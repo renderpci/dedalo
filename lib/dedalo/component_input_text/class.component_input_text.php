@@ -583,7 +583,7 @@ class component_input_text extends component_common {
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '!~';
 				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				break;
 			# IS SIMILAR
 			case (strpos($q, '=')===0 || $q_operator==='='):
@@ -591,7 +591,7 @@ class component_input_text extends component_common {
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '~*';
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				break;
 			# NOT CONTAIN
 			case (strpos($q, '-')===0 || $q_operator==='-'):
@@ -599,7 +599,7 @@ class component_input_text extends component_common {
 				$q_clean  = str_replace('-', '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				break;
 			# CONTAIN EXPLICIT
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
@@ -610,7 +610,7 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= $component_tipo === 'dd551'
 					? '\'.*\{".*'.$q_clean.'.*\''
 					: '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				dump(($component_tipo === 'dd551'), '$component_tipo  ++ '.to_string());
 				break;
 			# ENDS WITH
@@ -619,7 +619,7 @@ class component_input_text extends component_common {
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				break;
 			# BEGINS WITH
 			case (substr($q, -1)==='*'):
@@ -627,7 +627,7 @@ class component_input_text extends component_common {
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				break;
 			# LITERAL
 			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
@@ -635,7 +635,7 @@ class component_input_text extends component_common {
 				$q_clean  = str_replace("'", '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$query_object->unaccent = false; // (!) always false
 				break;
 			# DEFAULT CONTAIN
 			default:
@@ -646,7 +646,7 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= $component_tipo === 'dd551'
 					? '\'.*\{".*'.$q_clean.'.*\''
 					: '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				break;
 		}//end switch (true) {
 		#dump($query_object, ' query_object ++ '.to_string());
