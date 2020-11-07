@@ -535,7 +535,7 @@ class tool_import_files_dcnav extends tool_common {
 					// $name		= $file_data['regex']->name; // fulname of file without extension
 					// $code		= $name; // CODE PASA A SER IGUAL A NAME (!) 30-10-2020. Problema con variabilidad de nombres
 
-					$file_name = $file_data['file_name']; // Like '0002-0001'
+					$file_name = $file_data['file_name']; // Like '0002-0001'					
 
 				// parse XML file
 					$parsed_data = xml_dcnav_parser::parse_file($file_full_path);
@@ -543,7 +543,7 @@ class tool_import_files_dcnav extends tool_common {
 						// dump($parsed_data, ' parsed_data from file ++++++++++++++++++++++ '.to_string($current_file_name));
 					}
 
-				// check filename match the about info					
+				// check filename match the about info	
 					$about = array_find($parsed_data[0]->value, function($el){
 						return $el->prefix==='rdf' && $el->local==='about';
 					});
@@ -642,7 +642,7 @@ class tool_import_files_dcnav extends tool_common {
 						$parsed_item_type	= $parsed_item->type; // like description / access_point						
 						$image_key			= 0; // reset on each parsed_item iteratoin
 						
-						foreach ($parsed_item->value as $item_value) {							
+						foreach ($parsed_item->value as $item_value) {
 
 							// create new section on each item (section 'xml data')
 								$section_xml_data_tipo	= 'navarra34';
@@ -920,23 +920,34 @@ class tool_import_files_dcnav extends tool_common {
 								});
 								if (!empty($creators)) {
 									foreach ((array)$creators as $creator) {
-										$save_creator = (function($tipo, $section_tipo, $section_id, $value) {
+										// $save_creator = (function($tipo, $section_tipo, $section_id, $value) {
 
-											// target list locator. Entities : name
-											$locator = self::get_solved_select_value('rsc106', 'rsc116', $value);
+										// 	// target list locator. Entities : name
+										// 	$locator = self::get_solved_select_value('rsc106', 'rsc116', $value);
 
-											$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-											$component		= component_common::get_instance($modelo_name,
-																							 $tipo,
-																							 $section_id,
-																							 'list',
-																							 DEDALO_DATA_NOLAN,
-																							 $section_tipo);
-											$component->add_locator_to_dato( $locator );
-											$result = $component->Save();
+										// 	$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+										// 	$component		= component_common::get_instance($modelo_name,
+										// 													 $tipo,
+										// 													 $section_id,
+										// 													 'list',
+										// 													 DEDALO_DATA_NOLAN,
+										// 													 $section_tipo);
+										// 	$component->add_locator_to_dato( $locator );
+										// 	$result = $component->Save();
 
-											return $result;
-										})('navarra6', $section_tipo, $section_id, $creator);
+										// 	return $result;
+										// })('navarra6', $section_tipo, $section_id, $creator);
+
+										$creators_locator		= self::get_solved_select_value('rsc106', 'rsc116', $creator);
+										$creators_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo('navarra6',true);
+										$creators_component		= component_common::get_instance($creators_modelo_name,
+																								 'navarra6',
+																								 $section_id,
+																								 'list',
+																								 DEDALO_DATA_NOLAN,
+																								 $section_tipo);
+										$creators_component->add_locator_to_dato( $creators_locator );
+										$creators_component->Save();
 									}
 								}
 
@@ -1282,7 +1293,7 @@ class tool_import_files_dcnav extends tool_common {
 				$code_component->set_dato( $dato );
 				$code_component->Save();
 
-			debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::WARNING);
+			debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
 		}
 
 		$locator = new locator();
