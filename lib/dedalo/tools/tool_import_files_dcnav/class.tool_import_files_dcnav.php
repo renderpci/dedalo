@@ -535,7 +535,14 @@ class tool_import_files_dcnav extends tool_common {
 					// $name		= $file_data['regex']->name; // fulname of file without extension
 					// $code		= $name; // CODE PASA A SER IGUAL A NAME (!) 30-10-2020. Problema con variabilidad de nombres
 
+				// file_name. Used a s document code
 					$file_name = $file_data['file_name']; // Like '0002-0001'					
+
+				// catalog_code. Used as grouper code (catalog)
+					$catalog_code = explode('-', $file_name)[0];
+					if (empty($catalog_code)) {
+						throw new Exception("Error Processing Request. catalog_code is invalid: $catalog_code - file_name: $file_name", 1);						
+					}				
 
 				// parse XML file
 					$parsed_data = xml_dcnav_parser::parse_file($file_full_path);
@@ -673,7 +680,7 @@ class tool_import_files_dcnav extends tool_common {
 									return $result;
 								})('navarra52', $section_xml_data_tipo, $section_xml_data_id, $parsed_key);
 
-							// catalog code. like '0008-0001' or '0008-0001-0001' (is file name string without extension)
+							// catalog code. like '0008' 
 								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
 
 									$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -688,7 +695,7 @@ class tool_import_files_dcnav extends tool_common {
 									$result = $component->Save();
 
 									return $result;
-								})('navarra73', $section_xml_data_tipo, $section_xml_data_id, $file_name);
+								})('navarra73', $section_xml_data_tipo, $section_xml_data_id, $catalog_code);
 
 							// document code. like '0008-0001' or '0008-0001-0001' (is file name string without extension)
 								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
@@ -1150,11 +1157,7 @@ class tool_import_files_dcnav extends tool_common {
 					})('navarra54', $section_tipo, $section_id, $current_file_name);
 
 
-				// attach to 'Catálogo Documental' documents portal
-					$catalog_code = explode('-', $file_name)[0];
-					if (empty($catalog_code)) {
-						throw new Exception("Error Processing Request. catalog_code is invalid: $catalog_code - file_name: $file_name", 1);						
-					}
+				// attach to 'Catálogo Documental' documents portal					
 					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $file_name) {
 
 						// find existing or creates new setion ($section_tipo, $component_tipo, $value, $filter=null)
