@@ -17,11 +17,13 @@
 		$header_html  .= " Creates one section $section_tipo for each xml file ";			
 		$header_html  .= "</span>";
 		
+		if(SHOW_DEBUG===true) {
+		$header_html .= "  <span class=\"notes\">Target dir: ".TOOL_IMPORT_FILES_UPLOAD_DIR."</span>";
+		}
+		
 		$header_html  .= " </div>";
 		$header_html  .= " <div class=\"import_context_label\">";
-		if(SHOW_DEBUG===true) {
-		$header_html .= "  <span class=\"debug_info\">".TOOL_IMPORT_FILES_UPLOAD_DIR."</span>";
-		}
+		
 		$header_html  .= " </div>";//import_context_label
 		$header_html  .= " </div>";//tool_header
 		echo $header_html;
