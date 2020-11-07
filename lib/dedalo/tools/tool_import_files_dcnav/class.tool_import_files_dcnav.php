@@ -558,13 +558,13 @@ class tool_import_files_dcnav extends tool_common {
 						break; // stop current loop and file
 					}					
 
-				// find existing section or create a new one					
+				// find existing section or create a new one
 					$code_tipo	= 'navarra19'; // tipo of the component_input_text where is stored code value
 					$sqo = json_decode('{
 						"id": "'.$section_tipo.'_list",
 						"parsed": false,
 						"section_tipo": ["'.$section_tipo.'"],
-						"limit": 1,
+						"limit": 2,
 						"offset": 0,
 						"type": "search_json_object",
 						"full_count": false,
@@ -573,7 +573,7 @@ class tool_import_files_dcnav extends tool_common {
 							"$and": [
 								{
 									"q": "'.$file_name.'",
-									"q_operator": null,
+									"q_operator": "=",
 									"path": [
 										{
 											"section_tipo": "'.$section_tipo.'",
@@ -586,10 +586,13 @@ class tool_import_files_dcnav extends tool_common {
 							]
 						},
 						"select": []
-					}');
+					}');					
 					$search_development2	= new search_development2($sqo);
 					$search_result			= $search_development2->search();
 					$ar_records				= $search_result->ar_records;
+					if (count($ar_records)>1) {
+						throw new Exception("Error Processing Request. Search in 'navarra19' get more than one result. Only one is expected !", 1);						
+					}
 					if(!empty($ar_records)) {
 						// founded. Already created record
 							$section_id = reset($ar_records)->section_id;
@@ -1220,7 +1223,7 @@ class tool_import_files_dcnav extends tool_common {
 		$sqo = json_decode('{
 			"parsed": false,
 			"section_tipo": "'.$section_tipo.'",
-			"limit": 1,
+			"limit": 2,
 			"offset": 0,
 			"type": "search_json_object",
 			"full_count": false,
@@ -1231,6 +1234,9 @@ class tool_import_files_dcnav extends tool_common {
 		$search_development2	= new search_development2($sqo);
 		$search_result			= $search_development2->search();
 		$ar_records				= $search_result->ar_records;
+		if (count($ar_records)>1) {
+			throw new Exception("Error Processing Request [get_solved_select_value]. Search in '$section_tipo' get more than one result. Only one is expected !", 1);						
+		}
 		if(!empty($ar_records)) {
 			// founded. Already created record
 				$section_id = reset($ar_records)->section_id;
