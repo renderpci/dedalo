@@ -1138,6 +1138,10 @@ class tool_import_files_dcnav extends tool_common {
 
 
 				// attach to 'Catálogo Documental' documents portal
+					$catalog_code = explode('-', $file_name)[0];
+					if (empty($catalog_code)) {
+						throw new Exception("Error Processing Request. catalog_code is invalid: $catalog_code - file_name: $file_name", 1);						
+					}
 					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $file_name) {
 
 						// find existing or creates new setion ($section_tipo, $component_tipo, $value, $filter=null)
@@ -1161,7 +1165,7 @@ class tool_import_files_dcnav extends tool_common {
 						$result = $component->Save();
 
 						return $result;
-					})('navarra59', $section_tipo, $section_id, $code_tipo, $file_name);
+					})('navarra59', $section_tipo, $section_id, $code_tipo, $catalog_code);
 
 
 				// Add as processed
