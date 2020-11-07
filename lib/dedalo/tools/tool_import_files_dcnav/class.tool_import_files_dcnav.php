@@ -615,7 +615,7 @@ class tool_import_files_dcnav extends tool_common {
 							$code_component->Save();
 					}				
 
-				// clean portal old data if exists
+				// clean portal old data if exists (portal 'xml data')
 					$portal_xml_data_tipo			= 'navarra48';
 					$portal_xml_data_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($portal_xml_data_tipo,true);
 					$portal_xml_data_component		= component_common::get_instance($portal_xml_data_modelo_name,
@@ -642,7 +642,7 @@ class tool_import_files_dcnav extends tool_common {
 						
 						foreach ($parsed_item->value as $item_value) {							
 
-							// create new section on each item
+							// create new section on each item (section 'xml data')
 								$section_xml_data_tipo	= 'navarra34';
 								$section_xml_data		= section::get_instance(null, $section_xml_data_tipo);
 								$section_xml_data->Save();
@@ -671,7 +671,7 @@ class tool_import_files_dcnav extends tool_common {
 									return $result;
 								})('navarra52', $section_xml_data_tipo, $section_xml_data_id, $parsed_key);
 
-							// catalog code. like '0008'
+							// catalog code. like '0008-0001' or '0008-0001-0001' (is file name string without extension)
 								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
 
 									$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -688,7 +688,7 @@ class tool_import_files_dcnav extends tool_common {
 									return $result;
 								})('navarra73', $section_xml_data_tipo, $section_xml_data_id, $file_name);
 
-							// document code. like '0008-0001' or '0008-0001-0001'
+							// document code. like '0008-0001' or '0008-0001-0001' (is file name string without extension)
 								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
 
 									$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -783,7 +783,7 @@ class tool_import_files_dcnav extends tool_common {
 									})('navarra39', $section_xml_data_tipo, $section_xml_data_id, $item_value->tip);
 								}
 
-							// value (component_input_text_large)
+							// value (component_text_area)
 								if (isset($item_value->value) && !empty($item_value->value)) {
 									$save_value = (function($tipo, $section_tipo, $section_id, $value) {
 
@@ -1151,12 +1151,12 @@ class tool_import_files_dcnav extends tool_common {
 																		 'list',
 																		 DEDALO_DATA_NOLAN,
 																		 $this->catalog_section_tipo);
-						$add_locator = new locator();
-							$add_locator->set_section_tipo($section_tipo);
-							$add_locator->set_section_id($section_id);
-							$add_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+						$to_add_locator = new locator();
+							$to_add_locator->set_section_tipo($section_tipo);
+							$to_add_locator->set_section_id($section_id);
+							$to_add_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 						
-						$component->add_locator($add_locator);
+						$component->add_locator($to_add_locator);
 
 						$result = $component->Save();
 
