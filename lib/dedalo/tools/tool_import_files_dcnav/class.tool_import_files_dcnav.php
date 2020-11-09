@@ -22,6 +22,10 @@ class tool_import_files_dcnav extends tool_common {
 	public $catalog_section_tipo		= 'navarra57';
 
 
+	public static $xml_files_path		= DEDALO_MEDIA_BASE_PATH . '/xml/original';
+	public static $xml_files_base_url	= DEDALO_MEDIA_BASE_URL . '/xml/original';
+	
+
 	/**
 	* __CONSTRUCT
 	*/
@@ -466,7 +470,7 @@ class tool_import_files_dcnav extends tool_common {
 			$files_dir				= TOOL_IMPORT_FILES_UPLOAD_DIR;
 
 		// check target dir for xml files store
-			$xml_files_path	= DEDALO_MEDIA_BASE_PATH . '/import/xml';
+			$xml_files_path	= self::$xml_files_path; // DEDALO_MEDIA_BASE_PATH . '/xml/original';
 			if( !is_dir($xml_files_path) ) {
 				if(!mkdir($xml_files_path, 0775,true)) {
 					throw new Exception(" Error on read or create directory. Permission denied: $xml_files_path");
@@ -1130,7 +1134,7 @@ class tool_import_files_dcnav extends tool_common {
 				// link (component_iri) navarra54 
 					$save_link = (function($tipo, $section_tipo, $section_id, $value) {
 
-						$url 	= DEDALO_MEDIA_BASE_URL .'/import/xml/'. $value;
+						$url 	= self::$xml_files_base_url . '/' . $value; // DEDALO_MEDIA_BASE_URL .'/xml/original/'. $value;
 						$title 	= $value;
 
 						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -1158,10 +1162,10 @@ class tool_import_files_dcnav extends tool_common {
 
 
 				// attach to 'Catálogo Documental' documents portal					
-					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $file_name) {
+					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $catalog_code) {
 
 						// find existing or creates new setion ($section_tipo, $component_tipo, $value, $filter=null)
-						$locator	= self::get_solved_select_value($this->catalog_section_tipo, $code_tipo, $file_name);
+						$locator	= self::get_solved_select_value($this->catalog_section_tipo, $code_tipo, $catalog_code);
 
 						// portal add document locator
 						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);

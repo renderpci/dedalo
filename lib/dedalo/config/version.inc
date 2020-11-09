@@ -1923,6 +1923,10 @@
 		Clean code
 
 
+	Valencia 09-11-2020 5.7.8
+		Changed tool_import_files_dcnav	paths to xml files. Now are placed in /media/xml/original
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1948,7 +1952,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-11-2020');
+	define('DEDALO_BUILD'	, '09-11-2020');
 
 
 
