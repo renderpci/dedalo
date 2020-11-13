@@ -13,13 +13,15 @@ class css {
 	static $structure_file_path = '/common/css/structure.css';
 	static $mixins_file_path 	= '/common/css/mixins.less';
 
+	static $lessphp_lib_path = DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
+
 
 	
 	# CSS LINK CODE . RETURN COMBINATED CSS LINKS FOR INSERT IN HEADER  
 	public static function get_css_link_code() {
 		global $modo;
-					
-		$html	= '';				
+		
+		$html	= '';
 		
 		#
 		# COMMON CSS . Insertamos los estilos generales
@@ -190,9 +192,9 @@ class css {
 
 		$response = new stdClass();
 			$response->result = false;
-			$response->msg 	  = null;			
+			$response->msg 	  = null;
 
-		include DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
+		include self::$lessphp_lib_path;
 		$less = new lessc;
 		$less_code   = [];
 		$less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
@@ -226,14 +228,16 @@ class css {
 			
 			// css_prefix. get_css_prefix
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
-				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);
-		
+				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);		
 
 			// less line				
 				if ($modelo_name==='section') {
 					
 					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
-						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
+						$current_convert_code = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
+						if (!empty($current_convert_code)) {
+							$ar_less_code[] = $current_convert_code;
+						}						
 					}
 				
 					// Envolve code into custom wrapper
@@ -242,7 +246,10 @@ class css {
 				}else{
 
 					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
-						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, false);
+						$current_convert_code = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, false);
+						if (!empty($current_convert_code)) {
+							$ar_less_code[] = $current_convert_code;
+						}						
 					}
 					
 					// Envolve code into custom wrapper
@@ -355,7 +362,7 @@ class css {
 			}
 
 		}else{
-			debug_log(__METHOD__." error. obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $selector - terminoID : $terminoID", logger::ERROR);
+			debug_log(__METHOD__." error. Ignored: obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $selector - terminoID : $terminoID", logger::ERROR);
 		}
 
 		return $less_value;
@@ -425,7 +432,7 @@ class css {
 
 		$json_css_key = 'json_css';	
 
-		include DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
+		include self::$lessphp_lib_path;
 		$less = new lessc;
 		$less_code   = [];
 		$less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
@@ -448,7 +455,7 @@ class css {
 			$propiedades_str = $rows["propiedades"];
 			$propiedades 	 = json_decode($propiedades_str);
 			if (!isset($propiedades->css)) {
-				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
+				debug_log(__METHOD__." Ignored failed json decode properties of terminoID: '$terminoID'. Propiedades: ".to_string($propiedades_str), logger::ERROR);
 				continue;
 			}			
 			$css_obj = $propiedades->{$json_css_key};
@@ -456,20 +463,25 @@ class css {
 			// Debug only
 			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
 			#if(!in_array($terminoID, $ar_term)) continue;
-			
-			// css_prefix. get_css_prefix
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
-				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);		
-
-			// less line				
+						
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
+				
+			// less line
 				if ($modelo_name==='section') {
+
+					// css_prefix. get_css_prefix
+					$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);
 					
-					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
-						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
+					$ar_less_code = [];
+					foreach ($css_obj as $selector => $obj_value) {
+						$current_convert_code = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
+						if (!empty($current_convert_code)) {
+							$ar_less_code[] = $current_convert_code;
+						}
 					}
 				
 					// Envolve code into custom wrapper
-					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";					
+					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
 	
 				}else{
 
@@ -523,7 +535,7 @@ class css {
 				$file_size = format_size_units( filesize($file_name) );
 				$response->result 	 = true;
 				$response->msg 	  	 = "File css created successful. Size: $file_size";
-				$response->file_path = self::$structure_file_path;				
+				$response->file_path = self::$structure_file_path;
 			}
 			#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
 	
@@ -533,6 +545,4 @@ class css {
 
 
 	
-		
 }//end class
-?>
