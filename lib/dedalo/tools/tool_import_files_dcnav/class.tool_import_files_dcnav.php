@@ -209,7 +209,7 @@ class tool_import_files_dcnav extends tool_common {
 		// // preg_match('/^(((\d{1,5})-(\d{1,5}))-?(\d{1,5})?)\.([a-zA-Z]{3,4})$/', $file, $ar_match);
 		// preg_match('/^(((\d{1,5})-(\d{1,5}))-?(\d{1,5})?-?\d{1,5}?-?\d{1,5}?)\.([a-zA-Z]{3,4})$/', $file, $ar_match);
 		// if (!isset($ar_match[0])) {
-		// 	trigger_error('Error on regex. Invalid file name: '.$file,);
+		// 	trigger_error('Error on regex. Invalid file name: '.$file);
 		// 	dump($file, ' file ++ '.to_string());
 		// 	dump($ar_match, ' ar_match ++ '.to_string());
 		// }			
@@ -806,7 +806,7 @@ class tool_import_files_dcnav extends tool_common {
 																						 $section_id,
 																						 'list',
 																						 DEDALO_DATA_NOLAN,
-																						 $section_tipo);										
+																						 $section_tipo);
 										$value_string = is_array($value)
 											? implode(PHP_EOL, $value)
 											: $value;
@@ -868,10 +868,10 @@ class tool_import_files_dcnav extends tool_common {
 												// move and rename image file
 													self::set_media_file($image_file_data, $images_component_tipo, $images_section_tipo, $images_section_id);
 
-												// attach created image locator to catalog portal (navarra32)																									
+												// attach created image locator to catalog portal (navarra32)
 													$portal_tipo = ($image_key===0)
-														? 'navarra11'	// identitfy image case (the first one)
-														: 'navarra32';	// aditional images case (next images)													
+														? 'navarra11'	// identify image case (the first one)
+														: 'navarra32';	// aditional images case (next images)
 													$modelo_name_portal	= RecordObj_dd::get_modelo_name_by_tipo($portal_tipo,true);
 													$component_portal	= component_common::get_instance($modelo_name_portal,
 																										 $portal_tipo,
@@ -1161,7 +1161,7 @@ class tool_import_files_dcnav extends tool_common {
 					})('navarra54', $section_tipo, $section_id, $current_file_name);
 
 
-				// attach to 'Catálogo Documental' documents portal					
+				// attach to 'Catálogo Documental' documents portal 
 					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $catalog_code) {
 
 						// find existing or creates new setion ($section_tipo, $component_tipo, $value, $filter=null)
@@ -1195,7 +1195,7 @@ class tool_import_files_dcnav extends tool_common {
 						$processed_info->file_data	= $file_data;
 					$ar_processed[] = $processed_info;
 
-				debug_log(__METHOD__." Imported files and data from $section_tipo".to_string(), logger::WARNING);
+				debug_log(__METHOD__." Imported files and data from $section_tipo".to_string(), logger::ERROR);
 
 				$total++;
 			}//end foreach ((array)$ar_data as $key => $value_obj)
@@ -1253,7 +1253,7 @@ class tool_import_files_dcnav extends tool_common {
 			"offset": 0,
 			"type": "search_json_object",
 			"full_count": false,
-			"order": false,
+			"order": "section_id ASC",
 			"filter": '.$filter_string.',
 			"skip_projects_filter": true,
 			"select": []
