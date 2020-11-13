@@ -132,6 +132,7 @@ abstract class RecordDataBoundObject {
 				if(SHOW_DEBUG===true) {
 					throw new Exception("Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".pg_last_error()." ".to_string($strQuery), 1);
 				}
+				return false;
 			}
 
 			$arRow = pg_fetch_assoc($result);
@@ -142,7 +143,7 @@ abstract class RecordDataBoundObject {
 					#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					#throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);					
 				}
-				return(false);
+				return false;
 			}
 
 
