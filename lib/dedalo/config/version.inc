@@ -1926,6 +1926,14 @@
 	Valencia 09-11-2020 5.7.8
 		Changed tool_import_files_dcnav	paths to xml files. Now are placed in /media/xml/original
 
+	
+	Valencia 13-11-2020 5.7.9
+		Fix lib lessc.inc.php legacy issues with modern php versions >=7.3
+		Improved error managing and unified path to lib /vendor/leafo/lessphp/lessc.inc.php
+		Clean class.RecordDataBoundObject.php code
+		Clean class.tool_import_files_dcnav.php code
+
+
 
 
 	WORK IN PROGRESS
@@ -1947,12 +1955,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.8';
+	$DEDALO_VERSION = '5.7.9';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-11-2020');
+	define('DEDALO_BUILD'	, '13-11-2020');
 
 
 
