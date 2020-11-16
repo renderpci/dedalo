@@ -819,14 +819,15 @@ class component_relation_parent extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) {
+
+		$resolve_value = isset($option_obj->resolve_value) ? $option_obj->resolve_value : false;
 		
 		if (isset($option_obj->add_parents)) {
 			
 			// recursively
-			$section_id 	= $this->get_parent();
-			$section_tipo 	= $this->section_tipo;
-
-			$resolve_value  	 = isset($option_obj->resolve_value) ? $option_obj->resolve_value : false;
+			$section_id		= $this->get_parent();
+			$section_tipo	= $this->section_tipo;
+			
 			$parent_section_tipo = isset($option_obj->parent_section_tipo) ? $option_obj->parent_section_tipo : false;
 	
 			$parents = self::get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false);
@@ -904,7 +905,6 @@ class component_relation_parent extends component_relation_common {
 					$new_dato[] = $locator->section_id;
 				}
 			}
-
 			
 		}else{
 
