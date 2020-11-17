@@ -1933,7 +1933,8 @@
 		Clean class.RecordDataBoundObject.php code
 		Clean class.tool_import_files_dcnav.php code
 
-
+	Valencia 17-11-2020 5.7.10
+		Changed ts_object button show_indexations filter to dynamic (from fixed tipo to dynamic model [component_relation_index and component_relation_struct]) 
 
 
 	WORK IN PROGRESS
@@ -1955,12 +1956,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.9';
+	$DEDALO_VERSION = '5.7.10';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '13-11-2020');
+	define('DEDALO_BUILD'	, '17-11-2020');
 
 
 

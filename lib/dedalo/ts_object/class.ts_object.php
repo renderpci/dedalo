@@ -384,7 +384,9 @@ class ts_object extends Accessors {
 					default:
 						$element_obj->value = $dato;
 						break;
-				}		
+				}
+
+				$element_obj->model = $modelo_name;
 				
 			# Add			
 			$childrens_data->ar_elements[] = $element_obj;
