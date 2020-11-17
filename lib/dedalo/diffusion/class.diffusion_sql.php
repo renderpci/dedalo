@@ -1616,9 +1616,7 @@ class diffusion_sql extends diffusion  {
 
 				
 				// resolve references recursion. Look inside portals of portals, etc..
-					$next_recursion_level = ($modelo_name==='component_autocomplete_hi99')
-						? ($max_recursions - 1) // Avoid more recursion after resolve component_autocomplete_hi data 2018-11-16
-						: ($recursion_level + 1);
+					$next_recursion_level = ($recursion_level + 1);
 
 					// debug. show levels resolution calls
 						if(SHOW_DEBUG===true) {							
