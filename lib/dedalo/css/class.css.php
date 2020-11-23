@@ -286,10 +286,10 @@ class css {
 			$less->setPreserveComments(false);	// true | false
 		
 		// Compile 
-			#$compiled_css = $less->compile( $less_code );
+			$compiled_css = '';
 			try {
 				$compiled_css = $less->compile( $less_code );
-			} catch (exception $e) {
+			} catch (exception $e) {				
 				debug_log(__METHOD__." Error en compile less: ".$e->getMessage(), logger::ERROR);
 				echo "fatal error: " . $e->getMessage();
 			}
