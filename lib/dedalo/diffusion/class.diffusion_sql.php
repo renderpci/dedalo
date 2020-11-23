@@ -3636,7 +3636,7 @@ class diffusion_sql extends diffusion  {
 						if (is_array($value) || is_object($value)) {
 							$value = json_encode($value,JSON_UNESCAPED_UNICODE);
 						}else{
-							$value = trim($value);
+							$value = $value;
 						}
 
 					// store value in array
