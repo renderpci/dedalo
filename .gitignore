@@ -202,3 +202,4 @@ saml_config.php
 /lib/javascript-templates/package.json
 .svn
 
+/lib/dedalo/config/config_auto.php
