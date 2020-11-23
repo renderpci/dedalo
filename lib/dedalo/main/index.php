@@ -27,6 +27,9 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 }
 */
 
+	// check db config
+	tool_administration::check_db_ready();
+
 	# set vars
 	$vars = array('t','tipo','m','modo','id','h','parent','json');
 		foreach($vars as $name) $$name = common::setVar($name);

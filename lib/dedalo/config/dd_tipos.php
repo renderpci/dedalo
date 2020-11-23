@@ -212,3 +212,13 @@ if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
 }
 
 
+// config_auto file
+	$config_auto_path = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
+	try {
+		include $config_auto_path;
+	}catch (Exception $e) {
+		$content = "<?php \n// config_auto [dd_tipos] \n";
+		file_put_contents($path, $content);
+		debug_log(__METHOD__. 'File config_auto.php not found. '.PHP_EOL . ' Created new one', logger::ERROR);
+	}
+

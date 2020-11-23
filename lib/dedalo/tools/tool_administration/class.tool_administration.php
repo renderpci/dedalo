@@ -1797,4 +1797,55 @@ class tool_administration extends tool_common {
 
 
 
+	/**
+	* CHECK_DB_READY
+	* @return bool
+	*/
+	public static function check_db_ready() {		
+
+		// check column jer_dd:properties
+			if (!defined('ADDED_COLUMN_PROPERTIES')) {
+
+				$path = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
+				if (!file_exists($path)) {
+					$content		= "<?php \n// config_auto [check_db_ready] \n";
+					file_put_contents($path, $content);
+					debug_log(__METHOD__. 'File config_auto.php not found. '.PHP_EOL . ' Created new one', logger::ERROR);
+				}
+							
+				$table	= 'jer_dd';
+				$column	= 'properties';
+				$result	= search_development2::check_column_exists($table, $column);
+				if ($result!==true) {
+					$result	= search_development2::add_column($table, $column, $type='jsonb');
+				}
+
+				if ($result===true) {
+					
+					$file = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
+
+					// remove last php tag if exists
+						$content		= file_get_contents($file);
+						$content_clean	= str_replace('?>', '', $content);
+						file_put_contents($file, $content_clean);
+					
+					// add vars
+						if (strpos($content_clean, 'ADDED_COLUMN_PROPERTIES')===false) {						
+							// line
+							$line = "\n define('ADDED_COLUMN_PROPERTIES', true); \n";
+							// Write the contents to the file, 
+							// using the FILE_APPEND flag to append the content to the end of the file
+							// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
+							file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+
+							debug_log(__METHOD__." Added config_auto line with constant: ADDED_COLUMN_PROPERTIES  ".to_string(), logger::ERROR);
+						}
+				}
+			}
+
+		return true;
+	}//end check_db_ready
+
+
+
 }//end class

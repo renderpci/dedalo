@@ -1933,8 +1933,16 @@
 		Clean class.RecordDataBoundObject.php code
 		Clean class.tool_import_files_dcnav.php code
 
+
 	Valencia 17-11-2020 5.7.10
 		Changed ts_object button show_indexations filter to dynamic (from fixed tipo to dynamic model [component_relation_index and component_relation_struct]) 
+
+	
+	Valencia 23-11-2020 5.7.11
+		Added control to verify database integrity issues like column existence, etc. (ex. 'properties' in jer_dd)
+		
+
+
 
 
 	WORK IN PROGRESS
@@ -1956,12 +1964,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.10';
+	$DEDALO_VERSION = '5.7.11';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-11-2020');
+	define('DEDALO_BUILD'	, '23-11-2020');
 
 
 

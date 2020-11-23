@@ -3597,5 +3597,64 @@ class search_development2 {
 
 
 
+	/**
+	* CHECK_COLUMN_EXISTS
+	* @return bool
+	*/
+	public static function check_column_exists($table, $column) {
+
+		try {
+			
+			$strQuery = 'SELECT (SELECT 1 -- EXISTS
+						FROM information_schema.columns 
+						WHERE table_schema=\'public\' AND table_name=\''.$table.'\' AND column_name=\''.$column.'\');';
+			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
+			if (!$result) {
+				dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
+				throw new Exception("Error Processing Request", 1);
+			}
+			$val = pg_fetch_result($result, 0, 0);
+			debug_log(__METHOD__." Column properties check result: ".json_encode($val), logger::ERROR);
+			if ($val===null) {
+				// The column do not exists
+				trigger_error(" Column properties does not exists: ".json_encode($val));				
+				return false;				
+			}
+
+		}catch (Exception $e) {
+    		trigger_error('[check_column_exists] Caught exception: '.$e->getMessage());
+    		return false;
+		}
+		
+
+		return true;	
+	}//end check_column_exists
+
+
+
+	/**
+	* ADD_COLUMN
+	* @return bool
+	*/
+	public static function add_column($table, $column, $type) {
+		
+		try {
+			$strQuery = "ALTER TABLE \"$table\" ADD IF NOT EXISTS \"$column\" $type NULL;";
+			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
+			if (!$result) {
+				dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
+				throw new Exception("Error Processing Request", 1);
+			}
+		}catch (Exception $e) {
+    		trigger_error('[add_column] Caught exception: '.$e->getMessage());
+    		return false;
+		}
+		
+
+		return true;
+	}//end add_column
+
+
+
 
 }//end search_development
