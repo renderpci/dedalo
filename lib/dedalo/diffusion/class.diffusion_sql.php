@@ -3385,6 +3385,28 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* BUILD_GEOLOCATION_DATA_GEOJSON
+	* @return string
+	*/
+	public static function build_geolocation_data_geojson($options, $dato) {
+
+		$request_options = new stdClass();
+			$request_options->raw_text = $dato;
+
+		$options = new stdClass();
+			$options->raw_text			= false;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+
+		$ar_elements = component_text_area::build_geolocation_data_geojson($options->raw_text);
+		$response 	 = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+
+		return (string)$response; // json_encoded object
+	}//end build_geolocation_data_geojson
+
+
+
+	/**
 	* RETURN_EMPTY_STRING
 	* Fake method to return true always
 	* @return string

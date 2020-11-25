@@ -1950,6 +1950,9 @@
 		Fix issue wit double quotes on set config_auto.php file contents 
 
 
+	Valencia 25-11-2020 5.7.14
+		Added diffusion method 'build_geolocation_data_geojson' (converts text area value to geojson data)
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1970,7 +1973,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.13';
+	$DEDALO_VERSION = '5.7.14';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
