@@ -1942,8 +1942,8 @@
 		Added control to verify database integrity issues like column existence, etc. (ex. 'properties' in jer_dd)
 		
 
-	Valencia 25-11-2020 5.7.12
-		Changed component text area build_geolocation_data. Now all tag data is returned instead an array of coordinates
+	Valencia 25-11-2020 5.7.12b
+		Addedd component text area build_geolocation_data_geojson
 		
 
 
@@ -1968,7 +1968,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.12';
+	$DEDALO_VERSION = '5.7.12b';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}

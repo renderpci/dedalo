@@ -2238,7 +2238,7 @@ class component_text_area extends component_common {
 	* BUILD_GEOLOCATION_DATA
 	* @return array $ar_elements
 	*/
-	public static function build_geolocation_data($raw_text) {
+	public static function build_geolocation_data($raw_text, $geojson=false) {
 
 		# Test data
 		// $request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
@@ -2308,24 +2308,32 @@ class component_text_area extends component_common {
 		    		$geo_data = str_replace('\'', '"', $geo_data);
 		    		$geo_data = json_decode($geo_data);
 
-					// $layer_data = array();
-					// if(!empty($geo_data->features)){
-					// 	foreach ((array)$geo_data->features as $key => $feature) {
-					// 		$lon = isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
-					// 		$lat = isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
+					if ($geojson===true) {
 
-					// 		$object = new stdClass();
-					// 			$object->lon 	= $lon;
-					// 			$object->lat 	= $lat;
-					// 			$object->type   = $feature->geometry->type;
-					// 		$layer_data[] = $object;
-					// 	}
-					// }
+						$layer_data = $geo_data;
 
-					$element = new stdClass();
-						$element->layer_id		= $layer_id;
-						$element->text			= $text;
-						$element->layer_data	= $geo_data;
+					}else{
+
+						$layer_data = array();
+						if(!empty($geo_data->features)){
+							foreach ((array)$geo_data->features as $key => $feature) {
+								$lon = isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
+								$lat = isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
+
+								$object = new stdClass();
+									$object->lon	= $lon;
+									$object->lat	= $lat;
+									$object->type	= $feature->geometry->type;
+								$layer_data[] = $object;
+							}
+						}
+					}
+
+
+		    		$element = new stdClass();
+		    			$element->layer_id 		= $layer_id;
+		    			$element->text 			= $text;
+		    			$element->layer_data	= $layer_data;
 
 		    		$ar_elements[] = $element;
 	    		}
@@ -2334,6 +2342,17 @@ class component_text_area extends component_common {
 
 		
 		return $ar_elements;
+	}//end build_geolocation_data
+
+
+
+	/**
+	* BUILD_GEOLOCATION_DATA
+	* @return array $ar_elements
+	*/
+	public static function build_geolocation_data_geojson($raw_text) {
+
+		return self::build_geolocation_data($raw_text, true);
 	}//end build_geolocation_data
 
 
