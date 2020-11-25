@@ -162,10 +162,10 @@ class tool_administration extends tool_common {
 		#loop the rows
 		while ($rows = pg_fetch_assoc($result)) {
 
-			$id 			= (int)$rows['id'];
-			$section_id 	= $rows['section_id'];
-			$section_tipo 	= $rows['section_tipo'];
-			$datos 			= (string)$rows['datos'];
+			$id				= (int)$rows['id'];
+			$section_id		= $rows['section_id'];
+			$section_tipo	= $rows['section_tipo'];
+			$datos			= (string)$rows['datos'];
 
 			if ($id<1) {
 				continue; // avoid modify root user data
@@ -324,9 +324,9 @@ class tool_administration extends tool_common {
 
 			$ar_version = explode(".", $datos->dedalo_version);
 
-			$current_version[0] = (int)$ar_version[0];
-			$current_version[1] = (int)$ar_version[1];
-			$current_version[2] = (int)$ar_version[2];
+			$current_version[0]	= (int)$ar_version[0];
+			$current_version[1]	= (int)$ar_version[1];
+			$current_version[2]	= (int)$ar_version[2];
 		}
 
 		return $current_version;
@@ -346,9 +346,9 @@ class tool_administration extends tool_common {
 
 		$ar_version = explode(".", DEDALO_VERSION);
 
-		$current_version[0] = (int)$ar_version[0];
-		$current_version[1] = (int)$ar_version[1];
-		$current_version[2] = (int)$ar_version[2];
+		$current_version[0]	= (int)$ar_version[0];
+		$current_version[1]	= (int)$ar_version[1];
+		$current_version[2]	= (int)$ar_version[2];
 
 		return $current_version;
 	}//end get_dedalo_version
@@ -375,9 +375,9 @@ class tool_administration extends tool_common {
 				if($current_version[1] == $version_to_update->update_from_medium){
 					if($current_version[2] == $version_to_update->update_from_minor){
 
-							$update_version[0] = $version_to_update->version_major;
-							$update_version[1] = $version_to_update->version_medium;
-							$update_version[2] = $version_to_update->version_minor;
+							$update_version[0]	= $version_to_update->version_major;
+							$update_version[1]	= $version_to_update->version_medium;
+							$update_version[2]	= $version_to_update->version_minor;
 
 						return $update_version;
 					}
@@ -398,8 +398,8 @@ class tool_administration extends tool_common {
 			$response->msg 		= '';
 
 		require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
-		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
-		$username = $_SESSION['dedalo4']['auth']['username'];
+		$user_id	= $_SESSION['dedalo4']['auth']['user_id'];
+		$username	= $_SESSION['dedalo4']['auth']['username'];
 
 		$response = (object)backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
 		#debug_log(__METHOD__."  backup_info: $response->msg ".to_string(), logger::DEBUG);
@@ -417,8 +417,8 @@ class tool_administration extends tool_common {
 		global $updates;
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+			$response->result	= false;
+			$response->msg		= '';
 
 		$current_version = self::get_current_version_in_db();
 
@@ -441,9 +441,9 @@ class tool_administration extends tool_common {
 				if($current_version[1] == $version_to_update->update_from_medium){
 					if($current_version[2] == $version_to_update->update_from_minor){
 
-						$update_version[0] = $version_to_update->version_major;
-						$update_version[1] = $version_to_update->version_medium;
-						$update_version[2] = $version_to_update->version_minor;
+						$update_version[0]	= $version_to_update->version_major;
+						$update_version[1]	= $version_to_update->version_medium;
+						$update_version[2]	= $version_to_update->version_minor;
 
 						$update = $version_to_update;
 					}
@@ -459,8 +459,8 @@ class tool_administration extends tool_common {
 				$msg[] = "Updated sql: ".to_string($cmsg);
 
 				if ($SQL_update->result===false) {
-					$response->result = false ;
-					$response->msg 	  = "Error on SQL_update. <br>".implode('<br>', $msg);
+					$response->result	= false ;
+					$response->msg		= "Error on SQL_update. <br>".implode('<br>', $msg);
 					return $response;
 				}
 			}
@@ -489,16 +489,16 @@ class tool_administration extends tool_common {
 		}
 
 		# TABLE MATRIX_UPDATES DATA
-		$version_to_update = self::get_update_version();
-		$version_to_update = implode(".", $version_to_update);
-		$new_version 	   = self::update_dedalo_data_version($version_to_update);
+		$version_to_update	= self::get_update_version();
+		$version_to_update	= implode(".", $version_to_update);
+		$new_version		= self::update_dedalo_data_version($version_to_update);
 		$msg[] = "Updated Dédalo data version: ".to_string($version_to_update);
 
 		$result = isset($components_update) ? $components_update : null;
 
 
-		$response->result = true ;
-		$response->msg 	  = "Update version is done. <br>".implode('<br>', $msg);
+		$response->result	= true ;
+		$response->msg		= "Update version is done. <br>".implode('<br>', $msg);
 
 		return (object)$response;
 	}//end update_version
@@ -1183,15 +1183,15 @@ class tool_administration extends tool_common {
 			$options->set_english_name	= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$term_tipo 			= DEDALO_THESAURUS_TERM_TIPO;
-		$geonames_id_tipo 	= DEDALO_THESAURUS_GEONAMES_ID_TIPO;
-		$parent_tipo 		= DEDALO_THESAURUS_RELATION_PARENT_TIPO;
-		$geolocation_tipo 	= DEDALO_THESAURUS_GEOLOCATION_TIPO;
+		$term_tipo			= DEDALO_THESAURUS_TERM_TIPO;
+		$geonames_id_tipo	= DEDALO_THESAURUS_GEONAMES_ID_TIPO;
+		$parent_tipo		= DEDALO_THESAURUS_RELATION_PARENT_TIPO;
+		$geolocation_tipo	= DEDALO_THESAURUS_GEOLOCATION_TIPO;
 
-		$term_modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($term_tipo, true);
-		$geonames_id_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($geonames_id_tipo, true);
-		$parent_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
-		$geolocation_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($geolocation_tipo, true);
+		$term_modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($term_tipo, true);
+		$geonames_id_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($geonames_id_tipo, true);
+		$parent_modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
+		$geolocation_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($geolocation_tipo, true);
 
 		require_once(DEDALO_EXTRAS_PATH .'/geonames/class.geonames.php');
 
@@ -1400,10 +1400,10 @@ class tool_administration extends tool_common {
 
 						foreach ($component_dato as $from_component_tipo => $ar_locators) {
 							$propagate_options = new stdClass();
-								$propagate_options->ar_locators  		= $ar_locators;
-								$propagate_options->section_id 	 		= $section_id;
-								$propagate_options->section_tipo 		= $section_tipo;
-								$propagate_options->from_component_tipo = $from_component_tipo;
+								$propagate_options->ar_locators			= $ar_locators;
+								$propagate_options->section_id			= $section_id;
+								$propagate_options->section_tipo		= $section_tipo;
+								$propagate_options->from_component_tipo	= $from_component_tipo;
 							$propagate_response = search_development2::propagate_component_dato_to_relations_table( $propagate_options );
 						}
 
@@ -1583,10 +1583,10 @@ class tool_administration extends tool_common {
 			$section_tipo_old = '';
 			while ($row = pg_fetch_assoc($result)) {
 
-				$id 			= $row['id'];
-				$section_id 	= $row['section_id'];
-				$section_tipo 	= $row['section_tipo'];
-				$datos 			= $row['datos'];
+				$id				= $row['id'];
+				$section_id		= $row['section_id'];
+				$section_tipo	= $row['section_tipo'];
+				$datos			= $row['datos'];
 
 				if ($section_tipo!==$section_tipo_old) {
 					debug_log(__METHOD__." Iterating table $table - section_tipo $section_tipo ".to_string(), logger::DEBUG);
@@ -1594,9 +1594,9 @@ class tool_administration extends tool_common {
 				}
 
 				// Convert section dato
-					$section_dato 	   	= json_decode($datos);
-					$new_section_dato 	= self::convert_section_dato_info($section_dato);
-					$new_section_dato 	= json_encode($new_section_dato);
+					$section_dato		= json_decode($datos);
+					$new_section_dato	= self::convert_section_dato_info($section_dato);
+					$new_section_dato	= json_encode($new_section_dato);
 
 				// Save new dato
 					$strQuery_update = "UPDATE \"$table\" SET datos = $1 WHERE id = $2";
@@ -1638,17 +1638,17 @@ class tool_administration extends tool_common {
 				unset($section_dato->inverse_locators);
 			}
 
-		$value_created_by_userID 	= isset($section_dato->created_by_userID) ? $section_dato->created_by_userID : null;
-		$value_created_date 		= isset($section_dato->created_date) ? $section_dato->created_date : null;
-		$value_modified_by_userID 	= isset($section_dato->modified_by_userID) ? $section_dato->modified_by_userID : null;
-		$value_modified_date 		= isset($section_dato->modified_date) ? $section_dato->modified_date : null;
+		$value_created_by_userID	= isset($section_dato->created_by_userID) ? $section_dato->created_by_userID : null;
+		$value_created_date			= isset($section_dato->created_date) ? $section_dato->created_date : null;
+		$value_modified_by_userID	= isset($section_dato->modified_by_userID) ? $section_dato->modified_by_userID : null;
+		$value_modified_date		= isset($section_dato->modified_date) ? $section_dato->modified_date : null;
 
 		$modified_section_tipos = section::get_modified_section_tipos();
 		# Items
-		$created_by_user 		= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_by_user'; });
-		$created_date 			= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_date'; });
-		$modified_by_user 		= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_by_user'; });
-		$modified_date 			= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_date'; });
+		$created_by_user	= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_by_user'; });
+		$created_date		= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_date'; });
+		$modified_by_user	= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_by_user'; });
+		$modified_date		= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_date'; });
 
 		// created_by_user
 			if (!empty($value_created_by_userID)) {
@@ -1769,8 +1769,8 @@ class tool_administration extends tool_common {
 	public function get_last_backup_info() {
 
 		// read dir
-			$path 				= DEDALO_LIB_BASE_PATH.'/backup/backups';
-			$allowed_extensions = ['backup'];
+			$path				= DEDALO_LIB_BASE_PATH.'/backup/backups';
+			$allowed_extensions	= ['backup'];
 
 		// call to core function
 			$last_modified_file = get_last_modified_file($path, $allowed_extensions);
@@ -1778,9 +1778,9 @@ class tool_administration extends tool_common {
 		if (!empty($last_modified_file)) {
 			// file_size
 				$filesize_formatted = function($path) {
-					$size  = filesize($path);
-					$units = array( 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-					$power = $size > 0 ? floor(log($size, 1024)) : 0;
+					$size	= filesize($path);
+					$units	= array( 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
+					$power	= $size > 0 ? floor(log($size, 1024)) : 0;
 					return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
 				};
 				//$info = new SplFileInfo($last_modified_file);
@@ -1801,7 +1801,7 @@ class tool_administration extends tool_common {
 	* CHECK_DB_READY
 	* @return bool
 	*/
-	public static function check_db_ready() {		
+	public static function check_db_ready() {
 
 		// check column jer_dd:properties
 			if (!defined('ADDED_COLUMN_PROPERTIES')) {
@@ -1812,7 +1812,7 @@ class tool_administration extends tool_common {
 					file_put_contents($path, $content);
 					debug_log(__METHOD__. 'File config_auto.php not found. '.PHP_EOL . ' Created new one', logger::ERROR);
 				}
-							
+
 				$table	= 'jer_dd';
 				$column	= 'properties';
 				$result	= search_development2::check_column_exists($table, $column);
@@ -1830,7 +1830,7 @@ class tool_administration extends tool_common {
 						file_put_contents($file, $content_clean);
 					
 					// add vars
-						if (strpos($content_clean, 'ADDED_COLUMN_PROPERTIES')===false) {						
+						if (strpos($content_clean, 'ADDED_COLUMN_PROPERTIES')===false) {
 							// line
 							$line = "\n define('ADDED_COLUMN_PROPERTIES', true); \n";
 							// Write the contents to the file, 
