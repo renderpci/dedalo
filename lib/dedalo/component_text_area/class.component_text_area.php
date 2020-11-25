@@ -2308,25 +2308,24 @@ class component_text_area extends component_common {
 		    		$geo_data = str_replace('\'', '"', $geo_data);
 		    		$geo_data = json_decode($geo_data);
 
-		    		$layer_data = array();
-		    		if(!empty($geo_data->features)){
-		    			foreach ((array)$geo_data->features as $key => $feature) {
-							$lon = isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
-							$lat = isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
+					// $layer_data = array();
+					// if(!empty($geo_data->features)){
+					// 	foreach ((array)$geo_data->features as $key => $feature) {
+					// 		$lon = isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
+					// 		$lat = isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
 
-							$object = new stdClass();
-								$object->lon 	= $lon;
-								$object->lat 	= $lat;
-								$object->type   = $feature->geometry->type;
-							$layer_data[] = $object;
-						}
-		    		}
+					// 		$object = new stdClass();
+					// 			$object->lon 	= $lon;
+					// 			$object->lat 	= $lat;
+					// 			$object->type   = $feature->geometry->type;
+					// 		$layer_data[] = $object;
+					// 	}
+					// }
 
-
-		    		$element = new stdClass();
-		    			$element->layer_id 		= $layer_id;
-		    			$element->text 			= $text;
-		    			$element->layer_data	= $layer_data;
+					$element = new stdClass();
+						$element->layer_id		= $layer_id;
+						$element->text			= $text;
+						$element->layer_data	= $geo_data;
 
 		    		$ar_elements[] = $element;
 	    		}
