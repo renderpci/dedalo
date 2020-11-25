@@ -1806,10 +1806,12 @@ class tool_administration extends tool_common {
 		// check column jer_dd:properties
 			if (!defined('ADDED_COLUMN_PROPERTIES')) {
 
-				$path = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
-				if (!file_exists($path)) {
-					$content		= "<?php \n// config_auto [check_db_ready] \n";
-					file_put_contents($path, $content);
+				$config_auto_path = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
+				if (!file_exists($config_auto_path)) {
+					$content = '<?php // config_auto [check_db_ready] '.PHP_EOL;
+					if(!file_put_contents($config_auto_path, $content)){
+						throw new Exception("Error Processing Request. Unable to create config_auto file", 1);						
+					}
 					debug_log(__METHOD__. 'File config_auto.php not found. '.PHP_EOL . ' Created new one', logger::ERROR);
 				}
 
@@ -1825,14 +1827,12 @@ class tool_administration extends tool_common {
 					$file = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
 
 					// remove last php tag if exists
-						$content		= file_get_contents($file);
-						$content_clean	= str_replace('?>', '', $content);
-						file_put_contents($file, $content_clean);
+						$content = file_get_contents($file);						
 					
 					// add vars
-						if (strpos($content_clean, 'ADDED_COLUMN_PROPERTIES')===false) {
+						if (strpos($content, 'ADDED_COLUMN_PROPERTIES')===false) {
 							// line
-							$line = "\n define('ADDED_COLUMN_PROPERTIES', true); \n";
+							$line = PHP_EOL . ' define(\'ADDED_COLUMN_PROPERTIES\', true); ';
 							// Write the contents to the file, 
 							// using the FILE_APPEND flag to append the content to the end of the file
 							// and the LOCK_EX flag to prevent anyone else writing to the file at the same time

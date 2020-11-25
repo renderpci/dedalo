@@ -216,9 +216,11 @@ if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
 	$config_auto_path = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
 	try {
 		include $config_auto_path;
-	}catch (Exception $e) {
-		$content = "<?php \n// config_auto [dd_tipos] \n";
-		file_put_contents($path, $content);
+	}catch (Exception $e) {		
+		$content = '<?php // config_auto [dd_tipos] '.PHP_EOL;
+		if(!file_put_contents($config_auto_path, $content)){
+			throw new Exception("Error Processing Request. Unable to create config_auto file", 1);						
+		}
 		debug_log(__METHOD__. 'File config_auto.php not found. '.PHP_EOL . ' Created new one', logger::ERROR);
 	}
 

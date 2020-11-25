@@ -1945,7 +1945,9 @@
 	Valencia 25-11-2020 5.7.12b
 		Addedd component text area build_geolocation_data_geojson
 		
-
+	
+	Valencia 25-11-2020 5.7.13
+		Fix issue wit double quotes on set config_auto.php file contents 
 
 
 
@@ -1968,7 +1970,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.12b';
+	$DEDALO_VERSION = '5.7.13';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
