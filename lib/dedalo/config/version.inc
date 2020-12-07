@@ -1953,6 +1953,13 @@
 	Valencia 25-11-2020 5.7.14
 		Added diffusion method 'build_geolocation_data_geojson' (converts text area value to geojson data)
 
+	
+	Valencia 07-12-2020 5.7.15
+		Added warning to 'Update Dédalo code' button (tool administration) to avoid mistakes on local development mode
+		Optimized filter children_sentences in diffusion process_result
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1973,12 +1980,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.14';
+	$DEDALO_VERSION = '5.7.15';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '25-11-2020');
+	define('DEDALO_BUILD'	, '07-12-2020');
 
 
 
