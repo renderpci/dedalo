@@ -18,8 +18,8 @@ class component_text_area extends component_common {
 		// Overwrite lang when component_select_lang is present
 		if ( ($modo==='edit') && (!empty($parent) && !empty($section_tipo)) ) {
 
-			$var_requested 		= common::get_request_var('m');
-			$var_requested_mode = common::get_request_var('mode');
+			$var_requested		= common::get_request_var('m');
+			$var_requested_mode	= common::get_request_var('mode');
 
 			if ( (!empty($var_requested) && $var_requested==='edit') || (!empty($var_requested_mode) && $var_requested_mode==='load_rows') ) {
 				# Only when component is loaded on page edit mode (avoid tool_lang changes of lang)
@@ -64,11 +64,11 @@ class component_text_area extends component_common {
 			}
 			if (isset($related_component_select_lang)) {
 				$component_select_lang = component_common::get_instance('component_select_lang',
-																	    $related_component_select_lang,
-																	    $parent,
-																	    'list',
-																	    DEDALO_DATA_NOLAN,
-																	    $section_tipo);
+																		$related_component_select_lang,
+																		$parent,
+																		'list',
+																		DEDALO_DATA_NOLAN,
+																		$section_tipo);
 				$component_select_lang_dato = (array)$component_select_lang->get_dato();
 
 				#
@@ -76,8 +76,8 @@ class component_text_area extends component_common {
 				# dato of component_select_lang is an array of locators.
 				# For this we select only first locator and get his lang data
 				if (!empty($component_select_lang_dato[0])) {
-					$lang_locator = reset( $component_select_lang_dato );
-					$target_lang  = lang::get_code_from_locator($lang_locator, $add_prefix=true);
+					$lang_locator	= reset( $component_select_lang_dato );
+					$target_lang	= lang::get_code_from_locator($lang_locator, $add_prefix=true);
 					if (!empty($target_lang) && strpos($target_lang, 'lg-')!==false && $target_lang!==$lang) {
 						#debug_log(__METHOD__." Changed lang: $lang to $target_lang ", logger::DEBUG);
 						$lang = $target_lang;
