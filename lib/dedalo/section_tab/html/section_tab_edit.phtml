@@ -21,6 +21,12 @@
 					$html_tab_content 	= '';
 					$i=0; foreach ($ar_tab_html as $tab_tipo => $tab_html) {
 
+						$permisions = common::get_permissions($section_tipo, $tab_tipo);
+						// dump($tab_tipo, ' tab_tipo ++ '.to_string($permisions));
+						if ($permisions < 1) {
+							continue;
+						}
+
 						// tabs labels 
 							$name   = RecordObj_dd::get_termino_by_tipo($tab_tipo,DEDALO_DATA_LANG,true);
 							$active = ($i===0) ? ' section_tab_active' : '';

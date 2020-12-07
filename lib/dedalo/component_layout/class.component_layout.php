@@ -689,12 +689,6 @@ class component_layout extends component_common {
 
 					foreach ($ar_children_elements as $children_tipo) {
 
-						#remove the $children_tipo that the user don't has permisions
-						$permisions = common::get_permissions($children_tipo);
-						if ($permisions < 1) {
-							continue;
-						}
-
 						$ar_tab_html[$children_tipo] = '';
 
 						$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
@@ -778,6 +772,12 @@ class component_layout extends component_common {
 					#$ar_children_elements = RecordObj_dd::get_ar_childrens($terminoID);
 
 					foreach ($ar_children_elements as $children_tipo) {
+
+						#remove the $children_tipo that the user don't has permisions
+						$permisions = common::get_permissions($section_obj->get_tipo(), $children_tipo);
+						if ($permisions < 1) {
+							continue;
+						}
 
 						$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
 							#dump($children_modelo_name,'children_modelo_name');
@@ -1205,4 +1205,3 @@ class component_layout extends component_common {
 
 
 };#END CLASS
-?>
