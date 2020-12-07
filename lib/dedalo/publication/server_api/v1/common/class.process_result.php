@@ -48,9 +48,11 @@ abstract class process_result {
 		
 		
 		// search 2
-			$children_sentences = array_map(function($item){
-				return 'section_id = ' . (int)$item;
-			}, $ar_section_id);
+			// $children_sentences = array_map(function($item){
+			// 	return 'section_id = ' . (int)$item;
+			// }, $ar_section_id);
+			$children_sentences[] = 'section_id IN (' . implode(',', $ar_section_id). ')';
+			
 			$all_sentences = array_merge($children_sentences, $ar_parent_sentences);
 			$sql_filter = implode(' OR ', $all_sentences);
 			
