@@ -543,7 +543,14 @@
 			#
 			# UPDATE DEDALO CODE
 				$html   .= "<div class=\"panel_option form-inline\">";
-				$html   .= "<span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
+				$html   .= "<span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";				
+				try {
+					if ($_SERVER['SERVER_PORT']!=='80' || $_SERVER['SERVER_ADDR']==='127.0.0.1') {
+						$html   .= '<div class="warning">Warning. You are in localhost</div>';
+					}
+				} catch (Exception $e) {
+				    echo 'Caught exception: ',  $e->getMessage(), "\n";
+				}
 				$html   .= "<input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Update Dédalo code\" data-mode=\"update_dedalo_code\" onclick=\"tool_administration.update_dedalo_code(this,event)\" /> ";
 				$html   .= '<input type="checkbox" id="update_dedalo_code_check" value="true"> <label for="update_dedalo_code_check">Preview only</label>';
 				$html   .= ' <span style="float:right"><a href="'.DEDALO_SOURCE_VERSION_URL.'" target="_blank">'.DEDALO_SOURCE_VERSION_URL.'</a></span>';
