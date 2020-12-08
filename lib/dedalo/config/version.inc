@@ -1958,6 +1958,13 @@
 		Added warning to 'Update Dédalo code' button (tool administration) to avoid mistakes on local development mode
 		Optimized filter children_sentences in diffusion process_result
 
+	
+	Valencia 08-12-2020 5.7.16
+		Fix tool portal search set value error in component_autocomplete_hi
+
+
+
+
 
 
 
@@ -1980,12 +1987,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.15';
+	$DEDALO_VERSION = '5.7.16';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-12-2020');
+	define('DEDALO_BUILD'	, '08-12-2020');
 
 
 
