@@ -1686,6 +1686,7 @@ class diffusion_sql extends diffusion  {
 	/**
 	* SAVE_GLOBAL_SEARCH_DATA
 	* v. 1.3 [20-11-2018]
+	* v. 1.4 [09-12-2020]
 	* @return object $save
 	*/
 	public function save_global_search_data($request_options) {
@@ -1702,6 +1703,7 @@ class diffusion_sql extends diffusion  {
 			$full_data_tipos 		= (array)$options->global_search_map->full_data;
 			$name_surname_tipos 	= isset($options->global_search_map->name_surname) ? (array)$options->global_search_map->name_surname : [];
 			$prisoner_number_tipos 	= isset($options->global_search_map->prisoner_number) ? (array)$options->global_search_map->prisoner_number : [];
+			$symbol_state_tipos 	= isset($options->global_search_map->symbol_state) ? (array)$options->global_search_map->symbol_state : [];
 			$sort_tipos 			= isset($options->global_search_map->sort) ? (array)$options->global_search_map->sort : [];
 			$thesaurus_tipos 		= (array)$options->global_search_map->thesaurus;
 			$prison_tipos 			= isset($options->global_search_map->prison) ? (array)$options->global_search_map->prison : []; // 25-01-2018
@@ -1754,7 +1756,9 @@ class diffusion_sql extends diffusion  {
 					'situation_place',
 					'nazi_camp',
 					'nazi_sub_camp',
-					'prisoner_number'
+					'prisoner_number',
+					// added 09-12-2020
+					// 'symbol_state' (already added above in $symbol_state_tipos)
 				];
 
 			$fields_array = [];
@@ -1767,19 +1771,20 @@ class diffusion_sql extends diffusion  {
 					#dump($ar_columns, ' ar_columns ++ '.to_string());
 
 					$list_data[$lang] = new stdClass();
-						$list_data[$lang]->title 	= [];
-						$list_data[$lang]->summary  = [];
+						$list_data[$lang]->title	= [];
+						$list_data[$lang]->summary	= [];
 
-					$full_data[$lang] 		 	= [];
-					$name_surname_data[$lang]	= [];
-					$prisoner_number_data[$lang]= [];
-					$thesaurus_data[$lang]		= [];
-					$prison_data[$lang]			= [];
-					$sort_data[$lang]			= [];
-					$pub_author_data[$lang]		= [];
-					$title_generic_data[$lang]	= [];
-					$filter_date_data[$lang] 	= [];
-					$filter_mdcat[$lang] 	 	= [];
+					$full_data[$lang]				= [];
+					$name_surname_data[$lang]		= [];
+					$prisoner_number_data[$lang]	= [];
+					$symbol_state_data[$lang]		= [];
+					$thesaurus_data[$lang]			= [];
+					$prison_data[$lang]				= [];
+					$sort_data[$lang]				= [];
+					$pub_author_data[$lang]			= [];
+					$title_generic_data[$lang]		= [];
+					$filter_date_data[$lang]		= [];
+					$filter_mdcat[$lang]			= [];
 
 					foreach ($ar_columns as $column) {
 						switch ($column['field_name']) {
@@ -1828,6 +1833,21 @@ class diffusion_sql extends diffusion  {
 											}											
 										}
 									}
+
+								# symbol_state . Added 09-12-2020 !!
+									if (in_array($column['tipo'], $symbol_state_tipos)) {
+										// $ar_values = explode(' | ', $column['field_value']);										
+										// $symbol_state_value = trim( strip_tags($column['field_value']) );
+										$ar_values = $column['field_value'];
+										// $symbol_state_value = $column['field_value']
+										if (!empty($ar_values)) {
+											foreach ($ar_values as $symbol_state_value) {
+												if (!empty($symbol_state_value)) {
+													$symbol_state_data[$lang][] = $symbol_state_value;
+												}
+											}
+										}
+									}	
 
 								# sort_tipos . Added 18-03-2018 !!
 									if (in_array($column['tipo'], $sort_tipos)) {
@@ -2009,6 +2029,12 @@ class diffusion_sql extends diffusion  {
 							'field_name'  => 'prisoner_number',
 							'field_value' => json_encode($prisoner_number_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
+
+					# symbol_state. symbol_state_data . Added 09-12-2020 !!
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'symbol_state',
+							'field_value' => json_encode($symbol_state_data[$lang], JSON_UNESCAPED_UNICODE)
+						];	
 
 					# sort. sort_data . Added 18-03-2018 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [

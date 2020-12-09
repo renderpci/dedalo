@@ -3953,6 +3953,19 @@ class web_data {
 						$ar_filter[] 	= $current_filter_prisoner_number;
 					}
 				}
+				# symbol_state - operator: AND
+				if (!empty($json_data->filters->symbol_state)) {
+					$ar_symbol_state = $json_data->filters->symbol_state;
+					$ar_term = [];
+					foreach ((array)$ar_symbol_state as $key => $value) {
+						$ar_term[] = "`symbol_state` LIKE '%\"".escape_string($value)."\"%'";
+						// $ar_term[] = "`symbol_state` = '[\"".escape_string($value)."\"]'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_symbol_state = '('.implode(' AND ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_symbol_state;
+					}
+				}
 
 				// sql_filter add final string if not empty
 					if (!empty($ar_filter)) {
