@@ -1964,6 +1964,10 @@
 
 
 
+	Valencia 09-12-2020 5.7.17
+		Fix url path issue on tool administration when link to public API viewer (Safari only) 
+
+
 
 
 
@@ -1987,12 +1991,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.16';
+	$DEDALO_VERSION = '5.7.17';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-12-2020');
+	define('DEDALO_BUILD'	, '09-12-2020');
 
 
 
