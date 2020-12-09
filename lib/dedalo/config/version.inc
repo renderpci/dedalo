@@ -1963,11 +1963,12 @@
 		Fix tool portal search set value error in component_autocomplete_hi
 
 
-
 	Valencia 09-12-2020 5.7.17
 		Fix url path issue on tool administration when link to public API viewer (Safari only) 
 
-
+	
+	Valencia 09-12-2020 5.7.18
+		Added fixed filter symbol_state_tipos to public API get_global_search_json
 
 
 
@@ -1991,7 +1992,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.17';
+	$DEDALO_VERSION = '5.7.18';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
