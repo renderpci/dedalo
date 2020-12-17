@@ -3630,7 +3630,17 @@ class diffusion_sql extends diffusion  {
 				#$value = $component->{$method}($options->lang);
 				#$custom_arguments[] = $options->lang;
 				array_unshift($custom_arguments, $options->lang); // always as first argument (!)
-			}			
+			}
+
+			// add current lang always
+				if (isset($custom_arguments[0]) && !isset($custom_arguments[0]->lang)) {
+					if (is_array($custom_arguments[0])) {
+						$custom_arguments[0]['lang'] = $options->lang;
+					}elseif (is_object($custom_arguments[0])) {
+						$custom_arguments[0]->lang = $options->lang;
+					}
+				}
+
 			$value = call_user_func_array(array($component, $method), $custom_arguments);
 
 			// split string value (see qdp291)
