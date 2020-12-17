@@ -711,4 +711,3 @@ class component_input_text extends component_common {
 
 
 }//end class component_input_text
-?>
