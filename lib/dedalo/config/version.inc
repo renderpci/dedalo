@@ -1970,6 +1970,10 @@
 	Valencia 09-12-2020 5.7.18
 		Added fixed filter symbol_state_tipos to public API get_global_search_json
 
+	
+	Valencia 17-12-2020 5.7.19
+		Fix error on get_diffusion_resolve_value when the lang was not correctly set on diffusion
+	
 
 
 
@@ -1992,12 +1996,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.18';
+	$DEDALO_VERSION = '5.7.19';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-12-2020');
+	define('DEDALO_BUILD'	, '17-12-2020');
 
 
 
