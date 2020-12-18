@@ -18,9 +18,9 @@
 				$msg = 'Error on get unaccent extension';
 				$html .= "<span class=\"error\">$msg</span>";
 			}
-		} catch (Exception $e) {
-		    #$msg = 'Error on get unaccent extension - Exception: ' . $e->getMessage();
-		    #$html .=$msg;
+		}catch (Exception $e) {
+			$msg = 'Error on get unaccent extension - Exception: ' . $e->getMessage();
+			$html .= $msg;
 		}
 
 
@@ -29,11 +29,17 @@
 	$html   .= "<div class=\"content_data block-content-1\" >";
 
 		# Check PHP shell_exec permissions
-		$a = shell_exec("ls -l");
-		if (empty($a)) {
-			$html   .= "<div class=\"error\">WARNING. Your PHP shell_exec seems not work. Please review your server php config</div>";
-			dump($a, ' shell_exec command ls -l ++ '.to_string($a));
+		try {
+			$a = shell_exec("ls -l");
+			if (empty($a)) {
+				$html   .= "<div class=\"error\">WARNING. Your PHP shell_exec seems not work. Please review your server php config</div>";
+				dump($a, ' shell_exec command ls -l ++ '.to_string($a));
+			}
+		}catch (Exception $e) {
+			$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+			$html .= $msg;
 		}
+		
 
 		# Check DB config
 		if (empty(DB_BIN_PATH)) {
@@ -373,17 +379,17 @@
 
 				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('export'))."\" data-mode=\"export_structure_to_json\" onclick=\"tool_administration.export_structure_to_json(this,event)\" />";
 				
-				// file
-				$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
-				if (file_exists($file_path)) {
+				// file structure_json_file_path
+				$structure_json_file_path = (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
+				if (file_exists($structure_json_file_path)) {
 					// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . 'structure.json';
 					$file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_MEDIA_BASE_URL . '/import/files' . '/' . 'structure.json';
 					$html   .= "<a href=\"$file_url\" target=\"_blank\">$file_url</a>";									
-					$file_structure_size = format_size_units( filesize($file_path) );					
+					$file_structure_size = format_size_units( filesize($structure_json_file_path) );					
 					$html   .= "<div>File size: $file_structure_size</div>";
 
 					// 
-					$structure_data = json_decode( file_get_contents($file_path) );
+					$structure_data = json_decode( file_get_contents($structure_json_file_path) );
 					$unique_ar_tld = [];
 					foreach ($structure_data as $item) {
 						if (!in_array($item->tld, $unique_ar_tld)) {
@@ -412,11 +418,15 @@
 				if (!defined('STRUCTURE_FROM_SERVER') || STRUCTURE_FROM_SERVER===false) {
 					$html   .= "<div>Disable import structure from file</div>";
 				}else{
-					// $html   .= "  <span title=\"TLD\">".label::get_label('tld')."</span>";			
-					$html   .= "  <input type=\"text\" id=\"import_ar_tld\" class=\"form-control input-sm\" style=\"width:90.3%;\" autocomplete=\"off\" placeholder=\"ar_tld like dd,rsc,hierarchy,oh\" value=\"\" />";
-					$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('import'))."\" data-mode=\"import_structure_from_json\" onclick=\"tool_administration.import_structure_from_json(this,event)\" />";
+					// check file
+					if (!file_exists($structure_json_file_path)) {
+						$html .= '<div class="warning">structure.json file not found in: '.$structure_json_file_path.'</div>';
+					}else{			
+						$html .= "  <input type=\"text\" id=\"import_ar_tld\" class=\"form-control input-sm\" style=\"width:90.3%;\" autocomplete=\"off\" placeholder=\"ar_tld like dd,rsc,hierarchy,oh\" value=\"\" />";
+						$html .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('import'))."\" data-mode=\"import_structure_from_json\" onclick=\"tool_administration.import_structure_from_json(this,event)\" />";
+					}
 				}
-				
+
 				$html   .= "  <div id=\"import_structure_from_json_response\"></div>";
 				$html   .= " </div>";#end panel_option_subcontent
 
@@ -725,16 +735,28 @@
 
 			#
 			# PHP USER
-			$processUser = get_current_user(); // $processUser = posix_getpwuid(posix_geteuid());
-			$html .= tool_administration::show_info( "PHP user",
+			try {
+				$processUser = get_current_user(); // $processUser = posix_getpwuid(posix_geteuid());
+				$html .= tool_administration::show_info( "PHP user",
 													 $processUser,
 													 $processUser
 													);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
+
 			
 			#
 			# SEE YOURSELF
 			$command	= 'curl -X GET "' . DEDALO_PROTOCOL . '' . DEDALO_HOST . DEDALO_LIB_BASE_URL . '/tools/tool_administration/html/test.php" ';
-			$output		= shell_exec($command);
+			$output		= '';
+			try {
+				$output = shell_exec($command);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}			
 			$info = empty($output) ? '<error class="error">Error. Server can\'t connect with itself. Review your server host config to fix this issue</error>' : $output;
 			$html .= tool_administration::show_info( "SEE YOURSELF",
 													 $command,
@@ -743,24 +765,33 @@
 
 			#
 			# USER_LIMITS
-			#if(SHOW_DEBUG===true) {
-			$user_limits = shell_exec("ulimit -a");
-			$user_limits .= "-Hn\t\t\t\t     ".shell_exec("ulimit -Hn");
-			$user_limits .= "-Sn\t\t\t\t     ".shell_exec("ulimit -Sn");
-			$html .= tool_administration::show_info( "USER_LIMITS",
-													 "".$processUser,
-													 $user_limits
-													);
-			#}
+			try {
+				$user_limits = shell_exec("ulimit -a");
+				$user_limits .= "-Hn\t\t\t\t     ".shell_exec("ulimit -Hn");
+				$user_limits .= "-Sn\t\t\t\t     ".shell_exec("ulimit -Sn");
+				$html .= tool_administration::show_info( "USER_LIMITS",
+														 "".$processUser,
+														 $user_limits
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}			
+		
 
 			#
 			# DISK SPACE
-			#if(SHOW_DEBUG===true) {
-			$html .= tool_administration::show_info( "DISK SPACE",
+			try {
+				$html .= tool_administration::show_info( "DISK SPACE",
 													 "DF COMMAND",
 													 shell_exec("df -h")
 													);
-			#}
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
+			
+
 
 			#
 			# MAX_INPUT_VARS
@@ -837,148 +868,160 @@
 														 "Apache version",
 														 $apache_version
 														);
-
-				# APACHE HEADERS
-				/*
-				if (function_exists('get_headers')) {
-					if (!function_exists('getallheaders')) {
-						function getallheaders() {
-							   $headers = '';
-							foreach ($_SERVER as $name => $value) {
-								if (substr($name, 0, 5) == 'HTTP_') {
-									$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
-							   }
-							}
-						   return $headers;
-						}
-					}
-					$url 	 = DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-					$headers = array();
-					#$headers += headers_list();
-					$headers[] = get_headers($url, 1);
-					$headers[] = getallheaders();
-					$html .= tool_administration::show_info( "HTTP HEADER",
-															 " $url",
-															 $headers
-															);
-				}//end if (function_exists('get_headers'))
-			*/
-			} catch (Exception $e) {
-			    $html .= tool_administration::show_info( "APACHE INFO ERROR",
-													 "Apache info exception",
-													 "<span class=\"warning\">Exception on get apache info: " . $e->getMessage() . "</span>"
-													);
+			}catch (Exception $e) {
+				$html .= tool_administration::show_info( "APACHE INFO ERROR",
+														 "Apache info exception",
+														 "<span class=\"warning\">Exception on get apache info: " . $e->getMessage() . "</span>"
+														);
 			}
 
 			#
 			# FFMPEG
-			$ffmpeg = shell_exec(DEDALO_AV_FFMPEG_PATH." -version ");
-			$ffmpeg_config = shell_exec(DEDALO_AV_FFMPEG_PATH." -buildconf ");
-			preg_match("/ffmpeg version (.*) Copyright/", $ffmpeg, $output_array);
-			$info = $output_array[1] ?? null;
-			$html .= tool_administration::show_info( "FFMPEG",
-													 $info ." - ". DEDALO_AV_FFMPEG_PATH,
-													 $ffmpeg . $ffmpeg_config
-													);
+			try {
+				$ffmpeg = shell_exec(DEDALO_AV_FFMPEG_PATH." -version ");
+				$ffmpeg_config = shell_exec(DEDALO_AV_FFMPEG_PATH." -buildconf ");
+				preg_match("/ffmpeg version (.*) Copyright/", $ffmpeg, $output_array);
+				$info = $output_array[1] ?? null;
+				$html .= tool_administration::show_info( "FFMPEG",
+														 $info ." - ". DEDALO_AV_FFMPEG_PATH,
+														 $ffmpeg . $ffmpeg_config
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
 
 
 			#
 			# FFPROBE
-			$ffprobe = shell_exec(DEDALO_AV_FFPROBE_PATH." -version ");
-			preg_match("/ffprobe version (.*) Copyright/", $ffprobe, $output_array);
-			$info = $output_array[1] ?? null;
-			$html .= tool_administration::show_info( "PROBE",
-													 $info ." - ". DEDALO_AV_FFPROBE_PATH,
-													 $ffprobe
-													);
+			try {
+				$ffprobe = shell_exec(DEDALO_AV_FFPROBE_PATH." -version ");
+				preg_match("/ffprobe version (.*) Copyright/", $ffprobe, $output_array);
+				$info = $output_array[1] ?? null;
+				$html .= tool_administration::show_info( "PROBE",
+														 $info ." - ". DEDALO_AV_FFPROBE_PATH,
+														 $ffprobe
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
+			
 
 			#
 			# DEDALO_AV_FASTSTART_PATH
-			$faststart = shell_exec(DEDALO_AV_FASTSTART_PATH." -v ");
-			$html .= tool_administration::show_info( "FASTSTART",
-													 DEDALO_AV_FASTSTART_PATH,
-													 $faststart
-													);
+			try {
+				$faststart = shell_exec(DEDALO_AV_FASTSTART_PATH." -v ");
+				$html .= tool_administration::show_info( "FASTSTART",
+														 DEDALO_AV_FASTSTART_PATH,
+														 $faststart
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
+			
 
 			#
 			# IMAGE MAGICK
-			$result = shell_exec(MAGICK_PATH."convert -version ");
-			preg_match("/Version: ImageMagick (\S*)\s/", $result, $output_array);
-			$info = $output_array[1] ?? null;
-			$html .= tool_administration::show_info( "IMAGE MAGICK",
-													 $info ." - ". MAGICK_PATH,
-													 $result
-													);
+			try {
+				$result = shell_exec(MAGICK_PATH."convert -version ");
+				preg_match("/Version: ImageMagick (\S*)\s/", $result, $output_array);
+				$info = $output_array[1] ?? null;
+				$html .= tool_administration::show_info( "IMAGE MAGICK",
+														 $info ." - ". MAGICK_PATH,
+														 $result
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
+			
 
 			#
 			# NODE JS
-			$result = shell_exec(DEDALO_NODEJS." -v ");
-			$html .= tool_administration::show_info( "NODE JS",
-													 $result." - ".DEDALO_NODEJS,
-													 $result
-													);
+			try {
+				$result = shell_exec(DEDALO_NODEJS." -v ");
+				$html .= tool_administration::show_info( "NODE JS",
+														 $result." - ".DEDALO_NODEJS,
+														 $result
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
+			
 
 			#
 			# TINYMCE
-			#$path = DEDALO_ROOT.'/lib/tinymce/js/tinymce/tinymce.min.js';
-			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, TEXT_EDITOR_URL_JS);
-			$f = fopen($path, 'r');
-			$result = fgets($f);
-			fclose($f);
-			preg_match("/\/\/\s(\S*)\s/", $result, $output_array);
-			$info = $output_array[1] ?? null;
-			$html .= tool_administration::show_info( "TINYMCE",
-													 $info." - ".$path,
-													 $result
-													);
-
+			try {
+				#$path = DEDALO_ROOT.'/lib/tinymce/js/tinymce/tinymce.min.js';
+				$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, TEXT_EDITOR_URL_JS);
+				$f = fopen($path, 'r');
+				$result = fgets($f);
+				fclose($f);
+				preg_match("/\/\/\s(\S*)\s/", $result, $output_array);
+				$info = $output_array[1] ?? null;
+				$html .= tool_administration::show_info( "TINYMCE",
+														 $info." - ".$path,
+														 $result
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
 
 
 			#
 			# JQUERY
-			#$path = DEDALO_ROOT.'/lib/jquery/jquery.min.js';
-			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, JQUERY_LIB_URL_JS);
-			$f = fopen($path, 'r');
-			$result = fgets($f);
-			fclose($f);
-			preg_match("/\*\!\sjQuery v(\S*)\s/", $result, $output_array);
-			$info = $output_array[1] ?? null;
-			$html .= tool_administration::show_info( "JQUERY",
-													 $info." - ".$path,
-													 $result
-													);
+			try {
+				#$path = DEDALO_ROOT.'/lib/jquery/jquery.min.js';
+				$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, JQUERY_LIB_URL_JS);
+				$f = fopen($path, 'r');
+				$result = fgets($f);
+				fclose($f);
+				preg_match("/\*\!\sjQuery v(\S*)\s/", $result, $output_array);
+				$info = $output_array[1] ?? null;
+				$html .= tool_administration::show_info( "JQUERY",
+														 $info." - ".$path,
+														 $result
+														);
+			}catch (Exception $e) {
+				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
+				$html .= $msg;
+			}
+			
 
 
 			#
 			# PAPER
-			#$path = DEDALO_ROOT.'/lib/paper/dist/paper-full.min.js';
-			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, PAPER_JS_URL);
-			$lines = file($path);//file in to an array
-			$result = $lines[1]; //line 2
-			preg_match("/js v(\S*)\s-/", $result, $output_array);
-			$info = $output_array[1] ?? null;
-			$html .= tool_administration::show_info( "PAPER",
-													 $info." - ".$path,
-													 $result
-													);
+				#$path = DEDALO_ROOT.'/lib/paper/dist/paper-full.min.js';
+				$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, PAPER_JS_URL);
+				$lines = file($path);//file in to an array
+				$result = $lines[1]; //line 2
+				preg_match("/js v(\S*)\s-/", $result, $output_array);
+				$info = $output_array[1] ?? null;
+				$html .= tool_administration::show_info( "PAPER",
+														 $info." - ".$path,
+														 $result
+														);
 
 
 			#
 			# LEAFLET
-			#$path = DEDALO_ROOT.'/lib/leaflet/stable_versions/leaflet.js';
-			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, LEAFLET_JS_URL);
-			$lines = file($path);//file in to an array
-			$result = $lines[1]; //line 2
-			preg_match("/Leaflet ([0-9]\.[0-9]\.[0-9])\+.{1,12},/", $result, $output_array);
-			$info = $output_array[1] ?? null;
-			$html .= tool_administration::show_info( "LEAFLET",
-													 $info." - ".$path,
-													 $result
-													);
+				#$path = DEDALO_ROOT.'/lib/leaflet/stable_versions/leaflet.js';
+				$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, LEAFLET_JS_URL);
+				$lines = file($path);//file in to an array
+				$result = $lines[1]; //line 2
+				preg_match("/Leaflet ([0-9]\.[0-9]\.[0-9])\+.{1,12},/", $result, $output_array);
+				$info = $output_array[1] ?? null;
+				$html .= tool_administration::show_info( "LEAFLET",
+														 $info." - ".$path,
+														 $result
+														);
 
 			#
-			# SECTIONS
-			#if(SHOW_DEBUG===true) {
+			# SECTIONS			
 				$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
 				$ar_sections = array();
 				foreach ($ar_section_tipo as $current_section_tipo) {
@@ -988,13 +1031,11 @@
 				$html .= tool_administration::show_info( "SECTIONS",
 														 count($ar_section_tipo),
 														 $ar_sections
-														);
-			#}
+														);			
 
 
 			#
-			# DB TABLES
-			#if(SHOW_DEBUG===true) {
+			# DB TABLES			
 				$tables = (array)backup::get_tables();
 				$ar_tables=array();
 				foreach ($tables as $current_table) {
@@ -1005,8 +1046,6 @@
 														 "",
 														 $ar_tables
 														);
-			#}
-
 
 
 			#
@@ -1097,4 +1136,4 @@
 
 	print $html;
 
-?>
+
