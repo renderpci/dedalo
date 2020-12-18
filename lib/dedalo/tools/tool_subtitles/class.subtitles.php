@@ -10,7 +10,8 @@ abstract class subtitles {
 
 
 	# Version. Important!
-	static $version = "1.0.2"; // 15-01-2019
+	// static $version = "1.0.2"; // 15-01-2019
+	static $version = "1.0.3"; // 15-18-2020
 
 	# int $maxCharLine . Max number of chars for subtitle line. Default 144
 	static $maxCharLine;
@@ -28,15 +29,15 @@ abstract class subtitles {
 	public static function build_subtitles_text( $request_options ) {
 
 		$options = new stdClass();
-			$options->sourceText  					= null;		# clean text fragment without <p>, [TC], [INDEX] tags
-			$options->sourceText_unrestricted  		= null;
-			$options->total_ms 						= null;		# total of miliseconds (tcout-tcin)
-			$options->maxCharLine 					= 144;		# max number of char for subtitle line. Default 144
-			$options->type 							= 'srt';	# File type: srt or xml
-			$options->show_debug    				= false;	# Default false
-			$options->advice_text_subtitles_title  	= null;  	# Text like "Automatic translation"
-			$options->tc_in_secs 					= false;	# Optional subtitles filter from in tc
-			$options->tc_out_secs   				= false;	# Optional subtitles filter from out tc
+			$options->sourceText					= null;		# clean text fragment without <p>, [TC], [INDEX] tags
+			$options->sourceText_unrestricted		= null;
+			$options->total_ms						= null;		# total of miliseconds (tcout-tcin)
+			$options->maxCharLine					= 144;		# max number of char for subtitle line. Default 144
+			$options->type							= 'srt';	# File type: srt or xml
+			$options->show_debug					= false;	# Default false
+			$options->advice_text_subtitles_title	= null;  	# Text like "Automatic translation"
+			$options->tc_in_secs					= false;	# Optional subtitles filter from in tc
+			$options->tc_out_secs					= false;	# Optional subtitles filter from out tc
 
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
@@ -235,11 +236,7 @@ abstract class subtitles {
 	public static function get_ar_lines($text) {
 
 		# Explode text by tc pattern
-		#$tcPattern 	= "/(\[TC_[0-9]{2}:[0-9]{2}:[0-9]{2}\.?[0-9]{3}?_TC\])/";
-
-		#$tcPattern 	= TR::get_mark_pattern('tc_full',$standalone=true);
-
-		// Allow old codes like [TC_00:00:03_TC]
+			// Allow old codes like [TC_00:00:03_TC]
 			$tcPattern 	= "/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\]|\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}_TC\])/";
 
 		$ar_fragments	= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
@@ -252,21 +249,21 @@ abstract class subtitles {
 			# echo "<br>$key - $value";
 			if(!preg_match($tcPattern, $value)) {
 				# Es un texto
-				$text 	= $value;
+				$text = $value;
 				#if (empty($text) || strlen($text)<1 ) continue; # Skip
 
 				#$tcin 	= $ar_fragments[$key-1];
 				if (isset($ar_fragments[$key-1])) {
-					$tcin 	= $ar_fragments[$key-1];
+					$tcin = $ar_fragments[$key-1];
 				}else{
-					$tcin 	= null;
+					$tcin = null;
 				}
 
 				#$tcout 	= $ar_fragments[$key+1];
 				if (isset($ar_fragments[$key+1])) {
-					$tcout 	= $ar_fragments[$key+1];
+					$tcout = $ar_fragments[$key+1];
 				}else{
-					$tcout 	= null;
+					$tcout = null;
 				}
 
 					#
@@ -301,9 +298,9 @@ abstract class subtitles {
 		$ar_final = array();
 		foreach ($ar_fragments_formated as $ar_value) {
 
-			$tcin 	= $ar_value['tcin'];
-			$tcout 	= $ar_value['tcout'];
-			$text 	= $ar_value['text'];
+			$tcin	= $ar_value['tcin'];
+			$tcout	= $ar_value['tcout'];
+			$text	= $ar_value['text'];
 
 			$ar_final[] = subtitles::fragment_split($text, $tcin, $tcout);
 		}
@@ -352,11 +349,11 @@ abstract class subtitles {
 				trigger_error("ERROR: fragment_split : el tcout ($tcout) es menor que el tcin ($tcin)");
 				#return array();
 			}else{
-				$current_lenChar		= subtitles::text_lenght($text);
-				$current_charTime		= $current_durationSecs / $current_lenChar ;
+				$current_lenChar	= subtitles::text_lenght($text);
+				$current_charTime	= $current_durationSecs / $current_lenChar ;
 				if ($current_charTime<0) {
 					#$current_charTime= (float)$this->full_char_time_ms/1000; // Fallback to general chartime
-					$current_charTime=0;
+					$current_charTime = 0;
 				}
 			}
 		}
@@ -374,8 +371,8 @@ abstract class subtitles {
 			// remove start and end spaces
 				$current_line = trim($current_line);
 
-			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
-			$line_length = subtitles::text_lenght($current_line);
+			// line_length. search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
+				$line_length = subtitles::text_lenght($current_line);
 
 			// exception on large words
 				#dump(strpos($current_line, " "), 'strpos current_line ++ line_length: '.$line_length.' - maxCharLine: '.to_string($maxCharLine));
@@ -386,7 +383,7 @@ abstract class subtitles {
 				#}
 				#error_log("line_length: $line_length - maxCharLine: $maxCharLine - current_line: '$current_line' ");
 
-			if($line_length < ($maxCharLine -0)) {
+			if($line_length < $maxCharLine) {
 
 				$lastLine = true;
 				$spacePos = $line_length;
@@ -408,6 +405,8 @@ abstract class subtitles {
 				// no spaces found
 					if ($spacePos===false) {
 						$spacePos = ($maxCharLine -1);
+					}else{
+						$spacePos++; // because mb_strrpos position starts with 0 instead 1
 					}
 			}
 
@@ -418,8 +417,8 @@ abstract class subtitles {
 
 			// bold an italic
 				#añadimos negritas e itálicas al principio de un párrafo que tiene continuidad en las negritas o itálicas, el parrafo anterior no acaba y transpasaomos la etiqueta
-				$current_line_cut	= $siguiente_linea_add_b .=$current_line_cut;
-				$current_line_cut	= $siguiente_linea_add_i .=$current_line_cut;
+				$current_line_cut	= $siguiente_linea_add_b .= $current_line_cut;
+				$current_line_cut	= $siguiente_linea_add_i .= $current_line_cut;
 
 				#comprobamos si las negritas tienen continuidad en más de una línea
 				$numero_br = str_replace('<b>',  '<b>',  $current_line_cut, $br_in);
@@ -588,7 +587,7 @@ abstract class subtitles {
 	* TRUNCATE_TEXT
 	* Multibyte truncate text
 	*/
-	public static function truncate_text($string, $limit, $break=" ", $pad="...") {
+	public static function truncate_text($string, $limit, $break=' ', $pad='...') {
 
 		# return with no change if string is shorter than $limit
 		$str_len = subtitles::text_lenght($string);  // strlen($string)
@@ -596,7 +595,9 @@ abstract class subtitles {
 
 		$string = mb_substr($string, 0, $limit);
 
-		if(false !== ($breakpoint = mb_strrpos($string, $break))) {
+		$breakpoint = mb_strrpos($string, $break);
+
+		if($breakpoint!==false) {
 			$string = mb_substr($string, 0, $breakpoint);
 		}
 
@@ -672,6 +673,4 @@ abstract class subtitles {
 
 
 
-
 }//end subtitles
-?>

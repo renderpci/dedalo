@@ -1979,6 +1979,9 @@
 		Added tool_administration errors control for sell executions
 	
 
+	Valencia 18-12-2020 5.7.21
+		Fix issue on class subtitles when generated VTT fragments are incorrect length calculated, cutting words
+	
 
 
 
@@ -2003,7 +2006,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.20';
+	$DEDALO_VERSION = '5.7.21';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
