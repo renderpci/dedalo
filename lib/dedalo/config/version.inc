@@ -1987,7 +1987,10 @@
 		Added trigger tool_import_files_dcnav control to manage exceptions and return valid JSON response
 		Fix incorrect search_query_object order value. Set to false instead
 		Added search_development2 parse control to manage non valid values on 'select' and 'order' properties
-
+		
+	
+	Valencia 28-12-2020 5.7.23	
+		Fix error in search_development2 var name component_parser_order
 
 
 
@@ -2010,7 +2013,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.22';
+	$DEDALO_VERSION = '5.7.23';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}

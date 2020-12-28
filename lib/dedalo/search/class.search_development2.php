@@ -500,9 +500,9 @@ class search_development2 {
 	*/
 	public static function component_parser_order( $order_object ) {
 
-		if (!isset($order_object->path)) {			
+		if (!isset($order_object->path)) {
 			dump($order_object, ' INVALID order_object ++ '.to_string());
-			throw new Exception("Error Processing Request", 1);			
+			throw new Exception("Error Processing Request", 1);
 		}
 
 		$path			= $order_object->path;
@@ -513,7 +513,7 @@ class search_development2 {
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$order_object	= $modelo_name::get_select_query2($order_object);
 
-		return $select_object;
+		return $order_object;
 	}//end component_parser_order
 
 
@@ -525,9 +525,9 @@ class search_development2 {
 	*/
 	public static function component_parser_select( $select_object ) {
 
-		if (!isset($select_object->path)) {			
+		if (!isset($select_object->path)) {
 			dump($select_object, ' INVALID select_object ++ '.to_string());
-			throw new Exception("Error Processing Request", 1);			
+			throw new Exception("Error Processing Request", 1);
 		}
 
 		$path			= $select_object->path;
