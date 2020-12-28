@@ -1005,9 +1005,6 @@ class tool_import_files_dcnav extends tool_common {
 										$dd_date = new dd_date();
 										$dd_date->get_date_from_timestamp( $timestamp );
 
-										$lang_code	= lang::get_lang_code_from_alpha2($value); // like 'lg-spa' from 'es'
-										$lang		= lang::get_lang_locator_from_code( $lang_code ); // like {"type":"dd151","section_id":"17344","section_tipo":"lg1"}
-
 										$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 										$component		= component_common::get_instance($modelo_name,
 																						 $tipo,
