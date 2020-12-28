@@ -1982,7 +1982,11 @@
 	Valencia 18-12-2020 5.7.21
 		Fix issue on class subtitles when generated VTT fragments are incorrect length calculated, cutting words
 	
-
+	
+	Valencia 28-12-2020 5.7.22
+		Added trigger tool_import_files_dcnav control to manage exceptions and return valid JSON response
+		Fix incorrect search_query_object order value. Set to false instead
+		Added search_development2 parse control to manage non valid values on 'select' and 'order' properties
 
 
 
@@ -2006,12 +2010,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.21';
+	$DEDALO_VERSION = '5.7.22';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '18-12-2020');
+	define('DEDALO_BUILD'	, '28-12-2020');
 
 
 
