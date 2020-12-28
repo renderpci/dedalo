@@ -1253,7 +1253,7 @@ class tool_import_files_dcnav extends tool_common {
 			"offset": 0,
 			"type": "search_json_object",
 			"full_count": false,
-			"order": "section_id ASC",
+			"order": false,
 			"filter": '.$filter_string.',
 			"skip_projects_filter": true,
 			"select": []
