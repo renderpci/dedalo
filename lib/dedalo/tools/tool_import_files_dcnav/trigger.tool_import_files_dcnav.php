@@ -25,25 +25,32 @@ function import_files($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
-	$vars = array('tipo','section_tipo','top_tipo','top_id','import_mode','ar_data','import_file_name_mode','file_processor_properties','copy_all_filenames_to','optional_copy_filename');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			if ($name==='import_mode' || $name==='top_id' || $name==='file_processor_properties' || $name==='copy_all_filenames_to'|| $name==='optional_copy_filename') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-				return $response;
+
+	try {
+		
+		$vars = array('tipo','section_tipo','top_tipo','top_id','import_mode','ar_data','import_file_name_mode','file_processor_properties','copy_all_filenames_to','optional_copy_filename');
+			foreach($vars as $name) {
+				$$name = common::setVarData($name, $json_data);
+				# DATA VERIFY
+				if ($name==='import_mode' || $name==='top_id' || $name==='file_processor_properties' || $name==='copy_all_filenames_to'|| $name==='optional_copy_filename') continue; # Skip non mandatory
+				if (empty($$name)) {
+					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+					return $response;
+				}
 			}
-		}
 
-	# Init tool_import_files
-	$tool_import_files_dcnav = new tool_import_files_dcnav(null);
+		# Init tool_import_files
+		$tool_import_files_dcnav = new tool_import_files_dcnav(null);
 
-	$response = $tool_import_files_dcnav->import_files($json_data);
+		$response = $tool_import_files_dcnav->import_files($json_data);
 
-	// $response->result 	= true;
-	// $response->msg 		= 'Import files done successfully. Total: '.$total ." of " .count($ar_data);
+		// $response->result 	= true;
+		// $response->msg 		= 'Import files done successfully. Total: '.$total ." of " .count($ar_data);
+
+	}catch (Exception $e) {
+
+		$response->msg =  $e->getMessage();
+	}
 
 
 	# Debug
@@ -61,5 +68,3 @@ function import_files($json_data) {
 }//end if ($mode=='import_files')
 
 
-
-?>
