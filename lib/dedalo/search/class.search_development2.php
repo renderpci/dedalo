@@ -415,49 +415,72 @@ class search_development2 {
 	* Not return anything, only modifies the class var $this->search_query_object
 	*/
 	public function pre_parse_search_query_object() {
-
-		#$start_time=microtime(1);
-		#dump($this->search_query_object, 'preparsed $this->search_query_object 1 ++ '.to_string());
+		// dump($this->search_query_object, 'preparsed $this->search_query_object 1 ++ '.to_string());
 
 		# FILTER
 			if (!empty($this->search_query_object->filter)) {
 
-				# conform_search_query_object. Conform recursively each filter object asking the components
-				foreach ($this->search_query_object->filter as $op => $ar_value) {
-					$new_search_query_object_filter = self::conform_search_query_object($op, $ar_value);
-					break; // Only expected one
+				if (is_object($this->search_query_object->filter) || is_array($this->search_query_object->filter)) {
+
+					# conform_search_query_object. Conform recursively each filter object asking the components
+					foreach ($this->search_query_object->filter as $op => $ar_value) {
+						$new_search_query_object_filter = self::conform_search_query_object($op, $ar_value);
+						break; // Only expected one
+					}
+
+				}else{
+					// dump($this->search_query_object, ' $this->search_query_object ++ '.to_string());
+					debug_log(__METHOD__." Error. Ignored invalid filter value. Use object format instead: ".to_string($this->search_query_object->filter), logger::ERROR);
 				}
 
 				# Replace filter array with components preparsed values
-				if (isset($new_search_query_object_filter)) {
-					$this->search_query_object->filter = $new_search_query_object_filter;
-						#dump( json_encode($this->search_query_object, JSON_PRETTY_PRINT), ' json_encode(value) ++ '.to_string());
-				}else{
-					$this->search_query_object->filter = null;
-				}
+				$this->search_query_object->filter = (isset($new_search_query_object_filter))
+					? $new_search_query_object_filter
+					: null;
 			}
 
 		# SELECT
-			$new_search_query_object_select = [];
-			foreach ($this->search_query_object->select as $key => $select_object) {
-				$new_search_query_object_select[] = search_development2::component_parser_select( $select_object );
+			if (!empty($this->search_query_object->select)) {
+				
+				if (is_array($this->search_query_object->select)) {
+					
+					$new_search_query_object_select = [];
+					foreach ($this->search_query_object->select as $key => $select_object) {
+						$new_search_query_object_select[] = search_development2::component_parser_select( $select_object );
+					}
+					# Replace select array with components preparsed values
+					$this->search_query_object->select = $new_search_query_object_select;
+				
+				}else{
+					// dump($this->search_query_object, ' $this->search_query_object ++ '.to_string());
+					debug_log(__METHOD__." Error. Ignored invalid select value. Use array format instead: ".to_string($this->search_query_object->select), logger::ERROR);
+
+					$this->search_query_object->select = []; // reset
+				}
 			}
-			# Replace select array with components preparsed values
-			$this->search_query_object->select = $new_search_query_object_select;
 
 		# ORDER
 			if (!empty($this->search_query_object->order)) {
-				$new_search_query_object_order = [];
-				foreach ((array)$this->search_query_object->order as $key => $select_object) {
-					$new_search_query_object_order[] = search_development2::component_parser_select( $select_object );
-				}
-				#debug_log(__METHOD__." new_search_query_object_order ".to_string($new_search_query_object_order), logger::DEBUG); #die();
-				# Replace select array with components preparsed values
-				$this->search_query_object->order = $new_search_query_object_order;
+				
+				if (is_array($this->search_query_object->order)) {
+					
+					$new_search_query_object_order = [];
+					foreach ((array)$this->search_query_object->order as $key => $order_object) {
+						$new_search_query_object_order[] = search_development2::component_parser_order( $order_object );
+					}
+					#debug_log(__METHOD__." new_search_query_object_order ".to_string($new_search_query_object_order), logger::DEBUG); #die();
+					# Replace select array with components preparsed values
+					$this->search_query_object->order = $new_search_query_object_order;
+
+				}else{
+					// dump($this->search_query_object, ' $this->search_query_object ++ '.to_string());
+					debug_log(__METHOD__." Error. Ignored invalid order value. Use array format instead: ".to_string($this->search_query_object->order), logger::ERROR);
+
+					$this->search_query_object->order = []; // reset
+				}				
 			}
 
 		#dump($this->search_query_object, 'preparsed $this->search_query_object 2 ++ '.to_string()); die();
-		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 
 		# Set as parsed already
 		#$this->preparsed_search_query_object = true;
@@ -471,19 +494,49 @@ class search_development2 {
 
 
 	/**
+	* COMPONENT_PARSER_ORDER
+	* Call to component to parse select query (identical to select)
+	* @return object $select_object
+	*/
+	public static function component_parser_order( $order_object ) {
+
+		if (!isset($order_object->path)) {			
+			dump($order_object, ' INVALID order_object ++ '.to_string());
+			throw new Exception("Error Processing Request", 1);			
+		}
+
+		$path			= $order_object->path;
+		$component_tipo	= end($path)->component_tipo;
+		if ($component_tipo==='section_id' || $component_tipo==='section_tipo') {
+			return $order_object; // No parse section_id
+		}
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$order_object	= $modelo_name::get_select_query2($order_object);
+
+		return $select_object;
+	}//end component_parser_order
+
+
+
+	/**
 	* COMPONENT_PARSER_SELECT
 	* Call to component to parse select query (add component path)
 	* @return object $select_object
 	*/
 	public static function component_parser_select( $select_object ) {
 
-		$path				= $select_object->path;
-		$component_tipo 	= end($path)->component_tipo;
+		if (!isset($select_object->path)) {			
+			dump($select_object, ' INVALID select_object ++ '.to_string());
+			throw new Exception("Error Processing Request", 1);			
+		}
+
+		$path			= $select_object->path;
+		$component_tipo	= end($path)->component_tipo;
 		if ($component_tipo==='section_id' || $component_tipo==='section_tipo') {
 			return $select_object; // No parse section_id
 		}
-		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$select_object 		= $modelo_name::get_select_query2($select_object);
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$select_object	= $modelo_name::get_select_query2($select_object);
 
 		return $select_object;
 	}//end component_parser_select
