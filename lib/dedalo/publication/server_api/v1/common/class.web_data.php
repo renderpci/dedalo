@@ -990,7 +990,7 @@ class web_data {
 
 				// check is is locator
 					if (is_object($p_value)) {
-						$p_value = $p_value->section_id || null;
+						$p_value = $p_value->section_id ?? null;
 					}
 
 				// skip empty values
