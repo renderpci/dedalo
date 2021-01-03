@@ -986,7 +986,12 @@ class web_data {
 				}
 					
 			$current_ar_value = json_decode($rows[$current_field_ar_id]);
-			if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
+			if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {				
+
+				// check is is locator
+					if (is_object($p_value)) {
+						$p_value = $p_value->section_id || null;
+					}
 
 				// skip empty values
 					if (empty($p_value)) {
@@ -1029,7 +1034,7 @@ class web_data {
 		 			// format value for sql filter (add quotes or not)
 		 			$p_value_filter = $match_column==='section_id'
 		 				? $p_value // treated as int
-		 				: '\'' . $p_value . '\''; // rteated as string
+		 				: '\'' . $p_value . '\''; // treated as string
 
 					$portal_options->sql_filter	= '`' . $match_column . '`' . ' = ' . $p_value_filter . (!empty($filter) ? $filter : '');
 					$portal_options->order		= false;

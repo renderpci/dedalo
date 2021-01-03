@@ -1992,6 +1992,13 @@
 	Valencia 28-12-2020 5.7.23	
 		Fix error in search_development2 var name component_parser_order
 
+	
+	Valencia 03-01-2021 5.7.24	
+		Added support for resolve portals using children locators
+
+
+
+
 
 
 	WORK IN PROGRESS
@@ -2013,12 +2020,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.23';
+	$DEDALO_VERSION = '5.7.24';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '28-12-2020');
+	define('DEDALO_BUILD'	, '03-01-2021');
 
 
 
