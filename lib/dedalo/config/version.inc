@@ -1997,6 +1997,8 @@
 		Added support for resolve portals using children locators
 
 
+	Valencia 12-01-2021 5.7.25	
+		Fixed problem when tool administration hangs checking self host resolution using CURL (limited timeout to 1.5 secs)
 
 
 
@@ -2020,12 +2022,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.24';
+	$DEDALO_VERSION = '5.7.25';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-01-2021');
+	define('DEDALO_BUILD'	, '12-01-2021');
 
 
 
