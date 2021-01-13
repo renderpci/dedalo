@@ -2001,6 +2001,10 @@
 		Fixed problem when tool administration hangs checking self host resolution using CURL (limited timeout to 1.5 secs)
 
 
+	Valencia 13-01-2021 5.7.26	
+		Added new warning to admins when they try to remove a term in the Dédalo ontology (structure)
+
+
 
 
 	WORK IN PROGRESS
@@ -2022,12 +2026,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.25';
+	$DEDALO_VERSION = '5.7.26';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-01-2021');
+	define('DEDALO_BUILD'	, '13-01-2021');
 
 
 
