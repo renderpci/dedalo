@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.11",
-    "title" : "Dédalo Web REST API 1.0.11",
+    "version" : "1.0.12",
+    "title" : "Dédalo Web REST API 1.0.12",
     "description" : "Builds Public Dédalo data for publication. <br>Use this online tool to test your data and remember always write your <i>Auth code</i> when executes a try call.<br> <strong>This API is focused to Oral History archives and is for general pourposes.<br>If you need special features or custom results, you are wellcome to join API develop team contacting with the source developers (aka Alex&Paco)</strong> in webmaster@render.es",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -10,7 +10,7 @@
     },
     "contact" : {
       "name" : "Aditional Dédalo publication info",
-      "url" : "http://dedalo4.antropolis.net/dedalo/lib/dedalo/publication/server_api/v1/docu/API_docu_v1.pdf"
+      "url" : "http://master.render.es/dedalo/lib/dedalo/publication/server_api/v1/docu/API_docu_v1.pdf"
     }
   },
   "host" : "dedalo4.antropolis.net",
