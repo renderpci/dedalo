@@ -2004,6 +2004,9 @@
 	Valencia 13-01-2021 5.7.26	
 		Added new warning to admins when they try to remove a term in the Dédalo ontology (structure)
 
+	
+	Valencia 14-01-2021 5.7.27	
+		Added 'skip_publication_state_check' optional property (structure field 'propiedades') to force skip publication state (Biliography authors for example)
 
 
 
@@ -2026,12 +2029,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.26';
+	$DEDALO_VERSION = '5.7.27';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '13-01-2021');
+	define('DEDALO_BUILD'	, '14-01-2021');
 
 
 
