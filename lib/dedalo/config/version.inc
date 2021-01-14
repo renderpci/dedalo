@@ -2008,6 +2008,10 @@
 	Valencia 14-01-2021 5.7.27	
 		Added 'skip_publication_state_check' optional property (structure field 'propiedades') to force skip publication state (Biliography authors for example)
 
+	
+	Valencia 14-01-2021 5.7.28	
+		Unify diffusion property name from 'skip_publication_state_check' to 'is_publicable'
+
 
 
 	WORK IN PROGRESS
@@ -2029,7 +2033,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.27';
+	$DEDALO_VERSION = '5.7.28';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}

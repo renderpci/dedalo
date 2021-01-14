@@ -1160,8 +1160,8 @@ class diffusion_sql extends diffusion  {
 									foreach ($dato as $current_locator) {
 
 										// Check target is publicable
-											$current_is_publicable = isset($propiedades->skip_publication_state_check)
-												? $propiedades->skip_publication_state_check
+											$current_is_publicable = isset($propiedades->is_publicable)
+												? $propiedades->is_publicable
 												: diffusion::get_is_publicable($current_locator);
 											
 											if ($current_is_publicable!==true) {
