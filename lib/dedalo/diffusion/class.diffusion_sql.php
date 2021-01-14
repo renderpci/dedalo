@@ -3295,7 +3295,7 @@ class diffusion_sql extends diffusion  {
 			foreach ($dato as $key => $current_locator) {
 
 				$current_is_publicable = (isset($options->propiedades) && isset($options->propiedades->is_publicable))
-					? (bool)$propiedades->is_publicable
+					? (bool)$options->propiedades->is_publicable
 					: diffusion::get_is_publicable($current_locator);
 
 				if($current_is_publicable===true){
@@ -3333,7 +3333,7 @@ class diffusion_sql extends diffusion  {
 						if (isset($dato[$q_key])) {
 
 							$current_is_publicable = (isset($options->propiedades) && isset($options->propiedades->is_publicable))
-								? (bool)$propiedades->is_publicable
+								? (bool)$options->propiedades->is_publicable
 								: diffusion::get_is_publicable($dato[$q_key]);
 
 							if($current_is_publicable===true){
@@ -3346,7 +3346,7 @@ class diffusion_sql extends diffusion  {
 							if($key > $q_key){
 
 								$current_is_publicable = (isset($options->propiedades) && isset($options->propiedades->is_publicable))
-									? (bool)$propiedades->is_publicable
+									? (bool)$options->propiedades->is_publicable
 									: diffusion::get_is_publicable($current_locator);
 
 								if($current_is_publicable===true){
