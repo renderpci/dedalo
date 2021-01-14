@@ -3287,13 +3287,17 @@ class diffusion_sql extends diffusion  {
 	public static function count_data_elements($options, $dato) {
 
 		$model = get_class($options->component);
-
+		
 		$components_with_relations = component_relation_common::get_components_with_relations();
 
 		if (is_array($dato) && in_array($model, $components_with_relations)) {
 			$ar_result=[];
 			foreach ($dato as $key => $current_locator) {
-				$current_is_publicable = diffusion::get_is_publicable($current_locator);
+
+				$current_is_publicable = (isset($options->propiedades) && isset($options->propiedades->is_publicable))
+					? (bool)$propiedades->is_publicable
+					: diffusion::get_is_publicable($current_locator);
+
 				if($current_is_publicable===true){
 					$ar_result[] = $current_locator;
 				}
@@ -3327,7 +3331,11 @@ class diffusion_sql extends diffusion  {
 				switch ($q_operator) {
 					case '=':
 						if (isset($dato[$q_key])) {
-							$current_is_publicable = diffusion::get_is_publicable($dato[$q_key]);
+
+							$current_is_publicable = (isset($options->propiedades) && isset($options->propiedades->is_publicable))
+								? (bool)$propiedades->is_publicable
+								: diffusion::get_is_publicable($dato[$q_key]);
+
 							if($current_is_publicable===true){
 								$ar_result[] = $dato[$q_key];
 							}
@@ -3336,7 +3344,11 @@ class diffusion_sql extends diffusion  {
 					case '>':
 						foreach ($dato as $key => $current_locator) {
 							if($key > $q_key){
-								$current_is_publicable = diffusion::get_is_publicable($current_locator);
+
+								$current_is_publicable = (isset($options->propiedades) && isset($options->propiedades->is_publicable))
+									? (bool)$propiedades->is_publicable
+									: diffusion::get_is_publicable($current_locator);
+
 								if($current_is_publicable===true){
 									$ar_result[] = $current_locator;
 								}
