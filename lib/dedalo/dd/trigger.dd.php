@@ -282,6 +282,10 @@ if($accion==='deleteTS') {
 	if(!$terminoID) exit("Need more vars: terminoID: $terminoID ");
 
 
+	// delete terms is disabled
+	exit('Sorry. The option to delete terms is disabled for security reasons and its possible implications on existing data (Time machine, Activity, etc.). Please use a direct sql command against your database at your risk');
+
+
 	$html='';
 
 	if(!$modo) $modo = 'tesauro_list';
@@ -299,21 +303,24 @@ if($accion==='deleteTS') {
 			if( $n_hijos >0 )	die("<div class=\"error\"> $el_descriptor_tiene_hijos_title.<br> $para_eliminar_una_rama_title  $renderBtnVolver</div>");
 
 		# RELACIONES . Si tiene relaciones, las eliminamos para no dejar rastro
-			$arguments=array();
-			$arguments['strPrimaryKeyName']	= 'terminoID';
-			$arguments['sql_code']			= opTextSearch($campo='relaciones',$string="%\"$terminoID\"%",$boolean=2);
-			$prefijo = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
-			$RecordObj_dd_edit				= new RecordObj_dd_edit(NULL, $prefijo);
-			$ar_id							= $RecordObj_dd_edit->search($arguments);
+			$prefijo			= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+			$RecordObj_dd_edit	= new RecordObj_dd_edit(NULL, $prefijo);
+
+			$arguments = [
+				'strPrimaryKeyName' => 'terminoID',
+				'sql_code' 			=> 'relaciones LIKE \'%"'.$terminoID.'"%\''
+			];
+
+			$ar_id = $RecordObj_dd_edit->search($arguments);
+
+			// dump($ar_id," ar_id - terminoID:$terminoID"); die();
 
 			if(count($ar_id)>0) foreach($ar_id as $terminoID_rel) {
-
 				$RecordObj_dd_edit2 = new RecordObj_dd_edit($terminoID_rel);
 				$RecordObj_dd_edit2->remove_element_from_ar_terminos_relacionados($terminoID);
 				$RecordObj_dd_edit2->Save();
 			}
-
-	dump($ar_id," ar_id - terminoID:$terminoID");die();
+	
 
 		# MODELO . Verificamos que nadie lo usa como modelo
 			/*

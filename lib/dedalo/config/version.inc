@@ -1997,8 +1997,25 @@
 		Added support for resolve portals using children locators
 
 
+	Valencia 12-01-2021 5.7.25	
+		Fixed problem when tool administration hangs checking self host resolution using CURL (limited timeout to 1.5 secs)
 
 
+	Valencia 13-01-2021 5.7.26	
+		Added new warning to admins when they try to remove a term in the Dédalo ontology (structure)
+
+	
+	Valencia 14-01-2021 5.7.27
+		Added 'skip_publication_state_check' optional property (structure field 'propiedades') to force skip publication state (Biliography authors for example)
+
+	
+	Valencia 14-01-2021 5.7.28
+		Unify diffusion property name from 'skip_publication_state_check' to 'is_publicable'
+
+	
+	Valencia 14-01-2021 5.7.29
+		Propagated diffusion 'is_publicable' behavior to all diffusion class methods that use publication check to locators data 
+		
 
 
 	WORK IN PROGRESS
@@ -2020,12 +2037,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.24';
+	$DEDALO_VERSION = '5.7.29';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-01-2021');
+	define('DEDALO_BUILD'	, '14-01-2021');
 
 
 

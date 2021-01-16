@@ -20,7 +20,7 @@
 	print "data-from_modo=\"{$from_modo}\" ";
 	print "data-dato='{$dato_json}' ";
 	print "data-component_name=\"{$component_name}\" ";
-	print "data-component_info='{$component_info}' ";
+	print 'data-component_info=\''.$component_info.'\' ';
 
 	// service autocomplete options
 	print "data-search_sections='". json_encode($search_sections)."' ";
