@@ -2042,7 +2042,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-01-2021');
+	define('DEDALO_BUILD'	, '16-01-2021');
 
 
 
