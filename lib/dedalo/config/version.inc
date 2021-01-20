@@ -2016,6 +2016,11 @@
 	Valencia 14-01-2021 5.7.29
 		Propagated diffusion 'is_publicable' behavior to all diffusion class methods that use publication check to locators data 
 		
+	
+	Valencia 20-01-2021 5.7.30
+		Added file dd_renderers.css to component_html_text_editor_default.css
+		Removed component_html_text remove chars (\r\n|\n|\r) options on save to preserve html tabs and returns
+		
 
 
 	WORK IN PROGRESS
@@ -2037,12 +2042,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.29';
+	$DEDALO_VERSION = '5.7.30';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '16-01-2021');
+	define('DEDALO_BUILD'	, '20-01-2021');
 
 
 
