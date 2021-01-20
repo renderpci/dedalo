@@ -1,0 +1,236 @@
+/**
+* DD_RENDERERS
+*/
+.button_icon {
+  background-repeat: no-repeat;
+  background-position: center center;
+  width: 1.25em;
+  height: 1.25em;
+  cursor: pointer;
+  background-size: 71%;
+  background-color: #c8c8c87d;
+  border-radius: 2px;
+}
+.button_icon:active {
+  opacity: 0.5;
+}
+.button_icon:hover {
+  opacity: 1;
+}
+.button_icon_simple {
+  background-repeat: no-repeat;
+  background-position: center center;
+  width: 1em;
+  height: 1em;
+  cursor: pointer;
+  background-size: contain;
+  opacity: 0.7;
+}
+.button_icon_simple:active {
+  opacity: 0.5;
+}
+.button_icon_simple:hover {
+  opacity: 1;
+}
+.monospace_text {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 1.25;
+}
+.code_text {
+  background-color: #fdfdfd;
+  border: 1px solid #dae0e7;
+}
+.render_child_default.inside {
+  margin-left: 4em;
+}
+@media screen and (max-width: 736px) {
+  .render_child_default.inside {
+    margin-left: 1em;
+  }
+}
+.render_child_default.inside .category-title {
+  font-size: 1.6em;
+}
+.render_child_default.inside .dd_file_name {
+  font-size: 1em;
+}
+.render_item_feature {
+  -webkit-transition: background-color 300ms linear;
+  -ms-transition: background-color 300ms linear;
+  transition: background-color 300ms linear;
+  padding: 0;
+  padding-top: 1em;
+  cursor: pointer;
+}
+.render_item_feature:hover {
+  background-color: #f6f6f6;
+}
+.render_item_feature > div {
+  margin: 0;
+}
+.render_link {
+  margin-bottom: 4em;
+}
+.render_steps > * {
+  position: relative;
+}
+.render_steps .DES_strong {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid #808488;
+  display: block;
+  text-align: center;
+  line-height: 24px;
+  display: inline-block;
+  font-weight: 400;
+}
+.is_link {
+  cursor: pointer;
+}
+.toggle_content:after {
+  content: " ";
+  background-image: url("../../assets/img/arrow-right.svg");
+  background-repeat: no-repeat;
+  background-size: contain;
+  transform: rotate(-90deg);
+  display: block;
+  width: 1em;
+  height: 1em;
+  float: right;
+  cursor: pointer;
+  opacity: 0.45;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.toggle_content:after:active {
+  opacity: 0.2;
+}
+.toggle_content:after:hover {
+  opacity: 1;
+}
+.toggle_content.closed:after {
+  transform: rotate(90deg);
+}
+.dd_file_name {
+  display: block;
+  width: 100%;
+  padding: 0.5em;
+  padding-left: 0;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.5;
+}
+.dd_step {
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  border: 1px solid #808488;
+  display: block;
+  text-align: center;
+  line-height: 1.5em;
+  display: inline-block;
+  font-weight: 300;
+  padding: 0;
+  margin-right: 0.25em;
+  vertical-align: bottom;
+}
+.dd_unix_command {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 1.25;
+  background-color: #fdfdfd;
+  border: 1px solid #dae0e7;
+  background-color: #18201d;
+  display: block;
+  width: 100%;
+  padding: 0.75em;
+  font-size: 0.9em;
+}
+.dd_config_param {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 1.25;
+  padding-top: 1em;
+  padding-bottom: 1em;
+}
+.dd_config_param_format {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 1.25;
+  padding-top: 1em;
+  padding-bottom: 1em;
+}
+.dd_config_param_ex {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 1.25;
+  background-color: #fdfdfd;
+  border: 1px solid #dae0e7;
+  display: block;
+  width: 100%;
+  padding: 0.75em;
+  font-size: 0.9em;
+}
+.dd_note_green {
+  margin-bottom: 30px;
+  padding: 20px 20px 20px 25px;
+  border: 1px solid #cbd3dd;
+  border-radius: 3px;
+  box-shadow: inset 5px 0 0 0 #ff530d;
+  position: relative;
+  box-shadow: inset 5px 0 0 0 #4b5;
+}
+.dd_table_two_columns {
+  width: 100%;
+  margin-bottom: 20px;
+  max-width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background-color: transparent;
+}
+.dd_table_two_columns th {
+  padding: 12px;
+  font-weight: 300;
+  line-height: 1.42857143;
+  vertical-align: bottom;
+  text-align: left;
+  font-size: 1.125em;
+  border-bottom: 1px solid #cbd3dd;
+}
+.dd_table_two_columns td {
+  padding: 12px;
+  font-weight: 300;
+  line-height: 1.42857143;
+  vertical-align: top;
+  border-top: 1px solid #cbd3dd;
+}
+.dd_table_two_columns thead > tr > th {
+  font-weight: 400;
+}
+.dd_table_two_columns tbody > tr:nth-of-type(odd) {
+  background-color: #f6f7f8;
+}
