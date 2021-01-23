@@ -170,7 +170,7 @@ class search_development2 {
 
 		# Set skip_projects_filter. Default is false
 		$this->skip_projects_filter = isset($this->search_query_object->skip_projects_filter) ? $this->search_query_object->skip_projects_filter : false;
-		$ar_tables_skip_prejects = [
+		$ar_tables_skip_projects = [
 			'matrix_list',
 			'matrix_dd',
 			'matrix_hierarchy',
@@ -179,7 +179,7 @@ class search_development2 {
 			'matrix_layout',
 			'matrix_layout_dd'
 		];
-		if (in_array($this->matrix_table, $ar_tables_skip_prejects, true)) {
+		if (in_array($this->matrix_table, $ar_tables_skip_projects, true)) {
 			$this->skip_projects_filter = true; // Skip filter
 		}
 
