@@ -2020,6 +2020,11 @@
 	Valencia 20-01-2021 5.7.30
 		Added file dd_renderers.css to component_html_text_editor_default.css
 		Removed component_html_text remove chars (\r\n|\n|\r) options on save to preserve html tabs and returns
+
+
+	Valencia 23-01-2021 5.7.31
+		Added config constant SECTION_SKIP_PROJECT_FILTER to allow overwrite section filter on selected sections (mdcat requirement)
+		SECTION_SKIP_PROJECT_FILTER is checked in search_development2 class
 		
 
 
@@ -2042,12 +2047,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.30';
+	$DEDALO_VERSION = '5.7.31';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-01-2021');
+	define('DEDALO_BUILD'	, '23-01-2021');
 
 
 

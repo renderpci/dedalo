@@ -183,6 +183,11 @@ class search_development2 {
 			$this->skip_projects_filter = true; // Skip filter
 		}
 
+		// SECTION_SKIP_PROJECT_FILTER (defined in config, overrides skip_projects_filter value)
+			if (defined('SECTION_SKIP_PROJECT_FILTER') && in_array($this->main_section_tipo, SECTION_SKIP_PROJECT_FILTER)) {
+				$this->skip_projects_filter = true;
+			}
+
 
 		return true;
 	}//end set_up
