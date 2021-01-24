@@ -2025,6 +2025,10 @@
 	Valencia 23-01-2021 5.7.31
 		Added config constant SECTION_SKIP_PROJECT_FILTER to allow overwrite section filter on selected sections (mdcat requirement)
 		SECTION_SKIP_PROJECT_FILTER is checked in search_development2 class
+
+
+	Valencia 24-01-2021 5.7.32
+		Clean and optimize code of propagate_component_dato_to_relations_table methods and tools
 		
 
 
@@ -2047,12 +2051,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.31';
+	$DEDALO_VERSION = '5.7.32';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-01-2021');
+	define('DEDALO_BUILD'	, '24-01-2021');
 
 
 

@@ -1321,32 +1321,34 @@ class tool_administration extends tool_common {
 	* @return
 	*/
 	public static function generate_relations_table_data( $tables='*' ) {
+		
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= array('Error. Request failed '.__METHOD__);
 
 		$ar_msg = array();
 
-		if ($tables!=='*') {
-			$ar_tables = [];
-			$tables = explode(',', $tables);
-			foreach ($tables as $key => $table) {
-				$ar_tables[] = trim($table);
+		// tables
+			if ($tables!=='*') {
+				$ar_tables = [];
+				$tables = explode(',', $tables);
+				foreach ($tables as $key => $table) {
+					$ar_tables[] = trim($table);
+				}
 			}
-		}
+			if (empty($ar_tables)) {
+				$ar_tables = tool_administration::$ar_tables_with_relations;
+			}
 
-		if (empty($ar_tables)) {
-			$ar_tables = tool_administration::$ar_tables_with_relations;
-		}
+		// relations. truncate table and reset sequences
+			if ($tables==='*') {
+				# truncate current table data
+				$strQuery 	= "TRUNCATE \"relations\";";
+				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
 
-		if ($tables==='*') {
-			# truncate current table data
-			$strQuery 	= "TRUNCATE \"relations\";";
-			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-
-			$strQuery 	= "ALTER SEQUENCE relations_id_seq RESTART WITH 1;";
-			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-		}
+				$strQuery 	= "ALTER SEQUENCE relations_id_seq RESTART WITH 1;";
+				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+			}
 
 
 		foreach ($ar_tables as $key => $table) {
@@ -1354,79 +1356,84 @@ class tool_administration extends tool_common {
 			$counter = 1;
 
 			// Get last id in the table
-			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
-			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-			$rows 		= pg_fetch_assoc($result);
-			if (!$rows) {
-				continue;
-			}
-			$max 		= $rows['id'];
-
-			$min = 1;
-			if ($table==='matrix_users') {
-				$min = -1;
-			}
-
-			// iterate from 1 to last id
-			for ($i=$min; $i<=$max; $i++) {
-
-				$strQuery 	= "SELECT section_id, section_tipo, datos FROM $table WHERE id = $i";
-				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if(!$result) {
-					$msg = "Failed Search id $i. Data is not found.";
-					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+				$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+				$rows		= pg_fetch_assoc($result);
+				if (!$rows) {
 					continue;
 				}
-				$n_rows = pg_num_rows($result);
+				$max = $rows['id'];
 
-				if ($n_rows<1) continue;
+				$min = 1;
+				if ($table==='matrix_users') {
+					$min = -1;
+				}
 
-				while($rows = pg_fetch_assoc($result)) {
+			// iterate ordered rows from 1 to last id
+				for ($i=$min; $i<=$max; $i++) {
 
-					$section_id 	= $rows['section_id'];
-					$section_tipo 	= $rows['section_tipo'];
-					$datos 			= json_decode($rows['datos']);
+					$strQuery	= "SELECT section_id, section_tipo, datos FROM $table WHERE id = $i";
+					$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+					if(!$result) {
+						$msg = "Failed Search id $i. Data is not found.";
+						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+						continue;
+					}
+					$n_rows = pg_num_rows($result);
 
-					if (!empty($datos) && isset($datos->relations)) {
+					if ($n_rows<1) continue;
 
-						$component_dato = [];
-						foreach ($datos->relations as $key => $current_locator) {
-							if (isset($current_locator->from_component_tipo)) {
-								$component_dato[$current_locator->from_component_tipo][] = $current_locator;
-							}else{
-								debug_log(__METHOD__." Error on get from_component_tipo of locator $table - id:$id (ignored) ".to_string($current_locator), logger::ERROR);
+					while($rows = pg_fetch_assoc($result)) {
+
+						$section_id 	= $rows['section_id'];
+						$section_tipo 	= $rows['section_tipo'];
+						$datos 			= json_decode($rows['datos']);
+
+						if (!empty($datos) && isset($datos->relations)) {
+
+							$component_dato = [];
+							foreach ($datos->relations as $key => $current_locator) {
+								if (isset($current_locator->from_component_tipo)) {
+									$component_dato[$current_locator->from_component_tipo][] = $current_locator;
+								}else{
+									debug_log(__METHOD__." Error on get from_component_tipo of locator $table - id:$id (ignored) ".to_string($current_locator), logger::ERROR);
+								}
 							}
+
+							foreach ($component_dato as $from_component_tipo => $ar_locators) {
+								$propagate_options = new stdClass();
+									$propagate_options->ar_locators			= $ar_locators;
+									$propagate_options->section_id			= $section_id;
+									$propagate_options->section_tipo		= $section_tipo;
+									$propagate_options->from_component_tipo	= $from_component_tipo;
+								$propagate_response = search_development2::propagate_component_dato_to_relations_table( $propagate_options );
+							}
+
+						}else{
+							debug_log(__METHOD__." ERROR: Empty datos from: $table $section_tipo $section_id ".to_string(), logger::ERROR);
 						}
-
-						foreach ($component_dato as $from_component_tipo => $ar_locators) {
-							$propagate_options = new stdClass();
-								$propagate_options->ar_locators			= $ar_locators;
-								$propagate_options->section_id			= $section_id;
-								$propagate_options->section_tipo		= $section_tipo;
-								$propagate_options->from_component_tipo	= $from_component_tipo;
-							$propagate_response = search_development2::propagate_component_dato_to_relations_table( $propagate_options );
+					}
+					if(SHOW_DEBUG===true) {
+						# Show log msg every 100 id
+						if ($counter===1) {
+							debug_log(__METHOD__." Updated section data table $table $i".to_string(), logger::DEBUG);
 						}
+						$counter++;
+						if ($counter>300) {
+							$counter = 1;
+						}
+					}
 
-					}else{
-						debug_log(__METHOD__." ERROR: Empty datos from: $table $section_tipo $section_id ".to_string(), logger::ERROR);
-					}
-				}
-				if(SHOW_DEBUG===true) {
-					# Show log msg every 100 id
-					if ($counter===1) {
-						debug_log(__METHOD__." Updated section data table $table $i".to_string(), logger::DEBUG);
-					}
-					$counter++;
-					if ($counter>300) {
-						$counter = 1;
-					}
-				}
+					#break;
+				}//end for ($i=$min; $i<=$max; $i++)
+			
+			// debug msg
+				$response->msg[] = " Updated table data table $table ";			
+				debug_log(__METHOD__." Updated table data table $table  ", logger::WARNING);
+				#break; // stop now
 
-				#break;
-			}//end for ($i=$min; $i<=$max; $i++)
-			$response->msg[] = " Updated table data table $table ";
-			debug_log(__METHOD__." Updated table data table $table  ", logger::WARNING);
-			#break; // stop now
+			// Forces collection of any existing garbage cycles
+				gc_collect_cycles();
 
 		}//end foreach ($ar_tables as $key => $table)
 
