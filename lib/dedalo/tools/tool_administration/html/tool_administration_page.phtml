@@ -238,9 +238,9 @@
 			# PROPAGATE_RELATIONS
 				$html   .= "<div class=\"panel_option form-inline\">";
 				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
-				$html   .= "  <span>".label::get_label('propagar_relaciones')."</span>";
+				$html   .= "  <span>".label::get_label('propagar_relaciones')." (* for all tables)</span>";
 				$html   .= " <div class=\"panel_option_subcontent\">";
-				$html   .= "  <input type=\"text\" id=\"propagate_relations_tables\" class=\"form-control input-sm\" style=\"width:50%\" autocomplete=\"off\" placeholder=\"".label::get_label('tablas')." (you can use sequences like 'matrix,matrix_list')\" />";
+				$html   .= "  <input type=\"text\" id=\"propagate_relations_tables\" class=\"form-control input-sm\" style=\"width:50%\" autocomplete=\"off\" placeholder=\"".label::get_label('tablas')." (you can use sequences like 'matrix,matrix_list' or * to regenerate all tables and sequences)\" />";
 				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Ok\" data-mode=\"propagate_relations\" onclick=\"tool_administration.propagate_relations(this, event)\" />";
 				$html   .= "  <div id=\"propagate_relations_response\"></div>";
 				$html   .= " </div>";#end panel_option_subcontent

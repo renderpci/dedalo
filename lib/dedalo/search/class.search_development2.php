@@ -2953,15 +2953,15 @@ class search_development2 {
 	public static function propagate_component_dato_to_relations_table( $request_options ) {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= array('Error. Request failed '.__METHOD__);
+			$response->result	= false;
+			$response->msg		= array('Error. Request failed '.__METHOD__);
 
 		// options
 			$options = new stdClass();
-				$options->ar_locators 		  = null;
-				$options->section_tipo 		  = null;
-				$options->section_id 		  = null;
-				$options->from_component_tipo = null;
+				$options->ar_locators			= null;
+				$options->section_tipo			= null;
+				$options->section_id			= null;
+				$options->from_component_tipo	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			if (strpos($options->section_id, DEDALO_SECTION_ID_TEMP)!==false) {
@@ -2978,69 +2978,46 @@ class search_development2 {
 			}
 
 		// sort vars
-			$table 				 = 'relations';
-			$section_id 		 = $options->section_id;
-			$section_tipo 		 = $options->section_tipo;
-			$from_component_tipo = $options->from_component_tipo;
+			$table					= 'relations';
+			$section_id				= $options->section_id;
+			$section_tipo			= $options->section_tipo;
+			$from_component_tipo	= $options->from_component_tipo;
 
 		// DELETE . Remove all relations of current component
 			$strQuery 	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
 			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
 
 		// INSERT . Create all relations again (multiple)
-			/* Old way, one insert by record
-				foreach ((array)$options->ar_locators as $key => $locator) {
-
-					if(!isset($locator->section_tipo)) {
-						debug_log(__METHOD__." Error. empty section_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
-						continue;
-					}
-
-					$target_section_tipo = $locator->section_tipo;
-					$target_section_id 	 = $locator->section_id;
-					#$from_component_tipo = $locator->from_component_tipo; // Already defined before
-
-					# INSERT . Create new
-					$strQuery = "INSERT INTO $table (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id";
-					# Exec query
-					$result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $target_section_id, $target_section_tipo, $from_component_tipo ));
-					if(!$result) {
-						$msg = " Failed Insert relations record - $strQuery";
-						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-						$response->msg[] = $msg;
-					}else{
-						$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
-						$response->msg[] = $msg;
-						if(SHOW_DEBUG===true) {
-							if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-								$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
-								debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
-							}
-						}
-					}
-				}
-				*/
 			$ar_insert_values = [];
 			foreach ((array)$options->ar_locators as $key => $locator) {
 
-				if (empty($locator)) {
-					debug_log(__METHOD__." Error. empty locator. Ignored relations insert empty locator.", logger::ERROR);
-					continue;
-				}
+				// empty locator case
+					if (empty($locator)) {
+						debug_log(__METHOD__." Error. empty locator. Ignored relations insert empty locator.", logger::ERROR);
+						continue;
+					}
 
-				if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
-					debug_log(__METHOD__." Error. empty section_tipo or section_id. Ignored relations insert locator: ".to_string($locator), logger::ERROR);
-					continue;
-				}
-				$target_section_tipo  = $locator->section_tipo;
-				$target_section_id 	  = $locator->section_id;
+				// bad formed locator case
+					if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
+						debug_log(__METHOD__." Error. empty section_tipo or section_id. Ignored relations insert locator: ".to_string($locator), logger::ERROR);
+						continue;
+					}
 
-				// avoid save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO)
-				if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO || $target_section_tipo===DEDALO_SECTION_USERS_TIPO) {
-					continue;
-				}
+				$target_section_tipo	= $locator->section_tipo;
+				$target_section_id		= $locator->section_id;
 
-				$ar_insert_values[]   = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
+				// check vars format
+					if (!is_numeric($target_section_id)) {
+						debug_log(__METHOD__." Error. invalid target_section_id. Ignored relations insert locator: ".to_string($locator), logger::ERROR);
+						continue;
+					}
+
+				// DEDALO_SECTION_SI_NO_TIPO. Avoid save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO)
+					if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO || $target_section_tipo===DEDALO_SECTION_USERS_TIPO) {
+						continue;
+					}
+
+				$ar_insert_values[] = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
 			}
 			# Exec query (all records at once)
 				if (!empty($ar_insert_values)) {
@@ -3063,9 +3040,9 @@ class search_development2 {
 					}
 
 					// response
-						$response->result = true;
-						$response->msg[0] = "Ok. Relations row successfully"; // Override first message
-						$response->msg    = "<br>".implode('<br>', $response->msg);
+						$response->result	= true;
+						$response->msg[0]	= "Ok. Relations row successfully"; // Override first message
+						$response->msg		= "<br>".implode('<br>', $response->msg);
 				}
 
 
