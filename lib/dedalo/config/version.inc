@@ -2035,6 +2035,7 @@
 		Added specific render_list_value to component_html_text to strip tags value (avoid problems with unclosed tags in list)
 		Updated Dédalo publication api docu 1.0.12 => 1.0.13
 		Clean controllers code
+
 		
 
 
@@ -2058,12 +2059,12 @@
 
 	# Version
 	$DEDALO_VERSION = '5.7.33';
+
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
 	define('DEDALO_BUILD'	, '25-01-2021');
-
 
 
 	/*
