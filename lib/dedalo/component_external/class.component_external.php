@@ -94,7 +94,7 @@ class component_external extends component_common {
 
 		// check response
 			if (empty($response)) {
-				debug_log(__METHOD__." ERROR. Empty response from external_data".to_string(), logger::ERROR);
+				debug_log(__METHOD__." ERROR. Empty response from external_data [$entity] - options: ".to_string($options), logger::ERROR);
 				return null;
 			}
 
