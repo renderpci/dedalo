@@ -2036,7 +2036,12 @@
 		Updated Dédalo publication api docu 1.0.12 => 1.0.13
 		Clean controllers code
 
-		
+	
+	Valencia 25-01-2021 5.7.34
+		Extends error log information fro debug in class.component_external.php
+		Added timeout to all curl calls to avoid long delay in bad connection scenarios
+
+
 
 
 	WORK IN PROGRESS
@@ -2058,7 +2063,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.33';
+	$DEDALO_VERSION = '5.7.34';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
