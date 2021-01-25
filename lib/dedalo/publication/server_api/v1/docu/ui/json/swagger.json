@@ -1,9 +1,9 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.12",
-    "title" : "Dédalo Web REST API 1.0.12",
-    "description" : "Builds Public Dédalo data for publication. <br>Use this online tool to test your data and remember always write your <i>Auth code</i> when executes a try call.<br> <strong>This API is focused to Oral History archives and is for general pourposes.<br>If you need special features or custom results, you are wellcome to join API develop team contacting with the source developers (aka Alex&Paco)</strong> in webmaster@render.es",
+    "version" : "1.0.13",
+    "title" : "Dédalo Web REST API 1.0.13",
+    "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
       "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
@@ -217,7 +217,7 @@
         }, {
           "name" : "sql_filter",
           "in" : "query",
-          "description" : "Custom query added to standar filter",
+          "description" : "Custom query added to standard filter",
           "required" : false,
           "type" : "string",
           "format" : "string"
@@ -233,7 +233,7 @@
         }, {
           "name" : "limit",
           "in" : "query",
-          "description" : "Maximun records returned in query. 0 for no limit",
+          "description" : "Maximum records returned in query. 0 for no limit",
           "required" : false,
           "type" : "number",
           "format" : "int",
@@ -269,14 +269,14 @@
         }, {
           "name" : "resolve_portals_custom",
           "in" : "query",
-          "description" : "Resolve requested portals only. Use json map object like '{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}' where key is column name and value is target table. To resolve deeper, use format '{\"table.column\":\"table\"}'",
+          "description" : "Resolve requested portals only. Use a json map object like '{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}' where key is column name and value is target table. To resolve deeper, use format '{\"table.column\":\"table\"}'",
           "required" : false,
           "type" : "string",
           "format" : "string"
         }, {
           "name" : "map",
           "in" : "query",
-          "description" : "json representation of array ob objects like [{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}]",
+          "description" : "json representation of array of objects like [{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}]",
           "required" : false,
           "type" : "string",
           "format" : "string"
@@ -355,7 +355,7 @@
     "/thesaurus_root_list" : {
       "post" : {
         "summary" : "Get first level of terms from thesaurus",
-        "description" : "Return a array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.",
+        "description" : "Return an array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -484,7 +484,7 @@
         }, {
           "name" : "q",
           "in" : "query",
-          "description" : "string to search in database. Minimun 3 chars for full text search",
+          "description" : "string to search in database. Minimum 3 chars for full text search",
           "required" : true,
           "type" : "string",
           "default" : "term"
@@ -505,7 +505,7 @@
         }, {
           "name" : "tree_root",
           "in" : "query",
-          "description" : "Defines first element from build the hierarchy tree when show the reults. Accepted values first_parent | last_parent . Default is last_parent",
+          "description" : "Defines first element from build the hierarchy tree when showing the results. Accepted values first_parent | last_parent . Default is last_parent",
           "required" : false,
           "type" : "string",
           "format" : "string"
@@ -537,7 +537,7 @@
     "/thesaurus_autocomplete" : {
       "post" : {
         "summary" : "Predictive autocomplete search",
-        "description" : "Search string in database (begings with $q) and get array of max 25 records",
+        "description" : "Search string in database (begins with $q) and get array of max 25 records",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -554,7 +554,7 @@
         }, {
           "name" : "q",
           "in" : "query",
-          "description" : "string to search in database. Minimun 3 chars for full text search",
+          "description" : "string to search in database. Minimum 3 chars for full text search",
           "required" : true,
           "type" : "string",
           "default" : "term"
@@ -687,7 +687,7 @@
         }, {
           "name" : "ar_locators",
           "in" : "query",
-          "description" : "JSON ecoded array of locator objects like [{\"type\":\"dd96\",\"tag_id\":\"2\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"6\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]",
+          "description" : "JSON encoded array of locator objects like [{\"type\":\"dd96\",\"tag_id\":\"2\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"6\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]",
           "type" : "string",
           "required" : true,
           "default" : "[{\"type\":\"dd96\",\"tag_id\":\"1\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"1\",\"section_id\":\"4\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"3\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]"
@@ -831,7 +831,7 @@
         }, {
           "name" : "apperances_limit",
           "in" : "query",
-          "description" : "Max number of apperances (matches) calculated. Default is 1",
+          "description" : "Max number of appearances (matches) calculated. Default is 1",
           "type" : "integer",
           "format" : "int",
           "required" : false
@@ -938,7 +938,7 @@
     },
     "/global_search" : {
       "post" : {
-        "summary" : "Find word/s in table global_search. Require special server config!",
+        "summary" : "Find word/s in table global_search. Require a special server config!",
         "description" : "Exec a search against full_data column in global_search table",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
@@ -1009,7 +1009,7 @@
     "/combi" : {
       "post" : {
         "summary" : "Combined calls to api in one request",
-        "description" : "Exec an array of api request in only one call to server.",
+        "description" : "Exec an array of api requests in only one call to the server.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
