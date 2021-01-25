@@ -65,4 +65,3 @@
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
 	
-?>

@@ -2029,6 +2029,12 @@
 
 	Valencia 24-01-2021 5.7.32
 		Clean and optimize code of propagate_component_dato_to_relations_table methods and tools
+
+	
+	Valencia 25-01-2021 5.7.33
+		Added specific render_list_value to component_html_text to strip tags value (avoid problems with unclosed tags in list)
+		Updated Dédalo publication api docu 1.0.12 => 1.0.13
+		Clean controllers code
 		
 
 
@@ -2051,12 +2057,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.32';
+	$DEDALO_VERSION = '5.7.33';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-01-2021');
+	define('DEDALO_BUILD'	, '25-01-2021');
 
 
 

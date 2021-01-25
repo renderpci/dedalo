@@ -39,7 +39,6 @@
   white-space: pre;
   word-spacing: normal;
   word-break: normal;
-  line-height: 1.25;
 }
 .code_text {
   background-color: #fdfdfd;
@@ -54,7 +53,7 @@
   }
 }
 .render_child_default.inside .category-title {
-  font-size: 1.6em;
+  font-size: 2.1em;
 }
 .render_child_default.inside .dd_file_name {
   font-size: 1em;
@@ -118,17 +117,61 @@
 .toggle_content.closed:after {
   transform: rotate(90deg);
 }
-.dd_file_name {
-  display: block;
+.row .row {
+  margin-bottom: 3em;
+}
+[class^="dd_"] {
+  margin-top: 17px;
+  margin-bottom: 17px;
   width: 100%;
-  padding: 0.5em;
-  padding-left: 0;
+}
+[class^="dd_"] > .value > * {
+  line-height: inherit;
+  margin: inherit;
+  font-weight: inherit;
+  font-size: inherit;
+}
+[class^="dd_"] > .row {
+  margin-top: 17px;
+}
+.dd_text {
+  width: auto;
+}
+.dd_text > .value {
+  font-size: 1.1em;
+  font-weight: 300;
+  line-height: 1.5;
+}
+.dd_heading_1 {
+  margin: 0;
+  margin-bottom: 25px;
+  padding: 1em;
+  border: 1px solid #eeeeee;
+  border-radius: 3px;
+}
+.dd_heading_1 > .value {
+  font-size: 2em;
+  line-height: 1.7em;
+}
+.dd_heading_1 > .row {
+  margin-bottom: 0;
+}
+.dd_file_name {
+  margin: 0;
+}
+.dd_file_name > .value {
+  width: 100%;
   font-size: 1.2em;
   font-weight: 700;
   color: #333;
   line-height: 1.5;
 }
 .dd_step {
+  width: auto;
+  float: left;
+  margin-right: 0.5em;
+}
+.dd_step > .value {
   width: 1.5em;
   height: 1.5em;
   border-radius: 50%;
@@ -138,81 +181,83 @@
   line-height: 1.5em;
   display: inline-block;
   font-weight: 300;
-  padding: 0;
-  margin-right: 0.25em;
   vertical-align: bottom;
+  padding: 0;
+  float: left;
 }
 .dd_unix_command {
+  margin-bottom: 0;
+  margin-top: 0;
+}
+.dd_unix_command > .value {
   font-family: Consolas, Monaco, 'Andale Mono', monospace;
   direction: ltr;
   text-align: left;
   white-space: pre;
   word-spacing: normal;
   word-break: normal;
-  line-height: 1.25;
   background-color: #fdfdfd;
   border: 1px solid #dae0e7;
-  background-color: #18201d;
+  background-color: #5b5b5b;
+  color: #ececec;
+  display: block;
+  font-size: 0.9em;
+  width: auto;
+  padding: 0.5em;
+}
+.dd_unix_command > .value > * {
+  line-height: initial;
+  margin: initial;
+}
+.dd_config_param > .value {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+.dd_config_param_format > .value {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+.dd_config_param_ex > .value {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  background-color: #fdfdfd;
+  border: 1px solid #dae0e7;
   display: block;
   width: 100%;
   padding: 0.75em;
   font-size: 0.9em;
 }
-.dd_config_param {
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  direction: ltr;
-  text-align: left;
-  white-space: pre;
-  word-spacing: normal;
-  word-break: normal;
-  line-height: 1.25;
-  padding-top: 1em;
-  padding-bottom: 1em;
-}
-.dd_config_param_format {
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  direction: ltr;
-  text-align: left;
-  white-space: pre;
-  word-spacing: normal;
-  word-break: normal;
-  line-height: 1.25;
-  padding-top: 1em;
-  padding-bottom: 1em;
-}
-.dd_config_param_ex {
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  direction: ltr;
-  text-align: left;
-  white-space: pre;
-  word-spacing: normal;
-  word-break: normal;
-  line-height: 1.25;
-  background-color: #fdfdfd;
-  border: 1px solid #dae0e7;
-  display: block;
-  width: 100%;
-  padding: 0.75em;
-  font-size: 0.9em;
-}
-.dd_note_green {
-  margin-bottom: 30px;
+.dd_note_green > .value {
   padding: 20px 20px 20px 25px;
   border: 1px solid #cbd3dd;
   border-radius: 3px;
-  box-shadow: inset 5px 0 0 0 #ff530d;
   position: relative;
   box-shadow: inset 5px 0 0 0 #4b5;
 }
-.dd_table_two_columns {
+.dd_table > .value {
   width: 100%;
-  margin-bottom: 20px;
   max-width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
   background-color: transparent;
 }
-.dd_table_two_columns th {
+.dd_table > .value th {
   padding: 12px;
   font-weight: 300;
   line-height: 1.42857143;
@@ -221,16 +266,24 @@
   font-size: 1.125em;
   border-bottom: 1px solid #cbd3dd;
 }
-.dd_table_two_columns td {
+.dd_table > .value td {
   padding: 12px;
   font-weight: 300;
   line-height: 1.42857143;
   vertical-align: top;
   border-top: 1px solid #cbd3dd;
 }
-.dd_table_two_columns thead > tr > th {
+.dd_table > .value thead > tr > th {
   font-weight: 400;
 }
-.dd_table_two_columns tbody > tr:nth-of-type(odd) {
+.dd_table > .value tbody > tr:nth-of-type(odd) {
   background-color: #f6f7f8;
+}
+.dd_inside {
+  margin-left: 4em;
+}
+@media screen and (max-width: 736px) {
+  .dd_inside {
+    margin-left: 1em;
+  }
 }
