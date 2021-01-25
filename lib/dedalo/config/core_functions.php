@@ -198,6 +198,9 @@ function file_get_contents_curl($url) {
 	# Avoid verify ssl certificates (very slow)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
+	// A given cURL operation should only take 4 seconds max.
+		curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+
 	$data = curl_exec($ch);
 	curl_close($ch);
 

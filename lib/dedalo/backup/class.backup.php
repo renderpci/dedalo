@@ -1321,6 +1321,9 @@ abstract class backup {
 		# Avoid verify ssl certificates (very slow)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
+		// A given cURL operation should only take 5 seconds max.
+		curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+
 		// execute post
 		$result = curl_exec($ch);
 		#debug_log(__METHOD__." result ".to_string($result), logger::DEBUG);
@@ -1423,6 +1426,9 @@ abstract class backup {
 
 		# Avoid verify ssl certificates (very slow)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+		// A given cURL operation should only take 4 seconds max.
+		curl_setopt($ch, CURLOPT_TIMEOUT, 4);
 
 		//execute post
 		$result = curl_exec($ch);
