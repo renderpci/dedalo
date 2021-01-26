@@ -2042,6 +2042,13 @@
 		Added timeout to all curl calls to avoid long delay in bad connection scenarios
 
 
+	Valencia 26-01-2021 5.7.36
+		Add time machine save_options additional checks before save time machine record.
+    	Avoid the creation of empty time machine records when section publication info is updated
+		Add widgets value check on component info get_diffusion_dato
+		Add component_lang value check on section save_component_dato
+		Fix a spelling mistake
+
 
 
 	WORK IN PROGRESS
@@ -2063,13 +2070,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.34';
+	$DEDALO_VERSION = '5.7.35';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '25-01-2021');
+	define('DEDALO_BUILD'	, '26-01-2021');
 
 
 	/*
