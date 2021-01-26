@@ -143,8 +143,21 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
 		# if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity') {
 		if($this->matrix_table!=='matrix_activity') {
-			# Exec time machine save and set returned id
-			$this->time_machine_last_id = $this->save_time_machine( $save_options );
+
+			// check time machine options values
+				// Time machine options default values
+				// $options->time_machine_data			= false;
+				// $options->time_machine_lang			= false;
+				// $options->time_machine_tipo			= false;
+				// $options->time_machine_section_id 	= (int)$this->section_id; // always
+			
+			if ( empty($save_options->time_machine_tipo) || $save_options->time_machine_data===false ) {
+				// case section is saved (update) not triggered by a component. For example, when updating section publication date (diffusion_info)
+				debug_log(__METHOD__." Ignored time machine save (empty time_machine_tipo or time_machine_data) - save_options: ".to_string($save_options), logger::DEBUG);
+			}else{
+				# Exec time machine save and set returned id
+				$this->time_machine_last_id = $this->save_time_machine( $save_options );
+			}			
 		}
 
 
