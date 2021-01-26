@@ -201,7 +201,17 @@ function file_get_contents_curl($url) {
 	// A given cURL operation should only take 4 seconds max.
 		curl_setopt($ch, CURLOPT_TIMEOUT, 4);
 
+	// error control
+		curl_setopt($ch,CURLOPT_FAILONERROR,true);
+
 	$data = curl_exec($ch);
+
+	// Check if any error occurred
+	if(curl_errno($ch) || $data===false){
+		$error = curl_error($ch);
+		debug_log(__METHOD__." +++++++++++++++++++++++++++++++++++++++ CURL ERROR ".to_string($error), logger::ERROR);
+	}	
+
 	curl_close($ch);
 
 	return $data;
