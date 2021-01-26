@@ -517,7 +517,7 @@ class css {
 			try {
 				$compiled_css = $less->compile( $less_code );
 			} catch (exception $e) {
-				debug_log(__METHOD__." Error en compile less: ".$e->getMessage(), logger::ERROR);
+				debug_log(__METHOD__." Error on compile less: ".$e->getMessage(), logger::ERROR);
 				echo "fatal error: " . $e->getMessage();
 			}
 
