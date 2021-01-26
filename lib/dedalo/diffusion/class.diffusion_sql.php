@@ -865,7 +865,7 @@ class diffusion_sql extends diffusion  {
 			#$section = section::get_instance($current_section_id, $section_tipo, $modo='list');
 			#$diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
 			if ($build_mode==='default') {
-				$section->bl_loaded_matrix_data = false; // force section to update dato from current database to prevent loose user changes on publication time lapse
+				$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 				$section->diffusion_info_add($diffusion_element_tipo);
 				$section->save_modified = false;
 				$section->Save();
@@ -974,7 +974,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 			$section = section::get_instance($options->section_id, $options->section_tipo, $modo='list', false);
-			$section->bl_loaded_matrix_data = false; // force section to update dato from current database to prevent loose user changes on publication time lapse
+			$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 			$section->diffusion_info_add($options->diffusion_element_tipo);
 			$section->save_modified = false;
 			$section->Save();
@@ -1347,6 +1347,9 @@ class diffusion_sql extends diffusion  {
 				throw new Exception("Error Processing Request. Sorry, array is not accepted to update_record anymore. Please use int as options->section_id ", 1);
 			}
 
+		// saves publication data (moved temporaly)
+			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+
 		// short vars
 			$section_tipo			= $options->section_tipo;
 			$section_id				= $options->section_id; // (!) can be an array too
@@ -1669,8 +1672,8 @@ class diffusion_sql extends diffusion  {
 
 		// $this->ar_published_records = $ar_resolved_static;
 
-		// saves publication data
-			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+		// // saves publication data
+		// 	diffusion::update_publication_data($options->section_tipo, $options->section_id);
 
 		// debug
 			if(SHOW_DEBUG===true) {

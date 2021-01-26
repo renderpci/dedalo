@@ -2049,6 +2049,10 @@
 		Add component_lang value check on section save_component_dato
 		Fix a spelling mistake
 
+	
+	Valencia 26-01-2021 5.7.36
+		Fix issue with 'saves publication data' that overwrites user modifications (moved temporaly)
+
 
 
 	WORK IN PROGRESS
@@ -2070,7 +2074,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.36';
+	$DEDALO_VERSION = '5.7.37';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
