@@ -91,16 +91,21 @@ class component_external extends component_common {
 				$url = $entity::build_row_request_url($options);
 				
 				$response = file_get_contents_curl($url);
+					dump($response, ' response ++ '.to_string());
 
 		// check response
 			if (empty($response)) {
-				debug_log(__METHOD__." ERROR. Empty response from external_data [$entity] - options: ".to_string($options), logger::ERROR);
+				debug_log(__METHOD__." ERROR. Empty response from external_data [$entity] [$uid] - options: ".to_string($options), logger::ERROR);
+				// cache
+				$data_from_remote_cache[$uid] = null;
 				return null;
 			}
 
 		// decode json response
 			if (!$response_obj=json_decode($response)) {
 				debug_log(__METHOD__." ERROR. Empty parse json response from external_data".to_string($response), logger::ERROR);
+				// cache
+				$data_from_remote_cache[$uid] = null;
 				return null;	
 			}
 
@@ -130,6 +135,10 @@ class component_external extends component_common {
 
 		// load data from remote
 			$row_data = $this->load_data_from_remote();
+
+			if (empty($row_data)) {
+				return null;
+			}
 
 		// properties
 			$properties = $this->get_propiedades();
@@ -168,7 +177,7 @@ class component_external extends component_common {
 				return $carry;				
 			});
 
-		#dump($dato, ' dato ++ '.to_string($this->tipo)); 
+			
 		return $dato;
 	}//end get_dato
 
