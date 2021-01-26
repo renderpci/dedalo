@@ -938,14 +938,14 @@ class diffusion_sql extends diffusion  {
 		$to_publish = true;
 
 		$options = new stdClass();
-			$options->component_publication_tipo = null;
-			$options->section_id 				 = null;
-			$options->section_tipo 				 = null;
-			$options->database_name 			 = null;
-			$options->table_name 			 	 = null;
-			$options->diffusion_element_tipo  	 = null;
-			$options->table_propiedades  	 	 = null;
-			$options->delete_previous  	 	 	 = true;
+			$options->component_publication_tipo	= null;
+			$options->section_id					= null;
+			$options->section_tipo					= null;
+			$options->database_name					= null;
+			$options->table_name					= null;
+			$options->diffusion_element_tipo		= null;
+			$options->table_propiedades				= null;
+			$options->delete_previous				= true;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		# Resolve table alias name

@@ -460,11 +460,11 @@ abstract class diffusion  {
 					$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					$data = new stdClass();
-						$data->element_tipo = $element_tipo;
-						$data->name 		= $name;
-						$data->class_name 	= $diffusion_class_name;
-						$data->database_name= $diffusion_database_name;
-						$data->database_tipo= $diffusion_database_tipo;
+						$data->element_tipo		= $element_tipo;
+						$data->name				= $name;
+						$data->class_name		= $diffusion_class_name;
+						$data->database_name	= $diffusion_database_name;
+						$data->database_tipo	= $diffusion_database_tipo;
 							#dump($ar_diffusion_map->$diffusion_group_tipo[]=4, ' ar_diffusion_map_elements ++ '.to_string());
 
 					$ar_diffusion_map->{$diffusion_group_tipo}[] = $data;

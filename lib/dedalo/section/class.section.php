@@ -847,7 +847,7 @@ class section extends common {
 
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record trigered by one component
-
+			
 			if ($this->save_modified===false) {
 				// section dato only
 					$section_dato = (object)$this->get_dato();
@@ -2651,8 +2651,8 @@ class section extends common {
 
 		foreach((array)$inverse_locators as $locator) {
 
-			$current_section_tipo = $locator->from_section_tipo;
-			$current_section_id   = $locator->from_section_id;
+			$current_section_tipo	= $locator->from_section_tipo;
+			$current_section_id		= $locator->from_section_id;
 
 			$section = section::get_instance($current_section_id, $current_section_tipo, $modo='list');
 			$dato 	 = $section->get_dato();
