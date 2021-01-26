@@ -443,6 +443,10 @@ class section extends common {
 			throw new Exception("Error Processing Request: component_tipo is empty", 1);
 		}
 
+		if (empty($component_lang)) {
+			throw new Exception("Error Processing Request: component_lang is empty", 1);
+		}
+
 		if ($component_data_type==='relation') {
 			##
 			# RELATION COMPONENTS
