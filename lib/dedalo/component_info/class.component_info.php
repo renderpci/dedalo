@@ -142,28 +142,35 @@ class component_info extends component_common {
 
 		// dato. Dato has been set when widget html is generated
 			$dato = [];
-			foreach ($this->widgets as $current_widget) {
-
-				$widget_name = $current_widget->widget_name;
-				if (!in_array($widget_name, $options->widget_name)) {
-					continue;
-				}
-
-				if (!isset($current_widget->dato)) {
-					continue;
-				}
+			if (!isset($this->widgets)) {
 				
-				$current_dato_object = $current_widget->dato;
+				debug_log(__METHOD__." Error . widgets is not defined - get_diffusion_dato options ".to_string($options), logger::ERROR);
+				
+			}else{
 
-				$select_values = $options->select;
-				if (!empty($select_values)) {
-					foreach ($select_values as $name) {
-						if (property_exists($current_dato_object, $name)) {
-							$dato[] = $current_dato_object->{$name};
-						}
+				foreach ($this->widgets as $current_widget) {
+
+					$widget_name = $current_widget->widget_name;
+					if (!in_array($widget_name, $options->widget_name)) {
+						continue;
 					}
-				}else{
-					$dato[] = $current_dato_object;
+
+					if (!isset($current_widget->dato)) {
+						continue;
+					}
+					
+					$current_dato_object = $current_widget->dato;
+
+					$select_values = $options->select;
+					if (!empty($select_values)) {
+						foreach ($select_values as $name) {
+							if (property_exists($current_dato_object, $name)) {
+								$dato[] = $current_dato_object->{$name};
+							}
+						}
+					}else{
+						$dato[] = $current_dato_object;
+					}
 				}
 			}
 
