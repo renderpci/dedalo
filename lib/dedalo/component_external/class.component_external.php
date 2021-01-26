@@ -14,9 +14,9 @@ class component_external extends component_common {
 	*/
 	public function load_data_from_remote() {
 
-		$section_id 		 = $this->get_parent();
-		$section_tipo 		 = $this->section_tipo;
-		$lang 				 = DEDALO_DATA_LANG;
+		$section_id		= $this->get_parent();
+		$section_tipo	= $this->section_tipo;
+		$lang			= DEDALO_DATA_LANG;
 
 		// cache
 			static $data_from_remote_cache = [];
@@ -27,8 +27,8 @@ class component_external extends component_common {
 			}
 
 
-		$RecordObj_dd 		 = new RecordObj_dd($section_tipo);
-		$section_propiedades = $RecordObj_dd->get_propiedades(true);
+		$RecordObj_dd			= new RecordObj_dd($section_tipo);
+		$section_propiedades	= $RecordObj_dd->get_propiedades(true);
 
 		// format reference
 			# {
@@ -55,18 +55,18 @@ class component_external extends component_common {
 			}
 		
 		// properties external_data vars
-			$external_data  = $section_propiedades->external_data;
-			$api_url 		= $external_data->api_url;
-			$response_map 	= $external_data->response_map;
-			$entity 		= $external_data->entity;		
+			$external_data	= $section_propiedades->external_data;
+			$api_url		= $external_data->api_url;
+			$response_map	= $external_data->response_map;
+			$entity			= $external_data->entity;
 		
 			// fields
 				$ar_fields = [];
 				# get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false)
 				$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], true, true, true, false, false);
 				foreach ($ar_component_tipo as $component_tipo) {
-					$RecordObj_dd 		 	= new RecordObj_dd($component_tipo);
-					$component_propiedades 	= $RecordObj_dd->get_propiedades(true);
+					$RecordObj_dd			= new RecordObj_dd($component_tipo);
+					$component_propiedades	= $RecordObj_dd->get_propiedades(true);
 					if (empty($component_propiedades)) {
 						continue;
 					}
@@ -76,22 +76,21 @@ class component_external extends component_common {
 					});
 					if (!empty($field_name)) {
 						$ar_fields[] = $field_name;
-					}					
+					}
 				}
 
 			// call entity class to build custom api url
 				include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );		
 
 				$options = new stdClass();
-					$options->api_url 		= $api_url;
-					$options->ar_fields 	= $ar_fields;
-					$options->section_id 	= $section_id;
-					$options->lang 			= $lang;
+					$options->api_url		= $api_url;
+					$options->ar_fields		= $ar_fields;
+					$options->section_id	= $section_id;
+					$options->lang			= $lang;
 
 				$url = $entity::build_row_request_url($options);
 				
 				$response = file_get_contents_curl($url);
-					dump($response, ' response ++ '.to_string());
 
 		// check response
 			if (empty($response)) {
