@@ -2054,6 +2054,16 @@
 		Fix issue with 'saves publication data' that overwrites user modifications (moved temporaly)
 
 
+	Valencia 26-01-2021 5.7.37
+		Added component_external additional errors info and control when remote connection fails
+	
+
+	Valencia 27-01-2021 5.7.38
+		Fix error on blur element when component is deselected in lock-component process
+		Fix focus input issue in autocomplete when component is locked
+		Clean lock_components code
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -2074,13 +2084,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.37';
+	$DEDALO_VERSION = '5.7.38';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '26-01-2021');
+	define('DEDALO_BUILD'	, '27-01-2021');
 
 
 	/*
