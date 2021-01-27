@@ -2064,6 +2064,10 @@
 		Clean lock_components code
 
 
+	Valencia 27-01-2021 5.7.39
+		Fix issue with curl --max-time parameters versions compatibility (only integer are accepted in some versions)
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -2084,7 +2088,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.38';
+	$DEDALO_VERSION = '5.7.39';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
