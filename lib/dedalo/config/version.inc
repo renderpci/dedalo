@@ -2068,6 +2068,11 @@
 		Fix issue with curl --max-time parameters versions compatibility (only integer are accepted in some versions)
 
 
+	Valencia 27-01-2021 5.7.41
+		Fix issue with autocomplete activation (need focus and click to be activated)
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -2088,7 +2093,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.40';
+	$DEDALO_VERSION = '5.7.41';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
