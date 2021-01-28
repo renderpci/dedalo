@@ -66,6 +66,7 @@ lib/dedalo/extras/*
 !lib/dedalo/extras/mdcat
 !lib/dedalo/extras/numisdata
 !lib/dedalo/extras/muvaet
+!lib/dedalo/extras/dd
 
 # vendor ignore all except used public
 # vendor/*
