@@ -4,6 +4,9 @@
 	Plataforma Dédalo v4 Valencia 2012
 
 
+	[HISTORY]
+
+
 	Valencia 08-02-2012 v4.0b1
 		Añadida funcionalidad ( html_page.js -> document.activeElement.blur() ) de salvar el componente activo al abandonar la página (cerrar la ventana o volver atrás)
 
@@ -2076,9 +2079,15 @@
 		Fix lock components focus and blur issues
 
 
-	Valencia 29-01-2021 5.7.43	
+	Valencia 29-01-2021 5.7.43
 		Add load component call when component is locked to force update data
 
+
+	Valencia 29-01-2021 5.7.44
+		Add tool_administration Dédalo version history panel
+
+
+	[/HISTORY]
 
 
 
@@ -2101,7 +2110,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.43';
+	$DEDALO_VERSION = '5.7.44';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
