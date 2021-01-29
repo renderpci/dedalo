@@ -2076,6 +2076,10 @@
 		Fix lock components focus and blur issues
 
 
+	Valencia 29-01-2021 5.7.43	
+		Add load component call when component is locked to force update data
+
+
 
 
 	WORK IN PROGRESS
@@ -2097,7 +2101,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.42';
+	$DEDALO_VERSION = '5.7.43';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
