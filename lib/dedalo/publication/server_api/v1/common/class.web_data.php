@@ -2346,7 +2346,6 @@ class web_data {
 			$rd_options = new stdClass();
 				$rd_options->table 			= $options->table;
 				$rd_options->ar_fields 		= array('*');
-				#$rd_options->ar_fields 	= array('section_id','descriptor','tld','term_id',FIELD_TERM,'index','lang','childrens','related','time','space','code');
 				$rd_options->sql_filter 	= "`$field_term` LIKE '%".$q."%' " . $options->publication_filter_sql;
 				$rd_options->lang 			= $options->lang;
 				$rd_options->order 			= null;
@@ -2968,7 +2967,7 @@ class web_data {
 				$options->ar_fields				= array('*');
 				$options->only_descriptors		= true;
 				$options->remove_restricted		= true;
-				$options->remove_unused_terms	= false; // If true, exclude of results the childrens without indexations and childrens
+				$options->remove_unused_terms	= false; // If true, exclude of results the children without indexations and children
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$section_tipo = explode('_', $options->term_id)[0];
