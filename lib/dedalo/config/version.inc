@@ -2072,6 +2072,10 @@
 		Fix issue with autocomplete activation (need focus and click to be activated)
 
 
+	Valencia 29-01-2021 5.7.42
+		Fix lock components focus and blur issues
+
+
 
 
 	WORK IN PROGRESS
@@ -2093,13 +2097,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.41';
+	$DEDALO_VERSION = '5.7.42';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '27-01-2021');
+	define('DEDALO_BUILD'	, '29-01-2021');
 
 
 	/*
