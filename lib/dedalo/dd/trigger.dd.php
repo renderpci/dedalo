@@ -378,8 +378,6 @@ if($accion==='editTS') {
 	$parentInicial	= safe_xss($_POST['parentInicial']);
 	$parentPost		= safe_xss($_POST['parent']);	
 	$esdescriptor	= safe_xss($_POST['esdescriptor']);
-	$propiedades	= safe_xss($_POST['propiedades']);
-	$properties		= safe_xss($_POST['properties']);
 	$nHijos			= intval($nHijos);
 
 	# required fields
@@ -413,14 +411,20 @@ if($accion==='editTS') {
 		if(isset($_POST['modelo']))			$RecordObj_dd_edit->set_modelo( safe_xss($_POST['modelo']) );
 		if(isset($_POST['traducible']))		$RecordObj_dd_edit->set_traducible( safe_xss($_POST['traducible']) );
 	
-		// propiedades			
+		
+		if(isset($_POST['propiedades'])) {
+			$propiedades = (empty($_POST['propiedades']) || $_POST['propiedades']==='{}')
+				? null
+				: safe_xss($_POST['propiedades']);
 			$RecordObj_dd_edit->set_propiedades($propiedades);
-			
+		}
 
-		// properties
-			// if(!empty($properties) && $properties!=='{}') {
-				$RecordObj_dd_edit->set_properties($properties);
-			// }
+		if(isset($_POST['properties'])) {
+			$properties = (empty($_POST['properties']) || $_POST['properties']==='{}')
+				? null
+				: safe_xss($_POST['properties']);
+			$RecordObj_dd_edit->set_properties($properties);
+		}
 
 	# Verificamos si el padre asignado existe. (Antes verificamos el prefijo)
 	$RecordObj_dd_edit_parent	= new RecordObj_dd_edit($parentPost);
