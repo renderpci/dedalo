@@ -138,8 +138,11 @@ class menu extends common {
 								$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
 									$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
 									$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';
-									$menu_structure_html .= self::build_menu_link($structure_path, 'Structure');
+									$menu_structure_html .= self::build_menu_link('../ontology', 'Ontology');
 									$menu_structure_html .= '<ul>';
+									$menu_structure_html .= '<li>';
+									$menu_structure_html .= self::build_menu_link($structure_path, 'Structure');
+									$menu_structure_html .= '</li>';
 									$menu_structure_html .= '<li>';
 									$menu_structure_html .= self::build_menu_link($modelo_path, 'Model');
 									$menu_structure_html .= '</li>';
