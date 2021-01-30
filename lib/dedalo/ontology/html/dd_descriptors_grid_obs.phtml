@@ -1,0 +1,13 @@
+<tr >
+  <td class="td_paddind_right">
+	<div class="div_wraper">
+    <div class="left_div" style="padding-top:6px;"><?php echo $observaciones_title .' / '.$instruccion_para_indicador_title ?></div>
+    <div class="right_div">
+    	<textarea name="obs_<?php echo $id ?>" cols="" id="obs_<?php echo $id ?>" style="width:100%;"
+    	onfocus="myfocus(this)" onBlur="myblur(this);" 
+    	data-parent="<?php echo $parent_desc ?>" data-lang="<?php echo $lang ?>" data-tipo="obs"
+    	onChange="saveDescriptor(this);"><?php echo $obs ?></textarea>
+    </div>
+	</div>
+  </td>
+</tr>
