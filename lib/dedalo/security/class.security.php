@@ -482,4 +482,15 @@ class security {
 
 
 
+	/**
+	* IS_GLOBAL_ADMIN
+	* Alias of component_security_administrator::is_global_admin
+	*/
+	public static function is_global_admin($user_id) {
+		
+		return component_security_administrator::is_global_admin($user_id);
+	}//end is_global_admin
+
+
+
 }//end class

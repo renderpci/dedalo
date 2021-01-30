@@ -240,18 +240,18 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 							<?php #dump($propiedades, ' propiedades ++ '.to_string()); ?>
 							<div id="editor_json" class="editor_json_container"></div>
 							<script>
-							var propiedades_textarea_element = document.getElementById('propiedades')
-							  	propiedades_textarea_element.style.display = 'none';
-							  var options = {
+							const propiedades_textarea_element = document.getElementById('propiedades')
+							  	  propiedades_textarea_element.style.display = 'none';
+							  const options = {
 							    mode: 'code',
 							    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 							    error: function (err) {
 							      alert(err.toString());
 							    }
 							  };  
-							  // create the editor
-							  var container = document.getElementById('editor_json');
-							  var editor 	= new JSONEditor(container, options, <?php echo !empty($propiedades) ? (string)$propiedades : '""' ?>);
+							  // create json editor
+								const container	= document.getElementById('editor_json');
+								const editor	= new JSONEditor(container, options, <?php echo !empty($propiedades) ? (string)$propiedades : '""' ?>);
 							 	//console.log(editor);
 							  
 							// Send JSON text to input and force save

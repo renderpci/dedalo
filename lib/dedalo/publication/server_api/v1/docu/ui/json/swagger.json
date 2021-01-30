@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.13",
-    "title" : "Dédalo Web REST API 1.0.13",
+    "version" : "1.0.14",
+    "title" : "Dédalo Publication Server REST API 1.0.14",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -706,10 +706,10 @@
         }
       }
     },
-    "/thesaurus_childrens" : {
+    "/thesaurus_children" : {
       "post" : {
         "tags" : [ "Thesaurus" ],
-        "summary" : "Search all childrens of current term",
+        "summary" : "Search all children of current term",
         "description" : "Exec a records query in current term table to find records with data parent equal to current term_id",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
@@ -1017,7 +1017,7 @@
         }, {
           "name" : "ar_calls",
           "in" : "query",
-          "description" : "JSON stringified array of calls to api. Will be iterated and resolved in the server side. Example: [{\"id\":\"templates_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"template_map\",\"ar_fields\":[\"data\",\"name\"],\"lang\":\"lg-spa\"}},{\"id\":\"menu_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"ts_web\",\"ar_fields\":[\"section_id\",\"term_id\",\"term\",\"web_path\",\"parent\",\"childrens\",\"template_name\",\"titulo\",\"entradilla\",\"cuerpo\",\"norder\",\"imagen\"],\"lang\":\"lg-spa\"}}] ",
+          "description" : "JSON stringified array of calls to api. Will be iterated and resolved in the server side. Example: [{\"id\":\"templates_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"template_map\",\"ar_fields\":[\"data\",\"name\"],\"lang\":\"lg-spa\"}},{\"id\":\"menu_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"ts_web\",\"ar_fields\":[\"section_id\",\"term_id\",\"term\",\"web_path\",\"parent\",\"children\",\"template_name\",\"title\",\"abstract\",\"body\",\"norder\",\"image\"],\"lang\":\"lg-spa\"}}] ",
           "required" : true,
           "type" : "string",
           "format" : "string"

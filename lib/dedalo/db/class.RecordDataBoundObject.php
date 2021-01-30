@@ -228,7 +228,9 @@ abstract class RecordDataBoundObject {
 						$current_val = json_handler::encode($current_val);
 					}
 
-					if(is_int($current_val)) {		 // changed  from is_numeric to is_int (06-06-2016)
+					if(is_null($current_val)) {
+						$strQuery_set .= "\"$key\" = null, ";
+					}else if(is_int($current_val)) {		 // changed  from is_numeric to is_int (06-06-2016)
 						$strQuery_set .= "\"$key\" = $current_val, ";
 					}else{						
 						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data

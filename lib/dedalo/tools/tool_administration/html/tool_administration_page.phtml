@@ -574,7 +574,6 @@
 				$html   .= "</div>";
 
 
-
 		$html   .= "  </div>";//end panel-body
 		$html   .= "</div>";//end panel-primary
 
@@ -590,7 +589,7 @@
 			$html   .= "  <div class=\"panel-heading\">";
 			$html   .= "    <h3 class=\"panel-title\"> SEARCH QUERY OBJECT TEST ENVIROMENT </h3>";
 			$html   .= "  </div>";
-			$html   .= "  <div class=\"panel-body\">";
+			$html   .= "  <div class=\"panel-body\" style=\"display:none\">";
 
 				#
 				# FORCE_UNLOCK_ALL_COMPONENTS
@@ -640,7 +639,7 @@
 		$html   .= "  <div class=\"panel-heading\">";
 		$html   .= "    <h3 class=\"panel-title\"> USERS INFO </h3>";
 		$html   .= "  </div>";
-		$html   .= "  <div class=\"panel-body\">";
+		$html   .= "  <div class=\"panel-body\" style=\"display:none\">";
 
 			#
 			# FORCE_UNLOCK_ALL_COMPONENTS
@@ -672,13 +671,6 @@
 
 
 
-
-
-
-
-
-
-
 	#
 	# SYSTEM INFO
 	$html   .= "\n<div class=\"content_data block-content-2\" >";	// text_shadow_inset
@@ -689,7 +681,7 @@
 		$html   .= "    <h3 class=\"panel-title\"> SYSTEM INFO </h3>";
 		$html   .= "  </div>";
 		#$html   .= "  <div class=\"panel-body\">";
-		$html   .= "<ul class=\"list-group panel-body\">";
+		$html   .= "<ul class=\"list-group panel-body\" style=\"display:none\">";
 
 
 			#
@@ -849,7 +841,6 @@
 													 "mb_regex_encoding",
 													 $result
 													);
-
 
 
 			#
@@ -1019,6 +1010,31 @@
 														 $info." - ".$path,
 														 $result
 														);
+			
+
+		$html   .= "</ul>";//end list-group
+
+
+		#$html   .= "  </div>";//end panel-body
+		$html   .= "</div>";//end #system_info_content
+
+	$html .= "</div><!-- /content_data block-content-2 -->";
+
+
+
+
+	#
+	# DATABASE STATE
+	$html   .= "\n<div class=\"content_data block-content-2\" >";	// text_shadow_inset
+
+
+		$html   .= "<div class=\"panel panel-info\">";
+		$html   .= "  <div class=\"panel-heading\">";
+		$html   .= "    <h3 class=\"panel-title\"> DATABASE STATE </h3>";
+		$html   .= "  </div>";
+		#$html   .= "  <div class=\"panel-body\">";
+		$html   .= "<ul class=\"list-group panel-body\" style=\"display:none\">";
+			
 
 			#
 			# SECTIONS			
@@ -1096,6 +1112,52 @@
 
 
 
+
+	#
+	# VERSION HISTORY
+	$html   .= "\n<div class=\"content_data\" >";	// text_shadow_inset
+
+		# PANELS
+		$html   .= "<div class=\"panel panel-info\">";
+		$html   .= "  <div class=\"panel-heading\">";
+		$html   .= "    <h3 class=\"panel-title\"> VERSION HISTORY </h3>";
+		$html   .= "  </div>";
+		$html   .= "  <div class=\"panel-body\" style=\"display:none\">";
+
+		#
+		# VERSION HISTORY
+			$html   .= '<div class="panel_option form-inline">';
+			$html   .= '<span class="glyphicon glyphicon-cog" aria-hidden="true"></span> ';
+			$html   .= '<span class="">Dédalo version history from version 4</span> ';
+			try {
+				$version_file_content = file_get_contents(DEDALO_LIB_BASE_PATH.'/config/version.inc');
+				function get_string_between($string, $start, $end){
+				    $string = ' ' . $string;
+				    $ini = strpos($string, $start);
+				    if ($ini == 0) return '';
+				    $ini += strlen($start);
+				    $len = strpos($string, $end, $ini) - $ini;
+				    return substr($string, $ini, $len);
+				}
+				$parsed = get_string_between($version_file_content, '[HISTORY]', '[/HISTORY]');					
+
+			} catch (Exception $e) {
+			    echo 'Caught exception: ',  $e->getMessage(), "\n";
+			}
+			$html   .= '<div id="version_history_response" class="">';
+			if ($version_file_content && is_string($version_file_content)) {
+				$html   .= '<pre style="white-space: pre; padding-left: 0; tab-size: 4;">' . $parsed . '</pre>';
+			}else{
+				$html   .= '<div class="error">Error on read file version.inc</div>';
+			}			
+			$html   .= '</div>';
+			$html   .= '</div>';
+		
+
+		$html   .= "  </div>";//end panel-body
+		$html   .= "</div>";//end panel-info
+
+	$html   .= "</div>";//end content_data
 
 
 
