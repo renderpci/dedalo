@@ -24,57 +24,36 @@ if($is_global_admin!==true) {
 }
 
 
-/*
+/**
 *	TS_CLASS_ACTIONS
 *	ACCIONES SOBRE EL DD
 */
-#require_once(DEDALO_ROOT .'/inc/funciones.php');
 
 
 $codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
 
 # set vars
-$vars = array(
-	'accion',
-	'terminoID',
-	'parent',
-	'termino',
-	'terminoIDlist',
-	'terminoIDresalte',
-	'modo',
-	'type',
-	'tabla',
-	'id',
-	'ts_lang',
-	'lang2load',
-	'terminoID_to_link',
-	'dato',
-	'def',
-	'nombre',
-	'modelo',
-	'nHijos'
-);
-foreach($vars as $name)	$$name = common::setVar($name);
-
-#error_log( print_r($_REQUEST,true));
-
-/**
-* SHOW_INDEXATIONS : diffusion_index_ts
-*//*
-if($accion==='show_indexations') {
-
-	# DATA VERIFY
-	if(empty($terminoID) || strlen($terminoID)<3) exit("Trigger Error: terminoID is mandatory");
-
-	# DIFFUSION_INDEX_TS
-	$diffusion_index_ts = new diffusion_index_ts($terminoID);
-	$html 				= $diffusion_index_ts->get_html();
-		#dump($html,'$html');
-
-	exit($html);
-
-}#end show_indexations
-*/
+	$vars = array(
+		'accion',
+		'terminoID',
+		'parent',
+		'termino',
+		'terminoIDlist',
+		'terminoIDresalte',
+		'modo',
+		'type',
+		'tabla',
+		'id',
+		'ts_lang',
+		'lang2load',
+		'terminoID_to_link',
+		'dato',
+		'def',
+		'nombre',
+		'modelo',
+		'nHijos'
+	);
+	foreach($vars as $name)	$$name = common::setVar($name);
 
 
 
@@ -98,7 +77,7 @@ if($accion==='listadoHijos') {
 	echo $html;
 
 	die();
-}
+}//end if($accion==='listadoHijos')
 
 
 
@@ -200,7 +179,7 @@ if($accion==='insertTS') {
 	session_write_close();
 
 	die();
-}
+}//end if($accion==='insertTS')
 
 
 
@@ -233,7 +212,7 @@ if($accion==='update_tr_order') {
 	session_write_close();
 
 	exit();
-}
+}//end if($accion==='update_tr_order')
 
 
 
@@ -270,7 +249,7 @@ if($accion==='saveDescriptorFromList') {
 	echo $html;
 
 	exit();
-}
+}//end if($accion==='saveDescriptorFromList')
 
 
 
@@ -384,7 +363,7 @@ if($accion==='deleteTS') {
 	session_write_close();
 
 	exit();
-}
+}//end if($accion==='deleteTS')
 
 
 
@@ -559,10 +538,7 @@ if($accion==='editTS') {
 
 		exit();
 	}
-
-}#end EDIT V4
-
-
+}//if($accion==='editTS')
 
 
 
