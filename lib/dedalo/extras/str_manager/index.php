@@ -45,8 +45,16 @@ require_once( DEDALO_LIB_BASE_PATH . '/backup/class.backup.php');
 	$file_name 	= $selected_obj->name;
 	$file_path 	= $selected_obj->path .'/'. $selected_obj->name;
 
+// check file
+	$file_found = file_exists($file_path);
+	if (!$file_found) {
+		debug_log(__METHOD__." Trying to get structure from a non-existing file: ".to_string($file_path), logger::ERROR);
+	}
+
 // file size in bytes
-	$fsize = filesize($file_path);
+	$fsize = ($file_found)
+		? filesize($file_path)
+		: 0;
 
 // set headers
 	header("Pragma: public");
