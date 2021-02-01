@@ -542,45 +542,66 @@ if($accion==='searchTSform') {
 	# IMPORTANTE : Sólo buscaremos con un tipo seleccionado
 	# if(empty($type)) die("Please select type");
 
-	if ($terminoID) {
-		$terminoID = trim($terminoID);
-	}
-	if($termino) {
-		$termino	= trim($termino);
-		$termino	= addslashes($termino);
-	}
-	if($def)			$def 		= addslashes($def);
-	if($modelo)			$modelo		= trim($modelo);
+	// terminoID
+		if ($terminoID) {
+			$terminoID = trim($terminoID);
+		}
+
+	// termino
+		if($termino) {
+			$termino	= trim($termino);
+			$termino	= addslashes($termino);
+		}
+
+	// def
+		if($def) {
+			$def = addslashes($def);
+		}
+
+	// modelo
+		if($modelo) {
+			$modelo = trim($modelo);
+		}
 
 	
-	# case only select type
-	if( empty($terminoID) && empty($termino) && empty($def) && empty($modelo) && strlen($type)>0) {
-		$url = "dd_list.php?modo={$modo}&type={$type}";
-		header("Location: $url");
-		exit();
-	}
+	// case only select type
+		if( empty($terminoID) && empty($termino) && empty($def) && empty($modelo) && strlen($type)>0) {
+			$url = "dd_list.php?modo={$modo}&type={$type}";
+			header("Location: $url");
+			exit();
+		}
 	
-	# case nothing is received
-	if(empty($terminoID) && empty($termino) && empty($def) && empty($modelo)){
-		header("Location: dd_list.php?modo={$modo}");
-		exit();
-	}
+	// case nothing is received
+		if(empty($terminoID) && empty($termino) && empty($def) && empty($modelo)){
+			header("Location: dd_list.php?modo={$modo}");
+			exit();
+		}
 	
-	$getString		 = "&terminoID=$terminoID&termino=$termino&def=$def&type=$type&modelo=$modelo";
+	// build getString
+		$getString = "&terminoID=$terminoID&termino=$termino&def=$def&type=$type&modelo=$modelo";	
+		if($modo) {
+			$getString .= "&modo=$modo";
+		}	
 	
-	if($modo)	
-	$getString 		.= "&modo=$modo";
 	
 	# init dd in requested modo
-	$dd 			= new dd($modo,$type,$ts_lang);	
+		$dd = new dd($modo,$type,$ts_lang);	
 	
-	$resultArray 	= $dd->searchTSform($terminoID, $termino, $def, $type, $modelo);
-	
-	$n				= 0;		if(isset($resultArray['total']))	$n 				= $resultArray['total'];
-	$terminoIDlist	= false;	if(isset($resultArray['list']))		$terminoIDlist 	= $resultArray['list'];
-	$max			= false;	if(isset($resultArray['max']))		$max		 	= $resultArray['max'];
-	
-	$t 				= 'form';	
+		$resultArray = $dd->searchTSform($terminoID, $termino, $def, $type, $modelo);
+
+		$n = isset($resultArray['total'])
+			? $resultArray['total']
+			: 0;
+
+		$terminoIDlist = isset($resultArray['list'])
+			? $resultArray['list']
+			: false;
+
+		$max = isset($resultArray['max'])
+			? $resultArray['max']
+			: false;
+
+		$t = 'form';
 	
 	# con la lista de los terminos encontrados, saltamos a la función de buscar sus padres para poder desplegarlos
 	#echo searchTSlist($terminoIDlist, $t, $n, $max, $getString);
@@ -590,17 +611,17 @@ if($accion==='searchTSform') {
 		$html  = $codHeader ;
 		$html .= js::build_tag('inc/cookies.js');
 		$html .= js::build_tag('js/dd_common.js');
-		$html .= "<script type=\"text/javascript\">";
+		$html .= '<script type="text/javascript">';
 		
-		$terminosList = $dd->listaDeResultados2cookie($terminoIDlist);		#print_r($terminosList); die("<HR>V4 searchTSform terminosList Stop");		
+		$terminosList = $dd->listaDeResultados2cookie($terminoIDlist);		
 
-		$html .= "set_localStorage('cookieOpenDivs_dd','$terminosList',7);"; #die($terminosList);
+		$html .= "set_localStorage('cookieOpenDivs_dd','$terminosList',7);";
 		
 		# eliminamos del url "searchTSlist" (para poder recargar la página sin perder los cambios posteriores)
 		# y redireccionamos por javascript a la página general del listado	
-		$url   = "dd_list.php?modo=$modo&terminoIDlist=$terminoIDlist&total=$t&n=$n&max=$max&ts_lang={$ts_lang}" . $getString ;
+		$url   = "dd_list.php?modo={$modo}&terminoIDlist={$terminoIDlist}&total={$t}&n={$n}&max={$max}&ts_lang={$ts_lang}" . $getString ;
 		$html .= "document.location = '$url' ";	
-		$html .= "</script>";
+		$html .= '</script>';
 
 	# Write session to unlock session file
 	session_write_close();
