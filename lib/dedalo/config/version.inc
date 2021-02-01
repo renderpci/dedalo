@@ -2087,6 +2087,10 @@
 		Add tool_administration Dédalo version history panel
 
 
+	Valencia 01-02-2021 5.7.45
+		Added user dialog alert when user password is a non accepted sequence of number/letters (component_password verify password)
+
+
 	[/HISTORY]
 
 
@@ -2110,13 +2114,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.44';
+	$DEDALO_VERSION = '5.7.45';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-01-2021');
+	define('DEDALO_BUILD'	, '01-02-2021');
 
 
 	/*
