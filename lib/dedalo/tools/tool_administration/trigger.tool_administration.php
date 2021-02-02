@@ -19,8 +19,8 @@ function make_backup($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$response = (object)tool_administration::make_backup();
 
@@ -45,8 +45,8 @@ function force_unlock_all_components($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	include DEDALO_LIB_BASE_PATH . '/lock_components/class.lock_components.php';
 
@@ -208,8 +208,8 @@ function update_structure($json_data) {
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
 			$debug->exec_time			= exec_time_unit($start_time,'secs')." secs";
-			$debug->export_exec_time 	= $export_exec_time;
-			$debug->import_exec_time 	= $import_exec_time;			
+			$debug->export_exec_time	= $export_exec_time;
+			$debug->import_exec_time	= $import_exec_time;			
 					
 		$response->debug = $debug;
 	}
@@ -226,8 +226,8 @@ function delete_component_tipo_in_matrix_table($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
 	$vars = array('component_tipo','section_tipo','language','save');
@@ -241,10 +241,10 @@ function delete_component_tipo_in_matrix_table($json_data) {
 			}
 		}
 
-	$component_tipo = json_decode($component_tipo);
-	$section_tipo 	= json_decode($section_tipo);
-	$language 		= json_decode($language);
-	$save 			= json_decode($save);
+	$component_tipo	= json_decode($component_tipo);
+	$section_tipo	= json_decode($section_tipo);
+	$language		= json_decode($language);
+	$save			= json_decode($save);
 
 	if(empty($component_tipo)){
 		$response->msg .= "<span class='error'> Error: '".label::get_label('component_tipo')."' is mandatory</span>";
@@ -301,11 +301,11 @@ function renumerate_sections($json_data) {
 	$save = json_decode($save);
 
 	$options = new stdClass();
-		$options->section_tipo 		= $section_tipo;
-		$options->section_id_start 	= $section_id_start;
+		$options->section_tipo		= $section_tipo;
+		$options->section_id_start	= $section_id_start;
 		$options->section_id_end	= $section_id_end;
-		$options->counter_start 	= $counter_start;
-		$options->save 				= $save;
+		$options->counter_start		= $counter_start;
+		$options->save				= $save;
 	$response = (object)tool_administration::renumerate_sections( $options );
 
 	# Debug
@@ -332,8 +332,8 @@ function update_version($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	set_time_limit (0); // Set time limit unlimited
 
@@ -414,13 +414,13 @@ function remove_av_temporals($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$result = tool_administration::remove_av_temporals();
 	
-	$response->result = !empty($result) ? true : false;
-	$response->msg 	  = !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
+	$response->result	= !empty($result) ? true : false;
+	$response->msg		= !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -878,8 +878,8 @@ function long_time_process($json_data) {
 	}	
 
 	$response = new stdClass();
-		$response->result 	= true;
-		$response->msg 		= 'Ok. Request done. secondes: '.$seconds;
+		$response->result	= true;
+		$response->msg		= 'Ok. Request done. secondes: '.$seconds;
 
 	return (object)$response;
 }///end long_time_process
