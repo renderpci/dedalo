@@ -157,6 +157,19 @@ if($t==='form' && $n===0) {
 
 
 
+// Total dd
+	$strQuery	= "SELECT count(*) AS exact_count FROM \"jer_dd\" ";
+	$result		= JSON_RecordObj_matrix::search_free($strQuery);
+	$total_dd	= pg_fetch_assoc($result)['exact_count'];
+
+	# Total termns
+	$strQuery		= "SELECT count(*) AS exact_count FROM \"matrix_descriptors_dd\" ";
+	$result			= JSON_RecordObj_matrix::search_free($strQuery);
+	$total_terms	= pg_fetch_assoc($result)['exact_count'];
+
+
+
+
 $page_html = dirname(__FILE__).'/html/dd_list.phtml';
 
 # LOAD VISTA TEMPLATE CODE
