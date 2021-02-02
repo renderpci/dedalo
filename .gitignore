@@ -41,7 +41,7 @@ lib/dedalo/publication/client_api
 !lib/bootstrap
 !lib/canvas
 !lib/d3
-!lib/dd_node
+#!lib/dd_node
 !lib/javascript_load_image
 !lib/javascript-templates
 !lib/jquery
