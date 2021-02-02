@@ -46,8 +46,8 @@
 		case 'edit'	:
 			#
 			# JS includes additionals (!) Moved to init js
-				#js::$ar_url[] = PAPER_JS_URL;
-				#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
+				js::$ar_url[] = PAPER_JS_URL;
+				js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
 
 			$id_wrapper 	= 'wrapper_'.$identificador_unico;
 			$component_info = $this->get_component_info('json');
