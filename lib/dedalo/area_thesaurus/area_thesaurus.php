@@ -55,24 +55,6 @@
 
 					css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_records/css/section_records.css";
 
-				# Components
-					/*$ar_component_name = [
-						'component_text_area',
-						'component_order',
-						'component_input_text',
-						'component_input_text_large',
-						'component_relation_children',
-						'component_relation_model',
-						'component_relation_related',
-						'component_relation_index',
-						'component_number',
-						'component_radio_button',
-						'component_autocomplete'
-					];
-					foreach ($ar_component_name as $current_modelo_name) {
-						common::notify_load_lib_element_tipo($current_modelo_name, 'edit');
-					}*/
-
 
 				# HIERARCHY_SECTIONS
 				# Get all available sections except when filters are present
@@ -98,18 +80,13 @@
 
 				# Section tipos . Simple array of current sections tipo
 				$ar_section_tipos	= [];
-				$ar_section_names 	= [];
-				#foreach ($hierarchy_sections as $key => $obj_value) {
-				#	$ar_section_tipos[] = $obj_value->hierarchy_target_section_tipo;
-				#	#$ar_section_names[$obj_value->hierarchy_target_section_tipo] = $obj_value->hierarchy_target_section_name;
-				#}
+				$ar_section_names 	= [];				
 				foreach ($ar_sections_by_type as $key => $ar_value) {
 					foreach ($ar_value as $obj_value) {
 						$ar_section_tipos[] = $obj_value->hierarchy_target_section_tipo;
 						$ar_section_names[$obj_value->hierarchy_target_section_tipo] = $obj_value->hierarchy_target_section_name;
 					}
 				}
-				#dump($ar_section_tipos, ' ar_section_tipos ++ '.to_string());
 
 				#
 				# FILTER_CUSTOM. hierarchy_terms
@@ -230,30 +207,29 @@
 
 
 				#
-				# TEST
-					/*
-					if(SHOW_DEBUG===true) {
+				# TEST					
+					// if(SHOW_DEBUG===true) {
 
-						include(DEDALO_LIB_BASE_PATH."/tools/tool_ts_print/class.tool_ts_print.php");
+					// 	include(DEDALO_LIB_BASE_PATH."/tools/tool_ts_print/class.tool_ts_print.php");
 
-						$ts_locator = new locator();
-							$ts_locator->set_section_tipo('ts1');
-							$ts_locator->set_section_id('1');
+					// 	$ts_locator = new locator();
+					// 		$ts_locator->set_section_tipo('ts1');
+					// 		$ts_locator->set_section_id('1');
 
-						$ar_terms = tool_ts_print::get_childrens($ts_locator);
-							dump( json_encode($ar_terms, JSON_PRETTY_PRINT) , ' ar_terms ++ '.to_string());
+					// 	$ar_terms = tool_ts_print::get_childrens($ts_locator);
+					// 		dump( json_encode($ar_terms, JSON_PRETTY_PRINT) , ' ar_terms ++ '.to_string());
 
-						#$data_node = tool_ts_print::build_data_node('ts1',1);
-							#dump( json_encode($data_node, JSON_PRETTY_PRINT), ' data_node ++ '.to_string());
+					// 	#$data_node = tool_ts_print::build_data_node('ts1',1);
+					// 		#dump( json_encode($data_node, JSON_PRETTY_PRINT), ' data_node ++ '.to_string());
 
 
-						#$data_context = tool_ts_print::build_data_context('ts1');
-							#dump($data_context, ' data_context ++ '.to_string());
+					// 	#$data_context = tool_ts_print::build_data_context('ts1');
+					// 		#dump($data_context, ' data_context ++ '.to_string());
 
-						#$ts_data = tool_ts_print::build_ts_data('ts1');
-						#	dump(json_encode($ts_data, JSON_PRETTY_PRINT), ' ts_data ++ '.to_string());
+					// 	#$ts_data = tool_ts_print::build_ts_data('ts1');
+					// 	#	dump(json_encode($ts_data, JSON_PRETTY_PRINT), ' ts_data ++ '.to_string());
 
-					}*/
+					// }
 
 				break;
 	}//end switch($modo)

@@ -2120,7 +2120,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.46';
+	$DEDALO_VERSION = '5.7.47';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
