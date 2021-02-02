@@ -728,10 +728,11 @@
 			#
 			# PHP USER
 			try {
-				$processUser = get_current_user(); // $processUser = posix_getpwuid(posix_geteuid());
+				$processUser	= get_current_user(); // $processUser = posix_getpwuid(posix_geteuid());
+				$current_user	= trim(shell_exec('whoami'));
 				$html .= tool_administration::show_info( "PHP user",
-													 $processUser,
-													 $processUser
+													 null,
+													 'php get_current_user: '.$processUser . ' - whoami: ' . $current_user
 													);
 			}catch (Exception $e) {
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();

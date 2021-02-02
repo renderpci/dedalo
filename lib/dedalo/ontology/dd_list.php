@@ -169,11 +169,10 @@ if($t==='form' && $n===0) {
 
 
 
-
 $page_html = dirname(__FILE__).'/html/dd_list.phtml';
 
 # LOAD VISTA TEMPLATE CODE
-require_once($page_html);
+include($page_html);
 
 # Write session to unlock session file
 session_write_close();
