@@ -1,0 +1,23 @@
+/* WIDGET SUM_DATES
+--------------------------------------- */
+.total_answer {
+  font-size: 120%;
+}
+.total_closed {
+  font-size: 120%;
+}
+.get_archive_states {
+  padding-right: 5px;
+  color: #555555;
+  font-family: "Arial";
+}
+.update_info {
+  top: -15px;
+  position: absolute;
+  right: 0;
+}
+.get_archive_closed {
+  border-left: 1px solid #c8c8c8;
+  padding-left: 5px;
+}
+/*# sourceMappingURL=get_archive_states.css.map */
