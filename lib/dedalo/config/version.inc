@@ -2094,7 +2094,14 @@
 	Valencia 02-02-2021 5.7.46
 		Fixed issue with component image in edit mode. Now, component_image_read.js and paper.js are loaded always by component image across page css loader
 		Fixed issue with enter key in thesaurus (conflicts between search form and input fields like order, edit term)
+	
+	
+	Valencia 02-02-2021 5.7.47
 		Added hide class on first appearance of thesaurus_search_selector (toponymy, lang, etc.)
+
+	
+	Valencia 02-02-2021 5.7.48
+		Fixed issue with no file context im component image container
 
 
 	[/HISTORY]
@@ -2120,7 +2127,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.47';
+	$DEDALO_VERSION = '5.7.48';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
