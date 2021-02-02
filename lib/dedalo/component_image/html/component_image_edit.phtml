@@ -40,11 +40,11 @@
 				# IMAGE THUMB
 				$title = '';
 				if(SHOW_DEBUG) {
-					$title .= "image_path: ".$this->get_image_path($quality);
+					$title .= 'image_path: '.$this->get_image_path($quality);
 				}
 				
-				$open_tool_default='';
-				$add_class='';
+				$open_tool_default	= '';
+				$add_class			= '';
 				# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
 				if (component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
 					!$this->ImageObj->get_file_exists() &&
@@ -60,7 +60,7 @@
 					$open_tool_default .= "data-section_tipo=\"$section_tipo\" ";
 					$open_tool_default .= "data-original_img_height=\"$original_img_height\" ";
 					$open_tool_default .= "onclick=\"tool_common.open_tool_upload(this)\" ";
-					$open_tool_default .= "title=\"Upload file in original quality\" ";
+					$open_tool_default .= 'title="Upload file in original quality" ';
 
 					$add_class = 'no_file';
 				}
@@ -69,10 +69,9 @@
 		
 
 				# CANVAS : IMAGE
-				$html_content .= "<div class=\"canvas_container\">";
-				$html_content .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" hidpi=\"off\" {$open_tool_default}>";				
-				$html_content .= "</canvas>";
-				$html_content .= "</div>";
+				$html_content .= '<div class="canvas_container">';
+				$html_content .= "<canvas id=\"{$identificador_unico}\" class=\"canvas_edit {$add_class}\" hidpi=\"off\" {$open_tool_default}></canvas>";
+				$html_content .= '</div>';
 
 				#
 				# JS Init component
