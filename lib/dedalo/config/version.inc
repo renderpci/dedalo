@@ -2090,7 +2090,9 @@
 	Valencia 01-02-2021 5.7.45
 		Added user dialog alert when user password is a non accepted sequence of number/letters (component_password verify password)
 
-
+	
+	Valencia 02-02-2021 5.7.46
+		Fixed issue with component image in edit mode. Now, component_image_read.js and paper.js are loaded always by component image across page css loader
 
 
 	[/HISTORY]
@@ -2116,13 +2118,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.45';
+	$DEDALO_VERSION = '5.7.46';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-02-2021');
+	define('DEDALO_BUILD'	, '02-02-2021');
 
 
 	/*
