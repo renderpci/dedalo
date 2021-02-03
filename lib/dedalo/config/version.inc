@@ -2103,6 +2103,12 @@
 	Valencia 02-02-2021 5.7.48
 		Fixed issue with no file context im component image container
 
+	
+	Valencia 03-02-2021 5.7.49
+		Fixed issue in Publication API json_environment where protocol https is not detected correctly
+		Fixed error in component_iri read mode
+		Fixed error in component_email read mode
+
 
 	[/HISTORY]
 
@@ -2127,13 +2133,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.48d';
+	$DEDALO_VERSION = '5.7.49';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '02-02-2021');
+	define('DEDALO_BUILD'	, '03-02-2021');
 
 
 	/*
