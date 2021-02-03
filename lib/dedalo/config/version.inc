@@ -2111,6 +2111,14 @@
 		Fixed error in component_email read mode
 
 
+	Valencia 03-02-2021 5.7.50
+		Removed edit dd restriction in Ontology inline_edit
+		Added column 'gender' to web_data get_global_search_json
+		Added column 'gender' to diffusion_sql save_global_search_data
+		Added diffusion function map_locator_to_int (allow process gender column mdcat3713)
+		Added process_dato option to diffusion_sql::resolve_value 
+
+
 	[/HISTORY]
 
 
@@ -2134,7 +2142,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.49';
+	$DEDALO_VERSION = '5.7.50';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
