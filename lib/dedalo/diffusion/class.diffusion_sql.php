@@ -1695,6 +1695,7 @@ class diffusion_sql extends diffusion  {
 	* SAVE_GLOBAL_SEARCH_DATA
 	* v. 1.3 [20-11-2018]
 	* v. 1.4 [09-12-2020]
+	* v. 1.5 [03-02-2021] Added filter by gender
 	* @return object $save
 	*/
 	public function save_global_search_data($request_options) {
@@ -1766,7 +1767,9 @@ class diffusion_sql extends diffusion  {
 					'nazi_sub_camp',
 					'prisoner_number',
 					// added 09-12-2020
-					// 'symbol_state' (already added above in $symbol_state_tipos)
+					// 'symbol_state' (already added below in $symbol_state_tipos)
+					// added 03-02-2021
+					'gender'
 				];
 
 			$fields_array = [];
