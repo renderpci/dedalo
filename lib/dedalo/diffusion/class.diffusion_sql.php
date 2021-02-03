@@ -3682,6 +3682,23 @@ class diffusion_sql extends diffusion  {
 
 			$value = call_user_func_array(array($component, $method), $custom_arguments);
 
+			// process_dato (added 03-02-2021) @see mdcat3713
+				if ( isset($process_dato_arguments->process_dato) ) {
+					$process_dato_arguments_inside = $process_dato_arguments->process_dato_arguments; // is a object
+					$ar_parsed_values = [];
+					foreach ($process_dato_arguments_inside as $c_value) {
+						$ar_parsed_values[] = ($c_value==='$value')
+							? $value
+							: $c_value;
+					}
+					$value2 = call_user_func_array($process_dato_arguments->process_dato, $ar_parsed_values);
+					if (!empty($value) && empty($value2)) {
+						// something bad happened
+						debug_log(__METHOD__." value2 is empty. Something bad happened? - process_dato_arguments->process_dato: ".to_string($process_dato_arguments->process_dato), logger::ERROR);
+					}
+					$value = $value2;
+				}
+
 			// split string value (see qdp291)
 				if (isset($process_dato_arguments->split_string_value)) {
 					$value = json_encode( explode($process_dato_arguments->split_string_value, $value) );
