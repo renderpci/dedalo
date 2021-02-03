@@ -34,9 +34,17 @@
 
 			case ($permissions===1) :
 					foreach ($dato as $value) {
-						$html_content .= "<span class=\"css_span_dato\">$value</span>";
+
+						$current_title	= isset($value->title) ? $value->title : '';
+						$current_iri	= isset($value->iri) ? $value->iri : '';
+
+						if (empty($current_title) && !empty($current_iri)) {
+							$current_title = $current_iri;
+						}
+
+						$html_content .= '<span class="css_span_dato">'.$current_title.'</span> ';
 						# Button link
-						$html_content .= '<a class="input-group-addon css_button_generic btn_go_iri" onclick="component_iri.go_iri_link(this)">';
+						$html_content .= '<a class="input-group-addon css_button_generic btn_go_iri" onclick="window.open(\''.$current_iri.'\', \'_blank\')">';
 						$html_content .= '<div class="link css_iri_link"></div>';
 						$html_content .= '</a>';
 					}
