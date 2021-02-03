@@ -3968,6 +3968,10 @@ class web_data {
 						$ar_filter[] 	= $current_filter_symbol_state;
 					}
 				}
+				# gender . Coded gender as int like 1 . added 03-02-2021
+				if (!empty($json_data->filters->gender)) {
+					$ar_filter[] = 'gender = '. (int)$json_data->filters->gender;
+				}
 
 				// sql_filter add final string if not empty
 					if (!empty($ar_filter)) {
@@ -4010,7 +4014,9 @@ class web_data {
 					'situation_place',
 					'nazi_camp',
 					'nazi_sub_camp',
-					'prisoner_number'
+					'prisoner_number',
+					// added 03-02-2021
+					'gender'
 				];
 
 			#
