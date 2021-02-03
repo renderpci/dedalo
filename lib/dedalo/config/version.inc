@@ -2105,6 +2105,7 @@
 
 	
 	Valencia 03-02-2021 5.7.49
+		Add get_archive_states widget to the mdcat extras
 		Fixed issue in Publication API json_environment where protocol https is not detected correctly
 		Fixed error in component_iri read mode
 		Fixed error in component_email read mode
