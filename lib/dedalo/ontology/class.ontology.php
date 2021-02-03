@@ -290,7 +290,7 @@ class ontology {
 	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group
 	* @param string $terminoID
 	* @return array $ar_tesauro
-	*	array recursive of tesauro structure childrens
+	*	array recursive of tesauro structure children
 	*/
 	public static function get_children_recursive($tipo) {
 
@@ -372,6 +372,66 @@ class ontology {
 
 		return $ar_elements;
 	}//end get_children_recursive
+
+
+
+	/**
+	* ADD_TERM
+	* @return bool
+	*/
+	public static function add_term($options) { // WORK IN PROGRESS (!)
+
+		debug_log(__METHOD__." Called unfinished function. Ignored call ".to_string($options), logger::DEBUG);
+		return true;
+		
+		// options
+			$term_id	= $options->term_id;
+			$parent		= $options->parent;
+			$esmodelo	= $options->esmodelo;
+
+		// to do: verify is term already exists in the section (!)
+
+
+		// lang. At this time, is still 'lg-spa'
+			$lang = DEDALO_STRUCTURE_LANG;
+
+		// section
+			$section_tipo	= ONTOLOGY_SECTION_SECTION_TIPO;
+			$section		= section::get_instance(null, $section_tipo, 'edit', false);
+			$section->Save();
+			$section_id = $section->get_section_id();
+
+		// component term_id
+			(function($value) use($section_tipo, $section_id, $lang) {
+				$tipo 			= ONTOLOGY_SECTION_TERM_ID_TIPO;
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $tipo,
+																 $section_id,
+																 'edit',
+																 $lang,
+																 $section_tipo);
+				$dato = [$value];
+				$component->set_dato($dato);
+				$component->Save();
+			})($term_id);
+
+		// component parent
+			(function($value) use($section_tipo, $section_id, $lang) {
+				$tipo 			= ONTOLOGY_SECTION_PARENT_TIPO;
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $tipo,
+																 $section_id,
+																 'edit',
+																 $lang,
+																 $section_tipo);
+				$dato = [$value];
+				$component->set_dato($dato);
+				$component->Save();
+			})($parent);
+
+	}//end add_term
 
 
 
