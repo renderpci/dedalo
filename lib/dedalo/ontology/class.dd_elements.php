@@ -238,11 +238,11 @@ class dd_elements {
 			$html .= "</span>";
 		}
 
-		if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!='dedalo4_master' ) {
-			$html .= " <span class=\"termino_text\" alt=\"$terminoID\" >";
-		}else{
-			$html .= " <span class=\"termino_text\" alt=\"$terminoID\" ondblclick=\"dd.edit_inline(this)\">";
-		}
+		// if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!='dedalo_master_v5' ) {
+		// 	$html .= "\n <span class=\"termino_text\" alt=\"$terminoID\" >";
+		// }else{
+			$html .= PHP_EOL . ' <span class=\"termino_text\" alt="'.$terminoID.'" ondblclick="dd.edit_inline(this)">';
+		// }
 		$html .= $termino;
 		$html .= '</span>';
 
