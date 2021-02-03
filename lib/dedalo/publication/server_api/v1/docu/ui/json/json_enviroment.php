@@ -28,7 +28,10 @@
 
 	# Protocols
 		# Create protocols selector based on current protocol
-		$check_https = function() {	
+		$check_https = function() {
+			if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO']==='https') {
+				return true; 
+			}
 			if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443) {
 				return true; 
 			}
