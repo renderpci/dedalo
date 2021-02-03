@@ -3627,12 +3627,12 @@ class diffusion_sql extends diffusion  {
 					continue;
 				}
 
-			// target is publicable check				
+			// target is publishable check				
 				$current_is_publicable = isset($process_dato_arguments->is_publicable)
-					? (bool)$process_dato_arguments->is_publicable // overrive is_publicable verification (Bibliography case)
+					? (bool)$process_dato_arguments->is_publicable // override is_publicable verification (Bibliography case)
 					: diffusion::get_is_publicable($locator);
 				if ($current_is_publicable!==true) {
-					debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($locator), logger::DEBUG);
+					debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($locator), logger::DEBUG);
 					continue;
 				}
 
@@ -3914,8 +3914,9 @@ class diffusion_sql extends diffusion  {
 	*/
 	public function map_relations($options, $dato) {
 		
+		// unfinished !
 
-
+		return null;
 	}//end map_relations
 
 

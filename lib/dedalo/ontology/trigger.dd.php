@@ -10,50 +10,50 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 /**
 * LOGIN
 */
-$is_logged	= login::is_logged();
-	
-if($is_logged!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
-	header("Location: $url");
-	exit();
-}
-$is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
-if($is_global_admin!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
-	header("Location: $url");
-	exit();
-}
-
-#require_once( dirname(__FILE__) . '/common/class.navigator.php');
-require_once( dirname(__FILE__) .'/class.dd.php');
-require_once( dirname(__FILE__) .'/class.RecordObj_dd_edit.php');
+	$is_logged	= login::is_logged();
+		
+	if($is_logged!==true) {
+		$url =  DEDALO_ROOT_WEB ."/main/";
+		header("Location: $url");
+		exit();
+	}
+	$is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
+	if($is_global_admin!==true) {
+		$url =  DEDALO_ROOT_WEB ."/main/";
+		header("Location: $url");
+		exit();
+	}
 
 
+// other files to include
+	require_once( dirname(__FILE__) .'/class.dd.php');
+	require_once( dirname(__FILE__) .'/class.RecordObj_dd_edit.php');
 
-$codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
 
-# set vars
-$vars = array(
-	'accion',
-	'terminoID',
-	'parent',
-	'termino',
-	'terminoIDlist',
-	'terminoIDresalte',
-	'modo',
-	'type',
-	'tabla',
-	'id',
-	'ts_lang',
-	'lang2load',
-	'terminoID_to_link',
-	'dato',
-	'def',
-	'nombre',
-	'modelo',
-	'nHijos'
-);
-foreach($vars as $name)	$$name = common::setVar($name);
+
+// set vars
+	$codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+	$vars = array(
+		'accion',
+		'terminoID',
+		'parent',
+		'termino',
+		'terminoIDlist',
+		'terminoIDresalte',
+		'modo',
+		'type',
+		'tabla',
+		'id',
+		'ts_lang',
+		'lang2load',
+		'terminoID_to_link',
+		'dato',
+		'def',
+		'nombre',
+		'modelo',
+		'nHijos'
+	);
+	foreach($vars as $name)	$$name = common::setVar($name);
 
 
 
