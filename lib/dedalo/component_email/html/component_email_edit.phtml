@@ -29,7 +29,11 @@
 				break;
 
 		case $permissions===1 :
-				$html_content .= "<span class=\"css_span_dato\">$dato</span>";
+				if (!empty($dato)) {
+					foreach ($dato as $current_email) {
+						$html_content .= '<div class="css_span_dato">'.$current_email.'</div><br>';
+					}
+				}				
 				break;
 
 		case $permissions>=2 :
