@@ -2119,6 +2119,12 @@
 		Added process_dato option to diffusion_sql::resolve_value 
 
 
+	Valencia 04-02-2021 5.7.51
+		Added add_term method to sync records between structure and new section 'ontology'
+		Added ontology section and tool_docu
+		Added tool_docu automatic tool icon load to the inspector
+
+
 	[/HISTORY]
 
 
@@ -2142,13 +2148,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.50';
+	$DEDALO_VERSION = '5.7.51';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-02-2021');
+	define('DEDALO_BUILD'	, '04-02-2021');
 
 
 	/*
