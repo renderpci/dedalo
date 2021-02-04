@@ -2,6 +2,20 @@
 require_once( dirname(__FILE__) . '/class.RecordObj_dd_edit.php');
 
 
+
+// definitions
+	define('ONTOLOGY_SECTION_TIPOS', [
+		'section_tipo'	=> 'dd1472',
+		'id'			=> 'dd1483',
+		'tld'			=> 'dd1482',
+		'term_id'		=> 'dd1475',
+		'term'			=> 'dd1477',
+		'definition'	=> 'dd1478',
+		'observations'	=> 'dd1476'	
+	]);
+
+
+
 /**
 * ONTOLOGY
 * Manages structure (ontology) import and export data
@@ -377,17 +391,29 @@ class ontology {
 
 	/**
 	* ADD_TERM
-	* @return bool
+	* @param object $options
+	* @return int $section_id
 	*/
-	public static function add_term($options) { // WORK IN PROGRESS (!)
-
-		debug_log(__METHOD__." Called unfinished function. Ignored call ".to_string($options), logger::DEBUG);
-		return true;
+	public static function add_term($options) {
 		
 		// options
-			$term_id	= $options->term_id;
-			$parent		= $options->parent;
-			$esmodelo	= $options->esmodelo;
+			$term_id = $options->term_id;
+
+		// term_id
+			if (empty($term_id)) {
+				debug_log(__METHOD__." Error on add_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
+				return false;
+			}
+
+		// tld
+			$tld = RecordObj_dd_edit::get_prefix_from_tipo($term_id);
+			if (empty($tld)) {
+				debug_log(__METHOD__." Error on add_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
+				return false;
+			}
+
+		// id
+			$id = str_replace($tld, '', $term_id); // remove tld. from 'oh123' to '123'. id is a internal counter and it is not saved or set to the object
 
 		// to do: verify is term already exists in the section (!)
 
@@ -395,44 +421,276 @@ class ontology {
 		// lang. At this time, is still 'lg-spa'
 			$lang = DEDALO_STRUCTURE_LANG;
 
-		// section
-			$section_tipo	= ONTOLOGY_SECTION_SECTION_TIPO;
+		// section. Create a new one
+			$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 			$section		= section::get_instance(null, $section_tipo, 'edit', false);
 			$section->Save();
 			$section_id = $section->get_section_id();
 
 		// component term_id
 			(function($value) use($section_tipo, $section_id, $lang) {
-				$tipo 			= ONTOLOGY_SECTION_TERM_ID_TIPO;
+				$tipo 			= ONTOLOGY_SECTION_TIPOS['term_id'];
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $tipo,
 																 $section_id,
 																 'edit',
-																 $lang,
+																 DEDALO_DATA_NOLAN,
 																 $section_tipo);
 				$dato = [$value];
 				$component->set_dato($dato);
 				$component->Save();
 			})($term_id);
 
-		// component parent
+		// component tld
 			(function($value) use($section_tipo, $section_id, $lang) {
-				$tipo 			= ONTOLOGY_SECTION_PARENT_TIPO;
+				$tipo 			= ONTOLOGY_SECTION_TIPOS['tld'];
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $tipo,
 																 $section_id,
 																 'edit',
-																 $lang,
+																 DEDALO_DATA_NOLAN,
 																 $section_tipo);
 				$dato = [$value];
 				$component->set_dato($dato);
 				$component->Save();
-			})($parent);
+			})($tld);
 
+		// component id
+			(function($value) use($section_tipo, $section_id, $lang) {
+				$tipo 			= ONTOLOGY_SECTION_TIPOS['id'];
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $tipo,
+																 $section_id,
+																 'edit',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$dato = [$value];
+				$component->set_dato($dato);
+				$component->Save();
+			})($id);
+
+		// component parent
+			// (function($value) use($section_tipo, $section_id, $lang) {
+				
+			// 	$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
+			// 	$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+			// 	// filter
+			// 		$filter_string = '{
+			// 			"$and": [
+			// 				{
+			// 					"q": "'.$value.'",
+			// 					"q_operator": "=",
+			// 					"q_split": false,
+			// 					"unaccent": false,
+			// 					"path": [
+			// 						{
+			// 							"section_tipo": "'.$section_tipo.'",
+			// 							"component_tipo": "'.$component_tipo.'",
+			// 							"modelo": "'.$modelo_name.'",
+			// 							"name": "term_id"
+			// 						}
+			// 					]
+			// 				}
+			// 			]
+			// 		}';				
+			// 		$sqo = json_decode('{
+			// 			"parsed": false,
+			// 			"section_tipo": "'.$section_tipo.'",
+			// 			"limit": 2,
+			// 			"offset": 0,
+			// 			"type": "search_json_object",
+			// 			"full_count": false,
+			// 			"order": false,
+			// 			"filter": '.$filter_string.',
+			// 			"skip_projects_filter": true,
+			// 			"select": []
+			// 		}');
+			// 		$search_development2	= new search_development2($sqo);
+			// 		$search_result			= $search_development2->search();
+			// 		$ar_records				= $search_result->ar_records;
+			// 		$count					= count($ar_records);
+
+			// 		if ($count===1) {
+			// 			$tipo 			= ONTOLOGY_SECTION_TIPOS['parent'];
+			// 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			// 			$component 		= component_common::get_instance($modelo_name,
+			// 															 $tipo,
+			// 															 $section_id,
+			// 															 'edit',
+			// 															 DEDALO_DATA_NOLAN,
+			// 															 $section_tipo);
+
+			// 			$target_section_id = reset($ar_records)->section_id;
+
+			// 			$locator = new locator();
+			// 				$locator->set_section_tipo($section_tipo);
+			// 				$locator->set_section_id($target_section_id);
+			// 				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+
+			// 			$dato = [$locator];
+			// 			$component->set_dato($dato);
+			// 			$component->Save();
+			// 		}else{
+			// 			trigger_error('Parent not found! term_id not exists: '.to_string($value));
+			// 		}				
+			// })($parent);
+
+		// component is_model
+			// (function($value) use($section_tipo, $section_id, $lang) {
+			// 	$tipo 			= ONTOLOGY_SECTION_TIPOS['is_model'];
+			// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			// 	$component 		= component_common::get_instance($modelo_name,
+			// 													 $tipo,
+			// 													 $section_id,
+			// 													 'edit',
+			// 													 DEDALO_DATA_NOLAN,
+			// 													 $section_tipo);
+
+			// 	$target_section_id = ($value==='si')
+			// 		? NUMERICAL_MATRIX_VALUE_YES // 1
+			// 		: NUMERICAL_MATRIX_VALUE_NO; // 2
+
+			// 	$locator = new locator();
+			// 		$locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+			// 		$locator->set_section_id($target_section_id);
+			// 		$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+
+			// 	$dato = [$locator];
+			// 	$component->set_dato($dato);
+			// 	$component->Save();
+			// })($is_model);
+
+
+		return $section_id;
 	}//end add_term
 
+
+
+	/**
+	* EDIT_TERM
+	* @param object $options
+	* @return bool
+	*/
+	public static function edit_term($options) {
+		
+		// options			
+			$term_id	= $options->term_id;
+			$dato		= $options->dato;
+			$dato_tipo	= $options->dato_tipo;
+			$lang		= $options->lang;
+
+		if (empty($term_id)) {
+			debug_log(__METHOD__." Error on edit_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
+			return false;
+		}
+
+		$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
+
+		// section_id. locate the ontolpgy record by term_id
+			$section_id = ontology::get_section_id_by_term_id($term_id);
+			if (empty($section_id)) {
+				$section_id = ontology::add_term((object)[
+					'term_id' => $term_id
+				]);
+			}
+
+		// update value
+			if (!empty($section_id)) {
+				
+				$component_tipo = (function($dato_tipo){
+					switch ($dato_tipo) {
+						case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
+						case 'def':		return ONTOLOGY_SECTION_TIPOS['definition'];	break;
+						case 'obs':		return ONTOLOGY_SECTION_TIPOS['observations'];	break;
+					}
+					return null;
+				})($dato_tipo);
+				
+				// component save value 
+				(function($value) use($section_tipo, $section_id, $component_tipo, $lang) {
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$component 		= component_common::get_instance($modelo_name,
+																	 $component_tipo,
+																	 $section_id,
+																	 'edit',
+																	 $lang,
+																	 $section_tipo);
+					
+					$dato = ($modelo_name==='component_input_text') ? [$value] : $value;
+					$component->set_dato($dato);
+					$component->Save();
+				})($dato);
+
+				return true;
+			}
+		
+		return false;
+	}//end edit_term
+
+
+
+	/**
+	* GET_SECTION_ID_BY_TERM_ID
+	* @return int | null 
+	* @param string $term_id
+	*/
+	public static function get_section_id_by_term_id($term_id) {
+		
+		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
+		$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+		// filter
+			$filter_string = '{
+				"$and": [
+					{
+						"q": "'.$term_id.'",
+						"q_operator": "=",
+						"q_split": false,
+						"unaccent": false,
+						"path": [
+							{
+								"section_tipo": "'.$section_tipo.'",
+								"component_tipo": "'.$component_tipo.'",
+								"modelo": "'.$modelo_name.'",
+								"name": "term_id"
+							}
+						]
+					}
+				]
+			}';
+		// sqo (search query object)			
+			$sqo = json_decode('{
+				"parsed": false,
+				"section_tipo": "'.$section_tipo.'",
+				"limit": 2,
+				"offset": 0,
+				"type": "search_json_object",
+				"full_count": false,
+				"order": false,
+				"filter": '.$filter_string.',
+				"skip_projects_filter": true,
+				"select": []
+			}');
+		$search_development2	= new search_development2($sqo);
+		$search_result			= $search_development2->search();
+		$ar_records				= $search_result->ar_records;
+		$count					= count($ar_records);
+
+		if ($count===0) {
+			return null;
+		}else if ($count===1) {
+			return reset($ar_records)->section_id;
+		}else{
+			trigger_error('ERROR. Term is duplicate. Fix ASAP: '.to_string($term_id));
+		}
+
+		return null;
+	}//end get_section_id_by_term_id
 
 
 

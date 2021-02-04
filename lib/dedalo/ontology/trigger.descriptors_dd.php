@@ -97,6 +97,14 @@ if($mode=='saveDescriptor') {
 
 	$RecordObj->Save();
 
+	// sync Dédalo ontology records
+		// ontology::edit_term((object)[
+		// 	'term_id'	=> $parent,
+		// 	'dato'		=> $dato,
+		// 	'dato_tipo'	=> $tipo,
+		// 	'lang'		=> $lang
+		// ]); 
+
 	echo (string)$html;
 	exit();
 }

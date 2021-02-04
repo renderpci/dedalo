@@ -103,14 +103,11 @@ if($accion==='insertTS') {
 			if ($terminoID==$parent) {
 				exit("Error on insertTS. Created record with same terminoID as parent. Maybe counter is outdated. Please change manually current created term '$terminoID' before continue)");
 			}
-
 	
 		// sync Dédalo ontology records
-			ontology::add_term((object)[
-				'term_id'	=> $terminoID,
-				'parent'	=> $parent,
-				'esmodelo'	=> $esmodelo
-			]); 
+			// ontology::add_term((object)[
+			// 	'term_id'	=> $terminoID
+			// ]); 
 
 
 	// all is ok. return terminoID string	
@@ -185,7 +182,6 @@ if($accion==='editTS') {
 			trigger_error($msg);
 			exit();
 		}
-
 
 	// required fields
 		$parentInicial	= safe_xss($_POST['parentInicial']);
