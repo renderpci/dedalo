@@ -2129,6 +2129,11 @@
 		Added ontology section connection with structure (for testing purposes)
 
 
+	Valencia 05-02-2021 5.7.53
+		Splitted functionalities of export structure and build head code version from git
+
+
+
 	[/HISTORY]
 
 
@@ -2152,7 +2157,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.52';
+	$DEDALO_VERSION = '5.7.53';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
