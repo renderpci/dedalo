@@ -111,10 +111,12 @@ function build_version_from_git_master($json_data) {
 		try{
 
 			$output = update_head_code();
-
+			
 			# Append msg
-			$response->msg .= $output;
+			$response->msg .= to_string($output);
 			debug_log(__METHOD__." update_head_code output OK: $response->msg ".to_string(), logger::DEBUG);
+			
+			$response->result = true;			
 
 		} catch (Exception $e) {
 		

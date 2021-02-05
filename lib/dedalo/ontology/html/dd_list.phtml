@@ -48,8 +48,8 @@ print js::build_tag('js/dd_list.js');
 </head>
 
 <body onLoad="set_localStorage('tsopen','1',7);" onBeforeUnload="set_localStorage('tsopen','0',7);" onUnload="set_localStorage('tsopen','0',7);" >
+<div id="log_messages" class="hide"></div>
 <div id="wrapGeneral">
-<div id="log_messages"></div>
 <table >
 
   <tr>
@@ -167,13 +167,16 @@ print js::build_tag('js/dd_list.js');
 
 
 </table>
-</div><!-- fin wrapGeneral -->
-<div class="bottom_separator"></div>
 
-<div class="dd_info_bottom">
-	<label>Total dd:</label> <?php echo $total_dd ?><br>
-	<label>Total terms:</label> <?php echo $total_terms ?>	
-</div>
+
+<!-- stats -->
+	<div class="dd_info_bottom">
+		<label>Total dd:</label> <?php echo $total_dd ?><br>
+		<label>Total terms:</label> <?php echo $total_terms ?>	
+	</div>
+
+</div><!-- fin wrapGeneral -->
+
 
 </body>
 </html>
