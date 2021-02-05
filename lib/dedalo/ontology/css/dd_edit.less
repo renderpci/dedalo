@@ -7,11 +7,59 @@
   outline: 0;
 }
 
+input, select {
+	font-size: unset;
+	font-family: unset;
+	background-color: #f4f4f4;
+    border: 1px solid #CCC;
+    padding: 2px;
+    color: #333;
+    border-radius: 3px;
+    padding: 0.35em;
+}
+
+.model_selector {
+	min-width: 10em;
+}
+
 input, textarea {
 	color:#666;
 	border:none;
 	margin-left:2px;
-	padding: 3px;
+	padding: 5px;
+}
+
+
+.input_term {
+	min-width: 253px;
+}
+.table_opciones_principales {
+	line-height: 1.3em;
+}
+#container_docu {
+	// padding-top: 10px;
+	// text-align: center;
+	// margin-right: 5px;
+	
+	a {
+		padding: .5em;
+		text-align: center;
+		width: 3em;
+		background-color: #e6650d;
+		border-radius: 3px;
+		color: white;
+		vertical-align: middle;
+		display: block;
+
+
+		&:active {
+			opacity: 0.3;
+		}
+	}
+}
+
+.separator {
+	border-top: 1px solid #b6b6b6;
 }
 
 #wrapGeneral {
@@ -140,8 +188,17 @@ input, textarea {
 }
 
 .div_wraper{ width:650px;}
-.div_wraper .left_div {	float: left;  width:130px;  text-align:right;}
-.div_wraper .right_div {float: right; width: 500px; text-align:left}
+.div_wraper .left_div {	
+	float: left;  
+	width: 62px;  
+	text-align: right;
+}
+.div_wraper .right_div {
+	float: left;
+	width: 578px;
+	text-align: left;
+	margin-left: 5px
+}
 
 
 /* JSON EDITOR

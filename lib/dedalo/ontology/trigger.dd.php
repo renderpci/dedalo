@@ -369,33 +369,33 @@ if($accion==='update_tr_order') {
 /**
 * SAVEDESCRIPTORFROMLIST : Inline edit in tree
 */
-if($accion==='saveDescriptorFromList') {
-	
-	if(!$terminoID || strlen($terminoID)<2) die("Need more data! (terminoID) ");
-	
-	$html='';
+	// if($accion==='saveDescriptorFromList') {
+		
+	// 	if(!$terminoID || strlen($terminoID)<2) die("Need more data! (terminoID) ");
+		
+	// 	$html='';
 
-	$lang = $ts_lang;
+	// 	$lang = $ts_lang;
 
-	if(empty($lang) || strlen($lang)<3) {
-		$lang = 'lg-spa';	# Fixed main lang for dd structure
-	}
-	
-	$parent = $terminoID;
+	// 	if(empty($lang) || strlen($lang)<3) {
+	// 		$lang = 'lg-spa';	# Fixed main lang for dd structure
+	// 	}
+		
+	// 	$parent = $terminoID;
 
-	debug_log(__METHOD__." lang ".to_string($lang), logger::DEBUG);	
+	// 	debug_log(__METHOD__." lang ".to_string($lang), logger::DEBUG);	
 
-	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, null, $parent, $lang, $tipo='termino');
-	$RecordObj_descriptors_dd->set_dato($termino);
-	$RecordObj_descriptors_dd->Save();
-	
-	$html .= " Saved! ";
+	// 	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
+	// 	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, null, $parent, $lang, $tipo='termino');
+	// 	$RecordObj_descriptors_dd->set_dato($termino);
+	// 	$RecordObj_descriptors_dd->Save();
+		
+	// 	$html .= " Saved! ";
 
-	echo $html;
-	
-	exit();
-}//end saveDescriptorFromList
+	// 	echo $html;
+		
+	// 	exit();
+	// }//end saveDescriptorFromList
 
 
 

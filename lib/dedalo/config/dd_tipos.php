@@ -184,6 +184,17 @@ if (!defined('DEDALO_PROTOCOL')) {
 	define('DEDALO_PROTOCOL', 'http://');
 }
 
+// ontology section tipos
+define('ONTOLOGY_SECTION_TIPOS', [
+	'section_tipo'	=> 'dd1500',
+	'id'			=> 'dd1483',
+	'tld'			=> 'dd1482',
+	'term_id'		=> 'dd1475',
+	'term'			=> 'dd1477',
+	'definition'	=> 'dd1478',
+	'observations'	=> 'dd1476'
+]);
+
 
 
 # TOP_TIPO

@@ -25,7 +25,7 @@ print css::build_tag('css/dd_list.css', null, false);
 	// Establecemos una cookie de modo para toda la página
 	const modo		= '<?php echo $modo ?>';
 	const accion	= '<?php echo $accion ?>';
-	const ts_lang	= '<?php echo $ts_lang ?>';
+	const ts_lang	= '<?php echo !empty($ts_lang) ? $ts_lang : DEDALO_STRUCTURE_LANG ?>';
 	const type		= '<?php echo $type ?>';
 
 	/*

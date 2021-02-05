@@ -4,15 +4,15 @@ require_once( dirname(__FILE__) . '/class.RecordObj_dd_edit.php');
 
 
 // definitions
-	define('ONTOLOGY_SECTION_TIPOS', [
-		'section_tipo'	=> 'dd1472',
-		'id'			=> 'dd1483',
-		'tld'			=> 'dd1482',
-		'term_id'		=> 'dd1475',
-		'term'			=> 'dd1477',
-		'definition'	=> 'dd1478',
-		'observations'	=> 'dd1476'	
-	]);
+	// define('ONTOLOGY_SECTION_TIPOS', [
+	// 	'section_tipo'	=> 'dd1500',
+	// 	'id'			=> 'dd1483',
+	// 	'tld'			=> 'dd1482',
+	// 	'term_id'		=> 'dd1475',
+	// 	'term'			=> 'dd1477',
+	// 	'definition'	=> 'dd1478',
+	// 	'observations'	=> 'dd1476'
+	// ]);
 
 
 
@@ -611,21 +611,25 @@ class ontology {
 				})($dato_tipo);
 				
 				// component save value 
-				(function($value) use($section_tipo, $section_id, $component_tipo, $lang) {
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
-																	 $component_tipo,
-																	 $section_id,
-																	 'edit',
-																	 $lang,
-																	 $section_tipo);
+				if (!empty($component_tipo)) {
 					
-					$dato = ($modelo_name==='component_input_text') ? [$value] : $value;
-					$component->set_dato($dato);
-					$component->Save();
-				})($dato);
+					(function($value) use($section_tipo, $section_id, $component_tipo, $lang, $dato_tipo) {
+						// dump($lang, ' $lang ++ component_tipo: '.$component_tipo.' - dato_tipo: '.$dato_tipo. ' - value: '.to_string($value));
+						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component 		= component_common::get_instance($modelo_name,
+																		 $component_tipo,
+																		 $section_id,
+																		 'edit',
+																		 $lang,
+																		 $section_tipo);
+						
+						$dato = ($modelo_name==='component_input_text') ? [$value] : $value;
+						$component->set_dato($dato);
+						$component->Save();
+					})($dato);
 
-				return true;
+					return true;
+				}				
 			}
 		
 		return false;

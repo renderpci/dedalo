@@ -2124,6 +2124,10 @@
 		Added ontology section and tool_docu
 		Added tool_docu automatic tool icon load to the inspector
 
+	
+	Valencia 05-02-2021 5.7.52
+		Added ontology section connection with structure (for testing purposes)
+
 
 	[/HISTORY]
 
@@ -2148,13 +2152,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.51';
+	$DEDALO_VERSION = '5.7.52';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '04-02-2021');
+	define('DEDALO_BUILD'	, '05-02-2021');
 
 
 	/*

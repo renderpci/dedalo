@@ -25,6 +25,7 @@ $vars = ['id','mode','terminoID_lang','terminoID','termino','parent','lang', 'ti
 foreach($vars as $name)	$$name = common::setVar($name);
 
 
+
 if($mode==='removeDescriptor') {
 
 	if(!$id || !$terminoID) die("Need more data! id:$id - terminoID:$terminoID ");
@@ -51,6 +52,8 @@ if($mode==='removeDescriptor') {
 
 	exit($html);
 }
+
+
 
 if($mode=='newDescriptor') {
 
@@ -82,32 +85,46 @@ if($mode=='newDescriptor') {
 	exit($html);
 }
 
+
+
 # SAVE DESCRIPTOR
 if($mode=='saveDescriptor') {
 
-	session_write_close();
+	// session_write_close();
 
-	if(!$terminoID) die(" Error. Need more data! terminoID:$terminoID ");
+	if(empty($terminoID)) die(" Error. Need more data! terminoID:$terminoID ");
 
-	$html = '';
 
-	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo);
-	$RecordObj->set_dato($dato);
+	if ($tipo==='obs') {
+		
+		// (!) disabled. Now save descriptors data is indirect:
+		// First data is saved in regular section ontology, and then data is propagated to descriptors_dd from section->post_save_processes
+			$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+			$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo);
+			$RecordObj->set_dato($dato);
+			$RecordObj->Save();
 
-	$RecordObj->Save();
+		$response = null;
+	
+	}else{
 
-	// sync Dédalo ontology records
-		// ontology::edit_term((object)[
-		// 	'term_id'	=> $parent,
-		// 	'dato'		=> $dato,
-		// 	'dato_tipo'	=> $tipo,
-		// 	'lang'		=> $lang
-		// ]); 
+		// sync Dédalo ontology records
+			$result = ontology::edit_term((object)[
+				'term_id'	=> $parent,
+				'dato'		=> $dato,
+				'dato_tipo'	=> $tipo,
+				'lang'		=> $lang
+			]);
 
-	echo (string)$html;
+		$response = ($result===false)
+			? 'Error on save descriptor ' . json_encode($result)
+			: null;
+	}
+	
+
+	echo $response; 
 	exit();
-}
+}//end saveDescriptor
 
 
 
@@ -139,6 +156,8 @@ if($mode=='codigoKeyUp') {
 	exit("$n");
 	*/
 }
+
+
 
 if($mode=='networkTest') {
 	exit(' networkTest ok! ');

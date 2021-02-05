@@ -30,6 +30,9 @@
 	const debe_introducir_title						= '<?php echo msgJS($debe_introducir_title)?>'
 	const padre_title								= '<?php echo msgJS($padre_title);  ?>'
 	const trsND										= '#relTR,#hermanosTR,#hijosTR,#modeloTR,#usableIndexTR'
+	const DEDALO_LIB_BASE_URL						= '<?php echo DEDALO_LIB_BASE_URL ?>'
+
+	var window_docu
 </script>
 <?php
 // js
@@ -71,7 +74,7 @@
 							</td>
 
 							<!-- MODELO -->
-							<td align="center"  valign="top">
+							<td align="center" valign="top">
 								<?php
 								echo ucfirst($modelo_title);
 								if(SHOW_DEBUG==true || SHOW_DEVELOPER===true) echo " (esmodelo:$esmodelo)" ;
@@ -104,6 +107,25 @@
 									<option value="si" <?php if (!(strcmp('si', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
 									<option value="no" <?php if (!(strcmp('no', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
 								</select>
+							</td>
+
+							<!-- LINK DOCU -->
+							<td align="center" nowrap="nowrap" valign="top">
+								<div id="container_docu">Docu<br></div>
+								<script type="text/javascript">
+									const container	= document.getElementById("container_docu")
+									const url		= DEDALO_LIB_BASE_URL + '/main/?m=tool_docu&t=dd1500&component_tipo=' + terminoID
+									const link		= create_dom_element({
+										element_type	: 'a',
+										class_name		: '',
+										inner_html		: terminoID,
+										parent			: container
+									})
+									link.addEventListener("click", function(){
+										window_docu = window.open(url, 'docu');
+										window_docu.focus()
+									})
+								</script>								
 							</td>
 
 							</tr>

@@ -1,4 +1,4 @@
-<tr>
+<tr class="separator">
 
 	<!-- LANG NAME -->
 	<td style="text-align:center">
@@ -9,7 +9,7 @@
 
 	<!-- TERM -->
 	<td>
-    	<input type="text" name="termino_<?php echo $id ?>" id="termino_<?php echo $id ?>" style="width:99%" value="<?php echo $termino ?>"
+    	<input type="text" name="termino_<?php echo $id ?>" id="termino_<?php echo $id ?>" class="input_term" value="<?php echo $termino ?>"
     	onfocus="myfocus(this)" onblur="myblur(this);"
     	data-parent="<?php echo $parent_desc ?>" data-lang="<?php echo $lang ?>" data-tipo="termino"
     	onchange="saveDescriptor(this)" >
@@ -18,10 +18,13 @@
 
     <!-- DEFINITION -->
 	<td>
+    	<?php /*
     	<textarea name="def_<?php echo $def_id ?>" id="def_<?php echo $def_id ?>" style="width:100%; height:14px;"
     	onfocus="myfocus(this)" onblur="myblur(this);"
     	data-parent="<?php echo $parent_desc ?>" data-lang="<?php echo $lang ?>" data-tipo="def"
     	onchange="saveDescriptor(this)" ><?php echo $def ?></textarea>
+    	*/ ?>
+    	<em><?php echo $def ?></em>
     </td>
 
 
