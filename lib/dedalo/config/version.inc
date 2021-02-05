@@ -2137,6 +2137,9 @@
 		Added ontology edit form lock when descriptor is saving
 
 
+	Valencia 05-02-2021 5.7.55
+		Fix load ontology sync mode using promise instead jquery defer
+
 
 
 
@@ -2163,7 +2166,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.54';
+	$DEDALO_VERSION = '5.7.55';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
