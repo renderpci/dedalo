@@ -81,13 +81,17 @@ textarea {
 	border-radius: 4px;
 }
 select {
-	font-family: Arial, Helvetica, sans-serif;
+	// font-family: Arial, Helvetica, sans-serif;
 	// font-size: 11px;
 	background-color: #f4f4f4;
 	border: 1px solid #CCCCCC;
 	padding: 2px;
 	color: #333333;
 	border-radius: 3px;
+	max-width: 150px;
+}
+.model_selector {
+
 }
 .SubmitButon {
 	cursor: pointer;
@@ -158,16 +162,14 @@ select {
 	text-align: left;
 	clear: both;
 }
-.divTS {
-	margin: 0px;
-	padding: 0px;
-	padding-top: 4px;
-}
-.divTS img {
-	margin: 0px;
-	padding: 0px !important ;
-	cursor: pointer;
-}
+
+
+
+
+
+
+
+
 .btnGo1 {
 	cursor: pointer;
 }
@@ -190,14 +192,7 @@ select {
 	margin-right: -3px;
 	color: #8e8e8e;
 }
-.divflechaC {
-	margin: 0px;
-	padding: 0px;
-	width: 15px;
-	height: 9px;
-	display: inline-block;
-	cursor: pointer;
-}
+
 .divLineasInfo {
 	color: #496473;
 	padding-top: 5px;
@@ -215,18 +210,7 @@ select {
 
 
 
-// v6 properties
-	// button 'P'
-	.cuadroU.btn_properties {
-		background-color: @properties_bg_color;
-		color: #ffffff;
-		opacity: 0.8;
-	}
-	// json viewer div
-	.divLineasInfo.div_properties pre {
-		background-color: @properties_bg_color;	
-		color: #ffffff;	
-	}	
+
 
 
 
@@ -262,8 +246,9 @@ select {
 	border-style: inset;
 	border-color: #DBDBDB;
 	border-radius: 3px;
-	text-shadow: 0 0 0 transparent, 0 1px 0 #cdcdcd;
+	// text-shadow: 0 0 0 transparent, 0 1px 0 #cdcdcd;
 	//box-shadow: 0 1px 2px #aeaeae;
+	height: 20px;
 }
 #tsTreeLOAD .tsHeader .tsHeaderLeft {
 	float: left;
@@ -300,34 +285,9 @@ select {
 	//background-image: url("@{dd_path}/images/th_ramp3.png");
 }
 /* FIN TESAURO JERÁRQUICO */
-.nOrden {
-	font-size: 9px;
-	text-align: right;
-	display: inline-block;
-	min-width: 31px;
-	margin-right: 2px;
-}
-.nOrden a {
-	color: #999999;
-}
-.textoTermino {
-	display: inline-block;
-	min-height: 15px;
-	position: relative;
-	top: 0px;
-	line-height: 1.2em;
-	font-family: "Menlo", monospace;
 
-	.notas {
-		color: #d1d2db;
-		font-size: 8px;
-	}
-	input {
-		padding: 1em;
-		padding-top: 0.5em;
-		padding-bottom: 0.5em;
-	}
-}
+
+
 .resalte {
 	display: inline-block;
 	color: #000;
@@ -337,13 +297,7 @@ select {
 	padding-right: 3px;
 	padding-bottom: 1px;
 }
-.btnModelo {
-	display: inline;
-	padding: 0px;
-	margin-left: 4px;
-	color: #F60;
-	display: none;
-}
+
 div.inline {
 	display: inline;
 }
@@ -394,30 +348,8 @@ table.table_list_ts_used {
 table.table_list_ts_used td {
 	padding: 3px;
 }
-.cuadroU {
-	display: inline-block;
-	height: 14px;
-	width: auto;
-	margin: 0px;
-	padding: 0px;
-	padding-left: 4px;
-	padding-right: 4px;
-	overflow: hidden;
-	background-color: #e9dd9f;
-	border: solid 1px #919191;
-	color: #333333;
-	font-family: Arial, Helvetica, sans-serif;
-	font-size: 8px !important;
-	vertical-align: middle;
-	cursor: pointer;
-	line-height: 14px;
-	position: relative;
-	top: 0px;
-}
-.cuadroU:active {
-	background-color: #999999;
-	color: #ffffff;
-}
+
+
 .icon-help {
 	background-image: url("@{dd_path}/images/icon-help.gif");
 	width: 12px;
@@ -427,33 +359,7 @@ table.table_list_ts_used td {
 	vertical-align: middle;
 	cursor: pointer;
 }
-.bullet_mas {
-	background-image: url("@{dd_path}/images/bullet_mas.png");
-	width: 18px;
-	height: 18px;
-	display: inline-block;
-	position: relative;
-	vertical-align: bottom;
-	cursor: pointer;
-}
-.icon_delete {
-	background-image: url("@{dd_path}/images/delete.png");
-	width: 12px;
-	height: 13px;
-	display: inline-block;
-	vertical-align: text-top;
-	cursor: pointer;
-}
-.icon_edit {
-	background-image: url("@{dd_path}/images/edit_grey.png");
-	width: 15px;
-	height: 15px;
-	display: inline-block;
-	margin: 0px;
-	margin-top: -1px;
-	cursor: pointer;
-	vertical-align: text-top;
-}
+
 .tesauro_button_show_tr {
 	background-image: url("@{dd_path}/images/tr-icon.gif");
 	width: 15px;
@@ -473,26 +379,8 @@ table.table_list_ts_used td {
 	vertical-align: text-bottom;
 	position: relative;
 }
-.mostrar-modelo {
-	background-image: url("@{dd_path}/images/m-icon.gif");
-	width: 15px;
-	height: 14px;
-	display: inline-block;
-	cursor: pointer;
-	vertical-align: text-bottom;
-	margin: 0px;
-	position: relative;
-}
-.mostrar-obs {
-	background-image: url("@{dd_path}/images/o-icon.gif");
-	width: 15px;
-	height: 14px;
-	display: inline-block;
-	cursor: pointer;
-	vertical-align: text-bottom;
-	margin: 0px;
-	position: relative;
-}
+
+
 .mostrar-nd {
 	background-image: url("@{dd_path}/images/nd.gif");
 	width: 15px;
@@ -683,3 +571,127 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 }
 
 
+
+// divTS
+	.divTS {
+		margin: 0px;
+		padding: 0px;
+		padding-top: 4px;
+		display: flex;
+		// background-color: #e8fd92;
+		margin-bottom: 1px;
+
+		>* {
+			line-height: 14px;
+			display: inline-block;
+			vertical-align: bottom;
+			margin-right: 0.25em;
+			display: block;
+			line-height: 14px;
+		}
+
+		img {
+			margin: 0;
+			padding: 0;
+			cursor: pointer;
+		}
+
+		.bullet_mas {
+			background-image: url("@{dd_path}/images/bullet_mas.png");	
+			background-position: 1px -3px;
+			background-repeat: no-repeat;		
+			width: 18px;
+			cursor: pointer;			
+		}
+		.icon_delete {
+			background-image: url("@{dd_path}/images/delete.png");
+			background-position: 1px -1px;
+			background-repeat: no-repeat;
+			width: 12px;
+			cursor: pointer;
+		}		
+		.nOrden {
+			font-size: 9px;
+			text-align: right;
+			min-width: 31px;
+			a {
+				color: #999999;
+			}
+		}
+		.icon_edit {
+			background-image: url("@{dd_path}/images/edit_grey.png");
+			background-repeat: no-repeat;
+			width: 15px;			
+			cursor: pointer;
+			// vertical-align: text-top;
+		}
+		.textoTermino {	
+			font-family: "system-ui", "Menlo", monospace;
+			font-size: 14px;
+			line-height: 1.15em;
+			color: #676767;		
+			
+			.notas {
+				color: #d1d2db;
+				font-size: 8px;
+			}
+			input {
+				padding: 1em;
+				padding-top: 0.5em;
+				padding-bottom: 0.5em;
+			}
+		}
+		.cuadroU {
+			// font-family: Arial, Helvetica, sans-serif;
+			font-size: 8px !important;
+			width: auto;
+			height: 14px;
+			padding-left: 4px;
+			padding-right: 4px;
+			overflow: hidden;
+			background-color: #e9dd9f;
+			border: solid 1px #919191;
+			color: #333333;						
+			cursor: pointer;
+
+			&.btn_properties {
+				background-color: @properties_bg_color;
+				color: #ffffff;				
+			}
+
+			&:active {
+				background-color: #999999;
+				color: #ffffff;
+			}
+		}
+		.mostrar-modelo {
+			background-image: url("@{dd_path}/images/m-icon.gif");
+			width: 15px;
+			height: 14px;
+			cursor: pointer;
+		}
+		.mostrar-obs {
+			background-image: url("@{dd_path}/images/o-icon.gif");
+			width: 15px;
+			height: 14px;
+			cursor: pointer;			
+		}
+		.btnModelo {
+			color: #F60;
+			display: none;
+		}
+		.divflechaC {
+			width: 15px;
+			height: 14px;
+			cursor: pointer;
+		}
+	}
+
+
+
+// v6 properties	
+	// json viewer div
+	.divLineasInfo.div_properties pre {
+		background-color: @properties_bg_color;	
+		color: #ffffff;	
+	}	
