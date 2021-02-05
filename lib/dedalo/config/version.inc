@@ -2132,6 +2132,12 @@
 	Valencia 05-02-2021 5.7.53
 		Separates functionalities of export structure and build head code version from git into 2 buttons
 
+	
+	Valencia 05-02-2021 5.7.54
+		Added ontology edit form lock when descriptor is saving
+
+
+
 
 
 	[/HISTORY]
@@ -2157,7 +2163,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.53';
+	$DEDALO_VERSION = '5.7.54';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
