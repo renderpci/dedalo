@@ -2140,8 +2140,11 @@
 	Valencia 05-02-2021 5.7.55
 		Fix load ontology sync mode using promise instead jquery defer
 
+	
+	Valencia 06-02-2021 5.7.56
+		Optimized ontology tree load
 
-
+	
 
 	[/HISTORY]
 
@@ -2166,13 +2169,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.55';
+	$DEDALO_VERSION = '5.7.56';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '05-02-2021');
+	define('DEDALO_BUILD'	, '06-02-2021');
 
 
 	/*

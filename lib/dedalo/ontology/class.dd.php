@@ -335,7 +335,7 @@ class dd extends dd_elements {
 					$marginLeft = 0 ;
 					$display = "display:block" ;
 				}else{
-					$marginLeft = 50 ;
+					$marginLeft = 35 ;
 					$display = "display:block" ;
 				}
 
