@@ -2130,7 +2130,7 @@
 
 
 	Valencia 05-02-2021 5.7.53
-		Splitted functionalities of export structure and build head code version from git
+		Separates functionalities of export structure and build head code version from git into 2 buttons
 
 
 
