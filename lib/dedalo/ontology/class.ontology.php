@@ -225,6 +225,7 @@ class ontology {
 					$RecordObj_descriptors_dd->Save();
 
 				}// end foreach ($descriptors)
+
 		}//end foreach ($data as $key => $item)
 
 
@@ -572,6 +573,8 @@ class ontology {
 
 	/**
 	* EDIT_TERM
+	* Edit term in section 'Ontology'. 
+	* Note on save section finish, also is saved the value in 'matrix_descriptors_dd'
 	* @param object $options
 	* @return bool
 	*/
@@ -639,6 +642,7 @@ class ontology {
 
 	/**
 	* GET_SECTION_ID_BY_TERM_ID
+	* Search in DDBB for records in section Ontology where term_id is requested term_id
 	* @return int | null 
 	* @param string $term_id
 	*/
@@ -699,6 +703,7 @@ class ontology {
 
 
 }//end ontology
+
 
 
 /*

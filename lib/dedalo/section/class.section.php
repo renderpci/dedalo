@@ -3761,8 +3761,8 @@ class section extends common {
 
 
 	/**
-	* POST_SAVE_component_PROCESSES
-	* Executed on component save (when all save script is finished)
+	* POST_SAVE_COMPONENT_PROCESSES
+	* Executed on component save (when save script is complete)
 	* @return bool
 	*/
 	public function post_save_component_processes($options) {
@@ -3776,7 +3776,7 @@ class section extends common {
 			$lang			= $component->get_lang();
 			$component_tipo = $component->get_tipo();
 
-		// ontology sync
+		// ontology sync. Syncronize this section values with equivalents in table 'matrix_descriptors_dd'. Only master server
 			if (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true && 
 				defined('ONTOLOGY_SECTION_TIPOS') && ONTOLOGY_SECTION_TIPOS['section_tipo']===$section_tipo) {
 
