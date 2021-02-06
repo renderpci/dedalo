@@ -29,15 +29,16 @@ abstract class component_common_draw {
 			}
 		}		
 		
-		if($modo==='edit' || $modo==='search') {
-			#$def = RecordObj_dd::get_def_by_tipo($tipo, $lang=DEDALO_APPLICATION_LANG);
-			$def = $component_obj->get_def(); 	
-			if (!empty($def)) {
-				$def = "\n".$def;
-			}
-		}else{
-			$def = null;
-		}
+		// def (definition)
+			// if($modo==='edit' || $modo==='search') {
+			// 	#$def = RecordObj_dd::get_def_by_tipo($tipo, $lang=DEDALO_APPLICATION_LANG);
+			// 	$def = $component_obj->get_def(); 	
+			// 	if (!empty($def)) {
+			// 		$def = "\n".$def;
+			// 	}
+			// }else{
+			// 	$def = null;
+			// }
 		
 		$warning_code='';
 		$propiedades = $component_obj->get_propiedades();			
@@ -53,11 +54,11 @@ abstract class component_common_draw {
 			
 		}else{
 
-			if (empty($def)) {
+			// if (empty($def)) {
 				$html 	.= '<label class="css_label label" '.$required_code.'>'.$label.'</label>';
-			}else{
-				$html 	.= '<label class="css_label label tooltip_active" '.$required_code.' title="'. htmlentities($def) .'">'.$label.'</label>';
-			}
+			// }else{
+			// 	$html 	.= '<label class="css_label label tooltip_active" '.$required_code.' title="'. htmlentities($def) .'">'.$label.'</label>';
+			// }
 			//data-title=\"". $label . $def . "\" 
 			#$html 	.= "\n <label class=\"css_label tooltips\" $required_code >$label<span>$label $def</span></label>"; //data-title=\"". $label . $def . "\" 
 		}			

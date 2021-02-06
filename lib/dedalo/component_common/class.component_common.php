@@ -4562,11 +4562,14 @@ abstract class component_common extends common {
 	*/
 	public function get_def($lang=DEDALO_APPLICATION_LANG) {
 
-		if (isset($this->def)) {
-			$def = $this->def;
-		}else{
-			$def = RecordObj_dd::get_def_by_tipo($this->tipo, $lang);
-		}
+		// DES
+			// if (isset($this->def)) {
+			// 	$def = $this->def;
+			// }else{
+			// 	$def = RecordObj_dd::get_def_by_tipo($this->tipo, $lang);
+			// }
+
+		$def = null;
 
 		return $def;
 	}//end get_def
