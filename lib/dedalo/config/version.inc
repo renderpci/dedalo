@@ -2150,6 +2150,11 @@
 		Removed the no longer used directory 'dd'
 
 	
+	Valencia 06-02-2021 5.7.58
+		Fixed JSON editor issues on ontology dd_edit
+		Enabled save ontology data on non master servers
+
+	
 
 	[/HISTORY]
 
@@ -2174,7 +2179,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.57';
+	$DEDALO_VERSION = '5.7.58';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
