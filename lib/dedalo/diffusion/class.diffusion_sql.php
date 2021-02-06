@@ -3389,6 +3389,133 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* RESOLVE_JER_DD_DATA
+	* @return mixed
+	*/
+	public static function resolve_jer_dd_data($options, $dato) {
+				
+		// options
+			$lang			= $options->lang;
+			$propiedades	= $options->propiedades;
+			$column			= $propiedades->process_dato_arguments->column;
+			$mode			= $propiedades->process_dato_arguments->mode ?? null;
+			$resolve_label	= $propiedades->process_dato_arguments->resolve_label ?? null;
+			$term_id		= (!empty($dato)) // expected format ["dd1"]
+				? reset($dato)
+				: null;
+
+			if (empty($term_id)) {
+			 	return null;
+			} 
+
+		switch ($column) {
+			case 'esmodelo': // typology
+
+				$RecordObj_dd	= new RecordObj_dd($term_id);
+				$db_value		= $RecordObj_dd->get_esmodelo();
+
+				$value = $db_value==='si'
+					? 'object'
+					: 'instance';
+
+				return $value;
+				break;
+
+			case 'modelo' : // object_model, object_model_label
+
+				$RecordObj_dd	= new RecordObj_dd($term_id);
+				$tipo			= $RecordObj_dd->get_modelo();
+				
+				$value = ($resolve_label===true && !empty($tipo))
+					? RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, $from_cache=true, $fallback=false)
+					: (!empty($tipo) ? $tipo : null);				
+
+				return $value;
+				break;
+
+			case 'relaciones': // relations, relations_labels
+				
+				$tipos = RecordObj_dd::get_ar_terminos_relacionados($term_id, $cache=true, $simple=true);
+				
+				$value = ($resolve_label===true && !empty($tipos))
+					? array_map(function($item) use($lang){
+						return RecordObj_dd::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
+					  }, $tipos)
+					: (!empty($tipos) ? $tipos : null);
+
+				return $value;
+				break;
+
+			case 'parent': // children, children_labels, parent, parent_label, parenst, parents_label
+
+				if ($mode==='get_children') {
+
+					$RecordObj_dd	= new RecordObj_dd($term_id);
+					$tipos			= $RecordObj_dd->get_ar_childrens($term_id);					
+					
+					$value = ($resolve_label===true && !empty($tipos))
+						? array_map(function($item) use($lang){
+							return RecordObj_dd::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
+						  }, $tipos)
+						: (!empty($tipos) ? $tipos : null);
+
+				}else if ($mode==='get_parents') {
+				
+					$RecordObj_dd	= new RecordObj_dd($term_id);
+					$tipos			= array_values( $RecordObj_dd->get_ar_parents_of_this($ksort=true) );
+					
+					$value = ($resolve_label===true && !empty($tipos))
+						? array_map(function($item) use($lang){
+							return RecordObj_dd::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
+						  }, $tipos)
+						: (!empty($tipos) ? $tipos : null);
+
+				}else{
+
+					$RecordObj_dd	= new RecordObj_dd($term_id);
+					$tipo			= $RecordObj_dd->get_parent();
+					
+					$value = ($resolve_label===true && !empty($tipo))
+						? RecordObj_dd::get_termino_by_tipo($tipo, $lang, $from_cache=true, $fallback=true)
+						: (!empty($tipo) ? $tipo : null);
+				}
+
+				return $value;
+				break;		
+
+			case 'traducible': // translatable
+
+				$RecordObj_dd	= new RecordObj_dd($term_id);
+				$db_value		= $RecordObj_dd->get_traducible();
+
+				$value = $db_value==='si'
+					? true
+					: false;
+
+				return $value;
+				break;
+
+			case 'propiedades': // properties
+
+				$RecordObj_dd	= new RecordObj_dd($term_id);
+				$db_value		= $RecordObj_dd->get_propiedades();
+
+				$value = !empty($db_value) ? $db_value : null;
+
+				return $value;
+				break;	
+
+			default:
+				$value = null;
+				break;
+		}
+
+		return null;
+	}//end resolve_jer_dd_data
+
+
+
+	/**
 	* MAP_QUALITY_TO_INT
 	* @return
 	*/
@@ -3409,7 +3536,7 @@ class diffusion_sql extends diffusion  {
 	* Get only the first locator section_id if exists
 	* @return int | null
 	*/
-	public function map_locator_to_int($options=null, $dato) {
+	public function map_locator_to_int($options=null, $dato=null) {
 		
 		$value = (!empty($dato) && isset($dato[0]))
 			? (int)$dato[0]->section_id
