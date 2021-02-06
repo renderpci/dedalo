@@ -9,6 +9,7 @@
 // css
 	print css::build_tag('css/legacy/general.css',null,false);
 	print css::build_tag('css/legacy/edit.css',null,false);
+	print css::build_tag('css/dd_page.css',null,false);
 	print css::build_tag('css/dd_edit.css',null,false);
 ?>
 <script type="text/javascript">
@@ -196,7 +197,7 @@
 					</td>
 				</tr>		
 
-
+			
 			<!-- V5 Propiedades -->
 				<tr>
 					<td class="td_header" onClick="simpleToogleTBODY('propiedades_group',this);redimensionarVentana();" style="cursor:pointer">
@@ -210,18 +211,24 @@
 								<textarea id="propiedades" name="propiedades" class="propiedades_textarea"><?php echo $propiedades ?></textarea>
 								<div id="editor_json" class="editor_json_container"></div>
 								<script>
-								const propiedades_textarea_element = document.getElementById('propiedades')
+								const propiedades_textarea_element = document.getElementById('propiedades');
 									  propiedades_textarea_element.style.display = 'none';
-								const propiedades_options = {
+								
+								const propiedades_dato		= <?php echo json_encode($propiedades) ?>;
+								const propiedades_options	= {
 									mode	: 'code',
 									modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 									error	: function (err) {
-								    	alert(err.toString());
-								    }
-								  }
-								  // create the editor
+										alert(err.toString());
+									}
+								}
+								// create the editor
 									const propiedades_container	= document.getElementById('editor_json');
-									const propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options, <?php echo !empty($propiedades) ? (string)$propiedades : '""' ?>);
+									const propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options);
+									// set json
+									if (propiedades_dato) {
+										propiedades_editor.set( JSON.parse(propiedades_dato) )
+									}									
 								</script>
 							</div><!-- /div_wraper -->
 						</td>
@@ -244,24 +251,32 @@
 								?>
 								<textarea id="properties" name="properties" class="properties_textarea"><?php echo $properties_text ?></textarea>
 								<div id="properties_editor_json" class="editor_json_container"></div>
-								<script>
+								<script>																
 								const properties_textarea_element = document.getElementById('properties')
 									  properties_textarea_element.style.display = 'none';
-								const properties_options = {
+								
+								const properties_dato		= <?php echo json_encode($properties) ?>;
+								const properties_options	= {
 									mode	: 'code',
 									modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 									error	: function (err) {
 								    	alert(err.toString());
 								    }
-								  }
+								}
 								// create properties_editor
 									const properties_container	= document.getElementById('properties_editor_json');
-									const properties_editor		= new JSONEditor(properties_container, properties_options, <?php echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
+									// const properties_editor		= new JSONEditor(properties_container, properties_options, <?php #echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
+									const properties_editor		= new JSONEditor(properties_container, properties_options);
+									// set json
+									if (properties_dato) {
+										properties_editor.set( properties_dato )
+									}									
 								</script>
 							</div>
 						</td>
 					</tr>
 				</tbody>
+			<?php /*	*/ ?>
 			
 
 			<!-- hierarchie info -->
