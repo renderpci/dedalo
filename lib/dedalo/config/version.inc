@@ -2155,6 +2155,12 @@
 		Enabled save ontology data on non master servers
 		Improves dd_edit js files load
 
+
+	Valencia 06-02-2021 5.7.59
+		Added diffusion function 'resolve_jer_dd_data' to allow direct jer_dd access on publication 
+		Removed descriptors def column access. It is no longer necessary now
+		Fix error on dd_edit
+
 	
 
 	[/HISTORY]
@@ -2180,7 +2186,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.58d';
+	$DEDALO_VERSION = '5.7.59';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
