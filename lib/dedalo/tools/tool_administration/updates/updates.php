@@ -6,6 +6,13 @@ global $updates;
 $updates = new stdClass();
 
 
+// to use in next update:
+	// CREATE INDEX "jer_dd_terminoID_norden" ON "jer_dd" ("terminoID", "norden");
+	// CREATE INDEX "jer_dd_parent_esdescriptor" ON "jer_dd" ("parent", "esdescriptor");
+	// CREATE INDEX "matrix_descriptors_dd_dato_parent_tipo" ON "matrix_descriptors_dd" ("dato", "parent", "tipo");
+	// CREATE INDEX "jer_dd_parent_esdescriptor_esmodelo" ON "jer_dd" ("parent", "esdescriptor", "esmodelo");
+
+
 $v=560; #####################################################################################
 $updates->$v = new stdClass();
 

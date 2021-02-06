@@ -6,6 +6,8 @@ include( DEDALO_LIB_BASE_PATH .'/diffusion/class.diffusion.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 
+
+
 # IGNORE_USER_ABORT
 #ignore_user_abort(true);
 
@@ -208,7 +210,6 @@ function diffusion_complete_dump($json_data) {
 
 	# Write session to unlock session file
 	session_write_close();
-	
 
 	$response = (object)tool_diffusion::diffusion_complete_dump();
 
@@ -316,5 +317,3 @@ function export_thesaurus($json_data) {
 */
 
 
-
-?>
