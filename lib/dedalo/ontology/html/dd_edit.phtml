@@ -208,9 +208,11 @@
 					<tr>
 						<td>
 							<div class="wraper_propiedades">								
+								<textarea id="propiedades" name="propiedades" class="propiedades_textarea hide"><?php echo $propiedades ?></textarea>
 								<div id="editor_json" class="editor_json_container"></div>
 								<script>
 								window.addEventListener('DOMContentLoaded', (event) => {
+
 									const propiedades_dato		= <?php echo json_encode($propiedades) ?>;
 									const propiedades_options	= {
 										mode	: 'code',
@@ -219,6 +221,14 @@
 											alert(err.toString());
 										}
 									}
+									// create the editor
+										const propiedades_container	= document.getElementById('editor_json');
+										const propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options);
+										// set json
+										if (propiedades_dato) {
+											propiedades_editor.set( JSON.parse(propiedades_dato) )
+										}
+								})
 								</script>
 							</div><!-- /div_wraper -->
 						</td>
@@ -239,6 +249,7 @@
 								<?php
 								$properties_text = json_encode($properties);
 								?>
+								<textarea id="properties" name="properties" class="properties_textarea hide"><?php echo $properties_text ?></textarea>
 								<div id="properties_editor_json" class="editor_json_container"></div>
 								<script>
 								window.addEventListener('DOMContentLoaded', (event) => {
