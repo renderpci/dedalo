@@ -211,6 +211,7 @@
 								<textarea id="propiedades" name="propiedades" class="propiedades_textarea hide"><?php echo $propiedades ?></textarea>
 								<div id="editor_json" class="editor_json_container"></div>
 								<script>
+								let propiedades_editor
 								window.addEventListener('DOMContentLoaded', (event) => {
 
 									const propiedades_dato		= <?php echo json_encode($propiedades) ?>;
@@ -223,7 +224,7 @@
 									}
 									// create the editor
 										const propiedades_container	= document.getElementById('editor_json');
-										const propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options);
+										propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options);
 										// set json
 										if (propiedades_dato) {
 											propiedades_editor.set( JSON.parse(propiedades_dato) )
@@ -252,6 +253,7 @@
 								<textarea id="properties" name="properties" class="properties_textarea hide"><?php echo $properties_text ?></textarea>
 								<div id="properties_editor_json" class="editor_json_container"></div>
 								<script>
+								let properties_editor
 								window.addEventListener('DOMContentLoaded', (event) => {
 									
 									const properties_dato		= <?php echo json_encode($properties) ?>;
@@ -265,7 +267,7 @@
 									// create properties_editor
 										const properties_container	= document.getElementById('properties_editor_json');
 										// const properties_editor		= new JSONEditor(properties_container, properties_options, <?php #echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
-										const properties_editor		= new JSONEditor(properties_container, properties_options);
+										properties_editor		= new JSONEditor(properties_container, properties_options);
 										// set json
 										if (properties_dato) {
 											properties_editor.set( properties_dato )
@@ -315,11 +317,11 @@
 							<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="submit(this)">
 							<script type="text/javascript">
 							// Send JSON text to input and force update
-							document.getElementById('submit_button').onclick = function () {
-								$(propiedades_textarea_element)
+							document.getElementById('submit_button').onclick = function () {							
+								$('#propiedades')
 										.val(propiedades_editor.getText())
 										.trigger('change');
-								$(properties_textarea_element)
+								$('#properties')
 										.val(properties_editor.getText())
 										.trigger('change');
 							}
