@@ -2145,6 +2145,11 @@
 		Optimized ontology tree load
 
 	
+	Valencia 06-02-2021 5.7.57
+		Removed the no longer used directory 'dd'
+		Removed the no longer used directory 'dd'
+
+	
 
 	[/HISTORY]
 
@@ -2169,7 +2174,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.56';
+	$DEDALO_VERSION = '5.7.57';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
