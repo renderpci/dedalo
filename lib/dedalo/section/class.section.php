@@ -3777,7 +3777,7 @@ class section extends common {
 			$component_tipo = $component->get_tipo();
 
 		// ontology sync. Syncronize this section values with equivalents in table 'matrix_descriptors_dd'. Only master server
-			if (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true && 
+			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true && 
 				defined('ONTOLOGY_SECTION_TIPOS') && ONTOLOGY_SECTION_TIPOS['section_tipo']===$section_tipo) {
 
 				$ar_update_tipos = [
