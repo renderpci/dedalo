@@ -97,12 +97,15 @@ function build_version_from_git_master($json_data) {
 
 	// rsync trigger code HEAD from master git	
 		function update_head_code() {
+			global $response;
 
 			$source		= DEDALO_CODE_SERVER_GIT_DIR;
 			$target		= DEDALO_CODE_FILES_DIR .'/dedalo5_code.zip';
 			$command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target "; // @see https://git-scm.com/docs/git-archive
 
-			debug_log(__METHOD__." Updated Dédalo code with command: ".to_string($command), logger::DEBUG);
+			$msg = " Called Dédalo update_head_code with command: ".to_string($command);
+			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+			$response->msg .= $msg;
 
 			$output = shell_exec($command);
 			
@@ -113,8 +116,9 @@ function build_version_from_git_master($json_data) {
 			$output = update_head_code();
 			
 			# Append msg
-			$response->msg .= "update_head_code shell_exec output: ".json_encode($output);
-			debug_log(__METHOD__." update_head_code output OK: $response->msg ".to_string(), logger::DEBUG);
+			$msg = PHP_EOL ." update_head_code shell_exec output: ".json_encode($output);
+			$response->msg .= $msg;
+			debug_log(__METHOD__." update_head_code output OK: $msg ".to_string(), logger::DEBUG);
 			
 			$response->result = true;			
 
