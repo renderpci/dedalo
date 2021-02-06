@@ -2153,6 +2153,7 @@
 	Valencia 06-02-2021 5.7.58
 		Fixed JSON editor issues on ontology dd_edit
 		Enabled save ontology data on non master servers
+		Improves dd_edit js files load
 
 	
 

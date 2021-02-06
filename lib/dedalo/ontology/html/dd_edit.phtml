@@ -11,6 +11,7 @@
 	print css::build_tag('css/legacy/edit.css',null,false);
 	print css::build_tag('css/dd_page.css',null,false);
 	print css::build_tag('css/dd_edit.css',null,false);
+	print css::build_tag('jsoneditor/dist/jsoneditor.min.css');
 ?>
 <script type="text/javascript">
 // vars
@@ -37,14 +38,13 @@
 </script>
 <?php
 // js
-	print js::build_tag('jquery/dist/jquery.min.js');
-	print js::build_tag('jquery/dist/jquery-ui.min.js');
-	print js::build_tag('inc/javascript.js');
-	print js::build_tag('js/dd_common.js');
-	print js::build_tag('js/dd_edit.js');
-// Aditional css / js
-	print css::build_tag('jsoneditor/dist/jsoneditor.min.css');
-	print js::build_tag('jsoneditor/dist/jsoneditor.min.js');
+	print js::build_tag('jquery/dist/jquery.min.js', 'defer');
+	print js::build_tag('jquery/dist/jquery-ui.min.js', 'defer');
+	print js::build_tag('inc/javascript.js', 'defer');
+	print js::build_tag('js/dd_common.js', null);
+	print js::build_tag('js/dd_edit.js', 'defer');
+// Aditional css / js	
+	print js::build_tag('jsoneditor/dist/jsoneditor.min.js', 'defer');
 ?>
 </head>
 <body>
@@ -208,27 +208,27 @@
 					<tr>
 						<td>
 							<div class="wraper_propiedades">								
-								<textarea id="propiedades" name="propiedades" class="propiedades_textarea"><?php echo $propiedades ?></textarea>
+								<textarea id="propiedades" name="propiedades" class="propiedades_textarea hide"><?php echo $propiedades ?></textarea>
 								<div id="editor_json" class="editor_json_container"></div>
 								<script>
-								const propiedades_textarea_element = document.getElementById('propiedades');
-									  propiedades_textarea_element.style.display = 'none';
-								
-								const propiedades_dato		= <?php echo json_encode($propiedades) ?>;
-								const propiedades_options	= {
-									mode	: 'code',
-									modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-									error	: function (err) {
-										alert(err.toString());
+								window.addEventListener('DOMContentLoaded', (event) => {
+
+									const propiedades_dato		= <?php echo json_encode($propiedades) ?>;
+									const propiedades_options	= {
+										mode	: 'code',
+										modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+										error	: function (err) {
+											alert(err.toString());
+										}
 									}
-								}
-								// create the editor
-									const propiedades_container	= document.getElementById('editor_json');
-									const propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options);
-									// set json
-									if (propiedades_dato) {
-										propiedades_editor.set( JSON.parse(propiedades_dato) )
-									}									
+									// create the editor
+										const propiedades_container	= document.getElementById('editor_json');
+										const propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options);
+										// set json
+										if (propiedades_dato) {
+											propiedades_editor.set( JSON.parse(propiedades_dato) )
+										}
+								})
 								</script>
 							</div><!-- /div_wraper -->
 						</td>
@@ -249,28 +249,28 @@
 								<?php
 								$properties_text = json_encode($properties);
 								?>
-								<textarea id="properties" name="properties" class="properties_textarea"><?php echo $properties_text ?></textarea>
+								<textarea id="properties" name="properties" class="properties_textarea hide"><?php echo $properties_text ?></textarea>
 								<div id="properties_editor_json" class="editor_json_container"></div>
-								<script>																
-								const properties_textarea_element = document.getElementById('properties')
-									  properties_textarea_element.style.display = 'none';
-								
-								const properties_dato		= <?php echo json_encode($properties) ?>;
-								const properties_options	= {
-									mode	: 'code',
-									modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-									error	: function (err) {
-								    	alert(err.toString());
-								    }
-								}
-								// create properties_editor
-									const properties_container	= document.getElementById('properties_editor_json');
-									// const properties_editor		= new JSONEditor(properties_container, properties_options, <?php #echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
-									const properties_editor		= new JSONEditor(properties_container, properties_options);
-									// set json
-									if (properties_dato) {
-										properties_editor.set( properties_dato )
-									}									
+								<script>
+								window.addEventListener('DOMContentLoaded', (event) => {
+									
+									const properties_dato		= <?php echo json_encode($properties) ?>;
+									const properties_options	= {
+										mode	: 'code',
+										modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+										error	: function (err) {
+									    	alert(err.toString());
+									    }
+									}
+									// create properties_editor
+										const properties_container	= document.getElementById('properties_editor_json');
+										// const properties_editor		= new JSONEditor(properties_container, properties_options, <?php #echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
+										const properties_editor		= new JSONEditor(properties_container, properties_options);
+										// set json
+										if (properties_dato) {
+											properties_editor.set( properties_dato )
+										}
+								})
 								</script>
 							</div>
 						</td>
