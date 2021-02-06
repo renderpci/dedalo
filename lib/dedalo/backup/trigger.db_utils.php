@@ -113,7 +113,7 @@ function build_version_from_git_master($json_data) {
 			$output = update_head_code();
 			
 			# Append msg
-			$response->msg .= to_string($output);
+			$response->msg .= "update_head_code shell_exec output: ".json_encode($output);
 			debug_log(__METHOD__." update_head_code output OK: $response->msg ".to_string(), logger::DEBUG);
 			
 			$response->result = true;			
