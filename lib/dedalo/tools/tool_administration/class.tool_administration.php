@@ -1535,9 +1535,32 @@ class tool_administration extends tool_common {
 		}//end foreach ($ar_section_tipo as $key => $current_section_tipo)
 
 
-		$response->result   = true;
-		$response->msg 		= "Ok. All data is exported successfully"; // Override first message
-		$response->msg     .= "<br>".implode('<br>', $msg);
+		$response->result	= true;
+		$response->msg	= "Ok. All data is exported successfully"; // Override first message
+		$response->msg	.= "<br>".implode('<br>', $msg);
+		$response->msg	.= '<br>' . 'command_res: ' .$command_res;
+		$response->msg	.= '<br>' . 'To import use a command like this: ';
+		$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo4_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from ${SECTION_TIPO}.copy"';
+
+		// liks to files
+			$dir_path	= EXPORT_HIERARCHY_PATH; // like '../httpdocs/dedalo/install/import/hierarchy'
+			$files		= glob( $dir_path . '/*' ); // get all file names
+			$ar_link	= [];
+			foreach($files as $file){ // iterate files
+				if(is_file($file)) {
+					$extension = pathinfo($file,PATHINFO_EXTENSION);
+					if ($extension==='gz') {
+						$file_name = pathinfo($file,PATHINFO_BASENAME);
+						$url	= DEDALO_ROOT_WEB . '/install/import/hierarchy/' . $file_name;
+						$a		= '<a href="'.$url.'" target="_blank">'.$url.'</a>';
+						$ar_link[] = $a;
+					}
+				}
+			}
+			if (!empty($ar_link)) {
+				$response->msg	.= '<br>Available files for download: ' . '<br>' . implode('<br>', $ar_link);
+			}
+
 
 		return $response;
 	}//end export_hierarchy
