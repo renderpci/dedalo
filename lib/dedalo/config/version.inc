@@ -2161,7 +2161,11 @@
 		Removed descriptors def column access. It is no longer necessary now
 		Fix error on dd_edit
 
-	
+	Valencia 07-02-2021 5.7.59
+		Removed unnecessary window reposition on tool_upload
+		Added available hierarchy files list on export_hierarchy from tool_administration
+
+
 
 	[/HISTORY]
 
@@ -2186,13 +2190,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.59';
+	$DEDALO_VERSION = '5.7.60';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-02-2021');
+	define('DEDALO_BUILD'	, '07-02-2021');
 
 
 	/*
