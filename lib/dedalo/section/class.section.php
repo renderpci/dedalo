@@ -238,7 +238,7 @@ class section extends common {
 		}
 		*/
 
-		if( empty($this->section_id) || (abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
+		if( empty($this->section_id) || (abs(intval($this->section_id))<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
 
 			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin section_id)
 			#$this->bl_loaded_matrix_data = true;
@@ -314,7 +314,7 @@ class section extends common {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
-		if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+		if ( abs(intval($this->section_id))<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 			if(SHOW_DEBUG===true) {
 				if ($this->section_id==='result') {
 					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
@@ -374,7 +374,7 @@ class section extends common {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$component_tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
-		if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+		if ( abs(intval($this->section_id))<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 			if(SHOW_DEBUG===true) {
 				if ($this->section_id==='result') {
 					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
@@ -415,7 +415,7 @@ class section extends common {
 	public function save_component_dato($component_obj, $component_data_type='direct') {
 
 		# La sección es necesaria antes de gestionar el dato del componente. Si no existe, la crearemos previamente
-		if (abs($this->get_section_id())<1  && strpos($this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
+		if (abs(intval($this->get_section_id()))<1  && strpos($this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
 			$section_id = $this->Save();
 			trigger_error("Se ha creado una sección ($section_id) disparada por el salvado del componente ".$component_obj->get_tipo());
 			if(SHOW_DEBUG===true) {

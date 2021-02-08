@@ -2171,6 +2171,10 @@
 		Added tool_export options to manage 'relation_list' elements
 
 
+	Valencia 08-02-2021 5.7.62	
+		Fixed general bug when PHP8 generates an error on 'abs' calls with a temp section (string non convertible to int)
+
+
 
 	[/HISTORY]
 
@@ -2195,7 +2199,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.61';
+	$DEDALO_VERSION = '5.7.62';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
