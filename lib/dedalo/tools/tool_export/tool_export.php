@@ -71,6 +71,13 @@
 					$source_list = $this->get_ar_columns();
 					$target_list = array();//$this->get_ar_columns();
 
+					// relation_list. Add if defined in structure
+						$ar_relation_list_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['relation_list'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false);
+						if (!empty($ar_relation_list_tipo) && isset($ar_relation_list_tipo[0])) {
+							$relation_list_tipo = $ar_relation_list_tipo[0];
+							$source_list[$relation_list_tipo] = RecordObj_dd::get_termino_by_tipo($relation_list_tipo, DEDALO_APPLICATION_LANG, true, true);
+						}					
+
 					ob_start();
 					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_columns.phtml' );
 					$page_content_html = ob_get_clean();

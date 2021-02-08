@@ -103,11 +103,19 @@ class tool_export extends tool_common {
 		# SEARCH_QUERY_OBJECT . Add search_query_object to options
 		$search_query_object = $saved_search_options->search_query_object;
 
+		$relation_list_tipo = false;
 
 		# SELECT. layout map is used to set columns select in search_query_object
 		$ar_component_tipo = reset($layout_map);
 		$search_query_object->select = []; // reset
 		foreach ($ar_component_tipo as $key => $component_tipo) {
+
+			// avoid parse relation list here
+			$current_model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			if ($current_model==='relation_list') {
+				$relation_list_tipo = $component_tipo;
+				continue;
+			}
 
 			$path = search_development2::get_query_path($component_tipo, $section_tipo, false);
 
@@ -128,7 +136,13 @@ class tool_export extends tool_common {
 		$rows_data 		 	 = $search_develoment2->search();
 
 
-		$this->ar_records = $rows_data->ar_records;
+		$this->ar_records = ($relation_list_tipo!==false)
+			? array_map(function($item) use($relation_list_tipo){
+				// add empty column using relation_list tipo to resolve it later
+				$item->{$relation_list_tipo} = null;
+				return $item;
+			  }, $rows_data->ar_records)
+			: $rows_data->ar_records;
 
 
 		return $this->ar_records;
@@ -215,25 +229,28 @@ class tool_export extends tool_common {
 									$column_name  = '';
 									// from_section label
 										if ($h_item->from_section_tipo!==$h_item->section_tipo && $h_item->from_section_tipo!==$section_tipo) {
-											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator ;
+											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true);
+											$column_name .= ' ['.$h_item->from_section_tipo.'] ' . $internal_separator;											
 										}
 									// section label
 										#$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator ;
 
 									// from_component label
 										if ($h_item->from_component_tipo!==$h_item->component_tipo) {
-											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_component_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator ;
+											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_component_tipo, DEDALO_DATA_LANG, true, true);
+											$column_name .= ' ['.$h_item->from_component_tipo.'] ' . $internal_separator;	
 										}
 									// component label
 										$column_name .= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
+										$column_name .= ' ['.$current_tipo.']';
 								#}else{
 								#	$column_name = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 								#}
-								if(SHOW_DEBUG===true) {
-									// component tipo
-										$column_name .= ' ['.$current_tipo.']';
-										#dump($h_item, ' h_item ++ '.to_string($column_name));
-								}
+								// if(SHOW_DEBUG===true) {
+								// 	// component tipo
+								// 		$column_name .= ' ['.$current_tipo.']';
+								// 		#dump($h_item, ' h_item ++ '.to_string($column_name));
+								// }
 
 							}
 						}else{
@@ -315,11 +332,11 @@ class tool_export extends tool_common {
 										$current_value = is_array($current_value) ? $current_value : array($current_value);
 										foreach ($current_value as $value_key => $cvvalue) {
 											$ar_columns_keys[] = [
-												'header_key' 		=> $h_key,
-												'header_tipo'		=> $h_item->component_tipo.'_'.$h_item->section_tipo.'_'.$h_item->from_section_tipo.'_'.$h_item->from_component_tipo,#$h_item->component_tipo,
-												'value_key'  		=> $value_key,#$value_key.'_'.$h_item->section_tipo.'_'.$h_item->from_section_tipo,#
-												'header_model' 	=> RecordObj_dd::get_modelo_name_by_tipo($h_item->component_tipo,true),
-												'value' 	 	 		=> $cvvalue
+												'header_key'	=> $h_key,
+												'header_tipo'	=> $h_item->component_tipo.'_'.$h_item->section_tipo.'_'.$h_item->from_section_tipo.'_'.$h_item->from_component_tipo,#$h_item->component_tipo,
+												'value_key'		=> $value_key,#$value_key.'_'.$h_item->section_tipo.'_'.$h_item->from_section_tipo,#
+												'header_model'	=> RecordObj_dd::get_modelo_name_by_tipo($h_item->component_tipo,true),
+												'value'			=> $cvvalue
 											];
 										}
 							// default
@@ -445,50 +462,58 @@ class tool_export extends tool_common {
 		$row_deep_resolved=array();
 		foreach ($record as $key => $value) {
 
-			$component_tipo  = $key;
-			$section_tipo 	 = $record->section_tipo;
+			$component_tipo	= $key;
+			$section_tipo	= $record->section_tipo;
+			$section_id		= $record->section_id;
 
 			// skip id, section_tipo, section_id columns
-			if ($key==='id' || $key==='section_tipo' || $key==='section_id') continue;
+			if ($key==='id' || $key==='section_tipo' || $key==='section_id' || $key==='datos') continue;
 
-			// component
-				$modelo_name 	 	= RecordObj_dd::get_modelo_name_by_tipo($key,true);
-				$parent 		 		= $record->section_id;
-				$component 	    = component_common::get_instance($modelo_name,
-																											  $component_tipo,
-																											  $parent,
-																											  'list',
-																											  $lang,
-																											  $section_tipo,
-																											  false);
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
 
-			// section_list_custom
-				if ($modelo_name==='component_portal' && !empty($this->section_list_custom)) {
-					#dump($this->section_list_custom, ' section_list_custom ++ '.to_string());
-					// like
-					//	{
-					//	   "oh24" : [
-					//	      "rsc279",
-					//	       "rsc97"
-					//	   ]
-					//	}
-					// override component 'relaciones'
-					if (isset($this->section_list_custom->{$component_tipo}) && !empty($this->section_list_custom->{$component_tipo})) {
-						$relaciones = array_map(function($item){
-							return (object)[
-								'dd6' => $item
-							];
-						}, $this->section_list_custom->{$component_tipo});
-						// inject 'relaciones'
-						$component->RecordObj_dd->set_relaciones($relaciones);
-					}
-				}
+			switch ($modelo_name) {
+				case 'relation_list':
+					$relation_list	= new relation_list($component_tipo, $section_id, $section_tipo, 'list');
+					$valor_export	= $relation_list->get_valor_export();
+					break;
+				
+				default:
+					// component						
+						$component	= component_common::get_instance($modelo_name,
+																	 $component_tipo,
+																	 $section_id,
+																	 'list',
+																	 $lang,
+																	 $section_tipo,
+																	 false);
+					
+					// section_list_custom
+						if ($modelo_name==='component_portal' && !empty($this->section_list_custom)) {
+							#dump($this->section_list_custom, ' section_list_custom ++ '.to_string());
+							// like
+							//	{
+							//	   "oh24" : [
+							//	      "rsc279",
+							//	       "rsc97"
+							//	   ]
+							//	}
+							// override component 'relaciones'
+							if (isset($this->section_list_custom->{$component_tipo}) && !empty($this->section_list_custom->{$component_tipo})) {
+								$relaciones = array_map(function($item){
+									return (object)[
+										'dd6' => $item
+									];
+								}, $this->section_list_custom->{$component_tipo});
+								// inject 'relaciones'
+								$component->RecordObj_dd->set_relaciones($relaciones);
+							}
+						}
 
-			// call to component for get valor export
-				$valor_export = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
-				#dump($valor_export, ' valor_export ++ '.to_string($modelo_name));
-				#debug_log(__METHOD__." valor_export $modelo_name - $component_tipo - $parent +  valor_export: ".to_string($valor_export), logger::DEBUG);
-				#$row_deep_resolved = $valor_export;
+					// call to component for get valor export
+						$valor_export = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
+
+					break;
+			}
 
 			// add merged
 				$resolve_inside = true;
@@ -496,11 +521,11 @@ class tool_export extends tool_common {
 					$row_deep_resolved = $valor_export;
 				}else{
 					$row_deep_resolved = array_merge($row_deep_resolved, tool_export::recursive_value_resolve($component_tipo,
-																																																	  $section_tipo,
-																																																	  $section_tipo, 	// from_section_tipo
-																																																	  $component_tipo, 	// from_component_tipo
-																																																	  $valor_export,
-																																																	  false));
+																											  $section_tipo,
+																											  $section_tipo, 	// from_section_tipo
+																											  $component_tipo, 	// from_component_tipo
+																											  $valor_export,
+																											  false));
 					#dump($row_deep_resolved, ' row_deep_resolved ++ '.$modelo_name.' '.to_string($component_tipo));
 				}
 				#dump($row_deep_resolved, ' row_deep_resolved ++ '.to_string($component_tipo));
@@ -529,8 +554,9 @@ class tool_export extends tool_common {
 
 			$component_tipo  = $key;
 			$section_tipo 	 = $record->section_tipo;
+			$section_id 	 = $record->section_id;
 
-			if ($key==='id' || $key==='section_tipo') continue;
+			if ($key==='id' || $key==='section_tipo' || $key==='datos') continue;
 			if ($key==='section_id') {
 
 				$current_value = $value;
@@ -545,32 +571,39 @@ class tool_export extends tool_common {
 				continue;
 			}
 
-			$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($key,true);
-			$parent 		 = $record->section_id;
-			$component 	     = component_common::get_instance($modelo_name,
-															  $component_tipo,
-															  $parent,
-															  'list',
-															  $lang,
-															  $section_tipo,
-															  false);
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			
+			switch ($modelo_name) {
+				case 'relation_list':
+					$relation_list	= new relation_list($component_tipo, $section_id, $section_tipo, 'list');
+					$valor_export	= $relation_list->get_dato_export();
+					break;
+				
+				default:
+					$component	= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo,
+																 false);
 
-			// Full source untouched dato
-				$valor_export 	 = $this->get_valor_dedalo($component);
+					// Full source untouched dato
+						$valor_export = $this->get_valor_dedalo($component);					
+					break;
+			}
 
 			// escape delimiter for avoid breaks
-				$valor_export 	 = self::format_valor_csv_export_string($valor_export);
+				$valor_export = self::format_valor_csv_export_string($valor_export);
 
-			// store row
-				#$row_deep_resolved[$key] = $valor_export;
-				$current_value = $valor_export;
+			// store row item				
 				$row_item = new stdClass();
 					$row_item->model				= $modelo_name; // for debug info only
 					$row_item->component_tipo		= $component_tipo;
 					$row_item->section_tipo 		= $section_tipo;
 					$row_item->from_component_tipo	= $component_tipo;
 					$row_item->from_section_tipo 	= $section_tipo;
-					$row_item->value 				= $current_value;
+					$row_item->value 				= $valor_export;
 
 				$row_deep_resolved[] = $row_item;
 
@@ -607,22 +640,22 @@ class tool_export extends tool_common {
 				if (!empty($ar_found)) {
 
 					// Update existing object value mixed with new
-						$found_obj 					= reset($ar_found);
-						#$current_value 		= $found_obj->value . $internal_separator . self::format_valor_csv_export_string($valor_export);
-						$current_value 			= is_array($found_obj->value) ? $found_obj->value : array($found_obj->value);
-						$current_value[] 		= self::format_valor_csv_export_string($valor_export);
-						$found_obj->value 	= $current_value;
+						$found_obj			= reset($ar_found);
+						#$current_value		= $found_obj->value . $internal_separator . self::format_valor_csv_export_string($valor_export);
+						$current_value		= is_array($found_obj->value) ? $found_obj->value : array($found_obj->value);
+						$current_value[]	= self::format_valor_csv_export_string($valor_export);
+						$found_obj->value	= $current_value;
 
 				}else{
 
 					// create new and add
 						$current_value 	= tool_export::format_valor_csv_export_string($valor_export); // $valor_export;
 						$row_item = new stdClass();
-							$row_item->component_tipo				= $component_tipo;
-							$row_item->section_tipo 				= $section_tipo;
-							$row_item->from_section_tipo		= $from_section_tipo;
-							$row_item->from_component_tipo 	= $from_component_tipo;
-							$row_item->value 								= $current_value;
+							$row_item->component_tipo		= $component_tipo;
+							$row_item->section_tipo			= $section_tipo;
+							$row_item->from_section_tipo	= $from_section_tipo;
+							$row_item->from_component_tipo	= $from_component_tipo;
+							$row_item->value				= $current_value;
 
 						$ar_values[] = $row_item;
 				}
@@ -634,11 +667,11 @@ class tool_export extends tool_common {
 		foreach ($valor_export as $item) {
 			#dump($item, ' item ++ '.to_string($component_tipo));
 
-			$current_component_tipo 			= $item->component_tipo;
-			$current_section_tipo 				= $item->section_tipo;
-			$current_from_section_tipo 		= $item->section_tipo===$item->from_section_tipo ?	$from_section_tipo : $item->from_section_tipo;#$item->section_tipo;
-			$current_from_component_tipo 	= $item->from_component_tipo; // $item->component_tipo;
-			$current_value 								= $item->value;
+			$current_component_tipo			= $item->component_tipo;
+			$current_section_tipo			= $item->section_tipo;
+			$current_from_section_tipo		= $item->section_tipo===$item->from_section_tipo ? $from_section_tipo : $item->from_section_tipo;#$item->section_tipo;
+			$current_from_component_tipo	= $item->from_component_tipo; // $item->component_tipo;
+			$current_value					= $item->value;
 
 			// $ar_values = array_merge($ar_values, self::recursive_value_resolve($current_component_tipo,
 			// 																				$current_section_tipo,
@@ -649,13 +682,13 @@ class tool_export extends tool_common {
 			// 																				$ar_values
 			// 																			));
 			$ar_values_inside = self::recursive_value_resolve($current_component_tipo,
-																												$current_section_tipo,
-																												$current_from_section_tipo,
-																												$current_from_component_tipo,
-																												$current_value,
-																												true,
-																												$ar_values
-																											 );
+															  $current_section_tipo,
+															  $current_from_section_tipo,
+															  $current_from_component_tipo,
+															  $current_value,
+															  true,
+															  $ar_values
+															 );
 			$ar_values = $ar_values_inside;
 		}
 
