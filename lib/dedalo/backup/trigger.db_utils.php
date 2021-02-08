@@ -96,27 +96,32 @@ function build_version_from_git_master($json_data) {
 		$response->msg		= "";
 
 	// rsync trigger code HEAD from master git	
-		function update_head_code() {
-			global $response;
+		function update_head_code($response) {			
 
 			$source		= DEDALO_CODE_SERVER_GIT_DIR;
 			$target		= DEDALO_CODE_FILES_DIR .'/dedalo5_code.zip';
-			$command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target "; // @see https://git-scm.com/docs/git-archive
+			$command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target"; // @see https://git-scm.com/docs/git-archive
 
 			$msg = " Called Dédalo update_head_code with command: ".to_string($command);
 			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-			$response->msg .= $msg;
+			$response->msg .= PHP_EOL . $msg;
 
-			$output = shell_exec($command);
+			// $output = shell_exec($command); // 2>&1
+
+			$output_array	= null;
+			$retval			= null;
+			exec($command, $output_array, $retval);
+
+			$result = "Returned with status $retval and output:\n" . to_string($output_array);
 			
-			return $output;
+			return $result;
 		}
 		try{
 
-			$output = update_head_code();
+			$output = update_head_code($response);
 			
 			# Append msg
-			$msg = PHP_EOL ." update_head_code shell_exec output: ".json_encode($output);
+			$msg = PHP_EOL ."<br> update_head_code shell_exec output: <br>".PHP_EOL.to_string($output);
 			$response->msg .= $msg;
 			debug_log(__METHOD__." update_head_code output OK: $msg ".to_string(), logger::DEBUG);
 			
