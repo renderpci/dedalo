@@ -373,12 +373,11 @@ class web_data {
 				$response->msg    	= 'Ok get rows_data done. ' . $exec_query_response->msg;
 
 			// debug
-				if(SHOW_DEBUG===true) {
-					if (isset($exec_query_response->debug)) {
-						$response->debug = $exec_query_response->debug;
-					}
-				}
-				
+				$response->debug = (isset($exec_query_response->debug))
+					? $exec_query_response->debug
+					: new stdClass();
+					
+				$response->debug->total_time = round(microtime(1)-$start_time,3);				
 
 
 			return $response;
