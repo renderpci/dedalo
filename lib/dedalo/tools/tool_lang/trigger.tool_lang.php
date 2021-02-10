@@ -311,4 +311,61 @@ function open_structuration_selector($json_data) {
 
 
 
-?>
+/**
+* bulk_translate
+* @param $source_lang
+* @param $target_lang
+* @param $source_id
+* @param $tipo
+* @param $parent
+*/
+function bulk_translate($json_data) {
+	global $start_time;
+
+	set_time_limit ( 259200 );  // 3 dias
+	
+	# Write session to unlock session file
+	#session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# mandatory vars
+		$vars = array('source_lang','target_lang','component_tipo','section_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}	
+		debug_log(__METHOD__." options ".to_string($json_data), logger::DEBUG);
+
+	// exec
+		try {
+			// Options are the same as reveived json_data object
+			$options  = $json_data;
+			$response = tool_lang::bulk_translate($options);
+			debug_log(__METHOD__." response ".to_string($response), logger::DEBUG);
+
+		} catch (Exception $e) {
+		    $response->msg .= PHP_EOL . 'Caught exception: '. $e->getMessage(). "\n";
+		}	
+
+	# Debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'sec')." sec";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
+
+			$response->debug = $debug;
+		}
+	
+	return (object)$response;
+}//end bulk_translate
+
+

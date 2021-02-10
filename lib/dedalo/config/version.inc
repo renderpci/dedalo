@@ -2174,6 +2174,10 @@
 	Valencia 08-02-2021 5.7.62	
 		Fixed general bug when PHP8 generates an error on 'abs' calls with a temp section (string non convertible to int)
 
+	
+	Valencia 10-02-2021 5.7.63	
+		Added tool lang bulk_translate
+	
 
 
 	[/HISTORY]
@@ -2199,13 +2203,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.62';
+	$DEDALO_VERSION = '5.7.63';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-02-2021');
+	define('DEDALO_BUILD'	, '10-02-2021');
 
 
 	/*

@@ -293,6 +293,69 @@ class tool_lang extends tool_common {
 
 
 	/**
+	* BULK_TRANSLATE
+	* @return 
+	*/
+	public static function bulk_translate($request_options) {
+		
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$options = new stdClass();
+			$options->source_lang		= null;
+			$options->target_lang		= null;
+			$options->component_tipo	= null;
+			$options->parent			= null;
+			$options->section_tipo		= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// rows
+			// search_options
+			$section_tipo			= $options->section_tipo;
+			$search_options_id		= $section_tipo; // section tipo like oh1
+			$saved_search_options	= section_records::get_search_options( $search_options_id );
+			if ($saved_search_options===false) {
+				trigger_error("Sorry, search_options [$search_options_id] not exits in section_records::get_search_options");
+				$response->msg = PHP_EOL . 'Error. Sorry, search_options [$search_options_id] not exits in section_records::get_search_options';
+				return $response;
+			}
+			$search_query_object	= json_decode( json_encode($saved_search_options->search_query_object) );
+			$search_query_object->select	= null;
+			$search_query_object->limit		= 0;
+			$search_develoment2		= new search_development2($search_query_object);
+			$rows_data				= $search_develoment2->search();
+
+		// iterate records
+			foreach ($rows_data->ar_records as $key => $row) {
+				
+				$section_id = $row->section_id;
+
+				$row_options = new stdClass();
+					$row_options->source_lang	= $options->source_lang;
+					$row_options->target_lang	= $options->target_lang;
+					$row_options->tipo			= $options->component_tipo;
+					$row_options->section_tipo	= $options->section_tipo;
+					$row_options->parent		= $section_id;
+
+				$current_response = tool_lang::automatic_translation($row_options);
+
+				if ($current_response->result===false) {
+					$response->msg .= PHP_EOL . $current_response->msg;
+				}
+				debug_log(__METHOD__." --> row [$options->source_lang,$options->target_lang,$options->component_tipo,$options->section_tipo,$section_id] $current_response->msg ".to_string(), logger::DEBUG);
+			}
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+
+		return (object)$response;
+	}//end bulk_translate
+
+
+
+	/**
 	* SOURCE COMPONENTS
 	* Grouped by lang like Array([lg-esp]=>component obj)
 	*//*
