@@ -2177,6 +2177,10 @@
 	
 	Valencia 10-02-2021 5.7.63	
 		Added tool lang bulk_translate
+
+	
+	Valencia 10-02-2021 5.7.64
+		When map is inside section tab and current tab is hidden, map needs to refresh when tab is activated by the user
 	
 
 
@@ -2203,7 +2207,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.63';
+	$DEDALO_VERSION = '5.7.64';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
