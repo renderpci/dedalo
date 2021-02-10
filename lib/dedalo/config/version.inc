@@ -171,7 +171,7 @@
 
 
 	Valencia 19-11-2014 v4.0b2-72
-		Rebuilded component_autocomplete
+		Re-built component_autocomplete
 
 
 	Valencia 26-12-2014 v4.0b3.16
@@ -794,7 +794,7 @@
 	Valencia 12-11-2016 v4.5.0.bo
 		component_image : fixed bug when in time machine mode images with custom path (like '/0') are no found
 		search : load_rows : fixed bug when in time machine list, paginator don't use the correct container for load records
-		widgets : descriptors : Rebuilded to load by ajax on demand instead load always in lists (performance problem)
+		widgets : descriptors : Re-built to load by ajax on demand instead load always in lists (performance problem)
 
 
 	Valencia 15-11-2016 v4.5.0.bp

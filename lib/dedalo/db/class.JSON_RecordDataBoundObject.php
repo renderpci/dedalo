@@ -554,7 +554,7 @@ abstract class JSON_RecordDataBoundObject {
 			# QUE SE GUARDA EN UN ARRAY ESTÁTICO
 			# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
-			# the nexts results are 0 and duplicate records are builded in matrix)
+			# the nexts results are 0 and duplicate records are built in matrix)
 			$n_records = count($ar_records);
 			if( $use_cache===true && $this->use_cache_manager===true && DEDALO_CACHE_MANAGER===true && $n_records>0) {
 				# CACHE_MANAGER

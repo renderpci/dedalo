@@ -126,7 +126,7 @@
 						# Current_stats_item div
 						$html_content .= "<div class=\"current_stats_item\" id=\"current_stats_item_$key\"></div>";
 						
-						# SVG GRAPHIC BUILDED BY JS
+						# SVG GRAPHIC BUILT BY JS
 						$current_graph = new stdClass();
 							$current_graph->key 	= $key;
 							$current_graph->graph 	= $ar_value;
@@ -183,7 +183,7 @@
 	$html_content .= "<script>";
 	$html_content .= "window.onload = function(){";
 	foreach ($ar_graph as $key => $ar_value) {
-		# SVG GRAPHIC BUILDED BY JS		
+		# SVG GRAPHIC BUILT BY JS		
 		$html_content .= " component_state.build_charts(".json_handler::encode($ar_value).", '$key');";		
 	}
 	$html_content .= "}";

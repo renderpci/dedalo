@@ -135,7 +135,7 @@ class component_relation_common extends component_common {
 	/**
 	* SET_DATO
 	* Set raw dato overwrite existing dato.
-	* Usually, dato is builded element by element, adding one locator to existing dato, but some times we need
+	* Usually, dato is built element by element, adding one locator to existing dato, but some times we need
 	* insert complete array of locators at once. Use this method in this cases
 	*/
 	public function set_dato($dato) {
