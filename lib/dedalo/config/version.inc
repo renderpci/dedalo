@@ -2186,6 +2186,10 @@
 	Valencia 11-02-2021 5.7.65
 		Fixed class difussion sql map_locator_to_int method to static
 
+
+	Valencia 11-02-2021 5.7.66
+		Fixed import/export ontology path issues
+
 	
 
 	[/HISTORY]
@@ -2211,7 +2215,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.65';
+	$DEDALO_VERSION = '5.7.66';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
