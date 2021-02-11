@@ -149,7 +149,7 @@ class diffusion_mysql extends diffusion_sql  {
 			# EXEC SINGLE QUERY TO DATABASE
 			$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
 
-			debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
 
 		return true;
 	}//end create_table
