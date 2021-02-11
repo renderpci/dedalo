@@ -3536,7 +3536,7 @@ class diffusion_sql extends diffusion  {
 	* Get only the first locator section_id if exists
 	* @return int | null
 	*/
-	public function map_locator_to_int($options=null, $dato=null) {
+	public static function map_locator_to_int($options=null, $dato=null) {
 		
 		$value = (!empty($dato) && isset($dato[0]))
 			? (int)$dato[0]->section_id
