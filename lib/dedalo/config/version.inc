@@ -2180,9 +2180,13 @@
 
 	
 	Valencia 10-02-2021 5.7.64
-		When map is inside section tab and current tab is hidden, map needs to refresh when tab is activated by the user
+		Fixed component geolocation issue when the map is inside a section tab and current tab is hidden, map needs to refresh when tab is activated by the user
 	
+	
+	Valencia 11-02-2021 5.7.65
+		Fixed class difussion sql map_locator_to_int method to static
 
+	
 
 	[/HISTORY]
 
@@ -2207,13 +2211,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.64';
+	$DEDALO_VERSION = '5.7.65';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-02-2021');
+	define('DEDALO_BUILD'	, '11-02-2021');
 
 
 	/*
