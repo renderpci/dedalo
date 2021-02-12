@@ -51,13 +51,12 @@ class component_ip extends component_common {
 					$reader  = new Reader($db_file);
 
 					$record = $reader->city($ip);
-						#dump($record, ' $record ++ '.to_string());
 					
-					$geoip_info->city 	 	 = $record->city->names['en'];
+					$geoip_info->city 	 	 = $record->city->names['en'] ?? null;
 					$geoip_info->country 	 = $record->country->name;
 					$geoip_info->code 	 	 = $record->country->isoCode;
 					$geoip_info->region_name = $record->mostSpecificSubdivision->name;
-					$geoip_info->continent 	 = $record->continent->names['en'];		
+					$geoip_info->continent 	 = $record->continent->names['en'] ?? null;		
 					break;
 				
 				default:
@@ -65,10 +64,9 @@ class component_ip extends component_common {
 					$reader  = new Reader($db_file);
 
 					$record  = $reader->country($ip);
-						#dump($record, ' $record ++ '.to_string());
 					
 					$geoip_info->city 	 	 = null;
-					$geoip_info->country 	 = $record->country->names['en'];
+					$geoip_info->country 	 = $record->country->names['en'] ?? null;
 					$geoip_info->code 	 	 = $record->country->isoCode;
 					$geoip_info->region_name = null;
 					$geoip_info->continent 	 = null;						

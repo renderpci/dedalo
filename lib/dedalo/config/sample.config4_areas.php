@@ -3,7 +3,7 @@
 #
 # CONFIG4_AREAS
 #
-# Control what areas are showed in profiles an menu
+# This file controls which areas are shown in the profiles and the menu
 
 # Reviewed: 12-05-2018
 

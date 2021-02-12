@@ -171,7 +171,7 @@
 
 
 	Valencia 19-11-2014 v4.0b2-72
-		Rebuilded component_autocomplete
+		Re-built component_autocomplete
 
 
 	Valencia 26-12-2014 v4.0b3.16
@@ -794,7 +794,7 @@
 	Valencia 12-11-2016 v4.5.0.bo
 		component_image : fixed bug when in time machine mode images with custom path (like '/0') are no found
 		search : load_rows : fixed bug when in time machine list, paginator don't use the correct container for load records
-		widgets : descriptors : Rebuilded to load by ajax on demand instead load always in lists (performance problem)
+		widgets : descriptors : Re-built to load by ajax on demand instead load always in lists (performance problem)
 
 
 	Valencia 15-11-2016 v4.5.0.bp
@@ -2162,6 +2162,44 @@
 		Fix error on dd_edit
 
 	
+	Valencia 07-02-2021 5.7.60
+		Removed unnecessary window reposition on tool_upload
+		Added available hierarchy files list on export_hierarchy from tool_administration
+
+
+	Valencia 08-02-2021 5.7.61
+		Added tool_export options to manage 'relation_list' elements
+
+
+	Valencia 08-02-2021 5.7.62	
+		Fixed general bug when PHP8 generates an error on 'abs' calls with a temp section (string non convertible to int)
+
+	
+	Valencia 10-02-2021 5.7.63	
+		Added tool lang bulk_translate
+
+	
+	Valencia 10-02-2021 5.7.64
+		Fixed component geolocation issue when the map is inside a section tab and current tab is hidden, map needs to refresh when tab is activated by the user
+	
+	
+	Valencia 11-02-2021 5.7.65
+		Fixed class difussion sql map_locator_to_int method to static
+
+
+	Valencia 11-02-2021 5.7.66
+		Fixed import/export ontology path issues
+
+
+	Valencia 12-02-2021 5.7.67
+		Fixed tool administration import ontology error when a path is not defined in config vars
+		Unified structure_json_file_path and fallback (tool_administration)
+
+	
+	Valencia 12-02-2021 5.7.68
+		Fixed sintax error on tool administration 
+
+
 
 	[/HISTORY]
 
@@ -2186,13 +2224,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.59';
+	$DEDALO_VERSION = '5.7.68';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-02-2021');
+	define('DEDALO_BUILD'	, '12-02-2021');
 
 
 	/*

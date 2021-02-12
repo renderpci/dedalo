@@ -41,7 +41,7 @@
 				$html_tool .= "<span>";
 				$html_tool .= RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false);
 				if(SHOW_DEBUG===true) {
-					$html_tool .= ' <span class="notes">['.DEDALO_DIFFUSION_DOMAIN.']</span>';
+					$html_tool .= ' <span class="notes">['.DEDALO_DIFFUSION_DOMAIN .'-'. MYSQL_DEDALO_DATABASE_CONN. ' L'. DEDALO_DIFFUSION_RESOLVE_LEVELS .']</span>';
 				}
 				$html_tool .= "</span>";
 				$html_tool .= "</div>";

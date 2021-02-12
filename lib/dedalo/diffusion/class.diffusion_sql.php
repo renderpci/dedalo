@@ -1372,7 +1372,7 @@ class diffusion_sql extends diffusion  {
 			$database_name		= $table_map->database_name;
 			$database_tipo		= $table_map->database_tipo;
 			$table_from_alias	= $table_map->from_alias;
-		
+
 		// database_name . Resolve database_tipo in current diffusion map. Like 'web_aup'
 			// if (isset(self::$database_name)) {
 			// 	$database_name = self::$database_name;
@@ -1470,7 +1470,6 @@ class diffusion_sql extends diffusion  {
 					$cd_options->component_publication_tipo = $options->component_publication_tipo;
 				$ar_field_data = self::build_table_columns_data( $cd_options ); // Trigger resolve
 				#$table_data = self::$ar_table_data[$database_name][$diffusion_section]; // Result is set and usable
-					#dump($ar_field_data, ' ar_field_data ++ '.to_string($diffusion_section)); #die();
 
 			#
 			# SAVE RECORD . Insert MYSQL record (array) deleting before old data
@@ -1495,7 +1494,7 @@ class diffusion_sql extends diffusion  {
 
 					$save = diffusion_mysql::save_record($save_options);
 					
-					// global_search
+					// global_search (LEGACY ONLY)
 						if (isset($table_propiedades->global_search_map)) {
 
 							$gs_options = new stdClass();
@@ -1508,6 +1507,36 @@ class diffusion_sql extends diffusion  {
 
 						}//end if (isset($table_propiedades->global_search_map))
 
+					// save_global_table_data
+						if (isset($table_propiedades->global_table_maps)) {
+
+							// ref:
+								// "global_table_maps": [
+								//     {
+								//       "table_name": "myglobaltable",
+								//       "columns_map": [
+								//         {
+								//           "target_column": "full_data",
+								//           "source_columns": [
+								//             "nombre"
+								//           ]
+								//         }
+								//       ]
+								//     }
+								//   ]
+
+							foreach ($table_propiedades->global_table_maps as $key => $current_global_table_map) {
+								self::save_global_table_data((object)[
+									'global_table_map'			=> $current_global_table_map,
+									'diffusion_element_tipo'	=> $diffusion_element_tipo,
+									'diffusion_section'			=> $diffusion_section,
+									'section_tipo'				=> $section_tipo,
+									'database_name'				=> $database_name,
+									'ar_field_data'				=> $ar_field_data
+								]);
+							}
+						}
+				
 				}//end if(!empty($ar_field_data))
 
 			// cache . update
@@ -2201,6 +2230,72 @@ class diffusion_sql extends diffusion  {
 
 		return (object)$save;
 	}//end save_global_search_data
+
+
+
+	/**
+	* SAVE_GLOBAL_TABLE_DATA
+	*		
+	    {
+	      "table_name": "myglobaltable",
+	      "columns_map": [
+	        {
+	          "target_column": "full_data",
+	          "source_columns": [
+	            "nombre"
+	          ]
+	        }
+	      ]
+	    }		 
+	*
+	* @return object $save
+	*/
+	public function save_global_table_data($options) {
+		
+		dump($options, ' options ++ '.to_string()); return;
+
+		// options
+			$global_table_map		= $options->global_table_map;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo;
+			$diffusion_section		= $options->diffusion_section;
+			$section_tipo			= $options->section_tipo;
+			$ar_field_data			= $options->ar_field_data;
+			$database_name			= $options->database_name;
+
+		// short vars
+			$table_name		= $global_table_map->table_name;
+			$columns_map	= $global_table_map->columns_map;
+
+			// format reference
+				// $ar_fields_global[$pseudo_section_id][$lang][] = [
+				// 	'field_name'  => 'full_data',
+				// 	'field_value' => implode(' ',$full_data[$lang])
+				// ];
+
+		
+
+		$ar_field_data = [
+			"database_name" 	=> $database_name,
+			"table_name" 		=> $table_name,
+			"diffusion_section" => $diffusion_section,
+			"ar_fields" 		=> $ar_fields_global
+		];
+
+		$save_options = new stdClass();
+			$save_options->diffusion_element_tipo 	= $diffusion_element_tipo;
+			$save_options->section_tipo 			= $section_tipo;
+			$save_options->record_data 				= $ar_field_data;
+			$save_options->delete_previous 			= true;
+		$save = diffusion_mysql::save_record($save_options);
+
+		if (!isset($save->new_id)) {
+			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::ERROR);
+		}
+		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
+
+
+		return (object)$save;
+	}//end save_global_table_data
 
 
 
@@ -3536,7 +3631,7 @@ class diffusion_sql extends diffusion  {
 	* Get only the first locator section_id if exists
 	* @return int | null
 	*/
-	public function map_locator_to_int($options=null, $dato=null) {
+	public static function map_locator_to_int($options=null, $dato=null) {
 		
 		$value = (!empty($dato) && isset($dato[0]))
 			? (int)$dato[0]->section_id

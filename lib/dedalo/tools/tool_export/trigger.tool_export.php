@@ -50,7 +50,7 @@ function export_data($json_data) {
 
 	// Get records to export
 		$records = $tool_export->get_records( $layout_map );
-		#dump($records, ' records ++ '.to_string());
+			// dump($records, ' records ++ '.to_string());
 
 	// Result parsed as final string
 		$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);

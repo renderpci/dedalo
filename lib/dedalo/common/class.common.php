@@ -312,7 +312,7 @@ abstract class common {
 			}//end switch
 			
 		}else{
-			if(SHOW_DEBUG===true) {
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
 			}
 			throw new Exception("Error Processing Request. Not use component tipo ($tipo) to calculate matrix_table. Use always section_tipo", 1);

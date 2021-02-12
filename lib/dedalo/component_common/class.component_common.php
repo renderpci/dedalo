@@ -113,7 +113,7 @@ abstract class component_common extends common {
 				throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);
 			}
 			if ( (!empty($parent)
-				 && ( (!is_numeric($parent) || abs($parent)<1)) && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) )
+				 && ( (!is_numeric($parent) || abs(intval($parent))<1)) && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) )
 				{
 				dump($parent," parent - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);
@@ -709,7 +709,7 @@ abstract class component_common extends common {
 
 
 		# PARENT : Verify parent
-		if(abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
+		if(abs(intval($parent))<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
 			if(SHOW_DEBUG===true) {
 				dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
 				throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);;
@@ -761,7 +761,7 @@ abstract class component_common extends common {
 
 
 		# ID : Check valid id returned
-		if (abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
+		if (abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
 			throw new Exception("Save: received id ($section_id) not valid!", 1);
 		}
 
@@ -3315,7 +3315,7 @@ abstract class component_common extends common {
 			if ($current_locator->section_tipo===$locator_section_tipo && $current_locator->section_id==$locator_section_id) {
 			#if ( locator::compare_locators($current_locator, $locator, array('section_tipo','section_id')) ) {
 
-				# new ds locator is builded from termino_id temporarily
+				# new ds locator is built from termino_id temporarily
 				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
 
 				# ds container add if not exits in current locator
@@ -3337,7 +3337,7 @@ abstract class component_common extends common {
 				break;
 			}
 
-		}//endforeach ((array)$dato as $current_locator) {
+		}//end foreach ((array)$dato as $current_locator) {
 
 		return (object)$response;
 	}//end add_index_semantic
@@ -3369,7 +3369,7 @@ abstract class component_common extends common {
 					return $respose;
 				}
 
-				# new ds locator is builded from termino_id temporarily
+				# new ds locator is built from termino_id temporarily
 				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
 
 				# add ds locator to current portal locator removing duplicates

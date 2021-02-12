@@ -96,7 +96,7 @@ class locator extends stdClass {
 	* SET_SECTION_TOP_ID
 	*/
 	public function set_section_top_id($value) {
-		if(abs($value)<1) {
+		if(abs(intval($value))<1) {
 			throw new Exception("Error Processing Request. Invalid section_top_id: $value", 1);
 		}
 		$this->section_top_id = (string)$value;
@@ -106,7 +106,7 @@ class locator extends stdClass {
 	*/
 	public function set_section_id($value) {
 		#if(abs($value)<1 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
-		if(abs($value)<0 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
+		if(abs(intval($value))<0 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
 			throw new Exception("Error Processing Request. Invalid section_id: $value", 1);
 		}
 		$this->section_id = (string)$value;
@@ -142,7 +142,7 @@ class locator extends stdClass {
 	* SET_TAG_ID
 	*/
 	public function set_tag_id($value) {
-		if(abs($value)<1) {
+		if(abs(intval($value))<1) {
 			throw new Exception("Error Processing Request. Invalid tag_id: $value", 1);
 		}
 		$this->tag_id = (string)$value;

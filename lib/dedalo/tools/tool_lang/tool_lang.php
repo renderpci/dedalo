@@ -155,7 +155,13 @@
 					#
 					# STATE
 					# Note: component_state is loaded by ajax because when target lang is changed (on change target lang selector),
-					# component_state options tool lang must be updated to new lang					
+					# component_state options tool lang must be updated to new lang	
+
+					// total_records (bulk translate)
+						// Search_options
+						$search_options_id		= $section_tipo; // section tipo like oh1
+						$saved_search_options	= section_records::get_search_options( $search_options_id );
+						$total_records			= $saved_search_options->search_query_object->full_count ?? 0;
 
 					break;		
 	}#end switch	
@@ -168,4 +174,4 @@
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
 
-?>
+

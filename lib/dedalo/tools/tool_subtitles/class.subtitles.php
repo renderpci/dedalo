@@ -280,7 +280,7 @@ abstract class subtitles {
 							# Format as tc like '00:01:03'
 							$next_tcout_formated 	= OptimizeTC::seg2tc($next_tcout_secs);
 
-							# Rebuilded tc out
+							# Re-built tc out
 							$tcout = '[TC_'. $next_tcout_formated .'_TC]';
 
 								#echo " Changed tcout: $tcout from tcin $tcin <br>";

@@ -436,6 +436,48 @@ class relation_list extends common {
 
 
 
+	/**
+	* GET_VALOR_EXPORT
+	* @return array $ar_values
+	*/
+	public function get_valor_export() {
+		
+		$ar_values = [];
+		$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
+		foreach ($ar_inverse_references as $current_locator) {
+
+			$item = new stdClass();
+				$item->section_tipo			= $this->section_tipo;
+				$item->component_tipo		= $this->tipo;
+				$item->from_section_tipo	= $current_locator->from_section_tipo;
+				$item->from_component_tipo	= $current_locator->from_component_tipo;
+				$item->value				= $current_locator->from_section_id;
+
+			$ar_values[] = $item;
+		}
+
+		return $ar_values;
+	}//end get_valor_export
+
+
+
+	/**
+	* GET_DATO_EXPORT
+	* @return array $ar_values 
+	*/
+	public function get_dato_export() {
+		
+		$ar_values = [];
+		$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
+		foreach ($ar_inverse_references as $current_locator) {
+			$ar_values[] = $current_locator;
+		}
+
+		return json_encode($ar_values);
+	}//end get_dato_export
+
+
+
 }//relation_list
 
 

@@ -162,6 +162,8 @@
 			# TARGET OPTIONS
 			$html	.= "<div class=\"target_options\">";
 
+				$html .= ' <div id="bulk_translate_container" class="bulk_translate_container"></div>';
+
 				$html .= " <div class=\"propagate_optionsDIV\">";
 
 				$checked = NULL;
@@ -192,7 +194,10 @@
 
 	# Init tool
 	$html .= "<script>";
-	$html .= "$tool_name.init({textarea_lang:'$original_lang'});";
+	$html .= "$tool_name.init({
+		textarea_lang	: '$original_lang',
+		total_records	: $total_records
+	});";
 	$html .= "</script>";
 
 	print $html;

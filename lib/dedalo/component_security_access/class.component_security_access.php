@@ -294,7 +294,7 @@ class component_security_access extends component_common {
 	*	array of vars needed for construct final tree. default is empty array
 	*
 	* @return $tree_htm
-	*	html final of builded tree
+	*	html final of built tree
 	*/
 	public static function walk_ar_elements_recursive($ar_elements, $arguments=array()) {
 
