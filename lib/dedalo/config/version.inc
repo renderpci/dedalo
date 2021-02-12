@@ -2193,8 +2193,13 @@
 
 	Valencia 12-02-2021 5.7.67
 		Fixed tool administration import ontology error when a path is not defined in config vars
+		Unified structure_json_file_path and fallback (tool_administration)
 
 	
+	Valencia 12-02-2021 5.7.68
+		Fixed sintax error on tool administration 
+
+
 
 	[/HISTORY]
 
@@ -2219,7 +2224,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.67';
+	$DEDALO_VERSION = '5.7.68';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();

@@ -406,9 +406,10 @@
 					if (!file_exists($structure_json_file_path)) {
 						$html .= '<div class="warning">structure.json file not found in: '.$structure_json_file_path.'</div>';
 					}else{
-						$file_url	= str_replace(DEDALO_ROOT, DEDALO_ROOT_WEB, $structure_json_file_path,);
+						$file_url	= str_replace(DEDALO_ROOT, DEDALO_ROOT_WEB, $structure_json_file_path);
 						$html   .= "<a href=\"$file_url\" target=\"_blank\">$file_url</a>";
-						$file_structure_size = format_size_units( filesize($structure_json_file_path) );
+						$size = filesize($structure_json_file_path);
+						$file_structure_size = format_size_units( $size );
 						$html   .= "<div>File size: $file_structure_size</div>";
 
 						// resolve available tld's in file
