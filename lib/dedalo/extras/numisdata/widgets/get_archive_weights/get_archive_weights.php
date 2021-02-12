@@ -64,6 +64,18 @@
 				$component_tipo_used 	= $component_used->component_tipo;
 				$section_tipo_used 		= $component_used->section_tipo;
 
+				
+				$component_duplicated = array_reduce($data_source, function ($carry, $item){
+
+					if ($item->type==='duplicated') {
+						return $item;
+					}
+					return $carry;
+				});
+
+				$component_tipo_duplicated 	= $component_duplicated->component_tipo;
+				$section_tipo_duplicated 		= $component_duplicated->section_tipo;
+
 
 				$component_data_weights = array_reduce($data_source, function ($carry, $item){
 
