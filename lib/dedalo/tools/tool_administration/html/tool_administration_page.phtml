@@ -398,22 +398,20 @@
 					$html   .= "<div>Disable import structure from file</div>";
 				}else{
 
-					// file structure_json_file_path
-					$structure_json_file_path = (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
+					// file structure_json_file_path				
+					$structure_json_file_path = tool_administration::get_ontology_import_fron_json_file_path();
+					$html .= "<div>Using file path: $structure_json_file_path</div>";
+
+					// check file
 					if (!file_exists($structure_json_file_path)) {
-						// try with import files option (fallback)
-						$structure_json_file_path = DEDALO_MEDIA_BASE_PATH . '/import/files/' . 'structure.json'; // alternative path
-						debug_log(__METHOD__." Using alternative path: $structure_json_file_path ".to_string(), logger::DEBUG);
-						$html .= "<div>Main path fail: $structure_json_file_path</div>";
-						$html .= "<div>Using alternative path: $structure_json_file_path</div>";
-					}
-					if (file_exists($structure_json_file_path)) {
+						$html .= '<div class="warning">structure.json file not found in: '.$structure_json_file_path.'</div>';
+					}else{
 						$file_url	= str_replace(DEDALO_ROOT, DEDALO_ROOT_WEB, $structure_json_file_path,);
 						$html   .= "<a href=\"$file_url\" target=\"_blank\">$file_url</a>";
 						$file_structure_size = format_size_units( filesize($structure_json_file_path) );
 						$html   .= "<div>File size: $file_structure_size</div>";
 
-						// 
+						// resolve available tld's in file
 						$structure_data = json_decode( file_get_contents($structure_json_file_path) );
 						$unique_ar_tld = [];
 						foreach ($structure_data as $item) {
@@ -422,12 +420,6 @@
 							}
 						}
 						$html   .= '<div>Available TLDs: '. implode(',', $unique_ar_tld) . '</div>';
-					}
-
-					// check file
-					if (!file_exists($structure_json_file_path)) {
-						$html .= '<div class="warning">structure.json file not found in: '.$structure_json_file_path.'</div>';
-					}else{			
 						$html .= "  <input type=\"text\" id=\"import_ar_tld\" class=\"form-control input-sm\" style=\"width:90.3%;\" autocomplete=\"off\" placeholder=\"ar_tld like dd,rsc,hierarchy,oh\" value=\"\" />";
 						$html .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('import'))."\" data-mode=\"import_structure_from_json\" onclick=\"tool_administration.import_structure_from_json(this,event)\" />";
 					}

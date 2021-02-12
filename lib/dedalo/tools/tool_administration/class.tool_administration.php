@@ -1878,4 +1878,24 @@ class tool_administration extends tool_common {
 
 
 
+	/**
+	* GET_ONTOLOGY_IMPORT_FRON_JSON_FILE_PATH
+	* @return string $file_path
+	*/
+	public static function get_ontology_import_fron_json_file_path() {
+		
+		// file structure_json_file_path
+			$structure_json_file_path			= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
+			$overwrite_structure_json_file_path	= DEDALO_MEDIA_BASE_PATH . '/import/files/' . 'structure.json';
+
+
+		$file_path = (file_exists($overwrite_structure_json_file_path))
+			? $overwrite_structure_json_file_path
+			: $structure_json_file_path;
+		
+		return $file_path;
+	}//end get_ontology_import_fron_json_file_path
+
+
+
 }//end class

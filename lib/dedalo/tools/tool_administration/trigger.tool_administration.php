@@ -846,15 +846,14 @@ function import_structure_from_json($json_data) {
 
 	$ar_tld	= empty($tld_list) ? [] : explode(',', $tld_list);
 
-	// file structure_json_file_path
-		$structure_json_file_path = (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
-		if (!file_exists($structure_json_file_path)) {
-			// try with import files option (fallback)
-			$structure_json_file_path = DEDALO_MEDIA_BASE_PATH . '/import/files/' . 'structure.json'; // alternative path
-		}
-		debug_log(__METHOD__." Importing structure from JSON file: ".to_string($structure_json_file_path), logger::ERROR);
+	
 
 	try {
+
+		// file structure_json_file_path
+			$structure_json_file_path = tool_administration::get_ontology_import_fron_json_file_path();
+			debug_log(__METHOD__." Importing structure from JSON file: ".to_string($structure_json_file_path), logger::ERROR);
+
 
 		$data		= json_decode( file_get_contents($structure_json_file_path) );
 		$response	= backup::import_structure_json_data($data, $ar_tld);
