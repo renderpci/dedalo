@@ -1372,7 +1372,7 @@ class diffusion_sql extends diffusion  {
 			$database_name		= $table_map->database_name;
 			$database_tipo		= $table_map->database_tipo;
 			$table_from_alias	= $table_map->from_alias;
-		
+
 		// database_name . Resolve database_tipo in current diffusion map. Like 'web_aup'
 			// if (isset(self::$database_name)) {
 			// 	$database_name = self::$database_name;
@@ -1470,7 +1470,6 @@ class diffusion_sql extends diffusion  {
 					$cd_options->component_publication_tipo = $options->component_publication_tipo;
 				$ar_field_data = self::build_table_columns_data( $cd_options ); // Trigger resolve
 				#$table_data = self::$ar_table_data[$database_name][$diffusion_section]; // Result is set and usable
-					#dump($ar_field_data, ' ar_field_data ++ '.to_string($diffusion_section)); #die();
 
 			#
 			# SAVE RECORD . Insert MYSQL record (array) deleting before old data
@@ -1495,7 +1494,7 @@ class diffusion_sql extends diffusion  {
 
 					$save = diffusion_mysql::save_record($save_options);
 					
-					// global_search
+					// global_search (LEGACY ONLY)
 						if (isset($table_propiedades->global_search_map)) {
 
 							$gs_options = new stdClass();

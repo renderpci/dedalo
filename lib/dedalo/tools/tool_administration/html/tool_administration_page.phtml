@@ -61,7 +61,7 @@
 
 			#
 			# Long time process test
-				if(SHOW_DEBUG===true) {
+				if(SHOW_DEVELOPER===true) {
 					$html   .= "<div class=\"panel_option\">";
 					$html   .= "  <a href=\"javascript:;\" data-mode=\"make_backup\" onclick=\"tool_administration.long_time_process(this,event)\">Long time process</a>";
 					$html   .= "</div>";#end panel_option
@@ -154,7 +154,7 @@
 						}
 					}
 
-					#if(SHOW_DEBUG===true) {
+					#if(SHOW_DEVELOPER===true) {
 						// Show updates object (current target correspondence) with all config to apply to current update script
 						$html   .= "<input type=\"button\" class=\"btn btn-default btn-sm btn_update\" value=\"Run all update data version actions\" ";
 						$html   .= "data-mode=\"update_version\" ";
@@ -1065,14 +1065,13 @@
 
 
 			#
-			# DB DATA CHECK
-			#if(SHOW_DEBUG===true) {
+			# DB DATA CHECK			
 				require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
 				$data_check = new data_check();
 				$response 	= $data_check->check_sequences();
 				if ($response->result!=true) {
 					#debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
-					if(SHOW_DEBUG===true) {
+					if(SHOW_DEVELOPER===true) {
 						#die("Error on ".$response->msg);
 					}
 				}
@@ -1080,17 +1079,16 @@
 														 "",
 														 $response->msg
 														);
-			#}
+			
 
 
 			#
 			# DB DATA CHECK
-			#if(SHOW_DEBUG===true) {
 				#require_once(DEDALO_LIB_BASE_PATH.'/db/class.counter.php');
 				$response 	= counter::check_counters();
 				if ($response->result!==true) {
 					#debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
-					if(SHOW_DEBUG===true) {
+					if(SHOW_DEVELOPER===true) {
 						#die("Error on ".$response->msg);
 					}
 				}
@@ -1098,7 +1096,7 @@
 														 "",
 														 $response->msg
 														);
-			#}
+
 
 
 		$html   .= "</ul>";//end list-group

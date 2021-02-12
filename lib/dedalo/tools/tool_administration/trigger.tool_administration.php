@@ -25,7 +25,7 @@ function make_backup($json_data) {
 	$response = (object)tool_administration::make_backup();
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			
@@ -53,7 +53,7 @@ function force_unlock_all_components($json_data) {
 	$response = (object)lock_components::force_unlock_all_components();
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
 
@@ -77,7 +77,7 @@ function get_active_users($json_data) {
 	$response = (object)lock_components::get_active_users();
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
 
@@ -99,7 +99,7 @@ function build_structure_css($json_data) {
 	$response = (object)css::build_structure_css();
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
 
@@ -205,7 +205,7 @@ function update_structure($json_data) {
 	$response->result 	= true;
 	
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time			= exec_time_unit($start_time,'secs')." secs";
 			$debug->export_exec_time	= $export_exec_time;
@@ -261,7 +261,7 @@ function delete_component_tipo_in_matrix_table($json_data) {
 	$response = (object)tool_administration::delete_component_tipo_in_matrix_table($section_tipo,$component_tipo,$language,$save);
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
@@ -309,7 +309,7 @@ function renumerate_sections($json_data) {
 	$response = (object)tool_administration::renumerate_sections( $options );
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
@@ -348,7 +348,7 @@ function update_version($json_data) {
 	#$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";		
 
@@ -391,7 +391,7 @@ function skip_publication_state_check($json_data) {
 		$response->msg 		= 'Set skip_publication_state_check successfully: '.to_string($value);
 	
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
@@ -423,7 +423,7 @@ function remove_av_temporals($json_data) {
 	$response->msg		= !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";		
 
@@ -482,7 +482,7 @@ function move_component_data($json_data) {
 	$response = (object)tool_administration::move_component_data($options);	
 	
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
@@ -530,7 +530,7 @@ function remove_inverse_locators_in_section($json_data) {
 	}
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
@@ -583,7 +583,7 @@ function propagate_relations($json_data) {
 	}
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
@@ -630,7 +630,7 @@ function update_jer_from_4_0_to_4_1($json_data) {
 	$response =	(object)hierarchy::update_jer_from_4_0_to_4_1($tld, $modelo);
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
@@ -705,7 +705,7 @@ function convert_search_object_to_sql_query($json_data) {
 	
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			#foreach($vars as $name) {
@@ -749,7 +749,7 @@ function export_hierarchy($json_data) {
 	
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			#foreach($vars as $name) {
@@ -811,7 +811,7 @@ function export_structure_to_json($json_data) {
 	// $response->url	= $file_url;
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 		$response->debug = $debug;
@@ -862,7 +862,7 @@ function import_structure_from_json($json_data) {
 
 
 	# Debug
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 		$response->debug = $debug;
@@ -1012,7 +1012,7 @@ function update_dedalo_code($json_data) {
 
 
 	// Debug
-		if(SHOW_DEBUG===true) {
+		if(SHOW_DEVELOPER===true) {
 			$debug = new stdClass();
 				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			$response->debug = $debug;
