@@ -2190,6 +2190,10 @@
 	Valencia 11-02-2021 5.7.66
 		Fixed import/export ontology path issues
 
+
+	Valencia 12-02-2021 5.7.67
+		Fixed tool administration import ontology error when a path is not defined in config vars
+
 	
 
 	[/HISTORY]
@@ -2215,13 +2219,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.66';
+	$DEDALO_VERSION = '5.7.67';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-02-2021');
+	define('DEDALO_BUILD'	, '12-02-2021');
 
 
 	/*
