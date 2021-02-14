@@ -1,6 +1,6 @@
 <?php
 #require_once(DEDALO_CORE_PATH . '/dd/class.RecordObj_dd_edit.php');
-require_once(DEDALO_CORE_PATH . '/dd/class.ontology.php');
+require_once(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
 
 
 /**
