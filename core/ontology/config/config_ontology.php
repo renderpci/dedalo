@@ -9,7 +9,7 @@
 
 
 // session auth user_id. May differ between D5 / D6 vesions
-	define('CURRENT_LOGGED_USED_ID', $_SESSION['dedalo']['auth']['user_id']);
+	define('CURRENT_LOGGED_USED_ID', $_SESSION['dedalo']['auth']['user_id'] ?? null);
 
 
 
