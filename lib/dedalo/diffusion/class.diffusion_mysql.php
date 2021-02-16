@@ -543,8 +543,8 @@ class diffusion_mysql extends diffusion_sql  {
 
 			# if it don't work with versions, delete current record in all langs if exists
 			if ($options->delete_previous===true) {
-					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
-					$response->msg[] = $delete_result->msg;
+				$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
+				$response->msg[] = $delete_result->msg;
 			}
 
 
@@ -883,7 +883,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* DELETE_SQL_RECORD
-	* @return
+	* @return object $response
 	*/
 	public static function delete_sql_record($section_id, $database_name, $table_name, $section_tipo=null, $custom=false) {
 

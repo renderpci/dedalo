@@ -242,7 +242,7 @@ class relation_list extends common {
 	*/
 	public function get_diffusion_value($lang=null) {
 
-		// dump(func_get_args(), 'func_get_args() ++ '.to_string($this->tipo));
+		// dump(func_get_args(), 'func_get_args() ++ /////////////// '.to_string($this->tipo));
 		// dump($this, ' this ++ '.to_string());
 		// dump($this->tipo, ' this->tipo ++ '.to_string());
 
@@ -388,7 +388,7 @@ class relation_list extends common {
 				}
 
 				$ar_relations_lists	= $this->get_relation_list_obj($ar_values, $value_resolved=true);	
-				$diffusion_value	= $ar_relations_lists;			
+				$diffusion_value	= $ar_relations_lists;
 				break;
 
 			case 'dato_full':
@@ -429,6 +429,7 @@ class relation_list extends common {
 				$diffusion_value = array_unique($ar_values);				
 				break;
 		}
+		
 		
 
 		return $diffusion_value;
