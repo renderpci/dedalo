@@ -40,8 +40,8 @@ function update_lock_components_state($json_data) {
 
 	// exclude temp section of lock
 		if ($section_id===DEDALO_SECTION_ID_TEMP || strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false) {
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']. Ignored temp section_id';
+			$response->result	= true;
+			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']. Ignored temp section_id';			
 			return $response;
 		}
 	
