@@ -230,7 +230,59 @@ class relation_list extends common {
 
 
 
+	/**
+	* GET_DIFFUSION_DATO
+	* @return string $diffusion_value
+	* 
+	* @see numisdata1021
+	*/
+	public function get_diffusion_dato() {	
 
+		# Propiedades of diffusion element that references this component
+		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+		$diffusion_properties	= $this->get_diffusion_properties();
+		$process_dato_arguments	= isset($diffusion_properties->process_dato_arguments) 
+			? $diffusion_properties->process_dato_arguments
+			: null;
+		$ar_inverse_references	= $this->get_inverse_references($limit=false, $offset=0, $count=false);
+		$ar_values = [];
+		foreach ($ar_inverse_references as $current_locator) {
+
+			// filter_section
+				if (isset($process_dato_arguments->filter_section)) {
+					if (!in_array($current_locator->from_section_tipo, $process_dato_arguments->filter_section)) {
+						continue;
+					}
+				}
+
+			// filter_component
+				if (isset($process_dato_arguments->filter_component)) {
+					if (!in_array($current_locator->from_component_tipo, $process_dato_arguments->filter_component)) {
+						continue;
+					}
+				}
+
+			// locator restored from inverse
+				$locator = new locator();
+					$locator->set_section_tipo($current_locator->from_section_tipo);
+					$locator->set_section_id($current_locator->from_section_id);
+
+			// Check target is publicable
+				$current_is_publicable = diffusion::get_is_publicable($locator);
+				if ($current_is_publicable!==true) {
+					// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($locator), logger::DEBUG);
+					continue;
+				}
+			$ar_values[] = $locator;
+		}
+
+
+		return $ar_values;
+	}//end get_diffusion_dato
+
+
+	
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
