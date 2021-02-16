@@ -1135,12 +1135,12 @@ class diffusion_sql extends diffusion  {
 					$dato = $current_component->{$get_dato_method}();
 						#dump($dato, ' dato ++ '.to_string($modelo_name).' - '.$get_dato_method);
 				}else{
-					$dato = $current_component->get_dato();
+					$dato = ($modelo_name==='relation_list')
+						? $current_component->get_diffusion_dato() // use 'propiedades->process_dato_arguments' to filter by section or component
+						: $current_component->get_dato();
 				}
 
 				$diffusion_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
-
-
 				
 
 				# switch cases
@@ -1169,8 +1169,9 @@ class diffusion_sql extends diffusion  {
 								$ar_field_data['field_value'] = (string)$propiedades->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}
 								break;
 							default:
+								
 								$components_with_relations = component_relation_common::get_components_with_relations();
-								if (is_array($dato) && in_array($modelo_name, $components_with_relations)) {
+								if (is_array($dato) && (in_array($modelo_name, $components_with_relations) || $modelo_name==='relation_list')) {
 									$ar_id = array();
 									foreach ($dato as $current_locator) {
 
