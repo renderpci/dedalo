@@ -223,7 +223,24 @@ class diffusion_sql extends diffusion  {
 							$options = new stdClass();
 								$options->typology 	= 'default';
 								$options->tipo 		= $curent_children_tipo;
-							$ar_table_data['ar_fields'][] = self::create_field( $options );
+							$element = self::create_field( $options );
+
+							$name = RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
+							if ($name==='section_id') {
+								// overwrite default auto-created int column section_id
+								$found = array_find($ar_table_data['ar_fields'], function($item){
+									return $item['field_name']==='section_id';
+								});
+								if ($found) {
+									foreach ($ar_table_data['ar_fields'] as $c_key => $c_value) {
+										if ($c_value['field_name']==='section_id') {
+											$ar_table_data['ar_fields'][$c_key] = $element;
+										}
+									}
+								}
+							}else{
+								$ar_table_data['ar_fields'][] = $element;
+							}
 							break;
 					}//end switch (true)
 					break;
