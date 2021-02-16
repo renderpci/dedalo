@@ -305,7 +305,15 @@ class relation_list extends common {
 		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
 		$diffusion_properties = $this->get_diffusion_properties();
 		
-		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
+		$data_to_be_used = isset($diffusion_properties->data_to_be_used)
+			? $diffusion_properties->data_to_be_used 
+			: 'dato';
+
+		// overwrite data_to_be_used
+			if (isset($diffusion_properties->process_dato_arguments) && isset($diffusion_properties->process_dato_arguments->data_to_be_used)) {
+				$data_to_be_used = $diffusion_properties->process_dato_arguments->data_to_be_used;
+			}	
+
 		switch ($data_to_be_used) {
 
 			case 'custom':
