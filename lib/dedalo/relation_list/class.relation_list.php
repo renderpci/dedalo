@@ -473,20 +473,23 @@ class relation_list extends common {
 
 			case 'dato':
 			default:
-				$ar_values = [];
-				$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
-				foreach ($ar_inverse_references as $current_locator) {
+				// DES
+					// $ar_values = [];
+					// $ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
+					// foreach ($ar_inverse_references as $current_locator) {
 
-					// Check target is publicable
-					$current_is_publicable = diffusion::get_is_publicable($current_locator);
-					if ($current_is_publicable!==true) {
-						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
-						continue;
-					}
-					$ar_values[] = $current_locator->section_tipo;					
-				}
+					// 	// Check target is publicable
+					// 	$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					// 	if ($current_is_publicable!==true) {
+					// 		debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+					// 		continue;
+					// 	}
+					// 	$ar_values[] = $current_locator->section_tipo;					
+					// }
 
-				$diffusion_value = array_unique($ar_values);				
+					// $diffusion_value = array_unique($ar_values);
+	
+				$diffusion_value = $this->get_diffusion_dato();
 				break;
 		}
 		
