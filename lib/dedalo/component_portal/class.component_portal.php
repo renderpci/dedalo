@@ -1341,7 +1341,7 @@ class component_portal extends component_relation_common {
 						// Check target is publicable
 							$current_is_publicable = diffusion::get_is_publicable($current_locator);
 							if ($current_is_publicable!==true) {
-								debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 								continue;
 							}
 
@@ -1378,7 +1378,7 @@ class component_portal extends component_relation_common {
 						// Check target is publicable
 							$current_is_publicable = diffusion::get_is_publicable($current_locator);
 							if ($current_is_publicable!==true) {
-								debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 								continue;
 							}
 
@@ -1399,7 +1399,7 @@ class component_portal extends component_relation_common {
 						// Check target is publicable
 							$current_is_publicable = diffusion::get_is_publicable($current_locator);
 							if ($current_is_publicable!==true) {
-								debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 								continue;
 							}
 
