@@ -4043,7 +4043,9 @@ class diffusion_sql extends diffusion  {
 								? $value
 								: json_decode($value);
 						}else{
-							$value_array = json_decode($value);
+							$value_array = (is_array($value))
+								? $value
+								: json_decode($value);
 						}
 
 					if ($value_array!==null) {
