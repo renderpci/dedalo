@@ -2275,22 +2275,105 @@ class diffusion_sql extends diffusion  {
 			$database_name			= $options->database_name;
 
 		// short vars
-			$table_name		= $global_table_map->table_name;
-			$columns_map	= $global_table_map->columns_map;
+			$ar_fields			= $ar_field_data['ar_fields'];
+			$columns_map		= $global_table_map->columns_map;
+			$table_tipo			= $global_table_map->table_tipo;
+			$table_name			= RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$source_table_name	= $ar_field_data['table_name'];
 
-			// format reference
-				// $ar_fields_global[$pseudo_section_id][$lang][] = [
-				// 	'field_name'  => 'full_data',
-				// 	'field_value' => implode(' ',$full_data[$lang])
-				// ];
+		// iterate already calculated fields and extract mapped values
+			$values = [];
+			foreach($ar_fields as $section_id => $data) {
+				foreach ($data as $lang => $current_values) {
+					
+					$new_items = [];
 
-		
+					// section_id (used term_id here to allow use the same record manager to delete etc..)
+						$new_items[] = [
+							'field_name'	=> 'section_id',
+							'field_value'	=> $section_tipo .'_'. $section_id
+						];
+
+					// ref_section_id
+						$new_items[] = [
+							'field_name'	=> 'ref_section_id',
+							'field_value'	=> $section_id
+						];
+
+					// ref_section_tipo
+						$new_items[] = [
+							'field_name'	=> 'ref_section_tipo',
+							'field_value'	=> $section_tipo
+						];	
+
+					// lang
+						$new_items[] = [
+							'field_name'	=> 'lang',
+							'field_value'	=> $lang
+						];
+
+					// table
+						$new_items[] = [
+							'field_name'	=> 'table',
+							'field_value'	=> $source_table_name
+						];
+					
+					foreach ($columns_map as $column_map_item) {
+
+						$column_values = [];
+
+						$target_column	= $column_map_item->target_column;
+						$source_columns	= $column_map_item->source_columns;						
+
+						// extract values
+							foreach ($source_columns as $source_column) {
+								$found = array_find($current_values, function($element) use($source_column){
+									return ($element['field_name']===$source_column);
+								});
+								if ($found!==null) {
+									$column_values[] = $found['field_value'];
+								}
+							}
+
+						// field value formated
+							$field_value = (function($column_values) use($column_map_item, $source_columns){
+								
+								$format = $column_map_item->format ?? null;
+
+								switch ($format) {
+									case 'string':
+										$separator = $column_map_item->separator ?? ' | ';
+										return implode($separator, $column_values);
+										break;
+									default:
+										if (count($source_columns)<2) {											
+											return reset($column_values);
+										}else{
+											return json_encode($column_values, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+										}										
+										break;
+								}
+							})($column_values);
+						
+
+						$new_items[] = [
+							'field_name'	=> $target_column,
+							'field_value'	=> $field_value
+						];					
+					}
+
+					$values[$section_id][$lang] = $new_items;
+
+				}//end loop lang
+
+
+			}//end foreach($ar_fields as $section_id => $data)
 
 		$ar_field_data = [
 			"database_name" 	=> $database_name,
 			"table_name" 		=> $table_name,
-			"diffusion_section" => $diffusion_section,
-			"ar_fields" 		=> $ar_fields_global
+			"diffusion_section" => $table_tipo,
+			"ar_fields" 		=> $values
 		];
 
 		// delete previous records if exists (custom way using section_id and table combination)			
@@ -2307,9 +2390,9 @@ class diffusion_sql extends diffusion  {
 		
 		$save_options = new stdClass();
 			$save_options->diffusion_element_tipo 	= $diffusion_element_tipo;
-			$save_options->section_tipo 			= $section_tipo;
+			$save_options->section_tipo 			= $table_tipo; // $section_tipo;
 			$save_options->record_data 				= $ar_field_data;
-			$save_options->delete_previous 			= true;
+			$save_options->delete_previous 			= true; // already custom deleted
 		$save = diffusion_mysql::save_record($save_options);
 
 		if (!isset($save->new_id)) {
