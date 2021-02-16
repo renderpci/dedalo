@@ -495,13 +495,13 @@ class diffusion_mysql extends diffusion_sql  {
 					$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
 						#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
 
-					$table_map			= $diffusion_element_tables_map->{$section_tipo};
+					$table_map			= $diffusion_element_tables_map->{$section_tipo} ?? null;
 					#$table_name		= $table_map->name;
 					#$table_tipo		= $table_map->table;
 					#$table_propiedades	= $table_map->propiedades;
 					#$database_name		= $table_map->database_name;
 					#$database_tipo		= $table_map->database_tipo;
-					$table_from_alias	= $table_map->from_alias;
+					$table_from_alias	= $table_map->from_alias ?? null;
 
 					$table_columns_options = new stdClass();
 						$table_columns_options->table_tipo			= $diffusion_section;
