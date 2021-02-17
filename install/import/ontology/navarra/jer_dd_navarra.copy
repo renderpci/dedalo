@@ -1,0 +1,105 @@
+navarra82	navarra86	dd347	no	si	si	11	navarra	si	[{"dd1229":"hierarchy65"},{"dd6":"dc1"}]	\N	\N
+navarra65	dd3	dd17	no	si	si	20	navarra	si	\N	\N	\N
+navarra85	navarra86	dd347	no	si	si	14	navarra	si	[{"dd1229":"rsc510"}]	\N	\N
+navarra66	navarra65	dd18	no	si	si	1	navarra	si	\N	\N	\N
+navarra80	navarra86	dd347	no	si	si	9	navarra	si	[{"dd1229":"hierarchy79"}]	\N	\N
+navarra101	navarra70	dd1231	no	si	si	2	navarra	si	[{"dd432":"ww34"}]		null
+navarra67	navarra66	dd1743	no	si	si	1	navarra	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}	{"diffusion": {"class_name": "diffusion_mysql"}}
+navarra83	navarra86	dd347	no	si	si	12	navarra	si	[{"dd6":"on1"},{"dd1229":"hierarchy65"}]	\N	\N
+navarra81	navarra68	dd347	no	si	si	3	navarra	si	[{"dd6":"cro1"},{"dd1229":"hierarchy65"}]	\N	\N
+navarra69	navarra68	dd347	no	si	si	1	navarra	si	[{"dd1229":"dd600"}]	\N	\N
+navarra87	navarra68	dd1229	no	si	si	8	navarra	si	[{"dd6":"navarra60"}]	\N	\N
+navarra71	navarra35	dd247	no	si	si	8	navarra	no	\N	\N	\N
+navarra72	navarra68	dd347	no	si	si	4	navarra	si	[{"dd1229":"rsc264"}]	\N	\N
+navarra84	navarra86	dd347	no	si	si	13	navarra	si	[{"dd6":"es1"},{"dd1229":"hierarchy65"}]	\N	\N
+navarra104	navarra72	dd1231	no	si	si	1	navarra	si	[{"dd9":"rsc21"}]	\N	\N
+navarra90	navarra87	dd1231	no	si	si	3	navarra	si	[{"dd592":"navarra11"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc29",\r\n    "dato_splice": [\r\n      1\r\n    ]\r\n  }\r\n}	\N
+navarra73	navarra35	dd9	no	si	si	9	navarra	no	\N	\N	\N
+navarra74	navarra35	dd9	no	si	si	10	navarra	no	\N	\N	\N
+navarra49	navarra34	dd91	no	si	si	2	navarra	no	[{"dd11":"navarra36"},{"dd11":"navarra37"},{"dd1017":"navarra40"},{"dd9":"navarra38"},{"dd9":"navarra39"},{"dd43":"navarra52"},{"dd9":"navarra73"},{"dd9":"navarra74"}]	\N	\N
+navarra88	navarra87	dd1233	no	si	si	1	navarra	si	[{"dd339":"navarra4"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}	\N
+navarra89	navarra87	dd1231	no	si	si	2	navarra	si	[{"dd442":"navarra31"}]	{\r\n  "data_to_be_used": "dato"\r\n}	\N
+navarra91	navarra87	dd1231	no	si	si	4	navarra	si	[{"dd592":"navarra32"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc29"\r\n  }\r\n}	\N
+navarra92	navarra87	dd1231	no	si	si	5	navarra	si	[{"dd9":"navarra5"}]	\N	\N
+navarra94	navarra86	dd1231	no	si	si	6	navarra	si	null	\N	\N
+navarra34	navarra18	dd6	no	si	si	4	navarra	no	\N	\N	\N
+navarra35	navarra34	dd8	no	si	si	1	navarra	no	\N	\N	\N
+navarra36	navarra35	dd11	no	si	si	3	navarra	no	[{"dd6":"navarra41"},{"dd9":"navarra43"}]	\N	\N
+navarra37	navarra35	dd11	no	si	si	4	navarra	no	[{"dd6":"navarra44"},{"dd9":"navarra46"}]	\N	\N
+navarra38	navarra35	dd9	no	si	si	6	navarra	no	\N	\N	\N
+navarra41	navarra18	dd6	no	si	si	5	navarra	no	[{"dd626":"dd22"}]	\N	\N
+navarra40	navarra35	dd10	no	si	si	5	navarra	no	\N	\N	\N
+navarra42	navarra41	dd8	no	si	si	1	navarra	no	\N	\N	\N
+navarra43	navarra42	dd9	no	si	si	1	navarra	no	\N	\N	\N
+navarra44	navarra18	dd6	no	si	si	6	navarra	no	[{"dd626":"dd22"}]	\N	\N
+navarra45	navarra44	dd8	no	si	si	1	navarra	no	\N	\N	\N
+navarra46	navarra45	dd9	no	si	si	1	navarra	no	\N	\N	\N
+navarra47	navarra1	dd8	no	si	si	4	navarra	no	\N	\N	\N
+navarra10	navarra1	dd709	no	si	si	2	navarra	si	\N	\N	\N
+navarra50	navarra41	dd91	no	si	si	2	navarra	no	[{"dd9":"navarra43"}]	\N	\N
+navarra51	navarra44	dd91	no	si	si	2	navarra	si	[{"dd9":"navarra46"}]	\N	\N
+navarra52	navarra35	dd43	no	si	si	2	navarra	no	\N	\N	\N
+navarra39	navarra35	dd9	no	si	si	7	navarra	no	\N	\N	\N
+navarra54	navarra47	dd500	no	si	si	1	navarra	no	\N	\N	\N
+navarra53	navarra2	dd904	no	si	si	11	navarra	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}	\N
+navarra57	navarra18	dd6	no	si	si	2	navarra	si	[{"dd6":"navarra1"}]	\N	\N
+navarra58	navarra1	dd8	no	si	si	3	navarra	si	\N	\N	\N
+navarra48	navarra47	dd592	no	si	si	2	navarra	no	[{"dd6":"navarra34"},{"dd11":"navarra36"},{"dd11":"navarra37"},{"dd1017":"navarra40"},{"dd9":"navarra38"},{"dd9":"navarra39"},{"dd43":"navarra52"}]	{\r\n  "edit_view": "view_single_line"\r\n}	\N
+navarra59	navarra58	dd592	no	si	si	1	navarra	no	[{"dd6":"navarra60"},{"dd9":"navarra19"},{"dd9":"navarra5"},{"dd530":"navarra6"},{"dd592":"navarra11"}]	\N	\N
+navarra56	navarra48	dd97	no	si	si	1	navarra	si	[{"dd11":"navarra36"},{"dd11":"navarra37"},{"dd10":"navarra40"},{"dd9":"navarra38"},{"dd9":"navarra39"},{"dd43":"navarra52"},{"dd9":"navarra73"},{"dd9":"navarra74"}]	\N	\N
+navarra60	navarra18	dd6	no	si	si	3	navarra	no	[{"dd6":"navarra1"}]	\N	\N
+navarra55	navarra35	dd1747	no	si	si	1	navarra	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+navarra61	navarra60	dd1129	no	si	si	1	navarra	si	[{"dd8":"navarra58"}]	\N	\N
+navarra62	navarra57	dd1129	no	si	si	1	navarra	si	[{"dd8":"navarra47"}]	\N	\N
+navarra63	navarra60	dd91	no	si	si	2	navarra	si	[{"dd339":"navarra4"},{"dd9":"navarra19"},{"dd11":"navarra9"},{"dd9":"navarra5"},{"dd530":"navarra7"},{"dd592":"navarra11"}]	\N	\N
+navarra64	navarra57	dd91	no	si	si	2	navarra	si	[{"dd339":"navarra4"},{"dd9":"navarra19"},{"dd9":"navarra5"},{"dd592":"navarra59"}]	\N	\N
+navarra33	navarra60	dd1221	no	si	si	3	navarra	no	\N	{\r\n  "tool_name": "tool_import_files_dcnav",\r\n  "tipo": "navarra33",\r\n  "section_tipo": "navarra60",\r\n  "context_name": "files",\r\n  "custom_params": {\r\n    "file_processor": null,\r\n    "map_name": null,\r\n    "copy_all_filenames_to": null,\r\n    "optional_copy_filename": null\r\n  }\r\n}	\N
+navarra4	navarra2	dd339	no	si	si	2	navarra	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "10%"}}}}
+navarra21	navarra10	dd711	no	si	si	1	navarra	si	\N	\N	\N
+navarra20	navarra2	dd9	no	si	si	5	navarra	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "15%"}}}}
+navarra18	dd351	dd4	no	si	si	5	navarra	si	\N	\N	\N
+navarra29	navarra10	dd711	no	si	si	2	navarra	no	\N	\N	\N
+navarra12	navarra11	dd97	no	si	si	1	navarra	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "100%",\r\n    "element_height": "160px"\r\n  }\r\n}	{"edit_view_options": {"element_width": "100%", "element_height": "160px"}}
+navarra13	navarra11	dd91	no	si	si	2	navarra	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N	\N
+navarra5	navarra2	dd9	no	si	si	8	navarra	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "50%"}}}}
+navarra30	navarra29	dd10	no	si	si	1	navarra	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
+navarra19	navarra2	dd9	no	si	si	4	navarra	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "15%"}}}}
+navarra1	navarra18	dd6	no	si	si	1	navarra	no	\N	\N	\N
+navarra2	navarra1	dd8	no	si	si	1	navarra	no	\N	\N	\N
+navarra15	navarra1	dd177	no	si	si	5	navarra	no	\N	\N	\N
+navarra16	navarra1	dd183	no	si	si	6	navarra	no	\N	\N	\N
+navarra17	navarra1	dd91	no	si	si	7	navarra	no	[{"dd339":"navarra4"},{"dd9":"navarra19"},{"dd11":"navarra9"},{"dd9":"navarra5"},{"dd11":"navarra7"},{"dd592":"navarra11"}]	\N	\N
+navarra93	navarra70	dd1231	no	si	si	3	navarra	si	[{"dd431":"ww32"}]	{\r\n  "data_to_be_used": "dato"\r\n}	\N
+navarra97	navarra70	dd1231	no	si	si	5	navarra	si	[{"dd592":"ww29"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc35"\r\n  }\r\n}	\N
+navarra24	navarra21	dd530	no	si	si	3	navarra	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd530":"rsc94"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "30%"}}}}
+navarra22	navarra21	dd80	no	si	si	1	navarra	no	[{"dd6":"rsc723"},{"dd9":"rsc726"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%",\r\n        "float": "left"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"float": "left", "width": "20%"}}}}
+navarra23	navarra21	dd530	no	si	si	2	navarra	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "25%"}}}}
+navarra32	navarra29	dd592	no	si	si	3	navarra	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd635":"rsc26"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd749":"rsc29"}]	{\r\n\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {}}}}
+navarra25	navarra21	dd530	no	si	si	4	navarra	no	[{"dd6":"dd898"},{"dd9":"dd900"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "25%"}}}}
+navarra26	navarra21	dd635	no	si	si	5	navarra	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "25%"}}}}
+navarra7	navarra2	dd530	no	si	si	6	navarra	no	[{"dd6":"rsc312"},{"dd9":"rsc315"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "35%"}}}}
+navarra9	navarra2	dd11	no	si	si	3	navarra	no	[{"dd6":"dd1132"},{"dd9":"dd1135"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "15%"}}}}
+navarra3	navarra2	dd1747	no	si	si	1	navarra	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".inverse"], "style": {"width": "10%", "border-bottom-right-radius": "8px"}}}}
+navarra6	navarra2	dd530	no	si	si	9	navarra	no	[{"dd6":"rsc106"},{"dd9":"rsc116"},{"dd11":"rsc121"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "25%"}}}}
+navarra14	navarra2	dd247	no	si	si	12	navarra	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"float": "right", "width": "50%"}}}}
+navarra96	navarra70	dd1231	no	si	si	4	navarra	si	[{"dd431":"ww32"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "hierarchy40",\r\n    "component_method": "get_dato"\r\n  }\r\n}	\N
+navarra98	navarra70	dd1231	no	si	si	6	navarra	si	[{"dd592":"ww31"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc29"\r\n  }\r\n}	\N
+navarra11	navarra2	dd592	no	si	si	7	navarra	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "dragable_connectWith": "qdp141",\r\n  "ar_tools_name": {\r\n    "tool_import_files": {\r\n      "target_component": "rsc29",\r\n      "layout_map": [\r\n        "rsc52",\r\n        "rsc31",\r\n        "rsc23"\r\n      ],\r\n      "target_date": "rsc44"\r\n    }\r\n  },\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ".mosaic_li": {\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".mosaic_li": {"style": {"width": "50%"}}, ".mosaic_ul": {"style": {"height": "160px", "overflow": "auto"}}, ".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"float": "right", "width": "50%"}}, ".css_button_generic > span": {"style": {"display": "none"}}}, "edit_view": "view_mosaic", "ar_tools_name": {"tool_import_files": {"layout_map": ["rsc52", "rsc31", "rsc23"], "target_date": "rsc44", "target_component": "rsc29"}}, "portal_link_open": false, "dragable_connectWith": "qdp141"}
+navarra28	navarra21	dd442	no	si	si	6	navarra	no	\N	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "55%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "55%"}}}, "source": {"mode": "autocomplete", "hierarchy_types": [2], "hierarchy_sections": []}, "value_with_parents": true}
+navarra27	navarra21	dd592	no	si	si	7	navarra	no	[{"dd6":"rsc182"},{"dd11":"rsc162"},{"dd635":"rsc163"},{"dd1018":"rsc165"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%",\r\n        "clear": "left"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ".__DES__content_data": {\r\n      "mixin": [],\r\n      "style": {\r\n        "columns": "initial",\r\n        "column-count": "initial",\r\n        "-webkit-columns": "initial",\r\n        "-webkit-column-count": "initial"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"clear": "left", "width": "100%"}}, ".__DES__content_data": {"mixin": [], "style": {"columns": "initial", "column-count": "initial", "-webkit-columns": "initial", "-webkit-column-count": "initial"}}, ".css_button_generic > span": {"style": {"display": "none"}}}}
+navarra8	navarra2	dd635	no	si	si	10	navarra	no	\N	{\r\n  "date_mode": "range",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "25%"}}}, "date_mode": "range"}
+navarra77	navarra68	dd347	no	si	si	7	navarra	si	[{"dd1229":"rsc267"}]	\N	\N
+navarra99	navarra70	dd1231	no	si	si	8	navarra	si	[{"dd592":"ww30"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc37"\r\n  }\r\n}	null
+navarra86	ts11	dd440	no	si	si	9	navarra	si	\N		null
+navarra100	navarra70	dd1231	no	si	si	9	navarra	si	[{"dd592":"ww30"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc23"\r\n  }\r\n}	null
+navarra31	navarra29	dd442	no	si	si	2	navarra	no	\N	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      1,\r\n      2,\r\n      6\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "40%"}}}, "source": {"mode": "autocomplete", "hierarchy_types": [1, 2], "hierarchy_sections": []}}
+navarra102	navarra86	dd592	no	si	si	7	navarra	si	[{"dd6":"rsc170"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ]\r\n    }\r\n  }\r\n}	null
+navarra75	navarra68	dd347	no	si	si	5	navarra	si	[{"dd1229":"oh66"}]	\N	\N
+navarra76	navarra68	dd347	no	si	si	6	navarra	si	[{"dd1229":"rsc275"}]	\N	\N
+navarra78	navarra86	dd347	no	si	si	7	navarra	si	[{"dd1229":"rsc444"}]	\N	\N
+navarra103	navarra70	dd1231	no	si	si	7	navarra	si	[{"dd592":"ww31"}]	{\r\n  "data_to_be_used": "dato"\r\n}	null
+navarra79	navarra86	dd347	no	si	si	8	navarra	si	[{"dd1229":"oh112"}]	\N	\N
+navarra68	navarra67	dd1259	no	si	si	1	navarra	si	\N		null
+navarra70	navarra68	dd347	no	si	si	2	navarra	si	[{"dd1229":"dd622"},{"dd6":"ww1"}]		null
+navarra95	navarra70	dd1231	no	si	si	1	navarra	si	[{"dd592":"ww22"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc29",\r\n    "dato_splice": [\r\n      1\r\n    ]\r\n  }\r\n}	\N
+navarra105	navarra60	dd58	no	si	si	4	navarra	no	[{"dd9":"navarra19"},{"dd9":"navarra5"}]		null
