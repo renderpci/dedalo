@@ -1368,9 +1368,9 @@ class diffusion_sql extends diffusion  {
 			$section_tipo			= $options->section_tipo;
 			$section_id				= $options->section_id; // (!) can be an array too
 			$diffusion_element_tipo	= $options->diffusion_element_tipo; // diffusion_element_tipo (structre diffusion_element like oh63 for 'Historia oral web')
-		
+	
 		// table info
-			$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );			
+			$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
 				if(SHOW_DEBUG===true) {
 					#dump($options, ' options ++ $resolve_references: '.to_string($resolve_references));
