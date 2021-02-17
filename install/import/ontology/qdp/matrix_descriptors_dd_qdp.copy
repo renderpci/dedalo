@@ -1,0 +1,721 @@
+qdp1	Objectes	termino	lg-cat
+qdp1	Objetos	termino	lg-spa
+qdp10	Estado de conservación	termino	lg-spa
+qdp10	Estat de conservació	termino	lg-cat
+qdp100	Fotografías	termino	lg-spa
+qdp100	Fotografies	termino	lg-cat
+qdp101	Descripció	termino	lg-cat
+qdp101	Descripción	termino	lg-spa
+qdp102	Ficha fotografía	termino	lg-spa
+qdp102	Fitxa fotografia	termino	lg-cat
+qdp103	Identificació	termino	lg-cat
+qdp103	Identificación	termino	lg-spa
+qdp104	Descripció	termino	lg-cat
+qdp104	Descripción	termino	lg-spa
+qdp105	Lista de fotografias	termino	lg-spa
+qdp105	Llista de fotografies	termino	lg-cat
+qdp106	Nou	termino	lg-cat
+qdp106	Nuevo	termino	lg-spa
+qdp107	Borrar	termino	lg-spa
+qdp107	Esborrar	termino	lg-cat
+qdp108	Importa fitxes amb imatge	termino	lg-cat
+qdp108	Importar fichas con imagen	termino	lg-spa
+qdp109	Id	termino	lg-cat
+qdp109	Id	termino	lg-spa
+qdp11	General Information	termino	lg-eng
+qdp11	Informació general	termino	lg-cat
+qdp11	Información general	termino	lg-spa
+qdp110	Difusió	termino	lg-cat
+qdp110	Difusión	termino	lg-spa
+qdp111	Colección	termino	lg-spa
+qdp111	Col·lecció	termino	lg-cat
+qdp112	Persona	termino	lg-cat
+qdp112	Persona	termino	lg-spa
+qdp113	Fotografia	termino	lg-cat
+qdp113	Fotografía	termino	lg-spa
+qdp114	view_mosaic	termino	lg-spa
+qdp115	Listado	termino	lg-spa
+qdp116	Autor	termino	lg-cat
+qdp116	Autor	termino	lg-spa
+qdp117	Medidas	termino	lg-spa
+qdp117	Mesures	termino	lg-cat
+qdp118	Características	termino	lg-spa
+qdp118	Característiques	termino	lg-cat
+qdp119	Materiales	termino	lg-spa
+qdp119	Materials	termino	lg-cat
+qdp12	Category list	termino	lg-eng
+qdp12	Lista de categorías	termino	lg-spa
+qdp12	Llistat	termino	lg-cat
+qdp120	Año	termino	lg-spa
+qdp120	Any	termino	lg-cat
+qdp121	Año dudoso	termino	lg-spa
+qdp121	Any dubtós	termino	lg-cat
+qdp122	Descripció	termino	lg-cat
+qdp122	Descripción	termino	lg-spa
+qdp123	Comentarios	termino	lg-spa
+qdp123	Comentaris	termino	lg-cat
+qdp124	Clasificación	termino	lg-spa
+qdp124	Classificació	termino	lg-cat
+qdp125	Projecte	termino	lg-cat
+qdp125	Proyecto	termino	lg-spa
+qdp126	Características	termino	lg-spa
+qdp126	Caracterítiques	termino	lg-cat
+qdp127	Informació general	termino	lg-cat
+qdp127	Información general	termino	lg-spa
+qdp128	Lista de características	termino	lg-spa
+qdp128	Llistat	termino	lg-cat
+qdp129	Nou	termino	lg-cat
+qdp129	Nuevo	termino	lg-spa
+qdp13	New	termino	lg-eng
+qdp13	Nou	termino	lg-cat
+qdp13	Nuevo	termino	lg-spa
+qdp130	Borrar	termino	lg-spa
+qdp130	Esborrar	termino	lg-cat
+qdp131	Id	termino	lg-cat
+qdp131	Id	termino	lg-spa
+qdp132	Categoria	termino	lg-cat
+qdp132	Categoría	termino	lg-spa
+qdp133	Característica	termino	lg-cat
+qdp133	Característica	termino	lg-spa
+qdp134	Projecte	termino	lg-cat
+qdp134	Proyecto	termino	lg-spa
+qdp135	Entidad	termino	lg-spa
+qdp135	Entitat	termino	lg-cat
+qdp136	Material Fotogràfic	termino	lg-cat
+qdp136	Material Fotográfico	termino	lg-spa
+qdp137	Titularidad	termino	lg-spa
+qdp137	Titularitat	termino	lg-cat
+qdp138	Colecciones	termino	lg-spa
+qdp138	Col·leccions	termino	lg-cat
+qdp139	Ficha fotografía histórico	termino	lg-spa
+qdp139	Fitxa fotografia històric	termino	lg-cat
+qdp14	Borrar	termino	lg-spa
+qdp14	Delete	termino	lg-eng
+qdp14	Esborrar	termino	lg-cat
+qdp140	Informació general	termino	lg-cat
+qdp140	Información general	termino	lg-spa
+qdp141	Imágenes	termino	lg-spa
+qdp141	Imatges	termino	lg-cat
+qdp142	Lista de colecciones	termino	lg-spa
+qdp142	Llistat	termino	lg-cat
+qdp143	Històric	termino	lg-cat
+qdp143	Histórico	termino	lg-spa
+qdp144	Nou	termino	lg-cat
+qdp144	Nuevo	termino	lg-spa
+qdp145	QDP	termino	lg-spa
+qdp146	Borrar	termino	lg-spa
+qdp146	Esborrar	termino	lg-cat
+qdp147	Especificaciones de manipulación, transporte, exposición	termino	lg-spa
+qdp147	Especificacions de manipulació, transport, exposició	termino	lg-cat
+qdp148	Id	termino	lg-cat
+qdp148	Id	termino	lg-spa
+qdp149	LARGO. Medida perpendicular (altura) / ANCHO. Medida horizontal el frente (anchurado) / PROFUNDO. Medida horizontal de profundidad (espesor). Las medidas se darán preferentemente en centímetros. Pueden usarse otras unidades de medida, pero sea cual sea la unidad utilizada se indicará después de la cantidad. En caso de que las medidas incluyan peana, se pondrá:  180 x 26 x 32 cm ( con peana )	def	lg-spa
+qdp149	Medidas	termino	lg-spa
+qdp149	Mesures	termino	lg-cat
+qdp15	Id	termino	lg-cat
+qdp15	Id	termino	lg-spa
+qdp150	Restaurada	termino	lg-cat
+qdp150	Restaurada	termino	lg-spa
+qdp151	Data declaració	termino	lg-cat
+qdp151	Fecha declaración	termino	lg-spa
+qdp152	Indica el terme o nom comú amb què es coneix al bé.	def	lg-cat
+qdp152	Indica el término o nombre común con el que se conoce al bien.	def	lg-spa
+qdp152	Nom del bé	termino	lg-cat
+qdp152	Nombre del bien	termino	lg-spa
+qdp153	Colección	termino	lg-spa
+qdp153	Col·lecció	termino	lg-cat
+qdp154	Inscripciones	termino	lg-spa
+qdp154	Inscripcions	termino	lg-cat
+qdp155	Projecte	termino	lg-cat
+qdp155	Proyecto	termino	lg-spa
+qdp156	Relaciones	termino	lg-spa
+qdp156	Relacions	termino	lg-cat
+qdp157	Darrers canvis	termino	lg-cat
+qdp157	Últimos cambios	termino	lg-spa
+qdp158	Històric	termino	lg-cat
+qdp158	Histórico	termino	lg-spa
+qdp159	Administració	termino	lg-cat
+qdp159	Administración	termino	lg-spa
+qdp16	Data d&#039;incoació	termino	lg-cat
+qdp16	Fecha de Incoación	termino	lg-spa
+qdp16	Inception Date	termino	lg-eng
+qdp160	Listado	termino	lg-spa
+qdp160	Llistat	termino	lg-cat
+qdp161	Identificació	termino	lg-cat
+qdp161	Identificación	termino	lg-spa
+qdp162	Id	termino	lg-cat
+qdp162	Id	termino	lg-spa
+qdp163	Tipo de medida	termino	lg-spa
+qdp163	Tipus de mesura	termino	lg-cat
+qdp164	Unidad	termino	lg-spa
+qdp164	Unitat	termino	lg-cat
+qdp165	Projecte	termino	lg-cat
+qdp165	Proyecto	termino	lg-spa
+qdp166	QDP	termino	lg-spa
+qdp167	view_single_line	termino	lg-spa
+qdp168	Se indicarán siempre que pueda saberse, todas las técnicas artísticas o artesanales que hayan sido empleadas en la ejecución de la pieza separadas por punto e introducidas por  estricto orden alfabético.	def	lg-spa
+qdp168	Técnica	termino	lg-spa
+qdp168	Tècnica	termino	lg-cat
+qdp169	Històric	termino	lg-cat
+qdp169	Histórico	termino	lg-spa
+qdp17	Categoria	termino	lg-cat
+qdp17	Categoría	termino	lg-spa
+qdp17	Category	termino	lg-eng
+qdp170	Autor de la ficha	termino	lg-spa
+qdp170	Autor de la fitxa	termino	lg-cat
+qdp171	Intervenció	termino	lg-cat
+qdp171	Intervención	termino	lg-spa
+qdp220	Audiovisuals identificati	termino	lg-cat
+qdp361	exhibitions	termino	lg-spa
+qdp172	Aquella que describa y/o reproduzca el objeto. En este campo se recogerán, siempre que exista, cualquier tipo de publicación en la que se haga mención específica de la obra objeto de la recogida de datos, incluyéndosebibliografía actualizada.	def	lg-spa
+qdp172	Aquella que descriga i/o reproduesca l&#039;objecte	def	lg-cat
+qdp172	Bibliografia pròpia del bé	termino	lg-cat
+qdp172	Bibliografía propia del bien	termino	lg-spa
+qdp173	view_single_line	termino	lg-spa
+qdp174	Bibliografia relacionada amb el bé	termino	lg-cat
+qdp174	Bibliografía relacionada con el bien	termino	lg-spa
+qdp175	view_single_line	termino	lg-spa
+qdp176	Moviments	termino	lg-cat
+qdp176	Movimientos	termino	lg-spa
+qdp177	view_single_line	termino	lg-spa
+qdp178	Conjuntos	termino	lg-spa
+qdp178	Conjunts	termino	lg-cat
+qdp179	Bienes	termino	lg-spa
+qdp179	Peces del conjunto	termino	lg-cat
+qdp18	Project	termino	lg-eng
+qdp18	Projecte	termino	lg-cat
+qdp18	Proyecto	termino	lg-spa
+qdp180	Observaciones	termino	lg-spa
+qdp180	Observacions	termino	lg-cat
+qdp181	identifying_immovable	termino	lg-spa
+qdp182	Lloc de recuperació	termino	lg-cat
+qdp182	Lugar de recuperación	termino	lg-spa
+qdp183	Mapa de los componentes	termino	lg-spa
+qdp183	Mapa dels components	termino	lg-cat
+qdp184	Recuperació	termino	lg-cat
+qdp184	Recuperación	termino	lg-spa
+qdp185	Ubicació y moviments	termino	lg-cat
+qdp185	Ubicación y movimientos	termino	lg-spa
+qdp186	Colección	termino	lg-spa
+qdp186	Col·lecció	termino	lg-cat
+qdp187	Colector/a	termino	lg-spa
+qdp187	Col·lector/a	termino	lg-cat
+qdp188	QDP	termino	lg-spa
+qdp189	Listado	termino	lg-spa
+qdp189	Llistat	termino	lg-cat
+qdp19	Informació general	termino	lg-cat
+qdp19	Información general	termino	lg-spa
+qdp190	Font d&#039;ingrés	termino	lg-cat
+qdp190	Fuente de ingreso	termino	lg-spa
+qdp190	Indica el nom de la persona, col.lectiu o institució de qui prové l&#039;objecte en ingressar al museu.	def	lg-cat
+qdp190	Indica el nombre de la persona, colectivo o institución de quien proviene el objeto al ingresar en el museo.	def	lg-spa
+qdp191	Forma d&#039;ingrés	termino	lg-cat
+qdp191	Forma de ingreso	termino	lg-spa
+qdp191	Indica la manera segons la qual el museu o institució ha adquirit la tutela de l’objecte.	def	lg-cat
+qdp191	Indica la manera según la cual el museo o institución ha adquirido la tutela del objeto:	def	lg-spa
+qdp192	Conservador/a	termino	lg-cat
+qdp192	Conservador/a	termino	lg-spa
+qdp193	Documentació de recuperació	termino	lg-cat
+qdp193	Documentación de recuperación	termino	lg-spa
+qdp194	Data d&#039;ingrés /referència recuperació	termino	lg-cat
+qdp194	Fecha de ingreso/referencia recuperación	termino	lg-spa
+qdp194	Indica la data en què ha ingressat l’objecte al museu.	def	lg-cat
+qdp194	Indica la fecha en la cual ha ingresado el objeto en el museo.	def	lg-spa
+qdp195	Llocs d&#039;troballa	termino	lg-cat
+qdp195	Lugares de hallazgo	termino	lg-spa
+qdp196	Listado	termino	lg-spa
+qdp196	Llistat	termino	lg-cat
+qdp197	Lloc de troballa	termino	lg-cat
+qdp197	Lugar de hallazgo	termino	lg-spa
+qdp198	Id	termino	lg-cat
+qdp198	Id	termino	lg-spa
+qdp199	Lugar de hallazgo	termino	lg-cat
+qdp199	Lugar de hallazgo	termino	lg-spa
+qdp2	Ficha inventario	termino	lg-spa
+qdp2	Fitxa inventari	termino	lg-cat
+qdp20	Lista de temas	termino	lg-spa
+qdp20	Llista de temes	termino	lg-cat
+qdp200	Geolocalitzacions recuperació	termino	lg-cat
+qdp200	Geolocalizaciones recuperación	termino	lg-spa
+qdp201	Geolocalització	termino	lg-cat
+qdp201	Geolocalización	termino	lg-spa
+qdp202	Exclosos	termino	lg-cat
+qdp202	Excluidos	termino	lg-spa
+qdp203	Exclosos	termino	lg-cat
+qdp203	Excluidos	termino	lg-spa
+qdp204	Listado	termino	lg-spa
+qdp204	Llistat	termino	lg-cat
+qdp205	Listado	termino	lg-spa
+qdp205	Llistat	termino	lg-cat
+qdp206	quart	termino	lg-spa
+qdp207	Museo Virtual Quart de Poblet	termino	lg-spa
+qdp208	Web Museu Virtual	termino	lg-spa
+qdp209	museu_virtual_web	termino	lg-spa
+qdp21	Nou	termino	lg-cat
+qdp21	Nuevo	termino	lg-spa
+qdp210	template_map	termino	lg-spa
+qdp211	ts_web	termino	lg-spa
+qdp212	Fabricant	termino	lg-cat
+qdp212	Fabricante	termino	lg-spa
+qdp213	documents_pdf	termino	lg-spa
+qdp214	exclude	termino	lg-spa
+qdp215	Listado	termino	lg-spa
+qdp216	sets	termino	lg-spa
+qdp217	items	termino	lg-spa
+qdp218	Altres imatges identificatives	termino	lg-cat
+qdp218	Otras imágenes identificativas	termino	lg-spa
+qdp219	Inmoble identificatiu	termino	lg-cat
+qdp219	Inmueble identificativo	termino	lg-spa
+qdp22	Borrar	termino	lg-spa
+qdp22	Esborrar	termino	lg-cat
+qdp360	pdf_title	termino	lg-spa
+qdp220	Audivovisuales identificativos	termino	lg-spa
+qdp221	Listado	termino	lg-spa
+qdp221	Llistat	termino	lg-cat
+qdp222	identifying_audiovisual	termino	lg-spa
+qdp223	Documentos PDF	termino	lg-spa
+qdp223	Documents PDF	termino	lg-cat
+qdp224	Audiovisuales	termino	lg-spa
+qdp224	Audiovisuals	termino	lg-cat
+qdp225	audiovisuals	termino	lg-spa
+qdp226	Altres imatges	termino	lg-cat
+qdp226	Otras imágenes	termino	lg-spa
+qdp227	identifying_other_images	termino	lg-spa
+qdp228	other_images	termino	lg-spa
+qdp229	Listado	termino	lg-spa
+qdp23	Id	termino	lg-cat
+qdp23	Id	termino	lg-spa
+qdp230	Objecte	termino	lg-cat
+qdp230	Objeto	termino	lg-spa
+qdp231	Publicació	termino	lg-cat
+qdp231	Publicación	termino	lg-spa
+qdp232	Relaciones	termino	lg-spa
+qdp232	Relations	termino	lg-cat
+qdp233	Projecte	termino	lg-cat
+qdp233	Proyecto	termino	lg-spa
+qdp234	Marca	termino	lg-cat
+qdp234	Marca	termino	lg-spa
+qdp234	Trademark	termino	lg-eng
+qdp235	view_mosaic	termino	lg-spa
+qdp236	Datació d&#039;as	termino	lg-cat
+qdp236	Datación de uso	termino	lg-spa
+qdp237	Indexació	termino	lg-cat
+qdp237	Indexación	termino	lg-spa
+qdp238	Últimos cambios	termino	lg-spa
+qdp238	Últims canvis	termino	lg-cat
+qdp239	Relaciones	termino	lg-spa
+qdp239	Relacions	termino	lg-cat
+qdp24	Difusió	termino	lg-cat
+qdp24	Difusión	termino	lg-spa
+qdp240	últimos cambios	termino	lg-spa
+qdp240	Últims canvis	termino	lg-cat
+qdp241	Tipologia	termino	lg-cat
+qdp241	Tipología	termino	lg-spa
+qdp242	Graduació / escala / ràtio	termino	lg-cat
+qdp242	Graduación / escala / ratio	termino	lg-spa
+qdp243	Geolocalitzacions (recuperació, ús, fabricació, ...)	termino	lg-cat
+qdp243	Geolocalizaciones (recuperación, uso, fabricación, ...)	termino	lg-spa
+qdp244	Geolocalització	termino	lg-cat
+qdp244	Geolocalización	termino	lg-spa
+qdp245	Municipi	termino	lg-cat
+qdp245	Municipio	termino	lg-spa
+qdp246	image	termino	lg-spa
+qdp247	QDP	termino	lg-spa
+qdp248	Identificació	termino	lg-cat
+qdp248	Identificación	termino	lg-spa
+qdp249	Id	termino	lg-cat
+qdp249	Id	termino	lg-spa
+qdp25	Tema	termino	lg-cat
+qdp25	Tema	termino	lg-spa
+qdp250	Publicació	termino	lg-cat
+qdp250	Publicación	termino	lg-spa
+qdp251	Titol	termino	lg-cat
+qdp251	Título	termino	lg-spa
+qdp252	Resumen	termino	lg-cat
+qdp252	Resumen	termino	lg-spa
+qdp253	Cos de text	termino	lg-cat
+qdp253	Cuerpo	termino	lg-spa
+qdp254	Projecte	termino	lg-cat
+qdp254	Proyecto	termino	lg-spa
+qdp255	bjecte identificatiu	termino	lg-cat
+qdp255	Objeto identificativo	termino	lg-spa
+qdp256	Fotografia identificativa	termino	lg-cat
+qdp256	Fotografía identificativa	termino	lg-spa
+qdp257	Descripción	termino	lg-cat
+qdp257	Descripción	termino	lg-spa
+qdp258	Objectes	termino	lg-cat
+qdp258	Objectos	termino	lg-spa
+qdp259	Fotografias	termino	lg-cat
+qdp259	Fotografías	termino	lg-spa
+qdp26	Projecte	termino	lg-cat
+qdp26	Proyecto	termino	lg-spa
+qdp260	Nou	termino	lg-cat
+qdp260	Nuevo	termino	lg-spa
+qdp261	Borrar	termino	lg-spa
+qdp261	Esborrar	termino	lg-cat
+qdp262	Listado	termino	lg-spa
+qdp262	Llistat	termino	lg-cat
+qdp263	Listado	termino	lg-spa
+qdp264	Listado	termino	lg-spa
+qdp265	Tipologia de panel	termino	lg-cat
+qdp265	Tipología de panel	termino	lg-spa
+qdp266	Tipologias de paneles de exposición	termino	lg-spa
+qdp266	Tipologies de panels d&#039;expositions	termino	lg-cat
+qdp267	Identificació	termino	lg-cat
+qdp267	Identificación	termino	lg-spa
+qdp268	Id	termino	lg-cat
+qdp268	Id	termino	lg-spa
+qdp269	TIpologia	termino	lg-cat
+qdp269	Tipología	termino	lg-spa
+qdp27	Informació general	termino	lg-cat
+qdp27	Información general	termino	lg-spa
+qdp270	Projecte	termino	lg-cat
+qdp270	Proyecto	termino	lg-spa
+qdp271	Nou	termino	lg-cat
+qdp271	Nuevo	termino	lg-spa
+qdp272	Borrar	termino	lg-spa
+qdp272	Esborrar	termino	lg-cat
+qdp273	List	termino	lg-cat
+qdp273	Listado	termino	lg-spa
+qdp274	Relaciones	termino	lg-spa
+qdp274	Relacions	termino	lg-cat
+qdp275	Padre	termino	lg-spa
+qdp275	Pare	termino	lg-cat
+qdp276	Fills	termino	lg-cat
+qdp276	Hijos	termino	lg-spa
+qdp277	Descriptor	termino	lg-cat
+qdp277	Descriptor	termino	lg-spa
+qdp278	Listado tesauro	termino	lg-spa
+qdp279	mapa de sección	termino	lg-spa
+qdp28	Lista de ubicaciones	termino	lg-spa
+qdp28	Llistat	termino	lg-cat
+qdp280	Exposiciones	termino	lg-spa
+qdp280	Exposicions	termino	lg-cat
+qdp281	catalog	termino	lg-spa
+qdp282	publication	termino	lg-spa
+qdp283	title	termino	lg-spa
+qdp284	dating	termino	lg-spa
+qdp285	outstanding	termino	lg-spa
+qdp286	pictures	termino	lg-spa
+qdp287	objects	termino	lg-spa
+qdp288	identifying_images_data	termino	lg-spa
+qdp289	identifying_images	termino	lg-spa
+qdp29	Nou	termino	lg-cat
+qdp29	Nuevo	termino	lg-spa
+qdp290	images_data	termino	lg-spa
+qdp291	images	termino	lg-spa
+qdp292	name_data	termino	lg-spa
+qdp293	name	termino	lg-spa
+qdp294	material_data	termino	lg-spa
+qdp295	material	termino	lg-spa
+qdp296	fondo	def	lg-spa
+qdp296	fund_data	termino	lg-spa
+qdp297	fondo	def	lg-spa
+qdp297	fund	termino	lg-spa
+qdp298	collection_data	termino	lg-spa
+qdp299	collection	termino	lg-spa
+qdp3	Categorías	termino	lg-spa
+qdp3	Categories	termino	lg-cat
+qdp3	Categories	termino	lg-eng
+qdp30	Borrar	termino	lg-spa
+qdp30	Esborrar	termino	lg-cat
+qdp300	typology_data	termino	lg-spa
+qdp301	typology	termino	lg-spa
+qdp302	technique_data	termino	lg-spa
+qdp303	technique	termino	lg-spa
+qdp304	recovery_mode	termino	lg-spa
+qdp305	colector	def	lg-spa
+qdp305	manifold	termino	lg-spa
+qdp306	recovery_place	termino	lg-spa
+qdp307	curator	termino	lg-spa
+qdp308	recovery_date	termino	lg-spa
+qdp309	source	termino	lg-spa
+qdp31	Id	termino	lg-cat
+qdp31	Id	termino	lg-spa
+qdp310	municipality	termino	lg-spa
+qdp311	geolocation_data	termino	lg-spa
+qdp312	map	termino	lg-spa
+qdp313	description	termino	lg-spa
+qdp314	inscriptions	termino	lg-spa
+qdp315	author	termino	lg-spa
+qdp316	trademark	termino	lg-spa
+qdp317	manufacturer	termino	lg-spa
+qdp318	scale	termino	lg-spa
+qdp319	measurements_data	termino	lg-spa
+qdp32	Difusió	termino	lg-cat
+qdp32	Difusión	termino	lg-spa
+qdp320	own_bibliography_data	termino	lg-spa
+qdp321	related_bibliography	termino	lg-spa
+qdp322	publications	termino	lg-spa
+qdp323	interpretation	termino	lg-spa
+qdp324	use_dating	termino	lg-spa
+qdp325	indexation_data	termino	lg-spa
+qdp326	indexation	termino	lg-spa
+qdp327	QDP	termino	lg-spa
+qdp328	measurements	termino	lg-spa
+qdp329	Publicació	termino	lg-cat
+qdp329	Publication	termino	lg-spa
+qdp33	Ubicació	termino	lg-cat
+qdp33	Ubicación	termino	lg-spa
+qdp330	own_bibliography	termino	lg-spa
+qdp331	related_bibliography _data	termino	lg-spa
+qdp332	publications_data	termino	lg-spa
+qdp333	global_search	termino	lg-spa
+qdp334	Documentos	termino	lg-spa
+qdp334	Documents	termino	lg-cat
+qdp335	Audiovisuales	termino	lg-spa
+qdp335	Audiovisuals	termino	lg-cat
+qdp336	Inmobles	termino	lg-cat
+qdp336	Inmuebles	termino	lg-spa
+qdp337	exluidos	termino	lg-spa
+qdp338	Listado	termino	lg-spa
+qdp339	ts_technique	termino	lg-spa
+qdp34	Projecte	termino	lg-cat
+qdp34	Proyecto	termino	lg-spa
+qdp340	ts_material	termino	lg-spa
+qdp341	relations	termino	lg-spa
+qdp342	relations	termino	lg-spa
+qdp343	ts_onomastic	termino	lg-spa
+qdp344	relations	termino	lg-spa
+qdp345	ts_thematic	termino	lg-spa
+qdp346	relations	termino	lg-spa
+qdp347	Anàlisi i interpretació simbòlica, social ...	termino	lg-cat
+qdp347	Análisis e interpretación simbólica, social...	termino	lg-spa
+qdp348	Ubicació (topográficos)	termino	lg-cat
+qdp348	Ubicación (topográfico)	termino	lg-spa
+qdp349	view_single_line	termino	lg-spa
+qdp35	Lista de materiales	termino	lg-spa
+qdp35	Llista de materials	termino	lg-cat
+qdp350	Códigos QR	termino	lg-spa
+qdp350	Codis QR	termino	lg-cat
+qdp350	QR codes	termino	lg-eng
+qdp351	Add metadata	termino	lg-spa
+qdp352	images_typology	termino	lg-spa
+qdp353	documents	termino	lg-spa
+qdp354	audiovisuals	termino	lg-spa
+qdp355	Inmueble	termino	lg-cat
+qdp355	Inmueble	termino	lg-spa
+qdp356	other_images_resolved	termino	lg-spa
+qdp357	identify_image	termino	lg-spa
+qdp358	audiovisual_resolved	termino	lg-spa
+qdp359	pdf_resolved	termino	lg-spa
+qdp36	Informació general	termino	lg-cat
+qdp36	Información general	termino	lg-spa
+qdp362	publication	termino	lg-spa
+qdp363	title	termino	lg-spa
+qdp364	panel_typology	termino	lg-spa
+qdp365	summary	termino	lg-spa
+qdp366	body	termino	lg-spa
+qdp367	identifying_object	termino	lg-spa
+qdp368	identifying_image	termino	lg-spa
+qdp369	objects	termino	lg-spa
+qdp37	Nou	termino	lg-cat
+qdp37	Nuevo	termino	lg-spa
+qdp370	images	termino	lg-spa
+qdp371	immovable	termino	lg-spa
+qdp372	father	termino	lg-spa
+qdp373	children	termino	lg-spa
+qdp374	project	termino	lg-spa
+qdp375	dating_start	termino	lg-spa
+qdp376	dating_end	termino	lg-spa
+qdp377	typology_id	termino	lg-spa
+qdp378	norder	termino	lg-spa
+qdp379	immovable	termino	lg-spa
+qdp38	Borrar	termino	lg-spa
+qdp38	Esborrar	termino	lg-cat
+qdp380	section_tipo	termino	lg-spa
+qdp381	geolocation_data_geojson	termino	lg-spa
+qdp382	measure_type	termino	lg-spa
+qdp383	measure_value	termino	lg-spa
+qdp384	measure_unit	termino	lg-spa
+qdp385	measure_element	termino	lg-spa
+qdp386	imágenes	termino	lg-spa
+qdp386	Imatges	termino	lg-cat
+qdp387	Observaciones	termino	lg-spa
+qdp387	Observacions	termino	lg-cat
+qdp388	relations	termino	lg-spa
+qdp389	audiovisual	termino	lg-spa
+qdp39	Id	termino	lg-cat
+qdp39	Id	termino	lg-spa
+qdp390	documents	termino	lg-spa
+qdp391	publications	termino	lg-spa
+qdp392	global_search	termino	lg-spa
+qdp393	date_start	termino	lg-spa
+qdp394	Listado	termino	lg-spa
+qdp394	Llistat	termino	lg-cat
+qdp395	Listado tesauro	termino	lg-spa
+qdp396	news	termino	lg-spa
+qdp397	Marc temporal	termino	lg-cat
+qdp397	Marco temporal	termino	lg-spa
+qdp398	Localització	termino	lg-cat
+qdp398	Localización	termino	lg-spa
+qdp399	date_end	termino	lg-spa
+qdp4	Temas	termino	lg-spa
+qdp4	Temes	termino	lg-cat
+qdp40	Material	termino	lg-cat
+qdp40	Material	termino	lg-spa
+qdp400	News	termino	lg-eng
+qdp400	Noticias	termino	lg-spa
+qdp400	Noticies	termino	lg-cat
+qdp401	municipality	termino	lg-spa
+qdp402	DIV	termino	lg-spa
+qdp403	children	termino	lg-spa
+qdp404	parents	termino	lg-spa
+qdp405	Protecció administrativa	termino	lg-cat
+qdp405	Protección administrativa	termino	lg-spa
+qdp406	Protecció	termino	lg-cat
+qdp406	Protección	termino	lg-spa
+qdp407	Regimen de protecció	termino	lg-cat
+qdp407	Régimen de protección	termino	lg-spa
+qdp408	Numeració Nacional Registre de BIC	termino	lg-cat
+qdp408	Numeración Nacional Registro de BIC	termino	lg-spa
+qdp409	Altra numeració	termino	lg-cat
+qdp409	Otra numeración	termino	lg-spa
+qdp41	Data butlletí declaració	termino	lg-cat
+qdp41	Fecha boletín declaración	termino	lg-spa
+qdp410	Medidas especiales	termino	lg-spa
+qdp410	Mesures especials	termino	lg-cat
+qdp411	Informes	termino	lg-cat
+qdp411	Informes	termino	lg-spa
+qdp412	Boletín o Diario Oficial	termino	lg-spa
+qdp412	Butlletí o Diari Oficial	termino	lg-cat
+qdp413	Expedient administratiu	termino	lg-cat
+qdp413	Expediente administrativo	termino	lg-spa
+qdp414	Data	termino	lg-cat
+qdp414	Fecha	termino	lg-spa
+qdp415	Procesos	termino	lg-spa
+qdp415	Processos	termino	lg-cat
+qdp416	ts_chronological	termino	lg-spa
+qdp417	relations	termino	lg-spa
+qdp42	Projecte	termino	lg-cat
+qdp42	Proyeto	termino	lg-spa
+qdp43	Identificació	termino	lg-cat
+qdp43	Identificación	termino	lg-spa
+qdp44	Listado	termino	lg-spa
+qdp44	Llistat	termino	lg-cat
+qdp45	Nou	termino	lg-cat
+qdp45	Nuevo	termino	lg-spa
+qdp46	Borrar	termino	lg-spa
+qdp46	Esborrar	termino	lg-cat
+qdp47	Id	termino	lg-cat
+qdp47	Id	termino	lg-spa
+qdp47	Indica el número de registre que identifica l’objecte dins la col·lecció. Tots els objectes d’un museu han de tenir un número d’inventari propi, ja sigui de forma individual o com a part d’un conjunt mitjançant sufixos numèrics. És important que el museu informe correctament el camp Fitxa/Conjunt per poder garantir el bon funcionament del programa.	def	lg-cat
+qdp47	Indica el número de registro que identifica el objeto dentro de la colección. Todos los objetos de un museo han de tener un número de inventario propio, ya sea de forma individual o como parte de un conjunto mediante sufijos numéricos. Es importante que el museo informe correctamente el campo Fitxa/Conjunto para poder garantizar el buen funcionamiento del programa.	def	lg-spa
+qdp48	Difusió	termino	lg-cat
+qdp48	Difusión	termino	lg-spa
+qdp8	Tamany	termino	lg-cat
+qdp80	Difusió	termino	lg-cat
+qdp80	Difusión	termino	lg-spa
+qdp81	Nom	termino	lg-cat
+qdp81	Nombre	termino	lg-spa
+qdp49	Campo donde se identifican las diferentes colecciones del museo, entendidas como los conjuntos ordenados de objetos y/o obras reunidos voluntariamente por su interés y valor artístico, científico y/o documental y que constituyen unas colecciones más o menos completas. La identificación de una colección puede responder a diferentes parámetros (orígen geográfico/cronológico, técnica, temática, etc.). Según los museos este mismo concepto puede ser denominado con otros términos (fondo, sección...)	def	lg-spa
+qdp49	Fondo	termino	lg-spa
+qdp49	Fons	termino	lg-cat
+qdp49	Pertanyent a: Camp on s’identifiquen les diferents col·leccions del museu, enteses com els conjunts ordenats d’objectes i/o obres reunits voluntàriament pel seu interès i valor artístic, científic i/o documental i que constitueixen uns reculls més o menys complets. L’identificació d’una col·lecció pot respondre a diferents paràmetres (origen geogràfic/cronològic, tècnica, temàtica, etc.). Segons els museus, aquest mateix concepte pot ser denominat amb altres termes (fons, secció...)	def	lg-cat
+qdp5	Materiales	termino	lg-spa
+qdp5	Materials	termino	lg-cat
+qdp50	Projecte	termino	lg-cat
+qdp50	Proyecto	termino	lg-spa
+qdp51	Medidas	termino	lg-spa
+qdp51	Mesures	termino	lg-cat
+qdp52	Descripció	termino	lg-cat
+qdp52	Descripción	termino	lg-spa
+qdp53	Restauració	termino	lg-cat
+qdp53	Restauración	termino	lg-spa
+qdp54	Catalogació	termino	lg-cat
+qdp54	Catalogación	termino	lg-spa
+qdp55	Autor	termino	lg-cat
+qdp55	Autor	termino	lg-spa
+qdp56	Datació	termino	lg-cat
+qdp56	Datación	termino	lg-spa
+qdp57	Materia	termino	lg-spa
+qdp57	Matèria	termino	lg-cat
+qdp57	Se indicarán los materiales utilizados para realizar la pieza, teniendo en cuenta cuandosean más de uno citar en primer lugar el material que define o aglutina y, acontinuación, separado por “sobre”, el material de soporte. Las materias que conforman el objeto iránseparadas por punto y en estricto orden alfabético.	def	lg-spa
+qdp58	Camp instrumental que s’utilitza bàsicament per a l’explotació web i que permet indicar les característiques de l’objecte de manera breu i sintètica.	def	lg-cat
+qdp58	Campo instrumental que se utiliza básicamente para la explotación web y que permite indicar las características del objeto de manera breve y sintética.	def	lg-spa
+qdp58	Descripció rellevant	termino	lg-cat
+qdp58	Descripción relevante	termino	lg-spa
+qdp59	Documentació interna	termino	lg-cat
+qdp59	Documentación interna	termino	lg-spa
+qdp6	Ubicaciones	termino	lg-spa
+qdp6	Ubicacions	termino	lg-cat
+qdp60	Ficha inventario histórico	termino	lg-spa
+qdp60	Fitxa inventari històric	termino	lg-cat
+qdp61	Destacado	termino	lg-spa
+qdp61	Destacat	termino	lg-cat
+qdp62	Estado de revisión	termino	lg-spa
+qdp62	Estat de revisió	termino	lg-cat
+qdp63	En este campo se recogerán todos los datos relativos al título (dado por el autor, por la tradición o por el público en una obra), así como la denominación o nombre del objeto. Se pretende recalcar la diferencia entre denominación o nombre del objeto y título si lo tiene. Realmente sólo los objetos que tengan representación figurada deben tener denominación y título (pinturas, grabados, esculturas, etc.), en tanto que el resto de objetos sólo tienen denominación, pero no título (caso de la orfebrería y otros objetos artísticos, instrumentos musicales, mobiliario, textiles, determinados materiales arqueológicos, numismáticos…). Cuando el bien no esté titulado pero sea posible identificar la escena o forma representada por su iconografía o temática, se utilizará el nexo &quot;representando&quot;. No obstante, al cumplimentar los datos referidos a dichos campos, tanto en los objetos que tengan representación figurada, como en los que carezcan de ella, deberán cumplimentarse ambos campos, aunque la acepción sea la misma.	def	lg-spa
+qdp63	Indica el nom o títol donat a l&#039;objecte pel creador, fabricant, curador o propietari, o el text d&#039;un títol que apareix a la imatge tant en gravats, en dibuixos com en fotografies.                                                         La fórmula “Sense títol” cal reservar-la per als objectes titulats d’aquesta manera pels seus creadors.	def	lg-cat
+qdp63	Títol	termino	lg-cat
+qdp63	Título	termino	lg-spa
+qdp64	Listado	termino	lg-spa
+qdp65	view_mosaic	termino	lg-spa
+qdp66	Imágenes identificativas	termino	lg-spa
+qdp66	Imatges identificatives	termino	lg-cat
+qdp67	Informació general	termino	lg-cat
+qdp67	Información general	termino	lg-spa
+qdp68	Lista de estados de conservación	termino	lg-spa
+qdp68	Llistat	termino	lg-cat
+qdp69	Nou	termino	lg-cat
+qdp69	Nuevo	termino	lg-spa
+qdp7	Catàleg	termino	lg-cat
+qdp7	Catálogo	termino	lg-spa
+qdp70	Borrar	termino	lg-spa
+qdp70	Esborrar	termino	lg-cat
+qdp71	Id	termino	lg-cat
+qdp71	Id	termino	lg-spa
+qdp72	Butlletí Incoació	termino	lg-cat
+qdp72	Fecha boletín Incoación	termino	lg-spa
+qdp73	Esta de conservació	termino	lg-cat
+qdp73	Estado de conservación	termino	lg-spa
+qdp74	Projecte	termino	lg-cat
+qdp74	Proyecto	termino	lg-spa
+qdp75	Identificació	termino	lg-cat
+qdp75	Identificación	termino	lg-spa
+qdp76	Lista de objetos	termino	lg-spa
+qdp76	Llista d&#039;objetes	termino	lg-cat
+qdp77	Nou	termino	lg-cat
+qdp77	Nuevo	termino	lg-spa
+qdp78	Borrar	termino	lg-spa
+qdp78	Esborrar	termino	lg-cat
+qdp79	Id	termino	lg-cat
+qdp79	Id	termino	lg-spa
+qdp8	Tamaño	termino	lg-spa
+qdp82	Categoria	termino	lg-cat
+qdp82	Categoría	termino	lg-spa
+qdp83	Tema	termino	lg-cat
+qdp83	Tema	termino	lg-spa
+qdp84	Material	termino	lg-cat
+qdp84	Material	termino	lg-spa
+qdp85	Técnica	termino	lg-spa
+qdp85	Tècnica	termino	lg-cat
+qdp86	Medidas	termino	lg-spa
+qdp86	Mesures	termino	lg-cat
+qdp87	Marca	termino	lg-cat
+qdp87	Marca	termino	lg-spa
+qdp88	Datació	termino	lg-cat
+qdp88	Datación	termino	lg-spa
+qdp89	Ús	termino	lg-cat
+qdp89	Uso	termino	lg-spa
+qdp9	Tabs	termino	lg-spa
+qdp90	Descripció	termino	lg-cat
+qdp90	Descripción	termino	lg-spa
+qdp91	Procedencia	termino	lg-spa
+qdp91	Procedència	termino	lg-cat
+qdp92	Estado de conservación	termino	lg-spa
+qdp92	Estat de conservació	termino	lg-cat
+qdp93	Notas de conservación	termino	lg-spa
+qdp93	Notes de conservació	termino	lg-cat
+qdp94	Observaciones	termino	lg-spa
+qdp94	Observacions	termino	lg-cat
+qdp95	Localització	termino	lg-cat
+qdp95	Localización	termino	lg-spa
+qdp96	Projecte	termino	lg-cat
+qdp96	Proyecto	termino	lg-spa
+qdp97	Fotografías	termino	lg-spa
+qdp97	Fotografies	termino	lg-cat
+qdp98	Importa fitxes amb imatge	termino	lg-cat
+qdp98	Importar fichas con imagen	termino	lg-spa
+qdp99	view_mosaic	termino	lg-spa
+qdp418	term_id	termino	lg-spa
