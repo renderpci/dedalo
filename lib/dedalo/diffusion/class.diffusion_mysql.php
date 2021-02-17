@@ -539,7 +539,7 @@ class diffusion_mysql extends diffusion_sql  {
 		foreach ((array)$ar_section_id as $section_id => $ar_fields) {
 			# Iterate one or more records
 			#$ar_fields 	= $options->record_data['ar_fields'][$section_id];
-				#dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));	continue;
+			// dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));
 
 			# if it don't work with versions, delete current record in all langs if exists
 			if ($options->delete_previous===true) {
@@ -914,7 +914,7 @@ class diffusion_mysql extends diffusion_sql  {
 			// Generic delete way
 			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' OR `section_id` = '{$section_tipo}_{$section_id}' ";
 		}
-
+		
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 			if (!$result) {
 				if(SHOW_DEBUG===true) {
