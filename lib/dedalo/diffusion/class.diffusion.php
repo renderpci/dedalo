@@ -455,9 +455,28 @@ abstract class diffusion  {
 					$name = RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					# Database of current diffusion element
-					$ar_children 			 = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='children', $search_exact=true);
-					$diffusion_database_tipo = reset($ar_children);
-					$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					$ar_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='children', $search_exact=true);
+					
+					$diffusion_database_tipo = !empty($ar_children)
+						? reset($ar_children)
+						: null;
+					
+					// database_alias case try
+						if (empty($diffusion_database_tipo)) {
+							$ar_children			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database_alias', $relation_type='children', $search_exact=true);
+							$database_alias_tipo	= reset($ar_children);
+							$ar_real_database_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', false);
+							
+							$diffusion_database_tipo = reset($ar_real_database_tipo);
+							$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($database_alias_tipo, DEDALO_STRUCTURE_LANG, true, false);
+							// dump($ar_real_database_tipo, ' ar_real_database_tipo ++ diffusion_database_name: '.to_string($diffusion_database_name));
+							
+							// overwrite element_tipo (!)
+							// $element_tipo = $diffusion_database_tipo;
+
+						}else{
+							$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						}					
 
 					$data = new stdClass();
 						$data->element_tipo		= $element_tipo;
@@ -465,7 +484,6 @@ abstract class diffusion  {
 						$data->class_name		= $diffusion_class_name;
 						$data->database_name	= $diffusion_database_name;
 						$data->database_tipo	= $diffusion_database_tipo;
-							#dump($ar_diffusion_map->$diffusion_group_tipo[]=4, ' ar_diffusion_map_elements ++ '.to_string());
 
 					$ar_diffusion_map->{$diffusion_group_tipo}[] = $data;
 

@@ -2482,15 +2482,26 @@ class diffusion_sql extends diffusion  {
 		# DIFFUSION_ELEMENT_TIPO_TABLES . Point of start to calculate diffusion tables
 		$diffusion_element_tipo_tables = $diffusion_element_tipo; // Default
 
-		# Override in 'propiedades' the base point for calculate diffusion tables
+		# CEDIS ONLY. Override in 'propiedades' the base point for calculate diffusion tables
 		# This is useful for development purposes, and allow publish in different database without duplicate all tables structure for each difusion_element
-		$diffusion_element_tipo_obj = new RecordObj_dd($diffusion_element_tipo);
-		$propiedades = $diffusion_element_tipo_obj->get_propiedades(true);
-		if (isset($propiedades->force_source_tables_tipo)) {
-			# Override
-			$diffusion_element_tipo_tables = $propiedades->force_source_tables_tipo;
-			debug_log(__METHOD__." Overrided diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
-		}
+			$diffusion_element_tipo_obj = new RecordObj_dd($diffusion_element_tipo);
+			$propiedades = $diffusion_element_tipo_obj->get_propiedades(true);
+			if (isset($propiedades->force_source_tables_tipo)) {
+				# Override
+				$diffusion_element_tipo_tables = $propiedades->force_source_tables_tipo;
+				debug_log(__METHOD__." Overrided diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
+			}
+
+		// database_alias check . $tipo, $modelo_name, $relation_type, $search_exact=false
+			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
+			if (!empty($direct_child)) {
+				$database_alias_tipo = reset($direct_child);
+				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true);
+				if (!empty($real_db_tipo)) {
+					$diffusion_element_tipo_tables = reset($real_db_tipo);
+				}
+			}
+
 
 		#
 		# TABLES
@@ -4193,8 +4204,20 @@ class diffusion_sql extends diffusion  {
 		
 		$ar_diffusion_sections = array();
 
+		$reference_root_element = $diffusion_element_tipo;
+
+		// database_alias check . $tipo, $modelo_name, $relation_type, $search_exact=false
+			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
+			if (!empty($direct_child)) {
+				$database_alias_tipo = reset($direct_child);
+				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true);
+				if (!empty($real_db_tipo)) {
+					$reference_root_element = reset($real_db_tipo);
+				}
+			}
+
 		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
-		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', false);
+		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($reference_root_element, 'table', 'children_recursive', false);
 		foreach ($tables as $current_table_tipo) {
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
