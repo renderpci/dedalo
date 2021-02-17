@@ -102,8 +102,7 @@ class diffusion_sql extends diffusion  {
 		foreach ($options as $var_name => $value) {
 			$$var_name = $value;
 		}
-
-
+		
 		$ar_table_data=array();
 
 
@@ -121,22 +120,19 @@ class diffusion_sql extends diffusion  {
 		# 	}
 		# }
 
-		#
-		# ID FIELD	. Mandatory column
-		$options = new stdClass();
-			$options->typology 	= 'section_id';
-			$options->tipo 		= null;
-		$ar_table_data['ar_fields'][] = self::create_field( $options );
+		// ID FIELD	. Mandatory column
+			$options = new stdClass();
+				$options->typology	= 'section_id';
+				$options->tipo		= null;
+			$ar_table_data['ar_fields'][] = self::create_field( $options );
 
 
-		#
-		# LANG FIELD . Mandatory column
-		$options = new stdClass();
-			$options->typology 	= 'lang';
-			$options->tipo 		= null;
-		$ar_table_data['ar_fields'][] = self::create_field( $options );
-			#dump($ar_table_data, ' ar_table_data'); die();
-
+		// LANG FIELD . Mandatory column
+			$options = new stdClass();
+				$options->typology	= 'lang';
+				$options->tipo		= null;
+			$ar_table_data['ar_fields'][] = self::create_field( $options );
+			
 	
 		#
 		# OTHER FIELDS . Normal columns
@@ -227,14 +223,31 @@ class diffusion_sql extends diffusion  {
 							$options = new stdClass();
 								$options->typology 	= 'default';
 								$options->tipo 		= $curent_children_tipo;
-							$ar_table_data['ar_fields'][] = self::create_field( $options );
+							$element = self::create_field( $options );
+
+							$name = RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
+							if ($name==='section_id') {
+								// overwrite default auto-created int column section_id
+								$found = array_find($ar_table_data['ar_fields'], function($item){
+									return $item['field_name']==='section_id';
+								});
+								if ($found) {
+									foreach ($ar_table_data['ar_fields'] as $c_key => $c_value) {
+										if ($c_value['field_name']==='section_id') {
+											$ar_table_data['ar_fields'][$c_key] = $element;
+										}
+									}
+								}
+							}else{
+								$ar_table_data['ar_fields'][] = $element;
+							}
 							break;
 					}//end switch (true)
 					break;
 			}//end switch modelo_name
 
 		}//end foreach ($ar_table_children as $curent_children_tipo)
-		#dump($ar_table_data, ' ar_table_data'); die();
+		// dump($ar_table_data['ar_fields'], ' ar_table_data[ar_fields]'); // die();
 
 
 		return $ar_table_data;
@@ -1122,12 +1135,12 @@ class diffusion_sql extends diffusion  {
 					$dato = $current_component->{$get_dato_method}();
 						#dump($dato, ' dato ++ '.to_string($modelo_name).' - '.$get_dato_method);
 				}else{
-					$dato = $current_component->get_dato();
+					$dato = ($modelo_name==='relation_list')
+						? $current_component->get_diffusion_dato() // use 'propiedades->process_dato_arguments' to filter by section or component
+						: $current_component->get_dato();
 				}
 
 				$diffusion_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
-
-
 				
 
 				# switch cases
@@ -1156,8 +1169,9 @@ class diffusion_sql extends diffusion  {
 								$ar_field_data['field_value'] = (string)$propiedades->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}
 								break;
 							default:
+								
 								$components_with_relations = component_relation_common::get_components_with_relations();
-								if (is_array($dato) && in_array($modelo_name, $components_with_relations)) {
+								if (is_array($dato) && (in_array($modelo_name, $components_with_relations) || $modelo_name==='relation_list')) {
 									$ar_id = array();
 									foreach ($dato as $current_locator) {
 
@@ -2237,7 +2251,7 @@ class diffusion_sql extends diffusion  {
 	* SAVE_GLOBAL_TABLE_DATA
 	*		
 	    {
-	      "table_name": "myglobaltable",
+	      "table_tipo": "test_19",
 	      "columns_map": [
 	        {
 	          "target_column": "full_data",
@@ -2251,9 +2265,7 @@ class diffusion_sql extends diffusion  {
 	* @return object $save
 	*/
 	public function save_global_table_data($options) {
-		
-		dump($options, ' options ++ '.to_string()); return;
-
+				
 		// options
 			$global_table_map		= $options->global_table_map;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
@@ -2263,29 +2275,124 @@ class diffusion_sql extends diffusion  {
 			$database_name			= $options->database_name;
 
 		// short vars
-			$table_name		= $global_table_map->table_name;
-			$columns_map	= $global_table_map->columns_map;
+			$ar_fields			= $ar_field_data['ar_fields'];
+			$columns_map		= $global_table_map->columns_map;
+			$table_tipo			= $global_table_map->table_tipo;
+			$table_name			= RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$source_table_name	= $ar_field_data['table_name'];
 
-			// format reference
-				// $ar_fields_global[$pseudo_section_id][$lang][] = [
-				// 	'field_name'  => 'full_data',
-				// 	'field_value' => implode(' ',$full_data[$lang])
-				// ];
+		// iterate already calculated fields and extract mapped values
+			$values = [];
+			foreach($ar_fields as $section_id => $data) {
+				foreach ($data as $lang => $current_values) {
+					
+					$new_items = [];
 
-		
+					// section_id (used term_id here to allow use the same record manager to delete etc..)
+						$new_items[] = [
+							'field_name'	=> 'section_id',
+							'field_value'	=> $section_tipo .'_'. $section_id
+						];
+
+					// ref_section_id
+						$new_items[] = [
+							'field_name'	=> 'ref_section_id',
+							'field_value'	=> $section_id
+						];
+
+					// ref_section_tipo
+						$new_items[] = [
+							'field_name'	=> 'ref_section_tipo',
+							'field_value'	=> $section_tipo
+						];	
+
+					// lang
+						$new_items[] = [
+							'field_name'	=> 'lang',
+							'field_value'	=> $lang
+						];
+
+					// table
+						$new_items[] = [
+							'field_name'	=> 'table',
+							'field_value'	=> $source_table_name
+						];
+					
+					foreach ($columns_map as $column_map_item) {
+
+						$column_values = [];
+
+						$target_column	= $column_map_item->target_column;
+						$source_columns	= $column_map_item->source_columns;						
+
+						// extract values
+							foreach ($source_columns as $source_column) {
+								$found = array_find($current_values, function($element) use($source_column){
+									return ($element['field_name']===$source_column);
+								});
+								if ($found!==null) {
+									$column_values[] = $found['field_value'];
+								}
+							}
+
+						// field value formated
+							$field_value = (function($column_values) use($column_map_item, $source_columns){
+								
+								$format = $column_map_item->format ?? null;
+
+								switch ($format) {
+									case 'string':
+										$separator = $column_map_item->separator ?? ' | ';
+										return implode($separator, $column_values);
+										break;
+									default:
+										if (count($source_columns)<2) {											
+											return reset($column_values);
+										}else{
+											return json_encode($column_values, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+										}										
+										break;
+								}
+							})($column_values);
+						
+
+						$new_items[] = [
+							'field_name'	=> $target_column,
+							'field_value'	=> $field_value
+						];					
+					}
+
+					$values[$section_id][$lang] = $new_items;
+
+				}//end loop lang
+
+
+			}//end foreach($ar_fields as $section_id => $data)
 
 		$ar_field_data = [
 			"database_name" 	=> $database_name,
 			"table_name" 		=> $table_name,
-			"diffusion_section" => $diffusion_section,
-			"ar_fields" 		=> $ar_fields_global
+			"diffusion_section" => $table_tipo,
+			"ar_fields" 		=> $values
 		];
 
+		// delete previous records if exists (custom way using section_id and table combination)			
+			// if (diffusion_mysql::table_exits($database_name, $table_name)) {
+			// 	foreach($ar_fields as $section_id => $data) {
+			// 		$custom = new stdClass();
+			// 			$custom->field_name		= ['section_id', 'table'];
+			// 			$custom->field_value	= [$section_id, $source_table_name];
+			// 				dump($custom, ' custom ++ '.to_string());
+			// 		$deleted = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo, $custom);
+					
+			// 	}
+			// }
+		
 		$save_options = new stdClass();
 			$save_options->diffusion_element_tipo 	= $diffusion_element_tipo;
-			$save_options->section_tipo 			= $section_tipo;
+			$save_options->section_tipo 			= $table_tipo; // $section_tipo;
 			$save_options->record_data 				= $ar_field_data;
-			$save_options->delete_previous 			= true;
+			$save_options->delete_previous 			= true; // already custom deleted
 		$save = diffusion_mysql::save_record($save_options);
 
 		if (!isset($save->new_id)) {
@@ -3810,13 +3917,15 @@ class diffusion_sql extends diffusion  {
 		}else{
 			return null;
 		}
-
+		
 		// can be direct or passed by others
 		$process_dato_arguments = (!isset($options->propiedades))
 			? $options
 			: (object)$options->propiedades->process_dato_arguments;
 
-		$output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
+		$output = isset($process_dato_arguments->output)
+			? $process_dato_arguments->output
+			: null;
 
 		// dato_splice. To cut dato for get only first, last, etc..
 			if (isset($process_dato_arguments->dato_splice) && !empty($ar_locator)) {
@@ -3836,10 +3945,8 @@ class diffusion_sql extends diffusion  {
 		#});
 		#dump($ar_target_component_tipo, ' ar_target_component_tipo ++ '.to_string());
 		#$object_component_tipo = reset($ar_target_component_tipo);
-		$target_component_tipo = $process_dato_arguments->target_component_tipo;
-			#dump($target_component_tipo, ' $target_component_tipo ++ '.to_string()); die();
-
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
+		$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
 
 		$ar_value = [];
 		foreach ($ar_locator as $key => $locator) {
@@ -3882,16 +3989,16 @@ class diffusion_sql extends diffusion  {
 			# Fix common error in structure propiedades config..
 			if ($method==='get_diffusion_valor') $method = 'get_diffusion_value';
 
-			# arguments
-			$custom_arguments = array();
-			if (isset($process_dato_arguments->custom_arguments)) {
-				$custom_arguments = (array)$process_dato_arguments->custom_arguments;
-			}			
-			if ($method==='get_diffusion_value') {
-				#$value = $component->{$method}($options->lang);
-				#$custom_arguments[] = $options->lang;
-				array_unshift($custom_arguments, $options->lang); // always as first argument (!)
-			}
+			// arguments
+				$custom_arguments = array();
+				if (isset($process_dato_arguments->custom_arguments)) {
+					$custom_arguments = (array)$process_dato_arguments->custom_arguments;
+				}
+				if ($method==='get_diffusion_value') {
+					#$value = $component->{$method}($options->lang);
+					#$custom_arguments[] = $options->lang;
+					array_unshift($custom_arguments, $options->lang); // always as first argument (!)
+				}
 
 			// add current lang always
 				if (isset($custom_arguments[0]) && !isset($custom_arguments[0]->lang)) {
@@ -3903,7 +4010,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 			$value = call_user_func_array(array($component, $method), $custom_arguments);
-
+			
 			// process_dato (added 03-02-2021) @see mdcat3713
 				if ( isset($process_dato_arguments->process_dato) ) {
 					$process_dato_arguments_inside = $process_dato_arguments->process_dato_arguments; // is a object
@@ -3923,6 +4030,7 @@ class diffusion_sql extends diffusion  {
 
 			// split string value (see qdp291)
 				if (isset($process_dato_arguments->split_string_value)) {
+
 					$value = json_encode( explode($process_dato_arguments->split_string_value, $value) );
 				}
 
@@ -3935,7 +4043,9 @@ class diffusion_sql extends diffusion  {
 								? $value
 								: json_decode($value);
 						}else{
-							$value_array = json_decode($value);
+							$value_array = (is_array($value))
+								? $value
+								: json_decode($value);
 						}
 
 					if ($value_array!==null) {

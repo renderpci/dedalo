@@ -37,6 +37,13 @@ function update_lock_components_state($json_data) {
 				return $response;
 			}
 		}
+
+	// exclude temp section of lock
+		if ($section_id===DEDALO_SECTION_ID_TEMP || strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false) {
+			$response->result	= true;
+			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']. Ignored temp section_id';			
+			return $response;
+		}
 	
 	$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];	
 	if ($user_id<0) {

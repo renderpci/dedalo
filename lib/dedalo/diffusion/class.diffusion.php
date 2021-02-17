@@ -917,6 +917,12 @@ abstract class diffusion  {
 
 		$section_tipo	= $locator->section_tipo;
 		$section_id		= $locator->section_id;
+		$uid			= $section_tipo.'_'.$section_id;
+
+		static $resolved_is_publicable;
+		if (isset($resolved_is_publicable[$uid])) {
+			return $resolved_is_publicable[$uid];
+		}
 
 		// Locate component_publication in current section
 		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$section_tipo,
@@ -934,9 +940,12 @@ abstract class diffusion  {
 		$component_publication_tipo = reset($ar_children);
 
 
-		$is_publicable = self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
+		$is_publicable = (bool)self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
 
-		return (bool)$is_publicable;
+		// cache
+		$resolved_is_publicable[$uid] = $is_publicable;
+
+		return $is_publicable;
 	}//end get_is_publicable
 
 

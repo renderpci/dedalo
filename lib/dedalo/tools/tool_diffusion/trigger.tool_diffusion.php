@@ -154,7 +154,7 @@ function export_record($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-	$vars = array('section_tipo','section_id','diffusion_element_tipo');
+		$vars = array('section_tipo','section_id','diffusion_element_tipo');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -163,10 +163,11 @@ function export_record($json_data) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
-		}	
+		}
 
 	
 	try{
+		
 		$result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo);
 		
 		$response->result = $result->result;

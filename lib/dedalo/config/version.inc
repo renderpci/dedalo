@@ -2200,6 +2200,24 @@
 		Fixed sintax error on tool administration 
 
 
+	Valencia 16-02-2021 5.7.69
+		Fixed issue in diffusion_sql resolve_value merged option when received data is already array
+		Fixed errors and added improvements in diffusion_sql save_global_table_data
+		Enabled relation_list model in diffusion_sql build_data_field
+		Added build_table_columns option for replace column 'section_id' in diffusion_sql
+		Changed default data format in realtion_list get_diffusion_value -> dato
+		Added option to overwrite data_to_be_used in relation_list get_diffusion_value
+		Added relations list method 'get_diffusion_dato' with filters by section and component
+		Created css 'grid_2_columns' class to display debug info in inspector (for example about Publication details)
+		Fixed issue when table_map->from-alias vars is empty (when creating global table)
+		Added static cache to iget_s_publicable result
+		Commented debug info 'Skipped locator not publicable'
+		Added inpector development info about diffusion
+		Fix edit_in_list mode in component_date
+		Fix original copy calculation get_archive_weights widgets
+		Set the duplicated conditional to the get_archive_weights widget
+
+
 
 	[/HISTORY]
 
@@ -2224,13 +2242,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.68';
+	$DEDALO_VERSION = '5.7.69';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-02-2021');
+	define('DEDALO_BUILD'	, '16-02-2021');
 
 
 	/*
