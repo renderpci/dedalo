@@ -16,22 +16,22 @@
 
 		$html_tool .= '<div class="diffusion_group">';
 			
-			#$html_tool .= label::get_label('tool_diffusion');		
+			#$html_tool .= label::get_label('tool_diffusion');
 			$html_tool .= '<div class="diffusion_group_name">';
 			$html_tool .= RecordObj_dd::get_termino_by_tipo($diffusion_group_tipo, DEDALO_DATA_LANG, true, true);
 			$html_tool .= '</div>';
 
-			$html_tool .= '<ul>';			
+			$html_tool .= '<ul>';
 			foreach ($ar_diffusion_element as $obj_value) {
-
-				$element_tipo = $obj_value->element_tipo;					
+				
+				$element_tipo = $obj_value->element_tipo;
 
 				$html_tool .= '<li>';
 
 				$options = new stdClass();
-					$options->section_tipo  		= $this->section_tipo;
-					$options->mode 					='export_record';
-					$options->diffusion_element_tipo= $element_tipo;
+					$options->section_tipo				= $this->section_tipo;
+					$options->mode						='export_record';
+					$options->diffusion_element_tipo	= $element_tipo;
 
 				$options_json = json_encode($options);
 
@@ -48,8 +48,11 @@
 				if(SHOW_DEBUG===true) {
 					$html_tool .= '<div class="grid_2_columns">';
 					$html_tool .= '<span>DEDALO_DIFFUSION_DOMAIN: </span><span>'.DEDALO_DIFFUSION_DOMAIN.'</span>';
-					$html_tool .= '<span>MYSQL_DEDALO_DATABASE_CONN: </span><span>'.MYSQL_DEDALO_DATABASE_CONN.'</span>';
 					$html_tool .= '<span>DEDALO_DIFFUSION_RESOLVE_LEVELS: </span><span>'.DEDALO_DIFFUSION_RESOLVE_LEVELS.'</span>';
+					$html_tool .= '<span>MYSQL_DEDALO_DATABASE_CONN: </span><span>'.MYSQL_DEDALO_DATABASE_CONN.'</span>';
+					foreach ($obj_value as $c_key => $c_value) {
+						$html_tool .= '<span>'.$c_key.': </span><span>'.$c_value.'</span>';
+					}
 					$html_tool .= '</div>';
 				}
 				$html_tool .= '</div>';
