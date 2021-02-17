@@ -2225,6 +2225,11 @@
 		Added additional inspector info about diffusion
 
 
+	Valencia 17-02-2021 5.7.71
+		Fixed appearance issues in tool_diffusion buttons in list mode
+		Fixed error on delete previous record when diffusion mysql insert record is called
+
+
 
 	[/HISTORY]
 
@@ -2249,7 +2254,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.70';
+	$DEDALO_VERSION = '5.7.71';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
