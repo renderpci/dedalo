@@ -297,13 +297,11 @@ class tool_diffusion {
 			
 			$diffusion_element_tipo = $obj_value->element_tipo;
 
-			#$ar_related = common::get_ar_related_by_model('section',$diffusion_element_tipo); // Old way
 			$ar_related = self::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $obj_value->class_name);
-				#dump($ar_related, ' $ar_related ++ '.to_string( $diffusion_element_tipo )." - name:".$obj_value->name);
-				if(in_array($section_tipo, $ar_related)) {
-					$have_section_diffusion = true;
-					break;
-				}
+			if(in_array($section_tipo, $ar_related)) {
+				$have_section_diffusion = true;
+				break;
+			}
 		}
 
 		return $have_section_diffusion;
@@ -316,15 +314,17 @@ class tool_diffusion {
 	* @param string $diffusion_element_tipo
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $class_name) {		
+	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $class_name) {
 	
-		if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
-			return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
+		if(SHOW_DEVELOPER!==true) {
+			if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
+				return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
+			}
 		}
 
 		include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
 
-		$ar_diffusion_sections 	= $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
 	
 		# Store in session
 		$_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;

@@ -2197,7 +2197,7 @@
 
 	
 	Valencia 12-02-2021 5.7.68
-		Fixed sintax error on tool administration 
+		Fixed syntax error on tool administration 
 
 
 	Valencia 16-02-2021 5.7.69
@@ -2212,10 +2212,22 @@
 		Fixed issue when table_map->from-alias vars is empty (when creating global table)
 		Added static cache to iget_s_publicable result
 		Commented debug info 'Skipped locator not publicable'
-		Added inpector development info about diffusion
+		Added inspector development info about diffusion
 		Fix edit_in_list mode in component_date
 		Fix original copy calculation get_archive_weights widgets
 		Set the duplicated conditional to the get_archive_weights widget
+
+
+	Valencia 17-02-2021 5.7.70
+		Added diffusion model 'database_alias' to allow easy create development diffusion databases based on existing ones
+		Added Ontology autocomplete off property to input 'ordenNuevo'
+		Added trigger local components exclude temp section of lock
+		Added additional inspector info about diffusion
+
+
+	Valencia 17-02-2021 5.7.71
+		Fixed appearance issues in tool_diffusion buttons in list mode
+		Fixed error on delete previous record when diffusion mysql insert record is called
 
 
 
@@ -2242,13 +2254,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.69';
+	$DEDALO_VERSION = '5.7.71';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '16-02-2021');
+	define('DEDALO_BUILD'	, '17-02-2021');
 
 
 	/*

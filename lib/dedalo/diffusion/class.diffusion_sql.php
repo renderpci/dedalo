@@ -1368,9 +1368,9 @@ class diffusion_sql extends diffusion  {
 			$section_tipo			= $options->section_tipo;
 			$section_id				= $options->section_id; // (!) can be an array too
 			$diffusion_element_tipo	= $options->diffusion_element_tipo; // diffusion_element_tipo (structre diffusion_element like oh63 for 'Historia oral web')
-		
+	
 		// table info
-			$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );			
+			$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
 				if(SHOW_DEBUG===true) {
 					#dump($options, ' options ++ $resolve_references: '.to_string($resolve_references));
@@ -2376,23 +2376,21 @@ class diffusion_sql extends diffusion  {
 			"ar_fields" 		=> $values
 		];
 
-		// delete previous records if exists (custom way using section_id and table combination)			
-			// if (diffusion_mysql::table_exits($database_name, $table_name)) {
-			// 	foreach($ar_fields as $section_id => $data) {
-			// 		$custom = new stdClass();
-			// 			$custom->field_name		= ['section_id', 'table'];
-			// 			$custom->field_value	= [$section_id, $source_table_name];
-			// 				dump($custom, ' custom ++ '.to_string());
-			// 		$deleted = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo, $custom);
-					
-			// 	}
-			// }
+		// delete previous records if exists (custom way using section_id and table combination)
+			if (diffusion_mysql::table_exits($database_name, $table_name)) {
+				foreach($ar_fields as $section_id => $data) {
+					$custom = new stdClass();
+						$custom->field_name		= ['section_id'];
+						$custom->field_value	= [$section_tipo .'_'. $section_id];
+					$deleted = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo, $custom);
+				}
+			}
 		
 		$save_options = new stdClass();
-			$save_options->diffusion_element_tipo 	= $diffusion_element_tipo;
-			$save_options->section_tipo 			= $table_tipo; // $section_tipo;
-			$save_options->record_data 				= $ar_field_data;
-			$save_options->delete_previous 			= true; // already custom deleted
+			$save_options->diffusion_element_tipo	= $diffusion_element_tipo;
+			$save_options->section_tipo				= $table_tipo; // $section_tipo;
+			$save_options->record_data				= $ar_field_data;
+			$save_options->delete_previous			= false; // already custom deleted
 		$save = diffusion_mysql::save_record($save_options);
 
 		if (!isset($save->new_id)) {
@@ -2482,15 +2480,26 @@ class diffusion_sql extends diffusion  {
 		# DIFFUSION_ELEMENT_TIPO_TABLES . Point of start to calculate diffusion tables
 		$diffusion_element_tipo_tables = $diffusion_element_tipo; // Default
 
-		# Override in 'propiedades' the base point for calculate diffusion tables
+		# CEDIS ONLY. Override in 'propiedades' the base point for calculate diffusion tables
 		# This is useful for development purposes, and allow publish in different database without duplicate all tables structure for each difusion_element
-		$diffusion_element_tipo_obj = new RecordObj_dd($diffusion_element_tipo);
-		$propiedades = $diffusion_element_tipo_obj->get_propiedades(true);
-		if (isset($propiedades->force_source_tables_tipo)) {
-			# Override
-			$diffusion_element_tipo_tables = $propiedades->force_source_tables_tipo;
-			debug_log(__METHOD__." Overrided diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
-		}
+			$diffusion_element_tipo_obj = new RecordObj_dd($diffusion_element_tipo);
+			$propiedades = $diffusion_element_tipo_obj->get_propiedades(true);
+			if (isset($propiedades->force_source_tables_tipo)) {
+				# Override
+				$diffusion_element_tipo_tables = $propiedades->force_source_tables_tipo;
+				debug_log(__METHOD__." Overrided diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
+			}
+
+		// database_alias check . $tipo, $modelo_name, $relation_type, $search_exact=false
+			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
+			if (!empty($direct_child)) {
+				$database_alias_tipo = reset($direct_child);
+				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true);
+				if (!empty($real_db_tipo)) {
+					$diffusion_element_tipo_tables = reset($real_db_tipo);
+				}
+			}
+
 
 		#
 		# TABLES
@@ -4193,8 +4202,20 @@ class diffusion_sql extends diffusion  {
 		
 		$ar_diffusion_sections = array();
 
+		$reference_root_element = $diffusion_element_tipo;
+
+		// database_alias check . $tipo, $modelo_name, $relation_type, $search_exact=false
+			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
+			if (!empty($direct_child)) {
+				$database_alias_tipo = reset($direct_child);
+				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true);
+				if (!empty($real_db_tipo)) {
+					$reference_root_element = reset($real_db_tipo);
+				}
+			}
+
 		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
-		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', false);
+		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($reference_root_element, 'table', 'children_recursive', false);
 		foreach ($tables as $current_table_tipo) {
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
