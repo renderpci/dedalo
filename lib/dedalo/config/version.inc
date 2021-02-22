@@ -2229,6 +2229,14 @@
 		Fixed appearance issues in tool_diffusion buttons in list mode
 		Fixed error on delete previous record when diffusion mysql insert record is called
 
+	
+	Valencia 22-02-2021 5.7.72
+		Added which_command_posix function to tool_admiinstration
+		Fixed component text area people labels
+		Fixed issues with json encoding in difusion_sql. Added JSON_UNESCAPED_UNICODE to all json codifications
+		Added view the signature into the pdfjs worker
+		Redorder ontology data with tld directories 
+
 
 
 	[/HISTORY]
@@ -2254,13 +2262,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.71';
+	$DEDALO_VERSION = '5.7.72';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-02-2021');
+	define('DEDALO_BUILD'	, '22-02-2021');
 
 
 	/*
