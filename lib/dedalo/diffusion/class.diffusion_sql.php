@@ -1376,7 +1376,7 @@ class diffusion_sql extends diffusion  {
 					#dump($options, ' options ++ $resolve_references: '.to_string($resolve_references));
 					#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ section_tipo: '.to_string($section_tipo));
 				}
-				debug_log(__METHOD__." WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL."PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") NOT EXISTS IN SQL. If you want resolve this reference, create a duffusion table for this data ($section_tipo) or check mysql tables for problems with table creation. ".to_string(), logger::WARNING);
+				debug_log(__METHOD__." WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL."PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") DO NOT EXISTS IN SQL. If you want resolve this reference, create a duffusion table for this data ($section_tipo) or check mysql tables for problems with table creation. ".to_string(), logger::WARNING);
 				return false;
 			}
 			$table_map			= $diffusion_element_tables_map->{$section_tipo};
