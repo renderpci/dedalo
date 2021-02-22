@@ -1898,4 +1898,24 @@ class tool_administration extends tool_common {
 
 
 
+	/**
+	* WHICH_COMMAND_POSIX
+	* @see https://stackoverflow.com/questions/592620/how-can-i-check-if-a-program-exists-from-a-bash-script/677212#677212
+	* @param string $binary_name
+	* @return string $result
+	*/
+	public function which_command_posix($binary_name) {
+		
+		$command = 'command -v '.$binary_name.' 2>&1 || { echo >&2 "I require '.$binary_name.' but it\'s not installed.  Aborting."; exit 1; }';
+		// $command = 'type nohup 2>&1 || { echo >&2 "I require foo but it\'s not installed.  Aborting."; exit 1; }';
+		// $command = 'hash nohup 2>/dev/null || { echo >&2 "I require nohup but it\'s not installed.  Aborting."; exit 1; }';
+
+		// $result = shell_exec($command . ' 2>&1');		
+		exec($command . ' 2>&1', $result);
+
+		return $result;
+	}//end which_command_posix
+
+
+
 }//end class
