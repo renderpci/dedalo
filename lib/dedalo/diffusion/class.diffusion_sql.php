@@ -3892,7 +3892,7 @@ class diffusion_sql extends diffusion  {
 				case 'merged':
 					# Merge all arrays values in one only array
 					$ar_value 	= array_values($ar_value); // Restore array keys
-					$value 	  	= json_encode($ar_value);
+					$value 	  	= json_encode($ar_value, JSON_UNESCAPED_UNICODE);
 					break;
 
 				default:
@@ -4040,7 +4040,7 @@ class diffusion_sql extends diffusion  {
 			// split string value (see qdp291)
 				if (isset($process_dato_arguments->split_string_value)) {
 
-					$value = json_encode( explode($process_dato_arguments->split_string_value, $value) );
+					$value = json_encode( explode($process_dato_arguments->split_string_value, $value), JSON_UNESCAPED_UNICODE );
 				}
 
 			switch ($output) {				
@@ -4089,7 +4089,7 @@ class diffusion_sql extends diffusion  {
 
 					// convert to string always
 						if (is_array($value) || is_object($value)) {
-							$value = json_encode($value,JSON_UNESCAPED_UNICODE);
+							$value = json_encode($value, JSON_UNESCAPED_UNICODE);
 						}else{
 							$value = $value;
 						}
@@ -4114,7 +4114,7 @@ class diffusion_sql extends diffusion  {
 				# Merge all arrays values in one only array
 				#$ar_value	= array_unique($ar_value);
 				$ar_value	= array_values($ar_value); // Restore array keys
-				$value		= json_encode($ar_value);
+				$value		= json_encode($ar_value, JSON_UNESCAPED_UNICODE);
 				break;
 
 			default:				
