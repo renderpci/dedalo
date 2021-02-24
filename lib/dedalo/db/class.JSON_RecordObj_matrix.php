@@ -153,7 +153,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			
 			if ( empty($save_options->time_machine_tipo) || $save_options->time_machine_data===false ) {
 				// case section is saved (update) not triggered by a component. For example, when updating section publication date (diffusion_info)
-				debug_log(__METHOD__." Ignored time machine save (empty time_machine_tipo or time_machine_data) - save_options: ".to_string($save_options), logger::DEBUG);
+				// debug_log(__METHOD__." Ignored time machine save (empty time_machine_tipo or time_machine_data) - save_options: ".to_string($save_options), logger::DEBUG);
 			}else{
 				# Exec time machine save and set returned id
 				$this->time_machine_last_id = $this->save_time_machine( $save_options );
