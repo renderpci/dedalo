@@ -4140,6 +4140,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* SPLIT_DATE_RANGE
+	* @see numisdata1034 to get indirect call config (using diffusion_sql::resolve_value)
 	* @return string|null
 	*/
 	public static function split_date_range($options, $dato) {
@@ -4152,9 +4153,9 @@ class diffusion_sql extends diffusion  {
 		$selected_date 	= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
 		$date_format 	= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
 
-			// dump($options, ' options ++ '.to_string());
-			// dump($dato, ' dato ++ '.to_string());
-			#dump($process_dato_arguments, ' process_dato_arguments ++ '.to_string());
+			// dump($options, ' split_date_range options ++ '.to_string());
+			// dump($dato, ' split_date_range dato ++ '.to_string());
+			// dump($process_dato_arguments, ' process_dato_arguments ++ '.to_string());
 			// dump($selected_date, ' selected_date ++ '.to_string());
 
 		// Check array key exists
