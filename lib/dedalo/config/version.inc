@@ -2238,6 +2238,10 @@
 		Redorder ontology data with tld directories 
 
 
+	Valencia 25-02-2021 5.7.73
+		Added copy value options to relation_common save script
+
+
 
 	[/HISTORY]
 
@@ -2262,13 +2266,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.72';
+	$DEDALO_VERSION = '5.7.73';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-02-2021');
+	define('DEDALO_BUILD'	, '25-02-2021');
 
 
 	/*

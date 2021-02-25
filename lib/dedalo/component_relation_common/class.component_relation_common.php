@@ -495,6 +495,29 @@ class component_relation_common extends component_common {
 			$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);		
 		}
 
+		// copy value
+			$propiedades = $this->get_propiedades();
+			if (isset($propiedades->copy_value)) {
+				
+				$valor	= $this->get_valor();
+				$value	= (is_string($valor))
+					? strip_tags($valor)
+					: $valor;
+
+				$current_tipo	= $propiedades->copy_value;
+				$current_model	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$copy_component	= component_common::get_instance( $current_model,
+																  $current_tipo,
+																  $section_id,
+																  'list',
+																  DEDALO_DATA_NOLAN,
+																  $section_tipo);
+				
+				$copy_component->set_dato($value);
+				$copy_component->Save();
+				debug_log(__METHOD__." Saved copy_value to component $current_model - $current_tipo - $section_tipo - value: ".to_string($value), logger::DEBUG);
+			}
+
 
 		# RETURN SECTION ID
 		return (int)$section_id;
