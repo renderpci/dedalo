@@ -2235,7 +2235,7 @@
 		Fixed component text area people labels
 		Fixed issues with json encoding in difusion_sql. Added JSON_UNESCAPED_UNICODE to all json codifications
 		Added view the signature into the pdfjs worker
-		Redorder ontology data with tld directories 
+		Redorder ontology data with tld directories
 
 
 	Valencia 25-02-2021 5.7.73
@@ -2244,7 +2244,11 @@
 
 	Valencia 01-03-2021 5.7.74
 		Added class relation list value format options from properties to override default locator output
-
+		Added diffusion resolve_value relation_list support to export inverse locators data
+		
+	
+	Valencia 01-03-2021 5.7.75
+		Added relation_list diffusion remove duplicates option
 
 
 	[/HISTORY]
@@ -2270,7 +2274,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.74';
+	$DEDALO_VERSION = '5.7.75';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
