@@ -274,7 +274,24 @@ class relation_list extends common {
 					// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($locator), logger::DEBUG);
 					continue;
 				}
-			$ar_values[] = $locator;
+
+			// value. Default is locator. To override it, set:  diffusion_properties->process_dato_arguments->format
+				$value = (isset($process_dato_arguments->format))
+					? (function($locator, $format) {
+						switch ($format) {
+							case 'section_id':
+								return $locator->section_id;
+								break;
+							default:
+								# code...
+								break;
+						}
+						return $locator;
+					  })($locator, $process_dato_arguments->format)
+					: $locator;// default is built locator
+
+
+			$ar_values[] = $value;
 		}
 
 
