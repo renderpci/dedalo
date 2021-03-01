@@ -3954,9 +3954,13 @@ class diffusion_sql extends diffusion  {
 		#});
 		#dump($ar_target_component_tipo, ' ar_target_component_tipo ++ '.to_string());
 		#$object_component_tipo = reset($ar_target_component_tipo);
+		if (!is_object($process_dato_arguments)) {
+			dump($process_dato_arguments, ' error process_dato_arguments must be an object ++ '.to_string());
+			debug_log(__METHOD__." ERROR PROCESS_DATO_ARGUMENTS MUST BE AN OBJECT ".to_string(), logger::ERROR);
+		}
 		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
 		$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
-
+		
 		$ar_value = [];
 		foreach ($ar_locator as $key => $locator) {
 
@@ -3965,7 +3969,7 @@ class diffusion_sql extends diffusion  {
 					continue;
 				}
 
-			// target is publishable check				
+			// target is publishable check
 				$current_is_publicable = isset($process_dato_arguments->is_publicable)
 					? (bool)$process_dato_arguments->is_publicable // override is_publicable verification (Bibliography case)
 					: diffusion::get_is_publicable($locator);
@@ -3974,43 +3978,43 @@ class diffusion_sql extends diffusion  {
 					continue;
 				}
 
-			$component 	= component_common::get_instance($modelo_name,
-														 $target_component_tipo,
-														 $locator->section_id,
-														 'list',
-														 $options->lang,
-														 $locator->section_tipo,
-														 false);
+			// component				
+				$component = ($modelo_name==='relation_list')
+					? new relation_list($target_component_tipo,
+										$locator->section_id,
+										$locator->section_tipo,
+										'list')
+					: component_common::get_instance($modelo_name,
+										 $target_component_tipo,
+										 $locator->section_id,
+										 'list',
+										 $options->lang,
+										 $locator->section_tipo,
+										 false);
+			
+			// method
+				$method = isset($process_dato_arguments->component_method)
+					? $process_dato_arguments->component_method
+					: 'get_diffusion_value'; // default
 
-			$method = isset($process_dato_arguments->component_method) ? $process_dato_arguments->component_method : 'get_diffusion_value';
-
-			// Inject custom properties to target component to manage 'get_diffusion_value' or another called method
+			// target_component_properties. Inject custom properties to target component to manage 'get_diffusion_value' or another called method
 				if (isset($process_dato_arguments->target_component_properties)) {
 					# Overwrite component properties
 					$component->diffusion_properties = $process_dato_arguments->target_component_properties;
 				}
-
-			#
-			# !! FALTA FILTRAR SI ES PUBLICABLE O NO EL DESTINO !!
-			# AHORA SE AÑADE TODO LO QUE ESTÉ EN EL DATO INDEPENDIENTEMENTE DE SI ES PUBLICABLE
-			#
-
-			# Fix common error in structure propiedades config..
-			if ($method==='get_diffusion_valor') $method = 'get_diffusion_value';
-
+			
 			// arguments
 				$custom_arguments = array();
 				if (isset($process_dato_arguments->custom_arguments)) {
 					$custom_arguments = (array)$process_dato_arguments->custom_arguments;
 				}
+				// add lang when get_diffusion_value is the method
 				if ($method==='get_diffusion_value') {
-					#$value = $component->{$method}($options->lang);
-					#$custom_arguments[] = $options->lang;
 					array_unshift($custom_arguments, $options->lang); // always as first argument (!)
 				}
 
 			// add current lang always
-				if (isset($custom_arguments[0]) && !isset($custom_arguments[0]->lang)) {
+				if (isset($custom_arguments[0]) && !isset($custom_arguments[0]->lang)) {					
 					if (is_array($custom_arguments[0])) {
 						$custom_arguments[0]['lang'] = $options->lang;
 					}elseif (is_object($custom_arguments[0])) {
@@ -4018,7 +4022,9 @@ class diffusion_sql extends diffusion  {
 					}
 				}
 
-			$value = call_user_func_array(array($component, $method), $custom_arguments);
+			// method call
+				$value = call_user_func_array(array($component, $method), $custom_arguments);
+				// dump($value, ' value ++ '.to_string("method: $method"));
 			
 			// process_dato (added 03-02-2021) @see mdcat3713
 				if ( isset($process_dato_arguments->process_dato) ) {
