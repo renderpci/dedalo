@@ -509,8 +509,17 @@ class relation_list extends common {
 				$diffusion_value = $this->get_diffusion_dato();
 				break;
 		}
-		
-		
+
+		// remove duplicates option
+			if (isset($diffusion_properties->process_dato_arguments) 
+				&& isset($diffusion_properties->process_dato_arguments->remove_duplicates)
+				&& $diffusion_properties->process_dato_arguments->remove_duplicates===true) {
+				
+				if (is_array($diffusion_value)) {
+					$diffusion_value = array_unique($diffusion_value);
+				}
+			}
+				
 
 		return $diffusion_value;
 	}//end get_diffusion_value
