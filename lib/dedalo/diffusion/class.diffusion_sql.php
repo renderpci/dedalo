@@ -4049,7 +4049,8 @@ class diffusion_sql extends diffusion  {
 					$value = json_encode( explode($process_dato_arguments->split_string_value, $value), JSON_UNESCAPED_UNICODE );
 				}
 
-			switch ($output) {				
+			switch ($output) {
+				case 'merged_unique':
 				case 'merged':
 					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
 						if (true===self::empty_value($value) && isset($process_dato_arguments->empty_value)) {
@@ -4116,6 +4117,12 @@ class diffusion_sql extends diffusion  {
 
 
 		switch ($output) {
+			case 'merged_unique':
+				// @see numisdata1028
+				if (is_array($ar_value)) {
+					$ar_value = array_unique($ar_value, SORT_REGULAR);
+				}
+				// note execution here continues without break (!)
 			case 'merged':
 				# Merge all arrays values in one only array
 				#$ar_value	= array_unique($ar_value);
