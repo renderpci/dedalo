@@ -2251,6 +2251,12 @@
 		Added relation_list diffusion remove duplicates option
 
 
+	Valencia 02-03-2021 5.7.76
+		Added history back on ontology edit save instead close window
+		Fixed relation_list array_unique error when array elements are objects (SORT_REGULAR)
+		Added diffusion_sql resolve_value merged_unique output option
+
+
 	[/HISTORY]
 
 
@@ -2274,13 +2280,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.75';
+	$DEDALO_VERSION = '5.7.76';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-03-2021');
+	define('DEDALO_BUILD'	, '02-03-2021');
 
 
 	/*
