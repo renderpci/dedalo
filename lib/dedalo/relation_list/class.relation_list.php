@@ -516,7 +516,7 @@ class relation_list extends common {
 				&& $diffusion_properties->process_dato_arguments->remove_duplicates===true) {
 				
 				if (is_array($diffusion_value)) {
-					$diffusion_value = array_unique($diffusion_value);
+					$diffusion_value = array_unique($diffusion_value, SORT_REGULAR);
 				}
 			}
 				
