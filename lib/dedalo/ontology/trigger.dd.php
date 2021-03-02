@@ -283,7 +283,7 @@ if($accion==='editTS') {
 			$html .= "
 			<script type=\"text/javascript\">					
 				window.opener.openDivTrack('$parentPost',1,'$parentPost');
-				window.close(); 
+				// window.close(); 
 			</script>";
 		
 		# Si ha cambiado el parent		
@@ -297,7 +297,7 @@ if($accion==='editTS') {
 				// Actualiza la antigua ubicación 
 				window.opener.openDivTrack('$parentInicial',1,'$terminoID');
 				// Cierra la ventana de edición
-				window.close(); 
+				// window.close(); 
 			</script>";
 											
 		}else{
@@ -308,7 +308,8 @@ if($accion==='editTS') {
 				<script type=\"text/javascript\">
 					//alert('parentPost:$parentPost - terminoID:$terminoID')
 					window.opener.location.reload();
-					window.close();	
+					// window.close();
+					history.back()
 				</script>";
 			}else{
 				# Reload only de parent div
@@ -316,10 +317,10 @@ if($accion==='editTS') {
 				<script type=\"text/javascript\">
 					//alert('parentPost:$parentPost - terminoID:$terminoID')					
 					window.opener.openDivTrack('$parentPost',1,'$terminoID');
-					window.close();	
+					// window.close();
+					history.back()	
 				</script>";
-			}
-			
+			}			
 		}
 		
 		echo $codHeader . $html;
