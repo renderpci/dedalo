@@ -2257,6 +2257,11 @@
 		Added diffusion_sql resolve_value merged_unique output option
 
 
+	Valencia 07-03-2021 5.7.77
+		Unified menu get var to value = 0 when no menu is required
+
+	
+
 	[/HISTORY]
 
 
@@ -2280,13 +2285,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.76';
+	$DEDALO_VERSION = '5.7.77';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '02-03-2021');
+	define('DEDALO_BUILD'	, '07-03-2021');
 
 
 	/*

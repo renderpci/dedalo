@@ -94,7 +94,7 @@
 				$av_player_url = DEDALO_LIB_BASE_URL . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality=' . DEDALO_AV_QUALITY_DEFAULT; // rsc35_rsc167_1
 
 				#$tesauro_url = DEDALO_LIB_BASE_URL . "/ts/ts_list.php?modo=tesauro_rel&type=all&current_tipo=".$tipo."&caller_id=".$parent."&caller_tipo=".$tipo."";
-				$thesaurus_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
+				$thesaurus_url = DEDALO_LIB_BASE_URL . "/main/?menu=0&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
 
 
 				$this->component_obj->set_modo('tool_indexation');

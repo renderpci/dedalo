@@ -96,7 +96,7 @@
 				#js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 
 			# TESAURO_URL
-			$tesaurus_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
+			$tesaurus_url = DEDALO_LIB_BASE_URL . "/main/?menu=0&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
 
 			# AV_PLAYER_URL
 			$reelID = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $section_tipo.'_'.$parent;
