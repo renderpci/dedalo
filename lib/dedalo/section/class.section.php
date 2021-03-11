@@ -1022,7 +1022,7 @@ class section extends common {
 					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
 					if ($saved_id_matrix < 1 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-						trigger_error("Error on trying save->insert record. Nothing is saved!");
+						trigger_error("Error on trying save->insert record. Nothing is saved! ".to_string($saved_id_matrix));
 						if(SHOW_DEBUG===true) {
 							throw new Exception("Error Processing Request. Returned section_id on save section is mandatory. Received section_id: $this->section_id ", 1);
 						}
