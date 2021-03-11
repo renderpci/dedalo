@@ -56,6 +56,8 @@ lib/dedalo/publication/client_api
 !lib/tinymce
 # !lib/vexflow
 !lib/Zend
+!lib/htmLawed
+!lib/tcpdf
 
 
 # extras ignore all except common
