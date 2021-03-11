@@ -66,6 +66,10 @@ class component_autocomplete extends component_relation_common {
 			$dato = json_handler::decode($dato);
 		}
 
+		if (is_object($dato)) { # Tool Time machine case, dato is string
+			$dato = [$dato];
+		}
+
 		/* des
 			if (is_object($dato)) {
 				$dato = array($dato); // IMPORTANT
@@ -84,7 +88,7 @@ class component_autocomplete extends component_relation_common {
 			*/
 
 
-		return parent::set_dato( (array)$dato );
+		return parent::set_dato($dato);
 	}//end set_dato
 
 

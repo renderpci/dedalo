@@ -148,16 +148,16 @@ class component_relation_common extends component_common {
 				$dato = json_decode($dato);
 			}
 			if (is_object($dato)) {
-				$dato = array($dato);
+				$dato = [$dato];
 			}
-
+			
 			# Ensures is a real non-associative array (avoid json encode as object)
 			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 			# Verify all locators are well formed
 			$relation_type 		 = $this->relation_type;
 			$from_component_tipo = $this->tipo;
-
+	
 			foreach ((array)$dato as $key => $current_locator) {
 
 				if (!is_object($current_locator)) {
