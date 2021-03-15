@@ -1594,8 +1594,8 @@ class component_relation_common extends component_common {
 		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
 
 		if(SHOW_DEBUG===true) {
-			$subtotal = exec_time_unit($start_time,'ms')." ms";
-			debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
+			// $subtotal = exec_time_unit($start_time,'ms')." ms";
+			// debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
 		}
 
 		# Build the locators with the result
