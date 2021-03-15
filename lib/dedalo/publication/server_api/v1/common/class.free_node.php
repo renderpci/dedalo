@@ -223,10 +223,13 @@ class free_node {
 			if ($this->video_fragment===true) {
 
 				# TEXT_BEFORE . Buscamos el último <br /> anterior a word_position en el texto anterior
-					$pInArray 			= self::str_pos_all($text_before,'<br />');
-					$n_paragraphs 		= 4 ;
-					$inicioParrafoPos 	= isset($pInArray[count($pInArray)-$n_paragraphs-1]) ? $pInArray[count($pInArray)-$n_paragraphs-1] : 0 ;
-					$fragment_before 	= mb_substr($text_before, $inicioParrafoPos );
+					$pInArray			= self::str_pos_all($text_before,'<br />');
+					$n_paragraphs		= 4 ;
+					$c_key				= $pInArray && is_array($pInArray) 
+						? count($pInArray)-$n_paragraphs-1
+						: false;
+					$inicioParrafoPos	= ($c_key!==false && isset($pInArray[$c_key])) ? $pInArray[$c_key] : 0 ;
+					$fragment_before	= mb_substr($text_before, $inicioParrafoPos );
 						#dump($fragment_before, ' fragment_before ++ '.to_string());
 
 				# TEXT_AFTER . Buscamos el primer </p> posterior  a palabraPos
