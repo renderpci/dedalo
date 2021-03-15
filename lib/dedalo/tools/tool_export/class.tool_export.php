@@ -466,19 +466,19 @@ class tool_export extends tool_common {
 			$section_tipo	= $record->section_tipo;
 			$section_id		= $record->section_id;
 
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key, true);
+
 			// skip id, section_tipo, section_id columns
-			if ($key==='id' || $key==='section_tipo' || $key==='section_id' || $key==='datos') continue;
-
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
-
-			switch ($modelo_name) {
-				case 'relation_list':
+			if ($key==='id' || $key==='section_tipo' || $key==='section_id' || $key==='datos' || (strpos($component_tipo, '_order')!==false)) continue;
+		
+			switch (true) {
+				case ($modelo_name==='relation_list'):
 					$relation_list	= new relation_list($component_tipo, $section_id, $section_tipo, 'list');
 					$valor_export	= $relation_list->get_valor_export();
 					break;
 				
 				default:
-					// component						
+					// component
 						$component	= component_common::get_instance($modelo_name,
 																	 $component_tipo,
 																	 $section_id,
