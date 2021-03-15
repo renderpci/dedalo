@@ -73,7 +73,7 @@ function export_str($json_data) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
+				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 
 			$response->debug = $debug;
 		}
@@ -95,12 +95,12 @@ function build_version_from_git_master($json_data) {
 		$response->result	= false;
 		$response->msg		= "";
 
-	// rsync trigger code HEAD from master git	
-		function update_head_code($response) {			
+	// rsync trigger code HEAD from master git
+		function update_head_code($response) {
 
 			$source		= DEDALO_CODE_SERVER_GIT_DIR;
 			$target		= DEDALO_CODE_FILES_DIR .'/dedalo5_code.zip';
-			$command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target"; // @see https://git-scm.com/docs/git-archive
+			$command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target 2>&1"; // @see https://git-scm.com/docs/git-archive
 
 			$msg = " Called Dédalo update_head_code with command: ".to_string($command);
 			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
@@ -125,7 +125,7 @@ function build_version_from_git_master($json_data) {
 			$response->msg .= $msg;
 			debug_log(__METHOD__." update_head_code output OK: $msg ".to_string(), logger::DEBUG);
 			
-			$response->result = true;			
+			$response->result = true;
 
 		} catch (Exception $e) {
 		
@@ -137,7 +137,7 @@ function build_version_from_git_master($json_data) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
+				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 
 			$response->debug = $debug;
 		}
