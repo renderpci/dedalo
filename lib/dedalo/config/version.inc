@@ -2260,7 +2260,22 @@
 	Valencia 07-03-2021 5.7.77
 		Unified menu get var to value = 0 when no menu is required
 
-	
+
+	Valencia 16-03-2021 5.7.78
+		Fixed error in component_relation_parent search tipos that causes search from component parent do not works
+		Added lib htmLawed
+		Added lib tcpdf
+		Updated .gitignore file to apped some libraries (htmLawed,tcpdf)
+		Fixed verification duplicities in component_autocomplete and component_relation_common
+		Added section trigger error message info when section is not saved
+		Fixed error on free_node when find_word_in_text give error on word position not found
+		Increased download structure timeout from 5 to 60 secs in CURLOPT_TIMEOUT to allow manage large data like matrix_dd
+		Muted temporal debug notification on relation common get_relation_result
+		Fixed tool_export error when user records selection is ordered
+		Fixed search_development search sort error. Now, to avoid ambiguity in pagination of sorted equal values, the column id is added always
+
+
+
 
 	[/HISTORY]
 
@@ -2285,13 +2300,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.77';
+	$DEDALO_VERSION = '5.7.78';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-03-2021');
+	define('DEDALO_BUILD'	, '16-03-2021');
 
 
 	/*
