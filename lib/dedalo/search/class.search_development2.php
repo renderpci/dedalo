@@ -939,6 +939,10 @@ class search_development2 {
 			#$this->remove_distinct=true;
 		}
 
+		// if ($full_count!==true && (!empty($this->search_query_object->order) || !empty($this->search_query_object->order_custom))) {
+		// 	$this->remove_distinct = true;
+		// }
+		
 		// having reset and build
 			$this->having_search_objects = [];
 
@@ -1212,6 +1216,7 @@ class search_development2 {
 					$query_inside = '';
 					// select
 						$query_inside .= 'SELECT ' . $sql_query_select;
+						$query_inside .= ', id'; // avoid ambiguity in pagination of equal values
 					// from
 						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
 						# join virtual tables
@@ -1252,6 +1257,8 @@ class search_development2 {
 						}else{
 							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
 						}
+						$sql_query .= ', id ASC'; // avoid ambiguity in pagination of equal values
+						
 					// limit
 						if ($sql_limit>0) {
 							$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
