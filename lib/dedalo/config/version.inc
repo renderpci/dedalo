@@ -2274,6 +2274,9 @@
 		Fixed tool_export error when user records selection is ordered
 		Fixed search_development search sort error. Now, to avoid ambiguity in pagination of sorted equal values, the column id is added always
 
+	
+	Valencia 17-03-2021 5.7.79
+		Fixed error on create new layout print templates from tool_layout_print
 
 
 
@@ -2300,13 +2303,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.78';
+	$DEDALO_VERSION = '5.7.79';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '16-03-2021');
+	define('DEDALO_BUILD'	, '17-03-2021');
 
 
 	/*
