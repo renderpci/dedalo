@@ -2279,6 +2279,10 @@
 		Fixed error on create new layout print templates from tool_layout_print
 
 
+	Valencia 17-03-2021 5.7.80
+		Added tool layout print error notifications
+
+
 
 	[/HISTORY]
 
@@ -2303,7 +2307,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.79';
+	$DEDALO_VERSION = '5.7.80';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();

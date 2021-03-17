@@ -215,7 +215,10 @@ if($mode==='render_pdf') {
 		#
 		# Exec command
 		$result = exec_::live_execute_command($command,false);
-		#$result  = shell_exec($command." ");	// > /dev/null 2>/dev/null &
+		// $result  = shell_exec($command." ");	// > /dev/null 2>/dev/null &
+		
+		debug_log(__METHOD__." command ".to_string($command), logger::WARNING);
+		debug_log(__METHOD__." result ".to_string($result), logger::WARNING);
 		
 		if(SHOW_DEBUG===true) {
 			
@@ -226,20 +229,26 @@ if($mode==='render_pdf') {
 			$response->debug[$key]['path'] 	= DEDALO_PDF_RENDERER;		
 		}
 
-		if($result['exit_status'] === "0"){
-			// command execution succeeds
+		// command execution succeeds
 			$element_html .= trim("<a href=\"$pdf_url\" class=\"icon_pdf_big\" target=\"_blank\"></a><label>View pdf file ".$label."</label>");		
-		}else{
-		    // command execution failure
-		    $element_html .= trim("<span class=\"error\">Sorry. Error on render pdf file</span>");
-		}
+		
+		// error notice
+			if($result['exit_status']!="0"){
+				// command execution failure
+				$element_html .= '<span class="error">Sorry. Error was found on render pdf file. See the log for more info</span>';
+			}
 
 		if(SHOW_DEBUG===true) {
-			$size = @ filesize($pdf_path);
-			if ($size && $size>0) {
-				$KB = (int)$size/1000 ;
-				$element_html .= "<label>Filesize $KB KBytes</label>";
-			}			
+			try {
+				$size = @ filesize($pdf_path);
+				if ($size && $size>0) {
+					$KB = (int)$size/1000 ;
+					$element_html .= "<label>Filesize $KB KBytes</label>";
+				}
+			} catch (Exception $e) {
+				debug_log(__METHOD__." ERROR ".$e->getMessage(), logger::ERROR);
+				$element_html .= "<label class=\"error\">Filesize error</label>";
+			}
 		}
 		
 		$response->msg .= "<li>".$element_html."</li>";
