@@ -40,7 +40,7 @@
 
 						// Public 
 							$public_templates_title = 'Custom templates';
-							$ar_templates_public  	= $this->get_ar_templates('public');
+							$ar_templates_public  	= tool_layout_print::get_ar_templates('public', $tipo);
 							$ar_templates_public_js = array_map(function($item){
 								$element = [
 									'section_id' 	=> $item->section_id,
@@ -48,11 +48,11 @@
 									'label' 		=> $item->label
 								];
 								return $element;
-							}, $ar_templates_public,[]); // (!) Note second argument '[]' avoid preserve original asociative array keys	
+							}, $ar_templates_public,[]); // (!) Note second argument '[]' avoid preserve original asociative array keys
 						
 						// Private 
 							$private_templates_title = 'Default templates';
-							$ar_templates_private 	 = $this->get_ar_templates('private');
+							$ar_templates_private 	 = tool_layout_print::get_ar_templates('private', $tipo);
 							$ar_templates_private_js = array_map(function($item){
 								$element = [
 									'section_id' 	=> $item->section_id,
@@ -295,8 +295,9 @@
 						$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
 						
 						$array_key = $section_layout_tipo .'_'. $section_layout_id;
-						if (!isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {							
-							throw new Exception("Error Processing Request. Not found ar_templates_mix ", 1);							
+						if (!isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {
+							dump($ar_templates_mix, ' ar_templates_mix ++ '.to_string($array_key));				
+							throw new Exception("Error Processing Request. Not found ar_templates_mix : $array_key", 1);							
 						}
 						$template_obj 			= clone($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key]);					
 						$section_layout_label 	= isset($template_obj->label) ? $template_obj->label : '';

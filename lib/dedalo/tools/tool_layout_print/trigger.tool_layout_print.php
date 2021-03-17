@@ -27,6 +27,7 @@ if($mode==='save_template') {
 
 	#$vars = array('section_layout_id','section_layout_tipo','layout_label','component_layout_tipo','type','html_content');
 		#foreach($vars as $name) $$name = common::setVar($name);
+		#dump($_REQUEST, 'get_defined_vars() ++ '.to_string());
 
 	if(empty($component_layout_tipo)) 	exit('Error: component_layout_tipo not defined');
 	#if(empty($parent)) 				exit('Error: parent not defined');
@@ -37,6 +38,7 @@ if($mode==='save_template') {
 	if(empty($section_layout_tipo)) 	exit('Error: section_layout_tipo not defined');
 	if(empty($section_target_tipo)) 	exit('Error: section_target_tipo not defined');
 	if(empty($layout_label)) 			exit('Error: layout_label not defined');
+
 
 	/* reference only:
 		# COMPONENT SECTION
@@ -57,10 +59,12 @@ if($mode==='save_template') {
 		case DEDALO_LAYOUT_PUBLIC_COMPONENT_LAYOUT_TIPO : // Public
 			$component_section_tipo = DEDALO_LAYOUT_PUBLIC_COMPONENT_SECTION_TIPO;
 			$component_label_tipo 	= DEDALO_LAYOUT_PUBLIC_COMPONENT_LABEL_TIPO;
+			$public_private = 'public';
 			break;
 		case DEDALO_LAYOUT_TEMPLATES_COMPONENT_LAYOUT_TIPO : // Privada
 			$component_section_tipo = DEDALO_LAYOUT_TEMPLATES_COMPONENT_SECTION_TIPO;
 			$component_label_tipo 	= DEDALO_LAYOUT_TEMPLATES_COMPONENT_LABEL_TIPO;
+			$public_private = 'private';
 			break;
 		default:
 			throw new Exception("Error Processing Request", 1);
@@ -110,7 +114,7 @@ if($mode==='save_template') {
 		$component_layout->set_dato( $original_dato_string );
 		$component_layout->Save();
 		
-
+	
 	#
 	# SECTION TARGET 
 		$component_input_text = component_common::get_instance('component_input_text',$component_section_tipo,$section_layout_id,'edit',DEDALO_DATA_NOLAN,$section_layout_tipo);
@@ -123,21 +127,44 @@ if($mode==='save_template') {
 		$component_input_text = component_common::get_instance('component_input_text',$component_label_tipo,$section_layout_id,'edit',DEDALO_DATA_LANG,$section_layout_tipo);
 		$component_input_text->set_dato($layout_label);
 		$component_input_text->Save();
-		
-
+	
 	#
-	# Update session label name
-	$ar_templates_mix = (array)$_SESSION['dedalo4']['config']['ar_templates_mix'];
-	foreach ((array)$ar_templates_mix as $key => $obj_value) {
-		if ($obj_value->section_id==$section_layout_id && 
-			$obj_value->component_layout_tipo==$component_layout_tipo
-			) {
-			$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->label 			  = (string)$layout_label;	# Update session layout_label
-			$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->section_layout_dato = (object)$dato;			# Update session section_layout_dato
-			break;
-		}
-	}
+	# Update session label name	
+	// $ar_templates_mix = (array)$_SESSION['dedalo4']['config']['ar_templates_mix'];
+	// foreach ((array)$ar_templates_mix as $key => $obj_value) {
+	// 	if ($obj_value->section_id==$section_layout_id && 
+	// 		$obj_value->component_layout_tipo==$component_layout_tipo
+	// 		// $obj_value->section_layout_tipo==$section_layout_tipo
+	// 		) {
+	// 		$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->label 			  = (string)$layout_label;	# Update session layout_label
+	// 		$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->section_layout_dato = (object)$dato;			# Update session section_layout_dato
+	// 		break;
+	// 	}
+	// }
 
+	// locate current template in session to update it
+	$found = array_find($_SESSION['dedalo4']['config']['ar_templates_mix'], function($el) use($section_layout_id, $component_layout_tipo){
+		return $el->section_id==$section_layout_id && $el->component_layout_tipo===$component_layout_tipo;
+	});
+	if ($found) {
+		
+		$found->label				= $layout_label;
+		$found->section_layout_dato	= (object)$dato;
+	
+	}else{
+		// if not exists, get, parse and add to session ar_templates_mix
+		$ar_templates = tool_layout_print::get_ar_templates($public_private, $section_target_tipo, $section_layout_id);
+				
+		$first_key		= array_key_first($ar_templates);
+		$new_template	= (object)$ar_templates[$first_key];
+
+		// updadte values and save to session
+			$new_template->label				= $layout_label;
+			$new_template->section_layout_dato	= (object)$dato;
+
+		$_SESSION['dedalo4']['config']['ar_templates_mix'][$first_key] = $new_template;
+	}
+	
 
 	echo (int)$section_layout_id;
 	exit();

@@ -926,33 +926,39 @@ class tool_layout_print extends tool_common {
 	* @param string $type like 'public' / 'private'
 	* @return array $ar_layout_obj
 	*/
-	protected function get_ar_templates($type){
+	public static function get_ar_templates($type, $section_tipo, $filtered_by_section_id=false){
 
 		switch ($type) {
 			case 'public':
-				$component_section_tipo = DEDALO_LAYOUT_PUBLIC_COMPONENT_SECTION_TIPO; 	
-				$component_label_tipo 	= DEDALO_LAYOUT_PUBLIC_COMPONENT_LABEL_TIPO;	//'dd38';
+				$component_section_tipo	= DEDALO_LAYOUT_PUBLIC_COMPONENT_SECTION_TIPO; 	
+				$component_label_tipo	= DEDALO_LAYOUT_PUBLIC_COMPONENT_LABEL_TIPO;	//'dd38';
 				$component_layout_tipo	= DEDALO_LAYOUT_PUBLIC_COMPONENT_LAYOUT_TIPO;	
-				$matrix_table 			= 'matrix_layout';				
-				$section_layout_tipo 	= DEDALO_SECTION_LAYOUT_PUBLIC_TIPO;
+				$matrix_table			= 'matrix_layout';
+				$section_layout_tipo	= DEDALO_SECTION_LAYOUT_PUBLIC_TIPO;
 				break;
 			
 			case 'private':
-				$component_section_tipo = DEDALO_LAYOUT_TEMPLATES_COMPONENT_SECTION_TIPO;
-				$component_label_tipo 	= DEDALO_LAYOUT_TEMPLATES_COMPONENT_LABEL_TIPO;	//'dd29';
+				$component_section_tipo	= DEDALO_LAYOUT_TEMPLATES_COMPONENT_SECTION_TIPO;
+				$component_label_tipo	= DEDALO_LAYOUT_TEMPLATES_COMPONENT_LABEL_TIPO;	//'dd29';
 				$component_layout_tipo	= DEDALO_LAYOUT_TEMPLATES_COMPONENT_LAYOUT_TIPO;
-				$matrix_table 			= 'matrix_layout_dd';
-				$section_layout_tipo 	= DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO;
+				$matrix_table			= 'matrix_layout_dd';
+				$section_layout_tipo	= DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO;
 				break;
 			default:
 				throw new Exception("Error Processing Request. remplate type invalid", 1);
 				
 		}
-		$section_tipo	= $this->section_obj->get_tipo();
+
 		$layout_records = self::search_layout_records($component_section_tipo, $section_tipo, $matrix_table, $component_layout_tipo, $section_layout_tipo);
 	
 		$ar_layout_obj=array();
 		foreach ($layout_records as $section_id) {
+
+			if ($filtered_by_section_id!==false) {
+				if ($section_id!=$filtered_by_section_id) {
+					continue;
+				}
+			}
 
 			$component_label  = component_common::get_instance('component_input_text', $component_label_tipo, $section_id, 'list', DEDALO_DATA_LANG, $section_layout_tipo); 
 			$component_layout = component_common::get_instance('component_layout', $component_layout_tipo, $section_id, 'list', DEDALO_DATA_NOLAN, $section_layout_tipo);
@@ -960,10 +966,10 @@ class tool_layout_print extends tool_common {
 			$layout_obj = new stdClass();
 				$layout_obj->section_id				= $section_id;
 				$layout_obj->type 					= $type;
-				$layout_obj->section_layout_tipo 	= $section_layout_tipo;		
-				$layout_obj->label 					= $component_label->get_valor(0);				
+				$layout_obj->section_layout_tipo 	= $section_layout_tipo;
+				$layout_obj->label 					= $component_label->get_valor(0);
 				$layout_obj->section_layout_dato 	= $component_layout->get_dato();
-				$layout_obj->component_layout_tipo  = $component_layout_tipo;				
+				$layout_obj->component_layout_tipo  = $component_layout_tipo;
 
 			$array_key = $section_layout_tipo.'_'.$section_id;
 
