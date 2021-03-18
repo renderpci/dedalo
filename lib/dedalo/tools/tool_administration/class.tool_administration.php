@@ -1,6 +1,6 @@
 <?php
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-require_once(dirname(__FILE__) .'/updates/updates.php');
+// require(dirname(__FILE__) .'/updates/updates.php');
 /*
 * CLASS TOOL_ADMINISTRATION - B
 */
@@ -360,7 +360,9 @@ class tool_administration extends tool_common {
 	* @return array $update_version
 	*/
 	public static function get_update_version() {
-		global $updates;
+		// global $updates;
+
+		require(dirname(__FILE__) .'/updates/updates.php');
 
 		$update_version = array();
 		$current_version = self::get_current_version_in_db();
@@ -369,8 +371,8 @@ class tool_administration extends tool_common {
 			#return $current_version;
 			return false;
 		}
-
-		foreach ($updates as $key => $version_to_update) {
+	
+		foreach ($updates as $key => $version_to_update) {						
 			if($current_version[0] == $version_to_update->update_from_major){
 				if($current_version[1] == $version_to_update->update_from_medium){
 					if($current_version[2] == $version_to_update->update_from_minor){
@@ -385,6 +387,37 @@ class tool_administration extends tool_common {
 			}
 		}
 	}//end get_update_version
+
+
+
+	/**
+	* IS_VALID_DATA_VERSION
+	* @return bool
+	*/
+	public static function is_valid_data_version($required_version) {
+
+		$rv = is_string($required_version)
+			? explode('.', $required_version)
+			: $required_version;
+
+		if (!isset($rv[0]) || !isset($rv[1]) || !isset($rv[2])) {
+			debug_log(__METHOD__." ERROR. INVALID VERSION  ".to_string($required_version), logger::ERROR);
+			return false;
+		}
+
+		$version = tool_administration::get_current_version_in_db();		
+
+		if (   $version[0]>$rv[0]
+			|| ($version[0]==$rv[0] && $version[1]>$rv[1])
+			|| ($version[0]==$rv[0] && $version[1]==$rv[1] && $version[2]>=$rv[2])
+		) {
+
+			return true;
+		}
+
+
+		return false;
+	}//end is_valid_data_version
 
 
 
@@ -414,7 +447,9 @@ class tool_administration extends tool_common {
 	* @return object $response
 	*/
 	public static function update_version() {
-		global $updates;
+		// global $updates;
+
+		require(dirname(__FILE__) .'/updates/updates.php');
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1915,6 +1950,254 @@ class tool_administration extends tool_common {
 
 		return $result;
 	}//end which_command_posix
+
+
+
+	/**
+	* FORMAT_OLD_ACTIVITY_VALUE
+	*	Old installations could have old activity value.
+	*	transform it to current format
+	*	expected: [
+	*      {
+	*        "section_id": "229",
+	*        "section_tipo": "dd1"
+	*      }
+	*    ]
+	* @return string | false
+	*/
+	public static function format_old_activity_value($value) {
+		
+		if (is_array($value)) {
+			$locator	= reset($value);
+			$tipo		= 'dd' . $locator->section_id;
+			return $tipo;
+		}
+
+		return false;
+	}//end format_old_activity_value
+
+
+
+	/**
+	* UPDATE_ACTIVITY_DATA
+	* @return bool $modified
+	*/
+	public static function update_activity_data($row, $datos=false) {
+
+		$modified = (!empty($datos));	
+
+		$id		= (int)$row->id;
+		$datos	= $datos ?? json_decode($row->datos);
+	
+
+		// what
+			$component_tipo = logger_backend_activity::$_COMPONENT_QUE['tipo'];
+			if (isset($datos->components->{$component_tipo}->valor)) {
+
+				$key = $datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				if ($key) {
+					
+					$key = !is_string($key)
+						? self::format_old_activity_value($key)
+						: $key;
+
+					$component_dato = json_decode('{
+						"dato": {
+							"lg-nolan": '.json_encode($key).'
+						}
+					}');
+					$datos->components->{$component_tipo} = $component_dato;
+
+					$modified = true;
+				}
+			}
+
+		// where
+			$component_tipo = logger_backend_activity::$_COMPONENT_DONDE['tipo'];
+			if (isset($datos->components->{$component_tipo}->valor)) {
+
+				$key = $datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				if ($key) {
+					
+					$key = !is_string($key)
+						? self::format_old_activity_value($key)
+						: $key;
+					
+					$component_dato = json_decode('{
+						"dato": {
+							"lg-nolan": '.json_encode($key).'
+						}
+					}');
+					$datos->components->{$component_tipo} = $component_dato;
+
+					$modified = true;
+				}
+			}
+		
+		// ip
+			$component_tipo = logger_backend_activity::$_COMPONENT_IP['tipo'];
+			if (isset($datos->components->{$component_tipo}->valor)) {
+				$component_dato = json_decode('{
+					"dato": {
+						"lg-nolan": '.json_encode($datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN}).'
+					}
+				}');
+				$datos->components->{$component_tipo} = $component_dato;
+
+				$modified = true;
+			}
+		
+		// messages
+			$component_tipo = logger_backend_activity::$_COMPONENT_DATOS['tipo'];
+			if (isset($datos->components->{$component_tipo}->valor)) {
+				$component_dato = json_decode('{
+					"dato": {
+						"lg-nolan": '.json_encode($datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN}).'
+					}
+				}');
+				$datos->components->{$component_tipo} = $component_dato;
+
+				$modified = true;
+			}
+
+		// save
+			if ($modified===true) {
+				$new_section_dato	= json_encode($datos);
+				$table				= 'matrix_activity';
+				$strQuery_update	= 'UPDATE "'.$table.'" SET datos = $1 WHERE id = $2';
+				// $result_update	= pg_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
+				// if (!$result_update) {
+				// 	$response->msg .= " Error on UPDATE db record on table $table, id: $id. ".pg_last_error();
+				// 	return $response;
+				// }else{
+				// 	debug_log(__METHOD__." Update data activity record with old dato format - section_id: $section_id - ".to_string(), logger::WARNING);
+				// }
+				pg_send_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
+				$res = pg_get_result(DBi::_getConnection());				
+				debug_log(__METHOD__." Sent record to update activity data found with old dato format. id: $id ".to_string(), logger::WARNING);
+			}
+		
+
+		return $modified;
+	}//end update_activity_data
+
+
+
+	/**
+	* UPDATE_MATRIX_ACTIVITY_RECORDS
+	* This update checks and updates the old values of table 'matrix_activity'.
+	* This action can take a long time on busy systems
+	* @return bool
+	*/
+	public static function update_matrix_activity_records() {
+
+		require_once(DEDALO_LIB_BASE_PATH . '/diffusion/diffusion_section_stats/class.diffusion_section_stats.php');
+
+		// check structure. valid USER_ACTIVITY_SECTION_TIPO : dd1521
+			$RecordObj_dd = new RecordObj_dd(USER_ACTIVITY_SECTION_TIPO);
+			$parent = $RecordObj_dd->get_parent();
+			if (is_null($parent)) {
+				debug_log(__METHOD__." ERROR 2096. YOU MUST UPDATE YOUR ONTOLOGY VERSION TO THE LAST VERSION WITH DEFINED SECTION: ".USER_ACTIVITY_SECTION_TIPO, logger::ERROR);
+				return false;
+			}
+
+		// total records
+			$strQuery = 'SELECT count(*) as total FROM "matrix_activity";';
+			$result   = pg_query(DBi::_getConnection(), $strQuery);
+			if (!$result) {
+				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
+				return false;
+			}
+			$row	= pg_fetch_object($result);
+			$total	= $row->total;
+			$done	= 0;
+
+
+		self::iterate_rows($table='matrix_activity', $offset=0, $total, $done, $callback=function($row){
+			self::update_activity_data($row);
+		});
+
+		debug_log(__METHOD__." Updated all records of matrix_activity ".to_string(), logger::DEBUG);
+
+		// update users stats
+			$strQuery = 'SELECT * FROM "matrix_users";';
+			$result   = pg_query(DBi::_getConnection(), $strQuery);
+			while ($row = pg_fetch_object($result)) {				
+				
+				$user_id = $row->section_id;
+				
+				// user activity update stats
+				diffusion_section_stats::update_user_activity_stats($user_id);
+
+				debug_log(__METHOD__." Updated user activity. user: $user_id".to_string(), logger::DEBUG);
+			}
+
+			
+		return true;
+	}//end update_matrix_activity_records
+
+
+
+	/**
+	* ITERATE_ROWS
+	* @return bool true
+	*/
+	public static function iterate_rows($table, $offset, $total, $done, $callback, $last_id=null) {
+		
+		$limit = 10000;
+
+		// debug 
+			try {
+				$memory = tools::get_memory_usage();
+			} catch (Exception $e) {
+				$memory = 'unknow';
+			}
+			debug_log(__METHOD__." Working group total: $total - limit: $limit - offset: $offset - done: $done - last_id: $last_id - memory: ".to_string($memory), logger::DEBUG);
+
+		// optimizing huge offset tables
+			$filter = !empty($last_id)
+				? 'WHERE id > '.$last_id.' '
+				: '';
+			$offset = empty($last_id)
+				? 'OFFSET '.$offset.' '
+				: '';
+
+		$strQuery = '
+			SELECT *
+			FROM "'.$table.'" '.$filter.'
+			ORDER BY id ASC
+			LIMIT '.$limit.' '.$offset.'
+		';
+		$result   = pg_query(DBi::_getConnection(), $strQuery);
+		if (!$result) {
+			debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
+			return false;
+		}
+		$last_id = 0;
+		while ($row = pg_fetch_object($result)) {
+			$done++;
+			$last_id = $row->id;
+			$callback($row);
+		}
+
+		// memory manage
+			unset($result);
+
+			# Forces collection of any existing garbage cycles
+			gc_collect_cycles();
+
+			// let GC do the memory job
+			// wait for 0.2 seconds
+			usleep(200000);
+
+		// recursion
+			if ($done<$total) {
+				$offset = $done;
+				self::iterate_rows($table, $offset, $total, $done, $callback, $last_id);
+			}
+
+		return true;
+	}//end iterate_rows
 
 
 

@@ -154,7 +154,11 @@
 						}
 					}
 
-					#if(SHOW_DEVELOPER===true) {
+					$show_button_run_update_version = isset($updates->{$update_version_plain}->show_button_run_update_version)
+						? $updates->{$update_version_plain}->show_button_run_update_version
+						: true; 
+
+					if($show_button_run_update_version===true) {
 						// Show updates object (current target correspondence) with all config to apply to current update script
 						$html   .= "<input type=\"button\" class=\"btn btn-default btn-sm btn_update\" value=\"Run all update data version actions\" ";
 						$html   .= "data-mode=\"update_version\" ";
@@ -178,7 +182,7 @@
 								}
 							}
 						}
-					#}
+					}
 					$html   .= "  <div id=\"update_version_response\"></div>";
 					$html   .= "  </div>";#end panel_option_subcontent
 
