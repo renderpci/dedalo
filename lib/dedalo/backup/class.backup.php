@@ -1321,8 +1321,8 @@ abstract class backup {
 		# Avoid verify ssl certificates (very slow)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-		// A given cURL operation should only take 120 seconds max.
-		curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+		// A given cURL operation should only take 300 seconds max.
+		curl_setopt($ch, CURLOPT_TIMEOUT, 300);
 
 		// execute post
 		$result = curl_exec($ch);
