@@ -27,7 +27,7 @@ function export_list($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-	$vars = array('section_tipo','diffusion_element_tipo');
+	$vars = array('section_tipo','diffusion_element_tipo','level_value');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -39,6 +39,11 @@ function export_list($json_data) {
 		}
 
 	$seconds = 60 * 15; set_time_limit($seconds);
+
+	// fix levels on each call
+		$_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($level_value)
+			? $level_value
+			: DEDALO_DIFFUSION_RESOLVE_LEVELS;
 
 	# Write session to unlock session file
 	session_write_close();
@@ -144,17 +149,14 @@ function export_list($json_data) {
 function export_record($json_data) {
 	global $start_time;
 
-	$seconds = 60 * 5; set_time_limit($seconds); // Avoid some infinite loop cases when data is bad formed	
-
-	# Write session to unlock session file
-	session_write_close();	
+	$seconds = 60 * 5; set_time_limit($seconds); // Avoid some infinite loop cases when data is bad formed		
 
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-		$vars = array('section_tipo','section_id','diffusion_element_tipo');
+		$vars = array('section_tipo','section_id','diffusion_element_tipo','level_value');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -165,6 +167,13 @@ function export_record($json_data) {
 			}
 		}
 
+	// fix levels on each call
+		$_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($level_value)
+			? $level_value
+			: DEDALO_DIFFUSION_RESOLVE_LEVELS;
+
+	# Write session to unlock session file
+	session_write_close();	
 	
 	try{
 		
