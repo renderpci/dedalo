@@ -42,7 +42,7 @@ class class_loader {
 		
 	private static function loader($className) {
 	
-		switch (true) {			
+		switch (true) {
 			case (strpos($className, 'tool_')!==false):
 				$file_path	= DEDALO_LIB_BASE_PATH . '/tools/' . $className . '/class.' . $className . '.php';
 				break;
@@ -57,7 +57,7 @@ class class_loader {
 				return;
 				break;
 
-			case (strpos($className, 'default')!==false):				
+			case (strpos($className, 'default')!==false):
 				if(SHOW_DEBUG===true) {
 					$bt = debug_backtrace();
 					echo "<pre>";
@@ -77,10 +77,13 @@ class class_loader {
 				# Folder base dedalo lib
 				$file_path	= DEDALO_LIB_BASE_PATH . '/' . $className . '/class.' . $className . '.php';
 				break;
-		}		
+		}
 		
 		if ( !include($file_path) ) {
-			throw new Exception(__METHOD__ . "<hr> A loader call was made to class <b>$className</b><br> File not exits at: <b>$file_path</b><br>
+			// throw new Exception(__METHOD__ . "<hr> A loader call was made to class <b>$className</b><br> File not exits at: <b>$file_path</b><br>
+			// 	Please, remember require this file in main class (like component_common) or create standar dedalo lib path folder 
+			// 	like '/component_input_text/class.component_input_text.php' for loader calls. ");
+			trigger_error(__METHOD__ . "<hr> A loader call was made to class <b>$className</b><br> File not exits at: <b>$file_path</b><br>
 				Please, remember require this file in main class (like component_common) or create standar dedalo lib path folder 
 				like '/component_input_text/class.component_input_text.php' for loader calls. ");
 		}
@@ -90,7 +93,7 @@ class class_loader {
 	
 	
 	# Test if PHP versiion is supported
-	static private function test_php_version_supported() {		
+	static private function test_php_version_supported() {
 		
 		static $php_version_supported;
 		

@@ -2239,7 +2239,9 @@ class section extends common {
 															 'list',
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo);
-			$dato = $component->get_dato();
+			$dato = ($component!==null)
+				? $component->get_dato()
+				: null;
 
 		// local_date
 			if (empty($dato)) {
@@ -2277,7 +2279,9 @@ class section extends common {
 															 'list',
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo);
-			$dato = $component->get_dato();
+			$dato = ($component!==null)
+				? $component->get_dato()
+				: null;
 
 		// user name
 			if (empty($dato)) {

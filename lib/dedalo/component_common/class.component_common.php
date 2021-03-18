@@ -216,7 +216,14 @@ abstract class component_common extends common {
 			}
 			if (strpos($component_name, 'component_')===false) {
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__, 1);
+					trigger_error("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__.'');
+				}
+				return null;
+			}
+
+			if (!class_exists($component_name)) {
+				if(SHOW_DEBUG===true) {
+					trigger_error("Error Processing Request. component: '$component_name' is not defined as class. [".__METHOD__.']');
 				}
 				return null;
 			}

@@ -127,16 +127,24 @@ abstract class RecordDataBoundObject {
 			$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error());
 			
 			if ($result===false) {
-				$msg = "Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".pg_last_error() .' ';				
+
+				// recover from the infinite loop of not defined column 'properties'
+					$last_error = pg_last_error();
+					if (strpos($last_error, 'column "properties" does not exist')!==false) {
+						$_sql = 'ALTER TABLE "jer_dd" ADD IF NOT EXISTS "properties" jsonb NULL;';
+						$_result = pg_query(DBi::_getConnection(), $_sql);
+					}	
+
+				$msg = "Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".$last_error.' ';
 				trigger_error($msg);
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".pg_last_error()." ".to_string($strQuery), 1);
+					throw new Exception("Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".$last_error." ".to_string($strQuery), 1);
 				}
 				return false;
 			}
 
 			$arRow = pg_fetch_assoc($result);
-				#dump($arRow,"arRow");			
+				#dump($arRow,"arRow");
 
 			if($arRow===false)	{
 				if(SHOW_DEBUG===true) {
