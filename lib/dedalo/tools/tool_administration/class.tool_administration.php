@@ -1920,7 +1920,9 @@ class tool_administration extends tool_common {
 	public static function get_ontology_import_fron_json_file_path() {
 		
 		// file structure_json_file_path
-			$structure_json_file_path			= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
+			$structure_json_file_path			= (defined('STRUCTURE_DOWNLOAD_JSON_FILE')
+				? STRUCTURE_DOWNLOAD_JSON_FILE
+				: STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
 			$overwrite_structure_json_file_path	= DEDALO_MEDIA_BASE_PATH . '/import/files/' . 'structure.json';
 
 
