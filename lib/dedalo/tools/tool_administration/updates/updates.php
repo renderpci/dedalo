@@ -7,10 +7,92 @@ $updates = new stdClass();
 
 
 // to use in next update:
-	// CREATE INDEX "jer_dd_terminoID_norden" ON "jer_dd" ("terminoID", "norden");
-	// CREATE INDEX "jer_dd_parent_esdescriptor" ON "jer_dd" ("parent", "esdescriptor");
-	// CREATE INDEX "matrix_descriptors_dd_dato_parent_tipo" ON "matrix_descriptors_dd" ("dato", "parent", "tipo");
-	// CREATE INDEX "jer_dd_parent_esdescriptor_esmodelo" ON "jer_dd" ("parent", "esdescriptor", "esmodelo");
+
+
+
+$v=562; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 5;
+	$updates->$v->version_medium		= 6;
+	$updates->$v->version_minor			= 2;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major		= 5;
+	$updates->$v->update_from_medium	= 6;
+	$updates->$v->update_from_minor		= 1;
+
+	
+	$RecordObj_dd = new RecordObj_dd('dd1521');
+	$parent = $RecordObj_dd->get_parent();
+
+	if (is_null($parent)) {
+
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= 'Important! Before run this update, you must update your ontology version to 15-03-2021 or later';
+		$updates->$v->alert_update[] = $alert;
+		
+		debug_log(__METHOD__." ERROR 562. YOU MUST UPDATE YOUR ONTOLOGY VERSION TO THE LAST VERSION WITH DEFINED SECTION: dd1521", logger::ERROR);
+			
+		$updates->$v->show_button_run_update_version = false;
+
+	}else{
+		
+		# Update datos to section_data
+			$script_obj = new stdClass();
+				$script_obj->info			= "This update checks and updates the old values of table 'matrix_activity'. This action can take a long time on busy systems";
+				$script_obj->script_class	= "tool_administration";
+				$script_obj->script_method	= "update_matrix_activity_records";
+				$script_obj->script_vars	= []; // Note that only ONE argument as array is sended
+			$updates->$v->run_scripts[] = $script_obj;
+	}
+
+
+$v=561; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 5;
+	$updates->$v->version_medium		= 6;
+	$updates->$v->version_minor			= 1;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major		= 5;
+	$updates->$v->update_from_medium	= 6;
+	$updates->$v->update_from_minor		= 0;
+
+
+	$alert					= new stdClass();
+	$alert->notification	= 'V '.$v;
+	$alert->command			= 'This update creates the table \'matrix_stats\' if not already exists to manage user activity stats cache. Also, updates all matrix_activity table data.';
+	$updates->$v->alert_update[] 	= $alert;
+
+
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+		DROP TABLE IF EXISTS \"matrix_stats\";
+		
+		CREATE TABLE \"matrix_stats\" ( like \"matrix_list\" INCLUDING CONSTRAINTS INCLUDING INDEXES );
+		
+		CREATE SEQUENCE IF NOT EXISTS public.matrix_stats_id_seq
+		INCREMENT 1
+		START 1
+		MINVALUE 1
+		MAXVALUE 9223372036854775807
+		CACHE 1;
+
+		ALTER TABLE matrix_stats ALTER COLUMN id SET DEFAULT nextval('matrix_stats_id_seq');
+	");
+
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+		CREATE INDEX IF NOT EXISTS "jer_dd_terminoID_norden" ON "jer_dd" ("terminoID", "norden");
+		CREATE INDEX IF NOT EXISTS "jer_dd_parent_esdescriptor" ON "jer_dd" ("parent", "esdescriptor");
+		CREATE INDEX IF NOT EXISTS "matrix_descriptors_dd_dato_parent_tipo" ON "matrix_descriptors_dd" ("dato", "parent", "tipo");
+		CREATE INDEX IF NOT EXISTS "jer_dd_parent_esdescriptor_esmodelo" ON "jer_dd" ("parent", "esdescriptor", "esmodelo");
+	');	
+
 
 
 $v=560; #####################################################################################
