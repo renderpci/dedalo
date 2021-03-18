@@ -712,32 +712,33 @@ class login extends common {
 			self::init_cookie_auth();
 		}
 
+		// close script session
+			// session_write_close();
+
 		# BACKUP ALL
 		if( DEDALO_BACKUP_ON_LOGIN ) {
 			# Close script session
-			session_write_close();
+			// session_write_close();
 			require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
 			$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
 			$backup_info = $backup_secuence_response->msg;
 		}else{
 			$backup_info = 'Deactivated "on login backup" for this domain';
 		}
-
-
+		
 		try {
-
-			# REMOVE LOCK_COMPONENTS ELEMENTS
-			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-				lock_components::force_unlock_all_components($user_id);
-			}
+			// remove lock_components elements
+				if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+					lock_components::force_unlock_all_components($user_id);
+				}
 
 			# GET ENTITY DIFFUSION TABLES / SECTIONS . Store for speed
 			# $entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
-			# $_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
-
+			# $_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;	
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__." $e ", logger::CRITICAL);
+			trigger_error($e);
 		}
 
 		// add cookie dedalo_logged (used to check some features in same domain web)
@@ -1055,6 +1056,9 @@ class login extends common {
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 				lock_components::force_unlock_all_components($user_id);
 			}
+
+		// user activity update stats
+			diffusion_section_stats::update_user_activity_stats($user_id);
 
 		// LOGIN ACTIVITY REPORT
 			self::login_activity_report(

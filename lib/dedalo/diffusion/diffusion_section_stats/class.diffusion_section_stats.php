@@ -6,7 +6,14 @@
 #require_once 'class.section_preprocess.php';
 
 # tipo de las secciones de estadísticas diarias
-define('DEDALO_DAILY_STATS_SECTION_TIPO', 'dd70');
+	define('DEDALO_DAILY_STATS_SECTION_TIPO', 'dd70');
+
+// SECTION USER ACTIVITY STAT
+	define('USER_ACTIVITY_SECTION_TIPO', 	'dd1521');
+	define('USER_ACTIVITY_USER_TIPO', 		'dd1522');
+	define('USER_ACTIVITY_TYPE_TIPO', 		'dd1531');
+	define('USER_ACTIVITY_DATE_TIPO', 		'dd1530');
+	define('USER_ACTIVITY_TOTALS_TIPO', 	'dd1523');
 
 
 
@@ -428,9 +435,11 @@ class diffusion_section_stats extends diffusion {
 						$options_search_from_user->limit		= '';
 						$options_search_from_user->order_by		= 'count';
 						$options_search_from_user->filter_custom= $filter_custom;
-							#dump($options_search_from_user,'$options_search_from_user');die();
-						$section_rows 	= search::get_records_data($options_search_from_user);
+						
+						// $section_rows 	= search::get_records_data($options_search_from_user);
 							#dump($section_rows,'$section_rows');
+						$section_rows 	= new stdClass();
+							$section_rows->result = [];
 
 						$result	= $section_rows->result;
 
@@ -975,14 +984,900 @@ class diffusion_section_stats extends diffusion {
 	*/
 	static function sort_elements_by_x($a, $b) {
 		if($a->x == $b->x){ return 0 ; }
+		
 		return ($a->x < $b->x) ? -1 : 1;
 	}//end sort_elements_by_x
 
 
 
+	/**
+	* GET_INTERVAL_RAW_ACTIVITY_DATA
+	* Creates an object with all user actions summarized by action type in the given date range
+	* @param int $user_id
+	* @param string $date_in
+	*	Like 2019-12-31
+	* @param string $date_out
+	*	Like 2020-12-31
+	*
+	* @return array $totals_data
+	*/
+	public static function get_interval_raw_activity_data($user_id, $date_in, $date_out) {
+		
+		// tipos
+			$what_tipo	= logger_backend_activity::$_COMPONENT_QUE['tipo'];		// expected dd545
+			$where_tipo	= logger_backend_activity::$_COMPONENT_DONDE['tipo'];	// expected dd546
+			$when_tipo	= logger_backend_activity::$_COMPONENT_CUANDO['tipo'];	// expected dd547	
+
+		// base objects
+			$what_obj		= new stdClass();
+			$where_obj		= new stdClass();
+			$when_obj		= new stdClass();
+			$publish_obj	= new stdClass();
+		
+		// matrix_activity. Get data from current user in range
+			$strQuery = '
+				SELECT *
+				FROM "matrix_activity"
+				WHERE 
+				"date" between \''.$date_in.'\' and \''.$date_out.'\'
+				AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","type":"'.DEDALO_RELATION_TYPE_LINK.'","from_component_tipo":"dd543"}]\'
+			';
+			$result   = pg_query(DBi::_getConnection(), $strQuery);
+			if (!$result) {
+				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
+				return false;
+			}
+
+		// iterate found records
+		while ($row = pg_fetch_object($result)) {
+
+			$section_id	= (int)$row->section_id;
+			$datos		= json_decode($row->datos);
+
+			$found_old_data = false;
+
+			// what
+				$key = $datos->components->{$what_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				if ($key!==false) {
+
+					// deal with old activity data format
+					if (!is_string($key)) {
+						$key = tool_administration::format_old_activity_value($key);
+						if ($key===false) {
+							debug_log(__METHOD__." ERROR. IGNORED INVALID what DATA $what_tipo - $section_id - ".to_string($key), logger::ERROR);
+							continue;
+						}else{
+							$component_dato = json_decode('{
+								"dato": {
+									"lg-nolan": "'.$key.'"
+								}
+							}');
+							$datos->components->{$what_tipo} = $component_dato;
+							$found_old_data = true;
+						}
+					}
+
+					$what_obj->{$key} = isset($what_obj->{$key})
+						? $what_obj->{$key} + 1
+						: 1;
+				}
+
+			// where
+				$key = $datos->components->{$where_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				if ($key!==false) {
+
+					// deal with old activity data format
+					if (!is_string($key)) {
+						$key = tool_administration::format_old_activity_value($key);
+						if ($key===false) {
+							debug_log(__METHOD__." ERROR. IGNORED INVALID where DATA $where_tipo - $section_id - ".to_string($key), logger::ERROR);
+							continue;
+						}else{
+							$component_dato = json_decode('{
+								"dato": {
+									"lg-nolan": "'.$key.'"
+								}
+							}');
+							$datos->components->{$where_tipo} = $component_dato;
+							$found_old_data = true;
+						}
+					}				
+
+					// take care to manage publish cases in different way
+					switch (true) {
+						case ($key==='dd1223'): // last publish
+							// get record msg (dd551) info to calculate published section tipo
+							$msg = $datos->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? false;
+							if ($msg!==false) {								
+								$_section_tipo = $msg->top_tipo ?? $msg->section_tipo ?? false;
+								if ($_section_tipo!==false) {																	
+									$publish_obj->{$_section_tipo} = isset($publish_obj->{$_section_tipo})
+										? $publish_obj->{$_section_tipo} + 1
+										: 1;
+								}	
+							}
+							break;
+						case ($key==='dd271' || $key==='dd1224' || $key==='dd1225'): // first publish, first publish user, last publish user
+							// ignore it ..
+							break;
+						default:
+							$where_obj->{$key} = isset($where_obj->{$key})
+								? $where_obj->{$key} + 1
+								: 1;
+							break;
+					}
+				}
+
+			// when
+				$key = $datos->components->{$when_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				if ($key!==false) {
+
+					if (!is_string($key)) {
+						debug_log(__METHOD__." ERROR. IGNORED INVALID when DATA $when_tipo - $section_id - ".to_string($key), logger::ERROR);
+						continue;
+					}
+
+					$dd_date	= new dd_date();
+					$date_value	= $dd_date->get_date_from_timestamp( $key );
+					$hour		= $date_value->hour; 
+
+					$when_obj->{$hour} = isset($when_obj->{$hour})
+						? $when_obj->{$hour} + 1
+						: 1; 
+				}
+
+			// update old activity data cases
+				if ($found_old_data===true) {
+					// note that '$datos' is already modified
+					tool_administration::update_activity_data($row, $datos);
+				}
+			
+		}//end while ($rows = pg_fetch_assoc($result))
+
+		
+		// merge and verticalize data to store it
+			$totals_data = [];
+			foreach ($what_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'what';
+					$item->tipo		= $key;
+					$item->value	= $value;
+				$totals_data[] = $item;
+			}
+			foreach ($where_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'where';
+					$item->tipo		= $key;
+					$item->value	= $value;
+				$totals_data[] = $item;
+			}
+			foreach ($when_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'when';
+					$item->hour		= $key;
+					$item->value	= $value;
+				$totals_data[] = $item;
+			}
+			foreach ($publish_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'publish';
+					$item->tipo		= $key;
+					$item->value	= $value;
+				$totals_data[] = $item;
+			}
+
+
+		return $totals_data;
+	}//end get_interval_raw_activity_data
 
 
 
+	/**
+	* SAVE_USER_ACTIVITY
+	* @return int section_id
+	*	The section id created on save
+	*/
+	public static function save_user_activity($totals_data, $user_id, $type, $year, $month=null, $day=null) {
+
+		// check minimum version requirements 5.6.1
+			$required_version = [5,6,1];
+			if(!tool_administration::is_valid_data_version($required_version)) {
+				debug_log(__METHOD__." ERROR. YOU MUST UPDATE YOUR DATA VERSION TO ".json_encode($required_version)." OR LATER! ".to_string(), logger::ERROR);
+				return false;
+			}
+		
+		// creates a new section
+			$section_tipo	= USER_ACTIVITY_SECTION_TIPO; // 'dd1521';
+			$section		= section::get_instance(null, $section_tipo, 'edit', false);
+			$section_id		= $section->Save();
+			if (empty($section_id)) {
+				debug_log(__METHOD__." ERROR. UNABLE TO CREATE A NEW SECTION RECORD IN SECTION $section_tipo".to_string(), logger::ERROR);
+				return false;
+			}
+
+		// user. Int mandatory like 2
+			(function($tipo, $value) use($section_tipo, $section_id){
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance($model,
+															 $tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+				$locator = new locator();
+					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+					$locator->set_section_id($value);
+					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				
+				$data = [$locator];
+				$component->set_dato($data);
+				$component->Save();
+			})(USER_ACTIVITY_USER_TIPO, $user_id); // dd1522
+
+		// type. String, It can be one of these values: year, month, day
+			(function($tipo, $value) use($section_tipo, $section_id){
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance($model,
+															 $tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+				$data = [$value];
+				$component->set_dato($data);
+				$component->Save();
+			})(USER_ACTIVITY_TYPE_TIPO, $type); // dd1531
+
+		// date 
+			(function($tipo, $year, $month, $day) use($section_tipo, $section_id){
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance($model,
+															 $tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+				$date = new stdClass();
+					$date->year		= $year;
+					$date->month	= $month;
+					$date->day		= $day;
+
+				$dd_date = new dd_date($date);
+				
+				$data = new stdClass();
+					$data->start = $dd_date;
+
+				$component->set_dato([$data]);
+				$component->Save();
+			})(USER_ACTIVITY_DATE_TIPO, $year, $month, $day); // dd1530
+
+		// totals. Array of objects mandatory like [{"dd696": 24, "dd693": 110}]
+			(function($tipo, $value) use($section_tipo, $section_id){
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance($model,
+															 $tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+				$data = $value;
+				$component->set_dato($data);
+				$component->Save();
+			})(USER_ACTIVITY_TOTALS_TIPO, $totals_data); // dd1523		
+		
+
+		return $section_id;
+	}//end save_user_activity
+
+
+
+	/**
+	* UPDATE_USER_ACTIVITY_STATS
+	* Function called on user login
+	* It verifies all user activity data history
+	* It could take a long time to process (!)
+	* @return object $response
+	*/
+	public static function update_user_activity_stats($user_id) {
+
+		$start_time = start_time();
+
+		debug_log(__METHOD__." Updating user activity of user: $user_id".to_string(), logger::DEBUG);
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed. ';
+
+		// check minimum version requirements 5.6.1
+			$required_version = [5,6,1];
+			if(!tool_administration::is_valid_data_version($required_version)) {
+				debug_log(__METHOD__." ERROR. YOU MUST UPDATE YOUR DATA VERSION TO ".json_encode($required_version)." OR LATER! ".to_string(), logger::ERROR);
+				$response->msg .= 'Invalid data version ';
+				return $response;
+			}
+
+		// check structure. valid USER_ACTIVITY_SECTION_TIPO : dd1521
+			$RecordObj_dd = new RecordObj_dd(USER_ACTIVITY_SECTION_TIPO);
+			$parent = $RecordObj_dd->get_parent();
+			if (is_null($parent)) {
+				debug_log(__METHOD__." ERROR. YOU MUST UPDATE YOUR STRUCTURE VERSION TO THE LAST VERSION WITH DEFINED SECTION: ".USER_ACTIVITY_SECTION_TIPO, logger::ERROR);
+				$response->msg .= 'Invalid structure/ontology version ';
+				return $response;
+			}
+
+
+		// time vars
+			$today		= new DateTime();
+			$yesterday	= new DateTime(); $yesterday->modify('-1 day'); // or $yesterday->sub(new DateInterval('P1D'));
+			
+		// get last saved user activity stats
+			$sqo = json_decode('{
+			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			  "limit": 1,
+			  "offset": 0,
+			  "select": [],
+			  "filter": {
+			    "$and": [
+			      {
+			        "q": "[{\"section_tipo\":\"'.DEDALO_SECTION_USERS_TIPO.'\",\"section_id\":\"'.$user_id.'\",\"from_component_tipo\":\"'.USER_ACTIVITY_USER_TIPO.'\"}]",
+			        "q_operator": null,
+			        "path": [
+			          {
+			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			            "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
+			            "modelo": "component_autocomplete",
+			            "name": "User"
+			          }
+			        ]
+			      }
+			    ]
+			  },
+			  "order": [
+			    {
+			      "direction": "DESC",
+			      "path": [
+			        {
+			          "name": "Date",
+			          "modelo": "component_date",
+			          "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			          "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'"
+			        }
+			      ]
+			    }
+			  ]
+			}');
+			# Search records
+			$search_development2 = new search_development2($sqo);
+			$search_result 		 = $search_development2->search();
+			$ar_records 		 = $search_result->ar_records;
+
+			$activity_filter_beginning = isset($ar_records[0])
+				? (function($row){
+
+					$section_id		= $row->section_id;
+					$section_tipo	= $row->section_tipo;
+
+					$model		= RecordObj_dd::get_modelo_name_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
+					$component	= component_common::get_instance($model,
+																 USER_ACTIVITY_DATE_TIPO,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+					$dato			= $component->get_dato();
+					$current_date	= reset($dato);
+					$dd_date		= new dd_date($current_date->start);
+					$timestamp		= $dd_date->get_dd_timestamp("Y-m-d");
+
+					// all records after last saved + 1 day
+					$begin			= new DateTime($timestamp);
+					$beginning_date	= $begin->modify('+1 day')->format("Y-m-d");
+
+					$filter = 'AND date > \''.$beginning_date.'\'';
+
+					return $filter;
+				  })($ar_records[0])
+				: '';
+
+		// do not include today at any time because it is not complete yet			
+			$activity_filter_beginning .= ' AND date < \''.$today->format("Y-m-d").'\'';
+
+		// last activity record of current user
+			$strQuery = '
+				SELECT *
+				FROM "matrix_activity"
+				WHERE
+				datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
+				'.$activity_filter_beginning.'
+				ORDER BY date ASC
+				LIMIT 1
+			';
+			$result = pg_query(DBi::_getConnection(), $strQuery);
+			if (!$result) {
+				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
+				return false;
+			}
+			$row = pg_fetch_object($result);
+			if (!$row || empty($row->date)) {
+				debug_log(__METHOD__." Skip. Not computable result found for user $user_id ".to_string(), logger::DEBUG);
+				$response->msg .= 'Skip. Not computable result found for user '.$user_id;
+				return $response;
+			}
+			
+			// dd date object
+				$dd_date	= new dd_date();
+				$date_value	= $dd_date->get_date_from_timestamp( $row->date );
+				if (empty($date_value->year)) {
+					debug_log(__METHOD__." Skip. Not valid date found for user $user_id ".to_string(), logger::ERROR);
+					$response->msg .= 'Not valid date found for user '.$user_id;
+					return $response;
+				}
+
+		// iterate from the beginning, in steps of a day
+			$begin	= new DateTime($row->date);			
+			$end	= $yesterday; // remember not to include today because it is not finished yet
+
+			// by day
+				$updated_days = [];
+				for($i = $begin; $i <= $end; $i->modify('+1 day')){
+
+					// date_in
+						$current_date	= $i->format("Y-m-d");
+						$date_in		= $current_date;
+
+					// date_out
+						$i_clon		= clone $i;
+						$i_clon->modify('+1 day');
+						$date_out	= $i_clon->format("Y-m-d");
+					
+					$totals_data = diffusion_section_stats::get_interval_raw_activity_data($user_id, $date_in, $date_out);					
+
+					// if not empty totals_data, add
+					if (count($totals_data)>0) {
+
+						$result = diffusion_section_stats::save_user_activity($totals_data, $user_id, $type='day', $i->format("Y"), $i->format("m"), $i->format("d"));
+						
+						$updated_days[] = (object)[
+							'user'	=> $user_id,
+							'date'	=> $i->format("Y-m-d")
+						];
+					}
+				}
+
+		// debug info			
+			$memory		= tools::get_memory_usage();
+			$total_time	= exec_time_unit($start_time,'ms').' ms';
+			debug_log(__METHOD__." -> updated_days:  ".to_string($updated_days)." - memory: $memory - total_time: $total_time", logger::DEBUG);
+		
+		$response->result	= $updated_days;
+		$response->msg		= 'Ok. Request done. ';
+
+		return $response;
+	}//end update_user_activity_stats
+
+
+
+	/**
+	* CROSS_USERS_RANGE_DATA
+	* Used by the widget user_activity (component info in users section)
+	* Calculates the whole user activity totals from precalculated data from section user activity.
+	* Also it is used to export data to diffusion by the component info that host the widget
+	* Date in and user_id are optionals actually
+	* @param string $date_in
+	*	Like 2020-12-31
+	* @param string $date_out
+	*	Like 2021-12-31
+	* @param int $user_id [optional]
+	*	Like 1 . Filter result by user if is not null. Default: null
+	* @param string $lang
+	*	LIke lg-eng. Used to resolve labels. Default: DEDALO_DATA_LANG
+	* @return object | false
+	*/
+	public static function cross_users_range_data($date_in, $date_out, $user_id=null, $lang=DEDALO_DATA_LANG) {
+
+		$start_time = start_time();
+
+		// dates parse. from 2020-12-30 to {"year":2020,"month":6,"day":1,"time":64937808000}
+			$dd_date_in = new dd_date();
+			$dd_date_in->get_date_from_timestamp( $date_in );
+			$time 		= dd_date::convert_date_to_seconds($dd_date_in);
+			$dd_date_in->set_time($time);
+
+			$dd_date_out = new dd_date();
+			$dd_date_out->get_date_from_timestamp( $date_out );
+			$time 		= dd_date::convert_date_to_seconds($dd_date_out);
+			$dd_date_out->set_time($time);
+
+		// user filter
+			$user_filter = !is_null($user_id)
+				? ',{
+			        "q": "[{\"section_tipo\":\"'.DEDALO_SECTION_USERS_TIPO.'\",\"section_id\":\"'.$user_id.'\",\"from_component_tipo\":\"'.USER_ACTIVITY_USER_TIPO.'\"}]",
+			        "q_operator": null,
+			        "path": [
+			          {
+			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			            "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
+			            "modelo": "component_autocomplete",
+			            "name": "User"
+			          }
+			        ]
+			      }'
+				: '';
+		
+		// get all user activity records from user_activity_section in the range
+			$sqo = json_decode('{
+			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			  "limit": 0,
+			  "offset": 0,
+			  "select": [],
+			  "filter": {
+			    "$and": [			      
+			      {
+	                "q": "{\"start\":{\"op\":null,\"day\":'.$dd_date_in->day.',\"month\":'.$dd_date_in->month.',\"year\":'.$dd_date_in->year.',\"time\":'.$dd_date_in->time.'}}",
+	                "q_operator": ">",
+	                "path": [
+			          {
+			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
+			            "modelo": "component_date",
+			            "name": "Date"
+			          }
+			        ]
+			      },
+			      {
+	                "q": "{\"start\":{\"op\":null,\"day\":'.$dd_date_out->day.',\"month\":'.$dd_date_out->month.',\"year\":'.$dd_date_out->year.',\"time\":'.$dd_date_out->time.'}}",
+	                "q_operator": "<=",
+	                "path": [
+			          {
+			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
+			            "modelo": "component_date",
+			            "name": "Date"
+			          }
+			        ]
+			      }
+			      '.$user_filter.'
+			    ]
+			  },
+			  "order": [
+			    {
+			      "direction": "ASC",
+			      "path": [
+			        {
+			          "name": "Date",
+			          "modelo": "component_date",
+			          "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			          "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'"
+			        }
+			      ]
+			    }
+			  ]
+			}');
+			
+			# Search records
+			$search_development2	= new search_development2($sqo);
+			$search_result			= $search_development2->search();
+			$ar_records				= $search_result->ar_records;			
+			if (empty($ar_records)) {
+				return false;
+			}
+			
+		// add selectors
+			$add_who_data		= true;
+			$add_what_data		= true;
+			$add_where_data		= true;
+			$add_when_data		= true;
+			$add_publish_data	= true;
+
+		// data
+			$who_data		= [];
+			$what_data		= [];
+			$where_data		= [];
+			$when_data		= [];
+			$publish_data	= [];
+
+		// objects
+			$who_data_obj		= new stdClass();
+			$what_data_obj		= new stdClass();
+			$where_data_obj		= new stdClass();
+			$when_data_obj		= new stdClass();
+			$publish_data_obj	= new stdClass();
+
+			// add all hours to preserve holes
+				for ($i=0; $i < 24; $i++) { 
+					$when_data_obj->{$i} = (object)[
+						'key'	=> $i,
+						'label'	=> str_pad($i, 2, '0', STR_PAD_LEFT),
+						'value'	=> 0
+					];
+				}
+
+			foreach ($ar_records as $row) {
+
+				$datos	= json_decode($row->datos);
+				$totals	= json_decode($datos->components->{USER_ACTIVITY_TOTALS_TIPO}->dato->{DEDALO_DATA_NOLAN});
+								
+				// who
+				if ($add_who_data===true) {
+					// user
+						$user = array_find($datos->relations, function($item){
+							return $item->from_component_tipo===USER_ACTIVITY_USER_TIPO && $item->section_tipo===DEDALO_SECTION_USERS_TIPO;
+						});
+					// actions totals
+						$actions_totals = array_reduce($totals, function($carry, $item){
+							if ($item->type==='what') {
+								$carry += $item->value;
+							}
+							return $carry;
+						}, 0);
+					// add data
+						$item_key = $user->section_id;
+						if (isset($who_data_obj->{$item_key})) {
+							$who_data_obj->{$item_key}->value += $actions_totals;
+						}else{
+
+							$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
+							$component	= component_common::get_instance($model_name,
+																		 DEDALO_USER_NAME_TIPO,
+																		 $user->section_id,
+																		 'list',
+																		 $lang,
+																		 $user->section_tipo);
+							$label = $component->get_valor();
+
+							$who_data_obj->{$item_key} = new stdClass();
+								$who_data_obj->{$item_key}->value	= $actions_totals;
+								$who_data_obj->{$item_key}->label	= $label;
+								$who_data_obj->{$item_key}->key		= $user->section_id;
+						}
+				}
+
+				// what
+				if ($add_what_data===true) {
+					// what totals
+						$what_totals = array_filter($totals, function($item){
+							return $item->type==='what';
+						});
+					// add data
+						foreach ($what_totals as $item) {
+
+							$item_key = $item->tipo;
+							if (isset($what_data_obj->{$item_key})) {
+								$what_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$what_data_obj->{$item_key} = new stdClass();
+									$what_data_obj->{$item_key}->key	= $item->tipo;
+									$what_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$what_data_obj->{$item_key}->value	= $item->value;
+							}
+						}
+				}
+
+				// where
+				if ($add_where_data===true) {
+					// where totals
+						$where_totals = array_filter($totals, function($item){
+							return $item->type==='where';
+						});
+						// dump($where_totals, ' where_totals ++ '.to_string());
+					// add data
+						foreach ($where_totals as $item) {
+							
+							$item_key = $item->tipo;
+							if (isset($where_data_obj->{$item_key})) {
+								$where_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$where_data_obj->{$item_key} = new stdClass();
+									$where_data_obj->{$item_key}->key	= $item->tipo;
+									$where_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$where_data_obj->{$item_key}->value	= $item->value;	
+							}
+						}
+				}
+
+				// when
+				if ($add_when_data===true) {
+					// when totals
+						$when_totals = array_filter($totals, function($item){
+							return $item->type==='when';
+						});
+					// add data
+						foreach ($when_totals as $item) {
+
+							$item_key = $item->hour;
+							if (isset($when_data_obj->{$item_key})) {
+								$when_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$when_data_obj->{$item_key} = new stdClass();
+									$when_data_obj->{$item_key}->key	= $item->hour;
+									$when_data_obj->{$item_key}->label	= str_pad($item->hour, 2, '0', STR_PAD_LEFT);
+									$when_data_obj->{$item_key}->value	= $item->value;	
+							}
+						}
+				}
+
+				// publish
+				if ($add_publish_data===true) {
+					// publish totals
+						$publish_totals = array_filter($totals, function($item){
+							return $item->type==='publish';
+						});
+					// add data
+						foreach ($publish_totals as $item) {							
+							$item_key = $item->tipo;
+							if (isset($publish_data_obj->{$item_key})) {
+								$publish_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$publish_data_obj->{$item_key} = new stdClass();
+									$publish_data_obj->{$item_key}->key		= $item->tipo;
+									$publish_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$publish_data_obj->{$item_key}->value	= $item->value;	
+							}
+						}
+				}
+			}
+			foreach ($who_data_obj as $key => $value) {
+				$who_data[] = $value;
+			}
+			foreach ($what_data_obj as $key => $value) {
+				$what_data[] = $value;
+			}
+			foreach ($where_data_obj as $key => $value) {
+				$where_data[] = $value;
+			}
+			foreach ($when_data_obj as $key => $value) {
+				$when_data[] = $value;
+			}
+			foreach ($publish_data_obj as $key => $value) {
+				$publish_data[] = $value;
+			}
+
+		// sort
+			$cmp_label = function($_a, $_b) {			
+				$a = $_a->label;
+				$b = $_b->label;
+
+				if ($a == $b) {
+			        return 0;
+			    }
+			    return ($a < $b) ? -1 : 1;
+			};
+			usort($when_data, $cmp_label);
+		
+		$totals = new stdClass();
+			$totals->who		= $who_data;
+			$totals->what		= $what_data;
+			$totals->where		= $where_data;
+			$totals->when		= $when_data;
+			$totals->publish	= $publish_data;
+
+		return $totals;
+	}//end cross_users_range_data
+
+
+
+	/**
+	* PARSE_TOTALS_FOR_JS
+	* @return array $ar_js_obj
+	*/
+	public static function parse_totals_for_js($totals, $tipo=USER_ACTIVITY_SECTION_TIPO) {
+		
+		$ar_js_obj = [];
+
+		// who
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUIEN['tipo']);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+						return (object)[
+							'x' => $el->label,
+							'y' => $el->value
+						];
+					}, $totals->who);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// what
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUE['tipo']);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_pie';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+						return (object)[
+							'x' => $el->label,
+							'y' => $el->value
+						];
+					}, $totals->what);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// where
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_DONDE['tipo']);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar_horizontal';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+
+						$label = strip_tags($el->label) . ' ['.$el->key.']';
+
+						return (object)[
+							'x' => $label,
+							'y' => $el->value
+						];
+					}, $totals->where);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// publish
+			$title = RecordObj_dd::get_termino_by_tipo('dd222');
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+
+						$label = strip_tags($el->label) . ' ['.$el->key.']';
+
+						return (object)[
+							'x' => $label,
+							'y' => $el->value
+						];
+					}, $totals->publish);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// when
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_CUANDO['tipo']);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+						return (object)[
+							'x' => strip_tags($el->label),
+							'y' => $el->value
+						];
+					}, $totals->when);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+
+		return $ar_js_obj;
+	}//end parse_totals_for_js
 
 
 
