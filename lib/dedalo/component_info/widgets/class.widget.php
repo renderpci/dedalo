@@ -15,7 +15,9 @@ class widget {
 	public $widget_name;
 	public $widget_info;
 	public $widget_path;
-	public $data_source;	
+	public $data_source;
+
+	public $dato;
 
 
 	/**
@@ -126,5 +128,15 @@ class widget {
 
 
 
+	/**
+	* SET_DATO
+	* @return 
+	*/
+	public function set_dato($dato) {
+		
+		$this->dato = $dato;
+	}//end set_dato
+
+
+
 }
-?>

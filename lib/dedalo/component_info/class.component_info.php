@@ -193,7 +193,5 @@ class component_info extends component_common {
 	}//end get_diffusion_dato
 
 
-
 	
 }//end component_info
-?>

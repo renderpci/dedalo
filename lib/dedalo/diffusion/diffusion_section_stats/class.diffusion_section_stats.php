@@ -36,7 +36,7 @@ class diffusion_section_stats extends diffusion {
 	/**
 	* CONSTRUCT
 	*/
-	function __construct( $caller_section_tipo=NULL, $fecha ) {
+	function __construct( $caller_section_tipo, $fecha ) {
 
 		if (empty($caller_section_tipo)) {
 			#throw new Exception("Error Processing Request. Empty caller_section_tipo", 1);
@@ -45,8 +45,9 @@ class diffusion_section_stats extends diffusion {
 		$this->fecha = $fecha;
 
 
-		$this->domain = 'dedalo';
-		//parent::__construct();
+		$this->domain = 'dedalo';		
+
+		return true;
 	}//end __construct
 
 
@@ -177,6 +178,7 @@ class diffusion_section_stats extends diffusion {
 
 		return (string)$date_sql;
 	}//end get_date_sql
+
 
 
 	/**

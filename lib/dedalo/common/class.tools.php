@@ -209,23 +209,18 @@ abstract class tools extends common {
 	*/
 	public static function get_memory_usage($mode='pid') {
 
-		if($mode==='pid') {
-			$pid = getmypid();
-     		exec("ps -o rss -p $pid", $output);
-     		$mem_usage = $output[1] *1024;
-		}else{
-			$mem_usage = memory_get_usage(true);
+		try {
+			if($mode==='pid') {
+				$pid = getmypid();
+				exec("ps -o rss -p $pid", $output);
+				$mem_usage = $output[1] *1024;
+			}else{
+				$mem_usage = memory_get_usage(true);
+			}
+		} catch (Exception $e) {
+			$mem_usage = $e->getMessage();
 		}
 
-
-        /*
-        if ($mem_usage < 1024)
-            return $mem_usage." bytes";
-        elseif ($mem_usage < 1048576)
-            return round($mem_usage/1024,2)." KB";
-        else
-            return round($mem_usage/1048576,2)." MB";
-        */
 		return tools::_formatBytes($mem_usage);
     }
 
