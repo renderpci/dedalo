@@ -18,12 +18,16 @@
 	$component_info 		= $this->get_component_info('json');
 	$file_name				= $modo;
 
-	if($permissions===0) return null;
+	if($permissions===0) {
+		debug_log(__METHOD__." Denied access to widget. Invalid permissions ".to_string($permissions), logger::DEBUG);
+		return null;
+	}
 
 	
 	# SHOW IN MODES
-	$show_in_modes = isset($propiedades->show_in_modes) ? (array)$propiedades->show_in_modes : array();	
-	if (!in_array($modo, $show_in_modes)) {	
+	$show_in_modes = isset($propiedades->show_in_modes) ? (array)$propiedades->show_in_modes : false;	
+	if ($show_in_modes!==false && !in_array($modo, $show_in_modes)) {
+		debug_log(__METHOD__." Prevented showing the widget. Ignored modo: ".to_string($modo), logger::DEBUG);
 		return null;
 	}	
 

@@ -138,24 +138,25 @@ class component_info extends component_common {
 			// 	: DEDALO_DATA_LANG;
 
 		// force calculate
-			$this->get_html();
-
+			$html = $this->get_html();
+			
 		// dato. Dato has been set when widget html is generated
 			$dato = [];
 			if (!isset($this->widgets)) {
 				
-				debug_log(__METHOD__." Error . widgets is not defined - get_diffusion_dato options ".to_string($options), logger::ERROR);
+				debug_log(__METHOD__." Error. this widgets is not defined - modo: $this->modo - get_diffusion_dato options ".to_string($options), logger::ERROR);
 				
 			}else{
 
 				foreach ($this->widgets as $current_widget) {
-
+					
 					$widget_name = $current_widget->widget_name;
 					if (!in_array($widget_name, $options->widget_name)) {
 						continue;
 					}
 
 					if (!isset($current_widget->dato)) {
+						debug_log(__METHOD__." Ignored widget without dato ".to_string($widget_name), logger::WARNING);
 						continue;
 					}
 					

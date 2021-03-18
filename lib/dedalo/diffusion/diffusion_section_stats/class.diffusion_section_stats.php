@@ -193,11 +193,11 @@ class diffusion_section_stats extends diffusion {
 					$options->$key = $value;
 				}
 			}
-			#dump($options,"options");
+			// dump($options,"options"); die();
 
 		# AR_DIFFUSION_MAP : Full map
 		$ar_diffusion_map = $this->get_ar_diffusion_map_section_stats( $options->section_tipo );
-			#dump($ar_diffusion_map,'$ar_diffusion_map '); die();
+			// dump($ar_diffusion_map,'$ar_diffusion_map '); die();
 
 		$this->diffusion_map_object = new stdClass();
 
@@ -245,8 +245,8 @@ class diffusion_section_stats extends diffusion {
 				if ($current_component_tipo=='dd1074') continue; # skip when
 				*/
 
-				$RecordObj_dd 				= new RecordObj_dd($current_component_tipo);
-				$propiedades 				= $RecordObj_dd->get_propiedades(true);
+				$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
+				$propiedades	= $RecordObj_dd->get_propiedades(true);
 					#dump($propiedades, ' propiedades ++ '.to_string());	continue;
 
 				#
@@ -1495,5 +1495,4 @@ class diffusion_section_stats extends diffusion {
 
 
 
-}
-?>
+}//end class

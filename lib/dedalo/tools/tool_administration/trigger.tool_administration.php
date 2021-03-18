@@ -895,7 +895,7 @@ function long_time_process($json_data) {
 
 	$response = new stdClass();
 		$response->result	= true;
-		$response->msg		= 'Ok. Request done. secondes: '.$seconds;
+		$response->msg		= 'Ok. Request done. seconds: '.$seconds;
 
 	return (object)$response;
 }///end long_time_process

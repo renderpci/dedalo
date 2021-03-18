@@ -434,7 +434,7 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function build_table_columns_data(stdClass $request_options) {
 		// $start_time = start_time();
-
+		
 		// options
 			$options = new stdClass();
 				$options->table_tipo					= null;
