@@ -10,6 +10,27 @@ $updates = new stdClass();
 
 
 
+$v=580; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 8;
+	$updates->$v->version_minor 	 = 0;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 6;
+	$updates->$v->update_from_minor  = 2;
+
+
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+		VACUUM ANALYZE;
+	");
+
+
+
 $v=562; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -84,6 +105,10 @@ $updates->$v = new stdClass();
 		CACHE 1;
 
 		ALTER TABLE matrix_stats ALTER COLUMN id SET DEFAULT nextval('matrix_stats_id_seq');
+	");
+
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+		VACUUM ANALYZE matrix_activity;
 	");
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
