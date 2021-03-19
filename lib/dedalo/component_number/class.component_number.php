@@ -205,7 +205,27 @@ class component_number extends component_common {
 		//$sequence_separator = ',';
 
         switch (true) {
-        	
+
+        	# EMPTY VALUE
+			case ($q==='!*'):
+				$operator = 'IS NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= $q_clean;
+				// to alow use IS NULL, change the type to string
+				$query_object->type = 'string';
+				break;
+
+			# NOT EMPTY
+			case ($q==='*'):
+				$operator = 'IS NOT NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= $q_clean;
+				// to alow use IS NOT NULL, change the type to string
+				$query_object->type = 'string';
+				break;
+
         	# BETWEEN
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
@@ -291,7 +311,7 @@ class component_number extends component_common {
 				$q_clean  = str_replace('+', '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';	
+				$query_object->q_parsed	= '\''.$q_clean.'\'';	
 				break;
 		}//end switch (true) {		
 
@@ -309,13 +329,15 @@ class component_number extends component_common {
 	public function search_operators_info() {
 		
 		$ar_operators = [
-			'...' 	=> 'entre',
-			#',' 	=> 'secuencia',
-			'>=' 	=> 'mayor_o_igual_que',
+			'*'		=> 'no_vacio', // not null
+			'!*'	=> 'campo_vacio', // null
+			'...'	=> 'entre',
+			'>='	=> 'mayor_o_igual_que',
 			'<='	=> 'menor_o_igual_que',
-			'>' 	=> 'mayor_que',
+			'>'		=> 'mayor_que',
 			'<'		=> 'menor_que',
-			#'=' 	=> 'igual'
+			#','	=> 'secuencia',
+			#'='	=> 'igual'
 		];
 
 		return $ar_operators;
