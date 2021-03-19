@@ -2295,8 +2295,9 @@
 	
 	Valencia 19-03-2021 5.8.1
 		Fixed php compatibility issues on update_activity_data method
+		Added updates dato version from 5.6.2 to 5.8.0 to unify version data and software numbers
 
-
+	
 
 	[/HISTORY]
 
@@ -2327,7 +2328,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '18-03-2021');
+	define('DEDALO_BUILD'	, '19-03-2021');
 
 
 	/*
