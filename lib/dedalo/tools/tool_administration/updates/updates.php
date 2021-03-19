@@ -105,6 +105,8 @@ $updates->$v = new stdClass();
 		CACHE 1;
 
 		ALTER TABLE matrix_stats ALTER COLUMN id SET DEFAULT nextval('matrix_stats_id_seq');
+
+		VACUUM ANALYZE matrix_activity;
 	");
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
