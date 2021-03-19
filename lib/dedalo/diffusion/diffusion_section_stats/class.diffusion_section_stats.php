@@ -994,7 +994,8 @@ class diffusion_section_stats extends diffusion {
 
 	/**
 	* GET_INTERVAL_RAW_ACTIVITY_DATA
-	* Creates an object with all user actions summarized by action type in the given date range
+	* Search records on table "matrix_activity" and creates an array of 
+	* objects with all user actions summarized by action type in the given date range
 	* @param int $user_id
 	* @param string $date_in
 	*	Like 2019-12-31
@@ -1023,8 +1024,9 @@ class diffusion_section_stats extends diffusion {
 				WHERE 
 				"date" between \''.$date_in.'\' and \''.$date_out.'\'
 				AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","type":"'.DEDALO_RELATION_TYPE_LINK.'","from_component_tipo":"dd543"}]\'
+				ORDER BY id ASC
 			';
-			$result   = pg_query(DBi::_getConnection(), $strQuery);
+			$result = pg_query(DBi::_getConnection(), $strQuery);
 			if (!$result) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
 				return false;
@@ -1038,8 +1040,13 @@ class diffusion_section_stats extends diffusion {
 
 			$found_old_data = false;
 
+			$what_key	= $datos->components->{$what_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+			$where_key	= $datos->components->{$where_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+			$when_key	= $datos->components->{$when_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+
+
 			// what
-				$key = $datos->components->{$what_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				$key = $what_key;
 				if ($key!==false) {
 
 					// deal with old activity data format
@@ -1059,13 +1066,22 @@ class diffusion_section_stats extends diffusion {
 						}
 					}
 
-					$what_obj->{$key} = isset($what_obj->{$key})
-						? $what_obj->{$key} + 1
-						: 1;
+					// take care to manage publish cases in different way
+					switch (true) {
+						case ($where_key==='dd1223' || $where_key==='dd271' || $where_key==='dd1224' || $where_key==='dd1225'):
+							// last publish first publish, first publish user, last publish user
+							// ignore it ..
+							break;
+						default:
+							$what_obj->{$key} = isset($what_obj->{$key})
+								? $what_obj->{$key} + 1
+								: 1;
+							break;
+					}
 				}
 
 			// where
-				$key = $datos->components->{$where_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				$key = $where_key;
 				if ($key!==false) {
 
 					// deal with old activity data format
@@ -1083,16 +1099,16 @@ class diffusion_section_stats extends diffusion {
 							$datos->components->{$where_tipo} = $component_dato;
 							$found_old_data = true;
 						}
-					}				
+					}
 
 					// take care to manage publish cases in different way
 					switch (true) {
 						case ($key==='dd1223'): // last publish
 							// get record msg (dd551) info to calculate published section tipo
 							$msg = $datos->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? false;
-							if ($msg!==false) {								
+							if ($msg!==false) {
 								$_section_tipo = $msg->top_tipo ?? $msg->section_tipo ?? false;
-								if ($_section_tipo!==false) {																	
+								if ($_section_tipo!==false) {
 									$publish_obj->{$_section_tipo} = isset($publish_obj->{$_section_tipo})
 										? $publish_obj->{$_section_tipo} + 1
 										: 1;
@@ -1111,7 +1127,7 @@ class diffusion_section_stats extends diffusion {
 				}
 
 			// when
-				$key = $datos->components->{$when_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+				$key = $when_key;
 				if ($key!==false) {
 
 					if (!is_string($key)) {
@@ -1176,6 +1192,20 @@ class diffusion_section_stats extends diffusion {
 
 	/**
 	* SAVE_USER_ACTIVITY
+	* Creates a new record on user activity section and
+	* store all data (user, type, date, totals)
+	* @param array $totals_data
+	*	Verticalized array of objects
+	* @param int $user_id
+	* @param string $type
+	*	Allow values:  year, month, day. Default is day
+	* @param int $year
+	*	Mandatory. Ex. 2021
+	* @param int $month
+	*	Optional. Ex. 12
+	* @param unt $day
+	*	Optional. Ex. 30
+	* 
 	* @return int section_id
 	*	The section id created on save
 	*/
@@ -1275,7 +1305,7 @@ class diffusion_section_stats extends diffusion {
 
 	/**
 	* UPDATE_USER_ACTIVITY_STATS
-	* Function called on user login
+	* Function called on user log in / log out
 	* It verifies all user activity data history
 	* It could take a long time to process (!)
 	* @return object $response
@@ -1391,7 +1421,7 @@ class diffusion_section_stats extends diffusion {
 				WHERE
 				datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				'.$activity_filter_beginning.'
-				ORDER BY date ASC
+				ORDER BY date ASC, id ASC
 				LIMIT 1
 			';
 			$result = pg_query(DBi::_getConnection(), $strQuery);
@@ -1594,6 +1624,18 @@ class diffusion_section_stats extends diffusion {
 					];
 				}
 
+			// who: exclude section info tipos to avoid fake totals
+				// $ar_exclude_tipos = [
+				// 	'dd200', // Created by user 
+				// 	'dd199', // Creation date
+				// 	'dd197', // Modified by user 
+				// 	'dd201', // Modification date
+				// 	'dd271', // First publication
+				// 	'dd1223', // Last publication 
+				// 	'dd1224', // First publication user
+				// 	'dd1225' //  Last publication user
+				// ];
+
 			foreach ($ar_records as $row) {
 
 				$datos	= json_decode($row->datos);
@@ -1605,9 +1647,9 @@ class diffusion_section_stats extends diffusion {
 						$user = array_find($datos->relations, function($item){
 							return $item->from_component_tipo===USER_ACTIVITY_USER_TIPO && $item->section_tipo===DEDALO_SECTION_USERS_TIPO;
 						});
-					// actions totals
-						$actions_totals = array_reduce($totals, function($carry, $item){
-							if ($item->type==='what') {
+					// actions totals (extrated from where totals)
+						$actions_totals = array_reduce($totals, function($carry, $item) {
+							if ($item->type==='where') {
 								$carry += $item->value;
 							}
 							return $carry;
@@ -1705,7 +1747,7 @@ class diffusion_section_stats extends diffusion {
 							return $item->type==='publish';
 						});
 					// add data
-						foreach ($publish_totals as $item) {							
+						foreach ($publish_totals as $item) {
 							$item_key = $item->tipo;
 							if (isset($publish_data_obj->{$item_key})) {
 								$publish_data_obj->{$item_key}->value += $item->value;
@@ -1717,7 +1759,10 @@ class diffusion_section_stats extends diffusion {
 							}
 						}
 				}
-			}
+
+			}//end foreach  rows
+
+		// convert data objects to vertical array
 			foreach ($who_data_obj as $key => $value) {
 				$who_data[] = $value;
 			}

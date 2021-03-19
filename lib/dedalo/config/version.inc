@@ -2297,6 +2297,10 @@
 		Fixed php compatibility issues on update_activity_data method
 		Added updates dato version from 5.6.2 to 5.8.0 to unify version data and software numbers
 
+
+	Valencia 19-03-2021 5.8.2
+		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals.
+
 	
 
 	[/HISTORY]
@@ -2322,7 +2326,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.1';
+	$DEDALO_VERSION = '5.8.2';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();

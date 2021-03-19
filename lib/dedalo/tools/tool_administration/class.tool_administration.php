@@ -2126,7 +2126,7 @@ class tool_administration extends tool_common {
 			debug_log(__METHOD__." Updated all records of matrix_activity ".to_string(), logger::DEBUG);
 
 		// update users stats
-			$strQuery = 'SELECT * FROM "matrix_users";';
+			$strQuery = 'SELECT * FROM "matrix_users" ORDER BY id ASC;';
 			$result   = pg_query(DBi::_getConnection(), $strQuery);
 			while ($row = pg_fetch_object($result)) {				
 				
