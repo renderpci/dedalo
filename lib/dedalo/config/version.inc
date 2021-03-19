@@ -2283,7 +2283,7 @@
 		Added tool layout print error notifications
 
 	
-	Valencia 17-03-2021 5.8.0
+	Valencia 18-03-2021 5.8.0
 		Increased max time for CURL get_remote_data on update structure to 300 (matrix_dd take long time to download on slow connections)
 		Added user activity statistics section with daily totals per user
 		Enabled the conditionals manager in updates (tool_administration)
@@ -2292,7 +2292,11 @@
 		Relaxed exceptions policy in some usual scenarios. Changed by trigger error
 		Added configurable diffusion resolve levels user input to allow overwrite default DEDALO_DIFFUSION_RESOLVE_LEVELS
 
-		
+	
+	Valencia 19-03-2021 5.8.1
+		Fixed php compatibility issues on update_activity_data method
+
+
 
 	[/HISTORY]
 
@@ -2317,7 +2321,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.0';
+	$DEDALO_VERSION = '5.8.1';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();

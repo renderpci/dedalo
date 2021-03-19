@@ -2067,15 +2067,15 @@ class tool_administration extends tool_common {
 				$new_section_dato	= json_encode($datos);
 				$table				= 'matrix_activity';
 				$strQuery_update	= 'UPDATE "'.$table.'" SET datos = $1 WHERE id = $2';
-				// $result_update	= pg_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
-				// if (!$result_update) {
-				// 	$response->msg .= " Error on UPDATE db record on table $table, id: $id. ".pg_last_error();
-				// 	return $response;
-				// }else{
-				// 	debug_log(__METHOD__." Update data activity record with old dato format - section_id: $section_id - ".to_string(), logger::WARNING);
-				// }
-				pg_send_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
-				$res = pg_get_result(DBi::_getConnection());				
+				$result_update	= pg_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
+				if (!$result_update) {
+					$response->msg .= " Error on UPDATE db record on table $table, id: $id. ".pg_last_error();
+					return $response;
+				}else{
+					debug_log(__METHOD__." Update data activity record with old dato format - section_id: $section_id - ".to_string(), logger::WARNING);
+				}
+				// pg_send_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
+				// $res = pg_get_result(DBi::_getConnection());				
 				debug_log(__METHOD__." Sent record to update activity data found with old dato format. id: $id ".to_string(), logger::WARNING);
 			}
 		
@@ -2114,12 +2114,16 @@ class tool_administration extends tool_common {
 			$total	= $row->total;
 			$done	= 0;
 
+		// callback_fn
+			$callback_fn = function($row){
+				tool_administration::update_activity_data($row);
+			};
 
-		self::iterate_rows($table='matrix_activity', $offset=0, $total, $done, $callback=function($row){
-			self::update_activity_data($row);
-		});
+		// iterate all rows
+			tool_administration::iterate_rows($table='matrix_activity', $offset=0, $total, $done, $callback_fn);
 
-		debug_log(__METHOD__." Updated all records of matrix_activity ".to_string(), logger::DEBUG);
+		// debug log
+			debug_log(__METHOD__." Updated all records of matrix_activity ".to_string(), logger::DEBUG);
 
 		// update users stats
 			$strQuery = 'SELECT * FROM "matrix_users";';
@@ -2148,12 +2152,8 @@ class tool_administration extends tool_common {
 		
 		$limit = 10000;
 
-		// debug 
-			try {
-				$memory = tools::get_memory_usage();
-			} catch (Exception $e) {
-				$memory = 'unknow';
-			}
+		// debug			
+			$memory = tools::get_memory_usage();			
 			debug_log(__METHOD__." Working group total: $total - limit: $limit - offset: $offset - done: $done - last_id: $last_id - memory: ".to_string($memory), logger::DEBUG);
 
 		// optimizing huge offset tables
@@ -2195,7 +2195,7 @@ class tool_administration extends tool_common {
 		// recursion
 			if ($done<$total) {
 				$offset = $done;
-				self::iterate_rows($table, $offset, $total, $done, $callback, $last_id);
+				tool_administration::iterate_rows($table, $offset, $total, $done, $callback, $last_id);
 			}
 
 		return true;
