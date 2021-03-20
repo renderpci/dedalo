@@ -1812,7 +1812,7 @@ class diffusion_section_stats extends diffusion {
 		$ar_js_obj = [];
 
 		// who
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUIEN['tipo']);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUIEN['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1833,7 +1833,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// what
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUE['tipo']);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUE['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1854,7 +1854,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// where
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_DONDE['tipo']);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_DONDE['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1878,7 +1878,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// publish
-			$title = RecordObj_dd::get_termino_by_tipo('dd222');
+			$title = RecordObj_dd::get_termino_by_tipo('dd222', DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1902,7 +1902,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// when
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_CUANDO['tipo']);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_CUANDO['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1974,329 +1974,330 @@ class diffusion_section_stats extends diffusion {
 	####################### OLD WORLD ###################################################################################################################
 
 
+
 	/**
 	* GET_MATRIX_STATS
 	* Recupera los datos completos de estadísticas de 'matrix_stats' que ya se guardaron con el trigger del cron
 	*/
-	protected function get_matrix_stats_DEPRECATED( $caller_section_tipo, $fecha_de_los_datos_custom=false ) {
-		#$fecha_de_los_datos_custom = "2014-04-26";
-
-		if ($fecha_de_los_datos_custom!==false) {
-			# CUSTOM DATE
-			# Se le pasa una fecha específica
-			# Verificamos el formato de fecha
-			preg_match("/\d{4}-\d{2}-\d{2}/", $fecha_de_los_datos_custom, $output_array);
-			if (empty($output_array[0])) {
-				throw new Exception("Error Processing Request. Wrong date format. Use YYY-MM-DD", 1);
-			}
-			$fecha_de_los_datos = $fecha_de_los_datos_custom;
-		}else{
-			# YESTERDAY DATE
-			# Por defecto
-			$date_yesterday		= component_date::get_timestamp_now_for_db( array('sub'=>'P1D') );
-			$fecha_de_los_datos	= date("Y-m-d", strtotime($date_yesterday));
-		}
-
-		# DIFFUSION_DOMAIN : Get structure tipo of current ('dedalo') diffusion_section_stats
-			$diffusion_domain = diffusion::get_my_diffusion_domain('dedalo',get_called_class());
-				#dump($diffusion_domain,'$diffusion_domain');
-
-			# SECTION_STATS_TIPO
-			$section_stats_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain, $modelo_name='section', $relation_type='children')[0];
-				#dump($section_stats_tipo,'$section_stats_tipo');die();
-
-			# FIX $section_stats_tipo
-			$this->section_stats_tipo = $section_stats_tipo;
-
-			# COMPONENT_DATE
-			#$component_date = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_stats_tipo, $modelo_name='component_date', $relation_type='children')[0];
-
-			# BUSCAMOS CON LA FECHA DADA
-			$arguments=array();
-			$arguments['strPrimaryKeyName']	= 'parent';
-			$arguments['dato:%like%']		= $fecha_de_los_datos ;	#date("Y-m-d", strtotime($timestamp));
-			$arguments['parent:not_like']	= 0;
-			$matrix_table 					= common::get_matrix_table_from_tipo($section_stats_tipo);
-			$RecordObj_matrix				= new RecordObj_matrix($matrix_table,NULL);
-			$ar_records						= $RecordObj_matrix->search($arguments);
-				#dump($ar_records,"ar_records ".print_r($arguments,true),array('arguments'=>$arguments)); dump(end($ar_records)); return;
-
-
-			if( empty($ar_records[0]) ) {
-				if(SHOW_DEBUG===true) dump($arguments,'$arguments '.$matrix_table.' '.print_r($ar_records,true));
-				$msg = "<div class=\"warning\">Warning. Date $fecha_de_los_datos not found [$matrix_table]</div>";
-				#throw new Exception($msg, 1);
-				#echo $msg;
-				return ;
-			}
-			#dump( $ar_records ,'$ar_records');
-
-			# Si hay varios, cogeremos el mas moderno que estará más actualizado
-			$parent = end($ar_records);
-
-			# AR_DIFFUSION_MAP : Full map
-			$ar_diffusion_map = $this->get_ar_diffusion_section_map( null );
-				#dump($ar_diffusion_map,'$ar_diffusion_map');
-
-			$ar_final=array();
-
-			foreach ($ar_diffusion_map as $key => $ar_value) {
+		// protected function get_matrix_stats_DEPRECATED( $caller_section_tipo, $fecha_de_los_datos_custom=false ) {
+		// 	#$fecha_de_los_datos_custom = "2014-04-26";
+
+		// 	if ($fecha_de_los_datos_custom!==false) {
+		// 		# CUSTOM DATE
+		// 		# Se le pasa una fecha específica
+		// 		# Verificamos el formato de fecha
+		// 		preg_match("/\d{4}-\d{2}-\d{2}/", $fecha_de_los_datos_custom, $output_array);
+		// 		if (empty($output_array[0])) {
+		// 			throw new Exception("Error Processing Request. Wrong date format. Use YYY-MM-DD", 1);
+		// 		}
+		// 		$fecha_de_los_datos = $fecha_de_los_datos_custom;
+		// 	}else{
+		// 		# YESTERDAY DATE
+		// 		# Por defecto
+		// 		$date_yesterday		= component_date::get_timestamp_now_for_db( array('sub'=>'P1D') );
+		// 		$fecha_de_los_datos	= date("Y-m-d", strtotime($date_yesterday));
+		// 	}
+
+		// 	# DIFFUSION_DOMAIN : Get structure tipo of current ('dedalo') diffusion_section_stats
+		// 		$diffusion_domain = diffusion::get_my_diffusion_domain('dedalo',get_called_class());
+		// 			#dump($diffusion_domain,'$diffusion_domain');
+
+		// 		# SECTION_STATS_TIPO
+		// 		$section_stats_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain, $modelo_name='section', $relation_type='children')[0];
+		// 			#dump($section_stats_tipo,'$section_stats_tipo');die();
+
+		// 		# FIX $section_stats_tipo
+		// 		$this->section_stats_tipo = $section_stats_tipo;
+
+		// 		# COMPONENT_DATE
+		// 		#$component_date = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_stats_tipo, $modelo_name='component_date', $relation_type='children')[0];
+
+		// 		# BUSCAMOS CON LA FECHA DADA
+		// 		$arguments=array();
+		// 		$arguments['strPrimaryKeyName']	= 'parent';
+		// 		$arguments['dato:%like%']		= $fecha_de_los_datos ;	#date("Y-m-d", strtotime($timestamp));
+		// 		$arguments['parent:not_like']	= 0;
+		// 		$matrix_table 					= common::get_matrix_table_from_tipo($section_stats_tipo);
+		// 		$RecordObj_matrix				= new RecordObj_matrix($matrix_table,NULL);
+		// 		$ar_records						= $RecordObj_matrix->search($arguments);
+		// 			#dump($ar_records,"ar_records ".print_r($arguments,true),array('arguments'=>$arguments)); dump(end($ar_records)); return;
+
+
+		// 		if( empty($ar_records[0]) ) {
+		// 			if(SHOW_DEBUG===true) dump($arguments,'$arguments '.$matrix_table.' '.print_r($ar_records,true));
+		// 			$msg = "<div class=\"warning\">Warning. Date $fecha_de_los_datos not found [$matrix_table]</div>";
+		// 			#throw new Exception($msg, 1);
+		// 			#echo $msg;
+		// 			return ;
+		// 		}
+		// 		#dump( $ar_records ,'$ar_records');
+
+		// 		# Si hay varios, cogeremos el mas moderno que estará más actualizado
+		// 		$parent = end($ar_records);
+
+		// 		# AR_DIFFUSION_MAP : Full map
+		// 		$ar_diffusion_map = $this->get_ar_diffusion_section_map( null );
+		// 			#dump($ar_diffusion_map,'$ar_diffusion_map');
+
+		// 		$ar_final=array();
+
+		// 		foreach ($ar_diffusion_map as $key => $ar_value) {
 
-				$related_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($key, $modelo_name='section', $relation_type='termino_relacionado')[0];
-					#dump($related_section_tipo,'$related_section_tipo');
-
-				$ar_map_related = array();
-				foreach ($ar_value as $stats_tipo) {
-
-					$related_component_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($stats_tipo, $modelo_name='component_', $relation_type='termino_relacionado')[0];
-						#dump($related_component_tipo,'related_component_tipo ' );
+		// 			$related_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($key, $modelo_name='section', $relation_type='termino_relacionado')[0];
+		// 				#dump($related_section_tipo,'$related_section_tipo');
+
+		// 			$ar_map_related = array();
+		// 			foreach ($ar_value as $stats_tipo) {
+
+		// 				$related_component_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($stats_tipo, $modelo_name='component_', $relation_type='termino_relacionado')[0];
+		// 					#dump($related_component_tipo,'related_component_tipo ' );
 
-						$related_component_modelo = RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
+		// 					$related_component_modelo = RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
 
-						# PORTAL : CASO PORTALES (El tipo es referido por 'portal_list' y definido en propiedades del puntero)
-						if ($related_component_modelo=='component_portal') {
-							$RecordObj_dd 	= new RecordObj_dd($stats_tipo);
-							$propiedades 	= $RecordObj_dd->get_propiedades();
-							$propiedades 	= json_decode($propiedades);
+		// 					# PORTAL : CASO PORTALES (El tipo es referido por 'portal_list' y definido en propiedades del puntero)
+		// 					if ($related_component_modelo=='component_portal') {
+		// 						$RecordObj_dd 	= new RecordObj_dd($stats_tipo);
+		// 						$propiedades 	= $RecordObj_dd->get_propiedades();
+		// 						$propiedades 	= json_decode($propiedades);
 
-							$related_component_tipo = $propiedades->portal_list[0];
-								#dump($related_component_tipo,'$related_component_tipo');
-						}
+		// 						$related_component_tipo = $propiedades->portal_list[0];
+		// 							#dump($related_component_tipo,'$related_component_tipo');
+		// 					}
 
-					$current_modelo = RecordObj_dd::get_modelo_name_by_tipo($stats_tipo,true);
-						#dump($current_modelo,'current_modelo '." $key - ". print_r($stats_tipo,true ) );
+		// 				$current_modelo = RecordObj_dd::get_modelo_name_by_tipo($stats_tipo,true);
+		// 					#dump($current_modelo,'current_modelo '." $key - ". print_r($stats_tipo,true ) );
 
-					$RecordObj_dd 	= new RecordObj_dd($stats_tipo);
-					$propiedades 	= $RecordObj_dd->get_propiedades();
-					$propiedades 	= json_decode($propiedades);
-						#dump($propiedades,'propiedades');
+		// 				$RecordObj_dd 	= new RecordObj_dd($stats_tipo);
+		// 				$propiedades 	= $RecordObj_dd->get_propiedades();
+		// 				$propiedades 	= json_decode($propiedades);
+		// 					#dump($propiedades,'propiedades');
 
-					$ar_map_related[$related_component_tipo] = array( 'modelo' => $current_modelo, 'propiedades' => $propiedades );
-				}
+		// 				$ar_map_related[$related_component_tipo] = array( 'modelo' => $current_modelo, 'propiedades' => $propiedades );
+		// 			}
 
 
-				##########
-				# SECTION : Current section stats from matrix_stats
-				if ($related_section_tipo==$caller_section_tipo  ) {
+		// 			##########
+		// 			# SECTION : Current section stats from matrix_stats
+		// 			if ($related_section_tipo==$caller_section_tipo  ) {
 
-					# COMPONENT_STATS
-					$component_stats = component_common::get_instance('component_stats', $key,$parent,'stats');
-						#dump($component_stats,'component_stats');
+		// 				# COMPONENT_STATS
+		// 				$component_stats = component_common::get_instance('component_stats', $key,$parent,'stats');
+		// 					#dump($component_stats,'component_stats');
 
-					$dato = $component_stats->get_dato()[$related_section_tipo];
-						#dump($dato,'dato');
+		// 				$dato = $component_stats->get_dato()[$related_section_tipo];
+		// 					#dump($dato,'dato');
 
-					# FILTER : Apply filter to result
-						# Filter records
-						$ar_records_filtered = array();
-						$ar_records = filter::get_ar_filter($related_section_tipo);
-							#dump($ar_records,'ar_records');
+		// 				# FILTER : Apply filter to result
+		// 					# Filter records
+		// 					$ar_records_filtered = array();
+		// 					$ar_records = filter::get_ar_filter($related_section_tipo);
+		// 						#dump($ar_records,'ar_records');
 
-						foreach ($ar_records as $key => $current_section_id) {
-							if (array_key_exists($current_section_id, $dato)) {
-								$ar_records_filtered[$current_section_id] = $dato[$current_section_id];
-							}
-						}
-						#dump($ar_records_filtered,'$ar_records_filtered');
+		// 					foreach ($ar_records as $key => $current_section_id) {
+		// 						if (array_key_exists($current_section_id, $dato)) {
+		// 							$ar_records_filtered[$current_section_id] = $dato[$current_section_id];
+		// 						}
+		// 					}
+		// 					#dump($ar_records_filtered,'$ar_records_filtered');
 
 
-					# PRIMERA PASADA (Suma los valores)
-						$results=array();
-						$total_records = count($ar_records_filtered);
-						foreach ($ar_records_filtered as $ar_value)
-						foreach ($ar_value as $current_component_tipo => $value) {
+		// 				# PRIMERA PASADA (Suma los valores)
+		// 					$results=array();
+		// 					$total_records = count($ar_records_filtered);
+		// 					foreach ($ar_records_filtered as $ar_value)
+		// 					foreach ($ar_value as $current_component_tipo => $value) {
 
-							#dump($current_component_tipo,'$current_component_tipo '.$current_component_tipo);
+		// 						#dump($current_component_tipo,'$current_component_tipo '.$current_component_tipo);
 
-							$component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-								#dump($component_modelo_name,'$component_modelo_name');
-							$results[$current_component_tipo] = $component_modelo_name::get_stats_value($current_component_tipo, $value);
+		// 						$component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+		// 							#dump($component_modelo_name,'$component_modelo_name');
+		// 						$results[$current_component_tipo] = $component_modelo_name::get_stats_value($current_component_tipo, $value);
 
-						}
-						#dump($results,'$results');
+		// 					}
+		// 					#dump($results,'$results');
 
-
-					# SEGUNDA PASADA (Resuelve los keys)
-						$ar_resolved=array();
-						foreach ($results as $current_component_tipo => $value) {
-
-							$component_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-
-							# RECUPERA EL MODELO DE GRÁFICO A MOSTRAR (PIE, BAR ...) Y LAS PROPIEDADES
-							if ( array_key_exists($current_component_tipo, $ar_map_related) ) {
-								$stats_model 		= $ar_map_related[$current_component_tipo]['modelo'];
-								$stats_propiedades 	= $ar_map_related[$current_component_tipo]['propiedades'];
-									#dump($stats_model,'stats_model');
-							}
-							#dump($component_modelo_name,'component_modelo_name - $current_component_tipo:'.$current_component_tipo." key:".$key);
-
-							$valor 					= $component_modelo_name::get_stats_value_resolved($current_component_tipo, $results[$current_component_tipo], $stats_model ,$stats_propiedades);
-							#$ar_final[] 			= $valor;
-							$ar_resolved = array_merge($ar_resolved, $valor);
-						}
-						$ar_final = array_merge($ar_final, $ar_resolved);
-						#dump($ar_final,'$ar_final');
-
-
-				}#end if ($related_section_tipo==$caller_section_tipo)
-
-
-				###########
-				# ACTIVITY
-				if($related_section_tipo==DEDALO_ACTIVITY_SECTION_TIPO ) {
-
-					# COMPONENT_STATS
-					$component_stats = component_common::get_instance('component_stats', $key, $parent, 'stats');
-						#dump($component_stats,'component_stats');
-
-					$dato = $component_stats->get_dato();
-						#dump($dato,'dato');
-
-					$path = array_key_path('section_tipo:'.$caller_section_tipo, $dato);
-						#dump($path,'$path');
-
-					if (!$path) {
-						#return "No activity data exists for this section";
-						return null;
-					}
-
-					$ar_section_activity =& array_path($dato, $path);
-						#dump($ar_section_activity,'$ar_section_activity section '.$caller_section_tipo);
-
-					# FILTER
-					# Filter records
-						$ar_records_filtered = array();
-						$ar_records = filter::get_ar_filter(DEDALO_SECTION_USERS_TIPO);
-							#dump($ar_records,'ar_records');
-
-						foreach ($ar_records as $key => $current_section_id) {
-
-							if (array_key_exists('userID:'.$current_section_id, $ar_section_activity)) {
-								$ar_records_filtered[$current_section_id] = $ar_section_activity['userID:'.$current_section_id];
-							}
-						}
-						#dump($ar_records_filtered,'$ar_records_filtered');
-
-
-					# PRIMERA PASADA (Suma los valores)
-						$ar_results=array();
-						$total_records 	= count($ar_records_filtered);
-						foreach ($ar_records_filtered as $userID => $ar_value1)
-						foreach ($ar_value1 as $key => $ar_value)
-						foreach ($ar_value as $name => $value) {
-
-							if(isset($ar_results[$key][$name]))
-								$ar_results[$key][$name] = $ar_results[$key][$name] + $value;
-							else
-								$ar_results[$key][$name] = $value;
-							#dump($value,'value name:'.$name." key:$key");
-						}
-						#dump($ar_results,'$ar_results');
-
-
-					# SEGUNDA PASADA (Resuelve los keys)
-						$ar_resolved=array();
-						foreach ($ar_results as $current_action => $ar_value) {
-
-							$current_action_resolved = label::get_label($current_action);
-
-							switch (true) {
-								case ($current_action=='que') :
-									foreach ($ar_value as $key => $value) {
-										$key_resolved = RecordObj_dd::get_termino_by_tipo( explode(':', $key)[1] );
-										$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
-									}
-									break;
-								case ($current_action=='ip') :
-									foreach ($ar_value as $key => $value) {
-
-										# GEOIP LIB
-										if (empty(self::$geoip_mm)) {
-											require_once(DEDALO_ROOT."/lib/geoip/geoipcity.inc");
-											require_once(DEDALO_ROOT."/lib/geoip/geoipregionvars.php");
-											self::$geoip_mm = geoip_open(DEDALO_ROOT."/lib/geoip/data/GeoLiteCity.dat",GEOIP_STANDARD);
-										}
-										$record 			= geoip_record_by_addr(self::$geoip_mm,$key);
-										if($record) {
-											$code 			= $record->country_code ;
-											$city			= utf8_encode($record->city) ;
-											$country_name 	= $record->country_name ;
-											#$region 		= $record->region ;
-											#if($code && $region)
-											#$region_name	= $GEOIP_REGION_NAME[$code][$region];
-											#$continent_code	= $record->continent_code ;
-
-											$key_resolved = "$key - $city ($country_name)";
-										}else{
-											$key_resolved = $key;
-										}
-										#dump($record ,'$record ip '.$key);
-
-										$ar_resolved[$current_action_resolved.':stats_bar_horizontal'][$key_resolved] = $value;
-											#dump($ar_resolved[$current_action_resolved.':stats_bar'][$key_resolved], " -$key ");
-									}
-									break;
-								case ($current_action=='donde') :
-									foreach ($ar_value as $key => $value) {
-										$key_resolved = RecordObj_dd::get_termino_by_tipo( $key );
-										$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
-									}
-									break;
-								case ($current_action=='proyecto') :
-									foreach ($ar_value as $key => $value) {
-										$key_resolved = component_filter::get_stats_value_resolved_activity( $key );
-											#dump($key_resolved,'key_resolved '.$key);
-										$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
-									}
-									break;
-								case ($current_action=='registros_modificados') :
-								case ($current_action=='registros_visualizados') :
-									foreach ($ar_value as $key => $value) {
-										$section 		= section::get_instance($key,$caller_section_tipo);
-										$key_resolved 	= $section->get_section_id();
-
-										$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
-									}
-									break;
-								case ($current_action=='actividad_horaria') :
-									$range = range(0,23);
-									foreach ($range as $current_hour) {
-
-										$key_resolved 	= $current_hour.'h';
-
-										if( array_key_exists($current_hour, $ar_value) ) {
-											$value = $ar_value[$current_hour];
-										}else{
-											$value = null;
-										}
-										$ar_resolved[$current_action_resolved.':stats_bar'][$key_resolved] = $value;
-									}
-									break;
-								default:
-									foreach ($ar_value as $key => $value) {
-										$key_resolved 	= $key;
-										$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
-									}
-									break;
-							}
-							$ar_final = array_merge($ar_final, $ar_resolved);
-
-						}
-						#$ar_final = $results;
-						#dump($ar_final,'$ar_final');
-
-
-
-				}#end if($related_section_tipo==$this->caller_section_tipo) {
-
-
-			}#end foreach ($ar_diffusion_map as $key => $value) {
-
-
-
-
-			return $ar_final;
-	}
+
+		// 				# SEGUNDA PASADA (Resuelve los keys)
+		// 					$ar_resolved=array();
+		// 					foreach ($results as $current_component_tipo => $value) {
+
+		// 						$component_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+
+		// 						# RECUPERA EL MODELO DE GRÁFICO A MOSTRAR (PIE, BAR ...) Y LAS PROPIEDADES
+		// 						if ( array_key_exists($current_component_tipo, $ar_map_related) ) {
+		// 							$stats_model 		= $ar_map_related[$current_component_tipo]['modelo'];
+		// 							$stats_propiedades 	= $ar_map_related[$current_component_tipo]['propiedades'];
+		// 								#dump($stats_model,'stats_model');
+		// 						}
+		// 						#dump($component_modelo_name,'component_modelo_name - $current_component_tipo:'.$current_component_tipo." key:".$key);
+
+		// 						$valor 					= $component_modelo_name::get_stats_value_resolved($current_component_tipo, $results[$current_component_tipo], $stats_model ,$stats_propiedades);
+		// 						#$ar_final[] 			= $valor;
+		// 						$ar_resolved = array_merge($ar_resolved, $valor);
+		// 					}
+		// 					$ar_final = array_merge($ar_final, $ar_resolved);
+		// 					#dump($ar_final,'$ar_final');
+
+
+		// 			}#end if ($related_section_tipo==$caller_section_tipo)
+
+
+		// 			###########
+		// 			# ACTIVITY
+		// 			if($related_section_tipo==DEDALO_ACTIVITY_SECTION_TIPO ) {
+
+		// 				# COMPONENT_STATS
+		// 				$component_stats = component_common::get_instance('component_stats', $key, $parent, 'stats');
+		// 					#dump($component_stats,'component_stats');
+
+		// 				$dato = $component_stats->get_dato();
+		// 					#dump($dato,'dato');
+
+		// 				$path = array_key_path('section_tipo:'.$caller_section_tipo, $dato);
+		// 					#dump($path,'$path');
+
+		// 				if (!$path) {
+		// 					#return "No activity data exists for this section";
+		// 					return null;
+		// 				}
+
+		// 				$ar_section_activity =& array_path($dato, $path);
+		// 					#dump($ar_section_activity,'$ar_section_activity section '.$caller_section_tipo);
+
+		// 				# FILTER
+		// 				# Filter records
+		// 					$ar_records_filtered = array();
+		// 					$ar_records = filter::get_ar_filter(DEDALO_SECTION_USERS_TIPO);
+		// 						#dump($ar_records,'ar_records');
+
+		// 					foreach ($ar_records as $key => $current_section_id) {
+
+		// 						if (array_key_exists('userID:'.$current_section_id, $ar_section_activity)) {
+		// 							$ar_records_filtered[$current_section_id] = $ar_section_activity['userID:'.$current_section_id];
+		// 						}
+		// 					}
+		// 					#dump($ar_records_filtered,'$ar_records_filtered');
+
+
+		// 				# PRIMERA PASADA (Suma los valores)
+		// 					$ar_results=array();
+		// 					$total_records 	= count($ar_records_filtered);
+		// 					foreach ($ar_records_filtered as $userID => $ar_value1)
+		// 					foreach ($ar_value1 as $key => $ar_value)
+		// 					foreach ($ar_value as $name => $value) {
+
+		// 						if(isset($ar_results[$key][$name]))
+		// 							$ar_results[$key][$name] = $ar_results[$key][$name] + $value;
+		// 						else
+		// 							$ar_results[$key][$name] = $value;
+		// 						#dump($value,'value name:'.$name." key:$key");
+		// 					}
+		// 					#dump($ar_results,'$ar_results');
+
+
+		// 				# SEGUNDA PASADA (Resuelve los keys)
+		// 					$ar_resolved=array();
+		// 					foreach ($ar_results as $current_action => $ar_value) {
+
+		// 						$current_action_resolved = label::get_label($current_action);
+
+		// 						switch (true) {
+		// 							case ($current_action=='que') :
+		// 								foreach ($ar_value as $key => $value) {
+		// 									$key_resolved = RecordObj_dd::get_termino_by_tipo( explode(':', $key)[1] );
+		// 									$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
+		// 								}
+		// 								break;
+		// 							case ($current_action=='ip') :
+		// 								foreach ($ar_value as $key => $value) {
+
+		// 									# GEOIP LIB
+		// 									if (empty(self::$geoip_mm)) {
+		// 										require_once(DEDALO_ROOT."/lib/geoip/geoipcity.inc");
+		// 										require_once(DEDALO_ROOT."/lib/geoip/geoipregionvars.php");
+		// 										self::$geoip_mm = geoip_open(DEDALO_ROOT."/lib/geoip/data/GeoLiteCity.dat",GEOIP_STANDARD);
+		// 									}
+		// 									$record 			= geoip_record_by_addr(self::$geoip_mm,$key);
+		// 									if($record) {
+		// 										$code 			= $record->country_code ;
+		// 										$city			= utf8_encode($record->city) ;
+		// 										$country_name 	= $record->country_name ;
+		// 										#$region 		= $record->region ;
+		// 										#if($code && $region)
+		// 										#$region_name	= $GEOIP_REGION_NAME[$code][$region];
+		// 										#$continent_code	= $record->continent_code ;
+
+		// 										$key_resolved = "$key - $city ($country_name)";
+		// 									}else{
+		// 										$key_resolved = $key;
+		// 									}
+		// 									#dump($record ,'$record ip '.$key);
+
+		// 									$ar_resolved[$current_action_resolved.':stats_bar_horizontal'][$key_resolved] = $value;
+		// 										#dump($ar_resolved[$current_action_resolved.':stats_bar'][$key_resolved], " -$key ");
+		// 								}
+		// 								break;
+		// 							case ($current_action=='donde') :
+		// 								foreach ($ar_value as $key => $value) {
+		// 									$key_resolved = RecordObj_dd::get_termino_by_tipo( $key );
+		// 									$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
+		// 								}
+		// 								break;
+		// 							case ($current_action=='proyecto') :
+		// 								foreach ($ar_value as $key => $value) {
+		// 									$key_resolved = component_filter::get_stats_value_resolved_activity( $key );
+		// 										#dump($key_resolved,'key_resolved '.$key);
+		// 									$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
+		// 								}
+		// 								break;
+		// 							case ($current_action=='registros_modificados') :
+		// 							case ($current_action=='registros_visualizados') :
+		// 								foreach ($ar_value as $key => $value) {
+		// 									$section 		= section::get_instance($key,$caller_section_tipo);
+		// 									$key_resolved 	= $section->get_section_id();
+
+		// 									$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
+		// 								}
+		// 								break;
+		// 							case ($current_action=='actividad_horaria') :
+		// 								$range = range(0,23);
+		// 								foreach ($range as $current_hour) {
+
+		// 									$key_resolved 	= $current_hour.'h';
+
+		// 									if( array_key_exists($current_hour, $ar_value) ) {
+		// 										$value = $ar_value[$current_hour];
+		// 									}else{
+		// 										$value = null;
+		// 									}
+		// 									$ar_resolved[$current_action_resolved.':stats_bar'][$key_resolved] = $value;
+		// 								}
+		// 								break;
+		// 							default:
+		// 								foreach ($ar_value as $key => $value) {
+		// 									$key_resolved 	= $key;
+		// 									$ar_resolved[$current_action_resolved.':stats_pie'][$key_resolved] = $value;
+		// 								}
+		// 								break;
+		// 						}
+		// 						$ar_final = array_merge($ar_final, $ar_resolved);
+
+		// 					}
+		// 					#$ar_final = $results;
+		// 					#dump($ar_final,'$ar_final');
+
+
+
+		// 			}#end if($related_section_tipo==$this->caller_section_tipo) {
+
+
+		// 		}#end foreach ($ar_diffusion_map as $key => $value) {
+
+
+
+
+		// 		return $ar_final;
+		// }
 
 
 
@@ -2310,129 +2311,121 @@ class diffusion_section_stats extends diffusion {
 	* En lo posible intentar hacerla a primera hora del día siguiente (00:01 por ejemplo) para asegurarnos de que está el día completo y aprovechar horas de bajo uso del servidor
 	* ya que el script puede consumir muchos recursos en el procesado de inventarios grandes
 	*/
-	public function set_matrix_stats__DEPRECATED( $fecha_de_los_datos_custom=false, $delete_previous_versions=true ) {
+		// public function set_matrix_stats__DEPRECATED( $fecha_de_los_datos_custom=false, $delete_previous_versions=true ) {
 
-		if ($fecha_de_los_datos_custom!==false) {
-			# CUSTOM DATE
-			# Se le pasa una fecha específica
-			# Verificamos el formato de fecha
-			preg_match("/\d{4}-\d{2}-\d{2}/", $fecha_de_los_datos_custom, $output_array);
-			if (empty($output_array[0])) {
-				throw new Exception("Error Processing Request. Wrong date format. Use YYY-MM-DD", 1);
-			}
-			$fecha_de_los_datos = $fecha_de_los_datos_custom;
-		}else{
-			# YESTERDAY DATE
-			# Para tener el histórico completo del día, se ejecuta cron a las 00:01 y se almacenan
-			# los registros del día completo de ayer (por defecto)
-			$date_yesterday		= component_date::get_timestamp_now_for_db( array('sub'=>'P1D') );
-			$fecha_de_los_datos	= date("Y-m-d", strtotime($date_yesterday));
-		}
+		// 	if ($fecha_de_los_datos_custom!==false) {
+		// 		# CUSTOM DATE
+		// 		# Se le pasa una fecha específica
+		// 		# Verificamos el formato de fecha
+		// 		preg_match("/\d{4}-\d{2}-\d{2}/", $fecha_de_los_datos_custom, $output_array);
+		// 		if (empty($output_array[0])) {
+		// 			throw new Exception("Error Processing Request. Wrong date format. Use YYY-MM-DD", 1);
+		// 		}
+		// 		$fecha_de_los_datos = $fecha_de_los_datos_custom;
+		// 	}else{
+		// 		# YESTERDAY DATE
+		// 		# Para tener el histórico completo del día, se ejecuta cron a las 00:01 y se almacenan
+		// 		# los registros del día completo de ayer (por defecto)
+		// 		$date_yesterday		= component_date::get_timestamp_now_for_db( array('sub'=>'P1D') );
+		// 		$fecha_de_los_datos	= date("Y-m-d", strtotime($date_yesterday));
+		// 	}
 
-		# AR_DIFFUSION_MAP : Full map
-		$ar_diffusion_map = $this->get_ar_diffusion_section_map( null );
-			#dump($ar_diffusion_map,'$ar_diffusion_map'); die();
-
-
-		# ITERATE ALL SECTIONS (included activity)
-		foreach ($ar_diffusion_map as $section_tipo => $ar_childrens) {
-
-			# REAL SECTION TIPO
-			$related_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, $modelo_name='section', $relation_type='termino_relacionado')[0];
-				dump($related_section_tipo,"ar_data - $section_tipo ".DEDALO_ACTIVITY_SECTION_TIPO);
-
-			switch (true) {
-				case ($related_section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) :
-					# SECTION DEDALO_ACTIVITY_SECTION_TIPO
-					$matrix_section_data = section_preprocess::get_matrix_section_data_activity( $section_tipo, $ar_diffusion_map[$section_tipo], $fecha_de_los_datos );
-					$ar_data["ACTIVITY"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => activity_preprocess::preprocess_data( $matrix_section_data ) );
-					break;
-
-				default:
-					# STANDAR SECTION STATS
-					$matrix_section_data = section_preprocess::get_matrix_section_data( $section_tipo, $ar_diffusion_map[$section_tipo], $fecha_de_los_datos );
-					$ar_data["SECTIONS"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => $matrix_section_data );
-					break;
-			}
-			dump($matrix_section_data,'matrix_section_data '.$section_tipo); die();
+		// 	# AR_DIFFUSION_MAP : Full map
+		// 	$ar_diffusion_map = $this->get_ar_diffusion_section_map( null );
+		// 		#dump($ar_diffusion_map,'$ar_diffusion_map'); die();
 
 
-			/*
-			if($related_section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
-			# SECTION DEDALO_ACTIVITY_SECTION_TIPO
-				$ar_data["ACTIVITY"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => activity_preprocess::preprocess_data( $matrix_section_data ) );
-			}else{
-			# STANDAR SECTION STATS
-				$ar_data["SECTIONS"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => $matrix_section_data );
-			}
-			*/
-		}
-		#dump($ar_data,'$ar_data');
-		#return 'not saved. Test only';
+		// 	# ITERATE ALL SECTIONS (included activity)
+		// 	foreach ($ar_diffusion_map as $section_tipo => $ar_childrens) {
 
-				# DELETE PREVIOUS VERSIONS OF STATS FOR THIS DATE
-				# Eliminamos posibles versiones de estadísticas para este día (evita redundancia innecesaria ya que los datos se pueden regenerar en cualquier momento)
-				# true por defecto
-				if($delete_previous_versions) {
-					$arguments=array();
-					$arguments['strPrimaryKeyName']	= 'parent';
-					$arguments['dato:%like%']		= $fecha_de_los_datos ;	#date("Y-m-d", strtotime($timestamp));
-					$arguments['parent:not_like']	= 0;
-					$matrix_table 					= common::get_matrix_table_from_tipo(DEDALO_DAILY_STATS_SECTION_TIPO);
-					$RecordObj_matrix				= new RecordObj_matrix($matrix_table,NULL);
-					$ar_records						= $RecordObj_matrix->search($arguments);
-					if(!empty($ar_records)) {
-						foreach ($ar_records as $current_section_id) {
-							# Creamos una sección con el id encontrado y ella ya se encarga de eliminar todos sus hijos
-							$section = section::get_instance($current_section_id,DEDALO_DAILY_STATS_SECTION_TIPO);	# ($id=NULL, $tipo=false, $modo='edit')
-							$section->Delete('delete_record');
-						}
-					}
-				}
+		// 		# REAL SECTION TIPO
+		// 		$related_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, $modelo_name='section', $relation_type='termino_relacionado')[0];
+		// 			dump($related_section_tipo,"ar_data - $section_tipo ".DEDALO_ACTIVITY_SECTION_TIPO);
+
+		// 		switch (true) {
+		// 			case ($related_section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) :
+		// 				# SECTION DEDALO_ACTIVITY_SECTION_TIPO
+		// 				$matrix_section_data = section_preprocess::get_matrix_section_data_activity( $section_tipo, $ar_diffusion_map[$section_tipo], $fecha_de_los_datos );
+		// 				$ar_data["ACTIVITY"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => activity_preprocess::preprocess_data( $matrix_section_data ) );
+		// 				break;
+
+		// 			default:
+		// 				# STANDAR SECTION STATS
+		// 				$matrix_section_data = section_preprocess::get_matrix_section_data( $section_tipo, $ar_diffusion_map[$section_tipo], $fecha_de_los_datos );
+		// 				$ar_data["SECTIONS"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => $matrix_section_data );
+		// 				break;
+		// 		}
+		// 		dump($matrix_section_data,'matrix_section_data '.$section_tipo); die();
 
 
-				#
-				# NEW SECTION
-				# Save collected data into new section
-				# date component saves always yesterday date (today -1 day)
-				$section 	= section::get_instance(NULL, $this->section_stats_tipo);
-				$section_id = $section->Save();
-					#dump($section_id,'$section_id');
+		// 		/*
+		// 		if($related_section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
+		// 		# SECTION DEDALO_ACTIVITY_SECTION_TIPO
+		// 			$ar_data["ACTIVITY"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => activity_preprocess::preprocess_data( $matrix_section_data ) );
+		// 		}else{
+		// 		# STANDAR SECTION STATS
+		// 			$ar_data["SECTIONS"][$related_section_tipo.":".$section_tipo] = array( $related_section_tipo => $matrix_section_data );
+		// 		}
+		// 		*/
+		// 	}
+		// 	#dump($ar_data,'$ar_data');
+		// 	#return 'not saved. Test only';
 
-				if( intval($section_id)<1 ) throw new Exception("Error Processing Request. Error on create new section ($this->section_stats_tipo)", 1);
-
-
-				# COMPONENT_DATE : TIMESTAMP NOW
-				# Guarda la fecha de los datos del 'snap-shot', no confundir confundir con la fecha de creación del registro
-				$component_timestamp_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->section_stats_tipo, $modelo_name='component_date', $relation_type='children')[0];
-				$current_component 			= component_common::get_instance('component_date', $component_timestamp_tipo, $section_id, 'stats');
-				$timestamp 					= $fecha_de_los_datos." 00:00:00";	#component_date::get_timestamp_now_for_db( array('sub'=>'P1D') ); # Date of yesterday !important
-				$current_component->set_dato( $timestamp );
-
-				$current_component->Save();
-
-				# COMPONENT_STATS : ONE FOR SECTION TIPO
-				foreach ($ar_data as $stat_name => $ar_data_section)
-				foreach ($ar_data_section as $component_tipo => $component_dato) {
-
-					$component_tipo = explode(':', $component_tipo)[1];
-
-					$current_component = component_common::get_instance('component_stats', $component_tipo, $section_id, 'stats');
-					$current_component->set_dato($component_dato);
-						#dump($current_component,'$current_component' );
-					$current_component->Save();
-				}
-
-				return $section_id;
-	}
+		// 			# DELETE PREVIOUS VERSIONS OF STATS FOR THIS DATE
+		// 			# Eliminamos posibles versiones de estadísticas para este día (evita redundancia innecesaria ya que los datos se pueden regenerar en cualquier momento)
+		// 			# true por defecto
+		// 			if($delete_previous_versions) {
+		// 				$arguments=array();
+		// 				$arguments['strPrimaryKeyName']	= 'parent';
+		// 				$arguments['dato:%like%']		= $fecha_de_los_datos ;	#date("Y-m-d", strtotime($timestamp));
+		// 				$arguments['parent:not_like']	= 0;
+		// 				$matrix_table 					= common::get_matrix_table_from_tipo(DEDALO_DAILY_STATS_SECTION_TIPO);
+		// 				$RecordObj_matrix				= new RecordObj_matrix($matrix_table,NULL);
+		// 				$ar_records						= $RecordObj_matrix->search($arguments);
+		// 				if(!empty($ar_records)) {
+		// 					foreach ($ar_records as $current_section_id) {
+		// 						# Creamos una sección con el id encontrado y ella ya se encarga de eliminar todos sus hijos
+		// 						$section = section::get_instance($current_section_id,DEDALO_DAILY_STATS_SECTION_TIPO);	# ($id=NULL, $tipo=false, $modo='edit')
+		// 						$section->Delete('delete_record');
+		// 					}
+		// 				}
+		// 			}
 
 
+		// 			#
+		// 			# NEW SECTION
+		// 			# Save collected data into new section
+		// 			# date component saves always yesterday date (today -1 day)
+		// 			$section 	= section::get_instance(NULL, $this->section_stats_tipo);
+		// 			$section_id = $section->Save();
+		// 				#dump($section_id,'$section_id');
+
+		// 			if( intval($section_id)<1 ) throw new Exception("Error Processing Request. Error on create new section ($this->section_stats_tipo)", 1);
 
 
+		// 			# COMPONENT_DATE : TIMESTAMP NOW
+		// 			# Guarda la fecha de los datos del 'snap-shot', no confundir confundir con la fecha de creación del registro
+		// 			$component_timestamp_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->section_stats_tipo, $modelo_name='component_date', $relation_type='children')[0];
+		// 			$current_component 			= component_common::get_instance('component_date', $component_timestamp_tipo, $section_id, 'stats');
+		// 			$timestamp 					= $fecha_de_los_datos." 00:00:00";	#component_date::get_timestamp_now_for_db( array('sub'=>'P1D') ); # Date of yesterday !important
+		// 			$current_component->set_dato( $timestamp );
 
+		// 			$current_component->Save();
 
+		// 			# COMPONENT_STATS : ONE FOR SECTION TIPO
+		// 			foreach ($ar_data as $stat_name => $ar_data_section)
+		// 			foreach ($ar_data_section as $component_tipo => $component_dato) {
 
+		// 				$component_tipo = explode(':', $component_tipo)[1];
 
+		// 				$current_component = component_common::get_instance('component_stats', $component_tipo, $section_id, 'stats');
+		// 				$current_component->set_dato($component_dato);
+		// 					#dump($current_component,'$current_component' );
+		// 				$current_component->Save();
+		// 			}
+
+		// 			return $section_id;
+		// }
 
 
 

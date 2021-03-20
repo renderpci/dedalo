@@ -2299,7 +2299,12 @@
 
 
 	Valencia 19-03-2021 5.8.2
-		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals.
+		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals
+
+
+	
+	Valencia 20-03-2021 5.8.2
+		Fixed parse_totals_for_js label lang fallback
 
 	
 
@@ -2326,13 +2331,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2';
+	$DEDALO_VERSION = '5.8.3';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-03-2021');
+	define('DEDALO_BUILD'	, '20-03-2021');
 
 
 	/*
