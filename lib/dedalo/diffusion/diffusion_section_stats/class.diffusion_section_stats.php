@@ -1023,7 +1023,7 @@ class diffusion_section_stats extends diffusion {
 				FROM "matrix_activity"
 				WHERE 
 				"date" between \''.$date_in.'\' and \''.$date_out.'\'
-				AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","type":"'.DEDALO_RELATION_TYPE_LINK.'","from_component_tipo":"dd543"}]\'
+				AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				ORDER BY id ASC
 			';
 			$result = pg_query(DBi::_getConnection(), $strQuery);
@@ -1421,7 +1421,7 @@ class diffusion_section_stats extends diffusion {
 				WHERE
 				datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				'.$activity_filter_beginning.'
-				ORDER BY date ASC, id ASC
+				ORDER BY date ASC
 				LIMIT 1
 			';
 			$result = pg_query(DBi::_getConnection(), $strQuery);
