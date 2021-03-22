@@ -68,11 +68,6 @@ rsc110	Elenco	termino	lg-ita
 rsc110	Listado	termino	lg-spa
 rsc110	Llistat	termino	lg-cat
 rsc110	λίστα	termino	lg-ell
-rsc111	Búsqueda	termino	lg-spa
-rsc111	Cerca	termino	lg-cat
-rsc111	Find	termino	lg-eng
-rsc111	Ricerca	termino	lg-ita
-rsc111	έρευνα	termino	lg-ell
 rsc112	Elenco relazioni	termino	lg-ita
 rsc112	Listado relaciones	termino	lg-spa
 rsc112	Llistat relacions	termino	lg-cat
@@ -182,6 +177,8 @@ rsc131	Llistat	termino	lg-cat
 rsc131	λίστα	termino	lg-ell
 rsc132	Descripció	termino	lg-cat
 rsc132	Descripción	termino	lg-spa
+rsc111	location value	termino	lg-eng
+rsc111	valore della posizione	termino	lg-ita
 rsc132	Description	termino	lg-eng
 rsc132	Descrizione	termino	lg-ita
 rsc132	Περιγραφή	termino	lg-ell
@@ -1253,7 +1250,6 @@ rsc354	Entrada secundària - Nom de congrés	termino	lg-cat
 rsc354	Entrada secundaria - Nombre de congreso	termino	lg-spa
 rsc354	EntradaΔευτεροβάθμια εισόδου - Όνομα συνέδριο	termino	lg-ell
 rsc354	Entrata secondaria - Nome del congresso	termino	lg-ita
-rsc355	Add entry - Uncontrolled analytic / related title	termino	lg-eng
 rsc355	Entrada secundària - Títol analític/relacionat no controlat	termino	lg-cat
 rsc355	Entrada secundaria - Título analítico / relacionado no controlado	termino	lg-spa
 rsc355	Entrata secondaria - Titolo analitico / collegato non controllato	termino	lg-ita
@@ -3035,3 +3031,11 @@ rsc99	Observations	termino	lg-eng
 rsc99	Osservazioni	termino	lg-ita
 rsc99	Παρατηρήσεις	termino	lg-ell
 rsc337	Portal that can use to get component_label, don&#039;t use it... the locator is correct  but the interface is not resolved	obs	lg-spa
+rsc787	title_colective	termino	lg-spa
+rsc111	localidad valor	termino	lg-spa
+rsc111	localitat valor	termino	lg-cat
+rsc111	τιμή τοποθεσίας	termino	lg-ell
+rsc679	Dependent of	termino	lg-eng
+rsc355	Secondary entry - Uncontrolled analytic / related title	termino	lg-eng
+rsc550	Restoration	termino	lg-eng
+rsc621	Movements	termino	lg-eng

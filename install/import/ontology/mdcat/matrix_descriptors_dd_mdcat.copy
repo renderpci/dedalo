@@ -7030,3 +7030,4 @@ mdcat999	Descripciones	termino	lg-spa
 mdcat999	Descripcions	termino	lg-cat
 mdcat1706	reciclar	termino	lg-spa
 mdcat3686	Radio button	obs	lg-spa
+mdcat1302	Changed &#039;component_method&#039; from get_diffusion_valor to &#039;get_diffusion_value&#039; in rsc23 (25-02-2021 Paco)	obs	lg-spa

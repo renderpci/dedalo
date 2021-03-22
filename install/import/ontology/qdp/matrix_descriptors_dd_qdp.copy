@@ -124,7 +124,6 @@ qdp152	Nom del bé	termino	lg-cat
 qdp152	Nombre del bien	termino	lg-spa
 qdp153	Colección	termino	lg-spa
 qdp153	Col·lecció	termino	lg-cat
-qdp154	Inscripciones	termino	lg-spa
 qdp154	Inscripcions	termino	lg-cat
 qdp155	Projecte	termino	lg-cat
 qdp155	Proyecto	termino	lg-spa
@@ -305,8 +304,6 @@ qdp238	Últimos cambios	termino	lg-spa
 qdp238	Últims canvis	termino	lg-cat
 qdp239	Relaciones	termino	lg-spa
 qdp239	Relacions	termino	lg-cat
-qdp24	Difusió	termino	lg-cat
-qdp24	Difusión	termino	lg-spa
 qdp240	últimos cambios	termino	lg-spa
 qdp240	Últims canvis	termino	lg-cat
 qdp241	Tipologia	termino	lg-cat
@@ -385,6 +382,7 @@ qdp276	Fills	termino	lg-cat
 qdp276	Hijos	termino	lg-spa
 qdp277	Descriptor	termino	lg-cat
 qdp277	Descriptor	termino	lg-spa
+qdp24	Inscripcions	termino	lg-cat
 qdp278	Listado tesauro	termino	lg-spa
 qdp279	mapa de sección	termino	lg-spa
 qdp28	Lista de ubicaciones	termino	lg-spa
@@ -442,8 +440,6 @@ qdp316	trademark	termino	lg-spa
 qdp317	manufacturer	termino	lg-spa
 qdp318	scale	termino	lg-spa
 qdp319	measurements_data	termino	lg-spa
-qdp32	Difusió	termino	lg-cat
-qdp32	Difusión	termino	lg-spa
 qdp320	own_bibliography_data	termino	lg-spa
 qdp321	related_bibliography	termino	lg-spa
 qdp322	publications	termino	lg-spa
@@ -719,3 +715,38 @@ qdp98	Importa fitxes amb imatge	termino	lg-cat
 qdp98	Importar fichas con imagen	termino	lg-spa
 qdp99	view_mosaic	termino	lg-spa
 qdp418	term_id	termino	lg-spa
+qdp426	Listado	termino	lg-spa
+qdp426	Llistat	termino	lg-cat
+qdp427	Inscripciones	termino	lg-spa
+qdp427	Inscriptions	termino	lg-cat
+qdp428	Identificación	termino	lg-spa
+qdp428	Identificació	termino	lg-cat
+qdp429	Id	termino	lg-spa
+qdp429	Id	termino	lg-cat
+qdp430	Posición	termino	lg-spa
+qdp430	Posició	termino	lg-cat
+qdp431	Inscripción	termino	lg-spa
+qdp431	Inscripció	termino	lg-cat
+qdp432	Proyecto	termino	lg-spa
+qdp432	Projecte	termino	lg-cat
+qdp433	Observaciones	termino	lg-spa
+qdp433	Observacions	termino	lg-cat
+qdp434	Listado	termino	lg-spa
+qdp434	Llistat	termino	lg-cat
+qdp425	Relaciones	termino	lg-spa
+qdp425	Relations	termino	lg-cat
+qdp424	Realciones	termino	lg-spa
+qdp424	Relacions	termino	lg-cat
+qdp154	Inscripciones_DESACTIVO	termino	lg-spa
+qdp422	Publicación	termino	lg-spa
+qdp422	Publicació	termino	lg-cat
+qdp24	Inscripciones	termino	lg-spa
+qdp421	Imagen	termino	lg-spa
+qdp421	Imatge	termino	lg-cat
+qdp423	view_mosaic	termino	lg-spa
+qdp32	mark_position	termino	lg-spa
+qdp419	source_name	termino	lg-spa
+qdp420	source_surname	termino	lg-spa
+qdp435	mark_data	termino	lg-spa
+qdp436	mark_inscription	termino	lg-spa
+qdp437	mark_images	termino	lg-spa
