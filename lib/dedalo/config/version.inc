@@ -2293,17 +2293,17 @@
 		Added configurable diffusion resolve levels user input to allow overwrite default DEDALO_DIFFUSION_RESOLVE_LEVELS
 
 	
-	Valencia 19-03-2021 5.8.1
+	Valencia 19-03-2021 5.8.0
 		Fixed php compatibility issues on update_activity_data method
 		Added updates dato version from 5.6.2 to 5.8.0 to unify version data and software numbers
 
 
-	Valencia 19-03-2021 5.8.2
+	Valencia 19-03-2021 5.8.0
 		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals
 
 
 	
-	Valencia 20-03-2021 5.8.2
+	Valencia 20-03-2021 5.8.0
 		Fixed parse_totals_for_js label lang fallback
 
 	
@@ -2331,7 +2331,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3';
+	$DEDALO_VERSION = '5.8.0';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
