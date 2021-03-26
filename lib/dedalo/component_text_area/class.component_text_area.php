@@ -118,7 +118,7 @@ class component_text_area extends component_common {
 		// 	$dato = parent::get_dato();
 		// }
 
-		if (!is_string($dato)) {
+		if (!is_null($dato) && !is_string($dato)) {
 			trigger_error("Error. invalid data format for dato. Expected string and received: ". gettype($dato) );
 			return json_encode($dato, JSON_UNESCAPED_UNICODE);
 		}
@@ -131,12 +131,7 @@ class component_text_area extends component_common {
 	/**
 	* SET_DATO
 	*/
-	public function set_dato($dato) {
-		if($dato==='""') {
-			$dato = ''; // empty dato json encoded
-		}elseif ($dato==='<br data-mce-bogus="1">') {
-			$dato = ''; // empty tinyMCE container !
-		}
+	public function set_dato($dato) {		
 
 		# Change &nbsp; for space . Optimizes chars time calculations
 		#$dato = str_replace('&nbsp;', " ", $dato);
@@ -149,9 +144,15 @@ class component_text_area extends component_common {
 			$dato = reset($dato);
 		}
 
-		if (!is_string($dato)) {
+		if (!is_null($dato) && !is_string($dato)) {
 			trigger_error("Error. invalid data format for dato. Expected string and received: ". gettype($dato) );
 			$dato = json_encode($dato, JSON_UNESCAPED_UNICODE);
+		}
+
+		if($dato==='""') {
+			$dato = ''; // empty dato json encoded
+		}elseif ($dato==='<br data-mce-bogus="1">') {
+			$dato = ''; // empty tinyMCE container !
 		}
 
 		parent::set_dato( (string)$dato );
