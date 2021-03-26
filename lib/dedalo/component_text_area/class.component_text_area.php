@@ -105,16 +105,22 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET DATO : Format "lg-spa"
+	* GET DATO
 	*/
 	public function get_dato() {
+		
 		$dato = parent::get_dato();
 
 		# Compatibility old dedalo3 installations
-		if ( strpos($dato, '[index_')!==false || strpos($dato, '[out_index_')!==false ) {
-			$this->dato = $this->convert_tr_v3_v4( $dato );	// Update index tags format
-			$this->Save();
-			$dato = parent::get_dato();
+		// if ( is_string($dato) && strpos($dato, '[index_')!==false || strpos($dato, '[out_index_')!==false ) {
+		// 	$this->dato = $this->convert_tr_v3_v4( $dato );	// Update index tags format
+		// 	$this->Save();
+		// 	$dato = parent::get_dato();
+		// }
+
+		if (!is_string($dato)) {
+			trigger_error("Error. invalid data format for dato. Expected string and received: ". gettype($dato) );
+			return json_encode($dato, JSON_UNESCAPED_UNICODE);
 		}
 
 		return (string)$dato;
@@ -143,8 +149,9 @@ class component_text_area extends component_common {
 			$dato = reset($dato);
 		}
 
-		if(SHOW_DEBUG===true) {
-
+		if (!is_string($dato)) {
+			trigger_error("Error. invalid data format for dato. Expected string and received: ". gettype($dato) );
+			$dato = json_encode($dato, JSON_UNESCAPED_UNICODE);
 		}
 
 		parent::set_dato( (string)$dato );
