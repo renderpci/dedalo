@@ -2459,10 +2459,8 @@ class component_text_area extends component_common {
     			$query_object->unaccent = false;
 
 				$clone = clone($query_object);
-	    			//$clone->operator = '!=';
-	    			$clone->operator = '!~';
+	    			$clone->operator = '~';
 	    			$clone->q_parsed = '\'.*""\'';
-
 
 				$logical_operator ='$and';
     			$new_query_json = new stdClass;
