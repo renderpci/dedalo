@@ -442,7 +442,9 @@ class relation_list extends common {
 								$value_obj->{$map_key} = $current_value;
 							}
 
-							$ar_values[] = $value_obj;
+							if (!in_array($value_obj, $ar_values)) {
+								$ar_values[] = $value_obj;
+							}
 						}
 
 					}//end foreach ($custom_map as $map_item)					
