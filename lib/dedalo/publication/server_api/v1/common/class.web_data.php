@@ -3245,7 +3245,7 @@ class web_data {
 				$options->rows_per_page 	= 10;
 				$options->page_number 		= 1;
 				$options->offset 			= 0;
-				$options->apperances_limit 	= 1;
+				$options->appearances_limit = 1;
 				$options->match_select 		= false; // Selects specific match inside results. Default = false . Optional
 				$options->count 			= true;
 				$options->image_type 	 	= 'posterframe';
@@ -3308,7 +3308,7 @@ class web_data {
 
 				$fn_options = new stdClass();
 					$fn_options->q 				  	= $options->q;
-					$fn_options->apperances_limit 	= $options->apperances_limit;
+					$fn_options->appearances_limit 	= $options->appearances_limit;
 					$fn_options->match_select 		= $options->match_select;
 					$fn_options->image_type 	  	= $options->image_type;
 					$fn_options->video_fragment 	= $options->video_fragment;

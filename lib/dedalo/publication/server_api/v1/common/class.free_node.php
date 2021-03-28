@@ -162,7 +162,7 @@ class free_node {
 
 		$reel_fragments = array();
 		foreach ($ar_word as $word) {
-			$ar_fragments = $this->find_word_in_text($word, $raw_text_sure, $this->av_section_id, $n_chars=400, $this->apperances_limit, $this->match_select);
+			$ar_fragments = $this->find_word_in_text($word, $raw_text_sure, $this->av_section_id, $n_chars=400, $this->appearances_limit, $this->match_select);
 				#dump($ar_fragments, ' $ar_fragments ++ '.to_string($word));
 			if (is_array($ar_fragments)) {
 				$reel_fragments = array_merge($reel_fragments, $ar_fragments);
