@@ -2291,15 +2291,21 @@
 		Added new widget 'user_activity' to manage statistics in users section (dd128)
 		Relaxed exceptions policy in some usual scenarios. Changed by trigger error
 		Added configurable diffusion resolve levels user input to allow overwrite default DEDALO_DIFFUSION_RESOLVE_LEVELS
-
 		Fixed php compatibility issues on update_activity_data method
 		Added updates dato version from 5.6.2 to 5.8.0 to unify version data and software numbers
-
 		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals
-
 		Fixed parse_totals_for_js label lang fallback
+		Added component number operators to allow search empty values and not empty as well
+		Updated Ontology for version 5.8.0 compatibility
+		Fixed component text area bug that given bad results on user non empty value searches
+		Fixed error on component text area get dato function that it would overwrite the value with 'array()' when the value is array (wrong importations case for example)
+		Fixed component text area dato checking error
+		Fix var name mistake in web_data free_search
+		Removes unused swagger yaml file
+		Added duplicate values prevention on relation_list get_diffusion_value
+		Optimized component section_id sequence search using IN() instead OR in operator
 
-	
+
 
 	[/HISTORY]
 
@@ -2330,7 +2336,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '28-03-2021');
+	define('DEDALO_BUILD'	, '29-03-2021');
 
 
 	/*
