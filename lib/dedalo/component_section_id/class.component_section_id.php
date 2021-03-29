@@ -158,21 +158,32 @@ class component_section_id extends component_common {
         	# SEQUENCE
 			case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
-				$ar_parts 	= explode($sequence_separator, $q);
-				$ar_result  = []; 
-				foreach ($ar_parts as $key => $value) {
-					$value = (int)$value;
-					if ($value<1) continue;
-					$query_object_current = clone $query_object;
-						$query_object_current->operator = '=';
-						$query_object_current->q_parsed	= $value;
-					$ar_result[] = $query_object_current;
-				}
-				// Return an subquery instead object
-				$cop = '$or';
-				$new_object = new stdClass();
-					$new_object->{$cop} = $ar_result;
-				$query_object = $new_object;
+				$ar_parts	= explode($sequence_separator, $q);
+				// $ar_result	= [];
+				// $first		= reset($ar_parts);
+				// $last		= end($ar_parts);
+				// foreach ($ar_parts as $key => $value) {
+				// 	$value = (int)$value;
+				// 	if ($value<1) continue;
+				// 	$query_object_current = clone $query_object;
+				// 		$query_object_current->q		= 'sequence from '.$first.' to '.$last;
+				// 		$query_object_current->operator	= '=';
+				// 		$query_object_current->q_parsed	= $value;
+				// 	$ar_result[] = $query_object_current;
+				// }
+				// // Return an subquery instead object
+				// $cop = '$or';
+				// $new_object = new stdClass();
+				// 	$new_object->{$cop} = $ar_result;
+				// $query_object = $new_object;
+
+				$operator = 'IN';
+				$q_clean  = array_map(function($el){
+					return (int)$el;
+				}, $ar_parts);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= implode(',', $q_clean);
+				$query_object->format	= 'in_column';
 				break;
 			# BIGGER OR EQUAL THAN
 			case (substr($q, 0, 2)==='>='):
@@ -205,13 +216,12 @@ class component_section_id extends component_common {
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
-				$q_clean  = (int)str_replace('+', '', $q);				
+				$q_clean  = (int)str_replace('+', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;	
+				$query_object->q_parsed	= $q_clean;	
 				break;
 		}//end switch (true) {		
-       	#dump($query_object, ' query_object ++ '.to_string());
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+		// debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 
         return $query_object;

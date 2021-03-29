@@ -265,7 +265,7 @@ class search_development2 {
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms'.' ms', logger::DEBUG);
 			// dump($ar_records, ' ar_records ++ '.to_string());
 
-		// childrens recursive
+		// children recursive
 			if (isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
 				$ar_row_children = [];
 				foreach ($ar_records as $row) {
@@ -2471,6 +2471,11 @@ class search_development2 {
 				# q
 				$sql_where .= $search_object->q_parsed;
 				break;
+
+			case 'in_column':
+				# q
+				$sql_where .= $table_alias . '.'.$component_path . ' IN(' . $search_object->q_parsed .') ';
+				break;	
 
 		}//end switch ($search_object->type)
 
