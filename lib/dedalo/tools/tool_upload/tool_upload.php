@@ -1,19 +1,12 @@
 <?php
-# SESSION LIFETIME
-# Set session_duration_hours before load 'config' file (override default value)
-$session_duration_hours = 18;
+// includes config and set common php directives (session_duration_hours, time_limit)
+require_once( dirname(__FILE__) .'/tool_includes_common.php');
 
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+
+
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');
-
-
-if(login::is_logged()!==true) {
-	$string_error = "Auth error: please login";
-	print dd_error::wrap_error($string_error);
-	die();
-}
 
 
 

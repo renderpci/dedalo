@@ -1,19 +1,6 @@
 <?php
-# SESSION LIFETIME
-# Set session_duration_hours before load 'config' file (override default value)
-$session_duration_hours = 24;
-
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-if(login::is_logged()!==true) {
-	$string_error = "Auth error: please login";
-	print dd_error::wrap_error($string_error);
-	die();
-}
-
-#ini_set('max_input_time', 0); // Unlimited time
-#ini_set('max_execution_time', 60 * 5); // Unlimited time
-set_time_limit(0);
+// includes config and set common php directives (session_duration_hours, time_limit)
+require_once( dirname(__FILE__) .'/tool_includes_common.php');
 
 
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
