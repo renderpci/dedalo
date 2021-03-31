@@ -2294,6 +2294,9 @@
 		Fixed php compatibility issues on update_activity_data method
 		Added updates dato version from 5.6.2 to 5.8.0 to unify version data and software numbers
 		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals
+		
+
+	Queue changes
 		Fixed parse_totals_for_js label lang fallback
 		Added component number operators to allow search empty values and not empty as well
 		Updated Ontology for version 5.8.0 compatibility
@@ -2304,6 +2307,8 @@
 		Removes unused swagger yaml file
 		Added duplicate values prevention on relation_list get_diffusion_value
 		Optimized component section_id sequence search using IN() instead OR in operator
+		Fixed component number error when is used to order result as string instead number
+		Fixed tool upload issues with large files (proxy_fcgi:error (104)Connection reset by peer)
 
 
 
@@ -2336,7 +2341,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-03-2021');
+	define('DEDALO_BUILD'	, '31-03-2021');
 
 
 	/*
