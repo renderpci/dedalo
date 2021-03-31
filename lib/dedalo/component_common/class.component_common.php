@@ -4130,7 +4130,6 @@ abstract class component_common extends common {
 						[section_tipo] => numisdata224
 						[component_tipo] => numisdata231
 					)
-
 			)
 
 		[lang] => lg-spa
@@ -4144,14 +4143,14 @@ abstract class component_common extends common {
 			$end_path 		= end($select_object->path);
 			$component_tipo = $end_path->component_tipo;
 
-			if (isset($end_path->selector)) {
-				$selector = $end_path->selector;
-			}else{
-				$selector = 'valor_list';
-			}
+			$selector = (isset($end_path->selector))
+				? $end_path->selector
+				: 'valor_list';
 
 			if (isset($end_path->lang) && $end_path->lang==='all') {
+	      		
 	      		$select_object->component_path = ['components',$component_tipo,$selector];
+	      	
 	      	}else{
 
 		      	if (isset($end_path->lang)) {
@@ -4159,11 +4158,10 @@ abstract class component_common extends common {
 				}else{
 					$RecordObj_dd = new RecordObj_dd($component_tipo);
 					$traducible   = $RecordObj_dd->get_traducible();
-					if ($traducible!=='si') {
-						$default_lang = DEDALO_DATA_NOLAN;
-					}else{
-						$default_lang = DEDALO_DATA_LANG;
-					}
+					$default_lang = ($traducible!=='si')
+						? DEDALO_DATA_NOLAN
+						: DEDALO_DATA_LANG;
+					
 					$lang = $default_lang;
 				}
 
