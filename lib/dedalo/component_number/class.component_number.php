@@ -363,5 +363,31 @@ class component_number extends component_common {
 
 
 
+	/**
+	* GET_SELECT_QUERY2
+	* @return object $selct_object
+	*/
+	public static function get_select_query2($select_object) {
+
+		# component path is not calculated
+		if(!isset($select_object->component_path)) {
+
+			$end_path		= end($select_object->path);
+			$component_tipo	= $end_path->component_tipo;
+			$selector		= 'dato';
+			$lang			= DEDALO_DATA_NOLAN;
+
+			# Set default
+			$select_object->component_path = ['components',$component_tipo,$selector,$lang];
+		}
+
+		$select_object->type = 'number';
+		
+
+		return $select_object;
+	}//end get_select_query2
+
+
+
 }//end component_number
 ?>
