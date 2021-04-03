@@ -2101,7 +2101,7 @@
 
 	
 	Valencia 02-02-2021 5.7.48
-		Fixed issue with no file context im component image container
+		Fixed issue with no file context in component image container
 
 	
 	Valencia 03-02-2021 5.7.49
@@ -2309,7 +2309,8 @@
 		Optimized component section_id sequence search using IN() instead OR in operator
 		Fixed component number error when is used to order result as string instead number
 		Fixed tool upload issues with large files (proxy_fcgi:error (104)Connection reset by peer)
-
+		Fixed error on diffusion_section_stats when user activity data was only calculated it until yesterday instead of today
+		Removed class tools exec("ps -o rss -p $pid) function. Changed by native PHP 'memory_get_usage'
 
 
 	[/HISTORY]
@@ -2341,7 +2342,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '31-03-2021');
+	define('DEDALO_BUILD'	, '03-04-2021');
 
 
 	/*
