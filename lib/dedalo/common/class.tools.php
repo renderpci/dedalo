@@ -210,13 +210,13 @@ abstract class tools extends common {
 	public static function get_memory_usage($mode='pid') {
 
 		try {
-			if($mode==='pid') {
-				$pid = getmypid();
-				exec("ps -o rss -p $pid", $output);
-				$mem_usage = $output[1] *1024;
-			}else{
+			// if($mode==='pid') {
+			// 	$pid = getmypid();
+			// 	exec("ps -o rss -p $pid", $output);
+			// 	$mem_usage = $output[1] *1024;
+			// }else{
 				$mem_usage = memory_get_usage(true);
-			}
+			// }
 		} catch (Exception $e) {
 			$mem_usage = $e->getMessage();
 		}
