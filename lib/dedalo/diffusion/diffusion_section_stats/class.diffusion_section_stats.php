@@ -1447,7 +1447,7 @@ class diffusion_section_stats extends diffusion {
 
 		// iterate from the beginning, in steps of a day
 			$begin	= new DateTime($row->date);			
-			$end	= $yesterday; // remember not to include today because it is not finished yet
+			$end	= $today; // $yesterday; // remember not to include today because it is not finished yet
 
 			// by day
 				$updated_days = [];
