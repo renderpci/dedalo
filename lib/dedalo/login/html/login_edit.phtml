@@ -70,7 +70,7 @@
 					# Postgres user and db name
 					if(DEDALO_ENTITY==='development') {
 						$html_content .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
-					}					
+					}
 
 					try {
 					    $str_version   = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
@@ -87,6 +87,10 @@
 						#$html_content .= " : ".DEDALO_DB_PORT_CONN." ";
 						$html_content .= "</span>";
 					}
+
+					$html_content .= '<div class="powered_by">';
+					$html_content .= '<img src="'.DEDALO_LIB_BASE_URL.'/themes/default/dedalo_logo.svg" height="15"> <a href="https://dedalo.dev" target="_blank">Dédalo Cultural Heritage Management System</a>';
+					$html_content .= '</div>';
 			
 				$html_content .= "</div>";
 

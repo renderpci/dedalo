@@ -2311,6 +2311,7 @@
 		Fixed tool upload issues with large files (proxy_fcgi:error (104)Connection reset by peer)
 		Fixed error on diffusion_section_stats when user activity data was only calculated it until yesterday instead of today
 		Removed class tools exec("ps -o rss -p $pid) function. Changed by native PHP 'memory_get_usage'
+		Added link to dedalo.dev in login page
 
 
 	[/HISTORY]
@@ -2342,7 +2343,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-04-2021');
+	define('DEDALO_BUILD'	, '05-04-2021');
 
 
 	/*
