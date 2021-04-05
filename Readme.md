@@ -41,7 +41,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 <p><strong>Projects: </strong> 
 <p><a href="http://www.occupation-memories.org/de/archive/index.html" target="_blank">Freie Universität Berlin</a></p>
-<p><a href="https://numisdata.org/sardinia/" target="_blank">Findsopts in Sardinia</a></p>
+<p><a href="https://monedaiberica.org" target="_blank">Moneda Ibérica catalog</a></p>
 <p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>	
 <p><a href="https://arxiu.memoria.gencat.cat/en/app/#/" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
 <p><a href="https://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>
@@ -186,10 +186,11 @@ Dédalo have three main updates procedures:
 **SERVER SYSTEM**
 
 Dédalo in the server part is tested into the next Operating Systems:
-- CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7,5, 8+
-- Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7.5, 8+
-- Debian 8.7+
-- MacOsX 10.10 (deprecated update as soon as possible), 10.11, 10.12+
+- Ubuntu Server 16.04+
+- Debian 9.0+
+- MacOsX 10.12+, 11.0+
+- CentOS, Fedora and RedHat, all versions are deprecated, v7 and v8, we will remove support due CentOS project focus was changed.
+<p><a href="https://blog.centos.org/2020/12/future-is-centos-stream/?utm_source=rss&utm_medium=rss&utm_campaign=future-is-centos-stream" target="_blank">CentOS blog</a></p>
 
 All other Linux will be compatible but we don't test it.
 
@@ -202,12 +203,12 @@ Firefox situation: From the 4.8 version of Dédalo is full compatible with Firef
 
 Browser	|	Version |	certificated
 --------- | --------- | ---------
-Chrome	|	60+ | YES - recomended
-Chrome	|	50+ | Deprecated (Please update as soon as posible)	 
-Chrome	|	0 to 50 | NO	 
+Chrome	|	70+ | YES - recomended
+Chrome	|	60+ | Deprecated (Please update as soon as posible)	 
+Chrome	|	0 to 60 | NO	 
 Safari	|	10+ | YES
 Safari	|	9 | Deprecated (Please update as soon as posible)
-Safari	|	0 to 7 | NO	
+Safari	|	0 to 8 | NO	
 Firefox	|	60+ | YES
 Firefox	|	50 | Deprecated (Please update as soon as posible)
 Firefox	|	40-49 | NO
