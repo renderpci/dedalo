@@ -57,7 +57,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 *Required for the OS*
 
-- PHP 7.2+
+- PHP 7.4+
 - Apache 2.4.2+
 - Postgres 10.1+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication).
