@@ -1,6 +1,6 @@
 <?php
 // ontology custon config file
-require_once(dirname(__FILE__) .'/config/config_ontology.php');
+require_once( dirname(__FILE__) .'/config/config_ontology.php');
 
 /*
 * CLASE DD BASADA EN TESAURO V3
@@ -335,7 +335,7 @@ class dd extends dd_elements {
 					$marginLeft = 0 ;
 					$display = "display:block" ;
 				}else{
-					$marginLeft = 50 ;
+					$marginLeft = 35 ;
 					$display = "display:block" ;
 				}
 
