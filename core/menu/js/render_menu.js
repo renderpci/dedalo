@@ -143,7 +143,7 @@ render_menu.prototype.edit = async function() {
 			text_content	: 'Ontology'
 		})
 		ontology_link.addEventListener("click", ()=>{
-			const win = window.open('../dd', '_blank');
+			const win = window.open('../ontology', '_blank');
 				  win.focus();
 		})
 
