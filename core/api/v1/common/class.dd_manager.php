@@ -29,14 +29,15 @@ class dd_manager {
 	public function manage_request( $options ) {
 		$api_start_time=microtime(1);
 
-		// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
-		if(SHOW_DEBUG===true) {
-			$text			= 'API REQUEST ' . $options->action;
-			$text_lenght	= strlen($text) +1;
-			$nchars			= 200;
-			$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
-			debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
-		}
+		// debug
+			// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
+			if(SHOW_DEBUG===true) {
+				$text			= 'API REQUEST ' . $options->action;
+				$text_lenght	= strlen($text) +1;
+				$nchars			= 200;
+				$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
+				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
+			}
 
 		// logged
 			if ($options->action!=='login' && $options->action!=='get_login' && login::is_logged()!==true) {
@@ -68,7 +69,7 @@ class dd_manager {
 					}
 					break;
 
-				case 'dd_core_api':					
+				case 'dd_core_api':
 					$dd_core_api = new dd_core_api();
 					if ( !method_exists($dd_core_api, $options->action) ) {
 						$dedalo_data = new stdClass();
@@ -80,30 +81,32 @@ class dd_manager {
 					break;
 			}
 
-		if(SHOW_DEBUG===true) {
-			$total_time = exec_time_unit($api_start_time,'ms')." ms";
-			$api_debug = new stdClass();
-				$api_debug->api_exec_time	= $total_time;
-				// $api_debug->api_options		= $options;
+		// debug
+			if(SHOW_DEBUG===true) {
+				$total_time = exec_time_unit($api_start_time,'ms')." ms";
+				$api_debug = new stdClass();
+					$api_debug->api_exec_time	= $total_time;
+					$api_debug->memory_usage	= dd_memory_usage();
+					// $api_debug->api_options	= $options;
 
-			if (isset($dedalo_data->debug)) {
-				// add to existing debug properties
-				foreach ($api_debug as $key => $value) {
-					$dedalo_data->debug->{$key} = $value;
+				if (isset($dedalo_data->debug)) {
+					// add to existing debug properties
+					foreach ($api_debug as $key => $value) {
+						$dedalo_data->debug->{$key} = $value;
+					}
+				}else{
+					// create new debug property
+					$dedalo_data->debug = $api_debug;
 				}
-			}else{
-				// create new debug property
-				$dedalo_data->debug = $api_debug;
+				//dump($dedalo_data->debug, ' $dedalo_data->debug ++ '.to_string($options->action));
+				// debug_log("API REQUEST $total_time ".str_repeat(">", 70).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 171), logger::DEBUG);
+				// debug_log(json_encode($options, JSON_PRETTY_PRINT) .PHP_EOL. "API REQUEST $total_time ".str_repeat(">", 70), logger::DEBUG);
+				// $line = "API REQUEST total_time: $total_time ".str_repeat("<", 89); // 164
+				// debug_log($line, logger::DEBUG);
+				// if ($options->action==='read') {
+				// 	dump($dedalo_data, ' dedalo_data ++ '.to_string());
+				// }
 			}
-			//dump($dedalo_data->debug, ' $dedalo_data->debug ++ '.to_string($options->action));
-			// debug_log("API REQUEST $total_time ".str_repeat(">", 70).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 171), logger::DEBUG);
-			// debug_log(json_encode($options, JSON_PRETTY_PRINT) .PHP_EOL. "API REQUEST $total_time ".str_repeat(">", 70), logger::DEBUG);
-			// $line = "API REQUEST total_time: $total_time ".str_repeat("<", 89); // 164
-			// debug_log($line, logger::DEBUG);
-			// if ($options->action==='read') {
-			// 	dump($dedalo_data, ' dedalo_data ++ '.to_string());
-			// }
-		}
 
 
 		return $dedalo_data;

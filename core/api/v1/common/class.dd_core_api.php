@@ -27,6 +27,7 @@ class dd_core_api {
 		// static $context;
 
 
+
 	/**
 	* __CONSTRUCT
 	* @return bool
@@ -356,6 +357,7 @@ class dd_core_api {
 
 		return (object)$response;
 	}//end get_element_context
+
 
 
 	//
