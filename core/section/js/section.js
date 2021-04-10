@@ -204,7 +204,7 @@ section.prototype.build = async function(autoload=false) {
 					const event_token = event_manager.subscribe('render_'+self.id, show_debug_info)
 					function show_debug_info() {
 						event_manager.unsubscribe(event_token)
-						load_data_debug(self, api_response, dd_request_show_original)						
+						load_data_debug(self, api_response, dd_request_show_original)
 					}
 				}
 		}
@@ -249,9 +249,17 @@ section.prototype.build = async function(autoload=false) {
 			self.initiator = initiator
 
 	// pagination update properties
-		self.pagination.limit	= sqo.limit
-		self.pagination.offset	= sqo.offset
-		self.pagination.total	= self.pagination.total || sqo.full_count || 0
+		self.pagination.limit	= sqo
+			? sqo.limit
+			: 10
+		self.pagination.offset	= sqo
+			? sqo.offset
+			: 0
+		self.pagination.total	= self.pagination.total
+			? self.pagination.total
+			: sqo
+				? sqo.full_count
+				: 0
 
 	// paginator
 		if (!self.paginator) {
