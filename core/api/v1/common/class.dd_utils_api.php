@@ -340,8 +340,6 @@ class dd_utils_api {
 
 		$file_name	= 'structure.json';
 		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
-		// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
-			// dump($file_path, ' file_path ++ '.to_string());
 
 		if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
 			// write error occurred
@@ -365,8 +363,6 @@ class dd_utils_api {
 
 		return (object)$response;
 	}//end structure_to_json
-
-
 
 
 
@@ -415,8 +411,6 @@ class dd_utils_api {
 
 		return (object)$response;
 	}//end import_structure_from_json
-
-
 
 
 
@@ -695,9 +689,6 @@ class dd_utils_api {
 	// 	$options = new stdClass();
 	// 		$options->section_tipo = null;
 	// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-
-
 	// }//end get_time_machile_list
 
 
@@ -738,7 +729,6 @@ class dd_utils_api {
 
 		return (object)$response;
 	}//end regenerate_relations
-
 
 
 
