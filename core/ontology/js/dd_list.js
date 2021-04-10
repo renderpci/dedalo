@@ -101,39 +101,69 @@ var dd = new function() {
 	* Abrimos secuencialmente todos los divs cuyos terminoID estén contenidos en el array "openDivs"
 	* Se inicia al cargar la página, tras leer la cookie
 	*/
-	this.openTrackedDivs = function(terminoIDresalte) {
+	this.openTrackedDivs = async function(terminoIDresalte) {
+
+		const container = document.getElementById("tsTreeLOAD")
+		container.classList.add("hide")
+
+		const spinner = create_dom_element({
+			element_type	: 'div',
+			class_name		: 'loading_spinner',			
+			parent			: container.parentNode
+		})
+
 
 		// Remove duplicates
 		openDivs = uniq_fast(openDivs)
 			//console.log(openDivs)
 
-		let le = false
-		if(openDivs && openDivs.length) le = openDivs.length
+		const openDivs_length = (openDivs && openDivs.length)
+			? openDivs.length
+			: false
 		
-		// Create a deferred object
-		const dfd = $.Deferred()
-		
-		// Add handlers to be called when dfd is resolved
-		dfd.done(function() {
+		// Loop
+			if (openDivs_length && openDivs_length>0) {
+				for(let x=0; x < openDivs_length ; x++) {
+					if( typeof openDivs[x]!=='undefined' && openDivs[x].length>0 ) {
 
-			// Loop
-			if(le>0) for(let x=0; x < le ; x++) {
+						const terminoID		= openDivs[x]
+						const div_destino	= 'div_' + terminoID
+						const slide			= 'block'
+						
+						const current_promise = await dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)				
+					}				
+				}//end if(le!=-1) for(var x=0; x < le ; x++)
+			}
 
-				if( typeof openDivs[x] !== 'undefined' && openDivs[x].length>0 ) {
+		spinner.remove()
+		container.classList.remove("hide")
 
-					var terminoID 	= openDivs[x],
-						div_destino = 'div_' + terminoID,
-						slide 		= 'block'
+		// OLD
+			// // Create a deferred object
+			// const dfd = $.Deferred()
+			
+			// // Add handlers to be called when dfd is resolved
+			// dfd.done(function() {
+
+			// 	// Loop
+			// 	if(le>0) for(let x=0; x < le ; x++) {
+
+			// 		if( typeof openDivs[x] !== 'undefined' && openDivs[x].length>0 ) {
+
+			// 			var terminoID 	= openDivs[x],
+			// 				div_destino = 'div_' + terminoID,
+			// 				slide 		= 'block'
+						
+			// 			const current_promise = dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)				
+						
+			// 		}							
 					
-					dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)				
-				}							
-				
-			}//end if(le!=-1) for(var x=0; x < le ; x++)
-		});//end done
-		//console.log(dfd)
+			// 	}//end if(le!=-1) for(var x=0; x < le ; x++)
+			// });//end done
+			// //console.log(dfd)
 
-		// Resolve deferred obj
-		dfd.resolve()
+			// // Resolve deferred obj
+			// dfd.resolve()
 	}//end dd.openTrackedDivs
 
 
@@ -193,16 +223,16 @@ var dd = new function() {
 			}
 		}
 		
-		var input_field_html= '<input class="input_field_inline" type="text" name="input_field_'+terminoID+'" id="input_field_'+terminoID+'" value="'+termino+'" title="To validate changes press enter" >'
-		var close_img_html	= '<img   class="close_img_inline"   src="../themes/default/x-icon-orange.png" id="close_img_'+terminoID+'" >'
+		const input_field_html	= '<input class="input_field_inline" type="text" name="input_field_'+terminoID+'" id="input_field_'+terminoID+'" value="'+termino+'" title="To validate changes press enter" >'
+		const close_img_html	= '<img   class="close_img_inline"   src="../themes/default/x-icon-orange.png" id="close_img_'+terminoID+'" >'
 		
 		// hide termino and add input field
 		termino_span_obj.hide().after( input_field_html + close_img_html )
 		
-		var input_field_obj		= $('#input_field_'+terminoID)
-		var close_img_obj		= $('#close_img_'+terminoID)
+		const input_field_obj		= $('#input_field_'+terminoID)
+		const close_img_obj		= $('#close_img_'+terminoID)
 		
-		$(input_field_obj, close_img_obj).hide().fadeIn(300).focus()
+		$(input_field_obj, close_img_obj).hide().fadeIn(150).focus()
 		
 		$(close_img_obj).click(function() { // Close button
 			save_sequence(false)
@@ -216,7 +246,7 @@ var dd = new function() {
 			  save_sequence(false)
 		});		
 		
-		var save_sequence = function(save) {
+		function save_sequence(save) {
 			
 			// set and save content alert . If save id false, only remove input field
 			// si el termino del input es igual al original no lo guardamos a menos que sea un preview de traducción	
@@ -230,7 +260,7 @@ var dd = new function() {
 			// remove element
 			input_field_obj.remove()
 			close_img_obj.remove()
-			termino_span_obj.show(300)
+			termino_span_obj.show(150)
 		}
 
 		return true		
@@ -291,6 +321,10 @@ var dd = new function() {
 			//
 			actualizarPostAjax(terminoID,0)	//setTimeout("alert('No existe elemento "+terminoID+" ')",1000);
 
+			return new Promise(function(resolve){
+				resolve(false)
+			})
+
 		}else{
 			
 			const index = loadedDivs.indexOf(terminoID) // Find the index in array 'loadedDivs'
@@ -331,11 +365,11 @@ var dd = new function() {
 				// AJAX CALL
 				//jQuery.ajaxQueue({
 				//$.ajaxq ("MyQueue", {
-				$.ajax({
+				return $.ajax({
 					url		: this.trigger_url,
 					data	: mydata,
 					type	: 'GET',
-					async	: my_async,
+					// async	: my_async,
 					success : function( data_response ) {
 						if(accion==="buildTree") {
 							//$(divJQobj).hide();
@@ -362,42 +396,37 @@ var dd = new function() {
 				.fail( function(jqXHR, textStatus) {
 					alert("Load tree error "+textStatus)
 				})
-				// DONE
-				/*
-				.done(function(data_response) {
-					
-					if(accion==="buildTree") {
-						//$(divJQobj).hide();
-						$(divJQobj)
-							.css({'background-color':'#CCC'})
-							.fadeIn(time)
-						//$(divJQobj).fadeIn(time);
-					}else{
-						//$(divJQobj).hide();
-						$(divJQobj).html(data_response);
-						// Fijamos como abierto el div actual
-						actualizarPostAjax(terminoID,1);
+				// DONE					
+					// .done(function(data_response) {
+						
+					// 	if(accion==="buildTree") {
+					// 		//$(divJQobj).hide();
+					// 		$(divJQobj)
+					// 			.css({'background-color':'#CCC'})
+					// 			.fadeIn(time)
+					// 		//$(divJQobj).fadeIn(time);
+					// 	}else{
+					// 		//$(divJQobj).hide();
+					// 		$(divJQobj).html(data_response);
+					// 		// Fijamos como abierto el div actual
+					// 		actualizarPostAjax(terminoID,1);
 
-						if(slide==='block'){
-							$(divJQobj).css({'display':'block'}); // se usa sólo al cargar la página
-						}else{
-							$(divJQobj).slideDown(time, function(){ });
-						}
-					}//if modo=="list"
-					//return 1;
-					
-				})
-				.always(function() {
-				});
-				*/
-							
+					// 		if(slide==='block'){
+					// 			$(divJQobj).css({'display':'block'}); // se usa sólo al cargar la página
+					// 		}else{
+					// 			$(divJQobj).slideDown(time, function(){ });
+					// 		}
+					// 	}//if modo=="list"
+					// 	//return 1;
+						
+					// })
+					// .always(function() {
+					// });
 			
 			}//if(index==-1)
 			
 		}//if(div==null)
-
-		return true
-	};//end load_tree
+	}//end load_tree
 
 
 
@@ -428,12 +457,14 @@ var dd = new function() {
 		loadedDivs.length = 0	//alert("parent:"+parent)
 
 		// TREE : load tree from parent term to update only changed branch
-		const div_destino 		= 'div_' + parent
+		const div_destino		= 'div_' + parent
 		const slide				= ''
-		const terminoIDresalte 	= current_terminoID
-		const target				= 'manual'
+		const terminoIDresalte	= current_terminoID
+		const target			= 'manual'
 
-		dd.load_tree(parent, div_destino, modo, slide, terminoIDresalte, target, null, parent)	// (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
+		const current_promise = dd.load_tree(parent, div_destino, modo, slide, terminoIDresalte, target, null, parent)	// (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
+	
+		return current_promise
 	};//end actualizarList
 
 
@@ -534,17 +565,17 @@ var dd = new function() {
 	this.update_tr_order = function(terminoID, dato, obj) {
 		//return alert( "Dato a pasar: \n"+terminoID+" \n"+JSON.stringify( dato ) )
 
-		const myurl 		= this.trigger_url
-		const accion 		= 'update_tr_order'
-		const mydata		= { 
-			accion 		: accion,
-			terminoID 	: terminoID,
-			dato 		: dato,
-			top_tipo 	: page_globals.top_tipo
+		const myurl		= this.trigger_url
+		const accion	= 'update_tr_order'
+		const mydata	= { 
+			accion		: accion,
+			terminoID	: terminoID,
+			dato		: dato,
+			top_tipo	: page_globals.top_tipo
 		  }
 
 		// AJAX REQUEST
-		$.ajax({
+		return $.ajax({
 			url			: myurl,
 			data		: mydata,
 			type		: "POST",
@@ -572,10 +603,8 @@ var dd = new function() {
 			alert( msg )
 		})
 		// ALWAYS
-		.always(function() {		
+		.always(function() {
 		})
-
-		return true
 	}//end update_tr_order
 
 
@@ -663,7 +692,7 @@ var dd = new function() {
 			top_tipo	: page_globals.top_tipo
 		};
 
-		$.ajax({
+		const current_promise = $.ajax({
 			url			: this.trigger_url,
 			data		: mydata,
 			type		: "POST",
@@ -694,10 +723,9 @@ var dd = new function() {
 		})
 		// ALWAYS
 		.always(function() {
-		})			
-		
+		})
 
-		return true
+		return current_promise
 	};//fin function delete_term
 
 
@@ -723,7 +751,7 @@ var dd = new function() {
 				'top_tipo'	: page_globals.top_tipo
 				};//return console.log(modo) 
 		
-		$.ajax({
+		const current_promise = $.ajax({
 			url		: this.trigger_url,
 			data	: mydata,
 			type	: 'POST',
@@ -757,7 +785,7 @@ var dd = new function() {
 		.always(function() {
 		})
 			
-		return true	
+		return current_promise
 	};//end insertTS
 
 
@@ -771,45 +799,77 @@ var dd = new function() {
 			alert("Error on saveDescriptorFromlist. Need a valid terminoID")
 			return false
 		}
-				
-		const current_div = $(obj)
 
-		current_div.addClass('spinner')
-		
-		const trigger_url = this.trigger_url
-		const mydata = {
-					accion 		: 'saveDescriptorFromList',
-					terminoID 	: terminoID,
-					termino 	: termino,
-					ts_lang 	: ts_lang,
-					top_tipo 	: page_globals.top_tipo || null
-					};
+		$(obj).addClass('spinner')
 
-		if(SHOW_DEBUG===true) {
-			console.log("saveDescriptorFromList trigger_url, mydata",trigger_url, mydata)
+		const descriptors_trigger	= 'trigger.descriptors_dd.php';		
+		const dato					= termino
+		const lang					= ts_lang // defined as const in ts_list.phtml
+
+		const data	= {
+			mode		: 'saveDescriptor',
+			parent		: terminoID,
+			lang		: lang,
+			tipo		: 'termino',
+			dato		: dato,
+			terminoID	: terminoID,
+			top_tipo	: page_globals.top_tipo
 		}
-
-		$.ajax({
-			url	 : trigger_url,
-			data : mydata,
-			type : "POST",
-		})
-		// DONE
-		.done(function(data_response) {
-			if(SHOW_DEBUG===true) {
-				console.log("saveDescriptorFromList data_response:",data_response)
-			}
-		})
-		// FAIL ERROR
-		.fail(function(jqXHR, textStatus) {
-
-		})
-		// ALWAYS
-		.always(function() {
-			current_div.removeClass('spinner')
-		})
 		
-		return true
+		const current_promise = $.ajax({
+			url		: descriptors_trigger,
+			data	: data,
+			type	: "POST"
+		})
+		.done(function(data_response) {			
+			if(data_response) alert(data_response);
+		})
+		.fail( function(jqXHR, textStatus) {
+			alert("saveDescriptorFromList error : "+textStatus)
+		})
+		.always(function() {
+			$(obj).removeClass('spinner')
+		});
+
+		// OLD CODE
+			// const current_div = $(obj)
+
+			// current_div.addClass('spinner')
+			
+			// const trigger_url = this.trigger_url
+			// const mydata = {
+			// 	accion		: 'saveDescriptorFromList',
+			// 	terminoID	: terminoID,
+			// 	termino		: termino,
+			// 	ts_lang		: ts_lang,
+			// 	top_tipo	: page_globals.top_tipo || null
+			// }
+
+			// if(SHOW_DEBUG===true) {
+			// 	console.log("saveDescriptorFromList trigger_url, mydata",trigger_url, mydata)
+			// }
+
+			// $.ajax({
+			// 	url	 : trigger_url,
+			// 	data : mydata,
+			// 	type : "POST",
+			// })
+			// // DONE
+			// .done(function(data_response) {
+			// 	if(SHOW_DEBUG===true) {
+			// 		console.log("saveDescriptorFromList data_response:",data_response)
+			// 	}
+			// })
+			// // FAIL ERROR
+			// .fail(function(jqXHR, textStatus) {
+
+			// })
+			// // ALWAYS
+			// .always(function() {
+			// 	current_div.removeClass('spinner')
+			// })
+		
+		return current_promise
 	}//end saveDescriptorFromList
 
 
@@ -857,7 +917,7 @@ if( get_localStorage('cookieOpenDivs_dd')===null || get_localStorage('cookieOpen
 	
 
 // COOKIEOPENDIVSSTRING : leemos el valor del cookie que está como string
-var cookieOpenDivsString	= get_localStorage('cookieOpenDivs_dd')
+var cookieOpenDivsString = get_localStorage('cookieOpenDivs_dd')
 
 // COOKIEOPENDIVSARRAY : lo convertimos en array
 var cookieOpenDivsArray		= []
@@ -950,8 +1010,10 @@ function openDivTrack(terminoID, accion, resaltar) {
 		
 	}else{		 	// localizamos y eliminamos en el array "openDivs" el div cerrado
 		
-		var index	= openDivs.indexOf(terminoID) // Find the index
-		if(index!==-1) openDivs.splice(index,1) // Remove it if really found!		
+		const index	= openDivs.indexOf(terminoID) // Find the index
+		if(index!==-1) {
+			openDivs.splice(index,1) // Remove it if really found!
+		}	
 	}
 	
 	// Actualizamos la cookie
@@ -969,7 +1031,7 @@ function openDivTrack(terminoID, accion, resaltar) {
 	}
 
 	return true ;	
-}
+}//end openDivTrack
 
 
 
@@ -994,7 +1056,7 @@ function actualizarPostAjax(terminoID, cargadoObjeto) {
 
 		loadedDivTrack(terminoID,0) // elimina terminoID como cargado en el array "loadedDivs"	
 		
-		var index	= openDivs.indexOf(terminoID) // Find the index
+		const index = openDivs.indexOf(terminoID) // Find the index
 		if(index!==-1)	{
 			openDivTrack(terminoID,0) // elimina terminoID como abierto en el array "openDivs"
 		}
@@ -1003,7 +1065,8 @@ function actualizarPostAjax(terminoID, cargadoObjeto) {
 	}
 
 	return true
-}
+}//end actualizarPostAjax
+
 
 
 /**
