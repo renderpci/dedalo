@@ -10,50 +10,50 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 /**
 * LOGIN
 */
-$is_logged	= login::is_logged();
-	
-if($is_logged!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
-	header("Location: $url");
-	exit();
-}
-$is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
-if($is_global_admin!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
-	header("Location: $url");
-	exit();
-}
-
-#require_once( dirname(__FILE__) . '/common/class.navigator.php');
-require_once( dirname(__FILE__) .'/class.dd.php');
-require_once( dirname(__FILE__) .'/class.RecordObj_dd_edit.php');
+	$is_logged	= login::is_logged();
+		
+	if($is_logged!==true) {
+		$url =  DEDALO_ROOT_WEB ."/main/";
+		header("Location: $url");
+		exit();
+	}
+	$is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
+	if($is_global_admin!==true) {
+		$url =  DEDALO_ROOT_WEB ."/main/";
+		header("Location: $url");
+		exit();
+	}
 
 
+// other files to include
+	require_once( dirname(__FILE__) .'/class.dd.php');
+	require_once( dirname(__FILE__) .'/class.RecordObj_dd_edit.php');
 
-$codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
 
-# set vars
-$vars = array(
-	'accion',
-	'terminoID',
-	'parent',
-	'termino',
-	'terminoIDlist',
-	'terminoIDresalte',
-	'modo',
-	'type',
-	'tabla',
-	'id',
-	'ts_lang',
-	'lang2load',
-	'terminoID_to_link',
-	'dato',
-	'def',
-	'nombre',
-	'modelo',
-	'nHijos'
-);
-foreach($vars as $name)	$$name = common::setVar($name);
+
+// set vars
+	$codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+	$vars = array(
+		'accion',
+		'terminoID',
+		'parent',
+		'termino',
+		'terminoIDlist',
+		'terminoIDresalte',
+		'modo',
+		'type',
+		'tabla',
+		'id',
+		'ts_lang',
+		'lang2load',
+		'terminoID_to_link',
+		'dato',
+		'def',
+		'nombre',
+		'modelo',
+		'nHijos'
+	);
+	foreach($vars as $name)	$$name = common::setVar($name);
 
 
 
@@ -65,97 +65,99 @@ if($accion==='insertTS') {
 	if(!$parent)	exit("Need more vars: parent: $parent ");
 	if(!$modo)		exit("Need more vars: modo: $modo ");
 
+	
+	// prefix
+		$prefix = RecordObj_dd_edit::get_prefix_from_tipo($parent);
+		if (empty($prefix)) {
+			exit("Error on insertTS. Prefix not found for parent:$parent)");
+		}
+
+	// es modelo
+		$esmodelo = ($modo==='modelo_edit')
+			? 'si'
+			: 'no';
+	
+	// norden
+		$ar_childrens	= RecordObj_dd::get_ar_childrens($parent);
+		$norden			= (int)count($ar_childrens)+1;
+	
+	// configure RecordObj_dd
+		$RecordObj_dd_edit 	= new RecordObj_dd_edit(NULL,$prefix);	
+			# Defaults
+			$RecordObj_dd_edit->set_esdescriptor('si');
+			$RecordObj_dd_edit->set_visible('si');	
+			$RecordObj_dd_edit->set_parent($parent);
+			$RecordObj_dd_edit->set_esmodelo($esmodelo);
+			$RecordObj_dd_edit->set_norden($norden);
+	
+	// save : After save, we can recover new created terminoID (prefix+autoIncrement)
+		$created_id_ts = $RecordObj_dd_edit->Save();
+	
+	// terminoID : Seleccionamos el último terminoID recien creado
+		$terminoID = $RecordObj_dd_edit->get_terminoID();
 		
-	$prefijo 	= RecordObj_dd_edit::get_prefix_from_tipo($parent); #substr($parent,0,2);
-	if (empty($prefijo)) {
-		exit("Error on insertTS. Prefix not found for parent:$parent)");
-	}
+		// check valid created terminoID
+			if (empty($terminoID) || strlen($terminoID)<3) {
+				exit("Error on create new term.");
+			}
+			if ($terminoID==$parent) {
+				exit("Error on insertTS. Created record with same terminoID as parent. Maybe counter is outdated. Please change manually current created term '$terminoID' before continue)");
+			}
+	
+		// sync Dédalo ontology records
+			// ontology::add_term((object)[
+			// 	'term_id'	=> $terminoID
+			// ]); 
 
-	$esmodelo = 'no';
-	if($modo==='modelo_edit') $esmodelo	= 'si';
 
-	
-	$ar_childrens 	= RecordObj_dd::get_ar_childrens($parent);
-	$norden 		= (int)count($ar_childrens)+1; #error_log("norden: $norden");
-	
-	$RecordObj_dd_edit 	= new RecordObj_dd_edit(NULL,$prefijo);	
-		# Defaults
-		$RecordObj_dd_edit->set_esdescriptor('si');
-		$RecordObj_dd_edit->set_visible('si');	
-		$RecordObj_dd_edit->set_parent($parent);
-		$RecordObj_dd_edit->set_esmodelo($esmodelo);
-		$RecordObj_dd_edit->set_norden($norden);
-		#$RecordObj_dd_edit->set_usableIndex('si');
-
-		#dump($RecordObj_dd_edit, ' RecordObj_dd_edit ++ '.to_string()); exit();
-	
-	# SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
-	$created_id_ts = $RecordObj_dd_edit->Save();
-		#dump($created_id_ts,'created_id_ts'," "); die();
-	
-	# TERMINOID : Seleccionamos el último terminoID recien creado
-	$terminoID	= $RecordObj_dd_edit->get_terminoID();
-		#dump($RecordObj_dd_edit,"RecordObj_dd_edit new obj created terminoID:$terminoID, id:$created_id_ts "); die( );	
-
-	if ($terminoID==$parent) {
-		exit("Error on insertTS. Created record with same terminoID as parent. Maybe counter is outdated. Please change manually current created term '$terminoID' before continue)");
-	}
-	
-	if( $terminoID && strlen($terminoID)>2 ) {
-		
+	// all is ok. return terminoID string	
 		echo (string)$terminoID;
 		
 		/*
 		# DESCRIPTORS : finally we create one record in descriptors with this main info 
-		# Usaremos como lenguaje de creación, el lenguaje principal de la jerarquía actual. 
-		# (Ej. para 'je_dd', 'lg-spa' , definido en la tabla 'jerarquia')
-		$lang = 'lg-spa';	#Jerarquia::get_mainLang($terminoID);			
+			# Usaremos como lenguaje de creación, el lenguaje principal de la jerarquía actual. 
+			# (Ej. para 'je_dd', 'lg-spa' , definido en la tabla 'jerarquia')
+			$lang = 'lg-spa';	#Jerarquia::get_mainLang($terminoID);			
 
-		$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
-		$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, NULL, $terminoID, $lang);
-		$RecordObj_descriptors_dd->set_tipo('termino');
-		$RecordObj_descriptors_dd->set_parent($terminoID);
-		$RecordObj_descriptors_dd->set_lang($lang);
-		$created_id_descriptors	= $RecordObj_descriptors_dd->Save();		
-		*/
-		
-		# TREE : Reload only partial
-		/*
-		$RecordObj_dd_edit 	= new RecordObj_dd_edit( $terminoID );
-		$parentPost 		= $RecordObj_dd_edit->get_parent();
-		$terminoIDpost 		= $parent;		
-		$divName 			= 'divCont'.$parent;
+			$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
+			$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, NULL, $terminoID, $lang);
+			$RecordObj_descriptors_dd->set_tipo('termino');
+			$RecordObj_descriptors_dd->set_parent($terminoID);
+			$RecordObj_descriptors_dd->set_lang($lang);
+			$created_id_descriptors	= $RecordObj_descriptors_dd->Save();		
+			*/
+			
+			# TREE : Reload only partial
+			/*
+			$RecordObj_dd_edit 	= new RecordObj_dd_edit( $terminoID );
+			$parentPost 		= $RecordObj_dd_edit->get_parent();
+			$terminoIDpost 		= $parent;		
+			$divName 			= 'divCont'.$parent;
 
-		$html .= $codHeader ;
-		$html .= "<script type=\"text/javascript\">
-					try{
-						document.getElementById('$divName').innerHTML += '<div id=\"ok_msg\" class=\"ok\"> Created $terminoID ok ! </div>';
-						dd.openTSedit('$terminoID','$parent');	
-						setTimeout(function(){
-							window.openDivTrack('$parentPost',1,'$terminoIDpost');
-							var msg = document.getElementById('ok_msg');
-							if (msg) { msg.parentNode.removeChild(msg); }
-						},1500);
-					}catch(err){ 
-						alert(err)
-					}
-				</script>";
-		
-		echo $html ;
-		*/
-
-		
-
-
-	}else{
-		echo "Error on create new term.";
-	}
+			$html .= $codHeader ;
+			$html .= "<script type=\"text/javascript\">
+						try{
+							document.getElementById('$divName').innerHTML += '<div id=\"ok_msg\" class=\"ok\"> Created $terminoID ok ! </div>';
+							dd.openTSedit('$terminoID','$parent');	
+							setTimeout(function(){
+								window.openDivTrack('$parentPost',1,'$terminoIDpost');
+								var msg = document.getElementById('ok_msg');
+								if (msg) { msg.parentNode.removeChild(msg); }
+							},1500);
+						}catch(err){ 
+							alert(err)
+						}
+					</script>";
+			
+			echo $html ;
+			*/
 	
-	# Write session to unlock session file
-	session_write_close();
+	
+	// Write session to unlock session file
+		session_write_close();
 
 	die();	
-}
+}//end insertTS
 
 
 
@@ -180,7 +182,6 @@ if($accion==='editTS') {
 			trigger_error($msg);
 			exit();
 		}
-
 
 	// required fields
 		$parentInicial	= safe_xss($_POST['parentInicial']);
@@ -282,7 +283,7 @@ if($accion==='editTS') {
 			$html .= "
 			<script type=\"text/javascript\">					
 				window.opener.openDivTrack('$parentPost',1,'$parentPost');
-				window.close(); 
+				// window.close(); 
 			</script>";
 		
 		# Si ha cambiado el parent		
@@ -296,7 +297,7 @@ if($accion==='editTS') {
 				// Actualiza la antigua ubicación 
 				window.opener.openDivTrack('$parentInicial',1,'$terminoID');
 				// Cierra la ventana de edición
-				window.close(); 
+				// window.close(); 
 			</script>";
 											
 		}else{
@@ -307,7 +308,8 @@ if($accion==='editTS') {
 				<script type=\"text/javascript\">
 					//alert('parentPost:$parentPost - terminoID:$terminoID')
 					window.opener.location.reload();
-					window.close();	
+					// window.close();
+					history.back()
 				</script>";
 			}else{
 				# Reload only de parent div
@@ -315,10 +317,10 @@ if($accion==='editTS') {
 				<script type=\"text/javascript\">
 					//alert('parentPost:$parentPost - terminoID:$terminoID')					
 					window.opener.openDivTrack('$parentPost',1,'$terminoID');
-					window.close();	
+					// window.close();
+					history.back()	
 				</script>";
-			}
-			
+			}			
 		}
 		
 		echo $codHeader . $html;
@@ -327,10 +329,8 @@ if($accion==='editTS') {
 		session_write_close();
 		
 		exit();
-	}	
-
-}#end EDIT V4
-
+	}
+}//end editTS
 
 
 
@@ -363,41 +363,40 @@ if($accion==='update_tr_order') {
 	session_write_close();	
 
 	exit();
-}
-
+}//end update_tr_order
 
 
 
 /**
 * SAVEDESCRIPTORFROMLIST : Inline edit in tree
 */
-if($accion==='saveDescriptorFromList') {
-	
-	if(!$terminoID || strlen($terminoID)<2) die("Need more data! (terminoID) ");
-	
-	$html='';
+	// if($accion==='saveDescriptorFromList') {
+		
+	// 	if(!$terminoID || strlen($terminoID)<2) die("Need more data! (terminoID) ");
+		
+	// 	$html='';
 
-	$lang = $ts_lang;
+	// 	$lang = $ts_lang;
 
-	if(empty($lang) || strlen($lang)<3) {
-		$lang = 'lg-spa';	# Fixed main lang for dd structure
-	}
-	
-	$parent = $terminoID;
+	// 	if(empty($lang) || strlen($lang)<3) {
+	// 		$lang = 'lg-spa';	# Fixed main lang for dd structure
+	// 	}
+		
+	// 	$parent = $terminoID;
 
-	debug_log(__METHOD__." lang ".to_string($lang), logger::DEBUG);	
+	// 	debug_log(__METHOD__." lang ".to_string($lang), logger::DEBUG);	
 
-	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, null, $parent, $lang, $tipo='termino');
-	$RecordObj_descriptors_dd->set_dato($termino);
-	$RecordObj_descriptors_dd->Save();
-	
-	$html .= " Saved! ";
+	// 	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
+	// 	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, null, $parent, $lang, $tipo='termino');
+	// 	$RecordObj_descriptors_dd->set_dato($termino);
+	// 	$RecordObj_descriptors_dd->Save();
+		
+	// 	$html .= " Saved! ";
 
-	echo $html;
-	
-	exit();
-}
+	// 	echo $html;
+		
+	// 	exit();
+	// }//end saveDescriptorFromList
 
 
 
@@ -504,7 +503,7 @@ if($accion==='deleteTS') {
 	session_write_close();
 
 	exit();	
-}
+}//end deleteTS
 
 
 
@@ -528,7 +527,8 @@ if($accion==='listadoHijos') {
 	session_write_close();
 
 	die();
-}
+}//end listadoHijos
+
 
 
 /**
@@ -542,45 +542,66 @@ if($accion==='searchTSform') {
 	# IMPORTANTE : Sólo buscaremos con un tipo seleccionado
 	# if(empty($type)) die("Please select type");
 
-	if ($terminoID) {
-		$terminoID = trim($terminoID);
-	}
-	if($termino) {
-		$termino	= trim($termino);
-		$termino	= addslashes($termino);
-	}
-	if($def)			$def 		= addslashes($def);
-	if($modelo)			$modelo		= trim($modelo);
+	// terminoID
+		if ($terminoID) {
+			$terminoID = trim($terminoID);
+		}
+
+	// termino
+		if($termino) {
+			$termino	= trim($termino);
+			$termino	= addslashes($termino);
+		}
+
+	// def
+		if($def) {
+			$def = addslashes($def);
+		}
+
+	// modelo
+		if($modelo) {
+			$modelo = trim($modelo);
+		}
 
 	
-	# case only select type
-	if( empty($terminoID) && empty($termino) && empty($def) && empty($modelo) && strlen($type)>0) {
-		$url = "dd_list.php?modo={$modo}&type={$type}";
-		header("Location: $url");
-		exit();
-	}
+	// case only select type
+		if( empty($terminoID) && empty($termino) && empty($def) && empty($modelo) && strlen($type)>0) {
+			$url = "dd_list.php?modo={$modo}&type={$type}";
+			header("Location: $url");
+			exit();
+		}
 	
-	# case nothing is received
-	if(empty($terminoID) && empty($termino) && empty($def) && empty($modelo)){
-		header("Location: dd_list.php?modo={$modo}");
-		exit();
-	}
+	// case nothing is received
+		if(empty($terminoID) && empty($termino) && empty($def) && empty($modelo)){
+			header("Location: dd_list.php?modo={$modo}");
+			exit();
+		}
 	
-	$getString		 = "&terminoID=$terminoID&termino=$termino&def=$def&type=$type&modelo=$modelo";
+	// build getString
+		$getString = "&terminoID=$terminoID&termino=$termino&def=$def&type=$type&modelo=$modelo";	
+		if($modo) {
+			$getString .= "&modo=$modo";
+		}	
 	
-	if($modo)	
-	$getString 		.= "&modo=$modo";
 	
 	# init dd in requested modo
-	$dd 			= new dd($modo,$type,$ts_lang);	
+		$dd = new dd($modo,$type,$ts_lang);	
 	
-	$resultArray 	= $dd->searchTSform($terminoID, $termino, $def, $type, $modelo);
-	
-	$n				= 0;		if(isset($resultArray['total']))	$n 				= $resultArray['total'];
-	$terminoIDlist	= false;	if(isset($resultArray['list']))		$terminoIDlist 	= $resultArray['list'];
-	$max			= false;	if(isset($resultArray['max']))		$max		 	= $resultArray['max'];
-	
-	$t 				= 'form';	
+		$resultArray = $dd->searchTSform($terminoID, $termino, $def, $type, $modelo);
+
+		$n = isset($resultArray['total'])
+			? $resultArray['total']
+			: 0;
+
+		$terminoIDlist = isset($resultArray['list'])
+			? $resultArray['list']
+			: false;
+
+		$max = isset($resultArray['max'])
+			? $resultArray['max']
+			: false;
+
+		$t = 'form';
 	
 	# con la lista de los terminos encontrados, saltamos a la función de buscar sus padres para poder desplegarlos
 	#echo searchTSlist($terminoIDlist, $t, $n, $max, $getString);
@@ -590,17 +611,17 @@ if($accion==='searchTSform') {
 		$html  = $codHeader ;
 		$html .= js::build_tag('inc/cookies.js');
 		$html .= js::build_tag('js/dd_common.js');
-		$html .= "<script type=\"text/javascript\">";
+		$html .= '<script type="text/javascript">';
 		
-		$terminosList = $dd->listaDeResultados2cookie($terminoIDlist);		#print_r($terminosList); die("<HR>V4 searchTSform terminosList Stop");		
+		$terminosList = $dd->listaDeResultados2cookie($terminoIDlist);		
 
-		$html .= "set_localStorage('cookieOpenDivs_dd','$terminosList',7);"; #die($terminosList);
+		$html .= "set_localStorage('cookieOpenDivs_dd','$terminosList',7);";
 		
 		# eliminamos del url "searchTSlist" (para poder recargar la página sin perder los cambios posteriores)
 		# y redireccionamos por javascript a la página general del listado	
-		$url   = "dd_list.php?modo=$modo&terminoIDlist=$terminoIDlist&total=$t&n=$n&max=$max&ts_lang={$ts_lang}" . $getString ;
+		$url   = "dd_list.php?modo={$modo}&terminoIDlist={$terminoIDlist}&total={$t}&n={$n}&max={$max}&ts_lang={$ts_lang}" . $getString ;
 		$html .= "document.location = '$url' ";	
-		$html .= "</script>";
+		$html .= '</script>';
 
 	# Write session to unlock session file
 	session_write_close();
@@ -608,6 +629,6 @@ if($accion==='searchTSform') {
 	print $html;
 	
 	exit();
-}//end SEARCH
+}//end searchTSform
 
 

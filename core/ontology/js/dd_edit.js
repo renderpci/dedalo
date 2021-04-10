@@ -11,8 +11,15 @@ $(function() {
 
 });
 
+
+
 const descriptors_trigger = 'trigger.descriptors_dd.php';
 
+
+
+/**
+* VALIDAR
+*/
 function validar(formObj) {
 
 	var termino_id_val = $("#termino_"+id).val();	//alert(termino_id_val )
@@ -27,9 +34,15 @@ function validar(formObj) {
 	 	formObj.parent.focus();
      	return (false);
   	}
-  return true;
-}
 
+  return true;
+}//end validar
+
+
+
+/**
+* VERIFICARDESCRIPTOR
+*/
 function verificarDescriptor(valor) {
 	// Comprobamos si tiene hijos
 	if( (nHijos >= 1) && valor == 'no')
@@ -67,10 +80,12 @@ function verificarDescriptor(valor) {
 	}
 
 	return true
-}
+}//end verificarDescriptor
 
 
-/*
+
+/**
+* OPCIONESND
 * Si es NO descriptor, ocultamos las opciones de Términos relacionados
 */
 function opcionesND() {
@@ -78,11 +93,13 @@ function opcionesND() {
 		$(trsND).css('display','none');
 		redimensionarVentana()
 	}
-}
+}//end opcionesND
 
 
 
-
+/**
+* TOOGLETBODYTS
+*/
 function ToogleTBODYts(divget) {
 
   div = document.getElementById(divget);
@@ -95,8 +112,13 @@ function ToogleTBODYts(divget) {
 	}
   }
   redimensionarVentana();
-}
+}//end ToogleTBODYts
 
+
+
+/**
+* CLOSETESAURUS
+*/
 function closeTesaurus() {
 	try{
 		if(relwindow){ relwindow.close() };
@@ -104,16 +126,19 @@ function closeTesaurus() {
 		alert(e)
 	};
 	//return false
-}
+}//end closeTesaurus
 
-/********************************
-* AJAX TERMINOS RELACIONADOS
-********************************/
+
+
+/**
+* CARGARTSREL
+* ajax terminos relacionados
+*/
 function cargarTSrel(terminoID) {
 
-	var myurl 		= 'dd_edit_rel.php'
-	var div 		= $('#div_rel');
-	var mydata		= { 'terminoID': terminoID, 'top_tipo':page_globals.top_tipo};
+	const myurl		= 'dd_edit_rel.php'
+	const div		= $('#div_rel');
+	const mydata	= { 'terminoID': terminoID, 'top_tipo':page_globals.top_tipo};
 
 	//$(div).html('<div class=\"div_spinner_relations\"><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle" /></div>');
 
@@ -133,7 +158,7 @@ function cargarTSrel(terminoID) {
 	})
 	.always(function() {
 	});
-}
+}//end cargarTSrel
 
 
 
@@ -142,24 +167,25 @@ function cargarTSrel(terminoID) {
 */
 function linkTS(terminoID_to_link) {
 
-	var myurl			= 'dd_edit_rel.php'
-	var div 			= $('#div_rel')
-	var accion			= 'linkTS' ;
-	var terminoIDactual = terminoID ;
-	var mydata			= { 'accion' 			: accion,
-							'terminoID' 		: terminoIDactual,
-							'terminoID_to_link' : terminoID_to_link,
-							'top_tipo' 			: page_globals.top_tipo
-						  }
+	const myurl				= 'dd_edit_rel.php'
+	const div				= $('#div_rel')
+	const accion			= 'linkTS'
+	const terminoIDactual	= terminoID
+	const mydata			= {
+		accion				: accion,
+		terminoID			: terminoIDactual,
+		terminoID_to_link	: terminoID_to_link,
+		top_tipo			: page_globals.top_tipo
+	}
 
 	$(div).html('<div><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle"/></div>');
 
 	$.ajax({
-		url			: myurl,
-		data		: mydata,
-		type		: "POST",
-		cache		: false,
-		async		: false,
+		url		: myurl,
+		data	: mydata,
+		type	: "POST",
+		cache	: false,
+		async	: false
 	})
 	// DONE
 	.done(function(data_response) {
@@ -171,21 +197,30 @@ function linkTS(terminoID_to_link) {
 	})
 	.always(function() {
 	});
-}
+}//end linkTS
 
 
+
+/**
+* UNLINKTS
+*/
 function unlinkTS(terminoID_to_unlink, termino) {
 
-	var myurl			= 'dd_edit_rel.php'
-	var div 			= $('#div_rel') ;
-	var accion			= 'unlinkTS' ;
-	termino 			= my_urldecode(termino);
+	const myurl		= 'dd_edit_rel.php'
+	const div		= $('#div_rel') ;
+	const accion	= 'unlinkTS' ;
+	termino			= my_urldecode(termino);
 
 	// mensaje de confirmación
-  	var r=confirm( seguro_que_quiere_desvincular_title + '\n\n ' + descriptor_title + ': ' + termino + '\n\n' )
+  	const r = confirm( seguro_que_quiere_desvincular_title + '\n\n ' + descriptor_title + ': ' + termino + '\n\n' )
   	if (r==true) {
 
-		var mydata		= { 'accion': accion , 'terminoID': terminoID , 'terminoID_to_unlink': terminoID_to_unlink, 'top_tipo':page_globals.top_tipo };
+		const mydata = {
+			accion				: accion,
+			terminoID			: terminoID,
+			terminoID_to_unlink	: terminoID_to_unlink,
+			top_tipo			:page_globals.top_tipo
+		}
 		$.ajax({
 			url			: myurl,
 			data		: mydata,
@@ -193,60 +228,70 @@ function unlinkTS(terminoID_to_unlink, termino) {
 			cache		: false,
 			async		: false,
 			beforeSend	: function(data) {
-							div.html('<div><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle" /></div>');
-						},
+				div.html('<div><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle" /></div>');
+			},
 			success		: function(data) {
-							cargarTSrel(terminoID);
-							//redimensionarVentana();
-							//div.html(data);		alert(data);
-						},
+				cargarTSrel(terminoID);
+				//redimensionarVentana();
+				//div.html(data);		alert(data);
+			},
 			complete	: function() {
-						}
+			}
 		});//fin $.ajax
 	}//fin if (r==true)
-}
+}//end unlinkTS
 
 
-/*
+
+/**
 * TS NOMBRE VERIFY codigoKeyup
 */
 function codigoKeyUp(obj) {
 
-	var termino 		= $(obj).val();
+	const termino = $(obj).val();
 
 	if(termino.length<4) return false ;
 
-	var myurl 		= descriptors_trigger;
-	var div			= $('#div_keyup') ;
-	var mode		= 'codigoKeyUp' ;
-	var mydata		= { 'mode': mode, 'termino': termino, 'terminoID': terminoID, 'top_tipo':page_globals.top_tipo };	//alert(terminoID) // var id from page vars
+	const myurl		= descriptors_trigger;
+	const div		= $('#div_keyup') ;
+	const mode		= 'codigoKeyUp' ;
+	const mydata	= {
+		mode		: mode,
+		termino		: termino,
+		terminoID	: terminoID,
+		top_tipo	: page_globals.top_tipo
+	}
 
 	$.ajax({
 		url			: myurl,
 		data		: mydata,
 		type		: "POST",
-		beforeSend: function(){
-						//div.html('<div><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle" /></div>');
-						//div.addClass('spinner');
-					},
+		beforeSend	: function(){
+			//div.html('<div><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle" /></div>');
+			//div.addClass('spinner');
+		},
 		success		: function(data) {
-						//div.html(data);
-						if(data>0) {
-							div.html(" Warning: <strong>"+termino+"</strong> already exists ");
-							div.fadeIn(300);
-						}else{
-							div.html('');
-							div.hide(0);
-						}
-					},//success
+			//div.html(data);
+			if(data>0) {
+				div.html(" Warning: <strong>"+termino+"</strong> already exists ");
+				div.fadeIn(300);
+			}else{
+				div.html('');
+				div.hide(0);
+			}
+		},//success
 		complete	: function() {
-						//div.removeClass('spinner');
-						//div.html('');
-					}
+			//div.removeClass('spinner');
+			//div.html('');
+		}
 	});//fin $.ajax
-}
+}//end codigoKeyUp
 
-// loadDescriptorsGrid
+
+
+/**
+* LOADDESCRIPTORSGRID
+*/
 function loadDescriptorsGrid( id_focus ) {
 
 	// get page global 'terminoID'
@@ -288,9 +333,13 @@ function loadDescriptorsGrid( id_focus ) {
 		div.removeClass('spinner');
 		if(typeof id_focus!=='undefined') $('#termino_'+ id_focus).focus();
 	});
-}
+}//end loadDescriptorsGrid
 
-// removeDescriptor
+
+
+/**
+* removeDescriptor
+*/
 function removeDescriptor(id, terminoID) {
 
 	if(id<1) return alert("Error on removeDescriptor. Need a valid id");
@@ -321,63 +370,81 @@ function removeDescriptor(id, terminoID) {
 						}
 		});//fin $.ajax
 	}
-}
+}//end removeDescriptor
 
 
 
-// saveDescriptor
+/**
+* SAVEDESCRIPTOR
+*/
 function saveDescriptor(obj) {
 
-	var parent 	= obj.dataset.parent
-	var lang 	= obj.dataset.lang
-	var tipo 	= obj.dataset.tipo
-	var dato 	= obj.value
+	const parent	= obj.dataset.parent
+	const lang		= obj.dataset.lang
+	const tipo		= obj.dataset.tipo
+	const dato		= obj.value
 
-	switch(true) {
+	// check vars
+		switch(true) {
 
-		case typeof parent === "undefined" :
-			return alert(" parent data is not defined! \n Data is not saved! ")
+			case typeof parent === "undefined" :
+				return alert(" parent data is not defined! \n Data is not saved! ")
+				break;
 
-		case typeof lang === "undefined" 	:
-			return alert(" lang data is not defined! \n Data is not saved! ")
+			case typeof lang === "undefined" 	:
+				return alert(" lang data is not defined! \n Data is not saved! ")
+				break;
 
-		case typeof tipo === "undefined" 	:
-			return alert(" tipo data is not defined! \n Data is not saved! ")
-	}
+			case typeof tipo === "undefined" 	:
+				return alert(" tipo data is not defined! \n Data is not saved! ")
+				break;
+		}
 
 	// terminoID is a page global. Verify
-	if (typeof terminoID === 'undefined') { return alert("Sorry: global terminoID is not defined \n Data is not saved!") }
+		if (typeof terminoID === 'undefined') {
+			return alert("Sorry: global terminoID is not defined \n Data is not saved!")
+		}
 
+	// form lock
+		const form = document.getElementById("form1")
+		form.classList.add("loading")
 
-	var myurl 		= descriptors_trigger //return alert(myurl)
-	var div			= $(obj)
-	var mode 		= 'saveDescriptor'
-	var mydata		= { 'mode'		: mode,
-						'parent'	: parent,
-						'lang'		: lang,
-						'tipo'		: tipo,
-						'dato'		: dato,
-						'terminoID' : terminoID,
-						'top_tipo'	: page_globals.top_tipo
+	// request
+		return new Promise(function(resolve, reject){
+
+			const data	= {
+				mode		: 'saveDescriptor',
+				parent		: parent,
+				lang		: lang,
+				tipo		: tipo,
+				dato		: dato,
+				terminoID	: terminoID,
+				top_tipo	: page_globals.top_tipo
+			}
+			$.ajax({
+				url		: descriptors_trigger,
+				data	: data,
+				type	: "POST"
+			})
+			.done(function(data_response) {
+				
+				if(data_response) alert(data_response);
+
+				// update window_docu if is opened
+					if (window_docu) {
+						window_docu.location.reload()
 					}
 
-	$.ajax({
-		url			: myurl,
-		data		: mydata,
-		type		: "POST"
+				resolve(data_response)
+			})
+			.fail( function(jqXHR, textStatus) {
+				alert("saveDescriptor error : " + textStatus)
+				reject(textStatus)
+			})
+			.always(function() {
+				form.classList.remove("loading")				
+			});
 	})
-	// DONE
-	.done(function(data_response) {
-		if(data_response) alert(data_response);
-		//loadDescriptorsGrid()
-		//if(SHOW_DEBUG===true) console.log("->Saved descriptor:" + tipo + " dato:" +dato)
-	})
-	.fail( function(jqXHR, textStatus) {
-		alert("saveDescriptor error : "+textStatus)
-	})
-	.always(function() {
-	});
-
 }//end saveDescriptor
 
 
@@ -388,21 +455,21 @@ function saveDescriptor(obj) {
 function ts_edit_new_lang(terminoID_lang) {
 
 	switch(true) {
-
 		case terminoID_lang=='otro'	: return dd_abrirTSlist('tesauro_rel','lenguaje');
 		case terminoID_lang=='' 	: return false;
 	}
 	//if(terminoID_lang=='otro') return abrirTSlist('tesauro_rel','lenguaje');
 	//if(terminoID_lang==-1) return alert(" Error on newLang. Need a valid lang terminoID ");
 
-	var myurl 		= descriptors_trigger
-	var div			= $('#tbodyDescriptorsGrid')
-	var mode 		= 'newDescriptor'
-	var mydata		= { 'mode'			: mode,
-						'terminoID'		: terminoID,
-						'terminoID_lang': terminoID_lang,
-						'top_tipo'		: page_globals.top_tipo
-					  }
+	const myurl		= descriptors_trigger
+	const div		= $('#tbodyDescriptorsGrid')
+	const mode		= 'newDescriptor'
+	const mydata	= { 
+		mode			: mode,
+		terminoID		: terminoID,
+		terminoID_lang	: terminoID_lang,
+		top_tipo		: page_globals.top_tipo
+	}
 
 	$(div).addClass('spinner')
 
@@ -422,7 +489,6 @@ function ts_edit_new_lang(terminoID_lang) {
 	.always(function() {
 		$(div).removeClass('spinner')
 	});
-
 }//end ts_edit_new_lang
 
 
@@ -433,6 +499,7 @@ function myfocus(obj) {
 function myblur(obj) {
 	$(obj).removeClass('inputFocus'); 	//alert("blur")
 }
+
 
 
 /**
@@ -457,13 +524,14 @@ function redimensionarVentana() {
 
 	   	 }, 100);
 	//});
-}
+}//end redimensionarVentana
+
 
 
 /**
 * ADD_NEW_LANG
 */
-var add_new_lang = function(select_obj) {
+const add_new_lang = function(select_obj) {
 
 	const terminoID_lang = select_obj.value
 
@@ -527,7 +595,7 @@ var add_new_lang = function(select_obj) {
 /**
 * EXPORT_ONTOLOGY
 */
-var export_ontology = function(terminoID) {
+const export_ontology = function(terminoID) {
 
 	const data = {
 		mode 		: 'export_ontology',
@@ -569,7 +637,6 @@ var export_ontology = function(terminoID) {
 
 /**
 * BUILD_DOWNLOAD_DATA_LINK
-* 
 */
 const build_download_data_link = function(options) {
 
@@ -601,4 +668,5 @@ const build_download_data_link = function(options) {
 
 	return link_obj
 }//end build_download_data_link
+
 

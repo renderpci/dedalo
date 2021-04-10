@@ -96,7 +96,9 @@ $ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();			#dump($ar_paren
 		$mainLang					= $RecordObj_descriptors_dd->get_mainLang();
 		$langFull					= lang::get_name_from_code( $lang ); 
 
-		if(empty($id)) die( "Sorry: descriptors id ($id) not found for terminoID:<b>$terminoID</b>, lang:<b>$lang</b> <br> ");
+		if(empty($id)) {
+			die( "Sorry: descriptors id ($id) not found for terminoID:<b>$terminoID</b>, lang:<b>$lang</b> <br> ");
+		}
 
 	# TR DESCRIPTOR MAIN LANG AND DEF
 		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
