@@ -107,6 +107,10 @@ const event_manager_class = function(){
 	*/
 	this.when_in_dom = function(node, callback) {
 
+		if (document.contains(node)) {
+			return callback()
+		}
+
 		const observer = new MutationObserver(function(mutations) {
 			if (document.contains(node)) {
 				// console.log("It's in the DOM!");

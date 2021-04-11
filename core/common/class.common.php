@@ -82,7 +82,7 @@ abstract class common {
 			'component_html_file',
 			// 'component_html_text',
 			// 'component_image'
-			// 'component_info',
+			'component_info',
 			// 'component_input_text'
 			'component_input_text_large',
 			//'component_inverse',
@@ -1599,6 +1599,11 @@ abstract class common {
 		// (!) En proceso: eliminar var $this->request_ddo_value y buscar en un único cajón '$this->request_ddo_value'. Por acabar ..
 		$request_ddo_value = array_filter($this->request_ddo_value, function($item){
 		// $request_ddo_value = array_filter(dd_core_api::$request_ddo_value, function($item){
+			if (empty($item)) {
+				// dump($this->request_ddo_value, ' EMPTY ITEM FOUND IN this->request_ddo_value ++ '.to_string());
+				debug_log(__METHOD__." EMPTY ITEM FOUND IN this->request_ddo_value  ".to_string($this->request_ddo_value), logger::DEBUG);
+				return false;
+			}
 			$section_tipo = $this->get_section_tipo() ?? $this->tipo;
 			return ($item->config_type==='show' && $item->tipo!==$this->tipo && $item->typo==='ddo' && $item->tipo!==$section_tipo);
 		});
@@ -2725,7 +2730,7 @@ abstract class common {
 				//'component_relation_struct',
 				'component_geolocation',
 				// 'component_info',
-				'component_state',
+				// 'component_state',
 				'section_tab',
 				'component_json'
 			];

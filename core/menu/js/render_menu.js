@@ -526,7 +526,7 @@ const item_hierarchy = async (options) => {
 * CLOSE_ALL_DROP_MENU
 * select all nodes in the menu instance and set the css to remove the visualization
 */
-const close_all_drop_menu = async function(self) {
+const close_all_drop_menu = function(self) {
 
 	self.menu_active = false
 
@@ -560,7 +560,7 @@ const close_all_drop_menu = async function(self) {
 * CLOSE_ALL_CHILDRENS
 * Get all nodes childens of the tipo set to them the css to remove the visualization
 */
-const close_all_childrens = async function(tipo){
+const close_all_childrens = function(tipo){
 
 	if(tipo){
 		//get the children nodes of the sended tipo and add/remove the css
