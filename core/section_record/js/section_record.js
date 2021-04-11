@@ -245,6 +245,11 @@ section_record.prototype.get_ar_row_instances = async function(){
 
 			const current_context = columns[i]
 
+			if (!current_context) {
+				console.warn("ignored empty context: [key, columns]", i, columns);
+				continue;
+			}
+
 			// the component has direct data into the section
 			if(current_context.parent === tipo){
 				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
@@ -261,7 +266,6 @@ section_record.prototype.get_ar_row_instances = async function(){
 				const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
 				//add
 				ar_instances.push(current_instance)
-
 			}
 
 		}//end for loop

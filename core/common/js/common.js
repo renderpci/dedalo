@@ -579,7 +579,11 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 		// get the ddo context of the compoment from the datum,
 		// is necesary the match with the caller_tipo if the section has a relation with itself
 		// (the last component in the chain can had different parent, multiple portals can call same component)
-		const ddo = self.datum.context.find(item => item.tipo === current_tipo && item.parent === caller_tipo)
+		const ddo = self.datum.context.find(item => item.tipo===current_tipo && item.parent===caller_tipo)
+		if (!ddo) {
+			console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, self.datum.context);
+			continue
+		}
 		// if the ddo has a request_config it has sub-components and it will be not used
 		if(ddo.request_config){
 			// get the rqo of the component and the ddo_map for show
@@ -597,7 +601,7 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 			}
 		}else{
 			// the component don't has sub-components and it is the last in the chain.
-			if(ar_sub_ddo.length > 0){
+			if(ar_sub_ddo && ar_sub_ddo.length > 0){
 				// add the section_tipo and tipo of ddo for create the parent_f_path
 				ar_sub_ddo.push(ddo.section_tipo)
 				ar_sub_ddo.push(ddo.tipo)

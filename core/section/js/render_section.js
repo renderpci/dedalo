@@ -388,6 +388,11 @@ render_section.prototype.list_header = async function(){
 
 		const component = columns[i]
 
+		if (!component) {
+			console.warn("ignored empty component: [key, columns]", i, columns);
+			continue;
+		}
+
 		const label = []
 
 		if(component.parent === self.section_tipo){
