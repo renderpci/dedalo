@@ -274,8 +274,24 @@ section.prototype.build = async function(autoload=false) {
 
 			self.events_tokens.push(
 				event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
+					
+					// loading
+						const node = self.node && self.node[0]
+							? self.node[0].querySelector('.content_data.section')
+							: null
+						if (node) {
+							node.classList.add('loading')
+						}
+
 					self.pagination.offset = offset
-					self.refresh() // refresh current section
+
+					// refresh
+						await self.refresh() // refresh current section
+										
+					// loading
+						if (node) {
+							node.classList.remove('loading')
+						}					
 				})
 			)//end events push
 		}

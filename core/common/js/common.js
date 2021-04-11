@@ -225,7 +225,12 @@ common.prototype.refresh = async function () {
 
 	// build. Update the instance with new data
 		//if (self.status==='destroyed') {
-			const builded = await self.build(true)
+			try {
+				const builded = await self.build(true)
+			}catch(error){
+				console.error("error on build:", error);
+			}
+			
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false

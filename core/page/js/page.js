@@ -103,7 +103,6 @@ page.prototype.init = async function(options) {
 					self.status = 'rendered'
 
 				// loading
-					console.log("self.node:",self.node);
 					const node = self.node && self.node[0]
 						? self.node[0].querySelector('.content_data.page')
 						: null
@@ -151,17 +150,13 @@ page.prototype.init = async function(options) {
 						elements_to_stay.push(request_config)
 						self.page_elements = elements_to_stay
 
-				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
-					try {
-						// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
-						const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
-						for (let i = instances_to_stay.length - 1; i >= 0; i--) {
-							instances_to_stay[i].destroyable = false
-						}
-						await self.refresh()
-					}catch(error) {
-						console.error("error:",error);
+				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page					
+					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
+					const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+					for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+						instances_to_stay[i].destroyable = false
 					}
+					const refresh_result = await self.refresh()
 					
 					// loading
 						if (node) {
@@ -169,7 +164,7 @@ page.prototype.init = async function(options) {
 						}
 
 				// url history track
-					if(options.event_in_history!==true) {
+					if(options.event_in_history!==true && refresh_result===true) {
 
 						// options_url : clone options and remove optional 'event_in_history' property
 						const options_url 	= Object.assign({}, options);
