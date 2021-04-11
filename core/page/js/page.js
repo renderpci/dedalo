@@ -98,6 +98,18 @@ page.prototype.init = async function(options) {
 						options[name] = user_action_options[name]
 					}
 				}
+				
+				// reset status to prevent errors lock 
+					self.status = 'rendered'
+
+				// loading
+					console.log("self.node:",self.node);
+					const node = self.node && self.node[0]
+						? self.node[0].querySelector('.content_data.page')
+						: null
+					if (node) {
+						node.classList.add('loading')
+					}
 
 				// const current_data_manager 	= new data_manager()
 				// const api_response 			= await current_data_manager.get_element_context(options)
@@ -115,15 +127,19 @@ page.prototype.init = async function(options) {
 				// sqo
 					if (user_action_options.sqo) {
 						request_config.push(user_action_options.sqo)
-					}
-				
+					}				
 
 				// check response page element is valid for instantiate. Element instance loads the file
 					const page_element_instance = await instantiate_page_element(self, request_config)
 					if (typeof page_element_instance==="undefined" || !page_element_instance) {
 						console.error("[page.user_action] Stopped user action. Element instance not suitable. source:", request_config);
+						// loading
+							if (node) {
+								node.classList.remove('loading')
+							}
 						return false
 					}
+			
 
 				// elements to stay
 					// const base_models = ['section','tool','area']
@@ -136,12 +152,21 @@ page.prototype.init = async function(options) {
 						self.page_elements = elements_to_stay
 
 				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
-					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
-					const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
-					for (let i = instances_to_stay.length - 1; i >= 0; i--) {
-						instances_to_stay[i].destroyable = false
+					try {
+						// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
+						const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+						for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+							instances_to_stay[i].destroyable = false
+						}
+						await self.refresh()
+					}catch(error) {
+						console.error("error:",error);
 					}
-					await self.refresh()
+					
+					// loading
+						if (node) {
+							node.classList.remove('loading')
+						}
 
 				// url history track
 					if(options.event_in_history!==true) {
