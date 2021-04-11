@@ -94,6 +94,8 @@ if($mode=='saveDescriptor') {
 
 	if(empty($terminoID)) die(" Error. Need more data! terminoID:$terminoID ");
 
+	// decode stringified dato
+		$dato = json_decode($dato);
 
 	if ($tipo==='obs') {
 		
