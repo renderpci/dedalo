@@ -166,7 +166,7 @@ class css {
 		}
 		
 		# Add version
-		$url = $url.'?'.DEDALO_VERSION;
+		$url = $url.'?'.DEDALO_VERSION . '_' .DEDALO_BUILD;
 
 		$media_attr = (!is_null($media)) ? (' media="'.$media.'"') : '';	
 
