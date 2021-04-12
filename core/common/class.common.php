@@ -82,7 +82,7 @@ abstract class common {
 			'component_html_file',
 			// 'component_html_text',
 			// 'component_image'
-			'component_info',
+			// 'component_info',
 			// 'component_input_text'
 			'component_input_text_large',
 			//'component_inverse',
@@ -993,7 +993,7 @@ abstract class common {
 			$cookie_properties->domain 	 = $domain;
 			$cookie_properties->secure 	 = $secure;
 			$cookie_properties->httponly = $httponly;
-			
+
 
 		return $cookie_properties;
 	}//end get_cookie_properties
@@ -1191,7 +1191,7 @@ abstract class common {
 
 			$called_model = get_class($this); // get_called_class(); // static::class
 			$called_tipo  = $this->get_tipo();
-			
+
 		// cache context
 			// static $resolved_get_json = [];
 			// $resolved_get_json_key = $called_model .'_'. $called_tipo .'_'. ($this->section_tipo ?? '') .'_'. $this->modo .'_'. (int)$options->context_type . '_'. (int)$options->get_request_config;
@@ -1261,16 +1261,16 @@ abstract class common {
 
 		// context and subcontext from API dd_request if already exists sections
 			if ($called_model!=='sections' && isset(dd_core_api::$dd_request)) {
-				
+
 				// get request_ddo object
 					$dd_request		= dd_core_api::$dd_request;
 					$request_ddo	= array_find($dd_request, function($item){
 						return $item->typo==='request_ddo';
 					});
-				
+
 				// when no empty request_ddo->value
 					if ($request_ddo && !empty($request_ddo->value)) {
-						// $context = array_values(array_filter($request_ddo->value, function($ddo){							
+						// $context = array_values(array_filter($request_ddo->value, function($ddo){
 						// 	return $ddo->tipo===$this->tipo || $ddo->parent===$this->tipo || $ddo->section_tipo===$this->tipo;
 						// }));
 						$context = $request_ddo->value;
@@ -1283,7 +1283,7 @@ abstract class common {
 						// 		foreach ($context as $element) {
 						// 			// $element->parent				= $this->tipo;
 						// 			// $element->get_request_config	= $options->get_request_config;
-									
+
 						// 			dd_core_api::$context_dd_objects[] = $element;
 						// 		}
 
@@ -1291,15 +1291,15 @@ abstract class common {
 						// }
 					}
 			}
-		
-		
+
+
 		// path. Class name is called class (ex. component_input_text), not this class (common)
 			$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
 				// dump($resolved_get_json_key, ' show path ++ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH '.$called_model .' - '. $called_tipo.' - '. ($options->get_context===true ? 'context' : '' ) . ' ' .($options->get_data===true ? 'data' : '' ) );
 
 		// controller include
 			$json = include( $path );
-		
+
 		return $json->context;
 	}//end get_context
 
@@ -1406,6 +1406,7 @@ abstract class common {
 				}
 			}
 
+
 			// 2 . From injected 'from_parent'
 			if (!isset($parent) && isset($this->from_parent)) {
 
@@ -1425,6 +1426,8 @@ abstract class common {
 			$parent_grouper = !empty($this->parent_grouper)
 				? $this->parent_grouper
 				: $this->RecordObj_dd->get_parent();
+
+
 
 		// tools
 			$tools = array_map(function($item){
@@ -1449,6 +1452,7 @@ abstract class common {
 
 				return $tool;
 			}, $this->get_tools());
+
 
 		// request_config
 			if($add_request_config===true){
@@ -1479,6 +1483,7 @@ abstract class common {
 				'tools'				=> $tools,
 				'request_config'	=> $request_config,
 			]);
+
 
 		/*
 		* OPTIONAL PROPERTIES
@@ -1601,7 +1606,7 @@ abstract class common {
 		// $request_ddo_value = array_filter(dd_core_api::$request_ddo_value, function($item){
 			if (empty($item)) {
 				// dump($this->request_ddo_value, ' EMPTY ITEM FOUND IN this->request_ddo_value ++ '.to_string());
-				debug_log(__METHOD__." EMPTY ITEM FOUND IN this->request_ddo_value  ".to_string($this->request_ddo_value), logger::DEBUG);
+				// debug_log(__METHOD__." EMPTY ITEM FOUND IN this->request_ddo_value  ".to_string($this->request_ddo_value), logger::DEBUG);
 				return false;
 			}
 			$section_tipo = $this->get_section_tipo() ?? $this->tipo;
@@ -1626,7 +1631,7 @@ abstract class common {
 				// 	// dump(debug_backtrace()[3], 'debug_backtrace()[3] ++ '.to_string());
 			if(!empty($request_ddo_value)) foreach($request_ddo_value as $dd_object) {
 
-				if($dd_object->model==='section'){				
+				if($dd_object->model==='section'){
 					if (!dd_object::in_array_ddo($dd_object, dd_core_api::$context_dd_objects, ['model','tipo','section_tipo','mode'])) {
 						$ar_subcontext[] = $dd_object;
 						dd_core_api::$context_dd_objects[] = $dd_object;
@@ -1639,7 +1644,7 @@ abstract class common {
 				// }
 				// dump($dd_object, ' $dd_object +/////--------///////////+ '.to_string($this->tipo));
 				// dump(dd_core_api::$context_dd_objects, ' dd_core_api::$context_dd_objects +---------********----------+ '.to_string());
-				
+
 
 				// short vars
 					$dd_object				= (object)$dd_object;
@@ -1652,7 +1657,7 @@ abstract class common {
 					$cid = $current_tipo . '_' . $current_section_tipo;
 					if (in_array($cid, $ar_subcontext_calculated)) {
 						debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
-						// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);						
+						// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
 					}
 
 				// common temporal excluded/mapped models *******
@@ -1669,7 +1674,7 @@ abstract class common {
 					// component case
 					case (strpos($model, 'component_')===0):
 
-						$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);						
+						$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 						$related_element	= component_common::get_instance($model,
 																			 $current_tipo,
 																			 null,
@@ -2609,7 +2614,7 @@ abstract class common {
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
 
-		
+
 		return $ar_request_query_objects;
 	}//end get_ar_request_query_objects
 
@@ -2730,7 +2735,7 @@ abstract class common {
 				//'component_relation_struct',
 				'component_geolocation',
 				// 'component_info',
-				// 'component_state',
+				'component_state',
 				'section_tab',
 				'component_json'
 			];

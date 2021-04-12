@@ -56,19 +56,15 @@ render_component_info.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data 		= self.data
-		const value 	= data.value || []
+		const content_data = await get_content_data_edit(self)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
 
-	// Value as string
-		const value_string = value.join(self.divisor)
-
 	// Set value
-		wrapper.textContent = value_string
+		wrapper.appendChild(content_data)
 
 
 	return wrapper
