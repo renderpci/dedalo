@@ -18,37 +18,6 @@ export const render_calculation = function(component) {
 }//end render_calculation
 
 
-
-/**
-* LIST
-* Render component node to use in list
-* @return DOM node wrapper
-*/
-render_calculation.prototype.list = async function() {
-
-	const self = this
-
-	// short vars
-		const data 		= self.data
-		const value 	= data.value || []
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
-
-	// Value as string
-		const value_string = value.join(self.divisor)
-
-	// Set value
-		wrapper.textContent = value_string
-
-
-	return wrapper
-}//end list
-
-
-
 /**
 * EDIT
 * Render node for use in edit
@@ -78,7 +47,12 @@ render_calculation.prototype.edit = async function(options) {
 	return wrapper
 }//end edit
 
-
+/**
+* LIST
+* Render component node to use in list
+* @return DOM node wrapper
+*/
+render_calculation.prototype.list = render_calculation.prototype.edit
 
 /**
 * GET_CONTENT_DATA_EDIT
