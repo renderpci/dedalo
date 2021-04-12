@@ -274,11 +274,13 @@ section.prototype.build = async function(autoload=false) {
 
 			self.events_tokens.push(
 				event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
-					
+
 					// loading
+						const selector = self.mode==='list' ? '.list_body' : '.content_data.section'
 						const node = self.node && self.node[0]
-							? self.node[0].querySelector('.content_data.section')
+							? self.node[0].querySelector(selector)
 							: null
+							console.log("node:",node);
 						if (node) {
 							node.classList.add('loading')
 						}
