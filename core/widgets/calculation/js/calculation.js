@@ -38,7 +38,7 @@ export const calculation = function(){
 	calculation.prototype.init 	 	= widget_common.prototype.init
 	// render
 	calculation.prototype.edit 		= render_calculation.prototype.edit
-
+	calculation.prototype.list 		= render_calculation.prototype.list
 
 
 /**
