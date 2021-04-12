@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS GET_ARCHIVE_WEIGHTS
+* CLASS WIDGET_COMMON
 *
 *
 */
