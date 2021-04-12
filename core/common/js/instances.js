@@ -90,60 +90,120 @@ export const get_instance = async function(options){
 
 
 	// if the instance is not in the cache, build one new instance of the element
-		const load_instance = async () => {
+		// const load_instance = async () => {
 
-			// search. first we see if the instance is inside the instances cache
-			const found_instance = instances.filter(instance => instance.id===key)
+		// 	// search. first we see if the instance is inside the instances cache
+		// 	const found_instance = instances.filter(instance => instance.id===key)
 
-			if (found_instance.length===0) {
-				//console.log("---Creating instance of:", model, tipo, " - " + key)
+		// 	if (found_instance.length===0) {
+		// 		//console.log("---Creating instance of:", model, tipo, " - " + key)
 
-				// element file import path
-					const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
-					const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
+		// 		// element file import path
+		// 			const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
+		// 			const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
 
-				// import element mod file once (and wait until finish)
-					const current_element = await import(path)
+		// 		// import element mod file once (and wait until finish)
+		// 			const current_element = await import(path)
 
-				// check
-					if (typeof current_element[model]!=="function") {
-						console.warn(`------- INVALID MODEL!!! [${model}] path:`, path);
-						return null
-					}
+		// 		// check
+		// 			if (typeof current_element[model]!=="function") {
+		// 				console.warn(`------- INVALID MODEL!!! [${model}] path:`, path);
+		// 				return null
+		// 			}
 
-				// instance the element
-					const instance_element = new current_element[model]()
+		// 		// instance the element
+		// 			const instance_element = new current_element[model]()
 
-				// serialize element id
-				// add the id for init the instance with the id
-					instance_element.id = key
-					//instance_element.id_base = key_instances_builder(options, false)
-					instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
-				// id_variant . Propagate a custom instance id to children
-					if (options.id_variant) {
-						instance_element.id_variant = options.id_variant
-					}
+		// 		// serialize element id
+		// 		// add the id for init the instance with the id
+		// 			instance_element.id = key
+		// 			//instance_element.id_base = key_instances_builder(options, false)
+		// 			instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
+		// 		// id_variant . Propagate a custom instance id to children
+		// 			if (options.id_variant) {
+		// 				instance_element.id_variant = options.id_variant
+		// 			}
 
-				// init the element
-					await instance_element.init(options)
+		// 		// init the element
+		// 			await instance_element.init(options)
 
-				// add to the instances cache
-					instances.push(instance_element)
+		// 		// add to the instances cache
+		// 			instances.push(instance_element)
 
-					// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
+		// 			// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
 
-				// return the new created instance
-					return instance_element
+		// 		// return the new created instance
+		// 			return instance_element
 
-			}else{
-				// resolve the promise with the cache instance found
-					// console.log("Recycled instance of :",model, section_tipo, section_id)
-					return found_instance[0]
-			}
-		}
+		// 	}else{
+		// 		// resolve the promise with the cache instance found
+		// 			// console.log("Recycled instance of :",model, section_tipo, section_id)
+		// 			return found_instance[0]
+		// 	}
+		// }
+
+		const load_instance = () => {
+			return new Promise(async function(resolve){			
+
+				// search. first we see if the instance is inside the instances cache
+				const found_instance = instances.filter(instance => instance.id===key)
+
+				if (found_instance.length===0) {
+					//console.log("---Creating instance of:", model, tipo, " - " + key)
+
+					// element file import path
+						const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
+						const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
+
+					// import element mod file once (and wait until finish)
+						let current_element
+						try {
+							current_element = await import(path)
+						}catch(error){
+							console.error(`------- ERROR ON IMPORT ELEMENT!!! [${model}] path:`, path);
+							resolve(false)
+							return
+						}						
+
+					// check current_element
+						if (typeof current_element[model]!=="function") {
+							console.warn(`------- INVALID MODEL!!! [${model}] path:`, path);
+							resolve(false)
+							return
+						}
+
+					// instance the element
+						const instance_element = new current_element[model]()
+
+					// serialize element id
+					// add the id for init the instance with the id
+						instance_element.id = key
+						//instance_element.id_base = key_instances_builder(options, false)
+						instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
+					// id_variant . Propagate a custom instance id to children
+						if (options.id_variant) {
+							instance_element.id_variant = options.id_variant
+						}
+
+					// init the element
+						await instance_element.init(options)
+
+					// add to the instances cache
+						instances.push(instance_element)
+
+						// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
+
+					// return the new created instance						
+						resolve(instance_element)
+
+				}else{
+					// resolve the promise with the cache instance found						
+						resolve(found_instance[0])
+				}
+			})
+		}//end load_instance
 
 	const instance = load_instance()
-
 
 	return instance
 };//end get_instance
