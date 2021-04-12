@@ -92,12 +92,13 @@ page.prototype.init = async function(options) {
 					console.log("// page user_action received user_action_options", user_action_options);
 				}
 
-				const options = {}
-				for(const name in user_action_options) {
-					if (name!=='sqo') {					
-						options[name] = user_action_options[name]
+				// options .clean
+					const options = {}
+					for(const name in user_action_options) {
+						if (name!=='sqo') {
+							options[name] = user_action_options[name]
+						}
 					}
-				}
 				
 				// reset status to prevent errors lock 
 					self.status = 'rendered'
@@ -128,18 +129,19 @@ page.prototype.init = async function(options) {
 						request_config.push(user_action_options.sqo)
 					}				
 
-				// check response page element is valid for instantiate. Element instance loads the file
+				// check response page element is valid for instantiate. Element instance loads the file					
 					const page_element_instance = await instantiate_page_element(self, request_config)
-					if (typeof page_element_instance==="undefined" || !page_element_instance) {
-						console.error("[page.user_action] Stopped user action. Element instance not suitable. source:", request_config);
+					if (!page_element_instance) {
+						console.error("error on get page_element_instance:", page_element_instance);
 						// loading
 							if (node) {
-								node.classList.remove('loading')
+								setTimeout(function(){
+									node.classList.remove('loading')
+								}, 150)								
 							}
 						return false
-					}
-			
-
+					}					
+					
 				// elements to stay
 					// const base_models = ['section','tool','area']
 					const base_models = ['menu']
@@ -164,7 +166,7 @@ page.prototype.init = async function(options) {
 						}
 
 				// url history track
-					if(options.event_in_history!==true && refresh_result===true) {
+					if(refresh_result===true && options.event_in_history!==true)  {
 
 						// options_url : clone options and remove optional 'event_in_history' property
 						const options_url 	= Object.assign({}, options);
