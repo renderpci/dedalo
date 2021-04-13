@@ -262,28 +262,33 @@ page.prototype.get_ar_instances = async function(){
 	const self = this
 
 	// instances
-		const page_elements			= self.page_elements;
+		const page_elements = self.page_elements;
 
-		const page_elements_length	= page_elements.length
+		const ar_promises = []
+
+		const page_elements_length = page_elements.length
 		for (let i = 0; i < page_elements_length; i++) {
 
 			const request_config = page_elements[i]
 
-			if(SHOW_DEBUG===true) {
-				// console.log("page.get_ar_instances source:", source);
-			}
-
-			const current_instance = await instantiate_page_element(self, request_config)
-			// console.log("---- page get_ar_instances current_instance", current_instance);
-
-			// build (load data)
-			const autoload = current_instance.status==="initiated" // avoid reload menu data
-			await current_instance.build(autoload)
-
-			// add
-				self.ar_instances.push(current_instance)
+			ar_promises.push( new Promise(function(resolve){
+			
+				instantiate_page_element(self, request_config)
+				.then(function(current_instance){					
+					// build (load data)
+					const autoload = current_instance.status==="initiated" // avoid reload menu data
+					current_instance.build(autoload)
+					.then(function(response){
+						resolve(current_instance)
+					})
+				})
+			}))
 		};//end for (let i = 0; i < elements_length; i++)
 
+
+	await Promise.all(ar_promises).then((ar_instances) => {
+		self.ar_instances = ar_instances
+	});
 
 	return self.ar_instances
 };//end get_ar_instances
