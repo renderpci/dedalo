@@ -169,6 +169,10 @@ section.prototype.build = async function(autoload=false) {
 			// get context and data
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.read(self.dd_request.show)
+				if (!api_response.result) {
+					console.error("Error o read section datum :", api_response);
+					return false;
+				}
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -196,7 +200,7 @@ section.prototype.build = async function(autoload=false) {
 						: (async () => {
 							const response = await current_data_manager.count(sqo)
 							return response.result.total
-						})()
+						  })()
 				}
 
 			// debug
@@ -380,6 +384,8 @@ section.prototype.get_ar_instances = async function(){
 		const value_length	= value.length
 
 		const offset = self.pagination.offset
+
+		const ar_promises = []
 
 		for (let i = 0; i < value_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
