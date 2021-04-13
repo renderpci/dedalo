@@ -492,10 +492,24 @@ const get_input_element_edit = (i, current_value, ul_container, self, is_inside_
 		})
 
 	// init the map with the wrapper when container node is in DOM
-		event_manager.when_in_dom(map_container, draw_map)
-		function draw_map() {
-			self.get_map(map_container, current_value)
+		// event_manager.when_in_dom(map_container, draw_map)
+		// function draw_map() {
+		// 	self.get_map(map_container, current_value)
+		// }
+		if (map_container) {
+			const observer = new IntersectionObserver(function(entries) {
+				// if(entries[0].isIntersecting === true) {}
+				const entry = entries[0]
+				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+					self.get_map(map_container, current_value)
+					// observer.unobserve(entry.target);
+					observer.disconnect();
+				}
+			}, { threshold: [0] });
+
+			observer.observe(map_container);
 		}
+		
 
 	return li
 };//end get_input_element_edit
