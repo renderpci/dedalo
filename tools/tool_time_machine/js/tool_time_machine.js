@@ -233,7 +233,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 	// 	return base_context
-// };//end get_base_context
+	// };//end get_base_context
 
 
 
@@ -249,57 +249,74 @@ tool_time_machine.prototype.load_section = async function() {
 	const component = self.caller
 
 	// request_config . section in tm mode
-		const source = {
-			typo			: 'source',
-			model			: 'section',
-			mode			: 'tm',
-			tipo			: component.section_tipo,
-			section_tipo	: component.section_tipo,
-			section_id		: component.section_id, // needed for create tm sqo
-			component_tipo	: component.tipo, // needed for create tm sqo
-			lang			: component.lang // needed for create tm sqo (from component)
-		}
-		const ddo_component = {
-			typo			: 'ddo',
-			type			: 'component',
-			model			: component.model,
-			mode			: 'list',
-			tipo			: component.tipo,
-			section_tipo	: component.section_tipo,
-			section_id		: component.section_id,
-			lang			: component.lang
-		}
-		const sqo = {
-			typo				: 'sqo',
-			id					: 'tmp',
-			mode				: 'tm',
-			section_tipo		: [component.section_tipo],
-			filter_by_locators	: [{
-				section_tipo: source.section_tipo,
-				section_id	: source.section_id,
-				tipo		: source.component_tipo,
-				lang		: source.lang
-			}],
-			limit				: 10,
-			offset				: 0,
-			order				: [{
-				direction : 'DESC',
-				path	  : [{component_tipo : 'id'}]
-			}]
-		}
-		const request_config = [
-			source,
-			ddo_component,
-			sqo
-		]
+		
+		// source
+			const source = {
+				typo			: 'source',
+				model			: 'section',
+				mode			: 'tm',
+				tipo			: component.section_tipo,
+				section_tipo	: component.section_tipo,
+				section_id		: component.section_id, // needed for create tm sqo
+				component_tipo	: component.tipo, // needed for create tm sqo
+				lang			: component.lang // needed for create tm sqo (from component)
+			}
+		
+		// ddo
+			const ddo_component = {
+				typo			: 'ddo',
+				type			: 'component',
+				model			: component.model,
+				mode			: 'list',
+				tipo			: component.tipo,
+				section_tipo	: component.section_tipo,
+				section_id		: component.section_id,
+				lang			: component.lang
+			}
+			const ddo_section = {
+				typo			: 'ddo',
+				type			: 'section',
+				model			: 'section',
+				mode			: 'list',
+				tipo			: component.section_tipo,
+				section_tipo	: component.section_tipo,
+				section_id		: component.section_id,
+				lang			: component.lang
+			}
+		
+		// sqo
+			const sqo = {
+				typo				: 'sqo',
+				id					: 'tmp',
+				mode				: 'tm',
+				section_tipo		: [component.section_tipo],
+				filter_by_locators	: [{
+					section_tipo: source.section_tipo,
+					section_id	: source.section_id,
+					tipo		: source.component_tipo,
+					lang		: source.lang
+				}],
+				limit				: 10,
+				offset				: 0,
+				order				: [{
+					direction : 'DESC',
+					path	  : [{component_tipo : 'id'}]
+				}]
+			}
 
-	// context
-		const context = {
-			model			: source.model,
-			tipo			: source.tipo,
-			request_config	: request_config
-		}
+	// // request_config
+	// 	const request_config = [
+	// 		source,
+	// 		sqo
+	// 	]
 
+	// // context
+	// 	const context = {
+	// 		model			: source.model,
+	// 		tipo			: source.tipo,
+	// 		// request_config	: request_config
+	// 	}
+	
 	// instance options
 		const instance_options = {
 			model			: source.model,
@@ -308,7 +325,10 @@ tool_time_machine.prototype.load_section = async function() {
 			section_id		: source.section_id,
 			mode			: source.mode,
 			lang			: source.lang,
-			context			: context,
+			// context			: context,
+			dd_request		: {
+				show : [source, sqo, ddo_component, ddo_section]
+			},
 			caller			: self,
 			id_variant		: 'time_machine' // avoid conflicts
 		}
@@ -456,3 +476,5 @@ tool_time_machine.prototype.apply_value = async function() {
 
 	return trigger_response
 };//end apply_value
+
+
