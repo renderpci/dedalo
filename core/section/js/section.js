@@ -419,20 +419,20 @@ section.prototype.get_ar_instances = async function(){
 				}
 
 			// section_record. init and build
-				const current_section_record = await instances.get_instance(instance_options);
+				const current_section_record = await instances.get_instance(instance_options)
 				await current_section_record.build(true)
 
 			// add
-			self.ar_instances.push(current_section_record)
+				self.ar_instances.push(current_section_record)
 
 		}//end for loop
-
+	
 
 	return self.ar_instances
 };//end get_ar_instances
 
 
-//
+
 // /**
 // * GET_AR_ROWS
 // */

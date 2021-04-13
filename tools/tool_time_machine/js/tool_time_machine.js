@@ -107,47 +107,47 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 /**
 * BUILD_CUSTOM OLD
 */
-// tool_time_machine.prototype.build = async function(autoload=false) {
+	// tool_time_machine.prototype.build = async function(autoload=false) {
 
-// 	const self = this
+	// 	const self = this
 
-// 	// section_tm. get section full context
-// 		const current_data_manager = new data_manager()
-// 		const source = {
-// 			typo			: 'source',
-// 			tipo			: self.caller.tipo,
-// 			section_tipo	: self.caller.section_tipo,
-// 			section_id		: self.caller.section_id,
-// 			model			: 'section_tm',
-// 			lang			: self.caller.lang,
-// 			pagination		: {
-// 				total	: 0,
-// 				offset	: 0,
-// 				limit	: 10
-// 			}
-// 		}
-// 		const element_context 	= await current_data_manager.get_element_context(source)
-// 		self.section_tm_context = element_context.result
-// 			console.log("element_context:",element_context);
+	// 	// section_tm. get section full context
+	// 		const current_data_manager = new data_manager()
+	// 		const source = {
+	// 			typo			: 'source',
+	// 			tipo			: self.caller.tipo,
+	// 			section_tipo	: self.caller.section_tipo,
+	// 			section_id		: self.caller.section_id,
+	// 			model			: 'section_tm',
+	// 			lang			: self.caller.lang,
+	// 			pagination		: {
+	// 				total	: 0,
+	// 				offset	: 0,
+	// 				limit	: 10
+	// 			}
+	// 		}
+	// 		const element_context 	= await current_data_manager.get_element_context(source)
+	// 		self.section_tm_context = element_context.result
+	// 			console.log("element_context:",element_context);
 
-// 	// call generic commom tool build
-// 		const common_build = tool_common.prototype.build.call(self, autoload);
+	// 	// call generic commom tool build
+	// 		const common_build = tool_common.prototype.build.call(self, autoload);
 
-// 	// specific actions..
-// 		// const base_context 			= get_base_context(self)
-// 		// const current_data_manager 	= new data_manager()
-// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
+	// 	// specific actions..
+	// 		// const base_context 			= get_base_context(self)
+	// 		// const current_data_manager 	= new data_manager()
+	// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
 
-// 	// section_tm context
-// 		// const base_context 			= get_base_context(self)
-// 		// const current_data_manager 	= new data_manager()
-// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
-// 		// self.section_tm_context 	= api_response.result.context
-// 		// 	console.log("+++++ api_response.result:",api_response.result);
+	// 	// section_tm context
+	// 		// const base_context 			= get_base_context(self)
+	// 		// const current_data_manager 	= new data_manager()
+	// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
+	// 		// self.section_tm_context 	= api_response.result.context
+	// 		// 	console.log("+++++ api_response.result:",api_response.result);
 
 
-// 	return common_build
-// };//end build_custom
+	// 	return common_build
+	// };//end build_custom
 
 
 
@@ -155,7 +155,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 * GET_BASE_CONTEXT
 * Create a base context for section_tm
 */
-// const get_base_context = (self) => {
+	// const get_base_context = (self) => {
 
 	// 	const mode = "tm"
 

@@ -236,7 +236,7 @@ section_record.prototype.get_ar_row_instances = async function(){
 		const section_id 	= self.section_id
 		const columns		= await self.columns
 		const data 			= self.data
-
+	
 	// instances
 		const ar_instances = []
 		const columns_length =  columns.length

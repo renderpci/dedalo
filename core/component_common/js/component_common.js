@@ -680,7 +680,7 @@ component_common.prototype.get_ar_instances = async function(){
 	const value_length 	= value.length
 
 	// console.log("---- get_ar_instances deep_render value:", JSON.parse(JSON.stringify(value)));
-
+	
 	// iterate rows
 		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
