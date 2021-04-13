@@ -195,26 +195,41 @@ section_record.prototype.get_ar_instances = async function(){
 		const items = (mode==="list")
 			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
 			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
-
+	
 	// instances
-		const ar_instances = []
-		const items_length = items.length
+		const ar_promises	= []
+		const items_length	= items.length
 		for (let i = 0; i < items_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
-			const current_context = items[i]
-			const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
-			const current_instance	= await add_instance(self, current_context, section_id, current_data)
-			// add
-				ar_instances.push(current_instance)
+			// const current_context = items[i]
+			// const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+			// const current_instance	= await add_instance(self, current_context, section_id, current_data)
+			// // add
+			// 	ar_instances.push(current_instance)
 
-		}//end for loop
+			const current_promise = new Promise(function(resolve){
+				const current_context	= items[i]
+				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+				add_instance(self, current_context, section_id, current_data)
+				.then(function(current_instance){
+					current_instance.instance_order_key = i
+					resolve(current_instance)
+				})
+			})
+			ar_promises.push(current_promise)
 
-	// fix
+		}//end for loop	
+
+	await Promise.all(ar_promises).then(function(ar_instances){
+		// sort by instance_order_key asc to guarantee original order
+		ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
+		// fix
 		self.ar_instances = ar_instances
+	})
 
 
-	return ar_instances
+	return self.ar_instances
 };//end get_ar_instances
 
 
