@@ -3335,17 +3335,24 @@ class section extends common {
 		$dd_request = dd_core_api::$dd_request; // $this->dd_request
 
 		// source form dd_request		
-		$source = array_find($dd_request, function($element){
-			return (isset($element->typo) && $element->typo==='source');
-		});
+			$source = array_find($dd_request, function($element){
+				return (isset($element->typo) && $element->typo==='source');
+			});
 		
-		$ddo = array_find($dd_request, function($element){
-			return (isset($element->typo) && $element->typo==='ddo');
-		});
+		// do
+			$ddo = array_find($dd_request, function($element){
+				return (isset($element->typo) && $element->typo==='ddo');
+			});
+			if (empty($ddo)) {
+				debug_log(__METHOD__." Error on get ddo element. Please check your dd_request and set a valid ddo object.", logger::ERROR);
+				dump($dd_request, ' invalid dd_request: ++ '.to_string());
+				return [];
+			}
 
-		$sqo = array_find($dd_request, function($element){
-			return (isset($element->typo) && $element->typo==='sqo');
-		});
+		//sqo
+			$sqo = array_find($dd_request, function($element){
+				return (isset($element->typo) && $element->typo==='sqo');
+			});
 
 		$component_tipo = $ddo->tipo;
 		$component_lang = $ddo->lang;

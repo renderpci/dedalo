@@ -92,11 +92,11 @@ const get_content_data = async function(self) {
 			// exclude menu already added
 			if(current_instance.model!=='menu') {
 
-				const child_item = await current_instance.render({
+				const child_item = current_instance.render({
 					render_level : 'full'
 				})
 
-				content_data.appendChild(child_item)
+				content_data.appendChild(await child_item)
 			}
 		}
 
@@ -117,12 +117,12 @@ const get_content_data = async function(self) {
 */
 const get_menu = async function(self) {
 
-	const menu_instance = self.ar_instances.find( instance => instance.model === 'menu')
+	const menu_instance = self.ar_instances.find( instance => instance.model==='menu')
 	if(menu_instance){
 
 		const menu_item = menu_instance.render({
-				render_level : 'full'
-			})
+			render_level : 'full'
+		})
 		return menu_item
 	}
 

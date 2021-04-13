@@ -719,7 +719,7 @@ const build_request_show = function(self, request_config, action){
 		// 		}
 		// 	}
 
-	// direct request sqo if exists
+	// sqo. add request sqo if exists
 		const request_sqo = request_config.find(item => item.typo==='sqo')
 		if (request_sqo) {
 			dd_request.push(request_sqo)
@@ -734,12 +734,54 @@ const build_request_show = function(self, request_config, action){
 	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
 		// const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
 		// const all_request_ddo		= request_ddo_object.value
-		const all_request_ddo		= self.datum.context
+		const all_request_ddo = self.datum
+			? (self.datum.context ? self.datum.context : [])
+			: []
 
-		const rqo_length	= rqo.length
-		const ar_sections	= []
-		const request_ddo 	= []
-		if(self.model!=='section'){
+		const rqo_length				= rqo.length
+		const all_request_ddo_length	= all_request_ddo.length
+		const ar_sections				= []
+		const request_ddo				= []
+
+		if(self.model==='section'){
+			
+			// rqo loop
+				for (let i = 0; i < rqo_length; i++) {
+
+					const current_rqo	= rqo[i]
+					const sections		= current_rqo.section_tipo
+					const show			= current_rqo.show
+
+					// get sections
+						ar_sections.push(...sections)
+
+					// value_with_parents
+						if(show.value_with_parents){
+							dd_request.push({
+								typo	: 'value_with_parents',
+								value	: show.value_with_parents
+							})
+						}
+
+					// divisor
+						if(show.divisor){
+							dd_request.push({
+								typo	: 'divisor',
+								value	: show.divisor
+							})
+						}
+				}
+
+			// all_request_ddo loop
+				for (let i = 0; i < all_request_ddo_length; i++) {
+
+					const ddo = all_request_ddo[i]
+					// if(ddo.tipo === self.tipo && ddo.section_tipo === self.section_tipo && self.model==='section') continue
+					ddo.config_type = 'show'
+					request_ddo.push( ddo )
+				}
+
+		}else{
 
 			//set the context of the component in the request_ddo
 			request_ddo.push(self.context)
@@ -802,42 +844,7 @@ const build_request_show = function(self, request_config, action){
 					})
 				}
 			}
-		}else{
-			for (let i = 0; i < rqo_length; i++) {
-
-				const current_rqo		= rqo[i]
-				const sections			= current_rqo.section_tipo
-				const show				= current_rqo.show
-
-				//get sections
-				ar_sections.push(...sections)
-
-				//value_with_parents
-				if(show.value_with_parents){
-					dd_request.push({
-						typo : 'value_with_parents',
-						value : show.value_with_parents
-					})
-				}
-
-				//divisor
-				if(show.divisor){
-					dd_request.push({
-						typo : 'divisor',
-						value : show.divisor
-					})
-				}
-			}
-
-			for (let i = 0; i < all_request_ddo.length; i++) {
-
-				const ddo = all_request_ddo[i]
-				// if(ddo.tipo === self.tipo && ddo.section_tipo === self.section_tipo && self.model==='section') continue
-				ddo.config_type = 'show'
-				request_ddo.push( ddo )
-			}
-		}
-
+		}//end 	if(self.model==='section')	
 
 		// set the selected ddos into new request_ddo for do the call with the selection
 		dd_request.push({
@@ -845,13 +852,15 @@ const build_request_show = function(self, request_config, action){
 			value : request_ddo
 		})
 
+	// first rqo show
+		const first_rqo_show = rqo[0].show
 
 	// get the limit and offset
-		const limit	= (rqo[0].show.sqo_config.limit)
-			? rqo[0].show.sqo_config.limit
+		const limit	= (first_rqo_show.sqo_config.limit)
+			? first_rqo_show.sqo_config.limit
 			: 10
-		const offset = (rqo[0].show.sqo_config.offset)
-			? rqo[0].show.sqo_config.offset
+		const offset = (first_rqo_show.sqo_config.offset)
+			? first_rqo_show.sqo_config.offset
 			: 0
 
 	// sqo

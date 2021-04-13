@@ -58,7 +58,7 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 const get_content_data_edit = async function(self) {
 
 	const ar_instances = await self.get_ar_instances()
-
+	
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
