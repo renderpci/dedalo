@@ -161,6 +161,8 @@ select {
 	padding: 0px;
 	text-align: left;
 	clear: both;
+	padding-top: 1px;
+    padding-bottom: 1px;
 }
 
 
@@ -580,16 +582,21 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 		padding: 0px;
 		padding-top: 4px;
 		display: flex;
+		align-items: center;
 		// background-color: #e8fd92;
 		margin-bottom: 1px;
 
 		>* {
-			line-height: 14px;
-			display: inline-block;
-			vertical-align: bottom;
+			// vertical-align: bottom;
 			margin-right: 0.25em;
 			display: block;
+			font-size: 14px;
 			line-height: 14px;
+			height: 14px;
+			background-repeat: no-repeat;
+			overflow: hidden;
+			// background-color: #5bff00;
+			font-family: "system-ui", "Menlo", monospace;	
 		}
 
 		img {
@@ -627,10 +634,7 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 			cursor: pointer;
 			// vertical-align: text-top;
 		}
-		.textoTermino {	
-			font-family: "system-ui", "Menlo", monospace;
-			font-size: 14px;
-			line-height: 1.15em;
+		.textoTermino {						
 			color: #676767;		
 			
 			.notas {
@@ -639,15 +643,15 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 			}
 			input {
 				padding: 1em;
-				padding-top: 0.5em;
-				padding-bottom: 0.5em;
+				padding-top: 0.3em;
+				padding-bottom: 0.3em;
 			}
 		}
 		.cuadroU {
 			// font-family: Arial, Helvetica, sans-serif;
-			font-size: 8px !important;
+			font-size: 12px !important;
 			width: auto;
-			height: 14px;
+			// height: 14px;
 			padding-left: 4px;
 			padding-right: 4px;
 			overflow: hidden;
@@ -669,13 +673,13 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 		.mostrar-modelo {
 			background-image: url("@{dd_path}/images/m-icon.gif");
 			width: 15px;
-			height: 14px;
+			// height: 14px;
 			cursor: pointer;
 		}
 		.mostrar-obs {
 			background-image: url("@{dd_path}/images/o-icon.gif");
 			width: 15px;
-			height: 14px;
+			// height: 14px;
 			cursor: pointer;			
 		}
 		.btnModelo {
@@ -684,7 +688,7 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 		}
 		.divflechaC {
 			width: 15px;
-			height: 14px;
+			// height: 14px;
 			cursor: pointer;
 		}
 	}
