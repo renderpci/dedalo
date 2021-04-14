@@ -594,9 +594,10 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 			line-height: 14px;
 			height: 14px;
 			background-repeat: no-repeat;
-			overflow: hidden;
+			// overflow: hidden;
 			// background-color: #5bff00;
-			font-family: "system-ui", "Menlo", monospace;	
+			font-family: "system-ui", "Menlo", monospace;
+			position: relative;	
 		}
 
 		img {
@@ -645,7 +646,14 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 				padding: 1em;
 				padding-top: 0.3em;
 				padding-bottom: 0.3em;
+
+				top: -7px;
+				position: absolute;
+				z-index: 1;
 			}
+		}
+		em {
+			opacity: 0.5;
 		}
 		.cuadroU {
 			// font-family: Arial, Helvetica, sans-serif;
