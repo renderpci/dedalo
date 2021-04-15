@@ -2312,6 +2312,8 @@
 		Fixed error on diffusion_section_stats when user activity data was only calculated it until yesterday instead of today
 		Removed class tools exec("ps -o rss -p $pid) function. Changed by native PHP 'memory_get_usage'
 		Added link to dedalo.dev in login page
+		15-04-2021-a
+		Added TLD input user validation to eliminate invalid values temptations
 
 
 	[/HISTORY]
@@ -2343,7 +2345,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-04-2021-b');
+	define('DEDALO_BUILD'	, '15-04-2021-a');
 
 
 	/*
