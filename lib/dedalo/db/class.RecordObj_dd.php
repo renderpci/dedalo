@@ -280,15 +280,19 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_COUNTER_VALUE
 	*/
 	protected static function get_counter_value($tld) {
-		$strQuery 		= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
-		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
-		$counter_value 	= pg_fetch_assoc($result)['counter'];
+		$strQuery			= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
+		$result				= JSON_RecordDataBoundObject::search_free($strQuery);
+		// $counter_value	= pg_fetch_assoc($result)['counter'];
+		$row				= pg_fetch_assoc($result);
+		$counter_value		= isset($row['counter'])
+			? $row['counter']
+			: false;
 
 		if ($counter_value===false || is_null($counter_value)) {
 			if(SHOW_DEBUG===true) {				
 				//debug_log(__METHOD__." Error on get_counter_value 'RecordObj_dd_edit'. counter for tld not found. ".to_string(), logger::WARNING);
 			}
-			return (int)0;
+			return 0;
 		}
 
 		return (int)$counter_value;
