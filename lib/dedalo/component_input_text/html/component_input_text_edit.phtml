@@ -109,14 +109,10 @@
 						$html_content .= 'onkeyup="component_input_text.is_unique(this)" ';
 					}
 
-					// TLD validation. hierarchy6, hierarchy7
-					if ($tipo==='hierarchy6' || $tipo==='hierarchy7') {
-						$html_content .= 'onkeyup="component_input_text.check_patern_tld(this, event)" ';
-					}
-
 					$html_content .= 'id="'.$id_wrapper.'_input_'.$key.'" ';
 					$html_content .= 'name="'.$input_name.'" ';
 					$html_content .= 'value="'.$value.'" ';
+					$html_content .= 'data-value_original="'.$value.'" ';
 					$html_content .= 'title="'.$html_title.'" ';
 					$html_content .= $read_only .' ';
 					$html_content .= 'autocomplete="off" ';
