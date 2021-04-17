@@ -92,7 +92,7 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				dump($tipo,'tipo');
 				throw new Exception("Error Processing Request. get_permissions: tipo is empty", 1);
-			}			
+			}
 			#die("Error Processing Request. get_permissions: tipo is empty");
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
@@ -101,14 +101,19 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				dump($sub_tipo,'sub_tipo');
 				throw new Exception("Error Processing Request. get_permissions: sub_tipo is empty", 1);
-			}			
+			}
 			#die("Error Processing Request. get_permissions: sub_tipo is empty");
 			debug_log(__METHOD__." Error Processing Request. get_permissions: sub_tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
 		$permissions = security::get_security_permissions($tipo, $sub_tipo);
-			
-						
+
+		if ($tipo===DEDALO_HIERARCHY_SECTION_TIPO && SHOW_DEVELOPER!==true) {
+			if ($permissions>1) {
+				$permissions = 1;
+			}
+		}
+
 		return (int)$permissions;
 	}//end get_permissions
 
