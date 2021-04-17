@@ -52,99 +52,132 @@ class hierarchy {
 		$current_hierarchy_section_tipo = $options->section_tipo;
 		$current_hierarchy_section_id   = $options->section_id;
 
-		#
-		# ACTIVE
-		$active_tipo 	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
-		$component 		= component_common::get_instance( $modelo_name,
-														  $active_tipo,
-														  $options->section_id,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $options->section_tipo);
-		$dato 	 = (array)$component->get_dato();
-		$locator = reset($dato);
-				if( !isset($locator->section_tipo) || $locator->section_tipo!=DEDALO_SECTION_SI_NO_TIPO
-				 || !isset($locator->section_id) || $locator->section_id!=NUMERICAL_MATRIX_VALUE_YES) {
-				 	$response->result 	= false;
-					$response->msg 		= label::get_label('error_generate_hierarchy'); //'Current hierarchy is not active.';
-					return $response;
+		// active
+			$active_tipo 	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
+			$component 		= component_common::get_instance( $modelo_name,
+															  $active_tipo,
+															  $options->section_id,
+															  'edit',
+															  DEDALO_DATA_NOLAN,
+															  $options->section_tipo);
+			$dato 	 = (array)$component->get_dato();
+			$locator = reset($dato);
+					if( !isset($locator->section_tipo) || $locator->section_tipo!=DEDALO_SECTION_SI_NO_TIPO
+					 || !isset($locator->section_id) || $locator->section_id!=NUMERICAL_MATRIX_VALUE_YES) {
+					 	$response->result 	= false;
+						$response->msg 		= label::get_label('error_generate_hierarchy'); //'Current hierarchy is not active.';
+						return $response;
+					}
+
+
+		// tld
+			$tld2_tipo 		= DEDALO_HIERARCHY_TLD2_TIPO;	//'hierarchy6';
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tld2_tipo, true);
+			$component 		= component_common::get_instance( $modelo_name,
+															  $tld2_tipo,
+															  $options->section_id,
+															  'edit',
+															  DEDALO_DATA_NOLAN,
+															  $options->section_tipo);
+			$tld2 = strtolower($component->get_valor());
+			if (empty($tld2)) {
+				$response->result 	= false;
+				$response->msg 		= 'Error on get tld2. Empty value (tld is mandatory)';
+				return $response;
+			}
+
+
+		// source_real_section_tipo
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,true);
+			$component 		= component_common::get_instance( $modelo_name,
+															  DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
+															  $options->section_id,
+															  'list',
+															  DEDALO_DATA_NOLAN,
+															  $options->section_tipo);
+			$dato = $component->get_dato();
+			// check value
+			$real_section_tipo = isset($dato[0]) ? $dato[0] : false;
+			if (empty($real_section_tipo)) {
+				$response->result 	= false;
+				$response->msg 		= 'Error on get source_real_section_tipo. Empty value (source_real_section_tipo is mandatory)';
+				return $response;
+			}
+			$real_section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($real_section_tipo, true);
+			if ($real_section_modelo_name!=='section') {
+				$response->result 	= false;
+				$response->msg 		= 'Error on get source_real_section_tipo. Invalid model (only sections tipo are valid)';
+				return $response;
+			}
+
+
+		// tipology (of hierarchy)
+			$hierarchy_type	= DEDALO_HIERARCHY_TIPOLOGY_TIPO;
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type, true);
+			$component 		= component_common::get_instance( $modelo_name,
+															  $hierarchy_type,
+															  $options->section_id,
+															  'edit',
+															  DEDALO_DATA_NOLAN,
+															  $options->section_tipo);
+			$hierarchy_type_dato = $component->get_dato();
+			if (isset($hierarchy_type_dato[0]) && isset($hierarchy_type_dato[0]->section_id) && $hierarchy_type_dato[0]->section_id=="2") {
+				$is_toponymy = true;
+			}else{
+				$is_toponymy = false;
+			}
+			$tipology_id = isset($hierarchy_type_dato[0])
+				? (int)$hierarchy_type_dato[0]->section_id
+				: 0;
+			if ($tipology_id<1) {
+				$response->result 	= false;
+				$response->msg 		= 'Error on get typology. Empty value (typology is mandatory)';
+				return $response;
+			}
+
+		// name
+			$name_tipo 		= DEDALO_HIERARCHY_TERM_TIPO;	//'hierarchy5';
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
+			$component 		= component_common::get_instance( $modelo_name,
+															  $name_tipo,
+															  $options->section_id,
+															  'edit',
+															  DEDALO_DATA_LANG,
+															  $options->section_tipo);
+			$name = $component->get_valor();
+
+
+		// commands sequence
+
+
+		// virtual section . Tesaurus term
+			if($is_toponymy===true) {
+				$current_parent = 'dd101';
+			}else{
+				$current_parent = DEDALO_THESAURUS_VIRTUALS_AREA_TIPO;
+			}
+			$default_section_tipo_term  = self::get_default_section_tipo_term($tld2);
+			$options = new stdClass();
+				$options->terminoID 	= $default_section_tipo_term; // $tld2.'1';
+				$options->parent 		= $current_parent;	// 'dd101'; // 'hierarchy56'
+				$options->modelo 		= 'dd6';
+				$options->esmodelo 		= 'no';
+				$options->esdescriptor 	= 'si';
+				$options->visible 		= 'si';
+				$options->traducible 	= 'no';
+				if ($tld2==='lg') {
+					# add table 'matrix_langs'
+					$options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
+				}else{
+					// $options->relaciones = json_decode('[{"dd6":"hierarchy20"}]');
+					$options->relaciones = [
+						(object)[
+							'dd6' => $real_section_tipo # section. add real section. example: 'Thesaurus' hierarchy20
+						]
+					];
 				}
 
-
-
-		#
-		# TLD
-		$tld2_tipo 		= DEDALO_HIERARCHY_TLD2_TIPO;	//'hierarchy6';
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tld2_tipo, true);
-		$component 		= component_common::get_instance( $modelo_name,
-														  $tld2_tipo,
-														  $options->section_id,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $options->section_tipo);
-		$tld2 = strtolower($component->get_valor());
-		if (empty($tld2)) {
-			$response->result 	= false;
-			$response->msg 		= 'Error on get tld2. Empty value (tld is mandatory)';
-			return $response;
-		}
-
-
-		#
-		# TIPOLOGY OF HIERARCHY
-		$hierarchy_type	= DEDALO_HIERARCHY_TIPOLOGY_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type, true);
-		$component 		= component_common::get_instance( $modelo_name,
-														  $hierarchy_type,
-														  $options->section_id,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $options->section_tipo);
-		$hierarchy_type_dato = $component->get_dato();
-		if (isset($hierarchy_type_dato[0]) && isset($hierarchy_type_dato[0]->section_id) && $hierarchy_type_dato[0]->section_id=="2") {
-			$is_toponymy = true;
-		}else{
-			$is_toponymy = false;
-		}
-
-		#
-		# NAME
-		$name_tipo 		= DEDALO_HIERARCHY_TERM_TIPO;	//'hierarchy5';
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
-		$component 		= component_common::get_instance( $modelo_name,
-														  $name_tipo,
-														  $options->section_id,
-														  'edit',
-														  DEDALO_DATA_LANG,
-														  $options->section_tipo);
-		$name = $component->get_valor();
-
-		#
-		# COMMANDS SEQUENCE
-
-		#
-		# VIRTUAL SECTION . Tesaurus term
-		if($is_toponymy===true) {
-			$current_parent = 'dd101';
-		}else{
-			$current_parent = DEDALO_THESAURUS_VIRTUALS_AREA_TIPO;
-		}
-		$default_section_tipo_term  = self::get_default_section_tipo_term($tld2);
-		$options = new stdClass();
-			$options->terminoID 	= $default_section_tipo_term; // $tld2.'1';
-			$options->parent 		= $current_parent;	// 'dd101'; // 'hierarchy56'
-			$options->modelo 		= 'dd6';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			if ($tld2==='lg') {
-				# add table 'matrix_langs'
-				$options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
-			}else{
-				$options->relaciones 	= json_decode('[{"dd6":"hierarchy20"}]');
-			}
 			$options->propiedades 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= $name;
@@ -155,213 +188,241 @@ class hierarchy {
 					$response->msg 		.= $create_term->msg;
 				}
 
-		#
-		# VIRTUAL SECTION MODELO . Model term
-		$default_section_tipo_model = self::get_default_section_tipo_model($tld2);
-		$options = new stdClass();
-			$options->terminoID 	= $default_section_tipo_model;	//$tld2.'2';
-			$options->parent 		= DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;	//'dd101';
-			$options->modelo 		= 'dd6';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			if ($tld2==='lg') {
-				# add table 'matrix_langs'
-				$options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
-			}else{
-				$options->relaciones 	= json_decode('[{"dd6":"hierarchy20"}]');
-			}
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= $name . ' [m]';
+		// only for thesaurus alias
+		if ($real_section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
+			
+			// virtual section modelo . model term			
+				$default_section_tipo_model = self::get_default_section_tipo_model($tld2);
+				$options = new stdClass();
+					$options->terminoID 	= $default_section_tipo_model;	//$tld2.'2';
+					$options->parent 		= DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;	//'dd101';
+					$options->modelo 		= 'dd6';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+					if ($tld2==='lg') {
+						# add table 'matrix_langs'
+						$options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
+					}else{
+						$options->relaciones = json_decode('[{"dd6":"hierarchy20"}]');					
+					}
+					$options->propiedades 	= '';
+					$options->tld2 			= $tld2;
+					$options->name 			= $name . ' [m]';
 
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual section-list . terms
+				$options = new stdClass();
+					$options->terminoID 	= $tld2.'3';
+					$options->parent 		= $tld2.'1';
+					$options->modelo 		= 'dd91';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+					if ($tld2==='lg') {
+						$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy41"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
+					}else{
+						$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
+					}
+					$options->propiedades 	= '';
+					$options->tld2 			= $tld2;
+					$options->name 			= 'Listado';
+
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual section-list . modelo . model terms
+				$options = new stdClass();
+					$options->terminoID 	= $tld2.'4';
+					$options->parent 		= $tld2.'2';
+					$options->modelo 		= 'dd91';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+					if ($tld2==='lg') {
+						$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy41"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
+					}else{
+						$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
+					}
+					$options->propiedades 	= '';
+					$options->tld2 			= $tld2;
+					$options->name 			= 'Listado';
+
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual section-exlude-elements . terms
+				$options = new stdClass();
+					$options->terminoID 	= $tld2.'5';
+					$options->parent 		= $tld2.'1';
+					$options->modelo 		= 'dd1129';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+					$options->relaciones 	= json_decode('');
+					$options->propiedades 	= '';
+					$options->tld2 			= $tld2;
+					$options->name 			= 'Excluidos';
+
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual section-exlude-elements . modelo . model terms
+				$options = new stdClass();
+					$options->terminoID 	= $tld2.'6';
+					$options->parent 		= $tld2.'2';
+					$options->modelo 		= 'dd1129';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+					$options->relaciones 	= json_decode('');
+					$options->propiedades 	= '';
+					$options->tld2 			= $tld2;
+					$options->name 			= 'Excluidos';
+
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual search-list . terms
+				$options = new stdClass();
+					$options->terminoID 	= $tld2.'7';
+					$options->parent 		= $tld2.'1';
+					$options->modelo 		= 'dd524';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+					$options->relaciones 	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
+					$options->propiedades 	= '';
+					$options->tld2 			= $tld2;
+					$options->name 			= 'Búsqueda';
+
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual search-list . modelo . model terms
+				$options = new stdClass();
+					$options->terminoID 	= $tld2.'8';
+					$options->parent 		= $tld2.'2';
+					$options->modelo 		= 'dd524';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+					$options->relaciones 	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
+					$options->propiedades 	= '';
+					$options->tld2 			= $tld2;
+					$options->name 			= 'Búsqueda';
+
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual section-list-thesaurus . listado thesaurus
+			// use section-list-thesaurus from real section. only overwrite when really need			
+				$options = new stdClass();
+					$options->terminoID 	= $tld2.'9';
+					$options->parent 		= $tld2.'1';
+					$options->modelo 		= 'dd144';	// 'dd91';
+					$options->esmodelo 		= 'no';
+					$options->esdescriptor 	= 'si';
+					$options->visible 		= 'si';
+					$options->traducible 	= 'no';
+
+					// Listado Tesauro . Referecia para el nuevo elemento
+					$RecordObj_dd = new RecordObj_dd('hierarchy44');
+
+					$options->relaciones 	= $RecordObj_dd->get_relaciones();	//json_decode('[{"dd57":"hierarchy24"},{"dd9":"hierarchy25"},{"dd10":"hierarchy28"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd431":"hierarchy35"},{"dd432":"hierarchy40"},{"dd43":"hierarchy41"},{"dd57":"hierarchy23"},{"dd428":"hierarchy27"},{"dd57":"hierarchy26"}]');
+					$options->propiedades 	= $RecordObj_dd->get_propiedades();
+					$options->tld2 			= $tld2;
+					$options->name 			= 'Listado tesauro';
+
+					$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result 	 = $create_term->result;
+							$response->msg 		.= $create_term->msg;
+						}
+
+			// virtual section-list-thesaurus . modelo . model terms
+				// $options = new stdClass();
+				// 	$options->terminoID 	= $tld2.'4';
+				// 	$options->parent 		= $tld2.'2';
+				// 	$options->modelo 		= 'dd91';
+				// 	$options->esmodelo 		= 'no';
+				// 	$options->esdescriptor 	= 'si';
+				// 	$options->visible 		= 'si';
+				// 	$options->traducible 	= 'no';
+				// 	$options->relaciones 	= json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
+				// 	$options->propiedades 	= '';
+				// 	$options->tld2 			= $tld2;
+				// 	$options->name 			= 'Listado';
+
+				// 	$create_term = self::create_term( $options );
+				// 		if ($create_term) {
+				// 			$response->result 	 = $create_term->result;
+				// 			$response->msg 		.= $create_term->msg;
+				// 		}
+		
+		}else{
+
+			// target real section section_list
+				$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($real_section_tipo, ['section_list'], $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=true);
+				if (!empty($ar_section_list[0])) {
+					$section_list_tipo			= $ar_section_list[0];
+					$RecordObj_dd				= new RecordObj_dd($section_list_tipo);
+					$section_list_relaciones	= $RecordObj_dd->get_relaciones();
 				}
 
-		#
-		# VIRTUAL SECTION-LIST . terms
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'3';
-			$options->parent 		= $tld2.'1';
-			$options->modelo 		= 'dd91';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			if ($tld2==='lg') {
-				$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy41"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
-			}else{
-				$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
-			}
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Listado';
+			// virtual section-list . terms
+				if (!empty($ar_section_list) && !empty($section_list_relaciones)) {
+				
+					$options = new stdClass();
+						$options->terminoID		= $tld2.'3';
+						$options->parent		= $tld2.'1';
+						$options->modelo		= 'dd91';
+						$options->esmodelo		= 'no';
+						$options->esdescriptor	= 'si';
+						$options->visible		= 'si';
+						$options->traducible	= 'no';
+						$options->relaciones	= $section_list_relaciones;
+						$options->propiedades	= '';
+						$options->tld2			= $tld2;
+						$options->name			= 'Listado';
 
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
+						$create_term = self::create_term( $options );
+							if ($create_term) {
+								$response->result 	 = $create_term->result;
+								$response->msg 		.= $create_term->msg;
+							}
 				}
-
-		#
-		# VIRTUAL SECTION-LIST . MODELO . Model terms
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'4';
-			$options->parent 		= $tld2.'2';
-			$options->modelo 		= 'dd91';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			if ($tld2==='lg') {
-				$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy41"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
-			}else{
-				$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
-			}
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Listado';
-
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
-				}
-
-		#
-		# VIRTUAL SECTION-EXLUDE-ELEMENTS . terms
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'5';
-			$options->parent 		= $tld2.'1';
-			$options->modelo 		= 'dd1129';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			$options->relaciones 	= json_decode('');
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Excluidos';
-
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
-				}
-
-		#
-		# VIRTUAL SECTION-EXLUDE-ELEMENTS . MODELO . Model terms
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'6';
-			$options->parent 		= $tld2.'2';
-			$options->modelo 		= 'dd1129';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			$options->relaciones 	= json_decode('');
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Excluidos';
-
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
-				}
-
-		#
-		# VIRTUAL SEARCH-LIST . terms
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'7';
-			$options->parent 		= $tld2.'1';
-			$options->modelo 		= 'dd524';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			$options->relaciones 	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Búsqueda';
-
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
-				}
-
-		#
-		# VIRTUAL SEARCH-LIST . MODELO . Model terms
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'8';
-			$options->parent 		= $tld2.'2';
-			$options->modelo 		= 'dd524';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			$options->relaciones 	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Búsqueda';
-
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
-				}
-
-		#
-		# VIRTUAL SECTION-LIST-THESAURUS . Listado thesaurus
-		// USE SECTION-LIST-THESAURUS FROM REAL SECTION. ONLY OVERWRITE WHEN REALLY NEED
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'9';
-			$options->parent 		= $tld2.'1';
-			$options->modelo 		= 'dd144';	// 'dd91';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-
-			// Listado Tesauro . Referecia para el nuevo elemento
-			$RecordObj_dd = new RecordObj_dd('hierarchy44');
-
-			$options->relaciones 	= $RecordObj_dd->get_relaciones();	//json_decode('[{"dd57":"hierarchy24"},{"dd9":"hierarchy25"},{"dd10":"hierarchy28"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd431":"hierarchy35"},{"dd432":"hierarchy40"},{"dd43":"hierarchy41"},{"dd57":"hierarchy23"},{"dd428":"hierarchy27"},{"dd57":"hierarchy26"}]');
-			$options->propiedades 	= $RecordObj_dd->get_propiedades();
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Listado tesauro';
-
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
-				}
-
-		#
-		# VIRTUAL SECTION-LIST-THESAURUS . MODELO . Model terms
-		$options = new stdClass();
-			$options->terminoID 	= $tld2.'4';
-			$options->parent 		= $tld2.'2';
-			$options->modelo 		= 'dd91';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->traducible 	= 'no';
-			$options->relaciones 	= json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= 'Listado';
-
-			$create_term = self::create_term( $options );
-				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
-				}
+		}//end if ($real_section_tipo===DEDALO_THESAURUS_SECTION_TIPO)
 
 
 		#
@@ -376,17 +437,19 @@ class hierarchy {
 		*/
 
 
-
-
 		#
 		# SET PERMISSIONS
 		# Allow current user access to created default sections
 		$permissions_options = new stdClass();
 			$permissions_options->section_tipo 	= $current_hierarchy_section_tipo;
 			$permissions_options->section_id 	= $current_hierarchy_section_id;
-			$permissions_options->ar_sections 	= array($default_section_tipo_term, $default_section_tipo_model);
+			$ar_sections = (isset($default_section_tipo_model))
+				? [$default_section_tipo_term, $default_section_tipo_model]
+				: [$default_section_tipo_term];			
+			$permissions_options->ar_sections 	= $ar_sections;
 
 		hierarchy::set_hierarchy_permissions( $permissions_options );
+
 
 		return (object)$response;
 	}//end generate_virtual_section
