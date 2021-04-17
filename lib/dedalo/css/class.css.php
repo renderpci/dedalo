@@ -401,9 +401,13 @@ class css {
 				$css_prefix = 'alias';
 				break;				
 
+			case strpos($modelo_name, 'button_trigger')!==false :
+				$css_prefix = 'css_button';
+				break;
+
 			case strpos($modelo_name, 'component')!==false :
 				$css_prefix = 'wrap_component';
-				break;		
+				break;	
 			
 			#case strpos($modelo_name, 'section')!==false :
 			#	$css_prefix = 'wrap_section'; // section and section_list
