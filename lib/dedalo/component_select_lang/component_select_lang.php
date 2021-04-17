@@ -33,8 +33,8 @@
 				if ($this->get_filter_authorized_record()===false) return null ;
 
 				$dato		= $this->get_dato();
-				$dato_json 	= json_encode($dato);
-				#$valor 	= $this->get_valor();
+				$dato_json	= json_encode($dato);
+				$valor		= $this->get_valor();
 			
 				#$ar_all_project_select_langs	= $this->get_ar_all_project_select_langs();
 				$ar_all_project_select_langs	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
