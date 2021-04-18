@@ -2314,6 +2314,18 @@
 		Added link to dedalo.dev in login page
 		15-04-2021-a
 		Added TLD input user validation to eliminate invalid values temptations
+		17-04-2021-b
+		Added button trigger confirm dialog before exec
+		Added button trigger css parser from structure in css.php
+		Added user restrictions in section Hierarchy (hierarchy1). Only user developers can edit and delete sections now
+		Added/fixed component_input_text TLD values validation from section Hierarchy. Unique values and regex validations where added
+		Fixed error non defined var in component_select when permissions are 1
+		Added DD_TIPOS new constant DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO (to set source section when 'Generate' is triggered in Hierarchy section)
+		Fixed codification issues in tool export (Dédalo raw mode)
+		Minor Ontology css fixes
+		Added Hierarchy alternative original section source to create a new Hierarchy
+		Fix error on RecordObj_dd when function GET_COUNTER_VALUE returned empty results
+
 
 
 	[/HISTORY]
@@ -2345,7 +2357,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-04-2021-a');
+	define('DEDALO_BUILD'	, '17-04-2021-b');
 
 
 	/*
