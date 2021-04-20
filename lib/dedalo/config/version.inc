@@ -2325,7 +2325,8 @@
 		Minor Ontology css fixes
 		Added Hierarchy alternative original section source to create a new Hierarchy
 		Fix error on RecordObj_dd when function GET_COUNTER_VALUE returned empty results
-
+		20-04-2021-a
+		Fixed FFMPEG conversion issue when aspect ratio is not square (camera files for example). Videos are now playable in Safari and Firefox
 
 
 	[/HISTORY]
@@ -2357,7 +2358,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-04-2021-b');
+	define('DEDALO_BUILD'	, '20-04-2021-a');
 
 
 	/*
