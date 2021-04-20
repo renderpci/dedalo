@@ -1,9 +1,9 @@
 <?php
 // ontology custon config file
-require_once( dirname(__FILE__) .'/config/config_ontology.php' );
+include_once( dirname(__FILE__) .'/config/config_ontology.php' );
 
 # Old lang vars
-require_once( dirname(__FILE__) . '/lang/lang_code.php' );
+include_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 
 
@@ -25,9 +25,10 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 	}
 
 
+
 // other files to include
-	require_once( dirname(__FILE__) .'/class.dd.php');
-	require_once( dirname(__FILE__) .'/class.RecordObj_dd_edit.php');
+	include_once( dirname(__FILE__) .'/class.dd.php');
+	include_once( dirname(__FILE__) .'/class.RecordObj_dd_edit.php');
 
 
 
@@ -91,13 +92,13 @@ if(!empty($data) && $data->accion==='listadoHijos') {
 		
 		// echo $html;
 		$response->result	= $html;
-		$response->msg		= 'Ok. Request done (listadoHijos)';
+		$response->msg		= 'Ok. Request done (listadoHijos '.$terminoID.')';
 	}
 
 	header('Content-Type: application/json');
 	echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
-	die();
+	exit();
 }//end listadoHijos
 
 
