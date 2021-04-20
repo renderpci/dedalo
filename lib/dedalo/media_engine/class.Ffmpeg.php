@@ -632,7 +632,7 @@ class Ffmpeg {
 	*/
 	public function conform_header(AVObj $AVObj) {
 		
-		$result = false;		
+		$result = false;
 		
 		$ffmpeg_installed_path 			= DEDALO_AV_FFMPEG_PATH;
 		$qt_faststart_installed_path 	= DEDALO_AV_FASTSTART_PATH;
@@ -672,10 +672,10 @@ class Ffmpeg {
 			$result = shell_exec( $command );
 
 		} catch (Exception $e) {
-		    echo 'Caught exception: ',  $e->getMessage(), "\n";
-		    if(SHOW_DEBUG===true) {
-		    	dump($e->getMessage(), " EXCEPTION ".to_string());
-		    }		    	
+			echo 'Caught exception: ',  $e->getMessage(), "\n";
+			if(SHOW_DEBUG===true) {
+				dump($e->getMessage(), " EXCEPTION ".to_string());
+			}
 		}
 		
 		#$conform_header_command_exc = Exec::exec_command($command);

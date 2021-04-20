@@ -429,7 +429,7 @@ class diffusion_mysql extends diffusion_sql  {
 					// Ignore box
 					break;
 				default:
-					throw new Exception("Error Processing Request. Field type not defined: '$field_type' ($field_name, $field_coment, $field_options)", 1);
+					throw new Exception("Error Processing Request. Field type not defined: '$field_type' (field_name:'$field_name', field_coment:'$field_coment', field_options:'$field_options')", 1);
 					break;
 			}
 
