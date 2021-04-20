@@ -57,6 +57,51 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 
 
+$json	= file_get_contents('php://input');
+$data	= json_decode($json);
+
+
+/**
+* LISTADOHIJOS : listados (al abrir la flecha,etc..)
+*/
+if(!empty($data) && $data->accion==='listadoHijos') {
+
+	# Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed (listadoHijos)';
+	
+	// data vars
+		$terminoID			= $data->terminoID;
+		$ts_lang			= $data->ts_lang;
+		$modo				= $data->modo;
+		$type				= $data->type;
+		$terminoIDresalte	= $data->terminoIDresalte;
+
+	if(!empty($terminoID)) {
+	
+		$parentInicial		= $terminoID;
+		$terminoIDActual	= false;
+		
+		# init dd in requested modo
+		$dd		= new dd($modo, $type, $ts_lang);
+		$html	= $dd->buildTree($parentInicial, $terminoIDActual, $terminoIDresalte);
+		
+		// echo $html;
+		$response->result	= $html;
+		$response->msg		= 'Ok. Request done (listadoHijos)';
+	}
+
+	header('Content-Type: application/json');
+	echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+	die();
+}//end listadoHijos
+
+
+
 /**
 * INSERTTS 
 */
@@ -504,30 +549,6 @@ if($accion==='deleteTS') {
 
 	exit();	
 }//end deleteTS
-
-
-
-/**
-* LISTADOHIJOS : listados (al abrir la flecha,etc..)
-*/
-if($accion==='listadoHijos') {
-
-	if(!$terminoID) 	exit("Need more vars: terminoID: $terminoID ");
-	
-	$parentInicial		= $terminoID ;
-	$terminoIDActual	= false ;	#echo "$modo,$type,$ts_lang";
-	
-	# init dd in requested modo
-	$dd 				= new dd($modo,$type,$ts_lang);	
-	$html 				= $dd->buildTree($parentInicial, $terminoIDActual, $terminoIDresalte); 	
-	
-	echo $html;
-
-	# Write session to unlock session file
-	session_write_close();
-
-	die();
-}//end listadoHijos
 
 
 
