@@ -130,14 +130,14 @@ class web_data {
 		switch ($name) {
 			
 			case 'table':
-				preg_match('/^[a-z|_|,]{2,128}$/i', $value, $output_array);
+				preg_match('/^[a-zA-Z0-9|_|,]{2,128}$/i', $value, $output_array);
 				if (empty($output_array[0])) {
 					return false;
 				}
 				break;
 
 			case 'db_name':
-				preg_match('/^[a-z|_]{2,128}$/i', $value, $output_array);
+				preg_match('/^[a-zA-Z0-9|_]{2,128}$/i', $value, $output_array);
 				if (empty($output_array[0])) {
 					return false;
 				}
