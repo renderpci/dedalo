@@ -51,7 +51,7 @@ class web_data {
 		#static $version = "1.0.29";	// 17-09-2018
 		#static $version = "1.0.30";	// 13-11-2018
 		#static $version = "1.0.31";	// 05-03-2020
-		static $version = "1.0.32";		// 22-04-2021
+		static $version = "1.0.32-b";	// 22-04-2021
 
 
 	/**
@@ -85,7 +85,7 @@ class web_data {
 										 		MYSQL_DEDALO_DB_PORT_CONN,
 										 		MYSQL_DEDALO_SOCKET_CONN);
 		
-		// $mysql_conn = DBi::get_connect_dbo(
+		// $mysql_conn = web_data::get_DBO_connection(
 		// 	MYSQL_DEDALO_HOSTNAME_CONN,
 		// 	MYSQL_DEDALO_USERNAME_CONN,
 		// 	MYSQL_DEDALO_PASSWORD_CONN,
@@ -96,6 +96,28 @@ class web_data {
 
 		return $mysql_conn;
 	}//end get_db_connection
+
+
+
+	/**
+	* GET_DBO_CONNECTION
+	* @return resource $dbh
+	*/
+	public static function get_DBO_connection(
+		$host=MYSQL_DEDALO_HOSTNAME_CONN,
+		$user=MYSQL_DEDALO_USERNAME_CONN,
+		$password=MYSQL_DEDALO_PASSWORD_CONN,
+		$database=MYSQL_DEDALO_DATABASE_CONN,
+		$port=MYSQL_DEDALO_DB_PORT_CONN,
+		$socket=MYSQL_DEDALO_SOCKET_CONN) {
+
+		$dbh = new PDO('mysql:host='.MYSQL_DEDALO_HOSTNAME_CONN.';dbname='.MYSQL_DEDALO_DATABASE_CONN.';charset=utf8', MYSQL_DEDALO_USERNAME_CONN, MYSQL_DEDALO_PASSWORD_CONN);
+		$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+		$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+
+		return $dbh;
+	}//end get_DBO_connection
 
 
 
@@ -125,7 +147,7 @@ class web_data {
 				$plain_fields = is_array($value)
 					? implode(',', $value)
 					: $value;
-				preg_match('/^[a-z|_|,| |`|\(|\)]+$/i', $plain_fields, $output_array);
+				preg_match('/^[a-z|_|,| |`|\(|\)|\*]+$/i', $plain_fields, $output_array);
 				if (empty($output_array[0])) {
 					return false;
 				}
@@ -923,7 +945,7 @@ class web_data {
 
 				// prepare PDO
 					try {
-						$dbh	= DBi::get_connect_dbo();
+						$dbh	= web_data::get_DBO_connection();
 						$stmt	= $dbh->prepare($strQuery);
 						$stmt->setFetchMode(PDO::FETCH_ASSOC);
 						$result = $stmt->execute();
@@ -1443,7 +1465,7 @@ class web_data {
 
 			// prepare PDO
 				try {
-					$dbh	= DBi::get_connect_dbo();
+					$dbh	= web_data::get_DBO_connection();
 					$stmt	= $dbh->prepare($count_query);
 					$stmt->setFetchMode(PDO::FETCH_ASSOC);
 					$result = $stmt->execute();
