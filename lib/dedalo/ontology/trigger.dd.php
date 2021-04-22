@@ -79,7 +79,7 @@ if(!empty($data) && $data->accion==='listadoHijos') {
 		$ts_lang			= $data->ts_lang;
 		$modo				= $data->modo;
 		$type				= $data->type;
-		$terminoIDresalte	= $data->terminoIDresalte;
+		$terminoIDresalte	= $data->terminoIDresalte ?? null;
 
 	if(!empty($terminoID)) {
 	
