@@ -80,4 +80,26 @@ abstract class DBi {
 
 
 
+	/**
+	* GET_CONNECT_DBO
+	* @return resource $dbh
+	*/
+	public static function get_connect_dbo(
+		$host=MYSQL_DEDALO_HOSTNAME_CONN,
+		$user=MYSQL_DEDALO_USERNAME_CONN,
+		$password=MYSQL_DEDALO_PASSWORD_CONN,
+		$database=MYSQL_DEDALO_DATABASE_CONN,
+		$port=MYSQL_DEDALO_DB_PORT_CONN,
+		$socket=MYSQL_DEDALO_SOCKET_CONN) {
+
+		$dbh = new PDO('mysql:host='.MYSQL_DEDALO_HOSTNAME_CONN.';dbname='.MYSQL_DEDALO_DATABASE_CONN.';charset=utf8', MYSQL_DEDALO_USERNAME_CONN, MYSQL_DEDALO_PASSWORD_CONN);
+		$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+		$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+
+		return $dbh;
+	}//end get_connect_dbo
+
+
+
 }

@@ -25,16 +25,17 @@
 	$headers_file = dirname(dirname(__FILE__)) . '/config_api/server_config_headers.php';
 	include $headers_file;
 
+	// print as json data
+	header('Content-Type: application/json');
+
 
 
 // safe_xss 
 	$safe_xss = function($value) {
-		return $value;
-
-		//var_dump($value);
+		
 		if (is_string($value)) {
 			if ($decode_json=json_decode($value)) {
-				// If var is a stringify json, not verify string now
+				// If var is a stringify json, not verify string yet
 			}else{
 				$value = strip_tags($value,'<br><strong><em>');
 				$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -66,15 +67,14 @@
 		}
 	}
 
-// auth code 
-	// must to be identic to server config defined code
+// auth code . Must to be identic to server config defined code
 	$code = isset($_REQUEST['code']) ? $safe_xss($_REQUEST['code']) : false;
 
 // lang 
-	$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;
+	$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;	
 
 // db 
-	$db_name = isset($_REQUEST['db_name']) ? $safe_xss($_REQUEST['db_name']) : false;
+	$db_name = isset($_REQUEST['db_name']) ? $safe_xss($_REQUEST['db_name']) : false;	
 
 // config . Load server api config vars 
 	# If received code if different to defined code, and error was launched
@@ -82,6 +82,15 @@
 	if(!include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php')) {
 		exit("Error. Server API config file not found");
 	}
+
+// fast check vars
+	if (!empty($lang) && !web_data::check_safe_value('lang', $lang)) {
+		exit("Error. ilegal lang");
+	}
+	if (!empty($db_name) && !web_data::check_safe_value('db_name', $db_name)) {
+		exit("Error. ilegal db_name");
+	}
+
 
 // options . Get request vars options to send to manager 
 	$options = isset($_REQUEST['options']) ? $_REQUEST['options'] : false;
@@ -102,7 +111,9 @@
 					$cvalue = false;
 					break;
 			}
-			$options->$key = $cvalue;
+			$safe_value = strip_tags($cvalue,'<br><strong><em>');
+
+			$options->{$key} = $safe_value;
 		}
 	}
 
@@ -111,11 +122,6 @@
 	if ($dedalo_get!==false && is_object($options)) {
 		$options->dedalo_get = $dedalo_get;
 	}
-
-
-
-// print as json data
-	header('Content-Type: application/json');
 
 
 
