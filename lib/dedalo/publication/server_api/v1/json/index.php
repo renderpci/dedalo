@@ -128,7 +128,7 @@
 
 
 // manager
-	$manager = new manager();	
+	$manager = new manager();
 	try {
 		
 		$dedalo_data = $manager->manage_request( $options );

@@ -154,14 +154,14 @@ class web_data {
 				break;
 
 			case 'sql_fullselect':
-				preg_match_all("/delete|update|insert|truncate|set names|where|user|mysql/i", $value, $output_array);
+				preg_match_all("/delete|update|insert|truncate|set names|where|user|having|mysql/i", $value, $output_array);
 				if (!empty($output_array[0])) {
 					return false;
 				}
 				break;
 
 			case 'sql_filter':
-				preg_match_all("/delete|update|insert|truncate|set names|where|select|user|mysql/i", $value, $output_array);
+				preg_match_all("/delete|update|insert|truncate|set names|where|select|user|having|mysql/i", $value, $output_array);
 				if (!empty($output_array[0])) {
 					return false;
 				}
