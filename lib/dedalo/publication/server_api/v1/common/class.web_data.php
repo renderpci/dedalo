@@ -60,7 +60,7 @@ class web_data {
 	*/
 	public static function get_db_connection($db_name=false) {
 
-		if ($db_name!==false) {
+		if (!empty($db_name)) {
 
 			// Requested database
 				$database = $db_name;
@@ -103,15 +103,20 @@ class web_data {
 	* GET_PDO_CONNECTION
 	* @return resource $dbh
 	*/
-	public static function get_PDO_connection(
-		$host=MYSQL_DEDALO_HOSTNAME_CONN,
-		$user=MYSQL_DEDALO_USERNAME_CONN,
-		$password=MYSQL_DEDALO_PASSWORD_CONN,
-		$database=MYSQL_DEDALO_DATABASE_CONN,
-		$port=MYSQL_DEDALO_DB_PORT_CONN,
-		$socket=MYSQL_DEDALO_SOCKET_CONN) {
+	public static function get_PDO_connection($host=null, $user=null, $password=null, $database=null, $port=null, $socket=null) {
 
-		$dbh = new PDO('mysql:host='.MYSQL_DEDALO_HOSTNAME_CONN.';dbname='.MYSQL_DEDALO_DATABASE_CONN.';charset=utf8', MYSQL_DEDALO_USERNAME_CONN, MYSQL_DEDALO_PASSWORD_CONN);
+		$host		= !empty($host) ? $host : MYSQL_DEDALO_HOSTNAME_CONN;
+		$user		= !empty($user) ? $user : MYSQL_DEDALO_USERNAME_CONN;
+		$password	= !empty($password) ? $password : MYSQL_DEDALO_PASSWORD_CONN;
+		$database	= !empty($database)
+			? $database
+			: (defined('MYSQL_WEB_DATABASE_CONN') ? MYSQL_WEB_DATABASE_CONN : MYSQL_DEDALO_DATABASE_CONN);
+		$port		= !empty($port) ? $port : MYSQL_DEDALO_DB_PORT_CONN;
+		$socket		= !empty($socket) ? $socket : MYSQL_DEDALO_SOCKET_CONN;
+
+		// error_log('GET_PDO_CONNECTION $database: '.$database);
+
+		$dbh = new PDO('mysql:host='.$host.';dbname='.$database.';charset=utf8', $user, $password);
 		$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 		$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -439,7 +444,6 @@ class web_data {
 						return $response;
 					}
 				}	
-
 
 			// db_name check
 				if(!empty($sql_options->db_name)) {
@@ -973,7 +977,7 @@ class web_data {
 					$process_result			= $options->process_result ?? false;
 					$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query 
 					$lang					= $options->lang;
-					$db_name				= !empty($options->db_name) ? $options->db_name : MYSQL_DEDALO_DATABASE_CONN;
+					$db_name				= !empty($options->db_name) ? $options->db_name : null;
 
 				// safe strQuery query test
 					preg_match_all("/delete|update|insert|truncate|set names|user|mysql|localhost/i", $strQuery, $output_array);
@@ -997,7 +1001,7 @@ class web_data {
 
 				// prepare PDO
 					try {
-						$dbh	= web_data::get_PDO_connection(
+						$dbh = web_data::get_PDO_connection(
 							MYSQL_DEDALO_HOSTNAME_CONN,
 							MYSQL_DEDALO_USERNAME_CONN,
 							MYSQL_DEDALO_PASSWORD_CONN,
@@ -1029,7 +1033,7 @@ class web_data {
 				
 				// count records
 					$total = ((bool)$count===true)
-						? (int)web_data::count_records($strQuery)
+						? (int)web_data::count_records($strQuery, $dbname)
 						: false;			
 
 				// resolve_portals_custom like ‘{"audiovisual":"audiovisual","informant":"informant"}’
@@ -1487,7 +1491,7 @@ class web_data {
 		* COUNT_RECORDS
 		* @return int $total
 		*/
-		private static function count_records($sql) {
+		private static function count_records($sql, $db_name) {
 			
 			$ar_lines = explode(PHP_EOL, $sql);
 			$ar_clean = [];
@@ -1522,7 +1526,12 @@ class web_data {
 
 			// prepare PDO
 				try {
-					$dbh	= web_data::get_PDO_connection();
+					$dbh = web_data::get_PDO_connection(
+						MYSQL_DEDALO_HOSTNAME_CONN,
+						MYSQL_DEDALO_USERNAME_CONN,
+						MYSQL_DEDALO_PASSWORD_CONN,
+						$db_name
+					);
 					$stmt	= $dbh->prepare($count_query);
 					$stmt->setFetchMode(PDO::FETCH_ASSOC);
 					$result = $stmt->execute();

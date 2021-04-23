@@ -2329,7 +2329,8 @@
 		Fixed FFMPEG conversion issue when aspect ratio is not square (camera files for example). Videos are now playable in Safari and Firefox
 		22-04-2021-a
 		Fixed security vulnerabilities in public api
-
+		23-04-2021-b
+		Fixed bug in web_data::get_PDO_connection when count losses the db_name
 
 
 	[/HISTORY]
@@ -2361,7 +2362,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-04-2021-a');
+	define('DEDALO_BUILD'	, '23-04-2021-ab');
 
 
 	/*
