@@ -85,7 +85,7 @@ class web_data {
 										 		MYSQL_DEDALO_DB_PORT_CONN,
 										 		MYSQL_DEDALO_SOCKET_CONN);
 		
-		// $mysql_conn = web_data::get_DBO_connection(
+		// $mysql_conn = web_data::get_PDO_connection(
 		// 	MYSQL_DEDALO_HOSTNAME_CONN,
 		// 	MYSQL_DEDALO_USERNAME_CONN,
 		// 	MYSQL_DEDALO_PASSWORD_CONN,
@@ -100,10 +100,10 @@ class web_data {
 
 
 	/**
-	* GET_DBO_CONNECTION
+	* GET_PDO_CONNECTION
 	* @return resource $dbh
 	*/
-	public static function get_DBO_connection(
+	public static function get_PDO_connection(
 		$host=MYSQL_DEDALO_HOSTNAME_CONN,
 		$user=MYSQL_DEDALO_USERNAME_CONN,
 		$password=MYSQL_DEDALO_PASSWORD_CONN,
@@ -117,7 +117,41 @@ class web_data {
 
 
 		return $dbh;
-	}//end get_DBO_connection
+	}//end get_PDO_connection
+
+
+
+	/**
+	* FIND_EQUALITY
+	* @return bool
+	*/
+	public static function find_equality($value) {
+		
+		$equality = false;
+		// $pre_items = explode(' AND ', $value);
+		$pre_items = preg_split('/ AND /i', $value);
+		foreach ($pre_items as $pre_value) {
+			$pre_value	= str_replace(['(',')','\''], '', $pre_value);
+			$items		= explode(' ', $pre_value);
+			foreach ($items as $c_value) {
+				$c_value	= trim($c_value);
+				$beats		= explode('=', $c_value);
+				if (!empty($beats[0]) && !empty($beats[1])) {
+					$equality = trim($beats[0])==trim($beats[1]);
+					if ($equality===true) {
+						break 2;
+					}
+				}
+			}
+		}
+		if ($equality!==false) {
+			error_log("FIND_EQUALITY ERROR -- ".$value);
+			return false;
+		}
+		// error_log("FIND_EQUALITY OK -- ".$value);
+
+		return $equality;
+	}//end find_equality
 
 
 
@@ -130,6 +164,7 @@ class web_data {
 		switch ($name) {
 			
 			case 'table':
+				$value = is_array($value) ? implode(',', $value) : $value;
 				preg_match('/^[a-zA-Z0-9|_|,]{2,128}$/i', $value, $output_array);
 				if (empty($output_array[0])) {
 					return false;
@@ -147,21 +182,39 @@ class web_data {
 				$plain_fields = is_array($value)
 					? implode(',', $value)
 					: $value;
-				preg_match('/^[a-z|_|,| |`|\(|\)|\*]+$/i', $plain_fields, $output_array);
+
+				// equality check
+					if (web_data::find_equality($plain_fields)!==false) {
+						return false;
+					}
+
+				preg_match('/^[a-zA-Z0-9|_|,| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
 				if (empty($output_array[0])) {
 					return false;
 				}
 				break;
 
 			case 'sql_fullselect':
-				preg_match_all("/delete|update|insert|truncate|set names|where|user|having|mysql/i", $value, $output_array);
+
+				// equality check
+					if (web_data::find_equality($value)!==false) {
+						return false;
+					}
+
+				preg_match_all("/=|delete|update|insert|truncate|extractvalue|DBMS_PIPE| union |set names|where|user|having|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
 				if (!empty($output_array[0])) {
 					return false;
 				}
 				break;
 
 			case 'sql_filter':
-				preg_match_all("/delete|update|insert|truncate|set names|where|select|user|having|mysql/i", $value, $output_array);
+
+				// equality check
+					if (web_data::find_equality($value)!==false) {
+						return false;
+					}
+
+				preg_match_all("/select |delete|update|insert|truncate|extractvalue|DBMS_PIPE| union |set names|where|having|user|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
 				if (!empty($output_array[0])) {
 					return false;
 				}
@@ -182,7 +235,7 @@ class web_data {
 				break;
 
 			case 'order':
-				preg_match('/^[a-z|,| |`|_]+$/i', $value, $output_array);
+				preg_match('/^[a-z0-9|,| |`|_|\(|\)]+$/i', $value, $output_array);
 				if (empty($output_array[0])) {
 					return false;
 				}
@@ -245,8 +298,8 @@ class web_data {
 					$sql_options->ar_fields					= array('*');
 					$sql_options->sql_fullselect			= false; // default false
 					$sql_options->section_id				= false;
-					$sql_options->sql_filter				= ''; //publicacion = 'si'
-					$sql_options->lang						= null;	//WEB_CURRENT_LANG_CODE;
+					$sql_options->sql_filter				= ''; 	// publicacion = 'si'
+					$sql_options->lang						= null;	// WEB_CURRENT_LANG_CODE;
 					$sql_options->order						= '`id` ASC';
 					$sql_options->group						= false;
 					$sql_options->limit						= 0;
@@ -920,7 +973,7 @@ class web_data {
 					$process_result			= $options->process_result ?? false;
 					$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query 
 					$lang					= $options->lang;
-					$db_name				= !empty($options->db_name) ? $options->db_name : false;
+					$db_name				= !empty($options->db_name) ? $options->db_name : MYSQL_DEDALO_DATABASE_CONN;
 
 				// safe strQuery query test
 					preg_match_all("/delete|update|insert|truncate|set names|user|mysql|localhost/i", $strQuery, $output_array);
@@ -942,10 +995,14 @@ class web_data {
 						error_log("strQuery:".PHP_EOL.$strQuery);
 					}
 
-
 				// prepare PDO
 					try {
-						$dbh	= web_data::get_DBO_connection();
+						$dbh	= web_data::get_PDO_connection(
+							MYSQL_DEDALO_HOSTNAME_CONN,
+							MYSQL_DEDALO_USERNAME_CONN,
+							MYSQL_DEDALO_PASSWORD_CONN,
+							$db_name
+						);
 						$stmt	= $dbh->prepare($strQuery);
 						$stmt->setFetchMode(PDO::FETCH_ASSOC);
 						$result = $stmt->execute();
@@ -1465,7 +1522,7 @@ class web_data {
 
 			// prepare PDO
 				try {
-					$dbh	= web_data::get_DBO_connection();
+					$dbh	= web_data::get_PDO_connection();
 					$stmt	= $dbh->prepare($count_query);
 					$stmt->setFetchMode(PDO::FETCH_ASSOC);
 					$result = $stmt->execute();
@@ -2809,7 +2866,7 @@ class web_data {
 				$rd_options->ar_fields 		= array('*');
 				$rd_options->sql_filter 	= "`$field_term` LIKE '%".$q."%' " . $options->publication_filter_sql;
 				$rd_options->lang 			= $options->lang;
-				$rd_options->order 			= null;
+				$rd_options->order 			= null; // $field_term.' ASC';
 				$rd_options->limit 			= $options->rows_per_page;
 				$rd_options->offset 		= $offset;
 				$rd_options->count 			= true;
@@ -2943,7 +3000,7 @@ class web_data {
 				$rd_options = new stdClass();
 					$rd_options->table		= $term_obj->table;
 					$rd_options->ar_fields	= array('*');
-					$rd_options->sql_filter	= FIELD_TERM_ID ." = '$term_obj->parent'";
+					$rd_options->sql_filter	= FIELD_TERM_ID ."='$term_obj->parent'";
 					$rd_options->lang		= $term_obj->lang;
 					$rd_options->order		= null;
 					$rd_options->limit		= 1;
@@ -3736,7 +3793,7 @@ class web_data {
 
 			# TABLE FIELDS
 			# $ar_fields = web_data::get_table_fields(TABLE_AUDIOVISUAL);
-			$ar_fields = array("section_id",FIELD_VIDEO,FIELD_TRANSCRIPTION);
+			$ar_fields = array("section_id", FIELD_VIDEO, FIELD_TRANSCRIPTION);
 
 			#
 			# AUDIOVISUAL RECORDS
@@ -3747,6 +3804,7 @@ class web_data {
 						$search_options->table 		= (string)TABLE_AUDIOVISUAL;
 						$search_options->ar_fields 	= array_merge(
 													array("MATCH (".FIELD_TRANSCRIPTION.") AGAINST ('$options->q') AS relevance "), $ar_fields );
+						// $search_options->ar_fields 	= $ar_fields;
 						$search_options->sql_filter = 	 " MATCH (".FIELD_TRANSCRIPTION.") AGAINST ('$options->q' IN BOOLEAN MODE) "; // AND lang = '".WEB_CURRENT_LANG_CODE."'
 						if ($options->filter!==false) {
 							$search_options->sql_filter .= " AND (" .$options->filter .")";
