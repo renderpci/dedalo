@@ -1026,14 +1026,14 @@ class web_data {
 						// use always silent errors to not alter json result object
 						error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
 						if(SHOW_DEBUG===true) {
-							$response->msg .= $msg .' - '. to_string($strQuery);
+							$response->msg .= $msg .' - '. to_string($strQuery, $db_name);
 						}
 						return $response;
 					}
 				
 				// count records
 					$total = ((bool)$count===true)
-						? (int)web_data::count_records($strQuery, $dbname)
+						? (int)web_data::count_records($strQuery, $db_name)
 						: false;			
 
 				// resolve_portals_custom like ‘{"audiovisual":"audiovisual","informant":"informant"}’
