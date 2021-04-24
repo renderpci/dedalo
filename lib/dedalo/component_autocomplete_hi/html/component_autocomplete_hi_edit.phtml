@@ -7,28 +7,29 @@
 
 	$component_alias_css = isset($propiedades->alias_component_tipo) ? ' alias_'.$propiedades->alias_component_tipo : '';
 
-	print '<div class="wrap_component css_wrap_'.$component_name.' wrap_component_'.$modo.' wrap_component_'.$tipo. $component_alias_css.' tooltip_active" ';
-	print "id=\"{$id_wrapper}\" ";
+	print '<div class="wrap_component css_wrap_'.$component_name.' wrap_component_'.$modo.' wrap_component_'.$tipo. $component_alias_css.' tooltip_active" ';	
 	if ($modo==='search') {
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	}
+	print "id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
-	print "data-section_tipo=\"{$section_tipo}\" ";
-	print "data-parent=\"{$parent}\" ";
 	print "data-lang=\"{$lang}\" ";	
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";	
 	print "data-modo=\"{$modo}\" ";
 	print "data-from_modo=\"{$from_modo}\" ";	
+	print "data-dato='".json_encode($dato)."' ";
 	print "data-component_name=\"{$component_name}\" ";
-	print "data-component_info='{$component_info}' ";
-	print "data-dato='".json_encode($dato)."' ";		
+	print "data-component_info='{$component_info}' ";			
 	
 	// service autocomplete options
 	print "data-search_sections='". json_encode($search_sections)."' ";
 	
 	print 'data-relation_type="'.$relation_type.'" ';
 
-	print 'data-search_query_object=\''.$json_search_query_object.'\' ';
 	print 'data-q_operator="'.$q_operator.'" ';
+
+	print 'data-search_query_object=\''.$json_search_query_object.'\' ';	
 	print 'data-divisor="'. $divisor .'" ';
 	print 'data-limit="'. $limit .'" ';
 	print '>';
@@ -38,18 +39,18 @@
 
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	switch($permissions) {
+	switch(true) {
 
-		case 0	:
+		case ($permissions === 0) :
 			$html_content .= "";
 			break;
 
-		case 1	:
+		case ($permissions === 1) :
 			$html_content .= $valor;
 			break;
 
-		case 2	:
-		case 3	:
+		case ($permissions>=2) :
+
 			// Button change mode
 				if($modo !== 'edit_in_list'){
 					if($modo!=='search' && $from_modo!=='edit'){
@@ -233,7 +234,7 @@
 
 
 
-	print "</div>"; //wrap
+	print '</div>'; //wrap
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
