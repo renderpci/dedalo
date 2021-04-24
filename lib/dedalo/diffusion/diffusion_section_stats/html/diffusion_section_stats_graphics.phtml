@@ -14,7 +14,7 @@
 		echo '<div id="stats_container">';
 
 			# Iterate all stats elements
-			foreach ((array)$ar_js_obj as $key => $ar_value) {		
+			foreach ((array)$ar_js_obj as $key => $ar_value) {
 				# Current_stats_item div
 				echo '<div class="current_stats_item" id="current_stats_item_'.$key.'">';
 
@@ -31,7 +31,7 @@
 					
 						#
 						# TABLE INFO
-						$column_title 	= $ar_value->title;
+						$column_title = $ar_value->title;
 						echo '<table>';
 						echo '<tr>';
 							echo '<th>';
@@ -43,12 +43,16 @@
 						echo '</tr>';
 						$current_values = isset($ar_value->data[0]) ? $ar_value->data[0]->values : array();
 						foreach ((array)$current_values as $ckey => $cvalue) {
+
+							$current_value_y = strip_tags($cvalue->y);
+							$current_value_x = strip_tags($cvalue->x);
+
 							echo '<tr>';
 								echo '<td>';
-								echo $cvalue->y;
+								echo $current_value_y;
 								echo '</td>';
 								echo '<td>';
-								echo $cvalue->x;
+								echo $current_value_x;
 								echo '</td>';
 							echo '</tr>';
 						}
