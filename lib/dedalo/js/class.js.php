@@ -187,7 +187,7 @@ class js {
 		}
 
 		# Add version
-		$url = $url .'?'. DEDALO_VERSION;
+		$url = $url .'?'. DEDALO_VERSION . '_' .DEDALO_BUILD;
 
 		$tag  = PHP_EOL . '<script ';
 		$tag .= $modifier!==false ? $modifier.' ' : '';

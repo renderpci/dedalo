@@ -2312,6 +2312,25 @@
 		Fixed error on diffusion_section_stats when user activity data was only calculated it until yesterday instead of today
 		Removed class tools exec("ps -o rss -p $pid) function. Changed by native PHP 'memory_get_usage'
 		Added link to dedalo.dev in login page
+		15-04-2021-a
+		Added TLD input user validation to eliminate invalid values temptations
+		17-04-2021-b
+		Added button trigger confirm dialog before exec
+		Added button trigger css parser from structure in css.php
+		Added user restrictions in section Hierarchy (hierarchy1). Only user developers can edit and delete sections now
+		Added/fixed component_input_text TLD values validation from section Hierarchy. Unique values and regex validations where added
+		Fixed error non defined var in component_select when permissions are 1
+		Added DD_TIPOS new constant DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO (to set source section when 'Generate' is triggered in Hierarchy section)
+		Fixed codification issues in tool export (Dédalo raw mode)
+		Minor Ontology css fixes
+		Added Hierarchy alternative original section source to create a new Hierarchy
+		Fix error on RecordObj_dd when function GET_COUNTER_VALUE returned empty results
+		20-04-2021-a
+		Fixed FFMPEG conversion issue when aspect ratio is not square (camera files for example). Videos are now playable in Safari and Firefox
+		22-04-2021-a
+		Fixed security vulnerabilities in public api
+		23-04-2021-b
+		Fixed bug in web_data::get_PDO_connection when count losses the db_name
 
 
 	[/HISTORY]
@@ -2343,7 +2362,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '05-04-2021');
+	define('DEDALO_BUILD'	, '24-04-2021-a');
 
 
 	/*

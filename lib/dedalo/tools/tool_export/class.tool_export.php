@@ -963,7 +963,7 @@ class tool_export extends tool_common {
 		}
 
 		if (!empty($ar_valor)) {
-			$valor_dedalo = json_encode($ar_valor);
+			$valor_dedalo = json_encode($ar_valor, JSON_UNESCAPED_UNICODE);
 		}
 
 

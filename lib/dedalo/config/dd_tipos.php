@@ -95,6 +95,7 @@ define('DEDALO_HIERARCHY_ORDER_TIPO'					, 'hierarchy48');
 define('DEDALO_HIERARCHY_FILTER_TIPO'					, 'hierarchy54');
 define('DEDALO_HIERARCHY_BUTTON_NEW_TIPO'				, 'hierarchy11');
 define('DEDALO_HIERARCHY_BUTTON_DELETE_TIPO'			, 'hierarchy12');
+define('DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO'		, 'hierarchy109');
 
 # Thesaurus real section
 define('DEDALO_THESAURUS_SECTION_TIPO'					, 'hierarchy20');

@@ -47,7 +47,7 @@ abstract class notes {
 
 		$ar_notes = [];
 
-		return $notes;
+		return $ar_notes;
 
 		// En curso (Necesita RecordObj_dd de momento)..........................
 

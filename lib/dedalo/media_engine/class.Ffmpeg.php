@@ -411,10 +411,10 @@ class Ffmpeg {
 					$target_path 	= "404";			# like '404'
 					*/
 					# paso 1 sólo video			
-					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
+					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -pix_fmt yuv420p -profile:v high -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
 					
 					# paso 2 video
-					$command	.= "&& nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";			
+					$command	.= "&& nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -pass 2 -vcodec $vcodec -pix_fmt yuv420p -profile:v high -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";			
 					
 					# paso 2 audio
 					$command	.= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file ";													
@@ -632,7 +632,7 @@ class Ffmpeg {
 	*/
 	public function conform_header(AVObj $AVObj) {
 		
-		$result = false;		
+		$result = false;
 		
 		$ffmpeg_installed_path 			= DEDALO_AV_FFMPEG_PATH;
 		$qt_faststart_installed_path 	= DEDALO_AV_FASTSTART_PATH;
@@ -652,7 +652,7 @@ class Ffmpeg {
 		$command .= "cd ".$AVObj->get_media_path_abs()." ";
 		
 		# Copy file
-		$command .= "&& $ffmpeg_installed_path -i $file_path -c:v copy -c:a copy $file_path_temp ";	# && rm -f $file_path && mv $file_path_temp $file_path # -y
+		$command .= "&& $ffmpeg_installed_path -i $file_path -map_metadata -1 -c:v copy -c:a copy $file_path_temp ";	# && rm -f $file_path && mv $file_path_temp $file_path # -y
 		
 		# Rename original to conservate original file untouched
 		$command .= "&& mv $file_path $file_path_original ";
@@ -672,10 +672,10 @@ class Ffmpeg {
 			$result = shell_exec( $command );
 
 		} catch (Exception $e) {
-		    echo 'Caught exception: ',  $e->getMessage(), "\n";
-		    if(SHOW_DEBUG===true) {
-		    	dump($e->getMessage(), " EXCEPTION ".to_string());
-		    }		    	
+			echo 'Caught exception: ',  $e->getMessage(), "\n";
+			if(SHOW_DEBUG===true) {
+				dump($e->getMessage(), " EXCEPTION ".to_string());
+			}
 		}
 		
 		#$conform_header_command_exc = Exec::exec_command($command);

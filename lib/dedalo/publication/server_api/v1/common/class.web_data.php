@@ -50,8 +50,8 @@ class web_data {
 		#static $version = "1.0.28";	// 17-07-2018
 		#static $version = "1.0.29";	// 17-09-2018
 		#static $version = "1.0.30";	// 13-11-2018
-		static $version = "1.0.31";		// 05-03-2020
-
+		#static $version = "1.0.31";	// 05-03-2020
+		static $version = "1.0.32-b";	// 22-04-2021
 
 
 	/**
@@ -60,16 +60,14 @@ class web_data {
 	*/
 	public static function get_db_connection($db_name=false) {
 
-		static $mysql_conn;
-
-		if (isset($mysql_conn)) {
-			return $mysql_conn;
-		}
-
-		if ($db_name!==false) {
+		if (!empty($db_name)) {
 
 			// Requested database
 				$database = $db_name;
+
+			if (!self::check_safe_value('db_name', $db_name)) {
+				die("Error. Ilegal database name: ".$db_name);
+			}
 
 		}else{
 			// Custom database defined in api server check
@@ -86,8 +84,198 @@ class web_data {
 										 		$database,
 										 		MYSQL_DEDALO_DB_PORT_CONN,
 										 		MYSQL_DEDALO_SOCKET_CONN);
+		
+		// $mysql_conn = web_data::get_PDO_connection(
+		// 	MYSQL_DEDALO_HOSTNAME_CONN,
+		// 	MYSQL_DEDALO_USERNAME_CONN,
+		// 	MYSQL_DEDALO_PASSWORD_CONN,
+		// 	$database,
+		// 	MYSQL_DEDALO_DB_PORT_CONN,
+		// 	MYSQL_DEDALO_SOCKET_CONN
+		// );
+
 		return $mysql_conn;
 	}//end get_db_connection
+
+
+
+	/**
+	* GET_PDO_CONNECTION
+	* @return resource $dbh
+	*/
+	public static function get_PDO_connection($host=null, $user=null, $password=null, $database=null, $port=null, $socket=null) {
+
+		$host		= !empty($host) ? $host : MYSQL_DEDALO_HOSTNAME_CONN;
+		$user		= !empty($user) ? $user : MYSQL_DEDALO_USERNAME_CONN;
+		$password	= !empty($password) ? $password : MYSQL_DEDALO_PASSWORD_CONN;
+		$database	= !empty($database)
+			? $database
+			: (defined('MYSQL_WEB_DATABASE_CONN') ? MYSQL_WEB_DATABASE_CONN : MYSQL_DEDALO_DATABASE_CONN);
+		$port		= !empty($port) ? $port : MYSQL_DEDALO_DB_PORT_CONN;
+		$socket		= !empty($socket) ? $socket : MYSQL_DEDALO_SOCKET_CONN;
+
+		// error_log('GET_PDO_CONNECTION $database: '.$database);
+
+		$dbh = new PDO('mysql:host='.$host.';dbname='.$database.';charset=utf8', $user, $password);
+		$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+		$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+
+		return $dbh;
+	}//end get_PDO_connection
+
+
+
+	/**
+	* FIND_EQUALITY
+	* @return bool
+	*/
+	public static function find_equality($value) {
+		
+		$equality = false;
+		// $pre_items = explode(' AND ', $value);
+		$pre_items = preg_split('/ AND /i', $value);
+		foreach ($pre_items as $pre_value) {
+			$pre_value	= str_replace(['(',')','\''], '', $pre_value);
+			$items		= explode(' ', $pre_value);
+			foreach ($items as $c_value) {
+				$c_value	= trim($c_value);
+				$beats		= explode('=', $c_value);
+				if (!empty($beats[0]) && !empty($beats[1])) {
+					$equality = trim($beats[0])==trim($beats[1]);
+					if ($equality===true) {
+						break 2;
+					}
+				}
+			}
+		}
+		if ($equality!==false) {
+			error_log("FIND_EQUALITY ERROR -- ".$value);
+			return false;
+		}
+		// error_log("FIND_EQUALITY OK -- ".$value);
+
+		return $equality;
+	}//end find_equality
+
+
+
+	/**
+	* CHECK_SAFE_VALUE
+	* @return bool
+	*/
+	public static function check_safe_value($name, $value) {
+		
+		switch ($name) {
+			
+			case 'table':
+				$value = is_array($value) ? implode(',', $value) : $value;
+				preg_match('/^[a-zA-Z0-9|_|,]{2,128}$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'db_name':
+				preg_match('/^[a-zA-Z0-9|_]{2,128}$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'ar_fields':
+				$plain_fields = is_array($value)
+					? implode(',', $value)
+					: $value;
+
+				// equality check
+					if (web_data::find_equality($plain_fields)!==false) {
+						return false;
+					}
+
+				preg_match('/^[a-zA-Z0-9|_|,| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'sql_fullselect':
+
+				// equality check
+					if (web_data::find_equality($value)!==false) {
+						return false;
+					}
+
+				preg_match_all("/=|delete|update|insert|truncate|extractvalue|DBMS_PIPE| union |set names|where|user|having|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
+				if (!empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'sql_filter':
+
+				// equality check
+					if (web_data::find_equality($value)!==false) {
+						return false;
+					}
+
+				preg_match_all("/select |delete|update|insert|truncate|extractvalue|DBMS_PIPE| union |set names|where|having|user|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
+				if (!empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'lang':
+				preg_match('/^lg-[a-z]{2,3}$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'section_id':
+				preg_match('/^[0-9|,| |]+$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'order':
+				preg_match('/^[a-z0-9|,| |`|_|\(|\)]+$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'group':
+				preg_match('/^[a-z| |`|,|_]+$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;	
+
+			case 'limit':
+			case 'offset':
+				preg_match('/^[0-9]+$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			case 'term_id':
+			case 'section_tipo':
+				preg_match('/^[a-z1-9|_]+$/i', $value, $output_array);
+				if (empty($output_array[0])) {
+					return false;
+				}
+				break;
+
+			default:
+				return false;
+				break;
+		}
+
+		return true;
+	}//end check_safe_value
 
 
 
@@ -115,12 +303,12 @@ class web_data {
 					$sql_options->ar_fields					= array('*');
 					$sql_options->sql_fullselect			= false; // default false
 					$sql_options->section_id				= false;
-					$sql_options->sql_filter				= ''; //publicacion = 'si'
-					$sql_options->lang						= null;	//WEB_CURRENT_LANG_CODE;
+					$sql_options->sql_filter				= ''; 	// publicacion = 'si'
+					$sql_options->lang						= null;	// WEB_CURRENT_LANG_CODE;
 					$sql_options->order						= '`id` ASC';
-					$sql_options->limit						= 0;
 					$sql_options->group						= false;
-					$sql_options->offset					= false;
+					$sql_options->limit						= 0;
+					$sql_options->offset					= false;					
 					$sql_options->count						= false;
 					$sql_options->resolve_portal			= false; // bool
 					$sql_options->resolve_portals_custom	= false; // array | bool
@@ -138,7 +326,137 @@ class web_data {
 					$response->result = false;
 					$response->msg    = "Empty options->table ";
 					return $response;
+				}else{					
+					if (!self::check_safe_value('table', $sql_options->table)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal table (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->table";
+						}
+						return $response;
+					}				
 				}
+
+			// ar_fields check
+				if (!empty($sql_options->ar_fields)) {
+					if (!self::check_safe_value('ar_fields', $sql_options->ar_fields)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal ar_fields (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : ".to_string($sql_options->ar_fields);
+						}
+						return $response;
+					}				
+				}
+
+			// sql_fullselect check
+				if (!empty($sql_options->sql_fullselect)) {
+					if (!self::check_safe_value('sql_fullselect', $sql_options->sql_fullselect)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal sql_fullselect option (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->sql_fullselect";
+						}
+						return $response;
+					}
+				}
+
+			// section_id
+				if (!empty($sql_options->section_id)) {
+					if (!self::check_safe_value('section_id', $sql_options->section_id)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal section_id option (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->section_id";
+						}
+						return $response;
+					}
+				}
+
+			// sql_filter check
+				if (!empty($sql_options->sql_filter)) {
+					if (!self::check_safe_value('sql_filter', $sql_options->sql_filter)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal sql_filter option (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->sql_filter";							
+						}
+						return $response;
+					}
+				}
+
+			// lang check
+				if(!empty($sql_options->lang)) {
+					if (!self::check_safe_value('lang', $sql_options->lang)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal lang (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->lang";
+						}
+						return $response;
+					}
+				}
+
+			// order check
+				if(!empty($sql_options->order)) {
+					if (!self::check_safe_value('order', $sql_options->order)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal order (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->order";
+						}
+						return $response;
+					}
+				}
+
+			// group check
+				if(!empty($sql_options->group)) {
+					if (!self::check_safe_value('group', $sql_options->group)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal group (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->group";
+						}
+						return $response;
+					}
+				}
+
+			// limit check
+				if(!empty($sql_options->limit)) {
+					if (!self::check_safe_value('limit', $sql_options->limit)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal limit (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->limit";
+						}
+						return $response;
+					}
+				}
+
+			// offset check
+				if(!empty($sql_options->offset)) {
+					if (!self::check_safe_value('offset', $sql_options->offset)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal offset (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->offset";
+						}
+						return $response;
+					}
+				}	
+
+			// db_name check
+				if(!empty($sql_options->db_name)) {
+					if (!self::check_safe_value('db_name', $sql_options->db_name)) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal db_name (1)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $sql_options->db_name";
+						}
+						return $response;
+					}
+				}
+
 
 			// debug
 				// dump($sql_options, ' sql_options ++ '.to_string());
@@ -230,121 +548,6 @@ class web_data {
 			// set final strQuery
 				// $sql_options->strQuery = $strQuery;
 					#dump($strQuery, ' strQuery ++ '.to_string());
-
-
-			// // exec query
-				// 	$result = $sql_options->conn->query($strQuery);
-
-				// 	if (!$result) {
-				// 		# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
-				// 		$response->result = false;
-				// 		$response->msg    = "Error on sql request (no result) ";
-				// 		#if(SHOW_DEBUG===true) {
-				// 			$msg = "Error processing request: ".$sql_options->conn->error;
-				// 			// use always silent errors to not alter json result object
-				// 			error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
-				// 			$response->msg .= $msg .' - '. to_string($strQuery);
-				// 		#}
-				// 		return $response;
-				// 	}
-
-				// // count records
-				// 	if ($sql_options->count===true) {
-				// 		$response->total = (int)web_data::count_records( $strQuery, $sql_options->conn );
-				// 	}//end if ($sql_options->count===true) {
-
-				// // reset pointer
-				// 	if (empty($sql_options->ar_fields) || $sql_options->ar_fields[0]=='*') {
-				// 		$sql_options->ar_fields = array_keys((array)$result->fetch_assoc());
-				// 		$result->data_seek(0); # Reset pointer of fetch_assoc
-				// 	}
-
-				// // resolve_portal. publication_schema
-				// // When options resolve_portal is true, we create a virtual resolve_portals_custom options from publication_schema whith all portals
-				// 	if ($sql_options->resolve_portal===true) {
-				// 		$sql_options->resolve_portals_custom = self::get_publication_schema( $sql_options->table );
-				// 	}
-
-				// // rows iterate
-				// 	$i=0;while( $rows = $result->fetch_assoc() ) {
-
-				// 		foreach($sql_options->ar_fields as $current_field) {
-
-				// 			if ($current_field==='id') {
-				// 				# continue; // Skip mysql table id
-				// 				# Replace id column for table name column
-				// 				# If table is array, only first table is supported
-				// 				$ar_data[$i]['table'] = $sql_options->table;
-				// 				continue;
-				// 			}
-
-				// 			# alias case (like  floor(YEAR(fecha_inicio)/10)*10 as decade)
-				// 			if (strpos($current_field, ' AS ')!==false) {
-				// 				$ar_parts = explode(' AS ', $current_field);
-				// 				$current_field = trim($ar_parts[1]);
-				// 			}
-
-				// 			# POSTPROCESS_FIELD if need
-				// 			if ($sql_options->apply_postprocess===true) {
-				// 				$field_data = self::postprocess_field($current_field, $rows[$current_field]); // Default
-				// 			}else{
-				// 				$field_data = $rows[$current_field];
-				// 			}
-
-				// 			# Default behaviour
-				// 			$ar_data[$i][$current_field] = $field_data;
-
-				// 			#  Portal resolve cases
-				// 			if ( $sql_options->resolve_portals_custom!==false ) {
-				// 				if (is_array($sql_options->resolve_portals_custom)) {
-				// 					$sql_options->resolve_portals_custom = (object)$sql_options->resolve_portals_custom;
-				// 				}elseif (is_string($sql_options->resolve_portals_custom)) {
-				// 					$sql_options->resolve_portals_custom = json_decode($sql_options->resolve_portals_custom);
-				// 				}
-				// 				if ( property_exists($sql_options->resolve_portals_custom, $current_field)
-				// 				  && $current_field !== $sql_options->table // case field image into table image, por example
-				// 				) {
-				// 					$ar_data[$i][$current_field] = self::portal_resolve($rows, $current_field, $request_options, $sql_options->resolve_portals_custom);
-				// 				}
-				// 			}
-				// 		}
-
-				// 	$i++;};
-
-				// $result->free();
-				// #web_data::get_db_connection()->close();
-
-				// // map. Format : [{"field":birthplace_id","function":"resolve_geolocation","output_field":"birthplace_obj"}]
-				// 	if ($sql_options->map!==false) {
-				// 		# Exed defined map functions and add columns as request
-				// 		foreach ($ar_data as $key => $row) {
-				// 			foreach ($sql_options->map as $map_obj) {
-				// 				if ($map_obj->table===$sql_options->table) {
-				// 					$ar_data[$key][$map_obj->output_field] = map::{$map_obj->function}($row[$map_obj->field], $sql_options->lang);
-				// 				}
-				// 			}
-				// 		}
-				// 	}
-
-				// #$final_ar_data = [];
-				// #foreach ($ar_data as $key => $value) {
-				// #	$final_ar_data[] = (object)$value;
-				// #}
-				// #$ar_data = $final_ar_data;
-
-				// // Debug properties
-				// 	if(SHOW_DEBUG===true) {
-				// 		if (isset($count_query)) {
-				// 		$response->debug['count_query']= $count_query;
-				// 		}
-				// 		$response->debug['strQuery']= $strQuery;
-				// 		$response->debug['time'] 	= round(microtime(1)-$start_time,3);
-				// 		#error_log("strQuery: ".$strQuery);
-				// 	}
-
-				// // Fixed properties
-				// 	$response->result 	= $ar_data;
-				// 	$response->msg    	= "Ok request done";
 
 			// exec query
 				$query_options = new stdClass();
@@ -540,210 +743,428 @@ class web_data {
 		* @param object $options
 		* @return object $response
 		*/
-		private static function exec_query($options) {
+			// private static function exec_query($options) {
 
-			$start_time = microtime(1);
+			// 	$start_time = microtime(1);
 
-			$response = new stdClass();
-				$response->result = false;
-				$response->msg    = "Error on get data (exec_query)";
+			// 	$response = new stdClass();
+			// 		$response->result = false;
+			// 		$response->msg    = "Error on get data (exec_query)";
 
-			// sort vars
-				$strQuery				= $options->strQuery;
-				$caller					= $options->caller;
-				$count					= $options->count;
-				$ar_fields				= $options->ar_fields;
-				$resolve_portal			= $options->resolve_portal;
-				$resolve_portals_custom = $options->resolve_portals_custom ?? false;
-				$portal_filter			= $options->portal_filter ?? false;
-				$table					= $options->table;
-				$apply_postprocess		= $options->apply_postprocess ?? false;
-				$map					= $options->map ?? false;
-				$process_result			= $options->process_result ?? false;
-				$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query 
-				$lang					= $options->lang;
-				$db_name				= !empty($options->db_name) ? $options->db_name : false;
-				$conn					= is_resource($options->conn) ? $options->conn : web_data::get_db_connection($db_name);
+			// 	// sort vars
+			// 		$strQuery				= $options->strQuery;
+			// 		$caller					= $options->caller;
+			// 		$count					= $options->count;
+			// 		$ar_fields				= $options->ar_fields;
+			// 		$resolve_portal			= $options->resolve_portal;
+			// 		$resolve_portals_custom = $options->resolve_portals_custom ?? false;
+			// 		$portal_filter			= $options->portal_filter ?? false;
+			// 		$table					= $options->table;
+			// 		$apply_postprocess		= $options->apply_postprocess ?? false;
+			// 		$map					= $options->map ?? false;
+			// 		$process_result			= $options->process_result ?? false;
+			// 		$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query 
+			// 		$lang					= $options->lang;
+			// 		$db_name				= !empty($options->db_name) ? $options->db_name : false;
+			// 		$conn					= is_resource($options->conn) ? $options->conn : web_data::get_db_connection($db_name);
 
-			// connection check
-				if (empty($conn)) {
+			// 	// connection check
+			// 		if (empty($conn)) {
+			// 			$response->result = false;
+			// 			$response->msg    = "Empty connection";
+			// 			return $response;
+			// 		}
+
+			// 	// safe query test
+			// 		preg_match_all("/delete|update|insert/i", $strQuery, $output_array);
+			// 		if (!empty($output_array[0])) {
+			// 			$response->result = false;
+			// 			$response->msg    = "Error on sql request. Ilegal option";
+			// 			if(SHOW_DEBUG===true) {
+			// 				$response->msg   .= " : $strQuery";
+			// 				dump($output_array[0], ' output_array[0] ++ '.to_string());
+			// 			}
+			// 			return $response;
+			// 		}
+
+			// 	// debug
+			// 		if ($caller!=='portal_resolve') {
+			// 			debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::DEBUG);
+			// 		}
+
+			// 	// exec mysql query
+			// 		$result = $conn->query($strQuery);
+
+			// 		if (!$result) {
+			// 			# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
+			// 			$response->result = false;
+			// 			$response->msg    = "Error on sql request (no result) ";
+			// 			$msg = "Error processing request: ".$conn->error;
+			// 			// use always silent errors to not alter json result object
+			// 			error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
+			// 			if(SHOW_DEBUG===true) {
+			// 				$response->msg .= $msg .' - '. to_string($strQuery);
+			// 			}
+			// 			return $response;
+			// 		}
+
+			// 	// count records
+			// 		$total = ($count===true)
+			// 			? (int)web_data::count_records($strQuery, $conn)
+			// 			: false;
+
+			// 	// reset pointer
+			// 		if (empty($ar_fields) || $ar_fields[0]==='*') {
+			// 			$ar_fields = array_keys((array)$result->fetch_assoc());
+			// 			$result->data_seek(0); # Reset pointer of fetch_assoc
+			// 		}
+
+			// 	// resolve_portals_custom like ‘{"audiovisual":"audiovisual","informant":"informant"}’
+			// 		switch (true) {
+			// 			case (is_string($resolve_portals_custom) && !empty($resolve_portals_custom)):
+			// 				$resolve_portals_custom = json_decode($resolve_portals_custom);
+			// 				break;
+			// 			case (is_object($resolve_portals_custom) && !empty($resolve_portals_custom)):
+			// 				// nothing to do
+			// 				break;
+			// 			default:
+			// 				$resolve_portals_custom = false;
+			// 				break;
+			// 		}
+
+			// 	// resolve_portal. publication_schema
+			// 		// When options 'resolve_portal' is true, we create a virtual 'resolve_portals_custom' options
+			// 		// from 'publication_schema' whith all portals
+			// 		if ($resolve_portals_custom===false && $resolve_portal===true) {
+			// 			$resolve_portals_custom = self::get_publication_schema($table);
+			// 			// format resolve_portals_custom as object always
+			// 			if (is_array($resolve_portals_custom)) {
+			// 				$resolve_portals_custom = (object)$resolve_portals_custom;
+			// 			}elseif (is_string($resolve_portals_custom)) {
+			// 				$resolve_portals_custom = json_decode($resolve_portals_custom);
+			// 			}
+			// 		}
+
+			// 	// rows iterate
+			// 		$ar_data = [];
+			// 		$i=0;while( $row = $result->fetch_assoc() ) {
+
+			// 			// table is added always as first column
+			// 				$ar_data[$i]['table'] = $table;
+
+			// 			foreach($ar_fields as $current_field) {
+
+			// 				if ($current_field==='id') {
+			// 					# continue; // Skip mysql table id
+			// 					# Replace id column for table name column
+			// 					# If table is array, only first table is supported
+			// 					// $ar_data[$i]['table'] = $table;
+			// 					continue;
+			// 				}
+
+			// 				# alias case (like  floor(YEAR(fecha_inicio)/10)*10 AS decade)
+			// 				if (strpos($current_field, ' AS ')!==false) {
+			// 					$ar_parts = explode(' AS ', $current_field);
+			// 					$current_field = trim($ar_parts[1]);
+			// 				}
+
+			// 				# field_data. postprocess_field if need
+			// 				$field_data = ($apply_postprocess===true)
+			// 					? self::postprocess_field($current_field, $row[$current_field])
+			// 					: $row[$current_field];
+
+			// 				# Default behaviour
+			// 				$ar_data[$i][$current_field] = $field_data;
+
+			// 				#  Portal resolve cases
+			// 				if ($resolve_portals_custom!==false) {
+								
+			// 					if ( (property_exists($resolve_portals_custom, $current_field) )
+			// 					  && $current_field!==$table // case field image into table image, por example
+			// 					) {
+			// 						// request options
+			// 						$request_options = new stdClass();
+			// 							$request_options->lang 			 = $lang;
+			// 							$request_options->resolve_portal = $resolve_portal;
+			// 							$request_options->portal_filter  = $portal_filter;
+			// 							$request_options->map  			 = $map;
+
+			// 						$ar_data[$i][$current_field] = self::portal_resolve($row,
+			// 																			$current_field,
+			// 																			$request_options,
+			// 																			$resolve_portals_custom);
+			// 					}
+			// 				}//end if ($resolve_portals_custom!==false)
+			// 			}
+
+			// 		$i++;};
+
+			// 	$result->free();
+			// 	// web_data::get_db_connection()->close();
+
+
+			// 	// map. Format : [{"field":birthplace_id","function":"resolve_geolocation","output_field":"birthplace_obj"}]
+			// 		if ($map!==false) {
+			// 			# Exec defined map functions and add columns as request
+			// 			foreach ($ar_data as $key => $row) {
+			// 				foreach ($map as $map_obj) {
+			// 					if ($map_obj->table===$table) {
+			// 						$ar_data[$key][$map_obj->output_field] = map::{$map_obj->function}($row[$map_obj->field], $lang);
+			// 					}
+			// 				}
+			// 			}
+			// 		}//end if ($map!==false)
+
+			// 	// process_result. : function name, ar_data, process_result object, sql_options object, $total
+			// 		if ($process_result!==false && !empty($ar_data)) {
+			// 			$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+
+			// 			// overwrite ar_data (!)
+			// 				$ar_data = $user_func_response->ar_data;
+			// 		}
+
+
+			// 	// response Fixed properties
+			// 		$response->result 	= $ar_data;
+			// 		$response->total 	= $total ?? false;
+			// 		$response->msg    	= "Ok exec_query done";
+
+			// 	// response debug properties
+			// 		if(SHOW_DEBUG===true) {
+			// 			$query_parts = explode(PHP_EOL, $strQuery);
+			// 			$response->debug = (object)[
+			// 				'count_query' 	=> $count_query ?? false,
+			// 				'strQuery' 		=> implode(' ', $query_parts),
+			// 				'time' 	 		=> round(microtime(1)-$start_time,3)
+			// 			];					
+			// 		}
+
+			// 	// debug
+			// 		if(SHOW_DEBUG===true) {
+			// 			// error_log("++++++ query: " . implode(' ', $query_parts));;
+			// 		}
+					
+
+			// 	return $response;
+			// }//end exec_query
+
+
+
+		/**
+		* EXEC_QUERY
+		* @param object $options
+		* @return object $response
+		*/
+			private static function exec_query($options) {
+
+				$start_time = microtime(1);
+
+				$response = new stdClass();
 					$response->result = false;
-					$response->msg    = "Empty connection";
-					return $response;
-				}
+					$response->msg    = "Error on get data (exec_query)";
 
-			// safe query test
-				preg_match_all("/delete|update|insert/i", $strQuery, $output_array);
-				if (!empty($output_array[0])) {
-					$response->result = false;
-					$response->msg    = "Error on sql request. Ilegal option";
+				// sort vars
+					$strQuery				= $options->strQuery;
+					$caller					= $options->caller;
+					$count					= $options->count;
+					$ar_fields				= $options->ar_fields;
+					$resolve_portal			= $options->resolve_portal;
+					$resolve_portals_custom = $options->resolve_portals_custom ?? false;
+					$portal_filter			= $options->portal_filter ?? false;
+					$table					= $options->table;
+					$apply_postprocess		= $options->apply_postprocess ?? false;
+					$map					= $options->map ?? false;
+					$process_result			= $options->process_result ?? false;
+					$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query 
+					$lang					= $options->lang;
+					$db_name				= !empty($options->db_name) ? $options->db_name : null;
+
+				// safe strQuery query test
+					preg_match_all("/delete|update|insert|truncate|set names|user|mysql|localhost/i", $strQuery, $output_array);
+					if (!empty($output_array[0])) {
+						$response->result = false;
+						$response->msg    = "Error on sql request. Ilegal option (exec_query)";
+						if(SHOW_DEBUG===true) {
+							$response->msg   .= " : $strQuery";
+							dump($output_array[0], ' output_array[0] ++ '.to_string());
+						}
+						return $response;
+					}
+
+				// debug
+					if ($caller!=='portal_resolve') {
+						debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::DEBUG);
+					}
 					if(SHOW_DEBUG===true) {
-						$response->msg   .= " : $strQuery";
-						dump($output_array[0], ' output_array[0] ++ '.to_string());
+						error_log("strQuery:".PHP_EOL.$strQuery);
 					}
-					return $response;
-				}
 
-			// debug
-				if ($caller!=='portal_resolve') {
-					debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::DEBUG);
-				}
-
-			// exec mysql query
-				$result = $conn->query($strQuery);
-
-				if (!$result) {
-					# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
-					$response->result = false;
-					$response->msg    = "Error on sql request (no result) ";
-					$msg = "Error processing request: ".$conn->error;
-					// use always silent errors to not alter json result object
-					error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
-					if(SHOW_DEBUG===true) {
-						$response->msg .= $msg .' - '. to_string($strQuery);
+				// prepare PDO
+					try {
+						$dbh = web_data::get_PDO_connection(
+							MYSQL_DEDALO_HOSTNAME_CONN,
+							MYSQL_DEDALO_USERNAME_CONN,
+							MYSQL_DEDALO_PASSWORD_CONN,
+							$db_name
+						);
+						$stmt	= $dbh->prepare($strQuery);
+						$stmt->setFetchMode(PDO::FETCH_ASSOC);
+						$result = $stmt->execute();
+						
+						$dbh = null;
+					} catch (PDOException $e) {
+						// print "Error!: " . $e->getMessage() . "<br/>";
+						error_log(__METHOD__ ." ".PHP_EOL." ". $e->getMessage() );
+						die();
 					}
-					return $response;
-				}
 
-			// count records
-				$total = ($count===true)
-					? (int)web_data::count_records($strQuery, $conn)
-					: false;
-
-			// reset pointer
-				if (empty($ar_fields) || $ar_fields[0]==='*') {
-					$ar_fields = array_keys((array)$result->fetch_assoc());
-					$result->data_seek(0); # Reset pointer of fetch_assoc
-				}
-
-			// resolve_portals_custom like ‘{"audiovisual":"audiovisual","informant":"informant"}’
-				switch (true) {
-					case (is_string($resolve_portals_custom) && !empty($resolve_portals_custom)):
-						$resolve_portals_custom = json_decode($resolve_portals_custom);
-						break;
-					case (is_object($resolve_portals_custom) && !empty($resolve_portals_custom)):
-						// nothing to do
-						break;
-					default:
-						$resolve_portals_custom = false;
-						break;
-				}
-
-			// resolve_portal. publication_schema
-				// When options 'resolve_portal' is true, we create a virtual 'resolve_portals_custom' options
-				// from 'publication_schema' whith all portals
-				if ($resolve_portals_custom===false && $resolve_portal===true) {
-					$resolve_portals_custom = self::get_publication_schema($table);
-					// format resolve_portals_custom as object always
-					if (is_array($resolve_portals_custom)) {
-						$resolve_portals_custom = (object)$resolve_portals_custom;
-					}elseif (is_string($resolve_portals_custom)) {
-						$resolve_portals_custom = json_decode($resolve_portals_custom);
+					if (!isset($result) || !$result) {
+						# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
+						$response->result = false;
+						$response->msg    = "Error on sql request (no result) ";
+						$msg = "Error processing request (no result)";
+						// use always silent errors to not alter json result object
+						error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
+						if(SHOW_DEBUG===true) {
+							$response->msg .= $msg .' - '. to_string($strQuery, $db_name);
+						}
+						return $response;
 					}
-				}
+				
+				// count records
+					$total = ((bool)$count===true)
+						? (int)web_data::count_records($strQuery, $db_name)
+						: false;			
 
-			// rows iterate
-				$ar_data = [];
-				$i=0;while( $row = $result->fetch_assoc() ) {
+				// resolve_portals_custom like ‘{"audiovisual":"audiovisual","informant":"informant"}’
+					switch (true) {
+						case (is_string($resolve_portals_custom) && !empty($resolve_portals_custom)):
+							$resolve_portals_custom = json_decode($resolve_portals_custom);
+							break;
+						case (is_object($resolve_portals_custom) && !empty($resolve_portals_custom)):
+							// nothing to do
+							break;
+						default:
+							$resolve_portals_custom = false;
+							break;
+					}
 
-					// table is added always as first column
-						$ar_data[$i]['table'] = $table;
+				// resolve_portal. publication_schema
+					// When options 'resolve_portal' is true, we create a virtual 'resolve_portals_custom' options
+					// from 'publication_schema' whith all portals
+					if ($resolve_portals_custom===false && $resolve_portal===true) {
+						$resolve_portals_custom = self::get_publication_schema($table);
+						// format resolve_portals_custom as object always
+						if (is_array($resolve_portals_custom)) {
+							$resolve_portals_custom = (object)$resolve_portals_custom;
+						}elseif (is_string($resolve_portals_custom)) {
+							$resolve_portals_custom = json_decode($resolve_portals_custom);
+						}
+					}
+		
+				// rows iterate
+					$ar_data = [];
+					$i=0;  while ($row = $stmt->fetch()) {
 
-					foreach($ar_fields as $current_field) {
-
-						if ($current_field==='id') {
-							# continue; // Skip mysql table id
-							# Replace id column for table name column
-							# If table is array, only first table is supported
-							// $ar_data[$i]['table'] = $table;
-							continue;
+						if (empty($ar_fields) || $ar_fields==='*' || $ar_fields[0]==='*') {
+							$ar_fields = array_keys($row);
 						}
 
-						# alias case (like  floor(YEAR(fecha_inicio)/10)*10 AS decade)
-						if (strpos($current_field, ' AS ')!==false) {
-							$ar_parts = explode(' AS ', $current_field);
-							$current_field = trim($ar_parts[1]);
-						}
+						// table is added always as first column
+							$ar_data[$i]['table'] = $table;
 
-						# field_data. postprocess_field if need
-						$field_data = ($apply_postprocess===true)
-							? self::postprocess_field($current_field, $row[$current_field])
-							: $row[$current_field];
+						foreach($ar_fields as $current_field) {
 
-						# Default behaviour
-						$ar_data[$i][$current_field] = $field_data;
-
-						#  Portal resolve cases
-						if ($resolve_portals_custom!==false) {
-							
-							if ( (property_exists($resolve_portals_custom, $current_field) )
-							  && $current_field!==$table // case field image into table image, por example
-							) {
-								// request options
-								$request_options = new stdClass();
-									$request_options->lang 			 = $lang;
-									$request_options->resolve_portal = $resolve_portal;
-									$request_options->portal_filter  = $portal_filter;
-									$request_options->map  			 = $map;
-
-								$ar_data[$i][$current_field] = self::portal_resolve($row,
-																					$current_field,
-																					$request_options,
-																					$resolve_portals_custom);
+							if ($current_field==='id') {
+								// Skip mysql table id
+								# Replace id column for table name column
+								# If table is array, only first table is supported
+								// $ar_data[$i]['table'] = $table;
+								continue;
 							}
-						}//end if ($resolve_portals_custom!==false)
-					}
 
-				$i++;};
-
-			$result->free();
-			// web_data::get_db_connection()->close();
-
-
-			// map. Format : [{"field":birthplace_id","function":"resolve_geolocation","output_field":"birthplace_obj"}]
-				if ($map!==false) {
-					# Exec defined map functions and add columns as request
-					foreach ($ar_data as $key => $row) {
-						foreach ($map as $map_obj) {
-							if ($map_obj->table===$table) {
-								$ar_data[$key][$map_obj->output_field] = map::{$map_obj->function}($row[$map_obj->field], $lang);
+							# alias case (like  floor(YEAR(fecha_inicio)/10)*10 AS decade)
+							if (strpos($current_field, ' AS ')!==false) {
+								$ar_parts = explode(' AS ', $current_field);
+								$current_field = trim($ar_parts[1]);
 							}
+
+							# field_data. postprocess_field if need
+							$field_data = ($apply_postprocess===true)
+								? self::postprocess_field($current_field, $row[$current_field])
+								: $row[$current_field] ?? null;
+
+							# Default behaviour
+							$ar_data[$i][$current_field] = $field_data;
+
+							#  Portal resolve cases
+							if ($resolve_portals_custom!==false) {
+								
+								if ( (property_exists($resolve_portals_custom, $current_field) )
+								  && $current_field!==$table // case field image into table image, por example
+								) {
+									// request options
+									$request_options = new stdClass();
+										$request_options->lang 			 = $lang;
+										$request_options->resolve_portal = $resolve_portal;
+										$request_options->portal_filter  = $portal_filter;
+										$request_options->map  			 = $map;
+
+									$ar_data[$i][$current_field] = self::portal_resolve($row,
+																						$current_field,
+																						$request_options,
+																						$resolve_portals_custom);
+								}
+							}//end if ($resolve_portals_custom!==false)
 						}
-					}
-				}//end if ($map!==false)
 
-			// process_result. : function name, ar_data, process_result object, sql_options object, $total
-				if ($process_result!==false && !empty($ar_data)) {
-					$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
-
-					// overwrite ar_data (!)
-						$ar_data = $user_func_response->ar_data;
-				}
-
-
-			// response Fixed properties
-				$response->result 	= $ar_data;
-				$response->total 	= $total ?? false;
-				$response->msg    	= "Ok exec_query done";
-
-			// response debug properties
-				if(SHOW_DEBUG===true) {
-					$query_parts = explode(PHP_EOL, $strQuery);
-					$response->debug = (object)[
-						'count_query' 	=> $count_query ?? false,
-						'strQuery' 		=> implode(' ', $query_parts),
-						'time' 	 		=> round(microtime(1)-$start_time,3)
-					];					
-				}
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					// error_log("++++++ query: " . implode(' ', $query_parts));;
-				}
+					$i++;};
 				
 
-			return $response;
-		}//end exec_query
+				// map. Format : [{"field":birthplace_id","function":"resolve_geolocation","output_field":"birthplace_obj"}]
+					if ($map!==false) {
+						# Exec defined map functions and add columns as request
+						foreach ($ar_data as $key => $row) {
+							foreach ($map as $map_obj) {
+								if ($map_obj->table===$table) {
+									$ar_data[$key][$map_obj->output_field] = map::{$map_obj->function}($row[$map_obj->field], $lang);
+								}
+							}
+						}
+					}//end if ($map!==false)
+
+				// process_result. : function name, ar_data, process_result object, sql_options object, $total
+					if ($process_result!==false && !empty($ar_data)) {
+						$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+
+						// overwrite ar_data (!)
+							$ar_data = $user_func_response->ar_data;
+					}
+
+
+				// response Fixed properties
+					$response->result 	= $ar_data;
+					$response->total 	= $total ?? false;
+					$response->msg    	= "Ok exec_query done";
+
+				// response debug properties
+					if(SHOW_DEBUG===true) {
+						$query_parts = explode(PHP_EOL, $strQuery);
+						$response->debug = (object)[
+							'count_query' 	=> $count_query ?? false,
+							'strQuery' 		=> implode(' ', $query_parts),
+							'time' 	 		=> round(microtime(1)-$start_time,3)
+						];
+					}
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						// error_log("++++++ query: " . implode(' ', $query_parts));;
+					}
+					
+
+				return $response;
+			}//end exec_query
 
 
 
@@ -860,6 +1281,9 @@ class web_data {
 		*/
 		private static function build_sql_group($group) {
 
+			# Prevent duplications
+			$group = str_ireplace('GROUP BY', '', $group);
+
 			$sql  = '';
 			$sql .= 'GROUP BY '.$group;
 
@@ -875,7 +1299,7 @@ class web_data {
 		private static function build_sql_order($order) {
 
 			# Prevent duplications
-			$order = str_replace('ORDER BY', '', $order);
+			$order = str_ireplace('ORDER BY', '', $order);
 
 			$sql  = '';
 			$sql .= 'ORDER BY '.$order;
@@ -886,7 +1310,7 @@ class web_data {
 
 
 		/**
-		* BUILD_SQL_limit
+		* BUILD_SQL_LIMIT
 		* @return string $sql
 		*/
 		private static function build_sql_limit($limit, $offset=null) {
@@ -932,7 +1356,7 @@ class web_data {
 		* GET_FULL_PUBLICATION_SCHEMA
 		* @return object|false $data
 		*/
-		private static function get_full_publication_schema( ) {
+		private static function get_full_publication_schema() {
 			$data = false;
 
 			$strQuery = "SELECT name, data FROM publication_schema ";
@@ -959,11 +1383,6 @@ class web_data {
 		*/
 		private static function portal_resolve($rows, $current_field, $options, $resolve_portals_custom) {
 			$ar_portal=array();
-
-				// dump($rows, ' rows ++ '.to_string());
-				// dump($current_field, ' current_field ++ '.to_string());
-				// dump($options, ' options ++ '.to_string());
-				// dump($resolve_portals_custom, ' resolve_portals_custom ++ '.to_string());
 
 			if ($resolve_portals_custom!==false) {
 				# resolve_portals_custom is received
@@ -1072,10 +1491,8 @@ class web_data {
 		* COUNT_RECORDS
 		* @return int $total
 		*/
-		private static function count_records($sql, $conn=false) {
-
-			if($conn===false) $conn=web_data::get_db_connection();
-
+		private static function count_records($sql, $db_name) {
+			
 			$ar_lines = explode(PHP_EOL, $sql);
 			$ar_clean = [];
 			foreach ($ar_lines as $key => $line) {
@@ -1107,8 +1524,26 @@ class web_data {
 
 			debug_log(__METHOD__.' count_query - ' .PHP_EOL. to_string($count_query), logger::ERROR);
 
-			$count_result= $conn->query($count_query);
-			if (!$count_result) {
+			// prepare PDO
+				try {
+					$dbh = web_data::get_PDO_connection(
+						MYSQL_DEDALO_HOSTNAME_CONN,
+						MYSQL_DEDALO_USERNAME_CONN,
+						MYSQL_DEDALO_PASSWORD_CONN,
+						$db_name
+					);
+					$stmt	= $dbh->prepare($count_query);
+					$stmt->setFetchMode(PDO::FETCH_ASSOC);
+					$result = $stmt->execute();
+					
+					$dbh = null;
+				} catch (PDOException $e) {
+					// print "Error!: " . $e->getMessage() . "<br/>";
+					error_log(__METHOD__ ." ".PHP_EOL." ". $e->getMessage() );
+					die();
+				}
+			
+			if (!isset($result) || !$result) {
 				if(SHOW_DEBUG) {
 					#dump($count_query, "<H2>DEBUG Error Processing Request</H2> " .$conn->error );
 					debug_log(__METHOD__." DEBUG Error Processing Request : $count_query - ".to_string($conn->error), logger::ERROR);
@@ -1119,9 +1554,8 @@ class web_data {
 				# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
 				return 0;
 			}
-			$ar_record = $count_result->fetch_assoc();
-
-			$total = reset($ar_record);
+			$row	= $stmt->fetch();
+			$total	= $row['total'];
 
 			return (int)$total;
 		}//end count_records
@@ -1225,6 +1659,10 @@ class web_data {
 		* @return array $ar_columns
 		*/
 		private static function get_table_fields( $table, $full=false ) {
+
+			if(!self::check_safe_value('table', $table)) {
+				die("Error. Ilegal table: ".$table);
+			}		
 
 			$strQuery = "SHOW COLUMNS FROM $table";
 
@@ -1344,6 +1782,14 @@ class web_data {
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
+		// check vars
+			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
+				die("Error. Ilegal lang: ".$options->lang);
+			}
+			if(!empty($options->av_section_id) && !self::check_safe_value('section_id', $options->av_section_id)) {
+				die("Error. Ilegal av_section_id: ".$options->av_section_id);
+			}
+
 		$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
 
 		$TRANSCRIPTION_TIPO 		= TRANSCRIPTION_TIPO;
@@ -1437,6 +1883,14 @@ class web_data {
 			$options->filter_by_tag_id	= false; // false | array
 			$options->return_restricted	= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// check vars
+			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
+				die("Error. Ilegal lang: ".$options->lang);
+			}
+			if(!empty($options->av_section_id) && !self::check_safe_value('section_id', $options->av_section_id)) {
+				die("Error. Ilegal av_section_id: ".$options->av_section_id);
+			}
 
 		#
 		# Transcription text
@@ -1552,6 +2006,11 @@ class web_data {
 			$options->lang 			 = WEB_CURRENT_LANG_CODE;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
+		// check vars
+			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
+				die("Error. Ilegal lang: ".$options->lang);
+			}
+
 		$response = new stdClass();
 			$response->result 	= false;
 			#$response->msg 		= 'Error. Request failed (get_fragment_from_index_locator)';
@@ -1584,7 +2043,7 @@ class web_data {
 			$s_options->table 	 			= TABLE_AUDIOVISUAL;
 			$s_options->ar_fields 			= array(FIELD_VIDEO, FIELD_TRANSCRIPTION);
 			$s_options->lang  	 			= $options->lang;
-			$s_options->sql_filter 			= '`section_id` = '.$av_section_id;
+			$s_options->sql_filter 			= '`section_id` = '.(int)$av_section_id;
 			$s_options->apply_postprocess 	= false; // Avoid clean text on false
 
 		$rows_data	= (object)web_data::get_rows_data( $s_options );
@@ -1686,18 +2145,19 @@ class web_data {
 	* Calculate all terms used in current indexations
 	* @return object $rows_data
 	*/
-	public static function get_indexation_terms_multiple( $locators, $lang ) {
+	public static function get_indexation_terms_multiple( $locators, $lang=WEB_CURRENT_LANG_CODE ) {
 
 		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
 
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
 			$options->ar_fields 	= array('term_id',FIELD_TERM);
-			$options->lang 			= WEB_CURRENT_LANG_CODE;
+			$options->lang 			= $lang;
 			$options->order 		= null;
 			#$options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\",\"tag_id\":\"$tag_id\"%'" . PUBLICACION_FILTER_SQL;
 			// "type":"dd96","tag_id":"1","section_id":"22","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"17","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"
 			# {"type":"dd96","tag_id":"10","section_id":"9","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"9","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
+			
 			$ar_filter = array();
 			foreach ((array)$locators as $key => $locator) {
 
@@ -1757,6 +2217,14 @@ class web_data {
 				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment
 				$options->indexation_terms 		= false; # If true, calculate all terms used in this indexation
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// check vars
+			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
+				die("Error. Ilegal lang: ".$options->lang);
+			}
+			if(!empty($options->av_section_id) && !self::check_safe_value('section_id', $options->av_section_id)) {
+				die("Error. Ilegal av_section_id: ".$options->av_section_id);
+			}
 
 
 		$result = new stdClass();
@@ -1974,6 +2442,11 @@ class web_data {
 	*/
 	public static function get_fragment_data( $av_section_id, $tag_id ) {
 
+		// check vars			
+			if(!empty($av_section_id) && !self::check_safe_value('section_id', $av_section_id)) {
+				die("Error. Ilegal av_section_id: ".$av_section_id);
+			}
+
 		# TRANSCRIPTION
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_AUDIOVISUAL;
@@ -2037,6 +2510,18 @@ class web_data {
 	* @return array $ar_locators
 	*/
 	public static function get_ar_fragments_from_reel( $section_id, $term_id=false, $section_tipo=AUDIOVISUAL_SECTION_TIPO) {
+
+		// check vars
+			if(!empty($section_id) && !self::check_safe_value('section_id', $section_id)) {
+				die("Error. Ilegal section_id: ".$section_id);
+			}
+			if(!empty($term_id) && !self::check_safe_value('term_id', $term_id)) {
+				die("Error. Ilegal term_id: ".$term_id);
+			}
+			if(!empty($section_tipo) && !self::check_safe_value('section_tipo', $section_tipo)) {
+				die("Error. Ilegal section_tipo: ".$section_tipo);
+			}
+
 		// "section_id":"40","section_tipo":"rsc167","component_tipo":"rsc36"
 		#$filter = "(`index` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
 		$filter = "(`indexation` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%')";
@@ -2108,7 +2593,18 @@ class web_data {
 			// table is always a string. If array is received, implode as comma separated string
 				$table = (is_array($options->table))
 					? implode(',', $options->table)
-					: trim($options->table);				
+					: trim($options->table);
+
+			// check vars
+				if(!empty($options->table) && !self::check_safe_value('table', $options->table)) {
+					die("Error. Ilegal table: ".$options->table);
+				}
+				if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
+					die("Error. Ilegal lang: ".$options->lang);
+				}
+				if(!empty($options->order) && !self::check_safe_value('order', $options->order)) {
+					die("Error. Ilegal order: ".$options->order);
+				}
 
 			if ($options->parents!==false) {
 
@@ -2268,8 +2764,19 @@ class web_data {
 				$options->table  	 			 = (string)TABLE_THESAURUS;
 				$options->exclude_tld 			 = array("xx");
 				$options->lang 		 			 = WEB_CURRENT_LANG_CODE;
-				$options->publicacion_filter_sql = '';
+				$options->publication_filter_sql = '';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			// check vars
+				if(!empty($options->table) && !self::check_safe_value('table', $options->table)) {
+					die("Error. Ilegal table: ".$options->table);
+				}
+				if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
+					die("Error. Ilegal lang: ".$options->lang);
+				}
+				if(!empty($options->publication_filter_sql) && !self::check_safe_value('sql_filter', $options->publication_filter_sql)) {
+					die("Error. Ilegal publication_filter_sql: ".$options->publication_filter_sql);
+				}
 
 			$field_term 	= FIELD_TERM;
 			$field_term_id 	= FIELD_TERM_ID;
@@ -2277,6 +2784,11 @@ class web_data {
 			$exclude_filter = '';
 			$ar = array();
 			foreach ($options->exclude_tld as $tld) {
+
+				if(!empty($tld) && !self::check_safe_value('term_id', $tld)) {
+					die("Error. Ilegal tld: ".$tld);
+				}
+
 				$ar[] = "tld != '$tld'";
 			}
 			$exclude_filter = ' AND ('.implode(' AND ',$ar).')';
@@ -2288,7 +2800,7 @@ class web_data {
 			$sd_options = new stdClass();
 				$sd_options->table 		= $options->table;
 				$sd_options->ar_fields 	= array($field_term, $field_term_id,'indexation');
-				$sd_options->sql_filter = "(`indexation` != '' AND `indexation` != '[]') ". $lang_filter . $exclude_filter . $options->publicacion_filter_sql;
+				$sd_options->sql_filter = "(`indexation` != '' AND `indexation` != '[]') ". $lang_filter . $exclude_filter . $options->publication_filter_sql;
 				$sd_options->order 		= "RAND()";
 				$sd_options->limit 		= 1;
 			$search_data	= (object)web_data::get_rows_data( $sd_options );
@@ -2322,9 +2834,25 @@ class web_data {
 				$options->page_number				= 1;
 				$options->exclude_tld				= array("xx");
 				$options->tree_root					= 'last_parent'; # first_parent | last_parent
-				// $options->publicacion_filter_sql	= '';
 				$options->publication_filter_sql	= '';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			// check vars
+				if(!empty($options->q) && !self::check_safe_value('sql_filter', $options->q)) {
+					die("Error. Ilegal q: ".$options->q);
+				}
+				if(!empty($options->table) && !self::check_safe_value('table', $options->table)) {
+					die("Error. Ilegal table: ".$options->table);
+				}
+				if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
+					die("Error. Ilegal lang: ".$options->lang);
+				}
+				if(!empty($options->rows_per_page) && !self::check_safe_value('limit', $options->rows_per_page)) {
+					die("Error. Ilegal rows_per_page: ".$options->rows_per_page);
+				}
+				if(!empty($options->publication_filter_sql) && !self::check_safe_value('sql_filter', $options->publication_filter_sql)) {
+					die("Error. Ilegal publication_filter_sql: ".$options->publication_filter_sql);
+				}
 
 			$field_term = FIELD_TERM;
 
@@ -2347,7 +2875,7 @@ class web_data {
 				$rd_options->ar_fields 		= array('*');
 				$rd_options->sql_filter 	= "`$field_term` LIKE '%".$q."%' " . $options->publication_filter_sql;
 				$rd_options->lang 			= $options->lang;
-				$rd_options->order 			= null;
+				$rd_options->order 			= null; // $field_term.' ASC';
 				$rd_options->limit 			= $options->rows_per_page;
 				$rd_options->offset 		= $offset;
 				$rd_options->count 			= true;
@@ -2469,13 +2997,19 @@ class web_data {
 				# Term is descriptor
 				$descriptor_obj = $term_obj;
 			}else{
+
+				// check vars
+					if(!empty($term_obj->parent) && !self::check_safe_value('term_id', $term_obj->parent)) {
+						die("Error. Ilegal term_obj->parent: ".$term_obj->parent);
+					}			
+
 				# Term is NOT descriptor
 				# Search parent descriptor
 				# Search in DDBB
 				$rd_options = new stdClass();
 					$rd_options->table		= $term_obj->table;
 					$rd_options->ar_fields	= array('*');
-					$rd_options->sql_filter	= FIELD_TERM_ID ." = '$term_obj->parent'";
+					$rd_options->sql_filter	= FIELD_TERM_ID ."='$term_obj->parent'";
 					$rd_options->lang		= $term_obj->lang;
 					$rd_options->order		= null;
 					$rd_options->limit		= 1;
@@ -3268,7 +3802,7 @@ class web_data {
 
 			# TABLE FIELDS
 			# $ar_fields = web_data::get_table_fields(TABLE_AUDIOVISUAL);
-			$ar_fields = array("section_id",FIELD_VIDEO,FIELD_TRANSCRIPTION);
+			$ar_fields = array("section_id", FIELD_VIDEO, FIELD_TRANSCRIPTION);
 
 			#
 			# AUDIOVISUAL RECORDS
@@ -3279,6 +3813,7 @@ class web_data {
 						$search_options->table 		= (string)TABLE_AUDIOVISUAL;
 						$search_options->ar_fields 	= array_merge(
 													array("MATCH (".FIELD_TRANSCRIPTION.") AGAINST ('$options->q') AS relevance "), $ar_fields );
+						// $search_options->ar_fields 	= $ar_fields;
 						$search_options->sql_filter = 	 " MATCH (".FIELD_TRANSCRIPTION.") AGAINST ('$options->q' IN BOOLEAN MODE) "; // AND lang = '".WEB_CURRENT_LANG_CODE."'
 						if ($options->filter!==false) {
 							$search_options->sql_filter .= " AND (" .$options->filter .")";

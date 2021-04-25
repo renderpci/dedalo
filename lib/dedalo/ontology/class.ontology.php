@@ -71,19 +71,19 @@ class ontology {
 	* @return object $item
 	*/
 	public static function tipo_to_json_item($tipo, $request_options=[
-			'tipo' 			=> true,
-			'tld'			=> true,
-			'is_model'		=> true,
-			'model'			=> true,
-			'model_tipo'	=> true,
-			'parent'		=> true,
-			'order'			=> true,
-			'translatable'	=> true,
-			'properties'	=> true,
-			'relations'		=> true,
-			'descriptors'	=> true,
-			'label'			=> false
-			]) {
+		'tipo' 			=> true,
+		'tld'			=> true,
+		'is_model'		=> true,
+		'model'			=> true,
+		'model_tipo'	=> true,
+		'parent'		=> true,
+		'order'			=> true,
+		'translatable'	=> true,
+		'properties'	=> true,
+		'relations'		=> true,
+		'descriptors'	=> true,
+		'label'			=> false
+		]) {
 
 		$options = new stdClass();
 			$options->tipo			= false;
