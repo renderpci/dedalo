@@ -11,9 +11,15 @@
 
 <p><em>Dédalo</em></p>
 
+<p><strong>IMPORTANT: V6 ontology compatibility for V4 and V5</strong>
+<em>Starting today, 21&#8211;05&#8211;2020, the ontology in V4 and V5 need to be update with a new column into the &#8220;jer_dd&#8221; table named &#8220;properties&#8221;, for compatibility with the upcoming V6, this new column will not affect v4 or V5 normal function but the new exported ontologies files from master will include this column in copy files. If you don&#8217;t add this column to jer_dd, Dédalo will can&#8217;t import the new files and you will can lost the ontology data, although you can re-build jer_dd making the import process manually.
+Read the update V5.6.0</em></p>
+
 <p><strong>ATENTION: New v6_developer branch is added, the v6 is in alpha state, the deverloper branch is freeze for new features and only update for bugs or errors</strong></p>
 
 <p>Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory.</p>
+
+<p><a href="https://dedalo.dev" target="_blank">Oficial Dédalo webpage</a></p>
 
 <p>Dédalo is a Open Source software based in a new paradigm of programing: develop objects with a ontology model. The ontology control the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. The objects are builded with a MVC structure and are linked to the ontology. The database use a NoSQL model, all data is stored in JSONB (binary).</p>
 
@@ -45,14 +51,13 @@ entity, section, component, and tag. In other words, the locator can find, archi
 
 <p><strong>Projects: </strong> 
 <p><a href="http://www.occupation-memories.org/de/archive/index.html" target="_blank">Freie Universität Berlin</a></p>
-<p><a href="https://numisdata.org/sardinia/" target="_blank">Findsopts in Sardinia</a></p>
+<p><a href="https://monedaiberica.org" target="_blank">Moneda Ibérica catalog</a></p>
 <p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>	
 <p><a href="https://arxiu.memoria.gencat.cat/en/app/#/" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
 <p><a href="https://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>
 <p><a href="http://memoriahistorica.paiporta.es" target="_blank">Arxiu de la Memòria Històrica de Paiporta</a> Delegación de Memoria Histórica de la Diputación de Valencia </p>
 <p><a href="http://memoriahistorica.dival.es/recursos/archivo-memoria-historica/" target="_blank">Nuestra Memoria. Archivo de historia oral</a></p>	
-<p><a href="http://memorialdemocratic.gencat.cat/ca/exposicions/expcicions_virtuals/catalunya_en_transicio/" target="_blank">
-	Catalonia in transition</a> (Transition in Catalonia - Memorial Democràtic)</p>
+<p><a href="https://exhumacionestempranas.navarra.es" target="_blank"> Lur Azpian, Desobiratze Goiztiarrak Nafarroan| Bajo tierra, Exhumaciones tempranas en Navarra </a> (Underground Early exhumations in Navarra - Instituto Navarro de Memoria)</p>
 <p><a href="http://www.museudelaparaula.es" target="_blank">Museu de la Paraula</a> (Archivo de la Memoria Oral Valenciana)</p>
 <p><a href="http://www.museudelaparaula.es/colecciones/?lang=es" target="_blank">Collection of funds from MUVAET</a> (Museu Valencià d'Etnologia)</p>
 
@@ -61,7 +66,7 @@ entity, section, component, and tag. In other words, the locator can find, archi
 <p><em>Required for the OS</em></p>
 
 <ul>
-<li>PHP 7.2+</li>
+<li>PHP 7.4+</li>
 <li>Apache 2.4.2+</li>
 <li>Postgres 10.1+</li>
 <li>MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication).</li>
@@ -114,13 +119,13 @@ un zip the file and move th libraries to:
 <ol>
 <li><p>Download Dédalo and copy to the httpdocs of web server</p></li>
 <li><p>Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).</p></li>
-<li><p>Restore the file /install/db/dedalo4_install.backup to the postgres created DB.</p>
+<li><p>Restore the plain sql file /install/db/dedalo4_install.pgsql (from zip version) to the postgres created DB.</p>
 
-<pre><code>Basic pg_restore:
-pg_restore /install/db/dedalo4_install.backup dedalo_xx
+<pre><code>Basic psql command:
+psql --dbname=XXX --file &quot;/install/db/dedalo4_install.pgsql&quot;
 
 Example of actual use:
-pg_restore --host localhost --port 5432 --username &quot;XXX&quot; --dbname &quot;dedalo4_xx&quot; --role &quot;xxx&quot; --no-owner --no-privileges --clean --verbose &quot;/install/db/dedalo4_install.backup&quot;
+psql --echo-errors --dbname=XXX --file &quot;/install/db/dedalo4_install.pgsql&quot;
 </code></pre></li>
 <li><p>Download the dependences and libs for Dédalo and install it into the /lib/ folder. In some cases you need see the /lib/dedalo/config/sample.config4.php file in order to change or customize the installation.</p></li>
 <li><p>Rename the /lib/dedalo/config/sample.config4.php to /lib/dedalo/config/config4.php.</p></li>
@@ -221,11 +226,13 @@ Optional: Import the toponymy that you will need (Dédalo install DB will not pr
 <p>Dédalo in the server part is tested into the next Operating Systems:</p>
 
 <ul>
-<li>CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7,5</li>
-<li>Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7.5</li>
-<li>Debian 8.7</li>
-<li>MacOsX 10.10 (deprecated update as soon as possible), 10.11, 10.12+</li>
+<li>Ubuntu Server 16.04+</li>
+<li>Debian 9.0+</li>
+<li>MacOsX 10.12+, 11.0+</li>
+<li>CentOS, Fedora and RedHat situation. We are stoping Dédalo testing into RedHat/CenOS/Fedora model due CentOS project focus was changed. The main OS will be Ubuntu to test Dédalo. RedHat/CentOS/Fedora will become to the category of &#8220;all other linux that we don&#8217;t test it&#8221;.</li>
 </ul>
+
+<p><a href="https://blog.centos.org/2020/12/future-is-centos-stream/?utm_source=rss&utm_medium=rss&utm_campaign=future-is-centos-stream" target="_blank">CentOS blog</a></p>
 
 <p>All other Linux will be compatible but we don&#8217;t test it.</p>
 
@@ -233,7 +240,7 @@ Optional: Import the toponymy that you will need (Dédalo install DB will not pr
 
 <p><strong>USE</strong></p>
 
-<p>Dédalo version 4, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, &#8230;).
+<p>Dédalo version v4+, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, &#8230;).
 Firefox situation: From the 4.8 version of Dédalo is full compatible with Firefox, and can be used in production, but we need more feedback from the users, please comment your experience.</p>
 
 <table>
@@ -254,17 +261,17 @@ Firefox situation: From the 4.8 version of Dédalo is full compatible with Firef
 <tbody>
 <tr>
 	<td>Chrome	</td>
-	<td>	60+ </td>
+	<td>	70+ </td>
 	<td> YES - recomended</td>
 </tr>
 <tr>
 	<td>Chrome	</td>
-	<td>	50+ </td>
+	<td>	60+ </td>
 	<td> Deprecated (Please update as soon as posible)	</td>
 </tr>
 <tr>
 	<td>Chrome	</td>
-	<td>	0 to 50 </td>
+	<td>	0 to 60 </td>
 	<td> NO	</td>
 </tr>
 <tr>
@@ -279,13 +286,18 @@ Firefox situation: From the 4.8 version of Dédalo is full compatible with Firef
 </tr>
 <tr>
 	<td>Safari	</td>
-	<td>	0 to 7 </td>
+	<td>	0 to 8 </td>
 	<td> NO	</td>
 </tr>
 <tr>
 	<td>Firefox	</td>
-	<td>	50+ </td>
-	<td> The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (10&#8211;09&#8211;2018), please test it and comment it.</td>
+	<td>	60+ </td>
+	<td> YES</td>
+</tr>
+<tr>
+	<td>Firefox	</td>
+	<td>	50 </td>
+	<td> Deprecated (Please update as soon as posible)</td>
 </tr>
 <tr>
 	<td>Firefox	</td>
@@ -299,13 +311,13 @@ Firefox situation: From the 4.8 version of Dédalo is full compatible with Firef
 </tr>
 <tr>
 	<td>EDGE	</td>
-	<td> 77+ 	</td>
-	<td> YES </td>
+	<td>	77+ </td>
+	<td> YES</td>
 </tr>
 <tr>
 	<td>EDGE	</td>
-	<td> All before 2019 (v45) </td>
-	<td> We don&#8217;t test it. But, is possible that Dédalo run fine in the previous versions,  Microsoft say that EDGE is ECMA and HTML5 standards compatible.</td>
+	<td> All before 2019 (v45)	</td>
+	<td> For us NO, we don&#8217;t test it. is possible that Dédalo run fine in the previous versions, Microsoft say that EDGE is ECMA and HTML5 standards compatible.</td>
 </tr>
 <tr>
 	<td>IExplorer	</td>
