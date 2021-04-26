@@ -12,6 +12,8 @@ Read the update V5.6.0*
 
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 
 
+<p><a href="https://dedalo.dev" target="_blank">Oficial Dédalo webpage</a></p>
+
 Dédalo is a Open Source software based in a new paradigm of programing: develop objects with a ontology model. The ontology control the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. The objects are builded with a MVC structure and are linked to the ontology. The database use a NoSQL model, all data is stored in JSONB (binary).
 
 Dédalo use the structured Ontology for three things:
@@ -47,8 +49,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 <p><a href="https://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>
 <p><a href="http://memoriahistorica.paiporta.es" target="_blank">Arxiu de la Memòria Històrica de Paiporta</a> Delegación de Memoria Histórica de la Diputación de Valencia </p>
 <p><a href="http://memoriahistorica.dival.es/recursos/archivo-memoria-historica/" target="_blank">Nuestra Memoria. Archivo de historia oral</a></p>	
-<p><a href="http://memorialdemocratic.gencat.cat/ca/exposicions/expcicions_virtuals/catalunya_en_transicio/" target="_blank">
-	Catalonia in transition</a> (Transition in Catalonia - Memorial Democràtic)</p>
+<p><a href="https://exhumacionestempranas.navarra.es" target="_blank"> Lur Azpian, Desobiratze Goiztiarrak Nafarroan| Bajo tierra, Exhumaciones tempranas en Navarra </a> (Underground Early exhumations in Navarra - Instituto Navarro de Memoria)</p>
 <p><a href="http://www.museudelaparaula.es" target="_blank">Museu de la Paraula</a> (Archivo de la Memoria Oral Valenciana)</p>
 <p><a href="http://www.museudelaparaula.es/colecciones/?lang=es" target="_blank">Collection of funds from MUVAET</a> (Museu Valencià d'Etnologia)</p>
 
@@ -189,7 +190,7 @@ Dédalo in the server part is tested into the next Operating Systems:
 - Ubuntu Server 16.04+
 - Debian 9.0+
 - MacOsX 10.12+, 11.0+
-- CentOS, Fedora and RedHat, all versions are deprecated, v7 and v8, we will remove support due CentOS project focus was changed.
+- CentOS, Fedora and RedHat situation. We are stoping Dédalo testing into RedHat/CenOS/Fedora model due CentOS project focus was changed. The main OS will be Ubuntu to test Dédalo. RedHat/CentOS/Fedora will become to the category of "all other linux that we don't test it".
 <p><a href="https://blog.centos.org/2020/12/future-is-centos-stream/?utm_source=rss&utm_medium=rss&utm_campaign=future-is-centos-stream" target="_blank">CentOS blog</a></p>
 
 All other Linux will be compatible but we don't test it.
@@ -198,7 +199,7 @@ Windows: is possible that Dédalo can run, but we NO TESTED.
 
 **USE**
 
-Dédalo version 4+, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...). 
+Dédalo version v4+, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...). 
 Firefox situation: From the 4.8 version of Dédalo is full compatible with Firefox, and can be used in production, but we need more feedback from the users, please comment your experience. 
 
 Browser	|	Version |	certificated
