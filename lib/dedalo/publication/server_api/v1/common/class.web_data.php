@@ -3939,22 +3939,25 @@ class web_data {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$response = new stdClass();
-				$response->result = false;
-				$response->msg 	  = 'Error. Request full_interview failed';
+				$response->result	= false;
+				$response->msg		= 'Error. Request full_interview failed';
 
 
 			// resolve interview tapes (audiovisual)
 				$sd_options = new stdClass();
-					$sd_options->table 	 	= TABLE_INTERVIEW;
-					$sd_options->ar_fields  = ['section_id',FIELD_AUDIOVISUAL];
-					$sd_options->sql_filter = 'section_id='.(int)$options->section_id;
-					$sd_options->lang 	 	= $options->lang;
-					$sd_options->limit 	 	= 1;
+					$sd_options->table		= TABLE_INTERVIEW;
+					$sd_options->ar_fields	= ['section_id',FIELD_AUDIOVISUAL];
+					$sd_options->sql_filter	= 'section_id='.(int)$options->section_id;
+					$sd_options->lang		= $options->lang;
+					$sd_options->limit		= 1;
 
-				$search_data	= (object)web_data::get_rows_data( $sd_options );						
-				$row			= (object)reset($search_data->result);				
-				$ar_audiovisual	= json_decode($row->{FIELD_AUDIOVISUAL});
-												
+				$search_data	= (object)web_data::get_rows_data( $sd_options );
+				$row			= (object)reset($search_data->result);
+				$field_name		= FIELD_AUDIOVISUAL;
+				$ar_audiovisual	= isset($row->{$field_name})
+					? json_decode($row->{$field_name})
+					: [];
+				
 				$ar_result = [];
 				foreach ($ar_audiovisual as $section_id) {
 
@@ -3965,8 +3968,8 @@ class web_data {
 					$ar_result[]		= $current_response->result;
 				}
 
-			$response->result = $ar_result;
-			$response->msg 	  = 'Ok. Request full_interview done successfully';
+			$response->result	= $ar_result;
+			$response->msg		= 'Ok. Request full_interview done successfully';
 
 
 			return $response;
