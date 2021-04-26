@@ -2296,7 +2296,7 @@
 		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals
 		
 
-	Queue changes
+	Valencia 25-03-2021 5.8.1
 		Fixed parse_totals_for_js label lang fallback
 		Added component number operators to allow search empty values and not empty as well
 		Updated Ontology for version 5.8.0 compatibility
@@ -2331,6 +2331,14 @@
 		Fixed security vulnerabilities in public api
 		23-04-2021-b
 		Fixed bug in web_data::get_PDO_connection when count losses the db_name
+		25-04-2021
+		Fixed syntax var name error in publication web_data
+		Fixed issue with activity stats data html tags. Removed to get a safe view
+		Fixed error when component_autocomplete_hi delete value is not deleted in search mode
+		Increased table length allowed to class.web_data
+		Fixed publication web_data get_full_interview issue with constant 'FIELD_AUDIOVISUAL' assignment
+		Updated publication api docu json file from 1.0.15 to 1.0.16
+
 
 
 	[/HISTORY]
@@ -2356,13 +2364,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.0';
+	$DEDALO_VERSION = '5.8.1';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-04-2021-a');
+	define('DEDALO_BUILD'	, '25-04-2021');
 
 
 	/*
