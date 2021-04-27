@@ -51,7 +51,7 @@ class web_data {
 		#static $version = "1.0.29";	// 17-09-2018
 		#static $version = "1.0.30";	// 13-11-2018
 		#static $version = "1.0.31";	// 05-03-2020
-		static $version = "1.0.32-b";	// 22-04-2021
+		static $version = "1.0.33";		// 272-04-2021
 
 
 	/**
@@ -1792,14 +1792,15 @@ class web_data {
 
 		$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
 
-		$TRANSCRIPTION_TIPO 		= TRANSCRIPTION_TIPO;
-		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
+		$TRANSCRIPTION_TIPO			= TRANSCRIPTION_TIPO;
+		$AUDIOVISUAL_SECTION_TIPO	= AUDIOVISUAL_SECTION_TIPO;
+		$field_indexation			= defined('FIELD_INDEX') ? FIELD_INDEX : 'indexation';
 
 		$ar_filter = array();
 		$ar = explode(',', $options->av_section_id);
 		foreach ($ar as $current_av_section_id) {
 			$current_av_section_id = trim($current_av_section_id);
-			$ar_filter[] = "`indexation` LIKE '%\"section_id\":\"$current_av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'";
+			$ar_filter[] = "`{$field_indexation}` LIKE '%\"section_id\":\"$current_av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'";
 			#$ar_filter[] = "MATCH (`indexation`) AGAINST ('\"section_id\":\"$current_av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"')";
 		}
 		$sql_filter = '('.implode(' OR ', $ar_filter).')';
@@ -1813,7 +1814,7 @@ class web_data {
 
 		$s_options = new stdClass();
 			$s_options->table 		= (string)TABLE_THESAURUS;
-			$s_options->ar_fields 	= array(FIELD_TERM_ID,FIELD_TERM,'indexation');
+			$s_options->ar_fields 	= array(FIELD_TERM_ID,FIELD_TERM,$field_indexation);
 			$s_options->lang 		= $options->lang;
 			$s_options->order 		= FIELD_TERM ." ASC";
 			#$s_options->sql_filter = (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'" . PUBLICACION_FILTER_SQL;
@@ -1826,7 +1827,7 @@ class web_data {
 		if (is_array($rows_data->result)) foreach($rows_data->result as $key => $value) {
 
 			$term_id  	= $value[FIELD_TERM_ID];
-			$indexation = json_decode($value['indexation']);
+			$indexation = json_decode($value[$field_indexation]);
 
 			# Skip optional restricted terms (defined in config)
 			if (in_array($term_id, $ar_restricted_terms)) {
@@ -2149,6 +2150,8 @@ class web_data {
 
 		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
 
+		$field_indexation = defined('FIELD_INDEX') ? FIELD_INDEX : 'indexation';
+
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
 			$options->ar_fields 	= array('term_id',FIELD_TERM);
@@ -2165,7 +2168,7 @@ class web_data {
 				$av_section_id 	 = $locator->section_id;
 				$av_section_tipo = $locator->section_tipo;
 
-				$ar_filter[] = "`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$av_section_tipo\"%'";
+				$ar_filter[] = "`{$field_indexation}` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$av_section_tipo\"%'";
 			}
 			$options->sql_filter = implode(" OR ",$ar_filter);
 
@@ -2522,17 +2525,21 @@ class web_data {
 				die("Error. Ilegal section_tipo: ".$section_tipo);
 			}
 
+		$field_indexation = defined('FIELD_INDEX') ? FIELD_INDEX : 'indexation';	
+
 		// "section_id":"40","section_tipo":"rsc167","component_tipo":"rsc36"
 		#$filter = "(`index` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
-		$filter = "(`indexation` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%')";
+		$filter = "(`{$field_indexation}` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%')";
 
 		if ($term_id) {
 			$filter = "`term_id` = '$term_id' AND $filter ";
 		}
 
+		
+
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
-			$options->ar_fields 	= array('indexation','term_id');
+			$options->ar_fields 	= array($field_indexation,'term_id');
 			$options->sql_filter 	= $filter; 	// !IMPORTANT : NEVER USE PUBLICATION FILTER HERE // ." AND lang = '".WEB_CURRENT_LANG_CODE."' "
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->order 		= null;
@@ -2549,7 +2556,7 @@ class web_data {
 		foreach ((array)$rows_data->result as $ar_value) {
 
 			$current_term_id 	= $ar_value['term_id'];
-			$ar_index  			= json_decode($ar_value['indexation']);
+			$ar_index  			= json_decode($ar_value[$field_indexation]);
 				#dump($ar_index, ' ar_index ++ '.to_string());
 			foreach ((array)$ar_index as $key => $locator) {
 				if ($locator->section_tipo==$section_tipo && $locator->section_id==$section_id) {
@@ -2795,12 +2802,14 @@ class web_data {
 
 			$lang_filter 	= " AND lang = '".$options->lang."' ";
 
+			$field_indexation = defined('FIELD_INDEX') ? FIELD_INDEX : 'indexation';
+
 			#
 			# RANDOM TERM
 			$sd_options = new stdClass();
 				$sd_options->table 		= $options->table;
-				$sd_options->ar_fields 	= array($field_term, $field_term_id,'indexation');
-				$sd_options->sql_filter = "(`indexation` != '' AND `indexation` != '[]') ". $lang_filter . $exclude_filter . $options->publication_filter_sql;
+				$sd_options->ar_fields 	= array($field_term, $field_term_id,$field_indexation);
+				$sd_options->sql_filter = "(`{$field_indexation}` != '' AND `{$field_indexation}` != '[]') ". $lang_filter . $exclude_filter . $options->publication_filter_sql;
 				$sd_options->order 		= "RAND()";
 				$sd_options->limit 		= 1;
 			$search_data	= (object)web_data::get_rows_data( $sd_options );
@@ -2810,7 +2819,7 @@ class web_data {
 			$response = new stdClass();
 				$response->term 		= $row[$field_term];
 				$response->term_id 		= $row[$field_term_id];
-				$response->indexation 	= $row['indexation'];
+				$response->indexation 	= $row[$field_indexation];
 
 			return (object)$response;
 		}//end get_thesaurus_random_term
@@ -2892,6 +2901,8 @@ class web_data {
 			$search_data->page_number	= $options->page_number;
 			$search_data->rows_per_page	= $options->rows_per_page;
 
+			$field_indexation = defined('FIELD_INDEX') ? FIELD_INDEX : 'indexation';
+
 			$ar_ts_terms	= array();
 			$ar_highlight	= array();
 			$ar_parent		= array();
@@ -2902,7 +2913,7 @@ class web_data {
 				$term		= $ar_value[$field_term];
 				$parent		= $ar_value['parent'];
 				$descriptor	= $ar_value['descriptor']; // es descriptor: no | yes
-				$indexation	= $ar_value['indexation'];
+				$indexation	= $ar_value[$field_indexation];
 
 				if (strpos($parent,'[')===0) {
 					# is json array
@@ -3562,9 +3573,11 @@ class web_data {
 					}
 				}
 
+				$field_indexation = defined('FIELD_INDEX') ? FIELD_INDEX : 'indexation';
+
 				# Remove unused terms
 				if ($remove_unused_terms===true) {
-					$term_filter .= ' AND (indexation IS NOT NULL OR childrens IS NOT NULL)';
+					$term_filter .= ' AND ('.$field_indexation.' IS NOT NULL OR childrens IS NOT NULL)';
 				}
 				#error_log($term_filter);
 
