@@ -37,7 +37,7 @@
 			if ($decode_json=json_decode($value)) {
 				// If var is a stringify json, not verify string yet
 			}else{
-				$value = strip_tags($value,'<br><strong><em>');
+				$value = strip_tags($value,'<br><strong><em><img>');
 				$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 			}
 		}
@@ -112,7 +112,7 @@
 					break;
 			}
 			$safe_value = is_string($cvalue)
-				? strip_tags($cvalue,'<br><strong><em>')
+				? strip_tags($cvalue,'<br><strong><em><img>')
 				: $cvalue;
 
 			$options->{$key} = $safe_value;
