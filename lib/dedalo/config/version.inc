@@ -2339,6 +2339,12 @@
 		Fixed publication web_data get_full_interview issue with constant 'FIELD_AUDIOVISUAL' assignment
 		Updated publication api docu json file from 1.0.15 to 1.0.16
 
+	
+	queue builds
+		27-04-2021
+		Enabled web_data thesaurus indexation column custom name (set config in server_config_api.php)
+		Added img html tag as allowed tag in publication server json/index.php filter (case numisdata legends)
+
 
 
 	[/HISTORY]
@@ -2370,7 +2376,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '25-04-2021');
+	define('DEDALO_BUILD'	, '27-04-2021');
 
 
 	/*
