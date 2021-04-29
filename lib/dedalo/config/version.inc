@@ -2344,6 +2344,10 @@
 		27-04-2021
 		Enabled web_data thesaurus indexation column custom name (set config in server_config_api.php)
 		Added img html tag as allowed tag in publication server json/index.php filter (case numisdata legends)
+		27-04-2021
+		Removed publication API json/index strip_tags directive to avoid issues with sql queries containing <=
+		Added publication API sql_options->sql_filter sanitizacion filter
+		Added publication API char '+' to allowed chars in field name (necessary for complex queries)
 
 
 
@@ -2376,7 +2380,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '27-04-2021');
+	define('DEDALO_BUILD'	, '29-04-2021');
 
 
 	/*
