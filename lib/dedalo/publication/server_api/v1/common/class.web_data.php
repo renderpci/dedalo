@@ -193,7 +193,7 @@ class web_data {
 						return false;
 					}
 
-				preg_match('/^[a-zA-Z0-9|_|,| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
+				preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
 				if (empty($output_array[0])) {
 					return false;
 				}
