@@ -375,6 +375,11 @@ class web_data {
 
 			// sql_filter check
 				if (!empty($sql_options->sql_filter)) {
+
+					// sanitize $sql_options->sql_filter
+						$conn = web_data::get_db_connection($sql_options->db_name);
+						$sql_options->sql_filter = mysqli_real_escape_string($conn, $sql_options->sql_filter);
+					
 					if (!self::check_safe_value('sql_filter', $sql_options->sql_filter)) {
 						$response->result = false;
 						$response->msg    = "Error on sql request. Ilegal sql_filter option (1)";
