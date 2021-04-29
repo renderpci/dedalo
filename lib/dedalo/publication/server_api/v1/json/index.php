@@ -71,10 +71,10 @@
 	$code = isset($_REQUEST['code']) ? $safe_xss($_REQUEST['code']) : false;
 
 // lang 
-	$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;	
+	$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;
 
 // db 
-	$db_name = isset($_REQUEST['db_name']) ? $safe_xss($_REQUEST['db_name']) : false;	
+	$db_name = isset($_REQUEST['db_name']) ? $safe_xss($_REQUEST['db_name']) : false;
 
 // config . Load server api config vars 
 	# If received code if different to defined code, and error was launched
@@ -150,4 +150,4 @@
 	#	error_log( 'API SERVER CALL $_REQUEST: '. $t . PHP_EOL . print_r($_REQUEST,true));
 	#}
 
-	
+
