@@ -111,11 +111,8 @@
 					$cvalue = false;
 					break;
 			}
-			$safe_value = is_string($cvalue)
-				? strip_tags($cvalue,'<br><strong><em><img>')
-				: $cvalue;
 
-			$options->{$key} = $safe_value;
+			$options->{$key} = $cvalue;
 		}
 	}
 
