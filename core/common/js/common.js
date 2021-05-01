@@ -220,7 +220,7 @@ common.prototype.refresh = async function () {
 		if(SHOW_DEBUG===true) {
 			console.group("Refresh "+self.model +" "+ (self.tipo ? self.tipo : '') );
 			console.log("+ Time to destroy:", self.model, performance.now()-t0);
-			var t1 = performance.now()			
+			var t1 = performance.now()
 		}
 
 	// build. Update the instance with new data
@@ -230,7 +230,7 @@ common.prototype.refresh = async function () {
 			}catch(error){
 				console.error("error on build:", error);
 			}
-			
+
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false
@@ -542,11 +542,11 @@ common.prototype.get_columns = async function(){
 	if (!rqo) {
 		console.log("No rqo found in self.dd_request.show. Skip get_columns. ", self.dd_request.show);
 		return ar_columns
-	}	
+	}
 	const ddo_map = rqo.show.ddo_map
-	
+
 	// console.log("self.dd_request", self.dd_request);
-	
+
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
 	const sub_columns = get_sub_columns(self, self.tipo, ddo_map, [])
@@ -589,29 +589,43 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 			console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, self.datum.context);
 			continue
 		}
+		// if the current ddo has defined by f_path, get the all path before the last section and component (get the all ancestors)
+		const ancestor_f_path  = []
+		if(typeof current_ddo.f_path!=='undefined'){
+			ancestor_f_path.push(...current_ddo.f_path)
+			ancestor_f_path.splice(-2, 2)
+		}
 		// if the ddo has a request_config it has sub-components and it will be not used
 		if(ddo.request_config){
+
 			// get the rqo of the component and the ddo_map for show
 			const rqo = ddo.request_config.find(item => item.typo==='rqo')
+
 			if (rqo) {
 				const sub_ddo_map = rqo.show.ddo_map
 				// add the section_tipo and tipo of ddo for create the parent_f_path
-				ar_sub_ddo.push(ddo.section_tipo)
-				ar_sub_ddo.push(current_tipo)
+				const ar_current_sub_ddo = [...ar_sub_ddo]
+				ar_current_sub_ddo.push(ddo.section_tipo)
+				ar_current_sub_ddo.push(current_tipo)
+
 				// recursive with the sub_ddo_map
-				const sub_columns = get_sub_columns(self, ddo.tipo, sub_ddo_map, ar_sub_ddo)
+				const sub_columns = get_sub_columns(self, ddo.tipo, sub_ddo_map, ar_current_sub_ddo)
 				ar_columns.push(...sub_columns)
 				// reset the parent_f_path
-				ar_sub_ddo.splice(0, ar_sub_ddo.length)
+				// ar_sub_ddo.splice(0, ar_sub_ddo.length)
 			}
 		}else{
+			// console.log("ar_sub_ddo------", ar_sub_ddo);
+			// console.log("sub_ddo------", sub_ddo);
 			// the component don't has sub-components and it is the last in the chain.
 			if(ar_sub_ddo && ar_sub_ddo.length > 0){
+				const ar_current_sub_ddo = [...ar_sub_ddo]
 				// add the section_tipo and tipo of ddo for create the parent_f_path
-				ar_sub_ddo.push(ddo.section_tipo)
-				ar_sub_ddo.push(ddo.tipo)
-				// add the parente_f_path to the ddo
-				ddo.parent_f_path = [...ar_sub_ddo]
+				ar_current_sub_ddo.push(...ancestor_f_path)
+				ar_current_sub_ddo.push(ddo.section_tipo)
+				ar_current_sub_ddo.push(ddo.tipo)
+				// add the parent_f_path to the ddo
+				ddo.parent_f_path = [...ar_current_sub_ddo]
 			}
 			ar_columns.push(ddo)
 		}
@@ -619,6 +633,8 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 
 	return ar_columns
 };//end build_request_show
+
+
 
 
 
@@ -744,7 +760,7 @@ const build_request_show = function(self, request_config, action){
 		const request_ddo				= []
 
 		if(self.model==='section'){
-			
+
 			// rqo loop
 				for (let i = 0; i < rqo_length; i++) {
 
@@ -844,7 +860,7 @@ const build_request_show = function(self, request_config, action){
 					})
 				}
 			}
-		}//end 	if(self.model==='section')	
+		}//end 	if(self.model==='section')
 
 		// set the selected ddos into new request_ddo for do the call with the selection
 		dd_request.push({
@@ -883,8 +899,8 @@ const build_request_show = function(self, request_config, action){
 		if(SHOW_DEBUG===true) {
 			// console.log("// dd_request [build_request_show]", dd_request);
 		}
-		
-	
+
+
 	return dd_request
 };//end build_request_show
 
