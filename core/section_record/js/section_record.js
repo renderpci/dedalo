@@ -195,7 +195,7 @@ section_record.prototype.get_ar_instances = async function(){
 		const items = (mode==="list")
 			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
 			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
-	
+
 	// instances
 		const ar_promises	= []
 		const items_length	= items.length
@@ -219,7 +219,7 @@ section_record.prototype.get_ar_instances = async function(){
 			})
 			ar_promises.push(current_promise)
 
-		}//end for loop	
+		}//end for loop
 
 	await Promise.all(ar_promises).then(function(ar_instances){
 		// sort by instance_order_key asc to guarantee original order
@@ -251,7 +251,7 @@ section_record.prototype.get_ar_row_instances = async function(){
 		const section_id 	= self.section_id
 		const columns		= await self.columns
 		const data 			= self.data
-	
+
 	// instances
 		const ar_instances = []
 		const columns_length =  columns.length
