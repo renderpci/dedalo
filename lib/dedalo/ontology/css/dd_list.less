@@ -297,13 +297,24 @@ select {
 
 
 .resalte {
-	display: inline-block;
-	color: #000;
-	font-weight: bold;
-	background-color: #FF0;
-	padding-left: 3px;
-	padding-right: 3px;
-	padding-bottom: 1px;
+	// display: inline-block;
+	// color: #000;
+	// font-weight: bold;
+	// background-color: #FF0;
+	// padding-left: 3px;
+	// padding-right: 3px;
+	// padding-bottom: 1px;
+
+	&:after {
+		content: " ";
+		background-color: #feff00;
+		width: 100%;
+		height: 1.2em;
+		display: block;
+		position: absolute;
+		top: -1px;
+		z-index: -1;
+	}
 }
 
 div.inline {
@@ -599,7 +610,7 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 			// overflow: hidden;
 			// background-color: #5bff00;
 			font-family: "system-ui", "Menlo", monospace;
-			position: relative;	
+			position: relative;
 		}
 
 		img {
@@ -638,11 +649,15 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 			// vertical-align: text-top;
 		}
 		.textoTermino {						
-			color: #676767;		
+			color: #676767;
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;	
 			
 			.notas {
 				color: #d1d2db;
 				font-size: 8px;
+				padding-right: 2px;
 			}
 			input {
 				padding: 1em;
@@ -703,6 +718,10 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 		}
 	}
 
+
+mark {
+	background-color: unset;
+}
 
 
 // v6 properties	

@@ -2348,7 +2348,7 @@
 		Removed publication API json/index strip_tags directive to avoid issues with sql queries containing <=
 		Added publication API sql_options->sql_filter sanitizacion filter
 		Added publication API char '+' to allowed chars in field name (necessary for complex queries)
-
+		01-05-2021
 
 
 	[/HISTORY]
@@ -2380,7 +2380,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-04-2021');
+	define('DEDALO_BUILD'	, '01-05-2021');
 
 
 	/*
