@@ -230,7 +230,7 @@ function remove_element($json_data) {
 */
 function build_component_json_data($json_data) {
 	global $start_time;
-	dump($json_data, ' json_data ++ '.to_string());
+	
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
