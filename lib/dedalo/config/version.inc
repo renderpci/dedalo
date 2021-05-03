@@ -2349,6 +2349,12 @@
 		Added publication API sql_options->sql_filter sanitizacion filter
 		Added publication API char '+' to allowed chars in field name (necessary for complex queries)
 		01-05-2021
+		Fixed Ontoly lang change error
+		Removed web_data sanitize $sql_options->sql_filter (incompatible with some configurations)
+		03-05-2021
+		Fixed component portal buttons issue within tool time machine
+		Fixed Ontology css error when non transtaled terms are not showed as italic font
+
 
 
 	[/HISTORY]
@@ -2380,7 +2386,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-05-2021-b');
+	define('DEDALO_BUILD'	, '01-05-2021-c');
 
 
 	/*
