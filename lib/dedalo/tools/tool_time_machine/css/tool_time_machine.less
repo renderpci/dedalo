@@ -280,8 +280,19 @@
 		
 
 
-	#wrap_time_machine_page .wrap_component>.content_data {
-		pointer-events: none; // Avoid user click on any component element end edit
+	#wrap_time_machine_page {
+		.wrap_component {
+
+			&.css_wrap_text_area {
+				pointer-events: none !important; // Avoid user click on any component element end edit
+			}
+
+			>.content_data {
+				input, select, a, label, ul, iframe, .mce-tinymce, .mce-content-body  {
+					pointer-events: none !important; // Avoid user click on any component element end edit
+				}
+			}
+		}
 	}
 
 
