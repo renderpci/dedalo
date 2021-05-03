@@ -230,7 +230,7 @@ function remove_element($json_data) {
 */
 function build_component_json_data($json_data) {
 	global $start_time;
-
+	dump($json_data, ' json_data ++ '.to_string());
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -267,6 +267,16 @@ function build_component_json_data($json_data) {
 
 		// Inject received dato here ONLY when context_name is tool_time_machine
 		if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
+			if (empty($dato)) {
+				if (isset($context->id_time_machine)) {
+					// preview component
+					$RecordObj_time_machine	= new RecordObj_time_machine($context->id_time_machine);
+					$dato					= $RecordObj_time_machine->get_dato();
+				}else{
+					// actual component
+					$dato = $component->get_dato();
+				}				
+			}
 			$component->set_dato($dato);
 		}
 	}

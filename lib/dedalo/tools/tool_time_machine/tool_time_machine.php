@@ -218,7 +218,8 @@
 
 					# COMPONENT CONTEXT SET
 					$context = new stdClass();
-						$context->context_name = 'tool_time_machine';
+						$context->context_name		= 'tool_time_machine';
+						$context->id_time_machine	= $id_time_machine;
 					$source_component->set_context($context);
 
 
