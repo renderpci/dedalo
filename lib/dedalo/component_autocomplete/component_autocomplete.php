@@ -70,6 +70,10 @@
 				$component_info 		= $this->get_component_info('json');
 				$dato_json 				= json_handler::encode($dato);
 
+				# Check if the compoment is mandatory
+				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
+				$mandatory_json = json_encode($mandatory);
+
 			// service autocomplete options
 				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 

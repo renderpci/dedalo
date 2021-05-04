@@ -137,7 +137,10 @@
 
 
 				// Rows
-					$html_content .= '<ul class="css_autocomplete_valor '.$css_autocomplete_valor.'" data-role="autocomplete_valor">';
+					$html_content .= '<ul class="css_autocomplete_valor '.$css_autocomplete_valor.'" data-role="autocomplete_valor"';
+					$html_content .= 'data-mandatory=\''.$mandatory_json.'\' ';
+					$html_content .= '>';
+
 					$i=0;
 					foreach ($ar_valor as $value_obj) {
 
@@ -164,6 +167,7 @@
 
 						// Value. String resolved to show
 							$html_content .= '<span>'.$current_value.'</span>';
+
 
 						// Button edit
 							if (!$in_time_machine && $open_section_tipo_permissions>=2) {
@@ -292,6 +296,10 @@
 						$init_options->uid 				= $identificador_unico;
 					$html_content .= 'component_common.init('.json_encode($init_options).');';
 					$html_content .= $autosearch_options_js; // Additional js calls
+					// First test on load element
+					if ($mandatory===true) {
+						$html_content .= "component_autocomplete.mandatory('{$id_wrapper}');";
+					}
 					$html_content .= '</script>';
 
 
