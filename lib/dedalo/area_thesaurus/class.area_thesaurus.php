@@ -64,7 +64,7 @@ class area_thesaurus extends area {
 
 			$tipology_data = $this->get_tipology_data($row->section_id);
 			# Skip filtered types when defined
-			if (!empty($hierarchy_types_filter) && !in_array($tipology_data->section_id, $hierarchy_types_filter)) {
+			if (empty($tipology_data) || (!empty($hierarchy_types_filter) && !in_array($tipology_data->section_id, $hierarchy_types_filter))) {
 				continue; // Skip
 			}
 
@@ -217,7 +217,7 @@ class area_thesaurus extends area {
 														 DEDALO_DATA_NOLAN,
 														 $section_tipo);
 		$dato 	 = $component->get_dato();
-
+		
 		$locator = reset($dato);
 
 		return $locator;
