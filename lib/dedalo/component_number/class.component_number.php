@@ -202,7 +202,7 @@ class component_number extends component_common {
 		$query_object->unaccent = false;
 
 		$between_separator  = '...';
-		//$sequence_separator = ',';
+		$sequence_separator = ';';
 
         switch (true) {
 
@@ -273,6 +273,18 @@ class component_number extends component_common {
 				$query_object = $new_object;
 				break;
 				*/
+			# SEQUENCE
+			case (strpos($q, $sequence_separator)!==false):
+				// Transform "12;25;36" to "IN(12,25,36)"
+				$ar_parts	= explode($sequence_separator, $q);
+				$operator = 'IN';
+				$q_clean  = array_map(function($el){
+					return '\''.(int)$el.'\'';
+				}, $ar_parts);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= implode(',', $q_clean);
+				$query_object->format	= 'in_column';
+				break;
 			# BIGGER OR EQUAL THAN
 			case (substr($q, 0, 2)==='>='):
 				$operator = '>=';

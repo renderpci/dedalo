@@ -2473,11 +2473,15 @@ class search_development2 {
 				break;
 
 			case 'in_column':
-				# q
-				$sql_where .= $table_alias . '.'.$component_path . ' IN(' . $search_object->q_parsed .') ';
+				$pre = ($component_path==='section_id')
+					? $table_alias .'.'.$component_path
+					: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
+
+				$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
 				break;	
 
 		}//end switch ($search_object->type)
+		
 
 
 		return $sql_where;
