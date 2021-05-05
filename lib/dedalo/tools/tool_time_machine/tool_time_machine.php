@@ -41,9 +41,16 @@
 				#
 				# CSS
 					css::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/css/$component_name.css";
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/css/component_text_area.css";
 				#
 				# JS includes
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
+					// text area for notes
+					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/component_text_area.js";
+					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/mce_editor.js";
+					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/text_editor.js";
+					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_date/js/component_date.js";
+					js::$ar_url[] = DEDALO_LIB_BASE_URL."/button_delete/js/button_delete.js";
 
 				# Configure component
 				# In case relation, set current_tipo_section as received value by url GET

@@ -34,6 +34,12 @@ class tool_time_machine extends tool_common {
 	public $limit;
 	public $offset;
 
+
+	const NOTES_TM_SECTION_TIPO		= 'rsc832';
+	const NOTES_TM_CODE_TIPO		= 'rsc835';
+	const NOTES_TM_ANNOTATION_TIPO	= 'rsc329';
+
+
 	/*
 	* Queda unificar el comportamiento con tool lang ... <-----------------------
 	*/
@@ -360,5 +366,157 @@ class tool_time_machine extends tool_common {
 
 
 
-}
-?>
+	/**
+	* GET_TM_NOTES
+	* @param array $id_time_machine
+	* @return array $tm_notes
+	*/
+	public static function get_tm_notes($id_time_machine, $lang=DEDALO_DATA_LANG) {
+		
+		$tm_notes = $id_time_machine;
+
+		// NOTES_TM_SECTION_TIPO	= 'rsc832';
+		// NOTES_TM_CODE_TIPO		= 'rsc835';
+		// NOTES_TM_ANNOTATION_TIPO	= 'rsc329';
+
+		$q = implode(';',(array)$id_time_machine);
+	
+		// sqo -- 1565586
+			$sqo = json_decode('
+				{
+				  "id": "rtm_notes",
+				  "section_tipo": "'.self::NOTES_TM_SECTION_TIPO.'",
+				  "limit": 0,
+				  "filter": {
+				    "$and": [
+				      {
+				        "q": "'.$q.'",
+				        "q_operator": null,
+				        "path": [
+				          {
+				            "section_tipo": "'.self::NOTES_TM_SECTION_TIPO.'",
+				            "component_tipo": "'.self::NOTES_TM_CODE_TIPO.'",
+				            "modelo": "component_number",
+				            "name": "Code"
+				          }
+				        ]
+				      }
+				    ]
+				  },
+				  "select": [
+				  	{
+			            "path": [
+			                {
+			                    "name": "Annotation",
+			                    "modelo": "component_text_area",
+			                    "section_tipo": "'.self::NOTES_TM_SECTION_TIPO.'",
+			                    "component_tipo": "'.self::NOTES_TM_ANNOTATION_TIPO.'"
+			                }
+			            ],
+			            "component_path": [
+			                "components",
+			                "'.self::NOTES_TM_ANNOTATION_TIPO.'",
+			                "dato",
+			                "'.$lang.'"
+			            ],
+			            "type": "string"
+			        },
+			        {
+			            "path": [
+			                {
+			                    "name": "Code",
+			                    "modelo": "component_number",
+			                    "section_tipo": "'.self::NOTES_TM_SECTION_TIPO.'",
+			                    "component_tipo": "'.self::NOTES_TM_CODE_TIPO.'"
+			                }
+			            ],
+			            "component_path": [
+			                "components",
+			                "'.self::NOTES_TM_CODE_TIPO.'",
+			                "dato",
+			                "lg-nolan"
+			            ],
+			            "type": "number"
+			        }			        
+				  ]
+				}
+			');
+			# Search records
+			$search_development2	= new search_development2($sqo);
+			$search_result			= $search_development2->search();
+			$ar_records				= $search_result->ar_records;
+				// dump($ar_records, ' ar_records ++ '.to_string());
+
+		// data
+			$data = [];
+			foreach ($ar_records as $key => $row) {
+
+				// $user_data	= json_decode($row->dd200);
+				// $date_data	= json_decode($row->dd199);
+				// $date		= reset($date_data)->start;
+				// $user_id		= reset($user_data)->section_id;
+
+				$section = section::get_instance($row->section_id, $row->section_tipo);
+				// $modified_by_userID 	= $section->get_modified_by_userID();
+				// $modified_date 			= $section->get_modified_date();
+				$created_by_userID 		= $section->get_created_by_userID();
+				$created_by_user_name 	= $section->get_created_by_user_name();
+				$created_date 			= $section->get_created_date();
+
+				$data[] = (object)[
+					'section_id'		=> $row->section_id,
+					'section_tipo'		=> $row->section_tipo,
+					'note'				=> $row->{self::NOTES_TM_ANNOTATION_TIPO},
+					'id_time_machine'	=> $row->{self::NOTES_TM_CODE_TIPO},
+					'date'				=> $created_date,
+					'user_id'			=> $created_by_userID,
+					'user_name'			=> $created_by_user_name
+				];
+			}
+
+		return $data;
+	}//end get_tm_notes
+
+
+
+	/**
+	* ADD_TM_NOTE
+	* Creates a new toime machine notes section and set code data as received id_time_machine
+	* to link created record with time machine record
+	* @param int $id_time_machine
+	* @param string $lang
+	* @return int $section_id
+	*/
+	public static function add_tm_note($id_time_machine, $lang=DEDALO_DATA_LANG) {
+
+		if (empty($id_time_machine)) {
+			return false;
+		}
+		
+		$section = section::get_instance( null, self::NOTES_TM_SECTION_TIPO );
+
+		$options = new stdClass();
+			$options->top_tipo = self::NOTES_TM_SECTION_TIPO;
+
+		// Section save returs the section_id created
+			$section_id = $section->Save($options);
+
+		// add current id_time_machine as code value
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo(self::NOTES_TM_CODE_TIPO,true);
+			$component		= component_common::get_instance($modelo_name,
+															 self::NOTES_TM_CODE_TIPO,
+															 $section_id,
+															 'edit',
+															 $lang,
+															 self::NOTES_TM_SECTION_TIPO);
+			$dato = (int)$id_time_machine;
+			$component->set_dato($dato);
+			$component->Save();
+
+
+		return $section_id;
+	}//end add_tm_note
+
+
+
+}//end class

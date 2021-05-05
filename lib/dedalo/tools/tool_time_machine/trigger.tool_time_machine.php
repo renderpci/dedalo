@@ -346,4 +346,92 @@ function load_rows($json_data) {
 
 
 
-?>
+/**
+* GET_TM_NOTES
+* @param $json_data
+*/
+function get_tm_notes($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	// vars
+		$vars = array('id_time_machine');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			// if ($name==='limit' || $name==='offset') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	// tool_time_machine call
+		$tm_notes = tool_time_machine::get_tm_notes($id_time_machine);
+
+	$response->result 	= $tm_notes;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
+
+			$response->debug = $debug;
+		}
+	
+	return (object)$response;
+}//end get_tm_notes
+
+
+
+/**
+* add_tm_note
+* @param $json_data
+*/
+function add_tm_note($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	// vars
+		$vars = array('id_time_machine');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			// if ($name==='limit' || $name==='offset') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	// tool_time_machine call
+		$tm_notes = tool_time_machine::add_tm_note($id_time_machine);
+
+	$response->result 	= $tm_notes;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
+
+			$response->debug = $debug;
+		}
+	
+	return (object)$response;
+}//end add_tm_note
+
+

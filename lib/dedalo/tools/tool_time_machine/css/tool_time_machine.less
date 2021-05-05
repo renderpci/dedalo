@@ -6,21 +6,21 @@
 
 /* TOOL WRAPPER
 --------------------------------------------------------------------------------------- */
-#wrap_time_machine_page {
-	display: block;
-	position: absolute;
-	width: 100%;
-	height: 99.9%;
-	min-height: 600px;
-	margin: 0;
-	padding: 0;
-	overflow: hidden;
-	/*background-color: #FDF96C;*/	
+	#wrap_time_machine_page {
+		display: block;
+		position: absolute;
+		width: 100%;
+		height: 99.9%;
+		min-height: 600px;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		/*background-color: #FDF96C;*/	
 
-	// Grid
-	display: grid;
-    grid-template-columns: 1fr 1fr;
-   	grid-template-rows: auto 370px; 
+		// Grid
+		display: grid;
+	    grid-template-columns: 1fr 1fr;
+	   	grid-template-rows: auto 7px auto; 
 	}	
 
 	/* BOTH ORIGINAL AND PREVIEW COMPONENTS
@@ -31,7 +31,7 @@
 			width: 100%;
 			float: left;
 			display: block;
-			min-height: 200px;			
+			// min-height: 200px;			
 			padding: 0;
 		}
 		#wrap_time_machine_page  #tm_component_actual {
@@ -57,18 +57,19 @@
 			position: relative;
 			// padding-bottom: 10px;
 			padding: 0;
+			// overflow-y: hidden;
 		}
 
 		// tm_selector_time_machine
 		#tm_selector_time_machine {
 			//background-color: #EDC995;
-			display: block;
+			// display: block;
 			//position: absolute;
 			//bottom: 10px;		
 			padding: 15px;		
 			width: 99.999%;
 			//height: 28%;
-			box-shadow: -1px 0 8px #dddddd;
+			// box-shadow: -1px 0 8px #dddddd;
 
 			z-index: 1;
 			background-color: #ffff;
@@ -78,8 +79,13 @@
 			// Grid
 			grid-column-start: 1;
 			grid-column-end: 3;
-			grid-row-start: 2;
-			grid-row-end: 3;			
+			grid-row-start: 3;
+			grid-row-end: 4;
+
+			display: grid;
+			grid-template-rows: 33px auto;
+			height: 100%;
+			overflow: auto;
 		}
 
 		// INFO LINE
@@ -212,54 +218,89 @@
 				right: 30px;
 				margin-top: 2px;
 			}
-			#time_machine_record_rows {
-				margin: 0px;
-				margin-top: 0px;
-				padding: 5px;
-				background-color: #F1F1F1;
-				border-radius: 4px;
-				color: #333333;
-				height: 320px;
-				overflow: auto;
-			}
+
+		// rows list
+		#time_machine_record_rows {
+			margin: 0px;
+			margin-top: 0px;
+			padding: 5px;
+			background-color: #F1F1F1;
+			border-radius: 4px;
+			color: #333333;
+			// min-height: 320px;
+			overflow: auto;
+		
 			.css_time_machine_record_line {
 				white-space: nowrap;
-				padding: 2px;				
-				width: 100%;				
-				white-space: nowrap;				
+				padding: 2px;
+				width: 100%;
+				white-space: nowrap;
 				// Grid
 				display: grid;
-    			grid-template-columns: 220px 30px auto;
-				}
-				.css_time_machine_record_line:hover {
+				grid-template-columns: 220px 30px auto 250px;
+
+
+				&:hover {
 					background-color: #CCCCCC;
 					cursor: pointer;
 				}
-				.css_time_machine_record_line:active {
-					color: #F7F7F7 !important;
-					background-color: #7BDE68;
-				}
+				// &:active {
+				// 	color: #F7F7F7 !important;
+				// 	background-color: #7BDE68;
+				// }
 
-				.css_time_machine_record_line > .date_info {
+				>.date_info {
 					width: 100%;
 					text-overflow: ellipsis;
 					overflow: hidden;
 				}
-				.css_time_machine_record_line > .sample_data {
+				>.sample_data {
 					font-size: 11px;
- 					opacity: 1;
- 					background: none;
+					opacity: 1;
+					background: none;
+					width: 100%;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
 				}
-    
-				
-				.css_image_go_back {
-					background-image: url('../../../themes/default/back.png');
-					margin-left: 3px;
-					}
-					.css_image_go_back:active {
-						opacity: 0.4;
+
+				.tm_note {
+					display: flex;				
+
+					.icon_sticky {
+						width: 1.2em;
+						height: 1.2em;
+						cursor: pointer;
+						opacity: 0.65;
+
+						&.orange {
+							opacity: 1;
+						}
+						&:active {
+							opacity: 0.3;
+						}
 					}
 
+					.note_text {
+						display: inline-block;
+						padding-left: 0.5em;
+						width: 100%;
+						white-space: nowrap;
+						overflow: hidden;
+						text-overflow: ellipsis;
+					}
+				}				
+			}			
+			
+			.css_image_go_back {
+				background-image: url('../../../themes/default/back.png');
+				margin-left: 3px;
+				&:active {
+					opacity: 0.4;
+				}
+			}
+		
+		}//end #time_machine_record_rows
 
 			
 
@@ -268,32 +309,32 @@
 	/* COMPONENTS SHOWED IN TIME MACHINE
 	--------------------------------------------------------------------------------------- */
 	.css_wrap_time_machine .wrap_component {
-			width: 100% !important;
-			
-		}
-		/* PORTAL CASE
-		--------------------------------------------------------------------------------------- */
-		.css_wrap_time_machine > .css_wrap_portal .content_data {
-			top: 0;
-			margin: 0;
-		}
+		width: 100% !important;
+		overflow: hidden;
+	}
+	/* PORTAL CASE
+	--------------------------------------------------------------------------------------- */
+	.css_wrap_time_machine > .css_wrap_portal .content_data {
+		top: 0;
+		margin: 0;
+	}
 		
 
+	// pointer events
+		#wrap_time_machine_page {
+			.wrap_component {
 
-	#wrap_time_machine_page {
-		.wrap_component {
-
-			&.css_wrap_text_area {
-				pointer-events: none !important; // Avoid user click on any component element end edit
-			}
-
-			>.content_data {
-				input, select, a, label, ul, iframe, .mce-tinymce, .mce-content-body  {
+				&.css_wrap_text_area {
 					pointer-events: none !important; // Avoid user click on any component element end edit
+				}
+
+				>.content_data {
+					input, select, a, label, ul, iframe, .mce-tinymce, .mce-content-body  {
+						pointer-events: none !important; // Avoid user click on any component element end edit
+					}
 				}
 			}
 		}
-	}
 
 
 	.css_time_machine_label {
@@ -307,7 +348,27 @@
 		border-bottom: 1px solid #eeeeee;
 		color: black;
 	}
+
+
+
+	.modal-body {
+		display: table;
+		width: 100%;
+	}
 	
 
-
+	.divisor {
+		height: 7px;
+		background-color: #6c6c6c;
+		display: block;
+		width: 100%;
+		grid-column-start: 1;
+		grid-column-end: 3;
+		cursor: row-resize;
+		z-index: 99;
+		background-image: url('../../../themes/default/horizontal_handler.png');
+		background-repeat: no-repeat;
+		background-position: center;
+		background-size: auto;
+	}
 
