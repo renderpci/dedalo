@@ -2354,7 +2354,13 @@
 		03-05-2021
 		Fixed component portal buttons issue within tool time machine
 		Fixed Ontology css error when non transtaled terms are not showed as italic font
-
+		05-05-2021
+		Add mandatory style to autocompete
+		Change the css of the mandatory style
+		Added tool_time_machine notes to make user annotations about the data changes
+		Added component_number 'in_column' mode to search as section_id is doing now
+		Added class.area_thesaurus get_hierarchy_sections validation before continue to prevent errors on non defined hierarchies type
+		Clean css code in component_text_area
 
 
 	[/HISTORY]
@@ -2386,7 +2392,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-05-2021-d');
+	define('DEDALO_BUILD'	, '05-05-2021-a');
 
 
 	/*
