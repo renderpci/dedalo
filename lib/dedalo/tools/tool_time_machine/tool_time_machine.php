@@ -46,9 +46,9 @@
 				# JS includes
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 					// text area for notes
-					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/component_text_area.js";
-					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/mce_editor.js";
-					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/text_editor.js";
+					// js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/component_text_area.js";
+					// js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/mce_editor.js";
+					// js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/text_editor.js";
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_date/js/component_date.js";
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/button_delete/js/button_delete.js";
 

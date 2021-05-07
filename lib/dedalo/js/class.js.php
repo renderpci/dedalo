@@ -35,6 +35,10 @@ class js {
 			#js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/acc/test/jquery.min.js' ;
 			#js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/acc/test/jquery-migrate-3.0.0.min.js' ;
 
+			# TEXT_EDITOR_URL_JS (Tinymce)
+			js::$ar_url_basic[] = TEXT_EDITOR_URL_JS;
+			// js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_text_area/js/mce_editor.js';
+
 			js::$ar_url_basic[] = JQUERY_UI_URL_JS;
 			#js::$ar_url_basic[] = JQUERY_TABLESORTER_JS;
 			js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/jquery.cookie.js' ;
@@ -145,14 +149,14 @@ class js {
 			
 
 			# Si se carga un componente tex_area cargamos la librería tinymce y especiíficas
-			if( strpos($url,'component_text_area')!== false && !isset($added_component_text_area_commons)  ) { //&& navigator::get_selected('modo')!='list'
-				# Tinymce
-				$html .= self::build_tag( TEXT_EDITOR_URL_JS );				
+			// if( strpos($url,'component_text_area')!== false && !isset($added_component_text_area_commons)  ) { //&& navigator::get_selected('modo')!='list'
+			// 	# Tinymce
+			// 	// $html .= self::build_tag( TEXT_EDITOR_URL_JS );				
 				
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_text_area/js/mce_editor.js' );
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js' );						
-				$added_component_text_area_commons = true;		
-			}
+			// 	// $html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_text_area/js/mce_editor.js' );
+			// 	#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js' );						
+			// 	$added_component_text_area_commons = true;		
+			// }
 
 			# Si se carga un componente html_text cargamos la librería tinymce y especiíficas
 			#if( strpos($url,'component_html_text')!== false && !isset($added_component_html_text_commons) && navigator::get_selected('modo')!=='list' ) {
