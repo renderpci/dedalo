@@ -200,11 +200,11 @@ function load_component_by_ajax($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	// vars
-		$vars = array('parent','tipo','lang','modo','section_tipo','current_tipo_section','context_name','arguments','top_tipo','top_id');
+		$vars = array('parent','tipo','lang','modo','section_tipo','current_tipo_section','context_name','arguments','top_tipo','top_id','permissions');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
 				# DATA VERIFY
-				if ($name==='current_tipo_section' || $name==='context_name' || $name==='arguments' || $name==='top_id') continue; # Skip non mandatory
+				if ($name==='current_tipo_section' || $name==='context_name' || $name==='arguments' || $name==='top_id' || $name==='permissions') continue; # Skip non mandatory
 				if (empty($$name)) {
 					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 					return $response;
@@ -238,6 +238,12 @@ function load_component_by_ajax($json_data) {
 	// arguments
 		if (!empty($arguments)) {
 			$component_obj->set_arguments($arguments);
+		}
+
+	// permissions. Note that only downgrade is enable
+		$current_permissions = $component_obj->get_component_permissions();		
+		if (!empty($permissions) && $permissions<$current_permissions) {
+			$component_obj->set_permissions( (int)$permissions );
 		}
 
 	// tool user admin case

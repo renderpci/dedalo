@@ -62,7 +62,7 @@
 						break;
 				}				
 
-				$max_long = 290;
+				$max_long = 500; // 290;
 				if (strlen($dato_string)>$max_long) {
 					$dato_string = mb_substr($dato_string, 0, $max_long) . '..';	
 				}				

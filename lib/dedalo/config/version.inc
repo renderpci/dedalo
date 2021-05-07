@@ -2361,6 +2361,8 @@
 		Added component_number 'in_column' mode to search as section_id is doing now
 		Added class.area_thesaurus get_hierarchy_sections validation before continue to prevent errors on non defined hierarchies type
 		Clean css code in component_text_area
+		07-05-2021
+		Improved Tool time machine notes. Added inspector view of current component history changes and user permissions control over notes 
 
 
 	[/HISTORY]
@@ -2392,7 +2394,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '05-05-2021-a');
+	define('DEDALO_BUILD'	, '07-05-2021-a');
 
 
 	/*
