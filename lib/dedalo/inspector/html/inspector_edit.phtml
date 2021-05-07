@@ -148,8 +148,9 @@
 			$html .= '<div id="component_history">';
 				$html .= '<div id="" class="css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0" data-tab_id="">';				
 				$html .= '<label class="css_label"> component history </label>';
+				$html .= '<span class="icon_bs text_unselectable time_machine_list_button" onclick="document.getElementById(\'component_history_content\').classList.toggle(\'hide\');this.classList.toggle(\'time_machine_list_button_off\')"></span>';
 				$html .= '</div>';
-				$html .= '<div class="css_section_group_content tab_content inspector_div_content">';
+				$html .= '<div class="css_section_group_content tab_content inspector_div_content" id="component_history_content">';
 				$html .= '<div id="wrap_info_line_tm" class="wrap_info_line_tm"></div>';
 				$html .= '<div id="wrap_component_history" class="inspector_info_body wrap_component_history"></div>';
 				$html .= '</div>';

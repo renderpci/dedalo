@@ -2368,6 +2368,8 @@
 		Fixed tool_time_machine pagination error
 		Fixed issue on portal css when a portal is displayed inside another portal
 		Fixed issues with component text area used in time machine notes when current section don't have one. Now, tinymce is loaded always as basic lib and tm notes take care of load another text area needed files
+		Added inspector button to collapse component history list
+		Added tool_time_machine notes user permissions control to prevent unauthorized access
 
 
 	[/HISTORY]
@@ -2399,7 +2401,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-05-2021-f');
+	define('DEDALO_BUILD'	, '07-05-2021-g');
 
 
 	/*
