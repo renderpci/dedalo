@@ -2365,6 +2365,9 @@
 		Improved Tool time machine notes. Added inspector view of current component history changes and user permissions control over notes 
 		Fixed tool time machine inspector user selection and save events issues
 		Prevent overload the component tm_history request in inspector calls
+		Fixed tool_time_machine pagination error
+		Fixed issue on portal css when a portal is displayed inside another portal
+
 
 
 	[/HISTORY]
@@ -2396,7 +2399,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-05-2021-c');
+	define('DEDALO_BUILD'	, '07-05-2021-e');
 
 
 	/*
