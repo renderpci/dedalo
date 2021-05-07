@@ -373,6 +373,10 @@ class tool_time_machine extends tool_common {
 	*/
 	public static function get_tm_notes($id_time_machine, $lang=DEDALO_DATA_LANG) {
 		
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed '.__METHOD__;
+
 		$tm_notes = $id_time_machine;
 
 		// NOTES_TM_SECTION_TIPO	= 'rsc832';
@@ -474,7 +478,16 @@ class tool_time_machine extends tool_common {
 				];
 			}
 
-		return $data;
+		// user permissions to view/edit notes
+			$tm_notes_permissions = common::get_permissions( self::NOTES_TM_SECTION_TIPO, self::NOTES_TM_ANNOTATION_TIPO );
+
+
+		$response = new stdClass();
+			$response->result				= $data;
+			$response->tm_notes_permissions	= $tm_notes_permissions;
+			$response->msg					= 'Ok. Request done '.__METHOD__;
+
+		return $response;
 	}//end get_tm_notes
 
 

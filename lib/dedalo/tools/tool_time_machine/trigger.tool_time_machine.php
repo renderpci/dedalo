@@ -370,10 +370,7 @@ function get_tm_notes($json_data) {
 		}
 
 	// tool_time_machine call
-		$tm_notes = tool_time_machine::get_tm_notes($id_time_machine);
-
-	$response->result 	= $tm_notes;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+		$response = tool_time_machine::get_tm_notes($id_time_machine);
 
 	# Debug
 		if(SHOW_DEBUG===true) {
