@@ -2364,6 +2364,7 @@
 		07-05-2021
 		Improved Tool time machine notes. Added inspector view of current component history changes and user permissions control over notes 
 		Fixed tool time machine inspector user selection and save events issues
+		Prevent overload the component tm_history request in inspector calls
 
 
 	[/HISTORY]
@@ -2395,7 +2396,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-05-2021-b');
+	define('DEDALO_BUILD'	, '07-05-2021-c');
 
 
 	/*
