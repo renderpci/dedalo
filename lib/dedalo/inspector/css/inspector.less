@@ -383,19 +383,25 @@
 
 
 // wrap_component_history
+	#component_history_content.css_section_group_content {
+		display: block;
+	}
 	.wrap_info_line_tm {
 		background-color: #f1f1f1;
 		color: #606060;
 		// display: flex;		
-		display: grid;
-		grid-template-columns: 78% 11% 11%;
+		// display: grid;
+		// grid-template-columns: 78% 11% 11%;
 		width: 100%; 
+		display: flex;
+		flex-wrap: wrap;
 
 		>*{
 			padding: 0.5em;			
 		}
 
-		>.showed {			
+		>.showed {
+			flex: 1 1 100%;		
 			span {
 				// padding-left: 0.5em;
 				display: block;
@@ -405,6 +411,7 @@
 			background-color: #e4e4e4;
 			text-align: center;
 			outline: 1px solid #ffffff;
+			flex: 1 1 auto;	
 		}
 		>.load_more {
 
@@ -416,40 +423,42 @@
 	.wrap_component_history {		
 		
 		>.css_time_machine_record_line {
-			display: grid;
-			grid-template-columns: 65% 35%;
-			grid-template-rows: 1fr 1fr;
-			white-space: nowrap;
-			padding: 2px;
-			width: 100%;
-			overflow: hidden;
+			// background-color: #a8e6e1;			
+			// overflow: hidden;
+			width: 100%;			
 			border-bottom: 1px solid #eeeeee;
+			display: block;
+			position: relative;
 
-			// >.div_image_link {
-			// 	display: none;
-			// }
-
-			>.date_info {
-				text-overflow: ellipsis;
+			>* {
+				display: block;
+				width: 100%;				
 				overflow: hidden;
-				grid-column-start: 1;
-				grid-column-end: 2;
-				// width: 260px;
+				text-overflow: ellipsis;
+				white-space: nowrap;				
+				padding: 2px;				
 			}
 
-			>.tm_note {
-				display: flex;
-				grid-column-start: 2;
-				grid-column-end: 3;
-				width: 100%;
-				overflow: hidden;	
+			>.date_info {
+				color: #666666;
+			}
 
-				.icon_sticky {
+			>.sample_data {				
+				font-size: 1em;				
+			}
+
+			>.tm_note {				
+				display: flex;
+				
+				>* {
+					display: block;
+				}	
+
+				.icon_sticky {					
 					width: 1.2em;
 					height: 1.2em;
 					cursor: pointer;
-					opacity: 0.65;
-
+					// opacity: 0.65;
 					&.orange {
 						opacity: 1;
 					}
@@ -459,28 +468,13 @@
 				}
 
 				.note_text {
-					// width: 100%;
-					display: inline-block;
+					width: calc(100% - 1.2em);
 					padding-left: 0.5em;					
 					white-space: nowrap;
 					overflow: hidden;
 					text-overflow: ellipsis;
 				}
-			}
-
-
-			>.sample_data {
-				width: 100%;
-				font-size: 1em;
-				white-space: nowrap;
-				overflow: hidden;
-				text-overflow: ellipsis;
-
-				grid-column-start: 1;
-				grid-column-end: 3;
-				grid-row-start: 2;
-				grid-row-end: 3;
-			}
+			}	
 
 		}
 	}
