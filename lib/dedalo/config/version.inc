@@ -525,7 +525,7 @@
 		structure : added new model 'component_publication'
 					changed all elements 'Diffusion' from model 'component_radio_button' to 'component_publication'
 		component_publication : added new component to manage publication state. Current radio buttons used to set values of publication, change model to component_publication. Data is maintained
-		component_portal : fixed bug where images are not showed properly in portal list mode
+		component_portal : fixed bug where images are not displayed properly in portal list mode
 		config: added var DEDALO_STRUCTURE_LANG
 		component_select_lang : changes data format from current string like 'lg-spa' to array like '["lg-spa"]'
 								added option to link to component_text_area and override component_text_area lang
@@ -555,7 +555,7 @@
 
 
 	Valencia 23-05-2016
-		component_filter : fixed bug when in global admin, projects are showed by id_matrix instead section_id
+		component_filter : fixed bug when in global admin, projects are displayed by id_matrix instead section_id
 		lock_components : fixed bug when force_unlock_all_components unset all DB locked elements, instead current user only components
 		search : fixed bug in order by json fields when change from list to edit view
 		tool_indexation : fixed bug when not autosave text on change tag tipo
@@ -565,7 +565,7 @@
 		component_pdf : add thumb for pdf files
 						fixed correct output to tool_export
 		component_select : fixed correct output to tool_export
-		component_text_area : solved issue when button is not showed for link tag content from tool_portal
+		component_text_area : solved issue when button is not displayed for link tag content from tool_portal
 		tool_upload : added post processing create transcription when upload pdf media
 		tool_portal : added edit already existing portal links to enable, for example select a fragment when link is created in one user action (bibliography, etc..)
 		component_portal : fixed various issues related with refresh component in some context. Now centralized html _page page_globals engine is dedicated to manage components refresh
@@ -640,7 +640,7 @@
 		backup:init_backup_secuence : Added control to skip time range control
 		dd_date : fix bug when calculated reference time in seconds modify received dd_object subtracting 1 int to days and months
 		dd_date : moved class file from component_date dir to common (another elements but components are using this class now)
-		activity : changed column id. Now section_id is showed instead matrix id
+		activity : changed column id. Now section_id is displayed instead matrix id
 				   modified matrix_activity table indexes to optimize ordination (added to updates file 4.0.14 to 4.1.0)
 		search : performance : modified order_by when section activity is used. No longer adds "order by section_id" at end of query
 		common : added get_main_lang method (gets the info from config)
@@ -720,7 +720,7 @@
 
 
 	Benimamet 11-10-2016 v4.0.15.ja
-		component_security_access : fixed issue when buttons in virtual sections are no showed
+		component_security_access : fixed issue when buttons in virtual sections are no displayed
 		tool_import_dedalo_csv : added tool to import csv files (with dedalo special format:
 			- section_tipo is file base name like dd21 on file dd21.csv
 			- first line columns are components_tipo to import
@@ -752,7 +752,7 @@
 
 
 	Valencia 25-10-2016 v4.5.0.b
-		component_autocomplete : minor js/css fixes when is showed in portal list
+		component_autocomplete : minor js/css fixes when is displayed in portal list
 		tool_import_dedalo_csv : added multi language support for 'traducible' components (use JSON format in value like {"lg-eng":"My value","lg-spa":"Mi valor"})
 		section : unified get_ar_all_project_langs with common:get_ar_all_langs
 		component_select_lang : fix some issues using new dedalo thesaurus v4 lang
@@ -799,9 +799,9 @@
 
 	Valencia 15-11-2016 v4.5.0.bp
 		component_state : fixed permissions issue on 'validation' selector when not was shown to admin general and area/section administrators
-		component_text_area : changed data showed in list mode. Now, if exists related component_select_lang, original lang is used always in lists
+		component_text_area : changed data displayed in list mode. Now, if exists related component_select_lang, original lang is used always in lists
 							  Now value list is always calculated from original lang
-		component_info : widget tags : now data showed is synchronized with component_text_area lang (original lang when exists)
+		component_info : widget tags : now data displayed is synchronized with component_text_area lang (original lang when exists)
 
 
 	Valencia 17-11-2016 v4.5.0.bs
@@ -872,7 +872,7 @@
 
 
 	Valencia 26-01-2017 v4.5.1.c18
-		tool_import_files : fix issue with components permissions showed in temp section are wrong
+		tool_import_files : fix issue with components permissions displayed in temp section are wrong
 
 
 	Valencia 02-02-2017 v4.5.1.c23
@@ -988,7 +988,7 @@
 
 
 	Valencia 16-05-2017 4.6.1hj12
-		config : added new constant SHOW_DEVELOPER to control especial debug info showed to developers
+		config : added new constant SHOW_DEVELOPER to control especial debug info displayed to developers
 		login : added new method to control when user is developer
 		component_radiobutton : add forced read only mode when user is not dedalo superuser (root)
 
@@ -1536,7 +1536,7 @@
 
 
 	Valencia 14-05-2019 5.4.34
-		Fixed thesaurus no descriptors issue when more than one is not showed
+		Fixed thesaurus no descriptors issue when more than one is not displayed
 
 
 	Valencia 20-05-2019 5.4.36
@@ -2353,7 +2353,7 @@
 		Removed web_data sanitize $sql_options->sql_filter (incompatible with some configurations)
 		03-05-2021
 		Fixed component portal buttons issue within tool time machine
-		Fixed Ontology css error when non transtaled terms are not showed as italic font
+		Fixed Ontology css error when non transtaled terms are not displayed as italic font
 		05-05-2021
 		Add mandatory style to autocompete
 		Change the css of the mandatory style
@@ -2375,7 +2375,8 @@
 		Prevent selection of components in mode 'edit_node' because creates conflicts with inspector current selected component view
 		Fixed inspector css issues displaying large component history list
 		Fixed component common js issue when select component received wrapper is invalid
-		Improved user experience using component history in inspector. Added re focus component on quit dialog tm notes 
+		Improved user experience using component history in inspector. Added re focus component on quit dialog tm notes
+		Added component number read only mode like component input text
 
 
 	[/HISTORY]
@@ -2386,7 +2387,7 @@
 		component_date : mark as "red or similar" restricted an other terms based in x param..
 					on search fix appearance issue with results css
 		structure config search for all resources (notes, chapter titles, etc.)
-		tool_structuration : solve error in structure tag inside text (is showed outside)
+		tool_structuration : solve error in structure tag inside text (is displayed outside)
 
 
 	/**
@@ -2407,7 +2408,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-05-2021-b');
+	define('DEDALO_BUILD'	, '08-05-2021-d');
 
 
 	/*

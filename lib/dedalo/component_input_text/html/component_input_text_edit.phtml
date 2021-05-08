@@ -76,14 +76,12 @@
 				#}
 
 				# Read only mode (set in propiedades)
-				$read_only = null;
-				if (isset($propiedades->read_only) && $propiedades->read_only==true) {
-					$read_only = 'readonly';
-				}
-				if (isset($role) && $role==='source_lang') {					
-					$read_only = 'readonly';
-				}
-					
+					$read_only = (
+						(isset($propiedades->read_only) && ($propiedades->read_only===true || $propiedades->read_only==='read_only')) ||
+						(isset($role) && $role==='source_lang')
+						)
+						? 'readonly="readonly" '
+						: '';					
 
 				# Button add
 				if (isset($propiedades->multi_value) && $propiedades->multi_value==true) {
@@ -114,7 +112,7 @@
 					$html_content .= 'value="'.$value.'" ';
 					$html_content .= 'data-value_original="'.$value.'" ';
 					$html_content .= 'title="'.$html_title.'" ';
-					$html_content .= $read_only .' ';
+					$html_content .= $read_only;
 					$html_content .= 'autocomplete="off" ';
 					#$html_content .= $remove_autocomplete.' '; // Events to remove autocomplete safari behavior
 					$html_content .= 'data-tipo="'.$tipo.'" ';
