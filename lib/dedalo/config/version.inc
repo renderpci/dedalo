@@ -2375,6 +2375,7 @@
 		Prevent selection of components in mode 'edit_node' because creates conflicts with inspector current selected component view
 		Fixed inspector css issues displaying large component history list
 		Fixed component common js issue when select component received wrapper is invalid
+		Improved user experience using component history in inspector. Added re focus component on quit dialog tm notes 
 
 
 	[/HISTORY]
@@ -2406,7 +2407,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-05-2021-a');
+	define('DEDALO_BUILD'	, '08-05-2021-b');
 
 
 	/*
