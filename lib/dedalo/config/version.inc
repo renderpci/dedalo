@@ -2370,6 +2370,11 @@
 		Fixed issues with component text area used in time machine notes when current section don't have one. Now, tinymce is loaded always as basic lib and tm notes take care of load another text area needed files
 		Added inspector button to collapse component history list
 		Added tool_time_machine notes user permissions control to prevent unauthorized access
+		08-05-2021
+		Fixed tool time machine issue when re-render list and context info is loosed
+		Prevent selection of components in mode 'edit_node' because creates conflicts with inspector current selected component view
+		Fixed inspector css issues displaying large component history list
+		Fixed component common js issue when select component received wrapper is invalid
 
 
 	[/HISTORY]
@@ -2401,7 +2406,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-05-2021-g');
+	define('DEDALO_BUILD'	, '08-05-2021-a');
 
 
 	/*
