@@ -2377,6 +2377,12 @@
 		Fixed component common js issue when select component received wrapper is invalid
 		Improved user experience using component history in inspector. Added re focus component on quit dialog tm notes
 		Added component number read only mode like component input text
+		09-05-2021
+		Added php lib 'less_php' to build structure css file. Replaces leafo.lessphp
+		Updated .gitignore file to allow sync lib 'less_php'
+		Changed class css BUILD_STRUCTURE_CSS mothod to use new lib php_less		
+		Fixed refresh issues on delete and create time machine notes
+			
 
 
 	[/HISTORY]
@@ -2408,7 +2414,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-05-2021-d');
+	define('DEDALO_BUILD'	, '09-05-2021-a');
 
 
 	/*
