@@ -58,6 +58,7 @@ lib/dedalo/publication/client_api
 !lib/Zend
 !lib/htmLawed
 !lib/tcpdf
+!lib/less_php
 
 
 # extras ignore all except common
