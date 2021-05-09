@@ -53,6 +53,7 @@ class class_loader {
 
 			case (strpos($className, 'Smalot')!==false):
 			case (strpos($className, 'Zend')!==false):
+			case (strripos($className, 'Less_')===0):
 				# Nothint to do
 				return;
 				break;

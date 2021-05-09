@@ -181,26 +181,21 @@ class css {
 
 		return $tag;
 	}//edn build_tag
-	
-	
+
+
 
 	/**
-	* BUILD_STRUCTURE_CSS
-	* @return object $response
+	* GET_STRUCTURE_LESS_CODE
+	* @return array $css_properties
 	*/
-	public static function build_structure_css() {
+	public static function get_structure_less_code() {
+		
+		$less_code = [];
 
-		$response = new stdClass();
-			$response->result = false;
-			$response->msg 	  = null;
-
-		include self::$lessphp_lib_path;
-		$less = new lessc;
-		$less_code   = [];
+		// add current date
 		$less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
-
-		#
-		# SEARCH . Get all components custom css
+		
+		# search . Get all components custom css
 		$ar_prefix = unserialize(DEDALO_PREFIX_TIPOS);	
 		$ar_query  = [];
 		foreach ($ar_prefix as $prefix) {
@@ -209,15 +204,15 @@ class css {
 		$filter = implode(' OR ', $ar_query);
 
 		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
-		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
+
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$terminoID 		 = $rows["terminoID"];
 			$propiedades_str = $rows["propiedades"];
 			$propiedades 	 = json_decode($propiedades_str);
 			if (!isset($propiedades->css)) {
-				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
+				debug_log(__METHOD__." Ignored Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
 				continue;
 			}			
 			$css_obj = $propiedades->css;
@@ -265,53 +260,92 @@ class css {
 			$less_code[] = $less_line;
 		
 		}//end while ($rows = pg_fetch_assoc($result)) {
-		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);
-		$less_code = implode(' ', $less_code);	
 
+
+		return $less_code;
+	}//end get_structure_less_code
+	
+	
+
+	/**
+	* BUILD_STRUCTURE_CSS
+	* @return object $response
+	*/
+	public static function build_structure_css() {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg 	  = null;			
+
+		// get all structure css items as less code
+			$ar_less_code	= self::get_structure_less_code();
+			$less_code		= implode(' ', $ar_less_code);
 		
-		// MXINS. Get mixixns file
+		// mxins. Get mixixns file and add to less_code
 			$file_name = DEDALO_LIB_BASE_PATH . self::$mixins_file_path;
 			if ($mixins_code = file_get_contents($file_name)) {
 				$less_code = $mixins_code.$less_code;
-			}	 
+			}
 
 		// Write final file. Full path
 			$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
+				
 		
-		// Format : lessjs (default) | compressed | classic
-			$format = (DEVELOPMENT_SERVER===true) ? 'lessjs' : 'compressed';
-			$less->setFormatter($format);	// lessjs (default) | compressed | classic
-		
-		// Preserve comments : true | false	
-			$less->setPreserveComments(false);	// true | false
-		
-		// Compile 
-			$compiled_css = '';
+		// Compile LESS
+			$compiled_css = null;
 			try {
-				$compiled_css = $less->compile( $less_code );
-			} catch (exception $e) {				
-				debug_log(__METHOD__." Error en compile less: ".$e->getMessage(), logger::ERROR);
-				echo "fatal error: " . $e->getMessage();
-			}
 
-		// Delete old version if exists
-			if ( file_exists($file_name) && !unlink($file_name) ) {
-				$response->result 	= false;
-				$response->msg 	  	= "Error on remove old css file ($file_name) ";	
-			}
+				// LEAFO LESS
+					// include self::$lessphp_lib_path;
+					// $less = new lessc;
+					// // Format : lessjs (default) | compressed | classic
+					// $format = (DEVELOPMENT_SERVER===true) ? 'lessjs' : 'compressed';
+					// $less->setFormatter('compressed');	// lessjs (default) | compressed | classic
+			
+					// // Preserve comments : true | false	
+					// $less->setPreserveComments(false);	// true | false
+					// $compiled_css = $less->compile( $less_code );
+
+				// less_php
+					require_once DEDALO_ROOT. '/lib/less_php/lib/Less/Autoloader.php';					
+					Less_Autoloader::register();
+
+					$parser_options = [ 'compress' => true, 'sourceMap' => false ];
+
+					$parser = new Less_Parser($parser_options);
+					$parser->parse( $less_code );
+					$compiled_css = $parser->getCss();
+
+			}catch (exception $e) {
+				debug_log(__METHOD__." ERROR EN COMPILE LESS: ".$e->getMessage(), logger::ERROR);
+				$response->result	= false;
+				$response->msg		= "ERROR EN COMPILE LESS: ".$e->getMessage();
+				return $response;
+			}		
 		
 		// write file
-			if( !$write = file_put_contents($file_name, $compiled_css) ) {
-				$response->result 	= false;
-				$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);
-			}else{
-				$file_size = format_size_units( filesize($file_name) );
-				$response->result 	 = true;
-				$response->msg 	  	 = "File css created successful. Size: $file_size";
-				$response->file_path = self::$structure_file_path;				
+			if (!empty($compiled_css)) {
+
+				// Delete old version if exists
+					if ( file_exists($file_name) && !unlink($file_name) ) {
+						$response->result 	= false;
+						$response->msg 	  	= "Error on remove old css file ($file_name) ";
+						return $response;
+					}
+				
+				// write new file		
+					if( !$write = file_put_contents($file_name, $compiled_css) ) {
+						$response->result 	= false;
+						$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);
+					}else{
+						$file_size = format_size_units( filesize($file_name) );
+						$response->result 	 = true;
+						$response->msg 	  	 = "File css created successful. Size: $file_size";
+						$response->file_path = self::$structure_file_path;
+					}
+					#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
 			}
-			#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
-	
+
 
 		return (object)$response;
 	}//end build_structure_css
