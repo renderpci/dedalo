@@ -2382,7 +2382,8 @@
 		Updated .gitignore file to allow sync lib 'less_php'
 		Changed class css BUILD_STRUCTURE_CSS mothod to use new lib php_less		
 		Fixed refresh issues on delete and create time machine notes
-			
+		10-05-2021
+		Fixed css an appearance issues in inspector and component history / tool time machine	
 
 
 	[/HISTORY]
@@ -2414,7 +2415,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-05-2021-a');
+	define('DEDALO_BUILD'	, '10-05-2021-a');
 
 
 	/*
