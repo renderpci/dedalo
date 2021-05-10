@@ -2385,6 +2385,7 @@
 		10-05-2021
 		Fixed css an appearance issues in inspector and component history / tool time machine
 		Removed tool time machine sample_data tooltip
+		Fixed inspector issue when time machine note is deleted
 
 
 	[/HISTORY]
@@ -2416,7 +2417,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-05-2021-b');
+	define('DEDALO_BUILD'	, '10-05-2021-c');
 
 
 	/*
