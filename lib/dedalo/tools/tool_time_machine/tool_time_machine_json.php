@@ -35,50 +35,38 @@
 			$ar_rows_obj = [];
 			foreach((array)$ar_component_time_machine as $tm_obj) {
 				
-				$date					= component_date::timestamp_to_date($tm_obj->get_timestamp(), $seconds=true);
-				$userID					= $tm_obj->get_userID();
-				$mod_user_name			= section::get_user_name_by_userID($userID);
-				$id_time_machine		= $tm_obj->get_ID();
-				$component_tipo 		= $tm_obj->get_tipo();
-				$lang					= $tm_obj->get_lang();
-				$dato					= $tm_obj->get_dato();
-				$uid 					= $tm_obj->get_identificador_unico();
-				$show_row 		 		= false;
+				$date				= component_date::timestamp_to_date($tm_obj->get_timestamp(), $seconds=true);
+				$userID				= $tm_obj->get_userID();
+				$mod_user_name		= section::get_user_name_by_userID($userID);
+				$id_time_machine	= $tm_obj->get_ID();
+				$component_tipo		= $tm_obj->get_tipo();
+				$lang				= $tm_obj->get_lang();
+				$dato				= $tm_obj->get_dato();
+				$uid				= $tm_obj->get_identificador_unico();
+				$show_row			= false;
 
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				switch ($modelo_name) {
-					case 'component_text_area':
-						$dato_string	= component_text_area::clean_raw_text_for_preview($dato);
-						$dato_string 	= strip_tags($dato_string);						
-						break;		
-					default:
-						if (!is_string($dato)) {
-							$dato_string = json_encode($dato, JSON_UNESCAPED_UNICODE);
-						}else{
-							$dato_string = $dato;
-							$dato_string = strip_tags($dato_string);
-						}
-						#$dato_string	= to_string($dato);
-						break;
-				}				
-
-				$max_long = 500; // 290;
-				if (strlen($dato_string)>$max_long) {
-					$dato_string = mb_substr($dato_string, 0, $max_long) . '..';	
-				}				
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component		= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $parent,
+																 'list',
+																 $lang,
+																 $section_tipo);
+				$component->set_dato($dato);
+				$dato_string = $component->get_valor();
 
 				// Row object
 				$row_obj = new stdClass();
-					$row_obj->date 					= $date;
-					$row_obj->userID 				= $userID;
-					$row_obj->mod_user_name 		= $mod_user_name;
-					$row_obj->id_time_machine 		= $id_time_machine;
-					$row_obj->component_tipo 		= $component_tipo;
-					$row_obj->parent 				= $parent;
-					$row_obj->current_tipo_section  = $this->section_tipo;
-					$row_obj->lang 					= $lang;
-					$row_obj->dato_string 			= $dato_string;
-					$row_obj->uid 					= $uid;
+					$row_obj->date					= $date;
+					$row_obj->userID				= $userID;
+					$row_obj->mod_user_name			= $mod_user_name;
+					$row_obj->id_time_machine		= $id_time_machine;
+					$row_obj->component_tipo		= $component_tipo;
+					$row_obj->parent				= $parent;
+					$row_obj->current_tipo_section	= $this->section_tipo;
+					$row_obj->lang					= $lang;
+					$row_obj->dato_string			= $dato_string;
+					$row_obj->uid					= $uid;
 
 				$ar_rows_obj[] = $row_obj;
 				
