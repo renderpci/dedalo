@@ -108,11 +108,12 @@ abstract class common {
 		}
 		$permissions = security::get_security_permissions($tipo, $sub_tipo);
 
-		if ($tipo===DEDALO_HIERARCHY_SECTION_TIPO && SHOW_DEVELOPER!==true) {
-			if ($permissions>1) {
-				$permissions = 1;
-			}
-		}
+		// thesaurus root terms case
+		// if ($tipo===DEDALO_HIERARCHY_SECTION_TIPO && SHOW_DEVELOPER!==true) {
+		// 	if ($permissions>1) {
+		// 		$permissions = 1;
+		// 	}
+		// }
 
 		return (int)$permissions;
 	}//end get_permissions

@@ -756,9 +756,14 @@ class ts_object extends Accessors {
 	
 		switch ($element_name) {
 			case 'button_new':
+				
 				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-					$tipo = DEDALO_HIERARCHY_BUTTON_NEW_TIPO;
-					$permissions = common::get_permissions($this->section_tipo,$tipo);
+					
+					// root thesaurus case
+					// $tipo = DEDALO_HIERARCHY_BUTTON_NEW_TIPO;					
+					// $permissions = common::get_permissions($this->section_tipo, $tipo);
+					$permissions = 2;
+
 				}elseif ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
 					$tipo = DEDALO_THESAURUS_BUTTON_NEW_TIPO;
 					$permissions = common::get_permissions($this->section_tipo,$tipo);
