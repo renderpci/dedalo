@@ -2386,6 +2386,8 @@
 		Fixed css an appearance issues in inspector and component history / tool time machine
 		Removed tool time machine sample_data tooltip
 		Fixed inspector issue when time machine note is deleted
+		13-05-2021
+		Fixed issue with Thesaurus root terms button new permissions calculation. Now target section button new is verified to get right write permissions
 
 
 	[/HISTORY]
@@ -2417,7 +2419,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-05-2021-c');
+	define('DEDALO_BUILD'	, '13-05-2021-a');
 
 
 	/*

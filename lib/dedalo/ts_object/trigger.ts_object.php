@@ -260,6 +260,29 @@ function add_children_from_hierarchy($json_data) {
 				}
 			}
 
+	// target_section_tipo new button permissions
+		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+			
+			// get target section tipo button_new			
+				$ar_button_new = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo,
+																						['button_new'],
+																						$from_cache=true,
+																						$resolve_virtual=true,
+																						$recursive=true,
+																						$search_exact=true,
+																						$ar_tipo_exclude_elements=false);
+			if (isset($ar_button_new[0])) {
+				$button_new_tipo	= $ar_button_new[0];
+				$permissions		= common::get_permissions($target_section_tipo, $button_new_tipo);
+				if ($permissions<2) {
+					$response->result 	= false;
+					$response->msg 		= 'Error. Insuficent permissions in target section '.$target_section_tipo.' ['.__FUNCTION__.']';
+					return $response;
+				}
+			}			
+		}
+
+
 	// new section
 		$new_section 	= section::get_instance(null,$target_section_tipo);
 		$new_section_id	= $new_section->Save();
