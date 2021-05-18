@@ -4199,6 +4199,10 @@ class diffusion_sql extends diffusion  {
 				$dd_date = new dd_date($date_obj);
 				$value 	 = $dd_date->year;
 				break;
+			case 'unix_timestamp':
+				$dd_date = new dd_date($date_obj);
+				$value 	 = $dd_date->convert_date_to_unix_timestamp();
+				break;
 			case 'full':
 			default:
 				// Default
