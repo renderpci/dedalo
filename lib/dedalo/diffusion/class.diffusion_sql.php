@@ -4054,6 +4054,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 			switch ($output) {
+				case 'merged_unique_implode':
 				case 'merged_unique':
 				case 'merged':
 					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
@@ -4121,6 +4122,14 @@ class diffusion_sql extends diffusion  {
 
 
 		switch ($output) {
+			case 'merged_unique_implode':
+				// @see numisdata1028
+				if (is_array($ar_value)) {
+					$separator	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
+					$ar_value = array_unique($ar_value, SORT_REGULAR);
+					$value = implode($separator, $ar_value);
+				}
+				break;
 			case 'merged_unique':
 				// @see numisdata1028
 				if (is_array($ar_value)) {
