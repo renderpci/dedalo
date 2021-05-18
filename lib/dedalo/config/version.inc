@@ -2388,6 +2388,9 @@
 		Fixed inspector issue when time machine note is deleted
 		13-05-2021
 		Fixed issue with Thesaurus root terms button new permissions calculation. Now target section button new is verified to get right write permissions
+		18-05-2021
+		Changed component_filter view in search mode from checkbox to select to improve user experience on large projects list
+
 
 
 	[/HISTORY]
@@ -2419,7 +2422,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '13-05-2021-a');
+	define('DEDALO_BUILD'	, '18-05-2021-a');
 
 
 	/*
