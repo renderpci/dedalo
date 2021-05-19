@@ -25,7 +25,7 @@ $updates->$v = new stdClass();
 	$RecordObj_dd = new RecordObj_dd('rsc209');
 	$translatable = $RecordObj_dd->get_traducible()==='si';
 
-	if ($translatable) {
+	if ($translatable===true) {
 
 		$alert					= new stdClass();
 		$alert->notification	= 'V '.$v;
@@ -33,7 +33,7 @@ $updates->$v = new stdClass();
 		$updates->$v->alert_update[] = $alert;
 		
 		debug_log(__METHOD__." ERROR 582. YOU MUST UPDATE YOUR ONTOLOGY VERSION TO THE LAST VERSION WITH DEFINED SECTION: rsc205", logger::ERROR);
-			
+		
 		$updates->$v->show_button_run_update_version = false;
 
 	}else{
@@ -45,6 +45,25 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "remove_lang_to_filenames";
 				$script_obj->script_vars	= ['rsc209','rsc205', $translatable]; // Note that only ONE argument as array is sended
 			$updates->$v->run_scripts[] = $script_obj;
+
+		# database updates
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+				-- UPDATED COUNTERS COLUMN TIPO LENGTH TO ALLOW LONG TLD
+					
+				ALTER TABLE "matrix_counter"
+				ALTER "tipo" TYPE character varying(128),
+				ALTER "tipo" DROP DEFAULT,
+				ALTER "tipo" SET NOT NULL;
+				COMMENT ON COLUMN "matrix_counter"."tipo" IS \'\';
+				COMMENT ON TABLE "matrix_counter" IS \'\';
+
+				ALTER TABLE "matrix_counter_dd"
+				ALTER "tipo" TYPE character varying(128),
+				ALTER "tipo" DROP DEFAULT,
+				ALTER "tipo" DROP NOT NULL;
+				COMMENT ON COLUMN "matrix_counter_dd"."tipo" IS \'\';
+				COMMENT ON TABLE "matrix_counter_dd" IS \'\';
+			');
 	}
 
 
