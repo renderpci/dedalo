@@ -2635,11 +2635,34 @@ class search_development2 {
 		$path[] = $current_path;
 
 		if ($resolve_related===true) {
-			$ar_related_components 	= component_relation_common::get_components_with_relations();
+			$ar_related_components = component_relation_common::get_components_with_relations();
 			if(in_array($term_model, $ar_related_components)===true) {
 
-				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
-				$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
+				switch ($term_model) {
+					case 'component_select_lang':
+						$ar_terminos_relacionados	= [DEDALO_THESAURUS_TERM_TIPO];
+						$ar_related_section			= ['lg1'];
+						break;
+
+					case 'component_filter':
+						$ar_terminos_relacionados	= ['dd156'];
+						$ar_related_section			= ['dd153'];
+						break;
+
+					case 'component_portal':
+						$RecordObj_dd	= new RecordObj_dd($tipo);
+						$propiedades	= $RecordObj_dd->get_propiedades(true);
+						if (isset($propiedades->order_component_tipo)) {
+							$ar_terminos_relacionados	= [$propiedades->order_component_tipo];
+							$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
+						}
+						break;
+					
+					default:
+						$ar_terminos_relacionados	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
+						$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
+						break;
+				}
 
 				if (!empty($ar_related_section)) {
 
