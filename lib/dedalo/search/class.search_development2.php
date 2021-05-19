@@ -1258,7 +1258,7 @@ class search_development2 {
 						}else{
 							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
 						}
-						$sql_query .= ', id ASC'; // avoid ambiguity in pagination of equal values
+						$sql_query .= ' NULLS LAST, id ASC'; // avoid ambiguity in pagination of equal values
 						
 					// limit
 						if ($sql_limit>0) {
