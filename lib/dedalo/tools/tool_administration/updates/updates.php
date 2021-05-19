@@ -8,6 +8,45 @@ $updates = new stdClass();
 
 // to use in next update:
 
+$v=582; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 8;
+	$updates->$v->version_minor 	 = 2;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 8;
+	$updates->$v->update_from_minor  = 0;
+
+
+	$RecordObj_dd = new RecordObj_dd('rsc209');
+	$translatable = $RecordObj_dd->get_traducible()==='si';
+
+	if ($translatable) {
+
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= 'Important! Before run this update, you must update your ontology version to 19-05-2021 or later';
+		$updates->$v->alert_update[] = $alert;
+		
+		debug_log(__METHOD__." ERROR 582. YOU MUST UPDATE YOUR ONTOLOGY VERSION TO THE LAST VERSION WITH DEFINED SECTION: rsc205", logger::ERROR);
+			
+		$updates->$v->show_button_run_update_version = false;
+
+	}else{
+		
+		# Update datos to section_data
+			$script_obj = new stdClass();
+				$script_obj->info			= "This update checks and updates the pdf files associated to publications";
+				$script_obj->script_class	= "tool_administration";
+				$script_obj->script_method	= "remove_lang_to_filenames";
+				$script_obj->script_vars	= ['rsc209','rsc205', $translatable]; // Note that only ONE argument as array is sended
+			$updates->$v->run_scripts[] = $script_obj;
+	}
+
 
 
 $v=580; #####################################################################################

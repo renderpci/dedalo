@@ -2202,5 +2202,62 @@ class tool_administration extends tool_common {
 	}//end iterate_rows
 
 
+	/**
+	* REMOVE_LANG_TO_FILENAMES
+	* @return 
+	*/
+	public static function remove_lang_to_filenames($component_tipo, $section_tipo, $translatable=false) {
+
+		if ($translatable) return false;
+
+		$pattern = $component_tipo.'_'.$section_tipo.'_';
+
+		$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component 	= component_common::get_instance($model_name,
+													$component_tipo,
+													null,
+													'list',
+													'lg-nolan',
+													$section_tipo,
+													false);
+
+		$dir_path	= $component->get_target_dir();
+	
+		$filenames = [];
+		$iterator = new DirectoryIterator($dir_path);
+		foreach ($iterator as $file_info) {
+			if ($file_info->getType()==='file') {
+
+				$file_name = $file_info->getFilename();
+		
+				preg_match('/('.$pattern.'[0-9]{1,})(_lg-[a-z]{3,})(.pdf)/', $file_name, $output_array);
+				if (!isset($output_array[2])) {
+					continue; // already renamed
+				}
+
+
+				$re		= '/('.$pattern.'[0-9]{1,})(_lg-[a-z]{3,})(.pdf)/m';
+				$str	= $file_name; // Like 'rsc209_rsc205_1_lg-spa.pdf';
+				$subst	= '$1$3';
+				$result	= preg_replace($re, $subst, $str);
+
+				try {
+					$source		= $file_info->getPathname();
+					$target		= $dir_path .'/'. $result;
+					$renamed	= (bool)rename($source, $target);
+
+					if ($renamed===true) {
+						debug_log(__METHOD__." Renamed file from $source to $target".to_string(), logger::WARNING);
+					}
+				
+				}catch (Exception $e) {
+					trigger_error('Caught exception: '.$e->getMessage());
+				}
+			}
+		}
+
+		return true;		
+		
+	}//end remove_lang_to_filenames
 
 }//end class
