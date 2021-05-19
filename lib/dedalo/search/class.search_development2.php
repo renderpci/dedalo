@@ -1217,7 +1217,7 @@ class search_development2 {
 					$query_inside = '';
 					// select
 						$query_inside .= 'SELECT ' . $sql_query_select;
-						$query_inside .= ', id'; // avoid ambiguity in pagination of equal values
+						$query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
 					// from
 						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
 						# join virtual tables
