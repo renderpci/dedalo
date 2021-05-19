@@ -2339,8 +2339,8 @@
 		Fixed publication web_data get_full_interview issue with constant 'FIELD_AUDIOVISUAL' assignment
 		Updated publication api docu json file from 1.0.15 to 1.0.16
 
-	
-	queue builds
+
+	Valencia 19-05-2021 5.8.2
 		27-04-2021
 		Enabled web_data thesaurus indexation column custom name (set config in server_config_api.php)
 		Added img html tag as allowed tag in publication server json/index.php filter (case numisdata legends)
@@ -2397,6 +2397,13 @@
 		Improved search order to move blank values to the end
 		Added search get_query_path component_portal and select_lang path resolution.
 		Now, component_portal can be configurated to use a specific related component in search tasks: 'propiedades->order_component_tipo'
+		Update the pdf filename removing lang
+		Added updates v582 SQL_update
+
+	
+	
+	queue builds
+
 
 
 
@@ -2423,13 +2430,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.1';
+	$DEDALO_VERSION = '5.8.2';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-05-2021-b');
+	define('DEDALO_BUILD'	, '19-05-2021-a');
 
 
 	/*
