@@ -1,10 +1,9 @@
 <?php
 	
 	# CONTROLLER
-	#dump($this, ' this ++ '.to_string());
 
-	# Section list propiedades	
-	$propiedades  = $this->propiedades; // Is set in controller in list mode
+	// Section list propiedades	
+		$propiedades	= $this->propiedades; // Is set in controller in list mode
 
 	/* to_review 14-2-2018
 	$tipo				= $this->section_records_obj->get_tipo();

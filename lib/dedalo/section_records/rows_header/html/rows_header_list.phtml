@@ -65,10 +65,11 @@
 		# TD DATOS
 		foreach ($ar_label_data as $value) {
 
-			$tipo  = $value['tipo'];
-			$label = $value['label'];
-			$path  = isset($value['path']) ? $value['path'] : null;
-			$path  = json_encode($path, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG);
+			$tipo	= $value['tipo'];
+			$label	= $value['label'];
+			$path	= isset($value['path'])
+				? json_encode($value['path'], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG)
+				: null;
 
 			$td_css_selector_tipo = 'th_column_'.$tipo;
 
@@ -102,5 +103,3 @@
 	print $html_content;
 
 	
-
-?>

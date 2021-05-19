@@ -1811,7 +1811,7 @@ class search_development2 {
 		}
 
 		if(SHOW_DEBUG===true) {
-			#debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
+			// debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
 		}
 
 
@@ -2626,10 +2626,10 @@ class search_development2 {
 		# Add first level always
 		$current_path = new stdClass();
 
-			$current_path->name 	  	  = strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
-			$current_path->modelo 	  	  = $term_model;
-			$current_path->section_tipo   = $section_tipo;
-			$current_path->component_tipo = $tipo;
+			$current_path->name				= strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
+			$current_path->modelo			= $term_model;
+			$current_path->section_tipo		= $section_tipo;
+			$current_path->component_tipo	= $tipo;
 
 		# Add direct level to array path
 		$path[] = $current_path;

@@ -1,6 +1,6 @@
 <?php
 
-// controller tool_cataloging
+// controller 
 
 
 // controller vars
