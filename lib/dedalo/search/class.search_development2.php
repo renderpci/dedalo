@@ -3030,9 +3030,11 @@ class search_development2 {
 					}
 
 				// DEDALO_SECTION_SI_NO_TIPO. Avoid save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO)
-					if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO || $target_section_tipo===DEDALO_SECTION_USERS_TIPO) {
-						continue;
-					}
+				// (!) DISABLED CONTINUE. Needed for sort columns like 'Publication' 19-05-2021. 
+				// (!) Use user admin panel 'propagate relations' to restore values
+					// if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO || $target_section_tipo===DEDALO_SECTION_USERS_TIPO) {
+					// 	continue;
+					// }
 
 				$ar_insert_values[] = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
 			}
