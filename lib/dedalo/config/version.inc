@@ -2390,6 +2390,13 @@
 		Fixed issue with Thesaurus root terms button new permissions calculation. Now target section button new is verified to get right write permissions
 		18-05-2021
 		Changed component_filter view in search mode from checkbox to select to improve user experience on large projects list
+		19-05-21
+		Fixed search select column id ambiguity issues when using order clause
+		Regression search disabled skip on relation propagation. They are needed for sort columns like 'Publication'. Use user admin panel 'propagate relations' to restore values (yes/no)
+		Optimized order results moving null values at end (class search_development)
+		Improved search order to move blank values to the end
+		Added search get_query_path component_portal and select_lang path resolution.
+		Now, component_portal can be configurated to use a specific related component in search tasks: 'propiedades->order_component_tipo'
 
 
 
@@ -2422,7 +2429,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '18-05-2021-a');
+	define('DEDALO_BUILD'	, '19-05-2021-b');
 
 
 	/*
