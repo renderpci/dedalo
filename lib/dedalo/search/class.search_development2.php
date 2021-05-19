@@ -1258,8 +1258,7 @@ class search_development2 {
 						}else{
 							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
 						}
-						$sql_query .= ' NULLS LAST, id ASC'; // avoid ambiguity in pagination of equal values
-						
+						$sql_query .= ', id ASC'; // avoid ambiguity in pagination of equal values
 					// limit
 						if ($sql_limit>0) {
 							$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
@@ -1793,11 +1792,16 @@ class search_development2 {
 
 						# Add to global order columns (necessary for order...)
 						# This array is added when query select is calculated
-						$this->order_columns[] = $column;
+						$this->order_columns[] = $column;					
 
-						$line = $alias . ' ' . $direction;
-						#$line = $base . ' ' . $direction;
-						#debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);
+						// $line = $alias . ' ' . $direction;
+						// reduce blank records noise
+						$line = 'NULLIF('.$alias.', \'\') '.$direction.' NULLS LAST';
+						
+						// debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);
+
+
+						
 					}
 
 					$ar_order[] = $line;
