@@ -196,7 +196,7 @@ abstract class tool_common extends common {
 	* Get section_map from section class and calculate value of desired component type like 'code'
 	* @return mixed object|null
 	*/
-	public static function get_inverse_element($type, $section_id, $section_tipo) {			
+	public static function get_inverse_element($type, $section_id, $section_tipo) {
 
 		# section_map is in properties of structure element 'section_map', inside current section structure
 		$section_map = section::get_section_map( $section_tipo );
@@ -247,5 +247,48 @@ abstract class tool_common extends common {
 
 
 
+	/**
+	* ITERATE_FILES
+	* @return object $response
+	*/
+	public static function iterate_files($dir_path, $action) {
+				
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// check valid dir
+			if (!is_dir($dir_path)) {
+				$response->msg	= 'Error. dir_path is not a valid dir. ' . json_encode($dir_path);
+				return $response;
+			}
+
+		// Let's traverse the images directory
+			$fileSystemIterator = new FilesystemIterator($dir_path);
+
+		// iterate
+			$procesed_files = [];
+			foreach ($fileSystemIterator as $fileInfo){
+				
+				$file_name = $fileInfo->getFilename();
+				$file_type = $fileInfo->getType();
+
+				// exec function callback
+				$action_response = $action($fileInfo);
+				
+				if (!$action_response) {
+					debug_log(__METHOD__." Error. Ignored file: ".to_string($file_name), logger::WARNING);
+				}else{
+					$procesed_files[] = $file_name;
+				}
+			}
+		
+		$response->result	= true;
+		$response->msg		= 'Ok. Request done';
+
+		return $response;
+	}//end iterate_files
+
+
+
 }//end class
-?>

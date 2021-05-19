@@ -204,6 +204,10 @@
 			//search mode always can edit the field, permissions always in 2
 			$permissions = 2;
 
+			# Check if the compoment is mandatory
+				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
+				$mandatory_json = json_encode($mandatory);
+
 			$file_name 	= 'edit';
 			break;
 
