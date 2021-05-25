@@ -18,7 +18,7 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
 				break;
 
 			default:
@@ -28,32 +28,41 @@
 					
 				}else{
 
-					// context and subcontext from API dd_request if already exists sections					
-						
-					$dd_request = dd_core_api::$dd_request;
+					// context and subcontext from API dd_request if already exists sections
 
-						$request_ddo = array_find($dd_request, function($item){
-							return $item->typo==='request_ddo';
-						});
+					// section structure context (tipo, relations, properties, etc.)
+						$context[] = $this->get_structure_context($permissions, $add_rqo=true);
+				
+					// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
+						$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
+						foreach ($ar_subcontext as $current_context) {
+							$context[] = $current_context;
+						}
+						
+					// $rqo = dd_core_api::$rqo;
+
+						// $request_ddo = array_find($dd_request, function($item){
+						// 	return $item->typo==='request_ddo';
+						// });
 						// dump($request_ddo, ' request_ddo ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
 					
 					// when no empty request_ddo->value
-					if ($request_ddo && !empty($request_ddo->value)) {
+					// if ($request_ddo && !empty($request_ddo->value)) {
 						
-						$context = $request_ddo->value;
-						// dd_core_api::$context_dd_objects = $context;
+					// 	$context = $request_ddo->value;
+					// 	// dd_core_api::$context_dd_objects = $context;
 						
-					}else{
+					// }else{
 
-						// section structure context (tipo, relations, properties, etc.)
-							$context[] = $this->get_structure_context($permissions, $add_request_config=true);
+						// // section structure context (tipo, relations, properties, etc.)
+						// 	$context[] = $this->get_structure_context($permissions, $add_rqo=true);
 						
-						// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
-							$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
-							foreach ($ar_subcontext as $current_context) {
-								$context[] = $current_context;
-							}						
-					}
+						// // subcontext from element layout_map items (from_parent_tipo, parent_grouper)
+						// 	$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
+						// 	foreach ($ar_subcontext as $current_context) {
+						// 		$context[] = $current_context;
+						// 	}						
+					// }
 				}
 				break;
 		}

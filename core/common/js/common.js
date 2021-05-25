@@ -686,9 +686,9 @@ common.prototype.get_row = async function(){
 
 
 /**
-* BUILD_DD_REQUEST
+* BUILD_RQO
 */
-common.prototype.build_dd_request = function(dd_request_type, request_config, action){
+common.prototype.build_rqo = function(dd_request_type, request_config, action){
 
 	const self = this
 
@@ -706,7 +706,7 @@ common.prototype.build_dd_request = function(dd_request_type, request_config, ac
 	}
 
 	return null
-};//end build_dd_request
+};//end build_rqo
 
 
 
@@ -715,6 +715,27 @@ common.prototype.build_dd_request = function(dd_request_type, request_config, ac
 * @return array dd_request
 */
 const build_request_show = function(self, request_config, action){
+	
+	const source	= create_source(self, action);
+	const show		= typeof self.context.request_config[0].show!=='undefined'
+		? self.context.request_config[0].show
+		: null 
+
+	const rqo = {
+		source	: source,
+		show	: show
+	}
+
+	return rqo
+}
+
+
+
+/**
+* BUILD_REQUEST_SHOW
+* @return array dd_request
+*/
+const build_request_show_OLD = function(self, request_config, action){
 
 	const dd_request = []
 
@@ -1043,7 +1064,7 @@ const build_request_search = function(self, request_config, action){
 		})
 
 		// if(current_rqo.select){
-		// 	const select = self.build_dd_request('select', request_config, 'get_data')
+		// 	const select = self.build_rqo('select', request_config, 'get_data')
 		// 	const ddo_select = select.filter(item => item.typo === 'ddo')
 		// 	sqo_search.push(...ddo_select)
 		// 	console.log("ddo_select", sqo_search);

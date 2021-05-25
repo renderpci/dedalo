@@ -41,7 +41,7 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 		wrapper_page.classList.add('wrapper_page', self.type)
 
 	// menu
-		const element_menu = self.page_elements.find(el => el.filter(item => item.model==='menu').length>0 )
+		const element_menu = self.context.find(el => el.model==='menu')
 		if (typeof element_menu!=='undefined') {
 			const menu_node = get_menu(self)
 			wrapper_page.appendChild(await menu_node)

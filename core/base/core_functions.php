@@ -1482,7 +1482,7 @@ function check_basic_system() {
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed';
+		$response->msg 		= 'Error. check_basic_system failed';
 
 	// basic system files check
 	// langs js
@@ -1513,6 +1513,8 @@ function check_basic_system() {
 			debug_log(__METHOD__." Generated structure css file: $file_path ".$build_structure_css_response->msg, logger::WARNING);
 		}
 
+	$response->result 	= true;
+	$response->msg 		= 'Ok. check_basic_system done';
 
 	return $response;
 }//end check_basic_system

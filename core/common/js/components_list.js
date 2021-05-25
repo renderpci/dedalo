@@ -1,5 +1,7 @@
 // includes
 
+	import '../../page/js/page.js'
+
 
 // 	// section
 	import '../../section/js/section.js' // + '?v=' + page_globals.dedalo_version

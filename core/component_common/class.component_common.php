@@ -1706,7 +1706,7 @@ abstract class component_common extends common {
 
 		// get_config_context normalized
 			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
-			$config_context = (array)common::get_ar_request_query_objects($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
+			$config_context = (array)common::get_ar_request_config($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
 
 
 		$ar_target_section_tipo = [];

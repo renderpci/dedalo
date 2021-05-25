@@ -43,16 +43,16 @@
 
 					$context = array_merge($context, $section_json->context);
 				}
-
-				$dd_request = dd_core_api::$dd_request;
-				$request_ddo = array_find($dd_request, function($item){
-					return $item->typo==='request_ddo';
-				});
-				// when no empty request_ddo->value
-				if ($request_ddo && !empty($request_ddo->value)) {
-					dd_core_api::$context_dd_objects = $request_ddo->value;
-					$context						 = $request_ddo->value;
-				}		
+				
+				// $dd_request = dd_core_api::$dd_request;
+				// $request_ddo = array_find($dd_request, function($item){
+				// 	return $item->typo==='request_ddo';
+				// });
+				// // when no empty request_ddo->value
+				// if ($request_ddo && !empty($request_ddo->value)) {
+				// 	dd_core_api::$context_dd_objects = $request_ddo->value;
+				// 	$context						 = $request_ddo->value;
+				// }
 				break;
 		}
 	}//end if($options->get_context===true)

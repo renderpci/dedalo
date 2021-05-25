@@ -17,8 +17,8 @@ class dd_core_api {
 	// $request_ddo_value . store current ddo items added by get_config_context methods (portals, etc.)
 		static $request_ddo_value = [];
 
-	// dd_request . store current dd_request received in context to allow external access (portals, etc.)
-		static $dd_request;
+	// rqo . store current rqo received in context to allow external access (portals, etc.)
+		static $rqo;
 
 	// context_dd_objects . store calculated context dd_objects
 		static $context_dd_objects;
@@ -101,13 +101,13 @@ class dd_core_api {
 
 	/**
 	* READ
-	* @param object $json_data
+	* @param request query object $rqo
 	*	arrray $json_data->context
 	* @return object $result
 	*	array $result->context
 	*	array $result->data
 	*/
-	static function read($json_data) {
+	static function read($rqo) {
 		global $start_time;
 
 		//session_write_close();
@@ -117,20 +117,13 @@ class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// validate input data
-			if (empty($json_data->dd_request)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty \'dd_request\' (is mandatory)';
+			if (empty($rqo->source->section_tipo)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
 				return $response;
 			}
-			if (!is_array($json_data->dd_request)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid \'dd_request\' (must be array) received type:'.gettype($json_data->dd_request);
-				return $response;
-			}
-
-		// context accept object and array of objects
-			$dd_request = $json_data->dd_request;
 
 		// build rows (context & data)
-			$json_rows = self::build_json_rows($dd_request);
+			$json_rows = self::build_json_rows($rqo);
 
 		$result = $json_rows;
 
@@ -323,8 +316,8 @@ class dd_core_api {
 				case $model==='section_tm':
 					$section_id 	= $source->section_id;
 					$element 		= section_tm::get_instance($section_id, $section_tipo);
-					// set dd_request (source)
-					$element->set_dd_request([$source]); // inject whole source
+					// set rqo (source)
+					$element->set_rqo([$source]); // inject whole source
 					break;
 
 				case strpos($model, 'area')===0:
@@ -416,7 +409,7 @@ class dd_core_api {
 		// 						$page_element->tipo 		= 'dd85';
 		// 						$page_element->mode 		= 'edit';
 		// 						$page_element->lang 		= DEDALO_APPLICATION_LANG;
-		// 						$page_element->dd_request  = null;
+		// 						$page_element->rqo  = null;
 		// 						$page_element->datum 		= $menu_json;
 		//
 		// 					return $page_element;
@@ -434,11 +427,11 @@ class dd_core_api {
 		// 						$page_element->lang 	 	= DEDALO_DATA_LANG;
 		// 						$page_element->section_tipo = $tipo;
 		//
-		// 						// dd_request
+		// 						// rqo
 		// 							$area = area::get_instance($model, $tipo, $mode);
-		// 							$dd_request = $area->get_dd_request();
+		// 							$rqo = $area->get_rqo();
 		//
-		// 						$page_element->dd_request = $dd_request;
+		// 						$page_element->rqo = $rqo;
 		//
 		// 					return $page_element;
 		// 				})();
@@ -449,10 +442,10 @@ class dd_core_api {
 		//
 		// 					$section_tipo = $tipo;
 		//
-		// 					// dd_request
+		// 					// rqo
 		// 						$section = section::get_instance($section_id, $section_tipo, $mode);
 		// 						$section->set_lang($lang);
-		// 						$dd_request = $section->get_dd_request();
+		// 						$rqo = $section->get_rqo();
 		//
 		// 					$page_element = new StdClass();
 		// 						$page_element->model 		 = $model;
@@ -462,7 +455,7 @@ class dd_core_api {
 		// 						$page_element->section_id 	 = $section_id;
 		// 						$page_element->mode 		 = $mode;
 		// 						$page_element->lang 		 = $lang;
-		// 						$page_element->dd_request	 = $dd_request;
+		// 						$page_element->rqo	 = $rqo;
 		//
 		// 					return $page_element;
 		// 				})();
@@ -473,10 +466,10 @@ class dd_core_api {
 		//
 		// 					$section_tipo = $tipo;
 		//
-		// 					// dd_request
+		// 					// rqo
 		// 						$section = section_tm::get_instance($section_id, $section_tipo, $mode);
 		// 						$section->set_lang($lang);
-		// 						$dd_request = $section->get_dd_request();
+		// 						$rqo = $section->get_rqo();
 		//
 		// 					$page_element = new StdClass();
 		// 						$page_element->model		 = $model;
@@ -486,7 +479,7 @@ class dd_core_api {
 		// 						$page_element->section_id	 = $section_id;
 		// 						$page_element->mode 		 = $mode;
 		// 						$page_element->lang 		 = $lang;
-		// 						$page_element->dd_request	 = $dd_request;
+		// 						$page_element->rqo	 = $rqo;
 		//
 		// 					return $page_element;
 		// 				})();
@@ -506,11 +499,11 @@ class dd_core_api {
 		// 					$section_id		= null;
 		// 					$lang 	 	 	= DEDALO_DATA_LANG;
 		//
-		// 					// dd_request
+		// 					// rqo
 		// 						$section = section::get_instance($section_id, $section_tipo, $mode);
 		// 						$section->set_lang($lang);
 		// 						$section->config = $properties->config;
-		// 						$dd_request = $section->get_dd_request();
+		// 						$rqo = $section->get_rqo();
 		//
 		// 					$page_element = new StdClass();
 		// 						$page_element->model 		 = 'section';
@@ -519,7 +512,7 @@ class dd_core_api {
 		// 						$page_element->section_id 	 = $section_id;
 		// 						$page_element->mode 	 	 = $mode;
 		// 						$page_element->lang 	 	 = $lang;
-		// 						$page_element->dd_request   = $dd_request;
+		// 						$page_element->rqo   = $rqo;
 		//
 		// 					return $page_element;
 		// 				})();
@@ -730,7 +723,7 @@ class dd_core_api {
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
-	private static function build_json_rows($dd_request) {
+	private static function build_json_rows($rqo) {
 		$start_time=microtime(1);
 
 		// default result
@@ -738,57 +731,58 @@ class dd_core_api {
 				$result->context = [];
 				$result->data 	 = [];
 
-		// fix dd_request
-			dd_core_api::$dd_request = $dd_request;
+		// fix rqo
+			dd_core_api::$rqo = $rqo;
 
 		// des
 			// // ar_dd_objects . Array of all dd objects in requested context
-			// 	$ar_dd_objects = array_values( array_filter($dd_request, function($item) {
+			// 	$ar_dd_objects = array_values( array_filter($rqo, function($item) {
 			// 		 if($item->typo==='ddo') return $item;
 			// 	}) );
 			// 	// set as static to allow external access
 			// 	dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
 
 		// ddo_source
-			$ar_source = array_filter($dd_request, function($item) {
-				 if(isset($item->typo) && $item->typo==='source') return $item;
-			});
-			if (count($ar_source)!==1) {
-				throw new Exception("Error Processing Request. Invalid number of 'source' items in context. Only one is allowed. Found: ".count($ar_source), 1);
-				return $result;
-			}
-			$ddo_source = reset($ar_source);
+			$ddo_source = $rqo->source;
+		// 	$ar_source = array_filter($rqo, function($item) {
+		// 		 if(isset($item->typo) && $item->typo==='source') return $item;
+		// 	});
+		// 	if (count($ar_source)!==1) {
+		// 		throw new Exception("Error Processing Request. Invalid number of 'source' items in context. Only one is allowed. Found: ".count($ar_source), 1);
+		// 		return $result;
+		// 	}
+		// 	$ddo_source = reset($ar_source);
 
-			// source vars
-				$action			= $ddo_source->action ?? 'search';
-				$mode			= $ddo_source->mode ?? 'list';
-				$lang			= $ddo_source->lang ?? null;
-				$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-				$section_id		= $ddo_source->section_id ?? null;
-				$tipo			= $ddo_source->tipo ?? null;
-				$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
+		// source vars
+			$action			= $ddo_source->action ?? 'search';
+			$mode			= $ddo_source->mode ?? 'list';
+			$lang			= $ddo_source->lang ?? null;
+			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
+			$section_id		= $ddo_source->section_id ?? null;
+			$tipo			= $ddo_source->tipo ?? null;
+			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 
 		// sqo. search_query_object
 			$sqo_id = implode('_', [$model,$section_tipo,$mode]);
-			$search_query_object = array_find($dd_request, function($item){
-				return (isset($item->typo) && $item->typo==='sqo');
-			});
-			if (empty($search_query_object)) {
+			$sqo 	= $rqo->sqo ?? null;
+			if (empty($sqo)) {
 				if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-					$search_query_object = $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+					$sqo = $_SESSION['dedalo']['config']['sqo'][$sqo_id];
 				}else{
-
-					// user preset check (defined sqo limit)
+					//get the limit from the show
+					if (isset($rqo->show) && isset($rqo->show->sqo_config->limit)) {
+						$limit = $rqo->show->sqo_config->limit;
+					}else{
+						// user preset check (defined sqo limit)
 						$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, $view=null);
 						if (!empty($user_preset)) {
-							$rqo = array_find($user_preset, function($item) use($tipo){
-								return $item->tipo===$tipo && $item->typo==='rqo';
-							});
-							if ($rqo && isset($rqo->show->sqo_config->limit)) {
-								$limit = $rqo->show->sqo_config->limit;
+							$user_preset_rqo = $user_preset->rqo;
+							if ($user_preset_rqo && isset($user_preset_rqo->show->sqo_config->limit)) {
+								$limit = $user_preset_rqo->show->sqo_config->limit;
 							}
 						}
-
+					}
+					// build the new sqo from show or user preset
 					$limit = $limit ?? ($mode==='list' ? 10 : 1);
 
 					$sqo_options = new stdClass();
@@ -809,7 +803,7 @@ class dd_core_api {
 								$self_locator->set_section_id($section_id);
 							$sqo_options->filter_by_locators = [$self_locator];
 						}
-					$search_query_object = common::build_search_query_object($sqo_options);
+					$sqo = common::build_search_query_object($sqo_options);
 
 					// tm case
 						// if ($mode==='tm') {
@@ -817,7 +811,7 @@ class dd_core_api {
 						// 	$search_query_object->limit = 10;
 						// 	$search_query_object->offset= 0;
 						// 	// add component tipo and lang to locator for tm search
-						// 	$component_ddo = array_find($dd_request, function($item){
+						// 	$component_ddo = array_find($rqo, function($item){
 						// 		return (isset($item->typo) && $item->typo==='ddo' && $item->type==='component');
 						// 	});
 						// 	$locator = reset($search_query_object->filter_by_locators);
@@ -828,9 +822,9 @@ class dd_core_api {
 				}
 			}//end if (empty($search_query_object))
 
-			// pagination vars from sqo
-				$limit	= $search_query_object->limit ?? null;
-				$offset	= $search_query_object->offset ?? null;
+		// pagination vars from sqo
+			$limit	= $sqo->limit ?? null;
+			$offset	= $sqo->offset ?? null;
 
 
 		// CONTEXT
@@ -841,10 +835,10 @@ class dd_core_api {
 					case 'search': // example use: get section records in list or edit mode, search in autocomplete service
 
 						// sections
-							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
+							$element = sections::get_instance(null, $sqo, $section_tipo, $mode, $lang);
 
 							// set always
-							// $element->set_dd_request($dd_request); // inject whole dd_request context
+							// $element->set_rqo($rqo); // inject whole rqo context
 
 						break;
 
@@ -914,7 +908,7 @@ class dd_core_api {
 					case 'search':
 						/*
 							// search
-								$search 	= search::get_instance($search_query_object);
+								$search 	= search::get_instance($sqo);
 								$rows_data 	= $search->search();
 
 							// section. generated the self section_data
@@ -986,12 +980,12 @@ class dd_core_api {
 							*/
 
 						// sections
-							$element = sections::get_instance(null, $search_query_object, $tipo, $mode, $lang);
+							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
-						// store search_query_object
+						// store sqo
 							// $context[] = $current_sqo;
 							if ($model==='section') {
-								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $search_query_object;
+								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							}
 						break;
 
@@ -1030,8 +1024,8 @@ class dd_core_api {
 							// search_action
 								$search_action = $ddo_source->search_action ?? 'show_all';
 								$obj = new stdClass();
-									$obj->action				= $search_action;
-									$obj->search_query_object	= $search_query_object;
+									$obj->action = $search_action;
+									$obj->sqo	 = $sqo;
 								$element->set_search_action($obj);
 
 						}else{
@@ -1085,8 +1079,8 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->search_query_object	= $search_query_object ?? null;
-					$debug->dd_request			= $dd_request;
+					$debug->sqo					= $sqo ?? null;
+					$debug->rqo					= $rqo;
 					$debug->context_exec_time	= $context_exec_time;
 					$debug->data_exec_time		= $data_exec_time;
 					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";

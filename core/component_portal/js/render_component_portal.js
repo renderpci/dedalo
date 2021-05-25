@@ -258,8 +258,8 @@ const add_events = function(self, wrapper) {
 				if(self.autocomplete_active===false){
 
 					// set dd_request
-						self.dd_request.search 	= self.dd_request.search || self.build_dd_request('search', self.context.request_config, 'search')
-						self.dd_request.select 	= self.dd_request.select || self.build_dd_request('select', self.context.request_config, 'get_data')
+						self.dd_request.search 	= self.dd_request.search || self.build_rqo('search', self.context.request_config, 'search')
+						self.dd_request.select 	= self.dd_request.select || self.build_rqo('select', self.context.request_config, 'get_data')
 
 					self.autocomplete = new service_autocomplete()
 					self.autocomplete.init({

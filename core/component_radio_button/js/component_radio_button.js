@@ -44,7 +44,7 @@ export const component_radio_button = function(){
 	component_radio_button.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_radio_button.prototype.update_datum		= component_common.prototype.update_datum
 	component_radio_button.prototype.change_value		= component_common.prototype.change_value
-	component_radio_button.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_radio_button.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
 	component_radio_button.prototype.mini				= render_component_radio_button.prototype.mini

@@ -20,12 +20,12 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
 				break;
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
+					$current_context = $this->get_structure_context($permissions, $add_rqo=true);
 					// // add records_mode to properties, if not already defined
 					// if (!isset($current_context->properties->source->records_mode)) {
 					// 	if (!property_exists($current_context, 'properties')) {

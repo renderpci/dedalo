@@ -42,7 +42,7 @@ export const component_inverse = function(){
 	component_inverse.prototype.destroy				= common.prototype.destroy
 	component_inverse.prototype.save				= component_common.prototype.save
 	component_inverse.prototype.load_data			= component_common.prototype.load_data
-	component_inverse.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_inverse.prototype.build_rqo	= common.prototype.build_rqo
 
 // render
 	component_inverse.prototype.render				= common.prototype.render

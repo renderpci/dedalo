@@ -17,114 +17,73 @@
 
 
 
-// load page
-	$load_page = function($context) use($tipo, $section_id, $mode){
-		global $page_globals, $html_header;
-
-		// page_options
-			$page_options = new StdClass();
-				$page_options->mode		= 'default';
-				$page_options->context	= $context;
-
-		// load base html
-			$page_html = dirname(__FILE__) . '/html/page.phtml';
-			if( !include($page_html) ) echo "<div class=\"error\">Invalid page file</div>";
-
-		return true;
-	};
-
-
-
-// not logged
+// context
+	$context = [];
 	if (login::is_logged()!==true) {
+		
+		// not logged case		
 
 		// check_basic_system (lang and structure files)
-			check_basic_system();
+			$system_is_ready = check_basic_system();
+			if ($system_is_ready->result===false) {
+				exit($system_is_ready->msg);
+			}
 
-		$page_elements = [];
+		// page context elements [login]
+			$login = new login('edit');
+	
+		// add to page context
+			$context[] = $login->get_structure_context();
 
-		// page elements [login]
-			$login_element = (function() {
+	}else{
 
-				$login = new login('edit');
-				$login_source = $login->get_source();
+		// logged case
 
-				return [$login_source];
-			})();
+		$initiator = $_GET['initiator'] ?? false;
 
-		$page_elements[] = $login_element;
+		// menu. Get the mandatory menu element
+			// if ($initiator===false) {
 
-		$context = (object)[
-			'model'			=> 'page',
-			'page_elements'	=> $page_elements
-		];
+			// 	$menu = new menu();
+			// 	$menu->set_lang(DEDALO_DATA_LANG);
 
-		$load_page($context);
+			// 	// add to page context
+			// 		$context[] = $menu->get_structure_context();
+			// }
 
-		exit();
-	}//end if (login::is_logged()!==true)
-
-
-
-// logged
-	if (login::is_logged()!==true) return null;
-
-	$page_elements = [];
-
-	$initiator = $_GET['initiator'] ?? false;
-
-	// menu. Get the mandatory menu element
-		if ($initiator===false) {
-
-			$menu = new menu();
-			$menu->set_lang(DEDALO_DATA_LANG);
-
-			$page_elements[] = [$menu->get_source()];
-		}
-
-	// section/area/tool. Get the page element from get url vars
-		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-		// if (strpos($model,'area')===0) {
-
+		// section/area/tool. Get the page element from get url vars
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			switch (true) {
 				case ($model==='section'):
 
 					$section = section::get_instance($section_id, $tipo, MODE);
 					$section->set_lang(DEDALO_DATA_LANG);
-					$page_elements[] = [$section->get_source()];
+					
+					// add to page context
+						$context[] = $section->get_structure_context(1, true);
 					break;
 
 				case (strpos($model, 'area')===0):
 
 					$area = area::get_instance($model, $tipo, MODE);
 					$area->set_lang(DEDALO_DATA_LANG);
-					$page_elements[] = [$area->get_source()];
+					
+					// add to page context
+						$context[] = $area->get_structure_context();
 					break;
 
 				default:
-					// code...
+					// ..
 					break;
 			}
-			// dump($source, ' $source ++ '.to_string());
-			// $page_elements[] = $source;
+	}//end if (login::is_logged()!==true)
 
-		// }else{
-		// 	$element_required = new stdClass();
-		// 		$element_required->options = (object)[
-		// 			'model' 	 => $model,
-		// 			'tipo' 		 => $tipo,
-		// 			'lang' 		 => DEDALO_DATA_LANG,
-		// 			'mode' 		 => MODE,
-		// 			'section_id' => $section_id
-		// 		];
-		// 	$page_elements[] = dd_core_api::get_page_element($element_required)->result;
-		// }
 
-		$context = (object)[
-			'model'			=> 'page',
-			'page_elements'	=> $page_elements
-		];
-		// dump($context, ' $context ++ '.to_string());
 
-	// page load all elements
-		$load_page($context);
+// load page
+	
+	// load base html
+		$page_html = dirname(__FILE__) . '/html/page.phtml';
+		if( !include($page_html) ) echo '<div class="error">Invalid page file</div>';
+
+

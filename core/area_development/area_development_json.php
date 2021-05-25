@@ -20,7 +20,7 @@
 			$this->from_parent = $tipo;
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions, $add_request_config=true);
+			$context[] = $this->get_structure_context($permissions, $add_rqo=true);
 
 		// subcontext from element layout_map items
 			$ar_subcontext = $this->get_ar_widgets();

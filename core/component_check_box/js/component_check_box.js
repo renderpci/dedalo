@@ -49,7 +49,7 @@ export const component_check_box = function(){
 	component_check_box.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_check_box.prototype.update_datum		= component_common.prototype.update_datum
 	component_check_box.prototype.change_value		= component_common.prototype.change_value
-	component_check_box.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_check_box.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
 	component_check_box.prototype.mini				= render_component_check_box.prototype.mini

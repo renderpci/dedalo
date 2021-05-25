@@ -55,7 +55,7 @@ export const component_json = function(){
 	component_json.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_json.prototype.update_datum		= component_common.prototype.update_datum
 	component_json.prototype.change_value		= component_common.prototype.change_value
-	component_json.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_json.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
 	component_json.prototype.mini				= render_component_json.prototype.mini

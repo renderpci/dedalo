@@ -53,7 +53,7 @@ export const component_filter_records = function(){
 	component_filter_records.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_filter_records.prototype.update_datum			= component_common.prototype.update_datum
 	component_filter_records.prototype.change_value			= component_common.prototype.change_value
-	component_filter_records.prototype.build_dd_request		= common.prototype.build_dd_request
+	component_filter_records.prototype.build_rqo		= common.prototype.build_rqo
 
 	// render
 	component_filter_records.prototype.mini					= render_component_filter_records.prototype.mini

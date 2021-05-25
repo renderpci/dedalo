@@ -54,7 +54,7 @@ export const component_text_area = function(){
 	component_text_area.prototype.change_value		= component_common.prototype.change_value
 	component_text_area.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_text_area.prototype.update_datum		= component_common.prototype.update_datum
-	component_text_area.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_text_area.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
 	component_text_area.prototype.mini				= render_component_text_area.prototype.mini

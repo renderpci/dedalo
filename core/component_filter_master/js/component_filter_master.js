@@ -52,7 +52,7 @@ export const component_filter_master = function(){
 	component_filter_master.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_filter_master.prototype.update_datum		= component_common.prototype.update_datum
 	component_filter_master.prototype.change_value		= component_common.prototype.change_value
-	component_filter_master.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_filter_master.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render (from component_filter_master)
 	component_filter_master.prototype.mini				= component_filter.prototype.mini

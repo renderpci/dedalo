@@ -59,7 +59,7 @@ export const area_thesaurus = function() {
 	area_thesaurus.prototype.render				= common.prototype.render
 	area_thesaurus.prototype.refresh			= common.prototype.refresh
 	area_thesaurus.prototype.destroy			= common.prototype.destroy
-	area_thesaurus.prototype.build_dd_request	= common.prototype.build_dd_request
+	area_thesaurus.prototype.build_rqo	= common.prototype.build_rqo
 	area_thesaurus.prototype.edit				= render_area_thesaurus.prototype.edit
 	area_thesaurus.prototype.list				= render_area_thesaurus.prototype.list
 
@@ -109,7 +109,7 @@ area_thesaurus.prototype.build = async function() {
 
 	// dd_request
 		const request_config	= self.context ? self.context.request_config : null
-		self.dd_request.show	= self.build_dd_request('show', request_config, 'get_data')
+		self.dd_request.show	= self.build_rqo('show', request_config, 'get_data')
 
 	// debug
 		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
@@ -138,7 +138,7 @@ area_thesaurus.prototype.build = async function() {
 				self.widgets	= new_data.context.filter(element => element.parent===self.tipo && element.typo==='widget')
 
 			// dd_request
-				self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+				self.dd_request.show = self.build_rqo('show', self.context.request_config, 'get_data')
 				// console.log("-----------------------self.dd_request.show", self.dd_request.show);
 		}
 

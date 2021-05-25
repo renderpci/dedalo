@@ -53,7 +53,7 @@ export const area_development = function() {
 	area_development.prototype.render			= common.prototype.render
 	area_development.prototype.refresh			= common.prototype.refresh
 	area_development.prototype.destroy			= common.prototype.destroy
-	area_development.prototype.build_dd_request	= common.prototype.build_dd_request
+	area_development.prototype.build_rqo	= common.prototype.build_rqo
 	area_development.prototype.edit				= render_area_development.prototype.edit
 	area_development.prototype.list				= render_area_development.prototype.list
 
@@ -73,7 +73,7 @@ area_development.prototype.build = async function(autoload=true) {
 		self.status = 'building'
 
 	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
+		self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
 
 	// debug
 		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))

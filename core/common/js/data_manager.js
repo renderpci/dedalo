@@ -30,7 +30,7 @@ data_manager.prototype.request = async function(options) {
 	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 	this.body			= options.body // body data type must match "Content-Type" header
 
-	const handle_errors = function(response) {
+	const handle_errors = function(response) {		
 		if (!response.ok) {
 			console.warn("-> HANDLE_ERRORS response:",response);
 			throw Error(response.statusText);
@@ -52,7 +52,7 @@ data_manager.prototype.request = async function(options) {
 		})
 		.then(handle_errors)
 		.then(response => {
-			// console.log("-> json response 1 ok:",response.body);
+			// console.log("-> json response 1 ok:",response);
 			const json_parsed = response.json().then((result)=>{
 				// console.log("-> json result 2:",result);
 				return result
@@ -61,7 +61,7 @@ data_manager.prototype.request = async function(options) {
 			return json_parsed
 		})// parses JSON response into native Javascript objects
 		.catch(error => {
-			console.error("!!!!! [data_manager.request] ERROR:", error)
+			console.error("!!!!! [data_manager.request] Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
 			return {
 				result 	: false,
 				msg 	: error.message,
@@ -95,36 +95,7 @@ data_manager.prototype.request = async function(options) {
 
 
 /**
-* GET_MENU
-* Generic section data loader (API read)
-* @param object context
-* @return promise api_response
-*/
-data_manager.prototype.get_menu = async function(dd_request) {
-
-	// data_manager
-		const api_response = this.request({
-			body : {
-				action	: 'get_menu',
-				dd_api	: 'dd_utils_api',
-				context	: dd_request
-			}
-		})
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			api_response.then((response)=>{
-				console.log(`__Time to get_menu ${response.debug.exec_time} [data_manager.get_menu] response:`, response, `dd_request:`, dd_request);
-			})
-		}
-
-	return api_response
-};//end get_menu
-
-
-
-/**
-* GET_login
+* GET_LOGIN
 * Generic section data loader (API read)
 * @param object context
 * @return promise api_response
@@ -132,12 +103,14 @@ data_manager.prototype.get_menu = async function(dd_request) {
 data_manager.prototype.get_login = async function() {
 
 	// data_manager
-		const api_response = this.request({
-			body : {
-				action	: 'get_login',
-				dd_api	: 'dd_utils_api'
+		const api_response = this.request(
+			{
+				body : {
+					action	: 'get_login',
+					dd_api	: 'dd_utils_api'
+				}
 			}
-		})
+		)
 
 	// debug
 		if(SHOW_DEBUG===true) {

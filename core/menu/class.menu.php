@@ -6,26 +6,30 @@
 */
 class menu extends common {
 
+
+
 	protected $tipo = 'dd85';
 	protected $RecordObj_dd;
+
+
 
 	/**
 	* __CONSTRUCT
 	*/
 	public function __construct($modo='edit') {
 
-			$id		= NULL;
-			$tipo	= $this->tipo;
+		$id					= null;
+		$tipo				= $this->tipo;
+		$this->id			= $id;
+		$this->tipo			= $tipo;
+		$this->lang			= DEDALO_DATA_LANG;
+		$this->modo			= $modo;
+		$this->section_tipo	= 'dd1';
 
-			$this->id			= $id;
-			$this->tipo			= $tipo;
-			$this->lang			= DEDALO_DATA_LANG;
-			$this->modo			= $modo;
-			$this->section_tipo	= 'dd1';
-
-			parent::load_structure_data();
+		parent::load_structure_data();
 
 	}//end __construct
+
 
 
 	/**
@@ -82,6 +86,36 @@ class menu extends common {
 
 		return $info_data;
 	}//end get_info_data
+
+
+
+	/**
+	* GET_STRUCTURE_CONTEXT
+	* @return object $dd_object
+	*/
+	public function get_structure_context($permissions=1, $add_rqo=false) {
+
+		// short vars
+			$tipo	= $this->get_tipo();
+			$mode	= $this->get_modo();
+			$label	= $this->get_label();
+			$lang	= $this->get_lang();
+			$model	= get_class($this);
+
+		// dd_object
+			$dd_object = new dd_object((object)[
+				'label'			=> $label,
+				'tipo'			=> $tipo,
+				'model'			=> $model,
+				'lang'			=> $lang,
+				'mode'			=> $mode,
+				'permissions'	=> $permissions
+			]);
+
+			
+		return $dd_object;
+	}//end get_structure_context
+
 
 
 

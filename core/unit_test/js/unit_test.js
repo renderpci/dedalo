@@ -349,7 +349,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				describe("builds page instance from options", function() {
 						make_test({
 							model	: "page",
-							context	: {page_elements:[]}
+							context	: {dd_request:[]}
 						}, page);
 				});
 			// component_input_text instance

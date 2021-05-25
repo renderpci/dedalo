@@ -60,7 +60,7 @@ export const section = function() {
 	section.prototype.render			= common.prototype.render
 	section.prototype.destroy			= common.prototype.destroy
 	section.prototype.refresh			= common.prototype.refresh
-	section.prototype.build_dd_request	= common.prototype.build_dd_request
+	section.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	section.prototype.edit				= render_section.prototype.edit
@@ -107,11 +107,11 @@ section.prototype.init = async function(options) {
 	self.data				= options.data		|| null
 
 	// dd request
-	self.dd_request			= options.dd_request || {
-								show	: null,
-								search	: null,
-								select	: null
-							}
+	// self.rqo				= options.rqo || {
+	// 							show	: null,
+	// 							search	: null,
+	// 							select	: null
+	// 						}
 
 	// pagination info
 	self.pagination			= {
@@ -149,7 +149,6 @@ section.prototype.init = async function(options) {
 *	bool true
 */
 section.prototype.build = async function(autoload=false) {
-
 	const t0 = performance.now()
 
 	const self = this
@@ -157,20 +156,26 @@ section.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
-	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
+	// // set rqo
+	// 	self.rqo.show = self.rqo.show || self.build_rqo('show', self.context.request_config, 'search')
 
-	// debug
-		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
+	// // debug
+	// 	const rqo_show_original = JSON.parse(JSON.stringify(self.rqo.show))
 
 	// load data if is not already received as option
 		if (autoload===true) {
 
+			// rqo build
+			const rqo = self.build_rqo('show', self.context.request_config, 'search')
+			rqo.action = 'read'
+				console.log("rqo:",rqo);
+
 			// get context and data
 				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.read(self.dd_request.show)
+				// const api_response		= await current_data_manager.read(rqo)
+				const api_response			= await current_data_manager.request({body : rqo})
 				if (!api_response.result) {
-					console.error("Error o read section datum :", api_response);
+					console.error("Error o read section datum api_response:", api_response);
 					return false;
 				}
 
@@ -184,13 +189,13 @@ section.prototype.build = async function(autoload=false) {
 					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 					: null
 
-			// recreate and set dd_request with the new configuration
-				self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'search')
+			// recreate and set rqo with the new configuration
+				self.rqo.show = self.build_rqo('show', self.context.request_config, 'search')
 
 			// sqo
-				const sqo = self.dd_request.show.find(element => element.typo==='sqo')
+				const sqo = self.rqo.show.find(element => element.typo==='sqo')
 				// console.log("self.context.request_config", self.context.request_config);
-				// console.log(" self.dd_request.show",  self.dd_request.show);
+				// console.log(" self.rqo.show",  self.rqo.show);
 
 			// count rows
 				if (!self.pagination.total) {
@@ -227,7 +232,7 @@ section.prototype.build = async function(autoload=false) {
 
 
 	// sqo
-		const sqo = self.dd_request.show.find(element => element.typo==='sqo')
+		const sqo = self.rqo.show.find(element => element.typo==='sqo')
 
 
 	// Update section mode/label with context declarations

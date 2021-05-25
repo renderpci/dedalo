@@ -45,7 +45,7 @@ export const component_number = function(){
 	component_number.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_number.prototype.update_datum			= component_common.prototype.update_datum
 	component_number.prototype.change_value			= component_common.prototype.change_value
-	component_number.prototype.build_dd_request		= common.prototype.build_dd_request
+	component_number.prototype.build_rqo		= common.prototype.build_rqo
 
 	// render
 	component_number.prototype.mini					= render_component_number.prototype.mini
