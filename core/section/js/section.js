@@ -293,11 +293,11 @@ section.prototype.build = async function(autoload=false) {
 
 					// refresh
 						await self.refresh() // refresh current section
-										
+
 					// loading
 						if (node) {
 							node.classList.remove('loading')
-						}					
+						}
 				})
 			)//end events push
 		}
@@ -351,6 +351,7 @@ section.prototype.build = async function(autoload=false) {
 					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id )
 					if (index!==-1) {
 						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
+
 					}else{
 						ar_used.push(element)
 					}
@@ -432,7 +433,7 @@ section.prototype.get_ar_instances = async function(){
 				self.ar_instances.push(current_section_record)
 
 		}//end for loop
-	
+
 
 	return self.ar_instances
 };//end get_ar_instances
