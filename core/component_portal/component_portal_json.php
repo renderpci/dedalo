@@ -21,7 +21,7 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
 				break;
 
 			default:
@@ -55,7 +55,7 @@
 				}else{
 
 					// Component structure context (tipo, relations, properties, etc.)
-						$current_context = $this->get_structure_context($permissions, $add_request_config=true);
+						$current_context = $this->get_structure_context($permissions, $add_rqo=true);
 
 						$context[] = $current_context;
 

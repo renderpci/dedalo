@@ -49,12 +49,12 @@ export const get_instance = async function(options){
 	// if(options.model==='section') console.log("=========================================== get_instance options:",options);
 	// key values ['model','tipo','section_tipo','section_id','mode','lang']
 
-	// mandatory vars
+	// options. mandatory vars
 		const tipo				= options.tipo
 		const section_tipo		= options.section_tipo
 		const section_id		= options.section_id // string format
 
-	// optional vars (only mandatory for build the instance)
+	// options. optional vars (only mandatory for build the instance)
 		const mode				= options.mode  || 'list'
 		const lang				= options.lang  || page_globals.dedalo_data_lang
 		const model				= options.model || await ( async () => {
@@ -83,64 +83,64 @@ export const get_instance = async function(options){
 
 	// key. build the key locator of the instance
 		const key = options.key || key_instances_builder(options, true)
-
 		//if (model!=='section_record') {
 		//	key = key_instances_builder(options) + "_" + Date.now()
 		//}
 
-
 	// if the instance is not in the cache, build one new instance of the element
-		// const load_instance = async () => {
 
-		// 	// search. first we see if the instance is inside the instances cache
-		// 	const found_instance = instances.filter(instance => instance.id===key)
+		// DES
+			// const load_instance = async () => {
 
-		// 	if (found_instance.length===0) {
-		// 		//console.log("---Creating instance of:", model, tipo, " - " + key)
+			// 	// search. first we see if the instance is inside the instances cache
+			// 	const found_instance = instances.filter(instance => instance.id===key)
 
-		// 		// element file import path
-		// 			const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
-		// 			const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
+			// 	if (found_instance.length===0) {
+			// 		//console.log("---Creating instance of:", model, tipo, " - " + key)
 
-		// 		// import element mod file once (and wait until finish)
-		// 			const current_element = await import(path)
+			// 		// element file import path
+			// 			const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
+			// 			const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
 
-		// 		// check
-		// 			if (typeof current_element[model]!=="function") {
-		// 				console.warn(`------- INVALID MODEL!!! [${model}] path:`, path);
-		// 				return null
-		// 			}
+			// 		// import element mod file once (and wait until finish)
+			// 			const current_element = await import(path)
 
-		// 		// instance the element
-		// 			const instance_element = new current_element[model]()
+			// 		// check
+			// 			if (typeof current_element[model]!=="function") {
+			// 				console.warn(`------- INVALID MODEL!!! [${model}] path:`, path);
+			// 				return null
+			// 			}
 
-		// 		// serialize element id
-		// 		// add the id for init the instance with the id
-		// 			instance_element.id = key
-		// 			//instance_element.id_base = key_instances_builder(options, false)
-		// 			instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
-		// 		// id_variant . Propagate a custom instance id to children
-		// 			if (options.id_variant) {
-		// 				instance_element.id_variant = options.id_variant
-		// 			}
+			// 		// instance the element
+			// 			const instance_element = new current_element[model]()
 
-		// 		// init the element
-		// 			await instance_element.init(options)
+			// 		// serialize element id
+			// 		// add the id for init the instance with the id
+			// 			instance_element.id = key
+			// 			//instance_element.id_base = key_instances_builder(options, false)
+			// 			instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
+			// 		// id_variant . Propagate a custom instance id to children
+			// 			if (options.id_variant) {
+			// 				instance_element.id_variant = options.id_variant
+			// 			}
 
-		// 		// add to the instances cache
-		// 			instances.push(instance_element)
+			// 		// init the element
+			// 			await instance_element.init(options)
 
-		// 			// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
+			// 		// add to the instances cache
+			// 			instances.push(instance_element)
 
-		// 		// return the new created instance
-		// 			return instance_element
+			// 			// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
 
-		// 	}else{
-		// 		// resolve the promise with the cache instance found
-		// 			// console.log("Recycled instance of :",model, section_tipo, section_id)
-		// 			return found_instance[0]
-		// 	}
-		// }
+			// 		// return the new created instance
+			// 			return instance_element
+
+			// 	}else{
+			// 		// resolve the promise with the cache instance found
+			// 			// console.log("Recycled instance of :",model, section_tipo, section_id)
+			// 			return found_instance[0]
+			// 	}
+			// }
 
 		const load_instance = () => {
 			return new Promise(async function(resolve){			
@@ -152,22 +152,24 @@ export const get_instance = async function(options){
 					//console.log("---Creating instance of:", model, tipo, " - " + key)
 
 					// element file import path
-						const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
-						const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
+						const base_path	= model.indexOf('tool_')!==-1
+							? '../../../tools/'
+							: '../../'
+						const path		= base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
 
 					// import element mod file once (and wait until finish)
 						let current_element
 						try {
 							current_element = await import(path)
 						}catch(error){
-							console.error(`------- ERROR ON IMPORT ELEMENT!!! [${model}] path:`, path);
+							console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] Error: \n`, error);
 							resolve(false)
 							return
 						}						
 
 					// check current_element
 						if (typeof current_element[model]!=="function") {
-							console.warn(`------- INVALID MODEL!!! [${model}] path:`, path);
+							console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
 							resolve(false)
 							return
 						}
@@ -324,3 +326,5 @@ export const key_instances_builder = function(options){
 
 	return key
 };//end key_instances_builder
+
+

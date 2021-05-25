@@ -271,7 +271,7 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_REQUEST_CONFIG
+	* SET_request_config
 	*/
 	public function set_request_config($value) {
 

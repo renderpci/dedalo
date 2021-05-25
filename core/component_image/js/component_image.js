@@ -57,7 +57,7 @@ export const component_image = function(){
 	component_image.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_image.prototype.update_datum		= component_common.prototype.update_datum
 	component_image.prototype.change_value		= component_common.prototype.change_value
-	component_image.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_image.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
 	component_image.prototype.mini				= render_component_image.prototype.mini

@@ -23,6 +23,7 @@ include(DEDALO_CORE_PATH . '/common/class.locator.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
 include(DEDALO_CORE_PATH . '/common/class.layout_map.php');# new 12-06-2019
 include(DEDALO_CORE_PATH . '/common/class.dd_object.php'); # new 12-06-2019
+include(DEDALO_CORE_PATH . '/common/class.request_query_object.php'); # new 16-05-2021
 #include(DEDALO_CORE_PATH . '/common/class.relation.php');
 include(DEDALO_CORE_PATH . '/component_common/class.component_common.php');
 include(DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_common.php');

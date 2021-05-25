@@ -58,7 +58,7 @@ export const page = function () {
 * @param object options
 */
 page.prototype.init = async function(options) {
-
+	
 	const self = this
 
 	self.model			= 'page'
@@ -67,19 +67,13 @@ page.prototype.init = async function(options) {
 	self.node			= []
 	self.ar_instances	= []
 	self.context		= options.context // mixed items types like 'sections', 'tools'..
-	self.page_elements	= self.context ? self.context.page_elements : []
+	// self.dd_request		= self.context ? self.context.dd_request : []
 	self.status			= null
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
 
-	self.dd_request		= {
-		show : null
-	}
-
-
 	// launch preload all components files in parallel
 		//import('../../common/js/components_list.js')
-
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 		// user_action
@@ -117,20 +111,18 @@ page.prototype.init = async function(options) {
 				// // element context from api server result
 				// 	const page_element = api_response.result
 
-				const request_config = []
-				
-				// source
-					const source = JSON.parse(JSON.stringify(options))
-						  source.typo	 = "source"
-					request_config.push(source)				
 
+				// source
+					const rqo = JSON.parse(JSON.stringify(options))
+						  rqo.typo	 = "source"
+			
 				// sqo
 					if (user_action_options.sqo) {
-						request_config.push(user_action_options.sqo)
+						rqo.sqo = user_action_options.sqo
 					}				
 
 				// check response page element is valid for instantiate. Element instance loads the file					
-					const page_element_instance = await instantiate_page_element(self, request_config)
+					const page_element_instance = await instantiate_page_element(self, rqo)
 					if (!page_element_instance) {
 						console.error("error on get page_element_instance:", page_element_instance);
 						// loading
@@ -146,11 +138,11 @@ page.prototype.init = async function(options) {
 					// const base_models = ['section','tool','area']
 					const base_models = ['menu']
 					// const elements_to_stay 	= self.elements.filter(item => item.model!==page_element.model)
-					const elements_to_stay 	= self.page_elements.filter( el => el.filter(item => base_models.includes(item.model)).length > 0 )
+					const elements_to_stay 	= self.dd_request.filter( item => base_models.includes(item.model))
 
 					// add current source from options
-						elements_to_stay.push(request_config)
-						self.page_elements = elements_to_stay
+						elements_to_stay.push(rqo)
+						self.dd_request = elements_to_stay
 
 				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page					
 					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
@@ -229,7 +221,7 @@ page.prototype.init = async function(options) {
 
 	// status update
 		self.status = 'initiated'
-
+	
 
  	return true
 };//end init
@@ -240,7 +232,7 @@ page.prototype.init = async function(options) {
 * BUILD
 */
 page.prototype.build = async function() {
-
+	
 	const self = this
 
 	// instances (like section). Instances are returned init and builded
@@ -262,19 +254,17 @@ page.prototype.get_ar_instances = async function(){
 	const self = this
 
 	// instances
-		const page_elements = self.page_elements;
-
 		const ar_promises = []
 
-		const page_elements_length = page_elements.length
-		for (let i = 0; i < page_elements_length; i++) {
+		const context_length = self.context.length
+		for (let i = 0; i < context_length; i++) {
 
-			const request_config = page_elements[i]
+			const current_ddo = self.context[i]
 
 			ar_promises.push( new Promise(function(resolve){
 			
-				instantiate_page_element(self, request_config)
-				.then(function(current_instance){					
+				instantiate_page_element(self, current_ddo)
+				.then(function(current_instance){
 					// build (load data)
 					const autoload = current_instance.status==="initiated" // avoid reload menu data
 					current_instance.build(autoload)
@@ -285,10 +275,10 @@ page.prototype.get_ar_instances = async function(){
 			}))
 		};//end for (let i = 0; i < elements_length; i++)
 
-
-	await Promise.all(ar_promises).then((ar_instances) => {
-		self.ar_instances = ar_instances
-	});
+	// set on finish
+		await Promise.all(ar_promises).then((ar_instances) => {
+			self.ar_instances = ar_instances
+		});
 
 	return self.ar_instances
 };//end get_ar_instances
@@ -299,28 +289,28 @@ page.prototype.get_ar_instances = async function(){
 * INSTANTIATE_PAGE_ELEMENT
 * @return promise current_instance_promise
 */
-const instantiate_page_element = function(self, request_config) {
+const instantiate_page_element = function(self, ddo) {
 
-	const source = request_config.find(item => item.typo==='source')
-
-	const tipo			= source.tipo
-	const section_tipo	= source.section_tipo || tipo
-
-	const context		= {
-		model			: source.model,
-		tipo			: tipo,
-		request_config 	: request_config
+	const tipo			= ddo.tipo
+	const section_tipo	= ddo.section_tipo || tipo
+	const model			= ddo.model
+	const section_id	= ddo.section_id || null
+	const mode			= ddo.mode
+	const lang			= ddo.lang
+	const context		= ddo || {
+		model	: model,
+		tipo	: tipo,
+		ddo		: ddo
 	}
-
+	
 	// instance options
 		const instance_options = {
-			model			: source.model,
+			model			: model,
 			tipo			: tipo,
 			section_tipo	: section_tipo,
-			section_id		: source.section_id || null,
-			mode			: source.mode,
-			lang			: source.lang,
-			// datum		: source.datum || null
+			section_id		: section_id ,
+			mode			: mode,
+			lang			: lang,
 			context			: context
 		}
 

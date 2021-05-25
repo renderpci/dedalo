@@ -67,7 +67,7 @@ export const component_portal = function(){
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
 	component_portal.prototype.get_columns			= common.prototype.get_columns
-	component_portal.prototype.build_dd_request		= common.prototype.build_dd_request
+	component_portal.prototype.build_rqo		= common.prototype.build_rqo
 
 	// render
 	component_portal.prototype.mini					= render_component_portal.prototype.mini
@@ -145,7 +145,7 @@ component_portal.prototype.build = async function(autoload=false){
 		if (!self.datum) self.datum = {data:[],context:[]}
 
 	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
+		self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
 			// console.log("/// PORTAL BUILD self.dd_request.show:",self.dd_request.show);
 
 	// debug check

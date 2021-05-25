@@ -55,7 +55,7 @@ export const component_geolocation = function(){
 	component_geolocation.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_geolocation.prototype.update_datum		= component_common.prototype.update_datum
 	component_geolocation.prototype.change_value		= component_common.prototype.change_value
-	component_geolocation.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_geolocation.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
 	component_geolocation.prototype.mini				= render_component_geolocation.prototype.mini

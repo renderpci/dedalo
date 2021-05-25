@@ -26,57 +26,57 @@ class dd_manager {
 	* MANAGE_REQUEST
 	* @return mixed array|object
 	*/
-	public function manage_request( $options ) {
+	public function manage_request( $rqo ) {
 		$api_start_time=microtime(1);
 
 		// debug
-			// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
+			// dump($rqo, ' MANAGE_REQUEST rqo ++++++++++++++++++++++++++++++ '.to_string());
 			if(SHOW_DEBUG===true) {
-				$text			= 'API REQUEST ' . $options->action;
+				$text			= 'API REQUEST ' . $rqo->action;
 				$text_lenght	= strlen($text) +1;
 				$nchars			= 200;
-				$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
+				$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
 
 		// logged
-			if ($options->action!=='login' && $options->action!=='get_login' && login::is_logged()!==true) {
+			if ($rqo->action!=='login' && $rqo->action!=='get_login' && login::is_logged()!==true) {
 				$response = new stdClass();
 					$response->result	= false;
-					$response->msg		= 'Error. user is not logged ! [action:'.$options->action.']';
+					$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
 				return $response;
 			}
 
-		// options check
+		// rqo check
 			$dedalo_data = null;
-			if (!is_object($options) || !property_exists($options,'action')) {
-				debug_log(__METHOD__." Invalid action var (not found in options) ".to_string(), logger::ERROR);
+			if (!is_object($rqo) || !property_exists($rqo,'action')) {
+				debug_log(__METHOD__." Invalid action var (not found in rqo) ".to_string(), logger::ERROR);
 				return $dedalo_data;
 			}
 
 		// actions (dd_core_api | dd_utils_api)
-			$dd_api_type = $options->dd_api ?? 'dd_core_api';
+			$dd_api_type = $rqo->dd_api ?? 'dd_core_api';
 
 			switch ($dd_api_type) {
 				case 'dd_utils_api':
 					$dd_utils_api = new dd_utils_api();
-					if ( !method_exists($dd_utils_api, $options->action) ) {
+					if ( !method_exists($dd_utils_api, $rqo->action) ) {
 						$dedalo_data = new stdClass();
 							$dedalo_data->result	= false;
-							$dedalo_data->msg		= "Error. Undefined dd_utils_api method (action) : ".$options->action;
+							$dedalo_data->msg		= "Error. Undefined dd_utils_api method (action) : ".$rqo->action;
 					}else{
-						$dedalo_data = (object)dd_utils_api::{$options->action}( $options );
+						$dedalo_data = (object)dd_utils_api::{$rqo->action}( $rqo );
 					}
 					break;
 
 				case 'dd_core_api':
 					$dd_core_api = new dd_core_api();
-					if ( !method_exists($dd_core_api, $options->action) ) {
+					if ( !method_exists($dd_core_api, $rqo->action) ) {
 						$dedalo_data = new stdClass();
 							$dedalo_data->result	= false;
-							$dedalo_data->msg		= "Error. Undefined dd_core_api method (action) : ".$options->action;
+							$dedalo_data->msg		= "Error. Undefined dd_core_api method (action) : ".$rqo->action;
 					}else{
-						$dedalo_data = (object)dd_core_api::{$options->action}( $options );
+						$dedalo_data = (object)dd_core_api::{$rqo->action}( $rqo );
 					}
 					break;
 			}
@@ -87,7 +87,7 @@ class dd_manager {
 				$api_debug = new stdClass();
 					$api_debug->api_exec_time	= $total_time;
 					$api_debug->memory_usage	= dd_memory_usage();
-					// $api_debug->api_options	= $options;
+					// $api_debug->api_rqo	= $rqo;
 
 				if (isset($dedalo_data->debug)) {
 					// add to existing debug properties
@@ -98,12 +98,12 @@ class dd_manager {
 					// create new debug property
 					$dedalo_data->debug = $api_debug;
 				}
-				//dump($dedalo_data->debug, ' $dedalo_data->debug ++ '.to_string($options->action));
-				// debug_log("API REQUEST $total_time ".str_repeat(">", 70).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 171), logger::DEBUG);
-				// debug_log(json_encode($options, JSON_PRETTY_PRINT) .PHP_EOL. "API REQUEST $total_time ".str_repeat(">", 70), logger::DEBUG);
+				//dump($dedalo_data->debug, ' $dedalo_data->debug ++ '.to_string($rqo->action));
+				// debug_log("API REQUEST $total_time ".str_repeat(">", 70).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 171), logger::DEBUG);
+				// debug_log(json_encode($rqo, JSON_PRETTY_PRINT) .PHP_EOL. "API REQUEST $total_time ".str_repeat(">", 70), logger::DEBUG);
 				// $line = "API REQUEST total_time: $total_time ".str_repeat("<", 89); // 164
 				// debug_log($line, logger::DEBUG);
-				// if ($options->action==='read') {
+				// if ($rqo->action==='read') {
 				// 	dump($dedalo_data, ' dedalo_data ++ '.to_string());
 				// }
 			}

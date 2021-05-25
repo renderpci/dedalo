@@ -13,8 +13,8 @@
 	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$structure_context = $this->get_structure_context($permissions, $add_request_config=false);
-				$structure_context->request_config = [$this->get_source()];
+			$structure_context = $this->get_structure_context($permissions, $add_rqo=false);
+				$structure_context->request_config = $this->get_rqo();
 
 		$context[] = $structure_context;
 	}//end if($options->get_context===true)

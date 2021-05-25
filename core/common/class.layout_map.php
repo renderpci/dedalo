@@ -30,7 +30,7 @@ class layout_map {
 		$options = new stdClass();
 			$options->section_tipo			= null;
 			$options->tipo					= null;
-			$options->modo					= null;
+			$options->mode					= null;
 			$options->user_id				= navigator::get_user_id();
 			$options->view					= 'full';
 			$options->request_config_type	= 'show';
@@ -41,7 +41,7 @@ class layout_map {
 
 		// cache
 			static $resolved_layout_map = [];
-			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
+			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->mode .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
 			// $resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->request_config_type .'_'. $options->user_id ;
 			if (isset($resolved_layout_map[$resolved_key])) {
 			// if (isset($_SESSION['dedalo']['resolved_layout_map'][$resolved_key])) {
@@ -57,7 +57,7 @@ class layout_map {
 			}
 
 		// madatory
-			$ar_mandatory = ['section_tipo','tipo','modo'];
+			$ar_mandatory = ['section_tipo','tipo','mode'];
 			foreach ($ar_mandatory as $current_property) {
 				if (empty($options->{$current_property})) {
 					debug_log(__METHOD__." Error. property $current_property is mandatory for $options->tipo ". RecordObj_dd::get_termino_by_tipo($options->tipo,null,true) ." !".to_string(), logger::ERROR);
@@ -66,16 +66,22 @@ class layout_map {
 				}
 			}
 
-		// sort vars
+		// short vars
 			$section_tipo			= $options->section_tipo;
 			$tipo					= $options->tipo;
 			$model					= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$modo					= $options->modo;
+			$mode					= $options->mode;
 			$user_id				= $options->user_id;
 			$view					= $options->view;
 			$lang					= $options->lang ?? DEDALO_DATA_LANG;
 			$request_config_type	= $options->request_config_type;
 			$parent					= $tipo;
+			$ddo_key 				= $section_tipo.'_'.$tipo.'_'.$mode;
+		
+			// if($_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]){
+			// 	return  $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
+			// } 
+
 
 		// properties
 			// $RecordObj_dd	= new RecordObj_dd($tipo);
@@ -85,8 +91,16 @@ class layout_map {
 
 		// OLD
 			// 1. dd_core_api::$ar_dd_objects
-				if (isset(dd_core_api::$ar_dd_objects)) {
+				// if (isset(dd_core_api::$ar_dd_objects)) {
+				if($_SESSION['dedalo']['config']['ddo'][$section_tipo]){
 					# dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '.to_string($tipo));
+
+					$self_ar_dd_objects = [];
+					foreach ($_SESSION['dedalo']['config']['ddo'][$section_tipo] as $key => $curernt_ddo) {
+						# code...
+					}
+
+
 					// check found dd_objects of current portal
 					$self_ar_dd_objects = array_filter(dd_core_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
 						if($item->tipo===$tipo) return false;
@@ -128,7 +142,7 @@ class layout_map {
 			//
 			// // 2. search in user presets
 			// 	if (!isset($layout_map)) {
-			// 		$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);
+			// 		$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $mode, $view);
 			// 		if (!empty($user_preset)) {
 			// 			// layout_map
 			// 				// $layout_map = $user_preset;
@@ -166,7 +180,7 @@ class layout_map {
 
 					foreach ($item_request_config->section_tipo as $current_section_tipo) {
 						if ($options->add_section===true) {
-							$layout_map[] = layout_map::get_section_ddo($current_section_tipo, $modo, $lang);
+							$layout_map[] = layout_map::get_section_ddo($current_section_tipo, $mode, $lang);
 						}
 
 						// ddo_map
@@ -174,7 +188,7 @@ class layout_map {
 							if ($current_ddo_map!==false) {
 								foreach ((array)$current_ddo_map as $item) {
 									// $db = debug_backtrace();	dump($db, ' $db ++ '.to_string());
-									$current_mode = isset($item->mode) ? $item->mode : $modo;
+									$current_mode = isset($item->mode) ? $item->mode : $mode;
 
 									// if (isset($item->tipo) && is_string($item->tipo)) {
 									// 	$current_model = RecordObj_dd::get_modelo_name_by_tipo($item,true);

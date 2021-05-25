@@ -55,12 +55,8 @@ component_common.prototype.init = async function(options) {
 	self.events_tokens	= [] // array of events of current component
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 
-	// dd request
-	self.dd_request = {
-		show	: null,
-		search	: null,
-		select	: null
-	}
+	//rqo
+	self.rqo 			= {}
 
 	// pagination info
 	self.pagination = (self.data && self.data.pagination)
@@ -210,21 +206,21 @@ component_common.prototype.build = async function(autoload=false){
 	// load data on autoload true
 		if (autoload===true) {
 
-			// console.log("++++ self.dd_request.show:", JSON.parse(JSON.stringify(self.dd_request.show)));
+			// console.log("++++ self.rqo.show:", JSON.parse(JSON.stringify(self.rqo.show)));
 			// console.log("self.context:",self.context);
 			// alert("Loading component " + self.model + " - " + self.tipo);
 
-			// set dd_request if not exists
-				if(!self.dd_request.show){
-					self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+			// set rqo if not exists
+				if(!self.rqo.show){
+					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
 				}
 
-			// console.log("self.dd_request", self.dd_request);
-			// console.log("self.dd_request", !self.dd_request.show);
+			// console.log("self.rqo", self.rqo);
+			// console.log("self.rqo", !self.rqo.show);
 
 			// load data
 				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.read(self.dd_request.show)
+				const api_response 			= await current_data_manager.read(self.rqo.show)
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -238,9 +234,9 @@ component_common.prototype.build = async function(autoload=false){
 			// update instance properties from context
 				set_context_vars(self, self.context)
 
-			// dd_request. build again dd_request with updated request_config if exists
+			// rqo. build again rqo with updated request_config if exists
 				if (self.context.request_config) {
-					self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
 				}
 		}
 

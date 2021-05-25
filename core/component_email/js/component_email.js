@@ -52,7 +52,7 @@ export const component_email = function(){
 	component_email.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_email.prototype.update_datum		= component_common.prototype.update_datum
 	component_email.prototype.change_value		= component_common.prototype.change_value
-	component_email.prototype.build_dd_request	= common.prototype.build_dd_request
+	component_email.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
 	component_email.prototype.mini				= render_component_email.prototype.mini

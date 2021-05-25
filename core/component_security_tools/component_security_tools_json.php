@@ -14,16 +14,17 @@
 	$context = [];
 
 	if($options->get_context===true && $permissions>0){
+		$add_rqo = isset($properties->unique) ? true : false;
 		switch ($options->context_type) {
+
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$context[] = $this->get_structure_context_simple($permissions, $add_rqo);
 				break;
 
 			default:
-				$add_request_config = isset($properties->unique) ? true : false;
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $add_request_config);
+					$context[] = $this->get_structure_context($permissions, $add_rqo);
 
 				// add buttons
 					$context = array_merge($context, $this->get_structure_buttons($permissions));

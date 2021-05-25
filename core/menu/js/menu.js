@@ -4,7 +4,7 @@
 
 
 // imports
-	import {common} from '../../common/js/common.js'
+	import {common,create_source} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_menu} from './render_menu.js'
 
@@ -43,11 +43,11 @@ export const menu = function(){
 	menu.prototype.render			= common.prototype.render
 	menu.prototype.destroy			= common.prototype.destroy
 	menu.prototype.refresh			= common.prototype.refresh
-	menu.prototype.build_dd_request	= common.prototype.build_dd_request
+	// menu.prototype.create_source	= common.prototype.create_source
 
 	// render
-	menu.prototype.list				= render_menu.prototype.list
-	menu.prototype.edit				= render_menu.prototype.edit
+	menu.prototype.list			= render_menu.prototype.list
+	menu.prototype.edit			= render_menu.prototype.edit
 
 
 
@@ -71,10 +71,6 @@ menu.prototype.init = function(options) {
 	self.data			= options.data
 	self.events_tokens	= []
 
-	self.dd_request = {
-		show : null
-	}
-
 	// status update
 		self.status = 'initiated'
 
@@ -85,7 +81,9 @@ menu.prototype.init = function(options) {
 
 /**
 * BUILD
-* @return bool true
+* @param bool autoload
+* @return promise
+* 	resolve bool true
 */
 menu.prototype.build = async function(autoload=true){
 	const t0 = performance.now()
@@ -95,18 +93,20 @@ menu.prototype.build = async function(autoload=true){
 	// status update
 		self.status = 'building'
 
-		// set dd_request
-			self.request_config		= self.context.request_config
-			self.dd_request.show	= self.build_dd_request('show', self.request_config, 'search')
-
 	if (autoload===true) {
 
-		// load data
-			const current_data_manager = new data_manager()
+		// rqo build
+			const rqo = {
+				action : 'get_menu',
+				dd_api : 'dd_utils_api',
+				source : create_source(self, null)
+			}
 
-		// get context and data
-			const api_response = await current_data_manager.get_menu(self.dd_request.show)
-				// console.log("menu build api_response", api_response);
+		// load data. get context and data
+			const current_data_manager	= new data_manager()
+			const api_response			= await current_data_manager.request({
+				body : rqo
+			})
 
 		// set the result to the datum
 			self.datum = api_response.result
@@ -119,7 +119,7 @@ menu.prototype.build = async function(autoload=true){
 	// debug
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			console.log("__Time to build [autoload:"+autoload+"]", self.model, " ms:", performance.now()-t0);
 		}
 
 	// status update
@@ -128,3 +128,5 @@ menu.prototype.build = async function(autoload=true){
 
 	return true
 };//end build
+
+

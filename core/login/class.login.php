@@ -1167,9 +1167,9 @@ class login extends common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=0, $sqo_object=false) {
+	public function get_structure_context($permissions=1, $add_rqo=false) {
 
-		// sort vars
+		// short vars
 			$model 		  = 'login';
 			$tipo 		  = $this->get_tipo();
 			$translatable = false;
@@ -1185,59 +1185,56 @@ class login extends common {
 			$properties->login_items = [];
 
 			// login_items
-				$childrens = RecordObj_dd::get_ar_childrens($tipo);
-
-				foreach ($childrens as $children_tipo) {
-
+				$children = RecordObj_dd::get_ar_childrens($tipo);
+				foreach ($children as $children_tipo) {
 					$item = (object)[
-						'tipo'   => $children_tipo,
-						'model'  => RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true),
-						'label'  => RecordObj_dd::get_termino_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
+						'tipo'	=> $children_tipo,
+						'model'	=> RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true),
+						'label'	=> RecordObj_dd::get_termino_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
 					];
 					$properties->login_items[] = $item;
 				}
 
-
 		// Version : Dedalo version info
 			$properties->info   = [];
 			$properties->info[] = [
-				'type' 	=> 'dedalo_entity',
-				'label' => 'Dédalo entity',
-				'value' => DEDALO_ENTITY
+				'type'	=> 'dedalo_entity',
+				'label'	=> 'Dédalo entity',
+				'value'	=> DEDALO_ENTITY
 			];
 			$properties->info[] = [
-				'type' 	=> 'version',
-				'label' => 'Dédalo version',
-				'value' => DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
+				'type'	=> 'version',
+				'label'	=> 'Dédalo version',
+				'value'	=> DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
 			];
 			$properties->info[] = [
-				'type' 	=> 'db_user',
-				'label' => 'DB user',
-				'value' => (DEDALO_ENTITY==='development')
+				'type'	=> 'db_user',
+				'label'	=> 'DB user',
+				'value'	=> (DEDALO_ENTITY==='development')
 					? DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN
 					: ''
 			];
 			$properties->info[] = [
-				'type' 	=> 'db_user',
-				'label' => 'DD version',
-				'value' => RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO)
+				'type'	=> 'db_user',
+				'label'	=> 'DD version',
+				'value'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO)
 			];
 			$properties->info[] = [
-				'type' 	=> 'db_user',
-				'label' => 'DB info',
-				'value' => (DEVELOPMENT_SERVER===true)
+				'type'	=> 'db_user',
+				'label'	=> 'DB info',
+				'value'	=> (DEVELOPMENT_SERVER===true)
 					? DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
 					: ''
 			];
 
 		// dd_object
 			$dd_object = new dd_object((object)[
-				'label' 		=> $label, // *
-				'tipo' 			=> $tipo,
-				'model' 		=> $model, // *
-				'lang' 			=> $lang,
-				'mode' 			=> $mode,
-				'properties' 	=> $properties
+				'label'			=> $label,
+				'tipo'			=> $tipo,
+				'model'			=> $model,
+				'lang'			=> $lang,
+				'mode'			=> $mode,
+				'properties'	=> $properties
 			]);
 
 
