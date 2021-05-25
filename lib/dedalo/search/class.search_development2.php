@@ -1783,7 +1783,7 @@ class search_development2 {
 						$table_alias= $this->get_table_alias_from_path($path);
 						$selector 	= implode(',', $order_obj->component_path);
 						$alias 		= $component_tipo . '_order';
-						if ($type==='integer') {
+						if ($type==='integer' || 'number') {
 							$base 	= $table_alias . '.datos#>\'{'.$selector.'}\'';
 						}else{
 							$base 	= $table_alias . '.datos#>>\'{'.$selector.'}\'';
@@ -1796,7 +1796,12 @@ class search_development2 {
 
 						// $line = $alias . ' ' . $direction;
 						// reduce blank records noise
-						$line = 'NULLIF('.$alias.', \'\') '.$direction.' NULLS LAST';
+						if ($type==='integer' || 'number') {
+							$line = $alias.' '.$direction.' NULLS LAST';
+						}else{
+							$line = 'NULLIF('.$alias.', \'\') '.$direction.' NULLS LAST';
+						}
+						
 						
 						// debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);
 
