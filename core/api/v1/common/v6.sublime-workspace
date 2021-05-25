@@ -1,0 +1,1728 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"cu",
+				"current_value"
+			],
+			[
+				"chang",
+				"changed_data"
+			],
+			[
+				"curre",
+				"current_layer"
+			],
+			[
+				"get_file",
+				"get_file_path"
+			],
+			[
+				"file",
+				"file_path"
+			],
+			[
+				"fil",
+				"file_path"
+			],
+			[
+				"fi",
+				"file_path"
+			],
+			[
+				"patter",
+				"pattern_svg"
+			],
+			[
+				"sv",
+				"svg_replace"
+			],
+			[
+				"crea",
+				"createElement"
+			],
+			[
+				"do",
+				"document"
+			],
+			[
+				"clo",
+				"cloned_text"
+			],
+			[
+				"pa",
+				"pattern_draw"
+			],
+			[
+				"new",
+				"new_data"
+			],
+			[
+				"print",
+				"print_r"
+			],
+			[
+				"comp",
+				"component_tipo"
+			],
+			[
+				"com",
+				"component"
+			],
+			[
+				"jso",
+				"json_decode"
+			],
+			[
+				"reg",
+				"reg_ex"
+			],
+			[
+				"string",
+				"string_value"
+			],
+			[
+				"i",
+				"image"
+			],
+			[
+				"dato",
+				"dato_unchanged"
+			],
+			[
+				"layer",
+				"layer_item"
+			],
+			[
+				"array_fil",
+				"array_filter"
+			],
+			[
+				"ima",
+				"image_dato"
+			],
+			[
+				"getmo",
+				"get_modelo_name_by_tipo\tget_modelo_name"
+			],
+			[
+				"record",
+				"RecordObj_dd"
+			],
+			[
+				"rast",
+				"raster_layer"
+			],
+			[
+				"cla",
+				"classList"
+			],
+			[
+				"loa",
+				"load_layer"
+			],
+			[
+				"sca",
+				"scale"
+			],
+			[
+				"sc",
+				"scaling"
+			],
+			[
+				"act",
+				"activeLayer"
+			],
+			[
+				"ra",
+				"raster"
+			],
+			[
+				"full",
+				"fullscreen"
+			],
+			[
+				"del",
+				"delta_y"
+			],
+			[
+				"main",
+				"main_area"
+			],
+			[
+				"pro",
+				"project"
+			],
+			[
+				"rat",
+				"ratio_layer"
+			],
+			[
+				"for",
+				"foreach\tforeach …"
+			],
+			[
+				"svg",
+				"svg_file_data"
+			],
+			[
+				"unse",
+				"unset"
+			],
+			[
+				"is",
+				"isset"
+			],
+			[
+				"img",
+				"img_src"
+			],
+			[
+				"source",
+				"source_quality"
+			],
+			[
+				"sgv",
+				"svg_file"
+			],
+			[
+				"ratio",
+				"ratio_canvas"
+			],
+			[
+				"ca",
+				"canvas_node"
+			],
+			[
+				"path",
+				"path"
+			],
+			[
+				"firs",
+				"firstChild"
+			],
+			[
+				"laye",
+				"layers"
+			],
+			[
+				"ratt",
+				"ratio_delta"
+			],
+			[
+				"selec",
+				"selection_rectangle"
+			],
+			[
+				"sele",
+				"selection_rectangle"
+			],
+			[
+				"ar_la",
+				"ar_layers"
+			],
+			[
+				"ar",
+				"ar_layer_loaded"
+			],
+			[
+				"activel",
+				"active_layer"
+			],
+			[
+				"selectedC",
+				"selectedColor"
+			],
+			[
+				"trasn",
+				"transform"
+			],
+			[
+				"sel",
+				"selectionRectangle"
+			],
+			[
+				"ac",
+				"activeLayer"
+			],
+			[
+				"active",
+				"activeElement"
+			],
+			[
+				"get",
+				"get_lib_data"
+			],
+			[
+				"vector",
+				"vector_editor"
+			],
+			[
+				"moda",
+				"modal_container"
+			],
+			[
+				"call",
+				"caller_element"
+			],
+			[
+				"data",
+				"dataset"
+			],
+			[
+				"mou",
+				"mouseup"
+			],
+			[
+				"option",
+				"options"
+			],
+			[
+				"dia",
+				"dialog_options"
+			],
+			[
+				"use",
+				"user_layer_name"
+			],
+			[
+				"vie",
+				"viewed_layer"
+			],
+			[
+				"activ",
+				"activate"
+			],
+			[
+				"la",
+				"layer_id"
+			],
+			[
+				"a",
+				"active_layer"
+			],
+			[
+				"ma",
+				"margin\tproperty"
+			],
+			[
+				"con",
+				"content\tproperty"
+			],
+			[
+				"c",
+				"center\talign-items"
+			],
+			[
+				"d",
+				"display\tproperty"
+			],
+			[
+				"active_",
+				"active_layer"
+			],
+			[
+				"li",
+				"lib_data"
+			],
+			[
+				"layer_",
+				"layer_id"
+			],
+			[
+				"cah",
+				"changed_data"
+			],
+			[
+				"LAYER",
+				"Layer"
+			],
+			[
+				"ne",
+				"new_data_value"
+			],
+			[
+				"wid",
+				"width\tproperty"
+			],
+			[
+				"sl",
+				"scale"
+			],
+			[
+				"b",
+				"bounds"
+			],
+			[
+				"wi",
+				"width"
+			],
+			[
+				"main_",
+				"main_layer"
+			],
+			[
+				"tr",
+				"translate"
+			],
+			[
+				"s",
+				"scaling"
+			],
+			[
+				"l",
+				"layer"
+			],
+			[
+				"cen",
+				"center_x"
+			],
+			[
+				"ce",
+				"center_x"
+			],
+			[
+				"view",
+				"view_height"
+			],
+			[
+				"can",
+				"canvas_h"
+			],
+			[
+				"vi",
+				"view_ratio"
+			],
+			[
+				"text-a",
+				"text-align\tproperty"
+			],
+			[
+				"back",
+				"background-color"
+			],
+			[
+				"scla",
+				"scaling"
+			],
+			[
+				"pape",
+				"paper_h"
+			],
+			[
+				"cnete",
+				"center_y"
+			],
+			[
+				"co",
+				"console\tconsole_log"
+			],
+			[
+				"f",
+				"for\tfor (…) {…}"
+			],
+			[
+				"col",
+				"color_picker"
+			],
+			[
+				"bu",
+				"button_color_picker"
+			],
+			[
+				"vect",
+				"vector_editor"
+			],
+			[
+				"max",
+				"max-height\tproperty"
+			],
+			[
+				"se",
+				"self"
+			],
+			[
+				"cent",
+				"center_x"
+			],
+			[
+				"clas",
+				"classList"
+			],
+			[
+				"proto",
+				"prototype"
+			],
+			[
+				"vec",
+				"vector_editor"
+			],
+			[
+				"h",
+				"height"
+			],
+			[
+				"re",
+				"return"
+			],
+			[
+				"init",
+				"init_canvas"
+			],
+			[
+				"tc",
+				"tc_tag"
+			],
+			[
+				"conten",
+				"content_data"
+			],
+			[
+				"conte",
+				"content_data"
+			],
+			[
+				"sect",
+				"section_tipo"
+			],
+			[
+				"type",
+				"typeof"
+			],
+			[
+				"tex",
+				"text_content"
+			],
+			[
+				"tar",
+				"target_section_tipo"
+			],
+			[
+				"fun",
+				"function"
+			],
+			[
+				"pag",
+				"page_element"
+			],
+			[
+				"are",
+				"area_ddo"
+			],
+			[
+				"DEDALO_DA",
+				"DEDALO_DATA_NOLAN"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "class.dd_core_api.php",
+			"settings":
+			{
+				"buffer_size": 34225,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 89.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"pull",
+				"git: pull"
+			],
+			[
+				"sta",
+				"git: status"
+			],
+			[
+				"pack",
+				"Preferences: GitSavvy Key Bindings"
+			],
+			[
+				"auto",
+				"AutoFoldCode: Clear All"
+			],
+			[
+				"contro",
+				"Package Control: Enable Package"
+			],
+			[
+				"control",
+				"Package Control: Enable Package"
+			],
+			[
+				"",
+				"Code Folding: Unfold All"
+			],
+			[
+				"Install Package Control",
+				"Package Control: Install Local Dependency"
+			],
+			[
+				" control se",
+				"Preferences: Package Control Settings – Default"
+			],
+			[
+				" control sett",
+				"Preferences: Package Control Settings – Default"
+			],
+			[
+				"pa",
+				"Package Control: Install Package"
+			],
+			[
+				"install",
+				"Package Control: Advanced Install Package"
+			],
+			[
+				"pack ins",
+				"Package Control: Install Package"
+			],
+			[
+				"package li",
+				"Package Control: List Packages"
+			],
+			[
+				"package in",
+				"Package Control: Install Package"
+			],
+			[
+				"st",
+				"git: status"
+			],
+			[
+				"stat",
+				"git: status"
+			],
+			[
+				"packag",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"pu",
+				"git: push to existing branch"
+			],
+			[
+				"com",
+				"git: compare current file against ..."
+			],
+			[
+				"ull",
+				"git: pull"
+			],
+			[
+				"ins",
+				"Package Control: Install Local Dependency"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"git reset",
+				"git: reset"
+			],
+			[
+				"s",
+				"Sort Lines"
+			],
+			[
+				"pul",
+				"git: pull"
+			],
+			[
+				"pus",
+				"git: push to branch name"
+			],
+			[
+				"git",
+				"git: push"
+			],
+			[
+				"sh",
+				"git: show current file at commit"
+			],
+			[
+				"tag",
+				"git: smart tag"
+			],
+			[
+				"git:ta",
+				"git: tags"
+			],
+			[
+				"edi",
+				"git: edit and stage diff"
+			],
+			[
+				"git ",
+				"git: status"
+			],
+			[
+				"Sta",
+				"git: status"
+			],
+			[
+				"show",
+				"git: show current file at commit"
+			],
+			[
+				"qui",
+				"git: quick commit"
+			],
+			[
+				"ignore",
+				"git: ignore current file"
+			],
+			[
+				"git pull",
+				"git: pull"
+			],
+			[
+				"git u",
+				"git: assume file unchanged"
+			],
+			[
+				"git st",
+				"git: status"
+			],
+			[
+				"q",
+				"git: quick commit"
+			],
+			[
+				"qu",
+				"git: quick commit"
+			],
+			[
+				"mer",
+				"git: merge"
+			],
+			[
+				"clon",
+				"git: clone"
+			],
+			[
+				"git p",
+				"git: push"
+			],
+			[
+				"git b",
+				"git: branch"
+			],
+			[
+				"git q",
+				"git: quick commit"
+			],
+			[
+				"git pu",
+				"git: push"
+			],
+			[
+				" qu",
+				"git: quick commit"
+			],
+			[
+				"git com",
+				"git: quick commit"
+			],
+			[
+				"git: b",
+				"git: branch"
+			],
+			[
+				"git:pu",
+				"git: push"
+			],
+			[
+				"git:qui",
+				"git: quick commit"
+			],
+			[
+				"git:b",
+				"git: branch"
+			],
+			[
+				"prefere",
+				"Preferences: GitSavvy Project Settings"
+			],
+			[
+				"git:s",
+				"git: status"
+			],
+			[
+				"git:co",
+				"git: commit"
+			],
+			[
+				"git:p",
+				"git: push"
+			],
+			[
+				"git:",
+				"git: pull"
+			],
+			[
+				"git:com",
+				"git: commit"
+			],
+			[
+				"git:q",
+				"git: quick commit"
+			],
+			[
+				"package less",
+				"Package Control: List Packages"
+			],
+			[
+				"packages",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"less",
+				"Set Syntax: Less"
+			],
+			[
+				"json",
+				"Pretty JSON: Format (Pretty Print) JSON"
+			],
+			[
+				"Package Control: ",
+				"Package Control: List Packages"
+			],
+			[
+				"update",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"upgr",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"cache",
+				"SublimeLinter: Clear Caches"
+			],
+			[
+				"up",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"PHP: Generate",
+				"PHP: Generate Getters"
+			],
+			[
+				"Snippet: ",
+				"Snippet: COOKIE['…']"
+			],
+			[
+				"upda",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"color",
+				"Package Control: Add Repository"
+			],
+			[
+				"Snippet: cons",
+				"Snippet: console.log"
+			],
+			[
+				"lint",
+				"SublimeLinter: Lint This View"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"set",
+				"HTML: Wrap Selection With Tag"
+			],
+			[
+				"Packa",
+				"Preferences: Browse Packages"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"semicolo",
+				"Snippet: Insert the MIT license DocBlock"
+			],
+			[
+				"conso",
+				"Set Syntax: R Console"
+			],
+			[
+				"consol",
+				"Set Syntax: R Console"
+			]
+		],
+		"width": 476.0
+	},
+	"console":
+	{
+		"height": 248.0,
+		"history":
+		[
+			"Install Package Control",
+			"import urllib.request,os,hashlib; h = '6f4c264a24d933ce70df5dedcf1dcaee' + 'ebe013ee18cced0ef93d5f746d80ef60'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)",
+			"clear",
+			"import urllib.request,os,hashlib; h = '6f4c264a24d933ce70df5dedcf1dcaee' + 'ebe013ee18cced0ef93d5f746d80ef60'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)",
+			"sublime.version()"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": true,
+		"side_bar_visible": false,
+		"status_bar_visible": true
+	},
+	"expanded_folders":
+	[
+	],
+	"file_history":
+	[
+		"/Users/render/Desktop/trabajos/dedalo/v6.sublime-project",
+		"/Users/render/Library/Caches/com.binarynights.ForkLift-3/FileCache/561CF05C-DF38-453F-9A90-B24D33AF6ACC/config4.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/services/service_tinymce/js/service_tinymce.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/publication/server_api/v1/common/class.web_data.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/publication/server_api/v1/common/class.video_view_data.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/publication/server_api/v1/common/class.free_node.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/dd/inc/btn.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/js/render_component_text_area.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/class.component_text_area.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/component_text_area_json.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_svg/class.component_svg.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/tag.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/js/tr.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/class.TR.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_tc/class.tool_tc.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/publication/server_api/v1/common/class.image.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_image/class.component_image.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/tool_lang_multi/trigger.tool_lang_multi.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/tool_lang/trigger.tool_lang.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_calculation/js/component_calculation.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_svg/component_svg.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/media_engine/class.ImageObj.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/base/update/updates.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/base/update/class.update.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_date/class.component_date.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/class.common.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/lib/tcpdf/include/tcpdf_images.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/js/component_text_area_OLD.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/class.dd_date.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_common/class.component_common.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/base/core_functions.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/config/version.inc",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_image/component_image_json.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_image/js/render_component_image.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_image/js/vector_editor.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_image/js/component_image.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/page/css/main.css",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/page/css/main.css.map",
+		"/Users/render/Desktop/trabajos/dedalo/private/config.inc",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/media_engine/class.MediaObj.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/js/event_manager.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/js/ui.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/js/dd-modal.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/js/component_text_area.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_image/js/crop.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/page/js/page.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/page/js/render_page.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_autocomplete/js/render_component_autocomplete.js",
+		"/Users/render/Library/Application Support/Sublime Text 3/Packages/User/Package Control.sublime-settings",
+		"/Users/render/Library/Application Support/Sublime Text 3/Packages/Package Control/Package Control.sublime-settings",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/js/data_manager.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_common/js/component_common.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/services/service_tinymce/js/dd-tiny.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_pdf/viewer/viewer.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_html_text/js/render_component_html_text.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/tool_upload/js/tool_upload.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/tool_upload/js/render_tool_upload.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/tool_upload/trigger.tool_upload.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_media_common/class.component_media_common.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_input_text/js/render_component_input_text.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_image/js/main_paper.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/page/css/layout/layout.less",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/lib/paper/dist/paper-full.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/section/js/section.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/services/service_autocomplete/js/service_autocomplete.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/lib/pdfjs/build/pdf.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_common/js/area_common.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_geolocation/js/component_geolocation.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_geolocation/js/component_geolocation_OLD.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/js/common.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/page/css/main.less",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/js/common_DES.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_av/js/component_av.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_av/js/render_component_av.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_text_area/js/mce_editor_OLD.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_av/js/component_av_OLD.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/media_engine/js/av_media_player_OLD.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/media_engine/js/av_media_player_commands_OLD.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_portal/css/component_portal.css",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_av/js/smpte_reference_DON'T USED.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/search/class.search.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/ts_object/js/ts_object.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/sections/class.sections.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/search/js/search.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/search/js/render_search.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_thesaurus/js/render_area_thesaurus.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_thesaurus/js/area_thesaurus.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/api/v1/common/class.dd_core_api.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_thesaurus/area_thesaurus_json.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_thesaurus/class.area_thesaurus.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_autocomplete/class.component_autocomplete.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/section/class.section.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_common/class.area_common.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_common/area_common.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/publication/server_api/v1/common/class.ts_term.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area/class.area.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_activity/class.area_activity.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_admin/class.area_admin.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_development/class.area_development.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_publication/class.area_publication.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_resource/class.area_resource.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_root/class.area_root.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_tool/class.area_tool.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/js/components_list.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/page/page.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/common/class.dd_object.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/area_thesaurus/css/area_thesaurus.less",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/section/section_json.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/sections/sections_json.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/lib/jsoneditor/dist/jsoneditor-minimalist.js",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_update_cache/class.tool_update_cache.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_replace_component_data/class.tool_replace_component_data.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_layout_print/class.tool_layout_print.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_import_zotero/class.tool_import_zotero.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_export/class.tool_export.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_administration/trigger.tool_administration.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_administration/html/navigate_records.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/tools/old/tool_add_component_data/class.tool_add_component_data.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/section_records/trigger.section_records.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/section_records/class.section_records.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/hierarchy/class.hierarchy.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/diffusion/diffusion_index_ts/class.diffusion_index_ts.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/diffusion/class.diffusion_rdf.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_relation_related/class.component_relation_related.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_relation_common/class.component_relation_common.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_portal/class.component_portal.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_filter/class.component_filter.php",
+		"/Users/render/Desktop/trabajos/dedalo/master_dedalo/core/component_calculation/class.component_calculation.php"
+	],
+	"find":
+	{
+		"height": 31.0
+	},
+	"find_in_files":
+	{
+		"height": 123.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "class.dd_core_api.php",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 34225,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								23745,
+								23745
+							]
+						],
+						"settings":
+						{
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/PHP/PHP.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 31.0
+	},
+	"input":
+	{
+		"height": 47.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.GitSavvy":
+	{
+		"height": 203.0
+	},
+	"output.SublimeLinter":
+	{
+		"height": 0.0
+	},
+	"output.SublimeLinter Messages":
+	{
+		"height": 120.0
+	},
+	"output.exec":
+	{
+		"height": 27.0
+	},
+	"output.find_results":
+	{
+		"height": 112.0
+	},
+	"output.mdpopups":
+	{
+		"height": 0.0
+	},
+	"output.show_commit_info":
+	{
+		"height": 382.0
+	},
+	"pinned_build_system": "",
+	"project": "/Users/render/Desktop/trabajos/dedalo/v6.sublime-project",
+	"replace":
+	{
+		"height": 58.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"class image",
+				"master_dedalo/core/component_image/class.component_image.php"
+			],
+			[
+				"config",
+				"private/config.inc"
+			],
+			[
+				"component image clas",
+				"master_dedalo/core/component_image/class.component_image.php"
+			],
+			[
+				"dd-",
+				"master_dedalo/core/common/js/dd-modal.js"
+			],
+			[
+				"render page",
+				"master_dedalo/core/page/js/render_page.js"
+			],
+			[
+				"page",
+				"master_dedalo/core/page/js/page.js"
+			],
+			[
+				"ui",
+				"master_dedalo/core/common/js/ui.js"
+			],
+			[
+				"data manager",
+				"master_dedalo/core/common/js/data_manager.js"
+			],
+			[
+				"layou",
+				"master_dedalo/core/page/css/layout/layout.less"
+			],
+			[
+				"pag",
+				"master_dedalo/core/page/js/page.js"
+			],
+			[
+				"common",
+				"master_dedalo/core/common/js/common.js"
+			],
+			[
+				"search clas",
+				"master_dedalo/core/search/class.search.php"
+			],
+			[
+				"class common",
+				"master_dedalo/core/common/class.common.php"
+			],
+			[
+				"component common clas",
+				"master_dedalo/core/component_common/class.component_common.php"
+			],
+			[
+				"class commo",
+				"master_dedalo/core/common/class.common.php"
+			],
+			[
+				"api core",
+				"master_dedalo/core/api/v1/common/class.dd_core_api.php"
+			],
+			[
+				"section class",
+				"master_dedalo/core/section/class.section.php"
+			],
+			[
+				"relation index cla",
+				"master_dedalo/core/component_relation_index/class.component_relation_index.php"
+			],
+			[
+				"relation in",
+				"master_dedalo/core/component_relation_index/component_relation_index.php"
+			],
+			[
+				"ui js",
+				"master_dedalo/core/common/js/ui.js"
+			],
+			[
+				"section js",
+				"master_dedalo/core/section/js/section.js"
+			],
+			[
+				"page js",
+				"master_dedalo/core/page/js/page.js"
+			],
+			[
+				"ts_obje",
+				"master_dedalo/core/ts_object/js/ts_object.js"
+			],
+			[
+				"recordo",
+				"master_dedalo/core/db/class.RecordObj_dd.php"
+			],
+			[
+				"",
+				"Find Results"
+			],
+			[
+				"layout",
+				"core/page/css/layout/layout.less"
+			],
+			[
+				"dd_ob",
+				"core/common/class.dd_object.php"
+			],
+			[
+				"common clas",
+				"core/common/class.common.php"
+			],
+			[
+				"data",
+				"core/common/js/data_manager.js"
+			],
+			[
+				"class.dd_core_api.php",
+				"core/api/v1/common/class.dd_core_api.php"
+			],
+			[
+				"common class",
+				"core/component_common/class.component_common.php"
+			],
+			[
+				"menu cla",
+				"core/menu/class.menu.php"
+			],
+			[
+				"loader class",
+				"core/base/class.loader.php"
+			],
+			[
+				"class filter",
+				"core/common/class.filter.php"
+			],
+			[
+				"data_m",
+				"core/common/js/data_manager.js"
+			],
+			[
+				"render text",
+				"lib/dedalo/component_text_area/js/render_component_text_area.js"
+			],
+			[
+				"section clas",
+				"lib/dedalo/section/class.section.php"
+			],
+			[
+				"tool lang js",
+				"lib/dedalo/tools/tool_lang/js/tool_lang.js"
+			],
+			[
+				"class.label.php",
+				"lib/dedalo_50/common/class.label.php"
+			],
+			[
+				"class.section.php",
+				"lib/dedalo/section/class.section.php"
+			],
+			[
+				"component_json.php",
+				"lib/dedalo/component_json/component_json.php"
+			],
+			[
+				"class.component_common.php",
+				"lib/dedalo/component_common/class.component_common.php"
+			],
+			[
+				"json componet class",
+				"lib/dedalo/component_json/class.component_json.php"
+			],
+			[
+				"component json",
+				"lib/dedalo/component_json/component_json.php"
+			],
+			[
+				"class checkbox",
+				"lib/dedalo/component_check_box/class.component_check_box.php"
+			],
+			[
+				"class web_data",
+				"lib/dedalo/publication/server_api/v1/common/class.web_data.php"
+			],
+			[
+				"ts_term",
+				"lib/dedalo/publication/server_api/v1/common/class.ts_term.php"
+			],
+			[
+				"class tools",
+				"lib/dedalo/common/class.tools.php"
+			],
+			[
+				"tools",
+				"lib/bootstrap/docs/_includes/getting-started/tools.html"
+			],
+			[
+				"time_machine_list",
+				"lib/dedalo/time_machine_list/class.time_machine_list.php"
+			],
+			[
+				"subtitles class",
+				"lib/dedalo_50/tools/tool_subtitles/class.subtitles.php"
+			],
+			[
+				"state_map",
+				"lib/dedalo_50/tools/tool_time_machine/html/acc/tool_time_machine_rows.phtml"
+			],
+			[
+				"relation class",
+				"lib/dedalo/common/class.relation.php"
+			],
+			[
+				"record class",
+				"lib/dedalo/section_records/record/class.record.php"
+			],
+			[
+				"record",
+				"lib/dedalo/section_records/record/record.php"
+			],
+			[
+				"operator",
+				"lib/dedalo/common/class.operator.php"
+			],
+			[
+				"menu",
+				"lib/dedalo/menu/menu.php"
+			],
+			[
+				"image class",
+				"lib/dedalo_50/publication/server_api/v1/common/class.image.php"
+			],
+			[
+				"onto",
+				"lib/dedalo/dd/class.ontology.php"
+			],
+			[
+				"dd_api",
+				"lib/dedalo/api/v1/common/class.dd_api.php"
+			],
+			[
+				"main.l",
+				"lib/dedalo/page/css/main.less"
+			],
+			[
+				"search js",
+				"lib/dedalo/search/js/search.js"
+			],
+			[
+				"class.component_input_text.php",
+				"lib/dedalo/component_input_text/class.component_input_text.php"
+			],
+			[
+				"search deve",
+				"lib/dedalo_50/search/class.search_development2.php"
+			],
+			[
+				"main",
+				"lib/dedalo/page/css/main.less"
+			],
+			[
+				"lay",
+				"lib/dedalo/page/css/layout/layout.less"
+			],
+			[
+				"search",
+				"lib/dedalo/search/css/search.less"
+			],
+			[
+				"layout less",
+				"lib/dedalo/page/css/layout/layout.less"
+			],
+			[
+				"class section",
+				"lib/dedalo/section/class.section.php"
+			],
+			[
+				"class common clas",
+				"lib/dedalo/common/class.common.php"
+			],
+			[
+				"search class",
+				"lib/dedalo/search/class.search.php"
+			],
+			[
+				"instances",
+				"lib/dedalo/common/js/instances.js"
+			],
+			[
+				"manager ",
+				"lib/dedalo/common/js/event_manager.js"
+			],
+			[
+				"data ma",
+				"lib/dedalo/common/js/data_manager.js"
+			],
+			[
+				"pagephp",
+				"lib/dedalo/page/page.php"
+			],
+			[
+				"paginator less",
+				"lib/dedalo/page/css/layout/paginator.less"
+			],
+			[
+				"class common ",
+				"lib/dedalo/common/class.common.php"
+			],
+			[
+				"common js",
+				"lib/dedalo/common/js/common.js"
+			],
+			[
+				"component list",
+				"lib/dedalo/common/js/components_list.js"
+			],
+			[
+				"menu clas",
+				"lib/dedalo/menu/class.menu.php"
+			],
+			[
+				"list compo",
+				"lib/dedalo/common/js/components_list.js"
+			],
+			[
+				"class menu",
+				"lib/dedalo/menu/class.menu.php"
+			],
+			[
+				"search 2",
+				"lib/dedalo/search/class.search_development2.php"
+			],
+			[
+				"class common php",
+				"lib/dedalo/common/class.common.php"
+			],
+			[
+				"class layou",
+				"lib/dedalo/common/class.layout_map.php"
+			],
+			[
+				"layout_map clas",
+				"lib/dedalo/common/class.layout_map.php"
+			],
+			[
+				"component common",
+				"lib/dedalo/component_common/class.component_common.php"
+			],
+			[
+				"sections json",
+				"lib/dedalo/sections/sections_json.php"
+			],
+			[
+				"layout_map ",
+				"lib/dedalo/common/class.layout_map.php"
+			],
+			[
+				"json autoco",
+				"lib/dedalo/component_autocomplete/component_autocomplete_json.php"
+			],
+			[
+				"class autocom",
+				"lib/dedalo/component_autocomplete/class.component_autocomplete.php"
+			],
+			[
+				"layout map class",
+				"lib/dedalo/common/class.layout_map.php"
+			],
+			[
+				"search_development2",
+				"lib/dedalo/search/class.search_development2.php"
+			],
+			[
+				"layout class",
+				"lib/dedalo/common/class.layout_map.php"
+			],
+			[
+				"class section id",
+				"lib/dedalo/component_section_id/class.component_section_id.php"
+			],
+			[
+				"search develop",
+				"lib/dedalo/search/class.search_development2.php"
+			],
+			[
+				"layout map",
+				"lib/dedalo/common/class.layout_map.php"
+			],
+			[
+				"recordob. ",
+				"lib/dedalo/db/class.RecordObj_dd.php"
+			],
+			[
+				"search devel",
+				"lib/dedalo/search/class.search_development2.php"
+			],
+			[
+				"dd_api.p",
+				"lib/dedalo/api/v1/common/class.dd_api.php"
+			],
+			[
+				"ui.",
+				"lib/dedalo/common/js/ui.js"
+			],
+			[
+				"event mana",
+				"lib/dedalo/common/js/event_manager.js"
+			],
+			[
+				"locator clas",
+				"master_dedalo/lib/dedalo/common/class.locator.php"
+			],
+			[
+				"recordobj",
+				"master_dedalo/lib/dedalo/db/class.RecordObj_dd.php"
+			],
+			[
+				"record.p",
+				"master_dedalo/lib/dedalo/section_records/record/record.php"
+			],
+			[
+				"confg",
+				"lib/dedalo/config/config4.php"
+			],
+			[
+				"dd_init_test.php",
+				"lib/dedalo/config/dd_init_test.php"
+			],
+			[
+				"ignore",
+				".gitignore"
+			],
+			[
+				"conf",
+				"lib/dedalo/config/config4_db.php"
+			],
+			[
+				"class.ts_object.php",
+				"lib/dedalo/ts_object/class.ts_object.php"
+			],
+			[
+				"sear develop",
+				"lib/dedalo/search/class.search_development2.php"
+			],
+			[
+				"component commom class",
+				"dedalo/component_common/class.component_common.php"
+			],
+			[
+				"ver",
+				"dedalo/config/version.inc"
+			],
+			[
+				"class.component_autocomplete.php",
+				"dedalo/component_autocomplete/class.component_autocomplete.php"
+			],
+			[
+				"search de",
+				"dedalo/search/class.search_development2.php"
+			],
+			[
+				"serv",
+				"dedalo/js/services/service_autocomplete.js"
+			],
+			[
+				"tipo",
+				"dedalo/config/dd_tipos.php"
+			],
+			[
+				"versi",
+				"dedalo/config/version.inc"
+			],
+			[
+				"upda",
+				"dedalo/tools/tool_administration/updates/updates.php"
+			],
+			[
+				"recordob",
+				"dedalo/db/class.RecordObj_dd.php"
+			],
+			[
+				"search develo",
+				"dedalo/search/class.search_development2.php"
+			],
+			[
+				"js component commo",
+				"dedalo/component_common/js/component_common.js"
+			],
+			[
+				"service",
+				"dedalo/js/services/service_autocomplete.js"
+			],
+			[
+				"core",
+				"dedalo/config/core_functions.php"
+			],
+			[
+				"ts_object clas",
+				"dedalo/ts_object/class.ts_object.php"
+			],
+			[
+				"component_relation_common",
+				"dedalo/component_relation_common/class.component_relation_common.php"
+			],
+			[
+				"verso",
+				"dedalo/config/version.inc"
+			],
+			[
+				"develo",
+				"dedalo/search/class.search_development2.php"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/Trabajos/Dedalo/site_dedalo_plataforma_40/acc/Dedalo4.sublime-project"
+			]
+		],
+		"width": 802.0
+	},
+	"select_symbol":
+	{
+		"height": 392.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"!=="
+			]
+		],
+		"width": 1612.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": false,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 356.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
