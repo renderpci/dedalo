@@ -569,7 +569,7 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 
 	const ddo_length 	= ddo_map.length
 	const ar_columns 	= []
-	// every ddo will be checked if it is a component_portal or if is the last compomnet in the chain
+	// every ddo will be checked if it is a component_portal or if is the last component in the chain
 	for (let i = 0; i < ddo_length; i++) {
 		const ar_sub_ddo 	= sub_ddo
 		const current_ddo 	= ddo_map[i]
@@ -581,8 +581,8 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 			: typeof current_ddo.f_path!=='undefined'
 				? current_ddo.f_path[current_ddo.f_path.length - 1]
 				: current_ddo
-		// get the ddo context of the compoment from the datum,
-		// is necesary the match with the caller_tipo if the section has a relation with itself
+		// get the ddo context of the component from the datum,
+		// It is necessary the match with the caller_tipo if the section has a relation with itself
 		// (the last component in the chain can had different parent, multiple portals can call same component)
 		const ddo = self.datum.context.find(item => item.tipo===current_tipo && item.parent===caller_tipo)
 		if (!ddo) {
