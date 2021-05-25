@@ -252,7 +252,7 @@ class tool_sort extends tool_common {
 						$search_query_object->full_count = count($dato) ?? false;
 
 					// limit
-						$search_query_object->limit = 100;
+						$search_query_object->limit = 1000;
 
 					#dump($search_query_object, ' search_query_object ++ '.to_string());
 
