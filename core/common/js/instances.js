@@ -229,35 +229,35 @@ export const get_all_instances = function() {
 */
 export const delete_instance = async function(options) {
 
-	/*
-		const delete_id = options.id
-		const found_instance_index = instances.findIndex(item => item.id === delete_id)
+	// DES
+		// const delete_id = options.id
+		// const found_instance_index = instances.findIndex(item => item.id === delete_id)
 
-		// let deleted = 0;
-		// if(found_instance_index){
-		// 	instances.splice(found_instance_index, 1)
-		// 	deleted++
+		// // let deleted = 0;
+		// // if(found_instance_index){
+		// // 	instances.splice(found_instance_index, 1)
+		// // 	deleted++
+		// // }
+
+		// const deleted = async (found_instance_index) => {
+		// 	if(found_instance_index!==-1){
+		// 		instances.splice(found_instance_index, 1)
+		// 		return true
+		// 	}
+		// 	return false
+		// }
+		// const delete_value = await deleted(found_instance_index)
+
+		// // debug
+		// if (delete_value!==true) {
+		// 	console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
 		// }
 
-		const deleted = async (found_instance_index) => {
-			if(found_instance_index!==-1){
-				instances.splice(found_instance_index, 1)
-				return true
-			}
-			return false
-		}
-		const delete_value = await deleted(found_instance_index)
+		// //console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
+		// //console.log(" ++++++++ instances:",instances)
 
-		// debug
-		if (delete_value!==true) {
-			console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
-		}
+		// return delete_value
 
-		//console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
-		//console.log(" ++++++++ instances:",instances)
-
-		return delete_value
-		*/
 
 	let deleted = 0;
 	function check_options(item, index) {
