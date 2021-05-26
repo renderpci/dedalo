@@ -2549,7 +2549,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component,
 .wrapper_tool .wrapper_component,
-.search_group .wrapper_component {
+.search_group .wrapper_component,
+.page .wrapper_component {
   margin: 0;
   padding: 0;
   display: flex;
@@ -2562,7 +2563,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .label,
 .wrapper_tool .wrapper_component > .label,
-.search_group .wrapper_component > .label {
+.search_group .wrapper_component > .label,
+.page .wrapper_component > .label {
   padding: 1em;
   flex: 1 1 100%;
   padding-bottom: 0;
@@ -2578,7 +2580,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .top,
 .wrapper_tool .wrapper_component > .top,
-.search_group .wrapper_component > .top {
+.search_group .wrapper_component > .top,
+.page .wrapper_component > .top {
   display: flex;
   flex: 0 1 100%;
   align-items: center;
@@ -2588,7 +2591,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .top > select.mono,
 .wrapper_tool .wrapper_component > .top > select.mono,
-.search_group .wrapper_component > .top > select.mono {
+.search_group .wrapper_component > .top > select.mono,
+.page .wrapper_component > .top > select.mono {
   background-color: transparent;
   outline: none;
   -webkit-appearance: none;
@@ -2601,7 +2605,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container,
 .wrapper_tool .wrapper_component > .buttons_container,
-.search_group .wrapper_component > .buttons_container {
+.search_group .wrapper_component > .buttons_container,
+.page .wrapper_component > .buttons_container {
   background-color: #f78a1c;
   display: none;
   flex: 0 1 1em;
@@ -2619,7 +2624,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor,
-.search_group .wrapper_component > .buttons_container .vector_editor {
+.search_group .wrapper_component > .buttons_container .vector_editor,
+.page .wrapper_component > .buttons_container .vector_editor {
   mask: url("../../themes/default/icons/vector_editor.svg");
   -webkit-mask: url("../../themes/default/icons/vector_editor.svg");
   mask-size: contain;
@@ -2631,12 +2637,14 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools > .button,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools > .button,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools > .button {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools > .button,
+.page .wrapper_component > .buttons_container .vector_editor_tools > .button {
   background-color: #ffffff;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector {
   float: right;
   width: 11em;
   background-color: #f78a1c;
@@ -2648,19 +2656,22 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button {
   margin: 0.5em;
   float: none;
   display: inline-block;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add {
   float: left;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul {
   text-align: left;
   clear: both;
   max-height: 200px;
@@ -2668,7 +2679,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li {
   display: grid;
   grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
   height: 30px;
@@ -2681,25 +2693,29 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover {
   background-color: #f78a1c;
   color: #ffffff;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer {
   background-color: #ffffff;
   color: initial;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active {
   background-color: #f78a1c;
   color: #000;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active {
   background-color: #e6e6e6;
   color: #000;
   font-weight: bold;
@@ -2707,42 +2723,49 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon {
   background-color: black;
   justify-self: center;
   opacity: 0.2;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover {
   opacity: 0.5 !important;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active {
   opacity: 1;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete {
   background-color: black;
   justify-self: center;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color {
   width: 12px;
   height: 12px;
   border-radius: 12px;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child,
+.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child {
   border-top: 0.5px solid #777;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector,
+.page .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector {
   text-align: center;
   border-radius: 2px;
   width: calc(100% - 0.6em);
@@ -2752,12 +2775,14 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
+.page .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active {
   background-color: #FFFFFF;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .pointer,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .pointer,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer,
+.page .wrapper_component > .buttons_container .vector_editor_tools .pointer {
   mask: url("../../themes/default/icons/pointer.svg");
   -webkit-mask: url("../../themes/default/icons/pointer.svg");
   mask-size: contain;
@@ -2769,7 +2794,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt,
+.page .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt {
   mask: url("../../themes/default/icons/pointer_alt.svg");
   -webkit-mask: url("../../themes/default/icons/pointer_alt.svg");
   mask-size: contain;
@@ -2781,7 +2807,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .transform,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .transform,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .transform {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .transform,
+.page .wrapper_component > .buttons_container .vector_editor_tools .transform {
   mask: url("../../themes/default/icons/pointer.svg");
   -webkit-mask: url("../../themes/default/icons/pointer.svg");
   mask-size: contain;
@@ -2793,7 +2820,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .rectangle,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .rectangle,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .rectangle {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .rectangle,
+.page .wrapper_component > .buttons_container .vector_editor_tools .rectangle {
   mask: url("../../themes/default/icons/rectangle.svg");
   -webkit-mask: url("../../themes/default/icons/rectangle.svg");
   mask-size: contain;
@@ -2805,7 +2833,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .circle,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .circle,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .circle {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .circle,
+.page .wrapper_component > .buttons_container .vector_editor_tools .circle {
   mask: url("../../themes/default/icons/circle.svg");
   -webkit-mask: url("../../themes/default/icons/circle.svg");
   mask-size: contain;
@@ -2817,7 +2846,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .vector,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .vector,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector,
+.page .wrapper_component > .buttons_container .vector_editor_tools .vector {
   mask: url("../../themes/default/icons/vector.svg");
   -webkit-mask: url("../../themes/default/icons/vector.svg");
   mask-size: contain;
@@ -2829,7 +2859,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .zoom,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .zoom,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .zoom {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .zoom,
+.page .wrapper_component > .buttons_container .vector_editor_tools .zoom {
   mask: url("../../themes/default/icons/find.svg");
   -webkit-mask: url("../../themes/default/icons/find.svg");
   mask-size: contain;
@@ -2841,7 +2872,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .move,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .move,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .move {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .move,
+.page .wrapper_component > .buttons_container .vector_editor_tools .move {
   mask: url("../../themes/default/icons/hand.svg");
   -webkit-mask: url("../../themes/default/icons/hand.svg");
   mask-size: contain;
@@ -2853,28 +2885,33 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker,
+.page .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker {
   border: 0.5px solid #3F3F3F;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner,
+.page .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner {
   float: right;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active,
+.page .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active {
   opacity: 1;
   background-color: black;
 }
 .section_record .wrapper_component > .paginator,
 .wrapper_tool .wrapper_component > .paginator,
-.search_group .wrapper_component > .paginator {
+.search_group .wrapper_component > .paginator,
+.page .wrapper_component > .paginator {
   padding: 0;
 }
 .section_record .wrapper_component > .content_data,
 .wrapper_tool .wrapper_component > .content_data,
-.search_group .wrapper_component > .content_data {
+.search_group .wrapper_component > .content_data,
+.page .wrapper_component > .content_data {
   display: flex;
   flex: 1 1 100%;
   flex-wrap: wrap;
@@ -2885,18 +2922,21 @@ li .section_record.list .id_column {
 @media screen and (max-width: 960px) {
   .section_record .wrapper_component > .content_data,
   .wrapper_tool .wrapper_component > .content_data,
-  .search_group .wrapper_component > .content_data {
+  .search_group .wrapper_component > .content_data,
+  .page .wrapper_component > .content_data {
     flex: 1 1 100%;
   }
 }
 .section_record .wrapper_component > .content_data > .q_operator,
 .wrapper_tool .wrapper_component > .content_data > .q_operator,
-.search_group .wrapper_component > .content_data > .q_operator {
+.search_group .wrapper_component > .content_data > .q_operator,
+.page .wrapper_component > .content_data > .q_operator {
   width: 3em;
 }
 .section_record .wrapper_component > .content_data > .close,
 .wrapper_tool .wrapper_component > .content_data > .close,
-.search_group .wrapper_component > .content_data > .close {
+.search_group .wrapper_component > .content_data > .close,
+.page .wrapper_component > .content_data > .close {
   position: absolute;
   top: -0.1em;
   right: -0.4em;
@@ -2904,7 +2944,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .content_data.vertical,
 .wrapper_tool .wrapper_component > .content_data.vertical,
-.search_group .wrapper_component > .content_data.vertical {
+.search_group .wrapper_component > .content_data.vertical,
+.page .wrapper_component > .content_data.vertical {
   flex: 1 1 100%;
   background-color: #a1cccc5c;
   justify-content: center;
@@ -2912,7 +2953,8 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .content_data > .inputs_container,
 .wrapper_tool .wrapper_component > .content_data > .inputs_container,
-.search_group .wrapper_component > .content_data > .inputs_container {
+.search_group .wrapper_component > .content_data > .inputs_container,
+.page .wrapper_component > .content_data > .inputs_container {
   flex: 1 1 auto;
 }
 @media screen and (max-width: 1280px) {

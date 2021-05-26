@@ -67,7 +67,7 @@ page.prototype.init = async function(options) {
 	self.node			= []
 	self.ar_instances	= []
 	self.context		= options.context // mixed items types like 'sections', 'tools'..
-	// self.dd_request		= self.context ? self.context.dd_request : []
+	// self.dd_request	= self.context ? self.context.dd_request : []
 	self.status			= null
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
@@ -297,11 +297,7 @@ const instantiate_page_element = function(self, ddo) {
 	const section_id	= ddo.section_id || null
 	const mode			= ddo.mode
 	const lang			= ddo.lang
-	const context		= ddo || {
-		model	: model,
-		tipo	: tipo,
-		ddo		: ddo
-	}
+	const context		= ddo
 	
 	// instance options
 		const instance_options = {
@@ -329,52 +325,44 @@ const instantiate_page_element = function(self, ddo) {
 
 
 /**
-* BUILD_ELEMENT
+* USER_ACTION
 */
-page.prototype.build_element = async function(){
+	// const user_action = async function(self, options) {
+
+	// 	const current_data_manager = new data_manager()
+	// 	const api_response = await current_data_manager.request({
+	// 		body : {
+	// 			action 		: 'get_element',
+	// 			options 	: options
+	// 		}
+	// 	})
+
+	// 	// elements to stay
+	// 		const api_element 		= api_response.result
+	// 		const elements_to_stay 	= self.elements.filter(item => item.model!==api_element.model)
+	// 			  elements_to_stay.push(api_element)
+	// 		self.elements = elements_to_stay
+
+	// 	// instances. remove all other instances but current an refresh page
+	// 		const instances_to_destroy = self.ar_instances.filter(item => item.model!==api_element.model)
+	// 		for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
+	// 			instances_to_destroy[i].destroyable = false
+	// 		}
+	// 		self.refresh()
+
+	// 	// url history track
+	// 		if(options.event_in_history===true) return;
+
+	// 		const var_uri = Object.entries(options).map(([key, val]) => `${key}=${val}`).join('&');
+
+	// 		const uri_options	= JSON.parse(JSON.stringify(options))
+	// 		const state 		= {options : uri_options}
+	// 		const title 		= ''
+	// 		const url 			= "?"+var_uri //window.location.href
+
+	// 		history.pushState(state, title, url)
+
+	// 	return true
+	// };//end user_action
 
 
-}//build_element
-
-
-
-// /**
-// * USER_ACTION
-// */
-// const user_action = async function(self, options) {
-
-// 	const current_data_manager = new data_manager()
-// 	const api_response = await current_data_manager.request({
-// 		body : {
-// 			action 		: 'get_element',
-// 			options 	: options
-// 		}
-// 	})
-
-// 	// elements to stay
-// 		const api_element 		= api_response.result
-// 		const elements_to_stay 	= self.elements.filter(item => item.model!==api_element.model)
-// 			  elements_to_stay.push(api_element)
-// 		self.elements = elements_to_stay
-
-// 	// instances. remove all other instances but current an refresh page
-// 		const instances_to_destroy = self.ar_instances.filter(item => item.model!==api_element.model)
-// 		for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
-// 			instances_to_destroy[i].destroyable = false
-// 		}
-// 		self.refresh()
-
-// 	// url history track
-// 		if(options.event_in_history===true) return;
-
-// 		const var_uri = Object.entries(options).map(([key, val]) => `${key}=${val}`).join('&');
-
-// 		const uri_options	= JSON.parse(JSON.stringify(options))
-// 		const state 		= {options : uri_options}
-// 		const title 		= ''
-// 		const url 			= "?"+var_uri //window.location.href
-
-// 		history.pushState(state, title, url)
-
-// 	return true
-// };//end user_action

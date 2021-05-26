@@ -168,7 +168,7 @@ section.prototype.build = async function(autoload=false) {
 			// rqo build
 			const rqo = self.build_rqo('show', self.context.request_config, 'search')
 			rqo.action = 'read'
-				console.log("rqo:",rqo);
+			
 
 			// get context and data
 				const current_data_manager	= new data_manager()

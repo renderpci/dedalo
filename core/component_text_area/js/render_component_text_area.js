@@ -20,6 +20,7 @@ export const render_component_text_area = function() {
 };//end render_component_text_area
 
 
+
 /**
 * MINI
 * Render node to be used by service autocomplete or any datalist
@@ -92,7 +93,9 @@ render_component_text_area.prototype.edit = async function(options={render_level
 	const self = this
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		self.data.value = (self.data && self.data.value.length>0)
+			? self.data.value
+			: [null]
 
 	// render_level
 		const render_level = options.render_level

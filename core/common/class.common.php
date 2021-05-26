@@ -1715,9 +1715,9 @@ abstract class common {
 		// already_calculated
 			static $ar_subcontext_calculated = [];
 
-		$request_config = $this->request_config ?? null;
-
-		if(!$request_config) return null;
+		// request_config
+			$request_config = $this->request_config ?? null;
+			if(empty($request_config)) return null;
 
 		$request_ddo_value = $request_config->show->ddo_map;
 	
