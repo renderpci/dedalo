@@ -211,16 +211,22 @@ component_common.prototype.build = async function(autoload=false){
 			// alert("Loading component " + self.model + " - " + self.tipo);
 
 			// set rqo if not exists
-				if(!self.rqo.show){
-					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
-				}
-
-			// console.log("self.rqo", self.rqo);
+				// if(!self.rqo.show){
+				// 	const request_config = self.context.request_config || null
+				// 	self.rqo.show = self.build_rqo('show', request_config, 'get_data')
+				// }
+				const request_config	= self.context.request_config || null
+				const rqo				= self.build_rqo('show', request_config, 'get_data')
+				rqo.action				= 'read'
+				console.log("++++++ rqo", rqo);
 			// console.log("self.rqo", !self.rqo.show);
 
 			// load data
-				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.read(self.rqo.show)
+				const current_data_manager	= new data_manager()
+				// const api_response		= await current_data_manager.read(self.rqo.show)
+				const api_response			= await current_data_manager.request({
+					body : rqo
+				})
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -228,11 +234,14 @@ component_common.prototype.build = async function(autoload=false){
 				}
 
 			// set context and data to current instance
-				self.update_datum(api_response.result.data)
-				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				// if (api_response.result) {
 
-			// update instance properties from context
-				set_context_vars(self, self.context)
+					self.update_datum(api_response.result.data)
+					self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+
+					// update instance properties from context
+						set_context_vars(self, self.context)
+				// }
 
 			// rqo. build again rqo with updated request_config if exists
 				if (self.context.request_config) {
