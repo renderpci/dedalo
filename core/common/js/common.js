@@ -412,7 +412,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 * @return object source
 */
 export const create_source = function (self, action) {
-
+	
 	const source = { // source object
 		typo			: "source",
 		action			: action,
@@ -695,7 +695,7 @@ common.prototype.build_rqo = function(dd_request_type, request_config, action){
 	switch (dd_request_type) {
 
 		case 'show':
-			return build_request_show(self, request_config, action)
+			return build_rqo_show(self, request_config, action)
 
 		case 'search':
 			return build_request_search(self, request_config, action)
@@ -711,23 +711,35 @@ common.prototype.build_rqo = function(dd_request_type, request_config, action){
 
 
 /**
-* BUILD_REQUEST_SHOW
-* @return array dd_request
+* BUILD_RQO_SHOW
+* @return object rqo
 */
-const build_request_show = function(self, request_config, action){
+const build_rqo_show = function(self, request_config, action){
 	
 	const source	= create_source(self, action);
-	const show		= typeof self.context.request_config[0].show!=='undefined'
+	const show		= self.context.request_config && typeof self.context.request_config[0].show!=='undefined'
 		? self.context.request_config[0].show
-		: null 
+		: null
+	const sqo		= self.context.request_config && typeof self.context.request_config[0].sqo!=='undefined'
+		? self.context.request_config[0].sqo
+		: null
 
 	const rqo = {
-		source	: source,
-		show	: show
+		source	: source
 	}
 
+	if (show) {
+		rqo.show = show
+	}
+
+	if (sqo) {
+		rqo.sqo = sqo
+	}
+
+	console.log("build_rqo_show rqo:", rqo);
+
 	return rqo
-}
+}//end build_rqo_show
 
 
 

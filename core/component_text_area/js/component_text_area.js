@@ -54,7 +54,7 @@ export const component_text_area = function(){
 	component_text_area.prototype.change_value		= component_common.prototype.change_value
 	component_text_area.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_text_area.prototype.update_datum		= component_common.prototype.update_datum
-	component_text_area.prototype.build_rqo	= common.prototype.build_rqo
+	component_text_area.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_text_area.prototype.mini				= render_component_text_area.prototype.mini
@@ -80,6 +80,7 @@ component_text_area.prototype.tags_to_html = function(value) {
 
 	return html
 };//end tags_to_html
+
 
 
 /**
@@ -323,7 +324,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 
 /**
 * UNWRAP_ELEMENT
-* @return
+* @return bool
 */
 const unwrap_element = function(el) {
 
@@ -363,7 +364,6 @@ const is_tiny = function(ed) {
 component_text_area.prototype.update_tag = function(options) {
 
 	const self = this
-
 
 	if (typeof options == "undefined") {
 		alert("Please select tag");
@@ -733,3 +733,5 @@ component_text_area.prototype.create_fragment = function(key) {
 
 	// return true
 };//end create_fragment
+
+
