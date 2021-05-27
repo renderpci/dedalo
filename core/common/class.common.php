@@ -1362,8 +1362,8 @@ abstract class common {
 			}
 			// (!) new. Section overwrite css (virtual sections case)
 			if (strpos($model, 'component_')===0) {
-				$RecordObj_dd 		= new RecordObj_dd($section_tipo);
-				$section_properties = $RecordObj_dd->get_properties();
+				$RecordObj_dd		= new RecordObj_dd($section_tipo);
+				$section_properties	= $RecordObj_dd->get_properties();
 				if (isset($section_properties->css) && isset($section_properties->css->{$tipo})) {
 					$css = $section_properties->css->{$tipo};
 				}
@@ -1507,7 +1507,7 @@ abstract class common {
 			]);
 
 
-		// OPTIONAL PROPERTIES		
+		// optional properties		
 			// Filter_by_list
 				if (isset($properties->source->filter_by_list)) {
 					// Calculate ar elements to show in filter. Resolve self section items
@@ -1703,7 +1703,6 @@ abstract class common {
 
 
 
-
 	/**
 	* GET_AR_SUBCONTEXT
 	* @return array $ar_subcontext
@@ -1719,7 +1718,13 @@ abstract class common {
 			$request_config = $this->request_config ?? null;
 			if(empty($request_config)) return null;
 
-		$request_ddo_value = $request_config->show->ddo_map;
+			$request_config_dedalo = array_filter($request_config, function($el){
+				return $el->api_engine==='dedalo';
+			});
+
+		foreach ($request_config_dedalo as $request_config_item) {
+
+			$request_ddo_value = $request_config_item->show->ddo_map;
 	
 			if(!empty($request_ddo_value)) foreach($request_ddo_value as $ar_dd_object) {
 
@@ -1801,7 +1806,7 @@ abstract class common {
 					$ar_subcontext_calculated[] = $cid;
 
 			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
-
+		}
 
 		return $ar_subcontext;
 	}//end get_ar_subcontext
@@ -2423,9 +2428,10 @@ abstract class common {
 	*/
 	public static function get_ar_request_config($tipo, $external=false, $section_tipo=null, $mode='list', $section_id=null, $limit=10, $offset=0) {
 
-		// if (to_string($section_tipo)==='self') {
-		// 	throw new Exception("Error Processing get_request_config (6) unresolved section_tipo:".to_string($section_tipo), 1);
-		// }
+		// debug
+			// if (to_string($section_tipo)==='self') {
+			// 	throw new Exception("Error Processing get_request_config (6) unresolved section_tipo:".to_string($section_tipo), 1);
+			// }
 
 		// cache
 			static $resolved_request_properties_parsed = [];
@@ -2445,36 +2451,36 @@ abstract class common {
 			// fallback component_autocomplete_hi
 				// if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi') {
 				// 	$properties->source->request_config = json_decode('[
-			 //            {
-			 //                "show": {
-			 //                    "ddo_map": [
-			 //                        "hierarchy25"
-			 //                    ],
-			 //                    "sqo_config": {
-			 //                        "operator": "$or"
-			 //                    }
-			 //                },
-			 //                "search": {
-			 //                    "ddo_map": [
-			 //                        "hierarchy25"
-			 //                    ],
-			 //                    "sqo_config": {
-			 //                        "operator": "$or"
-			 //                    }
-			 //                },
-			 //                "records_mode": "list",
-			 //                "section_tipo": [
-			 //                    {
-			 //                        "value": [
-			 //                            2
-			 //                        ],
-			 //                        "source": "hierarchy_types"
-			 //                    }
-			 //                ],
-			 //                "search_engine": "search_dedalo"
-			 //            }
-			 //        ]');
-			 //        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);
+				//            {
+				//                "show": {
+				//                    "ddo_map": [
+				//                        "hierarchy25"
+				//                    ],
+				//                    "sqo_config": {
+				//                        "operator": "$or"
+				//                    }
+				//                },
+				//                "search": {
+				//                    "ddo_map": [
+				//                        "hierarchy25"
+				//                    ],
+				//                    "sqo_config": {
+				//                        "operator": "$or"
+				//                    }
+				//                },
+				//                "records_mode": "list",
+				//                "section_tipo": [
+				//                    {
+				//                        "value": [
+				//                            2
+				//                        ],
+				//                        "source": "hierarchy_types"
+				//                    }
+				//                ],
+				//                "search_engine": "search_dedalo"
+				//            }
+				//        ]');
+				//        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);
 				// }//end if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi')
 
 			foreach ($properties->source->request_config as $item_request_config) {
@@ -2485,17 +2491,17 @@ abstract class common {
 					// $parsed_item->typo = 'rqo';
 					// $parsed_item->sqo->tipo = $tipo;
 
-				// search_engine
-					if (isset($item_request_config->search_engine)) {
-						$parsed_item->search_engine = $item_request_config->search_engine;
-					}
+				// api_engine
+					$parsed_item->api_engine = isset($item_request_config->api_engine)
+						? $item_request_config->api_engine
+						: 'dedalo';
 
-				// section_tipo. get the ar_sections
+				// section_tipo. get the ar_sections as ddo
 					if (isset($item_request_config->sqo->section_tipo)){
 						$ar_section_tipo = component_relation_common::get_request_config_section_tipo($item_request_config->sqo->section_tipo, $section_tipo, $section_id);
 						$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
 							$ddo = new dd_object();
-								$ddo->set_tipo($section_tipo);
+								$ddo->set_tipo($section_tipo);								
 								$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
 							return $ddo;
 						}, $ar_section_tipo);
@@ -2503,7 +2509,7 @@ abstract class common {
 
 				// filter_by_list. get the filter_by_list (to set the prefilter selector)
 					if (isset($item_request_config->sqo->filter_by_list)) {
-						$parsed_item->sqo->filter_by_list	= component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
+						$parsed_item->sqo->filter_by_list = component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
 					}
 
 				// fixed_filter
@@ -2511,7 +2517,7 @@ abstract class common {
 						$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
 					}
 
-				// show (mandatory) it change when the mode is list, since is possible define a different show named show_list
+				// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
 					// dump($mode, ' $mode ++ '.to_string($tipo));
 					$parsed_item->show = ($mode==='list' && isset($item_request_config->show_list))
 						? $item_request_config->show_list
@@ -2520,18 +2526,17 @@ abstract class common {
 					// get the all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
 					$ar_ddo_map = $parsed_item->show->ddo_map;
 
-					$final_ddo_map = [];
-					foreach ($ar_ddo_map as $current_ddo_map) {		
-
-						$final_ddo_map[] = array_map(function($ddo){					
-							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true));
-							
-							return $ddo;
-						}, $current_ddo_map);
-					}
+					// ddo_map
+						$final_ddo_map = [];
+						foreach ($ar_ddo_map as $current_ddo_map) {
+							// add label to ddo_map items
+							$final_ddo_map[] = array_map(function($ddo){
+								$ddo->set_label(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true));								
+								return $ddo;
+							}, $current_ddo_map);
+						}
 
 					$parsed_item->show->ddo_map = $final_ddo_map;
-
 
 					if (isset($parsed_item->show->sqo_config)) {
 						// fallback non defined operator
@@ -2572,24 +2577,13 @@ abstract class common {
 								$sqo_config->operator	= '$or';
 							$parsed_item->search->sqo_config = $sqo_config;
 						}
-
 					}
-					// 	else{
-					// 	// fallback to show
-					// 	$search = clone $parsed_item->show;
-					// 	$parsed_item->search = $search;
-					// }
 
 				// choose
 					if (isset($item_request_config->choose)) {
 						// set item
 						$parsed_item->choose = $item_request_config->choose;
 					}
-					// else{
-					// 	// fallback to show
-					// 	$select = clone $parsed_item->show;
-					// 	$parsed_item->select = $select;
-					// }
 
 
 				// add parsed item
@@ -2649,8 +2643,7 @@ abstract class common {
 						}
 					}
 					break;
-			}
-
+			}//end switch ($mode)
 
 			// related_clean
 				$ar_related_clean 	 = [];
@@ -2686,13 +2679,15 @@ abstract class common {
 					$sqo_config->mode		= $mode;
 					$sqo_config->operator	= '$or';
 
-			$ddo_map = array_map(function($tipo){
-				$ddo = new dd_object();
-					$ddo->set_tipo($tipo);
-					$ddo->set_label(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true));
+			// ddo_map
+				$ddo_map = array_map(function($tipo) use($section_tipo){
+					$ddo = new dd_object();
+						$ddo->set_tipo($tipo);
+						// $ddo->set_section_tipo($section_tipo);
+						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true));
 
-				return [$ddo];
-			}, $ar_related_clean);
+					return [$ddo];
+				}, $ar_related_clean);
 
 			// show
 				$show = new stdClass();
@@ -2700,42 +2695,42 @@ abstract class common {
 					$show->sqo_config	= $sqo_config;
 
 			// // search
-			// 	$search = new stdClass();
-			// 		$search->ddo_map	= $ar_related_clean;
-			// 		$search->sqo_config	= $sqo_config;
+				// 	$search = new stdClass();
+				// 		$search->ddo_map	= $ar_related_clean;
+				// 		$search->sqo_config	= $sqo_config;
 
 			// // select
-			// 	$select = new stdClass();
-			// 		$select->ddo_map	= $ar_related_clean;
+				// 	$select = new stdClass();
+				// 		$select->ddo_map	= $ar_related_clean;
 
-			$ar_section_tipo = is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
+			// sqo section_tipo as ddo
+				$ar_section_tipo = is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
+				$ddo_section_tipo = array_map(function($section_tipo){
+					$ddo = new dd_object();
+						$ddo->set_tipo($section_tipo);
+						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+					return $ddo;
+				}, $ar_section_tipo);
 
-			$ddo_section_tipo = array_map(function($section_tipo){
-				$ddo = new dd_object();
-					$ddo->set_tipo($section_tipo);
-					$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
-				return $ddo;
-			}, $ar_section_tipo);
-
+			// sqo
+				$sqo = new stdClass();
+					$sqo->section_tipo = $ddo_section_tipo;
 
 			// request_config_item. build
 				$request_config_item = new stdClass();
-					$request_config_item->sqo	= new stdClass();
-					$request_config_item->show	= new stdClass();
-
-					// $request_config_item->typo			= 'rqo';
-					// $request_config_item->sqo->tipo		= $tipo;
-					// $request_config_item->sqo->type		= 'internal';
-					$request_config_item->sqo->section_tipo	= $ddo_section_tipo;
-					$request_config_item->show				= $show;
+					$request_config_item->api_engine	= 'dedalo';
+					$request_config_item->show			= $show;
+					$request_config_item->sqo			= $sqo;
+					// $request_config_item->sqo->tipo	= $tipo;
 					// $request_config_item->search		= $search;
 					// $request_config_item->select		= $select;
 
+					// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string()); die();
 
-				// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string()); die();
+			// set item
+				$ar_request_query_objects[] = $request_config_item;
 
-			$ar_request_query_objects = [$request_config_item];
-		}
+		}//end if(isset($properties->source->request_config) || $model==='component_autocomplete_hi')
 
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
