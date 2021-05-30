@@ -183,6 +183,17 @@ define('DEDALO_REGISTER_TOOLS_SECTION_TIPO'				, 'dd1324');
 define('DEDALO_SECTION_INFO_MODIFIED_BY_USER'			, 'dd197');
 define('DEDALO_SECTION_INFO_MODIFIED_DATE'				, 'dd201');
 
+// ontology section tipos
+define('ONTOLOGY_SECTION_TIPOS', [
+	'section_tipo'	=> 'dd1500',
+	'id'			=> 'dd1483',
+	'tld'			=> 'dd1482',
+	'term_id'		=> 'dd1475',
+	'term'			=> 'dd1477',
+	'definition'	=> 'dd1478',
+	'observations'	=> 'dd1476'
+]);
+
 
 if (!defined('DEDALO_PROTOCOL')) {
 	define('DEDALO_PROTOCOL', 'http://');
