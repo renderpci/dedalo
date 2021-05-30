@@ -60,6 +60,7 @@ render_component_input_text.prototype.mini = async function() {
 */
 render_component_input_text.prototype.list = async function() {
 
+
 	const self = this
 
 	// short vars

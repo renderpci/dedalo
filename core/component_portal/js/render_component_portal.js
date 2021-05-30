@@ -60,7 +60,7 @@ render_component_portal.prototype.list = async function() {
 
 	const self = this
 
-	const ar_section_record = await self.get_ar_instances()	
+	const ar_section_record = await self.get_ar_instances()
 
 	const ar_nodes = []
 
@@ -300,9 +300,9 @@ const get_content_data_edit = async function(self) {
 	// build values (add all nodes from the rendered_section_record)
 		const length = ar_section_record.length
 		for (let i = 0; i < length; i++) {
-			const current_section_record =  ar_section_record[i]
+			const current_section_record = ar_section_record[i]; 	console.log("current_section_record:",current_section_record);
 			if (!current_section_record) {
-				console.log("current_section_record:",current_section_record);
+				console.warn("empty current_section_record:",current_section_record);				
 			}
 			await input_element(current_section_record, inputs_container)
 			//const section_record_node = await ar_section_record[i].render()

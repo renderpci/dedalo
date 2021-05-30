@@ -162,7 +162,7 @@ component_portal.prototype.build = async function(autoload=false){
 			// console.log("/// update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 			const ar_used = []
 			for(const element of self.datum.data) {
-				const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id)
+				const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id && item.row_section_id===element.row_section_id)
 				if (index!==-1) {
 					console.error("PORTAL ERROR. self.datum.data contains duplicated elements:", self.datum.data);
 				}else{
@@ -288,9 +288,9 @@ component_portal.prototype.build = async function(autoload=false){
 		self.target_section = self.rqo_config.sqo.section_tipo
 
 	// columns
-		if(self.mode === 'edit'){
+		// if(self.mode === 'edit'){
 			self.columns = self.get_columns()
-		}
+		// }
 
 	// debug
 		if(SHOW_DEBUG===true) {

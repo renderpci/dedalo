@@ -127,11 +127,11 @@ const get_content_data = async function(self) {
 		}else{
 			// rows
 
-			// sequential mode
-				// for (let i = 0; i < ar_section_record_length; i++) {
-				// 	const row_item = await ar_section_record[i].render()
-				// 	fragment.appendChild(row_item)
-				// }
+			// // sequential mode
+			// 	for (let i = 0; i < ar_section_record_length; i++) {
+			// 		const row_item = await ar_section_record[i].render()
+			// 		fragment.appendChild(row_item)
+			// 	}
 
 			// parallel mode
 				const ar_promises = []

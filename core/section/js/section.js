@@ -340,7 +340,7 @@ section.prototype.build = async function(autoload=false) {
 			// debug duplicates check
 				const ar_used = []
 				for(const element of self.datum.data) {
-					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id )
+					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id && item.row_section_id===element.row_section_id)
 					if (index!==-1) {
 						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
 
@@ -373,13 +373,13 @@ section.prototype.get_ar_instances = async function(){
 		}
 
 	// iterate records
+		const lang 			= self.lang
 		const value			= self.data.value || []
 		const value_length	= value.length
 
 		const offset = self.rqo.sqo.offset
 
-		const ar_promises = []
-
+		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
@@ -396,7 +396,7 @@ section.prototype.get_ar_instances = async function(){
 					section_tipo	: current_section_tipo,
 					section_id		: current_section_id,
 					mode			: self.mode,
-					lang			: self.lang,
+					lang			: lang,
 					context			: current_context,
 					data			: current_data,
 					datum			: self.datum,
@@ -421,11 +421,13 @@ section.prototype.get_ar_instances = async function(){
 				const current_section_record = await instances.get_instance(instance_options)
 				await current_section_record.build(true)
 
-			// add
-				self.ar_instances.push(current_section_record)
-
+			// add instance
+				ar_instances.push(current_section_record)
+				
 		}//end for loop
 
+	// set
+		self.ar_instances = ar_instances
 
 	return self.ar_instances
 };//end get_ar_instances
