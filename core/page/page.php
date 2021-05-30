@@ -78,9 +78,10 @@
 			}
 
 		// component TEST
-			// $tipo			= 'test202';
-			// $section_tipo	= 'test38';
-			// $section_id		= 1;
+			// $tipo				= 'test202'; // portal 'test202'; // input text 'test164'
+			// $section_tipo		= 'test38';
+			// $section_id			= 1;
+			// $add_request_config	= true;
 			// $modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			// $component		= component_common::get_instance($modelo_name,
 			// 												 $tipo,
@@ -88,8 +89,8 @@
 			// 												 'edit',
 			// 												 DEDALO_DATA_LANG,
 			// 												 $section_tipo);
-			// $current_context = $component->get_structure_context(2, true);
-			// $current_context->section_id = $section_id;				
+			// $current_context = $component->get_structure_context(2, $add_request_config);
+			// $current_context->section_id = $section_id;
 			// $context[] = $current_context;
 
 	}//end if (login::is_logged()!==true)
