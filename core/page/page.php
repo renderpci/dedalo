@@ -52,46 +52,46 @@
 			// }
 
 		// section/area/tool. Get the page element from get url vars
-			// $model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-			// switch (true) {
-			// 	case ($model==='section'):
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			switch (true) {
+				case ($model==='section'):
 
-			// 		$section = section::get_instance($section_id, $tipo, MODE);
-			// 		$section->set_lang(DEDALO_DATA_LANG);
+					$section = section::get_instance($section_id, $tipo, MODE);
+					$section->set_lang(DEDALO_DATA_LANG);
 					
-			// 		// add to page context
-			// 			$context[] = $section->get_structure_context(1, true);
-			// 		break;
+					// add to page context
+						$context[] = $section->get_structure_context(1, true);
+					break;
 
-			// 	case (strpos($model, 'area')===0):
+				case (strpos($model, 'area')===0):
 
-			// 		$area = area::get_instance($model, $tipo, MODE);
-			// 		$area->set_lang(DEDALO_DATA_LANG);
+					$area = area::get_instance($model, $tipo, MODE);
+					$area->set_lang(DEDALO_DATA_LANG);
 					
-			// 		// add to page context
-			// 			$context[] = $area->get_structure_context();
-			// 		break;
+					// add to page context
+						$context[] = $area->get_structure_context();
+					break;
 
-			// 	default:
-			// 		// ..
-			// 		break;
-			// }
+				default:
+					// ..
+					break;
+			}
 
 		// component TEST
-			$tipo				= 'test202'; // portal 'test202'; // input text 'test164'
-			$section_tipo		= 'test38';
-			$section_id			= 1;
-			$add_request_config	= true;
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance($modelo_name,
-															 $tipo,
-															 $section_id,
-															 'edit',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$current_context = $component->get_structure_context(2, $add_request_config);
-			$current_context->section_id = $section_id;
-			$context[] = $current_context;
+			// $tipo				= 'test202'; // portal 'test202'; // input text 'test164'
+			// $section_tipo		= 'test38';
+			// $section_id			= 1;
+			// $add_request_config	= true;
+			// $modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			// $component		= component_common::get_instance($modelo_name,
+			// 												 $tipo,
+			// 												 $section_id,
+			// 												 'edit',
+			// 												 DEDALO_DATA_LANG,
+			// 												 $section_tipo);
+			// $current_context = $component->get_structure_context(2, $add_request_config);
+			// $current_context->section_id = $section_id;
+			// $context[] = $current_context;
 
 	}//end if (login::is_logged()!==true)
 		// dump($context, ' context ++ '.to_string());
