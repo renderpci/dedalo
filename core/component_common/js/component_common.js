@@ -59,13 +59,13 @@ component_common.prototype.init = async function(options) {
 	// self.rqo 			= {}
 
 	// pagination info
-	self.pagination = (self.data && self.data.pagination)
-		? self.data.pagination
-		: { // pagination info (used in portals, etc.)
-			total	: 0,
-			offset	: 0,
-			limit	: 0
-		}
+	// self.pagination = (self.data && self.data.pagination)
+	// 	? self.data.pagination
+	// 	: { // pagination info (used in portals, etc.)
+	// 		total	: 0,
+	// 		offset	: 0,
+	// 		limit	: 0
+	// 	}
 
 	// self.type	= self.context.type 	// tipology of current instance, usually 'component'
 	// self.label	= self.context.label // label of current component like 'summary'
@@ -674,6 +674,14 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 component_common.prototype.get_ar_instances = async function(){
 
 	const self 			= this
+
+	// self data veification
+		if (typeof self.data==="undefined") {
+			self.data = {
+				value : []
+			}
+		}
+
 	// const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
 	const records_mode 	= null
 
@@ -690,7 +698,14 @@ component_common.prototype.get_ar_instances = async function(){
 			const locator 			 	= value[i];
 			const current_section_tipo 	= locator.section_tipo
 			const current_section_id 	= locator.section_id
-			const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
+			const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id 
+				&& (el.row_section_id===self.data.row_section_id || el.parent_section_id===self.section_id))
+
+			
+				console.log("self.section_id:",self.section_id);
+	// console.log("self:",self);
+	console.log("self.datum.data:",self.datum.data, self.tipo);
+		// console.log("current_section_tipo:",current_section_tipo, current_section_id, self.data.row_section_id);
 
 			// const current_context 	= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
 			const current_context 		= (typeof self.datum.context!=="undefined")
