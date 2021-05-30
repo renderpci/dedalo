@@ -155,7 +155,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 	const ar_instances = await self.get_ar_row_instances()
 
 // const ar_instances = await self.get_ar_instances()
-// console.log("ar_instances------------", ar_instances);
+
 	const fragment = new DocumentFragment()
 
 	// section_record wrapper
@@ -179,7 +179,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
-		// console.log("/// ar_instances", ar_instances);
+		console.log("/// ar_instances", ar_instances);
 		for (let i = 0; i < ar_instances_length; i++) {
 
 			const current_instance = ar_instances[i]

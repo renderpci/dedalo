@@ -25,7 +25,7 @@ class dd_core_api {
 
 	// context . Whole calculated context
 		// static $context;
-		static $ddo_map; // fixed in get_structure_context()
+		static $ddo_map =[]; // fixed in get_structure_context()
 
 
 

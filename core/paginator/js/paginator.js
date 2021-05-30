@@ -163,7 +163,7 @@ paginator.prototype.destroy = async function(){
 */
 paginator.prototype.get_total = async function() {
 
-	const total = await this.caller.pagination.total
+	const total = await this.caller.total
 
 	return total
 };//end get_total
@@ -175,7 +175,7 @@ paginator.prototype.get_total = async function() {
 */
 paginator.prototype.get_limit = function() {
 
-	const limit = this.caller.pagination.limit
+	const limit = this.caller.rqo.sqo.limit
 
 	return limit
 };//end get_limit
@@ -187,7 +187,7 @@ paginator.prototype.get_limit = function() {
 */
 paginator.prototype.get_offset = function() {
 
-	const offset = this.caller.pagination.offset
+	const offset = this.caller.rqo.sqo.offset
 
 	return offset
 };//end get_offset

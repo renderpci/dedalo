@@ -201,14 +201,6 @@ common.prototype.refresh = async function () {
 
 	const self = this
 
-	// offset update
-		if (self.dd_request.show && typeof self.pagination!=="undefined") {
-			const sqo = self.dd_request.show.find(element => element.typo==='sqo')
-			if (sqo) {
-				sqo.offset = self.pagination.offset
-			}
-		}
-
 	// destroy dependences only
 		if (self.status==='rendered') {
 			const destroyed = await self.destroy(false, true)
@@ -744,23 +736,12 @@ common.prototype.build_rqo = async function(dd_request_type, request_config, act
 
 	const self = this
 
-	// sessionStorage check if already exists
-	const current_data_manager	= new data_manager()
-
-	// get value
-	const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
-	if(saved_rqo){
-		return saved_rqo
-	}
-
 	// create a new one
 
 	switch (dd_request_type) {
 
 		case 'show':
-			const rqo = build_rqo_show(self, request_config, action)
-				// sessionStorage save	
-				current_data_manager.set_local_db_data(rqo, 'rqo')
+			
 			return rqo
 
 		case 'search':
@@ -778,43 +759,65 @@ common.prototype.build_rqo = async function(dd_request_type, request_config, act
 * BUILD_RQO_SHOW
 * @return object rqo
 */
-const build_rqo_show = function(self, request_config, action){
-		console.log("request_config:",request_config);
-
-	const rqo_config = request_config.find(el => el.api_engine==='dedalo')
-
-
-	const source	= create_source(self, action);
-	const sqo		= rqo_config.sqo
-		? rqo_config.sqo
-		: null
-	// const show		= self.context.request_config && typeof self.context.request_config[0].show!=='undefined'
-	// 	? self.context.request_config[0].show
-	// 	: null
-	
-
-	const rqo = {
-		id		: self.id,
-		action	: 'read',
-		source	: source,
+common.prototype.build_rqo_show = async function(rqo_config, action){
 		
-	}
+		const self = this
 
-	if (sqo) {
-		rqo.sqo = rqo_config.show.sqo_config
-			? Object.assign(sqo, rqo_config.show.sqo_config)
-			: sqo
-		rqo.sqo = sqo
+	// sessionStorage check if already exists
+		const current_data_manager	= new data_manager()
 
-		// format objects as strins [{tipo:"oh1"}] to ["oh1"]
-		rqo.sqo.section_tipo = rqo.sqo.section_tipo.map(el=>el.tipo)
-	}
+	// get value
+		const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
+		if(saved_rqo){
+			return saved_rqo
+		}
 
-	// if (show) {
-	// 	rqo.show = show
-	// }	
+	// build new one with source of the instance caller (self)
+		const source	= create_source(self, action);		
 
-	console.log("build_rqo_show rqo:", rqo);
+	// get the sqo if it is defined (mandatory)
+	// if the rqo_config has sqo_config, get it and add to the sqo.
+	// format objects as strins [{tipo:"oh1"}] to ["oh1"]
+		const ar_sections = rqo_config.sqo.section_tipo.map(el=>el.tipo)
+
+
+	// get the limit, offset, full count, and filter by locators.
+		const limit	= (rqo_config.show.sqo_config.limit)
+			? rqo_config.show.sqo_config.limit
+			: 10
+		const offset = (rqo_config.show.sqo_config.offset)
+			? rqo_config.show.sqo_config.offset
+			: 0
+		const full_count	= (rqo_config.show.sqo_config.full_count)
+			? rqo_config.show.sqo_config.full_count
+			: false
+		const filter_by_locators	= (rqo_config.show.sqo_config.filter_by_locators)
+			? rqo_config.show.sqo_config.filter_by_locators
+			: null
+
+
+	// sqo
+		const sqo = {
+			section_tipo		: ar_sections,
+			filter				: null,
+			limit				: 3,//limit,
+			offset				: offset,
+			full_count			: full_count,
+			filter_by_locators	: filter_by_locators
+		}
+
+
+	//build the rqo
+		const rqo = {
+			id		: self.id,
+			action	: 'read',
+			source	: source,
+			sqo 	: sqo,
+		}
+
+
+	// sessionStorage save	
+		current_data_manager.set_local_db_data(rqo, 'rqo')
 
 
 	return rqo

@@ -36,7 +36,7 @@ export const component_portal = function(){
 	this.data
 	this.parent
 	this.node
-	this.pagination
+	this.total
 
 	this.modal
 
@@ -44,6 +44,7 @@ export const component_portal = function(){
 	this.autocomplete_active
 
 	this.rqo_config
+	this.rqo
 
 	return true
 };//end  component_portal
@@ -69,7 +70,7 @@ export const component_portal = function(){
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
 	component_portal.prototype.get_columns			= common.prototype.get_columns
-	component_portal.prototype.build_rqo		= common.prototype.build_rqo
+	component_portal.prototype.build_rqo_show		= common.prototype.build_rqo_show
 
 	// render
 	component_portal.prototype.mini					= render_component_portal.prototype.mini
@@ -144,7 +145,12 @@ component_portal.prototype.build = async function(autoload=false){
 		}
 
 	// rqo_config
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')	
+		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+
+	// rqo build
+		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
+
+	const current_data_manager	= new data_manager()
 
 	// set dd_request
 		// self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
@@ -173,14 +179,18 @@ component_portal.prototype.build = async function(autoload=false){
 			// rqo build
 				// const rqo	= self.build_rqo('show', self.context.request_config, 'get_data')
 				// rqo.action	= 'read'
-				const rqo	= {
-					source : create_source(self, 'get_data'),
-					action : 'read'
-				}
+				// const rqo	= {
+				// 	source : create_source(self, 'get_data'),
+				// 	action : 'read'
+				// }
+
+
 
 			// get context and data
-				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:rqo})
+				// const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.request({body:self.rqo})
+
+					console.log("api_response:",api_response);
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -198,24 +208,28 @@ component_portal.prototype.build = async function(autoload=false){
 				self.datum.context = api_response.result.context
 			
 			// pagination. update element pagination vars when are used
-				if (self.data.pagination && typeof self.pagination.total!=="undefined") {
+				if (self.data.pagination && !self.total) {
 					// console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++ self.data.pagination:",self.data.pagination);
-					self.pagination.total	= self.data.pagination.total
-					self.pagination.offset	= self.data.pagination.offset
+					self.total	= self.data.pagination.total
+					self.rqo.sqo.offset	= self.data.pagination.offset
+					// set value
+					current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
+
+				
 		}
 		
 
 	// pagination vars only in edit mode
 		if (self.mode==="edit") {
 
-			const show_sqo_config	= self.rqo_config.show.sqo_config
+			// const show_sqo_config	= self.rqo_config.show.sqo_config
 
-			// pagination safe defaults
-				self.pagination.total 	= self.pagination.total  || 0
-				self.pagination.offset 	= self.pagination.offset || 0
-				// self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
-				self.pagination.limit 	= self.pagination.limit  || ((show_sqo_config && show_sqo_config.limit) ? show_sqo_config.limit : 5)
+			// // pagination safe defaults
+			// 	self.pagination.total 	= self.pagination.total  || 0
+			// 	self.pagination.offset 	= self.pagination.offset || 0
+			// 	// self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
+			// 	self.pagination.limit 	= self.pagination.limit  || ((show_sqo_config && show_sqo_config.limit) ? show_sqo_config.limit : 5)
 
 			// sqo update filter_by_locators
 				// if(self.pagination.total>self.pagination.limit){
@@ -240,15 +254,18 @@ component_portal.prototype.build = async function(autoload=false){
 
 					self.events_tokens.push(
 						event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
-							self.pagination.offset = offset
+							self.rqo.sqo.offset = offset
+							// set value
+							current_data_manager.set_local_db_data(self.rqo, 'rqo')
+
 							self.refresh()
 						})
 					)//end events push
 
 				}else{
 					// refresh existing
-					self.paginator.offset = self.pagination.offset
-					self.paginator.total  = self.pagination.total
+					self.paginator.offset = self.rqo.sqo.offset
+					self.paginator.total  = self.total
 					// self.paginator.refresh()
 					// await self.paginator.build()
 					// self.paginator.render()
@@ -312,7 +329,7 @@ component_portal.prototype.add_value = async function(value) {
 		// }
 
 
-	const key = self.pagination.total || 0
+	const key = self.total || 0
 
 	const changed_data = Object.freeze({
 		action	: 'insert',
@@ -350,7 +367,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 	const self = this
 
 		console.log("self.data.pagination:",self.data.pagination);
-		console.log("self.pagination:",self.pagination);
+		console.log("self.self.rqo.sqo.:",self.self.rqo.sqo);
 
 	// update self.data.pagination
 		switch(action) {
@@ -358,25 +375,25 @@ component_portal.prototype.update_pagination_values = function(action) {
 				// update pagination total
 				if(self.data.pagination.total && self.data.pagination.total>0) {
 					// self.data.pagination.total--
-					self.pagination.total--
+					self.total--
 				}
 				break;
 			case 'add' :
 				// update self.data.pagination
 				if(self.data.pagination && self.data.pagination.total && self.data.pagination.total>=0) {
 					// self.data.pagination.total++
-					self.pagination.total++
+					self.total++
 				}
 				break;
 		}
-		// self.pagination.total = self.data.pagination.total
+		// self.total = self.data.pagination.total
 
 
 	// last_offset
 		const last_offset = (()=>{
 
-			const total = self.pagination.total
-			const limit = self.pagination.limit
+			const total = self.total
+			const limit = self.rqo.sqo.limit
 
 			if (total>0 && limit>0) {
 
@@ -389,15 +406,20 @@ component_portal.prototype.update_pagination_values = function(action) {
 		})()
 
 	// self pagination update
-		self.pagination.offset 	= last_offset
+		self.rqo.sqo.offset 	= last_offset
 
 
-	self.data.pagination = self.pagination // sync pagination info
+	self.data.pagination.offset	= self.rqo.sqo.offset
+	self.data.pagination.total	= self.total// sync pagination info
 
 	// // paginator object update
-		self.paginator.offset 	= self.pagination.offset
-		self.paginator.total 	= self.pagination.total
+		self.paginator.offset 	= self.rqo.sqo.offset
+		self.paginator.total 	= self.total
 	// console.log("update_pagination_values self.pagination:",self.pagination);
+
+	// set value
+	const current_data_manager	= new data_manager()
+	current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
 	return true
 };//end update_pagination_values
