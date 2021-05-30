@@ -176,7 +176,7 @@ abstract class component_common extends common {
 						# Verify modelo_name is section
 						$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
 						if ($section_modelo_name!=='section') {
-							dump($section_tipo," section_tipo - section_modelo_name: $section_modelo_name");
+							dump($section_tipo," Verify modelo_name is section: section_modelo_name: $section_modelo_name");
 							if (empty($section_modelo_name)) {
 								$msg = "Error. Current section ($section_tipo) don't exists or model is missing. Please fix structure ASAP";
 								throw new Exception($msg, 1);
@@ -1706,7 +1706,13 @@ abstract class component_common extends common {
 
 		// get_config_context normalized
 			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
-			$config_context = (array)common::get_ar_request_config($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
+			$options = new stdClass();
+				$options->tipo			= $this->tipo;
+				$options->external		= false;
+				$options->section_tipo	= $this->section_tipo;
+				$options->mode			= $this->modo;
+				$options->section_id	= null;
+			$config_context = (array)common::get_ar_request_config($options);
 
 
 		$ar_target_section_tipo = [];

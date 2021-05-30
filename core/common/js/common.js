@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -537,13 +538,13 @@ common.prototype.get_columns = async function(){
 
 	const ar_columns = []
 
-	// get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
-	const rqo = self.dd_request.show.find(item => item.typo === 'rqo')
-	if (!rqo) {
-		console.log("No rqo found in self.dd_request.show. Skip get_columns. ", self.dd_request.show);
-		return ar_columns
-	}
-	const ddo_map = rqo.show.ddo_map
+	// // get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
+	// const rqo = self.dd_request.show.find(item => item.typo === 'rqo')
+	// if (!rqo) {
+	// 	console.log("No rqo found in self.dd_request.show. Skip get_columns. ", self.dd_request.show);
+	// 	return ar_columns
+	// }
+	const ddo_map = self.rqo_config.show.ddo_map
 
 	// console.log("self.dd_request", self.dd_request);
 
@@ -566,21 +567,71 @@ common.prototype.get_columns = async function(){
 * @return array ar_columns
 */
 const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
+	
+	const ar_columns = []
+	
+	// get the valid ddo_map, only the last ddo in the path will be rendered.
+		function get_last_children(ddo_map, current_ddo) {
+			const ar_children = []
+			const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
+			
+			if(children.length === 0){
+				current_ddo.caller_tipo = caller_tipo
+				ar_children.push(current_ddo)
+			}else{
+				for (let i = 0; i < children.length; i++) {
+					const valid_child = get_last_children(ddo_map, children[i])[0]
+					ar_children.push(valid_child)
+				}
+			}
+			
+			return ar_children;
+		}	
 
-	const ddo_length 	= ddo_map.length
-	const ar_columns 	= []
+	// every ddo will be checked if it is a component_portal or if is the last component in the chain
+	// set the valid_ddo array with only the valid ddo that will be used.
+		const ar_valid_ddo = []
+		const ddo_length = ddo_map.length
+		for (let i = 0; i < ddo_length; i++) {
+			const current_ddo = ddo_map[i]
+			if(current_ddo.parent !== caller_tipo) continue;
+			const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
+			for (let j = 0; j < current_ar_valid_ddo.length; j++) {
+				ar_valid_ddo.push(current_ar_valid_ddo[j])
+			}
+		}
+		for (let i = 0; i < ar_valid_ddo.length; i++) {
+			const current_tipo = ar_valid_ddo[i].tipo
+
+			const ddo = self.datum.context.find(item => item.tipo===current_tipo)
+			if (!ddo) {
+				console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, self.datum.context);
+				continue
+			}
+
+			ar_columns.push(ddo)
+		}
+
+	/*
+
 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
 	for (let i = 0; i < ddo_length; i++) {
-		const ar_sub_ddo 	= sub_ddo
-		const current_ddo 	= ddo_map[i]
+		// const ar_sub_ddo 	= sub_ddo
+		const current_ddo 	= ar_valid_ddo[i]
+
+		// if(current_ddo.parent !== caller_tipo) continue;
+
 		// check if the item in ddo_map is a object, if true, get the tipo,
 		// if ddo is a f_path, get the last component, it will use for show the information
 		// else get the string with the tipo.
-		const current_tipo = typeof current_ddo.tipo!=='undefined'
-			? current_ddo.tipo
-			: typeof current_ddo.f_path!=='undefined'
-				? current_ddo.f_path[current_ddo.f_path.length - 1]
-				: current_ddo
+		// const current_tipo = typeof current_ddo.tipo!=='undefined'
+		// 	? current_ddo.tipo
+		// 	: typeof current_ddo.f_path!=='undefined'
+		// 		? current_ddo.f_path[current_ddo.f_path.length - 1]
+		// 		: current_ddo
+
+
+	
 		// get the ddo context of the component from the datum,
 		// It is necessary the match with the caller_tipo if the section has a relation with itself
 		// (the last component in the chain can had different parent, multiple portals can call same component)
@@ -629,8 +680,9 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 			}
 			ar_columns.push(ddo)
 		}
+		
 	}
-
+*/
 	return ar_columns
 };//end build_request_show
 
@@ -688,14 +740,28 @@ common.prototype.get_row = async function(){
 /**
 * BUILD_RQO
 */
-common.prototype.build_rqo = function(dd_request_type, request_config, action){
+common.prototype.build_rqo = async function(dd_request_type, request_config, action){
 
 	const self = this
+
+	// sessionStorage check if already exists
+	const current_data_manager	= new data_manager()
+
+	// get value
+	const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
+	if(saved_rqo){
+		return saved_rqo
+	}
+
+	// create a new one
 
 	switch (dd_request_type) {
 
 		case 'show':
-			return build_rqo_show(self, request_config, action)
+			const rqo = build_rqo_show(self, request_config, action)
+				// sessionStorage save	
+				current_data_manager.set_local_db_data(rqo, 'rqo')
+			return rqo
 
 		case 'search':
 			return build_request_search(self, request_config, action)
@@ -704,8 +770,6 @@ common.prototype.build_rqo = function(dd_request_type, request_config, action){
 			return build_request_select(self, request_config, action)
 			break;
 	}
-
-	return null
 };//end build_rqo
 
 
@@ -715,28 +779,43 @@ common.prototype.build_rqo = function(dd_request_type, request_config, action){
 * @return object rqo
 */
 const build_rqo_show = function(self, request_config, action){
-	
+		console.log("request_config:",request_config);
+
+	const rqo_config = request_config.find(el => el.api_engine==='dedalo')
+
+
 	const source	= create_source(self, action);
-	const show		= self.context.request_config && typeof self.context.request_config[0].show!=='undefined'
-		? self.context.request_config[0].show
+	const sqo		= rqo_config.sqo
+		? rqo_config.sqo
 		: null
-	const sqo		= self.context.request_config && typeof self.context.request_config[0].sqo!=='undefined'
-		? self.context.request_config[0].sqo
-		: null
+	// const show		= self.context.request_config && typeof self.context.request_config[0].show!=='undefined'
+	// 	? self.context.request_config[0].show
+	// 	: null
+	
 
 	const rqo = {
-		source	: source
-	}
-
-	if (show) {
-		rqo.show = show
+		id		: self.id,
+		action	: 'read',
+		source	: source,
+		
 	}
 
 	if (sqo) {
+		rqo.sqo = rqo_config.show.sqo_config
+			? Object.assign(sqo, rqo_config.show.sqo_config)
+			: sqo
 		rqo.sqo = sqo
+
+		// format objects as strins [{tipo:"oh1"}] to ["oh1"]
+		rqo.sqo.section_tipo = rqo.sqo.section_tipo.map(el=>el.tipo)
 	}
 
+	// if (show) {
+	// 	rqo.show = show
+	// }	
+
 	console.log("build_rqo_show rqo:", rqo);
+
 
 	return rqo
 }//end build_rqo_show
@@ -1237,7 +1316,7 @@ const build_request_select = function(self, request_config, action){
 * LOAD_DATA_DEBUG
 * @return
 */
-export const load_data_debug = async function(self, load_data_promise, dd_request_show_original) {
+export const load_data_debug = async function(self, load_data_promise, rqo_show_original) {
 
 	if(SHOW_DEBUG===false) {
 		return false
@@ -1271,10 +1350,11 @@ export const load_data_debug = async function(self, load_data_promise, dd_reques
 		}
 
 	// request to api
-		const sqo = dd_request_show_original.find(el => el.typo==='sqo') || null
+		// const sqo = dd_request_show_original.find(el => el.typo==='sqo') || null 
+		const sqo = rqo_show_original.sqo
 		const request_pre = ui.create_dom_element({
 			element_type	: 'pre',
-			text_content	: "dd_request sended to api: \n\n" + JSON.stringify(dd_request_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
+			text_content	: "dd_request sended to api: \n\n" + JSON.stringify(rqo_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
 			parent			: debug
 		})
 

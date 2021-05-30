@@ -3112,7 +3112,6 @@ dd-modal .footer > * {
   width: 15em;
   background-color: #fcfcfc;
   position: fixed;
-  top: 75px;
   left: calc(100vw - 16.4em);
   border: 1px solid #eee;
 }

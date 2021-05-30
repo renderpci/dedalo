@@ -160,6 +160,8 @@ class request_query_object extends stdClass {
 	*/
 	public function __construct( $data=null ) {
 
+		$this->api_engine = 'dedalo';
+
 		
 		return true;
 	}//end __construct
@@ -181,6 +183,14 @@ class request_query_object extends stdClass {
 	public function set_dd_api(string $value) {
 		$this->dd_api = $value;
 	}
+
+
+	/**
+	* SET_API_ENGINE
+	*/
+	public function set_api_engine(string $value) {
+		$this->api_engine = $value;
+	}//end set_api_engine
 
 
 

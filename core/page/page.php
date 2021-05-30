@@ -21,7 +21,7 @@
 	$context = [];
 	if (login::is_logged()!==true) {
 		
-		// not logged case		
+		// not logged case
 
 		// check_basic_system (lang and structure files)
 			$system_is_ready = check_basic_system();
@@ -78,8 +78,8 @@
 			}
 
 		// component TEST
-			// $tipo			= 'test139';
-			// $section_tipo	= 'test65';
+			// $tipo			= 'test202';
+			// $section_tipo	= 'test38';
 			// $section_id		= 1;
 			// $modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			// $component		= component_common::get_instance($modelo_name,
@@ -88,29 +88,12 @@
 			// 												 'edit',
 			// 												 DEDALO_DATA_LANG,
 			// 												 $section_tipo);
-			// $current_context = $component->get_structure_context();
-			// $current_context->section_id = $section_id;			
-			// // $request_config = json_decode('[
-			// // 	{					
-			// // 		"action"		: "get_data",
-			// // 		"source"		: {
-			// // 			"action"	: "get_data",
-			// // 			"tipo"			: "'.$tipo.'",
-			// // 			"section_tipo"	: "'.$section_tipo.'",
-			// // 			"section_id"	: "'.$section_id.'",
-			// // 			"mode"			: "edit",
-			// // 			"lang"			: "'.DEDALO_DATA_LANG.'"
-			// // 		},			
-			// // 		"sqo"			: {
-			// // 			"filter_by_locators" : [{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'"}]
-			// // 		}
-			// // 	}
-			// // ]');
-			// // $current_context->request_config = $request_config;
+			// $current_context = $component->get_structure_context(2, true);
+			// $current_context->section_id = $section_id;				
 			// $context[] = $current_context;
 
 	}//end if (login::is_logged()!==true)
-
+		// dump($context, ' context ++ '.to_string());
 
 
 // load page

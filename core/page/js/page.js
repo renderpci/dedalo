@@ -260,7 +260,7 @@ page.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < context_length; i++) {
 
 			const current_ddo = self.context[i]
-
+				console.log("current_ddo:",current_ddo);
 			ar_promises.push( new Promise(function(resolve){
 			
 				instantiate_page_element(self, current_ddo)
