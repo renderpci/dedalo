@@ -368,9 +368,9 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 		// transaction
 			const transaction = db.transaction(table, "readwrite");
 			// oncomplete. Do something when all the data is added to the database.
-				transaction.oncomplete = function(event) {
-					console.log("All done!");
-				};
+				// transaction.oncomplete = function(event) {
+				// 	console.log("All done!");
+				// };
 			// error
 				transaction.onerror = function(event) {
 					console.error("-> set_local_db_data error:", event.target);
@@ -412,9 +412,9 @@ data_manager.prototype.get_local_db_data = async function(id, table) {
 		// transaction
 			const transaction = db.transaction(table, "readwrite");
 			// oncomplete. Do something when all the data is added to the database.
-				transaction.oncomplete = function(event) {
-					console.log("All done!");
-				};
+				// transaction.oncomplete = function(event) {
+				// 	console.log("All done!");
+				// };
 			// error
 				transaction.onerror = function(event) {
 					console.error("-> get_local_db_data error:", event.target);
@@ -454,9 +454,9 @@ data_manager.prototype.delete_local_db_data = async function(id, table) {
 		// transaction
 			const transaction = db.transaction(table, "readwrite");
 			// oncomplete. Do something when all the data is added to the database.
-				transaction.oncomplete = function(event) {
-					console.log("All done!");
-				};
+				// transaction.oncomplete = function(event) {
+				// 	console.log("All done!");
+				// };
 			// error
 				transaction.onerror = function(event) {
 					console.error("-> get_local_db_data error:", event.target);

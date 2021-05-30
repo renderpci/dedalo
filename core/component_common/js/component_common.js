@@ -56,7 +56,7 @@ component_common.prototype.init = async function(options) {
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 
 	//rqo
-	self.rqo 			= {}
+	// self.rqo 			= {}
 
 	// pagination info
 	self.pagination = (self.data && self.data.pagination)

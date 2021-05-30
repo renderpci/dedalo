@@ -1865,9 +1865,17 @@ abstract class common {
 		$ar_subdata = [];
 
 		$source_model	= get_called_class();	
-		$ar_ddo	= isset(dd_core_api::$ddo_map)
+		$all_ar_ddo	= isset(dd_core_api::$ddo_map)
 			? dd_core_api::$ddo_map
 			: null;
+
+		// filter 
+			$ar_ddo = array_filter($all_ar_ddo, function($el){
+				return $el->parent===$this->tipo;
+			});
+
+				dump($ar_locators, '$ar_locators ++ '.to_string($this->tipo));
+				dump($ar_ddo, '$ar_ddo ++ '.to_string());
 
 		// des
 			// dump($context_dd_objects, ' context_dd_objects ++ '.to_string());			
@@ -1916,6 +1924,7 @@ abstract class common {
 
 			$section_id		= $current_locator->section_id;
 			$section_tipo	= $current_locator->section_tipo;
+
 
 			foreach ((array)$ar_ddo as $dd_object) {
 				
@@ -2142,7 +2151,9 @@ abstract class common {
 				$dedalo_request_config = array_find($request_config, function($el){
 					return $el->api_engine==='dedalo';
 				});
-				dd_core_api::$ddo_map = $dedalo_request_config->show->ddo_map;
+				dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
+
+				
 
 		// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
 		// 	// received request_ddo

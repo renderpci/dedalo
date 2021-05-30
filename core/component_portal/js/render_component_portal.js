@@ -440,7 +440,9 @@ const get_buttons = (self) => {
 
 
 	// button tree terms selector
-		if(self.context.properties.source.mode === 'tree'){
+		if( self.rqo_config.show.interface &&
+			self.rqo_config.show.interface.button_tree &&
+			self.rqo_config.show.interface.button_tree=== true){
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button gear',
@@ -453,7 +455,9 @@ const get_buttons = (self) => {
 		}
 
 
-		if(self.context.properties.source.mode === 'external'){
+		if( self.rqo_config.show.interface &&
+			self.rqo_config.show.interface.button_external &&
+			self.rqo_config.show.interface.button_external === true){
 
 			// button_update data external
 				const button_update_data_external = ui.create_dom_element({
@@ -462,7 +466,7 @@ const get_buttons = (self) => {
 					parent			: fragment
 				})
 				button_update_data_external.addEventListener("click", async function(e){
-					const source = self.rqo.show.find(item => item.typo === 'source')
+					const source = self.rqo_config.show.find(item => item.typo === 'source')
 					source.build_options = {
 						get_dato_external : true
 					}

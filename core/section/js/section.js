@@ -35,7 +35,7 @@ export const section = function() {
 	this.datum
 	this.context
 	this.data
-	this.pagination
+	this.total
 
 	this.ar_section_id
 
@@ -48,6 +48,7 @@ export const section = function() {
 	this.id_variant
 
 	this.rqo_config
+	this.rqo
 
 	return true
 };//end section
@@ -60,19 +61,19 @@ export const section = function() {
 */
 // prototypes assign
 	// life clycle
-	section.prototype.render	= common.prototype.render
-	section.prototype.destroy	= common.prototype.destroy
-	section.prototype.refresh	= common.prototype.refresh
-	section.prototype.build_rqo	= common.prototype.build_rqo
+	section.prototype.render			= common.prototype.render
+	section.prototype.destroy			= common.prototype.destroy
+	section.prototype.refresh			= common.prototype.refresh
+	section.prototype.build_rqo_show	= common.prototype.build_rqo_show
 
 	// render
-	section.prototype.edit			= render_section.prototype.edit
-	section.prototype.list			= render_section.prototype.list
-	section.prototype.list_portal	= render_section.prototype.list
-	section.prototype.tm			= render_section.prototype.list
-	section.prototype.list_header	= render_section.prototype.list_header
+	section.prototype.edit				= render_section.prototype.edit
+	section.prototype.list				= render_section.prototype.list
+	section.prototype.list_portal		= render_section.prototype.list
+	section.prototype.tm				= render_section.prototype.list
+	section.prototype.list_header		= render_section.prototype.list_header
 
-	section.prototype.get_columns	= common.prototype.get_columns
+	section.prototype.get_columns		= common.prototype.get_columns
 
 
 
@@ -108,12 +109,6 @@ section.prototype.init = async function(options) {
 	self.datum				= options.datum		|| null
 	self.context			= options.context	|| null
 	self.data				= options.data		|| null
-
-	// pagination info
-	self.pagination			= {
-		total : 0,
-		offset: 0
-	}
 
 	self.columns 			= []
 
@@ -163,34 +158,17 @@ section.prototype.build = async function(autoload=false) {
 	// rqo_config
 		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
-	// rqo
-		// self.rqo = get_rqo()
 	// rqo build
-		const rqo	= await self.build_rqo('show', self.context.request_config, 'search')
+		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search')
+
+	const current_data_manager	= new data_manager()
 
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			
-
-				// rqo.action	= 'read'
-				// const rqo	= {
-				// 	id 		: self.id,
-				// 	source : create_source(self, 'search'),
-				// 	// sqo : {
-				// 	// 	section_tipo : self.rqo_config.sqo.section_tipo.map(el=>el.tipo),
-				// 	// 	offset : 3
-				// 	// },
-				// 	action : 'read'
-				// }				
-
-			// debug only
-				// const rqo_show_original = JSON.parse(JSON.stringify(self.rqo.show))
-				// const rqo_show_original = JSON.parse(JSON.stringify(rqo.show))
-
 			// get context and data
-				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:rqo})
+				// const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.request({body:self.rqo})
 					console.log("api_response:",api_response);
 
 				// // set value
@@ -214,24 +192,13 @@ section.prototype.build = async function(autoload=false) {
 					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 					: null
 
-			// recreate and set rqo with the new configuration
-				// self.rqo.show = self.build_rqo('show', self.context.request_config, 'search')
-
-			// sqo
-				// const sqo = self.rqo.show.find(element => element.typo==='sqo')
-				const sqo = rqo.sqo
-				// console.log("self.context.request_config", self.context.request_config);
-				// console.log(" self.rqo.show",  self.rqo.show);
 
 			// count rows
-				if (!self.pagination.total) {
-
-					self.pagination.total = (sqo.full_count && sqo.full_count>0)
-						? sqo.full_count
-						: (async () => {
-							const response = await current_data_manager.count(sqo)
-							return response.result.total
-						  })()
+				if (!self.total) {
+					const response = await current_data_manager.count(self.rqo.sqo)
+					self.total = response.result.total
+					// set value
+					current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
 
 			// debug
@@ -239,7 +206,7 @@ section.prototype.build = async function(autoload=false) {
 					const event_token = event_manager.subscribe('render_'+self.id, show_debug_info)
 					function show_debug_info() {
 						event_manager.unsubscribe(event_token)
-						load_data_debug(self, api_response, rqo)
+						load_data_debug(self, api_response, self.rqo)
 					}
 				}
 		}
@@ -259,7 +226,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// sqo
 		// const sqo = self.rqo.show.find(element => element.typo==='sqo')
-		const sqo = rqo.sqo
+		const sqo = self.rqo.sqo
 
 
 	// Update section mode/label with context declarations
@@ -275,6 +242,7 @@ section.prototype.build = async function(autoload=false) {
 		self.permissions = section_context.permissions || 0
 
 	// initiator . Url defined var or Caller of parent section
+	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
 		const searchParams = new URLSearchParams(window.location.href);
 		const initiator = searchParams.has("initiator")
 			? searchParams.get("initiator")
@@ -284,18 +252,6 @@ section.prototype.build = async function(autoload=false) {
 		// fix initiator
 			self.initiator = initiator
 
-	// pagination update properties
-		self.pagination.limit	= sqo
-			? sqo.limit
-			: 10
-		self.pagination.offset	= sqo
-			? sqo.offset
-			: 0
-		self.pagination.total	= self.pagination.total
-			? self.pagination.total
-			: sqo
-				? sqo.full_count
-				: 0
 
 	// paginator
 		if (!self.paginator) {
@@ -321,7 +277,11 @@ section.prototype.build = async function(autoload=false) {
 							node.classList.add('loading')
 						}
 
-					self.pagination.offset = offset
+					// self.pagination.offset = offset
+
+					self.rqo.sqo.offset = offset
+					// set value
+					current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
 					// refresh
 						await self.refresh() // refresh current section
@@ -416,7 +376,7 @@ section.prototype.get_ar_instances = async function(){
 		const value			= self.data.value || []
 		const value_length	= value.length
 
-		const offset = self.pagination.offset
+		const offset = self.rqo.sqo.offset
 
 		const ar_promises = []
 

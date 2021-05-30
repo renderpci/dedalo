@@ -31,7 +31,7 @@
 			"dd_api"		: string // the API class to use,
 			"action"		: string // the API method to use
 			"source"		: {
-				"action_opt"	: string || object || array // the API method modifier to use
+				"action"		: string || object || array // the API method modifier to use
 				"model"			: string // model of the ddo
 				"tipo"			: string // tipo of the ddo
 				"section_tipo"	: string // section_tipo of the ddo
@@ -46,6 +46,10 @@
 				"ddo_map"		: array [array {ddo}, {ddo}] // layout map will be used, with specific path
 				"sqo_config"	: {
 					// specific sqo configuration for the show
+				}
+				"interface"		:{
+					"button_tree" : true || false // control of the imput interface button tree
+					"button_external" : true || false // control of the refresh button when the data of the portal is external
 				}
 			},
 			"search"		: {
