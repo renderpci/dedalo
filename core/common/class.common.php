@@ -2344,13 +2344,13 @@ abstract class common {
 					}else{
 						// fallback non defined sqo_config
 						$sqo_config = new stdClass();
-							$sqo_config->full_count	= false;
-							$sqo_config->add_select	= false;
-							$sqo_config->direct		= true;
-							$sqo_config->limit		= $limit;
-							$sqo_config->offset		= $offset;
-							$sqo_config->mode		= $mode;
-							$sqo_config->operator	= '$or';
+							$sqo_config->full_count		= false;
+							// $sqo_config->add_select	= false;
+							// $sqo_config->direct		= true;
+							$sqo_config->limit			= $limit;
+							$sqo_config->offset			= $offset;
+							$sqo_config->mode			= $mode;
+							$sqo_config->operator		= '$or';
 						$parsed_item->show->sqo_config = $sqo_config;
 					}
 
@@ -2366,13 +2366,13 @@ abstract class common {
 						}else{
 							// fallback non defined sqo_config
 							$sqo_config = new stdClass();
-								$sqo_config->full_count	= false;
-								$sqo_config->add_select	= false;
-								$sqo_config->direct		= true;
-								$sqo_config->limit		= $limit;
-								$sqo_config->offset		= $offset;
-								$sqo_config->mode		= $mode;
-								$sqo_config->operator	= '$or';
+								$sqo_config->full_count		= false;
+								// $sqo_config->add_select	= false;
+								// $sqo_config->direct		= true;
+								$sqo_config->limit			= $limit;
+								$sqo_config->offset			= $offset;
+								$sqo_config->mode			= $mode;
+								$sqo_config->operator		= '$or';
 							$parsed_item->search->sqo_config = $sqo_config;
 						}
 					}
@@ -2469,13 +2469,13 @@ abstract class common {
 
 			// sqo_config
 				$sqo_config = new stdClass();
-					$sqo_config->full_count	= false;
-					$sqo_config->add_select	= false;
-					$sqo_config->direct		= true;
-					$sqo_config->limit		= $limit;
-					$sqo_config->offset		= $offset;
-					$sqo_config->mode		= $mode;
-					$sqo_config->operator	= '$or';
+					$sqo_config->full_count		= false;
+					// $sqo_config->add_select	= false;
+					// $sqo_config->direct		= true;
+					$sqo_config->limit			= $limit;
+					$sqo_config->offset			= $offset;
+					$sqo_config->mode			= $mode;
+					$sqo_config->operator		= '$or';
 
 			// ddo_map
 					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string($tipo));
