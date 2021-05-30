@@ -93,6 +93,13 @@ class sections extends common {
 
 		$this->ar_section_tipo = $this->search_query_object->section_tipo;
 
+		// $ar_section_tipo = array_map(function($el){
+
+		// 	return isset($el->tipo) ? $el->tipo : $el;
+		// }, $this->search_query_object->section_tipo);
+
+		// $this->ar_section_tipo = $ar_section_tipo;
+
 		return $this->ar_section_tipo;
 	}//end get_ar_section_tipo
 

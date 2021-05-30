@@ -103,11 +103,18 @@ login.prototype.build = async function(autoload=true) {
 
 	if (autoload===true) {
 
-		// load data
-			const current_data_manager = new data_manager()
+		// rqo build
+			const rqo = {
+				action : 'get_login',
+				dd_api : 'dd_utils_api',
+				source : create_source(self, null)
+			}
 
-		// get context and data
-			const api_response = await current_data_manager.get_login()
+		// load data. get context and data
+			const current_data_manager	= new data_manager()
+			const api_response			= await current_data_manager.request({
+				body : rqo
+			})		
 
 		// set the result to the datum
 			self.datum = api_response.result

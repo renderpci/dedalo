@@ -26,33 +26,33 @@
 
 			default:
 
-				// context and subcontext from API dd_request if already exists sections					
+				// // context and subcontext from API dd_request if already exists sections					
 								
-				$dd_request = dd_core_api::$dd_request;
+				// $dd_request = dd_core_api::$dd_request;
 
-				// dd_request
-					// $source	= array_find($dd_request, function($item){
-					// 	return $item->typo==='source';
-					// });
-					// if ($source->tipo!==$this->tipo) {
-					// 	debug_log(__METHOD__." $this->tipo controller Processing Request. PORTAL. ESTO ES VALIDO ??????????????????????????????????????????????????? ".to_string(), logger::ERROR);
-					// 	// throw new Exception("controller Processing Request. PORTAL. ESTO ES VALIDO ??????????????????????????????????????????????????? ", 1);
-					// }
+				// // dd_request
+				// 	// $source	= array_find($dd_request, function($item){
+				// 	// 	return $item->typo==='source';
+				// 	// });
+				// 	// if ($source->tipo!==$this->tipo) {
+				// 	// 	debug_log(__METHOD__." $this->tipo controller Processing Request. PORTAL. ESTO ES VALIDO ??????????????????????????????????????????????????? ".to_string(), logger::ERROR);
+				// 	// 	// throw new Exception("controller Processing Request. PORTAL. ESTO ES VALIDO ??????????????????????????????????????????????????? ", 1);
+				// 	// }
 
-				// get request_ddo object	
-					$request_ddo = array_find($dd_request, function($item){
-						return $item->typo==='request_ddo';
-					});
-					// dump($request_ddo, ' request_ddo ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
+				// // get request_ddo object	
+				// 	$request_ddo = array_find($dd_request, function($item){
+				// 		return $item->typo==='request_ddo';
+				// 	});
+				// 	// dump($request_ddo, ' request_ddo ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
 				
-				// when no empty request_ddo->value
-				if ($request_ddo && !empty($request_ddo->value)) {
+				// // when no empty request_ddo->value
+				// if ($request_ddo && !empty($request_ddo->value)) {
 
 						
-					$context = $request_ddo->value;
-					// dd_core_api::$context_dd_objects = $context;					
+				// 	$context = $request_ddo->value;
+				// 	// dd_core_api::$context_dd_objects = $context;					
 					
-				}else{
+				// }else{
 
 					// Component structure context (tipo, relations, properties, etc.)
 						$current_context = $this->get_structure_context($permissions, $add_rqo=true);
@@ -65,7 +65,7 @@
 						foreach ($ar_subcontext as $current_context) {
 							$context[] = $current_context;
 						}
-					}
+				// }
 				break;
 		}
 		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
@@ -105,7 +105,7 @@
 		}
 		if (!empty($dato)) {
 
-			// data item (list mode result don't include self data, only subdata)								
+			// data item (list mode result don't include self data, only subdata)
 				$item = $this->get_data_item($value);
 					$item->parent_tipo			= $tipo;
 					$item->parent_section_id	= $section_id;
@@ -120,21 +120,21 @@
 			
 
 			// subdata from subcontext items
-				$ar_subdata = $this->get_ar_subdata($value);
-				if ($modo==='list') {
+				$ar_subdata = $this->get_ar_subdata($value); 	dump($ar_subdata, ' ar_subdata ++ '.to_string());
+				// if ($modo==='list') {
 					foreach ($ar_subdata as $current_data) {
 
 						// add subdata items parent_tipo/parent_section_id to identify indirect data
-							$current_data->parent_tipo			= $tipo;
-							$current_data->parent_section_id	= $section_id;
+							// $current_data->parent_tipo			= $tipo;
+							// $current_data->parent_section_id	= $current_data->section_id; //	$section_id;
 
 						$data[] = $current_data;
 					}
-				}else{
-					foreach ($ar_subdata as $current_data) {
-						$data[] = $current_data;
-					}
-				}
+				// }else{
+				// 	foreach ($ar_subdata as $current_data) {
+				// 		$data[] = $current_data;
+				// 	}
+				// }
 
 
 		}//end if (!empty($dato))

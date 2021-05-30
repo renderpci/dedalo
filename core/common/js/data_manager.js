@@ -38,9 +38,9 @@ data_manager.prototype.request = async function(options) {
 		return response;
 	}
 
- 	const api_response = fetch(
- 		this.url,
- 		{
+	const api_response = fetch(
+		this.url,
+		{
 			method		: this.method,
 			mode		: this.mode,
 			cache		: this.cache,
@@ -100,28 +100,28 @@ data_manager.prototype.request = async function(options) {
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.get_login = async function() {
+	// data_manager.prototype.get_login = async function() {
 
-	// data_manager
-		const api_response = this.request(
-			{
-				body : {
-					action	: 'get_login',
-					dd_api	: 'dd_utils_api'
-				}
-			}
-		)
+	// 	// data_manager
+	// 		const api_response = this.request(
+	// 			{
+	// 				body : {
+	// 					action	: 'get_login',
+	// 					dd_api	: 'dd_utils_api'
+	// 				}
+	// 			}
+	// 		)
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			api_response.then((response)=>{
-				const exec_time = response.debug ? response.debug.exec_time : ''
-				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response);
-			})
-		}
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			api_response.then((response)=>{
+	// 				const exec_time = response.debug ? response.debug.exec_time : ''
+	// 				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response);
+	// 			})
+	// 		}
 
-	return api_response
-};//end get_login
+	// 	return api_response
+	// };//end get_login
 
 
 
@@ -132,26 +132,26 @@ data_manager.prototype.get_login = async function() {
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.read = async function(dd_request) {
+	// data_manager.prototype.read = async function(dd_request) {
 
-	// data_manager
-		const api_response = this.request({
-			body : {
-				action		: 'read',
-				dd_request	: dd_request
-			}
-		})
+	// 	// data_manager
+	// 		const api_response = this.request({
+	// 			body : {
+	// 				action		: 'read',
+	// 				dd_request	: dd_request
+	// 			}
+	// 		})
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			api_response.then((response)=>{
-				const exec_time = response.debug ? response.debug.exec_time : '';
-				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `dd_request:`, dd_request);
-			})
-		}
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			api_response.then((response)=>{
+	// 				const exec_time = response.debug ? response.debug.exec_time : '';
+	// 				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `dd_request:`, dd_request);
+	// 			})
+	// 		}
 
-	return api_response
-};//end read
+	// 	return api_response
+	// };//end read
 
 
 
@@ -279,6 +279,209 @@ data_manager.prototype.get_page_element = async function(options) {
 
 
 /**
+* GET_LOCAL_DB
+*/
+data_manager.prototype.get_local_db = async function() {
+
+	// db storage
+		// In the following line, you should include the prefixes of implementations you want to test.
+		const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+		// DON'T use "var indexedDB = ..." if you're not in a function.
+		// Moreover, you may need references to some window.IDB* objects:
+		const IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
+		const IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+		// (Mozilla has never prefixed these objects, so we don't need window.mozIDB*)
+
+	// invalid local db case
+		if (!indexedDB) {
+			console.error("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
+		}
+
+	// open db. Let us open our database
+		const db_request = indexedDB.open("dedalo", 6);
+
+
+	return new Promise(function(resolve, reject){
+
+		// error case
+			db_request.onerror = function(event) {
+				console.error("-> get_local_db error:", event.target);
+				reject(false)
+			};
+
+		// success case
+			db_request.onsuccess = function(event) {
+				// console.log("-> get_local_db success:", event.target);
+				
+				const db = event.target.result;			
+
+				resolve(db)
+			};
+
+		// onupgradeneeded event
+			db_request.onupgradeneeded = function(event) {
+				console.log("-> get_local_db onupgradeneeded:", event.target);
+					
+				const db = event.target.result;
+
+				// objectStore
+				// Create an objectStore to hold information about our customers. We're
+				// going to use "ssn" as our key path because it's guaranteed to be
+				// unique - or at least that's what I was told during the kickoff meeting.
+					db.createObjectStore('rqo', { keyPath: "id" });
+					db.createObjectStore('context', { keyPath: "id" });
+					db.createObjectStore('data', { keyPath: "id" });
+					db.createObjectStore('ontology', { keyPath: "id" });
+
+				// index
+				// Create an index to search customers by name. We may have duplicates
+				// so we can't use a unique index.
+					// objectStore.createIndex("name", "name", { unique: false });
+
+				// oncomplete. Use transaction oncomplete to make sure the objectStore creation is
+				// finished before adding data into it.
+					// objectStore.transaction.oncomplete = function(event) {
+						// Store values in the newly created objectStore.
+						// const customerObjectStore = db.transaction(table, "readwrite").objectStore(table);
+						// customerData.forEach(function(customer) {
+						//	customerObjectStore.add(customer);
+						// });
+					// };
+			};
+	})
+};//end local_db
+
+
+
+/**
+* SET_LOCAL_DB_DATA
+*/
+data_manager.prototype.set_local_db_data = async function(data, table) {
+
+	const self = this
+
+	// get local db
+		const db = await self.get_local_db()
+
+	return new Promise(function(resolve, reject){
+
+		// transaction
+			const transaction = db.transaction(table, "readwrite");
+			// oncomplete. Do something when all the data is added to the database.
+				transaction.oncomplete = function(event) {
+					console.log("All done!");
+				};
+			// error
+				transaction.onerror = function(event) {
+					console.error("-> set_local_db_data error:", event.target);
+					reject(false)
+				};
+
+		// request
+			const objectStore	= transaction.objectStore(table);
+			// const request	= objectStore.add(data);
+			// Put this updated object back into the database.
+  			const request = objectStore.put(data);
+		 
+			request.onsuccess = function(event) {
+				// event.target.result === customer.ssn;
+				// console.log("Yuppiii:", event.target);
+				resolve(event.target.result)
+			};
+			request.onerror = function(event) {
+				// console.error("-> set_local_db_data error:", event.target);
+				reject(event.target.error);
+			};
+	})
+}//end set_local_db_data
+
+
+
+/**
+* GET_LOCAL_DB_DATA
+*/
+data_manager.prototype.get_local_db_data = async function(id, table) {
+
+	const self = this
+
+	// get local db
+		const db = await self.get_local_db()
+
+	return new Promise(function(resolve, reject){
+
+		// transaction
+			const transaction = db.transaction(table, "readwrite");
+			// oncomplete. Do something when all the data is added to the database.
+				transaction.oncomplete = function(event) {
+					console.log("All done!");
+				};
+			// error
+				transaction.onerror = function(event) {
+					console.error("-> get_local_db_data error:", event.target);
+					reject(false)
+				};
+
+		// request
+			const objectStore	= transaction.objectStore(table);
+			const request		= objectStore.get(id);
+		 
+			request.onsuccess = function(event) {
+				// event.target.result === customer.ssn;
+				// console.log("Yuppiii:", event.target);
+				resolve(event.target.result)
+			};
+			request.onerror = function(event) {
+				// console.error("-> get_local_db_data error:", event.target);
+				reject(event.target.error);
+			};
+	})
+}//end get_local_db_data
+
+
+
+/**
+* GET_LOCAL_DB_DATA
+*/
+data_manager.prototype.delete_local_db_data = async function(id, table) {
+
+	const self = this
+
+	// get local db
+		const db = await self.get_local_db()
+
+	return new Promise(function(resolve, reject){
+
+		// transaction
+			const transaction = db.transaction(table, "readwrite");
+			// oncomplete. Do something when all the data is added to the database.
+				transaction.oncomplete = function(event) {
+					console.log("All done!");
+				};
+			// error
+				transaction.onerror = function(event) {
+					console.error("-> get_local_db_data error:", event.target);
+					reject(false)
+				};
+
+		// request
+			const objectStore	= transaction.objectStore(table);
+			const request		= objectStore.delete(id);
+		 
+			request.onsuccess = function(event) {
+				// event.target.result === customer.ssn;
+				// console.log("Yuppiii:", event.target);
+				resolve(event.target.result)
+			};
+			request.onerror = function(event) {
+				// console.error("-> get_local_db_data error:", event.target);
+				reject(event.target.error);
+			};
+	})
+}//end get_local_db_data
+
+
+
+/**
 * DOWNLOAD_URL
 * @param string url
 * @param string filename
@@ -385,3 +588,5 @@ data_manager.prototype.component_load_context = async function(component) {
 	return context
 };//end component_load_context
 */
+
+

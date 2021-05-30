@@ -35,6 +35,7 @@ export const section = function() {
 	this.datum
 	this.context
 	this.data
+	this.pagination
 
 	this.ar_section_id
 
@@ -45,6 +46,8 @@ export const section = function() {
 	this.paginator
 
 	this.id_variant
+
+	this.rqo_config
 
 	return true
 };//end section
@@ -57,19 +60,19 @@ export const section = function() {
 */
 // prototypes assign
 	// life clycle
-	section.prototype.render			= common.prototype.render
-	section.prototype.destroy			= common.prototype.destroy
-	section.prototype.refresh			= common.prototype.refresh
-	section.prototype.build_rqo			= common.prototype.build_rqo
+	section.prototype.render	= common.prototype.render
+	section.prototype.destroy	= common.prototype.destroy
+	section.prototype.refresh	= common.prototype.refresh
+	section.prototype.build_rqo	= common.prototype.build_rqo
 
 	// render
-	section.prototype.edit				= render_section.prototype.edit
-	section.prototype.list				= render_section.prototype.list
-	section.prototype.list_portal		= render_section.prototype.list
-	section.prototype.tm				= render_section.prototype.list
-	section.prototype.list_header		= render_section.prototype.list_header
+	section.prototype.edit			= render_section.prototype.edit
+	section.prototype.list			= render_section.prototype.list
+	section.prototype.list_portal	= render_section.prototype.list
+	section.prototype.tm			= render_section.prototype.list
+	section.prototype.list_header	= render_section.prototype.list_header
 
-	section.prototype.get_columns		= common.prototype.get_columns
+	section.prototype.get_columns	= common.prototype.get_columns
 
 
 
@@ -106,13 +109,6 @@ section.prototype.init = async function(options) {
 	self.context			= options.context	|| null
 	self.data				= options.data		|| null
 
-	// dd request
-	// self.rqo				= options.rqo || {
-	// 							show	: null,
-	// 							search	: null,
-	// 							select	: null
-	// 						}
-
 	// pagination info
 	self.pagination			= {
 		total : 0,
@@ -130,7 +126,7 @@ section.prototype.init = async function(options) {
 	self.id_column_width	= '7.5em'
 	self.permissions		= options.permissions || null
 
-
+	
 	// events subscription
 
 
@@ -156,44 +152,74 @@ section.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
-	// // set rqo
-	// 	self.rqo.show = self.rqo.show || self.build_rqo('show', self.context.request_config, 'search')
+	// self.datum. On building, if datum is not created, creation is needed
+		if (!self.data) {
+			self.data = []
+		}
+		if (!self.datum) {
+			self.datum = {data:self.data, context:[]}
+		}
 
-	// // debug
-	// 	const rqo_show_original = JSON.parse(JSON.stringify(self.rqo.show))
+	// rqo_config
+		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+
+	// rqo
+		// self.rqo = get_rqo()
+	// rqo build
+		const rqo	= await self.build_rqo('show', self.context.request_config, 'search')
 
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// rqo build
-			const rqo = self.build_rqo('show', self.context.request_config, 'search')
-			rqo.action = 'read'
 			
+
+				// rqo.action	= 'read'
+				// const rqo	= {
+				// 	id 		: self.id,
+				// 	source : create_source(self, 'search'),
+				// 	// sqo : {
+				// 	// 	section_tipo : self.rqo_config.sqo.section_tipo.map(el=>el.tipo),
+				// 	// 	offset : 3
+				// 	// },
+				// 	action : 'read'
+				// }				
+
+			// debug only
+				// const rqo_show_original = JSON.parse(JSON.stringify(self.rqo.show))
+				// const rqo_show_original = JSON.parse(JSON.stringify(rqo.show))
 
 			// get context and data
 				const current_data_manager	= new data_manager()
-				// const api_response		= await current_data_manager.read(rqo)
-				const api_response			= await current_data_manager.request({body : rqo})
-				if (!api_response.result) {
-					console.error("Error o read section datum api_response:", api_response);
-					return false;
-				}
+				const api_response			= await current_data_manager.request({body:rqo})
+					console.log("api_response:",api_response);
 
+				// // set value
+				// 	current_data_manager.set_local_db_data(rqo, 'rqo')
+
+				// // get value
+				// const a = await current_data_manager.get_local_db_data(self.id, 'rqo')
+				// 	console.log("a:",a);
+
+				// // delete value
+				// 	const deleted = await current_data_manager.delete_local_db_data(self.id, 'rqo')
+				// 	console.log("deleted:",deleted);
+			
 			// set the result to the datum
 				self.datum = api_response.result
 
 			// set context and data to current instance
-				self.context	= self.datum.context.find(element => element.section_tipo===self.section_tipo)
-				self.data		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
+				self.context		= self.datum.context.find(element => element.section_tipo===self.section_tipo)
+				self.data			= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
 				self.section_id	= self.data
 					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 					: null
 
 			// recreate and set rqo with the new configuration
-				self.rqo.show = self.build_rqo('show', self.context.request_config, 'search')
+				// self.rqo.show = self.build_rqo('show', self.context.request_config, 'search')
 
 			// sqo
-				const sqo = self.rqo.show.find(element => element.typo==='sqo')
+				// const sqo = self.rqo.show.find(element => element.typo==='sqo')
+				const sqo = rqo.sqo
 				// console.log("self.context.request_config", self.context.request_config);
 				// console.log(" self.rqo.show",  self.rqo.show);
 
@@ -213,7 +239,7 @@ section.prototype.build = async function(autoload=false) {
 					const event_token = event_manager.subscribe('render_'+self.id, show_debug_info)
 					function show_debug_info() {
 						event_manager.unsubscribe(event_token)
-						load_data_debug(self, api_response, dd_request_show_original)
+						load_data_debug(self, api_response, rqo)
 					}
 				}
 		}
@@ -232,7 +258,8 @@ section.prototype.build = async function(autoload=false) {
 
 
 	// sqo
-		const sqo = self.rqo.show.find(element => element.typo==='sqo')
+		// const sqo = self.rqo.show.find(element => element.typo==='sqo')
+		const sqo = rqo.sqo
 
 
 	// Update section mode/label with context declarations

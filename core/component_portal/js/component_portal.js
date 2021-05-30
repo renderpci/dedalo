@@ -43,6 +43,8 @@ export const component_portal = function(){
 	this.autocomplete
 	this.autocomplete_active
 
+	this.rqo_config
+
 	return true
 };//end  component_portal
 
@@ -83,23 +85,15 @@ export const component_portal = function(){
 * INIT
 */
 component_portal.prototype.init = async function(options) {
-
+	
 	const self = this
 
 	// autocomplete. set default values of service autocomplete
 		self.autocomplete			= null
 		self.autocomplete_active	= false
 
-	// dd_request . Object with all possible request (show,select,search)
-		self.dd_request	= {
-			show	: null,
-			search	: null,
-			select	: null
-		}
-
 	// columns
 		self.columns = []
-
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -142,12 +136,20 @@ component_portal.prototype.build = async function(autoload=false){
 		self.status = 'building'
 
 	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.datum) self.datum = {data:[],context:[]}
+		if (!self.data) {
+			self.data = []
+		}
+		if (!self.datum) {
+			self.datum = {data:self.data, context:[]}
+		}
+
+	// rqo_config
+		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')	
 
 	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
+		// self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
 			// console.log("/// PORTAL BUILD self.dd_request.show:",self.dd_request.show);
-
+	
 	// debug check
 		if(SHOW_DEBUG===true) {
 			// console.log("-- component_portal.prototype.build self.context.request_config", self.context.request_config);
@@ -163,15 +165,22 @@ component_portal.prototype.build = async function(autoload=false){
 			}
 		}
 
-
 	// load data if not yet received as an option
 		if (autoload===true) {
 			
 			// console.log("// portal request (autoload=true): self.dd_request.show:",self.dd_request.show);
 
+			// rqo build
+				// const rqo	= self.build_rqo('show', self.context.request_config, 'get_data')
+				// rqo.action	= 'read'
+				const rqo	= {
+					source : create_source(self, 'get_data'),
+					action : 'read'
+				}
+
 			// get context and data
 				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.read(self.dd_request.show)
+				const api_response			= await current_data_manager.request({body:rqo})
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -186,6 +195,8 @@ component_portal.prototype.build = async function(autoload=false){
 				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				set_context_vars(self, self.context)
 
+				self.datum.context = api_response.result.context
+			
 			// pagination. update element pagination vars when are used
 				if (self.data.pagination && typeof self.pagination.total!=="undefined") {
 					// console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++ self.data.pagination:",self.data.pagination);
@@ -193,15 +204,19 @@ component_portal.prototype.build = async function(autoload=false){
 					self.pagination.offset	= self.data.pagination.offset
 				}
 		}
+		
 
 	// pagination vars only in edit mode
 		if (self.mode==="edit") {
 
+			const show_sqo_config	= self.rqo_config.show.sqo_config
+
 			// pagination safe defaults
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
-				self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
-			
+				// self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
+				self.pagination.limit 	= self.pagination.limit  || ((show_sqo_config && show_sqo_config.limit) ? show_sqo_config.limit : 5)
+
 			// sqo update filter_by_locators
 				// if(self.pagination.total>self.pagination.limit){
 
@@ -248,8 +263,12 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 		}//end if (self.mode==="edit")
 
+
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
+
+	// target_section
+		self.target_section = self.rqo_config.sqo.section_tipo
 
 	// columns
 		if(self.mode === 'edit'){

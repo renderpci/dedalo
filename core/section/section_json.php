@@ -12,8 +12,7 @@
 
 // context
 	$context = [];
-
-
+	
 	if($options->get_context===true  && $permissions>0){
 		switch ($options->context_type) {
 			case 'simple':
@@ -66,7 +65,12 @@
 				}
 				break;
 		}
+
+		$this->context = $context;
 	}//end if($options->get_context===true)
+
+
+
 
 
 
@@ -97,7 +101,7 @@
 					$data = $this->get_ar_subdata($value);
 		}
 
-	}// end if $permissions > 0
+	}//end if($options->get_data===true && $permissions>0)
 
 
 

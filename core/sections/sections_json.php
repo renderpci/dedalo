@@ -11,7 +11,7 @@
 
 // context
 	$context = [];
-
+	
 	if($options->get_context===true){
 		switch ($options->context_type) {
 			case 'simple':
@@ -21,7 +21,7 @@
 
 			default:				
 				foreach ((array)$ar_section_tipo as $current_section_tipo) {
-
+					
 					$section = $section_class::get_instance(null, $current_section_tipo, $modo);
 
 					// set dd_request always to allow components know request context
@@ -63,7 +63,7 @@
 	$data = [];
 
 	if($options->get_data===true){
-
+	
 		// dato is the full result of a search using the search_query_object
 		$dato = $this->get_dato();
 
@@ -104,7 +104,7 @@
 					if ($modo==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
 					}else{
-						// inject datos to section ans set as loaded
+						// inject datos to section as set as loaded
 						$datos = $current_record->datos ?? null;
 						if (!is_null($datos)) {
 							$section->set_dato($datos);

@@ -45,7 +45,9 @@ class dd_object extends stdClass {
 		}
 
 		// set model in first time
-			$this->set_model($data->model);
+			if(isset($data->model)) {
+				$this->set_model($data->model);
+			}			
 
 		// set all properties
 			foreach ($data as $key => $value) {
@@ -108,6 +110,9 @@ class dd_object extends stdClass {
 	* SET_SECTION_TIPO
 	*/
 	public function set_section_tipo(string $value) {
+		if (!isset($this->model)) {
+			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
+		}
 		if(strpos($this->model, 'area')!==0 && !RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
 		}

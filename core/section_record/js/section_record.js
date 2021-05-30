@@ -330,27 +330,32 @@ section_record.prototype.get_component_relation_data = function(component, secti
 
 	const self = this
 
-	const parent 			= component.parent
-	const section_tipo 		= component.section_tipo
-	const component_data 	= {}
-	// get the f_path it has full path from the main section to last component in the chain, (sectui b¡)
-	const f_path 			= component.parent_f_path
-	// get the first compoment, position 2, this component has the locator into the data of the main section.
-	const component_tipo 	= f_path[1]
-	const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
+	const parent			= component.parent
+	const section_tipo		= component.section_tipo
+	const component_tipo	= component.tipo
+	const component_data	= self.datum.data.find(item => item.tipo===component_tipo && item.row_section_id===section_id)
+	
+	// console.log("component_data:",component_data);
+
+	/**/
+	// // get the f_path it has full path from the main section to last component in the chain, (sectui b¡)
+	// const f_path 			= component.parent_f_path
+	// // get the first compoment, position 2, this component has the locator into the data of the main section.
+	// const component_tipo 	= f_path[1]
+	// const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
 
 	// Get the data of the component selected in the show, normally the last compoment of the chain.
 	// It's the column in the list
-	const parent_data = (first_locator)
-		? self.datum.data.find(item =>
-			item.tipo === component.tipo
-			&& item.parent_section_id 	=== section_id
-			&& item.parent_tipo 		=== first_locator.tipo)
-		: null
+	// const parent_data = (first_locator)
+	// 	? self.datum.data.find(item =>
+	// 		item.tipo === component.tipo
+	// 		&& item.parent_section_id 	=== section_id
+	// 		&& item.parent_tipo 		=== first_locator.tipo)
+	// 	: null
 	// if the component has data set it, if not create a null data
-	component_data.value = (parent_data)
-		? parent_data
-		: null
+	// component_data.value = (parent_data)
+	// 	? parent_data
+	// 	: null
 
 	// undefined case. If the current item don't has data will be instanciated with the current section_id
 	if (component_data.value === null) {
@@ -367,7 +372,7 @@ section_record.prototype.get_component_relation_data = function(component, secti
 	}
 	// self.data.push(component_data.value)
 
-	return component_data.value
+	return component_data
 };//end get_component_data
 
 

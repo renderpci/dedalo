@@ -257,9 +257,9 @@ const add_events = function(self, wrapper) {
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
 
-					// set dd_request
-						self.dd_request.search 	= self.dd_request.search || self.build_rqo('search', self.context.request_config, 'search')
-						self.dd_request.select 	= self.dd_request.select || self.build_rqo('select', self.context.request_config, 'get_data')
+					// set rqo
+						self.rqo.search 	= self.rqo.search || self.build_rqo('search', self.context.request_config, 'search')
+						self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
 
 					self.autocomplete = new service_autocomplete()
 					self.autocomplete.init({
@@ -324,7 +324,7 @@ const get_content_data_edit = async function(self) {
 	return content_data
 };//end  get_content_data_edit
 
-
+ 
 
 /**
 * GET_BUTTONS
@@ -332,11 +332,11 @@ const get_content_data_edit = async function(self) {
 * @return DOM node buttons_container
 */
 const get_buttons = (self) => {
-
+	
 	const is_inside_tool		= self.is_inside_tool
 	const mode					= self.mode
-	const show					= self.dd_request.show
-	const target_section		= show.filter(item => item.model==='section')
+	const show					= self.rqo.show
+	const target_section		= self.context.request_config.find(el => el.api_engine==='dedalo').sqo.section_tipo
 	const target_section_lenght	= target_section.length
 		  // sort section by label asc
 		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
@@ -462,7 +462,7 @@ const get_buttons = (self) => {
 					parent			: fragment
 				})
 				button_update_data_external.addEventListener("click", async function(e){
-					const source = self.dd_request.show.find(item => item.typo === 'source')
+					const source = self.rqo.show.find(item => item.typo === 'source')
 					source.build_options = {
 						get_dato_external : true
 					}
@@ -482,6 +482,7 @@ const get_buttons = (self) => {
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		buttons_container.appendChild(fragment)
+			console.log("buttons_container:",buttons_container);
 
 
 	return buttons_container
@@ -505,7 +506,7 @@ const get_top = function(self) {
 		const is_inside_tool		= self.is_inside_tool
 		const mode					= self.mode
 		const current_data_manager	= new data_manager()
-		const show					= self.dd_request.show
+		const show					= self.rqo.show
 		const target_section		= show.filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length
 		// sort section by label asc

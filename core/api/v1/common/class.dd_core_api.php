@@ -15,7 +15,7 @@ class dd_core_api {
 		// static $ar_dd_objects;
 
 	// $request_ddo_value . store current ddo items added by get_config_context methods (portals, etc.)
-		static $request_ddo_value = [];
+		// static $request_ddo_value = [];
 
 	// rqo . store current rqo received in context to allow external access (portals, etc.)
 		static $rqo;
@@ -25,6 +25,7 @@ class dd_core_api {
 
 	// context . Whole calculated context
 		// static $context;
+		static $ddo_map; // fixed in get_structure_context()
 
 
 
@@ -822,9 +823,9 @@ class dd_core_api {
 				}
 			}//end if (empty($search_query_object))
 
-		// pagination vars from sqo
-			$limit	= $sqo->limit ?? null;
-			$offset	= $sqo->offset ?? null;
+			// pagination vars from sqo
+				$limit	= $sqo->limit ?? null;
+				$offset	= $sqo->offset ?? null;
 
 
 		// CONTEXT
@@ -833,9 +834,9 @@ class dd_core_api {
 				switch ($action) {
 
 					case 'search': // example use: get section records in list or edit mode, search in autocomplete service
-
+						
 						// sections
-							$element = sections::get_instance(null, $sqo, $section_tipo, $mode, $lang);
+							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
 							// set always
 							// $element->set_rqo($rqo); // inject whole rqo context
@@ -896,88 +897,88 @@ class dd_core_api {
 
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 
+	
 		// DATA
 			$data = [];
 
 				$data_start_time=microtime(1);
-
+				
 				unset($element);
 
 				switch ($action) {
 
 					case 'search':
-						/*
-							// search
-								$search 	= search::get_instance($sqo);
-								$rows_data 	= $search->search();
+						// DES
+							// // search
+							// 	$search 	= search::get_instance($sqo);
+							// 	$rows_data 	= $search->search();
 
-							// section. generated the self section_data
-							foreach ($current_sqo->section_tipo as $current_section_tipo) {
+							// // section. generated the self section_data
+							// foreach ($current_sqo->section_tipo as $current_section_tipo) {
 
-								$section_data = new stdClass();
-									$section_data->tipo 		= $current_section_tipo;
-									$section_data->section_tipo = $current_section_tipo;
-									$ar_section_id = [];
-									foreach ($rows_data->ar_records as $current_row) {
-										if ($current_row->section_tipo===$current_section_tipo) {
-											$ar_section_id[] = $current_row->section_id;
-										}
-									}
-									$section_data->value 		= $ar_section_id;
+							// 	$section_data = new stdClass();
+							// 		$section_data->tipo 		= $current_section_tipo;
+							// 		$section_data->section_tipo = $current_section_tipo;
+							// 		$ar_section_id = [];
+							// 		foreach ($rows_data->ar_records as $current_row) {
+							// 			if ($current_row->section_tipo===$current_section_tipo) {
+							// 				$ar_section_id[] = $current_row->section_id;
+							// 			}
+							// 		}
+							// 		$section_data->value 		= $ar_section_id;
 
-									// pagination info
-									$section_data->offset 		= $current_sqo->offset;
-									$section_data->limit 		= $current_sqo->limit;
-									$section_data->total 		= $current_sqo->full_count;
+							// 		// pagination info
+							// 		$section_data->offset 		= $current_sqo->offset;
+							// 		$section_data->limit 		= $current_sqo->limit;
+							// 		$section_data->total 		= $current_sqo->full_count;
 
-								$data[] = $section_data;
-							}
+							// 	$data[] = $section_data;
+							// }
 
-							// Iterate records
-							$i=0; foreach ($rows_data->ar_records as $record) {
+							// // Iterate records
+							// $i=0; foreach ($rows_data->ar_records as $record) {
 
-								$section_id   	= $record->section_id;
-								$section_tipo 	= $record->section_tipo;
-								$datos			= json_decode($record->datos);
+							// 	$section_id   	= $record->section_id;
+							// 	$section_tipo 	= $record->section_tipo;
+							// 	$datos			= json_decode($record->datos);
 
-								if (!isset($section_dd_object)) {
-									$section_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($section_tipo){
-										if($item->model==='section' && $item->section_tipo===$section_tipo) return $item;
-										return $carry;
-									});
-								}
+							// 	if (!isset($section_dd_object)) {
+							// 		$section_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($section_tipo){
+							// 			if($item->model==='section' && $item->section_tipo===$section_tipo) return $item;
+							// 			return $carry;
+							// 		});
+							// 	}
 
-								$mode = $section_dd_object->mode;
+							// 	$mode = $section_dd_object->mode;
 
-								// Inject known dato to avoid re connect to database
-									$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
-									$section->set_dato($datos);
-									$section->set_bl_loaded_matrix_data(true);
+							// 	// Inject known dato to avoid re connect to database
+							// 		$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
+							// 		$section->set_dato($datos);
+							// 		$section->set_bl_loaded_matrix_data(true);
 
-								// get section json
-									$get_json_options = new stdClass();
-										$get_json_options->get_context 	= false;
-										$get_json_options->get_data 	= true;
-									$section_json = $section->get_json($get_json_options);
+							// 	// get section json
+							// 		$get_json_options = new stdClass();
+							// 			$get_json_options->get_context 	= false;
+							// 			$get_json_options->get_data 	= true;
+							// 		$section_json = $section->get_json($get_json_options);
 
-								// data add
-									$data = array_merge($data, $section_json->data);
+							// 	// data add
+							// 		$data = array_merge($data, $section_json->data);
 
-								// get_ddinfo_parents
-									if (isset($current_sqo->value_with_parents) && $current_sqo->value_with_parents===true) {
+							// 	// get_ddinfo_parents
+							// 		if (isset($current_sqo->value_with_parents) && $current_sqo->value_with_parents===true) {
 
-										$locator = new locator();
-											$locator->set_section_tipo($section_tipo);
-											$locator->set_section_id($section_id);
+							// 			$locator = new locator();
+							// 				$locator->set_section_tipo($section_tipo);
+							// 				$locator->set_section_id($section_id);
 
-										$dd_info = common::get_ddinfo_parents($locator, $current_sqo->source_component_tipo);
+							// 			$dd_info = common::get_ddinfo_parents($locator, $current_sqo->source_component_tipo);
 
-										$data[] = $dd_info;
-									}
+							// 			$data[] = $dd_info;
+							// 		}
 
 
-							$i++; }//end iterate records
-							*/
+							// $i++; }//end iterate records							
 
 						// sections
 							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
@@ -1064,16 +1065,18 @@ class dd_core_api {
 
 					}//end if (isset($element))
 
-
 			// smart remove data duplicates (!)
 				#$data = self::smart_remove_data_duplicates($data);
 
 			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
 
+				dump($context, ' context ++ '.to_string());
+				dump($data, ' data ++ '.to_string());
 
 		// Set result object
 			$result->context = $context;
 			$result->data 	 = $data;
+	
 
 
 		// Debug
@@ -1099,7 +1102,7 @@ class dd_core_api {
 	* SMART_REMOVE_DATA_DUPLICATES
 	* @param array $data
 	* @return array $clean_data
-	*/
+	
 	private static function smart_remove_data_duplicates($data) {
 
 		$clean_data = [];
