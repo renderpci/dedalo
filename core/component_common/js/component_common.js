@@ -215,18 +215,15 @@ component_common.prototype.build = async function(autoload=false){
 				// 	const request_config = self.context.request_config || null
 				// 	self.rqo.show = self.build_rqo('show', request_config, 'get_data')
 				// }
-				const request_config	= self.context.request_config || null
-				const rqo				= self.build_rqo('show', request_config, 'get_data')
-				rqo.action				= 'read'
-				console.log("++++++ rqo", rqo);
-			// console.log("self.rqo", !self.rqo.show);
+				// const request_config	= self.context.request_config || null
+				const rqo = {
+					source	: create_source(self, 'get_data'),
+					action	: 'read'
+				}
 
 			// load data
 				const current_data_manager	= new data_manager()
-				// const api_response		= await current_data_manager.read(self.rqo.show)
-				const api_response			= await current_data_manager.request({
-					body : rqo
-				})
+				const api_response			= await current_data_manager.request({body : rqo})
 
 			// debug
 				if(SHOW_DEBUG===true) {
