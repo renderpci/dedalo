@@ -407,6 +407,10 @@ class section extends common {
 			// 	# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
 			// }
 
+		$this->post_save_component_processes((object)[
+			'component' => $component_obj
+		]);
+
 
 		return $result;
 	}#end save_component_dato
@@ -3635,6 +3639,84 @@ class section extends common {
 		
 		return $data;
 	}//end get_tm_ar_subdata
+
+
+
+	/**
+	* POST_SAVE_COMPONENT_PROCESSES
+	* Executed on component save (when save script is complete)
+	* @return bool
+	*/
+	public function post_save_component_processes($options) {
+
+		// options
+			$component = $options->component;
+
+		// short vars
+			$section_tipo	= $this->tipo;
+			$section_id		= $this->section_id;
+			$lang			= $component->get_lang();
+			$component_tipo = $component->get_tipo();
+
+		// ontology sync. Syncronize this section values with equivalents in table 'matrix_descriptors_dd'. Only master server
+			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true && 
+				defined('ONTOLOGY_SECTION_TIPOS') && ONTOLOGY_SECTION_TIPOS['section_tipo']===$section_tipo) {
+
+				$ar_update_tipos = [
+					ONTOLOGY_SECTION_TIPOS['term'],
+					// ONTOLOGY_SECTION_TIPOS['definition']
+				];
+
+				if (in_array($component_tipo, $ar_update_tipos)) {
+
+					// term_id
+						$term_id = (function() use($section_id, $section_tipo){
+							
+							$component_tipo = ONTOLOGY_SECTION_TIPOS['term_id'];
+							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$component 		= component_common::get_instance($modelo_name,
+																			 $component_tipo,
+																			 $section_id,
+																			 'list',
+																			 DEDALO_DATA_NOLAN,
+																			 $section_tipo);
+							$dato		= $component->get_dato();
+							$term_id	= reset($dato);
+
+							return $term_id;
+						})();
+
+					if (empty($term_id)) {
+						debug_log(__METHOD__." term_id value is mandatoy. Nothing is propagated to descriptors ".to_string($term_id), logger::ERROR);
+					}else{
+						
+						$dato_tipo = (function() use($component_tipo){
+							switch ($component_tipo) {
+								case ONTOLOGY_SECTION_TIPOS['term']:		return 'termino';	break;
+								// case ONTOLOGY_SECTION_TIPOS['definition']:	return 'def';		break;
+								// case ONTOLOGY_SECTION_TIPOS['observations']:return 'obs';		break;
+							}
+							return null;
+						})();
+
+						if (!empty($dato_tipo)) {
+							
+							$value = $component->get_valor();
+
+							// set and save the value to descriptors dd
+								$RecordObj = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, null, $term_id, $lang, $dato_tipo);
+								$RecordObj->set_dato($value);
+								$result = $RecordObj->Save();
+
+								debug_log(__METHOD__." Updated descriptors_dd 'termino' [$term_id] - dato_tipo : $dato_tipo - with value: ".to_string($value), logger::DEBUG);
+						}
+					}
+				}
+			}//end ontology sync
+
+
+		return true;
+	}//end post_save_component_processes
 
 
 
