@@ -537,17 +537,18 @@ common.prototype.get_columns = async function(){
 	// 	return ar_columns
 	// }
 	const ddo_map = self.rqo_config.show.ddo_map
-
+console.log("ar_columns:",ddo_map); return ar_columns
 	// console.log("self.dd_request", self.dd_request);
 
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-	const sub_columns = get_sub_columns(self, self.tipo, ddo_map, [])
+	const sub_columns = get_sub_columns(self.datum, self.tipo, ddo_map, [])
 	ar_columns.push(...sub_columns)
+
+		console.log("ar_columns:",ar_columns);
 
 	return ar_columns
 };//end get_columns
-
 
 
 /**
@@ -558,10 +559,10 @@ common.prototype.get_columns = async function(){
 * @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
 * @return array ar_columns
 */
-const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
+const get_sub_columns = function(datum, caller_tipo, ddo_map, sub_ddo){
 	
 	const ar_columns = []
-	
+
 	// get the valid ddo_map, only the last ddo in the path will be rendered.
 		function get_last_children(ddo_map, current_ddo) {
 			const ar_children = []
@@ -595,89 +596,28 @@ const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 		for (let i = 0; i < ar_valid_ddo.length; i++) {
 			const current_tipo = ar_valid_ddo[i].tipo
 
-			const ddo = self.datum.context.find(item => item.tipo===current_tipo)
+			const ddo = datum.context.find(item => item.tipo===current_tipo)
+			// rqo_config
+			const rqo_config	= ddo.request_config
+				? ddo.request_config.find(el => el.api_engine==='dedalo')
+				: null
+
 			if (!ddo) {
-				console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, self.datum.context);
+				console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, datum.context);
 				continue
 			}
-
 			ar_columns.push(ddo)
-		}
 
-	/*
-
-	// every ddo will be checked if it is a component_portal or if is the last component in the chain
-	for (let i = 0; i < ddo_length; i++) {
-		// const ar_sub_ddo 	= sub_ddo
-		const current_ddo 	= ar_valid_ddo[i]
-
-		// if(current_ddo.parent !== caller_tipo) continue;
-
-		// check if the item in ddo_map is a object, if true, get the tipo,
-		// if ddo is a f_path, get the last component, it will use for show the information
-		// else get the string with the tipo.
-		// const current_tipo = typeof current_ddo.tipo!=='undefined'
-		// 	? current_ddo.tipo
-		// 	: typeof current_ddo.f_path!=='undefined'
-		// 		? current_ddo.f_path[current_ddo.f_path.length - 1]
-		// 		: current_ddo
-
-
-	
-		// get the ddo context of the component from the datum,
-		// It is necessary the match with the caller_tipo if the section has a relation with itself
-		// (the last component in the chain can had different parent, multiple portals can call same component)
-		const ddo = self.datum.context.find(item => item.tipo===current_tipo && item.parent===caller_tipo)
-		if (!ddo) {
-			console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, self.datum.context);
-			continue
-		}
-		// if the current ddo has defined by f_path, get the all path before the last section and component (get the all ancestors)
-		const ancestor_f_path  = []
-		if(typeof current_ddo.f_path!=='undefined'){
-			ancestor_f_path.push(...current_ddo.f_path)
-			ancestor_f_path.splice(-2, 2)
-		}
-		// if the ddo has a request_config it has sub-components and it will be not used
-		if(ddo.request_config){
-
-			// get the rqo of the component and the ddo_map for show
-			const rqo = ddo.request_config.find(item => item.typo==='rqo')
-
-			if (rqo) {
-				const sub_ddo_map = rqo.show.ddo_map
-				// add the section_tipo and tipo of ddo for create the parent_f_path
-				const ar_current_sub_ddo = [...ar_sub_ddo]
-				ar_current_sub_ddo.push(ddo.section_tipo)
-				ar_current_sub_ddo.push(current_tipo)
-
-				// recursive with the sub_ddo_map
-				const sub_columns = get_sub_columns(self, ddo.tipo, sub_ddo_map, ar_current_sub_ddo)
+			if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
+				const current_ddo_map = rqo_config.show.ddo_map
+				const sub_columns = get_sub_columns(datum, ddo.tipo, current_ddo_map, [])
 				ar_columns.push(...sub_columns)
-				// reset the parent_f_path
-				// ar_sub_ddo.splice(0, ar_sub_ddo.length)
 			}
-		}else{
-			// console.log("ar_sub_ddo------", ar_sub_ddo);
-			// console.log("sub_ddo------", sub_ddo);
-			// the component don't has sub-components and it is the last in the chain.
-			if(ar_sub_ddo && ar_sub_ddo.length > 0){
-				const ar_current_sub_ddo = [...ar_sub_ddo]
-				// add the section_tipo and tipo of ddo for create the parent_f_path
-				ar_current_sub_ddo.push(...ancestor_f_path)
-				ar_current_sub_ddo.push(ddo.section_tipo)
-				ar_current_sub_ddo.push(ddo.tipo)
-				// add the parent_f_path to the ddo
-				ddo.parent_f_path = [...ar_current_sub_ddo]
-			}
-			ar_columns.push(ddo)
 		}
-		
-	}
-*/
+
+
 	return ar_columns
 };//end build_request_show
-
 
 
 

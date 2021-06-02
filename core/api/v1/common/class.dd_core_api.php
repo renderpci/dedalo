@@ -1070,8 +1070,8 @@ class dd_core_api {
 
 			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
 
-				dump($context, ' context ++ '.to_string());
-				dump($data, ' data ++ '.to_string());
+				// dump($context, ' context ++ '.to_string());
+				// dump($data, ' data ++ '.to_string());
 
 		// Set result object
 			$result->context = $context;

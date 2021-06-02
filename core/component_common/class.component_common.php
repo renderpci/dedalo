@@ -1714,10 +1714,13 @@ abstract class component_common extends common {
 				$options->section_id	= null;
 			$config_context = (array)common::get_ar_request_config($options);
 
-
 		$ar_target_section_tipo = [];
 		foreach ($config_context as $config_context_item) {
-			$ar_target_section_tipo = array_merge($ar_target_section_tipo, $config_context_item->section_tipo);
+			$ar_current_section_tipo = array_map(function($el){
+				return $el->tipo;
+			}, $config_context_item->sqo->section_tipo);
+
+			$ar_target_section_tipo = array_merge($ar_target_section_tipo, $ar_current_section_tipo);
 		}
 
 		// debug
@@ -2851,6 +2854,7 @@ abstract class component_common extends common {
 
 		// slice
 			$dato_paginated = array_slice($dato, $offset, $array_lenght);
+
 
 		// pagination keys. Set an offset relative key to each element of paginated array
 			foreach ($dato_paginated as $key => $value) {

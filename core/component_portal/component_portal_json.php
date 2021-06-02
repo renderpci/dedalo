@@ -55,8 +55,7 @@
 				// }else{
 
 					// Component structure context (tipo, relations, properties, etc.)
-						$current_context = $this->get_structure_context($permissions, $add_rqo=true);
-
+						$current_context = $this->get_structure_context($permissions, $add_request_config=true);
 						$context[] = $current_context;
 
 						// dump(null, 'Time to context portal BEFORE SUBCONTEXT: '.exec_time_unit($api_start_time,'ms')." ms".to_string());
@@ -70,7 +69,6 @@
 		}
 		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 	}//end if($options->get_context===true)
-
 
 
 // data
@@ -103,6 +101,7 @@
 				$value	= $this->get_dato_paginated();
 				break;
 		}
+
 		if (!empty($dato)) {
 
 			// data item (list mode result don't include self data, only subdata)
@@ -120,7 +119,7 @@
 			
 
 			// subdata from subcontext items
-				$ar_subdata = $this->get_ar_subdata($value); 	dump($ar_subdata, ' ar_subdata ++ '.to_string());
+				$ar_subdata = $this->get_ar_subdata($value);
 				// if ($modo==='list') {
 					foreach ($ar_subdata as $current_data) {
 

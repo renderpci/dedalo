@@ -675,12 +675,12 @@ component_common.prototype.get_ar_instances = async function(){
 
 	const self 			= this
 
-	// self data veification
-		if (typeof self.data==="undefined") {
-			self.data = {
-				value : []
-			}
-		}
+	// // self data veification
+	// 	if (typeof self.data==="undefined") {
+	// 		self.data = {
+	// 			value : []
+	// 		}
+	// 	}
 
 	// const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
 	const records_mode 	= null
@@ -698,12 +698,12 @@ component_common.prototype.get_ar_instances = async function(){
 			const locator 			 	= value[i];
 			const current_section_tipo 	= locator.section_tipo
 			const current_section_id 	= locator.section_id
-			const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
+			// const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
 
 			
-				console.log("self.section_id:",self.section_id);
+
 	// console.log("self:",self);
-	console.log("self.datum.data:",self.datum.data, self.tipo);
+
 		// console.log("current_section_tipo:",current_section_tipo, current_section_id, self.data.row_section_id);
 
 			// const current_context 	= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
@@ -719,11 +719,11 @@ component_common.prototype.get_ar_instances = async function(){
 				mode			: records_mode,
 				lang			: lang,
 				context 		: current_context,
-				data			: current_data,
+				// data			: current_data,
 				datum 			: self.datum,
 				paginated_key 	: locator.paginated_key, // used by autocomplete / portal
 				caller 			: self,
-				columns 		: self.columns
+				// columns 		: self.columns
 			}
 
 			// id_variant . Propagate a custom instance id to children

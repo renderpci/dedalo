@@ -43,7 +43,7 @@
 				// all sqo definition in search_query_object class
 			}
 			"show"			: {
-				"ddo_map"		: array [array {ddo}, {ddo}] // layout map will be used, with specific path
+				"ddo_map"		: array [{ddo}, {ddo}] // layout map will be used, with specific path, the ddo are linked by parent to create the path
 				"sqo_config"	: {
 					// specific sqo configuration for the show
 				}
@@ -115,9 +115,9 @@
 			},
 			"show":{
 				"ddo_map":[
-					[{"section_tipo":"self","component_tipo":"numisdata27","mode":"edit","label":"number"}]
-					[{"section_tipo":"self","component_tipo":"numisdata309","mode":"list","label":"catalog"},{"section_tipo":"numisdata300","component_tipo":"numisdata303","mode":"list","label":"catalog"}]
-					[{"section_tipo":"self","component_tipo":"numisdata81","label":"key"}]
+					{"section_tipo":"self","component_tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3"},
+					{"section_tipo":"self","component_tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"}, {"section_tipo":"numisdata300","component_tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
+					{"section_tipo":"self","component_tipo":"numisdata81","label":"key", "parent": "numisdata3"}
 				],
 				"divisor": ", ",
 				"value_with_parents": true,
@@ -132,9 +132,9 @@
 			]},
 			"choose":{
 				"ddo_map":[
-					[{"section_tipo":"self","component_tipo":"numisdata27","mode":"edit"}]
-					[{"section_tipo":"self","component_tipo":"numisdata309","mode":"list"},{"section_tipo":"numisdata300","component_tipo":"numisdata303","mode":"list"}]
-					[{"section_tipo":"self","component_tipo":"numisdata81"}]
+					{"section_tipo":"self","component_tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3"},
+					{"section_tipo":"self","component_tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"},{"section_tipo":"numisdata300","component_tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"}
+					{"section_tipo":"self","component_tipo":"numisdata81","label":"key", , "parent": "numisdata3"}
 			]},
 		},
 		{
@@ -142,10 +142,10 @@
 			"section_tipo": [{"source":"section", "value":["zenon1"]}],
 			"search":
 				{"ddo_map": [
-					[{"section_tipo":"zenon1","component_tipo":"zenon3"}]
-					[{"section_tipo":"zenon1","component_tipo":"zenon4"}]
-					[{"section_tipo":"zenon1","component_tipo":"zenon5"}]
-					[{"section_tipo":"zenon1","component_tipo":"zenon6"}]
+					{"section_tipo":"zenon1","component_tipo":"zenon3", "parent": "zenon2"},
+					{"section_tipo":"zenon1","component_tipo":"zenon4", "parent": "zenon2"},
+					{"section_tipo":"zenon1","component_tipo":"zenon5", "parent": "zenon2"},
+					{"section_tipo":"zenon1","component_tipo":"zenon6", "parent": "zenon2"}
 	
 				]
 			}
