@@ -152,7 +152,9 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	const self = this
 
-	const ar_instances = await self.get_ar_row_instances()
+	const ar_instances = await self.get_ar_columns_instances()
+
+		// console.log("ar_instances:",ar_instances);
 
 // const ar_instances = await self.get_ar_instances()
 
@@ -199,17 +201,19 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 				// console.log("PORTAL -- current_instance", current_instance);
 
 				const current_instance_section_record_node = await current_instance.render()
+				fragment.appendChild(current_instance_section_record_node)
+				
 				// if (current_instance_section_record_node) {
 				// 	fragment.appendChild(current_instance_section_record_node.childNodes)
 				// }
 				// console.log("///// current_instance_section_record_node", current_instance_section_record_node.childNodes);
 
-				if (current_instance_section_record_node && current_instance_section_record_node.childNodes) {
-					for (let j = 0; j < current_instance_section_record_node.childNodes.length; j++) {
-						console.log("///// current_instance_section_record_node[j]", current_instance_section_record_node.childNodes[j]);
-						fragment.appendChild( current_instance_section_record_node.childNodes[j] )
-					}
-				}
+				// if (current_instance_section_record_node && current_instance_section_record_node.childNodes) {
+				// 	for (let j = 0; j < current_instance_section_record_node.childNodes.length; j++) {
+				// 		console.log("///// current_instance_section_record_node[j]", current_instance_section_record_node.childNodes[j]);
+				// 		fragment.appendChild( current_instance_section_record_node.childNodes[j] )
+				// 	}
+				// }
 
 			}else{
 				const current_instance_node = await current_instance.render()
@@ -248,17 +252,17 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 
 	// component_info
-		const component_info = self.get_component_info()
-		if (component_info){
-			const info_value = component_info.value.join('')
-			const info = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'info',
-				inner_html		: info_value
-			})
-			//wrapper.appendChild(info)
-			fragment.appendChild(info)
-		}
+		// const component_info = self.get_component_info()
+		// if (component_info){
+		// 	const info_value = component_info.value.join('')
+		// 	const info = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name		: 'info',
+		// 		inner_html		: info_value
+		// 	})
+		// 	//wrapper.appendChild(info)
+		// 	fragment.appendChild(info)
+		// }
 
 	// wrapper filling
 		wrapper.appendChild(fragment)

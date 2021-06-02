@@ -86,17 +86,10 @@ section_record.prototype.init = async function(options) {
 	self.node				= []
 	self.columns			= options.columns
 
-	// dd request
-	self.dd_request = {
-		show	: null,
-		search	: null,
-		select	: null
-	}
-
 	self.datum			= options.datum
 	self.context		= options.context
-	self.data			= options.data
-	self.paginated_key	= options.paginated_key
+	// self.data			= options.data
+	// self.paginated_key	= options.paginated_key
 
 	self.events_tokens	= []
 	self.ar_instances	= []
@@ -179,7 +172,7 @@ const add_instance = async (self, current_context, section_id, current_data) => 
 
 
 /**
-* GET_AR_INSTANCES
+* GET_AR_INSTANCES EDIT
 */
 section_record.prototype.get_ar_instances = async function(){
 
@@ -238,9 +231,9 @@ section_record.prototype.get_ar_instances = async function(){
 
 
 /**
-* GET_AR_ROW_INSTANCES
+* GET_AR_COLUMNS_INSTANCES LIST
 */
-section_record.prototype.get_ar_row_instances = async function(){
+section_record.prototype.get_ar_columns_instances = async function(){
 
 	const self = this
 
@@ -249,48 +242,52 @@ section_record.prototype.get_ar_row_instances = async function(){
 		const tipo 			= self.tipo
 		const section_tipo 	= self.section_tipo
 		const section_id 	= self.section_id
-		const columns		= await self.columns
-		const data 			= self.data
+
+		const children 		= self.caller.rqo_config.show.ddo_map.filter(item => item.parent === self.tipo)
+
+		// const data 			= self.data
 
 	// instances
 		const ar_instances = []
-		const columns_length =  columns.length
+		const children_length =  children.length
 
-		for (let i = 0; i < columns_length; i++) {
+		for (let i = 0; i < children_length; i++) {
 
-			const current_context = columns[i]
+			const current_ddo = children[i]
 
-			if (!current_context) {
+			if (!current_ddo) {
 				console.warn("ignored empty context: [key, columns]", i, columns);
 				continue;
 			}
 
 			// the component has direct data into the section
-			if(current_context.parent === tipo){
-				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+			// if(current_context.parent === tipo){
+				const current_data		= self.get_component_data(current_ddo.tipo, current_ddo.section_tipo, section_id)
+				const current_context 	= self.datum.context.find(item => item.tipo === current_ddo.tipo && item.section_tipo === current_ddo.section_tipo)
+
 				const current_instance	= await add_instance(self, current_context, section_id, current_data)
 				//add
 				ar_instances.push(current_instance)
-			}else{
-				// the component don't has direct data into the section, it has a locator that will use for located the data of the column
-				const current_data		= self.get_component_relation_data(current_context, section_id)
 
-				// sometimes the section_tipo can be different (es1, fr1, ...)
-				//the context get the first component, but the instance can be with the section_tipo data
-				current_context.section_tipo = current_data.section_tipo
-				const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
-				//add
-				ar_instances.push(current_instance)
-			}
+			// }else{
+			// 	// the component don't has direct data into the section, it has a locator that will use for located the data of the column
+			// 	const current_data		= self.get_component_relation_data(current_context, section_id)
+
+			// 	// sometimes the section_tipo can be different (es1, fr1, ...)
+			// 	//the context get the first component, but the instance can be with the section_tipo data
+			// 	current_context.section_tipo = current_data.section_tipo
+			// 	const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
+			// 	//add
+			// 	ar_instances.push(current_instance)
+			// }
 
 		}//end for loop
 
 	// fix
 		self.ar_instances = ar_instances
 
-
 	return ar_instances
-};//end get_ar_instances
+};//end get_ar_columns_instances
 
 
 
@@ -303,20 +300,15 @@ section_record.prototype.get_component_data = function(component_tipo, section_t
 
 	const self = this
 
-	let component_data = self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
-
-	// undefined case. If the current item don't has data will be instanciated with the current section_id
-	if (typeof(component_data)==='undefined') {
+	const component_data = self.datum.data.find(item => item.tipo===component_tipo && item.section_id===section_id) || { 
+		// undefined case. If the current item don't has data will be instanciated with the current section_id
 		// empy component data build
-		component_data = {
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			value			: [],
-			fallback_value	: [""]
-		}
+		tipo			: component_tipo,
+		section_tipo	: section_tipo,
+		section_id		: section_id,
+		value			: [],
+		fallback_value	: [""]
 	}
-
 
 	return component_data
 };//end get_component_data
@@ -378,18 +370,18 @@ section_record.prototype.get_component_relation_data = function(component, secti
 
 
 
-/**
-* GET_COMPONENT_INFO
-* @return object component_data
-*/
-section_record.prototype.get_component_info = function(component_tipo){
+// /**
+// * GET_COMPONENT_INFO
+// * @return object component_data
+// */
+// section_record.prototype.get_component_info = function(component_tipo){
 
-	const self = this
+// 	const self = this
 
-	const component_info = self.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
+// 	const component_info = self.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
 
-	return component_info
-};//end get_component_info
+// 	return component_info
+// };//end get_component_info
 
 
 

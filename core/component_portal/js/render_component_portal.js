@@ -64,10 +64,7 @@ render_component_portal.prototype.list = async function() {
 
 	const ar_nodes = []
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
+	const fragment = new DocumentFragment();
 
 	// add all nodes
 		const length = ar_section_record.length
@@ -76,15 +73,8 @@ render_component_portal.prototype.list = async function() {
 			//const child_item = await ar_section_record[i].node
 			const child_item = await ar_section_record[i].render()
 
-			// wrapper.appendChild(child_item)
-
-			return child_item
-
-			break;
+			fragment.appendChild(child_item)
 		}
-
-		return null
-
 	// events
 		// dblclick
 			// wrapper.addEventListener("dblclick", function(e){
@@ -94,6 +84,12 @@ render_component_portal.prototype.list = async function() {
 			// 	self.change_mode('edit_in_list', true)
 			// })
 
+	// wrapper
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : false
+		})
+
+	wrapper.appendChild(fragment)
 
 	return wrapper
 };//end  list

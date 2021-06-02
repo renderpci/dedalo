@@ -93,8 +93,8 @@ component_portal.prototype.init = async function(options) {
 		self.autocomplete			= null
 		self.autocomplete_active	= false
 
-	// columns
-		self.columns = []
+	// // columns
+	// 	self.columns = []
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -143,6 +143,7 @@ component_portal.prototype.build = async function(autoload=false){
 		if (!self.datum) {
 			self.datum = {data:self.data, context:[]}
 		}
+
 
 	// rqo_config
 		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
@@ -289,7 +290,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// columns
 		// if(self.mode === 'edit'){
-			self.columns = self.get_columns()
+			// self.columns = self.get_columns()
 		// }
 
 	// debug
@@ -367,7 +368,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 	const self = this
 
 		console.log("self.data.pagination:",self.data.pagination);
-		console.log("self.self.rqo.sqo.:",self.self.rqo.sqo);
+		console.log("self.rqo.sqo.:",self.rqo.sqo);
 
 	// update self.data.pagination
 		switch(action) {
@@ -426,50 +427,50 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 
 
-/**
-* GET_PORTAL_ITEMS
-* @return array of components context
-*/
-component_portal.prototype.get_portal_items = function() {
+// /**
+// * GET_PORTAL_ITEMS
+// * @return array of components context
+// */
+// component_portal.prototype.get_portal_items = function() {
 
-	const self = this
+// 	const self = this
 
-	const portal_items = []
+// 	const portal_items = []
 
-	// ddo map
-		const rqo = self.context.request_config.find(item => item.typo==='rqo')
-		if (rqo) {
-			const ddo_map			= rqo.show.ddo_map
-			const ddo_map_length	= ddo_map.length
-			for (let j = 0; j < ddo_map_length; j++) {
+// 	// ddo map
+// 		const rqo = self.context.request_config.find(item => item.typo==='rqo')
+// 		if (rqo) {
+// 			const ddo_map			= rqo.show.ddo_map
+// 			const ddo_map_length	= ddo_map.length
+// 			for (let j = 0; j < ddo_map_length; j++) {
 
-				const component_tipo = ddo_map[j]
-					console.log("component_tipo:",component_tipo);
+// 				const component_tipo = ddo_map[j]
+// 					console.log("component_tipo:",component_tipo);
 
-				const item_context = self.datum.context.find(item => item.tipo===component_tipo && item.parent===self.tipo)
+// 				const item_context = self.datum.context.find(item => item.tipo===component_tipo && item.parent===self.tipo)
 
-				portal_items.push(item_context)
-				// // iterate portal records
-				// for (let k = 0; k < portal_data.length; k++) {
-				// 	// if (!portal_data[k] || !portal_data[k].section_id) continue;
+// 				portal_items.push(item_context)
+// 				// // iterate portal records
+// 				// for (let k = 0; k < portal_data.length; k++) {
+// 				// 	// if (!portal_data[k] || !portal_data[k].section_id) continue;
 
-				// 	const portal_section_id		= portal_data[k].section_id
-				// 	const portal_section_tipo	= portal_data[k].section_tipo
-				// 		console.log("portal_section_id:",portal_section_id,portal_section_tipo);
+// 				// 	const portal_section_id		= portal_data[k].section_id
+// 				// 	const portal_section_tipo	= portal_data[k].section_tipo
+// 				// 		console.log("portal_section_id:",portal_section_id,portal_section_tipo);
 
-				// 	break;
-				// }
+// 				// 	break;
+// 				// }
 
-				// await add_instance(current_context, section_id)
+// 				// await add_instance(current_context, section_id)
 
-				// const current_data = portal_data.find(item => item.from_component_tipo===component_tipo)
-					// console.log("////// current_data "+component_tipo, current_data);
-			}
-		}
+// 				// const current_data = portal_data.find(item => item.from_component_tipo===component_tipo)
+// 					// console.log("////// current_data "+component_tipo, current_data);
+// 			}
+// 		}
 
 
-	return portal_items
-}; //end get_portal_items
+// 	return portal_items
+// }; //end get_portal_items
 
 
 

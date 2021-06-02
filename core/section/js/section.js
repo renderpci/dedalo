@@ -110,8 +110,6 @@ section.prototype.init = async function(options) {
 	self.context			= options.context	|| null
 	self.data				= options.data		|| null
 
-	self.columns 			= []
-
 	self.type				= 'section'
 	self.label				= null
 
@@ -326,10 +324,7 @@ section.prototype.build = async function(autoload=false) {
 			// }
 		}
 
-	// columns
-		if(self.mode === 'list'){
-			self.columns = self.get_columns()
-		}
+		const columns = self.get_columns()
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -365,19 +360,20 @@ section.prototype.get_ar_instances = async function(){
 
 	const self = this
 
-	// self data veification
-		if (typeof self.data==="undefined") {
-			self.data = {
-				value : []
-			}
-		}
+	// self data verification
+		// if (typeof self.data==="undefined") {
+		// 	self.data = {
+		// 		value : []
+		// 	}
+		// }
 
 	// iterate records
 		const lang 			= self.lang
 		const value			= self.data.value || []
 		const value_length	= value.length
 
-		const offset = self.rqo.sqo.offset
+		// const offset = self.rqo.sqo.offset
+	
 
 		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
@@ -385,10 +381,12 @@ section.prototype.get_ar_instances = async function(){
 
 			const current_section_id	= value[i].section_id
 			const current_section_tipo	= value[i].section_tipo
-			const current_data			= (self.mode==='tm')
-				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-			const current_context 		= self.context
+			// const current_data			= (self.mode==='tm')
+			// 	? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+			// 	: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+			const current_context 		= (typeof self.datum.context!=="undefined")
+				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+				: []
 
 			const instance_options = {
 					model			: 'section_record',
@@ -398,11 +396,11 @@ section.prototype.get_ar_instances = async function(){
 					mode			: self.mode,
 					lang			: lang,
 					context			: current_context,
-					data			: current_data,
+					// data			: current_data,
 					datum			: self.datum,
 					caller			: self,
-					offset			: (offset+i),
-					columns 		: self.columns || null
+					// offset			: (offset+i),
+					// columns 		: self.columns || null
 			}
 
 			// id_variant . Propagate a custom instance id to children
