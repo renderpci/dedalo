@@ -1794,17 +1794,17 @@ abstract class common {
 																				 $current_lang,
 																				 $current_section_tipo);							
 							// virtual request_config
-								// $children = get_children_resursive($request_config_item->show->ddo_map, $dd_object);
-								// // dump($children, ' children +++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($dd_object->tipo));	
-								// if (!empty($children)) {
+								$children = get_children_resursive($request_config_item->show->ddo_map, $dd_object);
+								// dump($children, ' children +++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($dd_object->tipo));	
+								if (!empty($children)) {
 									
-								// 	$show = new stdClass();
-								// 		$show->ddo_map = $children;
-								// 	$rqo = new request_query_object();
-								// 		$rqo->set_show($show);
+									$show = new stdClass();
+										$show->ddo_map = $children;
+									$rqo = new request_query_object();
+										$rqo->set_show($show);
 
-								// 	$related_element->request_config = [$rqo];
-								// }
+									$related_element->request_config = [$rqo];
+								}
 							break;
 
 						// grouper case
@@ -2145,16 +2145,11 @@ abstract class common {
 			// fix request_config value
 				$this->request_config = $request_config;
 
-		
 			// ddo_map (dd_core_api static var)
 				$dedalo_request_config = array_find($request_config, function($el){
 					return $el->api_engine==='dedalo';
 				});
-					dd_core_api::$ddo_map = $dedalo_request_config->show->ddo_map;
-
-				// $all_ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
-				// $id = spl_object_hash($object);
-
+				dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
 
 				
 
@@ -2492,76 +2487,24 @@ abstract class common {
 					$sqo_config->operator		= '$or';
 
 			// ddo_map
-				$ddo_map = [];
-				// get the sub ddo_map from other portals, autocomplete, etc
-				foreach ($ar_related_clean as $current_tipo) {
-					// create the ddo_oject
+					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string($tipo));
+					// $bt = debug_backtrace();
+					// dump($bt, ' bt ++ '.to_string());
+				$ddo_map = array_map(function($current_tipo) use($tipo, $section_tipo){
 					$ddo = new dd_object();
 						$ddo->set_tipo($current_tipo);
 						$ddo->set_section_tipo($section_tipo);
 						$ddo->set_parent($tipo);
-						$ddo->set_mode($mode);
 						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
-					
-					// set the current_ddo to the final array
-					$ddo_map = array_merge($ddo_map, [$ddo]);
-					
-					$model				= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					// if the model has relation it will have request_config
-					if (in_array($model, component_relation_common::get_components_with_relations())){
-						$current_component	= component_common::get_instance(
-																$model,
-																$current_tipo,
-																null,
-																$mode,
-																DEDALO_DATA_NOLAN,
-																$section_tipo);
 
-						$current_component->get_component_permissions();
-						$request_config = $current_component->build_request_config();
-
-						// $get_json_options = new stdClass();
-						// 		$get_json_options->get_context 	= true;
-						// 		$get_json_options->get_data 	= false;
-						// $component_context = $current_component->get_json($get_json_options);
-
-						// 	dump($component_context, ' component_context ++ '.to_string($model));
-
-						// $request_config = $component_context->request_config;
-
-							// dump($current_component, ' $current_component ++ '.to_string());
-
-						if(!empty($request_config)){
-							// api_engine dedalo only
-							$request_config_dedalo = array_find($request_config, function($el){
-								return $el->api_engine==='dedalo';
-							});
-
-								// dump($request_config_dedalo, ' request_config_dedalo ++ '.to_string());
-							// add the sub ddo_map to final 
-							$ddo_map = array_merge($ddo_map, $request_config_dedalo->show->ddo_map);
-						}						
-					}
-				}
-					// $bt = debug_backtrace();
-					// dump($bt, ' bt ++ '.to_string());
-				// $ddo_map = array_map(function($current_tipo) use($tipo, $section_tipo, $mode){
-				// 	$ddo = new dd_object();
-				// 		$ddo->set_tipo($current_tipo);
-				// 		$ddo->set_section_tipo($section_tipo);
-				// 		$ddo->set_parent($tipo);
-				// 		$ddo->set_mode($mode);
-				// 		$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
-
-				// 	return $ddo;
-				// }, $ar_related_clean);
-					// dump($ddo_map, ' ddo_map ++ '.to_string());
+					return $ddo;
+				}, $ar_related_clean);
+					// dump($ddo_map, ' ddo_map ++ '.to_string()); die();
 
 			// show
 				$show = new stdClass();
 					$show->ddo_map		= $ddo_map;
 					$show->sqo_config	= $sqo_config;
-
 
 			// // search
 				// 	$search = new stdClass();
