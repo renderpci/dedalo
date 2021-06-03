@@ -2490,11 +2490,12 @@ abstract class common {
 					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string($tipo));
 					// $bt = debug_backtrace();
 					// dump($bt, ' bt ++ '.to_string());
-				$ddo_map = array_map(function($current_tipo) use($tipo, $section_tipo){
+				$ddo_map = array_map(function($current_tipo) use($tipo, $section_tipo, $mode){
 					$ddo = new dd_object();
 						$ddo->set_tipo($current_tipo);
 						$ddo->set_section_tipo($section_tipo);
 						$ddo->set_parent($tipo);
+						$ddo->set_mode($mode);
 						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
 
 					return $ddo;
