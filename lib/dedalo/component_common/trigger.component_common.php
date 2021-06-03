@@ -140,7 +140,7 @@ function Save($json_data) {
 			$section_id = $component_obj->Save();
 			#debug_log(__METHOD__." current (get_dato) ".to_string($component_obj->get_dato()), logger::DEBUG);
 
-			if ($section_id>0 || $parent===DEDALO_SECTION_ID_TEMP) {
+			if ($section_id>0 || strpos($parent, DEDALO_SECTION_ID_TEMP)!==false) {
 				# Return id
 				$response->result 	= $section_id;
 				$response->msg 		= 'Ok. Request done [Save]';

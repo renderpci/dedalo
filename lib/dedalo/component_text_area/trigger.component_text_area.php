@@ -571,18 +571,25 @@ common::trigger_manager();
 				}
 			}
 
-		$user_id 		= navigator::get_user_id();
+		$user_id		= navigator::get_user_id();
 		$temp_id		= DEDALO_SECTION_ID_TEMP.'_reference_'.$user_id;
-
-		$component_tipo = DEDALO_TS_REFERENCES_COMPONENT_TIPO;
-		$section_tipo 	= DEDALO_TS_REFERENCES_SECTION_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true); // 'component_autocomplete_hi'
-		$component 		= component_common::get_instance($modelo_name,
+		$component_tipo	= DEDALO_TS_REFERENCES_COMPONENT_TIPO;
+		$section_tipo	= DEDALO_TS_REFERENCES_SECTION_TIPO;
+		
+		// reset session data
+			$temp_data_uid = $section_tipo.'_'.$temp_id;
+			if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
+				unset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid]);
+			}
+		
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true); // 'component_autocomplete_hi'
+		$component		= component_common::get_instance($modelo_name,
 														 $component_tipo,
 														 $temp_id,
 														 'edit',
 														 DEDALO_DATA_NOLAN,
 														 $section_tipo);
+
 		// Inject custom propiedades
 			// $propiedades = json_decode('{
 			//   "source": {
