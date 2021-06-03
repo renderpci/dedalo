@@ -528,7 +528,7 @@ common.prototype.get_columns = async function(){
 
 	const self = this
 
-	const ar_columns = []
+	const full_ddo_map = []
 
 	// // get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
 	// const rqo = self.dd_request.show.find(item => item.typo === 'rqo')
@@ -537,13 +537,25 @@ common.prototype.get_columns = async function(){
 	// 	return ar_columns
 	// }
 	const ddo_map = self.rqo_config.show.ddo_map
-console.log("ar_columns:",ddo_map); return ar_columns
+// console.log("ar_columns:",ddo_map); return ar_columns
 	// console.log("self.dd_request", self.dd_request);
 
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-	const sub_columns = get_sub_columns(self.datum, self.tipo, ddo_map, [])
-	ar_columns.push(...sub_columns)
+	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
+	full_ddo_map.push(...sub_ddo_map)
+
+
+	function get_children(ddo_map, current_ddo) {
+	}
+
+
+	// const ar_columns = []
+	// for (var i = 0; i < full_ddo_map.length; i++) {
+		// const ddo = full_ddo_map[i]
+		const ar_columns = get_column( full_ddo_map, self.tipo )
+		// ar_columns.push(children)
+	// }
 
 		console.log("ar_columns:",ar_columns);
 
@@ -552,34 +564,91 @@ console.log("ar_columns:",ddo_map); return ar_columns
 
 
 /**
-* GET_SUB_COLUMNS
+* GET_SUB_ddo_map
 * @param self instance_caller (section, component_portal)
-* @param caller_tipo tipo from section or portal that call to get the sub_columns
+* @param caller_tipo tipo from section or portal that call to get the sub_ddo_map
 * @param ddo_map the requested tipos
 * @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
 * @return array ar_columns
 */
-const get_sub_columns = function(datum, caller_tipo, ddo_map, sub_ddo){
+const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 	
-	const ar_columns = []
+	const ar_ddo = []
 
 	// get the valid ddo_map, only the last ddo in the path will be rendered.
-		function get_last_children(ddo_map, current_ddo) {
-			const ar_children = []
-			const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
+		// function get_last_children(ddo_map, current_ddo) {
+		// 	const ar_children = []
+		// 	const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
 			
-			if(children.length === 0){
-				current_ddo.caller_tipo = caller_tipo
-				ar_children.push(current_ddo)
-			}else{
-				for (let i = 0; i < children.length; i++) {
-					const valid_child = get_last_children(ddo_map, children[i])[0]
-					ar_children.push(valid_child)
-				}
+		// 	if(children.length === 0){
+		// 		current_ddo.caller_tipo = caller_tipo
+		// 		ar_children.push(current_ddo)
+		// 	}else{
+		// 		for (let i = 0; i < children.length; i++) {
+		// 			const valid_child = get_last_children(ddo_map, children[i])[0]
+		// 			ar_children.push(valid_child)
+		// 		}
+		// 	}
+			
+		// 	return ar_children;
+		// }	
+
+	// every ddo will be checked if it is a component_portal or if is the last component in the chain
+	// set the valid_ddo array with only the valid ddo that will be used.
+		// const ar_valid_ddo = []
+		// const ddo_length = ddo_map.length
+		// for (let i = 0; i < ddo_length; i++) {
+		// 	const current_ddo = ddo_map[i]
+		// 	if(current_ddo.parent !== caller_tipo) continue;
+		// 	const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
+		// 	for (let j = 0; j < current_ar_valid_ddo.length; j++) {
+		// 		ar_valid_ddo.push(current_ar_valid_ddo[j])
+		// 	}
+		// }
+		for (let i = 0; i < ddo_map.length; i++) {
+			const current_ddo = ddo_map[i]
+			if(current_ddo.parent !== caller_tipo) continue;
+			const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
+			// rqo_config
+			const rqo_config	= current_context.request_config
+				? current_context.request_config.find(el => el.api_engine==='dedalo')
+				: null
+
+			if (!current_context) {
+				console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, datum.context);
+				continue
 			}
-			
-			return ar_children;
-		}	
+			ar_ddo.push(current_ddo)
+
+			if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
+				const current_ddo_map = rqo_config.show.ddo_map
+				const sub_ddo_map = get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+				ar_ddo.push(...sub_ddo_map)
+			}
+		}
+
+
+	return ar_ddo
+};//end build_request_show
+
+
+
+
+/**
+* get_column
+*/
+const get_column = function(ddo_map, caller_tipo ){
+
+	// get the parents for the column
+	function get_parents(ddo_map, current_ddo) {
+		const ar_parents = []
+		const parent = ddo_map.find(item => item.tipo === current_ddo.parent)
+		if (parent) {
+			ar_parents.push(parent)
+			ar_parents.push(...get_parents(ddo_map, parent))
+		}
+		return ar_parents
+	}
 
 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
 	// set the valid_ddo array with only the valid ddo that will be used.
@@ -587,49 +656,17 @@ const get_sub_columns = function(datum, caller_tipo, ddo_map, sub_ddo){
 		const ddo_length = ddo_map.length
 		for (let i = 0; i < ddo_length; i++) {
 			const current_ddo = ddo_map[i]
-			if(current_ddo.parent !== caller_tipo) continue;
-			const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
-			for (let j = 0; j < current_ar_valid_ddo.length; j++) {
-				ar_valid_ddo.push(current_ar_valid_ddo[j])
-			}
+			// if(current_ddo.parent !== caller_tipo) continue;
+			const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
+			if(current_ar_valid_ddo.length !== 0) continue
+
+			const column = []
+			const parents = get_parents(ddo_map, current_ddo)
+			column.push(current_ddo,...parents)
+			ar_valid_ddo.push(column)
 		}
-		for (let i = 0; i < ar_valid_ddo.length; i++) {
-			const current_tipo = ar_valid_ddo[i].tipo
-
-			const ddo = datum.context.find(item => item.tipo===current_tipo)
-			// rqo_config
-			const rqo_config	= ddo.request_config
-				? ddo.request_config.find(el => el.api_engine==='dedalo')
-				: null
-
-			if (!ddo) {
-				console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, datum.context);
-				continue
-			}
-			ar_columns.push(ddo)
-
-			if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
-				const current_ddo_map = rqo_config.show.ddo_map
-				const sub_columns = get_sub_columns(datum, ddo.tipo, current_ddo_map, [])
-				ar_columns.push(...sub_columns)
-			}
-		}
-
-
-	return ar_columns
-};//end build_request_show
-
-
-
-
-/**
-* get_rows
-*/
-common.prototype.get_row = async function(){
-
-
-	return row
-};//end get_rows
+	return ar_valid_ddo
+};//end get_column
 
 
 
