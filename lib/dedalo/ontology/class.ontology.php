@@ -684,10 +684,20 @@ class ontology {
 				"skip_projects_filter": true,
 				"select": []
 			}');
-		$search_development2	= new search_development2($sqo);
-		$search_result			= $search_development2->search();
-		$ar_records				= $search_result->ar_records;
-		$count					= count($ar_records);
+		
+		$dedalo_version = explode(".", DEDALO_VERSION);
+		if ( (int)$dedalo_version[0]>5 ) {
+			// v6
+			$search		= search::get_instance($sqo);
+			$rows_data	= $search->search();
+			$ar_records	= $rows_data->ar_records;
+		}else{
+			// v5
+			$search_development2	= new search_development2($sqo);
+			$search_result			= $search_development2->search();
+			$ar_records				= $search_result->ar_records;
+		}
+		$count = count($ar_records);
 
 		if ($count===0) {
 			return null;
