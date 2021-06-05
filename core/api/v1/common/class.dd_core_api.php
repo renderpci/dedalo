@@ -829,77 +829,77 @@ class dd_core_api {
 
 
 		// CONTEXT
-			$context = [];
+			// $context = [];
 
-				switch ($action) {
+			// 	switch ($action) {
 
-					case 'search': // example use: get section records in list or edit mode, search in autocomplete service
+			// 		case 'search': // example use: get section records in list or edit mode, search in autocomplete service
 						
-						// sections
-							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+			// 			// sections
+			// 				$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
-							// set always
-							// $element->set_rqo($rqo); // inject whole rqo context
+			// 				// set always
+			// 				// $element->set_rqo($rqo); // inject whole rqo context
 
-						break;
+			// 			break;
 
-					case 'get_data': // example use: paginate a component portal or component autocomplete
+			// 		case 'get_data': // example use: paginate a component portal or component autocomplete
 
-						if(strpos($model, 'component')===0) {
-							// component
-								$RecordObj_dd	= new RecordObj_dd($tipo);
-								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-								$element		= component_common::get_instance($model,
-																				 $tipo,
-																				 $section_id,
-																				 $mode,
-																				 $component_lang,
-																				 $section_tipo);
-								if ($mode==='tm') {
-									// set matrix_id value to component to allow it search dato in
-									// matrix_time_machine component function 'get_dato' will be
-									// overwrited to get time machine dato instead the real dato
-									$element->matrix_id = $ddo_source->matrix_id;
-								}
-						}else if(strpos($model, 'area')===0) {
-							// area
-								$element = area::get_instance($model, $tipo, $mode);
-						}else{							
-							// others
-								// get data model not defined
-								debug_log(__METHOD__." WARNING context:get_data model not defined for ".to_string($model), logger::WARNING);						
-						}						
-						break;
+			// 			if(strpos($model, 'component')===0) {
+			// 				// component
+			// 					$RecordObj_dd	= new RecordObj_dd($tipo);
+			// 					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+			// 					$element		= component_common::get_instance($model,
+			// 																	 $tipo,
+			// 																	 $section_id,
+			// 																	 $mode,
+			// 																	 $component_lang,
+			// 																	 $section_tipo);
+			// 					if ($mode==='tm') {
+			// 						// set matrix_id value to component to allow it search dato in
+			// 						// matrix_time_machine component function 'get_dato' will be
+			// 						// overwrited to get time machine dato instead the real dato
+			// 						$element->matrix_id = $ddo_source->matrix_id;
+			// 					}
+			// 			}else if(strpos($model, 'area')===0) {
+			// 				// area
+			// 					$element = area::get_instance($model, $tipo, $mode);
+			// 			}else{							
+			// 				// others
+			// 					// get data model not defined
+			// 					debug_log(__METHOD__." WARNING context:get_data model not defined for ".to_string($model), logger::WARNING);						
+			// 			}						
+			// 			break;
 
-					default:
-						# not defined modelfro context / data
-						debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
-						break;
-				}// end switch (true)
+			// 		default:
+			// 			# not defined modelfro context / data
+			// 			debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
+			// 			break;
+			// 	}// end switch (true)
 
 
-				// element json
-					$get_json_options = new stdClass();
-						$get_json_options->get_context	= true;
-						$get_json_options->get_data		= false;
-					$element_json = $element->get_json($get_json_options);
+			// 	// element json
+			// 		$get_json_options = new stdClass();
+			// 			$get_json_options->get_context	= true;
+			// 			$get_json_options->get_data		= false;
+			// 		$element_json = $element->get_json($get_json_options);
 
-				// context add
-					$context = $element_json->context;
-					// $context[] = (object)[
-					// 	// 'source'	=> 'request_ddo',
-					// 	'typo'	=> 'request_ddo',
-					// 	'value'	=> dd_core_api::$request_ddo_value
-					// ];
+			// 	// context add
+			// 		$context = $element_json->context;
+			// 		// $context[] = (object)[
+			// 		// 	// 'source'	=> 'request_ddo',
+			// 		// 	'typo'	=> 'request_ddo',
+			// 		// 	'value'	=> dd_core_api::$request_ddo_value
+			// 		// ];
 
-				// fix final static var context
-					// dd_core_api::$context = $context;
+			// 	// fix final static var context
+			// 		// dd_core_api::$context = $context;
 
-			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
+			// $context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 	
 		// DATA
-			$data = [];
+			// $data = [];
 
 				$data_start_time=microtime(1);
 				
@@ -908,83 +908,11 @@ class dd_core_api {
 				switch ($action) {
 
 					case 'search':
-						// DES
-							// // search
-							// 	$search 	= search::get_instance($sqo);
-							// 	$rows_data 	= $search->search();
-
-							// // section. generated the self section_data
-							// foreach ($current_sqo->section_tipo as $current_section_tipo) {
-
-							// 	$section_data = new stdClass();
-							// 		$section_data->tipo 		= $current_section_tipo;
-							// 		$section_data->section_tipo = $current_section_tipo;
-							// 		$ar_section_id = [];
-							// 		foreach ($rows_data->ar_records as $current_row) {
-							// 			if ($current_row->section_tipo===$current_section_tipo) {
-							// 				$ar_section_id[] = $current_row->section_id;
-							// 			}
-							// 		}
-							// 		$section_data->value 		= $ar_section_id;
-
-							// 		// pagination info
-							// 		$section_data->offset 		= $current_sqo->offset;
-							// 		$section_data->limit 		= $current_sqo->limit;
-							// 		$section_data->total 		= $current_sqo->full_count;
-
-							// 	$data[] = $section_data;
-							// }
-
-							// // Iterate records
-							// $i=0; foreach ($rows_data->ar_records as $record) {
-
-							// 	$section_id   	= $record->section_id;
-							// 	$section_tipo 	= $record->section_tipo;
-							// 	$datos			= json_decode($record->datos);
-
-							// 	if (!isset($section_dd_object)) {
-							// 		$section_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($section_tipo){
-							// 			if($item->model==='section' && $item->section_tipo===$section_tipo) return $item;
-							// 			return $carry;
-							// 		});
-							// 	}
-
-							// 	$mode = $section_dd_object->mode;
-
-							// 	// Inject known dato to avoid re connect to database
-							// 		$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
-							// 		$section->set_dato($datos);
-							// 		$section->set_bl_loaded_matrix_data(true);
-
-							// 	// get section json
-							// 		$get_json_options = new stdClass();
-							// 			$get_json_options->get_context 	= false;
-							// 			$get_json_options->get_data 	= true;
-							// 		$section_json = $section->get_json($get_json_options);
-
-							// 	// data add
-							// 		$data = array_merge($data, $section_json->data);
-
-							// 	// get_ddinfo_parents
-							// 		if (isset($current_sqo->value_with_parents) && $current_sqo->value_with_parents===true) {
-
-							// 			$locator = new locator();
-							// 				$locator->set_section_tipo($section_tipo);
-							// 				$locator->set_section_id($section_id);
-
-							// 			$dd_info = common::get_ddinfo_parents($locator, $current_sqo->source_component_tipo);
-
-							// 			$data[] = $dd_info;
-							// 		}
-
-
-							// $i++; }//end iterate records							
 
 						// sections
 							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
-						// store sqo
-							// $context[] = $current_sqo;
+						// store sqo section
 							if ($model==='section') {
 								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							}
@@ -1033,7 +961,7 @@ class dd_core_api {
 
 							// others
 								// get data model not defined
-								debug_log(__METHOD__." WARNING data:get_data model not defined for ".to_string($model), logger::WARNING);
+								debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
 						}
 						break;
 
@@ -1052,12 +980,16 @@ class dd_core_api {
 
 						// element json
 							$get_json_options = new stdClass();
-								$get_json_options->get_context	= false;
+								$get_json_options->get_context	= true;
 								$get_json_options->get_data		= true;
 							$element_json = $element->get_json($get_json_options);
 
 						// data add
-							$data = array_merge($data, $element_json->data);
+							// $data = array_merge($data, $element_json->data);
+
+						// context and data add
+							$context	= $element_json->context;
+							$data		= $element_json->data;
 
 						// ar_all_section_id (experimental)
 							// $ar_all_section_id = $element->get_ar_all_section_id();
@@ -1075,19 +1007,18 @@ class dd_core_api {
 
 		// Set result object
 			$result->context = $context;
-			$result->data 	 = $data;
-	
+			$result->data 	 = $data;	
 
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->sqo					= $sqo ?? null;
-					$debug->rqo					= $rqo;
-					$debug->context_exec_time	= $context_exec_time;
-					$debug->data_exec_time		= $data_exec_time;
-					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
-					$debug->memory_usage		= dd_memory_usage();
+					$debug->sqo						= $sqo ?? null;
+					$debug->rqo						= $rqo;
+					// $debug->context_exec_time	= $context_exec_time;
+					$debug->data_exec_time			= $data_exec_time;
+					$debug->exec_time				= exec_time_unit($start_time,'ms')." ms";
+					$debug->memory_usage			= dd_memory_usage();
 				$result->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
 			}

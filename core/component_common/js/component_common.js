@@ -40,6 +40,7 @@ component_common.prototype.init = async function(options) {
 	self.matrix_id		= options.matrix_id || null // record matrix_id like 1 (list_tm mode only)
 	self.mode			= options.mode // current component mode like 'edit'
 	self.lang			= options.lang // current component lang like 'lg-nolan'
+	self.column_id 		= options.column_id // id of the column when the instance is created to render a column list.
 
 	self.section_lang	= options.section_lang // current section lang like 'lg-eng'
 	self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
@@ -439,7 +440,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 	const self = this
 
-	// (!) Note that component datum is shared with section datum. On the contrary, Portals have custom datum
+	// (!) Note that component datum is shared with section datum. BUT! Portals have specific datum
 
 	// new_data
 		const new_data_length = new_data.length
@@ -723,7 +724,8 @@ component_common.prototype.get_ar_instances = async function(){
 				datum 			: self.datum,
 				paginated_key 	: locator.paginated_key, // used by autocomplete / portal
 				caller 			: self,
-				// columns 		: self.columns
+				columns 		: self.columns,
+				column_id		: self.column_id
 			}
 
 			// id_variant . Propagate a custom instance id to children
@@ -737,6 +739,7 @@ component_common.prototype.get_ar_instances = async function(){
 
 			// add instance
 				ar_instances.push(current_section_record)
+
 
 		};//end for loop
 

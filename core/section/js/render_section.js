@@ -191,6 +191,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 			return content_data
 		}
 
+
 	const fragment = new DocumentFragment()
 
 
@@ -267,7 +268,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 
 
 	// list_header_node
-		if (ar_section_record.length>0) {
+		if (self.ar_instances.length>0) {
 			const list_header_node = await self.list_header()
 
 			Object.assign(
@@ -386,7 +387,9 @@ render_section.prototype.list_header = async function(){
 	const columns_length	= columns.length
 	for (let i = 0;  i < columns_length; i++) {
 
-		const component = columns[i]
+		const component = columns[i][0]
+
+			console.log("component:",component);
 
 		if (!component) {
 			console.warn("ignored empty component: [key, columns]", i, columns);

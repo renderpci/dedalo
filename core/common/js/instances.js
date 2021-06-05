@@ -199,6 +199,7 @@ export const get_instance = async function(options){
 						resolve(instance_element)
 
 				}else{
+						console.warn("returned already resolved instance from cache:", found_instance[0]);
 					// resolve the promise with the cache instance found						
 						resolve(found_instance[0])
 				}
@@ -309,7 +310,7 @@ export const delete_instance = async function(options) {
 */
 export const key_instances_builder = function(options){
 
-	const order = ['model','tipo','section_tipo','section_id','mode','lang','parent','matrix_id','id_variant']
+	const order = ['model','tipo','section_tipo','section_id','mode','lang','parent','matrix_id','id_variant','column_id']
 	const key_parts = []
 
 	const l = order.length
