@@ -1796,14 +1796,14 @@ abstract class common {
 							// virtual request_config
 								$children = get_children_resursive($request_config_item->show->ddo_map, $dd_object);
 								// dump($children, ' children +++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($dd_object->tipo));	
-								if (!empty($children)) {
-									
-									$show = new stdClass();
-										$show->ddo_map = $children;
-									$rqo = new request_query_object();
-										$rqo->set_show($show);
 
-									$related_element->request_config = [$rqo];
+								
+								if (!empty($children)) {
+
+									$new_rqo_config = clone $request_config_item;
+									$new_rqo_config->ddo_map = $children;
+								
+									$related_element->request_config = [$new_rqo_config];
 								}
 							break;
 

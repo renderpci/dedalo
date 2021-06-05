@@ -28,6 +28,7 @@ export const component_portal = function(){
 	this.section_id
 	this.mode
 	this.lang
+	this.column_id
 
 	this.section_lang
 
@@ -94,7 +95,7 @@ component_portal.prototype.init = async function(options) {
 		self.autocomplete_active	= false
 
 	// // columns
-	// 	self.columns = []
+		self.columns = options.columns
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -184,8 +185,6 @@ component_portal.prototype.build = async function(autoload=false){
 				// 	source : create_source(self, 'get_data'),
 				// 	action : 'read'
 				// }
-
-
 
 			// get context and data
 				// const current_data_manager	= new data_manager()
@@ -289,9 +288,9 @@ component_portal.prototype.build = async function(autoload=false){
 		self.target_section = self.rqo_config.sqo.section_tipo
 
 	// columns
-		// if(self.mode === 'edit'){
-			// self.columns = self.get_columns()
-		// }
+		if(self.mode === 'edit'){
+			self.columns = self.get_columns()
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {

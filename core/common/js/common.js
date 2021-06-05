@@ -523,6 +523,9 @@ common.prototype.load_script = async function(src) {
 
 /**
 * GET_COLUMNS
+* Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc) 
+* and create the columns to be render by the section or portals
+* @return array ar_columns the the speific columns to render into the list, with inverse path format.
 */
 common.prototype.get_columns = async function(){
 
@@ -531,45 +534,58 @@ common.prototype.get_columns = async function(){
 	const full_ddo_map = []
 
 	// // get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
-	// const rqo = self.dd_request.show.find(item => item.typo === 'rqo')
-	// if (!rqo) {
-	// 	console.log("No rqo found in self.dd_request.show. Skip get_columns. ", self.dd_request.show);
-	// 	return ar_columns
-	// }
 	const ddo_map = self.rqo_config.show.ddo_map
-// console.log("ar_columns:",ddo_map); return ar_columns
-	// console.log("self.dd_request", self.dd_request);
 
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
 	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
 	full_ddo_map.push(...sub_ddo_map)
 
-
-	function get_children(ddo_map, current_ddo) {
+	// get the parents for the column, creating the inverse path 
+	// (from the last component to the main parent, the column will be with the data of the first item of the column)
+	function get_parents(ddo_map, current_ddo) {
+		const ar_parents = []
+		const parent = ddo_map.find(item => item.tipo === current_ddo.parent)
+		if (parent) {
+			ar_parents.push(parent)
+			ar_parents.push(...get_parents(ddo_map, parent))
+		}
+		return ar_parents
 	}
 
-
-	// const ar_columns = []
-	// for (var i = 0; i < full_ddo_map.length; i++) {
-		// const ddo = full_ddo_map[i]
-		const ar_columns = get_column( full_ddo_map, self.tipo )
-		// ar_columns.push(children)
-	// }
-
-		console.log("ar_columns:",ar_columns);
+	// every ddo will be checked if it is a component_portal or if is the last component in the chain
+	// set the valid_ddo array with only the valid ddo that will be used.
+		const ar_columns = []
+		const ddo_length = full_ddo_map.length
+		for (let i = 0; i < ddo_length; i++) {
+			const current_ddo = full_ddo_map[i]
+			// check if the current ddo has children asociated, it's necesary identify the last ddo in the path chain, the last ddo create the column
+			// all parents has the link and data to get the data of the last ddo.
+			// interview -> people to study -> name
+			// «name» will be the column, «interview» and «people under study» has the locator to get the data.
+			const current_ar_valid_ddo = full_ddo_map.filter(item => item.parent === current_ddo.tipo)
+			if(current_ar_valid_ddo.length !== 0) continue
+			const column = []
+			// get the path with inverse order
+			// people to study -> interview
+			const parents = get_parents(full_ddo_map, current_ddo)
+			// join all with the inverse format
+			// name -> people to study -> interview
+			column.push(current_ddo,...parents)
+			ar_columns.push(column)
+		}
 
 	return ar_columns
 };//end get_columns
 
 
 /**
-* GET_SUB_ddo_map
-* @param self instance_caller (section, component_portal)
+* GET_SUB_DDO_MAP
+* @param datum self instance_caller datum (section, component_portal) with all contex and data of the caller. In the recursion
 * @param caller_tipo tipo from section or portal that call to get the sub_ddo_map
 * @param ddo_map the requested tipos
 * @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
-* @return array ar_columns
+* @return array ar_ddo with all ddo in all portals and sections config_rqo that has dependency of the caller.
 */
 const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 	
@@ -630,44 +646,6 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 
 	return ar_ddo
 };//end build_request_show
-
-
-
-
-/**
-* get_column
-*/
-const get_column = function(ddo_map, caller_tipo ){
-
-	// get the parents for the column
-	function get_parents(ddo_map, current_ddo) {
-		const ar_parents = []
-		const parent = ddo_map.find(item => item.tipo === current_ddo.parent)
-		if (parent) {
-			ar_parents.push(parent)
-			ar_parents.push(...get_parents(ddo_map, parent))
-		}
-		return ar_parents
-	}
-
-	// every ddo will be checked if it is a component_portal or if is the last component in the chain
-	// set the valid_ddo array with only the valid ddo that will be used.
-		const ar_valid_ddo = []
-		const ddo_length = ddo_map.length
-		for (let i = 0; i < ddo_length; i++) {
-			const current_ddo = ddo_map[i]
-			// if(current_ddo.parent !== caller_tipo) continue;
-			const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
-			if(current_ar_valid_ddo.length !== 0) continue
-
-			const column = []
-			const parents = get_parents(ddo_map, current_ddo)
-			column.push(current_ddo,...parents)
-			ar_valid_ddo.push(column)
-		}
-	return ar_valid_ddo
-};//end get_column
-
 
 
 
@@ -1376,3 +1354,34 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 	return true
 };//end load_data_debug
+
+
+
+/**
+* LOAD_DATA_FROM_DATUM
+* Get and set current element data from current datum (used on build components and sections)
+* when not already loaded data is vailable (injected on init for example)
+* @return mixed self.data
+*/
+common.prototype.load_data_from_datum = function() {
+
+	const self = this
+
+	// load data from datum (use on build only)
+		if (!self.data) {
+			self.data = self.datum
+				? self.datum.filter(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				: {
+					tipo			: self.tipo,
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					value			: [],
+					fallback_value	: [""]
+				  }
+		}
+
+	return self.data
+};//end load_data_from_datum
+
+
+

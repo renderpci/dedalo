@@ -46,6 +46,8 @@ export const section_record = function() {
 	this.matrix_id
 	this.id_variant
 
+	this.column_id
+
 	this.offset
 
 	return true
@@ -86,22 +88,23 @@ section_record.prototype.init = async function(options) {
 	self.node				= []
 	self.columns			= options.columns
 
-	self.datum			= options.datum
-	self.context		= options.context
+	self.datum				= options.datum
+	self.context			= options.context
 	// self.data			= options.data
 	// self.paginated_key	= options.paginated_key
 
-	self.events_tokens	= []
-	self.ar_instances	= []
+	self.events_tokens		= []
+	self.ar_instances		= []
 
-	self.type 				= self.model
-	self.label 				= null
+	self.type				= self.model
+	self.label				= null
 
-	self.caller 			= options.caller || null
+	self.caller				= options.caller || null
 
-	self.matrix_id 			= options.matrix_id || null
+	self.matrix_id			= options.matrix_id || null
+	self.column_id 			= options.column_id
 
-	self.modification_date 	= options.modification_date || null
+	self.modification_date	= options.modification_date || null
 
 	self.offset				= options.offset
 
@@ -125,7 +128,7 @@ section_record.prototype.init = async function(options) {
 /**
 * ADD_INSTANCE
 */
-const add_instance = async (self, current_context, section_id, current_data) => {
+const add_instance = async (self, current_context, section_id, current_data, column_id) => {
 
 
 	const instance_options = {
@@ -141,7 +144,8 @@ const add_instance = async (self, current_context, section_id, current_data) => 
 		context			: current_context,
 		data			: current_data,
 		datum			: self.datum,
-		request_config	: current_context.request_config
+		request_config	: current_context.request_config,
+		columns			: current_context.columns
 	}
 
 	// id_variant . Propagate a custom instance id to children
@@ -151,6 +155,10 @@ const add_instance = async (self, current_context, section_id, current_data) => 
 	// time machine matrix_id
 		if (self.matrix_id) {
 			instance_options.matrix_id = self.matrix_id
+		}
+	//column id
+		if(column_id){
+			instance_options.column_id = column_id
 		}
 
 	// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
@@ -165,7 +173,6 @@ const add_instance = async (self, current_context, section_id, current_data) => 
 
 	// add
 		// ar_instances.push(current_instance)
-
 	return current_instance
 }; //end add_instance
 
@@ -238,22 +245,25 @@ section_record.prototype.get_ar_columns_instances = async function(){
 	const self = this
 
 	// sort vars
-		const mode 			= self.mode
-		const tipo 			= self.tipo
-		const section_tipo 	= self.section_tipo
-		const section_id 	= self.section_id
+		const mode				= self.mode
+		const tipo				= self.tipo
+		const section_tipo		= self.section_tipo
+		const section_id		= self.section_id
+		const caller_column_id	= self.column_id
 
-		const children 		= self.caller.rqo_config.show.ddo_map.filter(item => item.parent === self.tipo)
-
-		// const data 			= self.data
+		const ar_columns	= await self.columns || []
 
 	// instances
 		const ar_instances = []
-		const children_length =  children.length
+		const ar_columns_length =  ar_columns.length
 
-		for (let i = 0; i < children_length; i++) {
+		for (let i = 0; i < ar_columns_length; i++) {
+			
+			const current_ddo_path	= ar_columns[i]
+			const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
 
-			const current_ddo = children[i]
+			const new_path 			= [...current_ddo_path]
+			new_path.pop()
 
 			if (!current_ddo) {
 				console.warn("ignored empty context: [key, columns]", i, columns);
@@ -262,10 +272,21 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 			// the component has direct data into the section
 			// if(current_context.parent === tipo){
-				const current_data		= self.get_component_data(current_ddo.tipo, current_ddo.section_tipo, section_id)
-				const current_context 	= self.datum.context.find(item => item.tipo === current_ddo.tipo && item.section_tipo === current_ddo.section_tipo)
+				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id)
+				const current_context 	= Array.isArray(current_ddo.section_tipo)
+					? self.datum.context.find(item => item.tipo === current_ddo.tipo)
+					: self.datum.context.find(item => item.tipo === current_ddo.tipo && item.section_tipo === current_ddo.section_tipo)
 
-				const current_instance	= await add_instance(self, current_context, section_id, current_data)
+				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
+
+				const column_id = caller_column_id
+					? caller_column_id
+					: i+1
+
+
+				const current_instance	= await add_instance(self, current_context, section_id, current_data, column_id)
+
+		
 				//add
 				ar_instances.push(current_instance)
 
@@ -296,14 +317,14 @@ section_record.prototype.get_ar_columns_instances = async function(){
 * GET_COMPONENT_DATA
 * @return object component_data
 */
-section_record.prototype.get_component_data = function(component_tipo, section_tipo, section_id){
+section_record.prototype.get_component_data = function(ddo, section_tipo, section_id){
 
 	const self = this
 
-	const component_data = self.datum.data.find(item => item.tipo===component_tipo && item.section_id===section_id) || { 
+	const component_data = self.datum.data.find(item => item.tipo===ddo.tipo && item.section_id===section_id && item.section_tipo === section_tipo) || { 
 		// undefined case. If the current item don't has data will be instanciated with the current section_id
 		// empy component data build
-		tipo			: component_tipo,
+		tipo			: ddo.tipo,
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		value			: [],
