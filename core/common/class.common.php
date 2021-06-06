@@ -1796,15 +1796,17 @@ abstract class common {
 							// virtual request_config
 								$children = get_children_resursive($request_config_item->show->ddo_map, $dd_object);
 								// dump($children, ' children +++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($dd_object->tipo));	
-
+									// dump($request_config_item->show->ddo_map, ' $request_config_item->show->ddo_map ++ '.to_string($current_tipo));
 								
 								if (!empty($children)) {
 
-									$new_rqo_config = clone $request_config_item;
-									$new_rqo_config->ddo_map = $children;
+									$new_rqo_config = unserialize(serialize($request_config_item));
+									$new_rqo_config->show->ddo_map = $children;
 								
 									$related_element->request_config = [$new_rqo_config];
 								}
+
+								// dump($related_element, ' related_element ++ '.to_string());
 							break;
 
 						// grouper case
@@ -1925,7 +1927,7 @@ abstract class common {
 
 
 			foreach ((array)$ar_ddo as $dd_object) {
-				
+					
 				$ar_section_tipo = is_array($dd_object->section_tipo) ? $dd_object->section_tipo : [$dd_object->section_tipo];
 				if (!in_array($section_tipo, $ar_section_tipo)) {
 					continue; // prevents multisection duplicate items
@@ -1980,7 +1982,8 @@ abstract class common {
 							$get_json_options = new stdClass();
 								$get_json_options->get_context 	= false;
 								$get_json_options->get_data 	= true;
-							$element_json = $current_component->get_json($get_json_options);										
+							$element_json = $current_component->get_json($get_json_options);
+					
 						break;
 
 					// grouper case
@@ -2150,8 +2153,6 @@ abstract class common {
 					return $el->api_engine==='dedalo';
 				});
 				dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
-
-				
 
 		// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
 		// 	// received request_ddo
@@ -2340,6 +2341,12 @@ abstract class common {
 								? $ar_section_tipo
 								: $current_ddo_map->section_tipo;
 
+							$current_ddo_map->mode = isset($current_ddo_map->mode)
+								? $current_ddo_map->mode
+								: ($model !== 'section'
+									? 'list'
+									: $mode);
+
 							$final_ddo_map[] = $current_ddo_map;
 						}
 
@@ -2490,12 +2497,18 @@ abstract class common {
 					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string($tipo));
 					// $bt = debug_backtrace();
 					// dump($bt, ' bt ++ '.to_string());
-				$ddo_map = array_map(function($current_tipo) use($tipo, $section_tipo, $mode){
+
+				$current_mode = $model !== 'section'
+					? 'list'
+					: $mode;
+
+
+				$ddo_map = array_map(function($current_tipo) use($tipo, $section_tipo, $current_mode){
 					$ddo = new dd_object();
 						$ddo->set_tipo($current_tipo);
 						$ddo->set_section_tipo($section_tipo);
 						$ddo->set_parent($tipo);
-						$ddo->set_mode($mode);
+						$ddo->set_mode($current_mode);
 						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
 
 					return $ddo;
