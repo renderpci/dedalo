@@ -1339,3 +1339,33 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 	return true
 };//end load_data_debug
+
+
+
+/**
+* LOAD_DATA_FROM_DATUM
+* Get and set current element data from current datum (used on build components and sections)
+* when not already loaded data is vailable (injected on init for example)
+* @return mixed self.data
+*/
+common.prototype.load_data_from_datum = function() {
+
+	const self = this
+
+	// load data from datum (use on build only)
+		if (!self.data) {
+			self.data = self.datum
+				? self.datum.filter(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				: {
+					tipo			: self.tipo,
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					value			: [],
+					fallback_value	: [""]
+				  }
+		}
+
+	return self.data
+};//end load_data_from_datum
+
+
