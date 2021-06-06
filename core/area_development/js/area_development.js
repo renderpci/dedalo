@@ -34,9 +34,9 @@ export const area_development = function() {
 	this.node
 	this.status
 
-	this.dd_request	= {
-		show	: null
-	}
+	// this.dd_request	= {
+	// 	show	: null
+	// }
 
 	return true
 };//end area_development
@@ -53,7 +53,7 @@ export const area_development = function() {
 	area_development.prototype.render			= common.prototype.render
 	area_development.prototype.refresh			= common.prototype.refresh
 	area_development.prototype.destroy			= common.prototype.destroy
-	area_development.prototype.build_rqo	= common.prototype.build_rqo
+	area_development.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	area_development.prototype.edit				= render_area_development.prototype.edit
 	area_development.prototype.list				= render_area_development.prototype.list
 
@@ -72,36 +72,46 @@ area_development.prototype.build = async function(autoload=true) {
 	// status update
 		self.status = 'building'
 
-	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
+	// rqo_config
+		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+	
+	// rqo build
+		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')		
 
 	// debug
-		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
+		const rqo_original = JSON.parse(JSON.stringify(self.rqo))		
 
-	if (autoload===true) {
+	// load from DDBB
+		if (autoload===true) {
 
-		// load data
-			const current_data_manager	= new data_manager()
-			const api_response			= await current_data_manager.read(self.dd_request.show)
+			// load data
+				const current_data_manager	= new data_manager()
+				const api_response = await current_data_manager.request({body:self.rqo})
+		
+			// set the result to the datum
+				self.datum	= api_response.result
 
-		// set the result to the datum
-			self.datum = api_response.result
+			// set context and data to current instance
+				self.context	= self.datum.context.find(el => el.tipo===self.tipo)
+				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
+				self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				event_manager.subscribe('render_'+self.id, function(){
-					load_data_debug(self, api_response, dd_request_show_original)
-				})
-			}
-	}
+			// rebuild the rqo_config and rqo in the instance
+			// rqo_config
+				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
-	// set context and data to current instance
-		self.context	= self.datum.context.filter(element => element.tipo===self.tipo)
-		self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
-		self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
+			// rqo build
+				self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')
 
-		const area_ddo	= self.context.find(element => element.type==='area')
-		self.label		= area_ddo.label
+			// debug
+				if(SHOW_DEBUG===true) {
+					event_manager.subscribe('render_'+self.id, function(){
+						load_data_debug(self, api_response, rqo_original)
+					})
+				}
+		}//end if (autoload===true)
+
+		self.label = self.context.label
 
 	// debug
 		if(SHOW_DEBUG===true) {
