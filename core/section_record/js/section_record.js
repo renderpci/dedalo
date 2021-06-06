@@ -130,7 +130,7 @@ section_record.prototype.init = async function(options) {
 */
 const add_instance = async (self, current_context, section_id, current_data, column_id) => {
 
-
+	
 	const instance_options = {
 		model			: current_context.model,
 		tipo			: current_context.tipo,
@@ -190,11 +190,11 @@ section_record.prototype.get_ar_instances = async function(){
 		const section_tipo 	= self.section_tipo
 		const section_id 	= self.section_id
 		const caller_tipo	= self.caller.tipo
-
+	console.log("mode:",mode);
 	// items. Get the items inside the section/component of the record to render it
 		const items = (mode==="list")
-			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
-			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
+			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode === mode)
+			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo && el.mode === mode)
 
 	// instances
 		const ar_promises	= []
@@ -273,8 +273,8 @@ section_record.prototype.get_ar_columns_instances = async function(){
 			// if(current_context.parent === tipo){
 				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id)
 				const current_context 	= Array.isArray(current_ddo.section_tipo)
-					? self.datum.context.find(item => item.tipo === current_ddo.tipo)
-					: self.datum.context.find(item => item.tipo === current_ddo.tipo && item.section_tipo === current_ddo.section_tipo)
+					? self.datum.context.find(item => item.tipo === current_ddo.tipo && item.mode === current_ddo.mode)
+					: self.datum.context.find(item => item.tipo === current_ddo.tipo && item.section_tipo === current_ddo.section_tipo && item.mode === current_ddo.mode)
 
 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
 

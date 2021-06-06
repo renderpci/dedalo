@@ -566,15 +566,17 @@ common.prototype.get_columns = async function(){
 			const current_ar_valid_ddo = full_ddo_map.filter(item => item.parent === current_ddo.tipo)
 			if(current_ar_valid_ddo.length !== 0) continue
 			const column = []
+
 			// get the path with inverse order
 			// people to study -> interview
 			const parents = get_parents(full_ddo_map, current_ddo)
+
 			// join all with the inverse format
 			// name -> people to study -> interview
 			column.push(current_ddo,...parents)
 			ar_columns.push(column)
 		}
-
+	console.log("ar_columns:",ar_columns);
 	return ar_columns
 };//end get_columns
 
@@ -625,15 +627,16 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 			const current_ddo = ddo_map[i]
 			if(current_ddo.parent !== caller_tipo) continue;
 			const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
+
 			// rqo_config
 			const rqo_config	= current_context.request_config
 				? current_context.request_config.find(el => el.api_engine==='dedalo')
 				: null
-
-			if (!current_context) {
-				console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, datum.context);
-				continue
-			}
+		
+			// if (!current_context) {
+			// 	console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_context.tipo, datum.context);
+			// 	continue
+			// }
 			ar_ddo.push(current_ddo)
 
 			if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
@@ -643,7 +646,8 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 			}
 		}
 
-
+		
+			// console.log("current_ddo:",current_ddo);
 	return ar_ddo
 };//end build_request_show
 

@@ -200,8 +200,8 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 				// console.log("PORTAL -- current_instance", current_instance);
 
-				const current_instance_section_record_node = await current_instance.render()
-				fragment.appendChild(current_instance_section_record_node)
+				const current_instance_node = await current_instance.render()
+				fragment.appendChild(current_instance_node)
 				
 				// if (current_instance_section_record_node) {
 				// 	fragment.appendChild(current_instance_section_record_node.childNodes)

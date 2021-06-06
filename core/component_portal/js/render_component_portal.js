@@ -304,7 +304,7 @@ const get_content_data_edit = async function(self) {
 			// const child_item = await ar_section_record[i].render()
 			// fragment.appendChild(child_item)
 			await input_element(current_section_record, inputs_container)
-
+	console.log("ar_section_record[i]:",ar_section_record[i]);
 			const section_record_node = await ar_section_record[i].render()
 		}
 		fragment.appendChild(inputs_container)
