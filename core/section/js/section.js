@@ -97,6 +97,7 @@ section.prototype.init = async function(options) {
 
 	// DOM
 	self.node				= []
+	self.columns			= []
 
 	self.section_lang		= options.section_lang
 	self.parent				= options.parent
@@ -118,7 +119,6 @@ section.prototype.init = async function(options) {
 
 	self.id_column_width	= '7.5em'
 	self.permissions		= options.permissions || null
-
 	
 	// events subscription
 
@@ -190,6 +190,12 @@ section.prototype.build = async function(autoload=false) {
 					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 					: null
 
+			// rebuild the rqo_config and rqo in the instance
+			// rqo_config
+				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+
+			// rqo build
+				self.rqo = await self.build_rqo_show(self.rqo_config, 'search')
 
 			// count rows
 				if (!self.total) {
@@ -323,8 +329,8 @@ section.prototype.build = async function(autoload=false) {
 				self.inspector = current_inspector
 			// }
 		}
-
-		const columns = self.get_columns()
+	// get the column for use into the list.
+		self.columns = self.get_columns()
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -377,8 +383,7 @@ section.prototype.get_ar_instances = async function(){
 
 		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
-			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
-
+			// console.groupCollapsed("section: section_record " + self.tipo +'-'+ value[i]);
 			const current_section_id	= value[i].section_id
 			const current_section_tipo	= value[i].section_tipo
 			// const current_data			= (self.mode==='tm')
@@ -400,7 +405,8 @@ section.prototype.get_ar_instances = async function(){
 					datum			: self.datum,
 					caller			: self,
 					// offset			: (offset+i),
-					// columns 		: self.columns || null
+					columns 		: self.columns,
+					column_id		: self.column_id
 			}
 
 			// id_variant . Propagate a custom instance id to children
@@ -418,6 +424,7 @@ section.prototype.get_ar_instances = async function(){
 			// section_record. init and build
 				const current_section_record = await instances.get_instance(instance_options)
 				await current_section_record.build(true)
+
 
 			// add instance
 				ar_instances.push(current_section_record)

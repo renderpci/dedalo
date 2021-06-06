@@ -523,114 +523,133 @@ common.prototype.load_script = async function(src) {
 
 /**
 * GET_COLUMNS
+* Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc) 
+* and create the columns to be render by the section or portals
+* @return array ar_columns the the speific columns to render into the list, with inverse path format.
 */
 common.prototype.get_columns = async function(){
 
 	const self = this
 
-	const ar_columns = []
+	const full_ddo_map = []
 
 	// // get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
-	// const rqo = self.dd_request.show.find(item => item.typo === 'rqo')
-	// if (!rqo) {
-	// 	console.log("No rqo found in self.dd_request.show. Skip get_columns. ", self.dd_request.show);
-	// 	return ar_columns
-	// }
 	const ddo_map = self.rqo_config.show.ddo_map
-console.log("ar_columns:",ddo_map); return ar_columns
-	// console.log("self.dd_request", self.dd_request);
 
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-	const sub_columns = get_sub_columns(self.datum, self.tipo, ddo_map, [])
-	ar_columns.push(...sub_columns)
+	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
+	full_ddo_map.push(...sub_ddo_map)
 
-		console.log("ar_columns:",ar_columns);
+	// get the parents for the column, creating the inverse path 
+	// (from the last component to the main parent, the column will be with the data of the first item of the column)
+	function get_parents(ddo_map, current_ddo) {
+		const ar_parents = []
+		const parent = ddo_map.find(item => item.tipo === current_ddo.parent)
+		if (parent) {
+			ar_parents.push(parent)
+			ar_parents.push(...get_parents(ddo_map, parent))
+		}
+		return ar_parents
+	}
+
+	// every ddo will be checked if it is a component_portal or if is the last component in the chain
+	// set the valid_ddo array with only the valid ddo that will be used.
+		const ar_columns = []
+		const ddo_length = full_ddo_map.length
+		for (let i = 0; i < ddo_length; i++) {
+			const current_ddo = full_ddo_map[i]
+			// check if the current ddo has children asociated, it's necesary identify the last ddo in the path chain, the last ddo create the column
+			// all parents has the link and data to get the data of the last ddo.
+			// interview -> people to study -> name
+			// «name» will be the column, «interview» and «people under study» has the locator to get the data.
+			const current_ar_valid_ddo = full_ddo_map.filter(item => item.parent === current_ddo.tipo)
+			if(current_ar_valid_ddo.length !== 0) continue
+			const column = []
+
+			// get the path with inverse order
+			// people to study -> interview
+			const parents = get_parents(full_ddo_map, current_ddo)
+
+			// join all with the inverse format
+			// name -> people to study -> interview
+			column.push(current_ddo,...parents)
+			ar_columns.push(column)
+		}
 
 	return ar_columns
 };//end get_columns
 
 
 /**
-* GET_SUB_COLUMNS
-* @param self instance_caller (section, component_portal)
-* @param caller_tipo tipo from section or portal that call to get the sub_columns
+* GET_SUB_DDO_MAP
+* @param datum self instance_caller datum (section, component_portal) with all contex and data of the caller. In the recursion
+* @param caller_tipo tipo from section or portal that call to get the sub_ddo_map
 * @param ddo_map the requested tipos
 * @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
-* @return array ar_columns
+* @return array ar_ddo with all ddo in all portals and sections config_rqo that has dependency of the caller.
 */
-const get_sub_columns = function(datum, caller_tipo, ddo_map, sub_ddo){
+const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 	
-	const ar_columns = []
+	const ar_ddo = []
 
 	// get the valid ddo_map, only the last ddo in the path will be rendered.
-		function get_last_children(ddo_map, current_ddo) {
-			const ar_children = []
-			const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
+		// function get_last_children(ddo_map, current_ddo) {
+		// 	const ar_children = []
+		// 	const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
 			
-			if(children.length === 0){
-				current_ddo.caller_tipo = caller_tipo
-				ar_children.push(current_ddo)
-			}else{
-				for (let i = 0; i < children.length; i++) {
-					const valid_child = get_last_children(ddo_map, children[i])[0]
-					ar_children.push(valid_child)
-				}
-			}
+		// 	if(children.length === 0){
+		// 		current_ddo.caller_tipo = caller_tipo
+		// 		ar_children.push(current_ddo)
+		// 	}else{
+		// 		for (let i = 0; i < children.length; i++) {
+		// 			const valid_child = get_last_children(ddo_map, children[i])[0]
+		// 			ar_children.push(valid_child)
+		// 		}
+		// 	}
 			
-			return ar_children;
-		}	
+		// 	return ar_children;
+		// }	
 
 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
 	// set the valid_ddo array with only the valid ddo that will be used.
-		const ar_valid_ddo = []
-		const ddo_length = ddo_map.length
-		for (let i = 0; i < ddo_length; i++) {
+		// const ar_valid_ddo = []
+		// const ddo_length = ddo_map.length
+		// for (let i = 0; i < ddo_length; i++) {
+		// 	const current_ddo = ddo_map[i]
+		// 	if(current_ddo.parent !== caller_tipo) continue;
+		// 	const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
+		// 	for (let j = 0; j < current_ar_valid_ddo.length; j++) {
+		// 		ar_valid_ddo.push(current_ar_valid_ddo[j])
+		// 	}
+		// }
+		for (let i = 0; i < ddo_map.length; i++) {
 			const current_ddo = ddo_map[i]
 			if(current_ddo.parent !== caller_tipo) continue;
-			const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
-			for (let j = 0; j < current_ar_valid_ddo.length; j++) {
-				ar_valid_ddo.push(current_ar_valid_ddo[j])
-			}
-		}
-		for (let i = 0; i < ar_valid_ddo.length; i++) {
-			const current_tipo = ar_valid_ddo[i].tipo
+			const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
 
-			const ddo = datum.context.find(item => item.tipo===current_tipo)
 			// rqo_config
-			const rqo_config	= ddo.request_config
-				? ddo.request_config.find(el => el.api_engine==='dedalo')
+			const rqo_config	= current_context.request_config
+				? current_context.request_config.find(el => el.api_engine==='dedalo')
 				: null
-
-			if (!ddo) {
-				console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_tipo, datum.context);
-				continue
-			}
-			ar_columns.push(ddo)
+		
+			// if (!current_context) {
+			// 	console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_context.tipo, datum.context);
+			// 	continue
+			// }
+			ar_ddo.push(current_ddo)
 
 			if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
 				const current_ddo_map = rqo_config.show.ddo_map
-				const sub_columns = get_sub_columns(datum, ddo.tipo, current_ddo_map, [])
-				ar_columns.push(...sub_columns)
+				const sub_ddo_map = get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+				ar_ddo.push(...sub_ddo_map)
 			}
 		}
 
-
-	return ar_columns
+		
+			// console.log("current_ddo:",current_ddo);
+	return ar_ddo
 };//end build_request_show
-
-
-
-
-/**
-* get_rows
-*/
-common.prototype.get_row = async function(){
-
-
-	return row
-};//end get_rows
-
 
 
 
@@ -713,39 +732,57 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 		}
 
 	// build new one with source of the instance caller (self)
-		const source	= create_source(self, action);		
+		const source	= create_source(self, action);
 
-	// get the sqo if it is defined (mandatory)
-	// if the rqo_config has sqo_config, get it and add to the sqo.
-	// format objects as strins [{tipo:"oh1"}] to ["oh1"]
-		const ar_sections = rqo_config.sqo.section_tipo.map(el=>el.tipo)
-
-
-	// get the limit, offset, full count, and filter by locators.
-		const limit	= (rqo_config.show.sqo_config.limit)
-			? rqo_config.show.sqo_config.limit
-			: 10
-		const offset = (rqo_config.show.sqo_config.offset)
-			? rqo_config.show.sqo_config.offset
-			: 0
-		const full_count	= (rqo_config.show.sqo_config.full_count)
-			? rqo_config.show.sqo_config.full_count
-			: false
-		const filter_by_locators	= (rqo_config.show.sqo_config.filter_by_locators)
-			? rqo_config.show.sqo_config.filter_by_locators
-			: null
+	// SQO
+	// set the sqo_config into a checked variable
+		const sqo_config = rqo_config.show && rqo_config.show.sqo_config
+			? rqo_config.show.sqo_config
+			: {}
 
 
-	// sqo
-		const sqo = {
-			section_tipo		: ar_sections,
-			filter				: null,
-			limit				: 3,//limit,
-			offset				: offset,
-			full_count			: full_count,
-			filter_by_locators	: filter_by_locators
-		}
+	// get the ar_sections
+		const ar_sections = rqo_config.sqo && rqo_config.sqo.section_tipo
+			? rqo_config.sqo.section_tipo.map(el=>el.tipo)
+			: ( sqo_config.section_tipo)
+					? sqo_config.section_tipo.map(el=>el.tipo)
+					: [self.section_tipo]
 
+
+		const sqo = rqo_config.sqo
+			? JSON.parse(JSON.stringify(rqo_config.sqo))
+			: {}
+
+	sqo.section_tipo = ar_sections
+	
+	// Get the limit, offset, full count, and filter by locators. 
+	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
+	// and finally if the rqo_config don't has sqo or sqo_config, set the default parameter to each.
+		sqo.limit = sqo.limit
+			? sqo.limit
+			: (sqo_config.limit)
+				? sqo_config.limit
+				: self.mode === 'edit'
+					? 1
+					: 10
+
+		sqo.offset = sqo.offset
+			? sqo.offset
+			: (sqo_config.offset)
+				? sqo_config.offset
+				: 0
+
+		sqo.full_count = sqo.full_count
+			? sqo.full_count
+			: (sqo_config.full_count)
+				? sqo_config.full_count
+				: false
+
+		sqo.filter_by_locators = sqo.filter_by_locators
+			? sqo.filter_by_locators
+			: (sqo_config.filter_by_locators)
+				? sqo_config.filter_by_locators
+				: null
 
 	//build the rqo
 		const rqo = {

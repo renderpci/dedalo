@@ -61,7 +61,7 @@ data_manager.prototype.request = async function(options) {
 			return json_parsed
 		})// parses JSON response into native Javascript objects
 		.catch(error => {
-			console.error("!!!!! [data_manager.request] Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
+			console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
 			return {
 				result 	: false,
 				msg 	: error.message,

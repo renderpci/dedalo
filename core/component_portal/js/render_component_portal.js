@@ -12,6 +12,8 @@
 
 	import {view_autocomplete} from './view_autocomplete.js'
 
+	// import {render_section} from '../../section/js/render_section.js'
+
 
 
 /**
@@ -23,6 +25,8 @@ export const render_component_portal = function() {
 	return true
 };//end  render_component_portal
 
+
+// render_component_portal.prototype.list_header			= render_section.prototype.list_header
 
 
 /**
@@ -134,7 +138,7 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 				const buttons = get_buttons(self)
 
 			// top
-				// const top = get_top(self)
+				const top = get_top(self)
 
 			// wrapper. ui build_edit returns component wrapper
 				wrapper =	ui.component.build_wrapper_edit(self, {
@@ -144,10 +148,13 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 				})
 				wrapper.classList.add("portal")
 
+
 			// events
 				add_events(self, wrapper)
 			break;
 	}
+
+		
 
 	const js_promise = wrapper
 
@@ -296,20 +303,24 @@ const get_content_data_edit = async function(self) {
 	// build values (add all nodes from the rendered_section_record)
 		const length = ar_section_record.length
 		for (let i = 0; i < length; i++) {
-			const current_section_record = ar_section_record[i]; 	console.log("current_section_record:",current_section_record);
+
+			const current_section_record = ar_section_record[i]; 	//console.log("current_section_record:",current_section_record);
 			if (!current_section_record) {
 				console.warn("empty current_section_record:",current_section_record);				
 			}
+			// const child_item = await ar_section_record[i].render()
+			// fragment.appendChild(child_item)
 			await input_element(current_section_record, inputs_container)
-			//const section_record_node = await ar_section_record[i].render()
+
+			const section_record_node = await ar_section_record[i].render()
 		}
 		fragment.appendChild(inputs_container)
 
 	// build references
-		if(self.data.references && self.data.references.length > 0){
-			const references_node = render_references(self.data.references)
-			fragment.appendChild(references_node)
-		}
+		// if(self.data.references && self.data.references.length > 0){
+			// const references_node = render_references(self.data.references)
+		// 	fragment.appendChild(references_node)
+		// }
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -507,7 +518,7 @@ const get_top = function(self) {
 		const mode					= self.mode
 		const current_data_manager	= new data_manager()
 		const show					= self.rqo.show
-		const target_section		= show.filter(item => item.model==='section')
+		const target_section		= self.rqo.sqo.section_tipo //filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length
 		// sort section by label asc
 			target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)

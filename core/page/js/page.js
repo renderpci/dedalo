@@ -81,19 +81,11 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('user_action', user_action)
 			)
 		// user_action fn
-			async function user_action(user_action_options) {
+			async function user_action(user_action_rqo) {
 				if(SHOW_DEBUG===true) {
-					console.log("// page user_action received user_action_options", user_action_options);
+					console.log("// page user_action received user_action_rqo", user_action_rqo);
 				}
 
-				// options .clean
-					const options = {}
-					for(const name in user_action_options) {
-						if (name!=='sqo') {
-							options[name] = user_action_options[name]
-						}
-					}
-				
 				// reset status to prevent errors lock 
 					self.status = 'rendered'
 
@@ -105,24 +97,37 @@ page.prototype.init = async function(options) {
 						node.classList.add('loading')
 					}
 
-				// const current_data_manager 	= new data_manager()
-				// const api_response 			= await current_data_manager.get_element_context(options)
-				//
-				// // element context from api server result
-				// 	const page_element = api_response.result
+				// rqo. request_config
+					const new_rqo = JSON.parse(JSON.stringify(user_action_rqo))
 
+					const config_section_tipo = new_rqo.sqo && new_rqo.sqo.section_tipo
+						? new_rqo.sqo.section_tipo.map(item => ({tipo:item}))
+						: [{tipo: user_action_rqo.section_tipo}]
 
-				// source
-					const rqo = JSON.parse(JSON.stringify(options))
-						  rqo.typo	 = "source"
+					const config_sqo = new_rqo.sqo
+						? new_rqo.sqo
+						: {}
+
+					config_sqo.section_tipo = config_section_tipo
+
+					const request_config = [{
+						api_engine	: 'dedalo',
+						sqo			: config_sqo
+					}]
+
+						console.log("request_config---page:",request_config);
+
+				// des
+					// const current_data_manager 	= new data_manager()
+					// const api_response 			= await current_data_manager.get_element_context(options)
+					//
+					// // element context from api server result
+					// 	const page_element = api_response.result
 			
-				// sqo
-					if (user_action_options.sqo) {
-						rqo.sqo = user_action_options.sqo
-					}				
-
 				// check response page element is valid for instantiate. Element instance loads the file					
-					const page_element_instance = await instantiate_page_element(self, rqo)
+					const page_element_instance = await instantiate_page_element(self, new_rqo.source)
+					page_element_instance.context.request_config = request_config
+						console.log("page_element_instance:",page_element_instance);
 					if (!page_element_instance) {
 						console.error("error on get page_element_instance:", page_element_instance);
 						// loading
@@ -132,17 +137,17 @@ page.prototype.init = async function(options) {
 								}, 150)								
 							}
 						return false
-					}					
+					}
 					
 				// elements to stay
 					// const base_models = ['section','tool','area']
 					const base_models = ['menu']
 					// const elements_to_stay 	= self.elements.filter(item => item.model!==page_element.model)
-					const elements_to_stay 	= self.dd_request.filter( item => base_models.includes(item.model))
+					const elements_to_stay 	= self.context.filter( item => base_models.includes(item.model))
 
 					// add current source from options
-						elements_to_stay.push(rqo)
-						self.dd_request = elements_to_stay
+						elements_to_stay.push(new_rqo.source)
+						self.context = elements_to_stay
 
 				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page					
 					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
@@ -150,23 +155,27 @@ page.prototype.init = async function(options) {
 					for (let i = instances_to_stay.length - 1; i >= 0; i--) {
 						instances_to_stay[i].destroyable = false
 					}
+
 					const refresh_result = await self.refresh()
-					
+						console.log("self:",self);
 					// loading
 						if (node) {
 							node.classList.remove('loading')
 						}
 
 				// url history track
-					if(refresh_result===true && options.event_in_history!==true)  {
+					if(refresh_result===true && new_rqo.event_in_history!==true)  {
 
 						// options_url : clone options and remove optional 'event_in_history' property
-						const options_url 	= Object.assign({}, options);
+						const options_url 	= Object.assign({}, new_rqo);
 						delete options_url.event_in_history
 
-						const var_uri		= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
-						const uri_options	= JSON.parse(JSON.stringify(options))
-						const state			= {options : uri_options}
+						// const var_uri	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
+						const new_instance 	= self.ar_instances.find(item => item.model === new_rqo.source.model && item.tipo === new_rqo.source.tipo && item.mode === new_rqo.source.mode)
+
+						const var_uri		= 'id=' + new_instance.id
+						const uri_options	= new_rqo
+						const state			= {rqo : new_rqo}
 						const title			= ''
 						const url			= "?"+var_uri //window.location.href
 
@@ -180,9 +189,9 @@ page.prototype.init = async function(options) {
 	// window onpopstate
 		window.onpopstate = function(event) {
 			if (event.state) {
-				const options = event.state.options
-				options.event_in_history = true
-				event_manager.publish('user_action', options)
+				const new_rqo = event.state.rqo
+				new_rqo.event_in_history = true
+				event_manager.publish('user_action', new_rqo)
 			}
 		}
 
@@ -260,7 +269,7 @@ page.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < context_length; i++) {
 
 			const current_ddo = self.context[i]
-				console.log("current_ddo:",current_ddo);
+				console.log("current_ddo:",current_ddo); 
 			ar_promises.push( new Promise(function(resolve){
 			
 				instantiate_page_element(self, current_ddo)
@@ -298,6 +307,7 @@ const instantiate_page_element = function(self, ddo) {
 	const mode			= ddo.mode
 	const lang			= ddo.lang
 	const context		= ddo
+
 	
 	// instance options
 		const instance_options = {
