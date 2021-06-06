@@ -58,7 +58,7 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 const get_content_data_edit = async function(self) {
 
 	const ar_instances = await self.get_ar_instances()
-	
+		
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
@@ -154,8 +154,6 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	const ar_instances = await self.get_ar_columns_instances()
 
-		// console.log("ar_instances:",ar_instances);
-
 // const ar_instances = await self.get_ar_instances()
 
 	const fragment = new DocumentFragment()
@@ -182,6 +180,8 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
 
+			// console.log("ar_instances:",ar_instances);
+
 		for (let i = 0; i < ar_instances_length; i++) {
 
 			const current_instance = ar_instances[i]
@@ -200,8 +200,8 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 				// console.log("PORTAL -- current_instance", current_instance);
 
-				const current_instance_section_record_node = await current_instance.render()
-				fragment.appendChild(current_instance_section_record_node)
+				const current_instance_node = await current_instance.render()
+				fragment.appendChild(current_instance_node)
 				
 				// if (current_instance_section_record_node) {
 				// 	fragment.appendChild(current_instance_section_record_node.childNodes)
@@ -439,28 +439,27 @@ const build_id_column = function(self) {
 							// edit_record(this, self)
 
 							const sqo = {
-								typo			: "sqo",
 								mode			: 'edit',
 								section_tipo	: [self.section_tipo],
 								filter			: null,
 								limit			: 1,
 								offset			: offset,
-								select			: [],
 								full_count		: false
 							}
 
-							const user_action_options = {
-								tipo			: self.section_tipo,
-								// section_id	: null,//self.section_id,
-								// offset		: offset,
-								model			: self.caller.model,
-								mode			: 'edit',
-								sqo				: sqo
+							const user_action_rqo = {
+								id: self.caller.id,
+								source 	: {
+									tipo		: self.section_tipo,
+									model		: self.caller.model,
+									mode		: 'edit'
+								},
+								sqo		: sqo
 							}
 							if(SHOW_DEBUG===true) {
-								console.log("// section_record build_id_column user_action_options default:",user_action_options);
+								console.log("// section_record build_id_column user_action_rqo default:",user_action_rqo);
 							}
-							event_manager.publish('user_action', user_action_options)
+							event_manager.publish('user_action', user_action_rqo)
 						})
 					}
 				// delete_line
