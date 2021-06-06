@@ -41,6 +41,8 @@ export const component_portal = function(){
 
 	this.modal
 
+	this.paginator
+
 	this.autocomplete
 	this.autocomplete_active
 
@@ -206,7 +208,14 @@ component_portal.prototype.build = async function(autoload=false){
 				set_context_vars(self, self.context)
 
 				self.datum.context = api_response.result.context
-			
+				
+		}
+		
+
+	// pagination vars only in edit mode
+		if (self.mode==="edit") {
+
+
 			// pagination. update element pagination vars when are used
 				if (self.data.pagination && !self.total) {
 					// console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++ self.data.pagination:",self.data.pagination);
@@ -215,32 +224,6 @@ component_portal.prototype.build = async function(autoload=false){
 					// set value
 					current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
-
-				
-		}
-		
-
-	// pagination vars only in edit mode
-		if (self.mode==="edit") {
-
-			// const show_sqo_config	= self.rqo_config.show.sqo_config
-
-			// // pagination safe defaults
-			// 	self.pagination.total 	= self.pagination.total  || 0
-			// 	self.pagination.offset 	= self.pagination.offset || 0
-			// 	// self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
-			// 	self.pagination.limit 	= self.pagination.limit  || ((show_sqo_config && show_sqo_config.limit) ? show_sqo_config.limit : 5)
-
-			// sqo update filter_by_locators
-				// if(self.pagination.total>self.pagination.limit){
-
-				// 	const show 	= self.dd_request.show
-				// 	const sqo 	= show.find(item => item.typo==='sqo')
-
-				// 	const data_value = self.data.value
-
-				// 	sqo.filter_by_locators = data_value
-				// }//end if(self.pagination.total>self.pagination.limit)
 
 			// paginator
 				if (!self.paginator) {
@@ -255,6 +238,7 @@ component_portal.prototype.build = async function(autoload=false){
 					self.events_tokens.push(
 						event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
 							self.rqo.sqo.offset = offset
+
 							// set value
 							current_data_manager.set_local_db_data(self.rqo, 'rqo')
 

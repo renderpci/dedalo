@@ -389,8 +389,6 @@ render_section.prototype.list_header = async function(){
 
 		const component = columns[i][0]
 
-			console.log("component:",component);
-
 		if (!component) {
 			console.warn("ignored empty component: [key, columns]", i, columns);
 			continue;
