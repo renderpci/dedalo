@@ -190,6 +190,12 @@ section.prototype.build = async function(autoload=false) {
 					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 					: null
 
+			// rebuild the rqo_config and rqo in the instance
+			// rqo_config
+				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+
+			// rqo build
+				self.rqo = await self.build_rqo_show(self.rqo_config, 'search')
 
 			// count rows
 				if (!self.total) {

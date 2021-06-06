@@ -58,7 +58,7 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 const get_content_data_edit = async function(self) {
 
 	const ar_instances = await self.get_ar_instances()
-	
+		
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
@@ -439,28 +439,27 @@ const build_id_column = function(self) {
 							// edit_record(this, self)
 
 							const sqo = {
-								typo			: "sqo",
 								mode			: 'edit',
 								section_tipo	: [self.section_tipo],
 								filter			: null,
 								limit			: 1,
 								offset			: offset,
-								select			: [],
 								full_count		: false
 							}
 
-							const user_action_options = {
-								tipo			: self.section_tipo,
-								// section_id	: null,//self.section_id,
-								// offset		: offset,
-								model			: self.caller.model,
-								mode			: 'edit',
-								sqo				: sqo
+							const user_action_rqo = {
+								id: self.caller.id,
+								source 	: {
+									tipo		: self.section_tipo,
+									model		: self.caller.model,
+									mode		: 'edit'
+								},
+								sqo		: sqo
 							}
 							if(SHOW_DEBUG===true) {
-								console.log("// section_record build_id_column user_action_options default:",user_action_options);
+								console.log("// section_record build_id_column user_action_rqo default:",user_action_rqo);
 							}
-							event_manager.publish('user_action', user_action_options)
+							event_manager.publish('user_action', user_action_rqo)
 						})
 					}
 				// delete_line

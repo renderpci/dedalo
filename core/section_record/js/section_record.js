@@ -201,7 +201,6 @@ section_record.prototype.get_ar_instances = async function(){
 		const items_length	= items.length
 		for (let i = 0; i < items_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
-
 			// const current_context = items[i]
 			// const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
 			// const current_instance	= await add_instance(self, current_context, section_id, current_data)
@@ -210,7 +209,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 			const current_promise = new Promise(function(resolve){
 				const current_context	= items[i]
-				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+				const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)
 				add_instance(self, current_context, section_id, current_data)
 				.then(function(current_instance){
 					current_instance.instance_order_key = i

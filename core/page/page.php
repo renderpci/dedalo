@@ -2,7 +2,7 @@
 // PAGE CONTROLLER
 
 // page mode and tipo
-	$default_section_tipo = 'test65';
+	$default_section_tipo = 'test38';
 	if (isset($_GET['locator'])) {
 		$locator	= json_decode($_GET['locator']);
 		$tipo		= $locator->section_tipo ?? $default_section_tipo;
