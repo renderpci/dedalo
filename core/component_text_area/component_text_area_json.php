@@ -4,9 +4,9 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$lang			= $this->get_lang()
 
 
 // context
@@ -39,10 +39,15 @@
 		// Value
 		switch ($modo) {
 			case 'list':
-				$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$dato = $this->get_dato();
+				$value = component_common::extract_component_dato_fallback($this, DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 				$total = count($value)>0 ? count($value) : 1;
 				foreach ($value as $key => $current_value) {
 					$value[$key] = common::truncate_html( ceil(200/$total), $current_value, true);
+				}
+				// check value fallback
+				if (!empty($dato) && empty($value[0])) {
+					$value[0] = 'Error on extract_component_dato_fallback ['.$lang.'] for '.json_encode($dato);
 				}
 				break;
 			case 'edit':
@@ -50,7 +55,7 @@
 				$value = $this->get_dato();
 				break;
 		}
-
+		
 		// data item
 		$item = $this->get_data_item($value);
 			$item->parent_tipo 		 = $this->get_tipo();

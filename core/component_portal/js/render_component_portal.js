@@ -12,6 +12,8 @@
 
 	import {view_autocomplete} from './view_autocomplete.js'
 
+	// import {render_section} from '../../section/js/render_section.js'
+
 
 
 /**
@@ -23,6 +25,8 @@ export const render_component_portal = function() {
 	return true
 };//end  render_component_portal
 
+
+// render_component_portal.prototype.list_header			= render_section.prototype.list_header
 
 
 /**
@@ -134,7 +138,7 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 				const buttons = get_buttons(self)
 
 			// top
-				// const top = get_top(self)
+				const top = get_top(self)
 
 			// wrapper. ui build_edit returns component wrapper
 				wrapper =	ui.component.build_wrapper_edit(self, {
@@ -144,10 +148,13 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 				})
 				wrapper.classList.add("portal")
 
+
 			// events
 				add_events(self, wrapper)
 			break;
 	}
+
+		
 
 	const js_promise = wrapper
 
@@ -304,7 +311,7 @@ const get_content_data_edit = async function(self) {
 			// const child_item = await ar_section_record[i].render()
 			// fragment.appendChild(child_item)
 			await input_element(current_section_record, inputs_container)
-	console.log("ar_section_record[i]:",ar_section_record[i]);
+
 			const section_record_node = await ar_section_record[i].render()
 		}
 		fragment.appendChild(inputs_container)
@@ -511,7 +518,7 @@ const get_top = function(self) {
 		const mode					= self.mode
 		const current_data_manager	= new data_manager()
 		const show					= self.rqo.show
-		const target_section		= show.filter(item => item.model==='section')
+		const target_section		= self.rqo.sqo.section_tipo //filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length
 		// sort section by label asc
 			target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)

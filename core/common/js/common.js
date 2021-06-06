@@ -576,7 +576,7 @@ common.prototype.get_columns = async function(){
 			column.push(current_ddo,...parents)
 			ar_columns.push(column)
 		}
-	console.log("ar_columns:",ar_columns);
+
 	return ar_columns
 };//end get_columns
 

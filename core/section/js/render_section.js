@@ -379,8 +379,6 @@ render_section.prototype.list_header = async function(){
 
 	const self = this
 
-	// const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component" && item.parent===self.section_tipo)
-
 	const columns = await self.columns
 
 	const ar_nodes			= []
@@ -396,29 +394,11 @@ render_section.prototype.list_header = async function(){
 
 		const label = []
 
-		if(component.parent === self.section_tipo){
-			const current_label = SHOW_DEBUG
-				? component.label + " [" + component.tipo + "]"
-				: component.label
-			label.push(current_label)
-		}else {
-			const component_parent = self.datum.context.find(item => item.tipo===component.parent && item.section_tipo===self.section_tipo)
-			if(component_parent){
-				const current_label = SHOW_DEBUG
-					? component_parent.label + " [" + component_parent.tipo + "]" + ': '+ component.label + " [" + component.tipo + "]"
-					: component_parent.label + ': '+ component.label					
-				label.push(current_label)
-			}else{
-				const current_label = SHOW_DEBUG
-					? ': '+ component.label + " [" + component.tipo + "]"
-					: ': '+ component.label	
-				label.push(current_label)
-			}
-		}
-			 // && item.type==="component")
-
-		// if(label)
-
+		const current_label = SHOW_DEBUG
+			? component.label + " [" + component.tipo + "]"
+			: component.label
+		label.push(current_label)
+	
 		// node header_item
 			const id			=  component.tipo + "_" + component.section_tipo +  "_"+ component.parent
 			const header_item	= ui.create_dom_element({
@@ -426,10 +406,8 @@ render_section.prototype.list_header = async function(){
 				id				: id,
 				inner_html		: label.join('')
 			})
-			// add if not already exists
-			// if (!ar_nodes.find(item => item.id===id)) {
-				ar_nodes.push(header_item)
-			// }
+
+			ar_nodes.push(header_item)
 	}
 
 	// header_wrapper
