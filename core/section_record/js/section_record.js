@@ -190,7 +190,7 @@ section_record.prototype.get_ar_instances = async function(){
 		const section_tipo 	= self.section_tipo
 		const section_id 	= self.section_id
 		const caller_tipo	= self.caller.tipo
-	console.log("mode:",mode);
+
 	// items. Get the items inside the section/component of the record to render it
 		const items = (mode==="list")
 			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode === mode)
