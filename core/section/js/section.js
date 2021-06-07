@@ -213,7 +213,7 @@ section.prototype.build = async function(autoload=false) {
 						load_data_debug(self, api_response, self.rqo)
 					}
 				}
-		}
+		}//end if (autoload===true)
 		// else{
 		//
 		// 	// set context and data to current instance
@@ -229,9 +229,7 @@ section.prototype.build = async function(autoload=false) {
 
 
 	// sqo
-		// const sqo = self.rqo.show.find(element => element.typo==='sqo')
 		const sqo = self.rqo.sqo
-
 
 	// Update section mode/label with context declarations
 		const section_context = self.context || {
