@@ -12,8 +12,6 @@
 
 	import {view_autocomplete} from './view_autocomplete.js'
 
-	// import {render_section} from '../../section/js/render_section.js'
-
 
 
 /**
@@ -26,7 +24,6 @@ export const render_component_portal = function() {
 };//end  render_component_portal
 
 
-// render_component_portal.prototype.list_header			= render_section.prototype.list_header
 
 
 /**
@@ -261,8 +258,8 @@ const add_events = function(self, wrapper) {
 				if(self.autocomplete_active===false){
 
 					// set rqo
-						self.rqo.search 	= self.rqo.search || self.build_rqo('search', self.context.request_config, 'search')
-						self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
+						self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
+						// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
 
 					self.autocomplete = new service_autocomplete()
 					self.autocomplete.init({
