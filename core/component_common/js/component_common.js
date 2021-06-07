@@ -472,7 +472,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 	// data (from current component only)
 		// current element data
-			self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_tipo===self.section_tipo && item.section_id===self.section_id) || []
+			self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
 				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
 		
 		// data of another components
