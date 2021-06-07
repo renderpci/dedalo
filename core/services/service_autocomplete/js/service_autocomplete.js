@@ -28,20 +28,19 @@ export const service_autocomplete = function() {
 	* INIT
 	* @return bool
 	*/
-	this.init = function(options) {
+	this.init = async function(options) {
 
 		const self = this
 
 		self.instance_caller		= options.caller
 		self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
 		self.wrapper				= options.wrapper
-		self.ar_dd_request			= self.instance_caller.dd_request.search
-		self.dd_request				= self.ar_dd_request[0]
-		console.log("dd_request", self.ar_dd_request);
-		self.sqo					= self.dd_request.find(item => item.typo==='sqo')
+		// self.ar_dd_request			= self.instance_caller.dd_request.search
+		self.dd_request				= await self.instance_caller.rqo_search
+		self.sqo					= self.dd_request.sqo
 		self.ar_search_section_tipo	= self.sqo.section_tipo
 		self.ar_filter_by_list		= []
-
+console.log("dd_request:",self.ar_search_section_tipo);
 		// engine. get the search_engine sended or set the default value
 			const engine			= self.dd_request.find(item => item.typo==='search_engine').value
 			self.search_engine		= (engine) ? engine : 'dedalo_engine';

@@ -541,6 +541,20 @@ common.prototype.get_columns = async function(){
 	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
 	full_ddo_map.push(...sub_ddo_map)
 
+	const ar_columns = get_ar_inverted_paths(full_ddo_map)
+
+	return ar_columns
+};//end get_columns
+
+
+/**
+* GET_AR_INVERTED_PATHS
+* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc) 
+* get the path in inverse format, the last in the chain will be the first object [0]
+* @return array ar_inverted_paths the the speific paths, with inverse path format.
+*/
+const get_ar_inverted_paths = function(full_ddo_map){
+
 	// get the parents for the column, creating the inverse path 
 	// (from the last component to the main parent, the column will be with the data of the first item of the column)
 	function get_parents(ddo_map, current_ddo) {
@@ -555,7 +569,7 @@ common.prototype.get_columns = async function(){
 
 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
 	// set the valid_ddo array with only the valid ddo that will be used.
-		const ar_columns = []
+		const ar_inverted_paths = []
 		const ddo_length = full_ddo_map.length
 		for (let i = 0; i < ddo_length; i++) {
 			const current_ddo = full_ddo_map[i]
@@ -574,12 +588,11 @@ common.prototype.get_columns = async function(){
 			// join all with the inverse format
 			// name -> people to study -> interview
 			column.push(current_ddo,...parents)
-			ar_columns.push(column)
+			ar_inverted_paths.push(column)
 		}
 
-	return ar_columns
-};//end get_columns
-
+	return ar_inverted_paths
+}// end get_ar_inverted_paths
 
 /**
 * GET_SUB_DDO_MAP
@@ -653,6 +666,8 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 
 
 
+
+
 /**
 * LOAD_TOOL
 * @param tool_object options
@@ -691,7 +706,7 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 /**
 * BUILD_RQO
 */
-common.prototype.build_rqo = async function(dd_request_type, request_config, action){
+common.prototype.build_rqo_DES = async function(dd_request_type, request_config, action){
 
 	const self = this
 
@@ -699,8 +714,7 @@ common.prototype.build_rqo = async function(dd_request_type, request_config, act
 
 	switch (dd_request_type) {
 
-		case 'show':
-			
+		case 'show':	
 			return rqo
 
 		case 'search':
@@ -799,6 +813,160 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 
 	return rqo
 }//end build_rqo_show
+
+
+
+/**
+* BUILD_RQO_SHOW
+* @return object rqo
+*/
+common.prototype.build_rqo_search = async function(rqo_config, action){
+		
+	const self = this
+
+	// build new one with source of the instance caller (self)
+		const source	= create_source(self, action);
+
+	// get the operator to use into the filter free
+		const operator	= rqo_config.search && rqo_config.search.sqo_config && rqo_config.search.sqo_config.operator
+			? rqo_config.search.sqo_config.operator 
+			: '$and'
+		
+	// SQO
+	// set the sqo_config into a checked variable, get the sqo_config for search or show
+		const sqo_config = rqo_config.search && rqo_config.search.sqo_config
+			? rqo_config.search.sqo_config
+			: rqo_config.show && rqo_config.show.sqo_config
+				? rqo_config.show.sqo_config
+				: {}
+
+
+	// get the ar_sections
+		const ar_sections = rqo_config.sqo && rqo_config.sqo.section_tipo
+			? rqo_config.sqo.section_tipo.map(el=>el.tipo)
+			: ( sqo_config.section_tipo)
+					? sqo_config.section_tipo.map(el=>el.tipo)
+					: [self.section_tipo]
+		
+
+	// limit and offset
+	// check if limit and offset exist in choose, if not get from search.sqo_config, if not, get from show.sqo_config else fixed value
+		const limit	= rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.limit
+			? rqo_config.choose.sqo_config.limit
+			: (sqo_config.limit)
+				? sqo_config.limit
+				: 10
+		const offset = rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.offset
+			? rqo_config.choose.sqo_config.offset
+			: (sqo_config.offset)
+				? qo_config.offset
+				: 0
+
+	// new sqo_search
+	const sqo = {
+		section_tipo : ar_sections,
+		filter		 : {[operator]:[]},
+		offset		 : offset,
+		limit		 : limit,
+		full_count	 : false
+	}
+
+
+	// FILTER_FREE 
+	// the filter will be used to set the q with all paths to use to search.
+		const filter_free			= {}
+			  filter_free[operator] = []
+
+		// create the paths for use into filter_free
+		// get the ddo_map to use for the paths in search or show or create new one with the caller
+			const search_ddo_map = rqo_config.search && rqo_config.search.ddo_map
+				? rqo_config.search.ddo_map
+				: rqo_config.show && rqo_config.show.ddo_map
+					? rqo_config.show.ddo_map
+					: [{
+						section_tipo	: self.section_tipo,
+						component_tipo	: self.tipo,
+						model			: self.model,
+						mode 			: 'list'
+					}]
+
+
+			if (search_ddo_map) {
+				// get the sub elements with the ddo_map, the method is recursive,
+				// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
+				const ar_paths = get_ar_inverted_paths(search_ddo_map)
+				// change the order of the paths to correct order for sqo and set all ddo to 'list' mode
+				const paths_length = ar_paths.length
+				for (let i = 0; i < paths_length; i++) {
+					const current_path = ar_paths[i]
+					const current_path_length = current_path.length
+					// reverse path and set the list
+					const new_path = []
+					for (let j = current_path_length - 1; j >= 0; j--) {
+						const current_ddo = current_path[j]
+						current_ddo.mode = 'list' // enable lang fallback value
+						new_path.push(current_ddo)
+					}
+					//add the path to the filter_free with the operator
+					filter_free[operator].push({
+						q		: '',
+						path	: new_path
+					})
+				}
+			}
+
+
+	// fixed_filter
+	const fixed_filter	= rqo_config.sqo && rqo_config.sqo.fixed_filter
+		? rqo_config.sqo.fixed_filter
+		: false
+
+
+	// filter_by_list if exists
+	const filter_by_list = rqo_config.sqo && rqo_config.sqo.filter_by_list
+		? rqo_config.sqo.filter_by_list
+		: false
+
+
+	//value_with_parents
+	const value_with_parents = sqo_config.value_with_parents
+		? sqo_config.value_with_parents
+		: false
+
+	//divisor
+	const divisor = sqo_config.divisor
+		? sqo_config.divisor
+		: false
+
+	// optional configuration to use when the serach will be builded
+		const sqo_options = {
+			filter_free			: filter_free,
+			fixed_filter		: fixed_filter,
+			filter_by_list		: filter_by_list,
+			value_with_parents	: value_with_parents,
+			divisor 			: divisor,
+			operator 			: operator,
+		}
+
+	// DDO_MAP
+	// get the ddo_map to show the components, if is set choose get it, if not get the search.ddo_map if not get the show.ddo_map
+		const ddo_map = rqo_config.choose && rqo_config.choose.ddo_map
+			? rqo_config.choose.ddo_map
+			: search_ddo_map
+
+
+		//build the rqo
+		const rqo = {
+			id			: self.id,
+			action		: 'search',
+			source		: source,
+			show		: {ddo_map : ddo_map},
+			sqo			: sqo,
+			sqo_options	: sqo_options
+		}
+
+	return rqo
+}//end build_rqo_search
 
 
 
