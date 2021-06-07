@@ -139,17 +139,15 @@ component_portal.prototype.build = async function(autoload=false){
 	// status update
 		self.status = 'building'
 
-	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.data) {
-			self.data = []
+	// self.datum. On building, if datum is not created, creation is needed		
+		self.datum = self.datum || {
+			data	: [],
+			context	: []
 		}
-		if (!self.datum) {
-			self.datum = {data:self.data, context:[]}
-		}
-
+		self.data = self.data || {}		
 
 	// rqo_config
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo');
 
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
