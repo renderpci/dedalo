@@ -337,12 +337,12 @@ component_common.prototype.save = async function(changed_data) {
 
 			}catch(error) {
 
-			  	console.error("+++++++ COMPONENT SAVE ERROR:", error);
-			  	return {
+				console.error("+++++++ COMPONENT SAVE ERROR:", error);
+				return {
 					result	: false,
 					msg		: error.message,
 					error	: error
-			  	}
+				}
 			}
 		}
 		const save_promise = send_data()
@@ -474,6 +474,7 @@ component_common.prototype.update_datum = function(new_data) {
 		// current element data
 			self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_tipo===self.section_tipo && item.section_id===self.section_id) || []
 				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
+		
 		// data of another components
 			/*
 			const ar_instances = instances.get_all_instances()
