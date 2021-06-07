@@ -1720,6 +1720,10 @@ abstract class common {
 		// already_calculated
 			static $ar_subcontext_calculated = [];
 
+		// subcontext from API rqo if exists
+			$requested_show = dd_core_api::$rqo->show ?? null;
+
+		if(empty($requested_show)){
 		// request_config
 			$request_config = $this->request_config ?? null;
 			if(empty($request_config)) return null;
@@ -1727,7 +1731,10 @@ abstract class common {
 			$request_config_dedalo = array_filter($request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
-
+		}else{
+			$request_config_dedalo = new stdClass();
+			$request_config_dedalo->show = $requested_show;
+		}
 		// children_resursive function
 			if (!function_exists('get_children_resursive')) {
 				function get_children_resursive($ar_ddo, $dd_object) {
