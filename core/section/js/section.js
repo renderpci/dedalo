@@ -184,10 +184,10 @@ section.prototype.build = async function(autoload=false) {
 				self.datum = api_response.result
 
 			// set context and data to current instance
-				self.context		= self.datum.context.find(element => element.section_tipo===self.section_tipo)
-				self.data			= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
-				self.section_id	= self.data
-					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+				self.context		= self.datum.context.find(el => el.section_tipo===self.section_tipo)
+				self.data			= self.datum.data.find(el => el.tipo===el.section_tipo && el.section_tipo===self.section_tipo) || []
+				self.section_id	= self.data.length>0
+					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
 
 			// rebuild the rqo_config and rqo in the instance
@@ -372,7 +372,7 @@ section.prototype.get_ar_instances = async function(){
 		// 		value : []
 		// 	}
 		// }
-
+	
 	// iterate records
 		const lang 			= self.lang
 		const value			= self.data.value || []
