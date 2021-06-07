@@ -69,7 +69,7 @@
 					$area->set_lang(DEDALO_DATA_LANG);
 					
 					// add to page context
-						$context[] = $area->get_structure_context();
+						$context[] = $area->get_structure_context(1, true);
 					break;
 
 				default:

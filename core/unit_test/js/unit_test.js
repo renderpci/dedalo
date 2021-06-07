@@ -38,12 +38,13 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 			value.type 					= "dd151"
 			value.section_id 			= (fn_random_number(50) || 1).toString()
+			// value.section_id 		= (fn_random_number(3) || 1).toString()
 			value.section_tipo 			= section_tipo // "dd501"
 			// if (paginated_key!==false) {
 				// value.paginated_key 	= paginated_key
 			// }
 			value.from_component_tipo 	= from_component_tipo // "test144"
-
+		
 		return value
 	}
 	function fn_random_date() {

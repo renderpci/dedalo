@@ -69,4 +69,17 @@ class area_common extends common  {
 
 
 
+	/**
+	* GET_SECTION_TIPO
+	* Only to preserve compatibility with sections in some scenarios like building
+	* request_config
+	* @return string $tipo
+	*/
+	public function get_section_tipo() {
+		
+		return $this->tipo;
+	}//end get_section_tipo
+
+
+
 }//end area_common

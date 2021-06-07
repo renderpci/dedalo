@@ -1449,6 +1449,13 @@ abstract class common {
 					$parent = $this->get_section_tipo();
 				}
 
+			// 4 . From structure (area case)
+				if (empty($parent)) {
+
+					// use structure term tipo as parent
+					$parent = $this->RecordObj_dd->get_parent();
+				}
+
 
 		// parent_grouper (structure parent)
 			$parent_grouper = !empty($this->parent_grouper)
