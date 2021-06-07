@@ -17,7 +17,7 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
+				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=false);
 				break;
 
 			default:
@@ -26,8 +26,6 @@
 						$context = $this->get_tm_context($permissions);
 					
 				}else{
-
-					// context and subcontext from API dd_request if already exists sections
 
 					// section structure context (tipo, relations, properties, etc.)
 						$context[] = $this->get_structure_context($permissions, $add_rqo=true);
