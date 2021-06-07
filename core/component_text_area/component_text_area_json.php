@@ -6,7 +6,7 @@
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$modo			= $this->get_modo();
-	$lang			= $this->get_lang()
+	$lang			= $this->get_lang();
 
 
 // context
