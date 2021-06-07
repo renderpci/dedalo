@@ -141,22 +141,20 @@ component_portal.prototype.build = async function(autoload=false){
 	// status update
 		self.status = 'building'
 
-	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.data) {
-			self.data = []
+	// self.datum. On building, if datum is not created, creation is needed		
+		self.datum = self.datum || {
+			data	: [],
+			context	: []
 		}
-		if (!self.datum) {
-			self.datum = {data:self.data, context:[]}
-		}
-
+		self.data = self.data || {}		
 
 	// rqo_config
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo');
 
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
 
-	const current_data_manager	= new data_manager()
+	const current_data_manager = new data_manager()
 
 	// set dd_request
 		// self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
@@ -191,9 +189,7 @@ component_portal.prototype.build = async function(autoload=false){
 				// }
 
 			// get context and data
-				// const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:self.rqo})
-
+				const api_response = await current_data_manager.request({body:self.rqo})
 					console.log("api_response:",api_response);
 
 			// debug
@@ -209,9 +205,8 @@ component_portal.prototype.build = async function(autoload=false){
 				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				set_context_vars(self, self.context)
 
-				self.datum.context = api_response.result.context
-				
-		}
+				self.datum.context = api_response.result.context				
+		}//end if (autoload===true)
 		
 
 	// pagination vars only in edit mode

@@ -146,12 +146,11 @@ section.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.data) {
-			self.data = []
+		self.datum = self.datum || {
+			data	: [],
+			context	: []
 		}
-		if (!self.datum) {
-			self.datum = {data:self.data, context:[]}
-		}
+		self.data = self.data || {}
 
 	// rqo_config
 		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
@@ -165,8 +164,7 @@ section.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// get context and data
-				// const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:self.rqo})
+				const api_response = await current_data_manager.request({body:self.rqo})
 					console.log("api_response:",api_response);
 
 				// // set value
@@ -184,10 +182,10 @@ section.prototype.build = async function(autoload=false) {
 				self.datum = api_response.result
 
 			// set context and data to current instance
-				self.context		= self.datum.context.find(element => element.section_tipo===self.section_tipo)
-				self.data			= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
-				self.section_id	= self.data
-					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+				self.context		= self.datum.context.find(el => el.section_tipo===self.section_tipo)
+				self.data			= self.datum.data.find(el => el.tipo===el.section_tipo && el.section_tipo===self.section_tipo)
+				self.section_id	= self.data && self.data.value
+					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
 
 			// rebuild the rqo_config and rqo in the instance
@@ -213,7 +211,7 @@ section.prototype.build = async function(autoload=false) {
 						load_data_debug(self, api_response, self.rqo)
 					}
 				}
-		}
+		}//end if (autoload===true)
 		// else{
 		//
 		// 	// set context and data to current instance
@@ -229,9 +227,7 @@ section.prototype.build = async function(autoload=false) {
 
 
 	// sqo
-		// const sqo = self.rqo.show.find(element => element.typo==='sqo')
 		const sqo = self.rqo.sqo
-
 
 	// Update section mode/label with context declarations
 		const section_context = self.context || {
@@ -372,10 +368,12 @@ section.prototype.get_ar_instances = async function(){
 		// 		value : []
 		// 	}
 		// }
-
+	
 	// iterate records
 		const lang 			= self.lang
-		const value			= self.data.value || []
+		const value			= self.data && self.data.value
+			? self.data.value
+			: []
 		const value_length	= value.length
 
 		// const offset = self.rqo.sqo.offset
