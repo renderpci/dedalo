@@ -146,12 +146,11 @@ section.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.data) {
-			self.data = []
+		self.datum = self.datum || {
+			data	: [],
+			context	: []
 		}
-		if (!self.datum) {
-			self.datum = {data:self.data, context:[]}
-		}
+		self.data = self.data || {}
 
 	// rqo_config
 		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
@@ -165,8 +164,7 @@ section.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// get context and data
-				// const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:self.rqo})
+				const api_response = await current_data_manager.request({body:self.rqo})
 					console.log("api_response:",api_response);
 
 				// // set value
@@ -185,8 +183,8 @@ section.prototype.build = async function(autoload=false) {
 
 			// set context and data to current instance
 				self.context		= self.datum.context.find(el => el.section_tipo===self.section_tipo)
-				self.data			= self.datum.data.find(el => el.tipo===el.section_tipo && el.section_tipo===self.section_tipo) || []
-				self.section_id	= self.data.length>0
+				self.data			= self.datum.data.find(el => el.tipo===el.section_tipo && el.section_tipo===self.section_tipo)
+				self.section_id	= self.data && self.data.value
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
 
@@ -373,7 +371,9 @@ section.prototype.get_ar_instances = async function(){
 	
 	// iterate records
 		const lang 			= self.lang
-		const value			= self.data.value || []
+		const value			= self.data && self.data.value
+			? self.data.value
+			: []
 		const value_length	= value.length
 
 		// const offset = self.rqo.sqo.offset
