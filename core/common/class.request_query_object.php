@@ -137,13 +137,15 @@
 			},
 			{
 				"search_engine": "zenon_engine",
-				"section_tipo": [{"source":"section", "value":["zenon1"]}],
-				"search": {
+				"sqo" : {
+					"section_tipo": [{"source":"section", "value":["zenon1"]}]
+				},
+				"show": {
 					"ddo_map": [
-						{"section_tipo":"zenon1","component_tipo":"zenon3", "parent": "zenon2"},
-						{"section_tipo":"zenon1","component_tipo":"zenon4", "parent": "zenon2"},
-						{"section_tipo":"zenon1","component_tipo":"zenon5", "parent": "zenon2"},
-						{"section_tipo":"zenon1","component_tipo":"zenon6", "parent": "zenon2"}
+						{"section_tipo":"zenon1","tipo":"zenon3", "parent": "zenon1"},
+						{"section_tipo":"zenon1","tipo":"zenon4", "parent": "zenon1"},
+						{"section_tipo":"zenon1","tipo":"zenon5", "parent": "zenon1"},
+						{"section_tipo":"zenon1","tipo":"zenon6", "parent": "zenon1"}
 					]
 				}
 			}

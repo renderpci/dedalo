@@ -58,7 +58,6 @@
 	}//end if($options->get_context===true)
 
 
-
 // data
 	$data = [];
 
@@ -70,28 +69,28 @@
 		if (!empty($dato)) {
 
 			// data item
-				$value = array_map(function($item) use($modo){
-					$locator = new stdClass();
-						$locator->section_tipo 	= $item->section_tipo;
-						$locator->section_id 	= $item->section_id;
+				// $value = array_map(function($item) use($modo){
+				// 	$locator = new stdClass();
+				// 		$locator->section_tipo 	= $item->section_tipo;
+				// 		$locator->section_id 	= $item->section_id;
 
-					// tm case
-						if($modo==='tm'){
-							$locator->matrix_id = $item->id;
-							$locator->timestamp = $item->timestamp;
-							$locator->state 	= $item->state;
-						}
+				// 	// tm case
+				// 		if($modo==='tm'){
+				// 			$locator->matrix_id = $item->id;
+				// 			$locator->timestamp = $item->timestamp;
+				// 			$locator->state 	= $item->state;
+				// 		}
 
-					return $locator;
-				}, $dato);
+				// 	return $locator;
+				// }, $dato);
 
-				$item = new stdClass();
-					#$item->typo 		= 'section';
-					$item->section_tipo = $ar_section_tipo[0];
-					$item->tipo 		= $ar_section_tipo[0];
-					$item->value 		= $value;
+				// $item = new stdClass();
+				// 	#$item->typo 		= 'section';
+				// 	$item->section_tipo = $ar_section_tipo[0];
+				// 	$item->tipo 		= $ar_section_tipo[0];
+				// 	$item->value 		= $value;
 
-				$data[] = $item;
+				// $data[] = $item;
 
 			// subdata
 				foreach ($dato as $current_record) {
