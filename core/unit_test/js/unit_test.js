@@ -102,193 +102,222 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 // Define components that will be tested
 	const options = []
 
-	// components general
-		const section_tipo	= 'test65'
-		const section_id	= 5
+	// components general values
+		const section_tipo	= 'test3'
+		const section_id	= 1
 		const mode			= 'edit'
 		const lang			= 'lg-eng'
 		const permissions	= 2
 
 
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_string
-		}
-	})('component_input_text', 'test159') )	
+	// component_input_text
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_input_text', 'test52', section_tipo, section_id, mode, lang, fn_random_string) )
+
+	// component_text_area
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_text_area', 'test17', section_tipo, section_id, mode, lang, fn_random_string) )
+
+	// component_portal basic v5 config
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+			}
+		})('component_portal', 'test80', section_tipo, section_id, mode, lang, fn_random_locator, ['test38', 'test80', 0]) )
+
+	// component_portal v6 toponymy A
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+			}
+		})('component_portal', 'test204', section_tipo, section_id, mode, lang, fn_random_locator, ['es1', 'test204', 0]) )
 	
-
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_number
-		}
-	})('component_number', 'test139') )
-	
-
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_string
-		}
-	})('component_text_area', 'test32') )
+	// des
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_number
+		// 	}
+		// })('component_number', 'test139') )
 
 
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_date,
-			new_value_params	: []
-		}
-	})('component_date', 'test145') )
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_date,
+		// 		new_value_params	: []
+		// 	}
+		// })('component_date', 'test145') )
 
 
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_email,
-			new_value_params	: []
-		}
-	})('component_email', 'test140') )
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_email,
+		// 		new_value_params	: []
+		// 	}
+		// })('component_email', 'test140') )
 
 
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_json
-		}
-	})('component_json', 'test150') )
-	
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_json
+		// 	}
+		// })('component_json', 'test150') )
+		
 
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_locator,
-			new_value_params	: ['dd501', tipo]
-		}
-	})('component_radio_button', 'test144') )	
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_locator,
+		// 		new_value_params	: ['dd501', tipo]
+		// 	}
+		// })('component_radio_button', 'test144') )	
 
-	
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_locator,
-			new_value_params	: ['dd501', tipo]
-		}
-	})('component_check_box', 'test146') )	
+		
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_locator,
+		// 		new_value_params	: ['dd501', tipo]
+		// 	}
+		// })('component_check_box', 'test146') )	
 
-	
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_locator,
-			new_value_params	: ['dd64', tipo]
-		}
-	})('component_publication', 'test148') )
+		
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_locator,
+		// 		new_value_params	: ['dd64', tipo]
+		// 	}
+		// })('component_publication', 'test148') )
 
-	
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_locator,
-			new_value_params	: ['dd501', tipo]
-		}
-	})('component_filter', 'test151') )
-
-
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn_random_locator,
-			new_value_params	: ['dd64', tipo]
-		}
-	})('component_select', 'test55') )
+		
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_locator,
+		// 		new_value_params	: ['dd501', tipo]
+		// 	}
+		// })('component_filter', 'test151') )
 
 
-	options.push( (function(model, tipo){
-		return {
-			model				: model,
-			tipo				: tipo,
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			// context			: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
-			new_value			: fn_random_locator,
-			new_value_params	: ['es1', tipo, 0]
-		}
-	})('component_portal', 'test153') )	
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: fn_random_locator,
+		// 		new_value_params	: ['dd64', tipo]
+		// 	}
+		// })('component_select', 'test55') )
 
 
-	// PORTAL NOT USED ANYMORE
-	// var model = 'component_portal',
-	// 	tipo  = 'test149'
-	// options.push({
-	// 	model 			: model,
-	// 	tipo  			: tipo,
-	// 	section_tipo 	: section_tipo,
-	// 	section_id 		: section_id,
-	// 	mode 			: mode,
-	// 	lang 			: lang,
-	// 	// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
-	// 	new_value 		: fn_random_locator,
-	// 	new_value_params: ['es1', tipo, 0]
-	// })
+		// options.push( (function(model, tipo){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		// context			: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
+		// 		new_value			: fn_random_locator,
+		// 		new_value_params	: ['es1', tipo, 0]
+		// 	}
+		// })('component_portal', 'test153') )
+
+
+		// PORTAL NOT USED ANYMORE
+		// var model = 'component_portal',
+		// 	tipo  = 'test149'
+		// options.push({
+		// 	model 			: model,
+		// 	tipo  			: tipo,
+		// 	section_tipo 	: section_tipo,
+		// 	section_id 		: section_id,
+		// 	mode 			: mode,
+		// 	lang 			: lang,
+		// 	// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
+		// 	new_value 		: fn_random_locator,
+		// 	new_value_params: ['es1', tipo, 0]
+		// })
 
 
 // instances
@@ -303,38 +332,46 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				});
 			}
 
+			const model				= 'component_input_text'
+			const tipo				= 'test52'
+			// const section_tipo	= 'test3'
+			// const section_id		= 1
+			// const mode			= 'edit'
+			// const lang			= 'lg-eng'
+
 			// keys: ['model','tipo','section_tipo','section_id','mode','lang']
 
-			describe("builds instance key based on options values", function() {
+			describe("builds instance key based on options values (using component_input_text)", function() {
 
-				// using value as int
+				// using section_id value as int
 					make_test({
-						"model" 		: "component_input_text",
-						"tipo"  		: "test159",
-						"section_tipo" 	: "test65",
-						"section_id" 	: 1,
-						"mode" 			: "edit",
-						"lang" 			: "lg-eng"
-					}, 'component_input_text_test159_test65_1_edit_lg-eng');
-
-				// using null as value
+						"model"			: model,
+						"tipo"			: tipo,
+						"section_tipo"	: section_tipo,
+						"section_id"	: section_id,
+						"mode"			: mode,
+						"lang"			: lang
+					}, `${model}_${tipo}_${section_tipo}_${section_id}_${mode}_${lang}`); // like 'component_input_text_test52_test65_1_edit_lg-eng'
+				
+				// using null as section_id value
 					make_test({
-							"model" 		: "component_input_text",
-							"tipo"  		: "test159",
-							"section_tipo" 	: "test65",
-							"section_id" 	: null,
-							"mode" 			: "edit",
-							"lang" 			: "lg-eng"
-						}, 'component_input_text_test159_test65_edit_lg-eng');
+						"model"			: model,
+						"tipo"			: tipo,
+						"section_tipo"	: section_tipo,
+						"section_id"	: null,
+						"mode"			: mode,
+						"lang"			: lang
+					}, `${model}_${tipo}_${section_tipo}_${mode}_${lang}`); // like 'component_input_text_test52_test65_edit_lg-eng'
 
 				// without receive some vars like section_id and lang
 					make_test({
-							"model" 		: "component_input_text",
-							"tipo"  		: "test159",
-							"section_tipo" 	: "test65",
-							"mode" 			: "edit",
-							"lang" 			: "lg-eng"
-						}, 'component_input_text_test159_test65_edit_lg-eng');
+						"model"			: model,
+						"tipo"			: tipo,
+						"section_tipo"	: section_tipo,
+						"section_id"	: null,
+						"mode"			: mode,
+						"lang"			: null
+					}, `${model}_${tipo}_${section_tipo}_${mode}`); // like 'component_input_text_test52_test65_edit'
 			});
 		});
 	// get_instance
@@ -350,25 +387,25 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				describe("builds page instance from options", function() {
 						make_test({
 							model	: "page",
-							context	: {dd_request:[]}
+							context	: []
 						}, page);
 				});
 			// component_input_text instance
 				describe("builds component_input_text instance from options", function() {
 						make_test({
 							model	: "component_input_text",
-							tipo	: "test159",
-							mode	: "edit",
-							lang	: "lg-eng",
+							tipo	: 'test52',
+							mode	: mode,
+							lang	: lang,
 							context	: {}
-						}, component_input_text);
+						}, component_input_text); 
 				});
 			// tool_lang instance
 				describe("builds tool_lang instance from options", function() {
 						make_test({
 							model		: "tool_lang",
-							mode		: "edit",
-							lang		: "lg-eng",
+							mode		: mode,
+							lang		: lang,
 							tool_object	: {},
 							caller		: {}
 						}, tool_lang);
@@ -388,24 +425,24 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 			// keys: ['model','tipo','section_tipo','section_id','mode','lang']
 
-			describe("delete instance based on options values to create the key: No delete [not exists]", function() {
+			describe("delete component_input_text instance based on options values to create the key: No delete [do not exists]", function() {
 				// using value as int
 					const options = {
 						model	: "component_input_text",
-						tipo	: "test159",
-						mode	: "edit",
-						lang	: "lg-cat",
+						tipo	: "test52",
+						mode	: mode,
+						lang	: lang,
 						context	: {}
 					}
 					make_test(options, 0);
 			});
 
-			describe("delete instance based on options values to create the key: Yes delete 1", function() {
+			describe("delete component_input_text instance based on options values to create the key: Yes delete 1", function() {
 				// using value as int
 					const options = {
 						model	: "component_input_text",
-						tipo	: "test159",
-						mode	: "edit",
+						tipo	: "test52",
+						mode	: mode,
 						lang	: "lg-vlca",
 						context	: {}
 					}
@@ -413,7 +450,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					make_test(options, 1);
 			});
 
-			describe("delete instance based on options values to create the key: Yes delete 1", function() {
+			describe("delete page instance based on options values to create the key: Yes delete 1", function() {
 				// create instance
 				const options  = {
 					"model"	: "page"
@@ -438,17 +475,26 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					// 	section_tipo 	: options.section_tipo,
 					// 	section_id		: options.section_id
 					// })
-					// console.log("************* calculated element_context:",element_context.result[0]);
+					// // console.log("************* calculated element_context:",element_context.result[0]);
 					// options.context = element_context.result[0]
 					
-					const source = create_source(options, 'get_data')
+				// direct miniumun context
+					const request_config = [{
+						api_engine	: "dedalo",
+						show		: {
+							ddo_map : []
+						},
+						sqo			: {
+							section_tipo : [options.section_tipo]
+						}
+					}]
 					options.context = {
-						request_config : [source]
+						request_config : request_config // [source]
 					}
 
 				// init instance
 					const new_instance = await get_instance(options)
-						console.log("new_instance:",new_instance);
+						// console.log("new_instance:", stage, JSON.parse(JSON.stringify(new_instance)) );
 
 				if (stage==='build' || stage==='render' || stage==='refresh' || stage==='destroy') {
 
@@ -496,60 +542,48 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 							break;
 						case 'permissions':
 							assert.equal(new_instance.permissions, expected)
-							break;
-						case 'properties':
-							assert.notEqual(new_instance.permissions, expected)
-							break;
-						case 'typo':
-							assert.notEqual(new_instance.permissions, expected)
-							break;
+							break;						
 						default:
 							assert.equal(new_instance.status, expected)
 							break;
 					}
 				}
-
+				
 				await new_instance.destroy()
 			});
-		}
+		}//end function make_test
 
 		// init
-			describe("init component based on options values to create a component instance: status = initiated, lang = lg-eng and permissions = null", function() {
+			describe("INIT component based on options values to create a component instance: status = initiated, lang = lg-eng and permissions = null", function() {
 
 				for (let i = 0; i < options.length; i++) {
-
 					describe(options[i].model, function() {
-
+						// params: options, property, expected, stage
 						make_test(options[i], 'status', 'initiated', 'init')
-						make_test(options[i], 'lang', options[i].lang, 'init')
-						make_test(options[i], 'permissions', null, 'init')
 					})
 				}
 			});
 
 
 		// build
-			describe("build component based on options values to create a component instance: status = builded and permissions = 1", function() {
+			describe("BUILD component based on options values to create a component instance: status = builded and permissions = 1", function() {
 
 				for (let i = 0; i < options.length; i++) {
-
 					describe(options[i].model, function() {
-
+						// params: options, property, expected, stage
 						make_test(options[i], 'status', 'builded', 'build')
-						// make_test(options[i], 'permissions', options[i].context.permissions, 'build')
-						make_test(options[i], 'properties', null, 'build')
-						make_test(options[i], 'typo', null, 'build')
+						// make_test(options[i], 'permissions', 3, 'build')
 					})
 				}
 			});
 
 
 		// render
-			describe("render component based on options values to create a component instance: status = builded and permissions = 1", function() {
+			describe("RENDER component based on options values to create a component instance: status = builded and permissions = 1", function() {
 
-				for (let i = 0; i < options.length; i++) {
-
+				for (let i = 0; i < options.length; i++) {					
 					describe(options[i].model, function() {
+						// params: options, property, expected, stage
 						make_test(options[i], 'status', 'rendered', 'render')
 					})
 				}
@@ -557,10 +591,10 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 		// refresh
-			describe("refresh component based on options values to create a component instance: status = builded and permissions = 1", function() {
+			describe("REFRESH component based on options values to create a component instance: status = builded and permissions = 1", function() {
 
 				for (let i = 0; i < options.length; i++) {
-
+					// params: options, property, expected, stage
 					describe(options[i].model, function() {
 						make_test(options[i], 'status', 'rendered', 'refresh')
 					})
@@ -569,10 +603,10 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 		// destroy
-			describe("destroy component based on existing instance", function() {
+			describe("DESTROY component based on existing instance", function() {
 
 				for (let i = 0; i < options.length; i++) {
-
+					// params: options, property, expected, stage
 					describe(options[i].model, function() {
 						make_test(options[i], 'instance', 'destroy', 'destroy')
 					})
@@ -586,10 +620,9 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 	describe("components : change data", function(){
 
 		function make_test_change_data(options, equals) {
-
+			
 			const new_value = options.new_value(options.new_value_params) //  old_value + 1
-				// console.log("new_value:",new_value);
-
+			
 			const test_title = (equals===true)
 				? `${options.model} => Save new_value  = new_value (` + JSON.stringify(new_value) + ')'
 				: `${options.model} => Save new_value != old_value (` + JSON.stringify(new_value) + ')'
@@ -606,27 +639,35 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					// options.context = element_context.result[0]
 
 				// create and add request_config
-					const source = create_source(options, 'get_data')
+					const request_config = [{
+						api_engine	: "dedalo",
+						show		: {
+							ddo_map : []
+						},
+						sqo			: {
+							section_tipo : [options.section_tipo]
+						}
+					}]
 					options.context = {
-						request_config : [source]
+						request_config : request_config // [source]
 					}
 
-				// first instance
+				// old instance
 					const old_instance = await get_instance(options)
 					await old_instance.build(true)
-					
+
 					const old_value = typeof old_instance.data.value!=="undefined"
 						? old_instance.data.value[0]
 						: null
 
 					// const new_value = old_value + 1
 					// const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
-
+					
 					// save
 						const changed_data = Object.freeze({
 							action	: 'insert',
 							key 	: 0,
-							value	: new_value,
+							value	: new_value
 						})
 						const api_response_save = await old_instance.change_value({
 							changed_data	: changed_data,
@@ -641,15 +682,15 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				// new instance
 					const new_instance = await get_instance(options)
 					await new_instance.build(true)
-
+						// console.log("____________ new_instance:",new_instance);
 
 					if (equals===true) {
 
 						const reference_value	= new_value
 						const data_value		= new_instance.data.value[0]
-
+						
 						// locator case check
-						if (typeof data_value.from_component_tipo!=="undefined" && data_value.from_component_tipo) {
+						if (data_value && typeof data_value.from_component_tipo!=="undefined" && data_value.from_component_tipo) {
 
 							const a = {
 								section_tipo		: data_value.section_tipo,
@@ -665,17 +706,25 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 						}else{
 
-							assert.equal( JSON.stringify(data_value), JSON.stringify(reference_value), "Compares equal saved value and sended value" )
+							const expected	= data_value
+								? JSON.stringify(data_value)
+								: null
+							const equal_to	= JSON.stringify(reference_value)
+							assert.equal( expected, equal_to, "Compares equal saved value and sended value" )
 						}
 
 					}else{
-
-						assert.notEqual( JSON.stringify(new_instance.data.value[0]), JSON.stringify(old_value), "Compares notEqual data value and old value" )
+						// console.log("new_instance.datum:",new_instance.datum);
+						const expected	= new_instance.data.value && new_instance.data.value.length>0
+							? JSON.stringify(new_instance.data.value[0])
+							: null						
+						const equal_to	= JSON.stringify(old_value)
+						assert.notEqual( expected, equal_to, "Compares notEqual data value and old value" )
 					}
 
 					await new_instance.destroy()
-			});
-		}
+			});//end it(test_title, async function()
+		}//end function make_test_change_data
 
 		describe("save data equals", function() {
 
@@ -696,7 +745,6 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				})
 			}
 		});
-
 	});
 
 
