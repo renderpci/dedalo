@@ -96,8 +96,6 @@
 					$item->value 		= [$locator];
 
 				$data[] = $item;
-					dump($data, ' data +----+ '.to_string());
-
 
 			// subdata
 				// default locator build with this section params
