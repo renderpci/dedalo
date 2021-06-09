@@ -84,6 +84,21 @@
 
 		}else{
 
+			// data
+				$locator = new stdClass();
+					$locator->section_tipo 	= $this->tipo;
+					$locator->section_id 	= $this->section_id;
+
+				$item = new stdClass();
+					#$item->typo 		= 'section';
+					$item->section_tipo = $this->tipo;
+					$item->tipo 		= $this->tipo;
+					$item->value 		= [$locator];
+
+				$data[] = $item;
+					dump($data, ' data +----+ '.to_string());
+
+
 			// subdata
 				// default locator build with this section params
 					$section_id		= $this->get_section_id();
@@ -96,7 +111,10 @@
 					$value = [$locator];
 
 				// subdata add
-					$data = $this->get_ar_subdata($value);
+					$sub_data = $this->get_ar_subdata($value);
+					foreach ($sub_data as $value) {
+						$data[] = $value;
+					}
 		}
 
 	}//end if($options->get_data===true && $permissions>0)

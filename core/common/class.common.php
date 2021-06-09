@@ -1487,6 +1487,7 @@ abstract class common {
 				return $tool;
 			}, $this->get_tools());
 
+
 		// request_config
 			$request_config = $add_request_config===true
 				? ($this->build_request_config() ?? [])
@@ -1720,10 +1721,7 @@ abstract class common {
 		// already_calculated
 			static $ar_subcontext_calculated = [];
 
-		// subcontext from API rqo if exists
-			$requested_show = dd_core_api::$rqo->show ?? null;
-
-		if(empty($requested_show)){
+		
 		// request_config
 			$request_config = $this->request_config ?? null;
 			if(empty($request_config)) return null;
@@ -1731,10 +1729,8 @@ abstract class common {
 			$request_config_dedalo = array_filter($request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
-		}else{
-			$request_config_dedalo = new stdClass();
-			$request_config_dedalo->show = $requested_show;
-		}
+
+		
 		// children_resursive function
 			if (!function_exists('get_children_resursive')) {
 				function get_children_resursive($ar_ddo, $dd_object) {
@@ -1865,7 +1861,7 @@ abstract class common {
 			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 		}
 		// dump($ar_subcontext, ' ar_subcontext ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo)); //die();
-		
+			
 		return $ar_subcontext;
 	}//end get_ar_subcontext
 
@@ -2123,6 +2119,41 @@ abstract class common {
 		// 			// dump($ar_request_query_objects, ' ar_request_query_objects [1] ++ '.to_string($this->tipo));
 
 		// 	}else{
+
+		// get the rqo sended to the API
+		$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show) 
+			? unserialize(serialize(dd_core_api::$rqo->show))
+			: false;
+
+		if(!empty($requested_show)){
+
+				//set the request_config with the API rqo sended by client
+				$requested_source = dd_core_api::$rqo->source ?? null;
+
+				foreach ($requested_show->ddo_map as $key => $current_ddo) {
+					//get the direct ddo linked by the source
+					if ($current_ddo->parent===$requested_source->tipo) {
+						// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
+						if(in_array($this->tipo, (array)$current_ddo->section_tipo))
+							$current_ddo->parent = $this->tipo;
+							$current_ddo->section_tipo = $this->tipo;
+					}
+				}
+
+			// create the new request_config with the caller
+			$request_config = new stdClass();
+			$request_config->api_engine = 'dedalo';
+			$request_config->show = $requested_show;
+			$this->request_config = [$request_config];
+
+			// foreach
+			dd_core_api::$ddo_map =  $request_config->show->ddo_map;
+
+			return $this->request_config;
+		}
+
+
+
 
 				// $records_mode	= $this->get_records_mode();
 				$mode			= $this->get_modo();

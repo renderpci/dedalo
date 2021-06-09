@@ -838,7 +838,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// get the operator to use into the filter free
 		const operator	= rqo_config.search && rqo_config.search.sqo_config && rqo_config.search.sqo_config.operator
 			? rqo_config.search.sqo_config.operator 
-			: '$and'
+			: '$or'
 		
 	// SQO
 	// set the sqo_config into a checked variable, get the sqo_config for search or show
@@ -872,11 +872,12 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 	// new sqo_search
 	const sqo = {
-		section_tipo : ar_sections,
-		filter		 : {[operator]:[]},
-		offset		 : offset,
-		limit		 : limit,
-		full_count	 : false
+		section_tipo			: ar_sections,
+		filter					: {[operator]:[]},
+		offset					: offset,
+		limit					: limit,
+		full_count				: false,
+		allow_sub_select_by_id	: true
 	}
 
 
@@ -911,8 +912,12 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 					// reverse path and set the list
 					const new_path = []
 					for (let j = current_path_length - 1; j >= 0; j--) {
-						const current_ddo = current_path[j]
+						const current_ddo = JSON.parse(JSON.stringify(current_path[j]))
 						current_ddo.mode = 'list' // enable lang fallback value
+						if(Array.isArray(current_ddo.section_tipo)){
+							current_ddo.section_tipo = current_ddo.section_tipo[0]
+						}
+						current_ddo.component_tipo = current_ddo.tipo
 						new_path.push(current_ddo)
 					}
 					//add the path to the filter_free with the operator
@@ -944,15 +949,13 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	//divisor
 	const divisor = sqo_config.divisor
 		? sqo_config.divisor
-		: false
+		: ', '
 
 	// optional configuration to use when the serach will be builded
 		const sqo_options = {
 			filter_free			: filter_free,
 			fixed_filter		: fixed_filter,
 			filter_by_list		: filter_by_list,
-			value_with_parents	: value_with_parents,
-			divisor 			: divisor,
 			operator 			: operator,
 		}
 
@@ -966,9 +969,13 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		//build the rqo
 		const rqo = {
 			id			: self.id,
-			action		: 'search',
+			action		: 'read',
 			source		: source,
-			show		: {ddo_map : ddo_map},
+			show		: {
+				ddo_map				: ddo_map,
+				value_with_parents	: value_with_parents,
+				divisor				: divisor
+			},
 			sqo			: sqo,
 			sqo_options	: sqo_options
 		}
