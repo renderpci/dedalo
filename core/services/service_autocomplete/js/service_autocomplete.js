@@ -28,22 +28,31 @@ export const service_autocomplete = function() {
 	* INIT
 	* @return bool
 	*/
-	this.init = async function(options) {
+	this.init = function(options) {
 
 		const self = this
 
 		self.instance_caller		= options.caller
 		self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
 		self.wrapper				= options.wrapper
-		// self.ar_dd_request			= self.instance_caller.dd_request.search
-		self.dd_request				= await self.instance_caller.rqo_search
-		self.sqo					= self.dd_request.sqo
-		self.ar_search_section_tipo	= self.sqo.section_tipo
+
+		self.request_config			= JSON.parse(JSON.stringify(self.instance_caller.context.request_config))
+		
+		self.sqo 					= {}
+		
+		self.dd_request 			= self.request_config.find(el => el.api_engine==='dedalo')
+		self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
 		self.ar_filter_by_list		= []
-console.log("dd_request:",self.ar_search_section_tipo);
+
+		// self.ar_dd_request			= self.instance_caller.dd_request.search
+		// self.dd_request				= self.ar_dd_request[0]
+		// self.sqo						= self.dd_request.find(item => item.typo==='sqo')
+		// self.ar_search_section_tipo	= self.sqo.section_tipo
+		// self.ar_filter_by_list		= []
+
 		// engine. get the search_engine sended or set the default value
-			const engine			= self.dd_request.find(item => item.typo==='search_engine').value
-			self.search_engine		= (engine) ? engine : 'dedalo_engine';
+			// const engine			= self.request_config.find(el => el.api_engine==='dedalo')
+			self.search_engine		= (self.dd_request) ? self.dd_request.api_engine : 'dedalo';
 
 		// Vars
 			self.tipo			= self.instance_caller.tipo
@@ -152,7 +161,7 @@ console.log("dd_request:",self.ar_search_section_tipo);
 		const self = this
 
 		// source elements
-			const ar_source 	= self.ar_dd_request
+			const ar_source 	= self.request_config
 
 		// switcher source
 			const source_selector = ui.create_dom_element({
@@ -179,19 +188,19 @@ console.log("dd_request:",self.ar_search_section_tipo);
 
 					const source		= ar_source[i]
 
-					const current_sqo	= source.find(item => item.typo === 'sqo')
+					const current_sqo	= source.sqo//find(item => item.typo === 'sqo')
 					const ar_section	= current_sqo.section_tipo
-					const request_ddo 	= source.find(item => item.typo === 'request_ddo').value
-					const ddo_section	= request_ddo.find(item => item.type === 'section' && item.typo === 'ddo')
-					const search_engine	= source.find(current_item=> current_item.typo==='search_engine').value
+					// const request_ddo 	= source.find(item => item.typo === 'request_ddo').value
+					// const ddo_section	= request_ddo.find(item => item.type === 'section' && item.typo === 'ddo')
+					const search_engine	= source.api_engine//find(current_item=> current_item.typo==='search_engine').value
 
 					const swicher_source = ui.create_dom_element({
 						element_type	: "option",
 						parent			: select,
 						value			: i+'',
 						inner_html		: ar_section.length > 1
-							? ddo_section.label + ", etc."
-							: ddo_section.label
+							? ar_section[0].label + ", etc."
+							: ar_section[0].label
 					})
 					if (search_engine===self.search_engine) {
 						swicher_source.setAttribute("selected", true)
@@ -203,10 +212,9 @@ console.log("dd_request:",self.ar_search_section_tipo);
 			select.addEventListener('change',function(e){
 				const key = e.target.value
 
-				self.dd_request				= self.ar_dd_request[key]
-				self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
-				self.ar_search_section_tipo	= self.sqo.section_tipo
-				self.search_engine			= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
+				self.dd_request				= JSON.parse(JSON.stringify(self.request_config[key]))
+				self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
+				self.search_engine			= self.dd_request.api_engine //.find((current_item)=> current_item.typo==='search_engine').value
 				// console.log("self.ar_search_section_tipo", self.ar_search_section_tipo);
 				self.destroy()
 				self.render()
@@ -276,14 +284,14 @@ console.log("dd_request:",self.ar_search_section_tipo);
 				const filter_items = []
 				for (let i = 0; i < ar_sections_length; i++) {
 
-					const section		= ar_sections[i]
-					const id			= section
-					const request_ddo 	= self.dd_request.find(item => item.typo === 'request_ddo').value
-					const ddo_section	= request_ddo.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
+					const ddo_section	= ar_sections[i]
+					// const id			= ddo_section.tipo
+					// const request_ddo 	= self.dd_request.find(item => item.typo === 'request_ddo').value
+					// const ddo_section	= request_ddo.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
 					const datalist_item	= {
 						grouper	: 'sections',
-						id		: section,
-						value	: section,
+						id		: ddo_section.tipo,
+						value	: ddo_section.tipo,
 						label	: ddo_section.label,
 						change	: function(input_node){
 							const index = ar_sections.indexOf(input_node.dd_value)
@@ -296,7 +304,7 @@ console.log("dd_request:",self.ar_search_section_tipo);
 					}
 					filter_items.push(datalist_item)
 
-					ar_id.push(id) // add to global array of id
+					ar_id.push(ddo_section.tipo) // add to global array of id
 				}
 
 				const filter_id		= self.list_name
@@ -306,7 +314,7 @@ console.log("dd_request:",self.ar_search_section_tipo);
 			}
 
 		// filter_by_list . if the component caller has a filter_by_list we add the datalist of the compoment
-			const filter_by_list = self.dd_request.find(item => item.typo==='filter_by_list') || false
+			const filter_by_list = self.dd_request.sqo.filter_by_list//find(item => item.typo==='filter_by_list') || false
 			if(filter_by_list) {
 
 				const ar_filter_by_list	= self.ar_filter_by_list
@@ -314,7 +322,7 @@ console.log("dd_request:",self.ar_search_section_tipo);
 				const filter_by_list_value_length = filter_by_list.value.length
 				for (let i = 0; i < filter_by_list_value_length; i++) {
 
-					const current_filter		= filter_by_list.value[i]; 	console.log("current_filter:",current_filter); 	console.log("self:",self);
+					const current_filter		= filter_by_list.value[i]; 	//console.log("current_filter:",current_filter); 	console.log("self:",self);
 					const section				= current_filter.context.section_tipo
 					const component_tipo		= current_filter.context.tipo
 					const component_datalist	= current_filter.datalist
@@ -373,7 +381,7 @@ console.log("dd_request:",self.ar_search_section_tipo);
 			}
 
 			// console.log("localStorage.getItem(self.id)", JSON.parse(localStorage.getItem(self.id)) );
-			console.log("ar_filter_by_list 2:",self.ar_filter_by_list);
+			// console.log("ar_filter_by_list 2:",self.ar_filter_by_list);
 
 		return filters_container
 	};//end render_filters_selector
@@ -564,21 +572,35 @@ console.log("dd_request:",self.ar_search_section_tipo);
 			class_name		: "inputs_list" // css_autocomplete_hi_search_field
 		})
 
+			const ddo_map = self.dd_request.show.ddo_map
+			const ddo_map_length = ddo_map.length
+
 			const ar_components = []
-			const request_ddo = self.dd_request.find(item => item.typo === 'request_ddo').value
-			const sqo_length = request_ddo.length
 
+			for (let i = 0; i < ddo_map_length; i++) {
+				const current_ddo = ddo_map[i]
+				// check if the current ddo has children asociated, it's necesary identify the last ddo in the path chain, the last ddo is the component
+				const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
+				if(current_ar_valid_ddo.length !== 0) continue
 
-			for (let i = sqo_length - 1; i >= 0; i--) {
-				const item = request_ddo[i]
-				if(item.type==='component' && item.typo==='ddo' && ar_components.indexOf(item.tipo)===-1){
-					ar_components.push(item.tipo)
-				}
+				ar_components.push(current_ddo)
 			}
 
-			for (let i = ar_components.length - 1; i >= 0; i--) {
-				const compoment		= ar_components[i]
-				const ddo_component	= request_ddo.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
+			// const request_ddo = self.dd_request.find(item => item.typo === 'request_ddo').value
+			// const sqo_length = request_ddo.length
+
+
+			// for (let i = sqo_length - 1; i >= 0; i--) {
+			// 	const item = request_ddo[i]
+			// 	if(item.type==='component' && item.typo==='ddo' && ar_components.indexOf(item.tipo)===-1){
+			// 		ar_components.push(item.tipo)
+			// 	}
+			// }
+
+			const ar_components_length = ar_components.length
+			for (let i = 0; i < ar_components_length; i++) {
+				const ddo_component		= ar_components[i]
+				// const ddo_component	= request_ddo.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
 
 				const component_input = ui.create_dom_element({
 					element_type	: "input",
@@ -602,8 +624,11 @@ console.log("dd_request:",self.ar_search_section_tipo);
 	this.render_operator_selector = function(){
 		const self = this
 		// operator selector
-		const filter_free 	= self.dd_request.find(item => item.typo ==='filter_free')
-		const operator 		= filter_free.operator
+		// get the operator to use into the filter free
+		const operator	= self.dd_request.search && self.dd_request.search.sqo_config && self.dd_request.search.sqo_config.operator
+			? rqo_config.search.sqo_config.operator 
+			: '$and'
+		
 			const operator_selector = ui.create_dom_element({
 				element_type 	: "div",
 				class_name 	 	: "search_operators_div"
@@ -802,7 +827,7 @@ console.log("dd_request:",self.ar_search_section_tipo);
 
 		// Request term
 			const q	= search_value
-			self.rebuild_search_query_object(q);
+			const rqo = self.rebuild_search_query_object(q);
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -810,34 +835,37 @@ console.log("dd_request:",self.ar_search_section_tipo);
 				console.log("self.dd_request", self.dd_request);
 			}
 
+			const engine = self.search_engine+'_engine'
+
 		// check valid function name (defined in component properties search_engine)
-			if (typeof self[self.search_engine]!=="function") {
+			if (typeof self[engine]!=="function") {
 				console.error("ERROR. Received search_engine function not exists. Review your component properties source->request_config->search_engine :", self.search_engine);
 				return new Promise(()=>{})
 			}
 		//recombine the select ddo with the search ddo to get the list
-			const select = self.instance_caller.dd_request.select
-			const dd_request = (select)
-				? self.dd_request.filter(item => item.typo!=='request_ddo')
-				: [...self.dd_request]
+			// const select = self.instance_caller.dd_request.select
+			// const dd_request = (select)
+			// 	? self.dd_request.filter(item => item.typo!=='request_ddo')
+			// 	: [...self.dd_request]
 
-			if(select){
-				const ddo_select = select.find(item => item.typo === 'request_ddo')
-				const value_with_parents = select.find(item => item.typo === 'value_with_parents')
-				dd_request.push(ddo_select)
-				if(value_with_parents){
-					dd_request.push(value_with_parents)
-				}
-			}
+			// if(select){
+			// 	const ddo_select = select.find(item => item.typo === 'request_ddo')
+			// 	const value_with_parents = select.find(item => item.typo === 'value_with_parents')
+			// 	dd_request.push(ddo_select)
+			// 	if(value_with_parents){
+			// 		dd_request.push(value_with_parents)
+			// 	}
+			// }
+
 
 		// search options
 			const options = {
-				dd_request	: dd_request,
-				q			: q
+				rqo	: rqo,
+				q	: q
 			}
 
 		// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
-			const js_promise = self[self.search_engine]( options )
+			const js_promise = self[engine]( options )
 
 
 		return js_promise
@@ -850,32 +878,33 @@ console.log("dd_request:",self.ar_search_section_tipo);
 	* Re-combines filter by fields and by sections in one search_query_object
 	* @return bool
 	*/
-	this.rebuild_search_query_object = function(q) {
+	this.rebuild_search_query_object = async function(q) {
 
 		const self = this
 
 		// search_query_object base stored in wrapper dataset
-			const sqo = self.sqo
+			const rqo_search 			= await self.instance_caller.rqo_search
+			self.sqo 					= rqo_search.sqo
+
+			const sqo_options = rqo_search.sqo_options
 
 			if(SHOW_DEBUG===true) {
-				console.log("sqo:",sqo);
+				console.log("sqo_options:",sqo_options);
 			}
 
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
 			const search_sections = self.ar_search_section_tipo
 
-			const fixed_filter		= self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
-			const filter_free		= self.dd_request.find((current_item)=> current_item.typo==='filter_free')
+			const fixed_filter		= sqo_options.fixed_filter //self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
+			const filter_free		= sqo_options.filter_free	//self.dd_request.find((current_item)=> current_item.typo==='filter_free')
 			const filter_by_list 	= self.ar_filter_by_list.map(item => item.value)
 
 			if(filter_free){
 
-				const filter_free_value = filter_free.value
-
 				// Iterate current filter
-					for (let operator in filter_free_value) {
+					for (let operator in filter_free) {
 
-						const current_filter = filter_free_value[operator]
+						const current_filter = filter_free[operator]
 						for (let i = 0; i < current_filter.length; i++) {
 
 							// Update q property
@@ -885,25 +914,25 @@ console.log("dd_request:",self.ar_search_section_tipo);
 							current_filter[i].q_split = false
 						}
 					}
-
+				
 				// filter rebuilded
 					self.sqo.filter = {
-						"$and" : [filter_free_value]
+						"$and" : [filter_free]
 						// "$and" : []
 					}
 					if (fixed_filter) {
 						for (let i = 0; i < fixed_filter.value.length; i++) {
-							sqo.filter.$and.push(fixed_filter.value[i])
+							self.sqo.filter.$and.push(fixed_filter.value[i])
 						}
 					}
 					if(filter_by_list){
-						sqo.filter.$and.push(...filter_by_list)
+						self.sqo.filter.$and.push(...filter_by_list)
 					}
 			}//end if(filter_free)
-			console.log("sqo", sqo);
+			console.log("sqo", self.sqo);
 
 		// allow_sub_select_by_id set to false to allow select deep fields
-			sqo.allow_sub_select_by_id = false
+			self.sqo.allow_sub_select_by_id = true
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -913,7 +942,7 @@ console.log("dd_request:",self.ar_search_section_tipo);
 			}
 
 
-		return sqo
+		return rqo_search
 	};//end rebuild_search_query_object
 
 
@@ -924,19 +953,19 @@ console.log("dd_request:",self.ar_search_section_tipo);
 	*/
 	this.dedalo_engine = async function(options) {
 
-		const dd_request 	= options.dd_request
+		const rqo 	= await options.rqo
 
 		if(SHOW_DEBUG===true) {
-			console.log("+++ [service_autocomplete.dedalo_engine] dd_request:", dd_request)
+			console.log("+++ [service_autocomplete.dedalo_engine] rqo:", rqo)
 		}
 
 		// verify source is in list mode to allow lang fallback
-			const source	= dd_request.find(item => item.typo==="source")
+			const source	= rqo.source
 			source.mode		= "list"
 
 		// API read request
 			const current_data_manager		= new data_manager()
-			const load_section_data_promise	= current_data_manager.read(dd_request)
+			const load_section_data_promise	= current_data_manager.request({body:rqo})
 
 		// render section on load data
 	 		const api_response = load_section_data_promise
