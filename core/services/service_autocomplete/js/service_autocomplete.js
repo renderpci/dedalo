@@ -715,18 +715,18 @@ export const service_autocomplete = function() {
 
 			// get data that mach with the current section from the global data sended by the api
 			// get the full row with all items in the ddo that mach with the section_id
-			const current_row 			= data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
+			const current_row = data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
 
 			// get dd objects from the context that will be used to build the lists in correct order
-			const select = self.instance_caller.dd_request.select // || self.instance_caller.dd_request.show
+			const rqo_search =  self.rqo_search
 
-			const select_divisor = select.find(item => item.typo === 'divisor')
-			const divisor = (select_divisor)
-				? select_divisor.value
-				: ' - '
+			// get the divisor between columns
+			const divisor = (rqo_search.show.divisor)
+				? rqo_search.show.divisor
+				: ' | '
 			// const current_ddo = self.dd_request.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
-			const request_ddo = select.find(item => item.typo === 'request_ddo').value
-			const current_ddo = request_ddo.filter(item => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
+			const ddo_map 		= rqo_search.show.ddo_map
+			// const current_ddo 	= ddo_map.filter(item => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
 
 			// create the li node container
 			const li_node = ui.create_dom_element({
@@ -735,9 +735,8 @@ export const service_autocomplete = function() {
 				dataset			: {value : JSON.stringify(current_locator)},
 				parent			: self.datalist
 			})
+
 			// when the user do click in one row send the data to the caller_instance for save it.
-
-
 			li_node.addEventListener('click', function(e){
 				e.stopPropagation()
 				const value = JSON.parse(this.dataset.value)
@@ -745,10 +744,14 @@ export const service_autocomplete = function() {
 			}, false);
 
 			// values. build the text of the row with label nodes in correct order (the ddo order in context).
-				for(const ddo_item of current_ddo){
+				// for(const ddo_item of current_ddo){
 
+				const ddo_map_length = ddo_map.length
+				for (let i = 0; i < ddo_map_length; i++) {
+						const ddo_item = ddo_map[i]
+				
 					// value_element
-						// const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
+						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
 						const current_element_data		= current_row.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
 
 						if (typeof current_element_data==="undefined") {
@@ -757,15 +760,15 @@ export const service_autocomplete = function() {
 						}
 
 						const instance_options = {
-							context			: ddo_item,
+							context			: current_element_context,
 							data			: current_element_data,
 							datum			: {data : data, context: context},
-							tipo			: ddo_item.tipo,
-							section_tipo	: ddo_item.section_tipo,
-							model			: ddo_item.model,
+							tipo			: current_element_context.tipo,
+							section_tipo	: current_element_context.section_tipo,
+							model			: current_element_context.model,
 							section_id		: current_element_data.section_id,
 							mode			: 'mini',
-							lang			: ddo_item.lang,
+							lang			: current_element_context.lang,
 							id_variant		: self.id
 						}
 
@@ -885,6 +888,7 @@ export const service_autocomplete = function() {
 		// search_query_object base stored in wrapper dataset
 			const rqo_search 			= await self.instance_caller.rqo_search
 			self.sqo 					= rqo_search.sqo
+			self.rqo_search 			= rqo_search
 
 			const sqo_options = rqo_search.sqo_options
 
