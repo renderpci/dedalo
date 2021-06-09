@@ -69,28 +69,41 @@
 		if (!empty($dato)) {
 
 			// data item
-				// $value = array_map(function($item) use($modo){
-				// 	$locator = new stdClass();
-				// 		$locator->section_tipo 	= $item->section_tipo;
-				// 		$locator->section_id 	= $item->section_id;
+				$value = array_map(function($item) use($modo){
+					$locator = new stdClass();
+						$locator->section_tipo 	= $item->section_tipo;
+						$locator->section_id 	= $item->section_id;
 
-				// 	// tm case
-				// 		if($modo==='tm'){
-				// 			$locator->matrix_id = $item->id;
-				// 			$locator->timestamp = $item->timestamp;
-				// 			$locator->state 	= $item->state;
-				// 		}
+					// tm case
+						if($modo==='tm'){
+							$locator->matrix_id = $item->id;
+							$locator->timestamp = $item->timestamp;
+							$locator->state 	= $item->state;
+						}
 
-				// 	return $locator;
-				// }, $dato);
+					return $locator;
+				}, $dato);
 
-				// $item = new stdClass();
-				// 	#$item->typo 		= 'section';
-				// 	$item->section_tipo = $ar_section_tipo[0];
-				// 	$item->tipo 		= $ar_section_tipo[0];
-				// 	$item->value 		= $value;
+				// group locators by section_tipo
+					$values_object = new stdClass();
+					foreach ($value as $locator) {
+						if (!isset($values_object->{$locator->section_tipo})) {
+							$values_object->{$locator->section_tipo} = [];
+						}
+						$values_object->{$locator->section_tipo}[] = $locator;
+					}
 
-				// $data[] = $item;
+				// data. Add an item data for each section_tipo
+					foreach ($values_object as $el_key => $el_value) {
+
+						$item = new stdClass();
+							#$item->typo 		= 'section';
+							$item->section_tipo = $el_key;
+							$item->tipo 		= $el_key;
+							$item->value 		= $el_value;
+
+						$data[] = $item;
+					}
 
 			// subdata
 				foreach ($dato as $current_record) {

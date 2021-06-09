@@ -223,12 +223,14 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 						}
 					})
 					if (api_response.result && api_response.result>0) {
-						// launch event 'user_action' that page is watching
-						event_manager.publish('user_action', {
-							tipo		: self.tipo,
-							mode		: 'edit',
-							model		: self.model,
-							section_id	: api_response.result
+						// launch event 'user_navigation' that page is watching
+						event_manager.publish('user_navigation', {
+							source : {
+								tipo		: self.tipo,
+								mode		: 'edit',
+								model		: self.model,
+								section_id	: api_response.result
+							}
 						})
 					}
 				})

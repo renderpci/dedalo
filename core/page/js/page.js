@@ -76,122 +76,108 @@ page.prototype.init = async function(options) {
 		//import('../../common/js/components_list.js')
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
-		// user_action
+		// user_navigation
 			self.events_tokens.push(
-				event_manager.subscribe('user_action', user_action)
+				event_manager.subscribe('user_navigation', user_navigation)
 			)
-		// user_action fn
-			async function user_action(user_action_rqo) {
+		// user_navigation fn
+			async function user_navigation(user_navigation_options) {
 				if(SHOW_DEBUG===true) {
-					console.log("// page user_action received user_action_rqo", user_action_rqo);
+					console.log("// page user_navigation received user_navigation_options", user_navigation_options);
 				}
+
+				// check valid vars
+					if (!user_navigation_options.source) { 
+						console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
+						return false
+					}
 
 				// reset status to prevent errors lock 
 					self.status = 'rendered'
 
-				// loading
+				// loading css add
 					const node = self.node && self.node[0]
 						? self.node[0].querySelector('.content_data.page')
 						: null
-					if (node) {
-						node.classList.add('loading')
-					}
+					if (node) { node.classList.add('loading') }
 
-				// rqo. request_config
-					const new_rqo = JSON.parse(JSON.stringify(user_action_rqo))
+				// do the work
+				return new Promise(async function(resolve){
 
-					const config_section_tipo = new_rqo.sqo && new_rqo.sqo.section_tipo
-						? new_rqo.sqo.section_tipo.map(item => ({tipo:item}))
-						: [{tipo: user_action_rqo.section_tipo}]
+					// basic vars
+						// Only source is mandatory but if sqo is received is placed in a new request_config 
+						// to allow sections and components manage properly the offset and limit
+						const source			= user_navigation_options.source
+						const sqo				= user_navigation_options.sqo || null
+						const request_config	= [{
+							api_engine	: 'dedalo',
+							sqo			: sqo,
+						}]
+						source.request_config = request_config
 
-					const config_sqo = new_rqo.sqo
-						? new_rqo.sqo
-						: {}
-
-					config_sqo.section_tipo = config_section_tipo
-
-					const request_config = [{
-						api_engine	: 'dedalo',
-						sqo			: config_sqo
-					}]
-
-						console.log("request_config---page:",request_config);
-
-				// des
-					// const current_data_manager 	= new data_manager()
-					// const api_response 			= await current_data_manager.get_element_context(options)
-					//
-					// // element context from api server result
-					// 	const page_element = api_response.result
-			
-				// check response page element is valid for instantiate. Element instance loads the file					
-					const page_element_instance = await instantiate_page_element(self, new_rqo.source)
-					page_element_instance.context.request_config = request_config
-						console.log("page_element_instance:",page_element_instance);
-					if (!page_element_instance) {
-						console.error("error on get page_element_instance:", page_element_instance);
-						// loading
-							if (node) {
-								setTimeout(function(){
-									node.classList.remove('loading')
-								}, 150)								
-							}
-						return false
-					}
-					
-				// elements to stay
-					// const base_models = ['section','tool','area']
-					const base_models = ['menu']
-					// const elements_to_stay 	= self.elements.filter(item => item.model!==page_element.model)
-					const elements_to_stay 	= self.context.filter( item => base_models.includes(item.model))
-
-					// add current source from options
-						elements_to_stay.push(new_rqo.source)
-						self.context = elements_to_stay
-
-				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page					
-					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
-					const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
-					for (let i = instances_to_stay.length - 1; i >= 0; i--) {
-						instances_to_stay[i].destroyable = false
-					}
-
-					const refresh_result = await self.refresh()
-						console.log("self:",self);
-					// loading
-						if (node) {
-							node.classList.remove('loading')
+					// check if new source of page element is actually valid for instantiation
+						const new_page_element_instance = await instantiate_page_element(self, source)
+						if (!new_page_element_instance) {
+							console.error("error on get new_page_element_instance:", new_page_element_instance);
+							// loading css remove
+							if (node) {setTimeout(()=> node.classList.remove('loading'), 150 )}
+							console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
+							return false
 						}
 
-				// url history track
-					if(refresh_result===true && new_rqo.event_in_history!==true)  {
+					// page context elements to stay. Menu and other static elements don't need to be built and rendered every time 
+						const base_models		= ['menu']
+						const elements_to_stay	= self.context.filter( item => base_models.includes(item.model))
+						// add current source from options
+							elements_to_stay.push(source)
+						// fix new page context
+							self.context = elements_to_stay
+					
+					// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
+						const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+						for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+							instances_to_stay[i].destroyable = false
+						}
 
-						// options_url : clone options and remove optional 'event_in_history' property
-						const options_url 	= Object.assign({}, new_rqo);
-						delete options_url.event_in_history
+					// refresh page. Force to load new context elements data from DDBB
+						const refresh_result = await self.refresh()
 
-						// const var_uri	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
-						const new_instance 	= self.ar_instances.find(item => item.model === new_rqo.source.model && item.tipo === new_rqo.source.tipo && item.mode === new_rqo.source.mode)
+					// url history track
+						if(refresh_result===true && user_navigation_options.event_in_history!==true)  {
+							
+							// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');							
+							const title			= new_page_element_instance.id
+							const url			= "?id="+ new_page_element_instance.id							
 
-						const var_uri		= 'id=' + new_instance.id
-						const uri_options	= new_rqo
-						const state			= {rqo : new_rqo}
-						const title			= ''
-						const url			= "?"+var_uri //window.location.href
+							const new_user_navigation_options = Object.assign({
+								event_in_history : false
+							}, user_navigation_options);
+							const state = {
+								user_navigation_options : new_user_navigation_options
+							}
 
-						history.pushState(state, title, url)
-					}
+							history.pushState(state, title, url)
+						}
 
-				return true
-			};//end user_action
+					// loading css remove
+						if (node) { node.classList.remove('loading') }
+
+					resolve(new_page_element_instance.id)
+				})
+			};//end user_navigation
 
 
-	// window onpopstate
+	// window onpopstate. Triggered when user make click on browser navigation buttons
+		// note that navigation calls generate a history of event state, and when user click's on back button, 
+		// the browser get this event form history with the state info stored previously
 		window.onpopstate = function(event) {
 			if (event.state) {
-				const new_rqo = event.state.rqo
-				new_rqo.event_in_history = true
-				event_manager.publish('user_action', new_rqo)
+				// get previously stored state data
+				const new_user_navigation_options = event.state.user_navigation_options
+				// mark as already used in history
+				new_user_navigation_options.event_in_history = true
+				// publish the event normally as usual
+				event_manager.publish('user_navigation', new_user_navigation_options)
 			}
 		}
 
@@ -250,7 +236,7 @@ page.prototype.build = async function() {
 	// status update
 		self.status = 'builded'
 
- 	return true
+	return true
 };//end build
 
 
@@ -269,7 +255,7 @@ page.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < context_length; i++) {
 
 			const current_ddo = self.context[i]
-				console.log("current_ddo:",current_ddo); 
+				console.log("PAGE get_ar_instances current_ddo:", current_ddo); 
 			ar_promises.push( new Promise(function(resolve){
 			
 				instantiate_page_element(self, current_ddo)
@@ -337,7 +323,7 @@ const instantiate_page_element = function(self, ddo) {
 /**
 * USER_ACTION
 */
-	// const user_action = async function(self, options) {
+	// const user_navigation = async function(self, options) {
 
 	// 	const current_data_manager = new data_manager()
 	// 	const api_response = await current_data_manager.request({
@@ -373,6 +359,6 @@ const instantiate_page_element = function(self, ddo) {
 	// 		history.pushState(state, title, url)
 
 	// 	return true
-	// };//end user_action
+	// };//end user_navigation
 
 
