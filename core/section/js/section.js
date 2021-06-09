@@ -77,8 +77,6 @@ export const section = function() {
 
 
 
-
-
 /**
 * INIT
 * @return bool
@@ -213,21 +211,18 @@ section.prototype.build = async function(autoload=false) {
 				}
 		}//end if (autoload===true)
 		// else{
-		//
-		// 	// set context and data to current instance
-		// 		self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
-		// 		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
-		// 		self.section_id = self.data
-		// 			? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
-		// 			: null
-		//
-		// 	// set request_config
-		// 		self.request_config = self.context.find(item => item.tipo===self.tipo && item.model==='section').request_config
-		// }
+			//
+			// 	// set context and data to current instance
+			// 		self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
+			// 		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
+			// 		self.section_id = self.data
+			// 			? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+			// 			: null
+			//
+			// 	// set request_config
+			// 		self.request_config = self.context.find(item => item.tipo===self.tipo && item.model==='section').request_config
+			// }
 
-
-	// sqo
-		const sqo = self.rqo.sqo
 
 	// Update section mode/label with context declarations
 		const section_context = self.context || {
@@ -332,7 +327,7 @@ section.prototype.build = async function(autoload=false) {
 		if(SHOW_DEBUG===true) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			// load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			console.log("__Time to build", self.model, "(ms):", performance.now()-t0);
 
 			// debug duplicates check
 				const ar_used = []
@@ -376,8 +371,7 @@ section.prototype.get_ar_instances = async function(){
 			: []
 		const value_length	= value.length
 
-		// const offset = self.rqo.sqo.offset
-	
+		
 
 		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
@@ -437,78 +431,76 @@ section.prototype.get_ar_instances = async function(){
 
 
 
-// /**
-// * GET_AR_ROWS
-// */
-// section.prototype.get_ar_rows = async function(){
-//
-// 	const self = this
-//
-// 	// self data veification
-// 		if (typeof self.data==="undefined") {
-// 			self.data = {
-// 				value : []
-// 			}
-// 		}
-//
-// 	// iterate records
-// 		const value			= self.data.value || []
-// 		const value_length	= value.length
-//
-// 		const offset = self.pagination.offset
-//
-// 		for (let i = 0; i < value_length; i++) {
-// 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
-//
-// 			const current_section_id	= value[i].section_id
-// 			const current_section_tipo	= value[i].section_tipo
-// 			const current_data			= (self.mode==='tm')
-// 				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-// 				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-// 			const current_context 		= self.context
-//
-// 			const instance_options = {
-// 					model			: 'section_record',
-// 					tipo			: current_section_tipo,
-// 					section_tipo	: current_section_tipo,
-// 					section_id		: current_section_id,
-// 					mode			: 'list',
-// 					lang			: self.lang,
-// 					context			: current_context,
-// 					data			: current_data,
-// 					datum			: self.datum,
-// 					caller			: self,
-// 					offset			: (offset+i),
-// 					columns 		: self.columns
-// 			}
-//
-// 			// id_variant . Propagate a custom instance id to children
-// 				if (self.id_variant) {
-// 					instance_options.id_variant = self.id_variant
-// 				}
-//
-// 			// time machine options
-// 				if (self.mode==='tm') {
-// 					instance_options.matrix_id			= value[i].matrix_id
-// 					instance_options.modification_date	= value[i].timestamp
-// 					// instance_options.state			= value[i].state
-// 				}
-//
-// 			// section_record. init and build
-// 				const current_section_record = await instances.get_instance(instance_options);
-// 				await current_section_record.build()
-//
-// 			// add
-// 				// self.ar_instances.push(current_section_record)
-//
-// 		}//end for loop
-//
-//
-// 	// return self.ar_instances
-// };//end get_ar_instances
-//
+/**
+* GET_AR_ROWS
+*//*
+section.prototype.get_ar_rows = async function(){
+
+	const self = this
+
+	// self data veification
+		if (typeof self.data==="undefined") {
+			self.data = {
+				value : []
+			}
+		}
+
+	// iterate records
+		const value			= self.data.value || []
+		const value_length	= value.length
+
+		const offset = self.pagination.offset
+
+		for (let i = 0; i < value_length; i++) {
+			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
+
+			const current_section_id	= value[i].section_id
+			const current_section_tipo	= value[i].section_tipo
+			const current_data			= (self.mode==='tm')
+				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+			const current_context 		= self.context
+
+			const instance_options = {
+					model			: 'section_record',
+					tipo			: current_section_tipo,
+					section_tipo	: current_section_tipo,
+					section_id		: current_section_id,
+					mode			: 'list',
+					lang			: self.lang,
+					context			: current_context,
+					data			: current_data,
+					datum			: self.datum,
+					caller			: self,
+					offset			: (offset+i),
+					columns 		: self.columns
+			}
+
+			// id_variant . Propagate a custom instance id to children
+				if (self.id_variant) {
+					instance_options.id_variant = self.id_variant
+				}
+
+			// time machine options
+				if (self.mode==='tm') {
+					instance_options.matrix_id			= value[i].matrix_id
+					instance_options.modification_date	= value[i].timestamp
+					// instance_options.state			= value[i].state
+				}
+
+			// section_record. init and build
+				const current_section_record = await instances.get_instance(instance_options);
+				await current_section_record.build()
+
+			// add
+				// self.ar_instances.push(current_section_record)
+
+		}//end for loop
 
 
+	// return self.ar_instances
+};//end get_ar_instances
+*/
 
 
 
@@ -666,7 +658,6 @@ section.prototype.render_content = async function(){
 
 
 
-
 /**
 * CREATE_request_config
 * @return
@@ -817,3 +808,5 @@ section.prototype.load_section_records = function() {
 	return loaded
 };//end load_section_records
 */
+
+

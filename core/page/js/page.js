@@ -86,14 +86,20 @@ page.prototype.init = async function(options) {
 					console.log("// page user_navigation received user_navigation_options", user_navigation_options);
 				}
 
+				// check valid vars
+					if (!user_navigation_options.source) { 
+						console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
+						return false
+					}
+
 				// reset status to prevent errors lock 
 					self.status = 'rendered'
 
-				// loading css
+				// loading css add
 					const node = self.node && self.node[0]
 						? self.node[0].querySelector('.content_data.page')
 						: null
-					if (node) {
+					if (node) { node.classList.add('loading') }
 						node.classList.add('loading')
 					}
 
@@ -328,7 +334,7 @@ page.prototype.build = async function() {
 	// status update
 		self.status = 'builded'
 
- 	return true
+	return true
 };//end build
 
 
@@ -347,7 +353,7 @@ page.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < context_length; i++) {
 
 			const current_ddo = self.context[i]
-				console.log("current_ddo:",current_ddo); 
+				console.log("PAGE get_ar_instances current_ddo:", current_ddo); 
 			ar_promises.push( new Promise(function(resolve){
 			
 				instantiate_page_element(self, current_ddo)
