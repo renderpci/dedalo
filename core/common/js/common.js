@@ -176,14 +176,15 @@ common.prototype.render = async function (options={render_level:'full'}) {
 	// event publish
 		event_manager.publish('render_'+self.id, result_node)
 		event_manager.publish('render_instance', self)
-
+	
 	// debug
 		if(SHOW_DEBUG===true) {
 			const total = performance.now()-t0
+			const msg = `__Time to render: model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
 			if (total>100) {
-				console.warn("__Time to render ms:", self.model, self.section_tipo, self.tipo, total);
+				console.warn(msg, total);
 			}else{
-				console.log("__Time to render ms:", self.model, self.section_tipo, self.tipo, total);
+				console.log(msg, total);
 			}
 		}
 
@@ -734,26 +735,34 @@ common.prototype.build_rqo_DES = async function(dd_request_type, request_config,
 */
 common.prototype.build_rqo_show = async function(rqo_config, action){
 		
-		const self = this
+	const self = this
 
 	// sessionStorage check if already exists
 		const current_data_manager	= new data_manager()
 
-	// get value
+	// local_db_data. get value if exists
 		const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
 		if(saved_rqo){
+
+			// update saved offset if is different from received config
+				if (rqo_config.sqo && typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {					
+					saved_rqo.sqo.offset = rqo_config.sqo.offset
+					current_data_manager.set_local_db_data(saved_rqo, 'rqo') // save updated object
+					console.warn("updated offset in saved_rqo:", saved_rqo);
+				}
+
+			console.warn("returning saved_rqo:", saved_rqo);
 			return saved_rqo
 		}
 
 	// build new one with source of the instance caller (self)
-		const source	= create_source(self, action);
+		const source = create_source(self, action);
 
 	// SQO
 	// set the sqo_config into a checked variable
 		const sqo_config = rqo_config.show && rqo_config.show.sqo_config
 			? rqo_config.show.sqo_config
 			: {}
-
 
 	// get the ar_sections
 		const ar_sections = rqo_config.sqo && rqo_config.sqo.section_tipo
@@ -807,7 +816,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 		}
 
 
-	// sessionStorage save	
+	// local_db_data save	
 		current_data_manager.set_local_db_data(rqo, 'rqo')
 
 
@@ -1491,6 +1500,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 	// load_data_promise
 	if (response.result===false) {
 		console.error("API EXCEPTION:",response.msg);
+		return false
 	}
 	console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.exec_time)
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)

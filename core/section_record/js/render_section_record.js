@@ -341,16 +341,16 @@ const build_id_column = function(self) {
 						})
 						edit_button.addEventListener("click", async function(e){
 							// navigate link
-								const user_action_options = {
+								const user_navigation_options = {
 									tipo		: self.section_tipo,
 									section_id	: self.section_id,
 									model		: self.caller.model,
 									mode		: 'edit'
 								}
 								if(SHOW_DEBUG===true) {
-									console.log("// section_record build_id_column user_action_options initiator component:",user_action_options);
+									console.log("// section_record build_id_column user_navigation_options initiator component:",user_navigation_options);
 								}
-								event_manager.publish('user_action', user_action_options)
+								event_manager.publish('user_navigation', user_navigation_options)
 
 							// detail_section
 								// ( async () => {
@@ -438,28 +438,26 @@ const build_id_column = function(self) {
 						edit_button.addEventListener("click", function(e){
 							// edit_record(this, self)
 
-							const sqo = {
-								mode			: 'edit',
-								section_tipo	: [self.section_tipo],
-								filter			: null,
-								limit			: 1,
-								offset			: offset,
-								full_count		: false
-							}
-
-							const user_action_rqo = {
-								id: self.caller.id,
-								source 	: {
-									tipo		: self.section_tipo,
-									model		: self.caller.model,
-									mode		: 'edit'
+							const user_navigation_rqo = {
+								caller_id : self.caller.id,
+								source : {
+									action			: 'search',
+									model			: self.caller.model,
+									tipo			: self.section_tipo,
+									section_tipo	: self.section_tipo,
+									mode			: 'edit',
+									lang			: self.caller.lang
 								},
-								sqo		: sqo
-							}
-							if(SHOW_DEBUG===true) {
-								console.log("// section_record build_id_column user_action_rqo default:",user_action_rqo);
-							}
-							event_manager.publish('user_action', user_action_rqo)
+								sqo : {
+									// mode			: 'edit',
+									section_tipo	: [{tipo : self.section_tipo}],
+									filter			: null,
+									limit			: 1,
+									offset			: offset,
+									// full_count		: false
+								}
+							}							
+							event_manager.publish('user_navigation', user_navigation_rqo)
 						})
 					}
 				// delete_line

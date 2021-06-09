@@ -3739,6 +3739,7 @@ danger {
 }
 .loading {
   opacity: 0.5;
+  pointer-events: none;
 }
 .hide {
   visibility: hidden !important;

@@ -276,10 +276,12 @@ const get_buttons = (self) => {
 					})
 					button_edit.addEventListener("click", function(){
 						// navigate link
-							event_manager.publish('user_action', {
-								tipo	: item.tipo,
-								model	: 'section',
-								mode	: 'list'
+							event_manager.publish('user_navigation', {
+								source : {
+									tipo	: item.tipo,
+									model	: 'section',
+									mode	: 'list'
+								}
 							})
 					})
 				}
