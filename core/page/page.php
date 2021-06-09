@@ -7,11 +7,13 @@
 		$locator	= json_decode($_GET['locator']);
 		$tipo		= $locator->section_tipo ?? $default_section_tipo;
 		$section_id	= $locator->section_id ?? null;
-		$mode		= !empty($section_id) ? 'edit' : 'list';
+		// $mode		= !empty($section_id) ? 'edit' : 'list';
+		$mode		= $locator->mode ?? 'list';
 	}else{
 		$tipo		= $_GET['t'] 	?? $_GET['tipo']		?? $default_section_tipo; //MAIN_FALLBACK_SECTION;
 		$section_id	= $_GET['id']	?? $_GET['section_id']	?? null;
-		$mode		= $_GET['m'] 	?? $_GET['mode']		?? (!empty($section_id) ? 'edit' : 'list');	
+		// $mode		= $_GET['m'] 	?? $_GET['mode']		?? (!empty($section_id) ? 'edit' : 'list');
+		$mode		= $_GET['m'] 	?? $_GET['mode']		?? 'list';	
 	}
 	define('MODE', $mode);
 
@@ -42,14 +44,14 @@
 		$initiator = $_GET['initiator'] ?? false;
 
 		// menu. Get the mandatory menu element
-			// if ($initiator===false) {
+			if ($initiator===false) {
 
-			// 	$menu = new menu();
-			// 	$menu->set_lang(DEDALO_DATA_LANG);
+				$menu = new menu();
+				$menu->set_lang(DEDALO_DATA_LANG);
 
-			// 	// add to page context
-			// 		$context[] = $menu->get_structure_context();
-			// }
+				// add to page context
+					$context[] = $menu->get_structure_context();
+			}
 
 		// section/area/tool. Get the page element from get url vars
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);

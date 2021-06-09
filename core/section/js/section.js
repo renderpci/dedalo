@@ -385,6 +385,8 @@ section.prototype.get_ar_instances = async function(){
 				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
 				: []
 
+			const offset = (self.rqo.sqo.offset + i)
+
 			const instance_options = {
 					model			: 'section_record',
 					tipo			: current_section_tipo,
