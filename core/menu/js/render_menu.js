@@ -221,10 +221,12 @@ render_menu.prototype.edit = async function() {
 				event.stopPropagation();
 				// event_manager
 				if (current_instance.mode==='edit'){
-					event_manager.publish('user_action', {
-						tipo	: current_instance.tipo,
-						model	: current_instance.model,
-						mode	: 'list'
+					event_manager.publish('user_navigation', {
+						source : {
+							tipo	: current_instance.tipo,
+							model	: current_instance.model,
+							mode	: 'list'
+						}
 					})
 				}
 				self.menu_active = false
@@ -492,10 +494,12 @@ const item_hierarchy = async (options) => {
 						  win.focus();
 				}else{
 					// navigate
-					event_manager.publish('user_action', {
-						tipo	: item.tipo,
-						model	: item.model,
-						mode	: 'list'
+					event_manager.publish('user_navigation', {
+						source : {
+							tipo	: item.tipo,
+							model	: item.model,
+							mode	: 'list'		
+						}						
 					})
 				}
 
@@ -604,7 +608,7 @@ const change_lang = async function(event) {
 	})
 	window.location.reload(false);
 
-	//event_manager.publish('user_action', {lang: current_lang})
+	//event_manager.publish('user_navigation', {lang: current_lang})
 
 	return api_response
 };//end change_lang

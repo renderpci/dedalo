@@ -76,20 +76,20 @@ page.prototype.init = async function(options) {
 		//import('../../common/js/components_list.js')
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
-		// user_action
+		// user_navigation
 			self.events_tokens.push(
-				event_manager.subscribe('user_action', user_action)
+				event_manager.subscribe('user_navigation', user_navigation)
 			)
-		// user_action fn
-			async function user_action(user_action_rqo) {
+		// user_navigation fn
+			async function user_navigation(user_navigation_options) {
 				if(SHOW_DEBUG===true) {
-					console.log("// page user_action received user_action_rqo", user_action_rqo);
+					console.log("// page user_navigation received user_navigation_options", user_navigation_options);
 				}
 
 				// reset status to prevent errors lock 
 					self.status = 'rendered'
 
-				// loading
+				// loading css
 					const node = self.node && self.node[0]
 						? self.node[0].querySelector('.content_data.page')
 						: null
@@ -97,12 +97,90 @@ page.prototype.init = async function(options) {
 						node.classList.add('loading')
 					}
 
-				// rqo. request_config
-					const new_rqo = JSON.parse(JSON.stringify(user_action_rqo))
 
+				(async ()=>{
+
+					// basic vars
+						const source			= user_navigation_options.source
+						const sqo				= user_navigation_options.sqo || null
+						const request_config	= [{
+							api_engine	: 'dedalo',
+							sqo			: sqo,
+						}]
+						source.request_config = request_config
+
+					// check response page element is valid for instantiate. Element instance loads the file
+						const page_element_instance = await instantiate_page_element(self, source)
+						if (!page_element_instance) {
+							console.error("error on get page_element_instance:", page_element_instance);
+							// loading
+								if (node) {
+									setTimeout(function(){
+										node.classList.remove('loading')
+									}, 150)
+								}
+							return false
+						}
+
+					// elements to stay
+						const base_models = ['menu']
+						const elements_to_stay 	= self.context.filter( item => base_models.includes(item.model))
+						// add current source from options
+							elements_to_stay.push(source)
+						// fix new page context
+							self.context = elements_to_stay
+					
+					// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
+						const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+						for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+							instances_to_stay[i].destroyable = false
+						}
+						const refresh_result = await self.refresh()
+
+					// url history track
+						if(refresh_result===true && user_navigation_options.event_in_history!==true)  {
+
+							// options_url : clone options and remove optional 'event_in_history' property
+							const options_url 	= Object.assign({}, user_navigation_options);
+							delete options_url.event_in_history
+							const var_uri		= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
+							const state			= {options : user_navigation_options}
+							const title			= ''
+							const url			= '' // "?"+var_uri //window.location.href
+
+							history.pushState(state, title, url)
+						}
+				})()
+
+				return
+
+
+				// options
+					const caller_id	= options.caller_id
+					const new_rqo	= JSON.parse(JSON.stringify(options.rqo))
+								
+				// new way
+				// new_context_element
+					// const new_context_element = {
+					// 	tipo			: new_rqo.source.tipo,
+					// 	section_tipo	: new_rqo.source.section_tipo || new_rqo.source.tipo,
+					// 	mode			: new_rqo.source.mode,
+					// 	model			: new_rqo.source.model,
+					// 	lang			: new_rqo.source.lang,
+					// 	request_config	: [{
+					// 		api_engine	: 'dedalo',
+					// 		sqo			: new_rqo.sqo
+					// 	}]
+					// }
+					// console.log("new_context_element:",new_context_element);
+
+				/*
+				// rqo. request_config
+					const new_rqo = JSON.parse(JSON.stringify(user_navigation_rqo))
+				
 					const config_section_tipo = new_rqo.sqo && new_rqo.sqo.section_tipo
 						? new_rqo.sqo.section_tipo.map(item => ({tipo:item}))
-						: [{tipo: user_action_rqo.section_tipo}]
+						: [{tipo: user_navigation_rqo.section_tipo}]
 
 					const config_sqo = new_rqo.sqo
 						? new_rqo.sqo
@@ -337,7 +415,7 @@ const instantiate_page_element = function(self, ddo) {
 /**
 * USER_ACTION
 */
-	// const user_action = async function(self, options) {
+	// const user_navigation = async function(self, options) {
 
 	// 	const current_data_manager = new data_manager()
 	// 	const api_response = await current_data_manager.request({
@@ -373,6 +451,6 @@ const instantiate_page_element = function(self, ddo) {
 	// 		history.pushState(state, title, url)
 
 	// 	return true
-	// };//end user_action
+	// };//end user_navigation
 
 
