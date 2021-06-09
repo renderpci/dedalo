@@ -85,18 +85,18 @@
 		}else{
 
 			// data
-				$locator = new stdClass();
-					$locator->section_tipo 	= $this->tipo;
-					$locator->section_id 	= $this->section_id;
+				// $locator = new stdClass();
+				// 	$locator->section_tipo 	= $this->tipo;
+				// 	$locator->section_id 	= $this->section_id;
 
-				$item = new stdClass();
-					#$item->typo 		= 'section';
-					$item->section_tipo = $this->tipo;
-					$item->tipo 		= $this->tipo;
-					$item->value 		= [$locator];
+				// $item = new stdClass();
+				// 	#$item->typo 		= 'section';
+				// 	$item->section_tipo = $this->tipo;
+				// 	$item->tipo 		= $this->tipo;
+				// 	$item->value 		= [$locator];
 
-				$data[] = $item;
-					dump($data, ' data +----+ '.to_string());
+				// $data[] = $item;
+				// 	dump($data, ' data +----+ '.to_string());
 
 
 			// subdata
