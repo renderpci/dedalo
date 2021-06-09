@@ -2429,6 +2429,13 @@ class component_text_area extends component_common {
 
 					$new_query_json->$logical_operator[] = $clone;
 
+					// regex try in all langs
+					$clone = clone($query_object);
+						$clone->operator = '!~';
+						$clone->q_parsed = '\'.+"lg-[a-z]{3,}": "[\w\s]{1,}".+\'';
+
+					$new_query_json->$logical_operator[] = $clone;
+
 				// langs check all
 					/*
 					$ar_query_object = [];
@@ -2467,8 +2474,8 @@ class component_text_area extends component_common {
     			$query_object->unaccent = false;
 
 				$clone = clone($query_object);
-	    			$clone->operator = '~';
-	    			$clone->q_parsed = '\'.*""\'';
+					$clone->operator = '~';
+					$clone->q_parsed = '\'.+"lg-[a-z]{3,}": "[\w\s]{1,}".+\''; //	'\'.*""\'';
 
 				$logical_operator ='$and';
     			$new_query_json = new stdClass;
