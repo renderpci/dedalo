@@ -176,14 +176,15 @@ common.prototype.render = async function (options={render_level:'full'}) {
 	// event publish
 		event_manager.publish('render_'+self.id, result_node)
 		event_manager.publish('render_instance', self)
-
+	
 	// debug
 		if(SHOW_DEBUG===true) {
 			const total = performance.now()-t0
+			const msg = `__Time to render: model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
 			if (total>100) {
-				console.warn("__Time to render ms:", self.model, self.section_tipo, self.tipo, total);
+				console.warn(msg, total);
 			}else{
-				console.log("__Time to render ms:", self.model, self.section_tipo, self.tipo, total);
+				console.log(msg, total);
 			}
 		}
 
@@ -1499,6 +1500,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 	// load_data_promise
 	if (response.result===false) {
 		console.error("API EXCEPTION:",response.msg);
+		return false
 	}
 	console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.exec_time)
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)

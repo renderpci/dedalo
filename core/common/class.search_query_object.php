@@ -36,7 +36,7 @@ class search_query_object extends stdClass {
 									}]
 		pased 					: (true || false) // boolean, state of the sqo
 		mode: 					: ('edit' || 'list' || 'tm') // configure the sqo for search into diferent models of matrix tables into DDBB
-		filter_by_locators 		:[{
+		filter_by_locators 		: [{
 									section_tipo
 									component_tipo
 								}]
@@ -47,7 +47,7 @@ class search_query_object extends stdClass {
 		remove_distinc 			: (true || false)
 		skip_projects_filter 	: (true || false)
 
-
+		
 	*/
 
 
