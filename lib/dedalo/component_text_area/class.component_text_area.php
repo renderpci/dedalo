@@ -2371,38 +2371,38 @@ class component_text_area extends component_common {
 	*/
 	public static function resolve_query_object_sql($query_object) {
 
-    	# Always set fixed values
+		# Always set fixed values
 		$query_object->type = 'string';
 
 		$q = $query_object->q;
 		$q = pg_escape_string(stripslashes($q));
 
-        switch (true) {
-        	# IS NULL
+		switch (true) {
+			# IS NULL
 			case ($q==='!*'):
-				/* old
-					$operator = 'IS NULL';
-					$q_clean  = '';
-					$query_object->operator = $operator;
-	    			$query_object->q_parsed	= $q_clean;
-	    			$query_object->unaccent = false;
+				// old
+					// $operator = 'IS NULL';
+					// $q_clean  = '';
+					// $query_object->operator = $operator;
+					// $query_object->q_parsed	= $q_clean;
+					// $query_object->unaccent = false;
 
-					$clone = clone($query_object);
-		    			$clone->operator = '~*';
-		    			$clone->q_parsed = '\'.*""\'';
+					// $clone = clone($query_object);
+					// 	$clone->operator = '~*';
+					// 	$clone->q_parsed = '\'.*""\'';
 
-					$logical_operator = '$or';
-	    			$new_query_json = new stdClass;
-		    			$new_query_json->$logical_operator = [$query_object, $clone];
-	    			# override
-	    			$query_object = $new_query_json ;
-					*/
+					// $logical_operator = '$or';
+					// $new_query_json = new stdClass;
+					// 	$new_query_json->$logical_operator = [$query_object, $clone];
+					// # override
+					// $query_object = $new_query_json ;
+				
 				$operator = 'IS NULL';
 				$q_clean  = '';
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
-				$query_object->lang 	= 'all';
+				$query_object->unaccent	= false;
+				$query_object->lang		= 'all';
 
 				$logical_operator = '$or';
 				$new_query_json = new stdClass;
@@ -2410,31 +2410,30 @@ class component_text_area extends component_common {
 
 				// Search empty only in current lang
 				// Resolve lang based on if is translatable
-					$path_end 		= end($query_object->path);
-					$component_tipo = $path_end->component_tipo;
-					$RecordObj_dd   = new RecordObj_dd($component_tipo);
-					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+					$RecordObj_dd	= new RecordObj_dd($component_tipo);
+					$lang			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
+					// null data in current lang
 					$clone = clone($query_object);
-						$clone->operator = '=';
-						$clone->q_parsed = '\'""\'';
-						$clone->lang 	 = $lang;
-
+						$clone->operator	= 'IS NULL';
+						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
 
-					// legacy data (set as null instead [])
+					// empty string
 					$clone = clone($query_object);
-						$clone->operator = 'IS NULL';
-						$clone->lang 	 = $lang;
-
+						$clone->operator	= '=';
+						$clone->q_parsed	= '\'\'';
+						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
 
 					// regex try in all langs
-					$clone = clone($query_object);
-						$clone->operator = '!~';
-						$clone->q_parsed = '\'.+"lg-[a-z]{3,}": "[\w\s]{1,}".+\'';
+					// $clone = clone($query_object);
+					// 	$clone->operator = '!~';
+					// 	$clone->q_parsed = '\'[ {]+"lg-[a-z]{3,}": "(\S{1,})"[,}]+\'';
 
-					$new_query_json->$logical_operator[] = $clone;
+					// $new_query_json->$logical_operator[] = $clone;
 
 				// langs check all
 					/*
@@ -2465,6 +2464,7 @@ class component_text_area extends component_common {
 				# override
 				$query_object = $new_query_json;
 				break;
+			
 			# IS NOT NULL
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
@@ -2473,17 +2473,38 @@ class component_text_area extends component_common {
     			$query_object->q_parsed	= $q_clean;
     			$query_object->unaccent = false;
 
-				$clone = clone($query_object);
-					$clone->operator = '~';
-					$clone->q_parsed = '\'.+"lg-[a-z]{3,}": "[\w\s]{1,}".+\''; //	'\'.*""\'';
-
 				$logical_operator ='$and';
     			$new_query_json = new stdClass;
-    				$new_query_json->$logical_operator = [$query_object, $clone];
+    				$new_query_json->$logical_operator = [$query_object];
+
+    			// $clone = clone($query_object);
+					// $clone->operator = '~';
+					// $clone->q_parsed = '\'[ {]+"lg-[a-z]{3,}": "(\S{1,})"[,}]+\''; //	'\'.*""\'';
+
+				// Search empty only in current lang
+				// Resolve lang based on if is translatable
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+					$RecordObj_dd	= new RecordObj_dd($component_tipo);
+					$lang			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
+					// null data in current lang
+					$clone = clone($query_object);
+						$clone->operator	= 'IS NOT NULL';
+						$clone->lang		= $lang;
+					$new_query_json->$logical_operator[] = $clone;
+
+					// empty string
+					$clone = clone($query_object);
+						$clone->operator	= '!=';
+						$clone->q_parsed	= '\'\'';
+						$clone->lang		= $lang;
+					$new_query_json->$logical_operator[] = $clone;					
 
 				# override
-    			$query_object = $new_query_json ;
+				$query_object = $new_query_json ;
 				break;
+			
 			# IS DIFFERENT
 			case (strpos($q, '!=')===0):
 				$operator = '!=';
