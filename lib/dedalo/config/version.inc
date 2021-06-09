@@ -2410,7 +2410,8 @@
 		Updated JQUERY lib from 2.2.3 to 2.2.4
 		07-06-2021
 		Add row_limit check into the find button in portals
-		
+		09-06-2021
+		Fixed component_text_area issue on search empty and non empty values (*, !*)
 
 	[/HISTORY]
 
@@ -2441,7 +2442,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-06-2021');
+	define('DEDALO_BUILD'	, '09-06-2021');
 
 
 	/*
