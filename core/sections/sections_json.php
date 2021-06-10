@@ -84,26 +84,15 @@
 					return $locator;
 				}, $dato);
 
-				// group locators by section_tipo
-					$values_object = new stdClass();
-					foreach ($value as $locator) {
-						if (!isset($values_object->{$locator->section_tipo})) {
-							$values_object->{$locator->section_tipo} = [];
-						}
-						$values_object->{$locator->section_tipo}[] = $locator;
-					}
+				
+				$item = new stdClass();
+					$item->typo 		= 'sections';
+					$item->section_tipo = $ar_section_tipo;
+					$item->tipo 		= $this->caller_tipo;
+					$item->value 		= $value;
 
-				// data. Add an item data for each section_tipo
-					foreach ($values_object as $el_key => $el_value) {
-
-						$item = new stdClass();
-							#$item->typo 		= 'section';
-							$item->section_tipo = $el_key;
-							$item->tipo 		= $el_key;
-							$item->value 		= $el_value;
-
-						$data[] = $item;
-					}
+				$data[] = $item;
+			
 
 			// subdata
 				foreach ($dato as $current_record) {
