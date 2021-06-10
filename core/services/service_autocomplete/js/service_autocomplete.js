@@ -703,9 +703,46 @@ export const service_autocomplete = function() {
 		// get the sections that was searched
 		// const ar_search_sections = self.ar_search_section_tipo
 
-		// get the ar_locator founded in section
-		const data_locator	= data.find((item)=> item.tipo === item.section_tipo);
+		// get dd objects from the context that will be used to build the lists in correct order
+		const rqo_search =  self.rqo_search
+
+		// get the divisor between columns
+		const divisor = (rqo_search.show.divisor)
+			? rqo_search.show.divisor
+			: ' | '
+
+		const columns 		= rqo_search.show.columns
+
+		// get the ar_locator founded in sections
+		const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
 		const ar_locator	= (data_locator) ? data_locator.value : []
+
+		// folow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
+		// all others ddo in the midle of the chain are portals with locator value, and only will show the last component.
+		function get_last_ddo_data_value(current_path, value){
+			// check the path length sended, the first loop is the full path, but it is changed with the check data
+			const current_path_length = current_path.length 
+			for (var i = 0; i < value.length; i++) {
+				const section_tipo 	= value[i].section_tipo
+				const section_id 	= value[i].section_id
+				// get the column data with last ddo
+				const ddo_item = current_path[current_path.length - 1];
+				// get the data into the full data from API and get the value (locator or final data as input_text data)
+				const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
+				const current_value = current_element_data.value
+				// create new_path without and remove the current ddo
+				const new_path = [...current_path]
+				new_path.pop()
+				// if it is the last ddo, the data is the correct data to build the column
+				// else continue with the path doing recursion
+				if (current_path_length===1) {
+					return current_element_data
+				}{
+					return get_last_ddo_data_value(new_path, current_value)
+				}
+				
+			}
+		}
 
 		// iterate the sections
 		for (const current_locator of ar_locator) {
@@ -717,15 +754,6 @@ export const service_autocomplete = function() {
 			// get the full row with all items in the ddo that mach with the section_id
 			const current_row = data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
 
-			// get dd objects from the context that will be used to build the lists in correct order
-			const rqo_search =  self.rqo_search
-
-			// get the divisor between columns
-			const divisor = (rqo_search.show.divisor)
-				? rqo_search.show.divisor
-				: ' | '
-			// const current_ddo = self.dd_request.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
-			const ddo_map 		= rqo_search.show.ddo_map
 			// const current_ddo 	= ddo_map.filter(item => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
 
 			// create the li node container
@@ -744,15 +772,17 @@ export const service_autocomplete = function() {
 			}, false);
 
 			// values. build the text of the row with label nodes in correct order (the ddo order in context).
-				// for(const ddo_item of current_ddo){
-
-				const ddo_map_length = ddo_map.length
-				for (let i = 0; i < ddo_map_length; i++) {
-						const ddo_item = ddo_map[i]
-				
+				const columns_length = columns.length
+				for (let i = 0; i < columns_length; i++) {
+						const current_path = columns[i]
+						// the columns has the last element in the chain in the first position of the array, 
+						// the first position is the only component that is necesary to buil and show
+						const ddo_item = current_path[0]
+						const current_element_data = get_last_ddo_data_value(current_path, [current_locator])
+					
 					// value_element
 						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
-						const current_element_data		= current_row.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
+						// const current_element_data		= current_row.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
 
 						if (typeof current_element_data==="undefined") {
 							console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);

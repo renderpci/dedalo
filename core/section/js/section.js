@@ -181,7 +181,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// set context and data to current instance
 				self.context		= self.datum.context.find(el => el.section_tipo===self.section_tipo)
-				self.data			= self.datum.data.find(el => el.tipo===el.section_tipo && el.section_tipo===self.section_tipo)
+				self.data			= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
 				self.section_id	= self.data && self.data.value
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
