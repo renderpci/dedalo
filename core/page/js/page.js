@@ -146,8 +146,8 @@ page.prototype.init = async function(options) {
 						if(refresh_result===true && user_navigation_options.event_in_history!==true)  {
 							
 							// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');							
-							const title			= new_page_element_instance.id
-							const url			= "?id="+ new_page_element_instance.id							
+							const title	= new_page_element_instance.id
+							const url	= "?t="+ source.tipo + '&m=' + source.mode
 
 							const new_user_navigation_options = Object.assign({
 								event_in_history : false
