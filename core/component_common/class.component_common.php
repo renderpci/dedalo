@@ -1941,12 +1941,12 @@ abstract class component_common extends common {
 			$dato = !empty($dato)
 				? $dato
 				: [null];
-
+		
 		$dato_fb = [];
 		// fallback if empty
 		foreach ($dato as $key => $value) {
 			if(empty($value)){
-
+				
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 					if ($lang!==$main_lang) {
 						$component->set_lang($main_lang);
@@ -1980,16 +1980,15 @@ abstract class component_common extends common {
 							if (!empty($dato_fb[$key])) break; # Stops when first data is found
 						}
 					}
-				}else{
-					$dato_fb[$key] = null;
-				}
+			}else{
+				$dato_fb[$key] = $value;
+			}
 		}
 
 		// restore initial lang
 			$component->set_lang($inital_lang);
 
 		return $dato_fb;
-
 	}//end extract_component_dato_fallback
 
 
