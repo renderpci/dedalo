@@ -1886,7 +1886,6 @@ abstract class common {
 				return $el->parent===$this->tipo;
 			});
 
-
 		// des
 			// dump($context_dd_objects, ' context_dd_objects ++ '.to_string());			
 			// $ar_ddo = [];
@@ -2147,7 +2146,7 @@ abstract class common {
 			$this->request_config = [$request_config];
 
 			// foreach
-			dd_core_api::$ddo_map =  $request_config->show->ddo_map;
+			dd_core_api::$ddo_map =  array_merge(dd_core_api::$ddo_map,$request_config->show->ddo_map);
 
 			return $this->request_config;
 		}

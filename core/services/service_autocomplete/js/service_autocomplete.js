@@ -775,20 +775,19 @@ export const service_autocomplete = function() {
 				const columns_length = columns.length
 				for (let i = 0; i < columns_length; i++) {
 						const current_path = columns[i]
-						// the columns has the last element in the chain in the first position of the array, 
-						// the first position is the only component that is necesary to buil and show
+					// the columns has the last element in the chain in the first position of the array, 
+					// the first position is the only component that is necesary to buil and show
 						const ddo_item = current_path[0]
 						const current_element_data = get_last_ddo_data_value(current_path, [current_locator])
-					
-					// value_element
-						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
-						// const current_element_data		= current_row.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
+
+					// context of the element
+						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===current_element_data.section_tipo )
 
 						if (typeof current_element_data==="undefined") {
 							console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
 							continue
 						}
-
+				
 						const instance_options = {
 							context			: current_element_context,
 							data			: current_element_data,

@@ -199,7 +199,7 @@ export const get_instance = async function(options){
 						resolve(instance_element)
 
 				}else{
-						console.warn("returned already resolved instance from cache:", found_instance[0]);
+						// console.warn("returned already resolved instance from cache:", found_instance[0]);
 					// resolve the promise with the cache instance found						
 						resolve(found_instance[0])
 				}
