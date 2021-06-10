@@ -44,6 +44,8 @@ export const service_autocomplete = function() {
 		self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
 		self.ar_filter_by_list		= []
 
+		self.operator 				= null
+
 		// self.ar_dd_request			= self.instance_caller.dd_request.search
 		// self.dd_request				= self.ar_dd_request[0]
 		// self.sqo						= self.dd_request.find(item => item.typo==='sqo')
@@ -291,7 +293,7 @@ export const service_autocomplete = function() {
 					const datalist_item	= {
 						grouper	: 'sections',
 						id		: ddo_section.tipo,
-						value	: ddo_section.tipo,
+						value	: ddo_section,
 						label	: ddo_section.label,
 						change	: function(input_node){
 							const index = ar_sections.indexOf(input_node.dd_value)
@@ -647,16 +649,20 @@ export const service_autocomplete = function() {
 					})
 					select.addEventListener("change",function(e){
 						// get the new operator selected
-						const new_operator	= e.target.value
-						const sqo_filter	= self.sqo.filter
-						// get the old operator
-						const ar_operators	= Object.keys(sqo_filter)
-						const op_length		= ar_operators.length
-						// change the operator with the new selected
-						for (let i = op_length - 1; i >= 0; i--) {
-							sqo_filter[new_operator] = sqo_filter[ar_operators[i]]
-							delete sqo_filter[ar_operators[i]]
-						}
+
+						self.operator 		= e.target.value
+						return
+
+						// const new_operator	= e.target.value
+						// const sqo_filter	= self.sqo.filter
+						// // get the old operator
+						// const ar_operators	= Object.keys(sqo_filter)
+						// const op_length		= ar_operators.length
+						// // change the operator with the new selected
+						// for (let i = op_length - 1; i >= 0; i--) {
+						// 	sqo_filter[new_operator] = sqo_filter[ar_operators[i]]
+						// 	delete sqo_filter[ar_operators[i]]
+						// }
 					},false)
 					const option_or = ui.create_dom_element({
 						element_type	: "option",
@@ -682,7 +688,7 @@ export const service_autocomplete = function() {
 
 
 	/**
-	* AUTOCOMPLETE_BUILD_OPTIONS
+	* AUTOCOMPLETE_BUILD_OPTIONS to choose it by user
 	* @return
 	*/
 	this.render_datalist = async function(api_response) {
@@ -926,7 +932,8 @@ export const service_autocomplete = function() {
 			}
 
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
-			const search_sections = self.ar_search_section_tipo
+			const search_sections	= self.ar_search_section_tipo
+			self.sqo.section_tipo	= search_sections.map(el=>el.tipo)
 
 			const fixed_filter		= sqo_options.fixed_filter //self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
 			const filter_free		= sqo_options.filter_free	//self.dd_request.find((current_item)=> current_item.typo==='filter_free')
@@ -934,24 +941,29 @@ export const service_autocomplete = function() {
 
 			if(filter_free){
 
+				const new_filter = {}
 				// Iterate current filter
 					for (let operator in filter_free) {
-
+						// get the array of the filter objects
 						const current_filter = filter_free[operator]
-						for (let i = 0; i < current_filter.length; i++) {
+						// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
+						const new_operator		= self.operator || operator
 
+						for (let i = 0; i < current_filter.length; i++) {
 							// Update q property
 							current_filter[i].q	= (q !== "")
 								? "*" + q + "*"
-								: "false_muyflase_de verdad"
+								: "false_muyfake_de verdad"
 							current_filter[i].q_split = false
+							// create the filter with the operator choosed by the user
+							new_filter[new_operator] = current_filter
 						}
 					}
 				
 				// filter rebuilded
 					self.sqo.filter = {
-						"$and" : [filter_free]
-						// "$and" : []
+						"$and" : [new_filter]
+						// "$and" : [filter_free]
 					}
 					if (fixed_filter) {
 						for (let i = 0; i < fixed_filter.value.length; i++) {
@@ -962,7 +974,6 @@ export const service_autocomplete = function() {
 						self.sqo.filter.$and.push(...filter_by_list)
 					}
 			}//end if(filter_free)
-			console.log("sqo", self.sqo);
 
 		// allow_sub_select_by_id set to false to allow select deep fields
 			self.sqo.allow_sub_select_by_id = true
