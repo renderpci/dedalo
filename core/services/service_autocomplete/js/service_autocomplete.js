@@ -648,21 +648,9 @@ export const service_autocomplete = function() {
 					parent			: operator_selector
 					})
 					select.addEventListener("change",function(e){
-						// get the new operator selected
-
+						// set the new operator selected
 						self.operator 		= e.target.value
-						return
-
-						// const new_operator	= e.target.value
-						// const sqo_filter	= self.sqo.filter
-						// // get the old operator
-						// const ar_operators	= Object.keys(sqo_filter)
-						// const op_length		= ar_operators.length
-						// // change the operator with the new selected
-						// for (let i = op_length - 1; i >= 0; i--) {
-						// 	sqo_filter[new_operator] = sqo_filter[ar_operators[i]]
-						// 	delete sqo_filter[ar_operators[i]]
-						// }
+						
 					},false)
 					const option_or = ui.create_dom_element({
 						element_type	: "option",
@@ -921,11 +909,15 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// search_query_object base stored in wrapper dataset
-			const rqo_search 			= await self.instance_caller.rqo_search
-			self.sqo 					= rqo_search.sqo
+			const original_rqo_search 	= await self.instance_caller.rqo_search
+			const rqo_search 			= JSON.parse(JSON.stringify(original_rqo_search))
 			self.rqo_search 			= rqo_search
+			self.sqo 					= rqo_search.sqo
+			
 
-			const sqo_options = rqo_search.sqo_options
+			const sqo_options = original_rqo_search.sqo_options
+		// delete the sqo_options to the final rqo_options
+			delete rqo_search.sqo_options
 
 			if(SHOW_DEBUG===true) {
 				console.log("sqo_options:",sqo_options);
@@ -938,13 +930,13 @@ export const service_autocomplete = function() {
 			const fixed_filter		= sqo_options.fixed_filter //self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
 			const filter_free		= sqo_options.filter_free	//self.dd_request.find((current_item)=> current_item.typo==='filter_free')
 			const filter_by_list 	= self.ar_filter_by_list.map(item => item.value)
-
+			// rebuild the filter with the user imputs
 			if(filter_free){
 
 				const new_filter = {}
 				// Iterate current filter
 					for (let operator in filter_free) {
-						// get the array of the filter objects
+						// get the array of the filters objects, they have the default operator
 						const current_filter = filter_free[operator]
 						// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
 						const new_operator		= self.operator || operator
