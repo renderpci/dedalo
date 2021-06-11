@@ -105,8 +105,8 @@ const content_data = async function(self) {
 			//console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
-	// empty case. display none when pages are <2
-		if (total_pages<2) {
+	// display none with empty case, chenck NaN!=NaN (always true) or when pages are <2
+		if (total_pages!=total_pages || total_pages<2) {
 			const wrap_rows_paginator = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'content_data paginator display_none'

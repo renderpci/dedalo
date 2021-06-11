@@ -389,9 +389,8 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// self pagination update
 		self.rqo.sqo.offset 	= last_offset
 
-
-	self.data.pagination.offset	= self.rqo.sqo.offset
-	self.data.pagination.total	= self.total// sync pagination info
+		self.data.pagination.offset	= self.rqo.sqo.offset
+		self.data.pagination.total	= self.total// sync pagination info
 
 	// // paginator object update
 		self.paginator.offset 	= self.rqo.sqo.offset
