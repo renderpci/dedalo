@@ -91,7 +91,7 @@ section_record.prototype.init = async function(options) {
 	self.datum				= options.datum
 	self.context			= options.context
 	// self.data			= options.data
-	// self.paginated_key	= options.paginated_key
+	self.paginated_key	= options.paginated_key
 
 	self.events_tokens		= []
 	self.ar_instances		= []

@@ -102,6 +102,7 @@ paginator.prototype.build = async function(){
 	const limit		= self.get_limit()
 	const offset	= self.get_offset()
 
+
 	// pages fix vars
 		self.limit				= limit
 		self.total_pages		= Math.ceil(total / limit)
