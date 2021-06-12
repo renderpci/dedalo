@@ -196,7 +196,7 @@ class component_relation_common extends component_common {
 				foreach ($this->dato_full as $locator) {
 					if ($translatable!=='si') {
 						$this->dato[] = $locator;
-					}else if($locator->lang === $this->lang){
+					}else if(isset($locator->lang) && $locator->lang===$this->lang){
 						$this->dato[] = $locator;
 					}
 				}
