@@ -490,7 +490,6 @@ const get_buttons = (self) => {
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		buttons_container.appendChild(fragment)
-			console.log("buttons_container:",buttons_container);
 
 
 	return buttons_container
