@@ -174,7 +174,7 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 			}
 		}
-
+	
 	// load data if not yet received as an option
 		if (autoload===true) {
 			
@@ -190,7 +190,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
-					console.log("api_response:",api_response);
+					console.log("portal api_response:",api_response);
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -208,7 +208,7 @@ component_portal.prototype.build = async function(autoload=false){
 				self.datum.context = api_response.result.context				
 		}//end if (autoload===true)
 		
-
+	
 	// pagination vars only in edit mode
 		if (self.mode==="edit") {
 
@@ -216,21 +216,24 @@ component_portal.prototype.build = async function(autoload=false){
 			// pagination. update element pagination vars when are used
 				if (self.data.pagination && !self.total) {
 					// console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++ self.data.pagination:",self.data.pagination);
-					self.total	= self.data.pagination.total
+					self.total			= self.data.pagination.total
 					self.rqo.sqo.offset	= self.data.pagination.offset
 					// set value
-					current_data_manager.set_local_db_data(self.rqo, 'rqo')
+					current_data_manager.set_local_db_data(self.rqo, 'rqo')					
 				}
 
 			// paginator
 				if (!self.paginator) {
+
 					// create new
 					const current_paginator = new paginator()
 					current_paginator.init({
 						caller : self
 					})
 					await current_paginator.build()
+					// fix paginator to current instance
 					self.paginator = current_paginator
+						console.log("self.paginator:",self.paginator);
 
 					self.events_tokens.push(
 						event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
@@ -347,8 +350,8 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	const self = this
 
-		console.log("self.data.pagination:",self.data.pagination);
-		console.log("self.rqo.sqo.:",self.rqo.sqo);
+	// console.log("self.data.pagination:",self.data.pagination);
+	// console.log("self.rqo.sqo.:",self.rqo.sqo);
 
 	// update self.data.pagination
 		switch(action) {
@@ -387,19 +390,21 @@ component_portal.prototype.update_pagination_values = function(action) {
 		})()
 
 	// self pagination update
-		self.rqo.sqo.offset 	= last_offset
+		self.rqo.sqo.offset 		= last_offset
 
-		self.data.pagination.offset	= self.rqo.sqo.offset
+		self.data.pagination.offset	= last_offset
 		self.data.pagination.total	= self.total// sync pagination info
 
 	// // paginator object update
 		self.paginator.offset 	= self.rqo.sqo.offset
 		self.paginator.total 	= self.total
-	// console.log("update_pagination_values self.pagination:",self.pagination);
+
+	// paginator force to paginate (bild and render content again)
+		self.paginator.paginate(last_offset)
 
 	// set value
-	const current_data_manager	= new data_manager()
-	current_data_manager.set_local_db_data(self.rqo, 'rqo')
+		const current_data_manager	= new data_manager()
+		current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
 	return true
 };//end update_pagination_values
