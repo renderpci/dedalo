@@ -2274,7 +2274,7 @@ abstract class common {
 			$section_id		= $options->section_id;
 			
 		// pagination defaults
-			$limit			= 10;
+			$limit			= $mode==='edit' ? 1 : 10;
 			$offset			= 0;
 
 		// debug
