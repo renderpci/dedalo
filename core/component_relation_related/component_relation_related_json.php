@@ -70,11 +70,9 @@
 					$pagination->offset	= $offset;
 				$item->pagination = $pagination;
 
-
 			// subdata.
 				$ar_subdata = $this->get_ar_subdata($value);
 
-					dump($value, ' value +----------------------+ '.to_string());
 			// subdata add
 				if ($modo==='list') {
 					foreach ($ar_subdata as $current_data) {
