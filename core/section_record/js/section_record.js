@@ -390,18 +390,18 @@ section_record.prototype.get_component_relation_data = function(component, secti
 
 
 
-// /**
-// * GET_COMPONENT_INFO
-// * @return object component_data
-// */
-// section_record.prototype.get_component_info = function(component_tipo){
+/**
+* GET_COMPONENT_INFO
+* @return object component_data
+*/
+section_record.prototype.get_component_info = function(){
 
-// 	const self = this
+	const self = this
 
-// 	const component_info = self.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
+	const component_info = self.datum.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
 
-// 	return component_info
-// };//end get_component_info
+	return component_info
+};//end get_component_info
 
 
 

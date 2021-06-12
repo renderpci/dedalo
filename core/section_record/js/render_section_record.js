@@ -173,7 +173,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	// regular columns
 		let n_colums					= 0
-		let n_relation_columns			= 0
+		// let n_relation_columns		= 0
 		const ar_grid_columns			= [] // remember add id column
 		const components_with_relations	= get_components_with_subcolumns()
 
@@ -252,17 +252,17 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 
 	// component_info
-		// const component_info = self.get_component_info()
-		// if (component_info){
-		// 	const info_value = component_info.value.join('')
-		// 	const info = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name		: 'info',
-		// 		inner_html		: info_value
-		// 	})
-		// 	//wrapper.appendChild(info)
-		// 	fragment.appendChild(info)
-		// }
+		const component_info = self.get_component_info()
+		if (component_info){
+			const info_value = component_info.value.join('')
+			const info = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info',
+				inner_html		: info_value
+			})
+			//wrapper.appendChild(info)
+			fragment.appendChild(info)
+		}
 
 	// wrapper filling
 		wrapper.appendChild(fragment)
@@ -489,30 +489,30 @@ const build_id_column = function(self) {
 * RECURSIVE_RELATION_COLUMNS
 * Updates var 'ar_relations_columns' recursively
 */
-const recursive_relation_columns = function(current_instance, datum) {
+// const recursive_relation_columns = function(current_instance, datum) {
 
-	let n_relation_columns		= 0
-	const component_childrens	= datum.context.filter(instance => instance.parent===current_instance.tipo)
+// 	let n_relation_columns		= 0
+// 	const component_childrens	= datum.context.filter(instance => instance.parent===current_instance.tipo)
 
-	if(component_childrens.length>0) {
+// 	if(component_childrens.length>0) {
 
-		const components_with_relations = get_components_with_subcolumns()
+// 		const components_with_relations = get_components_with_subcolumns()
 
-		component_childrens.forEach(function(element){
+// 		component_childrens.forEach(function(element){
 
-			if (components_with_relations.indexOf(element.model)!==-1) {
+// 			if (components_with_relations.indexOf(element.model)!==-1) {
 
-				n_relation_columns += recursive_relation_columns(element, datum)
-			}else{
-				n_relation_columns++
-			}
-		})
-	}else{
-		n_relation_columns++
-	}
+// 				n_relation_columns += recursive_relation_columns(element, datum)
+// 			}else{
+// 				n_relation_columns++
+// 			}
+// 		})
+// 	}else{
+// 		n_relation_columns++
+// 	}
 
-	return n_relation_columns
-};//end recursive_relation_columns
+// 	return n_relation_columns
+// };//end recursive_relation_columns
 
 
 

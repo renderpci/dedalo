@@ -943,9 +943,9 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 
 	//value_with_parents
-	const value_with_parents = sqo_config.value_with_parents
-		? sqo_config.value_with_parents
-		: false
+	// const value_with_parents = sqo_config.value_with_parents
+	// 	? sqo_config.value_with_parents
+	// 	: false
 
 	//divisor
 	const divisor = sqo_config.divisor
@@ -969,6 +969,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		// get the sub elements with the ddo_map, the method is recursive,
 		// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
 		const columns = get_ar_inverted_paths(ddo_map)
+	
 
 		//build the rqo
 		const rqo = {
@@ -977,13 +978,14 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			source		: source,
 			show		: {
 				ddo_map				: ddo_map,
-				value_with_parents	: value_with_parents,
+				// value_with_parents	: value_with_parents,
 				divisor				: divisor,
 				columns 			: columns
 			},
 			sqo			: sqo,
 			sqo_options	: sqo_options
 		}
+
 
 	return rqo
 }//end build_rqo_search
