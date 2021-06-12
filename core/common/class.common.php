@@ -1992,6 +1992,14 @@ abstract class common {
 								$get_json_options->get_context 	= false;
 								$get_json_options->get_data 	= true;
 							$element_json = $current_component->get_json($get_json_options);
+
+						//dd_info, additional information to the component, like parents
+							$value_with_parents = $dd_object->value_with_parents ?? false;
+							if ($value_with_parents===true) {
+								$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
+								$ar_subdata[] = $dd_info;
+							}
+
 					
 						break;
 
@@ -2439,6 +2447,18 @@ abstract class common {
 
 				// choose
 					if (isset($item_request_config->choose)) {
+						$choose_ddo_map = $item_request_config->choose->ddo_map;
+
+						foreach ($choose_ddo_map as $current_ddo_map) {
+
+							$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+								? $ar_section_tipo
+								: $current_ddo_map->section_tipo;
+
+							$final_ddo_map[] = $current_ddo_map;
+						}
+
+						// $parsed_item->show->ddo_map = $choose_ddo_map;
 						// set item
 						$parsed_item->choose = $item_request_config->choose;
 					}
