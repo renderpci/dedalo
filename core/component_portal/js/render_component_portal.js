@@ -314,10 +314,10 @@ const get_content_data_edit = async function(self) {
 		fragment.appendChild(inputs_container)
 
 	// build references
-		// if(self.data.references && self.data.references.length > 0){
-			// const references_node = render_references(self.data.references)
-		// 	fragment.appendChild(references_node)
-		// }
+		if(self.data.references && self.data.references.length > 0){
+			const references_node = render_references(self.data.references)
+			fragment.appendChild(references_node)
+		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
