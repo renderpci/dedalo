@@ -211,7 +211,10 @@ class component_relation_related extends component_relation_common {
 		// get the request_config of the componet to get the show object, it will use to format the label of the reference.
 		$request_config = $this->get_request_query_object();
 		$show = $request_config->show;
-		$ar_componets_related = $show->ddo_map;
+		$ar_componets_related = array_map(function($ddo){
+			return $ddo->tipo;
+		},$show->ddo_map);
+
 		$divisor = (isset($show->divisor)) ?  $show->divisor : ' | ';
 
 		$references = array_map(function($locator) use($ar_componets_related, $divisor) {

@@ -698,13 +698,17 @@ class component_relation_common extends component_common {
 
 			$value = array();
 			foreach ($ar_components_related as $component_tipo) {
+
 				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+
 				$current_component = component_common::get_instance($modelo_name,
 																	$component_tipo,
 																	$locator->section_id,
 																	'edit',
 																	$lang,
 																	$locator->section_tipo);
+
+
 
 				$current_value = component_common::extract_component_value_fallback($current_component, $lang, true);
 					#dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
