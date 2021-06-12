@@ -10,12 +10,19 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 // utilities
-	function fn_random_string(length=128) {
-		var result				= '';
-		var characters			= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789àü\'ñç';
-		var charactersLength	= characters.length;
-		for ( var i = 0; i < length; i++ ) {
+	function fn_random_string(length=128) {		
+
+		let result = '';
+
+		const names = ['El raspa','Isis','Monstruo','Osi','Mini','Pitu','Ojitos','Turbina','Susto']
+		const randomElement = names[Math.floor(Math.random() * names.length)];
+		result += randomElement + ' - '
+
+		const characters		= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789àü\'ñç';
+		const charactersLength	= characters.length;
+		for ( let i = 0; i < length; i++ ) {
 		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
+		   if (i>2) { break }		  
 		}
 		return result;
 	}
@@ -44,6 +51,21 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				// value.paginated_key 	= paginated_key
 			// }
 			value.from_component_tipo 	= from_component_tipo // "test144"
+		
+		return value
+	}
+	function fn_custom_locator() {
+		const section_tipo			= arguments[0][0]
+		const from_component_tipo	= arguments[0][1]
+		const paginated_key			= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
+		const section_id			= typeof arguments[0][3]!=="undefined" ? arguments[0][3] : false
+
+		const value = {
+			type				: "dd151",
+			section_id			: (section_id).toString(),
+			section_tipo		: section_tipo, // "dd501"
+			from_component_tipo	: from_component_tipo // "test144"
+		}
 		
 		return value
 	}
@@ -151,18 +173,19 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		})('component_portal', 'test80', section_tipo, section_id, mode, lang, fn_random_locator, ['test38', 'test80', 0]) )
 
 	// component_portal v6 toponymy A
-		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
-			return {
-				model				: model,
-				tipo				: tipo,
-				section_tipo		: section_tipo,
-				section_id			: section_id,
-				mode				: mode,
-				lang				: lang,
-				new_value			: new_value,
-				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
-			}
-		})('component_portal', 'test204', section_tipo, section_id, mode, lang, fn_random_locator, ['es1', 'test204', 0]) )
+		// options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+		// 	return {
+		// 		model				: model,
+		// 		tipo				: tipo,
+		// 		section_tipo		: section_tipo,
+		// 		section_id			: section_id,
+		// 		mode				: mode,
+		// 		lang				: lang,
+		// 		new_value			: new_value,
+		// 		new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+		// 	}
+		// })('component_portal', 'test204', section_tipo, section_id, mode, lang, fn_custom_locator, ['es1', 'test204', 0, 1]) )
+
 	
 	// des
 		// options.push( (function(model, tipo){

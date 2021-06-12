@@ -54,7 +54,7 @@ export const component_select = function(){
 	component_select.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_select.prototype.update_datum			= component_common.prototype.update_datum
 	component_select.prototype.change_value			= component_common.prototype.change_value
-	component_select.prototype.build_rqo		= common.prototype.build_rqo
+	component_select.prototype.build_rqo			= common.prototype.build_rqo
 	// component_select.prototype.load_data			= component_common.prototype.load_data
 	// component_select.prototype.get_value			= component_common.prototype.get_value
 	// component_select.prototype.set_value			= component_common.prototype.set_value
@@ -68,3 +68,5 @@ export const component_select = function(){
 	component_select.prototype.tm					= render_component_select.prototype.edit
 	component_select.prototype.search				= render_component_select.prototype.search
 	component_select.prototype.change_mode			= component_common.prototype.change_mode
+
+
