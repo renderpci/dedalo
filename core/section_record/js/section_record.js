@@ -398,7 +398,7 @@ section_record.prototype.get_component_info = function(){
 
 	const self = this
 
-	const component_info = self.datum.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
+	const component_info = self.datum.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id && item.section_tipo === self.section_tipo)
 
 	return component_info
 };//end get_component_info
