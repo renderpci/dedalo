@@ -2160,8 +2160,6 @@ abstract class common {
 		}
 
 
-
-
 				// $records_mode	= $this->get_records_mode();
 				$mode			= $this->get_modo();
 				$tipo			= $this->get_tipo();
@@ -2346,20 +2344,23 @@ abstract class common {
 					$parsed_item->api_engine = isset($item_request_config->api_engine)
 						? $item_request_config->api_engine
 						: 'dedalo';
+
+				// SQO
+					$parsed_item->sqo = $item_request_config->sqo ?? new stdClass();
 					
 				// section_tipo. get the ar_sections as ddo
-					if (isset($item_request_config->sqo->section_tipo)){
-						$ar_section_tipo = component_relation_common::get_request_config_section_tipo($item_request_config->sqo->section_tipo, $section_tipo, $section_id);						
-						$parsed_item->sqo = $parsed_item->sqo ?? new stdClass();
-						$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
-							$ddo = new dd_object();
-								$ddo->set_tipo($section_tipo);
-								$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
-							return $ddo;
-						}, $ar_section_tipo);
-						// $parsed_item->sqo = $parsed_item->sqo ?? new stdClass();
-						// $parsed_item->sqo->section_tipo = $ar_section_tipo;
+					if (isset($parsed_item->sqo->section_tipo)){
+						$ar_section_tipo = component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id);
+					}else{
+						$ar_section_tipo = [$section_tipo];
 					}
+
+					$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
+						$ddo = new dd_object();
+							$ddo->set_tipo($section_tipo);
+							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+						return $ddo;
+					}, $ar_section_tipo);
 
 				// filter_by_list. get the filter_by_list (to set the prefilter selector)
 					if (isset($item_request_config->sqo->filter_by_list)) {
@@ -2389,6 +2390,7 @@ abstract class common {
 							// 	return $ddo;
 							// }, $current_ddo_map);
 							$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+
 							$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
 								? $ar_section_tipo
 								: $current_ddo_map->section_tipo;
