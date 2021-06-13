@@ -856,7 +856,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			: ( sqo_config.section_tipo)
 					? sqo_config.section_tipo.map(el=>el.tipo)
 					: [self.section_tipo]
-		
+
 
 	// limit and offset
 	// check if limit and offset exist in choose, if not get from search.sqo_config, if not, get from show.sqo_config else fixed value

@@ -84,27 +84,29 @@ tool_common.prototype.build = async function(autoload=false) {
 					return false
 				}
 
-			// dd_request. Create the basic dd_request
-				const dd_request = {show: []}
-
-				// tool source for component json that stores full tool config
-				const source = {
-					typo			: "source",
-					action			: 'get_data',
-					model 			: 'component_json',
-					tipo 			: 'dd1353',
-					section_tipo	: self.tool_section_tipo,
-					section_id		: self.tool_section_id,
-					mode 			: 'edit',
-					lang 			: 'lg-nolan'
+			// rqo. Create the basic rqo
+				const rqo = {
+					action			: 'read',
+					// tool source for component json that stores full tool config
+					source : {
+						action			: 'get_data',
+						model 			: 'component_json',
+						tipo 			: 'dd1353',
+						section_tipo	: self.tool_section_tipo,
+						section_id		: self.tool_section_id,
+						mode 			: 'edit',
+						lang 			: 'lg-nolan'
+					}
+				// rqo.push(source)
 				}
-				dd_request.show.push(source)
+
 
 			// load data. Load section data from db of the current tool.
 			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
 			// The tool info was generated when it was imported / registered by admin
 				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.read(dd_request.show)
+				const api_response			= await current_data_manager.request({body:rqo})
+					console.log("api_response:",api_response);
 				const data					= api_response.result.data
 
 			// config set
