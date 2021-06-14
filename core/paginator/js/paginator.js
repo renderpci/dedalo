@@ -218,8 +218,7 @@ paginator.prototype.paginate = async function(offset) {
 		event_manager.publish('paginator_goto_'+self.id, offset)
 
 	// paginator content data update
-		const build  = await self.build()
-		const render = await self.render({render_level : 'content'})
+		self.refresh()
 
 
 	return true
