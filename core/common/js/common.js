@@ -785,8 +785,8 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 			? sqo.limit
 			: (sqo_config.limit)
 				? sqo_config.limit
-				: self.mode === 'edit'
-					? 1
+				: self.mode==='edit'
+					? (self.context.model==='section' ? 1 : 10)
 					: 10
 
 		sqo.offset = sqo.offset

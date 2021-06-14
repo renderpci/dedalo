@@ -354,8 +354,6 @@ abstract class component_common extends common {
 				$this->set_dato_default();
 			}
 
-		
-
 		// pagination
 			$this->pagination = new stdClass();
 				$this->pagination->offset	= 0; // default
@@ -363,10 +361,16 @@ abstract class component_common extends common {
 				$this->pagination->limit	= (function(){
 					// structure properties
 						$properties = $this->get_properties();
-						if (isset($properties->source->request_config) && isset($properties->source->request_config[0])) {
+						if ( isset($properties->source->request_config) ) {
+
+							$found = array_find($properties->source->request_config, function($el){
+								return $el->api_engine==='dedalo';
+							});
+							$rqo = $found ?? $properties->source->request_config[0];
+
 							// show
-							if (isset($properties->source->request_config[0]->show) && isset($properties->source->request_config[0]->show->sqo_config->limit)) {
-								return (int)$properties->source->request_config[0]->show->sqo_config->limit;
+							if (isset($rqo->show) && isset($rqo->show->sqo_config->limit)) {
+								return (int)$rqo->show->sqo_config->limit;
 							}
 						}
 					// default

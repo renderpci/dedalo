@@ -399,13 +399,14 @@ component_portal.prototype.update_pagination_values = function(action) {
 		self.paginator.offset	= self.rqo.sqo.offset
 		self.paginator.total	= self.total
 
-	// paginator force to paginate (bild and render content again)
-		if (action==='add') {
-			self.paginator.paginate(last_offset)
-		}
+	// paginator content data update (after self update to avoid artifacts (!))
+		event_manager.subscribe('render_'+self.id, refresh_paginator)
+		function refresh_paginator(node) {			
+			self.paginator.refresh()
+		}		
 
 	// set value
-		const current_data_manager	= new data_manager()
+		const current_data_manager = new data_manager()
 		current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
 	return true

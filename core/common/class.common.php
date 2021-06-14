@@ -2272,10 +2272,6 @@ abstract class common {
 			$section_tipo	= $options->section_tipo;
 			$mode			= $options->mode;
 			$section_id		= $options->section_id;
-			
-		// pagination defaults
-			$limit			= $mode==='edit' ? 1 : 10;
-			$offset			= 0;
 
 		// debug
 			// if (to_string($section_tipo)==='self') {
@@ -2292,6 +2288,14 @@ abstract class common {
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$properties		= $RecordObj_dd->get_properties();
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+		// pagination defaults. Note that limit defaults are set on element contruction based on properties
+			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;
+			$element = $model==='section'
+				? section::get_instance(null, $tipo, $mode, true)
+				: component_common::get_instance($model, $tipo, null, $mode, DEDALO_DATA_LANG, $section_tipo);
+			$limit	= $element->pagination->limit;
+			$offset	= 0;
 
 		$ar_request_query_objects = [];
 		if(isset($properties->source->request_config) || $model==='component_autocomplete_hi'){
