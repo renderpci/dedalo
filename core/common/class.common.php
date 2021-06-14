@@ -333,7 +333,7 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
 			}
-			throw new Exception("Error Processing Request. Not use component tipo ($tipo) to calculate matrix_table. Use always section_tipo", 1);
+			throw new Exception("Error Processing Request. Don't use non section tipo ($tipo - $modelo_name) to calculate matrix_table. Use always section_tipo", 1);
 
 			/*
 			# COMPONENT CASE
@@ -1753,7 +1753,7 @@ abstract class common {
 		foreach ($request_config_dedalo as $request_config_item) {
 
 			if(empty($request_config_item->show->ddo_map)) {
-				debug_log(__METHOD__." Ignoed empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
+				debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
 				continue;
 			}
 
@@ -2290,13 +2290,22 @@ abstract class common {
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// pagination defaults. Note that limit defaults are set on element contruction based on properties
-			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;
-			$element = $model==='section'
-				? section::get_instance(null, $tipo, $mode, true)
-				: (strpos($model, 'area')===0
-					? area_common::get_instance($model, $tipo, $mode)
-					: component_common::get_instance($model, $tipo, null, $mode, DEDALO_DATA_LANG, $section_tipo));
-			$limit	= $element->pagination->limit;
+			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;			
+			$limit = (function() use($model, $tipo, $section_tipo, $mode){
+				switch (true) {
+					case $model==='section':
+						$section = section::get_instance(null, $tipo, $mode, true);
+						return $section->pagination->limit;
+						break;					
+					case strpos($model, 'component_')===0:
+						$component = component_common::get_instance($model, $tipo, null, $mode, DEDALO_DATA_LANG, $section_tipo);
+						return $component->pagination->limit;
+						break;
+					default:
+						break;
+				}
+				return 10;
+			})();
 			$offset	= 0;
 
 		$ar_request_query_objects = [];
