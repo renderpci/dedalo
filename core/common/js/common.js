@@ -756,10 +756,9 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 		}
 
 	// build new one with source of the instance caller (self)
-		const source = create_source(self, action);
+		const source = create_source(self, action)
 
-	// SQO
-	// set the sqo_config into a checked variable
+	// sqo. Set the sqo_config into a checked variable
 		const sqo_config = rqo_config.show && rqo_config.show.sqo_config
 			? rqo_config.show.sqo_config
 			: {}
