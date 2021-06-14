@@ -153,6 +153,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
+			console.log("self.rqo_config:",self.rqo_config);
 
 	const current_data_manager = new data_manager()
 
@@ -388,14 +389,16 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	// paginator content data update (after self update to avoid artifacts (!))
 		event_manager.subscribe('render_'+self.id, refresh_paginator)
-		function refresh_paginator(node) {			
+		function refresh_paginator(node) {
+			event_manager.unsubscribe('render_'+self.id)
 			self.paginator.refresh()
-		}		
+		}
 
 	// set value
 		const current_data_manager = new data_manager()
 		current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
+	
 	return true
 };//end update_pagination_values
 
