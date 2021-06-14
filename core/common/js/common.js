@@ -841,22 +841,19 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			? rqo_config.search.sqo_config.operator 
 			: '$or'
 		
-	// SQO
-	// set the sqo_config into a checked variable, get the sqo_config for search or show
+	// sqo. Set the sqo_config into a checked variable, get the sqo_config for search or show
 		const sqo_config = rqo_config.search && rqo_config.search.sqo_config
 			? rqo_config.search.sqo_config
 			: rqo_config.show && rqo_config.show.sqo_config
 				? rqo_config.show.sqo_config
 				: {}
 
-
 	// get the ar_sections
 		const ar_sections = rqo_config.sqo && rqo_config.sqo.section_tipo
 			? rqo_config.sqo.section_tipo.map(el=>el.tipo)
 			: ( sqo_config.section_tipo)
 					? sqo_config.section_tipo.map(el=>el.tipo)
-					: [self.section_tipo]
-		
+					: [self.section_tipo]		
 
 	// limit and offset
 	// check if limit and offset exist in choose, if not get from search.sqo_config, if not, get from show.sqo_config else fixed value
@@ -873,14 +870,14 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 				: 0
 
 	// new sqo_search
-	const sqo = {
-		section_tipo			: ar_sections,
-		filter					: {[operator]:[]},
-		offset					: offset,
-		limit					: limit,
-		full_count				: false,
-		allow_sub_select_by_id	: true
-	}
+		const sqo = {
+			section_tipo			: ar_sections,
+			filter					: {[operator]:[]},
+			offset					: offset,
+			limit					: limit,
+			full_count				: false,
+			allow_sub_select_by_id	: true
+		}
 
 
 	// FILTER_FREE 
@@ -898,7 +895,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 						section_tipo	: self.section_tipo,
 						component_tipo	: self.tipo,
 						model			: self.model,
-						mode 			: 'list'
+						mode			: 'list'
 					}]
 
 

@@ -376,8 +376,8 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// last_offset
 		const last_offset = (()=>{
 
-			const total = self.total
-			const limit = self.rqo.sqo.limit
+			const total	= self.total
+			const limit	= self.rqo.sqo.limit
 
 			if (total>0 && limit>0) {
 
