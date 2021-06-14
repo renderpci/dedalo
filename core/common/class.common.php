@@ -2293,7 +2293,9 @@ abstract class common {
 			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;
 			$element = $model==='section'
 				? section::get_instance(null, $tipo, $mode, true)
-				: component_common::get_instance($model, $tipo, null, $mode, DEDALO_DATA_LANG, $section_tipo);
+				: (strpos($model, 'area')===0
+					? area_common::get_instance($model, $tipo, $mode)
+					: component_common::get_instance($model, $tipo, null, $mode, DEDALO_DATA_LANG, $section_tipo));
 			$limit	= $element->pagination->limit;
 			$offset	= 0;
 
