@@ -247,7 +247,7 @@ abstract class TR {
 			$options->personEditable 	= false;
 			$options->noteEditable 		= false;
 			$options->struct_as_labels	= false;
-			$options->tag_url			= '../../component_text_area/tag.php';
+			$options->tag_url			= '../../component_text_area/tag';
 			$options->force_tr_tags_cdn	= false;
 			if (is_object($request_options)) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
@@ -263,8 +263,8 @@ abstract class TR {
 
 		// tag_URL. url path to php script thats render image		
 			$tag_url = (defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false)
-				? TR_TAGS_CDN . '?'
-				: $options->tag_url . '?';
+				? TR_TAGS_CDN . '/?id='
+				: $options->tag_url . '/?id='; //'?'
 
 		# INDEX IN
 			$pattern	= TR::get_mark_pattern('indexIn'); // id,state,label,data
@@ -645,10 +645,10 @@ abstract class TR {
 
 		switch ($type) {
 			case 'index':
-				$img = "<img id=\"$tag\" src=\"../../component_text_area/tag.php/$tag\" class=\"index mceNonEditable\" data-mce-src=\"../../component_text_area/tag.php/$tag\">";
+				$img = "<img id=\"$tag\" src=\"../../component_text_area/tag/?id=$tag\" class=\"index mceNonEditable\" data-mce-src=\"../../component_text_area/tag/?id=$tag\">";
 				break;
 			case 'tc':
-				$img = "<img id=\"$tag\" src=\"../../component_text_area/tag.php/$tag\" class=\"tc\" data-mce-src=\"../../component_text_area/tag.php/$tag\">";
+				$img = "<img id=\"$tag\" src=\"../../component_text_area/tag/?id=$tag\" class=\"tc\" data-mce-src=\"../../component_text_area/tag/?id=$tag\">";
 				break;
 			default:
 				trigger_error("Sorry. Type ($type) is not defined");

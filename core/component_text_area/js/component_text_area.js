@@ -8,7 +8,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_text_area, build_node_tag} from '../../component_text_area/js/render_component_text_area.js'
-	import {tr} from '../../component_text_area/js/tr.js'
+	import {tr} from '../../common/js/tr.js'
 	//import '../../../prosemirror/dist/prosemirror.js';
 
 
