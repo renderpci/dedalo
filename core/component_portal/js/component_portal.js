@@ -177,25 +177,13 @@ component_portal.prototype.build = async function(autoload=false){
 	
 	// load data if not yet received as an option
 		if (autoload===true) {
-			
-			// console.log("// portal request (autoload=true): self.dd_request.show:",self.dd_request.show);
-
-			// rqo build
-				// const rqo	= self.build_rqo('show', self.context.request_config, 'get_data')
-				// rqo.action	= 'read'
-				// const rqo	= {
-				// 	source : create_source(self, 'get_data'),
-				// 	action : 'read'
-				// }
 
 			// get context and data
-				const api_response = await current_data_manager.request({body:self.rqo})
-					console.log("portal api_response:",api_response);
+				const api_response = await current_data_manager.request({body:self.rqo})					
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					// console.log("portal data:", JSON.parse(JSON.stringify(self.data)) )
-					// console.log("portal build api_response.result.data:", JSON.parse(JSON.stringify(api_response.result.data)) )
+					console.log("portal api_response:",api_response);
 				}
 
 			// set context and data to current instance
@@ -289,7 +277,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 
 	return true
-};//end  component_portal.prototype.build
+};//end component_portal.prototype.build
 
 
 
@@ -311,7 +299,6 @@ component_portal.prototype.add_value = async function(value) {
 		// 	console.log("[add_value] Value already exists !");
 		// 	return false
 		// }
-
 
 	const key = self.total || 0
 
@@ -414,50 +401,50 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 
 
-// /**
-// * GET_PORTAL_ITEMS
-// * @return array of components context
-// */
-// component_portal.prototype.get_portal_items = function() {
+/**
+* GET_PORTAL_ITEMS
+* @return array of components context
+*/
+	// component_portal.prototype.get_portal_items = function() {
 
-// 	const self = this
+	// 	const self = this
 
-// 	const portal_items = []
+	// 	const portal_items = []
 
-// 	// ddo map
-// 		const rqo = self.context.request_config.find(item => item.typo==='rqo')
-// 		if (rqo) {
-// 			const ddo_map			= rqo.show.ddo_map
-// 			const ddo_map_length	= ddo_map.length
-// 			for (let j = 0; j < ddo_map_length; j++) {
+	// 	// ddo map
+	// 		const rqo = self.context.request_config.find(item => item.typo==='rqo')
+	// 		if (rqo) {
+	// 			const ddo_map			= rqo.show.ddo_map
+	// 			const ddo_map_length	= ddo_map.length
+	// 			for (let j = 0; j < ddo_map_length; j++) {
 
-// 				const component_tipo = ddo_map[j]
-// 					console.log("component_tipo:",component_tipo);
+	// 				const component_tipo = ddo_map[j]
+	// 					console.log("component_tipo:",component_tipo);
 
-// 				const item_context = self.datum.context.find(item => item.tipo===component_tipo && item.parent===self.tipo)
+	// 				const item_context = self.datum.context.find(item => item.tipo===component_tipo && item.parent===self.tipo)
 
-// 				portal_items.push(item_context)
-// 				// // iterate portal records
-// 				// for (let k = 0; k < portal_data.length; k++) {
-// 				// 	// if (!portal_data[k] || !portal_data[k].section_id) continue;
+	// 				portal_items.push(item_context)
+	// 				// // iterate portal records
+	// 				// for (let k = 0; k < portal_data.length; k++) {
+	// 				// 	// if (!portal_data[k] || !portal_data[k].section_id) continue;
 
-// 				// 	const portal_section_id		= portal_data[k].section_id
-// 				// 	const portal_section_tipo	= portal_data[k].section_tipo
-// 				// 		console.log("portal_section_id:",portal_section_id,portal_section_tipo);
+	// 				// 	const portal_section_id		= portal_data[k].section_id
+	// 				// 	const portal_section_tipo	= portal_data[k].section_tipo
+	// 				// 		console.log("portal_section_id:",portal_section_id,portal_section_tipo);
 
-// 				// 	break;
-// 				// }
+	// 				// 	break;
+	// 				// }
 
-// 				// await add_instance(current_context, section_id)
+	// 				// await add_instance(current_context, section_id)
 
-// 				// const current_data = portal_data.find(item => item.from_component_tipo===component_tipo)
-// 					// console.log("////// current_data "+component_tipo, current_data);
-// 			}
-// 		}
+	// 				// const current_data = portal_data.find(item => item.from_component_tipo===component_tipo)
+	// 					// console.log("////// current_data "+component_tipo, current_data);
+	// 			}
+	// 		}
 
 
-// 	return portal_items
-// }; //end get_portal_items
+	// 	return portal_items
+	// }; //end get_portal_items
 
 
 

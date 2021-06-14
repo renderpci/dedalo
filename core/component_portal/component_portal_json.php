@@ -55,8 +55,8 @@
 				// }else{
 
 					// Component structure context (tipo, relations, properties, etc.)
-						$current_context = $this->get_structure_context($permissions, $add_request_config=true);
-						$context[] = $current_context;
+						$current_context	= $this->get_structure_context($permissions, $add_request_config=true);
+						$context[]			= $current_context;
 
 						// dump(null, 'Time to context portal BEFORE SUBCONTEXT: '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 					// subcontext from element layout_map items (from_parent, parent_grouper)

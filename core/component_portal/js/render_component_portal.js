@@ -196,26 +196,7 @@ const add_events = function(self, wrapper) {
 		//	})
 		//)
 
-	// remove element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('remove_element_'+self.id, remove_element)
-		)
-		async function remove_element(key) {
-			//// Solucionar el paginado al borrar (!) :
-			//const paginated_key = ar_section_record.find((item, index) => {
-			//											if(item.paginated_key===removed_key){
-			//												return index
-			//											}
-			//											})
-			//ar_section_record.splice(paginated_key,1)
-			//
-			//// change all elements inside of content_data
-			//const new_content_data = await render_content_data(ar_section_record)
-			//// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
-			//wrapper.childNodes[1].replaceWith(new_content_data)
-		}
-
-	// click
+	// click delegated
 		wrapper.addEventListener("click", function(e){
 			// e.stopPropagation()
 
@@ -234,9 +215,9 @@ const add_events = function(self, wrapper) {
 						value	: null
 					})
 					const changed = self.change_value({
-						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.textContent,
-						refresh 	 : false
+						changed_data	: changed_data,
+						label			: e.target.previousElementSibling.textContent,
+						refresh			: false
 					})
 					changed.then(async (api_response)=>{
 
