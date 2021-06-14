@@ -19,8 +19,12 @@
 export const service_autocomplete = function() {
 
 
-	// sections_without_filter_fields . exclude this section to build dom filter fields
-	this.sections_without_filter_fields = ['zenon1']
+
+	/**
+	* VARS
+	*/
+		// sections_without_filter_fields . exclude this section to build dom filter fields
+		this.sections_without_filter_fields = ['zenon1']
 
 
 
@@ -56,7 +60,7 @@ export const service_autocomplete = function() {
 			// const engine			= self.request_config.find(el => el.api_engine==='dedalo')
 			self.search_engine		= (self.dd_request) ? self.dd_request.api_engine : 'dedalo';
 
-		// Vars
+		// vars
 			self.tipo			= self.instance_caller.tipo
 			self.properties		= self.instance_caller.context.properties || {}
 			self.list_name		= 's_'+new Date().getUTCMilliseconds()
@@ -109,22 +113,25 @@ export const service_autocomplete = function() {
 				parent			: searh_container
 			})
 
-		// build operator selector
-		const source_selector = self.render_source_selector()
-		options_container.appendChild(source_selector)
-		// sections select
-		const sections_selector = self.render_filters_selector()
-		options_container.appendChild(sections_selector)
+		// source selector (Dédalo, Zenon, etc.)
+			const source_selector = self.render_source_selector()
+			options_container.appendChild(source_selector)
+		
+		// sections selector
+			const sections_selector = self.render_filters_selector()
+			options_container.appendChild(sections_selector)
 
 		// components fields for inputs_list
-		const inputs_list = self.render_inputs_list()
-		options_container.appendChild(inputs_list)
-		// build operator selector
-		const operator_selector = self.render_operator_selector()
-		options_container.appendChild(operator_selector)
+			const inputs_list = self.render_inputs_list()
+			options_container.appendChild(inputs_list)
+		
+		// operator selector
+			const operator_selector = self.render_operator_selector()
+			options_container.appendChild(operator_selector)
+		
 		// search_input
-		const search_input = self.render_search_input()
-		searh_container.appendChild(search_input)
+			const search_input = self.render_search_input()
+			searh_container.appendChild(search_input)
 
 		// button options
 			const button_options = ui.create_dom_element({
@@ -145,9 +152,11 @@ export const service_autocomplete = function() {
 				parent			: searh_container
 			})
 
-		self.searh_container 	= searh_container
-		self.search_input 		= search_input
-		self.datalist 			= datalist
+		// fix main nodes
+			self.searh_container	= searh_container
+			self.search_input		= search_input
+			self.datalist			= datalist
+
 
 		return true
 	};// end render
@@ -163,38 +172,37 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// source elements
-			const ar_source 	= self.request_config
+			const ar_source = self.request_config
 
 		// switcher source
 			const source_selector = ui.create_dom_element({
-				element_type 	: "div",
-				class_name 	 	: "source_selector"
+				element_type	: "div",
+				class_name		: "source_selector"
 			})
 			// label
-				ui.create_dom_element({
-					element_type 	: "label",
-					class_name 		: "css_label label",
-					text_content 	: get_label["origen"] || "Source",
-					parent 			: source_selector
-				})
-
+			ui.create_dom_element({
+				element_type	: "label",
+				class_name		: "css_label label",
+				text_content	: get_label["origen"] || "Source",
+				parent			: source_selector
+			})
+			// select
 			const select = ui.create_dom_element({
-						element_type 	: "select",
-						class_name 		: "select_source_selector",
-						parent 			: source_selector
-					})
+				element_type	: "select",
+				class_name		: "select_source_selector",
+				parent			: source_selector
+			})
 
-			// others
+			// options
 				const ar_search_length = ar_source.length
 				for (let i = 0; i < ar_search_length; i++) {
 
-					const source		= ar_source[i]
-
-					const current_sqo	= source.sqo//find(item => item.typo === 'sqo')
-					const ar_section	= current_sqo.section_tipo
-					// const request_ddo 	= source.find(item => item.typo === 'request_ddo').value
+					const source			= ar_source[i]
+					const current_sqo		= source.sqo//find(item => item.typo === 'sqo')
+					const ar_section		= current_sqo.section_tipo
+					// const request_ddo	= source.find(item => item.typo === 'request_ddo').value
 					// const ddo_section	= request_ddo.find(item => item.type === 'section' && item.typo === 'ddo')
-					const search_engine	= source.api_engine//find(current_item=> current_item.typo==='search_engine').value
+					const search_engine		= source.api_engine//find(current_item=> current_item.typo==='search_engine').value
 
 					const swicher_source = ui.create_dom_element({
 						element_type	: "option",
@@ -207,8 +215,7 @@ export const service_autocomplete = function() {
 					if (search_engine===self.search_engine) {
 						swicher_source.setAttribute("selected", true)
 					}
-
-				}
+				}//end for (let i = 0; i < ar_search_length; i++)
 
 			// add listener to the select
 			select.addEventListener('change',function(e){
@@ -387,6 +394,7 @@ export const service_autocomplete = function() {
 
 		return filters_container
 	};//end render_filters_selector
+
 
 
 	/**
@@ -733,8 +741,7 @@ export const service_autocomplete = function() {
 					return current_element_data
 				}{
 					return get_last_ddo_data_value(new_path, current_value)
-				}
-				
+				}				
 			}
 		}
 
@@ -852,8 +859,8 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// Request term
-			const q	= search_value
-			const rqo = self.rebuild_search_query_object(q);
+			const q		= search_value
+			const rqo	= self.rebuild_search_query_object(q);
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -909,10 +916,10 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// search_query_object base stored in wrapper dataset
-			const original_rqo_search 	= await self.instance_caller.rqo_search
-			const rqo_search 			= JSON.parse(JSON.stringify(original_rqo_search))
-			self.rqo_search 			= rqo_search
-			self.sqo 					= rqo_search.sqo
+			const original_rqo_search	= await self.instance_caller.rqo_search
+			const rqo_search			= JSON.parse(JSON.stringify(original_rqo_search))
+			self.rqo_search				= rqo_search
+			self.sqo					= rqo_search.sqo
 			
 
 			const sqo_options = original_rqo_search.sqo_options
@@ -929,7 +936,7 @@ export const service_autocomplete = function() {
 
 			const fixed_filter		= sqo_options.fixed_filter //self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
 			const filter_free		= sqo_options.filter_free	//self.dd_request.find((current_item)=> current_item.typo==='filter_free')
-			const filter_by_list 	= self.ar_filter_by_list.map(item => item.value)
+			const filter_by_list	= self.ar_filter_by_list.map(item => item.value)
 			// rebuild the filter with the user imputs
 			if(filter_free){
 
@@ -1022,16 +1029,16 @@ export const service_autocomplete = function() {
 
 		const self = this
 
-		const dd_request 	= options.dd_request
-		const q 			= options.q
+		const dd_request	= options.dd_request
+		const q				= options.q
 
 		if(SHOW_DEBUG===true) {
 			//console.log("[zenon_engine] dd_request:",dd_request);
 			console.log("[zenon_engine] source:", dd_request);
 		}
-		const request_ddo 				= dd_request.find(item => item.typo === 'request_ddo').value
-		const ar_selected_fields		= request_ddo.filter(item => item.model === 'component_external');
-		const ar_fields					= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
+		const request_ddo			= dd_request.find(item => item.typo === 'request_ddo').value
+		const ar_selected_fields	= request_ddo.filter(item => item.model === 'component_external');
+		const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
 
 		// fields of Zenon "title" for zenon4
 			const fields		= ar_fields
@@ -1047,7 +1054,7 @@ export const service_autocomplete = function() {
 					//console.log("+++ dd_request 1:",dd_request);
 					//console.log("+++ source 1:",source);
 	  			}
-				const section_data 		= []
+				const section_data		= []
 				const components_data	= []
 				const records			= data.records || []
 				const records_length	= records.length
@@ -1099,8 +1106,8 @@ export const service_autocomplete = function() {
 
 					//locator
 					const locator = {
-						section_tipo		: section_tipo,
-						section_id			: record['id']
+						section_tipo	: section_tipo,
+						section_id		: record['id']
 					}
 					// record_data
 						const record_data = {
@@ -1121,7 +1128,7 @@ export const service_autocomplete = function() {
 				const section ={
 					section_tipo	: section_tipo,
 					tipo			: section_tipo,
-					value 			: section_data
+					value			: section_data
 				}
 
 				// mix the section and component_data
@@ -1130,8 +1137,8 @@ export const service_autocomplete = function() {
 				const response = {
 					msg		: "Ok. Request done",
 					result 	: {
-						context : ar_selected_fields,
-						data 	: data_formatted
+						context	: ar_selected_fields,
+						data	: data_formatted
 					}
 				}
 
