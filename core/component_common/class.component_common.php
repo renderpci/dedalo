@@ -364,7 +364,7 @@ abstract class component_common extends common {
 						if ( isset($properties->source->request_config) ) {
 
 							$found = array_find($properties->source->request_config, function($el){
-								return $el->api_engine==='dedalo';
+								return isset($el->api_engine) && $el->api_engine==='dedalo';
 							});
 							$rqo = $found ?? $properties->source->request_config[0];
 
