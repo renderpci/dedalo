@@ -391,14 +391,16 @@ component_portal.prototype.update_pagination_values = function(action) {
 		event_manager.subscribe('render_'+self.id, refresh_paginator)
 		function refresh_paginator(node) {
 			event_manager.unsubscribe('render_'+self.id)
-			self.paginator.refresh()
+			if (self.paginator) {
+				self.paginator.refresh()
+			}			
 		}
 
 	// set value
 		const current_data_manager = new data_manager()
 		current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
-	
+
 	return true
 };//end update_pagination_values
 
