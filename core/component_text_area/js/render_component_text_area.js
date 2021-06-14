@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
-	import {tr} from '../../component_text_area/js/tr.js'
+	import {tr} from '../../common/js/tr.js'
 
 
 /**
@@ -830,7 +830,7 @@ export const build_node_tag = function(data_tag, tag_id) {
 	const label	= data_tag.label
 	const data	= data_tag.data
 
-	const images_factory_url = "../component_text_area/tag.php"
+	const images_factory_url = "../component_text_area/tag/?id="
 
 	// Bracket_in is different for close tag
 	const bracket_in = (type.indexOf("Out")!==-1)
@@ -841,8 +841,8 @@ export const build_node_tag = function(data_tag, tag_id) {
 	const type_name = type.replace(/In|Out/, '');
 
 	const src = (type==='tc')
-		? images_factory_url + "/" + "[TC_" + tag_id + "_TC]"
-		: images_factory_url + "/" + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
+		? images_factory_url  + "[TC_" + tag_id + "_TC]"
+		: images_factory_url  + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
 
 	const id = (type==='tc')
 		? tag_id

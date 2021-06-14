@@ -6,18 +6,11 @@ date_default_timezone_set($myDateTimeZone);
 
 #
 # TEXT
-$text = false;
-
-
-# TEXT STRING . Get last directory in $PATH
-#if( !$text = substr(strrchr($_SERVER["REQUEST_URI"], ".php/"), 5) ) {
-#	die("Need text!");
-#}
-if (strpos($_SERVER["REQUEST_URI"],'[/index')!==false) {
-	$text = substr(strrchr($_SERVER["REQUEST_URI"], ".php/"), 5);
-}else if( !$text = pathinfo($_SERVER["REQUEST_URI"])['basename']){
+$text = $_GET['id'] ?? false;
+if (empty($text)) {
 	die("Need text!");
 }
+
 
 /**
 * tag_SAFE_XSS
@@ -48,10 +41,9 @@ $text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
 
 
-
 #
 # TAG TYPE
-$tag_image_dir = dirname(dirname(__FILE__)) . '/themes/default/tag_base';
+$tag_image_dir = dirname(dirname(dirname(__FILE__))) . '/themes/default/tag_base';
 $type = false;
 switch (true) {
 	case (strpos($text,'[TC_')!==false):
@@ -84,8 +76,10 @@ switch (true) {
 		break;
 	case (strpos($text,'[draw-')!==false):
 		$type = 'draw' ;
-		# mode [svg-n-1-data:***]
+		# mode [draw-n-1-data:***]
 		$state 		= substr($text,6,1);
+		
+		// echo "state-------------------".$state;
 		$last_minus = strrpos($text, '-');
 		$ar_parts 	= explode('-', $text);
 		$text 		= $ar_parts[2];
@@ -136,7 +130,7 @@ switch (true) {
 		$locator = json_decode($changed_text);
 
 		if(!$locator) return;
-		include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
+		include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 
 		$section_tipo 	= $locator->section_tipo;
 		$section_id 	= $locator->section_id;
@@ -273,7 +267,7 @@ imageSaveAlpha($im, true);
 #imagecolortransparent($im,$colorBG);
 
 # FONT FILES . Path to our font file
-$path_fonts = dirname(dirname(__FILE__)) . '/themes/default/fonts';
+$path_fonts = dirname(dirname(dirname(__FILE__))) . '/themes/default/fonts';
 $fontfile	= $path_fonts . $font_name;
 
 # OFFSET

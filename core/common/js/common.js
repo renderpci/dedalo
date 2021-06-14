@@ -534,7 +534,7 @@ common.prototype.get_columns = async function(){
 
 	const full_ddo_map = []
 
-	// // get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
+	// // get ddo_map from the rqo_config.show, self can be a section or component_portal, and both has rqo_config
 	const ddo_map = self.rqo_config.show.ddo_map
 
 	// get the sub elements with the ddo_map, the method is recursive,
