@@ -2529,6 +2529,7 @@ abstract class common {
 			// related_clean
 				$ar_related_clean 	 = [];
 				$target_section_tipo = $section_tipo;
+
 				foreach ((array)$ar_related as $key => $current_tipo) {
 					$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					if ($current_model==='section') {
@@ -2548,6 +2549,7 @@ abstract class common {
 				if (!isset($target_section_tipo)) {
 					$target_section_tipo = $section_tipo;
 				}
+
 
 			// sqo_config
 				$sqo_config = new stdClass();
