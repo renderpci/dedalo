@@ -451,7 +451,7 @@ class Zend_Io_Reader
      * @param string $value The binary data string.
      * @return integer
      */
-    private final function _fromInt32($value)
+    private function _fromInt32($value)
     {
         list(, $int) = unpack('l*', $value);
         return $int;
