@@ -69,7 +69,7 @@ class image {
 		if ($this->description_with_images===true) {			
 
 			$options = new stdClass();
-				$options->tag_url = $this->tag_url; //__CONTENT_BASE_URL__ . '/core/component_text_area/tag.php';
+				$options->tag_url = $this->tag_url; //__CONTENT_BASE_URL__ . '/core/component_text_area/tag/?id=';
 			$this->description_with_images = TR::addTagImgOnTheFly($description_raw, $options);
 		}
 		
