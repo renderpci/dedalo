@@ -67,7 +67,7 @@
 	// REQUEST_CONFIG (request configuration for Dédalo API or others API):
 		[
 			{
-				"search_engine" : "dedalo_engine",
+				"api_engine" : "dedalo",
 				"sqo" : {
 					"section_tipo" : [
 						{"source" : "hierarchy_types", "value": [2]},
