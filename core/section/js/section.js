@@ -277,16 +277,19 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// filter
-		// if (!self.filter && self.permissions>0) {
-		// 	const current_filter = new search()
-		// 	current_filter.init({
-		// 		caller : self
-		// 	})
-		// 	current_filter.build()
-		// 	// fix section filter
-		// 	self.filter = current_filter
-		// }
-		console.log("section build filter unactive (remember) ");
+		if (!self.filter && self.permissions>0) {
+			const current_filter = new search()
+			current_filter.init({
+				caller : self
+			})
+			current_filter.build()
+			.then(function(response){
+				current_filter.render()
+			})
+			// fix section filter
+			self.filter = current_filter
+		}
+		// console.log("section build filter unactive (remember) ");
 
 	// inspector
 		if (!self.inspector && self.permissions) {

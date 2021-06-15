@@ -6,6 +6,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {common} from '../../common/js/common.js'
 	import * as instances from '../../common/js/instances.js'
 	import {render_search,
 			toggle_fields,
@@ -45,11 +46,14 @@ export const search = function() {
 * extend component functions from component common
 */
 // prototypes assign
+	// render	
+	search.prototype.render					= common.prototype.render
+	search.prototype.list					= render_search.prototype.list
 	search.prototype.render_base			= render_search.prototype.render_base
 	search.prototype.render_components_list	= render_search.prototype.render_components_list
 	search.prototype.render_search_buttons	= render_search.prototype.render_search_buttons
 	search.prototype.render_filter			= render_search.prototype.render_filter
-	search.prototype.build_search_group		= render_search.prototype.build_search_group
+	search.prototype.render_search_group	= render_search.prototype.render_search_group
 	search.prototype.build_search_component	= render_search.prototype.build_search_component
 	// drag
 	search.prototype.on_dragstart			= on_dragstart
@@ -82,8 +86,8 @@ search.prototype.init = async function(options) {
 		self.parent_node			= null
 		self.components_list		= {}
 		self.ar_instances			= []
-		self.source					= self.caller.dd_request.show.find(el => el.typo==='source')
-		self.sqo					= self.caller.dd_request.show.find(el => el.typo==='sqo')
+		self.source					= self.caller.rqo.source
+		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
 		self.limit					= self.sqo.limit || 10
 		self.search_layout_state	= null
@@ -102,6 +106,8 @@ search.prototype.init = async function(options) {
 		self.search_group_container				= undefined
 		self.search_container_selection_presets	= undefined
 		self.wrapper_sections_selector			= undefined
+
+		self.node = []
 
 
 	// events subscription
@@ -214,55 +220,55 @@ search.prototype.build = async function(){
 * RENDER
 * @return promise resolve dom element filter_wrapper
 */
-search.prototype.render = async function() {
+	// search.prototype.render = async function() {
 
-	const self = this
+	// 	const self = this
 
-	// render base html bounds
-		const filter_wrapper = await self.render_base()
+	// 	// render base html bounds
+	// 		const filter_wrapper = await self.render_base()
 
-	// render section component list [left]
-		await self.render_components_list({
-			section_tipo	: self.target_section_tipo,
-			target_div		: self.search_container_selector,
-			path			: []
-		})
+	// 	// render section component list [left]
+	// 		await self.render_components_list({
+	// 			section_tipo	: self.target_section_tipo,
+	// 			target_div		: self.search_container_selector,
+	// 			path			: []
+	// 		})
 
-	// render components from temp preset [center]
-		await self.render_filter({
-			editing_preset		: self.json_filter,
-			allow_duplicates	: true
-		})
+	// 	// render components from temp preset [center]
+	// 		await self.render_filter({
+	// 			editing_preset		: self.json_filter,
+	// 			allow_duplicates	: true
+	// 		})
 
-	// render buttons
-		await self.render_search_buttons()
+	// 	// render buttons
+	// 		await self.render_search_buttons()
 
-	// search_panel cookie state track
-		if(self.cookie_track("search_panel")===true) {
-			// Open search panel
-			toggle_search_panel(self) // toggle to open from defult state close
-		}
-	// fields_panel cookie state track
-		if(self.cookie_track("fields_panel")===true) {
-			// Open search panel
-			toggle_fields(self) // toggle to open from defult state close
-		}
-	// presets_panel cookie state track
-		if(self.cookie_track("presets_panel")===true) {
-			// Open search panel
-			toggle_presets(self) // toggle to open from defult state close
-		}
+	// 	// search_panel cookie state track
+	// 		if(self.cookie_track("search_panel")===true) {
+	// 			// Open search panel
+	// 			toggle_search_panel(self) // toggle to open from defult state close
+	// 		}
+	// 	// fields_panel cookie state track
+	// 		if(self.cookie_track("fields_panel")===true) {
+	// 			// Open search panel
+	// 			toggle_fields(self) // toggle to open from defult state close
+	// 		}
+	// 	// presets_panel cookie state track
+	// 		if(self.cookie_track("presets_panel")===true) {
+	// 			// Open search panel
+	// 			toggle_presets(self) // toggle to open from defult state close
+	// 		}
 
-	// Set initial state as unchanged
-	//self.update_state({state:'unchanged'})
-
-
-	// status update
-		self.status = 'rendered'
+	// 	// Set initial state as unchanged
+	// 	//self.update_state({state:'unchanged'})
 
 
-	return filter_wrapper
-};//end render
+	// 	// status update
+	// 		self.status = 'rendered'
+
+
+	// 	return filter_wrapper
+	// };//end render
 
 
 
@@ -447,7 +453,7 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 				//console.log("key,ar_data:",key,ar_data);
 
 			// Build dom search_group
-				const current_search_group = await self.build_search_group( dom_element, {
+				const current_search_group = await self.render_search_group( dom_element, {
 					operator : key,
 					is_root	 : options.is_root ? options.is_root : false
 				})
@@ -859,7 +865,7 @@ this.get_search_json_object = function() {
 			document.activeElement.blur()
 
 		// section
-			const section 		= self.caller
+			const section 		= self.caller; 	console.log("section:",section);
 			const section_node 	= section.node[0]
 
 		// loading css add
@@ -880,8 +886,8 @@ this.get_search_json_object = function() {
 			// sqo.limit 	= self.limit
 
 		// pagination
-			section.pagination.total  = null
-			section.pagination.offset = 0
+			section.total			= null
+			section.rqo.sqo.offset	= 0
 
 		// section
 			const js_promise = section.refresh()
@@ -918,8 +924,8 @@ this.get_search_json_object = function() {
 			self.sqo.limit 	= self.limit
 
 		// pagination
-			section.pagination.total  = null
-			section.pagination.offset = 0
+			section.total			= null
+			section.rqo.sqo.offset	= 0
 
 		// section
 			const js_promise = section.refresh()
@@ -1056,17 +1062,17 @@ search.prototype.filter_is_empty = function(filter_obj) {
 * INIT_TIPOLOGY_SELECTOR
 * @return
 */
-// search.prototype.init_tipology_selector = function(options) {
+	// search.prototype.init_tipology_selector = function(options) {
 
-// 	const thesaurus_typology_selector = self.wrapper_sections_selector.querySelector(".thesaurus_typology_selector")
-// 	const selected_value 			  = read_cookie("selected_tipology") || thesaurus_typology_selector.value;
+	// 	const thesaurus_typology_selector = self.wrapper_sections_selector.querySelector(".thesaurus_typology_selector")
+	// 	const selected_value 			  = read_cookie("selected_tipology") || thesaurus_typology_selector.value;
 
-// 	// Force update selector with selected value
-// 		thesaurus_typology_selector.value = selected_value;
+	// 	// Force update selector with selected value
+	// 		thesaurus_typology_selector.value = selected_value;
 
-// 	// Build checkboxes
-// 		render_thesaurus_sections_checkboxes(selected_value, options.ar_data_string);
+	// 	// Build checkboxes
+	// 		render_thesaurus_sections_checkboxes(selected_value, options.ar_data_string);
 
 
-// 	return true;
-// };//end init_tipology_selector
+	// 	return true;
+	// };//end init_tipology_selector

@@ -21,6 +21,61 @@ export const render_search = function() {
 
 
 
+
+/**
+* LIST
+* Render whole search in list mode
+* @return DOM node wrapper
+*/
+render_search.prototype.list = async function() {
+
+	const self = this
+
+	// wrapepr base html bounds
+		const filter_wrapper = await self.render_base()
+
+	// components_list. render section component list [left]
+		await self.render_components_list({		
+			section_tipo	: self.target_section_tipo,
+			target_div		: self.search_container_selector,
+			path			: []
+		})
+
+	// filter. render components from temp preset [center]
+		await render_filter({
+			self				: self,
+			editing_preset		: self.json_filter,
+			allow_duplicates	: true
+		})
+
+	// render buttons
+		await self.render_search_buttons()
+
+	// search_panel cookie state track
+		if(self.cookie_track("search_panel")===true) {
+			// Open search panel
+			toggle_search_panel(self) // toggle to open from defult state close
+		}
+	// fields_panel cookie state track
+		if(self.cookie_track("fields_panel")===true) {
+			// Open search panel
+			toggle_fields(self) // toggle to open from defult state close
+		}
+	// presets_panel cookie state track
+		if(self.cookie_track("presets_panel")===true) {
+			// Open search panel
+			toggle_presets(self) // toggle to open from defult state close
+		}
+
+	// Set initial state as unchanged
+	//self.update_state({state:'unchanged'})
+
+
+	return filter_wrapper
+};//end list
+
+
+
 /**
 * RENDER_BASE
 * Render basic nodes
@@ -33,7 +88,6 @@ render_search.prototype.render_base = async function() {
 	const section_tipo = self.section_tipo
 
 	const fragment = new DocumentFragment()
-
 
 	// filter button . Show and hide all search elements
 		const filter_button = ui.create_dom_element({
@@ -183,9 +237,9 @@ render_search.prototype.render_components_list = async function(options) {
 
 	const self = this
 
-	const section_tipo 	= options.section_tipo
-	const target_div 	= options.target_div
-	const path 		 	= options.path
+	const section_tipo	= options.section_tipo
+	const target_div	= options.target_div
+	const path			= options.path
 
 	// load components from api
 		const ar_elements = await self.get_section_elements_context({
@@ -340,14 +394,13 @@ render_search.prototype.render_components_list = async function(options) {
 /**
 * RENDER_FILTER
 */
-render_search.prototype.render_filter = async function(options){
+const render_filter = async function(options){
 
-	const self = this
-
-	const editing_preset 			= options.editing_preset
-	const clean_q 					= options.clean_q || false
-	const allow_duplicates 			= options.allow_duplicates || false
-	const search_group_container 	= self.search_group_container
+	const self						= options.self
+	const editing_preset			= options.editing_preset
+	const clean_q					= options.clean_q || false
+	const allow_duplicates			= options.allow_duplicates || false
+	const search_group_container	= self.search_group_container
 
 	// Clean target_div
 		while (search_group_container.hasChildNodes()) {
@@ -355,7 +408,7 @@ render_search.prototype.render_filter = async function(options){
 		}
 
 	// Reset resolved
-		this.ar_resolved_elements = []
+		self.ar_resolved_elements = []
 
 	// Build global_group
 		self.build_dom_group(editing_preset, search_group_container, {
@@ -460,12 +513,13 @@ render_search.prototype.render_search_buttons = function(){
 
 
 /**
-* BUILD_SEARCH_GROUP
+* RENDER_SEARCH_GROUP
 * @return dom object
 */
-render_search.prototype.build_search_group = async function(parent_div, options) {
+render_search.prototype.render_search_group = async function(parent_div, options) {
 
 	const self = this
+
 	// Create defaults when no received options
 		if (typeof options==="undefined") {
 			options = {
@@ -543,7 +597,7 @@ render_search.prototype.build_search_group = async function(parent_div, options)
 		})
 		search_group_button_plus.addEventListener("click",function(e){
 			//self.add_search_group_to_dom(this, search_group)
-			self.build_search_group( search_group )
+			self.render_search_group( search_group )
 			// Set as changed
 			self.update_state({state:'changed'})
 		},false)
@@ -551,7 +605,7 @@ render_search.prototype.build_search_group = async function(parent_div, options)
 
 
 	return search_group
-};//end build_search_group
+};//end render_search_group
 
 
 
