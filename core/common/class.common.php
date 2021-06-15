@@ -1556,7 +1556,7 @@ abstract class common {
 				'label'			=> $full_ddo->label,
 				'tipo'			=> $full_ddo->tipo,
 				'section_tipo'	=> $full_ddo->section_tipo,
-				'model'			=> $full_ddo->called_model,
+				'model'			=> $full_ddo->model,
 				'parent'		=> $full_ddo->parent,
 				'lang'			=> $full_ddo->lang,
 				'mode'			=> $full_ddo->mode,
