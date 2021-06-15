@@ -598,13 +598,13 @@ class dd_core_api {
 		//////session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$user_id 		 	 = navigator::get_user_id();
-			$target_section_tipo = $json_data->target_section_tipo;
-
-			$editing_preset 	= search::get_preset($user_id, $target_section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
+			$user_id				= navigator::get_user_id();
+			$target_section_tipo	= $json_data->target_section_tipo;
+			
+			$editing_preset			= search::get_preset($user_id, $target_section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -612,8 +612,8 @@ class dd_core_api {
 					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 			}
 
-		$response->result 		= $editing_preset;
-		$response->msg 	  		= 'Ok. Request done';
+		$response->result	= $editing_preset;
+		$response->msg		= 'Ok. Request done';
 
 		return (object)$response;
 	}//end filter_get_editing_preset

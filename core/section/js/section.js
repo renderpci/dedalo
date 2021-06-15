@@ -163,19 +163,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
-					// console.log("api_response:",api_response);
 
-				// // set value
-				// 	current_data_manager.set_local_db_data(rqo, 'rqo')
-
-				// // get value
-				// const a = await current_data_manager.get_local_db_data(self.id, 'rqo')
-				// 	console.log("a:",a);
-
-				// // delete value
-				// 	const deleted = await current_data_manager.delete_local_db_data(self.id, 'rqo')
-				// 	console.log("deleted:",deleted);
-			
 			// set the result to the datum
 				self.datum = api_response.result
 
@@ -246,7 +234,6 @@ section.prototype.build = async function(autoload=false) {
 				: false
 		// fix initiator
 			self.initiator = initiator
-
 
 	// paginator
 		if (!self.paginator) {
