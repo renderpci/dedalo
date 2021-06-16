@@ -257,6 +257,11 @@ const get_buttons = (self) => {
 			ui.add_tools(self, fragment)
 		}
 
+		const button_info = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button full_screen',
+			parent 			: fragment
+		})
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		buttons_container.appendChild(fragment)
