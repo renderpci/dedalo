@@ -992,7 +992,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 				})
 
 			// Thesaurus mode case
-			if (self.modo==="thesaurus") {
+			if (self.mode==="thesaurus") {
 				const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
 					//wrapper_sections_selector.style.display = "block"
 					wrapper_sections_selector.classList.remove("hide")
@@ -1012,7 +1012,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 				})
 
 			// Thesaurus mode case
-			if (self.modo==="thesaurus") {
+			if (self.mode==="thesaurus") {
 				const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
 					//wrapper_sections_selector.style.display = "none"
 					wrapper_sections_selector.classList.add("hide")
