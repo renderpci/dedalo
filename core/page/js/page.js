@@ -105,8 +105,9 @@ page.prototype.init = async function(options) {
 				return new Promise(async function(resolve){
 
 					// basic vars
-						// Only source is mandatory but if sqo is received is placed in a new request_config 
+						// Only source is mandatory but if sqo is received, is placed in a new request_config 
 						// to allow sections and components manage properly the offset and limit
+						const caller_id			= user_navigation_options.caller_id || null
 						const source			= user_navigation_options.source
 						const sqo				= user_navigation_options.sqo || null
 						const request_config	= [{
@@ -114,7 +115,7 @@ page.prototype.init = async function(options) {
 							sqo			: sqo,
 						}]
 						source.request_config = request_config
-
+				
 					// check if new source of page element is actually valid for instantiation
 						const new_page_element_instance = await instantiate_page_element(self, source)
 						if (!new_page_element_instance) {
