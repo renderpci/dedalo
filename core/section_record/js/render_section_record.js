@@ -454,7 +454,8 @@ const build_id_column = function(self) {
 									filter			: null,
 									limit			: 1,
 									offset			: offset,
-									// full_count		: false
+									filter			: self.caller.rqo.sqo.filter || null
+									// full_count	: false
 								}
 							}							
 							event_manager.publish('user_navigation', user_navigation_rqo)
