@@ -763,14 +763,17 @@ class dd_core_api {
 			$tipo			= $ddo_source->tipo ?? null;
 			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 
+			// dump($_SESSION['dedalo']['config']['sqo'], '$_SESSION[dedalo][config][sqo] ++ '.to_string());
+
 		// sqo. search_query_object
-			$sqo_id	= implode('_', [$model,$section_tipo,$mode]);
+			$sqo_id	= implode('_', [$model,$section_tipo]);
 			$sqo	= !empty($rqo->sqo)
 				? $rqo->sqo
 				: (function() use($model, $tipo, $section_tipo, $section_id, $mode, $rqo, $sqo_id) {										
 					
 					if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 						$sqo = $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+						// dump($sqo, ' sqo from session +++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($sqo_id));
 					}else{
 						//get the limit from the show
 						if (isset($rqo->show) && isset($rqo->show->sqo_config->limit)) {

@@ -771,7 +771,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 					? sqo_config.section_tipo.map(el=>el.tipo)
 					: [self.section_tipo]
 
-
+	// sqo
 		const sqo = rqo_config.sqo
 			? JSON.parse(JSON.stringify(rqo_config.sqo))
 			: {}
