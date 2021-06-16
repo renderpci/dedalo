@@ -267,8 +267,7 @@ class AVObj extends MediaObj {
 
 		if(isset($this->header_data)) return $this->header_data;
 
-		# Zend atom lib
-		require_once(DEDALO_ROOT . '/lib/Zend/Media/Iso14496.php');
+		
 
 		$local_file		= $this->get_local_full_path();		#dump($local_file, ' local_file');
 		$quality 		= $this->get_quality();
@@ -279,120 +278,127 @@ class AVObj extends MediaObj {
 
 		$ar_data = array();
 
-		try {
-
-			# HEADER ATOM OBJ . Librería Zend para leer información de la cabecera del movie
-			$header				= new Zend_Media_Iso14496($local_file, array("base" => "moov"));		#dump($header, ' $header ');die("E");
-			if(!$header)		throw new Exception('Header Atom info unreadable');
+		$media_header = Ffmpeg::get_media_streams($local_file);
 
 
-			# ARRAY OF TRACKS
-			$ar_tracks			= $header->moov->getBoxesByIdentifier("trak");
+		//OLD WAY
+		# Zend atom lib
+		// require_once(DEDALO_ROOT . '/lib/Zend/Media/Iso14496.php');
+
+		// try {
+
+		// 	# HEADER ATOM OBJ . Librería Zend para leer información de la cabecera del movie
+		// 	$header				= new Zend_Media_Iso14496($local_file, array("base" => "moov"));		#dump($header, ' $header ');die("E");
+		// 	if(!$header)		throw new Exception('Header Atom info unreadable');
+
+
+		// 	# ARRAY OF TRACKS
+		// 	$ar_tracks			= $header->moov->getBoxesByIdentifier("trak");
 
 
 
-			# DEBUG MODE
-			if($debug_mode) {
+		// 	# DEBUG MODE
+		// 	if($debug_mode) {
 
-				#return $header->moov->trak->mdia->minf->stbl->stsd ;
-				return $ar_tracks[1]->mdia->minf->stbl->stsd ;
-			}
-
-
-			if(is_array($ar_tracks)) foreach($ar_tracks as $track) {
+		// 		#return $header->moov->trak->mdia->minf->stbl->stsd ;
+		// 		return $ar_tracks[1]->mdia->minf->stbl->stsd ;
+		// 	}
 
 
-				if($track->mdia->hdlr->handlerType == 'vide') {			# VIDEO TRACK
-
-					# MOVIE DURATION . Duración general en 'tics' o unidades internas
-					#$ar_data[$quality]['movie_duration']		= $header->moov->trak->mdia->mdhd->duration;
-					$ar_data[$quality]['movie_duration']		= $track->mdia->mdhd->duration;
-					if(!$ar_data[$quality]['movie_duration'])	throw new Exception('Error on read movie_duration');
-
-					# MOVIE TIMESCALE . Time scale general
-					$ar_data[$quality]['movie_timescale']		= $track->mdia->mdhd->timescale;		#$timescale = $header->moov->trak->mdia->mdhd->timescale;
-					if(!$ar_data[$quality]['movie_timescale'])	throw new Exception('Error on read movie_timescale');
-
-					# SAMPLE COUNT
-					#$ar_data[$quality]['sample_count']			= $header->moov->trak->mdia->minf->stbl->stts->timeToSampleTable[1]['sampleCount'];
-					#if(!$ar_data[$quality]['sample_count']) 	throw new Exception('Error on calculate sample_count');
-
-					# MOVIE SAMPLE DELTA
-					$ar_data[$quality]['sample_delta']			= $track->mdia->minf->stbl->stts->timeToSampleTable[1]['sampleDelta'];
-					if(!$ar_data[$quality]['sample_delta']) 	throw new Exception('Error on calculate sample_delta');
-
-					# MOVIE WIDHT . Ancho de la pista de video en píxels
-					$ar_data[$quality]['width']					= $track->tkhd->width;
-					if(!$ar_data[$quality]['width']) 			throw new Exception('Error on read width');
-
-					# MOVIE HEIGHT . Alto de la pista de video en píxels
-					$ar_data[$quality]['height']				= $track->tkhd->height;
-					if(!$ar_data[$quality]['height']) 			throw new Exception('Error on read height');
-
-					# MOVIE DURATION IN SECONDS . Duración del movie en segundos y con decimales
-					$ar_data[$quality]['duration_secs']			= round( ($ar_data[$quality]['movie_duration'] / $ar_data[$quality]['movie_timescale']) , 6);
-					if(!$ar_data[$quality]['duration_secs']) 	throw new Exception('Error on calculate duration_secs');
-
-					# VIDEO FPS . Fotogramas por segundo
-					$ar_data[$quality]['fps']					= round( ($ar_data[$quality]['movie_timescale'] / $ar_data[$quality]['sample_delta']) , 2);
-					if(!$ar_data[$quality]['fps']) 				throw new Exception('Error on calculate fps . from (movie_timescale / sample_delta) ');
+		// 	if(is_array($ar_tracks)) foreach($ar_tracks as $track) {
 
 
-				}else if($track->mdia->hdlr->handlerType == 'soun') {	# AUDIO TRACK
+		// 		if($track->mdia->hdlr->handlerType == 'vide') {			# VIDEO TRACK
 
-					# AUDIO SAMPLE RATE
-					$ar_data[$quality]['sample_rate']			= $track->mdia->minf->stbl->stsd->SampleDescriptionTable[12];
-					if(!$ar_data[$quality]['sample_rate'])		throw new Exception('Error on read sample_rate');
+		// 			# MOVIE DURATION . Duración general en 'tics' o unidades internas
+		// 			#$ar_data[$quality]['movie_duration']		= $header->moov->trak->mdia->mdhd->duration;
+		// 			$ar_data[$quality]['movie_duration']		= $track->mdia->mdhd->duration;
+		// 			if(!$ar_data[$quality]['movie_duration'])	throw new Exception('Error on read movie_duration');
 
-					# AUDIO CALIDAD BITS
-					$ar_data[$quality]['sample_size_bits']		= $track->mdia->minf->stbl->stsd->SampleDescriptionTable[9];
-					if(!$ar_data[$quality]['sample_size_bits'])	throw new Exception('Error on read sample_size_bits');
+		// 			# MOVIE TIMESCALE . Time scale general
+		// 			$ar_data[$quality]['movie_timescale']		= $track->mdia->mdhd->timescale;		#$timescale = $header->moov->trak->mdia->mdhd->timescale;
+		// 			if(!$ar_data[$quality]['movie_timescale'])	throw new Exception('Error on read movie_timescale');
 
-					# AUDIO CHANELS
-					$ar_data[$quality]['n_chanels']				= $track->mdia->minf->stbl->stsd->SampleDescriptionTable[8];
-					if(!$ar_data[$quality]['n_chanels'])		throw new Exception('Error on read n_chanels');
+		// 			# SAMPLE COUNT
+		// 			#$ar_data[$quality]['sample_count']			= $header->moov->trak->mdia->minf->stbl->stts->timeToSampleTable[1]['sampleCount'];
+		// 			#if(!$ar_data[$quality]['sample_count']) 	throw new Exception('Error on calculate sample_count');
 
-					# MOVIE DURATION . Duración general en 'tics' o unidades internas
-					if(!isset($ar_data[$quality]['movie_duration'])) {
-						$ar_data[$quality]['movie_duration']		= $track->mdia->mdhd->duration;
-						if(!$ar_data[$quality]['movie_duration'])	throw new Exception('Error on read movie_duration');
-					}
+		// 			# MOVIE SAMPLE DELTA
+		// 			$ar_data[$quality]['sample_delta']			= $track->mdia->minf->stbl->stts->timeToSampleTable[1]['sampleDelta'];
+		// 			if(!$ar_data[$quality]['sample_delta']) 	throw new Exception('Error on calculate sample_delta');
 
-					# MOVIE TIMESCALE . Time scale general
-					if(!isset($ar_data[$quality]['movie_timescale'])) {
-						$ar_data[$quality]['movie_timescale']		= $track->mdia->mdhd->timescale;
-						if(!$ar_data[$quality]['movie_timescale'])	throw new Exception('Error on read movie_timescale');
-					}
+		// 			# MOVIE WIDHT . Ancho de la pista de video en píxels
+		// 			$ar_data[$quality]['width']					= $track->tkhd->width;
+		// 			if(!$ar_data[$quality]['width']) 			throw new Exception('Error on read width');
 
-					# MOVIE DURATION IN SECONDS . Duración del movie en segundos y con decimales
-					if(!isset($ar_data[$quality]['duration_secs']) && isset($ar_data[$quality]['movie_duration']) && isset($ar_data[$quality]['movie_duration'])) {
-						$ar_data[$quality]['duration_secs']			= round( ($ar_data[$quality]['movie_duration'] / $ar_data[$quality]['movie_timescale']) , 6);
-						if(!$ar_data[$quality]['duration_secs']) 	throw new Exception('Error on calculate duration_secs');
-					}
+		// 			# MOVIE HEIGHT . Alto de la pista de video en píxels
+		// 			$ar_data[$quality]['height']				= $track->tkhd->height;
+		// 			if(!$ar_data[$quality]['height']) 			throw new Exception('Error on read height');
 
-				}
+		// 			# MOVIE DURATION IN SECONDS . Duración del movie en segundos y con decimales
+		// 			$ar_data[$quality]['duration_secs']			= round( ($ar_data[$quality]['movie_duration'] / $ar_data[$quality]['movie_timescale']) , 6);
+		// 			if(!$ar_data[$quality]['duration_secs']) 	throw new Exception('Error on calculate duration_secs');
 
-				# HEADER INFO OK
-				$ar_data[$quality]['header_info']				= "ok";
+		// 			# VIDEO FPS . Fotogramas por segundo
+		// 			$ar_data[$quality]['fps']					= round( ($ar_data[$quality]['movie_timescale'] / $ar_data[$quality]['sample_delta']) , 2);
+		// 			if(!$ar_data[$quality]['fps']) 				throw new Exception('Error on calculate fps . from (movie_timescale / sample_delta) ');
 
 
-			}#if(is_array($ar_tracks))
+		// 		}else if($track->mdia->hdlr->handlerType == 'soun') {	# AUDIO TRACK
+
+		// 			# AUDIO SAMPLE RATE
+		// 			$ar_data[$quality]['sample_rate']			= $track->mdia->minf->stbl->stsd->SampleDescriptionTable[12];
+		// 			if(!$ar_data[$quality]['sample_rate'])		throw new Exception('Error on read sample_rate');
+
+		// 			# AUDIO CALIDAD BITS
+		// 			$ar_data[$quality]['sample_size_bits']		= $track->mdia->minf->stbl->stsd->SampleDescriptionTable[9];
+		// 			if(!$ar_data[$quality]['sample_size_bits'])	throw new Exception('Error on read sample_size_bits');
+
+		// 			# AUDIO CHANELS
+		// 			$ar_data[$quality]['n_chanels']				= $track->mdia->minf->stbl->stsd->SampleDescriptionTable[8];
+		// 			if(!$ar_data[$quality]['n_chanels'])		throw new Exception('Error on read n_chanels');
+
+		// 			# MOVIE DURATION . Duración general en 'tics' o unidades internas
+		// 			if(!isset($ar_data[$quality]['movie_duration'])) {
+		// 				$ar_data[$quality]['movie_duration']		= $track->mdia->mdhd->duration;
+		// 				if(!$ar_data[$quality]['movie_duration'])	throw new Exception('Error on read movie_duration');
+		// 			}
+
+		// 			# MOVIE TIMESCALE . Time scale general
+		// 			if(!isset($ar_data[$quality]['movie_timescale'])) {
+		// 				$ar_data[$quality]['movie_timescale']		= $track->mdia->mdhd->timescale;
+		// 				if(!$ar_data[$quality]['movie_timescale'])	throw new Exception('Error on read movie_timescale');
+		// 			}
+
+		// 			# MOVIE DURATION IN SECONDS . Duración del movie en segundos y con decimales
+		// 			if(!isset($ar_data[$quality]['duration_secs']) && isset($ar_data[$quality]['movie_duration']) && isset($ar_data[$quality]['movie_duration'])) {
+		// 				$ar_data[$quality]['duration_secs']			= round( ($ar_data[$quality]['movie_duration'] / $ar_data[$quality]['movie_timescale']) , 6);
+		// 				if(!$ar_data[$quality]['duration_secs']) 	throw new Exception('Error on calculate duration_secs');
+		// 			}
+
+		// 		}
+
+		// 		# HEADER INFO OK
+		// 		$ar_data[$quality]['header_info']				= "ok";
 
 
-		} catch (Exception $e) {
-
-			# HEADER INFO UNREADABLE
-			$ar_data[$quality]['header_info']					= "unreadable";
+		// 	}#if(is_array($ar_tracks))
 
 
-			echo "<div style=\"color:#FFF;word-wrap:break-word;\">";
-			if(SHOW_DEBUG) {
-				echo __METHOD__ . ' Exception: ',  $e->getMessage(), "<br />";
-			}
-			echo " <strong> Sorry. Unable to read movie information ($local_file)</strong>";
-			echo "</div>";
+		// } catch (Exception $e) {
 
-		}
+		// 	# HEADER INFO UNREADABLE
+		// 	$ar_data[$quality]['header_info']					= "unreadable";
+
+
+		// 	echo "<div style=\"color:#FFF;word-wrap:break-word;\">";
+		// 	if(SHOW_DEBUG) {
+		// 		echo __METHOD__ . ' Exception: ',  $e->getMessage(), "<br />";
+		// 	}
+		// 	echo " <strong> Sorry. Unable to read movie information ($local_file)</strong>";
+		// 	echo "</div>";
+
+		// }
 
 		$this->header_data = $ar_data ;	#var_dump($ar_data);
 
