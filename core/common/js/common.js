@@ -248,14 +248,15 @@ common.prototype.refresh = async function () {
 			return false
 		}
 
-	//node.classList.add("loading")
-	//const isPromise = (val) => {
-	//  return (
-	//  	(val !== undefined && val !== null) &&
-	//    typeof val.then==='function' &&
-	//    typeof val.catch==='function'
-	//  )
-	//}
+	// des
+		//node.classList.add("loading")
+		//const isPromise = (val) => {
+		//  return (
+		//  	(val !== undefined && val !== null) &&
+		//    typeof val.then==='function' &&
+		//    typeof val.catch==='function'
+		//  )
+		//}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -815,7 +816,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 		}
 
 
-	// local_db_data save	
+	// local_db_data save
 		current_data_manager.set_local_db_data(rqo, 'rqo')
 
 

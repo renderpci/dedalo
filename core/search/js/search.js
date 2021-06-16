@@ -193,20 +193,30 @@ search.prototype.build = async function(){
 		//load_all_section_elements_context()
 		*/
 
+	
+
 	// load user preset data
-		const user_presets = await current_data_manager.request({
-			body : {
-				action 	 	 		: "filter_get_user_presets",
-				target_section_tipo : self.section_tipo
-			}
-		})
+		ar_promises.push( new Promise(async function(resolve){
+			
+			const user_presets = await current_data_manager.request({
+				body : {
+					action 	 	 		: "filter_get_user_presets",
+					target_section_tipo : self.section_tipo
+				}
+			})
+
+			resolve(user_presets)
+		}))
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("-> search build editing_preset:", editing_preset);
-			console.log("-> search build user_presets:", user_presets);
+			// console.log("-> search build editing_preset:", editing_preset);
+			// console.log("-> search build user_presets:", user_presets);
 		}
 
+
+	// wait until all request are resolved
+		await Promise.allSettled(ar_promises);
 
 	// status update
 		self.status = 'builded'
@@ -854,18 +864,15 @@ this.get_search_json_object = function() {
 
 // SEARCH
 	/**
-	* SEARCH
+	* EXEC_SEARCH
 	* @return promise
 	*/
-	search.prototype.search = async function(button_obj) {
+	search.prototype.exec_search = async function() {
 
 		const self = this
 
-		// always blur active component to force set dato (!)
-			document.activeElement.blur()
-
 		// section
-			const section 		= self.caller; 	console.log("section:",section);
+			const section 		= self.caller;
 			const section_node 	= section.node[0]
 
 		// loading css add

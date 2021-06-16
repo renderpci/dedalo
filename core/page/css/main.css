@@ -4325,7 +4325,7 @@ div.tool_inspector_div .icon_bs {
   padding: 10px;
   position: relative;
   width: 100%;
-  z-index: 2;
+  z-index: 1;
 }
 .wrapper_search > .search_global_container.hide {
   padding: 0;
