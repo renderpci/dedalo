@@ -262,6 +262,9 @@ const get_buttons = (self) => {
 			class_name 		: 'button full_screen',
 			parent 			: fragment
 		})
+		button_info.addEventListener("mouseup", (e) =>{
+			
+		})
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		buttons_container.appendChild(fragment)
