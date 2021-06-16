@@ -2202,7 +2202,22 @@ abstract class common {
 				$dedalo_request_config = array_find($request_config, function($el){
 					return $el->api_engine==='dedalo';
 				});
-				dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
+				if (!empty($dedalo_request_config)) {
+
+					$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$sqo_id	= implode('_', [$model,$section_tipo]);
+					if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+						// replace default sqo whith the already stored in session
+						// $dedalo_request_config->sqo = $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+						foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
+							if($key==='section_tipo' || $key==='limit') continue;
+							$dedalo_request_config->sqo->{$key} = $value;
+						}
+						// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
+					}
+
+					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
+				}				
 
 		// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
 		// 	// received request_ddo

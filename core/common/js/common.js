@@ -745,12 +745,28 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 		const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
 		if(saved_rqo){
 
-			// update saved offset if is different from received config
-				if (rqo_config.sqo && typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {					
-					saved_rqo.sqo.offset = rqo_config.sqo.offset
+			if (rqo_config.sqo) {
+
+				let to_save = false
+
+				// update saved offset if is different from received config
+					if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
+						saved_rqo.sqo.filter = rqo_config.sqo.filter
+						to_save = true
+						console.warn("updated filter in saved_rqo:", saved_rqo);
+					}
+
+				// update saved offset if is different from received config
+					if (typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {
+						saved_rqo.sqo.offset = rqo_config.sqo.offset
+						to_save = true
+						console.warn("updated offset in saved_rqo:", saved_rqo);
+					}
+
+				if (to_save===true) {
 					current_data_manager.set_local_db_data(saved_rqo, 'rqo') // save updated object
-					console.warn("updated offset in saved_rqo:", saved_rqo);
 				}
+			}
 
 			console.warn("returning saved_rqo:", saved_rqo);
 			return saved_rqo
@@ -759,7 +775,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 	// build new one with source of the instance caller (self)
 		const source = create_source(self, action)
 
-	// sqo. Set the sqo_config into a checked variable
+	// rqo_config. Set the sqo_config into a checked variable
 		const sqo_config = rqo_config.show && rqo_config.show.sqo_config
 			? rqo_config.show.sqo_config
 			: {}
