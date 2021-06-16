@@ -83,6 +83,7 @@ export const component_portal = function(){
 	component_portal.prototype.edit					= render_component_portal.prototype.edit
 	component_portal.prototype.edit_in_list			= render_component_portal.prototype.edit
 	component_portal.prototype.tm					= render_component_portal.prototype.edit
+	component_portal.prototype.search				= render_component_portal.prototype.search
 	component_portal.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -146,16 +147,31 @@ component_portal.prototype.build = async function(autoload=false){
 			data	: [],
 			context	: []
 		}
-		self.data = self.data || {}		
+		self.data = self.data || {}
+
+	const current_data_manager = new data_manager()
 
 	// rqo_config
+		self.context.request_config				= self.context.request_config || await ( async () => {
+
+			const element_context_response	= await current_data_manager.get_element_context({
+				tipo			: self.tipo,
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id
+			})
+			if(SHOW_DEBUG===true) {
+				console.log("// [component_portal.prototype.build] element_context API response:", element_context_response);
+				console.trace();
+			}			
+			const request_config = element_context_response.result[0].request_config
+			return request_config
+		})();
+
 		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo');
 
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
-			console.log("self.rqo_config:",self.rqo_config);
 
-	const current_data_manager = new data_manager()
 
 	// set dd_request
 		// self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
@@ -253,6 +269,15 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 		}//end if (self.mode==="edit")
 
+	// active / prepare the autocomplete in search mode
+		if(self.mode ==="search"){
+			// autocomplete destroy. change the autocomplete service to false and desactive it.
+				if(self.autocomplete && self.autocomplete_active===true){
+					self.autocomplete.destroy()
+					self.autocomplete_active = false
+					self.autocomplete 		 = null
+				}
+		}// end if(self.mode ==="search")
 
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions

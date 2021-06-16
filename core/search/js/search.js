@@ -345,48 +345,48 @@ search.prototype.get_section_elements_context = async function(options) {
 
 
 
-/**
-* LOAD_COMPONENT_CONTEXT
-* Call to dd_core_api to obtain the list of components associated to current options section_tipo
-* @param object options
-*	string options.section_tipo
-* @return promise
-*/
-search.prototype.load_component_context = async function(options) {
+// /**
+// * LOAD_COMPONENT_CONTEXT
+// * Call to dd_core_api to obtain the list of components associated to current options section_tipo
+// * @param object options
+// *	string options.section_tipo
+// * @return promise
+// */
+// search.prototype.load_component_context = async function(options) {
 
-	const self = this
+// 	const self = this
 
-	// vars
-		const section_tipo 	= options.section_tipo
+// 	// vars
+// 		const section_tipo 	= options.section_tipo
 
-	// components
-		const get_components = async () => {
-			if (self.components_list[section_tipo]) {
+// 	// components
+// 		const get_components = async () => {
+// 			if (self.components_list[section_tipo]) {
 
-				return self.components_list[section_tipo]
+// 				return self.components_list[section_tipo]
 
-			}else{
+// 			}else{
 
-				// load data
-					const current_data_manager 	= new data_manager()
-					const api_response 			= await current_data_manager.request({
-						body : {
-							action			: "get_section_components",
-							ar_section_tipo	: [section_tipo]
-						}
-					})
+// 				// load data
+// 					const current_data_manager 	= new data_manager()
+// 					const api_response 			= await current_data_manager.request({
+// 						body : {
+// 							action			: "get_section_components",
+// 							ar_section_tipo	: [section_tipo]
+// 						}
+// 					})
 
-				// fix
-					self.components_list[section_tipo] = api_response.result
+// 				// fix
+// 					self.components_list[section_tipo] = api_response.result
 
-				return api_response.result
-			}
-		}
-		const components = get_components()
+// 				return api_response.result
+// 			}
+// 		}
+// 		const components = get_components()
 
 
-	return components
-};//end load_component_context
+// 	return components
+// };//end load_component_context
 
 
 
@@ -516,15 +516,7 @@ search.prototype.get_component_instance = async function(options) {
 	const q_operator		= options.q_operator
 	const path				= options.path
 
-	// source
-		const source = {
-			model			: model,
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			section_id		: null,
-			mode			: 'search',
-			typo			: 'source'
-		}
+
 
 	// test
 		// instance key. Custom to get unique key
@@ -535,7 +527,6 @@ search.prototype.get_component_instance = async function(options) {
 		const context = {
 			model			: model,
 			tipo			: component_tipo,
-			request_config 	: [source]
 		}
 		const component_options = {
 			key				: key,
@@ -555,7 +546,7 @@ search.prototype.get_component_instance = async function(options) {
 		await component_instance.build(true)
 
 	// inject value from search user preset
-		component_instance.datum.data[0].value = value
+		component_instance.datum.data.push({value : value})
 
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
@@ -564,7 +555,7 @@ search.prototype.get_component_instance = async function(options) {
 	// add instance
 		self.ar_instances.push(component_instance)
 
-			console.log("//// component_instance:",component_instance);
+			
 
 
 	return component_instance
