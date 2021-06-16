@@ -188,6 +188,10 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 	// content_data
 		const content_data = await get_content_data(self)
 		if (render_level==='content') {
+
+			// self.paginator.status = 'rendered'
+			self.paginator.refresh()
+
 			return content_data
 		}
 
