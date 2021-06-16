@@ -1552,20 +1552,21 @@ abstract class common {
 		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
 
 		// dd_object
-			$dd_object = new dd_object((object)[
-				'label'			=> $full_ddo->label,
-				'tipo'			=> $full_ddo->tipo,
-				'section_tipo'	=> $full_ddo->section_tipo,
-				'model'			=> $full_ddo->model,
-				'parent'		=> $full_ddo->parent,
-				'lang'			=> $full_ddo->lang,
-				'mode'			=> $full_ddo->mode,
-				'translatable'	=> $full_ddo->translatable,
-				'permissions'	=> $full_ddo->permissions
-			]);
+			// $dd_object = new dd_object((object)[
+			// 	'label'			=> $full_ddo->label,
+			// 	'tipo'			=> $full_ddo->tipo,
+			// 	'section_tipo'	=> $full_ddo->section_tipo,
+			// 	'model'			=> $full_ddo->model,
+			// 	'parent'		=> $full_ddo->parent,
+			// 	'lang'			=> $full_ddo->lang,
+			// 	'mode'			=> $full_ddo->mode,
+			// 	'translatable'	=> $full_ddo->translatable,
+			// 	'permissions'	=> $full_ddo->permissions,
+				
+			// ]);
 
 
-		return $dd_object;
+		return $full_ddo;
 	}//end get_structure_context_simple
 
 
