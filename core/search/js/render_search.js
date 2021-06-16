@@ -276,7 +276,6 @@ render_search.prototype.render_components_list = async function(options) {
 			parent 		    : target_div
 		})
 
-
 	let section_group
 	const len = ar_elements.length
 	for (let i = 0; i < len; i++) {
@@ -322,36 +321,37 @@ render_search.prototype.render_components_list = async function(options) {
 				// Calculated path (from dom position)
 				const calculated_component_path = self.calculate_component_path( element, path )
 
-				let class_names 				= "search_component_label element_draggable"
-				let has_subquery_draggable 		= true
-				if (element.model==="component_portal") {
-					// Autocompletes only
-					// Pointer to open "children" section (portals and aurocompletes)
-					// Builds li element
-					class_names = "search_component_label element_draggable"
-				}else if (element.model==="component_portal"){
-					class_names = "search_component_label"
-					has_subquery_draggable 		= false
+				const class_names 	= "search_component_label element_draggable"
+				const is_draggable 	= true
+				// if (element.model==="component_portal") {
+				// 	// Autocompletes only
+				// 	// Pointer to open "children" section (portals and aurocompletes)
+				// 	// Builds li element
+				// 	class_names = "search_component_label element_draggable"
+				// }else if (element.model==="component_portal"){
+				// 	class_names = "search_component_label"
+				// 	is_draggable 		= false
 
-				}
+				// }
 
 				const component = ui.create_dom_element({
 					element_type 			: 'li',
 					parent 		 			: section_group,
 					class_name 	 			: class_names,
 					inner_html 				: element.label,
-					draggable 	 			: has_subquery_draggable,
-					data_set 				: { path 			: JSON.stringify(calculated_component_path),
+					draggable 	 			: is_draggable,
+					data_set 				: { path : JSON.stringify(calculated_component_path),
 												tipo 			: element.tipo,
-												section_tipo 	: element.section_tipo
-											  },
+												section_tipo 	: element.section_tipo,
+											}
 				})
+			
 
-				if (element.model!=="component_portal"){
+				// if (element.model!=="component_portal"){
 					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
 					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
 					component.addEventListener('drop',function(e){self.on_drop(this,e)})
-				}
+				// }
 
 				// Portals and autocomplete only
 				// Pointer to open "children" target section (portals and autocompletes)
@@ -620,7 +620,7 @@ render_search.prototype.render_search_group = async function(parent_div, options
 render_search.prototype.build_search_component = async function(parent_div, path_plain, current_value, q_operator) {
 
 	const self = this
-
+	
 	const path 		 = JSON.parse(path_plain)
 	const last_item  = path[path.length-1]
 	const first_item = path[0]
@@ -642,6 +642,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 			q_operator 		: q_operator || null,
 			path 			: path
 		})
+
 		// console.log("////////// component_instance:",component_instance);
 
 	// Render component

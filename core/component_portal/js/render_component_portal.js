@@ -160,6 +160,53 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 
 
 
+
+/**
+* SEARCH
+* Render node for use in search
+* @return DOM node wrapper
+*/
+render_component_portal.prototype.search = async function() {
+
+	const self = this
+
+		console.log("self.data:",self.data);
+
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	const content_data = await get_content_data_search(self)
+
+	// wrapper. ui build_edit returns component wrapper
+		const wrapper = ui.component.build_wrapper_edit(self, {
+			content_data : content_data
+		})
+		wrapper.classList.add("portal")
+
+	// activate service autocomplete. Enable the service_autocomplete when the user do click
+		if(self.autocomplete_active===false){
+
+			// set rqo
+				self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
+
+			self.autocomplete = new service_autocomplete()
+			self.autocomplete.init({
+				caller	: self,
+				wrapper : wrapper
+			})
+			self.autocomplete_active = true
+			self.autocomplete.search_input.focus()
+
+			return true
+		}
+
+
+	return wrapper
+};//end search
+
+
+
+
 /**
 * ADD_EVENTS
 * @return bool
