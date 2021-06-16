@@ -189,6 +189,9 @@ section.prototype.build = async function(autoload=false) {
 					// current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
 
+			// set local_db value always
+				current_data_manager.set_local_db_data(self.rqo, 'rqo')
+
 			// debug
 				if(SHOW_DEBUG===true) {
 					const event_token = event_manager.subscribe('render_'+self.id, show_debug_info)
@@ -238,20 +241,19 @@ section.prototype.build = async function(autoload=false) {
 	// paginator
 		if (!self.paginator) {
 
-			const current_paginator = new paginator()
-			current_paginator.init({
-				caller : self
+			self.paginator = new paginator()
+			self.paginator.init({
+				caller	: self,
+				mode	: self.mode
 			})
-			current_paginator.build()
-			// fix section paginator
-			self.paginator = current_paginator
+			self.paginator.build()
 
 			self.events_tokens.push(
-				event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
+				event_manager.subscribe('paginator_goto_'+self.paginator.id , async (offset) => {
 
 					// loading
-						const selector = self.mode==='list' ? '.list_body' : '.content_data.section'
-						const node = self.node && self.node[0]
+						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
+						const node		= self.node && self.node[0]
 							? self.node[0].querySelector(selector)
 							: null
 							console.log("node:",node);
@@ -276,18 +278,14 @@ section.prototype.build = async function(autoload=false) {
 			)//end events push
 		}
 
-	// filter
+	// filter search
 		if (!self.filter && self.permissions>0) {
-			const current_filter = new search()
-			current_filter.init({
-				caller : self
+			self.filter = new search()
+			self.filter.init({
+				caller	: self,
+				mode	: self.mode
 			})
-			current_filter.build()
-			// .then(function(response){
-			// 	current_filter.render()
-			// })
-			// fix section filter
-			self.filter = current_filter
+			self.filter.build()
 		}
 		// console.log("section build filter unactive (remember) ");
 
