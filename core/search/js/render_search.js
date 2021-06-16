@@ -51,24 +51,28 @@ render_search.prototype.list = async function() {
 	// render buttons
 		await self.render_search_buttons()
 
-	// search_panel cookie state track
-		if(self.cookie_track("search_panel")===true) {
-			// Open search panel
-			toggle_search_panel(self) // toggle to open from defult state close
-		}
-	// fields_panel cookie state track
-		if(self.cookie_track("fields_panel")===true) {
-			// Open search panel
-			toggle_fields(self) // toggle to open from defult state close
-		}
-	// presets_panel cookie state track
-		if(self.cookie_track("presets_panel")===true) {
-			// Open search panel
-			toggle_presets(self) // toggle to open from defult state close
-		}
-
-	// Set initial state as unchanged
-	//self.update_state({state:'unchanged'})
+	// panels status (close/open)
+		const ui_status = await self.get_panels_status()
+		if (ui_status) {
+			// search_panel cookie state track
+			// if(self.cookie_track("search_panel")===true) {
+				if(ui_status.value["search_panel"] && ui_status.value["search_panel"].is_open) {
+					// Open search panel
+					toggle_search_panel(self) // toggle to open from defult state close
+				}
+			// fields_panel cookie state track
+				// if(self.cookie_track("fields_panel")===true) {
+				if(ui_status.value["fields_panel"] && ui_status.value["fields_panel"].is_open) {
+					// Open search panel
+					toggle_fields(self) // toggle to open from defult state close
+				}
+			// presets_panel cookie state track
+				// if(self.cookie_track("presets_panel")===true) {
+				if(ui_status.value["presets_panel"] && ui_status.value["presets_panel"].is_open) {
+					// Open search panel
+					toggle_presets(self) // toggle to open from defult state close
+				}
+		}//end if (ui_status)
 
 
 	return filter_wrapper
@@ -500,10 +504,10 @@ render_search.prototype.render_search_buttons = function(){
 			parent 		 			: search_buttons_container
 		})
 		submit_button.addEventListener("click", function(e){
-			self.search(this).then(function(){
-				// Close search div
-				//self.toggle_search_panel()
-			})
+			// always blur active component to force set dato (!)
+			document.activeElement.blur()
+			// exec search command
+			self.exec_search()
 		},false)
 
 
@@ -1067,34 +1071,28 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	*/
 	export const toggle_presets = (self) => {
 
-		const section_tipo 						 = self.section_tipo
 		const search_container_selection_presets = self.search_container_selection_presets // button.parentNode.querySelector(".search_container_selection_presets")
 
 		// Read cookie to track state
 		const cookie_name = "presets_panel"
+		let action
 
 		if (search_container_selection_presets.classList.contains("display_none")) {
 
 			search_container_selection_presets.classList.remove("display_none")
-
-			// Set search panel as open
-				self.track_show_panel({
-					name 			: cookie_name,
-					action 			: "open",
-					section_tipo 	: section_tipo
-				})
+			action = 'open'
 
 		}else{
 
 			search_container_selection_presets.classList.add("display_none")
-
-			// Set search panel as closed
-				self.track_show_panel({
-					name 			: cookie_name,
-					action 			: "close",
-					section_tipo 	: section_tipo
-				})
+			action = 'close'
 		}
+
+		// Set search panel as closed
+			self.track_show_panel({
+				name	: cookie_name,
+				action	: action
+			})
 
 
 		return true
