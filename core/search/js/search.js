@@ -78,9 +78,12 @@ search.prototype.init = async function(options) {
 
 	const self = this
 
-	// set vars
+	// options
 		self.caller					= options.caller
 		self.context				= options.caller.context
+		self.mode					= options.mode
+
+	// shor vars
 		self.section_tipo			= self.caller.section_tipo
 		self.events_tokens			= []
 		self.parent_node			= null
@@ -92,7 +95,7 @@ search.prototype.init = async function(options) {
 		self.limit					= self.sqo.limit || 10
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
-		self.modo					= null
+		
 
 	// sections_selector_data
 		self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined"
@@ -815,7 +818,7 @@ this.get_search_json_object = function() {
 			const search_container_selection_presets 	= self.search_container_selection_presets
 			const button_save_preset 				  	= document.getElementById("button_save_preset")
 
-		if (self.modo==="thesaurus") {
+		if (self.mode==="thesaurus") {
 			button_save_preset.classList.add("in_thesaurus")
 		}
 
