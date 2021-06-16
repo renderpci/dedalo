@@ -37,7 +37,7 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 		if (render_level==='content') {
 
 			self.paginator.refresh()
-			
+
 			return content_data
 		}
 
