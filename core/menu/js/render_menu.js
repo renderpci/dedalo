@@ -120,9 +120,9 @@ render_menu.prototype.edit = async function() {
 					return false
 				}
 				// if the user do click in other node than 'a' node, close all nodes, no other action to do
-			    if (event.target.tagName.toLowerCase()!=='a') {
-					close_all_drop_menu(self);
-			    }
+				if (event.target.tagName.toLowerCase()!=='a') {
+					close_all_drop_menu(self)
+				}
 			})
 
 		// keydown. set the escape key to close al menu nodes
@@ -130,9 +130,9 @@ render_menu.prototype.edit = async function() {
 				if(self.menu_active===false) {
 					return false
 				}
-			    if (event.key==='Escape') {
+				if (event.key==='Escape') {
 					close_all_drop_menu(self);
-			    }
+				}
 			})
 
 	// ontology link
@@ -324,7 +324,7 @@ const get_debug_info_bar = (self) => {
 */
 const level_hierarchy = async (options) => {
 
-	// sort vars
+	// options
 		const self			= options.self
 		const datalist		= options.datalist
 		const root_ul		= options.root_ul
@@ -366,14 +366,13 @@ const level_hierarchy = async (options) => {
 */
 const item_hierarchy = async (options) => {
 
-	// sort vars
+	// options
 		const self			= options.self
 		const datalist		= options.datalist
 		const ul_container	= options.ul_container
 		const root_ul		= options.root_ul
 		const item			= options.item
-		const children_item	= datalist.find(children_item => children_item.parent === item.tipo)
-		const current_tipo	= options.current_tipo
+		const current_tipo	= options.current_tipo				
 
 	// li
 		const li = ui.create_dom_element({
@@ -393,21 +392,22 @@ const item_hierarchy = async (options) => {
 				};//end if self.menu_active
 
 				// get current node mouse is over
-				const active_li = e.target.nodeName === 'A' ? e.target.parentNode : e.target
+				const active_li = e.target.nodeName==='A' ? e.target.parentNode : e.target
 				// get all nodes inside ul
-				const nodes_li = ul_container.getElementsByTagName('li')
+				const nodes_li	= ul_container.getElementsByTagName('li')
 				const len		= nodes_li.length
-
 				for (let i = len - 1; i >= 0; i--) {
 
 					//desactive all nodes
-					nodes_li[i].classList.add("menu_li_inactive");
-					nodes_li[i].classList.remove("menu_li_active");
-					const close_id = nodes_li[i].dataset.children
+					nodes_li[i].classList.add("menu_li_inactive")
+					nodes_li[i].classList.remove("menu_li_active")
+					
 					// close all ul nodes dependent of the current li
+					const close_id = nodes_li[i].dataset.children
 					close_all_childrens(close_id)
+
 					// check if the active li is the current loop node.
-					if(nodes_li[i] == active_li){
+					if(nodes_li[i]===active_li){
 
 						// active the current li
 						nodes_li[i].classList.add("menu_li_active");
@@ -427,7 +427,6 @@ const item_hierarchy = async (options) => {
 							if(active_li.parentNode.id === 'dd1'){
 								open_ul.style.left = (active_li.getBoundingClientRect().left -1 )+'px'
 							}else{
-
 								// the node is totally visible and don't need move to the top
 								open_ul.style.top = active_li.getBoundingClientRect().top+'px'
 								// normal calculation for the hierarchy menus
@@ -435,13 +434,12 @@ const item_hierarchy = async (options) => {
 								const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
 								// if the position is outside of the window (>0)
 								if (ul_bottom_dif>0) {
-										// get the top of the current li and remove the oversize outsize of the window
-										const total_top = active_li.getBoundingClientRect().top - ul_bottom_dif
-										open_ul.style.top = total_top +'px'
-								};
+									// get the top of the current li and remove the oversize outsize of the window
+									const total_top = active_li.getBoundingClientRect().top - ul_bottom_dif
+									open_ul.style.top = total_top +'px'
+								}
 								// move the node to the right position of the selected li
 								open_ul.style.left = active_li.getBoundingClientRect().right+'px'
-
 							};//end if(active_li.parentNode.id === 'dd1')
 						};//end if(open_id)
 
@@ -498,8 +496,8 @@ const item_hierarchy = async (options) => {
 						source : {
 							tipo	: item.tipo,
 							model	: item.model,
-							mode	: 'list'		
-						}						
+							mode	: 'list'
+						}
 					})
 				}
 
@@ -507,6 +505,7 @@ const item_hierarchy = async (options) => {
 			})
 
 	// children_item. recursive generation of children nodes of the current li node.
+		const children_item	= datalist.find(children_item => children_item.parent===item.tipo)
 		if (children_item) {
 
 			li.classList.add ('has-sub')
@@ -519,7 +518,7 @@ const item_hierarchy = async (options) => {
 				parent_tipo		: current_tipo
 			})
 
-		};//end children_item
+		}//end children_item
 
 	return true
 };//end item_hierarchy
@@ -561,7 +560,7 @@ const close_all_drop_menu = function(self) {
 
 
 /**
-* CLOSE_ALL_CHILDRENS
+* CLOSE_ALL_CHILDRENs
 * Get all nodes childens of the tipo set to them the css to remove the visualization
 */
 const close_all_childrens = function(tipo){
@@ -575,7 +574,6 @@ const close_all_childrens = function(tipo){
 		// get the child nodes of the current ul
 		const ar_children_nodes	= close_ul.childNodes
 		const child_len			= ar_children_nodes.length
-
 		for (let i = child_len - 1; i >= 0; i--) {
 			// get the children link node of the current li
 			const new_tipo = ar_children_nodes[i].dataset.children
