@@ -151,7 +151,7 @@ section.prototype.build = async function(autoload=false) {
 		self.data = self.data || {}
 
 	// rqo_config
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+		self.rqo_config	= self.rqo_config || self.context.request_config.find(el => el.api_engine==='dedalo')
 
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search')

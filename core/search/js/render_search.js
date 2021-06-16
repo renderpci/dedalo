@@ -31,7 +31,7 @@ render_search.prototype.list = async function() {
 
 	const self = this
 
-	// wrapepr base html bounds
+	// wrapper base html bounds
 		const filter_wrapper = await self.render_base()
 
 	// components_list. render section component list [left]
@@ -983,9 +983,8 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			// Set search panel as opened
 				self.track_show_panel({
-					name 			: "search_panel",
-					action 			: "open",
-					section_tipo 	: section_tipo
+					name	: "search_panel",
+					action	: "open"
 				})
 
 			// Thesaurus mode case
@@ -1041,9 +1040,8 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			// Set search panel as closed
 				self.track_show_panel({
-					name 			: cookie_name,
-					action 			: "open",
-					section_tipo 	: section_tipo
+					name	: cookie_name,
+					action	: "open"
 				})
 
 		}else{
@@ -1052,9 +1050,8 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			// Set search panel as closed
 				self.track_show_panel({
-					name 			: cookie_name,
-					action 			: "close",
-					section_tipo 	: section_tipo
+					name	: cookie_name,
+					action	: "close"
 				})
 		}
 

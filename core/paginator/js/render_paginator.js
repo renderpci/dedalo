@@ -25,7 +25,7 @@ export const render_paginator = function() {
 * @return DOM node wrapper
 */
 render_paginator.prototype.edit = async function(options={render_level:'full'}) {
-
+	
 	const self = this
 
 	const render_level = options.render_level
@@ -79,30 +79,26 @@ const add_wrapper_events = (wrapper, self) => {
 * @return DOM node content_data
 */
 const content_data = async function(self) {
-
+	
 	// build vars
-		// const offset 		= self.offset
-		// const limit 			= self.limit
-		// const total 			= await self.total
+		const total				= await self.get_total()
+		const limit				= self.get_limit()
+		const offset			= self.get_offset()
 
-		const total		= await self.get_total()
-		const limit		= self.get_limit()
-		const offset	= self.get_offset()
-
-		const total_pages  		= self.total_pages
-		const page_number 		= self.page_number
-		const prev_page_offset 	= self.prev_page_offset
-		const next_page_offset 	= self.next_page_offset
-		const page_row_begin 	= self.page_row_begin
-		const page_row_end 		= self.page_row_end
-		const offset_first 		= self.offset_first
-		const offset_prev 		= self.offset_prev
-		const offset_next 		= self.offset_next
-		const offset_last 		= self.offset_last
+		const total_pages		= self.total_pages
+		const page_number		= self.page_number
+		const prev_page_offset	= self.prev_page_offset
+		const next_page_offset	= self.next_page_offset
+		const page_row_begin	= self.page_row_begin
+		const page_row_end		= self.page_row_end
+		const offset_first		= self.offset_first
+		const offset_prev		= self.offset_prev
+		const offset_next		= self.offset_next
+		const offset_last		= self.offset_last
 
 		if(SHOW_DEBUG===true) {
 			const model = self.id.split("_")[1] +" "+ self.id.split("_")[2]
-			//console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
+			console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
 	// display none with empty case, chenck NaN!=NaN (always true) or when pages are <2
