@@ -168,8 +168,8 @@ section.prototype.build = async function(autoload=false) {
 				self.datum = api_response.result
 
 			// set context and data to current instance
-				self.context		= self.datum.context.find(el => el.section_tipo===self.section_tipo)
-				self.data			= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
+				self.context	= self.datum.context.find(el => el.section_tipo===self.section_tipo)
+				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
 				self.section_id	= self.data && self.data.value
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
@@ -178,15 +178,15 @@ section.prototype.build = async function(autoload=false) {
 			// rqo_config
 				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
-			// rqo build
-				self.rqo = await self.build_rqo_show(self.rqo_config, 'search')
+			// rqo build (!) Don't rebuild rqo because rewites custom limit
+				// self.rqo = await self.build_rqo_show(self.rqo_config, 'search')
 
 			// count rows
 				if (!self.total) {
 					const response = await current_data_manager.count(self.rqo.sqo)
 					self.total = response.result.total
 					// set value
-					current_data_manager.set_local_db_data(self.rqo, 'rqo')
+					// current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
 
 			// debug
@@ -283,9 +283,9 @@ section.prototype.build = async function(autoload=false) {
 				caller : self
 			})
 			current_filter.build()
-			.then(function(response){
-				current_filter.render()
-			})
+			// .then(function(response){
+			// 	current_filter.render()
+			// })
 			// fix section filter
 			self.filter = current_filter
 		}
