@@ -741,7 +741,7 @@ class dd_core_api {
 			// 		 if($item->typo==='ddo') return $item;
 			// 	}) );
 			// 	// set as static to allow external access
-			// 	dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
+		// 	dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
 
 		// ddo_source
 			$ddo_source = $rqo->source;
@@ -801,11 +801,13 @@ class dd_core_api {
 							$sqo_options->mode			= $mode;
 							$sqo_options->direct		= true;
 							// filter_by_locators. when section_id is received
+
 							if (!empty($section_id)) {
 								$self_locator = new locator();
 									$self_locator->set_section_tipo($section_tipo);
 									$self_locator->set_section_id($section_id);
 								$sqo_options->filter_by_locators = [$self_locator];
+
 							}
 						$sqo = common::build_search_query_object($sqo_options);
 
@@ -826,8 +828,7 @@ class dd_core_api {
 					}
 
 					return $sqo;
-				  })();			
-
+				  })();
 
 		// CONTEXT
 			// $context = [];
