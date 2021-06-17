@@ -2205,19 +2205,20 @@ abstract class common {
 				});
 				if (!empty($dedalo_request_config)) {
 
-					$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					$sqo_id	= implode('_', [$model,$section_tipo]);
-					if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-						// replace default sqo whith the already stored in session
-						// $dedalo_request_config->sqo = $_SESSION['dedalo']['config']['sqo'][$sqo_id];
-						foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
-							if($key==='section_tipo' || $key==='limit') continue;
-							$dedalo_request_config->sqo->{$key} = $value;
+					// sqo. Preserves filter across calls using session sqo if exists
+						$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$sqo_id	= implode('_', [$model,$section_tipo]);
+						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+							// replace default sqo whith the already stored in session (except section_tipo to void loose labels and limit to avoid overwrite list in edit and viceversa)
+							foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
+								if($key==='section_tipo' || $key==='limit') continue;
+								$dedalo_request_config->sqo->{$key} = $value;
+							}
+							// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
 						}
-						// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
-					}
 
-					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
+					// add ddo_map
+						dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
 				}				
 
 		// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed

@@ -763,9 +763,7 @@ class dd_core_api {
 			$tipo			= $ddo_source->tipo ?? null;
 			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 
-			// dump($_SESSION['dedalo']['config']['sqo'], '$_SESSION[dedalo][config][sqo] ++ '.to_string());
-
-		// sqo. search_query_object
+		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values 
 			$sqo_id	= implode('_', [$model,$section_tipo]);
 			$sqo	= !empty($rqo->sqo)
 				? $rqo->sqo
