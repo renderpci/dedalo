@@ -277,9 +277,9 @@ render_search.prototype.render_components_list = async function(options) {
 		})
 
 	let section_group
+
 	const len = ar_elements.length
 	for (let i = 0; i < len; i++) {
-
 		const element = ar_elements[i]
 
 		switch (true) {
@@ -334,6 +334,7 @@ render_search.prototype.render_components_list = async function(options) {
 
 				// }
 
+				const section_id = self.get_section_id()
 				const component = ui.create_dom_element({
 					element_type 			: 'li',
 					parent 		 			: section_group,
@@ -343,6 +344,7 @@ render_search.prototype.render_components_list = async function(options) {
 					data_set 				: { path : JSON.stringify(calculated_component_path),
 												tipo 			: element.tipo,
 												section_tipo 	: element.section_tipo,
+												section_id 		: section_id
 											}
 				})
 			
@@ -617,7 +619,7 @@ render_search.prototype.render_search_group = async function(parent_div, options
 * BUILD_SEARCH_COMPONENT
 * @return dom object
 */
-render_search.prototype.build_search_component = async function(parent_div, path_plain, current_value, q_operator) {
+render_search.prototype.build_search_component = async function(parent_div, path_plain, current_value, q_operator, section_id) {
 
 	const self = this
 	
@@ -625,16 +627,21 @@ render_search.prototype.build_search_component = async function(parent_div, path
 	const last_item  = path[path.length-1]
 	const first_item = path[0]
 
+
 	// search_component container. Create dom element before load html from trigger
 		const search_component = ui.create_dom_element({
 			element_type 	: 'div',
 			parent 		 	: parent_div,
 			class_name 	 	: "search_component",
-			data_set 		: { path : path_plain }
+			data_set 		: { 
+				path		: path_plain,
+				section_id	: section_id 
+				}
 		})
 
 	// component_instance. Get functional component to render
 		const component_instance = await self.get_component_instance({
+			section_id 		: section_id,
 			section_tipo 	: last_item.section_tipo,
 			component_tipo 	: last_item.component_tipo,
 			model 			: last_item.modelo,

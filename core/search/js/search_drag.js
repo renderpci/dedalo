@@ -10,8 +10,13 @@
 
 		event.stopPropagation();
 
+		const data = JSON.stringify({
+			path		: obj.dataset.path,
+			section_id	: obj.dataset.section_id
+			})
+
 		event.dataTransfer.effectAllowed = 'move';
-		event.dataTransfer.setData('text/plain', obj.dataset.path);
+		event.dataTransfer.setData('text/plain', data);
 
 		return true
 	};//end ondrag_start
@@ -58,13 +63,19 @@
 
 		//console.log("on_drop:",obj);
 		//console.log("on_drop event:", event.dataTransfer.getData('text/plain'));
-		const path 		  = event.dataTransfer.getData('text/plain');// element thats move
+		const data 		  = event.dataTransfer.getData('text/plain');// element thats move
 		const wrap_target = obj 	 // element on user leaves source wrap
 
+		const data_parse = JSON.parse(data)
+		const path = data_parse.path
+
+		const section_id = data_parse.section_id
+
 		// Build component html
-		self.build_search_component(wrap_target, path).then(()=>{
+		self.build_search_component(wrap_target, path, null, null, section_id).then(()=>{
 			//Update the state and save
 			self.update_state({state:'changed'})
+
 		});
 
 		return true
