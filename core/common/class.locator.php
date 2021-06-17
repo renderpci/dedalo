@@ -106,9 +106,10 @@ class locator extends stdClass {
 	*/
 	public function set_section_id($value) {
 		#if(abs($value)<1 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
-		if(abs($value)<0 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
+		if(abs((int)$value)<0 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
 			throw new Exception("Error Processing Request. Invalid section_id: $value", 1);
 		}
+
 		$this->section_id = (string)$value;
 	}	
 	/**
