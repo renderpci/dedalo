@@ -150,14 +150,14 @@ section.prototype.build = async function(autoload=false) {
 		}
 		self.data = self.data || {}
 
+	const current_data_manager	= new data_manager()
+
 	// rqo_config
 		self.rqo_config	= self.rqo_config || self.context.request_config.find(el => el.api_engine==='dedalo')
 
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search')
-
-	const current_data_manager	= new data_manager()
-
+	
 	// load data if is not already received as option
 		if (autoload===true) {
 

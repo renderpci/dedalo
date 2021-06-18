@@ -90,6 +90,7 @@ export const component_portal = function(){
 
 /**
 * INIT
+* @return bool
 */
 component_portal.prototype.init = async function(options) {
 	
@@ -151,8 +152,8 @@ component_portal.prototype.build = async function(autoload=false){
 
 	const current_data_manager = new data_manager()
 
-	// rqo_config
-		self.context.request_config				= self.context.request_config || await ( async () => {
+	// rqo_config (note that in some cases like search, no request_config is available. Then we call to API to get the full context)
+		self.context.request_config = self.context.request_config || await ( async () => {
 
 			const element_context_response	= await current_data_manager.get_element_context({
 				tipo			: self.tipo,
@@ -161,7 +162,6 @@ component_portal.prototype.build = async function(autoload=false){
 			})
 			if(SHOW_DEBUG===true) {
 				console.log("// [component_portal.prototype.build] element_context API response:", element_context_response);
-				console.trace();
 			}			
 			const request_config = element_context_response.result[0].request_config
 			return request_config
@@ -172,11 +172,6 @@ component_portal.prototype.build = async function(autoload=false){
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
 
-
-	// set dd_request
-		// self.dd_request.show = self.dd_request.show || self.build_rqo('show', self.context.request_config, 'get_data')
-			// console.log("/// PORTAL BUILD self.dd_request.show:",self.dd_request.show);
-	
 	// debug check
 		if(SHOW_DEBUG===true) {
 			// console.log("-- component_portal.prototype.build self.context.request_config", self.context.request_config);
@@ -196,12 +191,7 @@ component_portal.prototype.build = async function(autoload=false){
 		if (autoload===true) {
 
 			// get context and data
-				const api_response = await current_data_manager.request({body:self.rqo})					
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					console.log("portal api_response:",api_response);
-				}
+				const api_response = await current_data_manager.request({body:self.rqo})
 
 			// set context and data to current instance
 				self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
@@ -210,13 +200,12 @@ component_portal.prototype.build = async function(autoload=false){
 				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				set_context_vars(self, self.context)
 
-				self.datum.context = api_response.result.context				
+				self.datum.context = api_response.result.context
 		}//end if (autoload===true)
 		
 	
 	// pagination vars only in edit mode
 		if (self.mode==="edit") {
-
 
 			// pagination. update element pagination vars when are used
 				if (self.data.pagination && !self.total) {
@@ -270,7 +259,7 @@ component_portal.prototype.build = async function(autoload=false){
 		}//end if (self.mode==="edit")
 
 	// active / prepare the autocomplete in search mode
-		if(self.mode ==="search"){
+		else if(self.mode==="search"){
 			// autocomplete destroy. change the autocomplete service to false and desactive it.
 				if(self.autocomplete && self.autocomplete_active===true){
 					self.autocomplete.destroy()
@@ -316,8 +305,6 @@ component_portal.prototype.add_value = async function(value) {
 
 	const self = this
 
-	// console.log("self", self);
-
 	// check if value already exists
 		// const current_value = self.data.value
 		// const exists 		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id===value.section_id)
@@ -362,9 +349,6 @@ component_portal.prototype.add_value = async function(value) {
 component_portal.prototype.update_pagination_values = function(action) {
 
 	const self = this
-
-	// console.log("self.data.pagination:",self.data.pagination);
-	// console.log("self.rqo.sqo.:",self.rqo.sqo);
 
 	// update self.data.pagination
 		switch(action) {
