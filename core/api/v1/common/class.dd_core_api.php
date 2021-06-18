@@ -907,8 +907,8 @@ class dd_core_api {
 				unset($element);
 
 				switch ($action) {
-
-					case 'search':
+					
+					case 'search': // Used by section and service autocomplete
 
 						// sections
 							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
@@ -918,8 +918,8 @@ class dd_core_api {
 								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							}
 						break;
-
-					case 'get_data':
+					
+					case 'get_data': // Used by components and areas
 
 						if (strpos($model, 'component')===0) {
 
@@ -965,6 +965,39 @@ class dd_core_api {
 							// others
 								// get data model not defined
 								debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
+						}
+						break;
+
+					case 'resolve_data': // Used by components in search mode like portals to resolve locators data
+
+						if (strpos($model, 'component')===0) {
+							
+							// component
+								$RecordObj_dd	= new RecordObj_dd($tipo);
+								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+								$element		= component_common::get_instance($model,
+																				 $tipo,
+																				 $section_id,
+																				 $mode,
+																				 $component_lang,
+																				 $section_tipo);
+							// inject custom data to the component (ussually an array of locators)
+								$element->set_dato($dato);								
+
+							// pagination. fix pagination vars (defined in class component_common)
+								if (isset($sqo->limit) || isset($sqo->offset)) {							
+									$pagination = new stdClass();
+										$pagination->limit	= $sqo->limit;
+										$pagination->offset	= $sqo->offset;
+
+									$element->pagination = $pagination;
+								}						
+
+						}else{
+
+							// others
+								// resolve_data model not defined
+								debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
 						}
 						break;
 
