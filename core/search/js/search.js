@@ -112,7 +112,8 @@ search.prototype.init = async function(options) {
 
 		self.node = []
 
-		self.id = 'search'
+		self.id			= 'search'
+		self.section_id	= 0
 
 
 	// events subscription
@@ -342,7 +343,7 @@ search.prototype.get_section_elements_context = async function(options) {
 		}
 		const components = get_components()
 
-
+	
 	return components
 };//end get_section_elements_context
 
@@ -431,6 +432,11 @@ search.prototype.calculate_component_path = function(component_context, path) {
 };//end calculate_component_path
 
 
+search.prototype.get_section_id = function() {
+	const self = this
+	self.section_id = ++self.section_id
+	return 'tmp_seach_' + self.section_id 
+}
 
 /**
 * BUILD_DOM_GROUP
@@ -463,9 +469,9 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 						current_value 	= ''
 						q_operator 		= ''
 					}
-
+					 const section_id = self.get_section_id()
 					// Add. If not already resolved, add
-						self.build_search_component( dom_element, JSON.stringify(filter.path), current_value, q_operator)
+						self.build_search_component( dom_element, JSON.stringify(filter.path), current_value, q_operator, section_id)
 
 					// Set as resolved
 						if (allow_duplicates!==true) {
@@ -512,14 +518,13 @@ search.prototype.get_component_instance = async function(options) {
 
 	const self = this
 
+	const section_id		= options.section_id
 	const section_tipo		= options.section_tipo
 	const component_tipo	= options.component_tipo
 	const model				= options.model
 	const value				= options.value || []
 	const q_operator		= options.q_operator
 	const path				= options.path
-
-
 
 	// test
 		// instance key. Custom to get unique key
@@ -536,7 +541,7 @@ search.prototype.get_component_instance = async function(options) {
 			model			: model,
 			tipo			: component_tipo,
 			section_tipo	: section_tipo,
-			section_id		: null,
+			section_id		: section_id,
 			mode			: 'search',
 			lang			: lang,
 			context			: context,
@@ -549,7 +554,7 @@ search.prototype.get_component_instance = async function(options) {
 		await component_instance.build(true)
 
 	// inject value from search user preset
-		component_instance.datum.data.push({value : value})
+		component_instance.datum.data[0].value = value
 
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
@@ -557,8 +562,6 @@ search.prototype.get_component_instance = async function(options) {
 
 	// add instance
 		self.ar_instances.push(component_instance)
-
-			
 
 
 	return component_instance

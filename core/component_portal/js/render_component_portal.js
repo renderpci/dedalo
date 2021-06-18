@@ -170,12 +170,11 @@ render_component_portal.prototype.search = async function() {
 
 	const self = this
 
-		console.log("self.data:",self.data);
 
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const content_data = await get_content_data_search(self)
+	const content_data = await get_content_data_edit(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
