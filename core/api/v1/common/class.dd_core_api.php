@@ -686,33 +686,33 @@ class dd_core_api {
 
 
 	/**
-	* ONTOLOGY_GET_AREAS
+	* ONTOLOGY_GET_CHILDREN_RECURSIVE
 	* @return object $response
 	*/
-	static function ontology_get_children_recursive($json_data){
-		global $start_time;
+		// static function ontology_get_children_recursive($json_data){
+		// 	global $start_time;
 
-		// session_write_close();
+		// 	// session_write_close();
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		// 	$response = new stdClass();
+		// 		$response->result 	= false;
+		// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$target_tipo = $json_data->target_tipo;
+		// 		$target_tipo = $json_data->target_tipo;
 
-			$childrens = ontology::get_children_recursive($target_tipo);
+		// 		$childrens = ontology::get_children_recursive($target_tipo);
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			}
+		// 	// Debug
+		// 		if(SHOW_DEBUG===true) {
+		// 			$response->debug = new stdClass();
+		// 				$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+		// 		}
 
-		$response->result	= $childrens;
-		$response->msg		= 'Ok. Request done';
+		// 	$response->result	= $childrens;
+		// 	$response->msg		= 'Ok. Request done';
 
-		return (object)$response;
-	}//end ontology_get_areas
+		// 	return (object)$response;
+		// }//end ontology_get_areas
 
 
 
@@ -722,6 +722,7 @@ class dd_core_api {
 
 	/**
 	* BUILD_JSON_ROWS
+	* @see class.request_query_object.php
 	* @return object $result
 	*/
 	private static function build_json_rows($rqo) {
@@ -741,18 +742,18 @@ class dd_core_api {
 			// 		 if($item->typo==='ddo') return $item;
 			// 	}) );
 			// 	// set as static to allow external access
-		// 	dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
+			// 	dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
 
 		// ddo_source
 			$ddo_source = $rqo->source;
-		// 	$ar_source = array_filter($rqo, function($item) {
-		// 		 if(isset($item->typo) && $item->typo==='source') return $item;
-		// 	});
-		// 	if (count($ar_source)!==1) {
-		// 		throw new Exception("Error Processing Request. Invalid number of 'source' items in context. Only one is allowed. Found: ".count($ar_source), 1);
-		// 		return $result;
-		// 	}
-		// 	$ddo_source = reset($ar_source);
+			// 	$ar_source = array_filter($rqo, function($item) {
+			// 		 if(isset($item->typo) && $item->typo==='source') return $item;
+			// 	});
+			// 	if (count($ar_source)!==1) {
+			// 		throw new Exception("Error Processing Request. Invalid number of 'source' items in context. Only one is allowed. Found: ".count($ar_source), 1);
+			// 		return $result;
+			// 	}
+			// 	$ddo_source = reset($ar_source);
 
 		// source vars
 			$action			= $ddo_source->action ?? 'search';
@@ -829,6 +830,7 @@ class dd_core_api {
 
 					return $sqo;
 				  })();
+
 
 		// CONTEXT
 			// $context = [];
@@ -982,11 +984,12 @@ class dd_core_api {
 																				 $mode,
 																				 $component_lang,
 																				 $section_tipo);
-							// inject custom data to the component (ussually an array of locators)
-								$element->set_dato($dato);								
+							// inject custom value to the component (ussually an array of locators)
+								$value = $rqo->value;
+								$element->set_dato($value);
 
 							// pagination. fix pagination vars (defined in class component_common)
-								if (isset($sqo->limit) || isset($sqo->offset)) {							
+								if (isset($sqo->limit) || isset($sqo->offset)) {
 									$pagination = new stdClass();
 										$pagination->limit	= $sqo->limit;
 										$pagination->offset	= $sqo->offset;
@@ -1044,7 +1047,7 @@ class dd_core_api {
 
 		// Set result object
 			$result->context = $context;
-			$result->data 	 = $data;	
+			$result->data 	 = $data;
 
 
 		// Debug
