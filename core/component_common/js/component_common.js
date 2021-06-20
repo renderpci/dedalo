@@ -468,7 +468,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 		// add the new data into the general datum
 			self.datum.data = [...self.datum.data, ...new_data]
-				console.log("update_datum --------------------------- final self.datum.data:",new_data, JSON.parse(JSON.stringify(self.datum.data)));
+				// console.log("update_datum --------------------------- final self.datum.data:",new_data, JSON.parse(JSON.stringify(self.datum.data)));
 
 	// data (from current component only)
 		// current element data
@@ -701,8 +701,6 @@ component_common.prototype.get_ar_instances = async function(){
 			const current_section_tipo 	= locator.section_tipo
 			const current_section_id 	= locator.section_id
 			// const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
-
-			
 
 	// console.log("self:",self);
 

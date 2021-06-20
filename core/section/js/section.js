@@ -183,6 +183,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// count rows
 				if (!self.total) {
+						console.log("SECTION -- self.rqo.sqo:",self.rqo.sqo);
 					const response = await current_data_manager.count(self.rqo.sqo)
 					self.total = response.result.total
 					// set value

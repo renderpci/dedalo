@@ -103,14 +103,6 @@ class component_relation_common extends component_common {
 		// 	}
 		// }
 
-		$properties = $this->get_properties();
-
-		$this->pagination->limit = isset($properties->source->request_config)
-		&& isset($properties->source->request_config[0]->show)
-		&& isset($properties->source->request_config[0]->show->sqo_config)
-		&& isset($properties->source->request_config[0]->show->sqo_config->limit)
-			? $properties->source->request_config[0]->show->sqo_config->limit
-			: 5;
 
 		return true;
 	}//end __construct

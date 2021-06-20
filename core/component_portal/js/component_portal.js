@@ -153,24 +153,39 @@ component_portal.prototype.build = async function(autoload=false){
 	const current_data_manager = new data_manager()
 
 	// rqo_config (note that in some cases like search, no request_config is available. Then we call to API to get the full context)
-		self.context.request_config = self.context.request_config || await ( async () => {
+		// self.context.request_config = self.context.request_config || await ( async () => {
 
-			const element_context_response	= await current_data_manager.get_element_context({
-				tipo			: self.tipo,
-				section_tipo	: self.section_tipo,
-				section_id		: self.section_id
-			})
-			if(SHOW_DEBUG===true) {
-				console.log("// [component_portal.prototype.build] element_context API response:", element_context_response);
-			}			
-			const request_config = element_context_response.result[0].request_config
-			return request_config
-		})();
+		// 	const element_context_response	= await current_data_manager.get_element_context({
+		// 		tipo			: self.tipo,
+		// 		section_tipo	: self.section_tipo,
+		// 		section_id		: self.section_id
+		// 	})
+		// 	if(SHOW_DEBUG===true) {
+		// 		console.log("// [component_portal.prototype.build] element_context API response:", element_context_response);
+		// 	}			
+		// 	const request_config = element_context_response.result[0].request_config
+		// 	return request_config
+		// })();
 
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo');
+		const generate_rqo = async function(){
 
-	// rqo build
-		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
+			// get the rqo_config from context
+				self.rqo_config	= (self.context.request_config)
+					? self.context.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+
+			// rqo build
+				const action = (self.mode === 'search') ? 'resolve_data' : 'get_data'
+				self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action)
+				if(self.mode === 'search') {
+					self.rqo.source.value = self.data.value 
+				}
+		}
+		await generate_rqo()
+		
+
+		// self.rqo.sqo.limit = 2
+		// self.rqo.sqo.offset = 1
 
 	// debug check
 		if(SHOW_DEBUG===true) {
@@ -201,6 +216,8 @@ component_portal.prototype.build = async function(autoload=false){
 				set_context_vars(self, self.context)
 
 				self.datum.context = api_response.result.context
+
+				await generate_rqo()
 		}//end if (autoload===true)
 		
 	
@@ -270,12 +287,12 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
-
+	console.log("self.context:",self.context);
 	// target_section
 		self.target_section = self.rqo_config.sqo.section_tipo
 
 	// columns
-		if(self.mode === 'edit'){
+		if(self.mode === 'edit' || self.mode === 'search'){
 			self.columns = self.get_columns()
 		}
 

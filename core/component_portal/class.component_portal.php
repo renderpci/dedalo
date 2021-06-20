@@ -28,7 +28,7 @@ class component_portal extends component_relation_common {
 	* Only to enable component_autocomplete_hi compatibility
 	* @return object $properties
 	*/
-	public function get_properties() {
+	public function get_properties_DES() {
 
 		$properties = parent::get_properties();
 			#dump($properties, ' properties ++ '.to_string($this->tipo));

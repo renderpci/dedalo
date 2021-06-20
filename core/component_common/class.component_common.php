@@ -353,30 +353,44 @@ abstract class component_common extends common {
 			if ( $this->modo==='edit' && !is_null($this->section_id) ) {
 				$this->set_dato_default();
 			}
-
 		// pagination
 			$this->pagination = new stdClass();
-				$this->pagination->offset	= 0; // default
+				// $this->pagination->offset	= 0; // default
 				// $this->pagination->limit	= isset($properties->list_max_records) ? (int)$properties->list_max_records : 5;
-				$this->pagination->limit	= (function(){
+				
 					// structure properties
 						$properties = $this->get_properties();
-						if ( isset($properties->source->request_config) ) {
 
-							$found = array_find($properties->source->request_config, function($el){
-								return isset($el->api_engine) && $el->api_engine==='dedalo';
-							});
-							$rqo = $found ?? $properties->source->request_config[0];
+						$request_config = ( isset($properties->source->request_config) )
+							? $properties->source->request_config
+							: [];
+	
+						$found = array_find($request_config, function($el){
+							return isset($el->api_engine) && $el->api_engine==='dedalo';
+						});
+						$rqo = !empty($found)
+							? $found 
+							: (isset($request_config[0])
+								? $request_config[0]
+								: new stdClass());
 
-							// show
-							if (isset($rqo->show) && isset($rqo->show->sqo_config->limit)) {
-								return (int)$rqo->show->sqo_config->limit;
-							}
-						}
-					// default
-						return 5;
-				})();
-
+						// limit
+						$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit)) 
+							? (int)$rqo->sqo->limit
+							: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+								// show limit
+								?  (int)$rqo->show->sqo_config->limit
+								: 5);
+						
+						// offset
+						$this->pagination->offset =  (isset($rqo->sqo) && isset($rqo->sqo->offset)) 
+							? (int)$rqo->sqo->offset
+							: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
+								? (int)$rqo->show->sqo_config->offset
+								: 0);
+						
+						
+		
 
 		return true;
 	}//end __construct
@@ -2858,6 +2872,10 @@ abstract class component_common extends common {
 		// slice
 			$dato_paginated = array_slice($dato, $offset, $array_lenght);
 
+				// dump($limit, ' limit ++ '.to_string($this->tipo));
+				// dump($offset, ' offset ++ '.to_string($this->tipo));
+				// dump($dato, ' dato ++ '.to_string($this->tipo));
+				// dump($dato_paginated, ' dato_paginated ++ '.to_string($this->tipo));
 
 		// pagination keys. Set an offset relative key to each element of paginated array
 			foreach ($dato_paginated as $key => $value) {
@@ -2865,6 +2883,10 @@ abstract class component_common extends common {
 				$value->paginated_key = $paginated_key;
 			}
 
+			// $dato_paginated_2 = [];
+			// foreach ($dato_paginated as $key => $value) {
+			// 	$dato_paginated_2[$key + $offset] = $value;
+			// }
 
 		return $dato_paginated;
 	}//end get_dato_paginated

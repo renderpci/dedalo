@@ -746,8 +746,10 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 		if(saved_rqo){
 
 			if (rqo_config.sqo) {
-
+				
 				let to_save = false
+
+				saved_rqo.sqo = saved_rqo.sqo || {}
 
 				// update saved offset if is different from received config
 					if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
@@ -778,48 +780,58 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 	// rqo_config. Set the sqo_config into a checked variable
 		const sqo_config = rqo_config.show && rqo_config.show.sqo_config
 			? rqo_config.show.sqo_config
-			: {}
-
-	// get the ar_sections
-		const ar_sections = rqo_config.sqo && rqo_config.sqo.section_tipo
-			? rqo_config.sqo.section_tipo.map(el=>el.tipo)
-			: ( sqo_config.section_tipo)
-					? sqo_config.section_tipo.map(el=>el.tipo)
-					: [self.section_tipo]
+			: false
 
 	// sqo
 		const sqo = rqo_config.sqo
 			? JSON.parse(JSON.stringify(rqo_config.sqo))
-			: {}
+			: false
+
+	if (!sqo_config && !sqo) {
+		//build the rqo
+		const rqo = {
+			id		: self.id,
+			action	: 'read',
+			source	: source
+		}
+		return rqo
+	}
+
+	// get the ar_sections
+		const ar_sections = (sqo && sqo.section_tipo)
+			? sqo.section_tipo.map(el=>el.tipo)
+			: ( sqo_config && sqo_config.section_tipo)
+					? sqo_config.section_tipo.map(el=>el.tipo)
+					: false
 
 	sqo.section_tipo = ar_sections
 	
 	// Get the limit, offset, full count, and filter by locators. 
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
 	// and finally if the rqo_config don't has sqo or sqo_config, set the default parameter to each.
-		sqo.limit = sqo.limit
+		sqo.limit = (sqo && sqo.limit)
 			? sqo.limit
-			: (sqo_config.limit)
+			: (sqo_config && sqo_config.limit)
 				? sqo_config.limit
 				: self.mode==='edit'
 					? (self.context.model==='section' ? 1 : 10)
 					: 10
 
-		sqo.offset = sqo.offset
+		sqo.offset = (sqo && sqo.offset)
 			? sqo.offset
-			: (sqo_config.offset)
+			: (sqo_config && sqo_config.offset)
 				? sqo_config.offset
 				: 0
 
-		sqo.full_count = sqo.full_count
+		sqo.full_count = (sqo && sqo.full_count)
 			? sqo.full_count
-			: (sqo_config.full_count)
+			: (sqo_config && sqo_config.full_count)
 				? sqo_config.full_count
 				: false
 
-		sqo.filter_by_locators = sqo.filter_by_locators
+		sqo.filter_by_locators = (sqo && sqo.filter_by_locators)
 			? sqo.filter_by_locators
-			: (sqo_config.filter_by_locators)
+			: (sqo_config && sqo_config.filter_by_locators)
 				? sqo_config.filter_by_locators
 				: null
 
