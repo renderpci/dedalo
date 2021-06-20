@@ -38,6 +38,7 @@
 					"section_id"	: string || int || null // section_id of the ddo 
 					"mode"			: string (edit || list || search || ...), mode of the ddo
 					"lang"			: string // lang of the ddo
+					"value"			: array (optional) [{locator}] || ["text"] || [""] // value of the component to resolve, used by portal in seach mode
 				},			
 				"sqo"			: {
 					// all sqo definition in search_query_object class

@@ -1874,6 +1874,7 @@ abstract class common {
 	* @return array $ar_subcontext
 	*/
 	public function get_ar_subdata($ar_locators) {
+		// $ar_ddo=null;
 
 		$ar_subdata = [];
 
@@ -1884,8 +1885,9 @@ abstract class common {
 
 		// filter 
 			$ar_ddo = array_filter($all_ar_ddo, function($el){
-				return $el->parent===$this->tipo;
-			});
+					return $el->parent===$this->tipo;
+				});
+				
 
 		// des
 			// dump($context_dd_objects, ' context_dd_objects ++ '.to_string());			
@@ -2316,6 +2318,7 @@ abstract class common {
 						break;					
 					case strpos($model, 'component_')===0:
 						$component = component_common::get_instance($model, $tipo, null, $mode, DEDALO_DATA_LANG, $section_tipo);
+						
 						return $component->pagination->limit;
 						break;
 					default:

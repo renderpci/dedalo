@@ -535,6 +535,9 @@ search.prototype.get_component_instance = async function(options) {
 		const context = {
 			model			: model,
 			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: 'search'
 		}
 		const component_options = {
 			key				: key,
@@ -548,13 +551,18 @@ search.prototype.get_component_instance = async function(options) {
 			// data			: current_data,
 			// datum		: current_datum
 		}
-		const component_instance = await instances.get_instance(component_options)
+		const component_instance = await instances.get_instance(component_options)	
+
+	// inject value from search user preset
+		component_instance.data = {value : value}
+
+	// inject value from search user preset
+		component_instance.datum = {
+			data	: [{value : value}]
+		}
 
 	// build component to force load datalist etc.
 		await component_instance.build(true)
-
-	// inject value from search user preset
-		component_instance.datum.data[0].value = value
 
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
@@ -563,7 +571,7 @@ search.prototype.get_component_instance = async function(options) {
 	// add instance
 		self.ar_instances.push(component_instance)
 
-
+	console.log("component_instance:",component_instance);
 	return component_instance
 };//end get_component_instance
 
@@ -649,6 +657,8 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 				const component_wrapper		= element.querySelector('.wrapper_component')
 				const component_instance	= self.ar_instances.find(instance => instance.id===component_wrapper.id)
+					console.log("self.ar_instances:",self.ar_instances);
+					console.log("component_wrapper.id:",component_wrapper);
 				// overwrite
 				if (typeof component_instance!=="undefined") {
 					q			= component_instance.data.value

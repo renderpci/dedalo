@@ -26,45 +26,17 @@
 
 			default:
 
-				// // context and subcontext from API dd_request if already exists sections					
-								
-				// $dd_request = dd_core_api::$dd_request;
+				// Component structure context (tipo, relations, properties, etc.)
+					$current_context	= $this->get_structure_context($permissions, $add_request_config=true);
+					$context[]			= $current_context;
 
-				// // dd_request
-				// 	// $source	= array_find($dd_request, function($item){
-				// 	// 	return $item->typo==='source';
-				// 	// });
-				// 	// if ($source->tipo!==$this->tipo) {
-				// 	// 	debug_log(__METHOD__." $this->tipo controller Processing Request. PORTAL. ESTO ES VALIDO ??????????????????????????????????????????????????? ".to_string(), logger::ERROR);
-				// 	// 	// throw new Exception("controller Processing Request. PORTAL. ESTO ES VALIDO ??????????????????????????????????????????????????? ", 1);
-				// 	// }
+					// dump(null, 'Time to context portal BEFORE SUBCONTEXT: '.exec_time_unit($api_start_time,'ms')." ms".to_string());
+				// subcontext from element layout_map items (from_parent, parent_grouper)
+					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
 
-				// // get request_ddo object	
-				// 	$request_ddo = array_find($dd_request, function($item){
-				// 		return $item->typo==='request_ddo';
-				// 	});
-				// 	// dump($request_ddo, ' request_ddo ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
-				
-				// // when no empty request_ddo->value
-				// if ($request_ddo && !empty($request_ddo->value)) {
-
-						
-				// 	$context = $request_ddo->value;
-				// 	// dd_core_api::$context_dd_objects = $context;					
-					
-				// }else{
-
-					// Component structure context (tipo, relations, properties, etc.)
-						$current_context	= $this->get_structure_context($permissions, $add_request_config=true);
-						$context[]			= $current_context;
-
-						// dump(null, 'Time to context portal BEFORE SUBCONTEXT: '.exec_time_unit($api_start_time,'ms')." ms".to_string());
-					// subcontext from element layout_map items (from_parent, parent_grouper)
-						$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
-						foreach ($ar_subcontext as $current_context) {
-							$context[] = $current_context;
-						}
-				// }
 				break;
 		}
 		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
@@ -80,6 +52,8 @@
 		$section_id	= $this->get_section_id();
 		$limit		= $this->pagination->limit;
 		$offset		= $this->pagination->offset;
+
+			dump(dd_core_api::$ddo_map, ' dd_core_api::$ddo_map ++ '.to_string());
 
 		# Custom propiedades external dato
 		if(	!empty($this->build_options)
@@ -97,15 +71,7 @@
 				$value	= $this->get_dato_paginated($limit);
 				break;
 
-			case 'search':
-				$dato 	= [];
-				$value	= [];
-				$item = $this->get_data_item($value);
-					$item->parent_tipo			= $tipo;
-					$item->parent_section_id	= $section_id;
-				$data[] = $item;
-				break;
-	
+			case 'search':	
 			case 'edit':
 			default:
 				$dato	= $this->get_dato();

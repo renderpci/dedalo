@@ -151,7 +151,7 @@ const get_content_data_edit = async function(self) {
 render_section_record.prototype.list = async function(options={render_level : 'full'}) {
 
 	const self = this
-
+	
 	const ar_instances = await self.get_ar_columns_instances()
 
 // const ar_instances = await self.get_ar_instances()
