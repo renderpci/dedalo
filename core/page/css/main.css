@@ -4682,6 +4682,14 @@ ul.search_section_container ul li {
   -webkit-user-select: none;
   user-select: none;
 }
+ul.search_section_container ul li > * {
+  display: inline-block;
+  width: 99.99%;
+  padding-right: 1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 li.search_section_group_label {
   background-color: #969ca1;
   color: #ffffff;
@@ -4704,15 +4712,15 @@ li.search_component_label.has_subquery {
 li.search_component_label.has_subquery::after {
   content: " ";
   display: inline-block;
-  width: 6px;
-  height: 10px;
+  width: 7px;
+  height: 12px;
   border-bottom: 5px solid transparent;
   border-top: 5px solid transparent;
   border-left: 5px solid #000;
   pointer-events: none;
   position: absolute;
-  right: 8px;
-  margin-top: 3px;
+  right: 6px;
+  margin-top: 4px;
 }
 li.search_component_label.has_subquery.active {
   background-color: #ff9620 !important;
