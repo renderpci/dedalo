@@ -474,6 +474,7 @@ const build_id_column = function(self) {
 							parent			: delete_line
 						})
 						delete_button.addEventListener("click", function(e){
+								
 							delete_record(this, self)
 						})
 					}
