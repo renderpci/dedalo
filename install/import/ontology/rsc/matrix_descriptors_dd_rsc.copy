@@ -1,3 +1,23 @@
+rsc789	Identificación	termino	lg-spa
+rsc792	List	termino	lg-eng
+rsc795	Borrar	termino	lg-spa
+rsc796	Últims canvis	termino	lg-cat
+rsc798	Identificación	termino	lg-spa
+rsc799	Id	termino	lg-eng
+rsc800	Motiu de valoració	termino	lg-cat
+rsc802	Listado	termino	lg-spa
+rsc803	New	termino	lg-eng
+rsc804	Esborrar	termino	lg-cat
+rsc806	Valoraciones económicas	termino	lg-spa
+rsc807	Identification	termino	lg-eng
+rsc808	Id	termino	lg-cat
+rsc810	Valor	termino	lg-spa
+rsc811	Currency	termino	lg-eng
+rsc812	Data	termino	lg-cat
+rsc814	Projecto	termino	lg-spa
+rsc815	List	termino	lg-eng
+rsc816	Nou	termino	lg-cat
+rsc818	Relaciones	termino	lg-spa
 rsc1	Always call indirectly using virtual sections	obs	lg-spa
 rsc1	Global media resources container	def	lg-spa
 rsc1	Media	termino	lg-cat
@@ -68,6 +88,7 @@ rsc110	Elenco	termino	lg-ita
 rsc110	Listado	termino	lg-spa
 rsc110	Llistat	termino	lg-cat
 rsc110	λίστα	termino	lg-ell
+rsc789	Identification	termino	lg-eng
 rsc112	Elenco relazioni	termino	lg-ita
 rsc112	Listado relaciones	termino	lg-spa
 rsc112	Llistat relacions	termino	lg-cat
@@ -378,7 +399,6 @@ rsc17	Relation	termino	lg-eng
 rsc17	Relazione	termino	lg-ita
 rsc17	σχέση	termino	lg-ell
 rsc170	Image	termino	lg-eng
-rsc170	Imagen	termino	lg-spa
 rsc170	Imatge	termino	lg-cat
 rsc170	Immagine	termino	lg-ita
 rsc170	εικόνα	termino	lg-ell
@@ -1264,6 +1284,7 @@ rsc357	Documentación	termino	lg-spa
 rsc357	Documentation	termino	lg-eng
 rsc357	Documentazione	termino	lg-ita
 rsc357	τεκμηρίωση	termino	lg-ell
+rsc792	Llistat	termino	lg-cat
 rsc358	Específicos	termino	lg-spa
 rsc358	Específics	termino	lg-cat
 rsc358	Specific	termino	lg-eng
@@ -1330,7 +1351,6 @@ rsc369	αναφορά	termino	lg-ell
 rsc37	Document	termino	lg-cat
 rsc37	Document	termino	lg-eng
 rsc37	Documento	termino	lg-ita
-rsc37	Documento	termino	lg-spa
 rsc37	έγγραφο	termino	lg-ell
 rsc370	Estructuraciones de texto	termino	lg-spa
 rsc370	Store records from tool_structuration tags	obs	lg-spa
@@ -3030,12 +3050,183 @@ rsc99	Observacions	termino	lg-cat
 rsc99	Observations	termino	lg-eng
 rsc99	Osservazioni	termino	lg-ita
 rsc99	Παρατηρήσεις	termino	lg-ell
+rsc789	Identificació	termino	lg-cat
+rsc790	Id	termino	lg-spa
+rsc790	Id	termino	lg-eng
+rsc795	Delete	termino	lg-eng
+rsc793	Proyecto	termino	lg-spa
+rsc790	Id	termino	lg-cat
+rsc793	Project	termino	lg-eng
 rsc337	Portal that can use to get component_label, don&#039;t use it... the locator is correct  but the interface is not resolved	obs	lg-spa
+rsc793	Projecte	termino	lg-cat
 rsc787	title_colective	termino	lg-spa
+rsc794	Nuevo	termino	lg-spa
+rsc795	Esborrar	termino	lg-cat
+rsc798	Identification	termino	lg-eng
+rsc799	Id	termino	lg-cat
+rsc797	Motivos de valoraciones	termino	lg-spa
+rsc801	Proyecto	termino	lg-spa
+rsc802	List	termino	lg-eng
+rsc803	Nou	termino	lg-cat
+rsc805	Últimos cambios	termino	lg-spa
+rsc806	Economic valuations	termino	lg-eng
 rsc111	localidad valor	termino	lg-spa
 rsc111	localitat valor	termino	lg-cat
 rsc111	τιμή τοποθεσίας	termino	lg-ell
+rsc807	Identificació	termino	lg-cat
+rsc809	Motivo de valoración	termino	lg-spa
+rsc810	Value	termino	lg-eng
+rsc811	Divisa	termino	lg-cat
+rsc813	Observaciones	termino	lg-spa
+rsc814	Project	termino	lg-eng
+rsc815	Llistat	termino	lg-cat
+rsc817	Borrar	termino	lg-spa
+rsc818	Relations	termino	lg-eng
+rsc819	Last changes	termino	lg-eng
+rsc788	Tipo de divisa	termino	lg-spa
+rsc791	Nombre de la divisa	termino	lg-spa
+rsc791	Nom de la divisa	termino	lg-cat
+rsc794	New	termino	lg-eng
+rsc796	Últimos cambios	termino	lg-spa
+rsc798	Identificació	termino	lg-cat
+rsc797	Reasons for evaluations	termino	lg-eng
+rsc800	Motivo de valoración	termino	lg-spa
+rsc801	Project	termino	lg-eng
+rsc802	Llistat	termino	lg-cat
+rsc804	Borrar	termino	lg-spa
+rsc805	Last changes	termino	lg-eng
+rsc806	Valoracions econòmiques	termino	lg-cat
+rsc808	Id	termino	lg-spa
 rsc679	Dependent of	termino	lg-eng
 rsc355	Secondary entry - Uncontrolled analytic / related title	termino	lg-eng
+rsc809	Reason for valuation	termino	lg-eng
+rsc810	Valor	termino	lg-cat
+rsc812	Fecha	termino	lg-spa
+rsc813	Observations	termino	lg-eng
+rsc814	Projecte	termino	lg-cat
+rsc816	Nuevo	termino	lg-spa
+rsc817	Delete	termino	lg-eng
+rsc818	Relations	termino	lg-cat
+rsc819	Últims canvis	termino	lg-cat
+rsc788	Tipus de divisa	termino	lg-cat
+rsc791	Currency name	termino	lg-eng
+rsc820	Idioma - no controlado	termino	lg-spa
+rsc820	Language - not controlled	termino	lg-eng
+rsc821	Descripció física	termino	lg-cat
+rsc788	Type of currency	termino	lg-eng
+rsc792	Listado	termino	lg-spa
+rsc794	Nou	termino	lg-cat
 rsc550	Restoration	termino	lg-eng
 rsc621	Movements	termino	lg-eng
+rsc796	Last changes	termino	lg-eng
+rsc799	Id	termino	lg-spa
+rsc797	Motius de valoracions	termino	lg-cat
+rsc800	Reason for valuation	termino	lg-eng
+rsc801	Projecte	termino	lg-cat
+rsc803	Nuevo	termino	lg-spa
+rsc804	Delete	termino	lg-eng
+rsc805	Últims canvis	termino	lg-cat
+rsc807	Identificación	termino	lg-spa
+rsc808	Id	termino	lg-eng
+rsc809	Motiu de valoració	termino	lg-cat
+rsc811	Divisa	termino	lg-spa
+rsc812	Date	termino	lg-eng
+rsc813	Observacions	termino	lg-cat
+rsc815	Listado	termino	lg-spa
+rsc816	New	termino	lg-eng
+rsc817	Esborrar	termino	lg-cat
+rsc819	Últimos cambios	termino	lg-spa
+rsc820	Idioma -  no controlat	termino	lg-cat
+rsc821	Descripción física	termino	lg-spa
+rsc821	Physical description	termino	lg-eng
+rsc822	Condiciones de acceso	termino	lg-spa
+rsc822	Acces conditions	termino	lg-eng
+rsc823	Identificación	termino	lg-spa
+rsc823	Identification	termino	lg-eng
+rsc824	Id	termino	lg-spa
+rsc824	Id	termino	lg-eng
+rsc825	Condición de acceso	termino	lg-spa
+rsc825	Acces condition	termino	lg-eng
+rsc826	Proyecto	termino	lg-spa
+rsc826	Project	termino	lg-eng
+rsc827	Listado	termino	lg-spa
+rsc827	List	termino	lg-eng
+rsc828	Nuevo	termino	lg-spa
+rsc828	New	termino	lg-eng
+rsc829	Borrar	termino	lg-spa
+rsc829	Delete	termino	lg-eng
+rsc830	Últimos cambios	termino	lg-spa
+rsc830	Last changes	termino	lg-eng
+rsc831	Hora	termino	lg-cat
+rsc831	Hora	termino	lg-spa
+rsc832	Notas Time Machine	termino	lg-spa
+rsc832	Time Machine notes	termino	lg-eng
+rsc832	Notes de Time Machine	termino	lg-cat
+rsc833	List	termino	lg-spa
+rsc170	Imagen	termino	lg-spa
+rsc835	Code	termino	lg-eng
+rsc835	Código	termino	lg-spa
+rsc835	Codi	termino	lg-cat
+rsc834	exclude	termino	lg-spa
+rsc836	Data certainty	termino	lg-eng
+rsc837	Identificación	termino	lg-spa
+rsc837	Identification	termino	lg-eng
+rsc838	Id	termino	lg-spa
+rsc838	Id	termino	lg-eng
+rsc839	Certeza de dato	termino	lg-spa
+rsc839	Certainty of the data	termino	lg-eng
+rsc836	Certeza de dato	termino	lg-spa
+rsc840	Proyecto	termino	lg-spa
+rsc840	Project	termino	lg-eng
+rsc841	Nuevo	termino	lg-spa
+rsc841	New	termino	lg-eng
+rsc842	Borrar	termino	lg-spa
+rsc842	Delete	termino	lg-eng
+rsc843	Last changes	termino	lg-eng
+rsc843	Últimos cambios	termino	lg-spa
+rsc844	Listado	termino	lg-spa
+rsc844	Llistat	termino	lg-cat
+rsc844	List	termino	lg-eng
+rsc845	Responsable	termino	lg-spa
+rsc845	Responsable	termino	lg-cat
+rsc846	Idiomas	termino	lg-spa
+rsc846	Idiomes	termino	lg-cat
+rsc846	Languages	termino	lg-eng
+rsc847	Identificaicón	termino	lg-spa
+rsc847	Identificació	termino	lg-cat
+rsc847	Identification	termino	lg-eng
+rsc848	Id	termino	lg-spa
+rsc848	Id	termino	lg-cat
+rsc848	Id	termino	lg-eng
+rsc849	Idioma	termino	lg-spa
+rsc849	Idioma	termino	lg-cat
+rsc849	Language	termino	lg-eng
+rsc850	Proyecto	termino	lg-spa
+rsc850	projecte	termino	lg-cat
+rsc850	Project	termino	lg-eng
+rsc851	Listado	termino	lg-spa
+rsc851	llistat	termino	lg-cat
+rsc851	List	termino	lg-eng
+rsc852	Nuevo	termino	lg-spa
+rsc852	Nou	termino	lg-cat
+rsc852	New	termino	lg-eng
+rsc853	Borrar	termino	lg-spa
+rsc853	Esborrar	termino	lg-cat
+rsc853	Delete	termino	lg-eng
+rsc854	Correspondència ISO	termino	lg-cat
+rsc854	Correspondencia ISO	termino	lg-spa
+rsc854	ISO match	termino	lg-eng
+rsc855	SVG	termino	lg-spa
+rsc856	SVG document	termino	lg-eng
+rsc856	Documento SVG	termino	lg-spa
+rsc856	Document SVG	termino	lg-cat
+rsc856	Documento SVG	termino	lg-ita
+rsc856	Έγγραφο SVG	termino	lg-ell
+rsc857	Descripción	termino	lg-spa
+rsc857	Description	termino	lg-eng
+rsc857	Περιγραφή	termino	lg-ell
+rsc857	Descripció	termino	lg-cat
+rsc857	Descrizione	termino	lg-ita
+rsc37	Documento PDF	termino	lg-spa
+rsc858	Lista	termino	lg-spa
+rsc859	General	termino	lg-spa

@@ -331,7 +331,6 @@ mupreva2134	mupreva1250	dd530	no	si	si	10	mupreva	no	[{"dd6":"mupreva690"},{"dd9
 mupreva2088	mupreva368	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva373"},{"dd530":"mupreva372"},{"dd57":"mupreva370"},{"dd530":"mupreva371"},{"dd10":"mupreva375"},{"dd318":"mupreva374"}]		\N
 mupreva474	mupreva473	dd8	no	si	si	1	mupreva	no	\N		\N
 mupreva480	mupreva473	dd8	no	si	si	3	mupreva	no	\N		\N
-mupreva509	mupreva510	dd10	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva952	mupreva848	dd1231	no	si	si	25	mupreva	si	[{"dd592":"mupreva193"}]		\N
 mupreva957	mupreva849	dd1231	no	si	si	7	mupreva	si	[{"dd592":"mupreva208"}]		\N
 mupreva811	mupreva809	dd1231	no	si	si	2	mupreva	si	[{"dd530":"mupreva629"}]	{\r\n"table":"publicaciones"\r\n}	\N
@@ -343,6 +342,7 @@ mupreva1026	mupreva852	dd1231	no	si	si	2	mupreva	si	[{"dd635":"mupreva203"}]		\N
 mupreva1065	mupreva854	dd1231	no	si	si	11	mupreva	si	[{"dd635":"mupreva694"}]		\N
 mupreva718	mupreva710	dd8	no	si	si	2	mupreva	no	\N		\N
 mupreva1066	mupreva854	dd1231	no	si	si	12	mupreva	si	[{"dd635":"mupreva755"}]		\N
+mupreva509	mupreva510	dd10	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva896	mupreva514	dd91	no	si	si	1	mupreva	si	[{"dd6":"mupreva268"},{"dd749":"mupreva212"}]		\N
 mupreva889	mupreva802	dd1231	no	si	si	16	mupreva	si	[{"dd592":"mupreva606"}]		\N
 mupreva891	mupreva802	dd1231	no	si	si	19	mupreva	si	[{"dd592":"mupreva689"}]		\N
@@ -1382,7 +1382,6 @@ mupreva1896	mupreva861	dd1231	no	si	si	16	mupreva	si	[{"dd530":"mupreva574"}]	{\
 mupreva1891	mupreva861	dd1231	no	si	si	11	mupreva	si	[{"dd530":"mupreva1500"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1509	mupreva1330	dd183	no	si	si	5	mupreva	no	\N		\N
 mupreva302	mupreva290	dd91	no	si	si	5	mupreva	no	[{"dd57":"mupreva293"},{"dd9":"mupreva298"},{"dd530":"mupreva295"},{"dd10":"mupreva299"},{"dd9":"mupreva296"},{"dd10":"mupreva303"}]	\N	\N
-mupreva2635	ts11	dd440	no	si	si	1	mupreva	no	null		null
 mupreva1765	mupreva1752	dd1231	no	si	si	13	mupreva	si	[{"dd530":"mupreva1418"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1634	mupreva1631	dd1231	no	si	si	2	mupreva	si	[{"dd530":"mupreva1300"}]		\N
 mupreva1919	mupreva861	dd1231	no	si	si	39	mupreva	si	[{"dd530":"mupreva588"}]		\N
@@ -1746,6 +1745,7 @@ mupreva2282	mupreva2278	dd635	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".
 mupreva1417	mupreva1411	dd635	no	si	si	8	mupreva	no	\N		\N
 mupreva2265	mupreva859	dd1231	no	si	si	54	mupreva	si	[{"dd318":"mupreva2244"}]	\N	\N
 mupreva2266	mupreva859	dd1231	no	si	si	55	mupreva	si	[{"dd318":"mupreva2245"}]	\N	\N
+mupreva2635	ts11	dd440	no	si	si	2	mupreva	no	null		null
 mupreva2256	mupreva2255	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva2251"},{"dd339":"mupreva643"},{"dd9":"mupreva1324"},{"dd9":"mupreva656"},{"dd9":"mupreva655"},{"dd1018":"mupreva661"},{"dd749":"mupreva660"}]	{"dragable_connectWith": "mupreva2257"}	\N
 mupreva2270	mupreva2267	dd1231	no	si	si	3	mupreva	si	[{"dd11":"mupreva75"}]	\N	\N
 mupreva880	mupreva881	dd1231	no	si	si	4	mupreva	si	[{"dd9":"mupreva444"}]		\N
@@ -2372,7 +2372,6 @@ mupreva2583	mupreva2579	dd1231	no	si	si	9	mupreva	si	[{"dd318":"mupreva2569"}]	\
 mupreva2641	mupreva2579	dd1231	no	si	si	22	mupreva	si	[{"dd592":"mupreva2623"}]	{"data_to_be_used":"dato"}	\N
 mupreva2667	mupreva33	dd440	no	si	si	6	mupreva	no	[{"dd438":"mupreva2664"}]	\N	\N
 mupreva1530	mupreva1512	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva398"},{"dd9":"mupreva402"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2614	mupreva510	dd9	no	si	si	7	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2372	mupreva765	dd11	no	si	si	9	mupreva	no	[{"dd6":"mupreva2358"},{"dd9":"mupreva2360"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva558	mupreva1512	dd9	no	si	si	15	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2584	mupreva2603	dd9	no	si	si	2	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2382,6 +2381,7 @@ mupreva2673	mupreva1540	dd524	no	si	si	1	mupreva	no	[{"dd6":"mupreva153"},{"dd17
 mupreva1532	mupreva1556	dd530	no	si	si	1	mupreva	no	[{"dd6":"peri1"},{"dd9":"hierarchy25"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2374	mupreva765	dd904	no	si	si	11	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2585	mupreva2579	dd1235	no	si	si	4	mupreva	si	[{"dd9":"mupreva2584"}]	{\r\n  "varchar": 128\r\n}	\N
+mupreva2614	mupreva510	dd9	no	si	si	7	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2643	mupreva2579	dd1231	no	si	si	25	mupreva	si	[{"dd592":"mupreva2627"}]	{"data_to_be_used":"dato"}	\N
 mupreva1538	mupreva1537	dd635	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2587	mupreva2579	dd1231	no	si	si	11	mupreva	si	[{"dd352":"mupreva2571"}]	\N	\N
@@ -2395,7 +2395,7 @@ mupreva2382	mupreva1537	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva162"},{"dd9"
 mupreva503	mupreva501	dd442	no	si	si	6	mupreva	no	[{"dd6":"mupreva380"},{"dd9":"mupreva384"}]	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2,5\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2343	mupreva239	dd227	no	si	si	8	mupreva	no	\N	{\r\n  "multiple_data": true,\r\n  "multiple_data_tipo": "mupreva2617",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2677	mupreva2487	dd524	no	si	si	2	mupreva	si	[{"dd6":"mupreva2541"},{"dd530":"mupreva2544"}]	\N	\N
-mupreva2562	hierarchy56	dd4	no	si	si	11	mupreva	si	\N	\N	\N
+mupreva2562	hierarchy56	dd4	no	si	si	12	mupreva	si	\N	\N	\N
 mupreva2415	mupreva1250	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva1"},{"dd1747":"mupreva1224"},{"dd9":"mupreva776"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2347	mupreva239	dd11	no	si	si	12	mupreva	no	[{"dd6":"mupreva2352"},{"dd9":"mupreva2354"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2348	mupreva239	dd11	no	si	si	13	mupreva	no	[{"dd6":"mupreva2358"},{"dd9":"mupreva2360"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2546,10 +2546,10 @@ mupreva507	mupreva510	dd9	no	si	si	6	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap
 mupreva508	mupreva510	dd318	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "730px"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1352	mupreva510	dd318	no	si	si	2	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1351	mupreva510	dd10	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2338	mupreva510	dd530	no	si	si	10	mupreva	no	[{"dd6":"mupreva451"},{"dd9":"mupreva455"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva512	mupreva510	dd592	no	si	si	8	mupreva	no	[{"dd6":"mupreva153"},{"dd57":"mupreva628"},{"dd9":"mupreva171"},{"dd9":"mupreva175"},{"dd9":"mupreva178"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva513	mupreva510	dd592	no	si	si	9	mupreva	no	[{"dd6":"mupreva156"},{"dd9":"mupreva171"},{"dd57":"mupreva628"},{"dd1742":"mupreva631"},{"dd530":"mupreva174"},{"dd9":"mupreva178"},{"dd635":"mupreva181"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2338	mupreva510	dd530	no	si	si	10	mupreva	no	[{"dd6":"mupreva451"},{"dd9":"mupreva455"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2245	mupreva2242	dd10	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva513	mupreva510	dd592	no	si	si	9	mupreva	no	[{"dd6":"mupreva156"},{"dd9":"mupreva171"},{"dd57":"mupreva628"},{"dd1742":"mupreva631"},{"dd530":"mupreva174"},{"dd9":"mupreva178"},{"dd635":"mupreva181"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2244	mupreva2242	dd9	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1428	mupreva1425	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva1296"},{"dd339":"mupreva1299"},{"dd9":"mupreva1300"},{"dd318":"mupreva1301"},{"dd530":"mupreva1273"},{"dd530":"mupreva1264"},{"dd592":"mupreva1304"}]		\N
 mupreva151	mupreva2	dd592	no	si	si	4	mupreva	no	[{"dd6":"mupreva120"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd635":"mupreva207"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd749":"mupreva212"}]	{\r\n  "dragable_connectWith": "mupreva152",\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "20%",\r\n        "float": "right"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "180px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}	\N

@@ -1,7 +1,7 @@
 mht119	mht115	dd1235	no	si	si	8	mht	si	[{"dd530":"mht38"}]	{"varchar":600}	{"varchar": 600}
 mht73	mht72	dd8	no	si	si	1	mht	no	\N	\N	\N
 mht154	mht146	dd347	no	si	si	3	mht	si	[{"dd1229":"rsc687"}]	\N	\N
-mht156	mht131	dd1231	no	si	si	2	mht	si	[{"dd530":"rsc139"}]	\N	\N
+mht156	mht131	dd1231	no	si	si	1	mht	si	[{"dd530":"rsc139"}]	\N	\N
 mht78	mht72	dd8	no	si	si	2	mht	no	\N	\N	\N
 mht86	mht72	dd8	no	si	si	4	mht	no	\N	\N	\N
 mht84	mht78	dd318	no	si	si	6	mht	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [],\r\n      "style": {\r\n        "height": "1000px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [], "style": {"height": "1000px"}}}}
@@ -12,13 +12,13 @@ mht11	mht7	dd318	no	si	si	3	mht	si	\N	\N	\N
 mht13	mht5	dd177	no	si	si	4	mht	no	\N	\N	\N
 mht15	mht4	dd1231	no	si	si	2	mht	no	[{"dd318":"mht11"}]	\N	\N
 mht23	mht22	dd6	no	si	si	1	mht	no	\N	\N	\N
-mht22	dd351	dd4	no	si	si	2	mht	no	\N	\N	\N
 mht24	mht23	dd8	no	si	si	1	mht	no	\N	\N	\N
 mht19	mht3	dd347	no	si	si	5	mht	si	[{"dd1229":"rsc267"}]	\N	\N
 mht59	mht3	dd347	no	si	si	6	mht	si	[{"dd1229":"hierarchy65"},{"dd6":"aa1"}]	\N	\N
 mht61	mht3	dd347	no	si	si	7	mht	si	[{"dd1229":"hierarchy65"},{"dd6":"hp1"}]	\N	\N
 mht62	mht3	dd347	no	si	si	8	mht	si	[{"dd1229":"hierarchy65"},{"dd6":"rt1"}]	\N	\N
 mht28	mht24	dd247	no	si	si	6	mht	no	\N	{\r\n  "dato_default": \r\n    {\r\n    "2": "2"\r\n    }\r\n  ,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50",\r\n        ".line_top"\r\n      ]\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".width_50", ".line_top"]}}, "dato_default": {"2": "2"}}
+mht22	dd351	dd4	no	si	si	2	mht	no	\N	\N	\N
 mht30	mht23	dd8	no	si	si	2	mht	no	\N	\N	\N
 mht32	mht23	dd177	no	si	si	4	mht	no	\N	\N	\N
 mht33	mht23	dd183	no	si	si	5	mht	no	\N	\N	\N
@@ -115,7 +115,7 @@ mht152	mht78	dd592	no	si	si	9	mht	no	[{"dd6":"rsc176"},{"dd1747":"rsc175"},{"dd3
 mht124	mht110	dd1231	no	si	si	6	mht	si	[{"dd592":"mht56"}]	{\r\n  "data_to_be_used": "dato"\r\n}	{"data_to_be_used": "dato"}
 mht38	mht40	dd530	no	si	si	5	mht	no	[{"dd6":"rsc106"},{"dd9":"rsc116"}]	{\r\n  "search_list_add": [\r\n    "rsc119"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "25%"}}}, "search_list_add": ["rsc119"]}
 mht53	mht40	dd339	no	si	si	2	mht	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "2",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "8%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "width": "120px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".content_data": {"style": {"width": "120px"}}, ".wrap_component": {"mixin": [".vertical"], "style": {"width": "8%"}}}, "dato_default": [{"section_id": "2", "section_tipo": "dd64"}]}
-mht60	hierarchy56	dd4	no	si	si	9	mht	si	\N	\N	\N
+mht60	hierarchy56	dd4	no	si	si	10	mht	si	\N	\N	\N
 mht116	mht115	dd1233	no	si	si	1	mht	si	[{"dd339":"mht53"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}	{"enum": {"1": "si", "2": "no"}, "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue", "exclude_column": true, "data_to_be_used": "dato"}
 mht66	mht50	dd1259	no	si	si	1	mht	si	null	\N	\N
 mht2	mht21	dd1743	no	si	si	1	mht	si	null	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}	{"diffusion": {"class_name": "diffusion_mysql"}}
@@ -152,5 +152,5 @@ mht130	mht115	dd1234	no	si	si	7	mht	si	[{"dd635":"mht42"}]	{\r\n  "process_dato"
 mht98	mht96	dd1235	no	si	si	2	mht	si	[{"dd1747":"mht79"}]	{\r\n  "varchar": 64,\r\n  "process_dato": "diffusion_sql::map_to_terminoID"\r\n}	{"varchar": 64, "process_dato": "diffusion_sql::map_to_terminoID"}
 mht145	mht144	dd1743	no	si	si	1	mht	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  },\r\n  "publication_schema_info": "Use format {table_name.field_name:target_table} or {field_name:target_table} for multiple map",\r\n  "publication_schema": {\r\n    "image": "image",\r\n    "audiovisual": "audiovisual",\r\n    "informant": "informant",\r\n    "images": "image",\r\n    "imagen_identificativa": "image"\r\n  }\r\n}	{"diffusion": {"class_name": "diffusion_mysql"}, "publication_schema": {"image": "image", "images": "image", "informant": "informant", "audiovisual": "audiovisual", "imagen_identificativa": "image"}, "publication_schema_info": "Use format {table_name.field_name:target_table} or {field_name:target_table} for multiple map"}
 mht29	mht24	dd530	no	si	si	4	mht	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{\r\n  "source": {\r\n    "divisor": " "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50"\r\n      ]\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".width_50"]}}, "source": {"divisor": " "}}
-mht131	ts11	dd440	no	si	si	4	mht	si	[{"dd6":"rsc170"}]		null
+mht131	ts11	dd440	no	si	si	3	mht	si	[{"dd6":"rsc170"}]		null
 mht155	mht154	dd1232	no	si	si	1	mht	si	\N	{\r\n  "info": "this column, need to be at end, is not procesed at the resolution column, only when save the row",\r\n  "merge_columns": [\r\n    "rsc689",\r\n    "rsc690",\r\n    "rsc694",\r\n    "rsc695",\r\n    "rsc697",\r\n    "rsc699",\r\n    "rsc701",\r\n    "rsc702",\r\n    "rsc705",\r\n    "rsc706",\r\n    "rsc710",\r\n    "rsc737",\r\n    "rsc738",\r\n    "rsc739"\r\n  ]\r\n}	{"info": "this column, need to be at end, is not procesed at the resolution column, only when save the row", "merge_columns": ["rsc689", "rsc690", "rsc694", "rsc695", "rsc699", "rsc700", "rsc701", "rsc702", "rsc705", "rsc706", "rsc710"]}

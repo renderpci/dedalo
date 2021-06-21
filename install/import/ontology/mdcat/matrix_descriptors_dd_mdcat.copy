@@ -1150,11 +1150,6 @@ mdcat159	Protocols de recerca	termino	lg-cat
 mdcat1590	Id	termino	lg-cat
 mdcat1590	Id	termino	lg-spa
 mdcat1591	Id anterior	termino	lg-cat
-mdcat1591	Id anterior	termino	lg-spa
-mdcat1592	Clau	termino	lg-cat
-mdcat1592	Código	termino	lg-spa
-mdcat1593	Data de creació	termino	lg-cat
-mdcat1593	Fecha de creación	termino	lg-spa
 mdcat1594	Inici publicació	termino	lg-cat
 mdcat1594	Inicio publicación	termino	lg-spa
 mdcat1595	Publicació	termino	lg-cat
@@ -1163,8 +1158,6 @@ mdcat1596	Fondo	termino	lg-spa
 mdcat1596	Fons	termino	lg-cat
 mdcat1597	Estado	termino	lg-spa
 mdcat1597	Estat	termino	lg-cat
-mdcat1598	Fotografías	termino	lg-spa
-mdcat1598	Fotografies	termino	lg-cat
 mdcat1599	view_mosaic	termino	lg-spa
 mdcat16	Publicació	termino	lg-cat
 mdcat16	Publicación	termino	lg-spa
@@ -1176,8 +1169,6 @@ mdcat1601	Titol	termino	lg-cat
 mdcat1601	Título	termino	lg-spa
 mdcat1602	Descripció	termino	lg-cat
 mdcat1602	Descripción	termino	lg-spa
-mdcat1603	Desaparecida	termino	lg-spa
-mdcat1603	Desapareguda	termino	lg-cat
 mdcat1604	Mapa de fosas	termino	lg-spa
 mdcat1604	Mapa de fosses	termino	lg-cat
 mdcat1604	Mappa delle fosse	termino	lg-ita
@@ -1226,6 +1217,13 @@ mdcat1618	Nou	termino	lg-cat
 mdcat1618	Nuevo	termino	lg-spa
 mdcat1618	Nuovo	termino	lg-ita
 mdcat1619	Categorías de fosas	termino	lg-spa
+mdcat1593	Fecha de incorporación al mapa	termino	lg-spa
+mdcat1591	Id anterior	termino	lg-spa
+mdcat1592	DES_Código _eliminar	termino	lg-spa
+mdcat1592	DES_Clau	termino	lg-cat
+mdcat1603	Desapareguda, CAMVIA A CONSERVACIÓN	termino	lg-cat
+mdcat1598	Fotografías identificativas	termino	lg-spa
+mdcat1598	Fotografies identificatives	termino	lg-cat
 mdcat1619	Categorie di fosse	termino	lg-ita
 mdcat1619	Categories de fosses	termino	lg-cat
 mdcat162	Projecte	termino	lg-cat
@@ -1271,18 +1269,14 @@ mdcat1631	Proyecto	termino	lg-spa
 mdcat1632	Nou	termino	lg-cat
 mdcat1632	Nuevo	termino	lg-spa
 mdcat1632	Nuovo	termino	lg-ita
-mdcat1633	Bando	termino	lg-spa
 mdcat1633	Bandol	termino	lg-cat
 mdcat1634	Tipo de fosa	termino	lg-spa
 mdcat1634	Tipus de fossa	termino	lg-cat
-mdcat1635	Notas	termino	lg-spa
-mdcat1635	Notes	termino	lg-cat
 mdcat1636	Font	termino	lg-cat
 mdcat1636	Fuente	termino	lg-spa
 mdcat1637	Municipi	termino	lg-cat
 mdcat1637	Municipio	termino	lg-spa
 mdcat1638	Nombre de restes	termino	lg-cat
-mdcat1638	Número de restos	termino	lg-spa
 mdcat1639	Categoría de fosas	termino	lg-spa
 mdcat1639	Categoria de fosses	termino	lg-cat
 mdcat164	Articles sobre el projecte	termino	lg-cat
@@ -1295,8 +1289,6 @@ mdcat1642	Hospital Militar	termino	lg-cat
 mdcat1642	Hospital Militar	termino	lg-spa
 mdcat1643	Georeferenciació	termino	lg-cat
 mdcat1643	Georeferencición	termino	lg-spa
-mdcat1644	Info de georeferenciació	termino	lg-cat
-mdcat1644	Info de georeferenciación	termino	lg-spa
 mdcat1645	Nou	termino	lg-cat
 mdcat1645	Nuevo	termino	lg-spa
 mdcat1646	Borrar	termino	lg-spa
@@ -1305,15 +1297,9 @@ mdcat1647	Listado	termino	lg-spa
 mdcat1647	Llistat	termino	lg-cat
 mdcat1648	Tipos de militar	termino	lg-spa
 mdcat1648	Tipus de militar	termino	lg-cat
-mdcat1649	Difuntos	termino	lg-spa
-mdcat1649	Difunts	termino	lg-cat
 mdcat165	email	termino	lg-spa
 mdcat1650	view_single_line	termino	lg-spa
 mdcat1651	Listado	termino	lg-spa
-mdcat1652	Referencias bibliográficas y documentales	termino	lg-spa
-mdcat1652	Referències bibliogràfiques i documentais	termino	lg-cat
-mdcat1653	Publicaciones	termino	lg-spa
-mdcat1653	Publicacions	termino	lg-cat
 mdcat1654	Cens de Desapareguts	termino	lg-cat
 mdcat1654	Censo de desaparecidos	termino	lg-spa
 mdcat1655	Identificació	termino	lg-cat
@@ -1337,6 +1323,15 @@ mdcat1662	Sol·licituts	termino	lg-cat
 mdcat1663	Solicitudes	termino	lg-spa
 mdcat1663	Sol·licituts	termino	lg-cat
 mdcat1664	Identificació	termino	lg-cat
+mdcat1652	Fuentes de información	termino	lg-spa
+mdcat1652	Fonts d'informació	termino	lg-cat
+mdcat1649	Difunts documentats	termino	lg-cat
+mdcat1649	Difuntos documentados	termino	lg-spa
+mdcat1633	Bando CAMBIA A TIPO DE FOSA	termino	lg-spa
+mdcat1638	Número de restos CAMBIA A TIPO DE FOSA	termino	lg-spa
+mdcat1644	Emplaçament	termino	lg-cat
+mdcat1644	Emplazamiento	termino	lg-spa
+mdcat1635	Notas (Descripción e información)	termino	lg-spa
 mdcat1664	Identificación	termino	lg-spa
 mdcat1665	Id	termino	lg-cat
 mdcat1665	Id	termino	lg-spa
@@ -1549,8 +1544,6 @@ mdcat1742	Expedient de recerca	termino	lg-cat
 mdcat1742	Expediente de investigación	termino	lg-spa
 mdcat1743	Data Tancament Recerca	termino	lg-cat
 mdcat1743	Fecha de cierre investigación	termino	lg-spa
-mdcat1744	Cierre	termino	lg-spa
-mdcat1744	Tancament	termino	lg-cat
 mdcat1745	Tipi di isolamento	termino	lg-ita
 mdcat1745	Tipos de cierre	termino	lg-spa
 mdcat1745	Tipus de tancament	termino	lg-cat
@@ -1579,8 +1572,6 @@ mdcat1752	Listado	termino	lg-spa
 mdcat1752	Llistat	termino	lg-cat
 mdcat1753	Data Ampliació	termino	lg-cat
 mdcat1753	Fecha amplicación	termino	lg-spa
-mdcat1754	Cierre ampliación	termino	lg-spa
-mdcat1754	Tancament Ampliació	termino	lg-cat
 mdcat1755	Control de investigación documental	termino	lg-spa
 mdcat1755	Control de recerca documental	termino	lg-cat
 mdcat1756	Indemnitzacions per privació de llibertat	termino	lg-cat
@@ -1665,6 +1656,7 @@ mdcat1788	Georeferenciación	termino	lg-spa
 mdcat1789	Info de georeferenciació	termino	lg-cat
 mdcat1789	Info de georeferenciación	termino	lg-spa
 mdcat179	Nou	termino	lg-cat
+mdcat1754	Situación de la ampliación	termino	lg-spa
 mdcat1790	Bandol	termino	lg-cat
 mdcat1791	Número de Restes	termino	lg-cat
 mdcat1791	Número de restos	termino	lg-spa
@@ -7028,6 +7020,598 @@ mdcat998	Projecte	termino	lg-cat
 mdcat998	Proyecto	termino	lg-spa
 mdcat999	Descripciones	termino	lg-spa
 mdcat999	Descripcions	termino	lg-cat
-mdcat1706	reciclar	termino	lg-spa
+mdcat1706	MEMORIAL DEMOCRATIC	termino	lg-spa
 mdcat3686	Radio button	obs	lg-spa
 mdcat1302	Changed &#039;component_method&#039; from get_diffusion_valor to &#039;get_diffusion_value&#039; in rsc23 (25-02-2021 Paco)	obs	lg-spa
+mdcat1744	Situació de l’expedient	termino	lg-cat
+mdcat1744	Situación del expediente	termino	lg-spa
+mdcat1754	Situació de l’ampliació	termino	lg-cat
+mdcat1593	Data incorporació al mapa	termino	lg-cat
+mdcat3716	Antropología	termino	lg-spa
+mdcat3716	Antropologia	termino	lg-cat
+mdcat3717	Genètica	termino	lg-cat
+mdcat3717	Genética	termino	lg-spa
+mdcat3718	Núm muestras	termino	lg-spa
+mdcat3718	Núm mostres	termino	lg-cat
+mdcat3719	Fecha de extracción	termino	lg-spa
+mdcat3715	Propietat	termino	lg-cat
+mdcat3715	Propiedad	termino	lg-spa
+mdcat3719	Data extracció	termino	lg-cat
+mdcat3720	Fecha tramite laboratorio	termino	lg-spa
+mdcat3720	Data tramesa laboratori	termino	lg-cat
+mdcat3721	Fecha de finalización	termino	lg-spa
+mdcat3721	Data finalització	termino	lg-cat
+mdcat3722	Laboratorio	termino	lg-spa
+mdcat3722	Laboratori	termino	lg-cat
+mdcat3723	Informe genético	termino	lg-spa
+mdcat3723	Informe genètic	termino	lg-cat
+mdcat3726	Mapa de fosas	termino	lg-spa
+mdcat3726	Mapa de fosses	termino	lg-cat
+mdcat3729	Id	termino	lg-spa
+mdcat3729	Id	termino	lg-cat
+mdcat3730	Identificación de la persona	termino	lg-spa
+mdcat3730	Identificació de la persona	termino	lg-cat
+mdcat3731	Memòria individu	termino	lg-cat
+mdcat3731	Memoria individuo	termino	lg-spa
+mdcat3732	Resolución Dep.CULTURA	termino	lg-spa
+mdcat3732	Resolució Dep.CULTURA	termino	lg-cat
+mdcat3733	Destí final de les restes	termino	lg-cat
+mdcat3733	Destino final de los restos	termino	lg-spa
+mdcat3734	Acta de retorno	termino	lg-spa
+mdcat3734	Acta de retorn	termino	lg-cat
+mdcat3735	Retorno	termino	lg-spa
+mdcat3735	Retorn	termino	lg-cat
+mdcat3736	Proyecto	termino	lg-spa
+mdcat3736	Projecte	termino	lg-cat
+mdcat3737	Listado	termino	lg-spa
+mdcat3737	Llistat	termino	lg-cat
+mdcat3738	Nuevo	termino	lg-spa
+mdcat3738	Nou	termino	lg-cat
+mdcat3739	Eliminar	termino	lg-spa
+mdcat3739	Esborrar	termino	lg-cat
+mdcat3740	Relaciones	termino	lg-spa
+mdcat3740	Rel·lacions	termino	lg-cat
+mdcat3741	Últimos cambios	termino	lg-spa
+mdcat3741	Últioms canvis	termino	lg-cat
+mdcat3743	Identificación	termino	lg-spa
+mdcat3743	Identificació	termino	lg-cat
+mdcat3744	Id	termino	lg-spa
+mdcat3744	Id	termino	lg-cat
+mdcat3745	Estado	termino	lg-spa
+mdcat3745	Estat	termino	lg-cat
+mdcat3746	Listado	termino	lg-spa
+mdcat3746	Llistat	termino	lg-cat
+mdcat3747	Proyecto	termino	lg-spa
+mdcat3747	Projecte	termino	lg-cat
+mdcat3748	Nuevo	termino	lg-spa
+mdcat3748	Nou	termino	lg-cat
+mdcat3749	Borrar	termino	lg-spa
+mdcat3749	Esborrar	termino	lg-cat
+mdcat3750	Publicación	termino	lg-spa
+mdcat3750	Publicació	termino	lg-cat
+mdcat3751	Fecha	termino	lg-spa
+mdcat3751	Data	termino	lg-cat
+mdcat3752	Memoria interdisciplinaria	termino	lg-spa
+mdcat3752	Memòria interdisciplinària	termino	lg-cat
+mdcat3728	Identificación y retorno	termino	lg-spa
+mdcat3754	Identificación	termino	lg-spa
+mdcat3727	Individus exhumats	termino	lg-cat
+mdcat3753	Individuos exhumados	termino	lg-spa
+mdcat3753	Individus exhumats	termino	lg-cat
+mdcat3725	Individuos exhumados	termino	lg-spa
+mdcat3725	Individus exhumats	termino	lg-cat
+mdcat3727	Individuos exhumados	termino	lg-spa
+mdcat3754	Identificació	termino	lg-cat
+mdcat3755	Código	termino	lg-spa
+mdcat3755	Codi	termino	lg-cat
+mdcat3755	ANY(2 xifres)+3 lletres+00 (2 xifres) exemple 17PDL01	obs	lg-spa
+mdcat3756	Caixa i bossa	termino	lg-cat
+mdcat3757	Depósito	termino	lg-spa
+mdcat3757	Dipòsit	termino	lg-cat
+mdcat3761	Sexo	termino	lg-spa
+mdcat3761	Sexe	termino	lg-cat
+mdcat3764	Identificación	termino	lg-spa
+mdcat3764	Identificació	termino	lg-cat
+mdcat3765	id	termino	lg-spa
+mdcat3765	id	termino	lg-cat
+mdcat3767	Proyecto	termino	lg-spa
+mdcat3767	Projecte	termino	lg-cat
+mdcat3768	Listado	termino	lg-spa
+mdcat3768	Llistat	termino	lg-cat
+mdcat3728	Identificació i retorn	termino	lg-cat
+mdcat3762	Edad min.	termino	lg-spa
+mdcat3762	Edat min.	termino	lg-cat
+mdcat3724	Estat estudis genètics	termino	lg-cat
+mdcat3724	Estado estudios genéticos	termino	lg-spa
+mdcat3742	Estados de informes antropológicos	termino	lg-spa
+mdcat3742	Estats d'informes antropològics	termino	lg-cat
+mdcat3763	Estados de informes genéticos	termino	lg-spa
+mdcat3766	Estado	termino	lg-spa
+mdcat3766	Estat	termino	lg-cat
+mdcat3759	Hecho (estructura)	termino	lg-spa
+mdcat3759	Fet (estructura)	termino	lg-cat
+mdcat3758	Unidad Estratigráfica (UE)	termino	lg-spa
+mdcat3758	Unitat Estratigràfica (UE)	termino	lg-cat
+mdcat3760	Conjunto funcional	termino	lg-spa
+mdcat3760	Conjunt Funcional	termino	lg-cat
+mdcat3769	Nuevo	termino	lg-spa
+mdcat3769	Nou	termino	lg-cat
+mdcat3770	Borrar	termino	lg-spa
+mdcat3770	Esborrar	termino	lg-cat
+mdcat3771	Posible causa de mort	termino	lg-spa
+mdcat3771	Possible causa mort	termino	lg-cat
+mdcat3772	Posición	termino	lg-spa
+mdcat3772	Posició	termino	lg-cat
+mdcat3773	Orientación	termino	lg-spa
+mdcat3773	Orientació	termino	lg-cat
+mdcat3774	Descripción	termino	lg-spa
+mdcat3774	Descripció	termino	lg-cat
+mdcat3775	Observaciones	termino	lg-spa
+mdcat3775	Observacions	termino	lg-cat
+mdcat3776	Informe Antropològic	termino	lg-cat
+mdcat3776	Informe Antropológico	termino	lg-spa
+mdcat3777	Informe mèdic Forense	termino	lg-cat
+mdcat3777	Informe médico Forense	termino	lg-spa
+mdcat3778	Individuo	termino	lg-spa
+mdcat3778	Individu	termino	lg-cat
+mdcat3779	Amputació	termino	lg-cat
+mdcat3779	Amputación	termino	lg-spa
+mdcat3784	Intervenciones	termino	lg-spa
+mdcat3784	Intervencions	termino	lg-cat
+mdcat3785	Identificación	termino	lg-spa
+mdcat3785	Identificació	termino	lg-cat
+mdcat3786	Id	termino	lg-spa
+mdcat3786	Id	termino	lg-cat
+mdcat3787	Codigo	termino	lg-spa
+mdcat3787	Codi	termino	lg-cat
+mdcat3788	Presupuesto inicial	termino	lg-spa
+mdcat3788	Pressupost inicial	termino	lg-cat
+mdcat3789	Coste definitivo	termino	lg-spa
+mdcat3789	Cost definitiu	termino	lg-cat
+mdcat3791	Propuesta de intervención	termino	lg-spa
+mdcat3791	Proposta d'intervenció	termino	lg-cat
+mdcat3792	Fecha prevista	termino	lg-spa
+mdcat3792	Data prevista	termino	lg-cat
+mdcat3793	Descripción de la propuesta	termino	lg-spa
+mdcat3793	Descripció de la proposta	termino	lg-cat
+mdcat3794	Doc. proposta	termino	lg-cat
+mdcat3794	Doc. propuesta	termino	lg-spa
+mdcat3795	Permiso arqueológico	termino	lg-spa
+mdcat3795	Permís arqueològic	termino	lg-cat
+mdcat3796	Direcció arqueològica	termino	lg-cat
+mdcat3796	Dirección pública	termino	lg-spa
+mdcat3797	Fechas de intervención	termino	lg-spa
+mdcat3797	Dates intervenció	termino	lg-cat
+mdcat3798	Pínter	termino	lg-spa
+mdcat3798	Pínter	termino	lg-cat
+mdcat3799	Informes de intervención	termino	lg-spa
+mdcat3799	Informes intervenció	termino	lg-cat
+mdcat3800	Arqueológico	termino	lg-spa
+mdcat3800	Arqueològic	termino	lg-cat
+mdcat3803	Memòria final arqueològica	termino	lg-cat
+mdcat3803	Memória final arqueológica	termino	lg-spa
+mdcat3804	Proyecto	termino	lg-spa
+mdcat3804	Projecte	termino	lg-cat
+mdcat3805	Listado	termino	lg-spa
+mdcat3805	Llistat	termino	lg-cat
+mdcat3806	Nuevo	termino	lg-spa
+mdcat3806	Nou	termino	lg-cat
+mdcat3807	Borrar	termino	lg-spa
+mdcat3807	Esborrar	termino	lg-cat
+mdcat3808	Relaciones	termino	lg-spa
+mdcat3808	Relations	termino	lg-cat
+mdcat3809	Últimos cambios	termino	lg-spa
+mdcat3809	Últims canvis	termino	lg-cat
+mdcat3810	Solicitudes	termino	lg-spa
+mdcat3810	Sol·licituts	termino	lg-cat
+mdcat3811	Identificación	termino	lg-spa
+mdcat3811	Identificació	termino	lg-cat
+mdcat3812	Id	termino	lg-spa
+mdcat3812	Id	termino	lg-cat
+mdcat3813	Fecha solicitud	termino	lg-spa
+mdcat3813	Data sol·licitud	termino	lg-cat
+mdcat3814	Fecha de respuesta	termino	lg-spa
+mdcat3814	Data de resposta	termino	lg-cat
+mdcat3815	Tipos de solicitudes	termino	lg-spa
+mdcat3815	Tipus de sol·Licituts	termino	lg-cat
+mdcat3816	Identificación	termino	lg-spa
+mdcat3816	Identificació	termino	lg-cat
+mdcat3817	Id	termino	lg-spa
+mdcat3817	Id	termino	lg-cat
+mdcat3818	Tipo de solicitud	termino	lg-spa
+mdcat3818	Tipus de sol·licitut	termino	lg-cat
+mdcat3819	Proyecto	termino	lg-spa
+mdcat3819	Projecte	termino	lg-cat
+mdcat3790	Comentarios intervención	termino	lg-spa
+mdcat3790	Comentaris intervenció	termino	lg-cat
+mdcat3801	Material gráfico	termino	lg-spa
+mdcat3801	Material gràfic	termino	lg-cat
+mdcat3802	Listado	termino	lg-spa
+mdcat3802	Llistat	termino	lg-cat
+mdcat3780	Estat estudis antropològics	termino	lg-cat
+mdcat3781	Fotografías posición	termino	lg-spa
+mdcat3781	Fotografies posició	termino	lg-cat
+mdcat3782	Fotografias	termino	lg-spa
+mdcat3782	Fotografies	termino	lg-cat
+mdcat3783	Pla de fosses	termino	lg-cat
+mdcat3820	Listado	termino	lg-spa
+mdcat3820	Llistat	termino	lg-cat
+mdcat3821	Nuevo	termino	lg-spa
+mdcat3821	Nou	termino	lg-cat
+mdcat3822	Borrar	termino	lg-spa
+mdcat3822	Esborrar	termino	lg-cat
+mdcat3823	Tipo de solicitud	termino	lg-spa
+mdcat3823	Tipus de sol·licitut	termino	lg-cat
+mdcat3824	Documentos enviados	termino	lg-spa
+mdcat3824	Documents enviats	termino	lg-cat
+mdcat3825	Documentos recibidos	termino	lg-spa
+mdcat3825	Documents rebuts	termino	lg-cat
+mdcat3826	Proyecto	termino	lg-spa
+mdcat3826	Projecte	termino	lg-cat
+mdcat3827	Listado	termino	lg-spa
+mdcat3827	Llistat	termino	lg-cat
+mdcat3828	Listado	termino	lg-spa
+mdcat3828	Llistat	termino	lg-cat
+mdcat3829	Listado	termino	lg-spa
+mdcat3829	Llistat	termino	lg-cat
+mdcat3830	Nuevo	termino	lg-spa
+mdcat3830	Nou	termino	lg-cat
+mdcat3831	Borrar	termino	lg-spa
+mdcat3831	Esborrar	termino	lg-cat
+mdcat3832	Relaciones	termino	lg-spa
+mdcat3832	Rel·lacions	termino	lg-cat
+mdcat3833	Últimos cambios	termino	lg-spa
+mdcat3833	Últims canvis	termino	lg-cat
+mdcat3834	Permiso propietario	termino	lg-spa
+mdcat3834	Permís propietari	termino	lg-cat
+mdcat3835	Permís carreteres	termino	lg-cat
+mdcat3835	Permiso carreteras	termino	lg-spa
+mdcat3836	Sol·licitud permís Int arq. (Dept. Cultura)	termino	lg-cat
+mdcat3836	Solicitud permiso Instituto arqueología (Dep. Cultural)	termino	lg-spa
+mdcat1653	Referencias bibliográficas y documentales	termino	lg-spa
+mdcat3837	Informant/s	termino	lg-cat
+mdcat3837	Informante/s	termino	lg-spa
+mdcat3838	Comentarios fuente de información	termino	lg-spa
+mdcat3838	Comentaris fonts informació	termino	lg-cat
+mdcat3839	Casos posibles	termino	lg-spa
+mdcat3839	Casos possibles	termino	lg-cat
+mdcat3840	Desaparecidos posibles en el Cost Humà	termino	lg-spa
+mdcat3840	Desapareguts possible al Cost Humà	termino	lg-cat
+mdcat3841	Desaparecidos posibles en Censo Desaparecidos	termino	lg-spa
+mdcat3841	Desapareguts possible al Cens Desapareguts	termino	lg-cat
+mdcat3842	Inhumaciones	termino	lg-spa
+mdcat3842	Inhumacions	termino	lg-cat
+mdcat3843	Tipo de fosa por número	termino	lg-spa
+mdcat3844	Tipos de fosa por número	termino	lg-spa
+mdcat3844	Tipus de fossa per número	termino	lg-cat
+mdcat3845	Identificaicó	termino	lg-cat
+mdcat3846	Id	termino	lg-spa
+mdcat3846	Id	termino	lg-cat
+mdcat3847	Tamaño de la fosa	termino	lg-spa
+mdcat3847	Tamany de la fossa	termino	lg-cat
+mdcat3845	Identificación	termino	lg-spa
+mdcat3848	Proyecto	termino	lg-spa
+mdcat3848	Projecte	termino	lg-cat
+mdcat3849	Listado	termino	lg-spa
+mdcat3849	Llistat	termino	lg-cat
+mdcat3850	Nuevo	termino	lg-spa
+mdcat3850	Nou	termino	lg-cat
+mdcat3851	Borrar	termino	lg-spa
+mdcat3851	Esborrar	termino	lg-cat
+mdcat3852	Número de inhumados	termino	lg-spa
+mdcat3852	Nombre d'inhumats	termino	lg-cat
+mdcat3853	Comentaris núm. inhumats	termino	lg-cat
+mdcat3853	Comentarios núm. inhumados	termino	lg-spa
+mdcat3854	Identificació documental d'inhumats	termino	lg-cat
+mdcat3854	Identificación documental de inhumados	termino	lg-spa
+mdcat3855	Identificación de inhumados	termino	lg-spa
+mdcat3855	Identificación d'inhumats	termino	lg-cat
+mdcat3856	Identificación	termino	lg-spa
+mdcat3856	Identificació	termino	lg-cat
+mdcat3857	Id	termino	lg-spa
+mdcat3857	Id	termino	lg-cat
+mdcat3858	Valor	termino	lg-spa
+mdcat3858	Valor	termino	lg-cat
+mdcat3859	Proyecto	termino	lg-spa
+mdcat3859	Projecte	termino	lg-cat
+mdcat3860	Listado	termino	lg-spa
+mdcat3860	Llistat	termino	lg-cat
+mdcat3861	Nuevo	termino	lg-spa
+mdcat3861	Nou	termino	lg-cat
+mdcat3862	Borrar	termino	lg-spa
+mdcat3862	Esborrar	termino	lg-cat
+mdcat3863	Documentación pdf	termino	lg-spa
+mdcat3864	Documentación gráfica	termino	lg-spa
+mdcat3865	Contexto histórico	termino	lg-spa
+mdcat3865	Context històric	termino	lg-cat
+mdcat3866	Resumen contexto histórico local	termino	lg-spa
+mdcat3867	Fiabilitat	termino	lg-cat
+mdcat3866	Resum context històric local	termino	lg-cat
+mdcat3843	Tipus de fossa per número	termino	lg-cat
+mdcat3864	Documentació gràfica	termino	lg-cat
+mdcat1653	Referències bibliogràfiques i documentais	termino	lg-cat
+mdcat3867	Fiabilidad	termino	lg-spa
+mdcat3868	Probabilitat localització restes	termino	lg-cat
+mdcat3868	Probabilidad de localización restos	termino	lg-spa
+mdcat3869	Probabilidades de encontrar restos	termino	lg-spa
+mdcat3869	Probabilitats de localitzar restes	termino	lg-cat
+mdcat3870	Identificación	termino	lg-spa
+mdcat3870	Identificació	termino	lg-cat
+mdcat3871	Id	termino	lg-spa
+mdcat3871	Id	termino	lg-cat
+mdcat3872	Probabilidad	termino	lg-spa
+mdcat3872	Probabilitat	termino	lg-cat
+mdcat3873	Proyecto	termino	lg-spa
+mdcat3873	Projecte	termino	lg-cat
+mdcat3874	Listado	termino	lg-spa
+mdcat3874	Llistat	termino	lg-cat
+mdcat3875	Nuevo	termino	lg-spa
+mdcat3875	Nou	termino	lg-cat
+mdcat3876	Borrar	termino	lg-spa
+mdcat3876	Esborrar	termino	lg-cat
+mdcat3877	Comentarios de fiabilidad	termino	lg-spa
+mdcat3878	Tipo de propiedad	termino	lg-spa
+mdcat3878	Tipus de propietat	termino	lg-cat
+mdcat3879	Tipos de propiedad	termino	lg-spa
+mdcat3879	Tipus propietat	termino	lg-cat
+mdcat3880	Identificación	termino	lg-spa
+mdcat3880	Identificació	termino	lg-cat
+mdcat3881	Id	termino	lg-spa
+mdcat3881	Id	termino	lg-cat
+mdcat3882	Tipo de propiedad	termino	lg-spa
+mdcat3882	Tipus de propietat	termino	lg-cat
+mdcat3883	Proyecto	termino	lg-spa
+mdcat3883	Projecte	termino	lg-cat
+mdcat3884	Listado	termino	lg-spa
+mdcat3884	llistat	termino	lg-cat
+mdcat3885	Nuevo	termino	lg-spa
+mdcat3885	Nou	termino	lg-cat
+mdcat3886	Borrar	termino	lg-spa
+mdcat3886	Esborrar	termino	lg-cat
+mdcat3887	Referència cadastral	termino	lg-cat
+mdcat3887	Referencia catastral	termino	lg-spa
+mdcat3888	URI catastro	termino	lg-spa
+mdcat3889	Altres referències cadastrals	termino	lg-cat
+mdcat3889	Otras referencias catastrales	termino	lg-spa
+mdcat3890	Dades de la propietat	termino	lg-cat
+mdcat3890	Datos de la propiedad	termino	lg-spa
+mdcat3891	Observaciones a la propiedad	termino	lg-spa
+mdcat3891	Observacions a la proietat	termino	lg-cat
+mdcat3892	Jaciment arqueològic associat	termino	lg-cat
+mdcat3892	Yacimiento arqueológico asociado	termino	lg-spa
+mdcat3893	Jacimiento arquieológico asociado	termino	lg-spa
+mdcat3894	URI oficial del yacimiento	termino	lg-spa
+mdcat3894	URI oficial del jaciment	termino	lg-cat
+mdcat3895	IPArqueoC núm.	termino	lg-cat
+mdcat3895	IPArqueoC núm.	termino	lg-spa
+mdcat3896	IPArqueoC nom	termino	lg-spa
+mdcat3896	IPArqueoC nom	termino	lg-cat
+mdcat3897	Localización	termino	lg-spa
+mdcat3897	Localització	termino	lg-cat
+mdcat3898	Dins cementiri	termino	lg-cat
+mdcat3898	Dentro de cementerio	termino	lg-spa
+mdcat3899	Coordenades UTM ETRS 31 89	termino	lg-cat
+mdcat3899	Coordenadas UTM ETRS 31 89	termino	lg-spa
+mdcat3900	X	termino	lg-spa
+mdcat3900	X	termino	lg-cat
+mdcat3901	Y	termino	lg-spa
+mdcat3901	Y	termino	lg-cat
+mdcat3902	Geoide	termino	lg-spa
+mdcat3902	Geoide	termino	lg-cat
+mdcat3903	Dignificació / senyalització	termino	lg-cat
+mdcat3903	Dignificación / señalitzación	termino	lg-spa
+mdcat3904	Senyalitzada	termino	lg-cat
+mdcat3904	Señalizada	termino	lg-spa
+mdcat3905	Descripció senyalització	termino	lg-cat
+mdcat3905	Descripción de la señalización	termino	lg-spa
+mdcat3906	Fotografies senyalització	termino	lg-cat
+mdcat3906	Fotografías señalización	termino	lg-spa
+mdcat3907	Dignificada	termino	lg-cat
+mdcat3907	Dignificada	termino	lg-spa
+mdcat3908	Descripción dignificación	termino	lg-spa
+mdcat3909	Fotografies dignificació	termino	lg-cat
+mdcat3909	Fotografías dignificación	termino	lg-spa
+mdcat3910	Data dignificació	termino	lg-cat
+mdcat3910	Fecha dignificación	termino	lg-spa
+mdcat3911	Inclusió xarxa d'espais de memòria	termino	lg-cat
+mdcat3911	Inclusión Red de espacios de Memoria	termino	lg-spa
+mdcat3912	SEÑALIZADA DIV	termino	lg-spa
+mdcat3912	SENYALITZADA DIV	termino	lg-cat
+mdcat3913	DIGNIFICADA DIV	termino	lg-spa
+mdcat3913	DiGNIFICADA DIV	termino	lg-cat
+mdcat1603	Desaparecida, CAMBIA A CONSERVACIÓN	termino	lg-spa
+mdcat1635	Notes (Descripció i informació)	termino	lg-cat
+mdcat3914	Materials en superfície	termino	lg-cat
+mdcat3914	materiales en superficie	termino	lg-spa
+mdcat3908	Descripció dignificació	termino	lg-cat
+mdcat3888	URI Cadastre	termino	lg-cat
+mdcat3893	Jaciment arqueològic associat	termino	lg-cat
+mdcat3877	Comentaris fiabilitat	termino	lg-cat
+mdcat3916	Identificación	termino	lg-spa
+mdcat3916	Identificació	termino	lg-cat
+mdcat3917	Id	termino	lg-spa
+mdcat3917	Id	termino	lg-cat
+mdcat3919	Proyecto	termino	lg-spa
+mdcat3919	Projecte	termino	lg-cat
+mdcat3920	Listado	termino	lg-spa
+mdcat3920	Llist	termino	lg-cat
+mdcat3921	Nuevo	termino	lg-spa
+mdcat3921	Nou	termino	lg-cat
+mdcat3922	Borrar	termino	lg-spa
+mdcat3922	Esborrar	termino	lg-cat
+mdcat3925	Tipos de intervenciones	termino	lg-spa
+mdcat3925	Tipus d'intervencions	termino	lg-cat
+mdcat3926	Identificación	termino	lg-spa
+mdcat3926	Identificación	termino	lg-cat
+mdcat3927	Id	termino	lg-spa
+mdcat3927	Id	termino	lg-cat
+mdcat3928	Tipo de intervención	termino	lg-spa
+mdcat3928	Tipus d'intervenciò	termino	lg-cat
+mdcat3929	Proyecto	termino	lg-spa
+mdcat3929	Projecte	termino	lg-cat
+mdcat3930	Listado	termino	lg-spa
+mdcat3930	Llistat	termino	lg-cat
+mdcat3931	Nuevo	termino	lg-spa
+mdcat3931	Nou	termino	lg-cat
+mdcat3932	Borrar	termino	lg-spa
+mdcat3932	Esborrar	termino	lg-cat
+mdcat3933	Intervención	termino	lg-spa
+mdcat3933	Intervenció	termino	lg-cat
+mdcat3935	Intervenciones	termino	lg-spa
+mdcat3935	Intervencions	termino	lg-cat
+mdcat3936	Tipos de conservación	termino	lg-spa
+mdcat3936	Tipus de conservació	termino	lg-cat
+mdcat3937	Identificación	termino	lg-spa
+mdcat3937	Identificació	termino	lg-cat
+mdcat3938	Id	termino	lg-spa
+mdcat3938	Id	termino	lg-cat
+mdcat3939	Tipo de conservación	termino	lg-spa
+mdcat3939	Tipus de conservació	termino	lg-cat
+mdcat3940	Proyecto	termino	lg-spa
+mdcat3940	Projecte	termino	lg-cat
+mdcat3941	Listado	termino	lg-spa
+mdcat3941	Llistat	termino	lg-cat
+mdcat3942	Nuevo	termino	lg-spa
+mdcat3942	Nou	termino	lg-cat
+mdcat3943	Borrar	termino	lg-spa
+mdcat3943	Esborrar	termino	lg-cat
+mdcat3944	Conservación	termino	lg-spa
+mdcat3944	Conservació	termino	lg-cat
+mdcat3945	Comentaris de conservació	termino	lg-cat
+mdcat3945	Comentarios de conservación	termino	lg-spa
+mdcat3946	Fotografías	termino	lg-spa
+mdcat3946	Fotografies	termino	lg-cat
+mdcat3947	Eliminar	termino	lg-spa
+mdcat3949	Conservación DIV	termino	lg-spa
+mdcat3949	Conservació DIV	termino	lg-cat
+mdcat3950	Pestañas	termino	lg-spa
+mdcat3950	Pestanyes	termino	lg-cat
+mdcat3952	Documentación	termino	lg-spa
+mdcat3952	Documentació	termino	lg-cat
+mdcat3953	Contexto	termino	lg-spa
+mdcat3953	Context	termino	lg-cat
+mdcat3954	Zones de desaparició	termino	lg-cat
+mdcat3954	Zonas de desaparición	termino	lg-spa
+mdcat3756	Caja y bolsa	termino	lg-spa
+mdcat3934	Resultado	termino	lg-spa
+mdcat3915	Tipus d'actuació	termino	lg-cat
+mdcat3918	Tipo de actuación	termino	lg-spa
+mdcat3918	Tipus d'actuació	termino	lg-cat
+mdcat3924	Tipo de actuación	termino	lg-spa
+mdcat3924	Tipus d'actuació	termino	lg-cat
+mdcat3948	Intervenciones	termino	lg-spa
+mdcat3948	Intervencions	termino	lg-cat
+mdcat3951	Indexación temática	termino	lg-spa
+mdcat3951	Indexació temàtica	termino	lg-cat
+mdcat3923	Tipus de jaciment	termino	lg-cat
+mdcat3923	Tipo de yacimiento	termino	lg-spa
+mdcat3955	afectado copia	termino	lg-spa
+mdcat3934	Resultat	termino	lg-cat
+mdcat3915	Tipos de actuación	termino	lg-spa
+mdcat3956	Listado	termino	lg-spa
+mdcat3956	Llistat	termino	lg-cat
+mdcat3957	Listado	termino	lg-spa
+mdcat3957	Llistat	termino	lg-cat
+mdcat3958	Listado	termino	lg-spa
+mdcat3958	Llista	termino	lg-cat
+mdcat3959	Listado	termino	lg-spa
+mdcat3959	Llistat	termino	lg-cat
+mdcat3960	Edad máx.	termino	lg-spa
+mdcat3960	Edat màx.	termino	lg-cat
+mdcat3961	Categorias de edad	termino	lg-spa
+mdcat3961	Categories d'edat	termino	lg-cat
+mdcat3962	Identificación	termino	lg-spa
+mdcat3962	Identificació	termino	lg-cat
+mdcat3963	Id	termino	lg-spa
+mdcat3963	Id	termino	lg-cat
+mdcat3964	Categoria de edad	termino	lg-spa
+mdcat3964	Categoria d'edat	termino	lg-cat
+mdcat3965	Edad mín.	termino	lg-spa
+mdcat3965	Edat mín.	termino	lg-cat
+mdcat3966	Edat máx.	termino	lg-spa
+mdcat3966	Edat màx.	termino	lg-cat
+mdcat3967	Proyecto	termino	lg-spa
+mdcat3967	Projecte	termino	lg-cat
+mdcat3968	Nuevo	termino	lg-spa
+mdcat3968	Nou	termino	lg-cat
+mdcat3969	Listado	termino	lg-spa
+mdcat3969	Llista	termino	lg-cat
+mdcat3970	Categoría de edad	termino	lg-spa
+mdcat3970	Categoria d'edat	termino	lg-cat
+mdcat3971	Individuos exhumados sexo	termino	lg-spa
+mdcat3971	Individus exhumats sexe	termino	lg-cat
+mdcat3972	Identificación	termino	lg-spa
+mdcat3972	Identificació	termino	lg-cat
+mdcat3973	Id	termino	lg-spa
+mdcat3973	Id	termino	lg-cat
+mdcat3974	Sexo	termino	lg-spa
+mdcat3974	Sexe	termino	lg-cat
+mdcat3975	Proyecto	termino	lg-spa
+mdcat3975	Projecte	termino	lg-cat
+mdcat3976	Nuevo	termino	lg-spa
+mdcat3976	Nou	termino	lg-cat
+mdcat3977	Esborrar	termino	lg-cat
+mdcat3978	Listado	termino	lg-spa
+mdcat3978	Llistat	termino	lg-cat
+mdcat3979	Localización	termino	lg-spa
+mdcat3979	Localització	termino	lg-cat
+mdcat3980	Emplazamiento	termino	lg-spa
+mdcat3980	Emplaçament	termino	lg-cat
+mdcat3981	Municipio	termino	lg-spa
+mdcat3981	Municipi	termino	lg-cat
+mdcat3982	Coordenadas UTM ETRS 31 89	termino	lg-spa
+mdcat3982	Coordenades UTM ETRS 31 89	termino	lg-cat
+mdcat3983	X	termino	lg-spa
+mdcat3983	X	termino	lg-cat
+mdcat3984	Y	termino	lg-spa
+mdcat3984	Y	termino	lg-cat
+mdcat3985	Geoid	termino	lg-spa
+mdcat3985	Geoid	termino	lg-cat
+mdcat3986	Georeferenciación	termino	lg-spa
+mdcat3986	Georeferenciació	termino	lg-cat
+mdcat3780	Estado estudios antropológicos	termino	lg-spa
+mdcat3763	Estats d'informes genètics	termino	lg-cat
+mdcat3783	Plan de fosas	termino	lg-spa
+mdcat3987	Planes de fosas	termino	lg-spa
+mdcat3987	Plans de fosses	termino	lg-cat
+mdcat3988	Identificación	termino	lg-spa
+mdcat3988	Identificació	termino	lg-cat
+mdcat3989	Id	termino	lg-spa
+mdcat3989	Id	termino	lg-cat
+mdcat3990	Plan de fosa	termino	lg-spa
+mdcat3990	Pla de fossa	termino	lg-cat
+mdcat3991	Proyecto	termino	lg-spa
+mdcat3991	Projecte	termino	lg-cat
+mdcat3992	Listado	termino	lg-spa
+mdcat3992	llistat	termino	lg-cat
+mdcat3993	Nuevo	termino	lg-spa
+mdcat3993	Nou	termino	lg-cat
+mdcat3994	Borrar	termino	lg-spa
+mdcat3994	Esborrar	termino	lg-cat
+mdcat3977	Borrar	termino	lg-spa
+mdcat3863	Documentació pdf	termino	lg-cat
+mdcat3995	Publicació	termino	lg-cat
+mdcat3995	Publicación	termino	lg-spa
+mdcat3996	Publicación	termino	lg-spa
+mdcat3996	Publicació	termino	lg-cat
+mdcat3997	Tipo de víctima	termino	lg-spa
+mdcat3997	Tipus de victima	termino	lg-cat
+mdcat3998	Causas de aplazamiento	termino	lg-spa
+mdcat3998	Causes d'ajornament	termino	lg-cat
+mdcat3999	Causas de aplazamiento	termino	lg-spa
+mdcat3999	Causes d'ajornament	termino	lg-cat
+mdcat4000	Identificación	termino	lg-spa
+mdcat4000	Identificació	termino	lg-cat
+mdcat4001	Id	termino	lg-spa
+mdcat4001	Id	termino	lg-cat
+mdcat4002	Causa de aplazamiento	termino	lg-spa
+mdcat4002	Causes d'ajornament	termino	lg-cat
+mdcat4003	Proyecto	termino	lg-spa
+mdcat4003	Projecte	termino	lg-cat
+mdcat4004	Listado	termino	lg-spa
+mdcat4004	Llistat	termino	lg-cat
+mdcat4005	Nuevo	termino	lg-spa
+mdcat4005	Nou	termino	lg-cat
+mdcat4006	Borrar	termino	lg-spa
+mdcat4006	Esborrar	termino	lg-cat
+mdcat4007	Causas DIV	termino	lg-spa

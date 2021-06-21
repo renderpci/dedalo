@@ -122,8 +122,6 @@ dd1023	Sense fitxer	termino	lg-cat
 dd1023	Senza file	termino	lg-ita
 dd1023	Sin fichero	termino	lg-spa
 dd1023	δεν υπάρχει αρχείο	termino	lg-ell
-dd1024	Diffusione	termino	lg-ita
-dd1024	Difusion	termino	lg-spa
 dd1026	Identificació	termino	lg-cat
 dd1026	Identificaicón	termino	lg-spa
 dd1026	Identification	termino	lg-eng
@@ -162,11 +160,6 @@ dd1034	Seleccioneu una etiqueta per indexar	termino	lg-cat
 dd1034	Select a tag to index	termino	lg-eng
 dd1034	Seleziona un' etichetta per indicizzare	termino	lg-ita
 dd1034	Επιλέξτε μια ετικέτα στο ευρετήριο	termino	lg-ell
-dd1035	Para crear un nuevo fragmento, simplemente seleccione una parte del texto y pulse «Nuevo fragmento» abajo	termino	lg-spa
-dd1035	Per crear un nou fragment, simplement seleccioneu un fragment de text i premeu «Nou fragment» baix	termino	lg-cat
-dd1035	Per creare un nuovo frammento, semplicemente seleziona una parte del testo e clicca Nuovo frammento in basso	termino	lg-ita
-dd1035	To create a new fragment, simply select a text portion and click on the new button below	termino	lg-eng
-dd1035	Για να δημιουργήσετε ένα νέο απόσπασμα, απλά επιλέξτε ένα τμήμα του κειμένου και πατήστε το κουμπί Νέο κομμάτι παρακάτω	termino	lg-ell
 dd1036	Relació afegida	termino	lg-cat
 dd1036	Relación añadida	termino	lg-spa
 dd1036	Relation added	termino	lg-eng
@@ -196,6 +189,10 @@ dd104	επιλεγμένα	termino	lg-ell
 dd1040	New empty template	termino	lg-eng
 dd1040	Nova plantilla buida	termino	lg-cat
 dd1040	Nueva plantilla vacía	termino	lg-spa
+dd1024	related	termino	lg-spa
+dd1035	Per crear un nou fragment, simplement seleccioneu un fragment de text i premeu «Nou fragment» baix	termino	lg-cat
+dd1035	Per creare un nuovo frammento, semplicemente seleziona una parte del testo e clicca Nuovo frammento in basso	termino	lg-ita
+dd1035	To create a new fragment, simply select a text portion and click on the new button below	termino	lg-eng
 dd1040	Nuovo modello vuoto	termino	lg-ita
 dd1040	Νέα άδειο πρότυπο	termino	lg-ell
 dd1041	diffusion_component	termino	lg-spa
@@ -593,17 +590,15 @@ dd1156	ref_property_description	termino	lg-spa
 dd1157	publication	termino	lg-spa
 dd1158	name	termino	lg-spa
 dd1159	signature	termino	lg-spa
-dd116	Import preview	termino	lg-eng
-dd116	Previsualització d\\'importació	termino	lg-cat
-dd116	Previsualización de importación	termino	lg-spa
-dd116	Previsualizzazione dell'importazione	termino	lg-ita
-dd116	Προεπισκόπηση εισαγωγής	termino	lg-ell
 dd1160	result	termino	lg-spa
 dd1161	description	termino	lg-spa
 dd1162	param	termino	lg-spa
 dd1163	param_data	termino	lg-spa
 dd1164	example	termino	lg-spa
 dd1165	publication	termino	lg-spa
+dd116	Previsualizzazione del l'importazione	termino	lg-ita
+dd116	Import preview	termino	lg-eng
+dd116	Previsualización de importación	termino	lg-spa
 dd1167	data_type	termino	lg-spa
 dd1168	deprecated	termino	lg-spa
 dd1169	description	termino	lg-spa
@@ -819,11 +814,6 @@ dd1246	modo	termino	lg-ita
 dd1246	modo	termino	lg-spa
 dd1247	view	termino	lg-spa
 dd1247	Visor	termino	lg-cat
-dd1248	Choose page between ${page_in} and ${page_out}. Total pages: ${total_pages}.	termino	lg-eng
-dd1248	Página seleccionable entre ${page_in} y ${page_out}. Total de páginas: ${total_pages}.	termino	lg-spa
-dd1248	Pagina selezionabile tra ${page_in} e ${page_out}. Pagine totali: ${total_pages}.	termino	lg-ita
-dd1248	Trieu la pàgina entre ${page_in} i ${page_out}. Total de pàgines: ${total_pàgina}.	termino	lg-cat
-dd1248	Η σελίδα επιλέγεται μεταξύ ${page_in} και ${page_out}. Σύνολο σελίδων: ${total_pages}.	termino	lg-ell
 dd1249	Displayed records from X to Y of Z.	termino	lg-eng
 dd1249	Registres mostrats de X a Y de Z.	termino	lg-cat
 dd1249	Registri mostrati da X a Y di Z.	termino	lg-ita
@@ -840,19 +830,6 @@ dd1251	Informazione generale	termino	lg-ita
 dd1252	Elenco dei progetti	termino	lg-ita
 dd1252	Lista de proyectos	termino	lg-spa
 dd1252	Projects list	termino	lg-eng
-dd1253	Diffusion	termino	lg-eng
-dd1253	Diffusione	termino	lg-ita
-dd1253	Difusión	termino	lg-spa
-dd1254	Name	termino	lg-eng
-dd1254	Nombre	termino	lg-spa
-dd1254	Nome	termino	lg-ita
-dd1255	Descripción	termino	lg-spa
-dd1255	Description	termino	lg-eng
-dd1255	Descrizione	termino	lg-ita
-dd1256	Web	termino	lg-ita
-dd1256	Web	termino	lg-spa
-dd1257	Imágenes de proyecto	termino	lg-spa
-dd1257	Project images	termino	lg-eng
 dd1258	projects	termino	lg-spa
 dd1259	database	termino	lg-spa
 dd126	Dossier	termino	lg-ita
@@ -884,8 +861,6 @@ dd1271	Diffusion	termino	lg-eng
 dd1271	Difusión	termino	lg-spa
 dd1272	Project	termino	lg-eng
 dd1272	Proyecto	termino	lg-spa
-dd1273	Project	termino	lg-eng
-dd1273	Proyecto	termino	lg-spa
 dd1274	Project	termino	lg-eng
 dd1274	Proyecto	termino	lg-spa
 dd1275	Videos	termino	lg-eng
@@ -927,6 +902,15 @@ dd129	Información General	termino	lg-spa
 dd129	Informazione Generale	termino	lg-ita
 dd129	γενικές πληροφορίες	termino	lg-ell
 dd1290	Equipo	termino	lg-spa
+dd1253	other_images_resolved	termino	lg-spa
+dd1248	Choose page between ${page_in} and ${page_out}. Total pages: ${total_pages}.	termino	lg-eng
+dd1248	Pagina selezionabile tra ${page_in} e ${page_out}. Pagine totali: ${total_pages}.	termino	lg-ita
+dd1248	Trieu la pàgina entre ${page_in} i ${page_out}. Total de pàgines: ${total_pàgina}.	termino	lg-cat
+dd1254	other_images	termino	lg-spa
+dd1273	pdf_resolved	termino	lg-spa
+dd1256	pdf_title	termino	lg-spa
+dd1255	date_in	termino	lg-spa
+dd1257	date_out	termino	lg-spa
 dd1290	Team	termino	lg-eng
 dd1291	Excluded	termino	lg-eng
 dd1291	Excluidos	termino	lg-spa
@@ -1587,11 +1571,6 @@ dd1726	Aplicar	termino	lg-spa
 dd1726	Applicare	termino	lg-ita
 dd1726	Apply	termino	lg-eng
 dd1726	ισχύουν	termino	lg-ell
-dd1727	Previsualització d\\'impresió	termino	lg-cat
-dd1727	Previsualización de importación	termino	lg-spa
-dd1727	Previsualizzazione dell'importazione	termino	lg-ita
-dd1727	Print preview	termino	lg-eng
-dd1727	Προεπισκόπηση εισαγωγής	termino	lg-ell
 dd173	Created records	termino	lg-eng
 dd173	Registres creats	termino	lg-cat
 dd173	Registri creati	termino	lg-ita
@@ -1666,6 +1645,10 @@ dd176	Nombre del fichero	termino	lg-spa
 dd176	Nome del file	termino	lg-ita
 dd176	Όνομα αρχείου	termino	lg-ell
 dd177	button_new	termino	lg-spa
+dd1727	Previsualització d\\'impresió	termino	lg-cat
+dd1727	Previsualizzazione dell'importazione	termino	lg-ita
+dd1727	Print preview	termino	lg-eng
+dd1727	Προεπισκόπηση εισαγωγής	termino	lg-ell
 dd178	Fichero de Zotero procesado correctamente	termino	lg-spa
 dd178	File di Zotero processato correttamente	termino	lg-ita
 dd178	Zotero file processed successfully	termino	lg-eng
@@ -1940,7 +1923,6 @@ dd242	Inbentarioa	termino	lg-eus
 dd242	Inventaire	termino	lg-fra
 dd242	Inventari	termino	lg-cat
 dd242	Inventario	termino	lg-ita
-dd242	Inventario	termino	lg-spa
 dd242	Αποθεμάτων	termino	lg-ell
 dd243	Automatic transcription	termino	lg-eng
 dd243	Transcripció automàtica	termino	lg-cat
@@ -2117,11 +2099,6 @@ dd284	Fichero BibTex procesado correctamente	termino	lg-spa
 dd284	File BibTex processato correttamente	termino	lg-ita
 dd284	Fitxer BibTeX processat correctament	termino	lg-cat
 dd284	Αρχείο BibTex σωστή επεξεργασία	termino	lg-ell
-dd285	Add the BibTeX file and the corresponding PDF files from your hard disk. Once loaded, select 'Import files'	termino	lg-eng
-dd285	Afegeixi el fitxer BibTeX i els corresponents fitxers PDF des del seu disc dur. Un cop carregats, escollir 'Importar fitxers'	termino	lg-cat
-dd285	Aggiungere il file BIBTex e i corrispondenti files PDF dal suo disco duro. Una volta caricati, seleziona Importare files	termino	lg-ita
-dd285	Añada el fichero BIBTex y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'	termino	lg-spa
-dd285	Προσθέστε το αρχείο BibTeX και τα αντίστοιχα αρχεία PDF από το σκληρό σας δίσκο. Μόλις φορτωθεί, επιλέξτε 'Εισαγωγή αρχείων »	termino	lg-ell
 dd286	active elements	termino	lg-eng
 dd286	Elementi attivi	termino	lg-ita
 dd286	elementos activos	termino	lg-spa
@@ -2152,11 +2129,6 @@ dd290	descarregar	termino	lg-cat
 dd290	download	termino	lg-eng
 dd290	Scaricare	termino	lg-ita
 dd290	κατεβάσετε	termino	lg-ell
-dd291	Para conservar los cambios, NO CIERRE ESTA VENTANA. Inicie sesión en otra ventana del navegador y, a continuación, vuelva a esta ventana y guarde el contenido (presionando el botón 'Guardar')	termino	lg-spa
-dd291	Per conservar els canvis, NO TANQUI AQUESTA FINESTRA. Inicieu sessió en una altra finestra del navegador i, a continuació, torneu a aquesta finestra i guardi el contingut (prement el botó 'Guardar')	termino	lg-cat
-dd291	Per conservare i cambiamenti, NON CHIUDERE QUESTA FINESTRA. Inizia una sessione in un'altra finestra del browser e, successivamente, torna in questa finestra e salva il contenuto (cliccando il pulsante Salvare)	termino	lg-ita
-dd291	To keep the changes, DO NOT CLOSE THIS WINDOW. Log on to another browser window and then return to this window and save the content (pressing the 'Save' button)	termino	lg-eng
-dd291	Για να διατηρήσετε τις αλλαγές, δεν κλείσετε αυτό το παράθυρο. Συνδεθείτε με άλλο παράθυρο του browser και στη συνέχεια να επιστρέψει σε αυτό το παράθυρο και να αποθηκεύσετε το περιεχόμενο (πατώντας το κουμπί «Αποθήκευση»)	termino	lg-ell
 dd292	Tipologia de nombre normalitzat	termino	lg-cat
 dd292	Tipología de número normalizado	termino	lg-spa
 dd292	Tipologia di numero normalizzato	termino	lg-ita
@@ -2181,6 +2153,13 @@ dd297	New tipology	termino	lg-eng
 dd297	Nova tipologia	termino	lg-cat
 dd297	Nueva tipología de número normalizado	termino	lg-spa
 dd323	Inmateriala	termino	lg-eus
+dd285	Add the BibTeX file and the corresponding PDF files from your hard disk. Once loaded, select 'Import files'	termino	lg-eng
+dd285	Afegeixi el fitxer BibTeX i els corresponents fitxers PDF des del seu disc dur. Un cop carregats, escollir 'Importar fitxers'	termino	lg-cat
+dd285	Aggiungere il file BIBTex e i corrispondenti files PDF dal suo disco duro. Una volta caricati, seleziona Importare files	termino	lg-ita
+dd291	Para conservar los cambios, NO CIERRE ESTA VENTANA. Inicie sesión en otra ventana del navegador y, a continuación, vuelva a esta ventana y guarde el contenido (presionando el botón 'Guardar')	termino	lg-spa
+dd291	Per conservar els canvis, NO TANQUI AQUESTA FINESTRA. Inicieu sessió en una altra finestra del navegador i, a continuació, torneu a aquesta finestra i guardi el contingut (prement el botó 'Guardar')	termino	lg-cat
+dd291	Per conservare i cambiamenti, NON CHIUDERE QUESTA FINESTRA. Inizia una sessione in un'altra finestra del browser e, successivamente, torna in questa finestra e salva il contenuto (cliccando il pulsante Salvare)	termino	lg-ita
+dd291	To keep the changes, DO NOT CLOSE THIS WINDOW. Log on to another browser window and then return to this window and save the content (pressing the 'Save' button)	termino	lg-eng
 dd297	Nuova Tipologia di numero normalizzato	termino	lg-ita
 dd298	New tiplology	termino	lg-eng
 dd298	Nova tipologia	termino	lg-cat
@@ -2208,7 +2187,6 @@ dd301	Progetto	termino	lg-ita
 dd301	Project	termino	lg-eng
 dd301	Projecte	termino	lg-cat
 dd301	Proyecto	termino	lg-spa
-dd302	component_project_langs	termino	lg-spa
 dd303	relation_root	termino	lg-spa
 dd304	Entity tipology	termino	lg-eng
 dd304	Tipo d&#039; entità	termino	lg-ita
@@ -2223,7 +2201,6 @@ dd307	Colos space	termino	lg-eng
 dd307	Espacio de Color	termino	lg-spa
 dd307	Espai de color	termino	lg-cat
 dd307	Spazio del Colore	termino	lg-ita
-dd308	desactivo	termino	lg-spa
 dd309	Color space	termino	lg-eng
 dd309	Espacio de color	termino	lg-spa
 dd309	Espai de color	termino	lg-cat
@@ -2289,6 +2266,7 @@ dd323	Immaterial	termino	lg-cat
 dd323	Immateriale	termino	lg-ita
 dd323	Inmaterial	termino	lg-eng
 dd323	Inmaterial	termino	lg-spa
+dd308	utils	termino	lg-spa
 dd323	επουσιώδης	termino	lg-ell
 dd324	Import files	termino	lg-eng
 dd324	Importar ficheros	termino	lg-spa
@@ -2796,11 +2774,6 @@ dd433	Acrónimo	termino	lg-spa
 dd433	Acronym	termino	lg-eng
 dd433	ακρώνυμο	termino	lg-ell
 dd434	section_list_thesaurus_indexation	termino	lg-spa
-dd435	Buscar	termino	lg-spa
-dd435	Cercar	termino	lg-cat
-dd435	Cercare	termino	lg-ita
-dd435	Search	termino	lg-eng
-dd435	έρευνα	termino	lg-ell
 dd436	Leer	termino	lg-spa
 dd436	Leggere	termino	lg-ita
 dd436	Llegir	termino	lg-cat
@@ -2842,6 +2815,8 @@ dd449	Transcripció impressió	termino	lg-cat
 dd449	Transcripción impresión	termino	lg-spa
 dd449	Transcription print	termino	lg-eng
 dd449	Trascrizione stampa	termino	lg-ita
+dd435	Relacions	termino	lg-cat
+dd435	Relations	termino	lg-eng
 dd449	εκτύπωση μεταγραφή	termino	lg-ell
 dd45	default	termino	lg-spa
 dd450	Codici temporali	termino	lg-ita
@@ -3606,12 +3581,9 @@ dd632	Esborrar	termino	lg-cat
 dd633	component_ip	termino	lg-spa
 dd634	component_autocomplete_ts	termino	lg-spa
 dd635	component_date	termino	lg-spa
-dd636	Localizzatori	termino	lg-ita
-dd636	Locators	termino	lg-spa
 dd637	General	termino	lg-spa
 dd637	Generale	termino	lg-ita
 dd638	locator	termino	lg-spa
-dd639	locator_section_activity	termino	lg-spa
 dd64	Sí / No	termino	lg-cat
 dd64	Si/No	termino	lg-ita
 dd64	Si/No	termino	lg-spa
@@ -3629,6 +3601,8 @@ dd641	Per defecte	termino	lg-cat
 dd642	Section tipo	termino	lg-cat
 dd642	Section tipo	termino	lg-eng
 dd642	Section tipo	termino	lg-spa
+dd639	indexations	termino	lg-spa
+dd636	indexations_related	termino	lg-spa
 dd642	Tipo sezione	termino	lg-ita
 dd643	matrix	termino	lg-spa
 dd644	Cambi	termino	lg-ita
@@ -3969,7 +3943,6 @@ dd713	Dividir palabras	termino	lg-spa
 dd713	Dividir paraules	termino	lg-cat
 dd713	Split words	termino	lg-eng
 dd713	Διαχωρίστε τις λέξεις	termino	lg-ell
-dd714	skip_filterXXX	termino	lg-spa
 dd715	¡Fallo al guardar!	termino	lg-spa
 dd715	Errore nel salvare!	termino	lg-ita
 dd715	Fail to save!	termino	lg-eng
@@ -4066,14 +4039,13 @@ dd734	Processando	termino	lg-ita
 dd734	Processant	termino	lg-cat
 dd734	Processing	termino	lg-eng
 dd734	επεξεργασία	termino	lg-ell
-dd735	 Seleccione fotograma en el reproductor y pulse «CREAR POSTERFRAME» para crear un fotograma a partir del video	termino	lg-spa
-dd735	Seleccioneu fotograma en el reproductor i faci clic a «CREAR POSTERFRAME» per crear un fotograma a partir del vídeo	termino	lg-cat
 dd735	Select frame in player and click button MAKE POSTERFRAME to generate new posterframe image from video	def	lg-eng
-dd735	Select frame in player and click button MAKE POSTERFRAME to generate new posterframe image from video	termino	lg-eng
-dd735	Seleziona fotogramma nel riproduttore e clicca CREARE POSTERFRAME per creare un fotogramma a partire dal video	termino	lg-ita
 dd757	Tool	termino	lg-eng
 dd757	εργαλείο	termino	lg-ell
-dd735	Επιλέξτε καρέ στο παίκτη και πατήστε Create POSTERFRAME για να δημιουργήσετε ένα καρέ από το βίντεο	termino	lg-ell
+dd714	identify_image	termino	lg-spa
+dd735	Seleccioneu fotograma en el reproductor i faci clic a «CREAR POSTERFRAME» per crear un fotograma a partir del vídeo	termino	lg-cat
+dd735	Select frame in player and click button MAKE POSTERFRAME to generate new posterframe image from video	termino	lg-eng
+dd735	Seleziona fotogramma nel riproduttore e clicca CREARE POSTERFRAME per creare un fotogramma a partire dal video	termino	lg-ita
 dd736	Crear	termino	lg-cat
 dd736	Crear	termino	lg-spa
 dd736	Creare	termino	lg-ita
@@ -4355,9 +4327,6 @@ dd795	Id	termino	lg-spa
 dd796	Diffusion	termino	lg-eng
 dd796	Diffusione	termino	lg-ita
 dd796	Difusión	termino	lg-spa
-dd797	Clase	termino	lg-spa
-dd797	Class	termino	lg-eng
-dd797	Classe	termino	lg-ita
 dd798	Data	termino	lg-ita
 dd798	Extends	termino	lg-eng
 dd798	Extiende	termino	lg-spa
@@ -4371,9 +4340,6 @@ dd800	Obsoleto	termino	lg-spa
 dd801	Descripción	termino	lg-spa
 dd801	Description	termino	lg-eng
 dd801	Descrizione	termino	lg-ita
-dd802	Versiones	termino	lg-spa
-dd802	Versioni	termino	lg-ita
-dd802	Versions	termino	lg-eng
 dd803	complet	termino	lg-cat
 dd803	Completo	termino	lg-ita
 dd803	completo	termino	lg-spa
@@ -4400,6 +4366,9 @@ dd809	Métodos extendidos	termino	lg-spa
 dd81	Crear imagen identificativa	termino	lg-spa
 dd81	Crear imatge identificativa	termino	lg-cat
 dd81	Creare immagine identificativa	termino	lg-ita
+dd797	Version	termino	lg-eng
+dd802	Ejemplos	termino	lg-spa
+dd802	Examples	termino	lg-eng
 dd81	Create identifying image	termino	lg-eng
 dd81	Δημιουργήστε τον εντοπισμό εικόνα	termino	lg-ell
 dd810	Tipologia de bibliografia	termino	lg-cat
@@ -4424,9 +4393,6 @@ dd815	Filtro	termino	lg-spa
 dd816	Elenco	termino	lg-ita
 dd816	Listado	termino	lg-spa
 dd816	Llistat	termino	lg-cat
-dd817	Components list	termino	lg-eng
-dd817	Elenco dei componenti	termino	lg-ita
-dd817	Lista de componentes	termino	lg-spa
 dd818	New	termino	lg-eng
 dd818	Nuevo	termino	lg-spa
 dd818	Nuovo	termino	lg-ita
@@ -4513,6 +4479,7 @@ dd838	Nou estat de difusió	termino	lg-cat
 dd838	Nuevo estado de difusión	termino	lg-spa
 dd838	Nuovo stato di diffusione	termino	lg-ita
 dd839	Copia DVD	termino	lg-ita
+dd817	List	termino	lg-eng
 dd839	Copia DVD	termino	lg-spa
 dd839	Còpia DVD	termino	lg-cat
 dd839	DVD copy	termino	lg-eng
@@ -4809,8 +4776,6 @@ dd909	Borrar	termino	lg-spa
 dd909	Cancellare	termino	lg-ita
 dd909	Delete	termino	lg-eng
 dd91	section_list	termino	lg-spa
-dd910	Id	termino	lg-ita
-dd910	Id	termino	lg-spa
 dd911	clases CSS	termino	lg-spa
 dd911	CSS clases	termino	lg-eng
 dd912	Identificación	termino	lg-spa
@@ -4853,6 +4818,7 @@ dd922	Categoria Lavorativa / Responsabile	termino	lg-ita
 dd922	Labor Category / Title	termino	lg-eng
 dd922	Κατηγορία εργασίας / Τίτλος	termino	lg-ell
 dd923	Labor Category / Title	termino	lg-eng
+dd910	audiovisual_resolved	termino	lg-spa
 dd923	Valor de la lista	termino	lg-spa
 dd923	Valor de la llista	termino	lg-cat
 dd923	Valore della lista	termino	lg-ita
@@ -4893,12 +4859,6 @@ dd93	δημιουργήθηκε	termino	lg-ell
 dd930	Data della cancellazione	termino	lg-ita
 dd930	Fecha de baja	termino	lg-spa
 dd930	Removed date	termino	lg-eng
-dd931	Reference	termino	lg-eng
-dd931	Referencia	termino	lg-spa
-dd931	Riferimento	termino	lg-ita
-dd932	Ejemplo	termino	lg-spa
-dd932	Esempio	termino	lg-ita
-dd932	Example	termino	lg-eng
 dd933	Notas de la versión	termino	lg-spa
 dd933	Note della versione	termino	lg-ita
 dd933	Release notes	termino	lg-eng
@@ -4928,10 +4888,6 @@ dd94	χρήστη	termino	lg-ell
 dd940	Id	termino	lg-eng
 dd940	Id	termino	lg-ita
 dd940	Id	termino	lg-spa
-dd941	 Aggiungere il file JSON di Zotero e i corrispondenti files PDF dal suo disco duro. Una volta caricati, seleziona Importare files	termino	lg-ita
-dd941	Add the Zotero JSON file and the corresponding PDF files from your hard drive. Once loaded, select 'Import files'	termino	lg-eng
-dd941	Añada el fichero JSON de Zotero y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'	termino	lg-spa
-dd941	Zotero Προσθέστε το αρχείο JSON και τα αντίστοιχα αρχεία PDF από το σκληρό σας δίσκο. Μόλις φορτωθεί, επιλέξτε 'Εισαγωγή αρχείων'	termino	lg-ell
 dd942	Tipo de asociación / grupo	termino	lg-spa
 dd942	Tipo di associazione / gruppo	termino	lg-ita
 dd942	Tipus d'associació / grup	termino	lg-cat
@@ -4955,6 +4911,12 @@ dd945	λίστα	termino	lg-ell
 dd946	Progetto	termino	lg-ita
 dd946	Project	termino	lg-eng
 dd946	Projecte	termino	lg-cat
+dd932	Obsoleta	termino	lg-spa
+dd931	Deprecated	termino	lg-eng
+dd932	Obsolete	termino	lg-eng
+dd941	Aggiungere il file JSON di Zotero e i corrispondenti files PDF dal suo disco duro. Una volta caricati, seleziona Importare files	termino	lg-ita
+dd941	Añada el fichero JSON de Zotero y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'	termino	lg-spa
+dd941	Add the Zotero JSON file and the corresponding PDF files from your hard drive. Once loaded, select 'Import files'	termino	lg-eng
 dd946	Proyecto	termino	lg-spa
 dd946	σχέδιο	termino	lg-ell
 dd947	New Type of association / group	termino	lg-eng
@@ -4984,7 +4946,6 @@ dd953	Nuovo	termino	lg-ita
 dd954	Borrar	termino	lg-spa
 dd954	Cancellare	termino	lg-ita
 dd954	Delete	termino	lg-eng
-dd955	view_single_line	termino	lg-spa
 dd956	view_single_line	termino	lg-spa
 dd957	Format de l'original AV	termino	lg-cat
 dd957	Formato del original AV	termino	lg-spa
@@ -5134,6 +5095,12 @@ dd999	Configuration	termino	lg-eng
 dd999	Configurazione	termino	lg-ita
 dd999	Διαμόρφωση	termino	lg-ell
 dd1540	Description	termino	lg-eng
+dd1541	Definición	termino	lg-spa
+dd1541	Definition	termino	lg-eng
+dd1542	Nuevo	termino	lg-spa
+dd1542	New	termino	lg-eng
+dd1542	Nou	termino	lg-cat
+dd435	Relation	termino	lg-spa
 dd1474	Id	termino	lg-spa
 dd1477	Término	termino	lg-spa
 dd1481	Publication	termino	lg-eng
@@ -5195,13 +5162,9 @@ dd1517	audiovisual	termino	lg-spa
 dd1518	image	termino	lg-spa
 dd1519	informant	termino	lg-spa
 dd1520	ts_anthropology	termino	lg-spa
-dd1	Dédalo 22-03-2021 10:30 Benimamet	termino	lg-spa
 dd1528	ref_publications_other_people_role	termino	lg-spa
-dd1529	Mes	termino	lg-spa
 dd1531	Tipo	termino	lg-spa
 dd1531	It can be one of these values: year,month,day	obs	lg-spa
-dd1529	Int from 1 to 12	obs	lg-spa
-dd1529	Month	termino	lg-eng
 dd1531	Type	termino	lg-eng
 dd1532	Día	termino	lg-spa
 dd1532	Day	termino	lg-eng
@@ -5215,7 +5178,58 @@ dd1530	Could be year, year and month, year, month, day	obs	lg-spa
 dd1533	matrix_stats	termino	lg-spa
 dd1537	User activity	termino	lg-eng
 dd1537	Actividad de usuario	termino	lg-spa
+dd1543	Application rules	termino	lg-eng
+dd1529		obs	lg-spa
+dd1529	Version documentation	termino	lg-eng
+dd1529	Documentación de versión	termino	lg-spa
 dd1	NOTE: 11-11-2015\nname:  HUECOS A REUTILIZAR  ++ \n,,,,,,,,,,,,,,,,,,,,,,,,,\n\n,,\ndd1539,\ndd1540,\ndd1541,\ndd1542,\ndd1543,\ndd1544,\ndd1545,\ndd1546,\ndd1547,\ndd1548,\ndd1549,\ndd1550,\ndd1551,\ndd1552,\ndd1553,\ndd1554,\ndd1555,\ndd1556,\ndd1557,\ndd1558,\ndd1559,\ndd1560,\ndd1561,\ndd1562,\ndd1563,\ndd1564,\ndd1565,\ndd1566,\ndd1567,\ndd1568,\ndd1569,\ndd1570,\ndd1571,\ndd1572,\ndd1573,\ndd1574,\ndd1575,\ndd1576,\ndd1577,\ndd1578,\ndd1579,\ndd1580,\ndd1581,\ndd1582,\ndd1583,\ndd1584,\ndd1585,\ndd1586,\ndd1587,\ndd1588,\ndd1589,\ndd1590,\ndd1591,\ndd1592,\ndd1593,\ndd1594,\ndd1595,\ndd1596,\ndd1597,\ndd1598,\ndd1599,\ndd1600,\ndd1601,\ndd1602,\ndd1603,\ndd1604,\ndd1605,\ndd1606,\ndd1607,\ndd1608,\ndd1609,\ndd1610,\ndd1611,\ndd1612,\ndd1613,\ndd1614,\ndd1615,\ndd1616,\ndd1617,\ndd1618,\ndd1619,\ndd1620,\ndd1621,\ndd1622,\ndd1623,\ndd1624,\ndd1625,\ndd1626,\ndd1627,\ndd1628,\ndd1629,\ndd1630,\ndd1631,\ndd1632,\ndd1633,\ndd1634,\ndd1635,\ndd1636,\ndd1637,\ndd1638,\ndd1639,\ndd1640,\ndd1641,\ndd1642,\ndd1643,\ndd1644,\ndd1645,\ndd1646,\ndd1647,\ndd1648,\ndd1649,\ndd1650,\ndd1651,\ndd1652,\ndd1653,\ndd1654,\ndd1655,\ndd1656,\ndd1657,\ndd1658,\ndd1659,\ndd1660,\ndd1661,\ndd1662,\ndd1663,\ndd1664,\ndd1665,\ndd1666,\ndd1667,\ndd1668,\ndd1669,\ndd1670,\ndd1671,\ndd1672,\ndd1673,\ndd1674,\ndd1675,\ndd1676,\ndd1677,\ndd1678,\ndd1705,\ndd1708,\ndd1717,\ndd1723,\ndd1728,\ndd1729,\ndd1730,\ndd1731,\ndd1732,\ndd1733,\ndd1748,\ndd1749,\ndd1750,\ndd1751,\ndd1752,\ndd1753,\ndd1754,\ndd1755,\ndd1756,\ndd1757,\ndd1758,\ndd1759,\ndd1760,\ndd1761,\ndd1762,\ndd1763,\ndd1764,\ndd1765,\ndd1766,\ndd1767,\ndd1768,\ndd1769,\n\n\n\n----------------------------------------------------------------------------------------------------------------------------------\n\n\nname:  DESACTIVOS (MURAPA Museu de la rajoleria de Paiporta) \ndd557,\ndd1140,\ndd1141,\ndd1142,\ndd1143,\ndd1144,\ndd1145,\ndd1146,\ndd1147,\ndd1148,\ndd1149,\ndd1150,\ndd1151,\ndd1153,\ndd1154,\ndd1155,\ndd1156,\ndd1157,\ndd1189,\ndd1197,\ndd1198,\ndd1199,\ndd1200,\ndd1218,\ndd1679,\ndd1680,\ndd1682,\ndd1683,\ndd1684,\ndd1685,\ndd1686,\ndd1687,\ndd1688,\ndd1689,\ndd1690,\ndd1691,\ndd1692,\ndd1693,\ndd1694,\ndd1695,\ndd1696,\ndd1697,\ndd1698,\ndd1699,\ndd1700,	obs	lg-spa
 dd1539	Publication	termino	lg-spa
 dd1539	Publish	termino	lg-eng
 dd1521	User activity	termino	lg-eng
+dd1543	Reglas de aplicación	termino	lg-spa
+dd817	Lista	termino	lg-spa
+dd291	Για να διατηρήσετε τις αλλαγές, δεν κλείσετε αυτό το παράθυρο. Συνδεθείτε με άλλο παράθυρο του browser και στη συνέχεια να επιστρέψει σε αυτό το παράθυρο και να αποθηκεύσετε το περιεχόμενο (πατώντας το κουμπί «Αποθήκευση»)	termino	lg-ell
+dd941	Zotero Προσθέστε το αρχείο JSON και τα αντίστοιχα αρχεία PDF από το σκληρό σας δίσκο. Μόλις φορτωθεί, επιλέξτε 'Εισαγωγή αρχείων'	termino	lg-ell
+dd1035	Para crear un nuevo fragmento, simplemente seleccione una parte del texto y pulse «Nuevo fragmento» abajo	termino	lg-spa
+dd735	Επιλέξτε καρέ στο παίκτη και πατήστε Create POSTERFRAME για να δημιουργήσετε ένα καρέ από το βίντεο	termino	lg-ell
+dd931	Deprecada	termino	lg-spa
+dd797	Versión	termino	lg-spa
+dd735	Seleccione fotograma en el reproductor y pulse «CREAR POSTERFRAME» para crear un fotograma a partir del video	termino	lg-spa
+dd797	Versioni	termino	lg-ita
+dd955	Fecha de deprecación	termino	lg-spa
+dd955	Deprecation data	termino	lg-eng
+dd116	Προεπισκόπηση εισαγωγής	termino	lg-ell
+dd1035	Για να δημιουργήσετε ένα νέο απόσπασμα, απλά επιλέξτε ένα τμήμα του κειμένου και πατήστε το κουμπί Νέο κομμάτι παρακάτω	termino	lg-ell
+dd116	Previsualització d'importació	termino	lg-cat
+dd285	Añada el fichero BIBTex y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'	termino	lg-spa
+dd285	Προσθέστε το αρχείο BibTeX και τα αντίστοιχα αρχεία PDF από το σκληρό σας δίσκο. Μόλις φορτωθεί, επιλέξτε 'Εισαγωγή αρχείων »	termino	lg-ell
+dd1248	Página seleccionable entre ${page_in} y ${page_out}. Total de páginas: ${total_pages}.	termino	lg-spa
+dd1248	Η σελίδα επιλέγεται μεταξύ ${page_in} και ${page_out}. Σύνολο σελίδων: ${total_pages}.	termino	lg-ell
+dd1727	Previsualización de importación	termino	lg-spa
+dd302	widget	termino	lg-spa
+dd242	Inventario	termino	lg-spa
+dd1544	parents	termino	lg-spa
+dd1545	children	termino	lg-spa
+dd708	Name 'childrens' is maintained by legacy issues. Use column 'children' instead for new projects.	obs	lg-spa
+dd1546	Historial del componente	termino	lg-spa
+dd1546	Component history	termino	lg-eng
+dd1546	Ιστορικό συστατικών	termino	lg-ell
+dd1546	Històric del component	termino	lg-cat
+dd363	Positiu / Negatiu	termino	lg-cat
+dd1547	Marca de agua	termino	lg-spa
+dd1548	Notas	termino	lg-spa
+dd1549	Catalogación	termino	lg-spa
+dd1549	Cataloging	termino	lg-eng
+dd1549	Catalogació	termino	lg-cat
+dd1548	Notes	termino	lg-eng
+dd1548	Notes	termino	lg-cat
+dd1547	Watermark	termino	lg-eng
+dd1547	Marca d'aigua	termino	lg-cat
+dd1550	Importar MARC 21	termino	lg-spa
+dd1550	Import MARC 21	termino	lg-eng
+dd1550	Importar MARC 21	termino	lg-cat
+dd1551	Administración de usuario	termino	lg-spa
+dd1551	Administració d'usuari	termino	lg-cat
+dd1551	User administration	termino	lg-eng
+dd1552	SVG (PORTAL UNDER CONSTRUCTION)	termino	lg-spa
+dd1	Dédalo 20-06-2021 21:44 Benimamet	termino	lg-spa

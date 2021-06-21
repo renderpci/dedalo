@@ -1,3 +1,5 @@
+qdp438	Notas	termino	lg-spa
+qdp438	Annotacions	termino	lg-cat
 qdp1	Objectes	termino	lg-cat
 qdp1	Objetos	termino	lg-spa
 qdp10	Estado de conservación	termino	lg-spa
@@ -124,7 +126,7 @@ qdp152	Nom del bé	termino	lg-cat
 qdp152	Nombre del bien	termino	lg-spa
 qdp153	Colección	termino	lg-spa
 qdp153	Col·lecció	termino	lg-cat
-qdp154	Inscripcions	termino	lg-cat
+qdp154	Observacions	termino	lg-cat
 qdp155	Projecte	termino	lg-cat
 qdp155	Proyecto	termino	lg-spa
 qdp156	Relaciones	termino	lg-spa
@@ -296,7 +298,6 @@ qdp234	Marca	termino	lg-cat
 qdp234	Marca	termino	lg-spa
 qdp234	Trademark	termino	lg-eng
 qdp235	view_mosaic	termino	lg-spa
-qdp236	Datació d&#039;as	termino	lg-cat
 qdp236	Datación de uso	termino	lg-spa
 qdp237	Indexació	termino	lg-cat
 qdp237	Indexación	termino	lg-spa
@@ -304,6 +305,7 @@ qdp238	Últimos cambios	termino	lg-spa
 qdp238	Últims canvis	termino	lg-cat
 qdp239	Relaciones	termino	lg-spa
 qdp239	Relacions	termino	lg-cat
+qdp439	Alt: medidas	termino	lg-spa
 qdp240	últimos cambios	termino	lg-spa
 qdp240	Últims canvis	termino	lg-cat
 qdp241	Tipologia	termino	lg-cat
@@ -714,6 +716,9 @@ qdp97	Fotografies	termino	lg-cat
 qdp98	Importa fitxes amb imatge	termino	lg-cat
 qdp98	Importar fichas con imagen	termino	lg-spa
 qdp99	view_mosaic	termino	lg-spa
+qdp439	Alt: measure	termino	lg-eng
+qdp154	Observaciones	termino	lg-spa
+qdp439	Alt: mesures	termino	lg-cat
 qdp418	term_id	termino	lg-spa
 qdp426	Listado	termino	lg-spa
 qdp426	Llistat	termino	lg-cat
@@ -737,7 +742,6 @@ qdp425	Relaciones	termino	lg-spa
 qdp425	Relations	termino	lg-cat
 qdp424	Realciones	termino	lg-spa
 qdp424	Relacions	termino	lg-cat
-qdp154	Inscripciones_DESACTIVO	termino	lg-spa
 qdp422	Publicación	termino	lg-spa
 qdp422	Publicació	termino	lg-cat
 qdp24	Inscripciones	termino	lg-spa
@@ -747,6 +751,69 @@ qdp423	view_mosaic	termino	lg-spa
 qdp32	mark_position	termino	lg-spa
 qdp419	source_name	termino	lg-spa
 qdp420	source_surname	termino	lg-spa
+qdp440	Assessment	termino	lg-eng
 qdp435	mark_data	termino	lg-spa
 qdp436	mark_inscription	termino	lg-spa
 qdp437	mark_images	termino	lg-spa
+qdp440	Valoració	termino	lg-cat
+qdp442	Enlaces	termino	lg-spa
+qdp236	Datació d&#039;ús	termino	lg-cat
+qdp443	Ús i funció	termino	lg-cat
+qdp444	Context d&#039;ús	termino	lg-cat
+qdp445	Precisión d&#039;ús	termino	lg-cat
+qdp446	Ús	termino	lg-cat
+qdp449	¿Quien lo usa?	termino	lg-spa
+qdp450	¿Cuando se usa?	termino	lg-spa
+qdp451	¿Donde se usa?	termino	lg-spa
+qdp447	Com es fa servir?	termino	lg-cat
+qdp440	Valoración	termino	lg-spa
+qdp441	view_single_line	termino	lg-spa
+qdp442	Enllaços	termino	lg-cat
+qdp443	Uso y función	termino	lg-spa
+qdp444	Contexto de uso	termino	lg-spa
+qdp445	Precisiones de uso	termino	lg-spa
+qdp446	Uso	termino	lg-spa
+qdp448	Fuente de información	termino	lg-spa
+qdp449	Qui ho fa servir?	termino	lg-cat
+qdp450	Quan es fa servir?	termino	lg-cat
+qdp451	A on es fa servir?	termino	lg-cat
+qdp447	¿Cómo se usa?	termino	lg-spa
+qdp452	documents_titles	termino	lg-spa
+qdp453	DESACTIVOS	termino	lg-spa
+qdp454	Lugar de hallazgo - información pública	termino	lg-spa
+qdp455	Municipio	termino	lg-spa
+qdp455	Municipi	termino	lg-cat
+qdp454	Lloc de troballa - informació pública	termino	lg-cat
+qdp456	Relaciones	termino	lg-spa
+qdp456	Rel·lacions	termino	lg-cat
+qdp457	Últimos cambios	termino	lg-spa
+qdp457	Últims canvis	termino	lg-cat
+qdp458	Materiales didácticos	termino	lg-spa
+qdp458	Didactic materials	termino	lg-eng
+qdp458	Materials didàctics	termino	lg-cat
+qdp459	Listado	termino	lg-spa
+qdp460	Listado tesauro	termino	lg-spa
+qdp461	didactic	termino	lg-spa
+qdp462	exclude	termino	lg-spa
+qdp463	Color	termino	lg-spa
+qdp463	Color	termino	lg-eng
+qdp463	Color	termino	lg-cat
+qdp464	Tonalidades	termino	lg-spa
+qdp464	Tonalitats	termino	lg-cat
+qdp465	Identificación	termino	lg-spa
+qdp465	Identificació	termino	lg-cat
+qdp466	Id	termino	lg-spa
+qdp466	Id	termino	lg-cat
+qdp467	Nombre	termino	lg-spa
+qdp467	Nom	termino	lg-cat
+qdp468	css valor	termino	lg-spa
+qdp468	css valor	termino	lg-cat
+qdp469	Proyecto	termino	lg-spa
+qdp469	Projecte	termino	lg-cat
+qdp470	Listado	termino	lg-spa
+qdp470	Llidtst	termino	lg-cat
+qdp471	color	termino	lg-spa
+qdp472	Nuevo	termino	lg-spa
+qdp472	Nou	termino	lg-cat
+qdp473	images_footer	termino	lg-spa
+qdp474	identifying_images_footer	termino	lg-spa

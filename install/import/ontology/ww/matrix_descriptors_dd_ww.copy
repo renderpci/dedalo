@@ -1,8 +1,4 @@
 ww27	Children	termino	lg-eng
-ww1	WEB	termino	lg-spa
-ww10	Programación de la Web	termino	lg-cat
-ww10	Programación de la Web	termino	lg-spa
-ww10	Web programming	termino	lg-eng
 ww11	Menu name	termino	lg-eng
 ww11	Name that will appear in the menu	def	lg-eng
 ww11	Nom al menú	termino	lg-cat
@@ -48,6 +44,8 @@ ww20	Entradilla	termino	lg-cat
 ww20	Entradilla	termino	lg-spa
 ww20	Introduzione	termino	lg-ita
 ww21	Body	termino	lg-eng
+ww10	Web	termino	lg-spa
+ww10	Web	termino	lg-cat
 ww21	Corpo	termino	lg-ita
 ww21	Cos	termino	lg-cat
 ww21	Cuerpo	termino	lg-spa
@@ -105,9 +103,6 @@ ww35	Usable en indexación	termino	lg-spa
 ww35	Usable in indexing	termino	lg-eng
 ww35	Utilizzabile nell&#039; indicizzazione	termino	lg-ita
 ww35	Χρησιμοποιήσιμα στην ευρετηρίαση	termino	lg-ell
-ww36	Web Items	termino	lg-spa
-ww37	List	termino	lg-spa
-ww38	Exclude	termino	lg-spa
 ww39	descriptor	termino	lg-spa
 ww4	Elenco	termino	lg-ita
 ww4	Listado	termino	lg-spa
@@ -122,3 +117,14 @@ ww8	Búsqueda	termino	lg-spa
 ww8	Ricerca	termino	lg-ita
 ww9	Elenco thesaurus	termino	lg-ita
 ww9	Listado tesauro	termino	lg-spa
+ww37	Programación de la Web	termino	lg-spa
+ww36	Geolocalización	termino	lg-spa
+ww1	Web	termino	lg-spa
+ww37	Web programming	termino	lg-eng
+ww37	Programació del web	termino	lg-cat
+ww10	Web	termino	lg-eng
+ww38	Macro temporal	termino	lg-spa
+ww38	Marc temporal	termino	lg-cat
+ww41	Listado	termino	lg-spa
+ww42	Listado tesauro	termino	lg-spa
+ww43	Excluidos	termino	lg-spa

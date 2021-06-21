@@ -83,14 +83,10 @@ navarra74	LIke &#039;0008-0001&#039;	obs	lg-spa
 navarra75	interview	termino	lg-spa
 navarra76	audiovisual	termino	lg-spa
 navarra77	informant	termino	lg-spa
-navarra78	document	termino	lg-spa
 navarra79	project	termino	lg-spa
 navarra8	Datación	termino	lg-spa
-navarra80	hierarchy	termino	lg-spa
-navarra81	ts_exumaciones_tempranas	termino	lg-spa
 navarra82	ts_chronological	termino	lg-spa
 navarra83	ts_onomastic	termino	lg-spa
-navarra84	spain	termino	lg-spa
 navarra85	biography	termino	lg-spa
 navarra86	RECYCLE NAVARRA	termino	lg-spa
 navarra87	documents	termino	lg-spa
@@ -102,9 +98,13 @@ navarra91	images	termino	lg-spa
 navarra92	title	termino	lg-spa
 navarra93	related	termino	lg-spa
 navarra93	Related terms from section thesaurus &#039;cro1&#039;	obs	lg-spa
-navarra94	recycle	termino	lg-spa
 navarra95	identify_image	termino	lg-spa
 navarra96	indexations_related	termino	lg-spa
 navarra97	audiovisual_resolved	termino	lg-spa
 navarra98	other_images_resolved	termino	lg-spa
 navarra99	pdf_resolved	termino	lg-spa
+navarra80	Web objeción de conciencia	termino	lg-spa
+navarra94	Listado	termino	lg-spa
+navarra84	Excluidos	termino	lg-spa
+navarra78	Listado tesauro	termino	lg-spa
+navarra81	ts_objecion_conciencia	termino	lg-spa
