@@ -4321,8 +4321,7 @@ div.tool_inspector_div .icon_bs {
 .wrapper_search > .search_global_container {
   display: flex;
   background-color: rgba(239, 239, 239, 0.7);
-  border-radius: 5px;
-  padding: 10px;
+  padding-bottom: 0.5em;
   position: relative;
   width: 100%;
   z-index: 1;
@@ -4681,14 +4680,16 @@ ul.search_section_container ul li {
   -khtml-user-select: none;
   -webkit-user-select: none;
   user-select: none;
+  display: grid;
 }
 ul.search_section_container ul li > * {
-  display: inline-block;
+  display: grid;
   width: 99.99%;
   padding-right: 1em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  height: inherit;
 }
 li.search_section_group_label {
   background-color: #969ca1;

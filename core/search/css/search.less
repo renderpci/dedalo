@@ -40,8 +40,8 @@
 			display: flex;
 			background-color: fade(@bg_color_global, 70%);
 			//background-color: rgba(239, 239, 239, 0.71);
-			border-radius: 5px;
-			padding: 10px;
+			// border-radius: 5px;
+			padding-bottom: 0.5em;
 			position: relative;
 			width: 100%;
 			z-index: 1;
@@ -551,15 +551,19 @@
 			-khtml-user-select: none;
 			-webkit-user-select: none;
 			user-select: none;
+			display: grid;
+			// line-height: 1em;			
 
 			// truncate text
 				>* {
-					display: inline-block;
-					width: 99.99%;
+					display: grid;
+					width: 99.99%;					
 					padding-right: 1em;
 					white-space: nowrap;
 					overflow: hidden;
 					text-overflow: ellipsis;
+					// line-height: inherit;
+					height: inherit;
 				}
 		}
 	}
