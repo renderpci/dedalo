@@ -2412,6 +2412,13 @@
 		Add row_limit check into the find button in portals
 		09-06-2021
 		Fixed component_text_area issue on search empty and non empty values (*, !*)
+		Fixed error on search empty / non empty values in component_text_area
+		21-06-2021
+		Updated db install and structure files (ready for Dédalo version 5.8.2)
+		Fixed php8 compatibility issue on autocomplete_ts_search
+		Removed legacy ontology menu links
+
+
 
 	[/HISTORY]
 
@@ -2442,7 +2449,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-06-2021-b');
+	define('DEDALO_BUILD'	, '21-06-2021-a');
 
 
 	/*
