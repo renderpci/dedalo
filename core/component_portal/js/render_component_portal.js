@@ -166,12 +166,18 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 * Render node for use in search
 * @return DOM node wrapper
 */
-render_component_portal.prototype.search = async function() {
+render_component_portal.prototype.search = async function(options={render_level:'full'}) {
 
 	const self = this
 
+	// render_level
+		const render_level = options.render_level
+
 
 	const content_data = await get_content_data_edit(self)
+	if (render_level==='content') {
+					return content_data
+	}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -183,21 +189,19 @@ render_component_portal.prototype.search = async function() {
 		wrapper.id = self.id
 
 	// activate service autocomplete. Enable the service_autocomplete when the user do click
-		// if(self.autocomplete_active===false){
+		if(self.autocomplete_active===false){
 
-		// 	// set rqo
-		// 		self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
+			// set rqo
+				self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
 
-		// 	self.autocomplete = new service_autocomplete()
-		// 	self.autocomplete.init({
-		// 		caller	: self,
-		// 		wrapper : wrapper
-		// 	})
-		// 	self.autocomplete_active = true
-		// 	self.autocomplete.search_input.focus()
-
-		// 	return true
-		// }
+			self.autocomplete = new service_autocomplete()
+			self.autocomplete.init({
+				caller	: self,
+				wrapper : wrapper
+			})
+			self.autocomplete_active = true
+			self.autocomplete.search_input.focus()
+		}
 
 	return wrapper
 };//end search

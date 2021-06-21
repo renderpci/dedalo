@@ -623,7 +623,7 @@ class component_relation_common extends component_common {
 		// save_to_database. Verify component main vars
 			if (!isset($this->save_to_database) || $this->save_to_database!==false) {
 				// parent : Verify parent
-					if( abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
+					if( abs((int)$parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
 						if(SHOW_DEBUG===true) {
 							dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
 							throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);

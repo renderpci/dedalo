@@ -182,7 +182,7 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 		}
 		await generate_rqo()
-		
+			console.log("self.rqo:",self.rqo);
 
 		// self.rqo.sqo.limit = 2
 		// self.rqo.sqo.offset = 1
@@ -287,7 +287,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
-	console.log("self.context:",self.context);
+
 	// target_section
 		self.target_section = self.rqo_config.sqo.section_tipo
 
@@ -349,7 +349,9 @@ component_portal.prototype.add_value = async function(value) {
 		})
 
 	// update pagination offset
+	if(self.mode !== 'search'){
 		self.update_pagination_values('add')
+	}
 
 	// refresh self component
 		self.refresh()

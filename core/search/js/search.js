@@ -657,8 +657,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 				const component_wrapper		= element.querySelector('.wrapper_component')
 				const component_instance	= self.ar_instances.find(instance => instance.id===component_wrapper.id)
-					console.log("self.ar_instances:",self.ar_instances);
-					console.log("component_wrapper.id:",component_wrapper);
+
 				// overwrite
 				if (typeof component_instance!=="undefined") {
 					q			= component_instance.data.value
