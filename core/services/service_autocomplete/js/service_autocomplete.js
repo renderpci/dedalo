@@ -770,7 +770,7 @@ export const service_autocomplete = function() {
 				e.stopPropagation()
 				const value = JSON.parse(this.dataset.value)
 				if(self.instance_caller.mode === 'search'){
-					self.instance_caller.datum.data.push({value: current_locator})
+					// self.instance_caller.datum.data.push({value: current_locator})
 				}
 				self.instance_caller.add_value(value)
 			}, false);

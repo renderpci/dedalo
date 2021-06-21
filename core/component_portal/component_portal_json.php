@@ -53,7 +53,6 @@
 		$limit		= $this->pagination->limit;
 		$offset		= $this->pagination->offset;
 
-			dump(dd_core_api::$ddo_map, ' dd_core_api::$ddo_map ++ '.to_string());
 
 		# Custom propiedades external dato
 		if(	!empty($this->build_options)
@@ -63,18 +62,21 @@
 			$this->set_dato_external(true, true);	// Forces update dato with calculated external dato
 		}
 
+		$dato = $this->get_dato();
+
 		switch ($modo) {
 			case 'list':
-			// data item (list mode result don't include self data, only subdata)
-				$dato	= $this->get_dato();
+			// data item (list mode result don't include self data, only subdata)				
 				$limit  = 2; // (!) note than in list mode, limit is always 2
 				$value	= $this->get_dato_paginated($limit);
 				break;
 
-			case 'search':	
+			case 'search':
+				$value	= $dato;
+				break;
+
 			case 'edit':
 			default:
-				$dato	= $this->get_dato();
 				$value	= $this->get_dato_paginated();
 				break;
 		}
