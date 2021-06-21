@@ -460,7 +460,7 @@ class component_autocomplete_ts extends component_common {
 	* @return array ar_result 
 	*	Array format: id_matrix=>dato_string 
 	*/
-	public static function autocomplete_ts_search($ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true, $source_mode) {
+	public static function autocomplete_ts_search($ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true, $source_mode=null) {
 		#dump($ar_referenced_tipo, 'ar_referenced_tipo', array());
 		#if(SHOW_DEBUG) $start_time = start_time();
 
