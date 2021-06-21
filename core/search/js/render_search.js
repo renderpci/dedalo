@@ -623,34 +623,33 @@ render_search.prototype.build_search_component = async function(parent_div, path
 
 	const self = this
 	
-	const path 		 = JSON.parse(path_plain)
-	const last_item  = path[path.length-1]
-	const first_item = path[0]
+	const path			= JSON.parse(path_plain)
+	const last_item		= path[path.length-1]
+	const first_item	= path[0]
 
 
 	// search_component container. Create dom element before load html from trigger
 		const search_component = ui.create_dom_element({
-			element_type 	: 'div',
-			parent 		 	: parent_div,
-			class_name 	 	: "search_component",
-			data_set 		: { 
+			element_type	: 'div',
+			parent			: parent_div,
+			class_name		: "search_component",
+			data_set		: { 
 				path		: path_plain,
 				section_id	: section_id 
-				}
+			}
 		})
 
 	// component_instance. Get functional component to render
 		const component_instance = await self.get_component_instance({
-			section_id 		: section_id,
-			section_tipo 	: last_item.section_tipo,
-			component_tipo 	: last_item.component_tipo,
-			model 			: last_item.modelo,
-			value 			: current_value || null,
-			q_operator 		: q_operator || null,
-			path 			: path
+			section_id		: section_id,
+			section_tipo	: last_item.section_tipo,
+			component_tipo	: last_item.component_tipo,
+			model			: last_item.modelo,
+			mode			:'search',
+			value			: current_value || null,
+			q_operator		: q_operator || null,
+			path			: path
 		})
-
-		// console.log("////////// component_instance:",component_instance);
 
 	// Render component
 		// await component_instance.build(true)
@@ -661,9 +660,9 @@ render_search.prototype.build_search_component = async function(parent_div, path
 
 	// button close
 		const search_component_button_close = ui.create_dom_element({
-			element_type 			: 'span',
-			parent 		 			: search_component,
-			class_name 	 			: "button close"
+			element_type	: 'span',
+			parent			: search_component,
+			class_name		: "button close"
 		})
 		search_component_button_close.addEventListener("click",function(e){
 			// remove search box and content (component) from dom
@@ -675,7 +674,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 			component_instance.destroy(true);
 			// Set as changed
 			self.update_state({state:'changed'})
-		},false)
+		})
 
 	// label component source if exists
 		if (first_item!==last_item) {
