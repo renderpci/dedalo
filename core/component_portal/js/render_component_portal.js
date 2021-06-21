@@ -188,6 +188,9 @@ render_component_portal.prototype.search = async function(options={render_level:
 	// id
 		wrapper.id = self.id
 
+	// events
+		add_events(self, wrapper)
+
 	// activate service autocomplete. Enable the service_autocomplete when the user do click
 		if(self.autocomplete_active===false){
 
@@ -254,6 +257,7 @@ const add_events = function(self, wrapper) {
 				//	return false
 				//}
 
+
 			// remove row
 				if (e.target.matches('.button.remove')) {
 					e.preventDefault()
@@ -263,22 +267,35 @@ const add_events = function(self, wrapper) {
 						key		: JSON.parse(e.target.dataset.key),
 						value	: null
 					})
-					const changed = self.change_value({
-						changed_data	: changed_data,
-						label			: e.target.previousElementSibling.textContent,
-						refresh			: false
-					})
-					changed.then(async (api_response)=>{
 
-						// update pagination offset
-							self.update_pagination_values('remove')
+					switch(self.mode){
 
-						// refresh
-							self.refresh()
+						case 'search':
 
-						// event to update the dom elements of the instance
-							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-					})
+							const update = self.update_data_value(changed_data)
+							// refresh
+								self.refresh()
+							break;
+
+						default:
+							const changed = self.change_value({
+								changed_data	: changed_data,
+								label			: e.target.previousElementSibling.textContent,
+								refresh			: false
+							})
+							changed.then(async (api_response)=>{
+
+								// update pagination offset
+									self.update_pagination_values('remove')
+
+								// refresh
+									self.refresh()
+
+								// event to update the dom elements of the instance
+									event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+							})
+							break;	
+					}
 
 					return true
 				}
@@ -759,8 +776,8 @@ const get_top = function(self) {
 */
 const input_element = async function(current_section_record, inputs_container){
 
-
-	const key = current_section_record.paginated_key
+	const caller_mode = current_section_record.caller.mode
+	const key = caller_mode==='search' ? 0 : current_section_record.paginated_key
 
 	// li
 		const li = ui.create_dom_element({
