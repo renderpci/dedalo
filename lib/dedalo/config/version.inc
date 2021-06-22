@@ -2417,7 +2417,9 @@
 		Updated db install and structure files (ready for Dédalo version 5.8.2)
 		Fixed php8 compatibility issue on autocomplete_ts_search
 		Removed legacy ontology menu links
-
+		22-06-2021
+		Fixed tool time machine error in list mode
+		
 
 
 	[/HISTORY]
@@ -2449,7 +2451,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '21-06-2021-a');
+	define('DEDALO_BUILD'	, '22-06-2021-b');
 
 
 	/*
