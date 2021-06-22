@@ -738,78 +738,82 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 		
 	const self = this
 
-	// sessionStorage check if already exists
-		const current_data_manager	= new data_manager()
+	// clone rqo_config
+		rqo_config = JSON.parse(JSON.stringify(rqo_config))
 
 	// local_db_data. get value if exists
-		const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
-		if(saved_rqo){
+		const current_data_manager = new data_manager()
+		// const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
+		// if(saved_rqo){
 
-			if (rqo_config.sqo) {
+		// 	if (rqo_config.sqo) {
 				
-				let to_save = false
+		// 		let to_save = false
 
-				saved_rqo.sqo = saved_rqo.sqo || {}
+		// 		saved_rqo.sqo = saved_rqo.sqo || {}
 
-				// update saved offset if is different from received config
-					if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
-						saved_rqo.sqo.filter = rqo_config.sqo.filter
-						to_save = true
-						console.warn("updated filter in saved_rqo:", saved_rqo);
-					}
+		// 		// update saved offset if is different from received config
+		// 			if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
+		// 				saved_rqo.sqo.filter = rqo_config.sqo.filter
+		// 				to_save = true
+		// 				console.warn("updated filter in saved_rqo:", saved_rqo);
+		// 			}
 
-				// update saved offset if is different from received config
-					if (typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {
-						saved_rqo.sqo.offset = rqo_config.sqo.offset
-						to_save = true
-						console.warn("updated offset in saved_rqo:", saved_rqo);
-					}
+		// 		// update saved offset if is different from received config
+		// 			if (typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {
+		// 				saved_rqo.sqo.offset = rqo_config.sqo.offset
+		// 				to_save = true
+		// 				console.warn("updated offset in saved_rqo:", saved_rqo);
+		// 			}
 
-				if (to_save===true) {
-					current_data_manager.set_local_db_data(saved_rqo, 'rqo') // save updated object
-				}
-			}
+		// 		if (to_save===true) {
+		// 			current_data_manager.set_local_db_data(saved_rqo, 'rqo') // save updated object
+		// 		}
+		// 	}
 
-			console.warn("returning saved_rqo:", saved_rqo);
-			return saved_rqo
-		}
+		// 	console.warn("returning saved_rqo:", saved_rqo);
+		// 	return saved_rqo
+		// }
 
-	// build new one with source of the instance caller (self)
+	// source. build new one with source of the instance caller (self)
 		const source = create_source(self, action)
 
-	// rqo_config. Set the sqo_config into a checked variable
+	// sqo_config
 		const sqo_config = rqo_config.show && rqo_config.show.sqo_config
 			? rqo_config.show.sqo_config
 			: false
 
-	// sqo
+	// sqo with fallback to sqo_config
 		const sqo = rqo_config.sqo
-			? JSON.parse(JSON.stringify(rqo_config.sqo))
-			: false
+			? rqo_config.sqo
+			: sqo_config
+				? sqo_config
+				: {}
 
-	if (!sqo_config && !sqo) {
-		//build the rqo
-		const rqo = {
-			id		: self.id,
-			action	: 'read',
-			source	: source
+	// without sqo info case
+		if (!sqo) {
+			// build a minimal rqo without sqo
+			const rqo = {
+				id		: self.id,
+				action	: 'read',
+				source	: source
+			}
+			return rqo
 		}
-		return rqo
-	}
 
-	// get the ar_sections
+	// ar_sections. Get ar_sections from sqo and map to string from object
 		const ar_sections = (sqo && sqo.section_tipo)
 			? sqo.section_tipo.map(el=>el.tipo)
-			: ( sqo_config && sqo_config.section_tipo)
-					? sqo_config.section_tipo.map(el=>el.tipo)
-					: false
+			: sqo_config && sqo_config.section_tipo
+				? sqo_config.section_tipo.map(el=>el.tipo)
+				: [self.section_tipo]
 
 	sqo.section_tipo = ar_sections
 	
 	// Get the limit, offset, full count, and filter by locators. 
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
 	// and finally if the rqo_config don't has sqo or sqo_config, set the default parameter to each.
-		sqo.limit = (sqo && sqo.limit)
+		sqo.limit = (sqo.limit)
 			? sqo.limit
 			: (sqo_config && sqo_config.limit)
 				? sqo_config.limit
@@ -817,30 +821,39 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 					? (self.context.model==='section' ? 1 : 10)
 					: 10
 
-		sqo.offset = (sqo && sqo.offset)
+		sqo.offset = (sqo.offset)
 			? sqo.offset
 			: (sqo_config && sqo_config.offset)
 				? sqo_config.offset
 				: 0
 
-		sqo.full_count = (sqo && sqo.full_count)
-			? sqo.full_count
-			: (sqo_config && sqo_config.full_count)
-				? sqo_config.full_count
-				: false
+		// (!) somebody use this ? (count don't need this anymore..)
+			// sqo.full_count = (sqo.full_count)
+			// 	? sqo.full_count
+			// 	: (sqo_config && sqo_config.full_count)
+			// 		? sqo_config.full_count
+			// 		: false
 
-		sqo.filter_by_locators = (sqo && sqo.filter_by_locators)
-			? sqo.filter_by_locators
-			: (sqo_config && sqo_config.filter_by_locators)
-				? sqo_config.filter_by_locators
-				: null
+		// filter_by_locators
+			const filter_by_locators = (sqo.filter_by_locators)
+				? sqo.filter_by_locators
+				: (sqo_config && sqo_config.filter_by_locators)
+					? sqo_config.filter_by_locators
+					: null
+			if (filter_by_locators) {
+				sqo.filter_by_locators = filter_by_locators
+			}
 
-	//build the rqo
+	// sqo clean
+		delete sqo.generated_time
+		delete sqo.parsed
+
+	// build the rqo
 		const rqo = {
 			id		: self.id,
 			action	: 'read',
 			source	: source,
-			sqo 	: sqo,
+			sqo 	: sqo
 		}
 
 
