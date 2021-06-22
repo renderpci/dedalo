@@ -57,7 +57,7 @@ data_manager.prototype.request = async function(options) {
 				// console.log("-> json result 2:",result);
 				return result
 			})
-			// console.log("-> json_parsed:",json_parsed);
+			console.log("-> api_response json_parsed:",json_parsed);
 			return json_parsed
 		})// parses JSON response into native Javascript objects
 		.catch(error => {
@@ -161,57 +161,26 @@ data_manager.prototype.request = async function(options) {
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.count = async function(sqo) {
+	// data_manager.prototype.count = async function(sqo) {
 
-	// data_manager
-		const api_response = this.request({
-			body : {
-				action	: 'count',
-				sqo		: sqo
-			}
-		})
+	// 	// data_manager
+	// 		const api_response = this.request({
+	// 			body : {
+	// 				action	: 'count',
+	// 				sqo		: sqo
+	// 			}
+	// 		})
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("----------------------------------- count sqo:", sqo);
-			// console.log("----------------------------------- count total:", total);
-			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
-			// console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
-		}
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			// console.log("----------------------------------- count sqo:", sqo);
+	// 			// console.log("----------------------------------- count total:", total);
+	// 			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
+	// 			// console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
+	// 		}
 
-	return api_response
-};//end count
-
-
-
-/**
-* COUNT
-* Generic section data loader
-* @param object context
-* @return promise api_response
-*/
-data_manager.prototype.count_OLD = async function(sqo) {
-
-	// data_manager
-		const api_response = await this.request({
-			body : {
-				action	: 'count',
-				sqo		: sqo
-			}
-		})
-
-	const total = api_response.result.total
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("----------------------------------- count sqo:", sqo);
-			// console.log("----------------------------------- count total:", total);
-			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
-			console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
-		}
-
-	return total
-};//end count
+	// 	return api_response
+	// };//end count
 
 
 

@@ -174,18 +174,24 @@ section.prototype.build = async function(autoload=false) {
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
 
-			// rebuild the rqo_config and rqo in the instance
-			// rqo_config
+			// rqo_config re-select from updated context
 				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
-
-			// rqo build (!) Don't rebuild rqo because rewites custom limit
-				// self.rqo = await self.build_rqo_show(self.rqo_config, 'search')
+			// rqo re-build from updated rqo_config
+				self.rqo = await self.build_rqo_show(self.rqo_config, 'search')
 
 			// count rows
 				if (!self.total) {
-						console.log("SECTION -- self.rqo.sqo:",self.rqo.sqo);
-					const response = await current_data_manager.count(self.rqo.sqo)
-					self.total = response.result.total
+					const count_sqo = JSON.parse( JSON.stringify(self.rqo.sqo) )
+					delete count_sqo.limit
+					delete count_sqo.offset
+					delete count_sqo.select
+					delete count_sqo.generated_time
+					const rqo_count = {
+						action	: 'count',
+						sqo		: count_sqo
+					}
+					const api_count_response = await current_data_manager.request({body:rqo_count})
+					self.total = api_count_response.result.total
 					// set value
 					// current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
@@ -202,20 +208,7 @@ section.prototype.build = async function(autoload=false) {
 					}
 				}
 		}//end if (autoload===true)
-		// else{
-			//
-			// 	// set context and data to current instance
-			// 		self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
-			// 		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
-			// 		self.section_id = self.data
-			// 			? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
-			// 			: null
-			//
-			// 	// set request_config
-			// 		self.request_config = self.context.find(item => item.tipo===self.tipo && item.model==='section').request_config
-			// }
-
-
+	
 	// Update section mode/label with context declarations
 		const section_context = self.context || {
 			mode		: 'edit',
@@ -257,27 +250,22 @@ section.prototype.build = async function(autoload=false) {
 						const node		= self.node && self.node[0]
 							? self.node[0].querySelector(selector)
 							: null
-							console.log("node:",node);
-						if (node) {
-							node.classList.add('loading')
-						}
+						if (node) node.classList.add('loading')
 
-					// self.pagination.offset = offset
-
-					self.rqo.sqo.offset = offset
-					// set value
-					current_data_manager.set_local_db_data(self.rqo, 'rqo')
+					// fix new offset value
+						self.rqo.sqo.offset = offset
+					
+					// set_local_db_data updated rqo
+						current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
 					// refresh
 						await self.refresh() // refresh current section
 
 					// loading
-						if (node) {
-							node.classList.remove('loading')
-						}
+						if (node) node.classList.remove('loading')
 				})
 			)//end events push
-		}
+		}//end if (!self.paginator)
 
 	// filter search
 		if (!self.filter && self.permissions>0) {
@@ -309,7 +297,8 @@ section.prototype.build = async function(autoload=false) {
 				self.inspector = current_inspector
 			// }
 		}
-	// get the column for use into the list.
+
+	// columns. Get the columns to use into the list
 		self.columns = self.get_columns()
 
 	// debug
