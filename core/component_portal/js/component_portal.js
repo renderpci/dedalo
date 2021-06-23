@@ -178,11 +178,11 @@ component_portal.prototype.build = async function(autoload=false){
 				const action = (self.mode === 'search') ? 'resolve_data' : 'get_data'
 				self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action)
 				if(self.mode === 'search') {
-					self.rqo.source.value = self.data.value 
+					self.rqo.source.value = self.data.value
 				}
 		}
 		await generate_rqo()
-			console.log("self.rqo:",self.rqo);
+			console.log("portal generate_rqo 1 self.rqo_config:",self.rqo_config);
 
 		// self.rqo.sqo.limit = 2
 		// self.rqo.sqo.offset = 1
@@ -218,6 +218,7 @@ component_portal.prototype.build = async function(autoload=false){
 				self.datum.context = api_response.result.context
 
 				await generate_rqo()
+				console.log("portal generate_rqo 2 self.rqo:",self.rqo);
 		}//end if (autoload===true)
 		
 	
@@ -289,7 +290,9 @@ component_portal.prototype.build = async function(autoload=false){
 		self.permissions = self.context.permissions
 
 	// target_section
+		console.log("//// portal self.rqo.sqo.section_tipo:", self.rqo.sqo.section_tipo);
 		self.target_section = self.rqo_config.sqo.section_tipo
+		// self.target_section = self.rqo.sqo.section_tipo
 
 	// columns
 		if(self.mode === 'edit' || self.mode === 'search'){
