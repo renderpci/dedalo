@@ -174,6 +174,7 @@ class dd_core_api {
 					$tipo			= $context->tipo;
 					$section_tipo	= $context->section_tipo;
 					$lang			= $context->lang;
+					$mode			= $context->mode;
 					$changed_data	= $data->changed_data;
 
 					$RecordObj_dd	= new RecordObj_dd($tipo);
@@ -183,7 +184,7 @@ class dd_core_api {
 					$component = component_common::get_instance($model,
 																$tipo,
 																$section_id,
-																'edit',
+																$mode,
 																$component_lang,
 																$section_tipo);
 				// get the component permisions
@@ -191,13 +192,20 @@ class dd_core_api {
 				// check if the user can update the component
 					if($permissions < 2) return $response;
 
-				// update the dato with the changed data sended by the client
-					$component->update_data_value($changed_data);
-				// save the new data to the component
-					$component->Save();
+				if ($mode==='search') {
+					// force same changed_data
+						$component->set_dato([$changed_data->value]);
 
-				// force reacalculate dato
-					$dato = $component->get_dato();
+				}else{
+
+					// update the dato with the changed data sended by the client
+						$component->update_data_value($changed_data);
+					// save the new data to the component
+						$component->Save();
+
+					// force reacalculate dato
+						$dato = $component->get_dato();
+				}
 
 				// element json
 					$get_json_options = new stdClass();
