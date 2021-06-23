@@ -351,10 +351,21 @@ component_portal.prototype.add_value = async function(value) {
 			refresh		 : false
 		})
 
-	// update pagination offset
-	if(self.mode !== 'search'){
-		self.update_pagination_values('add')
+
+	switch(self.mode) {
+		case 'search' :
+			// publish change. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+		break;
+
+		default:
+			
+			// update pagination offset
+			self.update_pagination_values('add')
+		break;
 	}
+
+
 
 	// refresh self component
 		self.refresh()
