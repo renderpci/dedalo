@@ -565,15 +565,11 @@ search.prototype.get_component_instance = async function(options) {
 	// build component to force load datalist etc.
 		await component_instance.build(true)
 
-
-	// inject value from search user preset
-		component_instance.data = {value : value}
-
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
 		component_instance.path				= path
 
-// console.log("component_instance:",JSON.parse(JSON.stringify(component_instance)));
+
 	// add instance
 		self.ar_instances.push(component_instance)
 
@@ -874,7 +870,7 @@ this.get_search_json_object = function() {
 
 		// Recalculate filter_obj from DOM in default mode (include components with empty values)
 		const filter_obj = self.parse_dom_to_json_filter({}).filter
-	console.log("filter_obj************************:",filter_obj);
+
 		// save editing preset
 			const current_data_manager 	= new data_manager()
 			const api_response 			= await current_data_manager.request({

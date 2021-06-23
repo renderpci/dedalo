@@ -333,6 +333,7 @@ component_portal.prototype.add_value = async function(value) {
 		// 	return false
 		// }
 
+
 	const key = self.total || 0
 
 	const changed_data = Object.freeze({
@@ -350,7 +351,6 @@ component_portal.prototype.add_value = async function(value) {
 			changed_data : changed_data,
 			refresh		 : false
 		})
-
 
 	switch(self.mode) {
 		case 'search' :
