@@ -273,8 +273,12 @@ const add_events = function(self, wrapper) {
 						case 'search':
 
 							const update = self.update_data_value(changed_data)
+							// publish search. Event to update the dom elements of the instance
+								event_manager.publish('change_search_element', self)
+
 							// refresh
 								self.refresh()
+
 							break;
 
 						default:
