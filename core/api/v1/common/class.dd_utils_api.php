@@ -15,8 +15,6 @@ class dd_utils_api {
 	public static function get_menu($request_options=null) {
 		global $start_time;
 
-		// session_write_close();
-
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -51,8 +49,6 @@ class dd_utils_api {
 	*/
 	public static function get_login($request_options=null) {
 		global $start_time;
-
-		// session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -620,8 +616,10 @@ class dd_utils_api {
 
 		$response = (object)login::Login( $options );
 
-		// Close script session
-			session_write_close();
+		// force to calculate user permissions useful for menu etc.
+			// $ar_permisions_areas	= security::get_ar_authorized_areas_for_user();
+			// $areas					= area::get_areas();
+			// $ar_label				= label::get_ar_label();
 
 		// Debug
 			if(SHOW_DEBUG===true) {

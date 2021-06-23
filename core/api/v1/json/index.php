@@ -1,10 +1,22 @@
 <?php
 $start_time=microtime(1);
+	
+	// Turn off output buffering
+	ini_set('output_buffering', 'off');
+	// Turn off PHP output compression
+	// ini_set('zlib.output_compression', false);
+			
+	//Flush (send) the output buffer and turn off output buffering
+	//ob_end_flush();
+	// while (@ob_end_flush());
+			
+	// Implicitly flush the buffer(s)
+	// ini_set('implicit_flush', true);
+	// ob_implicit_flush(true);
 
 
 	// header print as json data
 		header('Content-Type: application/json');
-
 
 	// includes
 		// config dedalo
@@ -27,6 +39,9 @@ $start_time=microtime(1);
 			$dd_manager	= new dd_manager();
 			$result		= $dd_manager->manage_request( $rqo );
 			// throw new Exception('foo');
+
+			// close current session
+			session_write_close();
 
 		// } catch (Throwable $e) { // For PHP 7
 			
@@ -51,6 +66,31 @@ $start_time=microtime(1);
 		
 	
 	// output the result json string
-		echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		$output_string = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+	
+	// output_string_and_close_connection
+		function output_string_and_close_connection($string_to_output) {
+			// set_time_limit(0);
+			ignore_user_abort(true);   
+			// buffer all upcoming output - make sure we care about compression:
+			if(!ob_start("ob_gzhandler"))
+			    ob_start();        
+			echo $string_to_output;   
+			// get the size of the output
+			$size = ob_get_length();   
+			// send headers to tell the browser to close the connection   
+			header("Content-Length: $size");
+			header('Connection: close');
+			// flush all output
+			ob_end_flush();
+			// ob_flush();
+			flush();   
+			// close current session
+			// if (session_id()) session_write_close();
+		}
+
+
+	// output_string_and_close_connection($output_string);
+	echo $output_string;
 

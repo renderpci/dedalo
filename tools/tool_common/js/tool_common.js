@@ -54,7 +54,6 @@ tool_common.prototype.init = async function(options) {
 * BUILD
 */
 tool_common.prototype.build = async function(autoload=false) {
-
 	const t0 = performance.now()
 
 	const self = this
@@ -65,11 +64,9 @@ tool_common.prototype.build = async function(autoload=false) {
 	// component_json simple_tool_object
 		const simple_tool_object_tipo = 'dd1353'
 
-
 	// load self style
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
 		common.prototype.load_style(tool_css_url)
-
 
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -86,27 +83,24 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			// rqo. Create the basic rqo
 				const rqo = {
-					action			: 'read',
+					action	: 'read',
 					// tool source for component json that stores full tool config
 					source : {
 						action			: 'get_data',
-						model 			: 'component_json',
-						tipo 			: 'dd1353',
+						model			: 'component_json',
+						tipo			: 'dd1353',
 						section_tipo	: self.tool_section_tipo,
 						section_id		: self.tool_section_id,
-						mode 			: 'edit',
-						lang 			: 'lg-nolan'
+						mode			: 'edit',
+						lang			: 'lg-nolan'
 					}
-				// rqo.push(source)
 				}
-
 
 			// load data. Load section data from db of the current tool.
 			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
 			// The tool info was generated when it was imported / registered by admin
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.request({body:rqo})
-					console.log("api_response:",api_response);
 				const data					= api_response.result.data
 
 			// config set
@@ -150,7 +144,7 @@ tool_common.prototype.build = async function(autoload=false) {
 * @return instance tool
 *
 * Called by page observe event (init)
-* To load tool, don't call directly, publish event as
+* To load tool, don't call directly, publish a event as
 *	event_manager.publish('load_tool', {
 *		self 		: self,
 *		tool_object : tool_object
@@ -194,9 +188,9 @@ export const load_tool = async (options) => {
 
 /**
 * TRIGGER_REQUEST
+* This is a common tool API request way
 */
 export const trigger_request = async function(trigger_url, body) {
-
 	const t0 = performance.now()
 
 	const handle_errors = function(response) {

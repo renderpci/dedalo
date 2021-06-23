@@ -3306,26 +3306,26 @@ class section extends common {
 	* Gets component_relation_model value (dato and value) in current section (by locator)
 	* @return object $model_obj
 	*/
-	public static function get_section_model_DES($locator, $lang=DEDALO_DATA_LANG) {
+		// public static function get_section_model_DES($locator, $lang=DEDALO_DATA_LANG) {
 
-		$parent 		= $locator->section_id;
-		$section_tipo	= $locator->section_tipo;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO, true);
-		$component 		= component_common::get_instance($modelo_name,
-														 DEDALO_THESAURUS_RELATION_MODEL_TIPO,
-														 $parent,
-														 'list',
-														 $lang,
-														 $section_tipo);
-		$dato  = (array)$component->get_dato();
-		$value = $component->get_valor($lang);
+		// 	$parent 		= $locator->section_id;
+		// 	$section_tipo	= $locator->section_tipo;
+		// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO, true);
+		// 	$component 		= component_common::get_instance($modelo_name,
+		// 													 DEDALO_THESAURUS_RELATION_MODEL_TIPO,
+		// 													 $parent,
+		// 													 'list',
+		// 													 $lang,
+		// 													 $section_tipo);
+		// 	$dato  = (array)$component->get_dato();
+		// 	$value = $component->get_valor($lang);
 
-		$model_obj = new stdClass();
-			$model_obj->name 	= $value ?? '';
-			$model_obj->locator = reset($dato);
+		// 	$model_obj = new stdClass();
+		// 		$model_obj->name 	= $value ?? '';
+		// 		$model_obj->locator = reset($dato);
 
-		return $model_obj;
-	}//end get_section_model
+		// 	return $model_obj;
+		// }//end get_section_model
 
 
 
@@ -3334,7 +3334,84 @@ class section extends common {
 	* Build specific context when section is in 'tm' (time machine) mode
 	* @return array $context
 	*/
-	public function get_tm_context() {
+	public function get_tm_context($permissions) {		
+
+		// short vars
+			$rqo	= dd_core_api::$rqo; // from current client request
+			$source	= $rqo->source;
+			$sqo	= $rqo->sqo;
+
+				dump($rqo, ' rqo ++ '.to_string());
+
+		
+		$context = [];
+
+		// section self
+			$context[] = $this->get_structure_context($permissions, $add_rqo=true);
+
+
+		// fixed columns
+			// ddo matrix id
+			$context[] = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
+				'model'			=> 'component_section_id',
+				'tipo'			=> 'section_id_tipo', // fake tipo only used to match ddo with data
+				'section_tipo'	=> $this->tipo,
+				'label'			=> 'matrix ID',
+				'mode'			=> 'list',
+				'parent'		=> $this->tipo
+			];
+			// ddo modification date
+			$context[] = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
+				'model'			=> 'component_date',
+				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
+				'section_tipo'	=> $this->tipo,
+				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
+				'mode'			=> 'list',
+				'parent'		=> $this->tipo
+			];
+			// ddo modification user id
+			$context[] = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
+				'model'			=> 'component_select',
+				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+				'section_tipo'	=> $this->tipo,
+				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+				'mode'			=> 'list',
+				'parent'		=> $this->tipo
+			];
+
+		// component
+			$context[] = (function($tipo, $section_tipo, $lang) {
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $tipo,
+																 null,
+																 'list',
+																 $lang,
+																 $section_tipo);			
+				// get component json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= true;
+						$get_json_options->get_data		= false;
+					$element_json = $component->get_json($get_json_options);
+
+				// edit section_id to match section locator data item
+					$current_item = reset($element_json->context);
+
+				return $current_item;
+			})($component_tipo, $this->tipo, $component_lang);
+
+
+
+				dump($context, ' context get_tm_context ++++++++++++++++++++++++++ '.to_string());
+
+		die();
 
 		$dd_request = dd_core_api::$dd_request; // $this->dd_request
 
@@ -3495,6 +3572,7 @@ class section extends common {
 				return $current_item;
 			})($component_tipo, $this->tipo, $component_lang);
 
+		dump($context, ' context get_tm_context +++++++++++++++++++++++ '.to_string()); die();
 
 		return (array)$context;
 	}//end get_tm_context

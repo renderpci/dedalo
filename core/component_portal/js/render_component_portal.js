@@ -387,7 +387,8 @@ const get_buttons = (self) => {
 	const is_inside_tool		= self.is_inside_tool
 	const mode					= self.mode
 	const show					= self.rqo.show
-	const target_section		= self.context.request_config.find(el => el.api_engine==='dedalo').sqo.section_tipo
+	// const target_section		= self.context.request_config.find(el => el.api_engine==='dedalo').sqo.section_tipo
+	const target_section		= self.target_section
 	const target_section_lenght	= target_section.length
 		  // sort section by label asc
 		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)

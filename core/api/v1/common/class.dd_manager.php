@@ -27,7 +27,7 @@ class dd_manager {
 	* @return mixed array|object
 	*/
 	public function manage_request( $rqo ) {
-		$api_start_time=microtime(1);
+		$api_manager_start_time=microtime(1);
 
 		// debug
 			// dump($rqo, ' MANAGE_REQUEST rqo ++++++++++++++++++++++++++++++ '.to_string());
@@ -56,7 +56,6 @@ class dd_manager {
 
 		// actions (dd_core_api | dd_utils_api)
 			$dd_api_type = $rqo->dd_api ?? 'dd_core_api';
-
 			switch ($dd_api_type) {
 				case 'dd_utils_api':
 					$dd_utils_api = new dd_utils_api();
@@ -83,9 +82,9 @@ class dd_manager {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total_time = exec_time_unit($api_start_time,'ms')." ms";
+				$total_time_api_exec = exec_time_unit($api_manager_start_time,'ms')." ms";
 				$api_debug = new stdClass();
-					$api_debug->api_exec_time	= $total_time;
+					$api_debug->api_exec_time	= $total_time_api_exec;
 					$api_debug->memory_usage	= dd_memory_usage();
 					// $api_debug->api_rqo	= $rqo;
 
@@ -107,6 +106,7 @@ class dd_manager {
 				// 	dump($dedalo_data, ' dedalo_data ++ '.to_string());
 				// }
 			}
+		
 
 
 		return $dedalo_data;

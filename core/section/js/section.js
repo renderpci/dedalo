@@ -154,12 +154,14 @@ section.prototype.build = async function(autoload=false) {
 
 	// rqo_config
 		self.rqo_config	= self.rqo_config || self.context.request_config.find(el => el.api_engine==='dedalo')
-
+	console.log("__________________________- self.rqo_config:",self.rqo_config);
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search')
 	
 	// load data if is not already received as option
 		if (autoload===true) {
+
+				console.log("section ++++++++++++++++++++++++++++++++++++ self.rqo:",self.rqo);
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})

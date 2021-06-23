@@ -856,9 +856,18 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 			sqo 	: sqo
 		}
 
+	// show
+		if (rqo_config.show && rqo_config.show.ddo_map) {
+			// rqo.show = {
+			// 	ddo_map : rqo_config.show.ddo_map
+			// }
+		}
+	// if (!rqo_config.sqo) {
+	// 	rqo_config.sqo = sqo
+	// }
 
 	// local_db_data save
-		current_data_manager.set_local_db_data(rqo, 'rqo')
+		// current_data_manager.set_local_db_data(rqo, 'rqo')
 
 
 	return rqo
