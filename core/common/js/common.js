@@ -910,8 +910,9 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 				? qo_config.offset
 				: 0
 
-	// new sqo_search
+	// sqo. new sqo_search
 		const sqo = {
+			mode					: self.mode,
 			section_tipo			: ar_sections,
 			filter					: {[operator]:[]},
 			offset					: offset,
