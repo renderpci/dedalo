@@ -39,6 +39,37 @@ class search_tm extends search {
 
 
 
+	/**
+	* BUILD_SQL_QUERY_SELECT
+	* @return string $sql_query_select
+	*/
+	public function build_sql_query_select($full_count=false) {
+
+		if ($full_count===true) {
+			return $this->build_full_count_sql_query_select();
+		}
+
+		$search_query_object = $this->search_query_object;
+
+		$ar_sql_select = [];
+		$ar_key_path   = [];
+
+		$ar_sql_select[] = '*';
+
+		# Add order columns to select when need
+			foreach ((array)$this->order_columns as $select_line) {
+				$ar_sql_select[] = $select_line;
+			}
+
+		# Join all
+			$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
+
+
+		return $sql_query_select;
+	}//end build_sql_query_select
+
+
+
 	// /**
 	// * BUILD_MAIN_FROM_SQL
 	// * @return string $main_from_sql
