@@ -17,7 +17,7 @@
 export const common = function(){
 
 	return true
-};//end common
+}//end common
 
 
 
@@ -43,7 +43,7 @@ common.prototype.build = async function () {
 
 
 	return true
-};//end common.prototype.build
+}//end common.prototype.build
 
 
 
@@ -156,7 +156,8 @@ common.prototype.render = async function (options={render_level:'full'}) {
 								}else{
 									wrapper.replaceChild(new_content_data_node, old_content_data_node)
 								}
-						}
+								
+						}//end for (let i = nodes_length - 1; i >= 0; i--) 
 
 					return self.node[0]
 					break;
@@ -189,7 +190,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 		}
 
 	return result_node
-};//end render
+}//end render
 
 
 
@@ -268,7 +269,7 @@ common.prototype.refresh = async function () {
 
 
 	return true
-};//end refresh
+}//end refresh
 
 
 
@@ -397,7 +398,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 
 	//console.log("self.ar_instances final:",JSON.parse(JSON.stringify(self.ar_instances)));
 	return result
-};//end destroy
+}//end destroy
 
 
 
@@ -425,7 +426,7 @@ export const create_source = function (self, action) {
 		}
 
 	return source
-};//end create_source
+}//end create_source
 
 
 
@@ -472,7 +473,7 @@ common.prototype.load_style = function (src) {
 	}
 
 	return js_promise
-};//end load_style
+}//end load_style
 
 
 
@@ -519,7 +520,7 @@ common.prototype.load_script = async function(src) {
 	}
 
 	return js_promise
-};//end load_script
+}//end load_script
 
 
 
@@ -546,7 +547,8 @@ common.prototype.get_columns = async function(){
 	const ar_columns = get_ar_inverted_paths(full_ddo_map)
 
 	return ar_columns
-};//end get_columns
+}//end get_columns
+
 
 
 /**
@@ -595,6 +597,8 @@ const get_ar_inverted_paths = function(full_ddo_map){
 
 	return ar_inverted_paths
 }// end get_ar_inverted_paths
+
+
 
 /**
 * GET_SUB_DDO_MAP
@@ -664,7 +668,7 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 		
 			// console.log("current_ddo:",current_ddo);
 	return ar_ddo
-};//end build_request_show
+}//end build_request_show
 
 
 
@@ -701,7 +705,7 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 	// 	tool_instance.render()
 
 	// 	return tool_instance
-// };//end load_tool
+// }//end load_tool
 
 
 
@@ -726,7 +730,7 @@ common.prototype.build_rqo_DES = async function(dd_request_type, request_config,
 			return build_request_select(self, request_config, action)
 			break;
 	}
-};//end build_rqo
+}//end build_rqo
 
 
 
@@ -1224,7 +1228,7 @@ const build_request_show_OLD = function(self, request_config, action){
 
 
 	return dd_request
-};//end build_request_show
+}//end build_request_show
 
 
 
@@ -1400,7 +1404,7 @@ const build_request_search = function(self, request_config, action){
 
 
 	return dd_request
-};//end build_request_search
+}//end build_request_search
 
 
 
@@ -1517,7 +1521,7 @@ const build_request_select = function(self, request_config, action){
 		})
 
 	return dd_request
-};//end build_request_show
+}//end build_request_show
 
 
 
@@ -1548,7 +1552,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		console.error("API EXCEPTION:",response.msg);
 		return false
 	}
-	console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.exec_time)
+	// console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.exec_time)
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
 	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
 
@@ -1606,7 +1610,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 
 	return true
-};//end load_data_debug
+}//end load_data_debug
 
 
 
@@ -1634,6 +1638,6 @@ common.prototype.load_data_from_datum = function() {
 		}
 
 	return self.data
-};//end load_data_from_datum
+}//end load_data_from_datum
 
 

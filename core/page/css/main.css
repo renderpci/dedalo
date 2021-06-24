@@ -3740,6 +3740,15 @@ danger {
 .loading {
   opacity: 0.5;
   pointer-events: none;
+  transition: opacity 0.25s;
+}
+@keyframes loading_fade_out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
 }
 .hide {
   visibility: hidden !important;

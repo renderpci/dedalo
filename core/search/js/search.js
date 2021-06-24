@@ -49,6 +49,7 @@ export const search = function() {
 	// render	
 	search.prototype.render					= common.prototype.render
 	search.prototype.list					= render_search.prototype.list
+	search.prototype.edit					= render_search.prototype.list
 	search.prototype.render_base			= render_search.prototype.render_base
 	search.prototype.render_components_list	= render_search.prototype.render_components_list
 	search.prototype.render_search_buttons	= render_search.prototype.render_search_buttons
@@ -172,8 +173,7 @@ search.prototype.build = async function(){
 
 					self.json_filter = editing_preset.result.json_filter
 				}
-
-				console.log("// search stored self.json_filter:",self.json_filter);
+				// console.log("// SEARCH buld stored self.json_filter:",self.json_filter);
 
 			resolve(self.json_filter)
 		}))

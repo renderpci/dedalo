@@ -43,7 +43,7 @@ class menu extends common {
 		$ar_areas = [];
 
 		$user_id			= navigator::get_user_id();
-		$is_global_admin	= security::is_global_admin($user_id);		
+		$is_global_admin	= security::is_global_admin($user_id);
 
 		if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
 			// get all aras of the current instalation
@@ -59,6 +59,7 @@ class menu extends common {
 		}
 
 		$tree_datalist = $ar_areas;
+
 
 		return $tree_datalist;
 	}//end get_tree_datalist
@@ -111,8 +112,7 @@ class menu extends common {
 				'mode'			=> $mode,
 				'permissions'	=> $permissions
 			]);
-
-			
+		
 		return $dd_object;
 	}//end get_structure_context
 

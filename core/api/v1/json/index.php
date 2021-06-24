@@ -18,11 +18,6 @@ $start_time=microtime(1);
 	// header print as json data
 		header('Content-Type: application/json');
 
-	// includes
-		// config dedalo
-		include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
-		// json dd_manager
-		include dirname(dirname(__FILE__)) .'/common/class.dd_manager.php';
 
 
 	// get post vars
@@ -30,7 +25,18 @@ $start_time=microtime(1);
 		//error_log(print_r($str_json,true));
 		if (!empty($str_json)) {
 			$rqo = json_decode( $str_json );
+			// to prevent php session lock. On true, set session as read only to prevent lock
+			// define('PREVENT_SESSION_LOCK', ($rqo->prevent_lock ?? false));
 		}
+
+
+
+	// includes
+		// config dedalo
+		include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
+		// json dd_manager
+		include dirname(dirname(__FILE__)) .'/common/class.dd_manager.php';
+
 
 
 	// dd_dd_manager

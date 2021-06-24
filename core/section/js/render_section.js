@@ -118,7 +118,7 @@ const get_content_data = async function(self) {
 
 	// section_record instances (initied and builded)
 	const ar_section_record = await self.get_ar_instances()
-
+	
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
