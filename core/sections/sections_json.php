@@ -64,12 +64,13 @@
 	if($options->get_data===true){
 	
 		// dato is the full result of a search using the search_query_object
-		$dato = $this->get_dato();
+		$dato = $this->get_dato();		
 
 		if (!empty($dato)) {
 
 			// data item
 				$value = array_map(function($item) use($modo){
+					
 					$locator = new stdClass();
 						$locator->section_tipo 	= $item->section_tipo;
 						$locator->section_id 	= $item->section_id;
@@ -92,7 +93,6 @@
 					$item->value 		= $value;
 
 				$data[] = $item;
-			
 
 			// subdata
 				foreach ($dato as $current_record) {

@@ -199,7 +199,7 @@ section.prototype.build = async function(autoload=false) {
 				}
 
 			// set local_db value always
-				current_data_manager.set_local_db_data(self.rqo, 'rqo')
+				// current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
 			// debug
 				if(SHOW_DEBUG===true) {

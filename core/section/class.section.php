@@ -3394,7 +3394,7 @@ class section extends common {
 																 null,
 																 'list',
 																 $lang,
-																 $section_tipo);			
+																 $section_tipo);
 				// get component json
 					$get_json_options = new stdClass();
 						$get_json_options->get_context	= true;

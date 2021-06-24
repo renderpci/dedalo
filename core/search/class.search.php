@@ -226,7 +226,7 @@ class search {
 
 		# Converts json search_query_object to sql query string
 		$sql_query = $this->parse_search_query_object( $full_count=false );
-			#debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
+			// debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
 
 		$parsed_time = round(microtime(1)-$start_time,3);
 
@@ -278,8 +278,8 @@ class search {
 					//}
 					# Add property
 					$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
-					? json_decode($field_value)
-					: $field_value;
+						? json_decode($field_value)
+						: $field_value;
 				}
 			}
 			#debug_log(__METHOD__." row ".to_string($row), logger::DEBUG);
@@ -969,6 +969,9 @@ class search {
 		// Select fallback to 'datos' when $search_query_object->select is empty or unset
 			if (empty($search_query_object->select)) {
 				#$ar_sql_select[] = 'datos';
+				// $ar_sql_select[] = ($this->matrix_table==='matrix_time_machine')
+				// 	? $this->main_section_tipo_alias.'.dato'
+				// 	: $this->main_section_tipo_alias.'.datos';
 				$ar_sql_select[] = $this->main_section_tipo_alias.'.datos';
 			}else{
 				foreach ($search_query_object->select as $key => $select_object) {
