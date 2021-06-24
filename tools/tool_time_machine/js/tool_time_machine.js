@@ -7,7 +7,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
+	import {common, create_source, get_ar_inverted_paths} from '../../../core/common/js/common.js'
 	import {tool_common, trigger_request} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 
@@ -119,37 +119,64 @@ tool_time_machine.prototype.load_section = async function() {
 		const section_id		= component.section_id
 		const lang				= component.lang
 
+	// ddo_map
+		const ddo_map = [
+			//  matrix id
+			{
+				tipo			: 'section_id_tipo', // fake tipo only used to match ddo with data,
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				mode			: 'list'
+			},
+			// modification date DEDALO_SECTION_INFO_MODIFIED_DATE dd201
+			{
+				tipo			: 'dd201',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				mode			: 'list'
+			},
+			// modification user id DEDALO_SECTION_INFO_MODIFIED_BY_USER dd197
+			{
+				tipo			: 'dd197',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				mode			: 'list'
+			},
+			// component itself
+			{
+				tipo			: component_tipo,
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				mode			: 'list'
+			}
+		]
+
+	// sqo
+		const sqo = {
+			id					: 'tmp',
+			mode				: 'tm',
+			section_tipo		: [{tipo:section_tipo}],
+			filter_by_locators	: [{
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				tipo			: component_tipo,
+				lang			: lang
+			}],
+			limit				: 10,
+			offset				: 0,
+			order				: [{
+				direction	: 'DESC',
+				path		: [{component_tipo : 'id'}]
+			}]
+		}
+
 	// request_config
 		const request_config = [{
 			api_engine : 'dedalo',
 			show : {
-				ddo_map : [
-					{
-						component_tipo	: component_tipo,
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-						lang			: lang,
-						parent			: section_tipo
-					}
-				]
+				ddo_map : ddo_map
 			},
-			sqo : {
-				id					: 'tmp',
-				mode				: 'tm',
-				section_tipo		: [{"tipo":section_tipo}],
-				filter_by_locators	: [{
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					tipo			: component_tipo,
-					lang			: lang
-				}],
-				limit				: 10,
-				offset				: 0,
-				order				: [{
-					direction	: 'DESC',
-					path		: [{component_tipo : 'id'}]
-				}]
-			}
+			sqo : sqo
 		}]
 
 	// context
@@ -162,7 +189,7 @@ tool_time_machine.prototype.load_section = async function() {
 			mode			: 'list',
 			model			: 'section',
 			parent			: section_tipo,
-			request_config	: request_config
+			// request_config	: request_config
 		}
 
 	// instance options
@@ -182,16 +209,17 @@ tool_time_machine.prototype.load_section = async function() {
 		const section = await get_instance(instance_options)
 
 	// inject custom rqo
-		// const source						= create_source(section, 'search');
-		// section.rqo_config					= JSON.parse( JSON.stringify(request_config[0]) )
-		// section.rqo_config.sqo.section_tipo	= section.rqo_config.sqo.section_tipo.map(el=>el.tipo)
-		// section.rqo		= {
-		// 	id			: section.id,
-		// 	action		: 'read',
-		// 	source		: source,
-		// 	show		: section.rqo_config.show,
-		// 	sqo			: section.rqo_config.sqo
-		// }
+		const source						= create_source(section, 'search');
+		section.rqo_config					= JSON.parse( JSON.stringify(request_config[0]) )
+		section.rqo_config.sqo.section_tipo	= section.rqo_config.sqo.section_tipo.map(el=>el.tipo)
+		section.rqo_config.show.columns		= get_ar_inverted_paths(ddo_map)
+		section.rqo		= {
+			id			: section.id,
+			action		: 'read',
+			source		: source,
+			show		: section.rqo_config.show,
+			sqo			: section.rqo_config.sqo
+		}
 
 	// build section with autoload as true
 		await section.build(true)
@@ -218,32 +246,17 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 
 	const self = this
 
-	const component = self.caller
-
-
-	const context = JSON.parse(JSON.stringify(component.context))
-
-
-	const source = create_source(component, 'get_data')
-		// console.log("// load_component source:",source);
-
-		context.request_config = [source]
-
-	console.log("// load_component context:",context);
-
-	// request_config. Create if not exists
-		// if (!context.request_config) {
-		// 	context.request_config = []
-		// }
+	const component	= self.caller
+	const source	= create_source(component, 'get_data')
+	const context	= JSON.parse(JSON.stringify(component.context))
+		  context.request_config = [source]
 
 	// context lang switch if var lang is received
 		if (typeof lang!=='undefined') {
 			context.lang = lang
 		}
 
-			console.log("/// context:",context);
-
-	// component instance
+	// component instance_options
 		const instance_options = {
 			model			: component.model,
 			tipo			: component.tipo,

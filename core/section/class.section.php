@@ -3340,9 +3340,9 @@ class section extends common {
 			$rqo			= dd_core_api::$rqo; // from current client request
 			$source			= $rqo->source;
 			$sqo			= $rqo->sqo;
-			$component_ddo	= reset($rqo->show->ddo_map);
-			$component_tipo	= $component_ddo->component_tipo;
-			$component_lang	= $component_ddo->lang;
+			$component_ddo	= end($rqo->show->ddo_map);
+			$component_tipo	= $component_ddo->tipo;
+			$component_lang	= $source->lang;
 
 		
 		$context = [];

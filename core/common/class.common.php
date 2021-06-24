@@ -2150,13 +2150,31 @@ abstract class common {
 							$current_ddo->parent = $this->tipo;
 							$current_ddo->section_tipo = $this->tipo;
 					}
+
+					if(!isset($current_ddo->label)) {
+						$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+					}
+					if(!isset($current_ddo->mode)) {
+						$current_ddo->mode = $this->mode;
+					}
 				}
 
 			// create the new request_config with the caller
-			$request_config = new stdClass();
-			$request_config->api_engine = 'dedalo';
-			$request_config->show = $requested_show;
-			$this->request_config = [$request_config];
+				$request_config = new stdClass();
+					$request_config->api_engine	= 'dedalo';
+					$request_config->show		= $requested_show;
+
+					if (isset(dd_core_api::$rqo->sqo)) {
+						$sqo = unserialize(serialize(dd_core_api::$rqo->sqo));
+						$sqo->section_tipo = array_map(function($el){
+							return (object)[
+								'tipo' => $el
+							];
+						}, $sqo->section_tipo);
+						$request_config->sqo = $sqo;
+					}
+
+				$this->request_config = [$request_config];
 
 			// foreach
 			dd_core_api::$ddo_map =  array_merge(dd_core_api::$ddo_map,$request_config->show->ddo_map);

@@ -31,6 +31,7 @@ export const section = function() {
 	this.section_id
 	this.mode
 	this.lang
+	this.column_id
 
 	this.datum
 	this.context
@@ -118,6 +119,9 @@ section.prototype.init = async function(options) {
 
 	self.id_column_width	= '7.5em'
 	self.permissions		= options.permissions || null
+
+	// columns
+	self.columns = options.columns
 	
 	// events subscription
 
@@ -315,7 +319,13 @@ section.prototype.build = async function(autoload=false) {
 			// debug duplicates check
 				const ar_used = []
 				for(const element of self.datum.data) {
-					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id && item.row_section_id===element.row_section_id)
+					const index = ar_used.findIndex(item => item.tipo===element.tipo && 
+													item.section_tipo===element.section_tipo && 
+													item.section_id===element.section_id && 
+													item.from_component_tipo===element.from_component_tipo && 
+													item.parent_section_id===element.parent_section_id && 
+													item.row_section_id===element.row_section_id &&
+													item.matrix_id===element.matrix_id)
 					if (index!==-1) {
 						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
 
