@@ -65,6 +65,7 @@ export const section = function() {
 	section.prototype.destroy			= common.prototype.destroy
 	section.prototype.refresh			= common.prototype.refresh
 	section.prototype.build_rqo_show	= common.prototype.build_rqo_show
+	section.prototype.build_rqo_search	= common.prototype.build_rqo_search
 
 	// render
 	section.prototype.edit				= render_section.prototype.edit
@@ -154,9 +155,14 @@ section.prototype.build = async function(autoload=false) {
 
 	// rqo_config
 		self.rqo_config	= self.rqo_config || self.context.request_config.find(el => el.api_engine==='dedalo')
-	console.log("__________________________- self.rqo_config:",self.rqo_config);
+	
 	// rqo build
-		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search')
+		// if (self.mode==='tm') {
+		// 	self.rqo = self.rqo || await self.build_rqo_search(self.rqo_config, 'search')
+		// }else{
+			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search')
+		// }
+		
 	
 	// load data if is not already received as option
 		if (autoload===true) {
