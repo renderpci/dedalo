@@ -1185,6 +1185,7 @@ function session_start_manager($request_options) {
 		$options->save_path							= false; # /tmp/php
 		$options->aditional_save_path		= false; # /session_custom_sec
 		$options->session_name					= false;
+		$options->prevent_session_lock	= false;
 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 	switch ($options->save_handler) {		
@@ -1232,7 +1233,14 @@ function session_start_manager($request_options) {
 			ini_set('session.gc_divisor', 100); // Should always be 100
 
 			// Start the session!
-			session_start();
+			if ($options->prevent_session_lock===true) {
+				// read only but non locking session
+				session_start([
+					'read_and_close' => true
+				]);
+			}else{
+				session_start();
+			}
 
 			// Renew the time left until this session times out.
 			// If you skip this, the session will time out based

@@ -100,6 +100,7 @@ menu.prototype.build = async function(autoload=true){
 				action			: 'get_menu',
 				dd_api			: 'dd_utils_api',
 				source			: create_source(self, null),
+				prevent_lock	: true
 			}
 
 		// load data. get context and data
