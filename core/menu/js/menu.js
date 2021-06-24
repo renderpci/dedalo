@@ -97,9 +97,9 @@ menu.prototype.build = async function(autoload=true){
 
 		// rqo build
 			const rqo = {
-				action : 'get_menu',
-				dd_api : 'dd_utils_api',
-				source : create_source(self, null)
+				action			: 'get_menu',
+				dd_api			: 'dd_utils_api',
+				source			: create_source(self, null),
 			}
 
 		// load data. get context and data

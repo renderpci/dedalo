@@ -180,7 +180,9 @@ const add_instance = async (self, current_context, section_id, current_data, col
 
 
 /**
-* GET_AR_INSTANCES EDIT
+* GET_AR_INSTANCES (USED IN EDIT MODE)
+* @see render_section get_content_data
+* @return array ar_instances
 */
 section_record.prototype.get_ar_instances = async function(){
 
@@ -194,8 +196,8 @@ section_record.prototype.get_ar_instances = async function(){
 
 	// items. Get the items inside the section/component of the record to render it
 		const items = (mode==="list")
-			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode === mode)
-			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo && el.mode === mode)
+			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode===mode)
+			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo && el.mode===mode)
 
 	// instances
 		const ar_promises	= []
@@ -210,7 +212,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 			const current_promise = new Promise(function(resolve){
 				const current_context	= items[i]
-				const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)
+				const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)				
 				add_instance(self, current_context, section_id, current_data)
 				.then(function(current_instance){
 					current_instance.instance_order_key = i
@@ -228,17 +230,14 @@ section_record.prototype.get_ar_instances = async function(){
 		self.ar_instances = ar_instances
 	})
 
-
 	return self.ar_instances
 };//end get_ar_instances
 
 
 
-
-
-
 /**
-* GET_AR_COLUMNS_INSTANCES LIST
+* GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE)
+* @return array ar_instances
 */
 section_record.prototype.get_ar_columns_instances = async function(){
 
@@ -287,7 +286,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 				const current_instance	= await add_instance(self, current_context, section_id, current_data, column_id)
 
 		
-				//add
+				// add instance
 				ar_instances.push(current_instance)
 
 			// }else{
@@ -335,59 +334,60 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 };//end get_component_data
 
 
+
 /**
-* GET_COMPONENT_DATA
+* GET_COMPONENT_RELATION_DATA
+* Don't used now (!)
 * @return object component_data
 */
-section_record.prototype.get_component_relation_data = function(component, section_id){
+	// section_record.prototype.get_component_relation_data = function(component, section_id){
 
-	const self = this
+	// 	const self = this
 
-	const parent			= component.parent
-	const section_tipo		= component.section_tipo
-	const component_tipo	= component.tipo
-	const component_data	= self.datum.data.find(item => item.tipo===component_tipo && item.row_section_id===section_id)
-	
-	// console.log("component_data:",component_data);
+	// 		console.log("self.mode:",self.mode);
 
-	/**/
-	// // get the f_path it has full path from the main section to last component in the chain, (sectui b¡)
-	// const f_path 			= component.parent_f_path
-	// // get the first compoment, position 2, this component has the locator into the data of the main section.
-	// const component_tipo 	= f_path[1]
-	// const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
+	// 	const parent			= component.parent
+	// 	const section_tipo		= component.section_tipo
+	// 	const component_tipo	= component.tipo
+	// 	const component_data	= self.datum.data.find(item => item.tipo===component_tipo && item.row_section_id===section_id)	
+	// 	// console.log("component_data:",component_data);
 
-	// Get the data of the component selected in the show, normally the last compoment of the chain.
-	// It's the column in the list
-	// const parent_data = (first_locator)
-	// 	? self.datum.data.find(item =>
-	// 		item.tipo === component.tipo
-	// 		&& item.parent_section_id 	=== section_id
-	// 		&& item.parent_tipo 		=== first_locator.tipo)
-	// 	: null
-	// if the component has data set it, if not create a null data
-	// component_data.value = (parent_data)
-	// 	? parent_data
-	// 	: null
+	// 	// // get the f_path it has full path from the main section to last component in the chain, (sectui b¡)
+	// 	// const f_path 			= component.parent_f_path
+	// 	// // get the first compoment, position 2, this component has the locator into the data of the main section.
+	// 	// const component_tipo 	= f_path[1]
+	// 	// const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
 
-	// undefined case. If the current item don't has data will be instanciated with the current section_id
-	if (component_data.value === null) {
-		// empy component data build
-		component_data.value = {
-			section_id				: section_id,
-			section_tipo			: section_tipo,
-			tipo					: component.tipo,
-			from_component_tipo		: parent,
-			parent					: parent,
-			value					: [],
-			fallback_value			: [""]
-		}
-	}
-	// self.data.push(component_data.value)
+	// 	// Get the data of the component selected in the show, normally the last compoment of the chain.
+	// 	// It's the column in the list
+	// 	// const parent_data = (first_locator)
+	// 	// 	? self.datum.data.find(item =>
+	// 	// 		item.tipo===component.tipo
+	// 	// 		&& item.parent_section_id 	=== section_id
+	// 	// 		&& item.parent_tipo 		=== first_locator.tipo)
+	// 	// 	: null
+	// 	// if the component has data set it, if not create a null data
+	// 	// component_data.value = (parent_data)
+	// 	// 	? parent_data
+	// 	// 	: null
 
-	return component_data
-};//end get_component_data
+	// 	// undefined case. If the current item don't has data will be instanciated with the current section_id
+	// 	if (component_data.value===null) {
+	// 		// empy component data build
+	// 		component_data.value = {
+	// 			section_id				: section_id,
+	// 			section_tipo			: section_tipo,
+	// 			tipo					: component.tipo,
+	// 			from_component_tipo		: parent,
+	// 			parent					: parent,
+	// 			value					: [],
+	// 			fallback_value			: [""]
+	// 		}
+	// 	}
+	// 	// self.data.push(component_data.value)
 
+	// 	return component_data
+	// };//end get_component_relation_data
 
 
 
@@ -507,17 +507,3 @@ section_record.prototype.load_items = function() {
 };//end load_items
 */
 
-
-
-/**
-* GET_CONTEXT_CHILDRENS
-*//*
-section_record.prototype.get_context_childrens = function(component_tipo){
-
-	const self = this
-
-	const group_childrens = self.context.filter(item => item.parent===component_tipo)
-
-	return group_childrens
-};//end get_context_childrens
-*/

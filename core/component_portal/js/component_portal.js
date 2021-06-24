@@ -290,7 +290,7 @@ component_portal.prototype.build = async function(autoload=false){
 		self.permissions = self.context.permissions
 
 	// target_section
-		console.log("//// portal self.rqo.sqo.section_tipo:", self.rqo.sqo.section_tipo);
+		// console.log("//// portal self.rqo.sqo.section_tipo:", self.rqo.sqo.section_tipo);
 		self.target_section = self.rqo_config.sqo.section_tipo
 		// self.target_section = self.rqo.sqo.section_tipo
 

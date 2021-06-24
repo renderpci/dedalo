@@ -201,7 +201,9 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 				// console.log("PORTAL -- current_instance", current_instance);
 
 				const current_instance_node = await current_instance.render()
-				fragment.appendChild(current_instance_node)
+				
+				// add
+					fragment.appendChild(current_instance_node)
 				
 				// if (current_instance_section_record_node) {
 				// 	fragment.appendChild(current_instance_section_record_node.childNodes)
@@ -216,12 +218,12 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 				// }
 
 			}else{
+
 				const current_instance_node = await current_instance.render()
 
 				// add
 					fragment.appendChild(current_instance_node)
 			}
-
 
 
 			// grid . add columns

@@ -1173,18 +1173,18 @@ function safe_sql_query($sql_query) {
  */
 $sessiondb = null;
 function session_start_manager($request_options) {
-global $sessiondb;
+	global $sessiondb;
 	#if (session_status()===PHP_SESSION_ACTIVE) return false;
 
 	$options = new stdClass();
-		$options->save_handler			= 'files';
-		$options->timeout_seconds		= 1400;
-		$options->probability			= 100;
-		$options->cookie_path			= '/';
-		$options->cookie_domain			= null;
-		$options->save_path				= false; # /tmp/php
-		$options->aditional_save_path	= false; # /session_custom_sec
-		$options->session_name			= false;
+		$options->save_handler					= 'files';
+		$options->timeout_seconds				= 1400;
+		$options->probability						= 100;
+		$options->cookie_path						= '/';
+		$options->cookie_domain					= null;
+		$options->save_path							= false; # /tmp/php
+		$options->aditional_save_path		= false; # /session_custom_sec
+		$options->session_name					= false;
 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 	switch ($options->save_handler) {		

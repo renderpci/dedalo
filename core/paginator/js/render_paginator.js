@@ -98,7 +98,7 @@ const content_data = async function(self) {
 
 		if(SHOW_DEBUG===true) {
 			const model = self.id.split("_")[1] +" "+ self.id.split("_")[2]
-			console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
+			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
 	// display none with empty case, chenck NaN!=NaN (always true) or when pages are <2

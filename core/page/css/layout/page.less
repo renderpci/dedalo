@@ -95,6 +95,12 @@ danger {
 	.loading {
 		opacity: 0.5;
 		pointer-events: none; // avoid user click actions
+		// animation: loading_fade_out 300ms ease-out;
+		transition: opacity 0.25s
+	}
+	@keyframes loading_fade_out {
+		0%  { opacity: 1; }
+		100% { opacity: 0.5; }
 	}
 // hide
 	.hide {

@@ -152,22 +152,16 @@ section.prototype.build = async function(autoload=false) {
 		self.data = self.data || {}
 
 	const current_data_manager	= new data_manager()
-
+	
 	// rqo_config
 		self.rqo_config	= self.rqo_config || self.context.request_config.find(el => el.api_engine==='dedalo')
 	
 	// rqo build
-		// if (self.mode==='tm') {
-		// 	self.rqo = self.rqo || await self.build_rqo_search(self.rqo_config, 'search')
-		// }else{
-			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search')
-		// }
-		
+		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search', self.mode==='tm')	
+		console.log("SECTION self.rqo before load:", JSON.parse( JSON.stringify(self.rqo) ) );
 	
 	// load data if is not already received as option
 		if (autoload===true) {
-
-				console.log("section ++++++++++++++++++++++++++++++++++++ self.rqo:",self.rqo);
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
@@ -182,10 +176,13 @@ section.prototype.build = async function(autoload=false) {
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
 
-			// rqo_config re-select from updated context
-				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
-			// rqo re-build from updated rqo_config
-				self.rqo = await self.build_rqo_show(self.rqo_config, 'search')
+			// if (self.mode!=='tm') {
+				// rqo_config re-select from updated context
+					self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+				// rqo re-build from updated rqo_config
+					self.rqo = await self.build_rqo_show(self.rqo_config, 'search', self.mode==='tm')
+					console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
+			// }
 
 			// count rows
 				if (!self.total) {
@@ -337,7 +334,8 @@ section.prototype.build = async function(autoload=false) {
 
 
 /**
-* GET_AR_INSTANCES
+* GET_AR_INSTANCES (section_records)
+* Generate a section_record instance for each data value
 */
 section.prototype.get_ar_instances = async function(){
 
@@ -355,9 +353,7 @@ section.prototype.get_ar_instances = async function(){
 		const value			= self.data && self.data.value
 			? self.data.value
 			: []
-		const value_length	= value.length
-
-		
+		const value_length	= value.length		
 
 		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
@@ -405,7 +401,6 @@ section.prototype.get_ar_instances = async function(){
 				const current_section_record = await instances.get_instance(instance_options)
 				await current_section_record.build(true)
 
-
 			// add instance
 				ar_instances.push(current_section_record)
 				
@@ -413,6 +408,7 @@ section.prototype.get_ar_instances = async function(){
 
 	// set
 		self.ar_instances = ar_instances
+	
 
 	return self.ar_instances
 };//end get_ar_instances

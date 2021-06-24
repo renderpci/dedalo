@@ -110,13 +110,14 @@
 							],
 							"operator":"$or"
 						}
-					]
+					],
+					"filter_by_locators": [{locator},{locator}]
 				},
 				"show":{
 					"ddo_map":[
-						{"section_tipo":"self","component_tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": false},
-						{"section_tipo":"self","component_tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"}, {"section_tipo":"numisdata300","component_tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
-						{"section_tipo":"self","component_tipo":"numisdata81","label":"key", "parent": "numisdata3","value_with_parents": true}
+						{"section_tipo":"self","tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": false},
+						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"}, {"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
+						{"section_tipo":"self","tipo":"numisdata81","label":"key", "parent": "numisdata3","value_with_parents": true}
 					],
 					"divisor": ", ",
 					"sqo_config": {
@@ -126,13 +127,13 @@
 				},
 				"search":{
 					"ddo_map": [
-					[{"section_tipo":"self","component_tipo":"numisdata309","mode":"list"},{"section_tipo":"numisdata300","component_tipo":"numisdata303","mode":"list"}]
+					[{"section_tipo":"self","tipo":"numisdata309","mode":"list"},{"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list"}]
 				]},
 				"choose":{
 					"ddo_map":[
-						{"section_tipo":"self","component_tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": true},
-						{"section_tipo":"self","component_tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"},{"section_tipo":"numisdata300","component_tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"}
-						{"section_tipo":"self","component_tipo":"numisdata81","label":"key", "parent": "numisdata3"}
+						{"section_tipo":"self","tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": true},
+						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"},{"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"}
+						{"section_tipo":"self","tipo":"numisdata81","label":"key", "parent": "numisdata3"}
 				]},
 			},
 			{

@@ -57,7 +57,7 @@ data_manager.prototype.request = async function(options) {
 				// console.log("-> json result 2:",result);
 				return result
 			})
-			console.log("-> api_response json_parsed:",json_parsed);
+			// console.log("-> api_response json_parsed:",json_parsed);
 			return json_parsed
 		})// parses JSON response into native Javascript objects
 		.catch(error => {

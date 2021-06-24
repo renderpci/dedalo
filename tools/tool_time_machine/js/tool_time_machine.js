@@ -196,8 +196,6 @@ tool_time_machine.prototype.load_section = async function() {
 	// build section with autoload as true
 		await section.build(true)
 
-			console.log("section:",section); return
-
 	// debug
 		if(SHOW_DEBUG===true) {
 			console.log("[tool_time_machine.load_section] section:", section);
@@ -265,7 +263,6 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 		if (matrix_id) {
 			instance_options.matrix_id = matrix_id
 		}
-
 
 	// get instance and build
 		const component_instance = await get_instance(instance_options)
