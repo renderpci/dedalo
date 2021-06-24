@@ -384,6 +384,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 		elseif ($model==='component_autocomplete' || $model==='component_autocomplete_hi') {
 			$model='component_portal';
 		}
+		elseif ($model==='component_state') {
+			$model='component_info';
+		}
+		elseif ($model==='section_group_div') {
+			$model='section_group';
+		}
 
 		return $model;
 	}//end get_modelo_name
