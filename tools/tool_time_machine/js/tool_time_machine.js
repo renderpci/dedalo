@@ -105,250 +105,109 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
-* BUILD_CUSTOM OLD
-*/
-	// tool_time_machine.prototype.build = async function(autoload=false) {
-
-	// 	const self = this
-
-	// 	// section_tm. get section full context
-	// 		const current_data_manager = new data_manager()
-	// 		const source = {
-	// 			typo			: 'source',
-	// 			tipo			: self.caller.tipo,
-	// 			section_tipo	: self.caller.section_tipo,
-	// 			section_id		: self.caller.section_id,
-	// 			model			: 'section_tm',
-	// 			lang			: self.caller.lang,
-	// 			pagination		: {
-	// 				total	: 0,
-	// 				offset	: 0,
-	// 				limit	: 10
-	// 			}
-	// 		}
-	// 		const element_context 	= await current_data_manager.get_element_context(source)
-	// 		self.section_tm_context = element_context.result
-	// 			console.log("element_context:",element_context);
-
-	// 	// call generic commom tool build
-	// 		const common_build = tool_common.prototype.build.call(self, autoload);
-
-	// 	// specific actions..
-	// 		// const base_context 			= get_base_context(self)
-	// 		// const current_data_manager 	= new data_manager()
-	// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
-
-	// 	// section_tm context
-	// 		// const base_context 			= get_base_context(self)
-	// 		// const current_data_manager 	= new data_manager()
-	// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
-	// 		// self.section_tm_context 	= api_response.result.context
-	// 		// 	console.log("+++++ api_response.result:",api_response.result);
-
-
-	// 	return common_build
-	// };//end build_custom
-
-
-
-/**
-* GET_BASE_CONTEXT
-* Create a base context for section_tm
-*/
-	// const get_base_context = (self) => {
-
-	// 	const mode = "tm"
-
-	// 	// sqo
-	// 		const sqo = {
-	// 			typo 	: "sqo",
-	// 			id 		: "tmp",
-	// 			mode 	: mode,
-	// 			section_tipo: [
-	// 				self.caller.section_tipo
-	// 			],
-	// 			filter_by_locators: [{
-	// 				section_tipo : self.caller.section_tipo,
-	// 				section_id 	 : self.caller.section_id,
-	// 				tipo 		 : self.caller.tipo,
-	// 				lang 		 : self.caller.lang
-	// 			}],
-	// 			full_count: true,
-	// 			limit: 10,
-	// 			offset: 0,
-	// 			order: [{
-	// 				direction : "DESC",
-	// 				path	  : [{
-	// 					component_tipo: "id"
-	// 				}]
-	// 			}]
-	// 		}
-
-	// 	// component
-	// 		const component = {
-	// 			typo 			: "ddo",
-	// 			type 			: "component",
-	// 			model 			: self.caller.model,
-	// 			tipo 			: self.caller.tipo,
-	// 			section_tipo 	: self.caller.section_tipo,
-	// 			mode 			: "list",
-	// 			parent 			: self.caller.section_tipo,
-	// 			label 			: self.caller.label
-	// 		}
-
-	// 	// section
-	// 		const section = {
-	// 			typo 			: "ddo",
-	// 			type 			: "section",
-	// 			model 			: "section_tm",
-	// 			tipo 			: self.caller.section_tipo,
-	// 			section_tipo 	: self.caller.section_tipo,
-	// 			mode 			: "tm",
-	// 			parent 			: null,
-	// 			label 			: null
-	// 		}
-
-	// 	// source
-	// 		const source = {
-	// 			typo 			: "source",
-	// 			action 			: "search",
-	// 			model 			: "section_tm",
-	// 			tipo 			: self.caller.section_tipo,
-	// 			section_tipo 	: self.caller.section_tipo,
-	// 			section_id 		: null,
-	// 			mode 			: mode,
-	// 			lang 			: self.caller.lang,
-	// 			pagination 		: {
-	// 			  total  : {},
-	// 			  offset : 0
-	// 			}
-	// 		}
-
-	// 	const base_context = [
-	// 		sqo,
-	// 		component,
-	// 		section,
-	// 		source
-	// 	]
-
-
-	// 	return base_context
-	// };//end get_base_context
-
-
-
-/**
 * LOAD_SECTION
 */
 tool_time_machine.prototype.load_section = async function() {
 
-	const self = this
-
-	const current_data_manager = new data_manager()
+	const self = this	
 
 	const component = self.caller
+	
+	// short vars
+		const component_tipo	= component.tipo
+		const section_tipo		= component.section_tipo
+		const section_id		= component.section_id
+		const lang				= component.lang
 
-	// request_config . section in tm mode
-		
-		// source
-			const source = {
-				typo			: 'source',
-				model			: 'section',
-				mode			: 'tm',
-				tipo			: component.section_tipo,
-				section_tipo	: component.section_tipo,
-				section_id		: component.section_id, // needed for create tm sqo
-				component_tipo	: component.tipo, // needed for create tm sqo
-				lang			: component.lang // needed for create tm sqo (from component)
-			}
-		
-		// ddo
-			const ddo_component = {
-				typo			: 'ddo',
-				type			: 'component',
-				model			: component.model,
-				mode			: 'list',
-				tipo			: component.tipo,
-				section_tipo	: component.section_tipo,
-				section_id		: component.section_id,
-				lang			: component.lang
-			}
-			const ddo_section = {
-				typo			: 'ddo',
-				type			: 'section',
-				model			: 'section',
-				mode			: 'list',
-				tipo			: component.section_tipo,
-				section_tipo	: component.section_tipo,
-				section_id		: component.section_id,
-				lang			: component.lang
-			}
-		
-		// sqo
-			const sqo = {
-				typo				: 'sqo',
+	// request_config
+		const request_config = [{
+			api_engine : 'dedalo',
+			show : {
+				ddo_map : [
+					{
+						component_tipo	: component_tipo,
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						lang			: lang,
+						parent			: section_tipo
+					}
+				]
+			},
+			sqo : {
 				id					: 'tmp',
 				mode				: 'tm',
-				section_tipo		: [component.section_tipo],
+				section_tipo		: [{"tipo":section_tipo}],
 				filter_by_locators	: [{
-					section_tipo: source.section_tipo,
-					section_id	: source.section_id,
-					tipo		: source.component_tipo,
-					lang		: source.lang
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					tipo			: component_tipo,
+					lang			: lang
 				}],
 				limit				: 10,
 				offset				: 0,
 				order				: [{
-					direction : 'DESC',
-					path	  : [{component_tipo : 'id'}]
+					direction	: 'DESC',
+					path		: [{component_tipo : 'id'}]
 				}]
 			}
+		}]
 
-	// // request_config
-	// 	const request_config = [
-	// 		source,
-	// 		sqo
-	// 	]
+	// context
+		const context = {
+			type			: 'section',
+			typo			: 'ddo',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			lang			: lang,
+			mode			: 'list',
+			model			: 'section',
+			parent			: section_tipo,
+			request_config	: request_config
+		}
 
-	// // context
-	// 	const context = {
-	// 		model			: source.model,
-	// 		tipo			: source.tipo,
-	// 		// request_config	: request_config
-	// 	}
-	
 	// instance options
 		const instance_options = {
-			model			: source.model,
-			tipo			: source.tipo,
-			section_tipo	: source.section_tipo,
-			section_id		: source.section_id,
-			mode			: source.mode,
-			lang			: source.lang,
-			// context			: context,
-			dd_request		: {
-				show : [source, sqo, ddo_component, ddo_section]
-			},
+			model			: 'section',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: 'tm',
+			lang			: lang,
+			context			: context,
 			caller			: self,
 			id_variant		: 'time_machine' // avoid conflicts
 		}
 
 	// init section instance
-		const section_instance = await get_instance(instance_options)
+		const section = await get_instance(instance_options)
+
+	// inject custom rqo
+		// const source						= create_source(section, 'search');
+		// section.rqo_config					= JSON.parse( JSON.stringify(request_config[0]) )
+		// section.rqo_config.sqo.section_tipo	= section.rqo_config.sqo.section_tipo.map(el=>el.tipo)
+		// section.rqo		= {
+		// 	id			: section.id,
+		// 	action		: 'read',
+		// 	source		: source,
+		// 	show		: section.rqo_config.show,
+		// 	sqo			: section.rqo_config.sqo
+		// }
 
 	// build section with autoload as true
-		await section_instance.build(true)
+		await section.build(true)
+
+			console.log("section:",section); return
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[tool_time_machine.load_section] section_instance:", section_instance);
+			console.log("[tool_time_machine.load_section] section:", section);
 		}
 
 	// add to self instances list
-		self.ar_instances.push(section_instance)
+		self.ar_instances.push(section)
 
 
-	return section_instance
+	return section
 };//end load_section
 
 
@@ -368,7 +227,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 
 
 	const source = create_source(component, 'get_data')
-		console.log("// load_component source:",source);
+		// console.log("// load_component source:",source);
 
 		context.request_config = [source]
 
