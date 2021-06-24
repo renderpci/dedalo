@@ -56,11 +56,11 @@ class sections extends common {
 		}
 
 		// Set general vars
-			$this->ar_locators 			= $ar_locators;
-			$this->search_query_object 	= $search_query_object;
-			$this->caller_tipo 			= $caller_tipo;
-			$this->modo 				= $modo;
-			$this->lang 				= $lang;
+			$this->ar_locators			= $ar_locators;
+			$this->search_query_object	= $search_query_object;
+			$this->caller_tipo			= $caller_tipo;
+			$this->modo					= $modo;
+			$this->lang					= $lang;
 
 
 		return true;
@@ -76,7 +76,7 @@ class sections extends common {
 
 		$search_query_object = $this->search_query_object;
 			
-		$search 	= search::get_instance($search_query_object);
+		$search		= search::get_instance($search_query_object);
 		$rows_data	= $search->search();
 
 		$ar_records = $rows_data->ar_records;

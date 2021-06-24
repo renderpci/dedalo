@@ -182,7 +182,8 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 		}
 		await generate_rqo()
-			console.log("portal generate_rqo 1 self.rqo_config:",self.rqo_config);
+		// console.log("portal generate_rqo 1 self.rqo_config:", JSON.parse( JSON.stringify(self.rqo_config) ));
+		// console.log("portal generate_rqo 1 self.rqo:", JSON.parse( JSON.stringify(self.rqo) ));
 
 		// self.rqo.sqo.limit = 2
 		// self.rqo.sqo.offset = 1
@@ -245,7 +246,6 @@ component_portal.prototype.build = async function(autoload=false){
 					await current_paginator.build()
 					// fix paginator to current instance
 					self.paginator = current_paginator
-						console.log("self.paginator:",self.paginator);
 
 					self.events_tokens.push(
 						event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {

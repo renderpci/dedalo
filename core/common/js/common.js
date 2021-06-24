@@ -853,19 +853,9 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 			id		: self.id,
 			action	: 'read',
 			source	: source,
-			sqo 	: sqo
+			sqo		: sqo
 		}
-
-	// show
-		if (rqo_config.show && rqo_config.show.ddo_map) {
-			// rqo.show = {
-			// 	ddo_map : rqo_config.show.ddo_map
-			// }
-		}
-	// if (!rqo_config.sqo) {
-	// 	rqo_config.sqo = sqo
-	// }
-
+	
 	// local_db_data save
 		// current_data_manager.set_local_db_data(rqo, 'rqo')
 
@@ -876,7 +866,8 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 
 
 /**
-* BUILD_RQO_SHOW
+* BUILD_RQO_SEARCH
+* Used from portal to autocomplete
 * @return object rqo
 */
 common.prototype.build_rqo_search = async function(rqo_config, action){
