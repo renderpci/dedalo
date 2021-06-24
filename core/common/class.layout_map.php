@@ -7,7 +7,7 @@
 class layout_map {
 
 
-	static $groupers = array('section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div');
+	static $groupers = array('section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'); //
 
 
 
