@@ -776,7 +776,7 @@ class dd_core_api {
 			$sqo_id	= implode('_', [$model,$section_tipo]);
 			$sqo	= !empty($rqo->sqo)
 				? $rqo->sqo
-				: (($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]))
+				: (($model==='section' && ($mode==='edit' || $mode==='list') && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]))
 					? $_SESSION['dedalo']['config']['sqo'][$sqo_id]
 					: (function() use($model, $tipo, $section_tipo, $section_id, $mode, $rqo, $sqo_id) {
 
@@ -923,7 +923,7 @@ class dd_core_api {
 							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
 						// store sqo section
-							if ($model==='section') {
+							if ($model==='section' && ($mode==='edit' || $mode==='list')) {
 								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							}
 						break;

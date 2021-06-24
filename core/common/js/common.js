@@ -112,7 +112,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 							const wrapper = self.node[i]
 
 							// old content_data node
-								const old_content_data_node = self.model==='section' && self.mode==='list'
+								const old_content_data_node = self.model==='section' && (self.mode==='list' || self.mode==='tm')
 									? wrapper.querySelector(":scope >.list_body >.content_data")
 									: wrapper.querySelector(":scope >.content_data")
 
@@ -150,7 +150,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 								// console.log("-----------------new_node:", new_content_data_node, self.model);
 
 							// replace child from parent wrapper
-								if (self.model==='section' && self.mode==='list') {
+								if (self.model==='section' && (self.mode==='list' || self.mode==='tm') ) {
 									const list_body = wrapper.querySelector(":scope >.list_body")
 									list_body.replaceChild(new_content_data_node, old_content_data_node)
 								}else{
@@ -203,6 +203,12 @@ common.prototype.refresh = async function () {
 
 	const self = this
 
+	// loading css add
+		const nodes_lenght = self.node.length
+		for (let i = nodes_lenght - 1; i >= 0; i--) {
+			self.node[i].classList.add('loading')
+		}
+
 	// destroy dependences only
 		if (self.status==='rendered') {
 			const destroyed = await self.destroy(false, true)
@@ -247,6 +253,11 @@ common.prototype.refresh = async function () {
 		}else{
 			console.warn("/// render fail with status:", self.model, self.status);
 			return false
+		}
+
+	// loading css remove
+		for (let i = nodes_lenght - 1; i >= 0; i--) {
+			self.node[i].classList.remove('loading')
 		}
 
 	// des
@@ -557,7 +568,7 @@ common.prototype.get_columns = async function(){
 * get the path in inverse format, the last in the chain will be the first object [0]
 * @return array ar_inverted_paths the the speific paths, with inverse path format.
 */
-const get_ar_inverted_paths = function(full_ddo_map){
+export const get_ar_inverted_paths = function(full_ddo_map){
 
 	// get the parents for the column, creating the inverse path 
 	// (from the last component to the main parent, the column will be with the data of the first item of the column)
@@ -738,7 +749,7 @@ common.prototype.build_rqo_DES = async function(dd_request_type, request_config,
 * BUILD_RQO_SHOW
 * @return object rqo
 */
-common.prototype.build_rqo_show = async function(rqo_config, action){
+common.prototype.build_rqo_show = async function(rqo_config, action, add_show=false){
 		
 	const self = this
 
@@ -859,6 +870,14 @@ common.prototype.build_rqo_show = async function(rqo_config, action){
 			source	: source,
 			sqo		: sqo
 		}
+
+		if (add_show===true) {
+			if (rqo_config.show) {
+				rqo.show = rqo_config.show
+			}
+			console.warn("added rqo.show:", self.tipo, self.mode );
+		}
+		
 	
 	// local_db_data save
 		// current_data_manager.set_local_db_data(rqo, 'rqo')

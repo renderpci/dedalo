@@ -243,38 +243,38 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 	const self = this
 
-	// sort vars
+	// short vars
 		const mode				= self.mode
 		const tipo				= self.tipo
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
+		const matrix_id			= self.matrix_id // time machine 'tm' mode only
 		const caller_column_id	= self.column_id
-
-		const ar_columns	= await self.columns || []
+		const ar_columns		= await self.columns || []
 
 	// instances
-		const ar_instances = []
-		const ar_columns_length =  ar_columns.length
-
+		const ar_instances		= []
+		const ar_columns_length	=  ar_columns.length
 		for (let i = 0; i < ar_columns_length; i++) {
 			
-			const current_ddo_path	= ar_columns[i]
-			const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
+			// ddo
+				const current_ddo_path	= ar_columns[i]
+				const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
+				if (!current_ddo) {
+					console.warn("ignored empty context: [key, columns]", i, columns);
+					continue;
+				}
 
-			const new_path 			= [...current_ddo_path]
-			new_path.pop()
-
-			if (!current_ddo) {
-				console.warn("ignored empty context: [key, columns]", i, columns);
-				continue;
-			}
+			// new_path
+				const new_path = [...current_ddo_path]
+				new_path.pop()
 
 			// the component has direct data into the section
-			// if(current_context.parent === tipo){
-				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id)
-				const current_context 	= Array.isArray(current_ddo.section_tipo)
-					? self.datum.context.find(item => item.tipo === current_ddo.tipo && item.mode === current_ddo.mode)
-					: self.datum.context.find(item => item.tipo === current_ddo.tipo && item.section_tipo === current_ddo.section_tipo && item.mode === current_ddo.mode)
+			// if(current_context.parent===tipo){
+				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+				const current_context	= Array.isArray(current_ddo.section_tipo)
+					? self.datum.context.find(item => item.tipo===current_ddo.tipo && item.mode===current_ddo.mode)
+					: self.datum.context.find(item => item.tipo===current_ddo.tipo && item.section_tipo===current_ddo.section_tipo && item.mode===current_ddo.mode)
 
 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
 
@@ -282,9 +282,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 					? caller_column_id
 					: i+1
 
-
 				const current_instance	= await add_instance(self, current_context, section_id, current_data, column_id)
-
 		
 				// add instance
 				ar_instances.push(current_instance)
@@ -311,24 +309,31 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 
 
-
 /**
 * GET_COMPONENT_DATA
+* Compares received section_tipo, section_id, matrix_id with elements inside datum.data for try to match.
+* If no elements matches, a empty object is created to prevent gaps
 * @return object component_data
 */
-section_record.prototype.get_component_data = function(ddo, section_tipo, section_id){
+section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null){
 
 	const self = this
 
-	const component_data = self.datum.data.find(item => item.tipo===ddo.tipo && item.section_id===section_id && item.section_tipo === section_tipo) || { 
-		// undefined case. If the current item don't has data will be instanciated with the current section_id
-		// empy component data build
-		tipo			: ddo.tipo,
-		section_tipo	: section_tipo,
-		section_id		: section_id,
-		value			: [],
-		fallback_value	: [""]
-	}
+	const component_data = self.mode==='tm'
+		? self.datum.data.find(el => el.tipo===ddo.tipo && el.section_id===section_id && el.section_tipo===section_tipo && el.matrix_id===matrix_id)
+		: self.datum.data.find(el => el.tipo===ddo.tipo && el.section_id===section_id && el.section_tipo===section_tipo)
+
+	// undefined case. If the current item don't has data will be instanciated with the current section_id	
+		if(!component_data) {
+			// empy component data build
+			return {
+				tipo			: ddo.tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				value			: [],
+				fallback_value	: ['']
+			}
+		}
 
 	return component_data
 };//end get_component_data
@@ -399,7 +404,7 @@ section_record.prototype.get_component_info = function(){
 
 	const self = this
 
-	const component_info = self.datum.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id && item.section_tipo === self.section_tipo)
+	const component_info = self.datum.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id && item.section_tipo===self.section_tipo)
 
 	return component_info
 };//end get_component_info
@@ -468,7 +473,7 @@ section_record.prototype.load_items = function() {
 				if(current_item.tipo===section_tipo) continue;
 
 			// item_data . Select the data for the current item. if current item is a grouper, it don't has data and will need the childrens for instance it.
-				let item_data = (current_item.type==='grouper') ? {} : data.filter(item => item.tipo === current_item.tipo && item.section_id === section_id)[0]
+				let item_data = (current_item.type==='grouper') ? {} : data.filter(item => item.tipo===current_item.tipo && item.section_id===section_id)[0]
 
 				// undefined case. If the current item don't has data will be instanciated with the current section_id
 				if (typeof(item_data)==='undefined') {
