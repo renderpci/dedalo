@@ -553,6 +553,7 @@ search.prototype.get_component_instance = async function(options) {
 		}
 		const component_instance = await instances.get_instance(component_options)	
 
+
 	// inject value from search user preset
 		component_instance.data = {value : value}
 
@@ -568,10 +569,11 @@ search.prototype.get_component_instance = async function(options) {
 		component_instance.data.q_operator	= q_operator
 		component_instance.path				= path
 
+
 	// add instance
 		self.ar_instances.push(component_instance)
 
-	console.log("component_instance:",component_instance);
+	
 	return component_instance
 };//end get_component_instance
 

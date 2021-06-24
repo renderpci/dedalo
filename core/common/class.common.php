@@ -1666,8 +1666,8 @@ abstract class common {
 
 					// grouper case
 					case (in_array($model, layout_map::$groupers)):
-
-						$related_element = new $model($current_tipo, $current_section_tipo, $mode);
+						// $grouper_model		= ($model==='section_group_div') ? 'section_group' : $model;
+						$related_element	= new $model($current_tipo, $current_section_tipo, $mode);
 						break;
 
 					// others case
@@ -1761,7 +1761,7 @@ abstract class common {
 			foreach($request_config_item->show->ddo_map as $dd_object) {
 
 					// prevent resolve non children from path ddo
-						if ($dd_object->parent!==$this->tipo) {
+						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
 							continue;
 						}									
 				
@@ -1823,7 +1823,8 @@ abstract class common {
 						// grouper case
 						case (in_array($model, layout_map::$groupers)):
 
-							$related_element = new $model($current_tipo, $current_section_tipo, $mode);
+							// $grouper_model		= ($model==='section_group_div') ? 'section_group' : $model;
+							$related_element	= new $model($current_tipo, $current_section_tipo, $mode);
 							break;
 
 						// others case
@@ -2009,7 +2010,8 @@ abstract class common {
 					// grouper case
 					case (in_array($model, layout_map::$groupers)):
 
-						$related_element = new $model($current_tipo, $section_tipo, $mode);
+						// $grouper_model		= ($model==='section_group_div') ? 'section_group' : $model;
+						$related_element	= new $model($current_tipo, $section_tipo, $mode);
 
 						// inject section_id
 							$related_element->section_id = $section_id;
@@ -2142,9 +2144,9 @@ abstract class common {
 
 				foreach ($requested_show->ddo_map as $key => $current_ddo) {
 					//get the direct ddo linked by the source
-					if ($current_ddo->parent===$requested_source->tipo) {
+					if ($current_ddo->parent===$requested_source->tipo || $current_ddo->parent==='self') {
 						// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-						if(in_array($this->tipo, (array)$current_ddo->section_tipo))
+						if(in_array($this->tipo, (array)$current_ddo->section_tipo) || $current_ddo->section_tipo==='self')
 							$current_ddo->parent = $this->tipo;
 							$current_ddo->section_tipo = $this->tipo;
 					}
@@ -2317,7 +2319,11 @@ abstract class common {
 						return $section->pagination->limit;
 						break;					
 					case strpos($model, 'component_')===0:
-						$component = component_common::get_instance($model, $tipo, null, $mode, DEDALO_DATA_LANG, $section_tipo);
+						$recordObjdd = new RecordObj_dd($tipo);
+						$translatable = $recordObjdd->get_traducible()=== 'si';
+
+						$current_lang = $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$component = component_common::get_instance($model, $tipo, null, $mode, $current_lang, $section_tipo);
 						
 						return $component->pagination->limit;
 						break;
@@ -2425,10 +2431,16 @@ abstract class common {
 							// 	return $ddo;
 							// }, $current_ddo_map);
 							$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
-
+							
+							//set the default "self" value to the current section_tipo (the section_tipo of the parent)
 							$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
 								? $ar_section_tipo
 								: $current_ddo_map->section_tipo;
+							
+							//set the default "self" value to the current tipo (the parent)
+							$current_ddo_map->parent = $current_ddo_map->parent==='self'
+								? $tipo
+								: $current_ddo_map->parent;
 
 							$current_ddo_map->mode = isset($current_ddo_map->mode)
 								? $current_ddo_map->mode
@@ -2491,6 +2503,11 @@ abstract class common {
 							$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
 								? $ar_section_tipo
 								: $current_ddo_map->section_tipo;
+
+							//set the default "self" value to the current tipo (the parent)
+							$current_ddo_map->parent = $current_ddo_map->parent==='self'
+								? $tipo
+								: $current_ddo_map->parent;
 
 							$final_ddo_map[] = $current_ddo_map;
 						}
@@ -3174,8 +3191,10 @@ abstract class common {
 				switch (true) {
 					// component case
 					case (strpos($model, 'component_')===0):
+						$recordObjdd = new RecordObj_dd($element_tipo);
+						$translatable = $recordObjdd->get_traducible()=== 'si';
 
-						$current_lang = DEDALO_DATA_LANG;
+						$current_lang = $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$element  = component_common::get_instance(	$model,
 																	$element_tipo,
 																	null,
@@ -3187,7 +3206,8 @@ abstract class common {
 					// grouper case
 					case (in_array($model, layout_map::$groupers)):
 
-						$element  = new $model($element_tipo, $section_tipo, 'list');
+						$grouper_model	= ($model==='section_group_div') ? 'section_group' : $model;
+						$element		= new $model($element_tipo, $section_tipo, 'list');
 						break;
 
 					// others case
