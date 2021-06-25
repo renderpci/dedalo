@@ -211,7 +211,17 @@ section.prototype.build = async function(autoload=false) {
 	// debug check
 		if(SHOW_DEBUG===true) {
 			// console.log("SECTION self.rqo before load:", JSON.parse( JSON.stringify(self.rqo) ) );
-		}		
+		}
+
+	// filter search
+		if (!self.filter) {
+			self.filter = new search()
+			self.filter.init({
+				caller	: self,
+				mode	: self.mode
+			})
+			self.filter.build()
+		}	
 	
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -322,14 +332,14 @@ section.prototype.build = async function(autoload=false) {
 		}//end if (!self.paginator)
 
 	// filter search
-		if (!self.filter && self.permissions>0) {
-			self.filter = new search()
-			self.filter.init({
-				caller	: self,
-				mode	: self.mode
-			})
-			self.filter.build()
-		}
+		// if (!self.filter && self.permissions>0) {
+		// 	self.filter = new search()
+		// 	self.filter.init({
+		// 		caller	: self,
+		// 		mode	: self.mode
+		// 	})
+		// 	self.filter.build()
+		// }
 		// console.log("section build filter unactive (remember) ");
 
 	// inspector
