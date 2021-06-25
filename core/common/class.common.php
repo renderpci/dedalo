@@ -41,7 +41,7 @@ abstract class common {
 	// build options sended by the client into show ddo to modify the standard get data.
 	// in area_thesaurus it send if the thesaurus need get models or terms.
 	// in component_portal it send if the source external need to be updated.
-	public $build_options			= null;
+	public $build_options = null;
 
 	// request config with show, select and search of the item
 	public $request_config;
@@ -112,6 +112,14 @@ abstract class common {
 			'component_state',
 			// 'component_svg'
 			// 'component_text_area'
+		];
+		public static $groupers = [
+			'section_group',
+			'section_tab',
+			'tab',
+			'section_group_relation',
+			'section_group_portal',
+			'section_group_div'
 		];
 
 
@@ -1665,7 +1673,7 @@ abstract class common {
 						break;
 
 					// grouper case
-					case (in_array($model, layout_map::$groupers)):
+					case (in_array($model, common::$groupers)):
 						// $grouper_model		= ($model==='section_group_div') ? 'section_group' : $model;
 						$related_element	= new $model($current_tipo, $current_section_tipo, $mode);
 						break;
@@ -1821,7 +1829,7 @@ abstract class common {
 							break;
 
 						// grouper case
-						case (in_array($model, layout_map::$groupers)):
+						case (in_array($model, common::$groupers)):
 
 							// $grouper_model		= ($model==='section_group_div') ? 'section_group' : $model;
 							$related_element	= new $model($current_tipo, $current_section_tipo, $mode);
@@ -2008,7 +2016,7 @@ abstract class common {
 						break;
 
 					// grouper case
-					case (in_array($model, layout_map::$groupers)):
+					case (in_array($model, common::$groupers)):
 
 						// $grouper_model		= ($model==='section_group_div') ? 'section_group' : $model;
 						$related_element	= new $model($current_tipo, $section_tipo, $mode);
@@ -2100,44 +2108,45 @@ abstract class common {
 			$idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
 
-		// // dump(dd_core_api::$dd_request, 'dd_core_api::$dd_request ++ '.to_string($this->tipo)." - ". debug_backtrace()[1] );
+		// des
+			// // dump(dd_core_api::$dd_request, 'dd_core_api::$dd_request ++ '.to_string($this->tipo)." - ". debug_backtrace()[1] );
 
-		// // received dd_request from client
-		// 	$dd_request = dd_core_api::$dd_request ?? [];
+			// // received dd_request from client
+			// 	$dd_request = dd_core_api::$dd_request ?? [];
 
-		// // source
-		// 	$received_source = array_find($dd_request, function($item) {
-		// 		return $item->typo==='source' && $item->tipo===$this->tipo;
-		// 	});
-		// 	$source = !empty($received_source)
-		// 		? $received_source
-		// 		: $this->get_source();
+			// // source
+			// 	$received_source = array_find($dd_request, function($item) {
+			// 		return $item->typo==='source' && $item->tipo===$this->tipo;
+			// 	});
+			// 	$source = !empty($received_source)
+			// 		? $received_source
+			// 		: $this->get_source();
 
-		// // rqo. request_config
-		// 	// received rqo elements
-		// 	$received_ar_rqo = array_filter($dd_request, function($item) {
-		// 		return $item->typo==='rqo' && $item->tipo===$this->tipo;
-		// 	});
+			// // rqo. request_config
+			// 	// received rqo elements
+			// 	$received_ar_rqo = array_filter($dd_request, function($item) {
+			// 		return $item->typo==='rqo' && $item->tipo===$this->tipo;
+			// 	});
 
-		// 	if (!empty($received_ar_rqo)) {
+			// 	if (!empty($received_ar_rqo)) {
 
-		// 		$ar_request_query_objects = array_values($received_ar_rqo);
+			// 		$ar_request_query_objects = array_values($received_ar_rqo);
 
-		// 		// $ar_request_query_objects[0]->show->sqo_config->limit = $this->pagination->limit ?? null;
-		// 		// $ar_request_query_objects[0]->show->sqo_config->offset = $this->pagination->offset ?? null;
+			// 		// $ar_request_query_objects[0]->show->sqo_config->limit = $this->pagination->limit ?? null;
+			// 		// $ar_request_query_objects[0]->show->sqo_config->offset = $this->pagination->offset ?? null;
 
-		// 		// $ar_request_query_objects[0]->search->sqo_config->limit = $this->pagination->limit ?? null;
-		// 		// $ar_request_query_objects[0]->search->sqo_config->offset = $this->pagination->offset ?? null;
-		// 			// dump($ar_request_query_objects, ' ar_request_query_objects [1] ++ '.to_string($this->tipo));
+			// 		// $ar_request_query_objects[0]->search->sqo_config->limit = $this->pagination->limit ?? null;
+			// 		// $ar_request_query_objects[0]->search->sqo_config->offset = $this->pagination->offset ?? null;
+			// 			// dump($ar_request_query_objects, ' ar_request_query_objects [1] ++ '.to_string($this->tipo));
 
-		// 	}else{
+			// 	}else{
 
 		// get the rqo sended to the API
 		$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show) 
 			? unserialize(serialize(dd_core_api::$rqo->show))
 			: false;
 
-		if(!empty($requested_show)){
+		if(!empty($requested_show)) {
 
 				//set the request_config with the API rqo sended by client
 				$requested_source = dd_core_api::$rqo->source ?? null;
@@ -2180,41 +2189,43 @@ abstract class common {
 			dd_core_api::$ddo_map =  array_merge(dd_core_api::$ddo_map,$request_config->show->ddo_map);
 
 			return $this->request_config;
-		}
+		}//end if(!empty($requested_show))
 
 
-				// $records_mode	= $this->get_records_mode();
-				$mode			= $this->get_modo();
-				$tipo			= $this->get_tipo();
-				$section_tipo	= $this->get_section_tipo();
-				$section_id		= $this->get_section_id();
+			// $records_mode	= $this->get_records_mode();
+			$mode				= $this->get_modo();
+			$tipo				= $this->get_tipo();
+			$section_tipo		= $this->get_section_tipo();
+			$section_id			= $this->get_section_id();
 
-				// 1. From user preset
-					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
-						// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:navigator::get_user_id(), mode:$mode ".to_string());
-					if (!empty($user_preset)) {
-						$request_config = $user_preset;
+			// 1. From user preset
+				$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
+					// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:navigator::get_user_id(), mode:$mode ".to_string());
+				if (!empty($user_preset)) {
+					
+					$request_config = $user_preset;
 
-						// $request_config = array_filter($user_preset, function($item){
-						// 	return $item->typo==='rqo';
-						// });
-						// dump($request_config, ' request_config ++ [1] '.to_string());
-						debug_log(__METHOD__." request_query_objects calculated from user preset [$section_tipo-$tipo] ", logger::DEBUG);
-					}
+					// $request_config = array_filter($user_preset, function($item){
+					// 	return $item->typo==='rqo';
+					// });
+					// dump($request_config, ' request_config ++ [1] '.to_string());
+					debug_log(__METHOD__." request_query_objects calculated from user preset [$section_tipo-$tipo] ", logger::DEBUG);
+				}
 
-				// 2. From structure
-					if (empty($request_config)) {
+			// 2. From structure
+				if (empty($request_config)) {
 
-						$options = new stdClass();
-							$options->tipo			= $tipo;
-							$options->external		= false;
-							$options->section_tipo	= $section_tipo;
-							$options->mode			= $mode;
-							$options->section_id	= $section_id;
-						$request_config = common::get_ar_request_config($options);
+					$options = new stdClass();
+						$options->tipo			= $tipo;
+						$options->external		= false;
+						$options->section_tipo	= $section_tipo;
+						$options->mode			= $mode;
+						$options->section_id	= $section_id;
+					
+					$request_config = common::get_ar_request_config($options);
 						// dump($request_config, ' request_config [2] ++ '.to_string($this->tipo));
-					}
-			// }
+				}
+		// }
 
 		// request_config value
 			// $request_config = array_merge([$source], $request_config);
@@ -2242,39 +2253,39 @@ abstract class common {
 					// add ddo_map
 						dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
 				}				
+		// des
+			// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
+			// 	// received request_ddo
+			// 		$request_ddo = array_find($dd_request, function($item) {
+			// 			return $item->typo==='request_ddo';
+			// 		});
+			// 	// not received request_ddo
+			// 		if(empty($request_ddo)) {
+			// 			// preset request_ddo
+			// 				if (!isset($user_preset)) {
+			// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
+			// 				}
+			// 				if (!empty($user_preset)) {
+			// 					$request_ddo = array_find($user_preset, function($item){
+			// 						return $item->typo==='request_ddo';
+			// 					});
+			// 				}
 
-		// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
-		// 	// received request_ddo
-		// 		$request_ddo = array_find($dd_request, function($item) {
-		// 			return $item->typo==='request_ddo';
-		// 		});
-		// 	// not received request_ddo
-		// 		if(empty($request_ddo)) {
-		// 			// preset request_ddo
-		// 				if (!isset($user_preset)) {
-		// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
-		// 				}
-		// 				if (!empty($user_preset)) {
-		// 					$request_ddo = array_find($user_preset, function($item){
-		// 						return $item->typo==='request_ddo';
-		// 					});
-		// 				}
+			// 			// calculated request_ddo
+			// 				if (empty($request_ddo)) {
+			// 					$request_ddo = $this->get_request_ddo();
+			// 				}
+			// 		}
 
-		// 			// calculated request_ddo
-		// 				if (empty($request_ddo)) {
-		// 					$request_ddo = $this->get_request_ddo();
-		// 				}
-		// 		}
+			// 	// fix request_ddo_value for current element
+			// 		$this->request_ddo_value = $request_ddo->value;
 
-		// 	// fix request_ddo_value for current element
-		// 		$this->request_ddo_value = $request_ddo->value;
-
-		// 	// add non existent ddo's to static var dd_core_api::$request_ddo_value
-		// 		foreach ($request_ddo->value as $ddo) {
-		// 			if (!dd_object::in_array_ddo($ddo, dd_core_api::$request_ddo_value, ['model','tipo','section_tipo','mode','lang', 'parent','typo','type'])) {
-		// 				dd_core_api::$request_ddo_value[] = $ddo;
-		// 			}
-		// 		}
+			// 	// add non existent ddo's to static var dd_core_api::$request_ddo_value
+			// 		foreach ($request_ddo->value as $ddo) {
+			// 			if (!dd_object::in_array_ddo($ddo, dd_core_api::$request_ddo_value, ['model','tipo','section_tipo','mode','lang', 'parent','typo','type'])) {
+			// 				dd_core_api::$request_ddo_value[] = $ddo;
+			// 			}
+			// 		}
 
 
 		return $request_config;
@@ -2557,7 +2568,7 @@ abstract class common {
 						// section
 						$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
 						$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
-					}elseif (in_array($model, layout_map::$groupers)) {
+					}elseif (in_array($model, common::$groupers)) {
 						// groupers
 						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 					}else{
@@ -2577,7 +2588,7 @@ abstract class common {
 							$current_term = $ar_terms[0];
 							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
 						}
-					}elseif (in_array($model, layout_map::$groupers)) {
+					}elseif (in_array($model, common::$groupers)) {
 						// groupers
 						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 					}else{
@@ -3222,7 +3233,7 @@ abstract class common {
 						break;
 
 					// grouper case
-					case (in_array($model, layout_map::$groupers)):
+					case (in_array($model, common::$groupers)):
 
 						$grouper_model	= ($model==='section_group_div') ? 'section_group' : $model;
 						$element		= new $model($element_tipo, $section_tipo, 'list');

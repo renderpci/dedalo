@@ -7,9 +7,6 @@
 class layout_map {
 
 
-	static $groupers = array('section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'); //
-
-
 
 	/**
 	* GET_LAYOUT_MAP
@@ -123,7 +120,7 @@ class layout_map {
 					if (!empty($self_ar_dd_objects)) {
 
 						// groupers with childrens already defined case
-							if (in_array($model, layout_map::$groupers)) {
+							if (in_array($model, common::$groupers)) {
 								return []; // stop here (!)
 							}
 
@@ -142,7 +139,7 @@ class layout_map {
 			//
 			// // 2. search in user presets
 			// 	if (!isset($layout_map)) {
-			// 		$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $mode, $view);
+			// 		$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, $user_id, $mode, $view);
 			// 		if (!empty($user_preset)) {
 			// 			// layout_map
 			// 				// $layout_map = $user_preset;
@@ -369,10 +366,11 @@ class layout_map {
 
 
 	/**
-	* SEARCH_USER_PRESET
+	* SEARCH_USER_PRESET_LAYOUT_MAP
+	* Get user layout map preset 
 	* @return array | bool
 	*/
-	public static function search_user_preset($tipo, $section_tipo, $user_id, $modo, $view=null) {
+	public static function search_user_preset_layout_map($tipo, $section_tipo, $user_id, $modo, $view=null) {
 
 		// preset const
 			$user_locator = new locator();
@@ -523,7 +521,7 @@ class layout_map {
 
 
 		return $result;
-	}//end search_user_preset
+	}//end search_user_preset_layout_map
 
 
 
