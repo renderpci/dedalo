@@ -95,22 +95,40 @@ menu.prototype.build = async function(autoload=true){
 
 	if (autoload===true) {
 
-		// rqo build
-			const rqo = {
-				action			: 'get_menu',
-				dd_api			: 'dd_utils_api',
-				source			: create_source(self, null),
-				prevent_lock	: true
-			}
+		const current_data_manager = new data_manager()
+		const cache_data = await current_data_manager.get_local_db_data(self.id, 'data')
+		if(cache_data){
 
-		// load data. get context and data
-			const current_data_manager	= new data_manager()
-			const api_response			= await current_data_manager.request({
-				body : rqo
-			})
+			// set the result to the datum
+				self.datum = cache_data.value
 
-		// set the result to the datum
-			self.datum = api_response.result
+			console.warn("returned menu datum from local_db ", self.id);
+
+		}else{
+
+			// rqo build
+				const rqo = {
+					action			: 'get_menu',
+					dd_api			: 'dd_utils_api',
+					source			: create_source(self, null),
+					prevent_lock	: true
+				}
+
+			// load data. get context and data
+				const api_response = await current_data_manager.request({
+					body : rqo
+				})
+
+			// set the result to the datum
+				self.datum = api_response.result
+
+			// cache
+				const cache_data = {
+					id		: self.id,
+					value	: self.datum
+				}
+				current_data_manager.set_local_db_data(cache_data, 'data')
+		}
 	}
 
 	// set context and data to current instance
