@@ -4,7 +4,7 @@
 
 
 // imports
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 

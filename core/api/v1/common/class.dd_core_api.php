@@ -46,12 +46,11 @@ class dd_core_api {
 	* @return array $result
 	*/
 	static function create($json_data) {
-
 		global $start_time;
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		# set vars
 		$vars = array('section_tipo');
@@ -81,8 +80,8 @@ class dd_core_api {
 				// 	$search_options->search_query_object->full_count = true; // Force re-count records
 				// }
 
-		$response->result 	= $section_id;
-		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+		$response->result	= $section_id;
+		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
 
 		# Debug
 		if(SHOW_DEBUG===true) {
@@ -150,8 +149,6 @@ class dd_core_api {
 	*/
 	static function save($json_data) {
 		global $start_time;
-
-		//session_write_close();
 
 		// create the default save response
 		$response = new stdClass();
@@ -266,7 +263,7 @@ class dd_core_api {
 	static function count($json_data) {
 		global $start_time;
 
-		////////////session_write_close();
+		session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -300,8 +297,9 @@ class dd_core_api {
 	* @return object $response
 	*/
 	public static function get_element_context($json_data){
+		global $start_time;
 
-		//////////session_write_close();
+		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -559,19 +557,20 @@ class dd_core_api {
 	static function get_section_elements_context($json_data){
 		global $start_time;
 
-		////////session_write_close();
+		session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$ar_section_tipo 	= (array)$json_data->ar_section_tipo;
-			$context_type 		= $json_data->context_type;
 
-			$filter_components = common::get_section_elements_context([
-				'ar_section_tipo' 	=> $ar_section_tipo,
-				'context_type' 		=> $context_type
-			]);
+		$ar_section_tipo	= (array)$json_data->ar_section_tipo;
+		$context_type		= $json_data->context_type;
+
+		$filter_components = common::get_section_elements_context([
+			'ar_section_tipo'	=> $ar_section_tipo,
+			'context_type'		=> $context_type
+		]);			
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -579,17 +578,19 @@ class dd_core_api {
 					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 			}
 
-		$response->result 		= $filter_components;
-		$response->msg 	  		= 'Ok. Request done';
+		$response->result	= $filter_components;
+		$response->msg		= 'Ok. Request done';
+
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-					$debug->json_data 	= $json_data;
+					$debug->json_data	= $json_data;
 				$response->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
 			}
+
 
 		return (object)$response;
 	}//end get_section_elements_context
@@ -603,7 +604,7 @@ class dd_core_api {
 	static function filter_get_editing_preset($json_data){
 		global $start_time;
 
-		//////session_write_close();
+		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -634,8 +635,6 @@ class dd_core_api {
 	*/
 	static function filter_set_editing_preset($json_data){
 		global $start_time;
-
-		////session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -668,7 +667,7 @@ class dd_core_api {
 	static function filter_get_user_presets($json_data){
 		global $start_time;
 
-		//session_write_close();
+		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -956,7 +955,7 @@ class dd_core_api {
 
 									$element->pagination = $pagination;
 								}
-
+						
 						}else if (strpos($model, 'area')===0) {
 
 							// areas
