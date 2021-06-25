@@ -227,6 +227,11 @@ search.prototype.build = async function(){
 			resolve(user_presets)
 		}))
 
+	// get_section_elements_context
+		ar_promises.push( self.get_section_elements_context({
+			section_tipo : self.section_tipo
+		}) )
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("-> search build editing_preset:", editing_preset);
