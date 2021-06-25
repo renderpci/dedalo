@@ -113,27 +113,9 @@ const get_content_data = async function(self) {
 				inner_html		: get_label.nuevo || "New",
 				parent			: buttons_container
 			})
-			button_new.addEventListener('click', async (e) => {
+			button_new.addEventListener('click', (e) => {
 				e.stopPropagation()
-
-				// data_manager. create
-				const api_response = await data_manager.prototype.request({
-					body : {
-						action			: 'create',
-						section_tipo	: self.section_tipo
-					}
-				})
-				if (api_response.result && api_response.result>0) {
-					// launch event 'user_navigation' that page is watching
-					event_manager.publish('user_navigation', {
-						source : {
-							tipo		: self.caller.tipo,
-							mode		: self.caller.mode,
-							model		: self.caller.model,
-							section_id	: api_response.result
-						}
-					})
-				}
+				event_manager.publish('new_section_' + self.caller.id)				
 			})
 			// buttons_container.appendChild(button_new)
 

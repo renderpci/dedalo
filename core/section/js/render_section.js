@@ -218,27 +218,9 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 					text_content	: get_label.nuevo || "New",
 					parent 			: buttons
 				})
-				button_new.addEventListener('click', async (e) => {
+				button_new.addEventListener('click', (e) => {
 					e.stopPropagation()
-
-					// data_manager
-					const api_response = await data_manager.prototype.request({
-						body : {
-							action 		: 'create',
-							section_tipo: self.section_tipo
-						}
-					})
-					if (api_response.result && api_response.result>0) {
-						// launch event 'user_navigation' that page is watching
-						event_manager.publish('user_navigation', {
-							source : {
-								tipo		: self.tipo,
-								mode		: 'edit',
-								model		: self.model,
-								section_id	: api_response.result
-							}
-						})
-					}
+					event_manager.publish('new_section_' + self.id)
 				})
 
 			// search filter node
