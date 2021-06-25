@@ -785,7 +785,7 @@ class dd_core_api {
 							$limit = $rqo->show->sqo_config->limit;
 						}else{
 							// user preset check (defined sqo limit)
-							$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, $view=null);
+							$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, navigator::get_user_id(), $mode, $view=null);
 							if (!empty($user_preset)) {
 								$user_preset_rqo = $user_preset->rqo;
 								if ($user_preset_rqo && isset($user_preset_rqo->show->sqo_config->limit)) {
