@@ -152,46 +152,25 @@ component_portal.prototype.build = async function(autoload=false){
 
 	const current_data_manager = new data_manager()
 
-	// rqo_config (note that in some cases like search, no request_config is available. Then we call to API to get the full context)
-		// self.context.request_config = self.context.request_config || await ( async () => {
-
-		// 	const element_context_response	= await current_data_manager.get_element_context({
-		// 		tipo			: self.tipo,
-		// 		section_tipo	: self.section_tipo,
-		// 		section_id		: self.section_id
-		// 	})
-		// 	if(SHOW_DEBUG===true) {
-		// 		console.log("// [component_portal.prototype.build] element_context API response:", element_context_response);
-		// 	}			
-		// 	const request_config = element_context_response.result[0].request_config
-		// 	return request_config
-		// })();
-
+	// rqo
 		const generate_rqo = async function(){
-
-			// get the rqo_config from context
-				self.rqo_config	= (self.context.request_config)
-					? self.context.request_config.find(el => el.api_engine==='dedalo')
-					: {}
-
+			// rqo_config. get the rqo_config from context
+			self.rqo_config	= self.context.request_config
+				? self.context.request_config.find(el => el.api_engine==='dedalo')
+				: {}
 			// rqo build
-				const action = (self.mode === 'search') ? 'resolve_data' : 'get_data'
-				self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action)
-				if(self.mode === 'search') {
-					self.rqo.source.value = self.data.value
-				}
+			const action = (self.mode==='search') ? 'resolve_data' : 'get_data'
+			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action)
+			if(self.mode==='search') {
+				self.rqo.source.value = self.data.value
+			}
 		}
-		await generate_rqo()
-		// console.log("portal generate_rqo 1 self.rqo_config:", JSON.parse( JSON.stringify(self.rqo_config) ));
-		// console.log("portal generate_rqo 1 self.rqo:", JSON.parse( JSON.stringify(self.rqo) ));
-
-		// self.rqo.sqo.limit = 2
-		// self.rqo.sqo.offset = 1
+		await generate_rqo()		
 
 	// debug check
 		if(SHOW_DEBUG===true) {
-			// console.log("-- component_portal.prototype.build self.context.request_config", self.context.request_config);
-			// console.log("/// update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
+			// console.log("portal generate_rqo 1 self.rqo_config:", JSON.parse( JSON.stringify(self.rqo_config) ));
+			// console.log("portal generate_rqo 1 self.rqo:", JSON.parse( JSON.stringify(self.rqo) ));
 			const ar_used = []
 			for(const element of self.datum.data) {
 				const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id && item.row_section_id===element.row_section_id)
@@ -218,6 +197,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 				self.datum.context = api_response.result.context
 
+			// rqo regenerate
 				await generate_rqo()
 				console.log("portal generate_rqo 2 self.rqo:",self.rqo);
 		}//end if (autoload===true)

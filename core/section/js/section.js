@@ -156,13 +156,25 @@ section.prototype.build = async function(autoload=false) {
 		self.data = self.data || {}
 
 	const current_data_manager	= new data_manager()
-	
-	// rqo_config
-		self.rqo_config	= self.rqo_config || self.context.request_config.find(el => el.api_engine==='dedalo')
-	
-	// rqo build
-		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'search', self.mode==='tm')	
-		console.log("SECTION self.rqo before load:", JSON.parse( JSON.stringify(self.rqo) ) );
+		
+	// rqo
+		const generate_rqo = async function(){
+			// rqo_config. get the rqo_config from context
+			self.rqo_config	= self.context.request_config
+				? self.context.request_config.find(el => el.api_engine==='dedalo')
+				: {}
+			
+			// rqo build
+			const action	= 'search'
+			const add_show	= self.mode==='tm'
+			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
+		}
+		await generate_rqo()
+
+	// debug check
+		if(SHOW_DEBUG===true) {
+			// console.log("SECTION self.rqo before load:", JSON.parse( JSON.stringify(self.rqo) ) );
+		}		
 	
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -180,14 +192,10 @@ section.prototype.build = async function(autoload=false) {
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
 
-			// if (self.mode!=='tm') {
-				// rqo_config re-select from updated context
-					self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
-				// rqo re-build from updated rqo_config
-					self.rqo = await self.build_rqo_show(self.rqo_config, 'search', self.mode==='tm')
-					console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
-			// }
-
+			// rqo regenerate
+				await generate_rqo()
+				console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
+		
 			// count rows
 				if (!self.total) {
 					const count_sqo = JSON.parse( JSON.stringify(self.rqo.sqo) )
