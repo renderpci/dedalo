@@ -124,6 +124,43 @@ section.prototype.init = async function(options) {
 	self.columns = options.columns
 	
 	// events subscription
+		self.events_tokens.push(
+			event_manager.subscribe('new_section_' + self.id, create_new_section)
+		)
+		async function create_new_section() {
+
+			// data_manager. create
+			const rqo = {
+				action			: 'create',
+				section_tipo	: self.section_tipo
+			}
+			const current_data_manager	= new data_manager()
+			const api_response			= await current_data_manager.request({body:rqo})
+			if (api_response.result && api_response.result>0) {
+
+				const section_id = api_response.result
+
+				const source = create_source(self, 'search')
+					  source.section_id	= section_id
+					  source.mode		= 'edit'
+				
+				const sqo = {
+					mode				: self.mode,
+					section_tipo		: [{tipo:self.section_tipo}],
+					filter_by_locators	: [{
+						section_tipo	: self.section_tipo,
+						section_id		: section_id
+					}],
+					limit				: 1,
+					offset				: 0
+				}
+				// launch event 'user_navigation' that page is watching
+				event_manager.publish('user_navigation', {
+					source	: source,
+					sqo		: sqo
+				})
+			}
+		}
 
 
 	// status update
