@@ -45,12 +45,11 @@ class component_security_access extends component_common {
 	*/
 	public function get_datalist() {
 
-		$user_id = navigator::get_user_id();
-		$is_global_admin = security::is_global_admin($user_id);
-		$ar_areas = [];
+		$user_id			= navigator::get_user_id();
+		$is_global_admin	= security::is_global_admin($user_id);
+		$ar_areas			= [];
 
-
-		if($user_id === DEDALO_SUPERUSER || $is_global_admin=== true){
+		if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
 
 			$ar_areas = area::get_areas();
 
@@ -70,7 +69,7 @@ class component_security_access extends component_common {
 		$datalist = new stdClass();
 			$datalist->result = $ar_areas;
 
-		return $datalist;	
+		return $datalist;
 	}//end get_datalist
 
 

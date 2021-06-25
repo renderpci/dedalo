@@ -316,7 +316,7 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// columns. Get the columns to use into the list
-		self.columns = self.get_columns()
+		self.columns = self.get_columns()	
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -345,6 +345,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// status update
 		self.status = 'builded'
+
 
 	return true
 };//end build

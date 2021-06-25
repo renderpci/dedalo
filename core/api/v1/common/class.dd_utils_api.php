@@ -15,6 +15,8 @@ class dd_utils_api {
 	public static function get_menu($request_options=null) {
 		global $start_time;
 
+		// session_write_close();
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';

@@ -103,7 +103,7 @@ const get_content_data = async function(self) {
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons_container',
-			parent 			: content_data
+			parent			: content_data
 		})
 
 		// button_new . Call API to create new section and navigate to the new record

@@ -34,7 +34,7 @@ class search_query_object extends stdClass {
 											component_tipo
 										}]
 									}]
-		pased 					: (true || false) // boolean, state of the sqo
+		parsed 					: (true || false) // boolean, state of the sqo
 		mode: 					: ('edit' || 'list' || 'tm') // configure the sqo for search into diferent models of matrix tables into DDBB
 		filter_by_locators 		: [{
 									section_tipo

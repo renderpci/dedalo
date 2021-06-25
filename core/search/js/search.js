@@ -212,7 +212,6 @@ search.prototype.build = async function(){
 		}
 		//load_all_section_elements_context()
 		*/
-
 	
 
 	// load user preset data
