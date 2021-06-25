@@ -159,8 +159,9 @@ component_portal.prototype.build = async function(autoload=false){
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
 				: {}
 			// rqo build
-			const action = (self.mode==='search') ? 'resolve_data' : 'get_data'
-			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action)
+			const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
+			const add_show	= false
+			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
 			if(self.mode==='search') {
 				self.rqo.source.value = self.data.value
 			}
