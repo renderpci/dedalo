@@ -361,35 +361,40 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public function get_modelo_name() {
 
 		// forced models in v6 (while we are using structure v5)
-		if ($this->terminoID===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
-			return 'component_radio_button';
-		}elseif ($this->terminoID===DEDALO_USER_PROFILE_TIPO) {
-			return 'component_select';
-		}elseif ($this->terminoID==='dd546') { // activity where
-			return 'component_input_text';
-		}elseif ($this->terminoID==='dd545') { // activity what
-			return 'component_select';
-		}elseif ($this->terminoID==='dd544') { // activity ip
-			return 'component_input_text';
-		}elseif ($this->terminoID==='dd551') { // activity 'dato'
-			return 'component_json';
-		}elseif ($this->terminoID==='hierarchy48') { // hierarchy 'order'
-			return 'component_number';
-		}
+			if ($this->terminoID===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
+				return 'component_radio_button';
+			}elseif ($this->terminoID===DEDALO_USER_PROFILE_TIPO) {
+				return 'component_select';
+			}elseif ($this->terminoID==='dd546') { // activity where
+				return 'component_input_text';
+			}elseif ($this->terminoID==='dd545') { // activity what
+				return 'component_select';
+			}elseif ($this->terminoID==='dd544') { // activity ip
+				return 'component_input_text';
+			}elseif ($this->terminoID==='dd551') { // activity 'dato'
+				return 'component_json';
+			}elseif ($this->terminoID==='hierarchy48') { // hierarchy 'order'
+				return 'component_number';
+			}
+
 		$model = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
 
-		if ($model==='component_input_text_large') {
-			$model='component_input_text';
-		}
-		elseif ($model==='component_autocomplete' || $model==='component_autocomplete_hi') {
-			$model='component_portal';
-		}
-		elseif ($model==='component_state') {
-			$model='component_info';
-		}
-		elseif ($model==='section_group_div') {
-			$model='section_group';
-		}
+		// replace obsolete models on the fly
+			if ($model==='component_input_text_large') {
+				$model='component_input_text';
+			}
+			elseif ($model==='component_autocomplete' || $model==='component_autocomplete_hi') {
+				$model='component_portal';
+			}
+			elseif ($model==='component_state') {
+				$model='component_info';
+			}
+			elseif ($model==='section_group_div') {
+				$model='section_group';
+			}
+			elseif ($model==='component_relation_struct') {
+				$model='component_relation_index';
+			}
 
 		return $model;
 	}//end get_modelo_name
