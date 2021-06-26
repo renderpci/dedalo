@@ -6,7 +6,7 @@
 // element configuration vars
 	$ar_section_tipo	= $this->get_ar_section_tipo();
 	$modo				= $this->get_modo();
-	$section_class 		= 'section';
+	$section_class		= 'section';
 
 
 // context
@@ -19,7 +19,7 @@
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
 
-			default:				
+			default:
 				foreach ((array)$ar_section_tipo as $current_section_tipo) {
 					
 					$section = $section_class::get_instance(null, $current_section_tipo, $modo);
@@ -64,7 +64,7 @@
 	if($options->get_data===true){
 	
 		// dato is the full result of a search using the search_query_object
-		$dato = $this->get_dato();		
+		$dato = $this->get_dato();
 
 		if (!empty($dato)) {
 
@@ -72,14 +72,14 @@
 				$value = array_map(function($item) use($modo){
 					
 					$locator = new stdClass();
-						$locator->section_tipo 	= $item->section_tipo;
-						$locator->section_id 	= $item->section_id;
+						$locator->section_tipo	= $item->section_tipo;
+						$locator->section_id	= $item->section_id;
 
 					// tm case
 						if($modo==='tm'){
-							$locator->matrix_id = $item->id;
-							$locator->timestamp = $item->timestamp;
-							$locator->state 	= $item->state;
+							$locator->matrix_id	= $item->id;
+							$locator->timestamp	= $item->timestamp;
+							$locator->state		= $item->state;
 						}
 
 					return $locator;
@@ -87,20 +87,21 @@
 
 				
 				$item = new stdClass();
-					$item->typo 		= 'sections';
-					$item->section_tipo = $ar_section_tipo;
-					$item->tipo 		= $this->caller_tipo;
-					$item->value 		= $value;
+					$item->typo			= 'sections';
+					$item->section_tipo	= $ar_section_tipo;
+					$item->tipo			= $this->caller_tipo;
+					$item->value		= $value;
 
 				$data[] = $item;
 
 			// subdata
 				foreach ($dato as $current_record) {
 
-					$section_id   	= $current_record->section_id;
-					$section_tipo 	= $current_record->section_tipo;					
+					$section_id		= $current_record->section_id;
+					$section_tipo	= $current_record->section_tipo;
 
-					$section 		= $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
+					// section instance
+						$section = $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
 
 					if ($modo==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
@@ -116,7 +117,7 @@
 					// get the JSON data of the related component
 						$section_options = new stdClass();
 							$section_options->get_context	= false;
-							$section_options->get_data 	 	= true;
+							$section_options->get_data		= true;	
 						$section_json = $section->get_json($section_options);
 					
 					$data = array_merge($data, $section_json->data);
