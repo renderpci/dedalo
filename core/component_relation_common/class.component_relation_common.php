@@ -1458,7 +1458,6 @@ class component_relation_common extends component_common {
 		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
 
 
-		$ar_filter = [];
 		# Active
 		$active_locator = new locator();
 			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
@@ -1466,7 +1465,7 @@ class component_relation_common extends component_common {
 			$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 			$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
 
-		$ar_filter[] = '{
+		$active_filter = '{
 				"q": '.json_encode(json_encode($active_locator)).',
 				"path": [
 					{
@@ -1478,6 +1477,7 @@ class component_relation_common extends component_common {
 				]
 			}';
 		# Typology
+		$typology_filter = [];
 		foreach ((array)$hierarchy_types as $key => $value) {
 
 			$typology_locator = new locator();
@@ -1486,7 +1486,7 @@ class component_relation_common extends component_common {
 				$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
 
-			$ar_filter[] = '{
+			$typology_filter[] = '{
 				"q": '.json_encode(json_encode($typology_locator)).',
 				"path": [
 					{
@@ -1499,19 +1499,23 @@ class component_relation_common extends component_common {
 			}';
 		}//end foreach ((array)$hierarchy_types as $key => $value)
 
-		$filter = implode(',',$ar_filter);
+		$ar_typology_filter = implode(',',$typology_filter);
 
 		$search_query_object = json_decode('
 			{
-			  "id": "get_hierarchy_sections_from_types",
-			  "section_tipo": "'.$hierarchy_section_tipo.'",
-			  "skip_projects_filter":"true",
-			  "limit":0,
-			  "filter": {
-				"$and": [
-				  '.$filter.'
-				]
-			  }
+				"id": "get_hierarchy_sections_from_types",
+				"section_tipo": "'.$hierarchy_section_tipo.'",
+				"skip_projects_filter":"true",
+				"limit":0,
+				"filter": {
+					"$and": [
+						'.$active_filter.',
+						{ "$or":[
+								'.$ar_typology_filter.'
+							]
+						}
+					]
+				}
 			}
 		');
 
@@ -1578,16 +1582,52 @@ class component_relation_common extends component_common {
 						// in these case the array of sections will get from the value of specific field
 						$target_values = $source_item->value;
 						foreach ((array)$target_values as $key => $current_component_tipo) {
-							$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-							$component 		 = component_common::get_instance($model_name,
-																			  $current_component_tipo,
-																			  $section_id,
-																			  $modo='edit',
-																			  $lang=DEDALO_DATA_LANG,
-																			  $retrived_section_tipo);
 
-							$dato = $component->get_dato();
-							$ar_section_tipo = $dato; // Like ['es1']
+						$sqo = new stdClass();
+							$sqo->section_tipo			= $retrived_section_tipo;
+							$sqo->limit					= 0;
+							$sqo->offset				= 0;
+							$sqo->order					= false;
+							$sqo->skip_projects_filter	= true;
+
+						// sections
+							$sections = sections::get_instance(null, $sqo, $retrived_section_tipo, 'list', DEDALO_DATA_LANG);
+
+							$dato = $sections->get_dato();
+
+							$model_name 	 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+							$current_lang		=  common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
+
+						// data
+							foreach ($dato as $current_record) {
+
+								$section = section::get_instance($current_record->section_id, $current_record->section_tipo, 'list', $cache=true);
+								
+								// inject datos to section and set as loaded
+								$datos = $current_record->datos ?? null;
+								if (!is_null($datos)) {
+									$section->set_dato($datos);
+									$section->set_bl_loaded_matrix_data(true);
+								}
+								$component = component_common::get_instance($model_name,
+																				  $current_component_tipo,
+																				  $current_record->section_id,
+																				  $modo='list',
+																				  $current_lang,// $lang=DEDALO_DATA_LANG,
+																				  $current_record->section_tipo);
+
+								$component_dato = $component->get_dato();
+
+
+								foreach ($component_dato as $current_section_tipo) {
+									if (!empty($current_section_tipo)) {
+										$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+										if (!empty($section_modelo_name)) {
+											$ar_section_tipo[] = $current_section_tipo;
+										}										
+									}
+								}
+							}//end foreach ($dato as $current_record)
 						}
 						break;
 					break;
