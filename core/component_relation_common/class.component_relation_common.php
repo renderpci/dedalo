@@ -1458,7 +1458,6 @@ class component_relation_common extends component_common {
 		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
 
 
-		$ar_filter = [];
 		# Active
 		$active_locator = new locator();
 			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
@@ -1466,7 +1465,7 @@ class component_relation_common extends component_common {
 			$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 			$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
 
-		$ar_filter[] = '{
+		$active_filter = '{
 				"q": '.json_encode(json_encode($active_locator)).',
 				"path": [
 					{
@@ -1478,6 +1477,7 @@ class component_relation_common extends component_common {
 				]
 			}';
 		# Typology
+		$typology_filter = [];
 		foreach ((array)$hierarchy_types as $key => $value) {
 
 			$typology_locator = new locator();
@@ -1486,7 +1486,7 @@ class component_relation_common extends component_common {
 				$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
 
-			$ar_filter[] = '{
+			$typology_filter[] = '{
 				"q": '.json_encode(json_encode($typology_locator)).',
 				"path": [
 					{
@@ -1499,19 +1499,23 @@ class component_relation_common extends component_common {
 			}';
 		}//end foreach ((array)$hierarchy_types as $key => $value)
 
-		$filter = implode(',',$ar_filter);
+		$ar_typology_filter = implode(',',$typology_filter);
 
 		$search_query_object = json_decode('
 			{
-			  "id": "get_hierarchy_sections_from_types",
-			  "section_tipo": "'.$hierarchy_section_tipo.'",
-			  "skip_projects_filter":"true",
-			  "limit":0,
-			  "filter": {
-				"$and": [
-				  '.$filter.'
-				]
-			  }
+				"id": "get_hierarchy_sections_from_types",
+				"section_tipo": "'.$hierarchy_section_tipo.'",
+				"skip_projects_filter":"true",
+				"limit":0,
+				"filter": {
+					"$and": [
+						'.$active_filter.',
+						{ "$or":[
+								'.$ar_typology_filter.'
+							]
+						}
+					]
+				}
 			}
 		');
 
