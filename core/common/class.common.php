@@ -1772,7 +1772,7 @@ abstract class common {
 						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
 							continue;
 						}									
-				
+					
 					// short vars
 						$current_tipo				= $dd_object->tipo;
 						$ar_current_section_tipo	= $dd_object->section_tipo ?? $dd_object->tipo;
@@ -2417,7 +2417,7 @@ abstract class common {
 
 				// SQO
 					$parsed_item->sqo = $item_request_config->sqo ?? new stdClass();
-					
+
 				// section_tipo. get the ar_sections as ddo
 					if (isset($parsed_item->sqo->section_tipo)){
 						$ar_section_tipo = component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id);
@@ -2652,10 +2652,10 @@ abstract class common {
 					: $mode;
 
 
-				$ddo_map = array_map(function($current_tipo) use($tipo, $section_tipo, $current_mode){
+				$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
 					$ddo = new dd_object();
 						$ddo->set_tipo($current_tipo);
-						$ddo->set_section_tipo($section_tipo);
+						$ddo->set_section_tipo($target_section_tipo);
 						$ddo->set_parent($tipo);
 						$ddo->set_mode($current_mode);
 						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
