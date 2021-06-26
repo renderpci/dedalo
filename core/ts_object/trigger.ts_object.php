@@ -1,4 +1,7 @@
 <?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
 $start_time=microtime(1);
 include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 include(DEDALO_CORE_PATH . '/ts_object/class.ts_object.php');
@@ -24,6 +27,8 @@ ignore_user_abort(true);
 */
 function get_children_data($json_data) {
 	global $start_time;
+
+	session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
@@ -501,6 +506,8 @@ function update_parent_data($json_data) {
 function show_indexations($json_data) {
 	global $start_time;
 
+	session_write_close();
+
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -520,7 +527,6 @@ function show_indexations($json_data) {
 	# DIFFUSION_INDEX_TS
 	$diffusion_index_ts = new diffusion_index_ts($section_tipo, $section_id, $component_tipo);
 	$html 				= $diffusion_index_ts->get_html();
-
 
 	$response->result 	= $html;
 	$response->msg 		= "Request done successufully";
