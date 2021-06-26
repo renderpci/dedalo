@@ -89,6 +89,16 @@ data_manager.prototype.request = async function(options) {
 	// 	console.log(api_response.status, api_response.statusText);
 	// }
 
+	// debug
+	if (SHOW_DEBUG) {
+		api_response.then((response)=>{
+			if (response.result===false) {
+				console.error("api_response error:",response);
+			}			
+		})
+	}
+	
+
 	return api_response
 };//end request
 

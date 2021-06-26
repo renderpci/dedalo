@@ -1862,6 +1862,10 @@ abstract class common {
 								$element_json = $related_element->get_json($item_options);
 
 							// temp ar_subcontext
+								if (is_null($ar_subcontext)) {
+									$bt = debug_backtrace();
+									dump($bt, ' ar_subcontext bt ++ '.to_string($current_tipo));
+								}
 								$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
 						}
 
@@ -2454,6 +2458,10 @@ abstract class common {
 					// ddo_map
 						$final_ddo_map = [];
 						foreach ($ar_ddo_map as $current_ddo_map) {
+							if (!isset($current_ddo_map->tipo)) {
+								dump($current_ddo_map, ' current_ddo_map ++ '.to_string($tipo));
+								continue;
+							}
 							// add label to ddo_map items
 							// $final_ddo_map[] = array_map(function($ddo){
 							// 	$ddo->set_label(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true));								
