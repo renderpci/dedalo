@@ -657,7 +657,7 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 			const current_ddo = ddo_map[i]
 			if(current_ddo.parent !== caller_tipo) continue;
 			const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
-
+	
 			// rqo_config
 			const rqo_config	= current_context.request_config
 				? current_context.request_config.find(el => el.api_engine==='dedalo')
