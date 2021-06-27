@@ -42,7 +42,6 @@
 		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 	}//end if($options->get_context===true)
 
-
 // data
 	$data = [];
 
@@ -55,10 +54,8 @@
 
 
 		# Custom propiedades external dato
-		if(	!empty($this->build_options)
-			&& $this->build_options->get_dato_external === true
-			&& isset($properties->source->mode)
-			&& $properties->source->mode==='external') {
+		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
+			(isset($properties->source->mode) && $properties->source->mode==='external')) {
 			$this->set_dato_external(true, true);	// Forces update dato with calculated external dato
 		}
 

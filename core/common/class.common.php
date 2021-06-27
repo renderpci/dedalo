@@ -2581,11 +2581,6 @@ abstract class common {
 			// V5 model
 
 			// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
-			// 	debug_log(__METHOD__." Invalid configuration of component: '$model', tipo: '$tipo'. Please set 'request_config' in element properties! ".to_string(), logger::ERROR);
-			// 	return [];
-			// 	// throw new Exception("Error Processing Request. Invalid configuration", 1);
-			// 	// die();
-			// }
 
 			switch ($mode) {
 				case 'edit':
