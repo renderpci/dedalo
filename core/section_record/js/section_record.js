@@ -261,7 +261,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 				const current_ddo_path	= ar_columns[i]
 				const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
 				if (!current_ddo) {
-					console.warn("ignored empty context: [key, columns]", i, columns);
+					console.warn("ignored empty current_ddo: [i, tipo, section_tipo, section_id, matrix_id]", i, tipo, section_tipo, section_id, matrix_id);
 					continue;
 				}
 
@@ -273,8 +273,8 @@ section_record.prototype.get_ar_columns_instances = async function(){
 			// if(current_context.parent===tipo){
 				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 				const current_context	= Array.isArray(current_ddo.section_tipo)
-					? self.datum.context.find(item => item.tipo===current_ddo.tipo && item.mode===current_ddo.mode)
-					: self.datum.context.find(item => item.tipo===current_ddo.tipo && item.section_tipo===current_ddo.section_tipo && item.mode===current_ddo.mode)
+					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.section_tipo===current_ddo.section_tipo && el.mode===current_ddo.mode)
 
 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
 

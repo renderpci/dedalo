@@ -1738,7 +1738,6 @@ abstract class common {
 			$request_config_dedalo = array_filter($request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
-
 		
 		// children_resursive function
 			if (!function_exists('get_children_resursive')) {
