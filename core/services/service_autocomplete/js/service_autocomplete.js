@@ -328,10 +328,10 @@ export const service_autocomplete = function() {
 
 				const ar_filter_by_list	= self.ar_filter_by_list
 
-				const filter_by_list_value_length = filter_by_list.value.length
+				const filter_by_list_value_length = filter_by_list.length
 				for (let i = 0; i < filter_by_list_value_length; i++) {
 
-					const current_filter		= filter_by_list.value[i]; 	//console.log("current_filter:",current_filter); 	console.log("self:",self);
+					const current_filter		= filter_by_list[i]; 	//console.log("current_filter:",current_filter); 	console.log("self:",self);
 					const section				= current_filter.context.section_tipo
 					const component_tipo		= current_filter.context.tipo
 					const component_datalist	= current_filter.datalist
@@ -961,7 +961,7 @@ export const service_autocomplete = function() {
 							// Update q property
 							current_filter[i].q	= (q !== "")
 								? "*" + q + "*"
-								: "false_muyfake_de verdad"
+								: "false_muyfake_de verdad!"
 							current_filter[i].q_split = false
 							// create the filter with the operator choosed by the user
 							new_filter[new_operator] = current_filter
@@ -979,7 +979,9 @@ export const service_autocomplete = function() {
 						}
 					}
 					if(filter_by_list){
-						self.sqo.filter.$and.push(...filter_by_list)
+						self.sqo.filter.$and.push({
+							$or:[...filter_by_list]
+						})
 					}
 			}//end if(filter_free)
 
