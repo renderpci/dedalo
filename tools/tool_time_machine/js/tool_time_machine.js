@@ -112,6 +112,7 @@ tool_time_machine.prototype.load_section = async function() {
 	const self = this	
 
 	const component = self.caller
+		console.log("component +++++++++++++++++++++++++++++++++++:",component);
 	
 	// short vars
 		const component_tipo	= component.tipo
@@ -150,6 +151,16 @@ tool_time_machine.prototype.load_section = async function() {
 				mode			: 'list'
 			}
 		]
+
+	// component rqo_config_show
+		const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
+			? component.rqo_config.show.ddo_map
+			: null
+		if (component_show) {
+			ddo_map.push(...component_show)
+		}
+		console.log("component.rqo_config:",component.rqo_config);
+		console.log("ddo_map:",ddo_map);
 
 	// sqo
 		const sqo = {
@@ -240,33 +251,58 @@ tool_time_machine.prototype.load_section = async function() {
 
 /**
 * LOAD_COMPONENT
-* Loads component to place in respective containers: current and version preview
+* Loads component to place in respective containers: current preview and preview version
 */
-tool_time_machine.prototype.load_component = async function(lang, mode='tm', matrix_id=null) {
+tool_time_machine.prototype.load_component = async function(lang, mode, matrix_id=null) {
 
 	const self = this
 
 	const component	= self.caller
-	const source	= create_source(component, 'get_data')
-	const context	= JSON.parse(JSON.stringify(component.context))
-		  context.request_config = [source]
+	// const source	= create_source(component, 'get_data')
+	// const context	= JSON.parse(JSON.stringify(component.context))
+		  // context.request_config = [source]
 
-	// context lang switch if var lang is received
-		if (typeof lang!=='undefined') {
-			context.lang = lang
+	// short vars
+		const model				= component.model
+		const component_tipo	= component.tipo
+		const section_tipo		= component.section_tipo
+		const section_id		= component.section_id
+		const section_lang		= component.section_lang
+		const type				= component.type
+	
+	console.log("-> component:",component, mode, matrix_id);
+	
+	// request_config
+		const request_config = component.context.request_config
+			? JSON.parse( JSON.stringify(component.context.request_config) )
+			: null
+	
+	// context
+		const context = {
+			type			: 'component',
+			typo			: 'ddo',
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			lang			: lang,
+			mode			: mode,
+			model			: model,
+			parent			: section_tipo,
+			request_config	: request_config
 		}
+
+	console.log("-> context:",context);
 
 	// component instance_options
 		const instance_options = {
-			model			: component.model,
-			tipo			: component.tipo,
-			section_tipo	: component.section_tipo,
-			section_id		: component.section_id,
+			model			: model,
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
 			mode			: mode, // component.mode==='edit_in_list' ? 'edit' : component.mode,
-			lang			: context.lang,
-			section_lang	: component.section_lang,
+			lang			: lang,
+			section_lang	: section_lang,
 			//parent		: component.parent,
-			type			: component.type,
+			type			: type,
 			context			: context,
 			// data			: {value:[]},
 			// datum		: component.datum,
@@ -286,6 +322,8 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 		}
 
 		await component_instance.build(true)
+
+		console.log("-> new component_instance:",component_instance);
 
 	// add created component instance to current ar_instances
 		const instance_found = self.ar_instances.find( el => el===component_instance )
