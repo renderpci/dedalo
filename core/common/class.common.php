@@ -1780,6 +1780,7 @@ abstract class common {
 					$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					$label						= $dd_object->label;
 
+
 				$current_section_tipo = is_array($ar_current_section_tipo)
 					? reset($ar_current_section_tipo)
 					: $ar_current_section_tipo;
@@ -1790,6 +1791,18 @@ abstract class common {
 						debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
 						// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
 					}
+
+					// common temporal excluded/mapped models *******
+						if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+
+						$match_key = array_search($model, common::$ar_temp_map_models);
+						if (false!==$match_key) {
+							debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+							$model = $match_key;
+						}else if (in_array($model, common::$ar_temp_exclude_models)) {
+							debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
+							continue;
+						}
 
 				// common temporal excluded/mapped models *******
 					// $match_key = array_search($model, common::$ar_temp_map_models);
@@ -1825,8 +1838,7 @@ abstract class common {
 								$related_element->request_config = [$new_rqo_config];
 							}
 
-							// dump($related_element, ' related_element ++ '.to_string());
-						break;
+						break;				
 
 					// grouper case
 					case (in_array($model, common::$groupers)):
@@ -1962,6 +1974,20 @@ abstract class common {
 				$mode			= $dd_object->mode ?? 'edit'; // $records_mode;
 				$model			= $dd_object->model ?? RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$current_lang	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
+
+
+				// common temporal excluded/mapped models *******
+					// if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+
+					// $match_key = array_search($model, common::$ar_temp_map_models);
+					// if (false!==$match_key) {
+					// 	debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+					// 	$model = $match_key;
+					// }else if (in_array($model, common::$ar_temp_exclude_models)) {
+					// 	debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
+					// 	continue;
+					// }
+
 
 				switch (true) {
 
@@ -2568,11 +2594,6 @@ abstract class common {
 			// V5 model
 
 			// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
-			// 	debug_log(__METHOD__." Invalid configuration of component: '$model', tipo: '$tipo'. Please set 'request_config' in element properties! ".to_string(), logger::ERROR);
-			// 	return [];
-			// 	// throw new Exception("Error Processing Request. Invalid configuration", 1);
-			// 	// die();
-			// }
 
 			switch ($mode) {
 				case 'edit':
@@ -2619,6 +2640,8 @@ abstract class common {
 					break;
 			}//end switch ($mode)
 
+
+
 			// related_clean
 				$ar_related_clean 	 = [];
 				$target_section_tipo = $section_tipo;
@@ -2630,7 +2653,10 @@ abstract class common {
 						continue;
 					}else if ($current_model==='section' || $current_model==='exclude_elements') {
 						continue;
+					}else if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO){ 
+						continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 					}
+
 					$ar_related_clean[] = $current_tipo;
 				}
 				if (empty($ar_related_clean)) {
