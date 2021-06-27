@@ -1792,14 +1792,16 @@ abstract class common {
 						}
 
 					// common temporal excluded/mapped models *******
-						// $match_key = array_search($model, common::$ar_temp_map_models);
-						// if (false!==$match_key) {
-						// 	debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
-						// 	$model = $match_key;
-						// }else if (in_array($model, common::$ar_temp_exclude_models)) {
-						// 	debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
-						// 	continue;
-						// }
+						if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+
+						$match_key = array_search($model, common::$ar_temp_map_models);
+						if (false!==$match_key) {
+							debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+							$model = $match_key;
+						}else if (in_array($model, common::$ar_temp_exclude_models)) {
+							debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
+							continue;
+						}
 
 					switch (true) {
 						// component case
@@ -1827,6 +1829,7 @@ abstract class common {
 
 								// dump($related_element, ' related_element ++ '.to_string());
 							break;
+
 
 						// grouper case
 						case (in_array($model, common::$groupers)):
@@ -1962,6 +1965,20 @@ abstract class common {
 				$mode			= $dd_object->mode ?? 'edit'; // $records_mode;
 				$model			= $dd_object->model ?? RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$current_lang	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
+				
+
+				// common temporal excluded/mapped models *******
+					if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+
+					$match_key = array_search($model, common::$ar_temp_map_models);
+					if (false!==$match_key) {
+						debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+						$model = $match_key;
+					}else if (in_array($model, common::$ar_temp_exclude_models)) {
+						debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
+						continue;
+					}
+
 
 				switch (true) {
 
