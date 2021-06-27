@@ -323,6 +323,17 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 		? self.datum.data.find(el => el.tipo===ddo.tipo && el.section_id===section_id && el.section_tipo===section_tipo && el.matrix_id===matrix_id)
 		: self.datum.data.find(el => el.tipo===ddo.tipo && el.section_id===section_id && el.section_tipo===section_tipo)
 
+		if (self.mode==='tm') {
+			if (!component_data) {
+				console.warn("not found component_data ddo, section_tipo, section_id, matrix_id:", ddo, section_tipo, section_id, matrix_id);
+			}else{
+				if (component_data.debug_model==='component_portal') {
+					// console.log("component_data.debug_model:", component_data.debug_model);
+					console.log("--- get_component_data section_tipo, section_id, matrix_id, component_data:", component_data, section_tipo, section_id, matrix_id);
+				}
+			}
+		}
+		
 	// undefined case. If the current item don't has data will be instanciated with the current section_id	
 		if(!component_data) {
 			// empy component data build
