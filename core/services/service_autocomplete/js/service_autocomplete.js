@@ -328,10 +328,10 @@ export const service_autocomplete = function() {
 
 				const ar_filter_by_list	= self.ar_filter_by_list
 
-				const filter_by_list_value_length = filter_by_list.value.length
+				const filter_by_list_value_length = filter_by_list.length
 				for (let i = 0; i < filter_by_list_value_length; i++) {
 
-					const current_filter		= filter_by_list.value[i]; 	//console.log("current_filter:",current_filter); 	console.log("self:",self);
+					const current_filter		= filter_by_list[i]; 	//console.log("current_filter:",current_filter); 	console.log("self:",self);
 					const section				= current_filter.context.section_tipo
 					const component_tipo		= current_filter.context.tipo
 					const component_datalist	= current_filter.datalist
@@ -731,7 +731,11 @@ export const service_autocomplete = function() {
 				const ddo_item = current_path[current_path.length - 1];
 				// get the data into the full data from API and get the value (locator or final data as input_text data)
 				const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
-				const current_value = current_element_data.value
+				const current_value = (current_element_data)
+					? current_element_data.value
+					: false
+				// if the element doesn't has data stop the recursion.
+				if(current_value === false) return false;
 				// create new_path without and remove the current ddo
 				const new_path = [...current_path]
 				new_path.pop()
@@ -783,6 +787,8 @@ export const service_autocomplete = function() {
 					// the first position is the only component that is necesary to buil and show
 						const ddo_item = current_path[0]
 						const current_element_data = get_last_ddo_data_value(current_path, [current_locator])
+					// if the element doesn't has data continue to the next element.
+						if(current_element_data === false) continue;
 
 					// context of the element
 						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===current_element_data.section_tipo )
@@ -955,7 +961,7 @@ export const service_autocomplete = function() {
 							// Update q property
 							current_filter[i].q	= (q !== "")
 								? "*" + q + "*"
-								: "false_muyfake_de verdad"
+								: "false_muyfake_de verdad!"
 							current_filter[i].q_split = false
 							// create the filter with the operator choosed by the user
 							new_filter[new_operator] = current_filter
@@ -973,7 +979,9 @@ export const service_autocomplete = function() {
 						}
 					}
 					if(filter_by_list){
-						self.sqo.filter.$and.push(...filter_by_list)
+						self.sqo.filter.$and.push({
+							$or:[...filter_by_list]
+						})
 					}
 			}//end if(filter_free)
 

@@ -166,7 +166,7 @@ component_portal.prototype.build = async function(autoload=false){
 				self.rqo.source.value = self.data.value
 			}
 		}
-		await generate_rqo()		
+		await generate_rqo()
 
 	// debug check
 		if(SHOW_DEBUG===true) {
