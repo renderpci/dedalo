@@ -49,7 +49,8 @@
 
 			case 'search':
 				$value	= [];
-					dump($value, ' value ++ '.to_string());
+				$fallback_value			= false;
+
 				break;
 
 			case 'edit':
