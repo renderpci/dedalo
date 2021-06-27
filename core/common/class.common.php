@@ -2172,7 +2172,7 @@ abstract class common {
 			// 	}else{
 		
 		$requested_source = dd_core_api::$rqo->source ?? null;
-		if($requested_source && $requested_source->tipo===$this->tipo) {
+		if($requested_source) { // && $requested_source->tipo===$this->tipo
 
 			// set the request_config with the API rqo sended by client
 				
@@ -2219,7 +2219,7 @@ abstract class common {
 					$this->request_config = [$request_config];
 
 				// merge ddo elements
-					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map,$request_config->show->ddo_map);
+					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $request_config->show->ddo_map);
 
 				return $this->request_config; // we have finished ! Note we stop here (!)
 			}//end if (!empty($requested_show))
