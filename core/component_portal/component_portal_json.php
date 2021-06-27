@@ -21,7 +21,7 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
+					$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
 				break;
 
 			default:
@@ -30,13 +30,11 @@
 					$current_context	= $this->get_structure_context($permissions, $add_request_config=true);
 					$context[]			= $current_context;
 
-					// dump(null, 'Time to context portal BEFORE SUBCONTEXT: '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 				// subcontext from element layout_map items (from_parent, parent_grouper)
 					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
 					foreach ($ar_subcontext as $current_context) {
 						$context[] = $current_context;
 					}
-
 				break;
 		}
 		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
