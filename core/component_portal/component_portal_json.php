@@ -35,6 +35,8 @@
 					foreach ($ar_subcontext as $current_context) {
 						$context[] = $current_context;
 					}
+
+
 				break;
 		}
 		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
