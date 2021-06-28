@@ -157,13 +157,13 @@ tool_time_machine.prototype.load_section = async function() {
 			}
 		]
 
-	// // component rqo_config_show
-	// 	const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-	// 		? component.rqo_config.show.ddo_map
-	// 		: null
-	// 	if (component_show) {
-	// 		ddo_map.push(...component_show)
-	// 	}
+	// component rqo_config_show
+		const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
+			? component.rqo_config.show.ddo_map
+			: null
+		if (component_show) {
+			ddo_map.push(...component_show)
+		}
 	// 	console.log("component.rqo_config:",component.rqo_config);
 	// 	console.log("ddo_map:",ddo_map);
 
