@@ -1543,7 +1543,8 @@ abstract class common {
 
 
 		// cache. fix context dd_object
-			// $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key] = $ddo;
+			// $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key] = $dd_object;
+			// write_session_value(['config','ddo',$section_tipo,$ddo_key], $dd_object);
 
 
 		return $dd_object;
@@ -2182,10 +2183,8 @@ abstract class common {
 			// dump($idd, ' idd ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->modo));
 		}
 		
-		$requested_source = dd_core_api::$rqo->source ?? false;
-		// (!) note that filter '$requested_source->tipo===$this->tipo' is necessary in time machine mode 
-		// to prevent portals stop to calculate their 'show->ddo_map'
-		if($requested_source) { // && $requested_source->tipo===$this->tipo
+		$requested_source = dd_core_api::$rqo->source ?? false;		
+		if($requested_source) {
 			
 			// set the request_config with the API rqo sended by client
 				
@@ -3391,9 +3390,9 @@ abstract class common {
 	*/
 	public function get_client_registered_tools() {
 
-		if(isset($_SESSION['dedalo']['registered_tools'])) {
-			//return $_SESSION['dedalo']['registered_tools'];
-		}
+		// if(isset($_SESSION['dedalo']['registered_tools'])) {
+		// 	return $_SESSION['dedalo']['registered_tools'];
+		// }
 
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
@@ -3456,7 +3455,8 @@ abstract class common {
 			$registered_tools[] = $current_value;
 		}
 
-		$_SESSION['dedalo']['registered_tools'] = $registered_tools;
+		// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
+		// write_session_value('registered_tools', $registered_tools);
 
 
 		return $registered_tools;
