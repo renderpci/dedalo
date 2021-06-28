@@ -1546,3 +1546,48 @@ function array_find($xs, $f) {
 }//end find
 
 
+
+/**
+* WRITE_SESSION_VALUE
+* Simple assign value $_SESSION['xx'] = value
+* Write the received value into target session
+* Used to control session writes only
+* @return bool false | value mixed
+*/
+function write_session_value(array $session_keys, $value) {
+
+	$result = false;
+	
+	if(session_status()===PHP_SESSION_ACTIVE){
+		// write ready
+		// $result = $session = $value;
+		// $result = $_SESSION['dedalo'][$session_keys] = $value;
+		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);		
+	}else{
+		error_log('!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_key) . ' - value: '. json_encode($value) );
+	}
+
+	return $result;
+}//end write_session_value
+
+
+/**
+* INSERT_INTO
+* Insert vallue into array using any number of keys sequence 
+* like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key] 
+*/
+function insert_into(&$array, array $keys, $value) {
+     $last = array_pop($keys);       
+
+     foreach($keys as $key) {
+          if(!array_key_exists($key, $array) || 
+              array_key_exists($key, $array) && !is_array($array[$key])) {
+                  $array[$key] = array();
+
+          }
+          $array = &$array[$key];
+     }
+     $array[$last] = $value;
+}//end insert_into
+
+
