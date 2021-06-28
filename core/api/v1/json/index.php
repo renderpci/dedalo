@@ -39,6 +39,14 @@ $start_time=microtime(1);
 
 
 
+	// prevent_lock from session
+		if (isset($rqo->prevent_lock) && $rqo->prevent_lock===true) {
+			// close current session and set as only read
+			session_write_close();
+		}
+
+		
+
 	// dd_dd_manager
 		try {
 
@@ -46,8 +54,9 @@ $start_time=microtime(1);
 			$result		= $dd_manager->manage_request( $rqo );
 			// throw new Exception('foo');
 
-			// close current session
+			// close current session and set as only read
 			session_write_close();
+
 
 		} catch (Throwable $e) { // For PHP 7
 			
