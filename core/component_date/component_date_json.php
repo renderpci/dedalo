@@ -48,8 +48,11 @@
 				break;
 		}
 
+
+		
+
 		// data item
-		$item  = $this->get_data_item($value);
+		$item = $this->get_data_item($value);
 
 		$data[] = $item;
 

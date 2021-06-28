@@ -3659,7 +3659,6 @@ class section extends common {
 				return $current_item;
 			})($tipo, $section_tipo, $section_id, $lang, $id, $timestamp);
 
-
 		// user_id
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $user_id) {
 
