@@ -248,6 +248,8 @@ function process_topo() {
 		// $response->result 	= true;
 		// $response->msg 		= 'Removed session sum_total: '.$dato;
 
+		$response->msg = $strQuery;
+
 	
 
 
