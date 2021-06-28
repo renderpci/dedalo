@@ -93,7 +93,8 @@ tool_common.prototype.build = async function(autoload=false) {
 						section_id		: self.tool_section_id,
 						mode			: 'edit',
 						lang			: 'lg-nolan'
-					}
+					},
+					prevent_lock : true
 				}
 
 			// load data. Load section data from db of the current tool.
