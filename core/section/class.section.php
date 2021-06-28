@@ -3588,6 +3588,8 @@ class section extends common {
 		$data = [];
 
 		$current_record = $this->get_record();
+
+		$source_model	= get_called_class();
 		
 		// subdata time machine
 			$section_id		= $current_record->section_id;
@@ -3598,34 +3600,26 @@ class section extends common {
 			$timestamp		= $current_record->timestamp;
 			$user_id		= $current_record->userID;
 			$component_dato	= $current_record->dato;
+		
+		// matrix ID
+			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id) {			
 
-		// component. Data of actual component to show in section list
-			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $component_dato) {
-
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $tipo,
-																 $section_id,
-																 'list',
-																 $lang,
-																 $section_tipo);				
-				$component->set_dato($component_dato); // inject dato from time machine record
-
-				// get component json
-					$get_json_options = new stdClass();
-						$get_json_options->get_context	= false;
-						$get_json_options->get_data		= true;
-					$element_json = $component->get_json($get_json_options);
-
-				// edit section_id to match section locator data item
-					$current_item = reset($element_json->data);
-					if (!empty($current_item)) {
-						$current_item->matrix_id = $id;						
-					}			
-
+				$fake_tipo = 'dd784'; // fake tipo from projects, only used to allow get tm column id data
+				$current_item = (object)[
+					'section_id'			=> $section_id,
+					'section_tipo'			=> $section_tipo,
+					'tipo'					=> $fake_tipo,  // fake tipo only used to match ddo with data
+					'lang'					=> DEDALO_DATA_NOLAN,
+					'from_component_tipo'	=> $fake_tipo,  // fake tipo only used to match ddo with data
+					'value'					=> $id,
+					'debug_model'			=> 'component_section_id',
+					'debug_label'			=> 'matrix ID',
+					'debug_mode'			=> 'list',
+					'matrix_id'				=> $id
+				];
+				
 				return $current_item;
-			})($tipo, $section_tipo, $section_id, $lang, $id, $component_dato);
-			
+			})($tipo, $section_tipo, $section_id, $lang, $id);			
 
 		// timestamp
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $timestamp) {
@@ -3691,28 +3685,55 @@ class section extends common {
 				
 				return $current_item;
 			})($tipo, $section_tipo, $section_id, $lang, $id, $user_id);
-
-
-		// matrix ID
-			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id) {			
-
-				$current_item = (object)[
-					'section_id'			=> $section_id,
-					'section_tipo'			=> $section_tipo,
-					'tipo'					=> 'section_id_tipo',  // fake tipo only used to match ddo with data
-					'lang'					=> DEDALO_DATA_NOLAN,
-					'from_component_tipo'	=> 'section_id_tipo',  // fake tipo only used to match ddo with data
-					'value'					=> $id,
-					'debug_model'			=> 'component_section_id',
-					'debug_label'			=> 'matrix ID',
-					'debug_mode'			=> 'list',
-					'matrix_id'				=> $id
-				];
-				
-				return $current_item;
-			})($tipo, $section_tipo, $section_id, $lang, $id);
 		
-		
+		// component. Data of actual component to show in section list
+			// $data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $component_dato) {
+
+			// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			// 	$component 		= component_common::get_instance($modelo_name,
+			// 													 $tipo,
+			// 													 $section_id,
+			// 													 'list',
+			// 													 $lang,
+			// 													 $section_tipo);				
+			// 	$component->set_dato($component_dato); // inject dato from time machine record
+
+			// 	// get component json
+			// 		$get_json_options = new stdClass();
+			// 			$get_json_options->get_context	= false;
+			// 			$get_json_options->get_data		= true;
+			// 		$element_json = $component->get_json($get_json_options);
+
+			// 	// edit section_id to match section locator data item
+			// 		$current_item = reset($element_json->data);
+			// 		if (!empty($current_item)) {
+			// 			$current_item->matrix_id = $id;						
+			// 		}			
+
+			// 	return $current_item;
+			// })($tipo, $section_tipo, $section_id, $lang, $id, $component_dato);
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$mode			= 'list';
+			$element_json	= $this->build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $component_dato);
+			$component_data	= array_map(function($value_obj) use($id){
+				// $value_obj->row_section_id	= $section_id; // they are not necessary here !
+				// $value_obj->parent_tipo		= $this->tipo; // they are not necessary here !
+				$value_obj->matrix_id			= $id; // (!) needed to match context and data in tm mode section
+
+				return $value_obj;
+			}, $element_json->data);
+
+			// dd_info, additional information to the component, like parents
+				// $value_with_parents = $dd_object->value_with_parents ?? false;
+				// if ($value_with_parents===true) {
+				// 	$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
+				// 	$ar_final_subdata[] = $dd_info;
+				// }
+
+		// data add
+			$data = array_merge($data, $component_data);
+
+
 		return $data;
 	}//end get_tm_ar_subdata
 

@@ -216,7 +216,7 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// filter search
-		if (!self.filter) {
+		if (self.mode!=='tm' && !self.filter) {
 			self.filter = new search()
 			self.filter.init({
 				caller	: self,

@@ -2116,6 +2116,52 @@ abstract class common {
 
 
 	/**
+	* BUILD_COMPONENT_SUBDATA
+	* @return object $element_json
+	*/
+	public function build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $dato=null) {
+
+		// components
+			$current_component  = component_common::get_instance($model,
+																 $tipo,
+																 $section_id,
+																 $mode,
+																 $lang,
+																 $section_tipo);
+		// properties
+			// if (isset($dd_object->properties)){
+			// 	$current_component->set_properties($dd_object->properties);
+			// }
+		// Inject this tipo as related component from_component_tipo
+			if (strpos($source_model, 'component_')===0){
+				$current_component->from_component_tipo = $this->tipo;
+				$current_component->from_section_tipo 	= $this->section_tipo;
+			}
+
+		// inject dato if is received
+			if (!empty($dato)) {
+				$current_component->set_dato($dato);
+			}
+
+		// get component json
+			$get_json_options = new stdClass();
+				$get_json_options->get_context 	= false;
+				$get_json_options->get_data 	= true;
+			$element_json = $current_component->get_json($get_json_options);
+
+		// dd_info, additional information to the component, like parents
+			// $value_with_parents = $dd_object->value_with_parents ?? false;
+			// if ($value_with_parents===true) {
+			// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
+			// 	$ar_subdata[] = $dd_info;
+			// }
+
+		return $element_json;
+	}//end build_component_subdata
+
+
+
+	/**
 	* BUILD_RERQUEST_CONFIG
 	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
 	* The search_query_object_context (request_config) have at least:
