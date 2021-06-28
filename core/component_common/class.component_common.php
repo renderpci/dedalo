@@ -116,6 +116,8 @@ abstract class component_common extends common {
 			}
 			if (strpos($component_name, 'component_')!==0) {
 				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace();
+					dump($bt, ' bt ++ '.to_string($tipo));
 					throw new Exception("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__, 1);
 				}
 				return null;
