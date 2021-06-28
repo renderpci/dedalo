@@ -57,7 +57,7 @@ export const tool_time_machine = function () {
 * INIT
 */
 tool_time_machine.prototype.init = async function(options) {
-	console.log("options:",options);
+	
 	const self = this
 
 	// fix dedalo_projects_langs
@@ -159,10 +159,14 @@ tool_time_machine.prototype.load_section = async function() {
 
 	// component rqo_config_show
 		const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-			? component.rqo_config.show.ddo_map
+			? JSON.parse( JSON.stringify(component.rqo_config.show.ddo_map) )
 			: null
 		if (component_show) {
-			ddo_map.push(...component_show)
+			for (let i = 0; i < component_show.length; i++) {
+				const item = component_show[i]
+					  // item.mode = 'tm'
+				ddo_map.push(item)
+			}
 		}
 	// 	console.log("component.rqo_config:",component.rqo_config);
 	// 	console.log("ddo_map:",ddo_map);
@@ -202,7 +206,7 @@ tool_time_machine.prototype.load_section = async function() {
 			tipo			: section_tipo,
 			section_tipo	: section_tipo,
 			lang			: lang,
-			mode			: 'list',
+			mode			: 'tm',
 			model			: 'section',
 			parent			: section_tipo,
 			request_config	: request_config
