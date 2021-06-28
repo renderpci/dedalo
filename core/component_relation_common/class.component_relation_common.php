@@ -1058,6 +1058,7 @@ class component_relation_common extends component_common {
 						$locator = new locator();
 							$locator->set_section_id($current_locator->section_id);
 							$locator->set_section_tipo($current_locator->section_tipo);
+							// $locator->set_from_component_tipo($component_to_search_tipo);
 						break; // Only first is allowed
 					}
 
@@ -1082,9 +1083,11 @@ class component_relation_common extends component_common {
 			}else{
 				// default normal case
 				// locator . get the locator of the current section for search in the component that call this section
+					$component_to_search = is_array($ar_component_to_search) ? reset($ar_component_to_search) : $ar_component_to_search;
 					$locator = new locator();
 						$locator->set_section_id($section_id);
 						$locator->set_section_tipo($section_tipo);
+						$locator->set_from_component_tipo($component_to_search);
 			}
 
 		// new dato
@@ -1117,12 +1120,30 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 			$new_dato[] = $locator;
-			$ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
+			
+		// get the inverse references
+			//old way done in relations table
+			// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
+			//new way done in relations field
+			$result = search::calculate_inverse_locators( $locator );
+			$component_tipo = $this->get_tipo();
+
+			$ar_result = [];
+			foreach ($result as $key => $inverse_locator) {
+
+				$current_locator = new locator();
+					$current_locator->set_section_tipo($inverse_locator->from_section_tipo);
+				 	$current_locator->set_section_id($inverse_locator->from_section_id);
+				 	$current_locator->set_type($inverse_locator->type);
+				 	$current_locator->set_from_component_tipo($component_tipo);
+
+				$ar_result[] = $current_locator;
+			}
 
 			$total_ar_result = count($ar_result);
 			$total_ar_dato   = count($dato);
 
-			if ($total_ar_result>1000) {
+			if ($total_ar_result>2000) {
 				# Not maintain order, is too expensive above 1000 locators
 				if ($total_ar_dato!==$total_ar_result) {
 					$changed = false; // avoid expensive save
