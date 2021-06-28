@@ -193,8 +193,7 @@ const content_data_edit = async function(self) {
 * ADD_COMPONENT
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
-	return true
-
+	
 	// user select blank lang_value case
 		if (!lang_value) {
 			while (component_container.firstChild) {

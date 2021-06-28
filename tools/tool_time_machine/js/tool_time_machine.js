@@ -57,7 +57,7 @@ export const tool_time_machine = function () {
 * INIT
 */
 tool_time_machine.prototype.init = async function(options) {
-
+	console.log("options:",options);
 	const self = this
 
 	// fix dedalo_projects_langs
@@ -119,14 +119,17 @@ tool_time_machine.prototype.load_section = async function() {
 		const section_tipo		= component.section_tipo
 		const section_id		= component.section_id
 		const lang				= component.lang
+		const model				= component.model
+		const label				= component.label
 
 	// ddo_map
 		const ddo_map = [
 			//  matrix id
 			{
-				tipo			: 'section_id_tipo', // fake tipo only used to match ddo with data,
+				tipo			: 'dd784', // fake tipo from projects, only used to allow get tm column id data,
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
+				label			: 'Matrix id',
 				mode			: 'list'
 			},
 			// modification date DEDALO_SECTION_INFO_MODIFIED_DATE dd201
@@ -147,6 +150,8 @@ tool_time_machine.prototype.load_section = async function() {
 			{
 				tipo			: component_tipo,
 				section_tipo	: section_tipo,
+				model			: model,
+				label			: label,
 				parent			: section_tipo,
 				mode			: 'list'
 			}
@@ -170,8 +175,8 @@ tool_time_machine.prototype.load_section = async function() {
 			filter_by_locators	: [{
 				section_tipo	: section_tipo,
 				section_id		: section_id,
-				// tipo			: component_tipo,
-				// lang			: lang
+				tipo			: component_tipo, // (!) used only in time machine to filter by column tipo
+				lang			: lang // (!) used only in time machine to filter by column lang
 			}],
 			limit				: 10,
 			offset				: 0,
