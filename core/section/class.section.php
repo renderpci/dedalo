@@ -3350,7 +3350,6 @@ class section extends common {
 		// section self
 			$context[] = $this->get_structure_context($permissions, $add_rqo=true);
 
-
 		// fixed columns
 			// ddo matrix id
 			$context[] = (object)[
@@ -3387,7 +3386,7 @@ class section extends common {
 			];
 
 		// component
-			$context[] = (function($tipo, $section_tipo, $lang) {
+			$component_context = (function($tipo, $section_tipo, $lang) {
 
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
@@ -3403,10 +3402,14 @@ class section extends common {
 					$element_json = $component->get_json($get_json_options);
 
 				// edit section_id to match section locator data item
-					$current_item = reset($element_json->context);
+					$current_item_context = $element_json->context;
 
-				return $current_item;
+
+
+				return $current_item_context;
 			})($component_tipo, $this->tipo, $component_lang);
+
+			$context = array_merge($context, $component_context);
 
 		/* OLD
 			$dd_request = dd_core_api::$dd_request; // $this->dd_request

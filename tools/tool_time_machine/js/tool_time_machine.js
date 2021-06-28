@@ -152,15 +152,15 @@ tool_time_machine.prototype.load_section = async function() {
 			}
 		]
 
-	// component rqo_config_show
-		const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-			? component.rqo_config.show.ddo_map
-			: null
-		if (component_show) {
-			ddo_map.push(...component_show)
-		}
-		console.log("component.rqo_config:",component.rqo_config);
-		console.log("ddo_map:",ddo_map);
+	// // component rqo_config_show
+	// 	const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
+	// 		? component.rqo_config.show.ddo_map
+	// 		: null
+	// 	if (component_show) {
+	// 		ddo_map.push(...component_show)
+	// 	}
+	// 	console.log("component.rqo_config:",component.rqo_config);
+	// 	console.log("ddo_map:",ddo_map);
 
 	// sqo
 		const sqo = {
@@ -170,8 +170,8 @@ tool_time_machine.prototype.load_section = async function() {
 			filter_by_locators	: [{
 				section_tipo	: section_tipo,
 				section_id		: section_id,
-				tipo			: component_tipo,
-				lang			: lang
+				// tipo			: component_tipo,
+				// lang			: lang
 			}],
 			limit				: 10,
 			offset				: 0,

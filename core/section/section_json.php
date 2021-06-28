@@ -23,7 +23,7 @@
 
 			default:
 				
-				if ($modo==='tm') {
+				if ($modo==='tm99') {
 					// Component structure context (tipo, relations, properties, etc.)
 						$context = $this->get_tm_context($permissions);
 					

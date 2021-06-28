@@ -1766,13 +1766,12 @@ abstract class common {
 			}
 
 			foreach($request_config_item->show->ddo_map as $dd_object) {
-
 				// prevent resolve non children from path ddo
 					if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
 						// dump($dd_object, ' dd_object SKIP dd_object ++ '.to_string($this->tipo));
 						continue;
 					}
-				
+			
 				// short vars
 					$current_tipo				= $dd_object->tipo;
 					$ar_current_section_tipo	= $dd_object->section_tipo ?? $dd_object->tipo;
@@ -2220,7 +2219,7 @@ abstract class common {
 
 				// merge ddo elements
 					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $request_config->show->ddo_map);
-
+	dump($this->request_config, ' this->request_config +--------------------------------+ '.to_string());
 				return $this->request_config; // we have finished ! Note we stop here (!)
 			}//end if (!empty($requested_show))
 		}//end if(!empty($requested_show))

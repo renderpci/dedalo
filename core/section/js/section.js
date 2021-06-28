@@ -208,6 +208,8 @@ section.prototype.build = async function(autoload=false) {
 		}
 		await generate_rqo()
 
+
+
 	// debug check
 		if(SHOW_DEBUG===true) {
 			// console.log("SECTION self.rqo before load:", JSON.parse( JSON.stringify(self.rqo) ) );
@@ -228,6 +230,8 @@ section.prototype.build = async function(autoload=false) {
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
+
+				console.log("api_response----------section:",api_response.result);
 
 			// set the result to the datum
 				self.datum = api_response.result
