@@ -230,8 +230,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
-
-				console.log("api_response----------section:",api_response.result);
+					console.log("SECTION api_response:", self.id, api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -255,8 +254,9 @@ section.prototype.build = async function(autoload=false) {
 					delete count_sqo.select
 					delete count_sqo.generated_time
 					const rqo_count = {
-						action	: 'count',
-						sqo		: count_sqo
+						action			: 'count',
+						sqo				: count_sqo,
+						prevent_lock	: true
 					}
 					const api_count_response = await current_data_manager.request({body:rqo_count})
 					self.total = api_count_response.result.total

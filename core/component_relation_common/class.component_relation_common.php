@@ -133,7 +133,6 @@ class component_relation_common extends component_common {
 				$dato_tm = component_common::get_component_tm_dato($this->tipo, $this->section_tipo, $this->matrix_id);
 				// inject dato to component
 				$this->dato_resolved = $dato_tm;
-
 				return $this->dato_resolved;
 			}
 

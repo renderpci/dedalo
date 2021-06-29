@@ -165,9 +165,12 @@ const content_data_edit = async function(self) {
 		// })
 
 	// section list
-		const section		= await self.load_section()
+		// const section		= await self.load_section()
+		// const section_node	= await section.render()
+		// fragment.appendChild(section_node)
+		const section		= await self.section
 		const section_node	= await section.render()
-		fragment.appendChild(section_node)
+		fragment.appendChild(section_node)		
 
 
 	// buttons container
@@ -193,8 +196,7 @@ const content_data_edit = async function(self) {
 * ADD_COMPONENT
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
-	return
-
+	
 	// user select blank lang_value case
 		if (!lang_value) {
 			while (component_container.firstChild) {
