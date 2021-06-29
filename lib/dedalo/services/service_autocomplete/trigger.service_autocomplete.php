@@ -6,8 +6,6 @@ common::trigger_manager();
 
 
 
-
-
 /**
 * AUTOCOMPLETE_SEARCH
 * Get list of mathed DB results for current string by ajax call
@@ -76,6 +74,3 @@ function autocomplete_search($json_data) {
 }//end function autocomplete_search')
 
 
-
-
-?>

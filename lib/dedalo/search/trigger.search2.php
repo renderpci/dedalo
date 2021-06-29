@@ -553,6 +553,3 @@ function load_temp_filter($json_data) {
 }//end load_temp_filter
 
 
-
-
-?>

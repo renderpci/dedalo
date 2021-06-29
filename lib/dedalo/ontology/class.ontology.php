@@ -299,7 +299,6 @@ class ontology {
 
 
 
-
 	/**
 	* GET_CHILDREN_RECURSIVE . TS TREE FULL FROM PARENT
 	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group
