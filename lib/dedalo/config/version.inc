@@ -2419,6 +2419,8 @@
 		Removed legacy ontology menu links
 		22-06-2021
 		Fixed tool time machine error in list mode
+		29-06-2021
+		Optimized concurrent calls to Ontology trigger
 		
 
 
@@ -2451,7 +2453,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-06-2021-b');
+	define('DEDALO_BUILD'	, '29-06-2021-a');
 
 
 	/*

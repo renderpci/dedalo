@@ -1,4 +1,7 @@
- <?php
+<?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
 $start_time=microtime(1);
 include( dirname(dirname(dirname(__FILE__))).'/config/config4.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data

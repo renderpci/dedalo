@@ -1,4 +1,8 @@
 <?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
+
 // ontology custon config file
 include_once( dirname(__FILE__) .'/config/config_ontology.php' );
 

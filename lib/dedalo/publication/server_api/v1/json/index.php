@@ -15,6 +15,12 @@
 */
 
 
+
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
+
+
 // debug
 	#error_log(print_r($_REQUEST,true));
 	#error_log(print_r(file_get_contents('php://input'),true));
@@ -121,6 +127,10 @@
 	if ($dedalo_get!==false && is_object($options)) {
 		$options->dedalo_get = $dedalo_get;
 	}
+
+
+// unlock session lock
+	session_write_close();
 
 
 

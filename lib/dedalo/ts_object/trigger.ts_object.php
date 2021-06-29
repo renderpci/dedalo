@@ -1,4 +1,7 @@
 <?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
 $start_time=microtime(1);
 include( dirname(dirname(__FILE__)).'/config/config4.php');
 include(DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php');
@@ -24,6 +27,8 @@ ignore_user_abort(true);
 */
 function get_childrens_data($json_data) {
 	global $start_time;
+
+	session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
@@ -523,6 +528,8 @@ function update_parent_data($json_data) {
 */
 function show_indexations($json_data) {
 	global $start_time;
+
+	session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;

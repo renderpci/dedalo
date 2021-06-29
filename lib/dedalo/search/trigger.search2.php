@@ -1,4 +1,7 @@
 <?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
 $start_time=microtime(1);
 include( dirname(dirname(__FILE__)).'/config/config4.php');
 
@@ -69,6 +72,8 @@ function get_components_from_section($json_data) {
 */
 function load_components($json_data) {
 	global $start_time;
+
+	session_write_close();
 	
 	$response = new stdClass();
 		$response->result 	= false;
@@ -163,6 +168,8 @@ function load_components($json_data) {
 */
 function get_component_presets($json_data) {
 	global $start_time;
+
+	session_write_close();
 	
 	$response = new stdClass();
 		$response->result 	= false;
@@ -216,7 +223,7 @@ function get_component_presets($json_data) {
 function save_preset($json_data) {
 	global $start_time;
 
-	session_write_close();
+	// session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
@@ -355,7 +362,7 @@ function save_preset($json_data) {
 function delete_preset($json_data) {
 	global $start_time;
 
-	session_write_close();
+	// session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
