@@ -1914,6 +1914,8 @@ abstract class common {
 			$ar_ddo = array_filter($all_ar_ddo, function($el){
 				return $el->parent===$this->tipo;
 			});
+				// dump($ar_ddo, ' ar_ddo ++ '.to_string($this->tipo));
+				// dump($ar_locators, '$ar_locators ++ '.to_string());
 
 		// des
 			// dump($context_dd_objects, ' context_dd_objects ++ '.to_string());			
@@ -2120,7 +2122,7 @@ abstract class common {
 	* BUILD_COMPONENT_SUBDATA
 	* @return object $element_json
 	*/
-	public function build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $dato=null) {
+	public function build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $custom_dato='no_value') {
 
 		// components
 			$current_component  = component_common::get_instance($model,
@@ -2140,8 +2142,8 @@ abstract class common {
 			}
 
 		// inject dato if is received
-			if (!empty($dato)) {
-				$current_component->set_dato($dato);
+			if ($custom_dato!=='no_value') {
+				$current_component->set_dato($custom_dato);
 			}
 
 		// get component json
@@ -2156,6 +2158,9 @@ abstract class common {
 			// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
 			// 	$ar_subdata[] = $dd_info;
 			// }
+		
+
+		// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
 
 		return $element_json;
 	}//end build_component_subdata
@@ -2184,7 +2189,7 @@ abstract class common {
 		}
 		
 		$requested_source = dd_core_api::$rqo->source ?? false;		
-		if($requested_source) {
+		if($requested_source) { // && $requested_source->tipo===$this->tipo
 			
 			// set the request_config with the API rqo sended by client
 				
@@ -2234,6 +2239,7 @@ abstract class common {
 				// merge ddo elements
 					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $request_config->show->ddo_map);
 					// dump($this->request_config, ' this->request_config +--------------------------------+ '.to_string($this->tipo));
+					// dump(dd_core_api::$ddo_map, 'dd_core_api::$ddo_map ++ '.to_string());
 				
 				return $this->request_config; // we have finished ! Note we stop here (!)
 			}//end if (!empty($requested_show))

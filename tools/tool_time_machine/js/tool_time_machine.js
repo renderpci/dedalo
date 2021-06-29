@@ -30,7 +30,8 @@ export const tool_time_machine = function () {
 	this.type
 
 	this.caller
-	this.section_tm
+	// this.section_tm
+	this.section // custom section generated in tm mode on build
 	this.button_apply
 	this.selected_matrix_id
 	this.trigger_url
@@ -57,7 +58,7 @@ export const tool_time_machine = function () {
 * INIT
 */
 tool_time_machine.prototype.init = async function(options) {
-	console.log("options:",options);
+	
 	const self = this
 
 	// fix dedalo_projects_langs
@@ -68,14 +69,16 @@ tool_time_machine.prototype.init = async function(options) {
 
 	// events subscribe
 		self.events_tokens.push(
-			// user click over list record
+			// user click over list record eye icon
 			event_manager.subscribe('tm_edit_record', async (e)=>{
+				const matrix_id = e.matrix_id
 				// render. Create and add new component to preview container
-				add_component(self, self.preview_component_container, self.lang, e.date, 'tm', e.matrix_id)
+				const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
+				add_component(self, self.preview_component_container, self.lang, e.date, load_mode, matrix_id)				
+				// fix selected matrix_id
+				self.selected_matrix_id = matrix_id
 				// show Appy button
 				self.button_apply.classList.remove('hide')
-				// fix selected matrix_id
-				self.selected_matrix_id = e.matrix_id
 			})
 		)
 
@@ -95,6 +98,8 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	self.section = self.load_section() // don't wait here
+
 	// call generic commom tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
 
@@ -106,13 +111,16 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 /**
 * LOAD_SECTION
+* Build a new section custom request config based on current component requirements
+* Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
+* Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
 */
 tool_time_machine.prototype.load_section = async function() {
 
 	const self = this	
 
-	const component = self.caller
-		console.log("component +++++++++++++++++++++++++++++++++++:",component);
+	// caller component
+		const component = self.caller
 	
 	// short vars
 		const component_tipo	= component.tipo
@@ -146,7 +154,7 @@ tool_time_machine.prototype.load_section = async function() {
 				parent			: section_tipo,
 				mode			: 'list'
 			},
-			// component itself
+			// component itself. Remember add component show y exists (portals) to ddo_map
 			{
 				tipo			: component_tipo,
 				section_tipo	: section_tipo,
@@ -156,16 +164,17 @@ tool_time_machine.prototype.load_section = async function() {
 				mode			: 'list'
 			}
 		]
-
-	// component rqo_config_show
-		const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-			? component.rqo_config.show.ddo_map
-			: null
-		if (component_show) {
-			ddo_map.push(...component_show)
-		}
-	// 	console.log("component.rqo_config:",component.rqo_config);
-	// 	console.log("ddo_map:",ddo_map);
+		// component show . From rqo_config_show
+			const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
+				? JSON.parse( JSON.stringify(component.rqo_config.show.ddo_map) )
+				: null
+			if (component_show) {
+				for (let i = 0; i < component_show.length; i++) {
+					const item = component_show[i]
+						  item.mode = 'list'
+					ddo_map.push(item)
+				}
+			}
 
 	// sqo
 		const sqo = {
@@ -202,7 +211,7 @@ tool_time_machine.prototype.load_section = async function() {
 			tipo			: section_tipo,
 			section_tipo	: section_tipo,
 			lang			: lang,
-			mode			: 'list',
+			mode			: 'tm',
 			model			: 'section',
 			parent			: section_tipo,
 			request_config	: request_config
@@ -224,25 +233,12 @@ tool_time_machine.prototype.load_section = async function() {
 	// init section instance
 		const section = await get_instance(instance_options)
 
-	// inject custom rqo (it's no longer necessary !)
-		// const source						= create_source(section, 'search');
-		// section.rqo_config					= JSON.parse( JSON.stringify(request_config[0]) )
-		// section.rqo_config.sqo.section_tipo	= section.rqo_config.sqo.section_tipo.map(el=>el.tipo)
-		// section.rqo_config.show.columns		= get_ar_inverted_paths(ddo_map)
-		// section.rqo		= {
-		// 	id			: section.id,
-		// 	action		: 'read',
-		// 	source		: source,
-		// 	show		: section.rqo_config.show,
-		// 	sqo			: section.rqo_config.sqo
-		// }
-
 	// build section with autoload as true
 		await section.build(true)
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[tool_time_machine.load_section] section:", section);
+			// console.log("[tool_time_machine.load_section] section:", section);
 		}
 
 	// add to self instances list
@@ -259,13 +255,15 @@ tool_time_machine.prototype.load_section = async function() {
 * Loads component to place in respective containers: current preview and preview version
 */
 tool_time_machine.prototype.load_component = async function(lang, mode, matrix_id=null) {
+	// console.log("load_component:",lang, mode, matrix_id);
 
 	const self = this
 
-	const component	= self.caller
-	// const source	= create_source(component, 'get_data')
-	// const context	= JSON.parse(JSON.stringify(component.context))
-		  // context.request_config = [source]
+	// source component (is the caller)
+		const component	= self.caller
+		// const source	= create_source(component, 'get_data')
+		// const context	= JSON.parse(JSON.stringify(component.context))
+			  // context.request_config = [source]
 
 	// short vars
 		const model				= component.model
@@ -275,7 +273,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		const section_lang		= component.section_lang
 		const type				= component.type
 	
-	console.log("-> component:",component, mode, matrix_id);
+	// console.log("-> tool_time_machine load_component component:", component);
 	
 	// request_config
 		const request_config = component.context.request_config
@@ -295,7 +293,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 			request_config	: request_config
 		}
 
-	console.log("-> context:",context);
+	// console.log("-> tool_time_machine load_component context:",context);
 
 	// component instance_options
 		const instance_options = {
@@ -303,7 +301,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 			tipo			: component_tipo,
 			section_tipo	: section_tipo,
 			section_id		: section_id,
-			mode			: mode, // component.mode==='edit_in_list' ? 'edit' : component.mode,
+			mode			: mode,
 			lang			: lang,
 			section_lang	: section_lang,
 			//parent		: component.parent,
@@ -328,9 +326,9 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 
 		await component_instance.build(true)
 
-		console.log("-> new component_instance:",component_instance);
+		// console.log("-> tool_time_machine load_component new component_instance:", component_instance);
 
-	// add created component instance to current ar_instances
+	// add created component instance to current ar_instances if not already added
 		const instance_found = self.ar_instances.find( el => el===component_instance )
 		if (component_instance!==self.caller && typeof instance_found==="undefined") {
 			self.ar_instances.push(component_instance)

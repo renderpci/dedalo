@@ -24,18 +24,18 @@ class section extends common {
 		protected $modo;
 
 		# STRUCTURE DATA
-		protected $modelo ;
-		protected $label ;
+		protected $modelo;
+		protected $label;
 
 		# Buttons objs
-		public $ar_buttons ;
+		public $ar_buttons;
 
 		public $ar_all_project_langs;
 
 		public $show_inspector = true;			# default show: true
 
-		public $section_virtual 	 = false;
-		public $section_real_tipo ;
+		public $section_virtual = false;
+		public $section_real_tipo;
 
 		static $active_section_id;
 
@@ -3715,10 +3715,10 @@ class section extends common {
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$mode			= 'list';
 			$element_json	= $this->build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $component_dato);
-			$component_data	= array_map(function($value_obj) use($id){
+			$component_data	= array_map(function($value_obj) use($id, $section_id){
 				// $value_obj->row_section_id	= $section_id; // they are not necessary here !
 				// $value_obj->parent_tipo		= $this->tipo; // they are not necessary here !
-				$value_obj->matrix_id			= $id; // (!) needed to match context and data in tm mode section
+				$value_obj->matrix_id		= $id; // (!) needed to match context and data in tm mode section
 
 				return $value_obj;
 			}, $element_json->data);
@@ -3732,7 +3732,7 @@ class section extends common {
 
 		// data add
 			$data = array_merge($data, $component_data);
-
+				// dump($data, ' data ++++++++++++++++++++ '.to_string($id));
 
 		return $data;
 	}//end get_tm_ar_subdata

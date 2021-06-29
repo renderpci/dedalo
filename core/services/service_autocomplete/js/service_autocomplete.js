@@ -1007,7 +1007,7 @@ export const service_autocomplete = function() {
 	*/
 	this.dedalo_engine = async function(options) {
 
-		const rqo 	= await options.rqo
+		const rqo = await options.rqo
 			  rqo.prevent_lock = true
 
 		if(SHOW_DEBUG===true) {
