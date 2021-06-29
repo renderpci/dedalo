@@ -98,6 +98,8 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	self.section = self.load_section() // don't wait here
+
 	// call generic commom tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
 
@@ -109,13 +111,16 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 /**
 * LOAD_SECTION
+* Build a new section custom request config based on current component requirements
+* Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
+* Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
 */
 tool_time_machine.prototype.load_section = async function() {
 
 	const self = this	
 
-	const component = self.caller
-		console.log("component +++++++++++++++++++++++++++++++++++:",component);
+	// caller component
+		const component = self.caller
 	
 	// short vars
 		const component_tipo	= component.tipo
