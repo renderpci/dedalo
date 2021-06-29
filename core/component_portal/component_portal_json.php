@@ -42,6 +42,8 @@
 		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 	}//end if($options->get_context===true)
 
+
+
 // data
 	$data = [];
 
@@ -60,6 +62,7 @@
 		}
 
 		$dato = $this->get_dato();
+			// dump($dato, ' dato ++ '.to_string("$this->tipo - $this->section_tipo - $this->section_id - $this->modo"));
 
 		switch ($modo) {
 			case 'list':
@@ -96,6 +99,7 @@
 
 			// subdata from subcontext items
 				$ar_subdata = $this->get_ar_subdata($value);
+
 				// if ($modo==='list') {
 					foreach ($ar_subdata as $current_data) {
 

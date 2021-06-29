@@ -732,6 +732,10 @@ component_common.prototype.get_ar_instances = async function(){
 					instance_options.id_variant = self.id_variant
 				}
 
+				if (self.matrix_id) {
+					instance_options.matrix_id = self.matrix_id
+				}
+
 			// section_record instance
 				const current_section_record = await instances.get_instance(instance_options)
 				await current_section_record.build()

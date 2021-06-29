@@ -195,6 +195,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
+					console.log("COMPONENT PORTAL api_response:",self.id, api_response);
 
 			// set context and data to current instance
 				self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
@@ -283,7 +284,7 @@ component_portal.prototype.build = async function(autoload=false){
 		// self.target_section = self.rqo.sqo.section_tipo
 
 	// columns
-		if(self.mode === 'edit' || self.mode === 'search'){
+		if(self.mode!=='list'){
 			self.columns = self.get_columns()
 		}
 

@@ -156,7 +156,7 @@ search.prototype.build = async function(){
 				const editing_preset = await current_data_manager.request({
 					body : {
 						action				: "filter_get_editing_preset",
-						target_section_tipo	: self.section_tipo,
+						target_section_tipo	: self.section_tipo
 					}
 				})
 
