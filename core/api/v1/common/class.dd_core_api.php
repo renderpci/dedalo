@@ -320,12 +320,12 @@ class dd_core_api {
 					$element = section::get_instance(null, $section_tipo);
 					break;
 
-				case $model==='section_tm':
-					$section_id 	= $source->section_id;
-					$element 		= section_tm::get_instance($section_id, $section_tipo);
-					// set rqo (source)
-					$element->set_rqo([$source]); // inject whole source
-					break;
+				// case $model==='section_tm':
+				// 	$section_id 	= $source->section_id;
+				// 	$element 		= section_tm::get_instance($section_id, $section_tipo);
+				// 	// set rqo (source)
+				// 	$element->set_rqo([$source]); // inject whole source
+				// 	break;
 
 				case strpos($model, 'area')===0:
 					$element = area::get_instance($model, $tipo, $mode);

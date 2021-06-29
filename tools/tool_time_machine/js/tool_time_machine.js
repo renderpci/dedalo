@@ -228,25 +228,12 @@ tool_time_machine.prototype.load_section = async function() {
 	// init section instance
 		const section = await get_instance(instance_options)
 
-	// inject custom rqo (it's no longer necessary !)
-		// const source						= create_source(section, 'search');
-		// section.rqo_config					= JSON.parse( JSON.stringify(request_config[0]) )
-		// section.rqo_config.sqo.section_tipo	= section.rqo_config.sqo.section_tipo.map(el=>el.tipo)
-		// section.rqo_config.show.columns		= get_ar_inverted_paths(ddo_map)
-		// section.rqo		= {
-		// 	id			: section.id,
-		// 	action		: 'read',
-		// 	source		: source,
-		// 	show		: section.rqo_config.show,
-		// 	sqo			: section.rqo_config.sqo
-		// }
-
 	// build section with autoload as true
 		await section.build(true)
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[tool_time_machine.load_section] section:", section);
+			// console.log("[tool_time_machine.load_section] section:", section);
 		}
 
 	// add to self instances list
