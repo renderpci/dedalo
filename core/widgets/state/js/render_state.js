@@ -147,6 +147,7 @@ const get_value_element = (i, data, values_container, self) => {
 					inner_html 		: output_item.id,
 					parent 			: container
 				})
+					console.log("data:",data);
 			// Situation
 				// check if the component is translatable, with the first item in the data of the current column
 				const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
@@ -158,6 +159,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const situation_total = data.find(item => item.id === output_item.id
 														&& item.column === 'situation'
 														&& item.type ==='total')
+
 				// node for the colum situation
 				const situation = ui.create_dom_element({
 					element_type 	: 'div',

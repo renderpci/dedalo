@@ -56,6 +56,11 @@ class state extends widget_common {
 				// get the last path, this will be the component the call to the list (select / radio_button)
 				$last_path		= end($path);
 
+				// change the section_tipo in the path when the caller is inside a virtual section_tipo as resources sections.
+				foreach ($path as $current_path) {
+					$current_path->section_tipo = ($current_path->section_tipo === 'self') ? $section_tipo : $current_path->section_tipo;
+				}
+
 				// resolve the path with all levels and get the data of the final component.
 				$data_with_path = search::get_data_with_path($path, $ar_locator);
 
@@ -80,7 +85,7 @@ class state extends widget_common {
 					$current_result = new stdClass();
 						$label_component = ($section==='dd501') ? 'dd503' :'dd185';
 
-						$current_result->label 		= $this->get_label($locator, $label_component);;
+						$current_result->label 		= $this->get_label($locator, $label_component);
 						$current_result->value 		= 0;
 						$current_result->locator	= null;
 						$current_result->lang 		= $translatable === 'si' ? null : 'lg-nolan';
@@ -134,9 +139,10 @@ class state extends widget_common {
 				$ar_sum = [];
 				// get the current row id and the items into the $result
 				$current_id = $data_map->id;
-				$found = array_filter($result,function($item) use($current_id){
+				$found = array_values( array_filter($result,function($item) use($current_id){
 					return $item->id===$current_id;
-				});
+				}));
+
 				// create the final item for every column to set the final data.
 				foreach ($found as $item) {
 					$current_data = new stdClass();
@@ -154,11 +160,13 @@ class state extends widget_common {
 						$current_total = $ar_sum[$item->column]->total ?? 0;
 						$ar_sum[$item->column] = (object)[
 							'total'  	=> $current_total += (int)$item->value,
-							'n'			=> $item->n
+							'n'			=> $item->n,
+							'id' 		=> $item->id
 						];
 					// set the final data to the widget
 					$dato[] = $current_data;
 				}
+
 				// get the total nodes for every column and row with the total % of the process
 				foreach ($ar_sum as $column => $value) {
 					// get the statistic % of the sum of the all languages / by the number of project langs
@@ -167,7 +175,7 @@ class state extends widget_common {
 					$total_result = new stdClass();
 						$total_result->widget 	= get_class($this);
 						$total_result->key  	= $key;
-						$total_result->id		= $last_path->var_name;
+						$total_result->id		= $value->id;
 						$total_result->lang 	= 'lg-nolan';
 						$total_result->value 	= $total;
 						$total_result->column	= $column;
@@ -242,7 +250,7 @@ class state extends widget_common {
 			foreach ($ar_paths as $path) {
 				// get the last path, it point to the list
 				$last_path		= end($path);
-				$section_tipo 	= $last_path->section_tipo;
+				$section_tipo 	= (isset($last_path->section_tipo)) ? $last_path->section_tipo : $this->section_tipo;
 				$component_tipo = $last_path->component_tipo;
 				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				// create the component without any section_id, we only want the list fo values.

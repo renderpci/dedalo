@@ -1123,7 +1123,7 @@ class component_relation_common extends component_common {
 			
 		// get the inverse references
 			//old way done in relations table
-			// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
+				// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 			//new way done in relations field
 			$result = search::calculate_inverse_locators( $locator );
 			$component_tipo = $this->get_tipo();
@@ -1226,7 +1226,7 @@ class component_relation_common extends component_common {
 	* @return array $ar_result
 	* 	Array of locators
 	*/
-	private function get_external_result_from_relations_table($new_dato, $ar_component_to_search) {
+	private function DES_get_external_result_from_relations_table($new_dato, $ar_component_to_search) {
 		$start_time=microtime(1);
 
 		if (empty($new_dato)) {
