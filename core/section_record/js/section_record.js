@@ -236,7 +236,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 
 /**
-* GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE)
+* GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE. TIME MACHINE TOO)
 * @return array ar_instances
 */
 section_record.prototype.get_ar_columns_instances = async function(){
@@ -252,6 +252,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		const caller_column_id	= self.column_id
 		const ar_columns		= await self.columns || []
 			// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
+			// console.log("_________________________________________________ ar_columns:",ar_columns);
 
 	// instances
 		const ar_instances		= []
@@ -338,16 +339,19 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 			}
 			return false
 		})
+		// console.log("///////////////////////////////////////////// section_record get_component_data component_data:",component_data);
 
-	// debug		
-		if (!component_data) {
-			console.warn("not found component_data ddo, section_tipo, section_id, matrix_id:", ddo, section_tipo, section_id, matrix_id);
-		}else{
-			if (component_data.debug_model==='component_portal') {
-				// console.log("component_data.debug_model:", component_data.debug_model);
-				console.log("--- get_component_data section_tipo, section_id, matrix_id, component_data:", component_data, section_tipo, section_id, matrix_id);
-			}
-		}
+	// debug
+		// if (self.mode==='tm' || self.caller.mode==='tm') {
+			// if (!component_data) {
+			// 	console.warn("not found component_data ddo, section_tipo, section_id, matrix_id:", ddo, section_tipo, section_id, matrix_id);
+			// }else{
+			// 	if (component_data.debug_model==='component_portal') {
+			// 		// console.log("component_data.debug_model:", component_data.debug_model);
+			// 		console.log("--- get_component_data section_tipo, section_id, matrix_id, component_data:", component_data, section_tipo, section_id, matrix_id);
+			// 	}
+			// }
+		// }
 	
 		
 	// undefined case. If the current item don't has data will be instanciated with the current section_id	
