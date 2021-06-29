@@ -284,7 +284,7 @@ component_portal.prototype.build = async function(autoload=false){
 		// self.target_section = self.rqo.sqo.section_tipo
 
 	// columns
-		if(self.mode === 'edit' || self.mode === 'search'){
+		if(self.mode!=='list'){
 			self.columns = self.get_columns()
 		}
 
