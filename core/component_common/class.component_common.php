@@ -1315,8 +1315,8 @@ abstract class component_common extends common {
 					$filter = json_decode( json_encode($this->properties->filtered_by_search));
 				}
 
-  				$target_section_tipo = $this->get_ar_target_section_tipo();
-  				$target_section_tipo = reset($target_section_tipo);
+				$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
+				$target_section_tipo	= reset($ar_target_section_tipo);
 
 				# new search_query_object
 				// $search_query_object = new stdClass();
@@ -1325,7 +1325,7 @@ abstract class component_common extends common {
 				// 	$search_query_object->skip_projects_filter 	= true;
 				// 	$search_query_object->filter 				= $filter;
 				$search_query_object = new search_query_object();
-					$search_query_object->set_section_tipo($target_section_tipo);
+					$search_query_object->set_section_tipo($ar_target_section_tipo);
 					$search_query_object->set_limit(0);
 					$search_query_object->set_skip_projects_filter(true);
 					$search_query_object->set_filter($filter);
@@ -1336,8 +1336,8 @@ abstract class component_common extends common {
 			default:
 				# get_ar_related_by_model: $modelo_name, $tipo, $strict=true
   				# $target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
-  				$target_section_tipo = $this->get_ar_target_section_tipo();
-  				$target_section_tipo = reset($target_section_tipo);
+				$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
+				$target_section_tipo	= reset($ar_target_section_tipo);
 
 				# new search_query_object
 				// $search_query_object = new stdClass();
@@ -1345,7 +1345,7 @@ abstract class component_common extends common {
 				// 	$search_query_object->limit 				= 0;
 				// 	$search_query_object->skip_projects_filter 	= true;
 				$search_query_object = new search_query_object();
-					$search_query_object->set_section_tipo([$target_section_tipo]);
+					$search_query_object->set_section_tipo($ar_target_section_tipo);
 					$search_query_object->set_limit(0);
 					$search_query_object->set_skip_projects_filter(true);				
 
