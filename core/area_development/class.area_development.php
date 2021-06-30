@@ -330,25 +330,23 @@ class area_development extends area_common {
 			}
 
 		
-		// Dédalo API test enviroment
+		// Dédalo API test environment
 			$item = new stdClass();
-				$item->id		= 'dedalo_api_test_enviroment';
+				$item->id		= 'dedalo_api_test_environment';
 				$item->class	= 'blue';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= 'DÉDALO API TEST ENVIROMENT';
+				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
 				$item->info		= null;
-				$item->body		= '<textarea id="json_editor_api" class="hide"></textarea>';				
-				$item->body		.= '<label>API base class</label> <input type="text" id="dd_api_base" placeholder="dd_api_base" class="" value="" />';
-				$item->body		.= '<label>API function name</label> <input type="text" id="dd_api_fn" class="" placeholder="dd_api_fn" value="" />';
-				$item->body		.= '<label>API request name</label> <input type="text" id="dd_api_request" placeholder="request" class="" value="" />';
+				$item->body		= '<textarea id="json_editor_api" class="hide"></textarea>';
+				$item->body		.= '<label>API send RQO (Request Query Object) default dd_api is "dd_core_api"</label>';
 				$item->body		.= '<label></label> <button id="submit_api" class="border light">OK</button>';
 				$item->body		.= '<div id="json_editor_api_container" class="editor_json"></div>';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_json_editor_api',
 					'options'	=> (object)[
-						'editor_id'	=> 'json_editor_api'										
+						'editor_id'	=> 'json_editor_api'
 					]
 				];
 				$item->trigger 	= (object)[
@@ -359,17 +357,17 @@ class area_development extends area_common {
 			$ar_widgets[] = $item;
 
 
-		// search query object test enviroment
+		// search query object test environment
 			$item = new stdClass();
-				$item->id 		= 'search_query_object_test_enviroment';
+				$item->id		= 'search_query_object_test_environment';
 				$item->class	= 'blue';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'SEARCH QUERY OBJECT TEST ENVIROMENT';
-				$item->info 	= null;
-				$item->body 	= '<textarea id="json_editor" class="hide"></textarea>';
-				$item->body    .= '<div id="json_editor_container" class="editor_json"></div>';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
+				$item->info		= null;
+				$item->body		= '<textarea id="json_editor" class="hide"></textarea>';
+				$item->body		.= '<div id="json_editor_container" class="editor_json"></div>';
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_json_editor',
 					'options' => (object)['editor_id' => "json_editor"]
