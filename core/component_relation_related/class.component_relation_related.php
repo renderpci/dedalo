@@ -373,19 +373,26 @@ class component_relation_related extends component_relation_common {
 			$filter_group->path 			= $path;
 			$filter_group->component_path 	= $component_path;
 
-		$filter = [
+		$filter = (object)[
 			'$and' => [$filter_group]
 		];
 
 		# search_query_object
-		$search_query_object = new stdClass();
-			$search_query_object->id 			= 'temp';
-			$search_query_object->section_tipo 	= $this->section_tipo;
-			$search_query_object->filter 		= $filter;
-			$search_query_object->select 		= [];
-			$search_query_object->limit 		= 0;
-			$search_query_object->offset 		= 0;
-			$search_query_object->full_count 	= false;
+		// $search_query_object = new stdClass();
+		// 	$search_query_object->id 			= 'temp';
+		// 	$search_query_object->section_tipo 	= $this->section_tipo;
+		// 	$search_query_object->filter 		= $filter;
+		// 	$search_query_object->select 		= [];
+		// 	$search_query_object->limit 		= 0;
+		// 	$search_query_object->offset 		= 0;
+		// 	$search_query_object->full_count 	= false;
+		$search_query_object = new search_query_object();
+			$search_query_object->set_id('temp');
+			$search_query_object->set_section_tipo([$this->section_tipo]);
+			$search_query_object->set_filter($filter);	
+			$search_query_object->set_limit(0);
+			$search_query_object->set_offset(0);
+			$search_query_object->set_full_count(false);
 		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' $search_query_object ++ '.to_string()); #die();
 
 		$search 		= search::get_instance($search_query_object);
