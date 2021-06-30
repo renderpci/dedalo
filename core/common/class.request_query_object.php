@@ -1,6 +1,6 @@
 <?php
 /**
-* CLASS REQUEST QUERY OBJECT
+* REQUEST QUERY OBJECT (RQO)
 * Defines an object with normalized properties and checks
 
 
@@ -154,7 +154,7 @@
 
 
 */
-class request_query_object extends stdClass {
+class request_query_object {
 
 
 	
@@ -165,8 +165,22 @@ class request_query_object extends stdClass {
 	*/
 	public function __construct( $data=null ) {
 
-		$this->api_engine = 'dedalo';
+		if (is_null($data)) return;
 
+		# Nothing to do on construct (for now)
+		if (!is_object($data)) {
+			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
+			return false;
+		}
+
+		// default always is 'dedalo'
+		$this->set_api_engine = 'dedalo';
+
+		// set all properties
+			foreach ($data as $key => $value) {
+				$method = 'set_'.$key;
+				$this->{$method}($value);
+			}
 		
 		return true;
 	}//end __construct
@@ -179,7 +193,7 @@ class request_query_object extends stdClass {
 	public function set_typo(string $value) {
 		
 		$this->typo = $value;
-	}
+	}//end set_typo
 
 
 
@@ -189,7 +203,8 @@ class request_query_object extends stdClass {
 	public function set_dd_api(string $value) {
 		
 		$this->dd_api = $value;
-	}
+	}//end set_dd_api
+
 
 
 	/**
@@ -208,17 +223,17 @@ class request_query_object extends stdClass {
 	public function set_action(string $value) {
 		
 		$this->action = $value;
-	}
+	}//end set_action
 
 
 
 	/**
 	* SET_ACTION_OPT
 	*/
-	public function set_action_opt($value) {
+	// public function set_action_opt($value) {
 		
-		$this->action_opt = $value;
-	}
+	// 	$this->action_opt = $value;
+	// }//end set_action_opt
 
 
 
@@ -230,7 +245,7 @@ class request_query_object extends stdClass {
 			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
 		$this->tipo = $value;
-	}
+	}//end set_tipo
 
 
 
@@ -240,7 +255,7 @@ class request_query_object extends stdClass {
 	public function set_section_tipo(string $value) {
 		
 		$this->section_tipo = $value;
-	}
+	}//end set_section_tipo
 
 
 
@@ -250,7 +265,7 @@ class request_query_object extends stdClass {
 	public function set_section_id($value) {
 		
 		$this->section_id = $value;
-	}
+	}//end set_section_id
 
 
 
@@ -262,7 +277,7 @@ class request_query_object extends stdClass {
 			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
 		}
 		$this->lang = $value;
-	}
+	}//end set_lang
 
 
 
@@ -272,7 +287,7 @@ class request_query_object extends stdClass {
 	public function set_mode(string $value) {
 
 		$this->mode = $value;
-	}
+	}//end set_mode
 
 
 
@@ -282,7 +297,7 @@ class request_query_object extends stdClass {
 	public function set_model(string $value) {
 
 		$this->model = $value;
-	}
+	}//end set_model
 
 
 
@@ -292,7 +307,7 @@ class request_query_object extends stdClass {
 	public function set_sqo($value) {
 
 		$this->sqo = $value;
-	}
+	}//end set_sqo
 
 
 
@@ -302,7 +317,7 @@ class request_query_object extends stdClass {
 	public function set_show($value) {
 
 		$this->show = $value;
-	}
+	}//end set_show
 
 
 
@@ -312,7 +327,7 @@ class request_query_object extends stdClass {
 	public function set_search($value) {
 
 		$this->search = $value;
-	}
+	}//end set_search
 
 
 
@@ -322,8 +337,37 @@ class request_query_object extends stdClass {
 	public function set_choose($value) {
 
 		$this->choose = $value;
+	}//end set_choose
+
+
+
+	/**
+	* GET METHODS
+	* By accessors. When property exits, return property value, else return null
+	*/	
+	final public function __call($strFunction, $arArguments) {
+		
+		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember	= substr($strFunction, 4);
+		switch($strMethodType) {
+			#case 'set_' :
+			#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
+			#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
+			#	break;
+			case 'get_' :
+				return($this->GetAccessor($strMethodMember));
+				break;
+		}
+		return(false);
+	}
+	final private function GetAccessor($variable) {
+		if(property_exists($this, $variable)) {
+			return (string)$this->$variable;
+		}else{
+			return false;
+		}
 	}
 
 
 
-}//end dd_object
+}//end request_query_object (RQO)
