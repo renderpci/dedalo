@@ -513,7 +513,7 @@ class calculation extends widget_common {
 
 		}else{
 
-			$search_query_object  = clone $_SESSION['dedalo']['config']['search_options'][$current_section_tipo]->search_query_object;
+			$search_query_object = clone $_SESSION['dedalo']['config']['search_options'][$current_section_tipo]->search_query_object;
 		}
 
 			#dump($search_query_object, ' search_query_object ++ '.to_string());

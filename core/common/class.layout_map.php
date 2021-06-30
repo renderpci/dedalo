@@ -438,7 +438,7 @@ class layout_map {
 			}
 
 		// search query object
-			$search_query_object = [
+			$search_query_object = (object)[
 				'id'			=> 'search_user_preset_layout_map',
 				'modo'			=> 'list',
 				'section_tipo'	=> 'dd1244',

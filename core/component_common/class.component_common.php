@@ -1319,11 +1319,16 @@ abstract class component_common extends common {
   				$target_section_tipo = reset($target_section_tipo);
 
 				# new search_query_object
-				$search_query_object = new stdClass();
-					$search_query_object->section_tipo 			= $target_section_tipo;
-					$search_query_object->limit 				= 0;
-					$search_query_object->skip_projects_filter 	= true;
-					$search_query_object->filter 				= $filter;
+				// $search_query_object = new stdClass();
+				// 	$search_query_object->section_tipo 			= $target_section_tipo;
+				// 	$search_query_object->limit 				= 0;
+				// 	$search_query_object->skip_projects_filter 	= true;
+				// 	$search_query_object->filter 				= $filter;
+				$search_query_object = new search_query_object();
+					$search_query_object->set_section_tipo($target_section_tipo);
+					$search_query_object->set_limit(0);
+					$search_query_object->set_skip_projects_filter(true);
+					$search_query_object->set_filter($filter);
 
 				$hash_id = '_'.md5(json_encode($filter));
 				break;
@@ -1335,10 +1340,14 @@ abstract class component_common extends common {
   				$target_section_tipo = reset($target_section_tipo);
 
 				# new search_query_object
-				$search_query_object = new stdClass();
-					$search_query_object->section_tipo 			= $target_section_tipo;
-					$search_query_object->limit 				= 0;
-					$search_query_object->skip_projects_filter 	= true;
+				// $search_query_object = new stdClass();
+				// 	$search_query_object->section_tipo 			= $target_section_tipo;
+				// 	$search_query_object->limit 				= 0;
+				// 	$search_query_object->skip_projects_filter 	= true;
+				$search_query_object = new search_query_object();
+					$search_query_object->set_section_tipo([$target_section_tipo]);
+					$search_query_object->set_limit(0);
+					$search_query_object->set_skip_projects_filter(true);				
 
 				$hash_id ='';
 				break;
@@ -1348,15 +1357,15 @@ abstract class component_common extends common {
 			$target_section_model = RecordObj_dd::get_modelo_name_by_tipo($target_section_tipo,true);
 			if ($target_section_model!=='section') {
 				$response = new stdClass();
-					$response->result   			= [];
-					$response->msg 	  				= 'Error. section tipo: '.$target_section_tipo.' is not a valid section ('.$target_section_model.')';
+					$response->result	= [];
+					$response->msg		= 'Error. section tipo: '.$target_section_tipo.' is not a valid section ('.$target_section_model.')';
 					debug_log(__METHOD__."  ".$response->msg.to_string(), logger::ERROR);
 				return $response;
 			}
 
 		// cache
 			static $ar_list_of_values_data = [];
-			$uid = isset($search_query_object->section_tipo) ? $search_query_object->section_tipo.'_'.$lang. $hash_id : $this->tipo.'_'.$lang. $hash_id;
+			$uid = isset($target_section_tipo) ? $target_section_tipo.'_'.$lang. $hash_id : $this->tipo.'_'.$lang. $hash_id;
 			if (isset($ar_list_of_values_data[$uid])) {
 				#debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
 				return $ar_list_of_values_data[$uid];
