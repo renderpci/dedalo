@@ -24,8 +24,8 @@ class js {
 		
 		# Insertamos las librerías principales	
 
-			# Dédalo enviroment vars
-			js::$ar_url_basic[] = DEDALO_CORE_URL . '/common/js/enviroment.js.php';
+			# Dédalo environment vars
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/common/js/environment.js.php';
 			#js::$ar_url_basic[] = DEDALO_CORE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';	
 
 			# JQUERY LIBS

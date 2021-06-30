@@ -1691,49 +1691,34 @@ li .reset_input select {
 .area .widget_container.blue > .widget_body {
   background-color: #f3f3f3;
 }
-.area .widget_container#search_query_object_test_enviroment,
-.area .widget_container#dedalo_api_test_enviroment {
+.area .widget_container#search_query_object_test_environment,
+.area .widget_container#dedalo_api_test_environment {
   flex: 1 1 100%;
 }
-.area .widget_container#search_query_object_test_enviroment > .widget_body,
-.area .widget_container#dedalo_api_test_enviroment > .widget_body {
-  padding: 0;
-}
-.area .widget_container#search_query_object_test_enviroment > .widget_body > .body_info,
-.area .widget_container#dedalo_api_test_enviroment > .widget_body > .body_info {
-  padding: 0;
-}
-.area .widget_container#php_info {
-  flex: 1 1 100%;
-  background-color: #9999cc;
-}
-.area .widget_container#php_info > .widget_label {
-  background-color: #777bb3;
-}
-.area .widget_container#php_info iframe.php_info_iframe {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-}
-.area .widget_container#search_query_object_test_enviroment .editor_json,
-.area .widget_container#dedalo_api_test_enviroment .editor_json {
+.area .widget_container#search_query_object_test_environment .editor_json,
+.area .widget_container#dedalo_api_test_environment .editor_json {
   height: 50vh;
   min-height: 300px;
 }
-.area .widget_container#search_query_object_test_enviroment .editor_json .jsoneditor,
-.area .widget_container#dedalo_api_test_enviroment .editor_json .jsoneditor {
+.area .widget_container#search_query_object_test_environment .editor_json .jsoneditor,
+.area .widget_container#dedalo_api_test_environment .editor_json .jsoneditor {
   z-index: 1;
 }
-.area .widget_container#dedalo_api_test_enviroment > .widget_label {
+.area .widget_container#search_query_object_test_environment > .widget_body,
+.area .widget_container#dedalo_api_test_environment > .widget_body {
+  padding: 0;
+}
+.area .widget_container#search_query_object_test_environment > .widget_body > .body_info,
+.area .widget_container#dedalo_api_test_environment > .widget_body > .body_info {
+  padding: 0;
+}
+.area .widget_container#dedalo_api_test_environment > .widget_label {
   background-color: #21984b;
 }
-.area .widget_container#dedalo_api_test_enviroment > .widget_body {
+.area .widget_container#dedalo_api_test_environment > .widget_body {
   background-color: #c0e4cd;
 }
-.area .widget_container#dedalo_api_test_enviroment .editor_json {
-  height: 30vh;
-}
-.area .widget_container#dedalo_api_test_enviroment .jsoneditor-menu {
+.area .widget_container#dedalo_api_test_environment .jsoneditor-menu {
   background-color: #21984b;
 }
 .area .widget_container > .widget_label {
@@ -1913,6 +1898,18 @@ li .reset_input select {
   position: absolute;
   right: 0;
   top: 0;
+}
+.area#php_info {
+  flex: 1 1 100%;
+  background-color: #9999cc;
+}
+.area#php_info > .widget_label {
+  background-color: #777bb3;
+}
+.area#php_info iframe.php_info_iframe {
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }
 .area > .buttons {
   padding: 1em;

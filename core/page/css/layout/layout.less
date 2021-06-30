@@ -301,13 +301,21 @@
 				>.widget_body {					
 					background-color: #f3f3f3;					
 				}
-			}
+			}			
 
-			
-
-			&#search_query_object_test_enviroment, &#dedalo_api_test_enviroment {
-				flex: 1 1 100%;
+			&#search_query_object_test_environment, &#dedalo_api_test_environment {
+				flex: 1 1 100%;				
+				// min-height: 50vh;
 				// background-color: #3883fa;
+
+				.editor_json {
+					height: 50vh;
+					min-height: 300px;
+
+					.jsoneditor {
+						z-index: 1;
+					}
+				}
 
 				>.widget_label {
 					//background-color: #3275e2;
@@ -319,36 +327,9 @@
 						padding: 0;
 					}
 				}
-			}//end search_query_object_test_enviroment
+			}//end search_query_object_test_environment
 
-			&#php_info {
-				flex: 1 1 100%;
-				background-color: #9999cc;
-
-				>.widget_label {
-					background-color: #777bb3;
-				}
-
-				iframe.php_info_iframe {
-					margin: 0;
-					padding: 0;
-					width: 100%;
-				}
-			}//end php_info
-
-			&#search_query_object_test_enviroment, &#dedalo_api_test_enviroment {
-
-				.editor_json {
-					height: 50vh;
-					min-height: 300px;
-
-					.jsoneditor {
-						z-index: 1;
-					}
-				}
-			}
-
-			&#dedalo_api_test_enviroment {
+			&#dedalo_api_test_environment {
 
 				>.widget_label {
 					background-color: #21984b;
@@ -358,7 +339,7 @@
 				}
 
 				.editor_json {
-					height: 30vh;
+					// height: 30vh;
 				}
 				.jsoneditor-menu {
 					background-color: #21984b; // green instaed default blue
@@ -516,6 +497,21 @@
 				}
 			}
 		}
+
+		&#php_info {
+			flex: 1 1 100%;
+			background-color: #9999cc;
+
+			>.widget_label {
+				background-color: #777bb3;
+			}
+
+			iframe.php_info_iframe {
+				margin: 0;
+				padding: 0;
+				width: 100%;
+			}
+		}//end php_info
 
 		>.buttons {
 			padding: 1em;
