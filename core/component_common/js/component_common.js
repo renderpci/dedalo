@@ -470,25 +470,27 @@ component_common.prototype.update_datum = function(new_data) {
 			self.datum.data = [...self.datum.data, ...new_data]
 				// console.log("update_datum --------------------------- final self.datum.data:",new_data, JSON.parse(JSON.stringify(self.datum.data)));
 
-	// data (from current component only)
-		// current element data
-			self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
-				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
-		
-		// data of another components
-			/*
+	// data 
+		// current element data (from current component only), removed!, we need update all data in all compoments.
+			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
+
+
+		// data of multiple components
+		// the data sended by the serve can be data of multiple components. The new_data is a array with the all response from server.
+		// When one component is observed by other and the observable component data is changed, the observer component also will change
+		// It's necessary update the data in all compomnents (self, observers), not only the caller.
 			const ar_instances = instances.get_all_instances()
 			for (let i = new_data_length - 1; i >= 0; i--) {
 				const data_item = new_data[i]
-				const current_instance = ar_instances.find(item => item.tipo===data_item.tipo && item.section_tipo===data_item.section_tipo && item.section_id===data_item.section_id)
+				const current_instance = ar_instances.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id===data_item.section_id)
 				if (current_instance) {
 					// add
-					current_instance.data = self.datum.data.find(item => item.tipo===data_item.tipo && item.section_id===data_item.section_id) || []
+					current_instance.data = self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id===data_item.section_id) || {}
 				}else{
 					console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
 				}
 			}
-			*/
+			
 
 		// check data
 			if (typeof self.data==="undefined") {
