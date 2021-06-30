@@ -391,7 +391,7 @@ class search_query_object {
 		}
 		return(false);
 	}
-	final private function GetAccessor($variable) {
+	private function GetAccessor($variable) {
 		if(property_exists($this, $variable)) {
 			return (string)$this->$variable;
 		}else{
