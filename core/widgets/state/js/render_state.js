@@ -19,6 +19,34 @@ export const render_state = function() {
 }//end render_state
 
 
+/**
+* LIST
+* Render node for use in modes: list, edit_in_list
+* @return DOM node wrapper
+*/
+render_state.prototype.list = async function(options) {
+
+	const self = this
+
+	const render_level = options.render_level
+
+	// content_data
+		const content_data = await get_content_data_edit(self)
+		if (render_level==='content') {
+			return content_data
+		}
+
+	// wrapper. ui build_edit returns widget wrapper
+		const wrapper = ui.widget.build_wrapper_edit(self, {
+			content_data : content_data
+		})
+
+
+	return wrapper
+}//end list
+
+
+
 
 /**
 * EDIT
@@ -141,13 +169,14 @@ const get_value_element = (i, data, values_container, self) => {
 					class_name		: '',
 					parent 			: li
 				})
+
 				// label for the row
 				const label = ui.create_dom_element({
 					element_type 	: 'label',
-					inner_html 		: output_item.id,
+					inner_html 		: get_label[output_item.label] || output_item.id,
 					parent 			: container
 				})
-					console.log("data:",data);
+
 			// Situation
 				// check if the component is translatable, with the first item in the data of the current column
 				const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
