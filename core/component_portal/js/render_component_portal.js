@@ -564,7 +564,7 @@ const get_top = function(self) {
 	// sort vars
 		const is_inside_tool		= self.is_inside_tool
 		const mode					= self.mode
-		const current_data_manager	= new data_manager()
+		// const current_data_manager	= new data_manager()
 		const show					= self.rqo.show
 		const target_section		= self.rqo.sqo.section_tipo //filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length

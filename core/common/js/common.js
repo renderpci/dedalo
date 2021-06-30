@@ -763,7 +763,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		rqo_config = JSON.parse(JSON.stringify(rqo_config))
 
 	// local_db_data. get value if exists
-		const current_data_manager = new data_manager()
+		// const current_data_manager = new data_manager()
 		// const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
 		// if(saved_rqo){
 
