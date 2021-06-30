@@ -38,6 +38,7 @@ export const state = function(){
 	// state.prototype.init 	 	= component_common.prototype.init
 	// render
 	state.prototype.edit 			= render_state.prototype.edit
+	state.prototype.list 			= render_state.prototype.list
 
 
 
