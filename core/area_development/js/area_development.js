@@ -76,7 +76,8 @@ area_development.prototype.build = async function(autoload=true) {
 		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
 	
 	// rqo build
-		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')		
+		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
+		self.rqo.prevent_lock = true
 
 	// debug
 		const rqo_original = JSON.parse(JSON.stringify(self.rqo))		
@@ -85,7 +86,7 @@ area_development.prototype.build = async function(autoload=true) {
 		if (autoload===true) {
 
 			// load data
-				const current_data_manager	= new data_manager()
+				const current_data_manager = new data_manager()
 				const api_response = await current_data_manager.request({body:self.rqo})
 		
 			// set the result to the datum
@@ -232,61 +233,33 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 	const js_promise = load_json_editor_files().then(()=>{
 
 		// dom elements
-			const widget_container = document.getElementById(widget_object.id) // "dedalo_api_test_enviroment"
-
-		// inputs
-			const input_dd_api_base		= widget_container.querySelector('#dd_api_base')
-			input_dd_api_base.value		= localStorage.getItem('input_dd_api_base') || 'dd_core_api'
-			input_dd_api_base.addEventListener("change", function(){
-				 localStorage.setItem('input_dd_api_base', this.value)
-			})
-
-			const input_dd_api_fn		= widget_container.querySelector('#dd_api_fn')
-			input_dd_api_fn.value		= localStorage.getItem('input_dd_api_fn') || 'read'
-			input_dd_api_fn.addEventListener("change", function(){
-				 localStorage.setItem('input_dd_api_fn', this.value)
-			})
-
-			const input_dd_api_request	= widget_container.querySelector('#dd_api_request')
-			input_dd_api_request.value	= localStorage.getItem('input_dd_api_request') || 'dd_request'
-			input_dd_api_request.addEventListener("change", function(){
-				 localStorage.setItem('input_dd_api_request', this.value)
-			})
+			const widget_container = document.getElementById(widget_object.id) // "dedalo_api_test_environment"		
 
 		// button submit
 			const button_submit = widget_container.querySelector("#submit_api")
 			button_submit.addEventListener("click",async function(e){
 
 				const editor_text = editor.getText()
-
 				if (editor_text.length<3) {
 					return false
 				}
 
-				const body_options = JSON.parse(editor_text)
-				if (!body_options) {
-					console.warn("Invalid editor text", body_options);
+				const rqo = JSON.parse(editor_text)
+				if (!rqo) {
+					console.warn("Invalid editor text", rqo);
 					return false
 				}
 
-				const dd_api			= input_dd_api_base.value
-				const action			= input_dd_api_fn.value
-				const dd_api_request	= input_dd_api_request.value
-
 				// data_manager
 				const api_response = await data_manager.prototype.request({
-					body : {
-						dd_api				: dd_api,
-						action				: action,
-						[dd_api_request]	: body_options
-					}
+					body : rqo
 				})
 				console.log("/// json_editor_api api_response:",api_response);
 
 				print_response(body_response, api_response)
 
 				return api_response
-			},false)
+			})
 
 		// text area hiden
 			const editor_text_area = document.getElementById(editor_id)
