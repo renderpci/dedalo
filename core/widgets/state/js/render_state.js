@@ -379,6 +379,7 @@ const get_value_element = (i, data, values_container, self) => {
 														&& item.key === i
 														&& item.type === node.type
 													)
+		
 				// set the new value
 				if(new_data){
 					node.node_value.innerHTML = new_data.value +'%'
