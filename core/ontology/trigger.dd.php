@@ -512,6 +512,8 @@ if($accion==='deleteTS') {
 */
 if($accion==='listadoHijos') {
 
+	session_write_close();
+
 	if(!$terminoID) 	exit("Need more vars: terminoID: $terminoID ");
 	
 	$parentInicial		= $terminoID ;
@@ -524,7 +526,7 @@ if($accion==='listadoHijos') {
 	echo $html;
 
 	# Write session to unlock session file
-	session_write_close();
+	// session_write_close();
 
 	die();
 }//end listadoHijos

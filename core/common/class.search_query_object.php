@@ -116,7 +116,7 @@ class search_query_object {
 	*/
 	public function set_section_tipo(array $value) {
 		
-		$this->set_section_tipo = $value;
+		$this->section_tipo = $value;
 
 		return true;
 	}//end set_section_tipo
@@ -147,7 +147,7 @@ class search_query_object {
 	*/
 	public function set_filter(object $value) {
 		
-		$this->set_filter = $value;
+		$this->filter = $value;
 
 		return true;
 	}//end set_filter
@@ -176,7 +176,7 @@ class search_query_object {
 	*/
 	public function set_select(a $value) {
 		
-		$this->set_select = $value;
+		$this->select = $value;
 
 		return true;
 	}//end set_select
@@ -391,7 +391,7 @@ class search_query_object {
 		}
 		return(false);
 	}
-	final private function GetAccessor($variable) {
+	private function GetAccessor($variable) {
 		if(property_exists($this, $variable)) {
 			return (string)$this->$variable;
 		}else{

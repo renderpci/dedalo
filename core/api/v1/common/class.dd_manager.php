@@ -86,7 +86,7 @@ class dd_manager {
 				$api_debug = new stdClass();
 					$api_debug->api_exec_time	= $total_time_api_exec;
 					$api_debug->memory_usage	= dd_memory_usage();
-					// $api_debug->api_rqo	= $rqo;
+					$api_debug->rqo				= json_encode($rqo, JSON_PRETTY_PRINT);
 
 				if (isset($dedalo_data->debug)) {
 					// add to existing debug properties

@@ -1899,14 +1899,14 @@ li .reset_input select {
   right: 0;
   top: 0;
 }
-.area#php_info {
+.area #php_info {
   flex: 1 1 100%;
   background-color: #9999cc;
 }
-.area#php_info > .widget_label {
+.area #php_info > .widget_label {
   background-color: #777bb3;
 }
-.area#php_info iframe.php_info_iframe {
+.area #php_info iframe.php_info_iframe {
   margin: 0;
   padding: 0;
   width: 100%;

@@ -3023,28 +3023,51 @@ abstract class common {
 
 		}//end if ($options->direct===true)
 
+		$full_count		= $total_locators ?? $options->full_count;
+		$mode			= $options->mode ?? null;
+		$order_custom	= $options->order_custom ?? null;
 
 		// sqo
-			$query_object = new stdClass();
-				$query_object->typo  	   			= 'sqo';
-				$query_object->id  	   				= $id;
-				$query_object->section_tipo 		= $section_tipo;
-				$query_object->filter  				= $filter_group;
-				$query_object->select  				= $select_group;
-				$query_object->limit   				= $options->limit;
-				$query_object->offset  				= $options->offset;
-				$query_object->full_count  			= $total_locators ?? $options->full_count;
+			// $query_object = new stdClass();
+			// 	$query_object->typo			= 'sqo';
+			// 	$query_object->id			= $id;
+			// 	$query_object->section_tipo	= $section_tipo;
+			// 	$query_object->filter		= $filter_group;
+			// 	$query_object->select		= $select_group;
+			// 	$query_object->limit		= $options->limit;
+			// 	$query_object->offset		= $options->offset;
+			// 	$query_object->full_count	= $full_count;
 
-				if (!empty($options->mode)) {
-					$query_object->mode = $options->mode;
+			// 	if (!empty($options->mode)) {
+			// 		$query_object->mode = $options->mode;
+			// 	}
+			// 	if (!empty($filter_by_locators)) {
+			// 		$query_object->filter_by_locators = $filter_by_locators;
+			// 	}
+			// 	if (!empty($options->order_custom)) {
+			// 		$query_object->order_custom = $options->order_custom;
+			// 	}
+
+		// sqo
+			$sqo = new build_search_query_object();
+				$sqo->set_id($id);
+				$sqo->set_section_tipo($section_tipo);
+				$sqo->set_filter($filter);
+				$sqo->set_select($select);
+				$sqo->set_limit($limit);
+				$sqo->set_offset($offset);
+				$sqo->set_full_count($full_count);
+
+				if (!empty($mode)) {
+					$sqo->set_mode($mode);
 				}
 				if (!empty($filter_by_locators)) {
-					$query_object->filter_by_locators = $filter_by_locators;
+					$sqo->set_filter_by_locators($filter_by_locators);
 				}
-				if (!empty($options->order_custom)) {
-					$query_object->order_custom = $options->order_custom;
+				if (!empty($order_custom)) {
+					$sqo->set_order_custom($order_custom);
 				}
-
+		
 
 		return (object)$query_object;
 	}//end build_search_query_object
