@@ -1,57 +1,54 @@
 <?php
 /**
-* CLASS SEARCH QUERY OBJECT
-* Defines object with normalized properties and checks
-*
+* SEARCH QUERY OBJECT (SQO)
+* Defines object with normalized properties and checks.
+* SQO or Search Query Object definition is based on 
+* Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
 */
-class search_query_object extends stdClass {
+class search_query_object {
 
-	/* Format
-		typo					: "sqo"
-		id						: 'oh1' // section_tipo and other params to define the unique id
-		section_tipo 			: ['oh1'] // array of section_tipo for search
-		filter 					: {
-									operator  		: [			// ('$and' || '$or')
-											q 			: '2' 		// string for search
-											q_opeator	: '<' 		// string || null
-											path		: [{
+	/* FORMAT
+
+		id						: 'oh1'		// optional. section_tipo and other params to define the unique id
+		section_tipo			: ['oh1']	// array of section_tipo for search
+		mode					: ('edit' || 'list' || 'tm') // configure the sqo for search witch different models of matrix tables into the DDBB		
+		filter					: {
+									operator : // string ('$and' || '$or')
+										[{ 
+											q 			: '2'	// string to search
+											q_opeator	: '<'	// string || null
+											path		: [{	// array of components creating a sequential path
 												section_tipo
 												component_tipo
 											}]
-										]
-									} || null
-		select 					: [{
+										}]
+						  		  } || null
+		select					: [{	// array of objects optional
 									section_tipo
 									component_tipo
-								}]
-		limit 					: 1 // int
-		offset 					: 2 // int
-		full_count 				: (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
-		order 					: [{
-									direction 	: (ASC || DESC) // string
-									path		: [{
+								  }]
+		limit					: 1 // int
+		offset					: 2 // int
+		full_count				: (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
+		order					: [{
+										direction 	: (ASC || DESC) // string
+										path		: [{
 											section_tipo
 											component_tipo
 										}]
-									}]
-		parsed 					: (true || false) // boolean, state of the sqo
-		mode: 					: ('edit' || 'list' || 'tm') // configure the sqo for search into diferent models of matrix tables into DDBB
-		filter_by_locators 		: [{
-									section_tipo
-									component_tipo
-								}]
+								  }]		
+		filter_by_locators		: [{
+										section_tipo
+										component_tipo
+								  }]
 		order_custom 			: {
 									column_name : [values]
-								}
+								  }
 		allow_sub_select_by_id	: (true || false)
-		remove_distinc 			: (true || false)
-		skip_projects_filter 	: (true || false)
-
-		
-	*/
-
-
-	static $ar_type_allowed = ['section','component','grouper','button','area','widget','login','menu'];
+		remove_distinc			: (true || false)
+		skip_projects_filter	: (true || false)	
+		parsed					: (true || false) // boolean, state of the sqo	
+		*/
 
 
 
@@ -70,41 +67,11 @@ class search_query_object extends stdClass {
 			return false;
 		}
 
-		// set model in first time
-			$this->set_model($data->model);
-
 		// set all properties
 			foreach ($data as $key => $value) {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-
-		// set typo always
-			$this->set_typo('ddo');
-
-		// resolve type
-			$model = $this->model;
-			if (strpos($model, 'component_')===0) {
-				$type = 'component';
-			}elseif ($model==='section') {
-				$type = 'section';
-			}elseif (in_array($model, section::get_ar_grouper_models())) {
-				$type = 'grouper';
-			}elseif (strpos($model, 'button_')===0) {
-				$type = 'button';
-			}elseif (strpos($model, 'area')===0) {
-				$type = 'area';
-			}elseif ($model==='login') {
-				$type = 'login';
-			}elseif ($model==='menu') {
-				$type = 'menu';
-			}else{
-				$msg = __METHOD__." UNDEFINED model: $model - ".$this->tipo;
-				debug_log($msg, logger::ERROR);
-				trigger_error($msg);
-				return false;
-			}
-			$this->set_type($type);
 
 		return true;
 	}//end __construct
@@ -112,322 +79,327 @@ class search_query_object extends stdClass {
 
 
 	/**
-	* SET  METHODDS
-	* Verify values and set property to current object
+	* SET_ID
+	* @param string $value like 'oh1_list'
+	* @return bool true
 	*/
+	public function set_id(string $value) {
+		
+		$this->id = $value;
 
-
-
-	/**
-	* SET_TIPO
-	*/
-	public function set_tipo(string $value) {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
-		}
-		$this->tipo = $value;
-	}
-
-
-
-	/**
-	* SET_SECTION_TIPO
-	*/
-	public function set_section_tipo(string $value) {
-		if(strpos($this->model, 'area')!==0 && !RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
-		}
-		$this->section_tipo = $value;
-	}
-
-
-
-	/**
-	* SET_PARENT
-	*/
-	public function set_parent(string $value) {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid parent: $value", 1);
-		}
-		$this->parent = $value;
-	}
-
-
-
-	/**
-	* SET_PARENT_GROUPER
-	*/
-	public function set_parent_grouper(string $value) {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid parent_grouper: $value", 1);
-		}
-		$this->parent_grouper = $value;
-	}
-
-
-
-	/**
-	* SET_LANG
-	*/
-	public function set_lang(string $value) {
-		if(strpos($value, 'lg-')!==0) {
-			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
-		}
-		$this->lang = $value;
-	}
+		return true;
+	}//end set_id
 
 
 
 	/**
 	* SET_MODE
+	* Used to identify SQO search behavior to follow
+	* Time machine mode ('tm') works different for some methods
+	* @param string $value like 'tm'
+	* @return bool true
 	*/
 	public function set_mode(string $value) {
-
+		
 		$this->mode = $value;
-	}
+
+		return true;
+	}//end set_mode
 
 
 
 	/**
-	* SET_MODEL
+	* SET_SECTION_TIPO
+	* Array of one or more values
+	* @param array $value like ['oh1']
+	* @return bool true 
 	*/
-	public function set_model(string $value) {
+	public function set_section_tipo(array $value) {
+		
+		$this->set_section_tipo = $value;
 
-		$this->model = $value;
-	}
+		return true;
+	}//end set_section_tipo
 
 
 
 	/**
-	* SET_TYPO
+	* SET_FILTER
+	* Object as Mango Query
+	* @param object $value like
+	* {
+	*    "$and": [
+	*        {
+	*            "q": "1",
+	*            "q_operator": null,
+	*            "path": [
+	*                {
+	*                    "section_tipo": "oh1",
+	*                    "component_tipo": "oh62",
+	*                    "modelo": "component_section_id",
+	*                    "name": "Id"
+	*                }
+	*            ]
+	*        }
+	*    ]
+	* }
+	* @return bool true 
 	*/
-	public function set_typo(string $value) {
-		if($value!=='ddo') {
-			debug_log(__METHOD__." Error. Fixed invalid typo ".to_string($value), logger::DEBUG);
-			$value = 'ddo';
-		}
-		$this->typo = $value;
-	}
+	public function set_filter(object $value) {
+		
+		$this->set_filter = $value;
+
+		return true;
+	}//end set_filter
 
 
 
 	/**
-	* SET_TYPE
-	* Only allow 'section','component','groupper','button'
+	* SET_SELECT
+	* Array of objects
+	* @param object $value like
+	* [{
+	*    "path": [
+	*        {
+	*            "name": "Publication",
+	*            "modelo": "component_publication",
+	*            "section_tipo": "oh1",
+	*            "component_tipo": "oh32"
+	*        }
+	*    ],
+	*    "component_path": [
+	*        "relations"
+	*    ],
+	*    "type": "jsonb"
+	* }]
+	* @return bool true 
 	*/
-	public function set_type(string $value) {
-		$ar_type_allowed = self::$ar_type_allowed;
-		if( !in_array($value, $ar_type_allowed) ) {
-			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
-		}
-		$this->type = $value;
-	}
+	public function set_select(a $value) {
+		
+		$this->set_select = $value;
+
+		return true;
+	}//end set_select
 
 
 
 	/**
-	* SET_PROPERTIES
-	* Note hint parameter 'object' is not supported bellow php 7.2
-	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
+	* SET_LIMIT
+	* @param int $value like 10
+	* @return bool true
 	*/
-	public function set_properties($value) {
+	public function set_limit(int $value) {
+		
+		$this->limit = $value;
 
-		$this->properties = $value;
-	}
+		return true;
+	}//end set_limit
 
 
 
 	/**
-	* SET_PERMISSIONS
+	* SET_OFFSET
+	* @param int $value like 0
+	* @return bool true
 	*/
-	public function set_permissions(int $value) {
+	public function set_offset(int $value) {
+		
+		$this->offset = $value;
 
-		$this->permissions = $value;
-	}
+		return true;
+	}//end set_offset
 
 
 
 	/**
-	* SET_LABEL
+	* SET_FULL_COUNT
+	* Note that if the request is made it using 'true' value, the sqo->full_count value 
+	* will be modified with the result of the records count
+	* @param bool | int
+	* @return bool
 	*/
-	public function set_label(string $value) {
+	public function set_full_count($value) {
 
-		$this->label = $value;
-	}
-
-
-
-	/**
-	* SET_TRANSLATABLE
-	*/
-	public function set_translatable(bool $value) {
-
-		$this->translatable = $value;
-	}
-
-
-
-	/**
-	* SET_TOOLS
-	*/
-	public function set_tools(array $value) {
-
-		$this->tools = $value;
-	}
-
-
-
-	/**
-	* SET_CSS
-	*/
-	public function set_css($value) {
-
-		$this->css = $value;
-	}
-
-
-
-	/**
-	* SET_TARGET_SECTIONS
-	*/
-	public function set_target_sections($value) {
-
-		$this->target_sections = $value;
-	}
-
-
-	/**
-	* SET_request_config
-	*/
-	public function set_request_config($value) {
-
-		$this->request_config = $value;
-	}
-
-
-	/**
-	* SET_AR_SECTIONS_TIPO
-	*/
-	public function set_ar_sections_tipo($value) {
-
-		$this->ar_sections_tipo = $value;
-	}
-
-
-	/**
-	* SET_CONFIG_TYPE
-	*/
-	public function set_config_type($value) {
-
-		$this->config_type = $value;
-	}
-
-
-
-
-	/**
-	* COMPARE_DDO
-	* @return bool $equal
-	*/
-	public static function compare_ddo($ddo1, $ddo2, $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) {
-
-		if (!is_object($ddo1) || !is_object($ddo2)) {
+		if (gettype($value)!=='integer' && gettype($value)!=='boolean') {
+			debug_log(__METHOD__." ERROR on set_full_count. Invalid full_count type ".gettype($value).". Only integer|boolean are valid", logger::ERROR);
 			return false;
 		}
+		
+		$this->full_count = $value;
 
-		if (empty($ar_properties)){
-			foreach ($ddo1 as $property => $value) {
-				if (!in_array($property, $ar_exclude_properties)) {
-					$ar_properties[] = $property;
-				}
-			}
-
-			foreach ($ddo2 as $property => $value) {
-				if (!in_array($property, $ar_exclude_properties)) {
-					$ar_properties[] = $property;
-				}
-			}
-
-			$ar_properties = array_unique($ar_properties);
-		}
-
-
-		$equal = true;
-
-		foreach ((array)$ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
-
-			#if (!is_object($ddo1) || !is_object($ddo2)) {
-			#	$equal = false;
-			#	break;
-			#}
-
-			$property_exists_in_l1 = property_exists($ddo1, $current_property);
-			$property_exists_in_l2 = property_exists($ddo2, $current_property);
-
-
-			# Test property exists in all items
-			#if (!property_exists($ddo1, $current_property) && !property_exists($ddo2, $current_property)) {
-			if ($property_exists_in_l1===false && $property_exists_in_l2===false) {
-				# Skip not existing properties
-				#debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::DEBUG);
-				continue;
-			}
-
-			# Test property exists only in one locator
-			#if (property_exists($ddo1, $current_property) && !property_exists($ddo2, $current_property)) {
-			if ($property_exists_in_l1===true && $property_exists_in_l2===false) {
-				#debug_log(__METHOD__." Property $current_property exists in ddo1 but not exits in ddo2 (false is returned): ".to_string($ddo1).to_string($ddo2), logger::DEBUG);
-				$equal = false;
-				break;
-			}
-			#if (property_exists($ddo2, $current_property) && !property_exists($ddo1, $current_property)) {
-			if ($property_exists_in_l2===true && $property_exists_in_l1===false) {
-				#debug_log(__METHOD__." Property $current_property exists in ddo2 but not exits in ddo1 (false is returned): ".to_string($ddo1).to_string($ddo2), logger::DEBUG);
-				$equal = false;
-				break;
-			}
-
-			# Compare verified existing properties
-			if ($current_property==='section_id') {
-				if( $ddo1->$current_property != $ddo2->$current_property ) {
-					$equal = false;
-					break;
-				}
-			}else{
-				if( $ddo1->$current_property !== $ddo2->$current_property ) {
-					$equal = false;
-					break;
-				}
-			}
-		}
-
-		return (bool)$equal;
-	}//end compare_ddo
+		return true;
+	}//end set_full_count
 
 
 
 	/**
-	* IN_ARRAY_DDO
-	* @return bool $founded
+	* SET_ORDER
+	* @param array of objects like
+	* [
+	*    {
+	*        "direction": "DESC",
+	*        "path": [
+	*            {
+	*                "name": "Code",
+	*                "modelo": "component_input_text",
+	*                "section_tipo": "oh1",
+	*                "component_tipo": "oh14"
+	*            }
+	*        ]
+	*    }
+	* ]
+	* @return bool true
 	*/
-	public static function in_array_ddo($ddo, $ar_ddo, $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) {
-		$founded = false;
+	public function set_order(array $value) {
+		
+		$this->order = $value;
 
-		foreach ((array)$ar_ddo as $current_ddo) {
-			$founded = self::compare_ddo( $ddo, $current_ddo, $ar_properties );
-			if($founded===true) break;
+		return true;
+	}//end set_order
+
+
+
+	/**
+	* SET_ORDER_CUSTOM
+	* Used mainly in portals to preserve data order
+	* @param array of objects like
+	* [
+    *    {
+    *        "column_name": "section_id",
+    *        "column_values": [
+    *            1, 3, 84, 2
+    *        ]
+    *    }
+    * ]
+	* @return bool true
+	*/
+	public function set_order_custom(array $value) {
+		
+		$this->order_custom = $value;
+
+		return true;
+	}//end set_order_custom
+
+	
+
+	/**
+	* SET_FILTER_BY_LOCATORS
+	* Allow to search directly with one or more locator values(section_tipo, section_id, etc.)
+	* @param array $value like
+	* [{
+	*		"section_tipo" : "rsc35"
+	*		"section_id" : "4"
+	*  }]
+	* @return bool true
+	*/
+	public function set_filter_by_locators(array $value) {
+		
+		$this->filter_by_locators = $value;
+
+		return true;
+	}//end set_filter_by_locators
+
+
+
+	/**
+	* SET_ALLOW_SUB_SELECT_BY_ID
+	* Allow / disallow the default sql query window created with selected ids for speed
+	* Sometimes, the default behavior (true) interferes with some search calls like 
+	* in autocomplete cases 
+	* @param bool $value
+	* @return bool true
+	*/
+	public function set_allow_sub_select_by_id(bool $value) {
+		
+		$this->allow_sub_select_by_id = $value;
+
+		return true;
+	}//end set_allow_sub_select_by_id
+
+
+
+	/**
+	* SET_REMOVE_DISTINC
+	* By default, distinct clause is set in the search query to prevent duplicates on joins
+	* In some context (thesaurus search for example) we want "duplicate section_id's" because
+	* search is made it against various section tipo
+	* @param bool $value
+	* @return bool true
+	*/
+	public function set_remove_distinc(bool $value) {
+		
+		$this->remove_distinc = $value;
+
+		return true;
+	}//end set_remove_distinc
+
+
+
+	/**
+	* SET_SKIP_PROJECTS_FILTER
+	* By default, for non global administrators, a fixed filter y applied to all search using
+	* the user projects value. Sometimes, is required to remove this filter to allow access 
+	* transversal data like common value lists etc.
+	* @param bool $value
+	* @return bool true
+	*/
+	public function set_skip_projects_filter(bool $value) {
+		
+		$this->skip_projects_filter = $value;
+
+		return true;
+	}//end set_skip_projects_filter
+
+
+
+	/**
+	* SET_PARSED
+	* Mark the object status as parsed. Note that SQO have two moments:
+	* 1 - Base object with basic path definitions
+	* 2 - Parsed object with resolved component paths and component specific properties
+	* When SQO is passed to the search class to exec a DDBB query, the object elements are passed
+	* to the respective components to parse the final usable object 
+	* @see search.parse_search_query_object
+	* @param bool $value
+	* @return bool true
+	*/
+	public function set_parsed(bool $value) {
+		
+		$this->parsed = $value;
+
+		return true;
+	}//end set_parsed
+
+
+
+	/**
+	* GET METHODS
+	* By accessors. When property exits, return property value, else return null
+	*/	
+	final public function __call($strFunction, $arArguments) {
+		
+		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember	= substr($strFunction, 4);
+		switch($strMethodType) {
+			#case 'set_' :
+			#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
+			#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
+			#	break;
+			case 'get_' :
+				return($this->GetAccessor($strMethodMember));
+				break;
 		}
-
-		#$ar = array_filter(
-		#		$ar_ddo,
-		#		function($current_ddo) use($ddo, $ar_properties){
-		#			return self::compare_ddos( $ddo, $current_ddo, $ar_properties );
-		#		}
-		#); return $ar;
-
-
-		return $founded;
-	}//end in_array_ddo
+		return(false);
+	}
+	final private function GetAccessor($variable) {
+		if(property_exists($this, $variable)) {
+			return (string)$this->$variable;
+		}else{
+			return false;
+		}
+	}
 
 
-}//end dd_object
+
+
+}//end search_query_object

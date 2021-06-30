@@ -493,10 +493,10 @@ class locator extends stdClass {
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/	
-	public function __call($strFunction, $arArguments) {
+	final public function __call($strFunction, $arArguments) {
 		
-		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
-		$strMethodMember 	= substr($strFunction, 4);
+		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
 			#case 'set_' :
 			#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
@@ -508,9 +508,9 @@ class locator extends stdClass {
 		}
 		return(false);
 	}
-	private function GetAccessor($variable) {
+	final private function GetAccessor($variable) {
 		if(property_exists($this, $variable)) {
-			return (string)$this->$variable;			
+			return (string)$this->$variable;
 		}else{
 			return false;
 		}
