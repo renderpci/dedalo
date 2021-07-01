@@ -51,7 +51,7 @@ component_common.prototype.init = async function(options) {
 	self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 
 	// DOM
-	self.node			= [] // array of component nodes places in lihgt DOM
+	self.node			= [] // array of component nodes places in light DOM
 
 	self.events_tokens	= [] // array of events of current component
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
@@ -68,7 +68,7 @@ component_common.prototype.init = async function(options) {
 	// 		limit	: 0
 	// 	}
 
-	// self.type	= self.context.type 	// tipology of current instance, usually 'component'
+	// self.type	= self.context.type 	// typology of current instance, usually 'component'
 	// self.label	= self.context.label // label of current component like 'summary'
 	// self.tools	= self.context.tools || [] //set the tools of the component
 	// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
@@ -82,7 +82,7 @@ component_common.prototype.init = async function(options) {
 	self.permissions = null
 
 	// events subscription
-		// active_component (when user focus it in dom)
+		// active_component (when user focus it in DOM)
 			self.events_tokens.push(
 				event_manager.subscribe('active_component', (actived_component) => {
 					// call ui.component
@@ -114,7 +114,7 @@ component_common.prototype.init = async function(options) {
 						// the id_base is build when the component is instantiated
 						// this event can be fired by:
 						// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
-						// or the sort format with the id_base of the obserbable component:
+						// or the sort format with the id_base of the observable component:
 						// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
 						event_manager.subscribe(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ component_tipo, self[perform].bind(self))
 					)
@@ -177,7 +177,7 @@ component_common.prototype.init = async function(options) {
 */
 export const set_context_vars = function(self, context) {
 // console.log("context", self);
-	self.type			= self.context.type 	// tipology of current instance, usually 'component'
+	self.type			= self.context.type 	// typology of current instance, usually 'component'
 	self.label			= self.context.label // label of current component like 'summary'
 	self.tools			= self.context.tools || [] //set the tools of the component
 	self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
@@ -204,7 +204,7 @@ component_common.prototype.build = async function(autoload=false){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-	// load data on autoload true
+	// load data on auto-load true
 		if (autoload===true) {
 
 			// console.log("++++ self.rqo.show:", JSON.parse(JSON.stringify(self.rqo.show)));
@@ -415,7 +415,7 @@ component_common.prototype.get_value = function() {
 
 /**
 * SET_VALUE
-* Update component data value with dom node actual value
+* Update component data value with DOM node actual value
 * @return bool true
 */
 component_common.prototype.set_value = function(value) {
@@ -430,7 +430,7 @@ component_common.prototype.set_value = function(value) {
 
 /**
 * UPDATE_DATUM
-* Update component data value with changed_data send by the dom element
+* Update component data value with changed_data send by the DOM element
 * Update the datum and the data of the instance with the data changed and saved.
 * @param object new_data
 *	new_data contains fresh calculated data of saved component
@@ -454,7 +454,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 				const data_item = new_data[i]
 
-				const index_to_delete = self.datum.data.findIndex(item => item.tipo===data_item.tipo && item.section_tipo===data_item.section_tipo && item.section_id===data_item.section_id)
+				const index_to_delete = self.datum.data.findIndex(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id===data_item.section_id)
 
 				if (index_to_delete!==-1) {
 					if(SHOW_DEBUG===true) {
@@ -523,7 +523,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 /**
 * UPDATE_DATA_VALUE
-* Update component data value with changed_data send by the dom element
+* Update component data value with changed_data send by the DOM element
 * update_data_value. Update the data of the instance with the data changed
 * the format of changed_data = { key	: i,
 *								value : input.value }
@@ -574,7 +574,7 @@ component_common.prototype.change_value = async function(options) {
 
 	const self = this
 
-	// queue overlaped calls to avoid server concurrence issues
+	// queue overlapped calls to avoid server concurrence issues
 		if(self.status==='changing') {
 			//console.log(`Busy change_value delayed! ${options.changed_data.action} ${self.model}`, options.changed_data);
 			return new Promise(function(resolve) {
@@ -652,7 +652,7 @@ const function_queue = function(context, pool, fn, options) {
 
 /**
 * UPDATE_NODE_CONTENTS
-* Static function. Replaces old dom node by new node
+* Static function. Replaces old DOM node by new node
 */
 component_common.prototype.update_node_contents = async (current_node, new_node) => {
 
@@ -759,10 +759,10 @@ component_common.prototype.get_ar_instances = async function(){
 
 /**
 * CHANGE_MODE
-* Destroy current instance and dependences without remove html nodes (used to get target parent node placed in dom)
+* Destroy current instance and dependencies without remove html nodes (used to get target parent node placed in DOM)
 * Create a new instance in the new mode (for example, from list to edit_in_list)
 * Render a fresh full element node in the new mode
-* Replace every old placed dom node with the new one
+* Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
 */
 component_common.prototype.change_mode = async function(new_mode, autoload) {
@@ -808,7 +808,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 			render_level : 'full'
 		})
 
-	// clean and replace old dom nodes
+	// clean and replace old DOM nodes
 		await ui.update_dom_nodes(ar_node, node)
 
 	// active component at end
@@ -842,3 +842,5 @@ component_common.prototype.test_save = async function(component) {
 		}
 	}
 };//end test_save
+
+
