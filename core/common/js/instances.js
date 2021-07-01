@@ -75,7 +75,7 @@ export const get_instance = async function(options){
 			}
 		    return current_model
 		})();
-		// reasign the optional vars to the options
+		// reassign the optional vars to the options
 			options.model	= model
 			options.mode	= mode
 			options.lang	= lang
