@@ -230,6 +230,8 @@ function remove_element($json_data) {
 */
 function build_component_json_data($json_data) {
 	global $start_time;
+
+	// session_write_close();
 	
 	$response = new stdClass();
 		$response->result 	= false;
@@ -488,5 +490,3 @@ function show_more() {
 */
 
 
-
-?>

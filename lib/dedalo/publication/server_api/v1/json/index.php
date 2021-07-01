@@ -27,7 +27,7 @@
 
 
 
-// headers (configure it to allow CORS acces, etc.)
+// headers (configure it to allow CORS access, etc.)
 	$headers_file = dirname(dirname(__FILE__)) . '/config_api/server_config_headers.php';
 	include $headers_file;
 
@@ -127,6 +127,7 @@
 	if ($dedalo_get!==false && is_object($options)) {
 		$options->dedalo_get = $dedalo_get;
 	}
+
 
 
 // unlock session lock
