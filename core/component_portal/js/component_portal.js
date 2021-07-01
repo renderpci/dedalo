@@ -516,3 +516,5 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	// 	return offset_last
 	// };//end  get_last_offset
+
+
