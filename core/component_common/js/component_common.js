@@ -471,14 +471,15 @@ component_common.prototype.update_datum = function(new_data) {
 				// console.log("update_datum --------------------------- final self.datum.data:",new_data, JSON.parse(JSON.stringify(self.datum.data)));
 
 	// data 
-		// current element data (from current component only), removed!, we need update all data in all compoments.
-			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
+		// current element data (from current component only), removed!, we need update all data in all components.
+			// (!) note: Enabled again because tool_time_machine needs fix the data in this way
+			self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
 
 
 		// data of multiple components
-		// the data sended by the serve can be data of multiple components. The new_data is a array with the all response from server.
+		// the data sent by the serve can be data of multiple components. The new_data is a array with the all response from server.
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
-		// It's necessary update the data in all compomnents (self, observers), not only the caller.
+		// It's necessary update the data in all components (self, observers), not only the caller.
 			const ar_instances = instances.get_all_instances()
 			for (let i = new_data_length - 1; i >= 0; i--) {
 				const data_item = new_data[i]
