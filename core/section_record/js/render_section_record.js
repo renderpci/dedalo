@@ -316,11 +316,14 @@ const build_id_column = function(self) {
 
 		// initiator. Caller section defined
 			const initiator = self.caller.initiator || false
+				console.log("initiator:",initiator);
+				console.log("self.caller:",self.caller);
 
 		// button
 		switch(true) {
 
 			case (initiator && initiator.indexOf('component_')!==-1):
+			// case (self.caller.type==='component'):
 				// component portal caller (link)
 					const link_button = ui.create_dom_element({
 						element_type	: 'span',
@@ -440,26 +443,50 @@ const build_id_column = function(self) {
 						edit_button.addEventListener("click", function(e){
 							// edit_record(this, self)
 
-							const user_navigation_rqo = {
-								caller_id : self.caller.id,
-								source : {
-									action			: 'search',
-									model			: self.caller.model,
-									tipo			: self.section_tipo,
-									section_tipo	: self.section_tipo,
-									mode			: 'edit',
-									lang			: self.caller.lang
-								},
-								sqo : {
-									// mode			: 'edit',
-									section_tipo	: [{tipo : self.section_tipo}],
-									filter			: null,
-									limit			: 1,
-									offset			: offset,
-									filter			: self.caller.rqo.sqo.filter || null
-									// full_count	: false
+							// rqo
+							let user_navigation_rqo
+							if (self.caller.type==='component') {
+								user_navigation_rqo = {
+									caller_id	: self.caller.id,
+									source		: {
+										action			: 'search',
+										model			: 'section',
+										tipo			: self.section_tipo,
+										section_tipo	: self.section_tipo,
+										mode			: 'edit',
+										lang			: self.caller.lang
+									},
+									sqo : {
+										section_tipo		: [{tipo : self.section_tipo}],
+										filter				: null,
+										limit				: 1,
+										offset				: offset,
+										filter_by_locators	: [{
+											section_tipo : self.section_tipo,
+											section_id : self.section_id,
+										}]
+									}
 								}
-							}							
+							}else{
+								user_navigation_rqo = {
+									caller_id	: self.caller.id,
+									source		: {
+										action			: 'search',
+										model			: self.caller.model,
+										tipo			: self.section_tipo,
+										section_tipo	: self.section_tipo,
+										mode			: 'edit',
+										lang			: self.caller.lang
+									},
+									sqo : {
+										section_tipo	: [{tipo : self.section_tipo}],
+										filter			: null,
+										limit			: 1,
+										offset			: offset,
+										filter			: self.caller.rqo.sqo.filter || null										
+									}
+								}
+							}														
 							event_manager.publish('user_navigation', user_navigation_rqo)
 						})
 					}
