@@ -543,5 +543,5 @@ class locator extends stdClass {
 	}//end __destruct
 
 
-}
-?>
+
+}//end class

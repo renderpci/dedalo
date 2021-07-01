@@ -15,6 +15,7 @@ $start_time=microtime(1);
 	// ob_implicit_flush(true);
 
 
+
 	// header print as json data
 		header('Content-Type: application/json');
 
@@ -65,6 +66,9 @@ $start_time=microtime(1);
 				$result->msg	= (SHOW_DEBUG===true)
 					? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
 					: 'Throwable Exception when calling Dédalo API. Contact with your admin';
+				$result->debug	= (object)[
+					'rqo' => $rqo
+				];
 			
 			trigger_error($e->getMessage());
 		
@@ -75,6 +79,9 @@ $start_time=microtime(1);
 				$result->msg	= (SHOW_DEBUG===true)
 					? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
 					: 'Exception when calling Dédalo API. Contact with your admin';
+				$result->debug	= (object)[
+					'rqo' => $rqo
+				];
 
 			trigger_error($e->getMessage());
 		}

@@ -25,7 +25,6 @@ export const render_component_portal = function() {
 
 
 
-
 /**
 * MINI
 * Render node for use in list
@@ -61,20 +60,18 @@ render_component_portal.prototype.list = async function() {
 
 	const self = this
 
-	const ar_section_record = await self.get_ar_instances()
-
-	const ar_nodes = []
+	// build all section_record instances
+		const ar_section_record = await self.get_ar_instances()
 
 	const fragment = new DocumentFragment();
 
-	// add all nodes
+	// add all section_record nodes
 		const length = ar_section_record.length
 		for (let i = 0; i < length; i++) {
 
-			//const child_item = await ar_section_record[i].node
-			const child_item = await ar_section_record[i].render()
-
-			fragment.appendChild(child_item)
+			// section_record node. Await to preserve order
+			const section_record_node = await ar_section_record[i].render()
+			fragment.appendChild(section_record_node)
 		}
 	// events
 		// dblclick

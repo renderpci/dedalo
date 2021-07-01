@@ -674,24 +674,26 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 
 /**
 * GET_AR_INSTANCES
+* Create (init and build) a section_record for each component value
+* Used by portals to get all rows for render
+* @return array of objects (section_record instances)
 */
 component_common.prototype.get_ar_instances = async function(){
 
-	const self 			= this
+	const self = this
 
-	// // self data veification
+	// // self data verification
 	// 	if (typeof self.data==="undefined") {
 	// 		self.data = {
 	// 			value : []
 	// 		}
 	// 	}
 
-	// const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
-	const records_mode 	= null
-
-	const lang 			= self.section_lang
-	const value 		= self.data.value || []
-	const value_length 	= value.length
+	// const records_mode	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
+	const records_mode		= null
+	const lang				= self.section_lang
+	const value				= self.data.value || []
+	const value_length		= value.length
 
 	// console.log("---- get_ar_instances deep_render value:", JSON.parse(JSON.stringify(value)));
 
@@ -699,33 +701,33 @@ component_common.prototype.get_ar_instances = async function(){
 		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
 
-			const locator 			 	= value[i];
-			const current_section_tipo 	= locator.section_tipo
-			const current_section_id 	= locator.section_id
-			// const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
+			const locator				= value[i];
+			const current_section_tipo	= locator.section_tipo
+			const current_section_id	= locator.section_id
+			// const current_data		= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
 
 			// console.log("self:",self);
 
 			// console.log("current_section_tipo:",current_section_tipo, current_section_id, self.data.row_section_id);
 
-			// const current_context 	= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
-			const current_context 		= (typeof self.datum.context!=="undefined")
+			// const current_context = self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+			const current_context = (typeof self.datum.context!=="undefined")
 				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
 				: []
 
 			const instance_options = {
-				model 			: 'section_record',
-				tipo 			: self.tipo,
+				model			: 'section_record',
+				tipo			: self.tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
 				mode			: records_mode,
 				lang			: lang,
-				context 		: current_context,
+				context			: current_context,
 				// data			: current_data,
-				datum 			: self.datum,
-				paginated_key 	: locator.paginated_key, // used by autocomplete / portal
-				caller 			: self,
-				columns 		: self.columns,
+				datum			: self.datum,
+				paginated_key	: locator.paginated_key, // used by autocomplete / portal
+				caller			: self,
+				columns			: self.columns,
 				column_id		: self.column_id
 			}
 
@@ -767,12 +769,12 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 
 	const self = this
 
-	const current_context 		= self.context
-	const current_data 			= self.data
-	const current_datum 		= self.datum
-	const current_section_id 	= self.section_id
-	const section_lang 			= self.section_lang
-	const ar_node 				= self.node
+	const current_context		= self.context
+	const current_data			= self.data
+	const current_datum			= self.datum
+	const current_section_id	= self.section_id
+	const section_lang			= self.section_lang
+	const ar_node				= self.node
 
 	// new_mode check. When new_mode is undefined, fallback to 'list'. From 'list', change to 'edit_in_list'
 		if(typeof new_mode==='undefined'){

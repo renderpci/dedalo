@@ -92,7 +92,7 @@ tool_time_machine.prototype.init = async function(options) {
 
 
 /**
-* BUILD_CUSTOM
+* BUILD (CUSTOM)
 */
 tool_time_machine.prototype.build = async function(autoload=false) {
 
