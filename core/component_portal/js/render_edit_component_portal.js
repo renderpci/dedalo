@@ -5,92 +5,22 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../common/js/instances.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
+	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-
 	import {view_autocomplete} from './view_autocomplete.js'
 
 
 
 /**
-* RENDER_COMPONENT_portal
+* RENDER_EDIT_COMPONENT_PORTAL
 * Manages the component's logic and apperance in client side
 */
-export const render_component_portal = function() {
+export const render_edit_component_portal = function() {
 
 	return true
-};//end  render_component_portal
-
-
-
-/**
-* MINI
-* Render node for use in list
-* @return DOM node wrapper
-*/
-render_component_portal.prototype.mini = async function() {
-
-	const self = this
-
-	const ar_section_record = await self.get_ar_instances()
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-
-	// add all nodes
-		const length = ar_section_record.length
-		for (let i = 0; i < length; i++) {
-			const child_item = await ar_section_record[i].render()			
-			wrapper.appendChild(child_item)
-		}
-
-	return wrapper
-};//end  mini
-
-
-
-/**
-* LIST
-* Render node for use in list
-* @return DOM node wrapper
-*/
-render_component_portal.prototype.list = async function() {
-
-	const self = this
-
-	// build all section_record instances
-		const ar_section_record = await self.get_ar_instances()
-
-	const fragment = new DocumentFragment();
-
-	// add all section_record nodes
-		const length = ar_section_record.length
-		for (let i = 0; i < length; i++) {
-
-			// section_record node. Await to preserve order
-			const section_record_node = await ar_section_record[i].render()
-			fragment.appendChild(section_record_node)
-		}
-	// events
-		// dblclick
-			// wrapper.addEventListener("dblclick", function(e){
-			// 	// e.stopPropagation()
-			//
-			// 	// change mode
-			// 	self.change_mode('edit_in_list', true)
-			// })
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
-
-	wrapper.appendChild(fragment)
-
-	return wrapper
-};//end  list
+};//end render_edit_component_portal
 
 
 
@@ -99,7 +29,7 @@ render_component_portal.prototype.list = async function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_component_portal.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_portal.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
@@ -123,7 +53,7 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 				// self.portal_active = false
 
 			// content_data
-				const content_data = await get_content_data_edit(self)
+				const content_data = await build_content_data(self)
 				if (render_level==='content') {
 					return content_data
 				}
@@ -157,63 +87,12 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 
 
 
-
-/**
-* SEARCH
-* Render node for use in search
-* @return DOM node wrapper
-*/
-render_component_portal.prototype.search = async function(options={render_level:'full'}) {
-
-	const self = this
-
-	// render_level
-		const render_level = options.render_level
-
-
-	const content_data = await get_content_data_edit(self)
-	if (render_level==='content') {
-					return content_data
-	}
-
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
-		})
-		wrapper.classList.add("portal")
-
-	// id
-		wrapper.id = self.id
-
-	// events
-		add_events(self, wrapper)
-
-	// activate service autocomplete. Enable the service_autocomplete when the user do click
-		if(self.autocomplete_active===false){
-
-			// set rqo
-				self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-
-			self.autocomplete = new service_autocomplete()
-			self.autocomplete.init({
-				caller	: self,
-				wrapper : wrapper
-			})
-			self.autocomplete_active = true
-			self.autocomplete.search_input.focus()
-		}
-
-	return wrapper
-};//end search
-
-
-
-
 /**
 * ADD_EVENTS
+* Used too in search mode
 * @return bool
 */
-const add_events = function(self, wrapper) {
+export const add_events = function(self, wrapper) {
 
 	// add element, subscription to the events
 	// show the add_value in the instance
@@ -329,10 +208,11 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* BUILD_CONTENT_DATA
+* Used too in search mode
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+export const build_content_data = async function(self) {
 
 	const ar_section_record = await self.get_ar_instances()
 	const is_inside_tool 	= self.is_inside_tool
@@ -374,7 +254,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end  get_content_data_edit
+};//end  build_content_data
 
  
 
@@ -860,3 +740,5 @@ const render_references = function(ar_references) {
 
 	return fragment
 };//end render_references
+
+

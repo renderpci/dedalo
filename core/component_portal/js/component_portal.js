@@ -4,14 +4,18 @@
 
 
 // imports
+	import * as dd from '../../common/js/dd.common.funtions.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
 	import {component_common, set_context_vars} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
-	import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
-
+	// import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
+	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
+	import {render_list_component_portal} from '../../component_portal/js/render_list_component_portal.js'
+	import {render_search_component_portal} from '../../component_portal/js/render_search_component_portal.js'
+	import {render_mini_component_portal} from '../../component_portal/js/render_mini_component_portal.js'
 
 
 /**
@@ -78,13 +82,21 @@ export const component_portal = function(){
 	component_portal.prototype.build_rqo_choose		= common.prototype.build_rqo_choose
 
 	// render
-	component_portal.prototype.mini					= render_component_portal.prototype.mini
-	component_portal.prototype.list					= render_component_portal.prototype.list
-	component_portal.prototype.edit					= render_component_portal.prototype.edit
-	component_portal.prototype.edit_in_list			= render_component_portal.prototype.edit
-	component_portal.prototype.tm					= render_component_portal.prototype.list
-	component_portal.prototype.search				= render_component_portal.prototype.search
-	component_portal.prototype.change_mode			= component_common.prototype.change_mode
+	// component_portal.prototype.mini			= render_component_portal.prototype.mini
+	// component_portal.prototype.list			= render_component_portal.prototype.list
+	// component_portal.prototype.edit			= render_component_portal.prototype.edit
+	// component_portal.prototype.edit_in_list	= render_component_portal.prototype.edit
+	// component_portal.prototype.tm			= render_component_portal.prototype.list
+	// component_portal.prototype.search		= render_component_portal.prototype.search
+	// component_portal.prototype.change_mode	= component_common.prototype.change_mode
+
+	component_portal.prototype.mini				= render_mini_component_portal.prototype.mini
+	component_portal.prototype.list				= render_list_component_portal.prototype.list
+	component_portal.prototype.edit				= render_edit_component_portal.prototype.edit
+	component_portal.prototype.edit_in_list		= render_edit_component_portal.prototype.edit
+	component_portal.prototype.tm				= render_list_component_portal.prototype.list
+	component_portal.prototype.search			= render_search_component_portal.prototype.search
+	component_portal.prototype.change_mode		= component_common.prototype.change_mode
 
 
 
