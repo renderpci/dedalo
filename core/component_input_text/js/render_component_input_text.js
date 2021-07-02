@@ -95,6 +95,85 @@ render_component_input_text.prototype.list = async function() {
 
 
 /**
+* SEARCH
+* Render node for use in edit
+* @return DOM node wrapper
+*/
+render_component_input_text.prototype.search = async function() {
+
+	const self = this
+
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	const content_data = await get_content_data_search(self)
+
+	// ui build_edit returns component wrapper
+		const wrapper = ui.component.build_wrapper_edit(self, {
+			content_data : content_data
+		})
+
+	// id
+		wrapper.id = self.id
+
+	// Events
+
+		// change event, for every change the value in the imputs of the component
+			wrapper.addEventListener('change', (e) => {
+
+				// input_value. The standard input for the value of the component
+				if (e.target.matches('input[type="text"].input_value')) {
+
+					// input. Get the input node that has changed
+						const input = e.target
+
+					// parsed_value
+						const parsed_value = (input.value.length>0) ? input.value : null
+
+					// changed_data
+						const changed_data = Object.freeze({
+							action	: 'update',
+							key		: JSON.parse(input.dataset.key),
+							value	: parsed_value,
+						})
+
+					// update the instance data (previous to save)
+						self.update_data_value(changed_data)
+					// set data.changed_data. The change_data to the instance
+						self.data.changed_data = changed_data
+					// publish search. Event to update the dom elements of the instance
+						event_manager.publish('change_search_element', self)
+
+					return true
+				}
+
+				// q_operator. get the input value of the q_operator
+				// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
+				// like; radio_button, check_box, date, autocomplete, etc
+				// (!) Not used in input text
+				if (e.target.matches('input[type="text"].q_operator')) {
+
+					// input. Get the input node that has changed
+						const input = e.target
+					// value
+						const value = (input.value.length>0) ? input.value : null
+					// q_operator. Fix the data in the instance previous to save
+						self.data.q_operator = value
+					// publish search. Event to update the dom elements of the instance
+						event_manager.publish('change_search_element', self)
+
+					return true
+				}
+			}, false)
+
+
+
+	return wrapper
+};//end search
+
+
+
+/**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
@@ -305,85 +384,6 @@ const add_events = function(self, wrapper) {
 
 	return true
 };//end add_events
-
-
-
-/**
-* SEARCH
-* Render node for use in edit
-* @return DOM node wrapper
-*/
-render_component_input_text.prototype.search = async function() {
-
-	const self = this
-
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
-	const content_data = await get_content_data_search(self)
-
-	// ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
-		})
-
-	// id
-		wrapper.id = self.id
-
-	// Events
-
-		// change event, for every change the value in the imputs of the component
-			wrapper.addEventListener('change', (e) => {
-
-				// input_value. The standard input for the value of the component
-				if (e.target.matches('input[type="text"].input_value')) {
-
-					// input. Get the input node that has changed
-						const input = e.target
-
-					// parsed_value
-						const parsed_value = (input.value.length>0) ? input.value : null
-
-					// changed_data
-						const changed_data = Object.freeze({
-							action	: 'update',
-							key		: JSON.parse(input.dataset.key),
-							value	: parsed_value,
-						})
-
-					// update the instance data (previous to save)
-						self.update_data_value(changed_data)
-					// set data.changed_data. The change_data to the instance
-						self.data.changed_data = changed_data
-					// publish search. Event to update the dom elements of the instance
-						event_manager.publish('change_search_element', self)
-
-					return true
-				}
-
-				// q_operator. get the input value of the q_operator
-				// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
-				// like; radio_button, check_box, date, autocomplete, etc
-				// (!) Not used in input text
-				if (e.target.matches('input[type="text"].q_operator')) {
-
-					// input. Get the input node that has changed
-						const input = e.target
-					// value
-						const value = (input.value.length>0) ? input.value : null
-					// q_operator. Fix the data in the instance previous to save
-						self.data.q_operator = value
-					// publish search. Event to update the dom elements of the instance
-						event_manager.publish('change_search_element', self)
-
-					return true
-				}
-			}, false)
-
-
-
-	return wrapper
-};//end search
 
 
 

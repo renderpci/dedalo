@@ -316,8 +316,8 @@ const build_id_column = function(self) {
 
 		// initiator. Caller section defined
 			const initiator = self.caller.initiator || false
-				console.log("initiator:",initiator);
-				console.log("self.caller:",self.caller);
+				// console.log("initiator:",initiator);
+				// console.log("self.caller:",self.caller);
 
 		// button
 		switch(true) {
