@@ -198,7 +198,7 @@ component_portal.prototype.build = async function(autoload=false){
 					console.log("COMPONENT PORTAL api_response:",self.id, api_response);
 
 			// set context and data to current instance
-				self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
+				await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
 
 			// context. update instance properties from context (type, label, tools, divisor, permissions)
 				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
