@@ -1,4 +1,16 @@
-// utils
+// util
+'use strict';
+
+
+
+/**
+* CLONE
+* Exec a deeep safe clone of object
+*/
+export function clone(item){
+	return JSON.parse(JSON.stringify(item));
+}//end clone
+
 
 
 
@@ -33,9 +45,14 @@ export function wait_for_global(name, timeout=300) {
 
     wait(30)
   })
-};//end wait_for_global
+}//end wait_for_global
 
 
+
+/**
+* OBSERVE_CHANGES
+* Used by service_tinymce.js
+*/
 export async function observe_changes(element, config, once) {
 
 	// config are the options for the observer (which mutations to observe)
@@ -70,4 +87,6 @@ export async function observe_changes(element, config, once) {
 		// Start observing the target node for configured mutations
 		observer.observe(element, config);
 	})
-};//end observe_changes
+}//end observe_changes
+
+

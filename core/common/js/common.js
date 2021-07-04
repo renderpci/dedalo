@@ -4,7 +4,8 @@
 
 
 // imports
-	import * as dd from '../../common/js/dd.common.funtions.js'
+	// import * as dd from '../../common/js/dd.common.funtions.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
@@ -318,7 +319,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 							const destroyed_elements = self.ar_instances.splice(i, 1);
 							continue;
 						}
-						// console.log("self.ar_instances:", dd.clone(self.ar_instances[i]));
+						// console.log("self.ar_instances:", clone(self.ar_instances[i]));
 						// remove from array of instances of current element
 						const destroyed_elements = self.ar_instances.splice(i, 1)
 
@@ -408,7 +409,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 		self.status = 'destroyed'
 
 
-	//console.log("self.ar_instances final:",dd.clone(self.ar_instances));
+	//console.log("self.ar_instances final:",clone(self.ar_instances));
 	return result
 }//end destroy
 

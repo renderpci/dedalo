@@ -4,6 +4,7 @@
 
 
 // imports
+	import {clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
@@ -208,11 +209,9 @@ section.prototype.build = async function(autoload=false) {
 		}
 		await generate_rqo()
 
-
-
 	// debug check
 		if(SHOW_DEBUG===true) {
-			// console.log("SECTION self.rqo before load:", JSON.parse( JSON.stringify(self.rqo) ) );
+			// console.log("SECTION self.rqo before load:", clone(self.rqo) );
 		}
 
 	// filter search
@@ -244,11 +243,11 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo regenerate
 				await generate_rqo()
-				console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
+				console.log("SECTION self.rqo after load:", clone(self.rqo) );
 		
 			// count rows
 				if (!self.total) {
-					const count_sqo = JSON.parse( JSON.stringify(self.rqo.sqo) )
+					const count_sqo = clone(self.rqo.sqo )
 					delete count_sqo.limit
 					delete count_sqo.offset
 					delete count_sqo.select
@@ -386,7 +385,7 @@ section.prototype.build = async function(autoload=false) {
 													item.row_section_id===element.row_section_id &&
 													item.matrix_id===element.matrix_id)
 					if (index!==-1) {
-						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
+						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", ar_used[index]); // clone(self.datum.data)
 
 					}else{
 						ar_used.push(element)

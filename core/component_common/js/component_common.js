@@ -4,7 +4,8 @@
 
 
 // imports
-	import * as dd from '../../common/js/dd.common.funtions.js'
+	// import * as dd from '../../common/js/dd.common.funtions.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
@@ -208,7 +209,7 @@ component_common.prototype.build = async function(autoload=false){
 	// load data on auto-load true
 		if (autoload===true) {
 
-			// console.log("++++ self.rqo.show:", dd.clone(self.rqo.show));
+			// console.log("++++ self.rqo.show:", clone(self.rqo.show));
 			// console.log("self.context:",self.context);
 			// alert("Loading component " + self.model + " - " + self.tipo);
 
@@ -442,7 +443,7 @@ component_common.prototype.update_datum = async function(new_data) {
 	const self = this
 
 	// console.log("____ new_data:",new_data);
-	// console.log("____ self:",dd.clone(self));
+	// console.log("____ self:",clone(self));
 
 	// (!) Note that component datum is shared with section datum. BUT! Portals have specific datum
 
@@ -452,8 +453,8 @@ component_common.prototype.update_datum = async function(new_data) {
 			return false
 		}
 		const new_data_length = new_data.length
-			// console.log("update_datum --------------------------- new_data:", dd.clone(new_data) );
-			// console.log("update_datum --------------------------- first self.datum.data:", dd.clone(self.datum.data));
+			// console.log("update_datum --------------------------- new_data:", clone(new_data) );
+			// console.log("update_datum --------------------------- first self.datum.data:", clone(self.datum.data));
 			// console.trace();
 
 	// datum (global shared with section)
@@ -466,22 +467,21 @@ component_common.prototype.update_datum = async function(new_data) {
 				if (index_to_delete!==-1) {
 					// Ok, value already exists and will be deleted to prevent duplicates
 					if(SHOW_DEBUG===true) {
-						console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, dd.clone(self.datum.data[index_to_delete]) );
+						console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, clone(self.datum.data[index_to_delete]) );
 					}
 					self.datum.data.splice(index_to_delete, 1);
 				}else{
 					// Ops. data doesn't exists previously. Nothing to delete
-					console.warn("(!) [update_datum] NOT FOUNDED index_to_delete in component datum:", self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, dd.clone(self.datum) ) 
+					console.warn("(!) [update_datum] NOT FOUNDED index_to_delete in component datum:", self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) ) 
 				}
 			}
 
 		// add the new data into the general datum
 			self.datum.data = [...self.datum.data, ...new_data]
-				// console.log("update_datum --------------------------- final self.datum.data:", dd.clone(self.datum.data) );
+				// console.log("update_datum --------------------------- final self.datum.data:", clone(self.datum.data) );
 
 	// data (specific component data)
 		// current element data (from current component only), removed!, we need update all data in all components.
-			// (!) note: Enabled again because tool_time_machine needs fix the data in this way
 			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
 
 
@@ -490,19 +490,19 @@ component_common.prototype.update_datum = async function(new_data) {
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
 		// It's necessary update the data in all components (self, observers), not only the caller.
 			const ar_instances = instances.get_all_instances()
-			/* OLD WAY MONO
-			for (let i = new_data_length - 1; i >= 0; i--) {					
-				const data_item = new_data[i]
-				const current_instance = ar_instances.find(inst => inst.tipo===data_item.tipo && inst.section_tipo===data_item.section_tipo && inst.section_id==data_item.section_id)
-				if (current_instance) {
-					// add
-					// current_instance.data = self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
-					current_instance.data = self.datum.data.find(el => el.tipo===current_instance.tipo && el.section_tipo===current_instance.section_tipo && el.section_id==current_instance.section_id) || {}
-				}else{
-					console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
+			/* OLD WAY MONO 
+				for (let i = new_data_length - 1; i >= 0; i--) {					
+					const data_item = new_data[i]
+					const current_instance = ar_instances.find(inst => inst.tipo===data_item.tipo && inst.section_tipo===data_item.section_tipo && inst.section_id==data_item.section_id)
+					if (current_instance) {
+						// add
+						// current_instance.data = self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
+						current_instance.data = self.datum.data.find(el => el.tipo===current_instance.tipo && el.section_tipo===current_instance.section_tipo && el.section_id==current_instance.section_id) || {}
+					}else{
+						console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
+					}
 				}
-			}
-			*/
+				*/
 			// new way multi. Iterate data and instances with equal data
 			for (let i = new_data_length - 1; i >= 0; i--) {
 				
@@ -512,8 +512,9 @@ component_common.prototype.update_datum = async function(new_data) {
 				if (instances_length>0) {
 					// add
 					for (let j = 0; j < instances_length; j++) {
-						const inst	= current_instances[j]
-						inst.data	= self.datum.data.find(el => el.tipo===inst.tipo && el.section_tipo===inst.section_tipo && el.section_id==inst.section_id) || {}
+						const inst		= current_instances[j]
+						// inst.data	= self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
+						inst.data		= self.datum.data.find(el => el.tipo===inst.tipo && el.section_tipo===inst.section_tipo && el.section_id==inst.section_id) || {}						
 						console.log("____ updated instance data:", inst);
 					}
 				}else{
@@ -565,7 +566,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 	if(SHOW_DEBUG===true) {
 		const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
-		console.log("======= update_data_value PRE:", dd.clone(data_value) );
+		console.log("======= update_data_value PRE:", clone(data_value) );
 	}
 
 	const data_key 		= changed_data.key
@@ -584,8 +585,8 @@ component_common.prototype.update_data_value = function(changed_data){
 		}
 
 	if(SHOW_DEBUG===true) {
-		//console.log("***** update_data_value data_key:",dd.clone(data_key));
-		//console.log("======= update_data_value:",dd.clone(self.data.value));
+		//console.log("***** update_data_value data_key:",clone(data_key));
+		//console.log("======= update_data_value:",clone(self.data.value));
 		console.log("======= update_data_value:",self.data.value, self.id);
 	}
 
@@ -725,7 +726,7 @@ component_common.prototype.get_ar_instances = async function(){
 	const value				= self.data.value || []
 	const value_length		= value.length
 
-	// console.log("---- get_ar_instances deep_render value:", dd.clone(value));
+	// console.log("---- get_ar_instances deep_render value:", clone(value));
 
 	// iterate rows
 		const ar_instances = []
