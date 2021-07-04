@@ -146,24 +146,44 @@ tool_indexation.prototype.get_thesaurus = async function() {
 		const lang	= self.lang || page_globals.dedalo_data_lang
 		const mode	= 'list';
 
-	// instance
-		const options = {
+
+	// context
+		const context = {
+			type			: 'area',
+			typo			: 'ddo',
+			tipo			: tipo,
+			section_tipo	: tipo,
+			lang			: lang,
+			mode			: mode,
+			model			: 'section',
+			parent			: tipo,
+			// request_config	: request_config
+		}
+
+	// instance options
+		const instance_options = {
 			model			: model,
 			tipo			: tipo,
 			section_tipo	: tipo,
 			mode			: mode,
-			lang			: lang
+			lang			: lang,
+			context			: context,
+			caller			: self
 		}
-		const instance = await get_instance(options)
+
+	// init section instance
+		const area_thesaurus = await get_instance(instance_options)
 
 	// set instance in thesaurus mode 'relation'
-		instance.thesaurus_mode = "relation"
+		area_thesaurus.thesaurus_mode = "relation"
 
 	// build instance
-		await instance.build()
+		await area_thesaurus.build()
+
+			console.log("thesaurus area_thesaurus:",area_thesaurus);
 
 
-	return instance
+	return area_thesaurus
 };//end get_thesaurus
 
 
