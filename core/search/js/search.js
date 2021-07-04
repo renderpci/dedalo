@@ -8,23 +8,32 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import * as instances from '../../common/js/instances.js'
-	import {render_search,
-			toggle_fields,
-			toggle_search_panel,
-			toggle_presets,
-			// render_thesaurus_sections_checkboxes
-			} from './render_search.js'
-	import {on_dragstart,
-			on_dragover,
-			on_dragleave,
-			on_drop} from './search_drag.js'
-	import {load_search_preset,
-			new_preset,
-			save_new_preset,
-			save_preset,
-			delete_preset,
-			edit_preset} from './search_user_presets.js'
-	import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/cookie.js'
+	import {
+		render_search,
+		toggle_fields,
+		toggle_search_panel,
+		toggle_presets,
+		// render_thesaurus_sections_checkboxes
+	} from './render_search.js'
+	import {
+		on_dragstart,
+		on_dragover,
+		on_dragleave,
+		on_drop
+	} from './search_drag.js'
+	import {
+		load_search_preset,
+		new_preset,
+		save_new_preset,
+		save_preset,
+		delete_preset,
+		edit_preset
+	} from './search_user_presets.js'
+	import {
+		create_cookie,
+		read_cookie,
+		erase_cookie
+	} from '../../common/js/utils/cookie.js'
 
 
 

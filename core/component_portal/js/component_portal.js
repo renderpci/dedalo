@@ -4,7 +4,7 @@
 
 
 // imports
-	import * as dd from '../../common/js/dd.common.funtions.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'

@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/cookie.js'
+	// import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/utils/index.js'
 
 
 
