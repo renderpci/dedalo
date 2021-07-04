@@ -186,16 +186,19 @@ component_portal.prototype.build = async function(autoload=false){
 			// console.log("portal generate_rqo 1 self.rqo:", JSON.parse( JSON.stringify(self.rqo) ));
 			const ar_used = []
 			for(const element of self.datum.data) {
+
+				if (element.matrix_id) { continue; } // skip verification in matrix data
+
 				const index = ar_used.findIndex(item => item.tipo===element.tipo &&
 														item.section_tipo===element.section_tipo &&
-														item.section_id===element.section_id &&
+														item.section_id==element.section_id &&
 														item.from_component_tipo===element.from_component_tipo &&
-														item.parent_section_id===element.parent_section_id &&
-														item.row_section_id===element.row_section_id &&
-														(item.matrix_id && item.matrix_id===element.matrix_id)
+														item.parent_section_id==element.parent_section_id &&
+														item.row_section_id==element.row_section_id
+														// && (item.matrix_id && item.matrix_id==element.matrix_id)
 														)
 				if (index!==-1) {
-					console.error("PORTAL ERROR. self.datum.data contains duplicated elements:", self.datum.data);
+					console.error("PORTAL ERROR. self.datum.data contains duplicated elements:", ar_used[index]);
 				}else{
 					ar_used.push(element)
 				}
@@ -220,7 +223,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 			// rqo regenerate
 				await generate_rqo()
-				console.log("portal generate_rqo 2 self.rqo:",self.rqo);
+				// console.log("portal generate_rqo 2 self.rqo:",self.rqo);
 		}//end if (autoload===true)
 		
 	

@@ -1073,7 +1073,7 @@ class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->sqo						= $sqo ?? null;
-					$debug->rqo						= $rqo;
+					// $debug->rqo						= $rqo;
 					// $debug->context_exec_time	= $context_exec_time;
 					$debug->data_exec_time			= $data_exec_time;
 					$debug->exec_time				= exec_time_unit($start_time,'ms')." ms";
@@ -1092,7 +1092,7 @@ class dd_core_api {
 	* SMART_REMOVE_DATA_DUPLICATES
 	* @param array $data
 	* @return array $clean_data
-	
+	*/
 	private static function smart_remove_data_duplicates($data) {
 
 		$clean_data = [];

@@ -140,10 +140,11 @@ tool_indexation.prototype.get_component = async function(lang) {
 */
 tool_indexation.prototype.get_thesaurus = async function() {
 
-	const tipo 	= 'dd100';
-	const model = 'area_thesaurus';
-	const lang 	= self.lang || page_globals.dedalo_data_lang
-	const mode 	= 'list';
+	// short vars
+		const tipo	= 'dd100';
+		const model	= 'area_thesaurus';
+		const lang	= self.lang || page_globals.dedalo_data_lang
+		const mode	= 'list';
 
 	// instance
 		const options = {
