@@ -194,8 +194,10 @@ class state extends widget_common {
 
 				// get the total nodes for every column and row with the total % of the process
 				foreach ($ar_sum as $column => $value) {
+					// items, the register used to get the data (the locators of a portal, the total records used to get data)
+					$items = count($ar_locator);
 					// get the statistic % of the sum of the all languages / by the number of project langs
-					$total = round($value->total / $value->n, 2);
+					$total = round(($value->total / $value->n)/$items, 2);
 					// create the total item
 					$total_result = new stdClass();
 						$total_result->widget 	= get_class($this);
