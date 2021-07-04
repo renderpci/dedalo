@@ -152,7 +152,7 @@ export const component_info = function(){
 
 				const loaded_widget = self.ar_instances.find(item => item.id === widget_id)
 				const widget_value 	= value.filter(item => item.widget === widget_name && item.key === i)
-	
+
 				if(loaded_widget){
 					loaded_widget.value  = widget_value
 					event_manager.publish('update_widget_value_'+i+'_'+widget_id, widget_value)
