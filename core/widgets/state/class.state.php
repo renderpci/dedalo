@@ -45,6 +45,31 @@ class state extends widget_common {
 						$ar_locator[] = $locator;
 					}
 					break;
+				case 'component_data':
+					$ar_locator = [];
+					foreach ($source as $current_source) {
+						$source_section_tipo = (!isset($current_source->section_tipo) || $current_source->section_tipo==='current')
+							? $section_tipo
+							: $current_source->section_tipo;
+						$source_section_id = (!isset($current_source->section_id) || $current_source->section_id==='current')
+							? $section_id
+							: $current_source->section_id;
+						$source_component_tipo = $current_source->component_tipo;
+
+						$source_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
+						$source_component 	= component_common::get_instance($source_modelo_name,
+														   $source_component_tipo,
+														   $source_section_id,
+														   'list',
+														   DEDALO_DATA_LANG,
+														   $source_section_tipo);
+						$source_dato = $source_component->get_dato();
+						// locator will use to get the label of the components that has the information, only 1 locator is necessary
+						$locator = reset($source_dato);
+						
+						$ar_locator = array_merge($ar_locator, $source_dato);
+					}
+					break;
 
 				default:
 					break;
