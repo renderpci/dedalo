@@ -1241,7 +1241,7 @@ abstract class common {
 					if (strpos($called_model, 'component_')!==false && $options->get_data===true && !empty($json->data)) { //
 
 						$current = reset($json->data);
-							$current->debug_time_json	= $exec_time;
+							// $current->debug_time_json	= $exec_time;
 							$current->debug_model		= $called_model;
 							$current->debug_label		= $this->get_label();
 							$current->debug_mode		= $this->get_modo();
