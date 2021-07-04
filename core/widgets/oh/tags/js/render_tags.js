@@ -331,6 +331,21 @@ const get_value_element = (i, data, values_container, self) => {
 						parent 			: total_real_chars
 					})
 
+		// update the values when the observable was changed
+		event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
+	
+				total_tc_value.innerHTML				= changed_data.find(item => item.id === 'total_tc').value
+				ar_tc_wrong_value.innerHTML				= changed_data.find(item => item.id === 'ar_tc_wrong').value
+				total_index_value.innerHTML				= changed_data.find(item => item.id === 'total_index').value
+				total_missing_tags_value.innerHTML		= changed_data.find(item => item.id === 'total_missing_tags').value
+				total_to_review_tags_value.innerHTML	= changed_data.find(item => item.id === 'total_to_review_tags').value
+				total_private_notes_value.innerHTML		= changed_data.find(item => item.id === 'total_private_notes').value
+				total_public_notes_value.innerHTML		= changed_data.find(item => item.id === 'total_public_notes').value
+				total_chars_value.innerHTML				= changed_data.find(item => item.id === 'total_chars').value
+				total_chars_no_spaces_value.innerHTML	= changed_data.find(item => item.id === 'total_chars_no_spaces').value
+				total_real_chars_value.innerHTML		= changed_data.find(item => item.id === 'total_real_chars').value
+					
+		})
 
 
 	return li
