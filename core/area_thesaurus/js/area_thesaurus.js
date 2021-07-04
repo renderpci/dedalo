@@ -113,25 +113,39 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 		self.data = self.data || {}
 
-	// rqo_config
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
-
-	// rqo build
-		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
-
-	// // dd_request
-	// 	const request_config	= self.context ? self.context.request_config : null
-	// 	self.dd_request.show	= self.build_rqo('show', request_config, 'get_data')
-
-	// // debug
-	// 	const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
-
-	// // build_options. Add custom area build_options to source
-	// 	const source = self.dd_request.show.find(element => element.typo==='source')
-	// 		  source.build_options = self.build_options
-
-
 	const current_data_manager = new data_manager()
+
+	// // rqo_config
+	// 	self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+
+	// // rqo build
+	// 	self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
+
+	// rqo
+		const generate_rqo = async function(){
+			// rqo_config. get the rqo_config from context
+			self.rqo_config	= self.context.request_config
+				? self.context.request_config.find(el => el.api_engine==='dedalo')
+				: {}
+			
+			// rqo build
+			const action	= 'get_data'
+			const add_show	= false
+			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
+		}
+		await generate_rqo()
+
+	// old
+		// // dd_request
+		// 	const request_config	= self.context ? self.context.request_config : null
+		// 	self.dd_request.show	= self.build_rqo('show', request_config, 'get_data')
+
+		// // debug
+		// 	const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
+
+		// // build_options. Add custom area build_options to source
+		// 	const source = self.dd_request.show.find(element => element.typo==='source')
+		// 		  source.build_options = self.build_options	
 
 	// load data if not yet received as an option
 		if (autoload===true) {
@@ -139,11 +153,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			// get context and data
 				// const api_response = await current_data_manager.read(self.dd_request.show)
 				const api_response = await current_data_manager.request({body:self.rqo})
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					console.log("area_thesaurus api_response:",api_response);
-				}
+					console.log("AREA_THESAURUS api_response:", self.id, api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -152,17 +162,22 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				self.context	= self.datum.context.find(element => element.tipo===self.tipo)
 				self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
 				self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
+					console.log("self.widgets:",self.widgets);
 
 			// dd_request
 				// self.dd_request.show = self.build_rqo('show', self.context.request_config, 'get_data')
 				// console.log("-----------------------self.dd_request.show", self.dd_request.show);
 
-			// rebuild the rqo_config and rqo in the instance
-			// rqo_config
-				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+			// // rebuild the rqo_config and rqo in the instance
+			// // rqo_config
+			// 	self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
-			// rqo build
-				self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')
+			// // rqo build
+			// 	self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')
+
+			// rqo regenerate
+				await generate_rqo()
+				console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
 	}//end if (autoload===true)
 		
 
@@ -176,19 +191,15 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		self.section_tipo = self.context.section_tipo || null
 
 	// filter
-		// if (!self.filter && self.permissions>0) {
-		// 	// setTimeout(function(){
-
-		// 	const current_filter = new search()
-		// 	current_filter.init({
-		// 		caller : self
-		// 	})
-		// 	current_filter.build()
-		// 	self.filter = current_filter
-
-		// 	// },3000)
-		// }
-		console.log("Remember. Filter unactive");
+		if (!self.filter) {
+			self.filter = new search()
+			self.filter.init({
+				caller	: self,
+				mode	: self.mode
+			})
+			self.filter.build()
+		}
+		// console.log("Remember. Filter unactive");
 
 	// debug
 		if(SHOW_DEBUG===true) {
