@@ -50,7 +50,9 @@
 			// data item
 			$item  = $this->get_data_item($value);
 				$item->posterframe_url 	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
-				$item->video_url 		= $this->get_video_url(false);
+				$item->video_url 		= $this->av_file_exist()
+					? $this->get_video_url(false)
+					: null;
 
 			$data[] = $item;
 

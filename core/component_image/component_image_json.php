@@ -72,7 +72,7 @@
 		$item->datalist = $valid_urls;
 
 		// base_svg_url
-			$item->base_svg_url = $this->get_base_svg_url();
+			$item->base_svg_url = $this->get_base_svg_url(true);
 		
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
