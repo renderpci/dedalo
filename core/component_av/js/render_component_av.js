@@ -29,21 +29,21 @@ render_component_av.prototype.mini = async function() {
 	const self = this
 
 	// Options vars
-		const context 	= self.context
-		const data 		= self.data
+		const context	= self.context
+		const data		= self.data
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// url
-		const posterframe_url 	= data.posterframe_url
-		const url 				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+		const posterframe_url	= data.posterframe_url
+		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
-			src 			: url,
-			parent 			: wrapper
+			src				: url,
+			parent			: wrapper
 		})
 		// ui.component.add_image_fallback(image)
 
@@ -188,35 +188,47 @@ const get_content_data_edit = async function(self) {
 
 	// urls
 		// posterframe
-		const posterframe_url 	= self.data.posterframe_url
+		const posterframe_url	= self.data.posterframe_url
 		// media
-		const video_url 		= self.data.video_url
+		const video_url			= self.data.video_url
 
-	// source tag
-		const source = document.createElement("source")
-			  source.src  = video_url
-			  source.type = "video/mp4"
+	if (video_url) {
+		// source tag
+			const source = document.createElement("source")
+			source.type = "video/mp4"
+			// source.src  = video_url
 
-	// video tag
-		const video = document.createElement("video")
-				video.poster = posterframe_url
-				video.controls = true
-				video.classList.add("posterframe")
-				video.setAttribute("tabindex", 0)
-				video.appendChild(source)
+		// video tag
+			const video = document.createElement("video")
+			video.poster	= posterframe_url
+			video.controls	= true
+			video.classList.add("posterframe")
+			video.setAttribute("tabindex", 0)
+			video.appendChild(source)
+	
 
-	// keyup event
-		video.addEventListener("timeupdate", async (e) => {
-			// e.stopPropagation()
+		// keyup event
+			video.addEventListener("timeupdate", async (e) => {
+				// e.stopPropagation()
 
+				// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
+				// console.log("aqui:",frame);
+			})
 
-			// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-			// console.log("aqui:",frame);
-		})
+		// append the video node to the instance
+			self.video = video
+			fragment.appendChild(video)
 
-	// append the video node to the instance
-	self.video = video
-	fragment.appendChild(video)
+		// set video src only when it is in DOM (to save browser resources)
+			const observer = new IntersectionObserver(function(entries) {
+				const entry = entries[0]
+				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+					observer.disconnect();
+					source.src  = video_url
+				}
+			}, { threshold: [0] });
+			observer.observe(video);
+	}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
