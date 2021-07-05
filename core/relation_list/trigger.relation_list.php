@@ -53,6 +53,3 @@ function get_relation_list_json($json_data) {
 	return (object)$response;
 
 }//end get_relation_list_json
-
-
-?>
