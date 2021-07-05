@@ -63,14 +63,14 @@ class tags extends widget_common {
 				require_once(DEDALO_CORE_PATH.'/media_engine/class.OptimizeTC.php');
 				$ar_secs 	 = [];
 				$ar_tc_wrong = [];
-				foreach ($matches_tc[1] as $key => $value) {
-					#dump($value, ' value ++ '.to_string($key));
-					$secs 		= OptimizeTC::TC2seg($value);
-					$ar_secs[$key] 	= $secs;
+				foreach ($matches_tc[1] as $tc_key => $tc_value) {
+					#dump($tc_value, ' tc_value ++ '.to_string($tc_key));
+					$secs 		= OptimizeTC::TC2seg($tc_value);
+					$ar_secs[$tc_key] 	= $secs;
 						#dump($secs, ' secs ++ '.to_string());
-					if ($key>0 && $secs<$ar_secs[$key-1]) {
-						$ar_tc_wrong[] = $value;
-							#dump($secs, ' $secs ++ ERROR '.to_string($value));
+					if ($tc_key>0 && $secs<$ar_secs[$tc_key-1]) {
+						$ar_tc_wrong[] = $tc_value;
+							#dump($secs, ' $secs ++ ERROR '.to_string($tc_value));
 					}
 				}
 				#dump($ar_tc_wrong, ' $ar_tc_wrong ++ '.to_string());
@@ -99,9 +99,9 @@ class tags extends widget_common {
 
 				# INDEX MISSING IN
 				$ar_missing_indexIn=array();
-				foreach ($matches_indexOut[2] as $key => $value) {
-					if (!in_array($value, $matches_indexIn[2])) {
-						$tag_in = $matches_indexOut[0][$key];
+				foreach ($matches_indexOut[2] as $index_in_key => $index_invalue) {
+					if (!in_array($index_invalue, $matches_indexIn[2])) {
+						$tag_in = $matches_indexOut[0][$index_in_key];
 						$tag_in = str_replace('[/', '[', $tag_in);
 						$ar_missing_indexIn[] = $tag_in;
 					}
@@ -110,9 +110,9 @@ class tags extends widget_common {
 
 				# INDEX MISSING OUT
 				$ar_missing_indexOut=array();
-				foreach ($matches_indexIn[2] as $key => $value) {
-					if (!in_array($value, $matches_indexOut[2])) {
-						$tag_out = $matches_indexIn[0][$key];	// As we only have the in tag, we create out tag
+				foreach ($matches_indexIn[2] as $index_out_key => $index_out_value) {
+					if (!in_array($index_out_value, $matches_indexOut[2])) {
+						$tag_out = $matches_indexIn[0][$index_out_key];	// As we only have the in tag, we create out tag
 						$tag_out = str_replace('[', '[/', $tag_out);
 						$ar_missing_indexOut[] = $tag_out;
 					}
@@ -122,11 +122,11 @@ class tags extends widget_common {
 
 				$ar_different_index = array();
 				$ckey=3;
-				if(isset($matches_indexIn[$ckey])) foreach ($matches_indexIn[$ckey] as $value) {
-					$ar_different_index[] = $value;
+				if(isset($matches_indexIn[$ckey])) foreach ($matches_indexIn[$ckey] as $matches_in_value) {
+					$ar_different_index[] = $matches_in_value;
 				}
-				if(isset($matches_indexOut[$ckey])) foreach ($matches_indexOut[$ckey] as $value) {
-					$ar_different_index[] = $value;
+				if(isset($matches_indexOut[$ckey])) foreach ($matches_indexOut[$ckey] as $matches_out_value) {
+					$ar_different_index[] = $matches_out_value;
 				}
 				$ar_different_index = array_unique($ar_different_index);
 				$total_index = count($ar_different_index);
@@ -184,9 +184,9 @@ class tags extends widget_common {
 
 				# struct MISSING IN
 				$ar_missing_structIn=array();
-				foreach ($matches_structOut[2] as $key => $value) {
-					if (!in_array($value, $matches_structIn[2])) {
-						$tag_in = $matches_structOut[0][$key];
+				foreach ($matches_structOut[2] as $stuc_in_key => $struc_in_value) {
+					if (!in_array($struc_in_value, $matches_structIn[2])) {
+						$tag_in = $matches_structOut[0][$stuc_in_key];
 						$tag_in = str_replace('[/', '[', $tag_in);
 						$ar_missing_structIn[] = $tag_in;
 					}
@@ -195,9 +195,9 @@ class tags extends widget_common {
 
 				# struct MISSING OUT
 				$ar_missing_structOut=array();
-				foreach ($matches_structIn[2] as $key => $value) {
-					if (!in_array($value, $matches_structOut[2])) {
-						$tag_out = $matches_structIn[0][$key];	// As we only have the in tag, we create out tag
+				foreach ($matches_structIn[2] as $struc_out_key => $struc_out_value) {
+					if (!in_array($struc_out_value, $matches_structOut[2])) {
+						$tag_out = $matches_structIn[0][$struc_out_key];	// As we only have the in tag, we create out tag
 						$tag_out = str_replace('[', '[/', $tag_out);
 						$ar_missing_structOut[] = $tag_out;
 					}
@@ -207,11 +207,11 @@ class tags extends widget_common {
 
 				$ar_different_struct = array();
 				$ckey=3;
-				if(isset($matches_structIn[$ckey])) foreach ($matches_structIn[$ckey] as $value) {
-					$ar_different_struct[] = $value;
+				if(isset($matches_structIn[$ckey])) foreach ($matches_structIn[$ckey] as $matches_struc_in_value) {
+					$ar_different_struct[] = $matches_struc_in_value;
 				}
-				if(isset($matches_structOut[$ckey])) foreach ($matches_structOut[$ckey] as $value) {
-					$ar_different_struct[] = $value;
+				if(isset($matches_structOut[$ckey])) foreach ($matches_structOut[$ckey] as $matches_struc_out_value) {
+					$ar_different_struct[] = $matches_struc_out_value;
 				}
 				$ar_different_struct = array_unique($ar_different_struct);
 				$total_struct = count($ar_different_struct);
