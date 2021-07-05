@@ -501,9 +501,9 @@ const get_input_element_edit = (i, current_value, ul_container, self, is_inside_
 				// if(entries[0].isIntersecting === true) {}
 				const entry = entries[0]
 				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+					observer.disconnect();
 					self.get_map(map_container, current_value)
 					// observer.unobserve(entry.target);
-					observer.disconnect();
 				}
 			}, { threshold: [0] });
 

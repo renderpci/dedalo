@@ -196,7 +196,7 @@ const get_content_data_edit = async function(self) {
 		// source tag
 			const source = document.createElement("source")
 			source.type = "video/mp4"
-			// source.src  = video_url
+			source.src  = video_url
 
 		// video tag
 			const video = document.createElement("video")
@@ -220,14 +220,14 @@ const get_content_data_edit = async function(self) {
 			fragment.appendChild(video)
 
 		// set video src only when it is in DOM (to save browser resources)
-			const observer = new IntersectionObserver(function(entries) {
-				const entry = entries[0]
-				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-					observer.disconnect();
-					source.src  = video_url
-				}
-			}, { threshold: [0] });
-			observer.observe(video);
+			// const observer = new IntersectionObserver(function(entries) {				
+			// 	const entry = entries[0]
+			// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+			// 		observer.disconnect();
+			// 		source.src  = video_url
+			// 	}
+			// }, { threshold: [0] });
+			// observer.observe(video);
 	}
 
 	// content_data
