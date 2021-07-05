@@ -191,15 +191,15 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		self.section_tipo = self.context.section_tipo || null
 
 	// filter
-		if (!self.filter) {
-			self.filter = new search()
-			self.filter.init({
-				caller	: self,
-				mode	: self.mode
-			})
-			self.filter.build()
-		}
-		// console.log("Remember. Filter unactive");
+		// if (!self.filter) {
+		// 	self.filter = new search()
+		// 	self.filter.init({
+		// 		caller	: self,
+		// 		mode	: self.mode
+		// 	})
+		// 	self.filter.build()
+		// }
+		console.log("Remember. Filter unactive");
 
 	// debug
 		if(SHOW_DEBUG===true) {
