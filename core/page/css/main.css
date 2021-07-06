@@ -3564,6 +3564,27 @@ ul.inputs_container > li:focus-within .hidden_button {
 .content_data.area .form_container button {
   border: 1px solid #dadada;
 }
+.content_data.widget li > div {
+  padding: 0.5em;
+  background-color: #f0f0f0;
+  border-right: 1px solid #c0c0c0;
+}
+.content_data.widget li > div:last-of-type {
+  border: none;
+}
+.content_data.widget li > div > .label,
+.content_data.widget li > div > .value {
+  padding: 0.5em;
+}
+.content_data.widget li > div > .label {
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.content_data.widget li > div > .value {
+  padding-left: 0;
+}
 /*
 	.id_column {
 		//display: flex;
