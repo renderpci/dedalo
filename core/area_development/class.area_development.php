@@ -495,7 +495,7 @@ class area_development extends area_common {
 			$ar_tables = (function($tables) {
 				
 				if ($tables==='*') {
-					// all relationable tables (implies to truncate relations table)
+					// all relation able tables (implies to truncate relations table)
 					return area_development::$ar_tables_with_relations;
 				}else{
 					// is a list comma separated of tables like matrix,matrix_hierarchy

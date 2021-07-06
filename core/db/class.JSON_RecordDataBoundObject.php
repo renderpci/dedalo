@@ -442,7 +442,7 @@ abstract class JSON_RecordDataBoundObject {
 									if ( strpos($value, '->') ) {
 										$strPrimaryKeyName = $value;
 									}
-									# Else (dedault) is a column key and we use '"column_name"'
+									# Else (default) is a column key and we use '"column_name"'
 									else{
 										$strPrimaryKeyName = '"'.$value.'"';
 									}
@@ -556,7 +556,7 @@ abstract class JSON_RecordDataBoundObject {
 			# QUE SE GUARDA EN UN ARRAY ESTÁTICO
 			# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
-			# the nexts results are 0 and duplicate records are builded in matrix)
+			# the next results are 0 and duplicate records are built in matrix)
 			$n_records = count($ar_records);
 			if( $use_cache===true && $this->use_cache_manager===true && $n_records>0) {
 				# CACHE_MANAGER
@@ -771,9 +771,10 @@ abstract class JSON_RecordDataBoundObject {
 		}else{
 			return(false);
 		}
-	}
+	}//end GetAccessor
 
 
 
-}//end class
-?>
+}//end class JSON_RecordDataBoundObject
+
+
