@@ -11,7 +11,7 @@
 
 /**
 * RENDER_COMPONENT_AV
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_component_av = function() {
 
@@ -309,7 +309,7 @@ const build_video_html5 = function(request_options) {
 			play : false,
 			// poster image. (string) url of posterframe image
 			poster 	 : "",
-			// class css. video aditional css classes
+			// class css. video additional css classes
 			class 	 : "",
 			// preload (string) video element attribute preload
 			preload  : "auto",
