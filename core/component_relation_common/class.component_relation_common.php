@@ -1,7 +1,7 @@
 <?php
 /*
 * CLASS COMPONENT_RELATION_COMMON
-* Used as common base from all components that works from section relations data, instead standar component dato
+* Used as common base from all components that works from section relations data, instead standard component dato
 * like component_model, component_parent, etc..
 */
 class component_relation_common extends component_common {
@@ -113,7 +113,7 @@ class component_relation_common extends component_common {
 	* GET_DATO
 	* Returns dato from container 'relations', not from component dato container
 	* @return array $dato
-	*	$dato is always an array of locators or an empy array
+	*	$dato is always an array of locators or an empty array
 	*/
 	public function get_dato() {
 
@@ -150,7 +150,7 @@ class component_relation_common extends component_common {
 	* GET_DATO_FULL
 	* Returns dato from container 'relations', not for component dato container
 	* @return array $dato
-	*	$dato is always an array of locators or an empy array
+	*	$dato is always an array of locators or an empty array
 	*/
 	public function get_dato_full() {
 
@@ -208,7 +208,7 @@ class component_relation_common extends component_common {
 	* GET_DATO_FULL
 	* Returns dato from container 'relations', not for component dato container
 	* @return array $dato
-	*	$dato is always an array of locators or an empy array
+	*	$dato is always an array of locators or an empty array
 	*/
 	public function get_all_data() {
 
@@ -271,7 +271,7 @@ class component_relation_common extends component_common {
 	/**
 	* SET_DATO
 	* Set raw dato overwrite existing dato.
-	* Usually, dato is builded element by element, adding one locator to existing dato, but some times we need
+	* Usually, dato is built element by element, adding one locator to existing dato, but some times we need
 	* insert complete array of locators at once. Use this method in this cases
 	*/
 	public function set_dato($dato) {
@@ -376,7 +376,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_VALOR_LANG
 	* Return the component lang depending of is translatable or not
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
+	* If the component need change this langs (selects, radiobuttons...) overwrite this function
 	* @return string $lang
 	*/
 	public function get_valor_lang() {
@@ -399,7 +399,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -667,6 +667,7 @@ class component_relation_common extends component_common {
 	}//end Save
 
 
+
 	/**
 	* GET_LOCATOR_VALUE
 	* Resolve locator to string value to show in list etc.
@@ -698,7 +699,6 @@ class component_relation_common extends component_common {
 																	'edit',
 																	$lang,
 																	$locator->section_tipo);
-
 
 
 				$current_value = component_common::extract_component_value_fallback($current_component, $lang, true);
@@ -1018,7 +1018,7 @@ class component_relation_common extends component_common {
 	* SET_DATO_EXTERNAL
 	* get the dato from other component that reference at the current section of the component (portal, autocomplete, select, etc)
 	* the result will be the result of the search to the external section and component
-	* and the combiantion with the dato of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
+	* and the combination with the dato of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
 	* @see used by component_autocomplete and component_portal
 	* @return dato
 	*/
@@ -1257,7 +1257,7 @@ class component_relation_common extends component_common {
 
 		if(SHOW_DEBUG===true) {
 			//$subtotal = exec_time_unit($start_time,'ms')." ms";
-			//debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
+			//debug_log(__METHOD__." Sub-subtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
 		}
 
 		# Build the locators with the result
@@ -1440,8 +1440,8 @@ class component_relation_common extends component_common {
 		$filter = [];
 		foreach ($ar_terms as $current_item) {
 			$resursive = (bool)$current_item->recursive;
-			# Get childrens
-			$ar_childrens = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $resursive);
+			# Get children
+			$ar_children = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $resursive);
 			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_item->section_tipo, ['component_section_id'], true, true, true, true, false);
 
 			$path = new stdClass();
@@ -1452,7 +1452,7 @@ class component_relation_common extends component_common {
 
 			$ar_section_id = array_map(function($children){
 				return $children->section_id;
-			}, $ar_childrens);
+			}, $ar_children);
 
 			$filter_item = new stdClass();
 				$filter_item->q 	= implode(',', $ar_section_id);
@@ -1665,25 +1665,27 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_FIXED_FILTER
-	* @return
+	* @return array $ar_fixed_filter
 	*/
 	public static function get_fixed_filter($ar_fixed, $section_tipo, $section_id) {
-
 
 		$ar_fixed_filter = [];
 
 		foreach ($ar_fixed as $search_item) {
+			
 			$operator = $search_item->operator;
+			
 			$dato_filter = new stdClass();
 				$dato_filter->{$operator} = [];
 
 			switch ($search_item->source) {
+				
 				case 'fixed_dato':
 					foreach ($search_item->value as $object) {
 						foreach ($object->q->value as $q_value) {
 							$filter_item = new stdClass();
-								$filter_item->q 	= '';
-								$filter_item->path 	= [];
+								$filter_item->q		= '';
+								$filter_item->path	= [];
 							foreach ($object->f_path as $key => $value) {
 								if($key % 2 ===0){
 									$filter_item->path[] = search::get_query_path($value, $object->f_path[$key+1],false,false)[0];
@@ -1693,7 +1695,6 @@ class component_relation_common extends component_common {
 							$dato_filter->{$operator}[] =  $filter_item;
 						}
 					}
-
 					break;
 
 				case 'component_dato':
@@ -1719,7 +1720,6 @@ class component_relation_common extends component_common {
 							$dato_filter->{$operator}[] =  $filter_item;
 						}
 					}
-
 					break;
 
 				case 'hierarchy_terms':

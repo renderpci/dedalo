@@ -25,9 +25,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $filtroTerminos ;
 
 	# OPTIONAL ESPECIFIC LOADS
-	#protected $ar_recursive_childrens_of_this     = array();
-	#protected $ar_parents_cache 				= array();
-	#protected $ar_reels_of_this 				= array();
+	#protected $ar_recursive_childrens_of_this	= array();
+	#protected $ar_parents_cache				= array();
+	#protected $ar_reels_of_this				= array();
 
 
 	/**
@@ -97,7 +97,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	# DEFINERELATIONMAP : array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() {
 		return [
-			# db fieldn ame		# property name
+			# db field name		# property name
 			//'id'			=> 'ID',
 			'terminoID'		=> 'terminoID',
 			'parent'		=> 'parent',
@@ -195,6 +195,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* SAVE_TERM_AND_DESCRIPTOR
 	* Used to save elements in class hierarchy
+	* @param string $descriptor_dato
+	* @return string $terminoID
 	* @see class.hierarchy.php
 	*/
 	public function save_term_and_descriptor( $descriptor_dato=null ) {
@@ -217,7 +219,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			#dump($terminoID," terminoID - prefijo:$this->prefijo");die();
 
 		# Set defaults
-		if(empty($this->norden)) $this->set_norden( (int)1 );
+		if(empty($this->norden)) $this->set_norden(1);
 
 		$result = parent::Save();
 			#dump($result, ' result ++ counter_dato:'.to_string($counter_dato)); #die();
@@ -246,8 +248,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* UPDATE_COUNTER
-	* @param (string)$tld, (int)$current_value=false
-	* @return int
+	* @param string $tld
+	* @param int $current_value=false
+	* 
+	* @return int $counter_dato_updated
 	* Actualiza el contador para el tld dado (ej. 'dd').
 	* El 'current_value' es opcional. Si no se recibe se calcula
 	*/
@@ -274,17 +278,21 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_COUNTER_VALUE
+	* @param string $tld
+	* 
+	* @return int $counter_value
 	*/
 	protected static function get_counter_value($tld) {
-		$strQuery 		= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
+		
+		$strQuery		= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
 		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
-		$counter_value 	= pg_fetch_assoc($result)['counter'];
+		$counter_value	= pg_fetch_assoc($result)['counter'];
 
 		if ($counter_value===false || is_null($counter_value)) {
 			if(SHOW_DEBUG===true) {
 				//debug_log(__METHOD__." Error on get_counter_value 'RecordObj_dd_edit'. counter for tld not found. ".to_string(), logger::WARNING);
 			}
-			return (int)0;
+			return 0;
 		}
 
 		return (int)$counter_value;
@@ -357,6 +365,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET MODELO NAME (CURRENT OBJ)
 	* Alias of $this->get_termino_by_tipo($modelo_tipo)
+	* @return string $model
 	*/
 	public function get_modelo_name() {
 
@@ -432,8 +441,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	public static function get_real_model_name_by_tipo($tipo) {
 
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$model_name  = $RecordObj_dd->get_real_model_name();
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$model_name		= $RecordObj_dd->get_real_model_name();
 
 		return $model_name;
 	}//end get_real_model_name_by_tipo
@@ -526,14 +535,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 		static $ar_all_modelos_data;
 		if(isset($this->terminoID) && isset($ar_all_modelos_data[$this->terminoID])) return $ar_all_modelos_data[$this->terminoID];
 
-		$ar_all_modelos = array();		#echo " this->terminoID:".$this->get_terminoID() ." - ".$this->terminoID()."<hr>";
+		$ar_all_modelos = array();
 
 		# SEARCH
 		$arguments=array();
 		$arguments['esmodelo']	= 'si';
 		$RecordObj_dd			= new RecordObj_dd(NULL,$this->prefijo);
 		$ar_id					= (array)$RecordObj_dd->search($arguments);
-			#dump($ar_id," ");
 
 		foreach($ar_id as $terminoID) {
 			$ar_all_modelos[] = $terminoID ;
@@ -557,7 +565,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$arguments['modelo']	= $modelo_tipo;
 		$RecordObj_dd			= new RecordObj_dd(NULL,'dd');
 		$ar_id					= (array)$RecordObj_dd->search($arguments);
-			#dump($ar_id," ar_id");
 
 		$ar_all_terminoID=array();
 		foreach($ar_id as $terminoID) {
@@ -672,7 +679,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		if(isset($this->ar_recursive_childrens_of_this)) return $this->ar_recursive_childrens_of_this ;
-	}
+	}//end get_ar_recursive_childrens_of_this
+
+
+
 	/**
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
@@ -696,7 +706,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID,true);
 				if (in_array($modelo_name, $ar_exclude_models)) {
 					#debug_log(__METHOD__." Skiped model '$modelo_name' ".to_string($current_terminoID), logger::DEBUG);
-					continue;	// Skip current modelo and childrens
+					continue;	// Skip current modelo and children
 				}
 			}
 
@@ -705,7 +715,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		return $ar_resolved;
-	}
+	}//end get_ar_recursive_childrens
+
+
+
 	/**
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
@@ -774,8 +787,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		} while ( !empty($parent) && ($parent !== $parent_zero) && $parent !== $parent_inicial );
 
 
-		# ordenamos a la inversa los padres
-		#echo " ksort:";dump($ksort);
+		# ordenamos a la inversa los padres		
 		if($ksort===true) krsort($ar_parents_of_this);
 
 		# STORE CACHE DATA

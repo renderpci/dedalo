@@ -1,5 +1,7 @@
 <?php
 
+
+
 class json_handler {
  
 	protected static $_messages = array(
@@ -49,13 +51,13 @@ class json_handler {
 
 		#if(is_string($json))
 		#$json = stripslashes($json);
-/*
+		/*
 		if (is_string($json)) {
-				dump($json," ");
+			dump($json," ");
 			dump(gettype($json),"tipe of var $json ");
 			dump(debug_backtrace() );
 		}
-	*/	
+		*/	
 
 		# NORMAL FUNCTION
 		if(SHOW_DEBUG!=true) {
@@ -95,10 +97,8 @@ class json_handler {
 				trigger_error("$msg", E_USER_ERROR);           
 				#throw new RuntimeException(static::$_messages[json_last_error()]);
 			}
-
-		} 
-		
-	}
+		}
+	}//end decode
 
 
 
@@ -113,8 +113,10 @@ class json_handler {
 		}
 		return $value;
 
-	}#end test_json
+	}//end test_json
  
 
-}
-?>
+
+}//end class json_handler
+
+

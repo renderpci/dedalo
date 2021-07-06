@@ -42,17 +42,17 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected function defineRelationMap() {		
 		return (array(
 			# db fieldn ame			# property name
-			"id" 					=> "ID",		# integer
-			#"id_matrix" 			=> "id_matrix",	# integer
-			"section_id" 			=> "section_id",# integer
-			"section_tipo" 			=> "section_tipo",# string charvar 32
-			"tipo" 					=> "tipo",		# string charvar 32
-			"lang" 					=> "lang", 		# string 16
-			"timestamp" 			=> "timestamp", # timestamp standar db format
-			"userID" 				=> "userID", 	# integer
-			"state" 				=> "state",		# string char 32
-			"dato" 					=> "dato",		# jsonb format			
-			));
+			"id"			=> "ID",		# integer
+			#"id_matrix"	=> "id_matrix",	# integer
+			"section_id"	=> "section_id",# integer
+			"section_tipo"	=> "section_tipo",# string charvar 32
+			"tipo"			=> "tipo",		# string charvar 32
+			"lang"			=> "lang", 		# string 16
+			"timestamp"		=> "timestamp", # timestamp standar db format
+			"userID"		=> "userID", 	# integer
+			"state"			=> "state",		# string char 32
+			"dato"			=> "dato",		# jsonb format			
+		));
 	}//end defineRelationMap
 
 
@@ -99,7 +99,6 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		
 		$RecordObj_time_machine	= new RecordObj_time_machine(NULL);
 		$ar_id					= $RecordObj_time_machine->search($arguments);
-			#dump($ar_id,'ar_id '.print_r($arguments,true));
 		
 		#$ar_time_machine_of_this = array_values($ar_id);
 		#foreach($ar_id as $id) {
@@ -111,5 +110,4 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 
 	
-}
-?>
+}//end classRecordObj_time_machine

@@ -9,11 +9,11 @@ abstract class common {
 	// permissions. int value from 0 to 3
 	public $permissions;
 
-	// ar_loaded_modelos_name. List of all components/sections modelo name used in current page (without duplicates). Used to determine
+	// ar_loaded_modelos_name. List of all components/sections model name used in current page (without duplicates). Used to determine
 	// the css and css files to load
 	static $ar_loaded_modelos_name = array();
 
-	// identificador_unico. UID used to set dom elements id unic bsen on section_tipo, section_id, lang, modo, etc.
+	// identificador_unico. UID used to set dom elements id unique based on section_tipo, section_id, lang, modo, etc.
 	public $identificador_unico;
 	// variant. Modifier of identificador_unico
 	public $variant;
@@ -304,11 +304,11 @@ abstract class common {
 			switch (true) {
 				case ($tipo===DEDALO_SECTION_PROJECTS_TIPO):
 					$matrix_table = 'matrix_projects';
-					#error_log("Error. Table for section projects tipo is not defined. Unsing default table: '$matrix_table'");
+					#error_log("Error. Table for section projects tipo is not defined. Using default table: '$matrix_table'");
 					break;
 				case ($tipo===DEDALO_SECTION_USERS_TIPO):
 					$matrix_table = 'matrix_users';
-					#error_log("Error. Table for section users tipo is not defined. Unsing default table: '$matrix_table'");
+					#error_log("Error. Table for section users tipo is not defined. Using default table: '$matrix_table'");
 					break;
 				default:
 
@@ -472,7 +472,7 @@ abstract class common {
 	*/
 	public static function get_main_lang( $section_tipo, $section_id=null ) {
 		#dump($section_tipo, ' section_tipo ++ '.to_string());
-		# Always fixed lang of languages as english
+		# Always fixed lang of languages as English
 		if ($section_tipo==='lg1') {
 			return 'lg-eng';
 		}
@@ -520,7 +520,7 @@ abstract class common {
 
 			switch (true) {
 
-				# Thesaurus virtuals
+				# Thesaurus virtual
 				case (isset($ar_related_section_tipo[0]) && $ar_related_section_tipo[0]===DEDALO_THESAURUS_SECTION_TIPO):
 					$main_lang = hierarchy::get_main_lang($section_tipo);
 					if (empty($main_lang)) {
@@ -668,7 +668,7 @@ abstract class common {
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
 	* @return string $html
-	*	Get standar path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
+	*	Get standard path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
 	public function get_html() {
@@ -690,7 +690,7 @@ abstract class common {
 
 
 	/**
-	* GET_AR_ALL_LANGS : Return array of all langs of all proyects in Dédalo
+	* GET_AR_ALL_LANGS : Return array of all langs of all projects in Dédalo
 	* @return array $ar_all_langs
 	*	like (lg-eng=>locator,lg-spa=>locator) or resolved (lg-eng => English, lg-spa => Spanish)
 	*/
@@ -2191,9 +2191,9 @@ abstract class common {
 		$requested_source = dd_core_api::$rqo->source ?? false;		
 		if($requested_source) { // && $requested_source->tipo===$this->tipo
 			
-			// set the request_config with the API rqo sended by client
+			// set the request_config with the API rqo sent by client
 				
-			// requested_show. get the rqo sended to the API
+			// requested_show. get the rqo sent to the API
 			$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
 				? unserialize(serialize(dd_core_api::$rqo->show))
 				: false;
@@ -2350,12 +2350,12 @@ abstract class common {
 	/**
 	* GET_REQUEST_PROPERTIES_PARSED
 	* Resolves the component config context with backward compatibility
-	* The proper config in v6 is on term properties config, NOT as retated terms
+	* The proper config in v6 is on term properties config, NOT as related terms
 	* Note that section tipo 'self' will be replaced by argument '$section_tipo'
 	* @param string $tipo
 	*	component tipo
 	* @param bool $external
-	*	optional defaul false
+	*	optional default false
 	* @param string $section_tipo
 	*	optional default null
 	* @return object $request_config
@@ -2393,7 +2393,7 @@ abstract class common {
 		$properties		= $RecordObj_dd->get_properties();
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-		// pagination defaults. Note that limit defaults are set on element contruction based on properties
+		// pagination defaults. Note that limit defaults are set on element construction based on properties
 			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;			
 			$limit = (function() use($model, $tipo, $section_tipo, $mode){
 				switch (true) {
@@ -2869,7 +2869,7 @@ abstract class common {
 			$options->filter_by_locator		= false;
 			$options->filter_by_locators	= false; // different of 'filter_by_locator' (!)
 			$options->direct				= false; // true for section (!)
-			$options->mode					= 'list'; // is necesary to calculate the ddo's to search / show (layout_map)
+			$options->mode					= 'list'; // It is necessary to calculate the ddo's to search / show (layout_map)
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$id					= $options->id;
@@ -3242,7 +3242,7 @@ abstract class common {
 		$context_type 				= $options->context_type;
 
 		# Manage multiple sections
-		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
+		# section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
 		#$ar_section_tipo = (array)$section_tipo;
 		$resolved_section = [];
 		$context = [];
@@ -3370,13 +3370,13 @@ abstract class common {
 	*/
 	public function get_tools() {
 
-		$registered_tools 	= $this->get_client_registered_tools();
-		$model 				= get_class($this);
-		$tipo 				= $this->tipo;
-		$is_component 		= strpos($model, 'component_')===0;
-		$translatable 		= $this->traducible;
-		$properties 		= $this->get_properties();
-		$with_lang_versions = isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
+		$registered_tools	= $this->get_client_registered_tools();
+		$model				= get_class($this);
+		$tipo				= $this->tipo;
+		$is_component		= strpos($model, 'component_')===0;
+		$translatable		= $this->traducible;
+		$properties			= $this->get_properties();
+		$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
 		$tools = [];
 		foreach ($registered_tools as $tool) {
@@ -3405,7 +3405,6 @@ abstract class common {
 				}
 			}
 		}
-		#	dump($tools, ' tools ++ '.to_string());
 
 
 		return $tools;
@@ -3415,9 +3414,11 @@ abstract class common {
 
 	/**
 	* GET_REGISTERED_TOOLS
-	* @return
+	* @return array $registered_tools
 	*/
 	public function get_client_registered_tools() {
+
+		$registered_tools = [];
 
 		// if(isset($_SESSION['dedalo']['registered_tools'])) {
 		// 	return $_SESSION['dedalo']['registered_tools'];
@@ -3426,7 +3427,7 @@ abstract class common {
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
-		// get all active and regsitred tools
+		// get all active and registered tools
 		$sqo_tool_active = json_decode('{
 				"section_tipo": "dd1324",
 				"limit": 0,
@@ -3451,8 +3452,7 @@ abstract class common {
 
 		$search = search::get_instance($sqo_tool_active);
 		$result = $search->search();
-		// get the simple_tool_object
-		$registered_tools = [];
+		// get the simple_tool_object		
 		foreach ($result->ar_records as $record) {
 
 			$section 		= section::get_instance($record->section_id, $record->section_tipo);
@@ -3494,3 +3494,5 @@ abstract class common {
 
 
 }//end class
+
+

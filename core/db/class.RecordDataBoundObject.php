@@ -53,7 +53,7 @@ abstract class RecordDataBoundObject {
 		if($this->blIsLoaded!==true) $this->Load();
 
 		if (!isset($this->dato)) {
-			#error_log("Callin get dato from ".get_called_class().''.print_r(debug_backtrace(),true) );
+			#error_log("Calling get dato from ".get_called_class().''.print_r(debug_backtrace(),true) );
 			return null;
 		}
 
@@ -73,7 +73,11 @@ abstract class RecordDataBoundObject {
 
 
 
-	# LOAD
+	/**
+	* LOAD
+	* 
+	* @return bool true
+	*/
 	public function Load() {
 
 		# DEBUG INFO SHOWED IN FOOTER
@@ -110,8 +114,7 @@ abstract class RecordDataBoundObject {
 
 		}else if($this->use_cache===true && isset($ar_RecordDataObject_load_query_cache[$strQuery])) {
 
-			$arRow	= (array)$ar_RecordDataObject_load_query_cache[$strQuery];
-				#dump($ar_RecordDataObject_load_query_cache2,'$ar_RecordDataObject_load_query_cache2');
+			$arRow = (array)$ar_RecordDataObject_load_query_cache[$strQuery];
 
 			# DEBUG
 			if(SHOW_DEBUG===true) {
@@ -145,13 +148,13 @@ abstract class RecordDataBoundObject {
 			}
 
 
-			# CACHE
-			#if($this->use_cache===true)
-			$ar_RecordDataObject_load_query_cache[$strQuery] = $arRow;
+			# CACHE				
 			# CACHE_MANAGER
 			if( $this->use_cache_manager===true && $this->use_cache===true && strpos($strQuery, '_dd')!==false ) {
 				#cache::set($strQuery, json_handler::encode($arRow));
 				cache::set($strQuery, serialize($arRow));
+			}else if($this->use_cache===true) {
+				$ar_RecordDataObject_load_query_cache[$strQuery] = $arRow;
 			}
 
 			# DEBUG
@@ -201,12 +204,18 @@ abstract class RecordDataBoundObject {
 			// static $totaltime_static;
 			// $totaltime_static = $totaltime_static + $totaltime;
 			// debug_log(__METHOD__." Total: $totaltime ms - $strQuery - sum time ms: ".to_string($totaltime_static), logger::DEBUG);
-		}		
+		}
+
+		return true;
 	}//end load
 
 
 
-	# SAVE . UPDATE CURRENT RECORD
+	/**
+	* SAVE
+	* Update current record
+	* @return int $this->ID
+	*/
 	public function Save() {
 		
 		# SAVE UPDATE
@@ -230,9 +239,9 @@ abstract class RecordDataBoundObject {
 					
 					if(is_null($current_val)) {
 						$strQuery_set .= "\"$key\" = null, ";
-					}else if(is_int($current_val)) {		 // changed  from is_numeric to is_int (06-06-2016)
+					}else if(is_int($current_val)) { // changed  from is_numeric to is_int (06-06-2016)
 						$strQuery_set .= "\"$key\" = $current_val, ";
-					}else{						
+					}else{
 						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data
 						$strQuery_set .= "\"$key\" = " . pg_escape_literal($current_val) . ", ";
 						#$strQuery_set .= "\"$key\" = '".$current_val."', ";	# Escape the text data
@@ -261,7 +270,6 @@ abstract class RecordDataBoundObject {
 			}else{
 				$strQuery	.= ' WHERE "'. $this->strPrimaryKeyName .'" = ' . "'$this->ID'" ;
 			}
-			#dump($strQuery,"strQuery");
 
 			$result = pg_query(DBi::_getConnection(), $strQuery);
 			if($result===false) {
@@ -272,7 +280,6 @@ abstract class RecordDataBoundObject {
 					throw new Exception("Error Processing Request", 1);;
 				}
 			}
-			return $this->ID;
 
 		#
 		# SAVE INSERT . RECORD NOT EXISTS AND CREATE ONE
@@ -328,9 +335,9 @@ abstract class RecordDataBoundObject {
 			}
 			# Fix new received id
 			$this->ID = $id;
-
-			return $this->ID;
 		}
+
+		return $this->ID;
 	}//end Save
 
 
@@ -367,9 +374,12 @@ abstract class RecordDataBoundObject {
 
 
 
-	# SEARCH
-	# Buscador genérico . Necesita array key-value con campo,valor
-	# TIPO $arguments['parent'] = 14 ...
+	/**
+	* SEARCH
+	* Generic search. Needs array key-value as field => value
+	* TIPO $arguments['parent'] = 14 ...
+	* @return array $ar_records
+	*/
 	public function search($ar_arguments=NULL, $matrix_table=NULL) {
 
 		# DEBUG INFO SHOWED IN FOOTER
@@ -384,9 +394,9 @@ abstract class RecordDataBoundObject {
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
-		$strQuery_limit 	= '';
-		$strQuery_offset 	= '';
-		$SQL_CACHE 			= false;
+		$strQuery_limit		= '';
+		$strQuery_offset	= '';
+		$SQL_CACHE			= false;
 	
 
 		if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
@@ -524,9 +534,8 @@ abstract class RecordDataBoundObject {
 									break;				
 
 
-				# SQL_CACHE
-									/*
-				case ($key=='sql_cache'):
+				# SQL_CACHE									
+				/*case ($key=='sql_cache'):
 									if(!$SQL_CACHE && $value) $SQL_CACHE = 'SQL_CACHE ';
 									break;
 									*/
@@ -537,8 +546,8 @@ abstract class RecordDataBoundObject {
 									if (strpos($value, ':')!==false) {
 										$ar = explode(':', $value);
 										if(isset($ar[0]) && isset($ar[1])) {
-											$ar_key 	= $ar[0];
-											$ar_value 	= $ar[1];
+											$ar_key		= $ar[0];
+											$ar_value	= $ar[1];
 											#if (is_int($ar_value)) {
 											#	$strQuery  .= "AND $campo LIKE '%\"{$ar_key}\":{$ar_value}%' ";
 											#}else{
@@ -566,7 +575,7 @@ abstract class RecordDataBoundObject {
 		# Verify query format
 		if(strpos($strQuery, 'AND')===0) {
 			$strQuery = substr($strQuery, 4);
-		}else  if( strpos($strQuery, ' AND')===0 ) {
+		}else if( strpos($strQuery, ' AND')===0 ) {
 			$strQuery = substr($strQuery, 5);
 		}
 		#$strQuery = trim('SELECT '. $SQL_CACHE .$strPrimaryKeyName. ' FROM '.DEDALO_DATABASE_CONN.'.'.$this->strTableName.' WHERE '. $strQuery .' '. $strQuery_limit) ;	#$strQuery .= 'SQL_CACHE ';
@@ -579,7 +588,7 @@ abstract class RecordDataBoundObject {
 		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
 		static $ar_RecordDataObject_query_search_cache;
 
-	#$this->use_cache=false;
+		#$this->use_cache=false;
 
 		# CACHE_MANAGER
 		# USING EXTERNAL CACHE MANAGER (LIKE REDIS)
@@ -650,7 +659,7 @@ abstract class RecordDataBoundObject {
 		#pg_close(DBi::_getConnection());
 
 		return $ar_records;
-	}#end search
+	}//end search
 
 
 
@@ -691,7 +700,7 @@ abstract class RecordDataBoundObject {
 
 	# ACCESSORS CALL
 	public function __call($strFunction, $arArguments) {
-		#echo "call ok $strFunction - $arArguments";
+		#echo "call OK $strFunction - $arArguments";
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -699,7 +708,7 @@ abstract class RecordDataBoundObject {
 			case 'get_' : return($this->GetAccessor($strMethodMember));						break;
 		}
 		return(false);
-	}
+	}//end __call
 	# ACCESSORS SET
 	private function SetAccessor($strMember, $strNewValue) {
 
@@ -733,7 +742,7 @@ abstract class RecordDataBoundObject {
 		}else{
 			return(false);
 		}
-	}
+	}//end SetAccessor
 	# ACCESSORS GET
 	private function GetAccessor($strMember) {
 
@@ -749,9 +758,10 @@ abstract class RecordDataBoundObject {
 		}else{
 			return(false);
 		}
-	}
+	}//end GetAccessor
 
 
 
-}//end class
-?>
+}//end RecordDataBoundObject class
+
+

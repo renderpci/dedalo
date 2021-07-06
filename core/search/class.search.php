@@ -185,7 +185,7 @@ class search {
 			$this->allow_sub_select_by_id = $search_query_object->allow_sub_select_by_id;
 		}
 
-		# Set remove_distinct (usseful for thesaurus search)
+		# Set remove_distinct (useful for thesaurus search)
 		if ($count_ar_section_tipo > 1) {
 			$this->remove_distinct = true; # Force true when more than one section is passed
 		}else{
@@ -405,7 +405,7 @@ class search {
 
 	/**
 	* PRE_PARSE_SEARCH_QUERY_OBJECT
-	* Iterate all filter and select elements and comunicate with components to rebuild the search_query_object
+	* Iterate all filter and select elements and communicate with components to rebuild the search_query_object
 	* Not return anything, only modifies the class var $this->search_query_object
 	*/
 	public function pre_parse_search_query_object() {
@@ -987,7 +987,7 @@ class search {
 					$apply_distinct 		 = (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
 					$component_path 	 = implode(',', $select_object->component_path);
 					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-						# In activity section, data container is allways 'dato'
+						# In activity section, data container is always 'dato'
 						$component_path  = str_replace('valor_list', 'dato', $component_path);
 					}
 
@@ -1276,7 +1276,7 @@ class search {
 						}, $ar_projects)).'))';
 
 						#if(SHOW_DEBUG!==true) {
-							# Delete old filter except for reference to debuger
+							# Delete old filter except for reference to debugger
 							#$sql_filter = '';
 						#}
 					}

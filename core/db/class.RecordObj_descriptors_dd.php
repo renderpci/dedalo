@@ -41,11 +41,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			}
 		}
 
-
 		$this->unTranslated	= false;
 		$this->matrix_table = self::$descriptors_matrix_table;
 		$this->mainLang 	= self::$descriptors_mainLang;
-
 
 		if ($id>0) {
 
@@ -77,7 +75,6 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 					$id 	= $ar_id[0];	# ya que tenemos el id, lo usamos para agilizar el siguiente paso.
 				}
 			}
-
 
 			# LANG . SI NO TENEMOS LANG, USAMOS EL LANG PRINCIPAL DE SU JERARQUIA
 			if(empty($lang)) {
@@ -111,7 +108,8 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			parent::calculate_ID();
 		}
 
-	}
+		return true;
+	}//end __construct
 
 
 	/**
@@ -120,7 +118,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	* If current dato is untranslated, method decorator 'unTranslated' is apply
 	* @return $dato String
 	*/
-	function get_dato($raw=false) {
+	function ∑($raw=false) {
 
 		if ($raw) {
 			return $this->dato;
@@ -134,7 +132,10 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		if($this->unTranslated	=== true) $dato = component_common::decore_untranslated($dato);
 
 		return (string)$dato;
-	}
+	}//end __construct
+
+
+
 	/**
 	* SET DATO OVERWRITE PARENT JSON SET DATO
 	* @param $dato String
@@ -153,7 +154,8 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
  			$this->dato = trim($dato);
  		}
 		$this->arModifiedRelations['dato'] = 1;
-	}
+	}//end set_dato
+
 
 
 	# TRANSLATIONS OF CURRENT
@@ -176,9 +178,8 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 			$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd(self::$descriptors_matrix_table, $id);
 			$current_lang				= $RecordObj_descriptors_dd->get_lang();
-				#dump($RecordObj_descriptors_dd,'$current_lang '.$matrix_table);
 
-			if($current_lang !== $lang) {
+			if($current_lang!==$lang) {
 				$ar_translations[$id] = $current_lang;
 			}
 		}
@@ -186,7 +187,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		#return array();
 
 		return $ar_translations;
-	}
+	}//end get_ar_translations_of_current
+
+
 
 	# TERMINO EXISTS VERIFY
 	public static function termino_exists($dato,$tipo) {
@@ -200,7 +203,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		if(count($ar_id)===0) return false;
 
 		return true;
-	}
+	}//end termino_exists
+
+
 
 	# DELETE ALL DESCRIPTORS BY TIPO (PARENT)
 	public static function delete_all_descriptors_by_tipo($tipo) {
@@ -215,7 +220,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		}
 
 		return true;
-	}
+	}//end delete_all_descriptors_by_tipo
+
+
 
 	# GET_ALL_DESCRIPTORS_BY_TIPO
 	public static function get_all_descriptors_by_tipo($tipo) {
@@ -227,7 +234,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		$ar_id						= $RecordObj_descriptors_dd->search($arguments);
 
 		return $ar_id;
-	}
+	}//end get_all_descriptors_by_tipo
+
+
 
 	# GET_ALL_DESCRIPTORS_LANGS_BY_TIPO
 	public static function get_all_descriptors_langs_by_tipo($tipo) {
@@ -240,7 +249,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		$ar_lang						= $RecordObj_descriptors_dd->search($arguments);
 
 		return $ar_lang;
-	}
+	}//end get_all_descriptors_langs_by_tipo
 
 
 
@@ -273,7 +282,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		}
 
 		return parent::Save();
-	}
+	}//end Save
 
 
 	/**
@@ -301,9 +310,6 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 
+}//end class RecordObj_descriptors_dd
 
 
-
-
-}
-?>
