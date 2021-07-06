@@ -25,7 +25,9 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	public $time_machine_last_id;
 
 	public $save_time_machine_version = true;
-	
+
+
+
 	/**
 	* CONSTRUCT
 	*/
@@ -53,8 +55,11 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			if($lang)	$this->set_lang($lang) ; #DEDALO_DATA_LANG
 			parent::__construct(NULL);
 		}
-	}	
-	
+
+		return true;
+	}//end __construct
+
+
 		
 	# define current table (tr for this obj)
 	protected function defineTableName() {
@@ -75,6 +80,8 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			"lang" 					=> "lang"
 			));
 	}
+
+
 
 	/**
 	* CHANGE TABLE . Set another matrix table (default is 'matrix')
@@ -102,14 +109,21 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	}
 	*/
 
+
+
+	/**
+	* GET_ID
+	*/
 	public function get_ID() {
 		
 		if($this->ID===NULL) return $this->calculate_ID();
 		#if(parent::get_ID()==NULL) return $this->calculate_ID();
 		
 		return parent::get_ID();
-	}
-	
+	}//end get_ID
+
+
+
 	/**
 	* CALCULATE ID
 	* resolve ID from $parent, $tipo and $lang
@@ -167,14 +181,16 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		#if(SHOW_DEBUG===true) error_log("calculado id:$id from parent:$parent, tipo:$tipo, lang:$lang, table:$this->matrix_table");
 
 		return $id ;
-	}
+	}//end calculate_ID
+
+
 
 	/**
 	* TEST CAN SAVE
 	* Test data before save to avoid write malformed matrix data
+	* @return bool 
 	*/
-	private function test_can_save() {	
-		
+	private function test_can_save() {		
 		
 		# CURRENT OBJ TEST COPY
 		if (!empty($this->ID) ) {
@@ -227,7 +243,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		# TEST VALID USER
 		#$userID		= navigator::get_user_id();
-		$userID		= $_SESSION['dedalo']['auth']['user_id'];
+		$userID	= $_SESSION['dedalo']['auth']['user_id'];
 		if (
 			empty($userID)
 			&& $this->matrix_table != 'matrix_activity' && $this->matrix_table != 'matrix_counter' && $this->matrix_table != 'matrix_stats'
@@ -243,7 +259,8 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		}
 
 		return true;
-	}
+	}//end test_can_save
+
 
 
 	/**
@@ -252,35 +269,31 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	* @return int $id
 	*/
 	public function Save() {
-
 		$start_time=microtime(1);
 
-		$test_can_save = $this->test_can_save();
-		
-		if($test_can_save!==true) {
-			$msg = " Error (test_can_save). No matrix data is saved! ";
-			trigger_error($msg, E_USER_ERROR);   
-			exit($msg);
-		}
+		// test_can_save
+			$test_can_save = $this->test_can_save();
+			if($test_can_save!==true) {
+				$msg = " Error (test_can_save). No matrix data is saved! ";
+				trigger_error($msg, E_USER_ERROR);   
+				exit($msg);
+			}
 
 		# Si el objeto a salvar no tiene id pero si tiene parent, tipo y lang, calculamos su id para evitar crear un registro nuevo de un componente que ya tiene dato
 		# Esto pasa por jemplo con los checkboxes sin dato: si guardamos y no recargamos la página, se salva un registro por cada cambio pues no está definido el id_matrix en 
 		# el componente todavía. 
 		# NOTA:  Revisar el funcionamiento de este script al trabajar con lenguajes
-		if (empty($this->ID) && !empty($this->parent) && !empty($this->tipo) && !empty($this->lang)) {
-			$this->calculate_ID();
-		}
-		#dump($this,"save en RecordObj_matrix");
+			if (empty($this->ID) && !empty($this->parent) && !empty($this->tipo) && !empty($this->lang)) {
+				$this->calculate_ID();
 
-			# test_can_save again 
-			$test_can_save = $this->test_can_save();
-			
-			if($test_can_save!==true) {
-				$msg = " Error (test_can_save 2). No matrix data is saved! ";
-				trigger_error($msg, E_USER_ERROR);   
-				exit($msg);
+				// test_can_save run again, after calculate id
+					$test_can_save = $this->test_can_save();
+					if($test_can_save!==true) {
+						$msg = " Error (test_can_save 2). No matrix data is saved! ";
+						trigger_error($msg, E_USER_ERROR);
+						exit($msg);
+					}
 			}
-			
 
 		# MATRIX SAVE (with parent RecordDataBoundObject)
 		$id = parent::Save();
@@ -290,7 +303,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# Prevent time machine saving activity (if current tipo is a component logger, stop save)
 		if (in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
 			$this->save_time_machine_version = false;
-			return;
+			return $id;
 		}
 
 
@@ -306,9 +319,9 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			}
 		}		
 
-		return $id;	
-			
-	}#end Save
+		return $id;			
+	}//end Save
+
 
 
 	/**
@@ -321,8 +334,6 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		#}
 
 		return; # DESACTIVA DE MOMENTO
-
-
 		
 		
 		if(!self::test_can_save()===true) exit("Error. No tm data is saved!");
@@ -363,10 +374,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		$RecordObj_time_machine->Save();	
 		
 		return $RecordObj_time_machine->get_ID();
-	}
-	
-	
-	
+	}//end save_time_machine	
 
 
 	
@@ -393,10 +401,12 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		if(is_string($dato)) $dato = htmlspecialchars($dato);
 
 		return $dato;		
-	}
+	}//end get_dato
 	*/
 	
-	/* PASARÁ A COMPONENT SECURITY ACCESS*/
+	
+	/* NOT USED !
+	// PASARÁ A COMPONENT SECURITY ACCESS
 	function add_security_dato($ar_dato) {
 		
 		if(!is_array($ar_dato)) return null;
@@ -412,14 +422,12 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		}
 		
 		return $ar_dato_matrix;
-	}
+	}//end add_security_dato	
+	*/
+
+
 	
-	
-	
-	
-	
-	
-	
+	/* NOT USED !
 	public function get_ar_matrix_childrens_of_this() {
 				
 		# STATIC CACHE
@@ -451,9 +459,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		
 		return $ar_matrix_childrens_of_this ;
 	}
-	
-	
-	
+	*/
 	
 	
 	
@@ -503,5 +509,6 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	*/
 
 	
-}
-?>
+}//end class RecordObj_matrix
+
+

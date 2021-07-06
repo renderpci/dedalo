@@ -4,11 +4,13 @@
 * DB CONNECTION 
 * To close connection use pg_close(DBi::_getConnection()); at end of page
 */
-
 abstract class DBi {
+
+
 
 	/**
 	* _GETCONNECTION
+	* @return resource $pg_conn
 	*/
 	public static function _getConnection(
 		$host=DEDALO_HOSTNAME_CONN,
@@ -47,8 +49,9 @@ abstract class DBi {
 
 
 	/**
-	* _GETCONNECTION
+	* _GETNEWCONNECTION
 	* Get a new postgresql database connection without rehuse existing connections
+	* @return resource $pg_conn
 	*/
 	public static function _getNewConnection(
 		$host=DEDALO_HOSTNAME_CONN,
@@ -82,6 +85,7 @@ abstract class DBi {
 	
 	/**
 	* _GETCONNECTION_MYSQL
+	* @return resource $mysqli
 	*/
 	public static function _getConnection_mysql(
 		$host=MYSQL_DEDALO_HOSTNAME_CONN,
@@ -152,5 +156,6 @@ abstract class DBi {
 
 
 
-}
-?>
+}//end class DBi
+
+
