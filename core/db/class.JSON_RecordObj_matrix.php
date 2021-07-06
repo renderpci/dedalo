@@ -23,7 +23,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	
 	public $datos_time_machine;
 
-	#public $dato;
+
 	
 	/**
 	* CONSTRUCT
@@ -64,6 +64,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		}else{
 			parent::__construct(NULL);
 		}
+
+		return true;
 	}//end __construct
 
 
@@ -80,13 +82,13 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	protected function defineRelationMap() {
 		return (array(
 			# db fieldn ame		# property name
-			"id" 				=> "ID",
-			"section_id" 		=> "section_id",
-			"section_tipo" 		=> "section_tipo",
-			"datos" 			=> "datos",
-			));
+			"id"			=> "ID",
+			"section_id"	=> "section_id",
+			"section_tipo"	=> "section_tipo",
+			"datos"			=> "datos"
+		));
 	}	
-
+	# get_ID
 	public function get_ID() {
 		return parent::get_ID();
 	}	
@@ -102,7 +104,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			'matrix_activity',
 			'matrix_counter',
 			'matrix_stats'
-			);
+		);
 
 		# Tables without login need
 		if ( in_array($this->matrix_table, $ar_tables_can_save_without_login) ) {
@@ -124,6 +126,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	/**
 	* SAVE JSON MATRIX
 	* Call RecordDataBounceObject->Save() and RecordObj_time_machine->Save()
+	* @return int $id
 	*/
 	public function Save( $save_options=null ) {
 
@@ -136,8 +139,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		
 		# MATRIX SAVE (with parent RecordDataBoundObject)
 		# Returned id can be false (error on save), matrix id (normal case), section_id (activity case)
-		$id = parent::Save($save_options);
-		
+		$id = parent::Save($save_options);		
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
@@ -156,8 +158,14 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	/**
 	* SAVE TIME MACHINE
 	* @param object $save_options
+	* @return int $id_matrix
 	*/
 	protected function save_time_machine( $save_options ) {
+
+		// options
+			$time_machine_tipo = $save_options->time_machine_tipo ?? null;
+			$time_machine_lang = $save_options->time_machine_lang ?? null;
+			$time_machine_data = $save_options->time_machine_data ?? null;
 
 		/*
 		if (empty($save_options->time_machine_data)) {
@@ -171,55 +179,57 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			return false;
 		}
 		*/
-			
+		
 		$RecordObj_time_machine = new RecordObj_time_machine(null);
-		/* Fields sample
-		# db fieldn ame			# property name
-		"id" 					=> "ID",		# integer
-		"id_matrix" 			=> "id_matrix",	# integer
-		"section_id" 			=> "section_id",# integer
-		"section_tipo" 			=> "section_tipo",# string charvar 32
-		"tipo" 					=> "tipo",		# string charvar 32
-		"lang" 					=> "lang", 		# string 16
-		"timestamp" 			=> "timestamp", # timestamp standar db format
-		"userID" 				=> "userID", 	# integer
-		"state" 				=> "state",		# string char 32
-		"dato" 					=> "dato",		# jsonb format	
-		*/
+		
+		// Fields sample
+			# db field name			# property name
+			// "id"				=> "ID",		# integer
+			// "id_matrix"		=> "id_matrix",	# integer
+			// "section_id"		=> "section_id",# integer
+			// "section_tipo"	=> "section_tipo",# string charvar 32
+			// "tipo"			=> "tipo",		# string charvar 32
+			// "lang"			=> "lang", 		# string 16
+			// "timestamp"		=> "timestamp", # timestamp standard db format
+			// "userID"			=> "userID", 	# integer
+			// "state"			=> "state",		# string char 32
+			// "dato"			=> "dato",		# jsonb format
+		
 	
-		
-		# id_matrix
-		#$RecordObj_time_machine->set_id_matrix( $this->get_ID() );
-		# section_id
-		$RecordObj_time_machine->set_section_id( $this->get_section_id() );	// $save_options->time_machine_section_id
-		# section_tipo
-		$RecordObj_time_machine->set_section_tipo( $this->get_section_tipo() );
-		# tipo
-		if(isset($save_options->time_machine_tipo))
-		$RecordObj_time_machine->set_tipo( $save_options->time_machine_tipo );
-		# lang
-		if(isset($save_options->time_machine_lang))
-		$RecordObj_time_machine->set_lang( $save_options->time_machine_lang );
-		# timestamp
-		$RecordObj_time_machine->set_timestamp( component_date::get_timestamp_now_for_db() );
-		# userID
-		$RecordObj_time_machine->set_userID( navigator::get_user_id() );
-		# dato
-		if(isset($save_options->time_machine_data))
-		$RecordObj_time_machine->set_dato( $save_options->time_machine_data );
-		
-		
-		#dump($save_options,'$save_options->time_machine_data');
-		#dump($RecordObj_time_machine,'$RecordObj_time_machine');
-		#die();
+		// configure time machine object
+			# id_matrix
+				#$RecordObj_time_machine->set_id_matrix( $this->get_ID() );		
+			# section_id
+				$RecordObj_time_machine->set_section_id( $this->get_section_id() );	// $save_options->time_machine_section_id
+			# section_tipo
+				$RecordObj_time_machine->set_section_tipo( $this->get_section_tipo() );
+			# tipo
+				if (!empty($time_machine_tipo)) {
+					$RecordObj_time_machine->set_tipo( $time_machine_tipo );
+				}
+			# lang
+				if (!empty($time_machine_lang)) {
+					$RecordObj_time_machine->set_lang( $time_machine_lang );
+				}
+			# timestamp
+				$RecordObj_time_machine->set_timestamp( component_date::get_timestamp_now_for_db() );
+			# userID
+				$RecordObj_time_machine->set_userID( navigator::get_user_id() );
+			# dato
+				if (!empty($time_machine_data)) {
+					$RecordObj_time_machine->set_dato( $time_machine_data );
+				}
 
 		# Save obj	
-		$RecordObj_time_machine->Save( $save_options );
+		$RecordObj_time_machine->Save(); //  $save_options 
 
+		$id_matrix = $RecordObj_time_machine->get_ID();
 		
-		return $RecordObj_time_machine->get_ID();
+		return $id_matrix;
 	}//end save_time_machine
+
+
 	
-	
-}
-?>
+}//end JSON_RecordObj_matrix
+
+
