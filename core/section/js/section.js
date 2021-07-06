@@ -495,7 +495,7 @@ section.prototype.get_ar_rows = async function(){
 
 	const self = this
 
-	// self data veification
+	// self data verification
 		if (typeof self.data==="undefined") {
 			self.data = {
 				value : []
@@ -572,7 +572,7 @@ section.prototype.render__DES = async function(){
 	// status update
 		self.status = 'rendering'
 
-	// self data veification
+	// self data verification
 	if (typeof self.data==="undefined") {
 		self.data = {
 			value : []
@@ -610,7 +610,7 @@ section.prototype.render__DES = async function(){
 		}//end for loop
 
 
-		// render using external proptotypes of 'render_component_input_text'
+		// render using external prototypes of 'render_component_input_text'
 			// const mode = self.mode
 			// //self.ar_instances.push(ar_section_record)
 			// let node = null
