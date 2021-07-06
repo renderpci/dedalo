@@ -19,7 +19,7 @@ class tags extends widget_common {
 		$mode 			= 'list';
 
 		$dato = [];
-		foreach ($ipo as $key => $current_ipo) {
+		foreach ($ipo as $ipo_key => $current_ipo) {
 
 			$input 		= $current_ipo->input;
 			$output		= $current_ipo->output;
@@ -282,10 +282,10 @@ class tags extends widget_common {
 			foreach ($output as $data_map) {
 				$current_id = $data_map->id;
 				$current_data = new stdClass();
-					$current_data->widget 	= get_class($this);
-					$current_data->key  	= $key;
-					$current_data->id 		= $current_id;
-					$current_data->value 	= $$current_id ?? null;
+					$current_data->widget	= get_class($this);
+					$current_data->key		= $ipo_key;
+					$current_data->id		= $current_id;
+					$current_data->value	= $$current_id ?? null;
 				$dato[] = $current_data;
 			}
 		}

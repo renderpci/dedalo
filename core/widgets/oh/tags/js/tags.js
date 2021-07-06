@@ -38,7 +38,7 @@ export const tags = function(){
 	tags.prototype.init 	 		= widget_common.prototype.init
 	// render
 	tags.prototype.edit 			= render_tags.prototype.edit
-	tags.prototype.list 			= render_tags.prototype.list
+	tags.prototype.list 			= render_tags.prototype.edit
 
 
 /**

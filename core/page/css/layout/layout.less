@@ -2749,6 +2749,37 @@
 
 
 
+	.content_data.widget {
+
+		li {
+			>div {
+				padding: 0.5em;
+				background-color: #f0f0f0;
+				border-right: 1px solid #c0c0c0;
+
+				&:last-of-type {
+				  border: none;
+				}
+
+				>.label, >.value {
+					padding: 0.5em;
+				}
+
+				>.label {
+					font-weight: 400;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;					
+				}
+				>.value {
+					padding-left: 0;
+				}
+			}
+		}
+	}//end .content_data.widget
+
+
+
 
 
 
