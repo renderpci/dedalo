@@ -63,7 +63,7 @@ export const component_portal = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	// lifecycle
+	// life-cycle
 	// component_portal.prototype.init				= component_common.prototype.init
 	// component_portal.prototype.build				= component_common.prototype.build
 	component_portal.prototype.render				= common.prototype.render
@@ -115,7 +115,7 @@ component_portal.prototype.init = async function(options) {
 	// // columns
 		self.columns = options.columns
 
-	// call the generic commom tool init
+	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(this, options);
 
 	// events subscribe
@@ -282,7 +282,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// active / prepare the autocomplete in search mode
 		else if(self.mode==="search"){
-			// autocomplete destroy. change the autocomplete service to false and desactive it.
+			// autocomplete destroy. change the autocomplete service to false and deactivate it.
 				if(self.autocomplete && self.autocomplete_active===true){
 					self.autocomplete.destroy()
 					self.autocomplete_active = false
@@ -337,18 +337,18 @@ component_portal.prototype.add_value = async function(value) {
 		// 	return false
 		// }
 
+	// changed_data
+		const key			= self.total || 0
+		const changed_data	= Object.freeze({
+			action	: 'insert',
+			key		: key,
+			value	: value
+		})
 
-	const key = self.total || 0
-
-	const changed_data = Object.freeze({
-		action	: 'insert',
-		key		: key,
-		value	: value
-	})
-
-	if(SHOW_DEBUG===true) {
-		console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
-	}
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
+		}
 
 	// change_value
 		const api_response = await self.change_value({
@@ -356,20 +356,18 @@ component_portal.prototype.add_value = async function(value) {
 			refresh		 : false
 		})
 
-	switch(self.mode) {
-		case 'search' :
-			// publish change. Event to update the dom elements of the instance
-				event_manager.publish('change_search_element', self)
-		break;
+	// mode specifics
+		switch(self.mode) {
+			case 'search' :
+				// publish change. Event to update the dom elements of the instance
+					event_manager.publish('change_search_element', self)
+				break;
 
-		default:
-			
-			// update pagination offset
-			self.update_pagination_values('add')
-		break;
-	}
-
-
+			default:				
+				// update pagination offset
+					self.update_pagination_values('add')
+				break;
+		}
 
 	// refresh self component
 		self.refresh()

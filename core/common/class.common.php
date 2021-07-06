@@ -2504,12 +2504,12 @@ abstract class common {
 
 					// get the all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
 					$ar_ddo_map = $parsed_item->show->ddo_map;
-
+					
 					// ddo_map
 						$final_ddo_map = [];
 						foreach ($ar_ddo_map as $current_ddo_map) {
 							if (!isset($current_ddo_map->tipo)) {
-								dump($current_ddo_map, ' current_ddo_map ++ '.to_string($tipo));
+								dump($current_ddo_map, ' current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
 								continue;
 							}
 							// add label to ddo_map items
