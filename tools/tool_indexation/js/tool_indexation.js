@@ -10,6 +10,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation, add_component} from './render_tool_indexation.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 
 
 
@@ -31,7 +32,8 @@ export const tool_indexation = function () {
 	this.source_lang
 	this.target_lang
 	this.langs
-	this.caller
+	this.caller // component text area base (user selects tool button from it)
+	this.main_component // component text area where we are working into the tool
 
 
 	return true
@@ -62,8 +64,30 @@ tool_indexation.prototype.init = async function(options) {
 		self.lang 			= options.lang // page_globals.dedalo_data_lang
 		self.langs 			= page_globals.dedalo_projects_default_langs
 
-	// call the generic commom tool init
+	// call the generic common tool init
 		const common_init = tool_common.prototype.init.call(this, options);
+
+	// events
+		// link_term. Observe thesaurus tree link index button click
+			event_manager.subscribe('link_term', function(data) {
+				self.create_indexation(data)
+			})
+		// click_tag_index. Observe user tag selection in text area
+			event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, function(options){
+
+				// fix selected tag
+					self.active_tag_id = options.tag.dataset.tag_id
+
+				// force to update registered active values 
+					self.update_active_values([{
+						name	: "tag_id",
+						value	: options.tag.dataset.tag_id
+					},
+					{
+						name	: "state",
+						value	: options.tag.dataset.state
+					}])
+			})
 
 
 	return common_init
@@ -78,14 +102,49 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// call generic commom tool build
-		const common_build = tool_common.prototype.build.call(this, autoload);
+	// load_indexing_component. Init and build the indexing_component
+		self.load_indexing_component()
 
-	// specific actions..
+	// call generic common tool build
+		const common_build = tool_common.prototype.build.call(self, autoload);
 
 
 	return common_build
 };//end build_custom
+
+
+
+/**
+* LOAD_INDEXING_COMPONENT
+* @return promise bool true
+*/
+tool_indexation.prototype.load_indexing_component = async function() {
+
+	const self = this
+	
+	// indexing_component		
+		const component						= self.caller
+		const indexing_component_tipo		= component.context.properties.indexing_component
+		const indexing_component_options	= {
+			model			: 'component_relation_index',
+			tipo			: indexing_component_tipo,
+			section_tipo	: component.section_tipo,
+			section_id		: component.section_id,
+			mode			: 'edit',
+			lang			: 'lg-nolan', // The only different property from caller
+			context			: {},
+			id_variant		: 'tool_indexation'
+		}	
+
+		// init and build instance
+			self.indexing_component = await get_instance(indexing_component_options)
+			await self.indexing_component.build(true)
+
+		// store instances to remove on destroy
+			self.ar_instances.push(self.indexing_component)
+
+	return true
+};//end load_indexing_component
 
 
 
@@ -98,7 +157,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
-
+	
 	const component = self.caller
 	const context 	= JSON.parse(JSON.stringify(component.context))
 		  context.lang = lang
@@ -127,6 +186,8 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 	// store instances to remove on destroy
 	self.ar_instances.push(instance)
+
+	self.main_component = instance
 
 
 	return instance
@@ -190,10 +251,9 @@ tool_indexation.prototype.get_thesaurus = async function() {
 
 /**
 * CREATE FRAGMENT
-* Crea las imágenes (con los tag) al principio y final del texto seleccionado
-* y salva los datos
+* Create the images (with the tags) at the beginning and end of the selected text and save the data
 */
-tool_indexation.prototype.create_fragment = function ( button_obj, event ) {	//, component_name
+tool_indexation.prototype.create_fragment = function ( button_obj, event ) {
 
 	event.preventDefault()
 	event.stopPropagation()
@@ -206,7 +266,7 @@ tool_indexation.prototype.create_fragment = function ( button_obj, event ) {	//,
 	var component_id		= identificador_unico
 
 	// Select current editor
-	var ed = tinyMCE.get(component_id);
+	const ed = tinyMCE.get(component_id);
 	//var ed = tinymce.activeEditor
 		if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") }
 
@@ -278,26 +338,65 @@ tool_indexation.prototype.create_fragment = function ( button_obj, event ) {	//,
 
 
 /**
+* CREATE_INDEXATION
+* Add a new locator value to the target indexing_component (component_relation_index usually)
+* @param object data
+* 	{ section_tipo, section_id, label } from thesaurus selected term
+* @return boolean from portal.add_value method
+*/
+tool_indexation.prototype.create_indexation = function ( data ) {
+
+	const self = this
+
+	// tag_id. Previously selected by user. Check if is already selected before continue
+		const tag_id = self.active_tag_id || false
+		if(!tag_id){
+			console.warn("Needs to be selected a index tag in text to continue");
+			alert("Please select a tag");
+			// should activate the component (focus)
+			event_manager.publish('active_component', self.main_component)
+			return false
+		}
+
+	// locator value. Build from selected term section_tipo, section_id, and selected tag_id
+		const new_index_locator = {
+			section_id			: data.section_id, // thesaurus term section_id
+			section_tipo		: data.section_tipo, // thesaurus term section_tipo
+			tag_id				: tag_id, // user selected tag id
+			tag_component_tipo	: self.caller.tipo // (component_text_area tag source)
+		}
+
+	const result = self.indexing_component.add_value(new_index_locator)
+
+
+	return result
+}// end create_indexation
+
+
+
+/**
 * ACTIVE_VALUE
+* Set value as 'active'. That's mean current value is frequently updated by events
 * @return boolean
 */
 tool_indexation.prototype.active_value = function(name, callback) {
 
 	self.active_elements = self.active_elements || []
 
-	const found = self.active_elements.find(el => el.name===name && el.callback===callback)
-	if (found) {
-		console.warn("Skip already added active value name:", name);
-		return false
-	}
+	// check already exists in list of active_elements
+		const found = self.active_elements.find(el => el.name===name && el.callback===callback)
+		if (found) {
+			console.warn("Skip already added active value name:", name);
+			return false
+		}
 
-	// add
-	self.active_elements.push({
-		name		: name,
-		callback	: callback
-	})
+	// add if not already exists
+		self.active_elements.push({
+			name		: name,
+			callback	: callback
+		})
 
-	console.log("self.active_elements:",self.active_elements);
+	console.log("self.active_elements added one:", name, self.active_elements);
 
 
 	return true
@@ -308,6 +407,7 @@ tool_indexation.prototype.active_value = function(name, callback) {
 
 /**
 * UPDATE_ACTIVE_VALUES
+* Update all values registered as 'active_value' on fire event
 * @return boolean
 */
 tool_indexation.prototype.update_active_values = function(values) {
@@ -320,14 +420,15 @@ tool_indexation.prototype.update_active_values = function(values) {
 		for (let j = 0; j < founds.length; j++) {
 
 			const found = founds[j]
-				console.log("------------------- found:",found);
-
 			if (found.callback) {
 				found.callback(item.value)
 			}
 		}
 	}
 
+	console.log("Fired update_active_values self.active_elements list:", self.active_elements);
 
 	return true
 };//end update_active_values
+
+

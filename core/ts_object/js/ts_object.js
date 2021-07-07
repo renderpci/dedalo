@@ -16,7 +16,7 @@ export const ts_object = new function() {
 		this.trigger_url 		= DEDALO_CORE_URL + '/ts_object/trigger.ts_object.php'
 		// Set on update element in DOM (refresh)
 		this.element_to_hilite 	= null;
-		// thesaurus_mode . Defines apperance of thesaurus
+		// thesaurus_mode . Defines appearance of thesaurus
 		this.thesaurus_mode 	= null;
 
 		this.events_tokens 		= [];
@@ -42,7 +42,7 @@ export const ts_object = new function() {
 	/**
 	* GET_CHILDREN
 	* Get the JSON data from the server using promise. When data is loaded build DOM element
-	* Data is builded from parent info (current object section_tipo and section_id)
+	* Data is built from parent info (current object section_tipo and section_id)
 	* @return promise
 	*/
 	//var start = null
@@ -191,7 +191,7 @@ export const ts_object = new function() {
 	* DOM_PARSE_CHILDREN
 	* @param array ar_children_data
 	*	Array of children of current term from json source trigger
-	* @param DOM objec children_container
+	* @param DOM object children_container
 	*	children_container is 'children_container'
 	*/
 	// this.dom_parse_children = function(ar_children_data, children_container, clean_children_container, target_section_tipo, type) {
@@ -369,10 +369,10 @@ export const ts_object = new function() {
 					if (is_descriptor===true) {
 						const children_c_class_name = (children_container_is_loaded===true) ? 'children_container' : 'children_container js_first_load'
 						const children_c 		= ui.create_dom_element({
-																			element_type			: 'div',
-																			parent 					: wrap_ts_object,
-																			class_name 				: children_c_class_name,
-																			data_set 				: {role :'children_container',section_id : ar_children_data[i].section_id}
+																			element_type	: 'div',
+																			parent			: wrap_ts_object,
+																			class_name		: children_c_class_name,
+																			data_set		: {role :'children_container',section_id : ar_children_data[i].section_id}
 																		 })
 						// Fix current main_div
 						// Important. Fix global var self.current_main_div used by search to parse results
@@ -386,31 +386,32 @@ export const ts_object = new function() {
 					switch(ts_object.thesaurus_mode) {
 
 						case 'relation':
-							// hierarchy_node cannot be used as related  and not indexables too
+							// hierarchy_node cannot be used as related  and not indexable too
 							if (node_type==='hierarchy_node' || is_indexable===false) break;
 
-								// var event_function 		= [{'type':'click','name':'ts_object.link_term'}];
-								const link_related 		= ui.create_dom_element({
-																			element_type		: 'a',
-																		parent 					: id_colum_content,
-																		class_name 				: 'id_column_link ts_object_related',
-																		title_label 			: 'add',
-																	 })
-														link_related.addEventListener("click",(e)=>{
-															self.link_term(link_related, e)
-														})
-														// related icon
-														// const related_icon 	= ui.create_dom_element({
-														// 	element_type	: 'div',
-														// 	parent 			: link_related,
-														// 	class_name 		: 'icon_bs link new_autocomplete_ts ts_object_related_icon', //ts_object_add_icon
-														//  })
-														const related_icon 	= ui.create_dom_element({
-															element_type	: 'span',
-															parent 			: link_related,
-															class_name 		: 'button arrow_link', //ts_object_add_icon
-														})
+							const link_related = ui.create_dom_element({
+								element_type	: 'a',
+								parent			: id_colum_content,
+								class_name		: 'id_column_link ts_object_related',
+								title_label		: 'add',
+							})
+							const current_label_term = ar_children_data[i].ar_elements.find(el => el.type==='term')
+							link_related.data = {
+								section_tipo	: ar_children_data[i].section_tipo,
+								section_id		: ar_children_data[i].section_id,
+								label			: current_label_term ? current_label_term.value : ''
+							}
+							link_related.addEventListener("click",(e)=>{
+								self.link_term(link_related, e)
+							})
+							// related icon
+							const related_icon 	= ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button arrow_link', //ts_object_add_icon
+								parent			: link_related
+							})
 							break;
+
 						default:
 
 							// ADD . button + add element
@@ -436,7 +437,7 @@ export const ts_object = new function() {
 																	const new_section_id 	= response.result
 																// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
 																	const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
-																// button_obj. button plus tha user clicks
+																// button_obj. button plus that user clicks
 																	const button_obj 		= response.button_obj
 																// children_element. list_thesaurus_element of current wrapper
 																	const children_element 	= ts_object.get_link_children_from_wrap(response.wrap)
@@ -680,7 +681,7 @@ export const ts_object = new function() {
 										element_show_indexations.addEventListener("click",(e)=>{
 											self.show_indexations(element_show_indexations, e, ar_children_data[i].section_tipo, ar_children_data[i].section_id, ar_children_data[i].ar_elements[j].tipo, indexations_container_id)
 										})
-									// Build indexactions container
+									// Build indexations container
 										/*var indexations_container 	= ui.create_dom_element({
 																				element_type			: 'div',
 																				parent 					: wrap_ts_object,
@@ -1003,7 +1004,7 @@ export const ts_object = new function() {
 							//console.log("response:",response);
 						}
 
-						// falback
+						// fallback
 							if (typeof data_obj.manager!=="undefined" && typeof data_obj.fallback!=="undefined") {
 
 							 	// set_new_thesaurus_value on finish add_child
@@ -1074,7 +1075,7 @@ export const ts_object = new function() {
 				return Promise.resolve(function(){return false});
 			}
 
-		// parent wrap (current droped new parent)
+		// parent wrap (current drooped new parent)
 		const parent_wrap = wrap_ts_object.parentNode.parentNode;
 			if(!parent_wrap) {
 				console.log("[ts_object.update_parent_data] Error on find parent_wrap");
@@ -1299,7 +1300,7 @@ export const ts_object = new function() {
 	/**
 	* HILITE_ELEMENT
 	* section_tipo, section_id
-	* element.dataset.section_tipo, lement.dataset.section_id
+	* element.dataset.section_tipo, element.dataset.section_id
 	* @param dom object element
 	* @return int len
 	*/
@@ -1321,7 +1322,7 @@ export const ts_object = new function() {
 		// Hilite only current element
 			// element.classList.add("element_hilite");
 
-		// Hilite all apperances of current component (can appears more than once)
+		// Hilite all appearances of current component (can appears more than once)
 			const matches = document.querySelectorAll('.list_thesaurus_element[data-type="'+element.dataset.type+'"][data-section_tipo="'+element.dataset.section_tipo+'"][data-section_id="'+element.dataset.section_id+'"]');
 			const len 	  = matches.length;
 			for (let i = len - 1; i >= 0; i--) {
@@ -1335,7 +1336,7 @@ export const ts_object = new function() {
 
 	/**
 	* RESET_HILITES
-	* Removes css class element_hilite from all elemens
+	* Removes css class element_hilite from all elements
 	*/
 	this.reset_hilites = function() {
 
@@ -1655,7 +1656,7 @@ export const ts_object = new function() {
 				if (response.result===false) {
 					alert("Sorry. You can't delete a element with children. Please, remove all children before delete.")
 				}else{
-					// Remove all DOM apperances of current wrap_ts_object
+					// Remove all DOM appearances of current wrap_ts_object
 					/*
 					var len = ar_wrap_ts_object.length
 					for (var i = 0; i < ar_wrap_ts_object.length; i++) {
@@ -1892,42 +1893,18 @@ export const ts_object = new function() {
 	*/
 	this.link_term = function(button_obj) {
 
-		const source_window = window.opener || window.parent
+		// source window. Could be different than current (like iframe)
+			const source_window = window.opener || window.parent
 			if (source_window===null) {
 				console.log("[link_term] Error on find window.opener / parent")
 				return false
 			}
 
-		const wrap = button_obj.parentNode.parentNode;
-			if(!wrap) {
-				console.log("[link_term] Error on find wrap")
-				return false
-			}
-
-		// Component name is set fron url and sources from button dataset.component_name
-		const component_name = ts_object.component_name
-			if(typeof component_name==="undefined" || component_name==="undefined") {
-				if(SHOW_DEBUG===true) {
-					console.log("[link_term] Error on find component_name ts_object",ts_object)
-				}
-				return false
-			}
-
-		let label = " "
-		if(wrap.querySelector('.list_thesaurus_element[data-type="term"]').hasChildNodes()){
-			const wrap_term = wrap.querySelector('.list_thesaurus_element[data-type="term"]')
-			label = wrap_term.firstChild.innerHTML;
-		}
-
-		if (typeof source_window[component_name]==="undefined") {
-			console.error("Error on get source_window component_name,",component_name);
-			return false
-		}
-
-		const response = source_window[component_name].link_term(wrap.dataset.section_id, wrap.dataset.section_tipo, label)
+		// publish event link_term
+			source_window.event_manager.publish('link_term', button_obj.data)
 
 
-		return response
+		return true
 	};//end link_term
 
 
@@ -1978,7 +1955,7 @@ export const ts_object = new function() {
 				//    console.error("The request for " + url + " timed out.");
 				//};
 
-				// codification of the header for POST method, in GET no is necesary
+				// codification of the header for POST method, in GET no is necessary
 					if (typeof content_type==="undefined") {
 						content_type = "application/json"
 					}
@@ -2150,7 +2127,7 @@ export const ts_object = new function() {
 					continue;
 				}
 
-			// clean div conatainer
+			// clean div container
 				if(is_recursion===false) {
 					// Calculate main div of each root element
 					// Search children place
@@ -2433,7 +2410,7 @@ export const ts_object = new function() {
 						// Children are NOT loaded before. Set as not loaded and hide
 						children_container.classList.remove('js_first_load') // Set as already loaded
 						children_container.classList.add('removed_from_view')	// Set as hidden
-						icon_arrow.classList.remove('ts_object_children_arrow_icon_open') // Allways remove state 'open' from arrow
+						icon_arrow.classList.remove('ts_object_children_arrow_icon_open') // Always remove state 'open' from arrow
 					}
 				})
 

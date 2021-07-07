@@ -55,21 +55,6 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 	get_tag_info(self)
 
-	// events
-		event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, function(options){
-
-			self.update_active_values([{
-				name	: "tag_id",
-				value	: options.tag.dataset.tag_id
-			},
-			{
-				name	: "state",
-				value	: options.tag.dataset.state
-			}])
-		})
-
-
-
 	return wrapper
 };//end render_tool_indexation
 
@@ -180,6 +165,7 @@ const get_tag_info = function(self) {
 		})
 
 
+
 	return true;
 };//end get_tag_info
 
@@ -241,7 +227,6 @@ const get_content_data_edit = async function(self) {
 				component_container.appendChild(node)
 			})
 
-
 	// info container
 		const info_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -251,6 +236,9 @@ const get_content_data_edit = async function(self) {
 		// fix
 		self.info_container = info_container
 
+	// indexation component
+		const indexing_component_node = await self.indexing_component.render()
+		fragment.appendChild(indexing_component_node)
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -258,6 +246,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'content_data ' + self.type
 		})
 		content_data.appendChild(fragment)
+
 
 
 	return content_data
