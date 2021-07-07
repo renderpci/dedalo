@@ -46,7 +46,7 @@ render_tags.prototype.edit = async function(options) {
 	return wrapper
 }//end edit
 
-render_tags.prototype.list = render_tags.prototype.edit
+
 
 /**
 * GET_CONTENT_DATA_EDIT
@@ -54,21 +54,26 @@ render_tags.prototype.list = render_tags.prototype.edit
 */
 const get_content_data_edit = async function(self) {
 
+		console.log("self:",self);
+	if (!self.value || self.value.lenght<1) {
+		console.warn("tags get_content_data_edit. Value is empty!", self);
+	}
+
 	const fragment = new DocumentFragment()
 
 	// values container
 		const values_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'values_container',
-			parent 			: fragment
+			class_name		: 'values_container',
+			parent			: fragment
 		})
 
 	// values
-		const ipo 			= self.ipo
-		const ipo_length 	= ipo.length
+		const ipo			= self.ipo
+		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data 		= self.value.filter(item => item.key === i)
+			const data = self.value.filter(item => item.key === i)
 			get_value_element(i, data , values_container, self)
 		}
 
@@ -93,260 +98,126 @@ const get_value_element = (i, data, values_container, self) => {
 	// li, for every ipo will create a li node
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class 			: 'get_archive_weights',
-			parent 			: values_container
+			class			: 'get_archive_weights',
+			parent			: values_container
 		})
 
-	// total_tc
-		const total_tc = ui.create_dom_element({
-			element_type 	: 'div',
-			class 			: 'total_tc',
-			parent 			: li
-		})
-			//total_tc
-				// label
-					const total_tc_label = ui.create_dom_element({
-						element_type 	: 'span',
-						class_name		: 'label',
-						inner_html 		: 'TC :',
-						parent 			: total_tc
-					})
+	// reactive (Will be updated on every called event)
+		const reactive_items = []
 
-				// value
-					const total_tc_value = ui.create_dom_element({
-						element_type 	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_tc').value,
-						parent 			: total_tc
-					})
+	// total_tc		
+		const total_tc = item_value_factory('total_tc', 'TC', data)
+		li.appendChild(total_tc)
+		reactive_items.push(total_tc)
 
+	// ar_tc_wrong		
+		const ar_tc_wrong = item_value_factory('ar_tc_wrong', get_label.etiqueta_revisar, data)
+		li.appendChild(ar_tc_wrong)
+		reactive_items.push(ar_tc_wrong)
 
-	// ar_tc_wrong
-		const ar_tc_wrong = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'ar_tc_wrong',
-			parent 			: li
-		})
-			//ar_tc_wrong
-				// label
-					const ar_tc_wrong_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: get_label.etiqueta_revisar,
-						parent 			: ar_tc_wrong
-					})
+	// total_index		
+		const total_index = item_value_factory('total_index', 'INDEX', data)
+		li.appendChild(total_index)
+		reactive_items.push(total_index)
 
-				// value
-					const ar_tc_wrong_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'ar_tc_wrong').value,
-						parent 			: ar_tc_wrong
-					})
+	// total_missing_tags		
+		const total_missing_tags = item_value_factory('total_missing_tags', (get_label.etiquetas_borradas || 'Removed tags'), data)
+		li.appendChild(total_missing_tags)
+		reactive_items.push(total_missing_tags)
 
-	// total_index
-		const total_index = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_index',
-			parent 			: li
-		})
-			//total_index
-				// label
-					const total_index_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: 'INDEX :',
-						parent 			: total_index
-					})
+	// total_to_review_tags		
+		const total_to_review_tags = item_value_factory('total_to_review_tags', get_label.etiqueta_revisar, data)
+		li.appendChild(total_to_review_tags)
+		reactive_items.push(total_to_review_tags)
 
-				// value
-					const total_index_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_index').value,
-						parent 			: total_index
-					})
+	// total_private_notes		
+		const total_private_notes = item_value_factory('total_private_notes', 'Work NOTES', data)
+		li.appendChild(total_private_notes)
+		reactive_items.push(total_private_notes)
 
-	// total_missing_tags
-		const total_missing_tags = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_missing_tags',
-			parent 			: li
-		})
-			//total_missing_tags
-				// label
-					const total_missing_tags_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: get_label.etiquetas_borradas,
-						parent 			: total_missing_tags
-					})
+	// total_public_notes		
+		const total_public_notes = item_value_factory('total_public_notes', 'Public NOTES', data)
+		li.appendChild(total_public_notes)
+		reactive_items.push(total_public_notes)
 
-				// value
-					const total_missing_tags_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_missing_tags').value,
-						parent 			: total_missing_tags
-					})
+	// total_chars		
+		const total_chars = item_value_factory('total_chars', 'CHARS', data)
+		li.appendChild(total_chars)
+		reactive_items.push(total_chars)
 
-	// total_to_review_tags
-		const total_to_review_tags = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_to_review_tags',
-			parent 			: li
-		})
-			//total_to_review_tags
-				// label
-					const total_to_review_tags_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: get_label.etiqueta_revisar,
-						parent 			: total_to_review_tags
-					})
+	// total_chars_no_spaces		
+		const total_chars_no_spaces = item_value_factory('total_chars_no_spaces', 'NO SPACES', data)
+		li.appendChild(total_chars_no_spaces)
+		reactive_items.push(total_chars_no_spaces)
 
-				// value
-					const total_to_review_tags_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_to_review_tags').value,
-						parent 			: total_to_review_tags
-					})
-
-	// total_private_notes
-		const total_private_notes = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_private_notes',
-			parent 			: li
-		})
-			//total_private_notes
-				// label
-					const total_private_notes_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: 'Work NOTES :',
-						parent 			: total_private_notes
-					})
-
-				// value
-					const total_private_notes_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_private_notes').value,
-						parent 			: total_private_notes
-					})
-
-	// total_public_notes
-		const total_public_notes = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_public_notes',
-			parent 			: li
-		})
-			//total_public_notes
-				// label
-					const total_public_notes_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: 'Public NOTES :',
-						parent 			: total_public_notes
-					})
-
-				// value
-					const total_public_notes_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_public_notes').value,
-						parent 			: total_public_notes
-					})
+	// total_real_chars		
+		const total_real_chars = item_value_factory('total_real_chars', 'CHARS REAL', data)
+		li.appendChild(total_real_chars)
+		reactive_items.push(total_real_chars)
 
 
-	// total_chars
-		const total_chars = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_chars',
-			parent 			: li
-		})
-			//total_chars
-				// label
-					const total_chars_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: 'CHARS :',
-						parent 			: total_chars
-					})
-
-				// value
-					const total_chars_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_chars').value,
-						parent 			: total_chars
-					})
-
-
-	// total_chars_no_spaces
-		const total_chars_no_spaces = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_chars_no_spaces',
-			parent 			: li
-		})
-			//total_chars_no_spaces
-				// label
-					const total_chars_no_spaces_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: 'NO SPACES:',
-						parent 			: total_chars_no_spaces
-					})
-
-				// value
-					const total_chars_no_spaces_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_chars_no_spaces').value,
-						parent 			: total_chars_no_spaces
-					})
-
-
-	// total_real_chars
-		const total_real_chars = ui.create_dom_element({
-			element_type	: 'div',
-			class 			: 'total_real_chars',
-			parent 			: li
-		})
-			//total_real_chars
-				// label
-					const total_real_chars_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html 		: 'CHARS REAL:',
-						parent 			: total_real_chars
-					})
-
-				// value
-					const total_real_chars_value = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html 		: data.find(item => item.id === 'total_real_chars').value,
-						parent 			: total_real_chars
-					})
-
-		// update the values when the observable was changed
+	// update the values when the observable was changed
 		event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
-	
-				total_tc_value.innerHTML				= changed_data.find(item => item.id === 'total_tc').value
-				ar_tc_wrong_value.innerHTML				= changed_data.find(item => item.id === 'ar_tc_wrong').value
-				total_index_value.innerHTML				= changed_data.find(item => item.id === 'total_index').value
-				total_missing_tags_value.innerHTML		= changed_data.find(item => item.id === 'total_missing_tags').value
-				total_to_review_tags_value.innerHTML	= changed_data.find(item => item.id === 'total_to_review_tags').value
-				total_private_notes_value.innerHTML		= changed_data.find(item => item.id === 'total_private_notes').value
-				total_public_notes_value.innerHTML		= changed_data.find(item => item.id === 'total_public_notes').value
-				total_chars_value.innerHTML				= changed_data.find(item => item.id === 'total_chars').value
-				total_chars_no_spaces_value.innerHTML	= changed_data.find(item => item.id === 'total_chars_no_spaces').value
-				total_real_chars_value.innerHTML		= changed_data.find(item => item.id === 'total_real_chars').value
-					
+
+			function get_value_from_data(id) {				
+				const found = changed_data.find(el => el.id===id)
+				const value = found
+					? found.value
+					: ''
+				return value;
+			}
+
+			// update reactive items value
+			for (let i = 0; i < reactive_items.length; i++) {
+				reactive_items[i].value.innerHTML = get_value_from_data(reactive_items[i].id)
+			}
 		})
 
 
 	return li
 }//end get_value_element
+
+
+
+/**
+* ITEM_VALUE_FACTORY
+* Build a DOM structure with wraper, label and value
+* @param string id (like 'total_real_chars')
+* @param string label (like 'CHARS REAL')
+* @param array data
+* @return DOM node wrapper
+* 	ready to update using wrapper.value.innerHTML = 'my value'
+*/
+const item_value_factory = function(id, label, data) {
+
+	const wrapper = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: id
+	})
+	// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: label + ' :',
+			parent			: wrapper
+		})
+	// value
+		const found			= data.find(item => item.id===id)
+		const current_value	= found
+			? found.value
+			: ''
+		
+		const value_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: current_value,
+			parent			: wrapper
+		})
+
+	wrapper.value	= value_node
+	wrapper.id		= id
+
+	return wrapper
+}//end item_value_factory
+
+
