@@ -2427,6 +2427,8 @@
 		Added component_pdf control to diffusion value. Now only existing files generates output value (prevent empty files issues in publication)
 		Minor fixes in updates.php file to prevent issues updating Dédalo from old versions
 		Fixed issue when DEDALO_DIFFUSION_RESOLVE_LEVELS is not defined in config. Now a value of 2 levels is used as default
+		Fixed error in component_text_area where geolocation tags were not updated correctly causing a failure to save (besides, refactorized update_tag function)
+
 
 
 	[/HISTORY]
@@ -2458,7 +2460,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-07-2021-b');
+	define('DEDALO_BUILD'	, '08-07-2021-c');
 
 
 	/*
