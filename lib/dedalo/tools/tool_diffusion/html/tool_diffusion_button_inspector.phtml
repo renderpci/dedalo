@@ -4,6 +4,8 @@
 	$html_tool  = '';
 	$html_tool .= '<div class="tool_inspector_div">';
 
+	$resolve_levels = (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+
 	#
 	# GROUPS
 	foreach ($ar_diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
@@ -45,7 +47,8 @@
 				$html_tool .= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true); //$from_cache=false, $fallback=true
 				$html_tool .= '</div>';
 
-				$html_tool .= ' <input class="publication_level" type="text" value="'.DEDALO_DIFFUSION_RESOLVE_LEVELS.'" title="Diffusion resolve levels" onclick="event.stopPropagation()">';
+
+				$html_tool .= ' <input class="publication_level" type="text" value="'.$resolve_levels.'" title="Diffusion resolve levels" onclick="event.stopPropagation()">';
 				if ( SHOW_DEBUG && isset($diffusion_info->$element_tipo)) {
 					$html_tool .= '<i class="glyphicon glyphicon-ok" style="color:green"></i>';
 				}

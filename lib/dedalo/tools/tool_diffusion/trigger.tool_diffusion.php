@@ -43,7 +43,7 @@ function export_list($json_data) {
 	// fix levels on each call
 		$_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($level_value)
 			? $level_value
-			: DEDALO_DIFFUSION_RESOLVE_LEVELS;
+			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
 	# Write session to unlock session file
 	session_write_close();
@@ -170,7 +170,7 @@ function export_record($json_data) {
 	// fix levels on each call
 		$_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($level_value)
 			? $level_value
-			: DEDALO_DIFFUSION_RESOLVE_LEVELS;
+			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
 	# Write session to unlock session file
 	session_write_close();	

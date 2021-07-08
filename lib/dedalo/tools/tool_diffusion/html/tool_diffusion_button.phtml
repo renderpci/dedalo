@@ -29,8 +29,9 @@
 			$html_tool .= '<span>';
 			$html_tool .= RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false);
 			if(SHOW_DEVELOPER===true) {
-				$database_name = isset($obj_value->database_name) ? $obj_value->database_name : MYSQL_DEDALO_DATABASE_CONN;
-				$html_tool .= ' <span class="notes">['.DEDALO_DIFFUSION_DOMAIN .'-'. $database_name. ']</span>';
+				$database_name	= isset($obj_value->database_name) ? $obj_value->database_name : MYSQL_DEDALO_DATABASE_CONN;
+				$levels			= (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+				$html_tool .= ' <span class="notes">['. $levels .'-'. $database_name. ']</span>';
 			}
 			$html_tool .= ' <input class="publication_level" type="text" value="'.DEDALO_DIFFUSION_RESOLVE_LEVELS.'" title="Diffusion resolve levels" onclick="event.stopPropagation()">';
 			$html_tool .= '</span>';

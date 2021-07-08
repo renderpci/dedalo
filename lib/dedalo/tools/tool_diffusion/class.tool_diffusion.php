@@ -125,7 +125,7 @@ class tool_diffusion {
 
 			$max_recursions	= isset($_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
 				? $_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
-				: DEDALO_DIFFUSION_RESOLVE_LEVELS;
+				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
 			$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully. Levels: ".$max_recursions."</span>",$section_id);			
 		}else{
