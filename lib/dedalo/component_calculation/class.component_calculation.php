@@ -1423,5 +1423,4 @@ class component_calculation extends component_common {
 
 
 
-}
-?>
+}//end class component_calculation
