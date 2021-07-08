@@ -577,13 +577,16 @@ class component_pdf extends component_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-		
-		$diffusion_value = (defined('DEDALO_PUBLICATION_CLEAN_URL') && true===DEDALO_PUBLICATION_CLEAN_URL)
+
+		if(true===$this->get_file_exists()) {
+			$diffusion_value = (defined('DEDALO_PUBLICATION_CLEAN_URL') && true===DEDALO_PUBLICATION_CLEAN_URL)
 			? ($this->get_pdf_id() .'.'. DEDALO_PDF_EXTENSION)
 			: $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT);
 
-
-		return (string)$diffusion_value;
+			return (string)$diffusion_value;
+		}
+		
+		return null;
 	}//end get_diffusion_value
 
 
