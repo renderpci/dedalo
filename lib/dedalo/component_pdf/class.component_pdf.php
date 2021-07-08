@@ -154,7 +154,7 @@ class component_pdf extends component_common {
 		}
 
 		return $this->aditional_path = $ar_aditional_path[$this->pdf_id];
-	}
+	}//end get_aditional_path
 
 
 
@@ -177,7 +177,7 @@ class component_pdf extends component_common {
 			$this->initial_media_path = false;
 		}
 		return $this->initial_media_path;
-	}
+	}//end get_initial_media_path
 
 
 
@@ -185,7 +185,7 @@ class component_pdf extends component_common {
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (object)$dato;
-	}
+	}//end get_dato
 
 
 
@@ -193,7 +193,7 @@ class component_pdf extends component_common {
 	public function set_dato($dato) {
 		
 		parent::set_dato( (object)$dato );
-	}
+	}//end set_dato
 	
 
 
@@ -205,7 +205,7 @@ class component_pdf extends component_common {
 	public function get_valor() {
 		
 		return $this->valor = $this->get_pdf_id() ;
-	}
+	}//end get_valor
 	
 
 
@@ -235,7 +235,7 @@ class component_pdf extends component_common {
 		
 
 		return $this->pdf_id = $pdf_id;
-	}
+	}//end get_pdf_id
 
 
 	
@@ -246,7 +246,7 @@ class component_pdf extends component_common {
 		if(!isset($this->quality))	return DEDALO_PDF_QUALITY_DEFAULT;
 		
 		return $this->quality;
-	}
+	}//end get_quality
 
 
 
@@ -256,12 +256,12 @@ class component_pdf extends component_common {
 	public function get_target_filename() {
 		
 		return $this->pdf_id .'.'. DEDALO_PDF_EXTENSION ;
-	}
+	}//end get_target_filename
 	public function get_target_dir() {
 		
 		#return DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();
-	}
+	}//end get_target_dir
 	
 
 
@@ -277,7 +277,7 @@ class component_pdf extends component_common {
 		$this->ar_tools_name[] = 'tool_transcription';
 		
 		return parent::get_ar_tools_obj();
-	}
+	}//end get_ar_tools_obj
 
 
 
@@ -314,7 +314,7 @@ class component_pdf extends component_common {
 		#if(!file_exists($file)) $pdf_id = '0';
 	
 		return $PdfObj->get_media_path() . $pdf_id .'.'. $PdfObj->get_extension();
-	}
+	}//end get_pdf_url
 
 
 	
@@ -342,7 +342,9 @@ class component_pdf extends component_common {
 		$PdfObj->set_quality($quality);
 			
 		return $PdfObj->get_local_full_path();
-	}
+	}//end get_pdf_path
+
+
 
 	/**
 	* GET_PDF_SIZE
@@ -355,7 +357,9 @@ class component_pdf extends component_common {
 		$pdf_id 	= $this->get_pdf_id();
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
 		return $PdfObj->get_size();
-	}
+	}//end get_pdf_size
+
+
 
 	/**
 	* GET_FILE_EXISTS
@@ -368,7 +372,7 @@ class component_pdf extends component_common {
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
 		
 		return $PdfObj->get_file_exists();
-	}
+	}//end get_file_exists
 
 
 
@@ -621,4 +625,4 @@ class component_pdf extends component_common {
 
 
 
-}
+}//end class component_pdf

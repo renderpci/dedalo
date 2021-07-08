@@ -200,14 +200,14 @@
 			
 			<!-- V5 Propiedades -->
 				<tr>
-					<td class="td_header" onClick="simpleToogleTBODY('propiedades_group',this);redimensionarVentana();" style="cursor:pointer">
+					<td class="td_header" onClick="simpleToogleTBODY('propiedades_group',this)" style="cursor:pointer">
 						V5 Propiedades <div class="flecha_open_tboby"></div>
 					</td>
 				</tr>
 				<tbody id="propiedades_group" class="<?php echo MAIN_PROPERTIES_COLUMN==='propiedades' ? '' : 'hide'; ?>">
 					<tr>
 						<td>
-							<div class="wraper_propiedades">								
+							<div class="wraper_propiedades">
 								<textarea id="propiedades" name="propiedades" class="propiedades_textarea hide"><?php echo $propiedades ?></textarea>
 								<div id="editor_json" class="editor_json_container"></div>
 								<script>
@@ -239,7 +239,7 @@
 
 			<!-- V6 properties-->
 				<tr>
-					<td class="td_header" onClick="simpleToogleTBODY('properties_group',this);redimensionarVentana();" style="cursor:pointer">
+					<td class="td_header" onClick="simpleToogleTBODY('properties_group',this)" style="cursor:pointer">
 						V6 Properties <div class="flecha_close_tboby"></div>
 					</td>
 				</tr>
@@ -261,13 +261,13 @@
 										mode	: 'code',
 										modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 										error	: function (err) {
-									    	alert(err.toString());
-									    }
+											alert(err.toString());
+										}
 									}
 									// create properties_editor
-										const properties_container	= document.getElementById('properties_editor_json');
+										const properties_container = document.getElementById('properties_editor_json');
 										// const properties_editor		= new JSONEditor(properties_container, properties_options, <?php #echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
-										properties_editor		= new JSONEditor(properties_container, properties_options);
+										properties_editor = new JSONEditor(properties_container, properties_options);
 										// set json
 										if (properties_dato) {
 											properties_editor.set( properties_dato )
@@ -283,7 +283,7 @@
 
 			<!-- hierarchie info -->
 				<tr class="row_border_bottom">
-					<td>       
+					<td>
 					 <table class="table_hierarchy_info">
 						<!-- PARENT : Dependiente de (padre) -->
 							<tr>

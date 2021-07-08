@@ -278,13 +278,13 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 2;
 
 
-	/* en proceso !!
+	/* en proceso !!*/
 
 	# DATABASE UPDATES
 
-	CREATE EXTENSION btree_gin;
+	// CREATE EXTENSION btree_gin;
 
-	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
 		-- DELETE DUPLICATES
 		DELETE FROM relations a USING (
 			SELECT MIN(id) as id, section_tipo, section_id, target_section_tipo, target_section_id, from_component_tipo

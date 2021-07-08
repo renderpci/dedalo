@@ -1,24 +1,39 @@
 <?php
 /*
 * CLASS COMPONENT PASSWORD
+*
+*
+*
 */
-
-
 class component_password extends component_common {
+
+
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-	# GET DATO
+
+
+	/**
+	* GET DATO
+	*/
 	public function get_dato() {
+		
 		$dato = parent::get_dato();
 		return (string)$dato;
-	}
+	}//end get_dato
 
-	# SET_DATO (NO ENCRYTP THIS VAR !)
+
+
+	/**
+	* SET_DATO (DO NOT ENCRYTP THIS VAR !)
+	*/
 	public function set_dato($dato) {
-		parent::set_dato( (string)$dato );
-	}
+		
+		return parent::set_dato( (string)$dato );
+	}//end set_dato
+
+
 
 	/**
 	* SAVE OVERRIDE
@@ -36,14 +51,19 @@ class component_password extends component_common {
 
 		# A partir de aquí, salvamos de forma estándar
 		return parent::Save();
-	}
+	}//end Save
 
-	# GET EJEMPLO
+
+
+	/**
+	* GET EJEMPLO
+	*/
 	protected function get_ejemplo() {
 
 		if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";
 		return parent::get_ejemplo();
-	}
+	}//end get_ejemplo
+
 
 
 	/**
@@ -71,7 +91,10 @@ class component_password extends component_common {
 
 
 
-	# OVERRIDE COMPONENT_COMMON METHOD
+	/**
+	* GET_AR_TOOLS_OBJ
+	* Override component_common method
+	*/
 	public function get_ar_tools_obj() {
 
 		# Remove common tools (time machine and lang)
@@ -83,6 +106,9 @@ class component_password extends component_common {
 
 		return parent::get_ar_tools_obj();
 	}
+
+
+
 	/**
 	* UPDATE_DATO_VERSION
 	* @return
@@ -107,6 +133,7 @@ class component_password extends component_common {
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
+			
 			case '4.0.22':
 				#$dato = $this->get_dato_unchanged();
 
@@ -157,8 +184,11 @@ class component_password extends component_common {
 					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
 				}
-		}
-	}
+				break;
+		}//end switch ($update_version)
 
-};
-?>
+	}//end update_dato_version
+
+
+
+};//end class

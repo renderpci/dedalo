@@ -12,6 +12,8 @@
 	define('CURRENT_LOGGED_USED_ID', $_SESSION['dedalo4']['auth']['user_id']);
 
 
+
 // main properties column. D5 uses 'propiedades' and D6 uses 'properties' as main json column
 	define('MAIN_PROPERTIES_COLUMN', 'propiedades');
+
 
