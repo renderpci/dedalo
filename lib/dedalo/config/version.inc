@@ -2421,7 +2421,12 @@
 		Fixed tool time machine error in list mode
 		29-06-2021
 		Optimized concurrent calls to Ontology trigger
-		
+		08-07-2021
+		Updated structure.json file to 07-07-2021 version. Compressed for convenience
+		Reverted removal of legacy file RecordObj_ts to allow Dedalo version updates from older versions
+		Added component_pdf control to diffusion value. Now only existing files generates output value (prevent empty files issues in publication)
+		Minor fixes in updates.php file to prevent issues updating Dédalo from old versions
+		Fixed issue when DEDALO_DIFFUSION_RESOLVE_LEVELS is not defined in config. Now a value of 2 levels is used as default
 
 
 	[/HISTORY]
@@ -2453,7 +2458,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-07-2021-a');
+	define('DEDALO_BUILD'	, '08-07-2021-b');
 
 
 	/*
