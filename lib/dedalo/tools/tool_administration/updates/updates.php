@@ -300,23 +300,24 @@ $updates->$v = new stdClass();
 		AND a.id <> b.id ;
 
 		-- CONSTRAIN RELATIONS ALL FIELDS
+		ALTER TABLE public.relations DROP CONSTRAINT IF EXISTS relations_all_constraint;
 		ALTER TABLE public.relations ADD CONSTRAINT "relations_all_constraint" UNIQUE("section_tipo", "section_id", "target_section_tipo", "target_section_id", "from_component_tipo");
-		");
+	');
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
 		CREATE INDEX matrix_time_machine_combined
 	    ON public.matrix_time_machine USING btree
 	    (tipo COLLATE pg_catalog."default", section_id, section_tipo COLLATE pg_catalog."default", lang COLLATE pg_catalog."default")
 	    TABLESPACE pg_default;
-	    ');
+	');
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
 		CREATE INDEX matrix_hierarchy_section_tipo_section_id_DESC
 		ON public.matrix_hierarchy USING btree
 		(section_tipo COLLATE pg_catalog."default", section_id DESC)
 		TABLESPACE pg_default;
-		');
-	*/
+	');
+	
 
 	# Update datos to section_data
 	$script_obj = new stdClass();
@@ -973,12 +974,12 @@ $updates->$v = new stdClass();
 
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-									CREATE INDEX matrix_relations_idx ON matrix USING gin ((datos#>'{relations}'));
-									CREATE INDEX matrix_langs_relations_idx ON matrix_langs USING gin ((datos#>'{relations}'));
-									CREATE INDEX matrix_langs_hierarchy41_gin  ON matrix_langs USING GIN ((datos#>'{components, hierarchy41, dato, lg-nolan}'));
-									CREATE INDEX matrix_hierarchy_relations_idx ON matrix_hierarchy USING gin ((datos#>'{relations}'));
-									CREATE INDEX matrix_hierarchy_main_relations_idx ON matrix_hierarchy_main USING gin ((datos#>'{relations}'));
-									CREATE INDEX matrix_hierarchy63_gin ON matrix_hierarchy USING GIN ((datos#>'{components, hierarchy63, dato, lg-nolan}'));
+									CREATE INDEX IF NOT EXISTS matrix_relations_idx ON matrix USING gin ((datos#>'{relations}'));
+									CREATE INDEX IF NOT EXISTS matrix_langs_relations_idx ON matrix_langs USING gin ((datos#>'{relations}'));
+									CREATE INDEX IF NOT EXISTS matrix_langs_hierarchy41_gin  ON matrix_langs USING GIN ((datos#>'{components, hierarchy41, dato, lg-nolan}'));
+									CREATE INDEX IF NOT EXISTS matrix_hierarchy_relations_idx ON matrix_hierarchy USING gin ((datos#>'{relations}'));
+									CREATE INDEX IF NOT EXISTS matrix_hierarchy_main_relations_idx ON matrix_hierarchy_main USING gin ((datos#>'{relations}'));
+									CREATE INDEX IF NOT EXISTS matrix_hierarchy63_gin ON matrix_hierarchy USING GIN ((datos#>'{components, hierarchy63, dato, lg-nolan}'));
 									");
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
@@ -1072,14 +1073,41 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium = 0;
 	$updates->$v->update_from_minor  = 16;
 
+
+	$updates->$v->SQL_update[] = '
+		CREATE SEQUENCE IF NOT EXISTS public.relations_id_seq;
+		CREATE TABLE IF NOT EXISTS "relations" (
+		  "id" integer NOT NULL DEFAULT nextval(\'relations_id_seq\'::regclass),
+		  "section_tipo" character varying(254) NOT NULL,
+		  "section_id" integer NOT NULL,
+		  "target_section_tipo" character varying(254) NOT NULL,
+		  "target_section_id" integer NOT NULL,
+		  "from_component_tipo" character varying(254) NOT NULL,
+		  CONSTRAINT relations_id PRIMARY KEY (id)
+		);
+
+		ALTER TABLE public.relations ADD CONSTRAINT "relations_all_constraint" UNIQUE("section_tipo", "section_id", "target_section_tipo", "target_section_id", "from_component_tipo");
+
+		CREATE INDEX IF NOT EXISTS relations_section_id ON public.relations USING btree (section_id);
+		CREATE INDEX IF NOT EXISTS relations_section_tipo ON public.relations USING btree (section_tipo);
+		CREATE INDEX IF NOT EXISTS relations_target_section_id ON public.relations USING btree (target_section_id);
+		CREATE INDEX IF NOT EXISTS relations_target_section_tipo ON public.relations USING btree (target_section_tipo);
+		CREATE INDEX IF NOT EXISTS relations_from_component_tipo ON public.relations USING btree (from_component_tipo);
+
+		CREATE INDEX IF NOT EXISTS relations_section_tipo_section_id ON public.relations USING btree (section_tipo,section_id);
+		CREATE INDEX IF NOT EXISTS relations_target_section_tipo_target_section_id ON public.relations USING btree (target_section_tipo,target_section_id);
+		CREATE INDEX IF NOT EXISTS relations_target_section_tipo_section_tipo ON public.relations USING btree (target_section_tipo,section_tipo);
+		CREATE INDEX IF NOT EXISTS relations_target_section_id_section_id ON public.relations USING btree (target_section_id,section_id);
+	';
+
 	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(' CREATE TABLE IF NOT EXISTS "matrix_langs"
 									(
 									LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE
 									)
 									WITH (OIDS = FALSE);
-									CREATE SEQUENCE matrix_langs_id_seq;
+									CREATE SEQUENCE IF NOT EXISTS matrix_langs_id_seq;
 									ALTER TABLE matrix_langs ALTER COLUMN id SET DEFAULT nextval(\'matrix_langs_id_seq\'::regclass);
-									CREATE INDEX matrix_lang_code ON matrix_langs USING btree ((datos#>>\'{components, hierarchy41, dato, lg-nolan}\')); ');
+									CREATE INDEX IF NOT EXISTS matrix_lang_code ON matrix_langs USING btree ((datos#>>\'{components, hierarchy41, dato, lg-nolan}\')); ');
 
 
 	# LANGS (RUN ALWAYS BEFORE HIERARCHY_MAIN !!)
@@ -1222,7 +1250,7 @@ $updates->$v = new stdClass();
 									LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE
 									)
 									WITH (OIDS = FALSE);
-									CREATE SEQUENCE matrix_langs_id_seq;
+									CREATE SEQUENCE IF NOT EXISTS matrix_langs_id_seq;
 									ALTER TABLE matrix_langs ALTER COLUMN id SET DEFAULT nextval(\'matrix_langs_id_seq\'::regclass);
 									CREATE INDEX matrix_lang_code ON matrix_langs USING btree ((datos#>>\'{components, hierarchy41, dato, lg-nolan}\')); ');
 
@@ -1340,5 +1368,3 @@ $updates->$v = new stdClass();
 	$updates->$v->SQL_update[] 	= ' INSERT INTO "matrix_notifications" ("datos") VALUES (\'[]\') ';
 
 
-
-?>
