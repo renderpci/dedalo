@@ -251,6 +251,8 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		const matrix_id			= self.matrix_id // time machine 'tm' mode only
 		const caller_column_id	= self.column_id
 		const ar_columns		= await self.columns || []
+
+			console.log("section_tipo:",section_tipo);
 			// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
 			// console.log("_________________________________________________ ar_columns:",ar_columns);
 
@@ -274,18 +276,28 @@ section_record.prototype.get_ar_columns_instances = async function(){
 			// the component has direct data into the section
 			// if(current_context.parent===tipo){
 				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+
 				const current_context	= Array.isArray(current_ddo.section_tipo)
 					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.section_tipo===current_ddo.section_tipo && el.mode===current_ddo.mode)
 
 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
 
+			// if the component has multiple section_tipo like hierarchy25, get the current section_tipo and inject to the context
+			// multiple sections [on1, ts1, es1,...] has the same component and server only send 1 verion of it.
+			// it's necesary create different instances for the same component, to mantain the coherence with the data.
+				if(current_context.section_tipo !== section_tipo){
+					current_context.section_tipo = section_tipo
+				}
+			// clone the current_context to prevent changes in it.
+				const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
+
 				const column_id = caller_column_id
 					? caller_column_id
 					: i+1
 
-				const current_instance	= await add_instance(self, current_context, section_id, current_data, column_id)
-		
+				const current_instance	= await add_instance(self, new_context, section_id, current_data, column_id)
+
 				// add instance
 				ar_instances.push(current_instance)
 
@@ -339,7 +351,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 			}
 			return false
 		})
-		// console.log("///////////////////////////////////////////// section_record get_component_data component_data:",component_data);
+
 
 	// debug
 		// if (self.mode==='tm' || self.caller.mode==='tm') {

@@ -154,6 +154,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 	
 	const ar_instances = await self.get_ar_columns_instances()
 
+
 // const ar_instances = await self.get_ar_instances()
 
 	const fragment = new DocumentFragment()
