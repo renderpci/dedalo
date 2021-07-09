@@ -742,6 +742,7 @@ const get_custom_events = (self, i, get_service) => {
 					break;
 				default:
 					// nothing to do here
+
 					break;
 			};//end switch
 		}else if(evt.target.nodeName==='LABEL') {
@@ -754,6 +755,7 @@ const get_custom_events = (self, i, get_service) => {
 			// if (ed.dom.select('img').length>0) {
 			// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
 			// }
+			event_manager.publish('click_no_tag' +'_'+ self.id_base, {caller: self})
 		};//end click on img
 	};//end click
 
