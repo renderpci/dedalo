@@ -206,7 +206,9 @@ export const add_component = async (self, component_container, lang_value, label
 			return false
 		}
 
-	const component = await self.load_component(lang_value, mode, matrix_id)
+	const component = matrix_id===null
+		? self.caller
+		: await self.load_component(lang_value, mode, matrix_id)
 
 	// render node
 	const node = await component.render({
