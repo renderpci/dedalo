@@ -411,7 +411,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		self.services.push(current_service)
 
 
-		// button create fragment
+		// add button create fragment (Only when caller is a tool_indexation instance)
 			if (self.caller && self.caller.constructor.name==="tool_indexation") {
 
 				// create_fragment event subscription
@@ -423,14 +423,16 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 					self.events_tokens.push(
 						event_manager.subscribe('text_selection'+'_'+ self.id, show_button_create_fragment)
 					)
-					function show_button_create_fragment(data) {
+					function show_button_create_fragment(options) {
 
-						const component_container = li
+						// options
+							const selection	= options.selection
+							const callet	= options.caller
 
-						const selection		= data.selection
-						const button		= component_container.querySelector(".create_fragment")
-						const last_tag_id	= self.get_last_tag_id(i, 'index')
-						const label			= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+						const component_container	= li
+						const button				= component_container.querySelector(".create_fragment")
+						const last_tag_id			= self.get_last_tag_id(i, 'index')
+						const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 
 						const create_button = function(selection) {
 							const button_create_fragment = ui.create_dom_element({
@@ -440,13 +442,11 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 								parent 			: component_container
 							})
 
-							// event create_fragment add publish on click
-								// button_create_fragment.addEventListener("click", publish)
-								// function publish() {
-								// 	event_manager.publish('create_fragment'+'_'+ self.id, self)
-								// }
+							// event create_fragment add publish on click								
 								button_create_fragment.addEventListener("click", () => {
-									self.create_fragment(i)
+									
+									// self.create_fragment(i)
+									event_manager.publish('create_fragment'+'_'+ self.id, {caller : self, key: i})
 								})
 
 							return button_create_fragment
@@ -757,7 +757,7 @@ const get_custom_events = (self, i, get_service) => {
 		};//end click on img
 	};//end click
 
-	custom_events.MouseUp = (evt, options) => {
+	custom_events.MouseUp = (evt, options) => {		
 		// user text selection event
 			const selection = options.selection
 			event_manager.publish('text_selection' +'_'+ self.id, {selection:selection, caller: self})

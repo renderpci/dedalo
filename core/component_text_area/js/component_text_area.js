@@ -43,7 +43,7 @@ export const component_text_area = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_text_area.prototype.init				= component_common.prototype.init
+	// component_text_area.prototype.init				= component_common.prototype.init
 	component_text_area.prototype.build				= component_common.prototype.build
 	component_text_area.prototype.render			= common.prototype.render
 	component_text_area.prototype.refresh			= common.prototype.refresh
@@ -64,6 +64,31 @@ export const component_text_area = function(){
 	component_text_area.prototype.tm				= render_component_text_area.prototype.edit // time machine render alias of edit
 	component_text_area.prototype.search			= render_component_text_area.prototype.search
 	component_text_area.prototype.change_mode		= component_common.prototype.change_mode
+
+
+
+/**
+* INIT
+* @return bool
+*/
+component_text_area.prototype.init = async function(options) {
+	
+	const self = this
+	
+
+	// call the generic common tool init
+		const common_init = component_common.prototype.init.call(self, options);
+
+	// events subscribe
+		self.events_tokens.push(
+			// user click over button 'create_fragment'
+			event_manager.subscribe('create_fragment_' + self.id, self.create_fragment.bind(self))
+		)
+
+
+	return common_init
+};//end  init
+	
 
 
 
@@ -426,7 +451,6 @@ component_text_area.prototype.update_tag = function(options) {
 
 			// Save modified content
 			self.save_value(key, value)
-
 		}
 	}else{
 		// Standard dom container content editable
@@ -471,7 +495,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 			? "[/"
 			: "["
 
-	// type_name. Removes sufixes 'In' and 'Out'
+	// type_name. Removes suffixes 'In' and 'Out'
 		const type_name = type.replace(/In|Out/, '')
 
 	// label. Truncate and replace - avoid future errors
@@ -603,17 +627,26 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 
 /**
 * CREATE FRAGMENT
-* Crea las imágenes (con los tag) al principio y final del texto seleccionado
-* y salva los datos
+* Create the images (with the tags) at the beginning and end of the selected text and save the data
 */
-component_text_area.prototype.create_fragment = function(key) {
+component_text_area.prototype.create_fragment = function(options) {
 
 	const self = this
 
-	// service
+		console.warn("-->create_fragment options:",options); return
+
+	// options
+		const key = options.key
+
+	// service (needed for save)
 		const service = self.services[key]
+		if (!service) {
+			console.error("-> [component_text_area.create_fragment] service not found for key:", key);
+			return false
+		}
+
 	// selection text
-		const selection_raw = service.get_selection()
+		const selection_raw = service.get_selection();
 		if (!selection_raw || selection_raw.length<1) {
 			return false
 		}
