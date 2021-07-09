@@ -4,6 +4,7 @@
 
 
 // import
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -61,7 +62,7 @@ tool_indexation.prototype.init = async function(options) {
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_indexation/trigger.tool_indexation.php"
-		self.lang 			= options.lang // page_globals.dedalo_data_lang
+		self.lang 			= options.lang // from page_globals.dedalo_data_lang
 		self.langs 			= page_globals.dedalo_projects_default_langs
 
 	// call the generic common tool init
@@ -70,28 +71,42 @@ tool_indexation.prototype.init = async function(options) {
 	// events
 		// link_term. Observe thesaurus tree link index button click
 			self.events_tokens.push(
-				event_manager.subscribe('link_term', function(data) {
-					self.create_indexation(data)
-				})
+				event_manager.subscribe('link_term', self.create_indexation.bind(self))
 			)
 		// click_tag_index. Observe user tag selection in text area
 			self.events_tokens.push(
-				event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, function(options){
-
-					// fix selected tag
-						self.active_tag_id = options.tag.dataset.tag_id
-
-					// force to update registered active values 
-						self.update_active_values([{
-							name	: "tag_id",
-							value	: options.tag.dataset.tag_id
-						},
-						{
-							name	: "state",
-							value	: options.tag.dataset.state
-						}])
-				})
+				event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, click_tag_index)
 			)
+			function click_tag_index(options) {
+				// dd_console(`click_tag_index ${options.tag.dataset.tag_id}`, 'DEBUG', options)
+
+				// options
+					const tag_element	= options.tag // DOM node selected
+					const caller		= options.caller // instance of component text area
+
+				// fix selected tag
+					self.active_tag_id = tag_element.dataset.tag_id
+
+				// force to update registered active values 
+					self.update_active_values([{
+						name	: "tag_id",
+						value	: tag_element.dataset.tag_id
+					},
+					{
+						name	: "state",
+						value	: tag_element.dataset.state
+					}])
+
+				return true
+			}
+		// create fragment. Observe text area user selection text text_selection' +'_'+ self.id,
+			self.events_tokens.push(
+				event_manager.subscribe('text_selection' +'_'+ self.caller.id, text_selection)
+			)
+			function text_selection(options) {
+					console.log("options:",options);
+			}
+
 
 	return common_init
 };//end init
