@@ -365,31 +365,31 @@ component_text_area.prototype.update_tag = function(options) {
 
 	const self = this
 
-	if (typeof options == "undefined") {
-		alert("Please select tag");
-		console.error("[component_text_area.update_tag] ERROR. Stopped update_tag. Empty options:", options);
-		console.trace();
-		return false
-	}
+	// check options value
+		if (typeof options == "undefined") {
+			alert("Please select tag");
+			console.error("[component_text_area.update_tag] ERROR. Stopped update_tag. Empty options:", options);
+			console.trace();
+			return false
+		}
 
-	const type			= options.type
-	const tag_id		= options.tag_id
-	const new_data_obj	= options.dataset
-	const save			= options.save || false
+	// options
+		const type			= options.type
+		const tag_id		= options.tag_id
+		const new_data_obj	= options.dataset
+		const save			= options.save || false
 
-	const wrapper 	= self.node[0]
-
-	const textarea 	= wrapper.querySelector('textarea')
-
-	const container = (textarea)
-		? tinymce.get(textarea.id) // ED container
-		: wrapper.getElementsByClassName('text_area_tool_structuration')[0] // Struct container
+	// DOM elements
+		const wrapper	= self.node[0]
+		const textarea	= wrapper.querySelector('textarea')
+		const container	= (textarea)
+			? tinymce.get(textarea.id) // ED container
+			: wrapper.getElementsByClassName('text_area_tool_structuration')[0] // Struct container
 
 	// DOM Selection pattern
 		const selection_pattern = (type.indexOf('In')!==-1 || type.indexOf('Out')!==-1)
 			? '[data-type^="' + type.replace(/In|Out/, '') + '"][data-tag_id="'+tag_id+'"]'
 			: '[data-type="'+type+'"][data-tag_id="'+tag_id+'"]'
-
 
 	const ed_is_tiny = is_tiny(container)
 

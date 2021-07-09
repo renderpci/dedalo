@@ -116,7 +116,7 @@ component_portal.prototype.init = async function(options) {
 		self.columns = options.columns
 
 	// call the generic common tool init
-		const common_init = component_common.prototype.init.call(this, options);
+		const common_init = component_common.prototype.init.call(self, options);
 
 	// events subscribe
 		self.events_tokens.push(
