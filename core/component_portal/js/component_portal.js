@@ -377,8 +377,6 @@ component_portal.prototype.add_value = async function(value) {
 			self.filter_data_by_tag_id(self.active_tag)
 		}
 		
-
-		
 	return true
 };//end  add_value
 
@@ -462,14 +460,14 @@ component_portal.prototype.update_pagination_values = function(action) {
 * FILTER_DATA_BY_TAG_ID
 * Filtered data with the tag clicked by the user
 * The portal will show only the locators for the tag selected
-* @return bool
+* @return true
 */
 component_portal.prototype.filter_data_by_tag_id = function(options){
 
 	const self = this
 
 	// options
-		const tag_element component_portal= options.tag // DOM node selected
+		const tag_element = options.tag // DOM node selected
 		
 	// Fix received options from event as 'active_tag'
 		self.active_tag = options
@@ -495,7 +493,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 /**
 * RESET_FILTER_DATA
 * reset filtered data to the original and full server data
-* @return bool
+* @return true
 */
 component_portal.prototype.reset_filter_data = function(options){
 
@@ -508,6 +506,7 @@ component_portal.prototype.reset_filter_data = function(options){
 
 	return true
 }// end reset_filter_data
+
 
 
 
