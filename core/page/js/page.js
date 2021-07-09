@@ -8,6 +8,7 @@
 	// import '../../common/js/dd-modal.js'
 	import '../../services/service_tinymce/js/dd-tiny.js'
 	// others
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {menu} from '../../menu/js/menu.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -81,10 +82,8 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('user_navigation', user_navigation)
 			)
 		// user_navigation fn
-			async function user_navigation(user_navigation_options) {
-				if(SHOW_DEBUG===true) {
-					console.log("// page user_navigation received user_navigation_options", user_navigation_options);
-				}
+			async function user_navigation(user_navigation_options) {				
+				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
 				// check valid vars
 					if (!user_navigation_options.source) { 

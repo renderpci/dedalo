@@ -1,8 +1,12 @@
 <?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
 
 # set some time Important!
 $myDateTimeZone = 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
+
+
 
 #
 # TEXT
@@ -163,6 +167,7 @@ switch (true) {
 		// header('Accept-Ranges: bytes');
 		header('Vary: Accept-Encoding');
 		// fpassthru( $file_path );
+		header('Connection: close');
 		echo $file_content;
 		exit;
 		break;
@@ -401,6 +406,7 @@ header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
 
 # Output to browser
 header('Content-Type: image/png;');
+header('Connection: close');
 imagepng($im);
 
 # On finish destroy

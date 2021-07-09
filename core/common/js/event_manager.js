@@ -1,13 +1,13 @@
 /**
 * EVENT_MANAGER
-* the event_manager is created by the page and used by all instances: section, section_group, compnents, etc
+* the event_manager is created by the page and used by all instances: section, section_group, components, etc
 * the event manager is a observable-observer pattern but we implement connection with the instances with tokens
 * the token is stored in the instances and the events is a array of objects every event is auto-explained
-* the ionstances has control to create news and detroy it.
+* the instances has control to create news and destroy it.
 *
 * events format:[{
 *					event_name 	: the common name of the events for fired by publish/changes,
-*					token 		: unique id stored in the instance for contol the event,
+*					token 		: unique id stored in the instance for control the event,
 *					callback 	: the function that will fired when publish/change will fired
 *				}]
 *
@@ -30,15 +30,16 @@ const event_manager_class = function(){
 			const token = "event_"+String(++this.last_token)
 
 		// create the event
-				const new_event = {
-					event_name 	: event_name,
-					token 		: token,
-					callback 	: callback
-				}
+			const new_event = {
+				event_name	: event_name,
+				token		: token,
+				callback	: callback
+			}
+
 		// add the event to the global events of the page
 			this.events.push(new_event)
 
-		// return the token to save into the events_tokens propertie inside the caller instance
+		// return the token to save into the events_tokens properties inside the caller instance
 			return token
 	};//end  subscribe
 
@@ -64,7 +65,7 @@ const event_manager_class = function(){
 
 	/**
 	* PUBLISH
-	* when the publish event is fired it need propagated to the suscribers events
+	* when the publish event is fired it need propagated to the subscribers events
 	*/
 	this.publish = function(event_name, data={}) {
 		//if(SHOW_DEBUG===true) {
@@ -80,7 +81,7 @@ const event_manager_class = function(){
 			return false
 
 		}else{
-			// exec the suscribed events callbacks
+			// exec the subscribed events callbacks
 			const result = current_events.map(current_event => current_event.callback(data))
 			return result
 		}
@@ -144,3 +145,5 @@ export const event_manager = new event_manager_class()
 * iframes calling as parent.window
 */
 window.event_manager = event_manager
+
+

@@ -432,7 +432,9 @@ component_portal.prototype.update_pagination_values = function(action) {
 		self.paginator.total	= self.total
 
 	// paginator content data update (after self update to avoid artifacts (!))
-		event_manager.subscribe('render_'+self.id, refresh_paginator)
+		self.events_tokens.push(
+			event_manager.subscribe('render_'+self.id, refresh_paginator)
+		)
 		function refresh_paginator(node) {
 			event_manager.unsubscribe('render_'+self.id)
 			if (self.paginator) {

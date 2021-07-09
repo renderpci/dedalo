@@ -4,7 +4,7 @@
 
 
 // imports
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
@@ -62,7 +62,7 @@ export const section = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	// life clycle
+	// life cycle
 	section.prototype.render			= common.prototype.render
 	section.prototype.destroy			= common.prototype.destroy
 	section.prototype.refresh			= common.prototype.refresh
@@ -229,7 +229,8 @@ section.prototype.build = async function(autoload=false) {
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
-					console.log("SECTION api_response:", self.id, api_response);
+					dd_console("SECTION api_response:", 'DEBUG', [self.id, api_response]);
+
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -243,7 +244,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo regenerate
 				await generate_rqo()
-				console.log("SECTION self.rqo after load:", clone(self.rqo) );
+				// console.log("SECTION self.rqo after load:", clone(self.rqo) );
 		
 			// count rows
 				if (!self.total) {
@@ -269,6 +270,7 @@ section.prototype.build = async function(autoload=false) {
 			// debug
 				if(SHOW_DEBUG===true) {
 					const event_token = event_manager.subscribe('render_'+self.id, show_debug_info)
+					self.events_tokens.push(event_token)
 					function show_debug_info() {
 						event_manager.unsubscribe(event_token)
 						load_data_debug(self, api_response, self.rqo)
@@ -372,7 +374,8 @@ section.prototype.build = async function(autoload=false) {
 		if(SHOW_DEBUG===true) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			// load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
-			console.log("__Time to build", self.model, "(ms):", performance.now()-t0);
+			// console.log("__Time to build", self.model, "(ms):", performance.now()-t0);
+			dd_console(`__Time to build ${self.model} (ms): ${performance.now()-t0}`, 'DEBUG')
 
 			// debug duplicates check
 				const ar_used = []

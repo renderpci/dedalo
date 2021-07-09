@@ -24,6 +24,8 @@ export const state = function(){
 
 	this.status
 
+	this.events_tokens = []
+
 	return true
 }//end state
 

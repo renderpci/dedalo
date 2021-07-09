@@ -100,7 +100,7 @@ $start_time=microtime(1);
 			    ob_start();        
 			echo $string_to_output;   
 			// get the size of the output
-			$size = ob_get_length();   
+			$size = ob_get_length();
 			// send headers to tell the browser to close the connection   
 			header("Content-Length: $size");
 			header('Connection: close');

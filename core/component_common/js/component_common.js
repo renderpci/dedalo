@@ -5,7 +5,7 @@
 
 // imports
 	// import * as dd from '../../common/js/dd.common.funtions.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
@@ -106,22 +106,23 @@ component_common.prototype.init = async function(options) {
 		if(observe){
 			const l = observe.length
 			for (let i = l - 1; i >= 0; i--) {
-				const component_tipo 	= observe[i].component_tipo
-				const event 			= observe[i].event
-				const perform 			= observe[i].perform || null
+				const component_tipo	= observe[i].component_tipo
+				const event_name		= observe[i].event
+				const perform			= observe[i].perform || null
 
 				if(perform && typeof self[perform]==="function"){
-					self.events_tokens.push(
-						// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
-						// the id_base is build when the component is instantiated
-						// this event can be fired by:
-						// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
-						// or the sort format with the id_base of the observable component:
-						// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
-						event_manager.subscribe(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ component_tipo, self[perform].bind(self))
+					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
+					// the id_base is build when the component is instantiated
+					// this event can be fired by:
+					// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
+					// or the sort format with the id_base of the observable component:
+					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
+					self.events_tokens.push(	
+						event_manager.subscribe(event_name +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ component_tipo, self[perform].bind(self))
 					)
 				}else{
-					console.warn("Invalid observe perform:", observe[i], typeof self[perform]);
+					console.warn(`Invalid observe perform. Target function '${perform}' don't exists in ${self.model}:`, observe[i], typeof self[perform]);
+					console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
 				}
 			}
 		}

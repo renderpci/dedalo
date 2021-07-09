@@ -13,6 +13,27 @@ export function clone(item){
 
 
 
+/**
+* DD_CONSOLE
+* Custom console log from Dédalo
+*/
+export function dd_console(msg, level, items){
+
+	const type = level==='ERROR'
+		? 'error'
+		:	(level==='WARNING'
+				? 'warn'
+				: 'log')
+	
+	if (items) {
+		console[type](msg, items);
+	}else{
+		console[type](msg);
+	}	
+}//end clone
+
+
+
 
 /**
 * WAIT_FOR_GLOBAL
