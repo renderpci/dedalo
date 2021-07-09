@@ -13,6 +13,7 @@
 	$locator->component_tipo		= (string)$component_tipo; //destination component tipo
 	$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
 	$locator->tag_id				= (string)$tag_id;
+	$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
 	$locator->state					= (object)$state;
 	$locator->semantic				= (object)$semantic;
 	$locator->from_key				= (int)$from_key; //dataframe index array number of the data taht reference
@@ -32,6 +33,7 @@ class locator extends stdClass {
 		private $section_tipo;
 		private $component_tipo;
 		private $tag_id;
+		private $tag_component_tipo;
 		private $state;
 		private $semantic;
 		private $from_key;
@@ -147,6 +149,15 @@ class locator extends stdClass {
 			throw new Exception("Error Processing Request. Invalid tag_id: $value", 1);
 		}
 		$this->tag_id = (string)$value;
+	}
+	/**
+	* SET_TAG_COMPONENT_TIPO
+	*/
+	public function set_tag_component_tipo($value) {
+		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid component_tipo: $value", 1);
+		}
+		$this->tag_component_tipo = (string)$value;
 	}
 	/**
 	* SET_STATE
