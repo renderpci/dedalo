@@ -24,6 +24,8 @@ export const tags = function(){
 
 	this.status
 
+	this.events_tokens = []
+
 	return true
 }//end tags
 
