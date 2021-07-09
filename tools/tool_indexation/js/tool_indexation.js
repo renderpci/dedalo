@@ -5,7 +5,7 @@
 
 // import
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
@@ -69,26 +69,29 @@ tool_indexation.prototype.init = async function(options) {
 
 	// events
 		// link_term. Observe thesaurus tree link index button click
-			event_manager.subscribe('link_term', function(data) {
-				self.create_indexation(data)
-			})
+			self.events_tokens.push(
+				event_manager.subscribe('link_term', function(data) {
+					self.create_indexation(data)
+				})
+			)
 		// click_tag_index. Observe user tag selection in text area
-			event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, function(options){
+			self.events_tokens.push(
+				event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, function(options){
 
-				// fix selected tag
-					self.active_tag_id = options.tag.dataset.tag_id
+					// fix selected tag
+						self.active_tag_id = options.tag.dataset.tag_id
 
-				// force to update registered active values 
-					self.update_active_values([{
-						name	: "tag_id",
-						value	: options.tag.dataset.tag_id
-					},
-					{
-						name	: "state",
-						value	: options.tag.dataset.state
-					}])
-			})
-
+					// force to update registered active values 
+						self.update_active_values([{
+							name	: "tag_id",
+							value	: options.tag.dataset.tag_id
+						},
+						{
+							name	: "state",
+							value	: options.tag.dataset.state
+						}])
+				})
+			)
 
 	return common_init
 };//end init
@@ -120,28 +123,44 @@ tool_indexation.prototype.build = async function(autoload=false) {
 */
 tool_indexation.prototype.load_indexing_component = async function() {
 
-	const self = this
+	const self = this	
 	
 	// indexing_component		
 		const component						= self.caller
 		const indexing_component_tipo		= component.context.properties.indexing_component
-		const indexing_component_options	= {
-			model			: 'component_relation_index',
-			tipo			: indexing_component_tipo,
-			section_tipo	: component.section_tipo,
-			section_id		: component.section_id,
-			mode			: 'edit',
-			lang			: 'lg-nolan', // The only different property from caller
-			context			: {},
-			id_variant		: 'tool_indexation'
-		}	
 
-		// init and build instance
-			self.indexing_component = await get_instance(indexing_component_options)
-			await self.indexing_component.build(true)
+	// search the component instance in the global array of instances first
+		const found_instance = instances.find(el => el.tipo===indexing_component_tipo 
+											&& el.section_id===component.section_id
+											&& el.section_tipo===component.section_tipo )
+		if (found_instance) {
 
-		// store instances to remove on destroy
-			self.ar_instances.push(self.indexing_component)
+			// use existing instance
+			
+			self.indexing_component = found_instance
+		
+		}else{
+
+			// create a new one
+			
+			const indexing_component_options = {
+				model			: 'component_relation_index',
+				tipo			: indexing_component_tipo,
+				section_tipo	: component.section_tipo,
+				section_id		: component.section_id,
+				mode			: 'edit',
+				lang			: 'lg-nolan', // The only different property from caller
+				context			: {},
+				id_variant		: 'tool_indexation'
+			}	
+
+			// init and build instance
+				self.indexing_component = await get_instance(indexing_component_options)
+				await self.indexing_component.build(true)
+
+			// store instances to remove on destroy
+				self.ar_instances.push(self.indexing_component)
+		}		
 
 	return true
 };//end load_indexing_component
@@ -171,7 +190,7 @@ tool_indexation.prototype.get_component = async function(lang) {
 		lang 			: lang, // The only different property from caller
 		section_lang 	: component.lang,
 		context 		: context,
-		id_variant 		: 'tool_indexation'
+		// id_variant 		: 'tool_indexation'
 		// data 			: {value:[]},
 		// datum 			: null
 	}
