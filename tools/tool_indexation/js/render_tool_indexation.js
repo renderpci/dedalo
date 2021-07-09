@@ -180,7 +180,7 @@ const get_content_data_edit = async function(self) {
 	const fragment = new DocumentFragment()
 
 
-	// area thesaurus
+	// area thesaurus (left)
 		const thesaurus_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'thesaurus_container',
@@ -193,52 +193,59 @@ const get_content_data_edit = async function(self) {
 			})
 		})
 
-
-	// component_text_area
-		const component_container = ui.create_dom_element({
+	// right_container 
+		const right_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'component_container',
+			class_name		: 'right_container',
 			parent			: fragment
 		})
-		// lang selector
-			const lang_selector = ui.build_select_lang({
-				id			: "index_lang_selector",
-				selected	: self.lang,
-				class_name	: 'dd_input',
-				action		: async function(e){
-					// create new one
-					const component = await self.get_component(e.target.value)
 
-					component.render().then(function(node){
-						// remove previous nodeS
-						while (component_container.lastChild && component_container.lastChild.id!==lang_selector.id) {
-							component_container.removeChild(component_container.lastChild)
-						}
-						// add the new one
-						component_container.appendChild(node)
-					})
-				}
+		// component_text_area
+			const component_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'component_container',
+				parent			: right_container
 			})
-			component_container.appendChild(lang_selector)
+			// lang selector
+				const lang_selector = ui.build_select_lang({
+					id			: "index_lang_selector",
+					selected	: self.lang,
+					class_name	: 'dd_input',
+					action		: async function(e){
+						// create new one
+						const component = await self.get_component(e.target.value)
 
-		// component. render another node of component caller and append to container
-			const component = await self.get_component(self.lang)
-			component.render().then(function(node){
-				component_container.appendChild(node)
+						component.render().then(function(node){
+							// remove previous nodeS
+							while (component_container.lastChild && component_container.lastChild.id!==lang_selector.id) {
+								component_container.removeChild(component_container.lastChild)
+							}
+							// add the new one
+							component_container.appendChild(node)
+						})
+					}
+				})
+				component_container.appendChild(lang_selector)
+
+			// component. render another node of component caller and append to container
+				// const component = await self.get_component(self.lang)			
+				self.caller.render().then(function(node){
+					component_container.appendChild(node)
+				})
+
+		// info container
+			const info_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_container',
+				parent			: right_container
 			})
+			// fix
+			self.info_container = info_container
 
-	// info container
-		const info_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'info_container',
-			parent			: fragment
-		})
-		// fix
-		self.info_container = info_container
+		// indexation component
+			const indexing_component_node = await self.indexing_component.render()
+			right_container.appendChild(indexing_component_node)
 
-	// indexation component
-		const indexing_component_node = await self.indexing_component.render()
-		fragment.appendChild(indexing_component_node)
 
 	// content_data
 		const content_data = ui.create_dom_element({
