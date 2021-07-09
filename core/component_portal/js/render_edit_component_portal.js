@@ -171,7 +171,7 @@ export const add_events = function(self, wrapper) {
 								// refresh
 									await self.refresh()
 
-								// check if the caller has tag_id
+								// check if the caller has active a tag_id
 									if(self.active_tag){
 										self.filter_data_by_tag_id(self.active_tag)
 									}
