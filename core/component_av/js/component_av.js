@@ -4,6 +4,7 @@
 
 
 // imports
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -92,6 +93,11 @@ component_av.prototype.go_to_time = function(options){
 component_av.prototype.play_pause = function(){
 
 	const self = this
+
+	if (!self.video) {
+		dd_console("Ignored play_pause call. No self.video is set", 'warning', [self.tipo, self.id]);
+		return false
+	}
 
 	if (self.video.paused) {
 		self.video.play();

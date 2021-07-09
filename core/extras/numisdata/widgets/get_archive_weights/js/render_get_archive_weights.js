@@ -116,10 +116,12 @@ const get_value_element = (i, current_value, values_container, self) => {
 					parent 		: li
 				})
 		}
-		event_manager.subscribe('update_widget_value_'+self.id, (changed_data) =>{
-			console.log("change_data", changed_data);
-			span_value.innerHTML = JSON.stringify(changed_data)
-		})
+		self.events_tokens.push(
+			event_manager.subscribe('update_widget_value_'+self.id, (changed_data) =>{
+				console.log("change_data", changed_data);
+				span_value.innerHTML = JSON.stringify(changed_data)
+			})
+		)
 
 	return li
 };//end get_value_element

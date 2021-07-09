@@ -139,55 +139,55 @@ const get_value_element = (i, data, inputs_container, self) => {
 			})
 
 		// label after
-		const current_label_after = (value && data_map['label_after'+label_suffix])
-			? data_map['label_after'+label_suffix]
-			: ''
-		const separator = (value && data_map['separator'])
-			? data_map['separator']
-			: ''
-		const label_after =  ui.create_dom_element({
-				element_type 	: "label",
-				class_name 		: 'after',
-				text_content 	: (get_label[current_label_after] || current_label_after) + separator,
-				parent 		 	: li
-				})
-
+			const current_label_after = (value && data_map['label_after'+label_suffix])
+				? data_map['label_after'+label_suffix]
+				: ''
+			const separator = (value && data_map['separator'])
+				? data_map['separator']
+				: ''
+			const label_after =  ui.create_dom_element({
+				element_type	: "label",
+				class_name		: 'after',
+				text_content	: (get_label[current_label_after] || current_label_after) + separator,
+				parent			: li
+			})
 
 
 		// event update_widget_value
-			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) => {
+			self.events_tokens.push(
+				event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) => {
 
-				const current_data = changed_data.find(el => el.id===data_map.id)
+					const current_data = changed_data.find(el => el.id===data_map.id)
 
-				if(typeof current_data==='undefined'){
-					element_value.innerHTML = ''
-					label_before.textContent = ''
-					label_after.textContent = ''
-					return
-				}
-				const value = current_data.value
-				element_value.innerHTML = value
+					if(typeof current_data==='undefined'){
+						element_value.innerHTML = ''
+						label_before.textContent = ''
+						label_after.textContent = ''
+						return
+					}
+					const value = current_data.value
+					element_value.innerHTML = value
 
-				// labels
-				const label_suffix = value==1 ? '_singular' : ''
+					// labels
+					const label_suffix = value==1 ? '_singular' : ''
 
-				// label before
-				const current_label_before = (value && data_map['label_before'+label_suffix])
-					? data_map['label_before'+label_suffix]
-					: ''
-				label_before.textContent = get_label[current_label_before] || current_label_before
+					// label before
+					const current_label_before = (value && data_map['label_before'+label_suffix])
+						? data_map['label_before'+label_suffix]
+						: ''
+					label_before.textContent = get_label[current_label_before] || current_label_before
 
-				// label after
-				const current_label_after = (value && data_map['label_after'+label_suffix])
-					? data_map['label_after'+label_suffix]
-					: ''
-				const separator = (value && data_map['separator'])
-					? data_map['separator']
-					: ''
-				label_after.textContent = (get_label[current_label_after] || current_label_after) + separator
-
-			})
-	}
+					// label after
+					const current_label_after = (value && data_map['label_after'+label_suffix])
+						? data_map['label_after'+label_suffix]
+						: ''
+					const separator = (value && data_map['separator'])
+						? data_map['separator']
+						: ''
+					label_after.textContent = (get_label[current_label_after] || current_label_after) + separator
+				})
+			)
+	}//end for loop
 
 	return li
 }//end input_element

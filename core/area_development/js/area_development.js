@@ -106,9 +106,11 @@ area_development.prototype.build = async function(autoload=true) {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					event_manager.subscribe('render_'+self.id, function(){
-						load_data_debug(self, api_response, rqo_original)
-					})
+					self.events_tokens.push(
+						event_manager.subscribe('render_'+self.id, function(){
+							load_data_debug(self, api_response, rqo_original)
+						})
+					)
 				}
 		}//end if (autoload===true)
 

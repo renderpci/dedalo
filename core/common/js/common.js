@@ -5,7 +5,7 @@
 
 // imports
 	// import * as dd from '../../common/js/dd.common.funtions.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
@@ -221,8 +221,8 @@ common.prototype.refresh = async function () {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.group("Refresh "+self.model +" "+ (self.tipo ? self.tipo : '') );
-			console.log("+ Time to destroy:", self.model, performance.now()-t0);
+			// console.group("Refresh "+self.model +" "+ (self.tipo ? self.tipo : '') );
+			// console.log("+ Time to destroy:", self.model, performance.now()-t0);
 			var t1 = performance.now()
 		}
 
@@ -274,10 +274,10 @@ common.prototype.refresh = async function () {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("+ Time to render:", self.model, performance.now()-t2);
+			// console.log("+ Time to render:", self.model, performance.now()-t2);
 			// console.log("+ Time to full refresh:", self.model, performance.now()-t0);
-			console.log("%c+ Time to full refresh:" +" "+ self.model + " " + (performance.now()-t0), "color:#d2f115");
-			console.groupEnd();
+			// console.log("%c+ Time to full refresh:" +" "+ self.model + " " + (performance.now()-t0), "color:#d2f115");
+			// console.groupEnd();
 		}
 
 
