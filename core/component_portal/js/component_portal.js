@@ -370,9 +370,15 @@ component_portal.prototype.add_value = async function(value) {
 		}
 
 	// refresh self component
-		self.refresh()
+		await self.refresh()
 
+	// check if the caller has tag_id
+		if(self.active_tag){
+			self.filter_data_by_tag_id(self.active_tag)
+		}
+		
 
+		
 	return true
 };//end  add_value
 
@@ -453,49 +459,57 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 
 /**
-* GET_PORTAL_ITEMS
-* @return array of components context
+* FILTER_DATA_BY_TAG_ID
+* Filtered data with the tag clicked by the user
+* The portal will show only the locators for the tag selected
+* @return bool
 */
-	// component_portal.prototype.get_portal_items = function() {
+component_portal.prototype.filter_data_by_tag_id = function(options){
 
-	// 	const self = this
+	const self = this
 
-	// 	const portal_items = []
+	// options
+		const tag_element component_portal= options.tag // DOM node selected
+		
+	// Fix received options from event as 'active_tag'
+		self.active_tag = options
 
-	// 	// ddo map
-	// 		const rqo = self.context.request_config.find(item => item.typo==='rqo')
-	// 		if (rqo) {
-	// 			const ddo_map			= rqo.show.ddo_map
-	// 			const ddo_map_length	= ddo_map.length
-	// 			for (let j = 0; j < ddo_map_length; j++) {
+	const tag_id = tag_element.dataset.tag_id
 
-	// 				const component_tipo = ddo_map[j]
-	// 					console.log("component_tipo:",component_tipo);
+	// get all data from datum because if the user select one tag the portal data is filtered by the tag_id, 
+	// in the next tag selection by user the data doesn't have all locators and is necessary get the original data
+	// the full_data is clone to a new object because need to preserve the datum from these changes.
+		const full_data	= self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+		self.data		= JSON.parse(JSON.stringify(full_data))
 
-	// 				const item_context = self.datum.context.find(item => item.tipo===component_tipo && item.parent===self.tipo)
+	// the portal will use the filtered data value to render it with the tag_id locators.
+		self.data.value = self.data.value.filter(el => el.tag_id === tag_id )
 
-	// 				portal_items.push(item_context)
-	// 				// // iterate portal records
-	// 				// for (let k = 0; k < portal_data.length; k++) {
-	// 				// 	// if (!portal_data[k] || !portal_data[k].section_id) continue;
+		self.render({render_level : 'content'})
 
-	// 				// 	const portal_section_id		= portal_data[k].section_id
-	// 				// 	const portal_section_tipo	= portal_data[k].section_tipo
-	// 				// 		console.log("portal_section_id:",portal_section_id,portal_section_tipo);
-
-	// 				// 	break;
-	// 				// }
-
-	// 				// await add_instance(current_context, section_id)
-
-	// 				// const current_data = portal_data.find(item => item.from_component_tipo===component_tipo)
-	// 					// console.log("////// current_data "+component_tipo, current_data);
-	// 			}
-	// 		}
+	return true
+}// end filter_data_by_tag_id
 
 
-	// 	return portal_items
-	// }; //end get_portal_items
+
+/**
+* RESET_FILTER_DATA
+* reset filtered data to the original and full server data
+* @return bool
+*/
+component_portal.prototype.reset_filter_data = function(options){
+
+	const self = this
+
+	// refresh the data with the full data from datum and render portal.
+	self.data	= self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+	
+	self.render({render_level : 'content'})
+
+	return true
+}// end reset_filter_data
+
+
 
 
 

@@ -379,7 +379,7 @@ tool_indexation.prototype.create_fragment = function ( button_obj, event ) {
 * 	{ section_tipo, section_id, label } from thesaurus selected term
 * @return boolean from portal.add_value method
 */
-tool_indexation.prototype.create_indexation = function ( data ) {
+tool_indexation.prototype.create_indexation = async function ( data ) {
 
 	const self = this
 
@@ -401,8 +401,10 @@ tool_indexation.prototype.create_indexation = function ( data ) {
 			tag_component_tipo	: self.caller.tipo // (component_text_area tag source)
 		}
 
-	const result = self.indexing_component.add_value(new_index_locator)
+	const result = await self.indexing_component.add_value(new_index_locator)
 
+	self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id === tag_id )
+	self.indexing_component.render({render_level : 'content'})
 
 	return result
 }// end create_indexation

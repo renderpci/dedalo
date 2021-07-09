@@ -169,7 +169,12 @@ export const add_events = function(self, wrapper) {
 									self.update_pagination_values('remove')
 
 								// refresh
-									self.refresh()
+									await self.refresh()
+
+								// check if the caller has tag_id
+									if(self.active_tag){
+										self.filter_data_by_tag_id(self.active_tag)
+									}
 
 								// event to update the dom elements of the instance
 									event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
