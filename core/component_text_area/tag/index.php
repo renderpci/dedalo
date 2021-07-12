@@ -45,6 +45,7 @@ $text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
 
 
+
 #
 # TAG TYPE
 $tag_image_dir = dirname(dirname(dirname(__FILE__))) . '/themes/default/tag_base';
@@ -117,6 +118,9 @@ switch (true) {
 		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
 		$text			= urldecode($matches[4][0]);
 		$state 			= $matches[2][0];
+		if($state!=='a' && $state!=='b') {
+			$state = 'a';
+		}
 		$imgBase 		= $tag_image_dir."/person-{$state}-x2.png";
 		break;
 	case (strpos($text,'[note-')!==false):
@@ -188,6 +192,10 @@ $y 			= 0 ;	# 0
 
 # We create an image from the base image ($imgBase)
 $im = imagecreatefrompng($imgBase);
+
+if (!$im) {
+	die("Error on create img");
+}
 
 
 # Define colors
