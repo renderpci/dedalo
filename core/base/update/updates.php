@@ -22,12 +22,19 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 4;
 
 
-	# UPDATE COMPONENTS
-		$updates->$v->components_update = ['component_image','component_text_area'];
+
+		# component_relation_index. Update datos with relation_index
+			require_once( dirname(dirname(__FILE__)) .'/upgrade/class.relation_index_v5_to_v6.php');
+			$script_obj = new stdClass();
+				$script_obj->info   		= "Change the component_relation_related_index data inside thesaurus to resources section data";
+				$script_obj->script_class   = "relation_index_v5_to_v6";
+				$script_obj->script_method  = "change_component_dato";
+				$script_obj->script_vars    = json_encode([]); // Note that only ONE argument encoded is sended
+			$updates->$v->run_scripts[] = $script_obj;
 
 		return;
 
-
+	# UPDATE COMPONENTS
 		$updates->$v->components_update = ['component_json','component_image','component_text_area'];	// Force convert from string to array
 
 
