@@ -57,7 +57,11 @@ class v5_to_v6 {
 					$datos 	= json_decode($rows['datos']);
 
 					if (!empty($datos)) {
-						$section_data 			= self::$action( $datos ); // like 'convert_section_dato_to_data'
+
+						// called_class extends current class
+						$called_class = get_called_class();
+
+						$section_data 			= $called_class::{$action}( $datos ); // like 'convert_section_dato_to_data'
 						$section_data_encoded 	= json_encode($section_data);
 
 						$strQuery 	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
