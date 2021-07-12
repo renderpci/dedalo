@@ -79,8 +79,8 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 						$new_locator->set_tag_component_tipo($locator->component_tipo);
 						$new_locator->set_section_tipo($dato->section_tipo);
 						$new_locator->set_section_id($dato->section_id);
-						$new_locator->set_section_top_id($dato->section_top_id);
-						$new_locator->set_section_top_tipo($dato->section_top_tipo);
+						$new_locator->set_section_top_id($locator->section_top_id);
+						$new_locator->set_section_top_tipo($locator->section_top_tipo);
 
 					$target_component_tipo = $component_tipo[$locator->component_tipo];
 					$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
@@ -96,8 +96,8 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 					$saved = $target_component->Save();
 
 					// failed to save (when is ok, return a int section_id value)
-						if (empty($save)) {
-							debug_log(__METHOD__." Error on save component data $model - $target_component_tipo - $locator->section_tipo - $locator->section_id ".to_string(), logger::ERROR);
+						if (empty($saved)) {
+							debug_log(__METHOD__." Error on save component data **--** $model - $target_component_tipo - $locator->section_tipo - $locator->section_id ".to_string(), logger::ERROR);
 							$new_relations[] = $locator; // preserve non saved locator
 						}else{
 							debug_log(__METHOD__." Saved relation_index! $model - $target_component_tipo - $locator->section_tipo - $locator->section_id ".to_string($new_locator), logger::DEBUG);
