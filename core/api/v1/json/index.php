@@ -94,11 +94,11 @@ $start_time=microtime(1);
 	// output_string_and_close_connection
 		function output_string_and_close_connection($string_to_output) {
 			// set_time_limit(0);
-			ignore_user_abort(true);   
+			ignore_user_abort(true);
 			// buffer all upcoming output - make sure we care about compression:
 			if(!ob_start("ob_gzhandler"))
-			    ob_start();        
-			echo $string_to_output;   
+			    ob_start();
+			echo $string_to_output;
 			// get the size of the output
 			$size = ob_get_length();
 			// send headers to tell the browser to close the connection   
@@ -107,7 +107,7 @@ $start_time=microtime(1);
 			// flush all output
 			ob_end_flush();
 			// ob_flush();
-			flush();   
+			flush();
 			// close current session
 			// if (session_id()) session_write_close();
 		}
