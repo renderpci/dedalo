@@ -252,7 +252,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		const caller_column_id	= self.column_id
 		const ar_columns		= await self.columns || []
 
-			console.log("section_tipo:",section_tipo);
+			// console.log("section_tipo:",section_tipo);
 			// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
 			// console.log("_________________________________________________ ar_columns:",ar_columns);
 
@@ -280,6 +280,11 @@ section_record.prototype.get_ar_columns_instances = async function(){
 				const current_context	= Array.isArray(current_ddo.section_tipo)
 					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.section_tipo===current_ddo.section_tipo && el.mode===current_ddo.mode)
+				// check is valid context
+					if (!current_context) {
+						console.error("[get_ar_columns_instances] Ignored context not found for component:", current_ddo);
+						continue;
+					}
 
 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
 
