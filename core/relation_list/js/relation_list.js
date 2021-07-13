@@ -6,7 +6,7 @@
 # it can mix some different columns (number, types, name of columns) procedent of different sections
 
 {
-  "@context": [
+  "context": [
     {
       "section_tipo": "oh1",
       "section_label": "Historia Oral",
@@ -163,7 +163,7 @@ var relation_list = new function() {
         self.parse_html(response)
       });
 
-      // sent the request for count the rows
+      // 2 sent the request for count the rows
       options.count = true;
       self.load_relation_list_data(options).then(function(response){
         const total_records_count = response.reduce(
@@ -518,7 +518,7 @@ var relation_list = new function() {
         count           : options.count,
       }
 
-      // create the promise witht the server request
+      // create the promise with the server request
       let js_promise = common.get_json_data(trigger_url, trigger_vars).then(function(response) {
           if(SHOW_DEBUG===true) {
             console.log("[relation_list.load_relation_list_data] response",response);
