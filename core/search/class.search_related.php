@@ -77,7 +77,6 @@ class search_related extends search {
 
 		$str_query .= ';';
 
-
 		return $str_query;
 	}//end parse_search_query_object
 
@@ -91,7 +90,7 @@ class search_related extends search {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset=false, $count=false ) {
+	public static function calculate_inverse_locators_DES( $reference_locator, $limit=false, $offset=false, $count=false ) {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
 
 		# compare
