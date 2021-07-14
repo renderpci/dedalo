@@ -225,10 +225,9 @@ component_portal.prototype.build = async function(autoload=false){
 				await generate_rqo()
 				// console.log("portal generate_rqo 2 self.rqo:",self.rqo);
 		}//end if (autoload===true)
-		
 	
-	// pagination vars only in edit mode
 		if (self.mode==="edit") {
+			// pagination vars only in edit mode
 
 			// pagination. update element pagination vars when are used
 				if (self.data.pagination && !self.total) {
@@ -242,17 +241,15 @@ component_portal.prototype.build = async function(autoload=false){
 			// paginator
 				if (!self.paginator) {
 
-					// create new
-					const current_paginator = new paginator()
-					current_paginator.init({
+					// create new one
+					self.paginator = new paginator()
+					self.paginator.init({
 						caller : self
 					})
-					await current_paginator.build()
-					// fix paginator to current instance
-					self.paginator = current_paginator
+					await self.paginator.build()
 
 					self.events_tokens.push(
-						event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
+						event_manager.subscribe('paginator_goto_'+self.paginator.id , async (offset) => {
 							self.rqo.sqo.offset = offset
 
 							// set value
@@ -278,23 +275,22 @@ component_portal.prototype.build = async function(autoload=false){
 					self.autocomplete_active = false
 					self.autocomplete 		 = null
 				}
-		}//end if (self.mode==="edit")
+		
+		}else if(self.mode==="search"){
+			// active / prepare the autocomplete in search mode
 
-	// active / prepare the autocomplete in search mode
-		else if(self.mode==="search"){
 			// autocomplete destroy. change the autocomplete service to false and deactivate it.
 				if(self.autocomplete && self.autocomplete_active===true){
 					self.autocomplete.destroy()
 					self.autocomplete_active = false
 					self.autocomplete 		 = null
 				}
-		}// end if(self.mode ==="search")
+		}// end if(self.mode==="edit")
 
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
 
 	// target_section
-		// console.log("//// portal self.rqo.sqo.section_tipo:", self.rqo.sqo.section_tipo);
 		self.target_section = self.rqo_config.sqo.section_tipo
 		// self.target_section = self.rqo.sqo.section_tipo
 
@@ -374,6 +370,7 @@ component_portal.prototype.add_value = async function(value) {
 
 	// check if the caller has tag_id
 		if(self.active_tag){
+			// filter component data by tag_id and re-render contentent
 			self.filter_data_by_tag_id(self.active_tag)
 		}
 		
@@ -443,7 +440,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 			event_manager.unsubscribe('render_'+self.id)
 			if (self.paginator) {
 				self.paginator.refresh()
-			}			
+			}
 		}
 
 	// set value
@@ -460,7 +457,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 * FILTER_DATA_BY_TAG_ID
 * Filtered data with the tag clicked by the user
 * The portal will show only the locators for the tag selected
-* @return true
+* @return bool true
 */
 component_portal.prototype.filter_data_by_tag_id = function(options){
 
@@ -472,20 +469,25 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 	// Fix received options from event as 'active_tag'
 		self.active_tag = options
 
-	const tag_id = tag_element.dataset.tag_id
+	// tag_id from node dataset
+		const tag_id = tag_element.dataset.tag_id
 
 	// get all data from datum because if the user select one tag the portal data is filtered by the tag_id, 
 	// in the next tag selection by user the data doesn't have all locators and is necessary get the original data
 	// the full_data is clone to a new object because need to preserve the datum from these changes.
-		const full_data	= self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
-		self.data		= JSON.parse(JSON.stringify(full_data))
-
-		if(!self.data.value) return true
+		const full_data	= self.datum.data.find(el => el.tipo===self.tipo
+												  && el.section_tipo===self.section_tipo
+												  && el.section_id==self.section_id) || {}
+		self.data = JSON.parse(JSON.stringify(full_data))
 
 	// the portal will use the filtered data value to render it with the tag_id locators.
-		self.data.value = self.data.value.filter(el => el.tag_id === tag_id )
+		self.data.value = self.data.value
+			? self.data.value.filter(el => el.tag_id === tag_id )
+			: []
 
+	// re-render always the content
 		self.render({render_level : 'content'})
+
 
 	return true
 }// end filter_data_by_tag_id
@@ -508,9 +510,6 @@ component_portal.prototype.reset_filter_data = function(options){
 
 	return true
 }// end reset_filter_data
-
-
-
 
 
 

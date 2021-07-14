@@ -104,7 +104,7 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('text_selection' +'_'+ self.caller.id, text_selection)
 			)
 			function text_selection(options) {
-					console.log("options:",options);
+				console.log("event text_selection options:",options);
 			}
 
 
@@ -124,7 +124,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 		self.caller.caller = self
 
 	// load_indexing_component. Init and build the indexing_component (component_relation_index usually)
-		self.load_indexing_component()
+		await self.load_indexing_component()
 
 	// call generic common tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
@@ -149,8 +149,9 @@ tool_indexation.prototype.load_indexing_component = async function() {
 
 	// search the component instance in the global array of instances first
 		const found_instance = instances.find(el => el.tipo===indexing_component_tipo 
-											&& el.section_id===component.section_id
-											&& el.section_tipo===component.section_tipo )
+												 && el.section_id===component.section_id
+												 && el.section_tipo===component.section_tipo )
+	
 		if (found_instance) {
 
 			// use existing instance
@@ -170,7 +171,7 @@ tool_indexation.prototype.load_indexing_component = async function() {
 				lang			: 'lg-nolan', // The only different property from caller
 				context			: {},
 				id_variant		: 'tool_indexation'
-			}	
+			}
 
 			// init and build instance
 				self.indexing_component = await get_instance(indexing_component_options)
@@ -292,6 +293,7 @@ tool_indexation.prototype.get_thesaurus = async function() {
 */
 tool_indexation.prototype.create_fragment = function ( button_obj, event ) {
 	dd_console('button_obj','DEBUG', button_obj)
+
 	event.preventDefault()
 	event.stopPropagation()
 
@@ -403,10 +405,14 @@ tool_indexation.prototype.create_indexation = async function ( data ) {
 			section_top_id		: self.top_locator.section_top_id // the caller section_id to the resource like 4
 		}
 
-	const result = await self.indexing_component.add_value(new_index_locator)
+	// add value to the indexing component
+		const result = await self.indexing_component.add_value(new_index_locator)
 
-	self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id === tag_id )
-	self.indexing_component.render({render_level : 'content'})
+	// re-filter indexing_component data according current selected tag_id
+		self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id===tag_id )
+	
+	// force render indexing_component content again (as refresh)
+		self.indexing_component.render({render_level : 'content'})
 
 	return result
 }// end create_indexation
@@ -435,7 +441,7 @@ tool_indexation.prototype.active_value = function(name, callback) {
 			callback	: callback
 		})
 
-	console.log("self.active_elements added one:", name, self.active_elements);
+	console.warn("self.active_elements added one:", name, self.active_elements);
 
 
 	return true
@@ -464,8 +470,7 @@ tool_indexation.prototype.update_active_values = function(values) {
 			}
 		}
 	}
-
-	console.log("Fired update_active_values self.active_elements list:", self.active_elements);
+	// console.log("Fired update_active_values self.active_elements list:", self.active_elements);
 
 	return true
 };//end update_active_values
@@ -509,10 +514,12 @@ tool_indexation.prototype.get_related_sections = function() {
 		sqo		: sqo
 	}
 
-	const current_data_manager = new data_manager()
-
 	// get context and data
-	const api_response = current_data_manager.request({body:rqo})
+		const current_data_manager	= new data_manager()
+		const api_response			= current_data_manager.request({body:rqo})
+
 
 	return api_response
 };//end get_related_sections
+
+
