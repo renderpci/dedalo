@@ -1123,17 +1123,30 @@ class component_relation_common extends component_common {
 		// get the inverse references
 			//old way done in relations table
 				// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
-			//new way done in relations field
-			$result = search::calculate_inverse_locators( $locator );
+			//old way done with direct calculation
+				// $result = search::calculate_inverse_locators( $locator );
+
+			//new way done in relations field with standard sqo
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo(['all']);
+				$sqo->set_mode('related');
+				$sqo->set_full_count(false);
+				$sqo->set_filter_by_locators([$locator]);
+
+			$search		= search::get_instance($sqo);
+			$rows_data	= $search->search();
+			// fix result ar_records as dato
+			$result	= $rows_data->ar_records;
+
 			$component_tipo = $this->get_tipo();
 
 			$ar_result = [];
-			foreach ($result as $key => $inverse_locator) {
+			foreach ($result as $inverse_section) {
 
 				$current_locator = new locator();
-					$current_locator->set_section_tipo($inverse_locator->from_section_tipo);
-				 	$current_locator->set_section_id($inverse_locator->from_section_id);
-				 	$current_locator->set_type($inverse_locator->type);
+					$current_locator->set_section_tipo($inverse_section->section_tipo);
+				 	$current_locator->set_section_id($inverse_section->section_id);
+				 	// $current_locator->set_type($inverse_section->type);
 				 	$current_locator->set_from_component_tipo($component_tipo);
 
 				$ar_result[] = $current_locator;
