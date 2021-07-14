@@ -27,7 +27,7 @@ class area_development extends area_common {
 		"matrix_dd",
 		"matrix_layout_dd",
 		"matrix_activity"
-	);
+	);//end ar_tables_with_relations
 
 
 
