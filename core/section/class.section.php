@@ -2566,10 +2566,50 @@ class section extends common {
 			$reference_locator->set_section_id($this->section_id);
 
 		# Get calculated inverse locators for all matrix tables
-		$inverse_locators = search::calculate_inverse_locators( $reference_locator );
+		// $inverse_locators = search::calculate_inverse_locators( $reference_locator );
+
+		//new way done in relations field with standard sqo
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo(['all']);
+				$sqo->set_mode('related');
+				$sqo->set_full_count(false);
+				$sqo->set_filter_by_locators([$reference_locator]);
+
+			$search		= search::get_instance($sqo);
+			$rows_data	= $search->search();
+			// fix result ar_records as dato
+			$result	= $rows_data->ar_records;
+
+			$ar_inverse_locators = array();
+			
+			# Note that row relations contains all relations and not only searched because we need
+			# filter relations array for each records to get only desired coincidences
+
+			// Compare all properties of received locator in each relations locator
+			$ar_properties = array();
+			foreach ($reference_locator as $key => $value) {
+				$ar_properties[] = $key;
+			}
+
+			foreach ($result as $rows) {
+				
+				$current_section_id		= $rows['section_id'];
+				$current_section_tipo	= $rows['section_tipo'];
+				$current_relations		= (array)json_decode($rows['datos']['relations']);
+
+				foreach ($current_relations as $current_locator) {
+					if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
+						// Add some temporal info to current locator for build component later
+						$current_locator->from_section_tipo	= $current_section_tipo;
+						$current_locator->from_section_id	= $current_section_id;
+						// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
+						$ar_inverse_locators[] = $current_locator;
+					}
+				}
+			}
 
 
-		return (array)$inverse_locators;
+		return (array)$ar_inverse_locators;
 	}//end get_inverse_references
 
 
