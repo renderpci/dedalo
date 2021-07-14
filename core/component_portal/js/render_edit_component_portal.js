@@ -143,12 +143,13 @@ export const add_events = function(self, wrapper) {
 						key		: JSON.parse(e.target.dataset.key),
 						value	: null
 					})
-
 					switch(self.mode){
 
 						case 'search':
 
-							const update = self.update_data_value(changed_data)
+							// update . return bool
+								const update = self.update_data_value(changed_data)
+							
 							// publish search. Event to update the dom elements of the instance
 								event_manager.publish('change_search_element', self)
 
@@ -158,6 +159,7 @@ export const add_events = function(self, wrapper) {
 							break;
 
 						default:
+
 							const changed = self.change_value({
 								changed_data	: changed_data,
 								label			: e.target.previousElementSibling.textContent,
@@ -173,13 +175,14 @@ export const add_events = function(self, wrapper) {
 
 								// check if the caller has active a tag_id
 									if(self.active_tag){
+										// filter component data by tag_id and re-render content
 										self.filter_data_by_tag_id(self.active_tag)
 									}
 
 								// event to update the dom elements of the instance
 									event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
 							})
-							break;	
+							break;
 					}
 
 					return true
@@ -236,7 +239,7 @@ export const build_content_data = async function(self) {
 
 			const current_section_record = ar_section_record[i]; 	//console.log("current_section_record:",current_section_record);
 			if (!current_section_record) {
-				console.warn("empty current_section_record:",current_section_record);				
+				console.warn("empty current_section_record:",current_section_record);
 			}
 			// const child_item = await ar_section_record[i].render()
 			// fragment.appendChild(child_item)
