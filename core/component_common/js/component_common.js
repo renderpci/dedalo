@@ -449,8 +449,8 @@ component_common.prototype.update_datum = async function(new_data) {
 	// (!) Note that component datum is shared with section datum. BUT! Portals have specific datum
 
 	// new_data
-		if (!new_data || !Array.isArray(new_data) || new_data.length<1) {
-			console.error("component_common.update_datum received new_data is invalid!", new_data);
+		if (!new_data || !Array.isArray(new_data)) {
+			console.error(`component_common.update_datum received new_data is invalid! Expected array. Received:`, typeof new_data, new_data);
 			return false
 		}
 		const new_data_length = new_data.length
