@@ -556,9 +556,9 @@ component_common.prototype.update_datum = async function(new_data) {
 /**
 * UPDATE_DATA_VALUE
 * Update component data value with changed_data send by the DOM element
-* update_data_value. Update the data of the instance with the data changed
-* the format of changed_data = { key	: i,
-*								value : input.value }
+* update_data_value. Update the data of the instance with the data changed.
+* The format of changed_data is { key	: i,
+* @param object changed_data	  value : input.value }
 * @return bool true
 */
 component_common.prototype.update_data_value = function(changed_data){
@@ -627,7 +627,7 @@ component_common.prototype.change_value = async function(options) {
 	const prev_status = self.status
 	//self.status = 'changing'
 
-	// update the data in the instance previous to save
+	// update the data in the instance previous to save (returns bool)
 		const update_data = self.update_data_value(changed_data)
 
 	// save. save and rebuild the component
