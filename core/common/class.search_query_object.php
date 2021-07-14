@@ -11,7 +11,7 @@ class search_query_object {
 
 		id						: 'oh1'		// optional. section_tipo and other params to define the unique id
 		section_tipo			: ['oh1']	// array of section_tipo for search
-		mode					: ('edit' || 'list' || 'tm') // configure the sqo for search witch different models of matrix tables into the DDBB		
+		mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB		
 		filter					: {
 									operator : // string ('$and' || '$or')
 										[{ 

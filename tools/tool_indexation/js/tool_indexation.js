@@ -469,3 +469,48 @@ tool_indexation.prototype.update_active_values = function(values) {
 };//end update_active_values
 
 
+
+/**
+* GET_RELATED_SECTIONS
+* Get the list of related sections with the actual resource
+* @return boolean
+*/
+tool_indexation.prototype.get_related_sections = function() {
+
+	const self = this
+
+	const source = {
+		action			: 'related_search',
+		model			: self.caller.model,
+		tipo			: self.caller.tipo,
+		section_tipo	: self.caller.section_tipo,
+		section_id		: self.caller.section_id,
+		mode			: 'related_list',
+		lang			: self.caller.lang
+	}
+
+	const sqo = {
+		section_tipo		: ['all'],
+		mode				: 'related',
+		limit				: 10,
+		offset				: 0,
+		full_count			: false,
+		filter_by_locators	: [{
+			section_tipo	: self.caller.section_tipo,
+			section_id		: self.caller.section_id
+		}]
+	}
+
+	const rqo = {
+		action	: 'read',
+		source	: source,
+		sqo		: sqo
+	}
+
+	const current_data_manager = new data_manager()
+
+	// get context and data
+	const api_response = current_data_manager.request({body:rqo})
+
+	return api_response
+};//end get_related_sections
