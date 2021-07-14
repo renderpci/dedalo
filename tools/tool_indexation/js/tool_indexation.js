@@ -124,7 +124,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 		self.caller.caller = self
 
 	// load_indexing_component. Init and build the indexing_component (component_relation_index usually)
-		self.load_indexing_component()
+		await self.load_indexing_component()
 
 	// call generic common tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
@@ -405,10 +405,14 @@ tool_indexation.prototype.create_indexation = async function ( data ) {
 			section_top_id		: self.top_locator.section_top_id // the caller section_id to the resource like 4
 		}
 
-	const result = await self.indexing_component.add_value(new_index_locator)
+	// add value to the indexing component
+		const result = await self.indexing_component.add_value(new_index_locator)
 
-	self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id === tag_id )
-	self.indexing_component.render({render_level : 'content'})
+	// re-filter indexing_component data according current selected tag_id
+		self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id===tag_id )
+	
+	// force render indexing_component content again (as refresh)
+		self.indexing_component.render({render_level : 'content'})
 
 	return result
 }// end create_indexation
