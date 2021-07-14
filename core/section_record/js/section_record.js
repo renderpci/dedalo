@@ -282,7 +282,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.section_tipo===current_ddo.section_tipo && el.mode===current_ddo.mode)
 				// check is valid context
 					if (!current_context) {
-						console.error("[get_ar_columns_instances] Ignored context not found for component:", current_ddo);
+						console.error(`[get_ar_columns_instances] Ignored context not found for ${current_ddo.model} ${current_ddo.section_tipo}-${current_ddo.tipo} :`, current_ddo);
 						continue;
 					}
 

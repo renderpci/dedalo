@@ -104,7 +104,7 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('text_selection' +'_'+ self.caller.id, text_selection)
 			)
 			function text_selection(options) {
-					console.log("options:",options);
+				console.log("event text_selection options:",options);
 			}
 
 
@@ -149,8 +149,9 @@ tool_indexation.prototype.load_indexing_component = async function() {
 
 	// search the component instance in the global array of instances first
 		const found_instance = instances.find(el => el.tipo===indexing_component_tipo 
-											&& el.section_id===component.section_id
-											&& el.section_tipo===component.section_tipo )
+												 && el.section_id===component.section_id
+												 && el.section_tipo===component.section_tipo )
+	
 		if (found_instance) {
 
 			// use existing instance
@@ -170,7 +171,7 @@ tool_indexation.prototype.load_indexing_component = async function() {
 				lang			: 'lg-nolan', // The only different property from caller
 				context			: {},
 				id_variant		: 'tool_indexation'
-			}	
+			}
 
 			// init and build instance
 				self.indexing_component = await get_instance(indexing_component_options)
@@ -292,6 +293,7 @@ tool_indexation.prototype.get_thesaurus = async function() {
 */
 tool_indexation.prototype.create_fragment = function ( button_obj, event ) {
 	dd_console('button_obj','DEBUG', button_obj)
+
 	event.preventDefault()
 	event.stopPropagation()
 
@@ -435,7 +437,7 @@ tool_indexation.prototype.active_value = function(name, callback) {
 			callback	: callback
 		})
 
-	console.log("self.active_elements added one:", name, self.active_elements);
+	console.warn("self.active_elements added one:", name, self.active_elements);
 
 
 	return true
@@ -464,8 +466,7 @@ tool_indexation.prototype.update_active_values = function(values) {
 			}
 		}
 	}
-
-	console.log("Fired update_active_values self.active_elements list:", self.active_elements);
+	// console.log("Fired update_active_values self.active_elements list:", self.active_elements);
 
 	return true
 };//end update_active_values
@@ -509,10 +510,12 @@ tool_indexation.prototype.get_related_sections = function() {
 		sqo		: sqo
 	}
 
-	const current_data_manager = new data_manager()
-
 	// get context and data
-	const api_response = current_data_manager.request({body:rqo})
+		const current_data_manager	= new data_manager()
+		const api_response			= current_data_manager.request({body:rqo})
+
 
 	return api_response
 };//end get_related_sections
+
+

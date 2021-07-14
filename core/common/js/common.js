@@ -229,12 +229,8 @@ common.prototype.refresh = async function () {
 		}
 
 	// build. Update the instance with new data
-		//if (self.status==='destroyed') {
-			try {
-				const builded = await self.build(true)
-			}catch(error){
-				console.error("error on build:", error);
-			}
+		//if (self.status==='destroyed') {			
+		const builded = await self.build(true)			
 
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
@@ -255,7 +251,7 @@ common.prototype.refresh = async function () {
 		if (self.status==='builded') {
 			await self.render({render_level : 'content'})
 		}else{
-			console.warn("/// render fail with status:", self.model, self.status);
+			console.warn(`[common.refresh] Ignored render '${self.model}' with status:`, self.status);
 			return false
 		}
 
