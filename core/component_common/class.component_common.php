@@ -161,7 +161,7 @@ abstract class component_common extends common {
 						debug_log(__METHOD__." Error: section_id is array! : ".to_string($bt), logger::ERROR);
 					}
 				// modo (mode) validation
-					$ar_valid_modo = array('edit','list','search','simple','tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit','tool_description','view_tool_description','player','json');
+					$ar_valid_modo = array('edit','list','search','simple','tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','related_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit','tool_description','view_tool_description','player','json');
 					if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 						if(SHOW_DEBUG===true) {
 							throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);	;

@@ -69,6 +69,7 @@ class search {
 		public $ar_direct_columns = ['section_id','section_tipo','id'];
 
 		# include_negative
+		# negative section_id used in profiles for the root user, root record could be avoid or include
 		public $include_negative;
 
 
@@ -84,7 +85,23 @@ class search {
 			$search_query_object = json_decode($search_query_object);
 		}
 
-		$search_class = (isset($search_query_object->mode) && $search_query_object->mode==='tm') ? 'search_tm' : 'search';
+		// $search_class = (isset($search_query_object->mode) && $search_query_object->mode==='tm') ? 'search_tm' : 'search';
+
+		$mode = $search_query_object->mode ?? null;
+
+		switch ($mode) {
+			case 'tm':
+				$search_class = 'search_tm';
+				break;
+
+			case 'related':
+				$search_class = 'search_related';
+				break;
+			
+			default:
+				$search_class = 'search';
+				break;
+		}
 
 		return new $search_class($search_query_object);
 	}//end get_instance
@@ -141,8 +158,13 @@ class search {
 		}
 
 		# matrix_table (for time machine if always fixed 'matrix_time_machine', not calculated)
-		if (get_class($this)!=='search_tm') {
+		if (get_class($this)!=='search_tm' && get_class($this)!=='search_related') {
 			$this->matrix_table = common::get_matrix_table_from_tipo($this->main_section_tipo);
+		}
+
+		#matrix table for related seraches
+		if (get_class($this)!=='search_related') {
+			$this->ar_matrix_tables = common::get_matrix_tables_with_relations();
 		}
 
 		# select default
@@ -198,14 +220,14 @@ class search {
 
 		# Set skip_projects_filter. Default is false
 		$this->skip_projects_filter = isset($this->search_query_object->skip_projects_filter) ? $this->search_query_object->skip_projects_filter : false;
-		$ar_tables_skip_prejects = [
+		$ar_tables_skip_projects = [
 			'matrix_list',
 			'matrix_dd',
 			'matrix_hierarchy',
 			'matrix_hierarchy_main',
 			'matrix_langs'
 		];
-		if (in_array($this->matrix_table, $ar_tables_skip_prejects, true)) {
+		if (in_array($this->matrix_table, $ar_tables_skip_projects, true)) {
 			$this->skip_projects_filter = true; // Skip filter
 		}
 
@@ -1787,6 +1809,8 @@ class search {
 	* @return string $trimmed_tipo
 	*/
 	public static function trim_tipo($tipo, $max=2) {
+		//used by related search that don't know the section_tipo
+		if($tipo === 'all') return $tipo;
 
 		preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
 
@@ -2288,7 +2312,7 @@ class search {
 		// Set order to maintain results stable
 
 		if($count === false){
-			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC';
+			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
 			if($limit !== false){
 				$strQuery .= PHP_EOL . 'LIMIT '.$limit;
 				if($offset !== false){
@@ -2361,48 +2385,48 @@ class search {
 	*	Like 1
 	* @return array $result_table
 	*/
-	public static function get_inverse_relations_from_relations_table__UNUSED($section_tipo, $section_id) {
+	// public static function get_inverse_relations_from_relations_table__UNUSED($section_tipo, $section_id) {
 
-		$target_section_tipo = (string)$section_tipo;
-		$target_section_id 	 = (int)$section_id;
+	// 	$target_section_tipo = (string)$section_tipo;
+	// 	$target_section_id 	 = (int)$section_id;
 
-		# sql_query
-			$sql_query  = '';
-			# SELECT
-			#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
-			$sql_query .= PHP_EOL . 'SELECT section_id, section_tipo, from_component_tipo';
-			# FROM
-			$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
-			# WHERE
-			$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . (int)$target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
-			# END
-			$sql_query .= ';' . PHP_EOL;
+	// 	# sql_query
+	// 		$sql_query  = '';
+	// 		# SELECT
+	// 		#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
+	// 		$sql_query .= PHP_EOL . 'SELECT section_id, section_tipo, from_component_tipo';
+	// 		# FROM
+	// 		$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
+	// 		# WHERE
+	// 		$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . (int)$target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
+	// 		# END
+	// 		$sql_query .= ';' . PHP_EOL;
 
-			if(SHOW_DEBUG===true) {
-				#debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
-			}
+	// 		if(SHOW_DEBUG===true) {
+	// 			#debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
+	// 		}
 
-		$result	= JSON_RecordObj_matrix::search_free($sql_query);
-		if (!is_resource($result)) {
-			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $sql_query");
-			return null;
-		}
+	// 	$result	= JSON_RecordObj_matrix::search_free($sql_query);
+	// 	if (!is_resource($result)) {
+	// 		trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $sql_query");
+	// 		return null;
+	// 	}
 
-		# 1 Build a temporal table with array of records found in query
-		$result_table=array();
-		while ($rows = pg_fetch_assoc($result)) {
+	// 	# 1 Build a temporal table with array of records found in query
+	// 	$result_table=array();
+	// 	while ($rows = pg_fetch_assoc($result)) {
 
-			$locator = new locator();
-				$locator->set_section_tipo($rows['section_tipo']);
-				$locator->set_section_id($rows['section_id']);
-				$locator->set_from_component_tipo($rows['from_component_tipo']);
+	// 		$locator = new locator();
+	// 			$locator->set_section_tipo($rows['section_tipo']);
+	// 			$locator->set_section_id($rows['section_id']);
+	// 			$locator->set_from_component_tipo($rows['from_component_tipo']);
 
-			$result_table[] = $locator;
-		}
+	// 		$result_table[] = $locator;
+	// 	}
 
 
-		return $result_table;
-	}//end get_inverse_relations_from_relations_table
+	// 	return $result_table;
+	// }//end get_inverse_relations_from_relations_table
 
 
 
@@ -2416,46 +2440,46 @@ class search {
 	*	Like 1
 	* @return bool
 	*/
-	public static function have_inverse_relations($section_tipo, $section_id) {
+	// public static function have_inverse_relations($section_tipo, $section_id) {
 
-		static $have_inverse_relations_resolved = array();
-		if (isset($have_inverse_relations_resolved[$section_tipo.'_'.$section_id])) {
-			return $have_inverse_relations_resolved[$section_tipo.'_'.$section_id];
-		}
+	// 	static $have_inverse_relations_resolved = array();
+	// 	if (isset($have_inverse_relations_resolved[$section_tipo.'_'.$section_id])) {
+	// 		return $have_inverse_relations_resolved[$section_tipo.'_'.$section_id];
+	// 	}
 
-		$have_inverse_relations = false;
+	// 	$have_inverse_relations = false;
 
-		$target_section_tipo = (string)$section_tipo;
-		$target_section_id 	 = (int)$section_id;
+	// 	$target_section_tipo = (string)$section_tipo;
+	// 	$target_section_id 	 = (int)$section_id;
 
-		# sql_query
-			$sql_query  = '';
-			# SELECT
-			#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
-			$sql_query .= PHP_EOL . 'SELECT section_id';
-			# FROM
-			$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
-			# WHERE
-			$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . $target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
-			# LIMIT
-			$sql_query .= PHP_EOL . 'LIMIT 1';
-			# END
-			$sql_query .= ';';
+	// 	# sql_query
+	// 		$sql_query  = '';
+	// 		# SELECT
+	// 		#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
+	// 		$sql_query .= PHP_EOL . 'SELECT section_id';
+	// 		# FROM
+	// 		$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
+	// 		# WHERE
+	// 		$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . $target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
+	// 		# LIMIT
+	// 		$sql_query .= PHP_EOL . 'LIMIT 1';
+	// 		# END
+	// 		$sql_query .= ';';
 
-			debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
+	// 		debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
 
-		$result		= JSON_RecordObj_matrix::search_free($sql_query);
-		$num_rows 	= pg_num_rows($result);
+	// 	$result		= JSON_RecordObj_matrix::search_free($sql_query);
+	// 	$num_rows 	= pg_num_rows($result);
 
-		if ($num_rows>0) {
-			$have_inverse_relations = true;
-		}
+	// 	if ($num_rows>0) {
+	// 		$have_inverse_relations = true;
+	// 	}
 
-		# Store for runtime cache
-		$have_inverse_relations_resolved[$section_tipo.'_'.$section_id] = $have_inverse_relations;
+	// 	# Store for runtime cache
+	// 	$have_inverse_relations_resolved[$section_tipo.'_'.$section_id] = $have_inverse_relations;
 
-		return (bool)$have_inverse_relations;
-	}//end have_inverse_relations
+	// 	return (bool)$have_inverse_relations;
+	// }//end have_inverse_relations
 
 
 

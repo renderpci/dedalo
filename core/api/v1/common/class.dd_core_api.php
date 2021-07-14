@@ -940,6 +940,17 @@ class dd_core_api {
 								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							}
 						break;
+
+					case 'related_search': // Used to get the related sections that call to the source section
+
+						// sections
+							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+
+						// store sqo section
+							if ($model==='section' && ($mode==='edit' || $mode==='list')) {
+								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+							}
+						break;
 					
 					case 'get_data': // Used by components and areas
 

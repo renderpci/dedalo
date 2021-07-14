@@ -70,35 +70,74 @@ class sections extends common {
 
 	/**
 	* GET_DATO
-	* @return array $ar_records
+	* Get records from database using current sqo (search_query_object)
+	* @return array $this->dato ($ar_records)
 	*/
 	public function get_dato() {
 
-		$search_query_object = $this->search_query_object;
-			
-		$search		= search::get_instance($search_query_object);
-		$rows_data	= $search->search();
+		// already calculated case
+			if (isset($this->dato)) {
+				return $this->dato;
+			}
 
-		$ar_records = $rows_data->ar_records;
+		// sqo. Use sqo.mode to define the search class manager to run your search
+			$search_query_object = $this->search_query_object;
 
-		return $ar_records;
+		// search
+			$search		= search::get_instance($search_query_object);
+			$rows_data	= $search->search();
+
+		// fix result ar_records as dato
+			$this->dato = $rows_data->ar_records;
+
+		return $this->dato;
 	}//end get_dato
 
 
 
 	/**
 	* GET_AR_SECTION_TIPO : alias of $this->get_tipo()
+	* @return array $this->ar_section_tipo
 	*/
 	public function get_ar_section_tipo() {
 
-		$this->ar_section_tipo = $this->search_query_object->section_tipo;
+		// already calculated case
+			if (isset($this->ar_section_tipo)) {
+				return $this->ar_section_tipo;
+			}
 
-		// $ar_section_tipo = array_map(function($el){
+		// if the sqo has related mode, get the section_tipo from data, 
+		// It's not possible know the sections because data is a list of references to the source.
+		// In some cases that sqo has specific sections because the search will be filtered only for those sections. 
+		// in these case we get the section_tipo from the sql self definition
+		if($this->search_query_object->mode==='related'){
+			
+			// ar_section_tipo. If is defined, we done. Else, case 'all' get data to resolve used sections
+				$this->ar_section_tipo = (reset($this->search_query_object->section_tipo)!=='all')
+					? $this->search_query_object->section_tipo
+					: false;
 
-		// 	return isset($el->tipo) ? $el->tipo : $el;
-		// }, $this->search_query_object->section_tipo);
+			// calculated
+				if($this->ar_section_tipo===false){
+					
+					// force load dato
+					$dato = $this->get_dato();
 
-		// $this->ar_section_tipo = $ar_section_tipo;
+					$ar_section_tipo = [];
+					foreach ($dato as $record) {
+						
+						$current_section_tipo = $record->section_tipo;
+						if (!in_array($current_section_tipo, $ar_section_tipo)) {
+							$ar_section_tipo[] = $current_section_tipo;
+						}
+					}
+					$this->ar_section_tipo = $ar_section_tipo;
+				}
+	
+		}else{
+			$this->ar_section_tipo = $this->search_query_object->section_tipo;
+		}
+		
 
 		return $this->ar_section_tipo;
 	}//end get_ar_section_tipo

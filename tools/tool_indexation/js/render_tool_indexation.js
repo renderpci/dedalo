@@ -53,6 +53,8 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 				self.caller.refresh()
 		}
 
+
+
 	get_tag_info(self)
 
 	return wrapper
@@ -163,6 +165,31 @@ const get_tag_info = function(self) {
 		self.active_value("state", function(value){
 			tag_state_selector.value		= value
 		})
+
+	// related list
+		const div_related_list = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'div_related_list',
+			parent			: common_line
+		})
+		// button related list
+			const related_list = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button ',
+				parent			: div_related_list
+			})
+			const related_list_label = ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: get_label.list,
+				parent			: div_related_list
+			})
+			div_related_list.addEventListener("click", async function(e){
+				const related_section_datum = await self.get_related_sections()
+				const related_list_node = render_related_list(self, related_section_datum.result)
+
+				div_related_list.appendChild(related_list_node)
+
+			})
 
 
 
@@ -365,3 +392,62 @@ export const add_component = async (self, component_container, value) => {
 
 	return true
 };//end add_component
+
+
+
+/**
+* ADD_COMPONENT
+*/
+const render_related_list = function(self, datum){
+
+	const context	= datum.context
+	const data		= datum.data
+
+	const fragment = new DocumentFragment();
+
+	// related list
+		const div_related_list = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'div_related_list',
+			parent			: fragment
+		})
+			const select = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'select_related_list',
+				parent			: div_related_list
+			})
+
+	const sections = data.find(el => el.typo === 'sections')
+
+	const value			= sections.value
+	const value_length	= value.length
+	for (let i = 0; i < value_length; i++) {
+	
+	// for (let i = value_length - 1; i >= 0; i--) {
+		const current_locator = value[i]
+		const section_label = context.find(el => el.section_tipo === current_locator.section_tipo).label
+		const ar_component_data = data.filter(el => el.section_tipo === current_locator.section_tipo && el.section_id === current_locator.section_id)
+
+		const ar_component_value = []
+
+		for (var j = 0; j < ar_component_data.length; j++) {
+			ar_component_value.push(ar_component_data[j].value)
+		}
+
+		const label = 	section_label + ' | ' +
+						current_locator.section_id +' | ' +
+						ar_component_value.join(' | ')
+
+		const option = ui.create_dom_element({
+				element_type	: 'option',
+				value 			: current_locator,
+				inner_html 		: label,
+				parent			: select
+			})
+	}
+
+	return fragment
+
+};//end
+
+

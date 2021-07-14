@@ -2629,6 +2629,25 @@ abstract class common {
 						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
 					}
 					break;
+				case 'related_list':
+					if ($model==='section') {
+						// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
+						$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=true);
+
+						// If not found children, try resolving real section
+						if (empty($ar_terms)) {
+							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+						}// end if (empty($ar_terms))
+
+						if(isset($ar_terms[0])) {
+							# Use found related terms as new list
+							$current_term = $ar_terms[0];
+							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+						}
+					}
+						dump($ar_related, ' ar_related ++ '.to_string());
+
+					break;
 				case 'list':
 				case 'search':
 				case 'portal_list':
