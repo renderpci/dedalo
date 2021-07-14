@@ -64,6 +64,12 @@ common.prototype.render = async function (options={render_level:'full'}) {
 	const render_level 	= options.render_level || 'full'
 	let render_mode 	= self.mode
 
+	// status check to prevent duplicated actions
+		if (self.status==='rendering') {
+			console.warn(`[common.render] Ignored render already rendering '${self.model}'. current status:`, self.status);
+			return false
+		}
+
 	// status update
 		self.status = 'rendering'
 
@@ -149,17 +155,38 @@ common.prototype.render = async function (options={render_level:'full'}) {
 									: await self[render_mode]({render_level : render_level});
 
 							// replace child from parent wrapper
-								if (self.model==='section' && (self.mode==='list' || self.mode==='tm') ) {
-									const list_body = wrapper.querySelector(":scope >.list_body")
-									list_body.replaceChild(new_content_data_node, old_content_data_node)
+								// if (self.model==='section' && (self.mode==='list' || self.mode==='tm') ) {
+								// 	const list_body = wrapper.querySelector(":scope >.list_body")
+								// 	if (!list_body.contains( old_content_data_node )) {
+								// 		console.warn("------------- list_body:", list_body);
+								// 		console.warn("------------- old_content_data_node:", old_content_data_node);
+								// 	}else{
+								// 		list_body.replaceChild(new_content_data_node, old_content_data_node)
+								// 	}
+								// }else{
+									
+								// 	if (!wrapper.contains( old_content_data_node )) {
+								// 		console.warn("------------- wrapper:", wrapper);
+								// 		console.warn("------------- old_content_data_node:", old_content_data_node);
+								// 	}else{
+								// 		wrapper.replaceChild(new_content_data_node, old_content_data_node)
+								// 	}
+								// }
+
+								const base_container = ( self.model==='section' && (self.mode==='list' || self.mode==='tm') )
+									? wrapper.querySelector(":scope >.list_body")
+									: wrapper
+
+								if (!base_container.contains( old_content_data_node )) {
+									console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
+									console.warn("------------- base_container:", base_container);
+									console.warn("------------- old_content_data_node:", old_content_data_node);
+
+									// old_content_data_node.remove()
+									// base_container.appendChild(new_content_data_node)
 								}else{
-
-									// console.log("-----------------wrapper:", wrapper);
-									// console.log("-----------------old_content_data_node:",old_content_data_node);
-									// console.log(`-----------------new_node ${self.model}:`, new_content_data_node);
-
-									wrapper.replaceChild(new_content_data_node, old_content_data_node)
-								}
+									base_container.replaceChild(new_content_data_node, old_content_data_node)
+								}		
 								
 						}//end for (let i = nodes_length - 1; i >= 0; i--) 
 
