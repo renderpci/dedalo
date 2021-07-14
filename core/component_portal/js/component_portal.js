@@ -480,10 +480,10 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 												  && el.section_id==self.section_id) || {}
 		self.data = JSON.parse(JSON.stringify(full_data))
 
-	// if(!self.data.value) return true // removed
-
 	// the portal will use the filtered data value to render it with the tag_id locators.
-		self.data.value = self.data.value.filter(el => el.tag_id === tag_id )
+		self.data.value = self.data.value
+			? self.data.value.filter(el => el.tag_id === tag_id )
+			: []
 
 	// re-render always the content
 		self.render({render_level : 'content'})
