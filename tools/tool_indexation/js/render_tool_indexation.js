@@ -53,6 +53,11 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 				self.caller.refresh()
 		}
 
+	// get the relation list
+		const related_section_datum = await self.get_related_sections()
+		const related_list_node = render_related_list(self, related_section_datum.result)
+		header.appendChild(related_list_node)
+
 
 
 	get_tag_info(self)
@@ -165,32 +170,6 @@ const get_tag_info = function(self) {
 		self.active_value("state", function(value){
 			tag_state_selector.value		= value
 		})
-
-	// related list
-		const div_related_list = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'div_related_list',
-			parent			: common_line
-		})
-		// button related list
-			const related_list = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button ',
-				parent			: div_related_list
-			})
-			const related_list_label = ui.create_dom_element({
-				element_type	: 'label',
-				inner_html		: get_label.list,
-				parent			: div_related_list
-			})
-			div_related_list.addEventListener("click", async function(e){
-				const related_section_datum = await self.get_related_sections()
-				const related_list_node = render_related_list(self, related_section_datum.result)
-
-				div_related_list.appendChild(related_list_node)
-
-			})
-
 
 
 	return true;
@@ -421,12 +400,18 @@ const render_related_list = function(self, datum){
 
 	const value			= sections.value
 	const value_length	= value.length
+
 	for (let i = 0; i < value_length; i++) {
-	
-	// for (let i = value_length - 1; i >= 0; i--) {
-		const current_locator = value[i]
-		const section_label = context.find(el => el.section_tipo === current_locator.section_tipo).label
-		const ar_component_data = data.filter(el => el.section_tipo === current_locator.section_tipo && el.section_id === current_locator.section_id)
+		const current_locator = {
+			section_top_tipo	: value[i].section_tipo,
+			section_top_id		: value[i].section_id
+		}
+		// fix the first locator when tool is loaded (without user interaction)
+		if(i === 0){
+			self.top_locator = current_locator
+		}
+		const section_label = context.find(el => el.section_tipo === current_locator.section_top_tipo).label
+		const ar_component_data = data.filter(el => el.section_tipo === current_locator.section_top_tipo && el.section_id === current_locator.section_top_id)
 
 		const ar_component_value = []
 
@@ -435,16 +420,20 @@ const render_related_list = function(self, datum){
 		}
 
 		const label = 	section_label + ' | ' +
-						current_locator.section_id +' | ' +
+						current_locator.section_top_id +' | ' +
 						ar_component_value.join(' | ')
 
 		const option = ui.create_dom_element({
 				element_type	: 'option',
-				value 			: current_locator,
 				inner_html 		: label,
 				parent			: select
 			})
+		option.locator = current_locator
 	}
+
+	select.addEventListener("change", async function(e){
+		self.top_locator = this.options[this.selectedIndex].locator
+	})
 
 	return fragment
 
