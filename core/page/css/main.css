@@ -2419,6 +2419,7 @@ li .section_record.list .id_column {
 .wrapper_component.search.component_text_area > .content_data {
   min-height: 27em;
   max-height: inherit;
+  height: calc(100% - 1.75em);
 }
 .wrapper_component.edit.component_text_area > .content_data > ul,
 .wrapper_component.search.component_text_area > .content_data > ul {

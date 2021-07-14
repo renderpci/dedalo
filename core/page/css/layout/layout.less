@@ -1291,9 +1291,15 @@
 
 			// component_text_area
 			&.component_text_area {
+				// display: grid;						
+				// grid-template-rows: 1fr 1fr;
+				// background-color: #ecf564;		
+
 				>.content_data {
 					min-height: @media_min_height;
 					max-height: @media_max_height;
+					height: calc(100% - @component_label_height);
+					// background-color: #7df780;			
 
 					>ul {
 						height: 100%;

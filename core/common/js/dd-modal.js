@@ -92,6 +92,7 @@ class DDModal extends HTMLElement {
 			}
 			.modal_big .modal-body {
 				height: 100%;
+				min-height: 90vh;
 			}
 		</style>
 		<div class="modal">
