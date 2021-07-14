@@ -148,14 +148,16 @@ common.prototype.render = async function (options={render_level:'full'}) {
 									? node // use already calculated node
 									: await self[render_mode]({render_level : render_level});
 
-								// console.log("-----------------old_content_data_node:",old_content_data_node);
-								// console.log("-----------------new_node:", new_content_data_node, self.model);
-
 							// replace child from parent wrapper
 								if (self.model==='section' && (self.mode==='list' || self.mode==='tm') ) {
 									const list_body = wrapper.querySelector(":scope >.list_body")
 									list_body.replaceChild(new_content_data_node, old_content_data_node)
 								}else{
+
+									// console.log("-----------------wrapper:", wrapper);
+									// console.log("-----------------old_content_data_node:",old_content_data_node);
+									// console.log(`-----------------new_node ${self.model}:`, new_content_data_node);
+
 									wrapper.replaceChild(new_content_data_node, old_content_data_node)
 								}
 								

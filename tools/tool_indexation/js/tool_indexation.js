@@ -398,7 +398,9 @@ tool_indexation.prototype.create_indexation = async function ( data ) {
 			section_id			: data.section_id, // thesaurus term section_id
 			section_tipo		: data.section_tipo, // thesaurus term section_tipo
 			tag_id				: tag_id, // user selected tag id
-			tag_component_tipo	: self.caller.tipo // (component_text_area tag source)
+			tag_component_tipo	: self.caller.tipo, // (component_text_area tag source)
+			section_top_tipo	: self.top_locator.section_top_tipo, // the caller section_tipo to the resource like oh1
+			section_top_id		: self.top_locator.section_top_id // the caller section_id to the resource like 4
 		}
 
 	const result = await self.indexing_component.add_value(new_index_locator)

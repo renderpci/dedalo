@@ -431,7 +431,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 		self.data.pagination.offset	= last_offset
 		self.data.pagination.total	= self.total// sync pagination info
 
-	// // paginator object update
+	// paginator object update
 		self.paginator.offset	= self.rqo.sqo.offset
 		self.paginator.total	= self.total
 
@@ -479,6 +479,8 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 	// the full_data is clone to a new object because need to preserve the datum from these changes.
 		const full_data	= self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
 		self.data		= JSON.parse(JSON.stringify(full_data))
+
+		if(!self.data.value) return true
 
 	// the portal will use the filtered data value to render it with the tag_id locators.
 		self.data.value = self.data.value.filter(el => el.tag_id === tag_id )
