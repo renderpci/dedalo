@@ -61,6 +61,7 @@ export const paginator = function() {
 
 /**
 * INIT
+* @param object options
 * @return bool true
 */
 paginator.prototype.init = function(options) {
@@ -226,7 +227,7 @@ paginator.prototype.paginate = async function(offset) {
 
 /**
 * GET_PAGE_NUMBER
-* @return int
+* @return int page_number
 */
 paginator.prototype.get_page_number = function(item_per_page, offset) {
 
@@ -242,7 +243,7 @@ paginator.prototype.get_page_number = function(item_per_page, offset) {
 
 /**
 * GET_PAGE_ROW_END
-* @return int
+* @return int page_row_end
 */
 paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, total_records) {
 
@@ -265,7 +266,7 @@ paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, t
 /**
 * GO_TO_PAGE_JSON
 * Receive page value from input text and calculate offset and exec search_paginated
-* @return bool true
+* @return bool
 */
 paginator.prototype.go_to_page_json = function(input_obj, e, total_pages, item_per_page) {
 

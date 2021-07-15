@@ -381,6 +381,8 @@ component_portal.prototype.add_value = async function(value) {
 
 /**
 * UPDATE_PAGINATION_VALUES
+* @param string action
+* @return bool true
 */
 component_portal.prototype.update_pagination_values = function(action) {
 
@@ -437,10 +439,12 @@ component_portal.prototype.update_pagination_values = function(action) {
 			event_manager.subscribe('render_'+self.id, refresh_paginator)
 		)
 		function refresh_paginator(node) {
-			event_manager.unsubscribe('render_'+self.id)
-			if (self.paginator) {
-				self.paginator.refresh()
-			}
+			// remove the event to prevent multiple equal events
+				event_manager.unsubscribe('render_'+self.id)
+			// refresh paginator if already exists
+				if (self.paginator) {
+					self.paginator.refresh()
+				}
 		}
 
 	// set value
@@ -497,16 +501,17 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 /**
 * RESET_FILTER_DATA
 * reset filtered data to the original and full server data
-* @return true
+* @return bool true
 */
 component_portal.prototype.reset_filter_data = function(options){
 
 	const self = this
 
 	// refresh the data with the full data from datum and render portal.
-	self.data	= self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+		self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
 	
-	self.render({render_level : 'content'})
+	// re-render content
+		self.render({render_level : 'content'})
 
 	return true
 }// end reset_filter_data
