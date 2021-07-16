@@ -2428,7 +2428,9 @@
 		Minor fixes in updates.php file to prevent issues updating Dédalo from old versions
 		Fixed issue when DEDALO_DIFFUSION_RESOLVE_LEVELS is not defined in config. Now a value of 2 levels is used as default
 		Fixed error in component_text_area where geolocation tags were not updated correctly causing a failure to save (besides, refactorized update_tag function)
-
+		16-07-2021		
+		Fixed issue on updates when matrix_stats already exists cases
+		Fixed error in publication web_data when lang 'lg-vlca' don't pass the security verification regex 
 
 
 	[/HISTORY]
@@ -2460,7 +2462,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-07-2021-c');
+	define('DEDALO_BUILD'	, '16-07-2021');
 
 
 	/*
