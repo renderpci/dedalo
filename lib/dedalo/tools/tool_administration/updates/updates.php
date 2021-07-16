@@ -153,7 +153,7 @@ $updates->$v = new stdClass();
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 		DROP TABLE IF EXISTS \"matrix_stats\";
 		
-		CREATE TABLE \"matrix_stats\" ( like \"matrix_list\" INCLUDING CONSTRAINTS INCLUDING INDEXES );
+		CREATE TABLE IF NOT EXISTS \"matrix_stats\" ( like \"matrix_list\" INCLUDING CONSTRAINTS INCLUDING INDEXES );
 		
 		CREATE SEQUENCE IF NOT EXISTS public.matrix_stats_id_seq
 		INCREMENT 1
