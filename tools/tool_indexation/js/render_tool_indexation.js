@@ -234,10 +234,15 @@ const get_content_data_edit = async function(self) {
 				component_container.appendChild(lang_selector)
 
 			// component. render another node of component caller and append to container
-				// const component = await self.get_component(self.lang)			
-				self.caller.render().then(function(node){
+				const component = await self.get_component(self.lang)
+				component.render()
+				.then(function(node){
 					component_container.appendChild(node)
 				})
+				// self.caller.render()
+				// .then(function(node){
+				// 	component_container.appendChild(node)
+				// })
 
 		// info container
 			const info_container = ui.create_dom_element({
