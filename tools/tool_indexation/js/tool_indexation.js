@@ -209,8 +209,8 @@ tool_indexation.prototype.get_component = async function(lang) {
 		mode			: 'edit',
 		lang			: lang, // The only different property from caller
 		section_lang	: component.lang,
-		context			: context
-		// id_variant	: 'tool_indexation',
+		context			: context,
+		id_variant		: 'tool_indexation'
 		// data			: {value:[]},
 		// datum		: null
 	}

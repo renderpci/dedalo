@@ -571,7 +571,8 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 	// container . editor_content_data is a DOM node <body> from editor
 		const container = service.get_editor_content_data()	
 		if (!container) {
-			console.warn("////// get_last_tag_id container NOT FOUND:", container);	
+			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container, service);
+			return false
 		}
 
 	// get all tags of type

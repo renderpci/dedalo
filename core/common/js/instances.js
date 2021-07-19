@@ -86,6 +86,7 @@ export const get_instance = async function(options){
 		//if (model!=='section_record') {
 		//	key = key_instances_builder(options) + "_" + Date.now()
 		//}
+		// console.log("key:",key, options);
 
 	// if the instance is not in the cache, build one new instance of the element
 
