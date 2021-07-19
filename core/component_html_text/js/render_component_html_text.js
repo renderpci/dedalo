@@ -11,13 +11,14 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_HTML_TEXT
 * Manage the components logic and appearance in client side
 */
 export const render_component_html_text = function() {
 
 	return true
 };//end render_component_html_text
+
 
 
 /**
@@ -47,6 +48,7 @@ render_component_html_text.prototype.mini = async function() {
 
 	return wrapper
 };//end mini
+
 
 
 /**
@@ -228,8 +230,8 @@ const get_content_data_edit = async function(self) {
 	// inputs
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// build values
@@ -267,8 +269,8 @@ const get_buttons = (self) => {
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: fragment
+				class_name		: 'button add',
+				parent			: fragment
 			})
 		}
 
@@ -289,11 +291,11 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element li
+* @return DOM element li
 */
 const get_input_element = (i, current_value, self, is_inside_tool) => {
 
-	const mode 		= self.mode
+	const mode = self.mode
 
 	// li
 		const li = ui.create_dom_element({
@@ -304,11 +306,11 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		if(mode==='search'){
 			const q_operator = self.data.q_operator
 			const input_q_operator = ui.create_dom_element({
-				element_type 	: 'input',
-				type 		 	: 'text',
-				value 		 	: q_operator,
-				class_name 		: 'q_operator',
-				parent 		 	: li
+				element_type	: 'input',
+				type			: 'text',
+				value			: q_operator,
+				class_name		: 'q_operator',
+				parent			: li
 			})
 		}
 
@@ -323,29 +325,30 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// })
 
 	// service_tinymce
-		const get_service = () => { return current_service; }
-		// editor_config
-		const editor_config   		 = {}
-		editor_config.plugins 		 = [
-							"advlist autolink lists link image charmap print preview hr anchor pagebreak",
-							"searchreplace wordcount visualblocks visualchars code fullscreen",
-							"insertdatetime nonbreaking save table contextmenu directionality",
-							"emoticons template paste textcolor table"
-							]
-		editor_config.toolbar 		 = [
-							"bold italic undo redo searchreplace | cut copy paste pastetext | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist outdent indent table",
-							"link image | fontsizeselect | print preview fullscreen | code | button_upload"
-							]
-		editor_config.custom_buttons = get_custom_buttons(self, i, get_service)
-		editor_config.custom_events  = get_custom_events(self, i, get_service)
-
-		// init editor
 		const current_service = new service_tinymce()
-		current_service.init(self, li, {
-			value 			: current_value,
-			key 			: i,
-			editor_config 	: editor_config
-		})
+		
+		// editor_config			
+			const editor_config = {
+				plugins : [
+					"advlist autolink lists link image charmap print preview hr anchor pagebreak",
+					"searchreplace wordcount visualblocks visualchars code fullscreen",
+					"insertdatetime nonbreaking save table contextmenu directionality",
+					"emoticons template paste textcolor table"
+				],
+				toolbar : [
+					"bold italic undo redo searchreplace | cut copy paste pastetext | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist outdent indent table",
+					"link image | fontsizeselect | print preview fullscreen | code | button_upload"
+				],
+				custom_buttons	: get_custom_buttons(self, i, current_service),
+				custom_events	: get_custom_events(self, i, current_service)
+			}
+
+		// init editor		
+			current_service.init(self, li, {
+				value			: current_value,
+				key				: i,
+				editor_config	: editor_config
+			})
 
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -358,7 +361,6 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// }
 
 	return li
-
 };//end input_element
 
 
@@ -370,7 +372,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 *	self data element from array of values
 * @return array custom_buttons
 */
-const get_custom_buttons = (self, i, get_service) => {
+const get_custom_buttons = (self, i, service) => {
 
 	// custom_buttons
 	const custom_buttons = []
@@ -384,9 +386,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: button_name,
 			options : {
-				tooltip: 'Insert image desde disco',
-				image:  '../themes/default/icons/upload.svg',
-				onclick: function(evt) {
+				tooltip	: 'Insert image desde disco',
+				image	: '../themes/default/icons/upload.svg',
+				onclick	: function(evt) {
 					alert("Inserting image !");
 					// component_text_area.load_tags_person() //ed, evt, text_area_component
 					//id 		: 'upload-'+html_text_id
@@ -407,7 +409,7 @@ const get_custom_buttons = (self, i, get_service) => {
 *	self data element from array of values
 * @return object custom_events
 */
-const get_custom_events = (self, i, get_service) => {
+const get_custom_events = (self, i, service) => {
 
 	const custom_events = {}
 
@@ -418,8 +420,7 @@ const get_custom_events = (self, i, get_service) => {
 
 	custom_events.blur = (evt, options) => {
 		// save. service save function calls current component save_value()
-			const actual_value 	= self.data.value[i]
-			const service 		= get_service()
+			const actual_value 	= self.data.value[i]			
 			service.save(actual_value)
 	};//end blur
 
@@ -437,10 +438,10 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'indexIn' :
 				case 'indexOut' :
-					var tipo 			= text_area_component.dataset.tipo
-					var	lang 			= text_area_component.dataset.lang
-					var	section_tipo 	= text_area_component.dataset.section_tipo
-					var	parent 			= text_area_component.dataset.parent
+					const tipo			= text_area_component.dataset.tipo
+					const lang			= text_area_component.dataset.lang
+					const section_tipo	= text_area_component.dataset.section_tipo
+					const parent		= text_area_component.dataset.parent
 
 					switch(page_globals.modo) {
 
@@ -551,3 +552,5 @@ const get_custom_events = (self, i, get_service) => {
 
 	return custom_events
 };//end get_custom_events
+
+
