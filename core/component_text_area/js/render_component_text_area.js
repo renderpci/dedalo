@@ -392,23 +392,22 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// })
 
 	// service_tinymce
-		const get_service = () => { return current_service; }
+		const current_service = new service_tinymce()
+
 		// editor_config
-			const editor_config = {}
-				  editor_config.plugins			= ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
-				  editor_config.toolbar			= "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save"
-				  editor_config.custom_buttons	= get_custom_buttons(self, i, get_service)
-				  editor_config.custom_events	= get_custom_events(self, i, get_service)
+			const editor_config = {
+				plugins			: ["paste","image","print","searchreplace","code","fullscreen","noneditable"],
+				toolbar			: "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save",
+				custom_buttons	: get_custom_buttons(self, i, current_service),
+				custom_events	: get_custom_events(self, i, current_service)
+			}
 
 		// init editor
-		const current_service = new service_tinymce()
-		current_service.init(self, li, {
-			value 			: value,
-			key 			: i,
-			editor_config 	: editor_config
-		})
-
-		// self.services.push(current_service)
+			current_service.init(self, li, {
+				value			: value,
+				key				: i,
+				editor_config	: editor_config
+			})
 
 
 		// add button create fragment (Only when caller is a tool_indexation instance)
@@ -492,7 +491,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 *	self data element from array of values
 * @return array custom_buttons
 */
-const get_custom_buttons = (self, i, get_service) => {
+const get_custom_buttons = (self, i, service) => {
 
 	// custom_buttons
 	const custom_buttons = []
@@ -503,9 +502,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_person",
 			options : {
-				tooltip: 'Add person',
-				image:  '../themes/default/icons/person.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add person',
+				image	:  '../themes/default/icons/person.svg',
+				onclick	: function(evt) {
 					alert("Adding person !");
 					// component_text_area.load_tags_person() //ed, evt, text_area_component
 				}
@@ -516,9 +515,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_geo",
 			options : {
-				tooltip: 'Add georef',
-				image:  '../themes/default/icons/geo.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add georef',
+				image	:  '../themes/default/icons/geo.svg',
+				onclick	: function(evt) {
 					alert("Adding georef !");
 					// component_text_area.load_tags_geo(ed, evt, text_area_component) //ed, evt, text_area_component
 				}
@@ -529,9 +528,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_note",
 			options : {
-				tooltip: 'Add note',
-				image:  '../themes/default/icons/note.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add note',
+				image	:  '../themes/default/icons/note.svg',
+				onclick	: function(evt) {
 					alert("Adding note !");
 					// component_text_area.create_new_note(ed, evt, text_area_component)
 				}
@@ -542,9 +541,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_reference",
 			options : {
-				tooltip: 'Add reference',
-				image:  '../themes/default/icons/reference.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add reference',
+				image	:  '../themes/default/icons/reference.svg',
+				onclick	: function(evt) {
 					alert("Adding reference !");
 					// component_text_area.create_new_reference(ed, evt, text_area_component)
 				}
@@ -555,10 +554,10 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_delete_structuration",
 			options : {
-				text: "Delete chapter",
-				tooltip: 'Delete structuration',
-				icon :false,
-				onclick: function(evt) {
+				text	: "Delete chapter",
+				tooltip	: 'Delete structuration',
+				icon	: false,
+				onclick	: function(evt) {
 					alert("Deleting structuration !");
 					// tool_lang.delete_structuration(ed, evt, text_area_component)
 				}
@@ -569,10 +568,10 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_add_structuration",
 			options : {
-				text: "Add chapter",
-				tooltip: 'Add structuration',
-				icon :false,
-				onclick: function(evt) {
+				text	: "Add chapter",
+				tooltip	: 'Add structuration',
+				icon	: false,
+				onclick	: function(evt) {
 					alert("Adding structuration !");
 					// tool_lang.add_structuration(ed, evt, text_area_component)
 				}
@@ -583,10 +582,10 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_change_structuration",
 			options : {
-				text: "Change chapter",
-				tooltip: 'Change structuration',
-				icon :false,
-				onclick: function(evt) {
+				text	: "Change chapter",
+				tooltip	: 'Change structuration',
+				icon	: false,
+				onclick	: function(evt) {
 					alert("Changing structuration !");
 					// tool_lang.change_structuration(ed, evt, text_area_component)
 				}
@@ -598,13 +597,12 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_save",
 			options : {
-				text 	: save_label,
-				tooltip : save_label,
-				icon 	: false,
-				onclick : function(evt) {
-					// save. service save function calls current component save_value()
-						const service 		= get_service()
-						service.save()
+				text	: save_label,
+				tooltip	: save_label,
+				icon	: false,
+				onclick	: function(evt) {
+					// save. service save function calls current component save_value()						
+					service.save()
 				}
 			}
 		})
@@ -620,11 +618,11 @@ const get_custom_buttons = (self, i, get_service) => {
 * @param instance self
 * @param int i
 *	self data element from array of values
-* @param function get_service
+* @param function service
 *	select and return current service
 * @return object custom_events
 */
-const get_custom_events = (self, i, get_service) => {
+const get_custom_events = (self, i, service) => {
 
 	const custom_events = {}
 
@@ -636,9 +634,8 @@ const get_custom_events = (self, i, get_service) => {
 
 	// blur
 		custom_events.blur = (evt, options) => {
-			// save. service save function calls current component save_value()
-				const service = get_service()
-				service.save()
+			// save. service save function calls current component save_value()				
+			service.save()
 		};//end blur
 
 	// click
@@ -792,14 +789,13 @@ const get_custom_events = (self, i, get_service) => {
 						}
 
 					// service. get editor and content data
-						const service				= get_service()
-						const editor_content_data	= service.get_editor_content_data()
+						const editor_content_data = service.get_editor_content_data()
 
 					// iterate susbscriptors responses
 						for (let i = 0; i < susbscriptors_responses_length; i++) {
 							const data_tag 	= susbscriptors_responses[i]
 							const tag_id 	= (!data_tag.tag_id)
-								? self.get_last_tag_id(editor_content_data, data_tag.type, get_service()) + 1
+								? self.get_last_tag_id(editor_content_data, data_tag.type, service) + 1
 								: data_tag.tag_id;
 
 							switch(data_tag.type) {

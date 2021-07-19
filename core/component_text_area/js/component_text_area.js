@@ -537,7 +537,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[component_text_area.build_data_tag] dedalo_tag:", dedalo_tag)
+			// console.log("[component_text_area.build_data_tag] dedalo_tag:", dedalo_tag)
 		}
 
 
@@ -552,6 +552,8 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 *	Text editor instance (tinyMCE)
 * @param tag_type
 *	Class name of image searched like 'geo'
+* 
+* @return int tag_id
 */
 component_text_area.prototype.get_last_tag_id = function(key, tag_type, service) {
 
@@ -560,20 +562,17 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 	// default value zero
 		const ar_id_final = [0];
 
-	// service
-		// const service = self.services[key]
+	// service check
 		if (!service) {
-			// console.error(`Error on get service. service key: '${key}' not found in self.services:`, self.services);
 			console.error(`Error on get service. Empty service:`, service);
 			return false
 		}
 
 	// container . editor_content_data is a DOM node <body> from editor
-		const container = service.get_editor_content_data()
-			// console.log("////// service:",service);			
-			if (!container) {
-				console.warn("////// container NOT FOUND:", container);	
-			}
+		const container = service.get_editor_content_data()	
+		if (!container) {
+			console.warn("////// get_last_tag_id container NOT FOUND:", container);	
+		}
 
 	// get all tags of type
 		switch(tag_type) {
@@ -657,17 +656,16 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 
 /**
 * CREATE FRAGMENT (using index tags)
-* Create the images (with the tags) at the beginning and end of the selected text and save the data
+* Create the images (with the tags) at the beginning and end of the selected text
 * @return bool false | int tag_id
 */
 component_text_area.prototype.create_fragment = function(key, service) {
 
 	const self = this
 
-	// service (needed for save)
-		// const service = self.services[key]
+	// service check
 		if (!service) {
-			console.error("-> [component_text_area.create_fragment] service not found for key:", key);
+			console.error("-> [component_text_area.create_fragment] service not received! key:", key);
 			return false
 		}
 
@@ -677,8 +675,7 @@ component_text_area.prototype.create_fragment = function(key, service) {
 			console.warn("Ignored empty selection:", selection_raw, key);
 			return false
 		}
-	// editor_content_data is a DOM node <body> from editor
-		// const editor_content_data = service.get_editor_content_data()
+
 	// last_tag_id. Find last image of type index and returns id or 0
 		const last_tag_index_id = self.get_last_tag_id(key, 'index', service)
 
