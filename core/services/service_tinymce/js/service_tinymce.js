@@ -379,8 +379,24 @@ export const service_tinymce = function() {
 			editor.setDirty(true)
 
 
-		return true
+		return range_clon
 	};//end wrap_selection_with_tags
+
+
+
+	/**
+	* SELECT_NODE
+	* @return 
+	*/
+	this.select_node = function(selector_str) {
+
+		const self 	 = this
+		const editor = self.editor
+
+		const select_result = editor.selection.select(editor.dom.select(selector_str)[0]);
+
+		return select_result
+	};//end select_node
 
 
 

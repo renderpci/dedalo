@@ -30,7 +30,7 @@ export const component_text_area = function(){
 		this.node
 		this.id
 
-		this.services = []
+		// this.services = []
 
 	return true
 };//end component_text_area
@@ -82,8 +82,35 @@ component_text_area.prototype.init = async function(options) {
 	// events subscribe
 		self.events_tokens.push(
 			// user click over button 'create_fragment'
-			event_manager.subscribe('create_fragment_' + self.id, self.create_fragment.bind(self))
+			event_manager.subscribe('create_fragment_' + self.id, fn_create_fragment)
 		)
+		function fn_create_fragment(options) {
+
+			// options
+				const key		= options.key
+				const service	= options.service
+
+			// create the HTML fragment inside the editor adding in/out tags. Returns new created tag_index_id
+				const tag_id = self.create_fragment(key, service)				
+				if (tag_id) {					
+					
+					// save modified content
+						const value = service.get_value()
+						self.save_value(key, value)
+						.then((response)=>{
+							if (response) {								
+								// select the new tag image in DOM
+								const image_node_selector	= `img.index[data-tag_id=${tag_id}]`
+								const image_node			= service.select_node(image_node_selector)
+								if (image_node) {
+									image_node.click()
+								}
+							}
+						})
+				}//end if (created!==false)
+
+			return true
+		}//end fn_create_fragment
 
 
 	return common_init
@@ -526,7 +553,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 * @param tag_type
 *	Class name of image searched like 'geo'
 */
-component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
+component_text_area.prototype.get_last_tag_id = function(key, tag_type, service) {
 
 	const self = this
 
@@ -534,16 +561,19 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 		const ar_id_final = [0];
 
 	// service
-		const service = self.services[key]
+		// const service = self.services[key]
 		if (!service) {
-			console.error(`Error on get service. service key: '${key}' not found in self.services:`, self.services);
+			// console.error(`Error on get service. service key: '${key}' not found in self.services:`, self.services);
+			console.error(`Error on get service. Empty service:`, service);
 			return false
 		}
 
 	// container . editor_content_data is a DOM node <body> from editor
 		const container = service.get_editor_content_data()
-			// console.log("////// service:",service);
-			// console.log("////// container:",container);
+			// console.log("////// service:",service);			
+			if (!container) {
+				console.warn("////// container NOT FOUND:", container);	
+			}
 
 	// get all tags of type
 		switch(tag_type) {
@@ -626,20 +656,16 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 
 
 /**
-* CREATE FRAGMENT
+* CREATE FRAGMENT (using index tags)
 * Create the images (with the tags) at the beginning and end of the selected text and save the data
+* @return bool false | int tag_id
 */
-component_text_area.prototype.create_fragment = function(options) {
+component_text_area.prototype.create_fragment = function(key, service) {
 
 	const self = this
 
-		console.warn("-->create_fragment options:",options); return
-
-	// options
-		const key = options.key
-
 	// service (needed for save)
-		const service = self.services[key]
+		// const service = self.services[key]
 		if (!service) {
 			console.error("-> [component_text_area.create_fragment] service not found for key:", key);
 			return false
@@ -648,12 +674,13 @@ component_text_area.prototype.create_fragment = function(options) {
 	// selection text
 		const selection_raw = service.get_selection();
 		if (!selection_raw || selection_raw.length<1) {
+			console.warn("Ignored empty selection:", selection_raw, key);
 			return false
 		}
 	// editor_content_data is a DOM node <body> from editor
 		// const editor_content_data = service.get_editor_content_data()
 	// last_tag_id. Find last image of type index and returns id or 0
-		const last_tag_index_id = self.get_last_tag_id(key, 'index')
+		const last_tag_index_id = self.get_last_tag_id(key, 'index', service)
 
 	// create new string wrapping selection with new tags
 		// tag state. Default is 'n' (normal)
@@ -677,94 +704,11 @@ component_text_area.prototype.create_fragment = function(options) {
 			}, tag_id)
 
 		// wrap_selection_with_tags. Prepend and apped tag image node to current editor text selection
-			service.wrap_selection_with_tags(image_in, image_out)
+			const range_clon = service.wrap_selection_with_tags(image_in, image_out)
 
-	// save ?
-		// value as raw string
-			const value = service.get_value()
-		// save
-			self.save_value(key, value).then((response)=>{
-				console.log("+++++++++++++++++ response:",response);
-			})
-
-
-	return true
-
-	// var identificador_unico	= button_obj.dataset.identificador_unico
-	// var parent				= button_obj.dataset.parent
-	// var tipo				= button_obj.dataset.tipo
-	// var section_tipo		= button_obj.dataset.section_tipo
-	// var lang				= button_obj.dataset.lang
-	// var component_id		= identificador_unico
-
-	// // Select current editor
-	// var ed = tinyMCE.get(component_id);
-	// //var ed = tinymce.activeEditor
-	// 	if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") };
-
-	// var current_text_area = document.getElementById(component_id);
-	// 	if (!current_text_area) {
-	// 		return alert("Editor " + component_id + " not found [2]!")
-	// 	}
-
-	// //var last_tag_index_id = parseInt(current_text_area.dataset.last_tag_index_id);
-	// var last_tag_index_id = parseInt( component_text_area.get_last_tag_id(ed, 'index') )
-	// 	//console.log(last_tag_index_id); return;
-
-	// var string_selected 	= ed.selection.getContent({format : 'raw'}); // Get the selected text in raw format
-	// var string_len 			= string_selected.length ;
-	// 	if(string_len<1) return alert("Please, select a text fragment before ! " +string_len);
-
-	// // New tag_id to use
-	// var tag_id = parseInt(last_tag_index_id+1);		//alert("new tag_id:"+last_tag_index_id + " "+component_id); return false;
-
-	// // State. Default is 'n' (normal)
-	// var state = 'n';
-
-	// // Final string to replace
-	// var image_in  = component_text_area.build_dom_element_from_data('indexIn', tag_id, state, "label in "+tag_id, '')
-	// var image_out = component_text_area.build_dom_element_from_data('indexOut', tag_id, state, "label out "+tag_id, '')
-
-	// // Get selection range
-	// var range 		    = ed.selection.getRng(0)
-	// var range_clon 	    = range.cloneRange()
-	// // Save start and end position
-	// var startOffset 	= range_clon.startOffset
-	// var startContainer 	= range_clon.startContainer
-	// 	range_clon.collapse(false)	// Go to end of range position
-
-	// // Insert end out image
-	// range_clon.insertNode(image_out)
-
-	// // Positioned to begin of range
-	// range_clon.setStart(startContainer, startOffset)
-	// // Insert note at begining of range
-	// range_clon.collapse(true) // Go to start of range position
-	// range_clon.insertNode(image_in)
-
-	// // Force dirty state
-	// ed.setDirty(true);
-
-	// // Update last_tag_index_id data on current text area
-	// //$(current_text_area).data('last_tag_index_id',tag_id);
-	// current_text_area.dataset.last_tag_index_id = tag_id
-
-	// // FORCE UPDATE REAL TEXT AREA CONTENT (and save is triggered when text area changes)
-	// //tinyMCE.triggerSave();	//console.log(tinyMCE)
-	// // TEXT EDITOR : Force save
-	// var evt = null;
-	// //var js_promise = text_editor.save_command(ed, evt, current_text_area);
-	// var js_promise = component_text_area.Save(current_text_area, null, ed)
-	// 	js_promise.then(function(response) {
-	// 		// fragment_info
-	// 		tool_indexation.fragment_info(image_in, tipo, parent, section_tipo, lang);	//tag_obj, tipo, parent, section_tipo, lang
-	// 	})
-
-	// // Hide "Create New Fragment" button
-	// //$(button_obj).hide()
-	// button_obj.style.display = 'none'
-
-	// return true
+	return (range_clon)
+		? tag_id
+		: false
 };//end create_fragment
 
 

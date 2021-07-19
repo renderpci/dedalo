@@ -197,22 +197,22 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
 	
-	const component = self.caller
-	const context 	= JSON.parse(JSON.stringify(component.context))
-		  context.lang = lang
+	const component		= self.caller
+	const context		= JSON.parse(JSON.stringify(component.context))
+		  context.lang 	= lang
 
 	const instance_options = {
-		model 			: component.model,
-		tipo 			: component.tipo,
-		section_tipo 	: component.section_tipo,
-		section_id 		: component.section_id,
-		mode 			: 'edit',
-		lang 			: lang, // The only different property from caller
-		section_lang 	: component.lang,
-		context 		: context,
-		// id_variant 		: 'tool_indexation'
-		// data 			: {value:[]},
-		// datum 			: null
+		model			: component.model,
+		tipo			: component.tipo,
+		section_tipo	: component.section_tipo,
+		section_id		: component.section_id,
+		mode			: 'edit',
+		lang			: lang, // The only different property from caller
+		section_lang	: component.lang,
+		context			: context
+		// id_variant	: 'tool_indexation',
+		// data			: {value:[]},
+		// datum		: null
 	}
 
 	const instance = await get_instance(instance_options)
@@ -291,86 +291,88 @@ tool_indexation.prototype.get_thesaurus = async function() {
 * CREATE FRAGMENT
 * Create the images (with the tags) at the beginning and the end of the selected text, and save the data
 */
-tool_indexation.prototype.create_fragment = function ( button_obj, event ) {
-	dd_console('button_obj','DEBUG', button_obj)
+	// tool_indexation.prototype.create_fragment = function ( button_obj, event ) {
+	// 	dd_console('button_obj','DEBUG', button_obj)
 
-	event.preventDefault()
-	event.stopPropagation()
+	// 	return alert("Don't use this function! Use compoent_text_area function instead")
 
-	// btn dataset vars
-		const identificador_unico	= button_obj.dataset.identificador_unico
-		const parent				= button_obj.dataset.parent
-		const tipo					= button_obj.dataset.tipo
-		const section_tipo			= button_obj.dataset.section_tipo
-		const lang					= button_obj.dataset.lang
-	
-	// component_id is 'dataset.identificador_unico'
-		const component_id = identificador_unico
+	// 	event.preventDefault()
+	// 	event.stopPropagation()
 
-	// ed. Select current editor
-		const ed = tinyMCE.get(component_id);
-		if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") }
+	// 	// btn dataset vars
+	// 		const identificador_unico	= button_obj.dataset.identificador_unico
+	// 		const parent				= button_obj.dataset.parent
+	// 		const tipo					= button_obj.dataset.tipo
+	// 		const section_tipo			= button_obj.dataset.section_tipo
+	// 		const lang					= button_obj.dataset.lang
+		
+	// 	// component_id is 'dataset.identificador_unico'
+	// 		const component_id = identificador_unico
 
-	// current_text_area
-		const current_text_area = document.getElementById(component_id);
-		if (!current_text_area) {
-			return alert("Editor " + component_id + " not found [2]!")
-		}
+	// 	// ed. Select current editor
+	// 		const ed = tinyMCE.get(component_id);
+	// 		if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") }
 
-	// last_tag_index_id
-		const last_tag_index_id = parseInt( component_text_area.get_last_tag_id(ed, 'index') )
+	// 	// current_text_area
+	// 		const current_text_area = document.getElementById(component_id);
+	// 		if (!current_text_area) {
+	// 			return alert("Editor " + component_id + " not found [2]!")
+	// 		}
 
-	// string_selected
-		const string_selected	= ed.selection.getContent({format : 'raw'}); // Get the selected text in raw format
-		const string_len		= string_selected.length ;
-		if(string_len<1) return alert("Please, select a text fragment before ! " +string_len);
+	// 	// last_tag_index_id
+	// 		const last_tag_index_id = parseInt( component_text_area.get_last_tag_id(ed, 'index') )
 
-	// New tag_id to use
-		const tag_id = parseInt(last_tag_index_id+1);		//alert("new tag_id:"+last_tag_index_id + " "+component_id); return false;
+	// 	// string_selected
+	// 		const string_selected	= ed.selection.getContent({format : 'raw'}); // Get the selected text in raw format
+	// 		const string_len		= string_selected.length ;
+	// 		if(string_len<1) return alert("Please, select a text fragment before ! " +string_len);
 
-	// State. Default is 'n' (normal)
-		const state = 'n';
+	// 	// New tag_id to use
+	// 		const tag_id = parseInt(last_tag_index_id+1);		//alert("new tag_id:"+last_tag_index_id + " "+component_id); return false;
 
-	// Final string to replace
-		const image_in  = component_text_area.build_dom_element_from_data('indexIn', tag_id, state, "label in "+tag_id, '')
-		const image_out = component_text_area.build_dom_element_from_data('indexOut', tag_id, state, "label out "+tag_id, '')
+	// 	// State. Default is 'n' (normal)
+	// 		const state = 'n';
 
-	// Get selection range
-		const range			= ed.selection.getRng(0)
-		const range_clon	= range.cloneRange()
-	// Save start and end position
-		const startOffset		= range_clon.startOffset
-		const startContainer	= range_clon.startContainer
-		range_clon.collapse(false)	// Go to end of range position
+	// 	// Final string to replace
+	// 		const image_in  = component_text_area.build_dom_element_from_data('indexIn', tag_id, state, "label in "+tag_id, '')
+	// 		const image_out = component_text_area.build_dom_element_from_data('indexOut', tag_id, state, "label out "+tag_id, '')
 
-	// Insert end out image
-		range_clon.insertNode(image_out)
+	// 	// Get selection range
+	// 		const range			= ed.selection.getRng(0)
+	// 		const range_clon	= range.cloneRange()
+	// 	// Save start and end position
+	// 		const startOffset		= range_clon.startOffset
+	// 		const startContainer	= range_clon.startContainer
+	// 		range_clon.collapse(false)	// Go to end of range position
 
-	// Positioned to begin of range
-		range_clon.setStart(startContainer, startOffset)
-	
-	// Insert note at beginning of range
-		range_clon.collapse(true) // Go to start of range position
-		range_clon.insertNode(image_in)
+	// 	// Insert end out image
+	// 		range_clon.insertNode(image_out)
 
-	// Force ed dirty state
-		ed.setDirty(true);
+	// 	// Positioned to begin of range
+	// 		range_clon.setStart(startContainer, startOffset)
+		
+	// 	// Insert note at beginning of range
+	// 		range_clon.collapse(true) // Go to start of range position
+	// 		range_clon.insertNode(image_in)
 
-	// Update last_tag_index_id data on current text area
-		current_text_area.dataset.last_tag_index_id = tag_id
+	// 	// Force ed dirty state
+	// 		ed.setDirty(true);
 
-	// Force update and save real text area content (and save is triggered when text area changes)
-		const js_promise = component_text_area.Save(current_text_area, null, ed)
-		.then(function(response) {
-			// fragment_info update
-			tool_indexation.fragment_info(image_in, tipo, parent, section_tipo, lang);	//tag_obj, tipo, parent, section_tipo, lang
-		})
+	// 	// Update last_tag_index_id data on current text area
+	// 		current_text_area.dataset.last_tag_index_id = tag_id
 
-	// Hide "Create New Fragment" button
-		button_obj.style.display = 'none'
+	// 	// Force update and save real text area content (and save is triggered when text area changes)
+	// 		const js_promise = component_text_area.Save(current_text_area, null, ed)
+	// 		.then(function(response) {
+	// 			// fragment_info update
+	// 			tool_indexation.fragment_info(image_in, tipo, parent, section_tipo, lang);	//tag_obj, tipo, parent, section_tipo, lang
+	// 		})
 
-	return js_promise
-};//end create_fragment
+	// 	// Hide "Create New Fragment" button
+	// 		button_obj.style.display = 'none'
+
+	// 	return js_promise
+	// };//end create_fragment
 
 
 
