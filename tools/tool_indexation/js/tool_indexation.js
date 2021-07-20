@@ -35,6 +35,7 @@ export const tool_indexation = function () {
 	this.langs
 	this.caller // component text area base (user selects tool button from it)
 	this.main_component // component text area where we are working into the tool
+	this.related_sections_list // datum of related_sections_list (to obtaim list of top_section_tipo/id)
 
 
 	return true
@@ -55,10 +56,24 @@ export const tool_indexation = function () {
 
 /**
 * INIT
+* 
+* @param object options
+* Sample:
+* {
+* 	caller: component_text_area {id: "component_text_area_rsc36_rsc167_1_edit_lg-eng_rsc167", …}
+*	lang: "lg-eng"
+*	mode: "edit"
+*	model: "tool_indexation"
+*	section_id: "1"
+*	section_tipo: "rsc167"
+*	tipo: "rsc36"
+*	tool_object: {section_id: "2", section_tipo: "dd1324", name: "tool_indexation", label: "Tool Indexation", icon: "/v6/tools/tool_indexation/img/icon.svg", …}
+* }
 */
 tool_indexation.prototype.init = async function(options) {
 
 	const self = this
+		console.log("options:",options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_indexation/trigger.tool_indexation.php"
@@ -126,8 +141,11 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	// load_indexing_component. Init and build the indexing_component (component_relation_index usually)
 		await self.load_indexing_component()
 
+	// related_sections_list. Get the relation list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
+		self.related_sections_list = await self.load_related_sections_list()
+
 	// call generic common tool build
-		const common_build = tool_common.prototype.build.call(self, autoload);
+		const common_build = tool_common.prototype.build.call(self, autoload)
 
 
 	return common_build
@@ -480,11 +498,11 @@ tool_indexation.prototype.update_active_values = function(values) {
 
 
 /**
-* GET_RELATED_SECTIONS
+* LOAD_RELATED_SECTIONS_LIST
 * Get the list of related sections with the actual resource
 * @return boolean
 */
-tool_indexation.prototype.get_related_sections = function() {
+tool_indexation.prototype.load_related_sections_list = async function() {
 
 	const self = this
 
@@ -518,10 +536,11 @@ tool_indexation.prototype.get_related_sections = function() {
 
 	// get context and data
 		const current_data_manager	= new data_manager()
-		const api_response			= current_data_manager.request({body:rqo})
+		const api_response			= await current_data_manager.request({body:rqo})
+	
+	const datum = api_response.result	
 
-
-	return api_response
-};//end get_related_sections
+	return datum
+};//end load_related_sections_list
 
 

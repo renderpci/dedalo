@@ -46,16 +46,15 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 	// modal container
 		const header = wrapper.querySelector('.tool_header')
 		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
-		modal.on_close = () => {
+		modal.on_close = async () => {
 			// tool destroy
-				self.destroy(true, true, true)
+				await self.destroy(true, true, true)
 			// refresh source component text area
 				self.caller.refresh()
 		}
 
-	// get the relation list
-		const related_section_datum = await self.get_related_sections()
-		const related_list_node = render_related_list(self, related_section_datum.result)
+	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation		
+		const related_list_node = render_related_list(self)
 		header.appendChild(related_list_node)
 
 
@@ -268,82 +267,6 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-
-
-
-	// // components container
-	// 	const components_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name		: 'components_container',
-	// 		parent			: fragment
-	// 	})
-
-
-	// // source lang select
-	// 	const source_select_lang = ui.build_select_lang({
-	// 		langs		: self.langs,
-	// 		selected	: self.source_lang,
-	// 		class_name	: 'source_lang',
-	// 		action		: on_change_source_select_lang
-	// 	})
-	// 	function on_change_source_select_lang(e) {
-	// 		add_component(self, source_component_container, e.target.value)
-	// 	}
-	// 	components_container.appendChild(source_select_lang)
-
-
-	// // target lang select
-	// 	const target_select_lang = ui.build_select_lang({
-	// 		langs  		: self.langs,
-	// 		selected 	: self.target_lang,
-	// 		class_name	: 'target_lang',
-	// 		action 		: on_change_target_select_lang
-	// 	})
-	// 	function on_change_target_select_lang(e) {
-	// 		add_component(self, target_component_container, e.target.value)
-	// 	}
-	// 	components_container.appendChild(target_select_lang)
-
-
-	// // source
-	// 	const source_component_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'source_component_container disabled_component',
-	// 		parent 			: components_container
-	// 	})
-
-	// 	// source default value check
-	// 		if (source_select_lang.value) {
-	// 			add_component(self, source_component_container, source_select_lang.value)
-	// 		}
-
-	// // target
-	// 	const target_component_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'target_component_container',
-	// 		parent 			: components_container
-	// 	})
-
-	// 	// target default value check
-	// 		if (target_select_lang.value) {
-	// 			add_component(self, target_component_container, target_select_lang.value)
-	// 		}
-
-	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: components_container
-	// 	})
-
-	// 	// automatic_translation
-	// 		const translator_engine = self.simple_tool_object.config.translator_engine
-	// 		if (translator_engine) {
-	// 			const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
-	// 			buttons_container.appendChild(automatic_tranlation_node)
-	// 		}//end if (translator_engine)
-
-
 };//end get_content_data_edit
 
 
@@ -380,68 +303,74 @@ export const add_component = async (self, component_container, value) => {
 
 
 /**
-* ADD_COMPONENT
+* RENDER_RELATED_LIST
+* This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation	
 */
-const render_related_list = function(self, datum){
+const render_related_list = function(self){
 
+	const datum		= self.related_sections_list
 	const context	= datum.context
 	const data		= datum.data
 
 	const fragment = new DocumentFragment();
 
 	// related list
-		const div_related_list = ui.create_dom_element({
+		const related_list_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'div_related_list',
+			class_name		: 'related_list_container',
 			parent			: fragment
 		})
-			const select = ui.create_dom_element({
-				element_type	: 'select',
-				class_name		: 'select_related_list',
-				parent			: div_related_list
-			})
+		const select = ui.create_dom_element({
+			element_type	: 'select',
+			parent			: related_list_container
+		})
 
-	const sections = data.find(el => el.typo === 'sections')
+	// select -> options
+		const sections		= data.find(el => el.typo==='sections')
+		const value			= sections.value
+		const value_length	= value.length
+		for (let i = 0; i < value_length; i++) {
+			
+			const current_locator = {
+				section_top_tipo	: value[i].section_tipo,
+				section_top_id		: value[i].section_id
+			}
+			// fix the first locator when tool is loaded (without user interaction)
+				if(i===0){
+					self.top_locator = current_locator
+				}
 
-	const value			= sections.value
-	const value_length	= value.length
+			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
+			const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
 
-	for (let i = 0; i < value_length; i++) {
-		const current_locator = {
-			section_top_tipo	: value[i].section_tipo,
-			section_top_id		: value[i].section_id
-		}
-		// fix the first locator when tool is loaded (without user interaction)
-		if(i === 0){
-			self.top_locator = current_locator
-		}
-		const section_label = context.find(el => el.section_tipo === current_locator.section_top_tipo).label
-		const ar_component_data = data.filter(el => el.section_tipo === current_locator.section_top_tipo && el.section_id === current_locator.section_top_id)
+			// ar_component_value
+				const ar_component_value = []
+				for (let j = 0; j < ar_component_data.length; j++) {
+					const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
+					ar_component_value.push(current_value)
+				}
 
-		const ar_component_value = []
+			// label
+				const label = 	section_label + ' | ' +
+								current_locator.section_top_id +' | ' +
+								ar_component_value.join(' | ')
 
-		for (var j = 0; j < ar_component_data.length; j++) {
-			ar_component_value.push(ar_component_data[j].value)
-		}
+			// option DOM element
+				const option = ui.create_dom_element({
+					element_type	: 'option',
+					inner_html		: label,
+					parent			: select
+				})
+				option.locator = current_locator
 
-		const label = 	section_label + ' | ' +
-						current_locator.section_top_id +' | ' +
-						ar_component_value.join(' | ')
+		}//end for
 
-		const option = ui.create_dom_element({
-				element_type	: 'option',
-				inner_html 		: label,
-				parent			: select
-			})
-		option.locator = current_locator
-	}
-
-	select.addEventListener("change", async function(e){
-		self.top_locator = this.options[this.selectedIndex].locator
-	})
+	// event . Change
+		select.addEventListener("change", async function(e){
+			self.top_locator = this.options[this.selectedIndex].locator
+		})
 
 	return fragment
-
-};//end
+};//end render_related_list
 
 
