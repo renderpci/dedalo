@@ -83,70 +83,31 @@ class search_related extends search {
 
 
 	/**
-	* CALCULATE_INVERSE_LOCATORS
-	* Now inverse locators is always calculated, not stored !
+	* GET_REFERENCED_LOCATORS
+	* Get the sections that is pointed by any kind of locator to the caller (reference_locator)
 	* @see section::get_inverse_locators
 	* @param object $reference_locator
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators_DES( $reference_locator, $limit=false, $offset=false, $count=false ) {
-		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
+	public static function get_referenced_locators( $reference_locator, $limit=false, $offset=false, $count=false ) {
 
-		# compare
-		$compare = json_encode($reference_locator);
+		//new way done in relations field with standard sqo
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo(['all']);
+				$sqo->set_mode('related');
+				$sqo->set_full_count(false);
+				$sqo->set_limit($limit);
+				$sqo->set_offset($offset);
+				$sqo->set_filter_by_locators([$reference_locator]);
 
-		# Cache
-		#static $ar_inverse_locators_data;
-		#$uid = md5($compare) . '_' . (int)$limit . '_' . (int)$offset . '_' . (int)$count;
-		#if (isset($ar_inverse_locators_data[$uid])) {
-		#	debug_log(__METHOD__." Returning cached result !! ".to_string($uid), logger::DEBUG);
-		#	return $ar_inverse_locators_data[$uid];
-		#}
+			$search		= search::get_instance($sqo);			
+			$rows_data	= $search->search();
+			// fix result ar_records as dato
+			$result	= $rows_data->ar_records;
 
-		$ar_tables_to_search = common::get_matrix_tables_with_relations();
-		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
-
-		$ar_query=array();
-		foreach ($ar_tables_to_search as $table) {
-
-			$query	 = '';
-			$query	.= ($count===true)
-				? PHP_EOL . 'SELECT COUNT(*)'
-				: PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
-			$query	.= PHP_EOL . 'FROM "'.$table.'"';
-			$query	.= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
-
-			$ar_query[] = $query;
-		}
-
-		$strQuery  = '';
-		$strQuery .= implode(' UNION ALL ', $ar_query);
-		// Set order to maintain results stable
-
-		if($count === false){
-			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
-			if($limit !== false){
-				$strQuery .= PHP_EOL . 'LIMIT '.$limit;
-				if($offset !== false){
-					$strQuery .= PHP_EOL . 'OFFSET '.$offset;
-				}
-			}
-		}
-
-		$strQuery .= ';';
-
-		if(SHOW_DEBUG===true) {
-			//debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
-		}
-
-		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		if (!is_resource($result)) {
-			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-			return null;
-		}
-		$ar_inverse_locators = array();
-		if($count === false){
+			$ar_inverse_locators = array();
+			
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
 
@@ -156,11 +117,11 @@ class search_related extends search {
 				$ar_properties[] = $key;
 			}
 
-			while ($rows = pg_fetch_assoc($result)) {
-
-				$current_section_id		= $rows['section_id'];
-				$current_section_tipo	= $rows['section_tipo'];
-				$current_relations		= (array)json_decode($rows['relations']);
+			foreach ($result as $row) {
+				
+				$current_section_id		= $row->section_id;
+				$current_section_tipo	= $row->section_tipo;
+				$current_relations		= $row->datos->relations;
 
 				foreach ($current_relations as $current_locator) {
 					if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
@@ -172,20 +133,10 @@ class search_related extends search {
 					}
 				}
 			}
-			#debug_log(__METHOD__." ar_inverse_locators ".to_string($ar_inverse_locators), logger::DEBUG);
-
-		}else{
-			while ($rows = pg_fetch_assoc($result)) {
-				$ar_inverse_locators[] = $rows;
-			}
-		}
-
-		# Cache
-		#$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
 
 
 		return (array)$ar_inverse_locators;
-	}//end calculate_inverse_locators
+	}//end get_referenced_locators
 
 
 
