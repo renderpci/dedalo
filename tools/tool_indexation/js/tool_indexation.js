@@ -73,7 +73,6 @@ export const tool_indexation = function () {
 tool_indexation.prototype.init = async function(options) {
 
 	const self = this
-		console.log("options:",options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_indexation/trigger.tool_indexation.php"
@@ -115,12 +114,12 @@ tool_indexation.prototype.init = async function(options) {
 				return true
 			}
 		// create fragment. Observe text area user selection text text_selection' +'_'+ self.id,
-			self.events_tokens.push(
-				event_manager.subscribe('text_selection' +'_'+ self.caller.id, text_selection)
-			)
-			function text_selection(options) {
-				console.log("event text_selection options:",options);
-			}
+			// self.events_tokens.push(
+			// 	event_manager.subscribe('text_selection' +'_'+ self.caller.id, text_selection)
+			// )
+			// function text_selection(options) {
+			// 	console.log("event text_selection options:",options);
+			// }
 
 
 	return common_init
@@ -141,7 +140,8 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	// load_indexing_component. Init and build the indexing_component (component_relation_index usually)
 		await self.load_indexing_component()
 
-	// related_sections_list. Get the relation list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
+	// load_related_sections_list. Get the relation list. This is used to build a select element to allow
+		// user select the top_section_tipo and top_section_id of current indexation
 		self.related_sections_list = await self.load_related_sections_list()
 
 	// call generic common tool build

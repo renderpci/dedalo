@@ -57,9 +57,9 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		const related_list_node = render_related_list(self)
 		header.appendChild(related_list_node)
 
+	// get_tag_info. Fires build tag info panel nodes at begin
+		get_tag_info(self)
 
-
-	get_tag_info(self)
 
 	return wrapper
 };//end render_tool_indexation
@@ -67,25 +67,23 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 
 /**
-* get_TAG_INFO
+* GET_TAG_INFO
 * When user click on index tag, event if fired and recovered by this tool.
 * This event (click_tag_index) fires current function that build tag info panel nodes
 */
 const get_tag_info = function(self) {
 
-	// const self = this
-
 	// tag dom node
-	// const tag		= options.tag || null
+	// const tag	= options.tag || null
 	// const tag_id	= tag.dataset.tag_id || null
 	const tag_id	= ''
 
-
 	const info_container = self.info_container
+	
 	// clean previous nodes
-	while (info_container.lastChild) {
-		info_container.removeChild(info_container.lastChild)
-	}
+		while (info_container.lastChild) {
+			info_container.removeChild(info_container.lastChild)
+		}
 
 	// common_line. line info about tag
 		const common_line = ui.create_dom_element({
