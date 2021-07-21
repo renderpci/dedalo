@@ -736,22 +736,22 @@ class search {
 							}else{
 								if($this->allow_sub_select_by_id===true) {
 									$default_order = ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.section_id '.$default_order;
+									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias . '.section_id ' . $default_order;
 									if(SHOW_DEBUG===true) {
-										$order_query .= ' -- allow_sub_select_by_id=true ';
+										$order_query .= ' -- allow_sub_select_by_id=true (1-a) main_section_tipo_alias: '. $this->main_section_tipo_alias;
 									}
 								}else{
 									$order_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
 									if(SHOW_DEBUG===true) {
-										$order_query .= ' -- allow_sub_select_by_id=false ';
+										$order_query .= ' -- allow_sub_select_by_id=false (1-b)';
 									}
 								}
 							}
 							// order multi section union case
-								if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
-									$order_query = str_replace('mix.', '', $order_query);
-								}
-								$sql_query .= $order_query;
+								// if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
+								// 	$order_query = str_replace('mix.', '', $order_query);
+								// }
+							$sql_query .= $order_query;
 						// limit
 							$limit_query = '';
 							if ($this->search_query_object->limit>0) {

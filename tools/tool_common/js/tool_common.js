@@ -20,29 +20,41 @@ export const tool_common = function(){
 
 /**
 * INIT
+* Generic tool init function.
+* 
+* @param object options
+* Sample:
+* {
+* 	caller: component_text_area {id: "component_text_area_rsc36_rsc167_1_edit_lg-eng_rsc167", …}
+*	lang: "lg-eng"
+*	mode: "edit"
+*	model: "tool_indexation"
+*	section_id: "1"
+*	section_tipo: "rsc167"
+*	tipo: "rsc36"
+*	tool_object: {section_id: "2", section_tipo: "dd1324", name: "tool_indexation", label: "Tool Indexation", icon: "/v6/tools/tool_indexation/img/icon.svg", …}
+* }
 */
 tool_common.prototype.init = async function(options) {
 
 	const self = this
 
 	// set vars
-	self.model				= options.model
-	self.tool_section_tipo 	= options.tool_object.section_tipo
-	self.tool_section_id	= options.tool_object.section_id
-	self.mode 				= options.mode
-	self.caller 			= options.caller
-	self.node				= []
-	self.type				= 'tool'
-	self.ar_instances		= []
-	self.events_tokens 		= []
-	self.lang 				= options.lang
-	self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common
-	//get_label called by the different tools for obtain the own label in the current lang. The scope is for every tool.
-	self.get_label 			= get_label
+		self.model				= options.model
+		self.tool_section_tipo	= options.tool_object.section_tipo
+		self.tool_section_id	= options.tool_object.section_id
+		self.mode				= options.mode
+		self.caller				= options.caller
+		self.node				= []
+		self.type				= 'tool'
+		self.ar_instances		= []
+		self.events_tokens		= []
+		self.lang				= options.lang
+		self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common	
+		self.get_label			= get_label // get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 	// set status
 		self.status = 'initied'
-
 
 
 	return true
@@ -52,6 +64,10 @@ tool_common.prototype.init = async function(options) {
 
 /**
 * BUILD
+* Generic tool build function. Load basic tool config info (stored in component_json dd1353) and css files
+* 
+* @param bool autoload
+* @return promise bool
 */
 tool_common.prototype.build = async function(autoload=false) {
 	const t0 = performance.now()
@@ -139,17 +155,17 @@ tool_common.prototype.build = async function(autoload=false) {
 /**
 * LOAD_TOOL
 *
-* @param tool_object options
-* @param self instance_caller
-*
-* @return instance tool
-*
 * Called by page observe event (init)
 * To load tool, don't call directly, publish a event as
 *	event_manager.publish('load_tool', {
 *		self 		: self,
 *		tool_object : tool_object
 *	})
+* 
+* @param tool_object options
+* @param self instance_caller
+*
+* @return instance tool
 */
 export const load_tool = async (options) => {
 
@@ -178,7 +194,7 @@ export const load_tool = async (options) => {
 	// build
 		await tool_instance.build(true)
 
-	// render
+	// render tool (don't wait here)
 		tool_instance.render()
 
 
@@ -238,7 +254,11 @@ export const trigger_request = async function(trigger_url, body) {
 
 /**
 * GET_LABEL
-* return the label in the current language, if the label is not defined in current lang
+* Return the label in the current language.
+* If the label is not defined, try with lang_default, not lang and received label_name if nothing is found
+* 
+* @param string label_name like 'indexation_tool'
+* @return string label_item like 'Indexation Tool'
 */
 const get_label = function(label_name) {
 
@@ -249,14 +269,21 @@ const get_label = function(label_name) {
 
 	let label_item = tool_labels.find(item => item.name===label_name && item.lang===self.lang).value
 	if(typeof label_item==='undefined'){
+		
 		label_item = tool_labels.find(item => item.name===label_name && item.lang===lang_default).value
-	}
-	if(typeof label_item==='undefined'){
-		label_item = tool_labels.find(item => item.name===label_name).value
-	}
-	if(typeof label_item==='undefined'){
-		label_item = label_name
-	}
+
+		if(typeof label_item==='undefined'){
+
+			label_item = tool_labels.find(item => item.name===label_name).value
+
+			if(typeof label_item==='undefined'){
+				label_item = label_name
+			}
+		}
+	}	
+	
 
 	return label_item
 };//end get_label
+
+

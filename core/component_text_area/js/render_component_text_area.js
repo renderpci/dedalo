@@ -392,23 +392,22 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// })
 
 	// service_tinymce
-		const get_service = () => { return current_service; }
+		const current_service = new service_tinymce()
+
 		// editor_config
-			const editor_config = {}
-				  editor_config.plugins			= ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
-				  editor_config.toolbar			= "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save"
-				  editor_config.custom_buttons	= get_custom_buttons(self, i, get_service)
-				  editor_config.custom_events	= get_custom_events(self, i, get_service)
+			const editor_config = {
+				plugins			: ["paste","image","print","searchreplace","code","fullscreen","noneditable"],
+				toolbar			: "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save",
+				custom_buttons	: get_custom_buttons(self, i, current_service),
+				custom_events	: get_custom_events(self, i, current_service)
+			}
 
 		// init editor
-		const current_service = new service_tinymce()
-		current_service.init(self, li, {
-			value 			: value,
-			key 			: i,
-			editor_config 	: editor_config
-		})
-
-		self.services.push(current_service)
+			current_service.init(self, li, {
+				value			: value,
+				key				: i,
+				editor_config	: editor_config
+			})
 
 
 		// add button create fragment (Only when caller is a tool_indexation instance)
@@ -431,7 +430,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 						const component_container	= li
 						const button				= component_container.querySelector(".create_fragment")
-						const last_tag_id			= self.get_last_tag_id(i, 'index')
+						const last_tag_id			= self.get_last_tag_id(i, 'index', current_service)
 						const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 
 						const create_button = function(selection) {
@@ -444,9 +443,12 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 							// event create_fragment add publish on click								
 								button_create_fragment.addEventListener("click", () => {
-									
-									// self.create_fragment(i)
-									event_manager.publish('create_fragment'+'_'+ self.id, {caller : self, key: i})
+
+									event_manager.publish('create_fragment_'+ self.id, {
+										caller	: self,
+										key		: i,
+										service	: current_service
+									})
 								})
 
 							return button_create_fragment
@@ -489,7 +491,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 *	self data element from array of values
 * @return array custom_buttons
 */
-const get_custom_buttons = (self, i, get_service) => {
+const get_custom_buttons = (self, i, service) => {
 
 	// custom_buttons
 	const custom_buttons = []
@@ -500,9 +502,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_person",
 			options : {
-				tooltip: 'Add person',
-				image:  '../themes/default/icons/person.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add person',
+				image	:  '../themes/default/icons/person.svg',
+				onclick	: function(evt) {
 					alert("Adding person !");
 					// component_text_area.load_tags_person() //ed, evt, text_area_component
 				}
@@ -513,9 +515,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_geo",
 			options : {
-				tooltip: 'Add georef',
-				image:  '../themes/default/icons/geo.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add georef',
+				image	:  '../themes/default/icons/geo.svg',
+				onclick	: function(evt) {
 					alert("Adding georef !");
 					// component_text_area.load_tags_geo(ed, evt, text_area_component) //ed, evt, text_area_component
 				}
@@ -526,9 +528,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_note",
 			options : {
-				tooltip: 'Add note',
-				image:  '../themes/default/icons/note.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add note',
+				image	:  '../themes/default/icons/note.svg',
+				onclick	: function(evt) {
 					alert("Adding note !");
 					// component_text_area.create_new_note(ed, evt, text_area_component)
 				}
@@ -539,9 +541,9 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_reference",
 			options : {
-				tooltip: 'Add reference',
-				image:  '../themes/default/icons/reference.svg',
-				onclick: function(evt) {
+				tooltip	: 'Add reference',
+				image	:  '../themes/default/icons/reference.svg',
+				onclick	: function(evt) {
 					alert("Adding reference !");
 					// component_text_area.create_new_reference(ed, evt, text_area_component)
 				}
@@ -552,10 +554,10 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_delete_structuration",
 			options : {
-				text: "Delete chapter",
-				tooltip: 'Delete structuration',
-				icon :false,
-				onclick: function(evt) {
+				text	: "Delete chapter",
+				tooltip	: 'Delete structuration',
+				icon	: false,
+				onclick	: function(evt) {
 					alert("Deleting structuration !");
 					// tool_lang.delete_structuration(ed, evt, text_area_component)
 				}
@@ -566,10 +568,10 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_add_structuration",
 			options : {
-				text: "Add chapter",
-				tooltip: 'Add structuration',
-				icon :false,
-				onclick: function(evt) {
+				text	: "Add chapter",
+				tooltip	: 'Add structuration',
+				icon	: false,
+				onclick	: function(evt) {
 					alert("Adding structuration !");
 					// tool_lang.add_structuration(ed, evt, text_area_component)
 				}
@@ -580,10 +582,10 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_change_structuration",
 			options : {
-				text: "Change chapter",
-				tooltip: 'Change structuration',
-				icon :false,
-				onclick: function(evt) {
+				text	: "Change chapter",
+				tooltip	: 'Change structuration',
+				icon	: false,
+				onclick	: function(evt) {
 					alert("Changing structuration !");
 					// tool_lang.change_structuration(ed, evt, text_area_component)
 				}
@@ -595,13 +597,12 @@ const get_custom_buttons = (self, i, get_service) => {
 		custom_buttons.push({
 			name 	: "button_save",
 			options : {
-				text 	: save_label,
-				tooltip : save_label,
-				icon 	: false,
-				onclick : function(evt) {
-					// save. service save function calls current component save_value()
-						const service 		= get_service()
-						service.save()
+				text	: save_label,
+				tooltip	: save_label,
+				icon	: false,
+				onclick	: function(evt) {
+					// save. service save function calls current component save_value()						
+					service.save()
 				}
 			}
 		})
@@ -617,200 +618,202 @@ const get_custom_buttons = (self, i, get_service) => {
 * @param instance self
 * @param int i
 *	self data element from array of values
-* @param function get_service
+* @param function service
 *	select and return current service
 * @return object custom_events
 */
-const get_custom_events = (self, i, get_service) => {
+const get_custom_events = (self, i, service) => {
 
 	const custom_events = {}
 
+	// focus
+		custom_events.focus = (evt, options) => {
 
-	custom_events.focus = (evt, options) => {
+			event_manager.publish('active_component', self)
+		};//end focus
 
-		event_manager.publish('active_component', self)
-	};//end focus
-
-	custom_events.blur = (evt, options) => {
-		// save. service save function calls current component save_value()
-			const service = get_service()
+	// blur
+		custom_events.blur = (evt, options) => {
+			// save. service save function calls current component save_value()				
 			service.save()
-	};//end blur
+		};//end blur
 
-	custom_events.click = (evt, options) => {
-		// use the observe property into ontology of the components to suscribe to this events
-		// img : click on img
-		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
-			const tag_obj = evt.target
-			switch(evt.target.className) {
+	// click
+		custom_events.click = (evt, options) => {
+			// use the observe property into ontology of the components to suscribe to this events
+			// img : click on img
+			if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
+				const tag_obj = evt.target
+				switch(evt.target.className) {
 
-				case 'tc':
-					// Video goto timecode by tc tag
-					event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+					case 'tc':
+						// Video goto timecode by tc tag
+						event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+						break;
+
+					case 'index':
+
+						event_manager.publish('click_tag_index' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+
+						// const tipo			= text_area_component.dataset.tipo
+						// const lang			= text_area_component.dataset.lang
+						// const section_tipo	= text_area_component.dataset.section_tipo
+						// const parent		= text_area_component.dataset.parent
+
+						// switch(page_globals.modo) {
+
+						// 	case 'edit' :
+						// 		// inspector : Show info about indexations in inspector
+						// 		tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
+
+						// 		// relations
+						// 		//component_text_area.load_relation(tag, tipo, parent, section_tipo);
+						// 		//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
+
+						// 		// portal select fragment from tag button
+						// 		if (page_globals.context_name=='list_into_tool_portal') {
+						// 			// Show hidden button link_fragmet_to_portal and configure to add_resource
+						// 			component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
+						// 		}
+						// 		break;
+
+						// 	case 'tool_indexation' :
+						// 		// Show info about in tool relation window
+						// 		component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
+						// 		break;
+						// }
+						// // mask_tags on click image index
+						// mce_editor.mask_tags(ed, evt);
+						break;
+
+					case 'svg' :
+						// not defined yet
+						break;
+
+					case 'draw' :
+						// Load draw editor
+						event_manager.publish('click_tag_draw' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+
+						// switch(page_globals.modo) {
+
+						// 	case 'tool_transcription' :
+						// 		if (typeof component_image==="undefined") {
+						// 			console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
+						// 		}else{
+						// 			component_image.load_draw_editor(tag_obj);
+						// 		}
+						// 		break;
+
+						// 	case 'edit' :
+						// 		var canvas_id = text_area_component.dataset.canvas_id;
+						// 		if (typeof component_image_read!=="undefined") {
+						// 			component_image_read.load_draw_editor_read(tag_obj, canvas_id);
+						// 		}else{
+						// 			console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
+						// 		}
+						// 	break;
+						// }
+						break;
+
+					case 'geo' :
+						// Load geo editor
+						event_manager.publish('click_tag_geo' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+						break;
+
+					case 'page':
+						// PDF go to the specific page
+						event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+						break;
+
+					case 'person':
+						// Show person info
+						component_text_area.show_person_info( ed, evt, text_area_component )
+						break;
+					case 'note':
+						// Show note info
+						component_text_area.show_note_info( ed, evt, text_area_component )
+						break;
+					case 'reference':
+						if(evt.altKey===true){
+							// Select all node to override content
+							ed.selection.select(ed.selection.getNode())
+						}else{
+							// Show reference info
+							component_text_area.show_reference_info( ed, evt, text_area_component )
+						}
+						break;
+					default:
+						// nothing to do here
+
+						break;
+				};//end switch
+			}else if(evt.target.nodeName==='LABEL') {
+				// Fix text area selection values
+				if (page_globals.modo==='tool_lang') {
+					component_text_area.show_structuration_info(ed, evt, text_area_component)
+				}
+			}else{
+				// Sets styles on all paragraphs in the currently active editor
+				// if (ed.dom.select('img').length>0) {
+				// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
+				// }
+				event_manager.publish('click_no_tag' +'_'+ self.id_base, {caller: self})
+			};//end click on img
+		};//end click
+
+	// mouseup
+		custom_events.MouseUp = (evt, options) => {
+			// user text selection event
+				const selection = options.selection
+				event_manager.publish('text_selection' +'_'+ self.id, {selection:selection, caller: self})
+		};//end MouseUp
+
+	// keyup
+		custom_events.KeyUp = (evt, options) => {
+			// use the observe property into ontology of the components to suscribe to this events
+
+			switch(evt.keyCode ){
+				// 'esc' code: 27
+				case  27:
+					event_manager.publish('key_up_esc' +'_'+ self.id_base, evt.keyCode)
 					break;
+				// 'f2' code: 113
+				case 113:
+					// publish event and receive susbscriptors responses
+					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
+					const susbscriptors_responses_length	= susbscriptors_responses.length
 
-				case 'index':
+					// debug
+						if(SHOW_DEBUG===true) {
+							console.log("[render_component_text_area.get_custom_events] susbscriptors_responses (key_up_f2):", susbscriptors_responses);
+						}
 
-					event_manager.publish('click_tag_index' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+					// service. get editor and content data
+						const editor_content_data = service.get_editor_content_data()
 
-					// const tipo			= text_area_component.dataset.tipo
-					// const lang			= text_area_component.dataset.lang
-					// const section_tipo	= text_area_component.dataset.section_tipo
-					// const parent		= text_area_component.dataset.parent
+					// iterate susbscriptors responses
+						for (let i = 0; i < susbscriptors_responses_length; i++) {
+							const data_tag 	= susbscriptors_responses[i]
+							const tag_id 	= (!data_tag.tag_id)
+								? self.get_last_tag_id(editor_content_data, data_tag.type, service) + 1
+								: data_tag.tag_id;
 
-					// switch(page_globals.modo) {
-
-					// 	case 'edit' :
-					// 		// inspector : Show info about indexations in inspector
-					// 		tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
-
-					// 		// relations
-					// 		//component_text_area.load_relation(tag, tipo, parent, section_tipo);
-					// 		//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
-
-					// 		// portal select fragment from tag button
-					// 		if (page_globals.context_name=='list_into_tool_portal') {
-					// 			// Show hidden button link_fragmet_to_portal and configure to add_resource
-					// 			component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
-					// 		}
-					// 		break;
-
-					// 	case 'tool_indexation' :
-					// 		// Show info about in tool relation window
-					// 		component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
-					// 		break;
-					// }
-					// // mask_tags on click image index
-					// mce_editor.mask_tags(ed, evt);
+							switch(data_tag.type) {
+								case ('draw'):
+								case ('geo'):
+									render_layer_selector(self, data_tag, tag_id, service)
+									break;
+								case ('page'):
+									render_page_selector(self, data_tag, tag_id, service)
+									break;
+								default:
+									const tag = build_node_tag(data_tag, tag_id)
+									service.set_content(tag.outerHTML)
+							}// end switch
+						}
 					break;
-
-				case 'svg' :
-					// not defined yet
-					break;
-
-				case 'draw' :
-					// Load draw editor
-					event_manager.publish('click_tag_draw' +'_'+ self.id_base, {tag:tag_obj, caller: self})
-
-					// switch(page_globals.modo) {
-
-					// 	case 'tool_transcription' :
-					// 		if (typeof component_image==="undefined") {
-					// 			console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
-					// 		}else{
-					// 			component_image.load_draw_editor(tag_obj);
-					// 		}
-					// 		break;
-
-					// 	case 'edit' :
-					// 		var canvas_id = text_area_component.dataset.canvas_id;
-					// 		if (typeof component_image_read!=="undefined") {
-					// 			component_image_read.load_draw_editor_read(tag_obj, canvas_id);
-					// 		}else{
-					// 			console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
-					// 		}
-					// 	break;
-					// }
-					break;
-
-				case 'geo' :
-					// Load geo editor
-					event_manager.publish('click_tag_geo' +'_'+ self.id_base, {tag:tag_obj, caller: self})
-					break;
-
-				case 'page':
-					// PDF go to the specific page
-					event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self})
-					break;
-
-				case 'person':
-					// Show person info
-					component_text_area.show_person_info( ed, evt, text_area_component )
-					break;
-				case 'note':
-					// Show note info
-					component_text_area.show_note_info( ed, evt, text_area_component )
-					break;
-				case 'reference':
-					if(evt.altKey===true){
-						// Select all node to override content
-						ed.selection.select(ed.selection.getNode())
-					}else{
-						// Show reference info
-						component_text_area.show_reference_info( ed, evt, text_area_component )
-					}
-					break;
-				default:
-					// nothing to do here
-
-					break;
-			};//end switch
-		}else if(evt.target.nodeName==='LABEL') {
-			// Fix text area selection values
-			if (page_globals.modo==='tool_lang') {
-				component_text_area.show_structuration_info(ed, evt, text_area_component)
 			}
-		}else{
-			// Sets styles on all paragraphs in the currently active editor
-			// if (ed.dom.select('img').length>0) {
-			// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
-			// }
-			event_manager.publish('click_no_tag' +'_'+ self.id_base, {caller: self})
-		};//end click on img
-	};//end click
-
-	custom_events.MouseUp = (evt, options) => {		
-		// user text selection event
-			const selection = options.selection
-			event_manager.publish('text_selection' +'_'+ self.id, {selection:selection, caller: self})
-	};//end MouseUp
-
-	custom_events.KeyUp = (evt, options) => {
-		// use the observe property into ontology of the components to suscribe to this events
-
-		switch(evt.keyCode ){
-			// 'esc' code: 27
-			case  27:
-				event_manager.publish('key_up_esc' +'_'+ self.id_base, evt.keyCode)
-				break;
-			// 'f2' code: 113
-			case 113:
-				// publish event and receive susbscriptors responses
-				const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
-				const susbscriptors_responses_length	= susbscriptors_responses.length
-
-				// debug
-					if(SHOW_DEBUG===true) {
-						console.log("[render_component_text_area.get_custom_events] susbscriptors_responses (key_up_f2):", susbscriptors_responses);
-					}
-
-				// service. get editor and content data
-					const service				= get_service()
-					const editor_content_data	= service.get_editor_content_data()
-
-				// iterate susbscriptors responses
-					for (let i = 0; i < susbscriptors_responses_length; i++) {
-						const data_tag 	= susbscriptors_responses[i]
-						const tag_id 	= (!data_tag.tag_id)
-							? self.get_last_tag_id(editor_content_data, data_tag.type) + 1
-							: data_tag.tag_id;
-
-						switch(data_tag.type) {
-							case ('draw'):
-							case ('geo'):
-								render_layer_selector(self, data_tag, tag_id, service)
-								break;
-							case ('page'):
-								render_page_selector(self, data_tag, tag_id, service)
-								break;
-							default:
-								const tag = build_node_tag(data_tag, tag_id)
-								service.set_content(tag.outerHTML)
-						}// end switch
-					}
-				break;
-		}
-	};//end KeyUp
+		};//end KeyUp
 
 
 	return custom_events
