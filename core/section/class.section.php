@@ -2566,10 +2566,10 @@ class section extends common {
 			$reference_locator->set_section_id($this->section_id);
 
 		# Get calculated inverse locators for all matrix tables
-		$inverse_locators = search::calculate_inverse_locators( $reference_locator );
+		$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
 
 
-		return (array)$inverse_locators;
+		return (array)$ar_inverse_locators;
 	}//end get_inverse_references
 
 
