@@ -120,7 +120,30 @@ tool_indexation.prototype.init = async function(options) {
 			// function text_selection(options) {
 			// 	console.log("event text_selection options:",options);
 			// }
-
+		// change tag state selector
+			self.events_tokens.push(
+				event_manager.subscribe('change_tag_state_' + self.id, fn_change_tag_state)
+			)
+			function fn_change_tag_state(value) {
+				console.warn("tag_state value:",value);
+			}
+		// delete tag
+			self.events_tokens.push(
+				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
+			)
+			function fn_delete_tag(options) {
+				console.warn("fn_delete_tag options:",options);
+			}
+		// click_no_tag
+			self.events_tokens.push(
+				event_manager.subscribe('click_no_tag_' + self.id_base, fn_click_no_tag)
+			)
+			function fn_click_no_tag(options) {
+				if (!self.info_container.classList.contains('hide')) {
+					self.info_container.classList.add('hide')
+				}
+			}
+			
 
 	return common_init
 };//end init

@@ -76,7 +76,7 @@ const get_tag_info = function(self) {
 	// tag dom node
 	// const tag	= options.tag || null
 	// const tag_id	= tag.dataset.tag_id || null
-	const tag_id	= ''
+	let tag_id	= ''
 
 	const info_container = self.info_container
 	
@@ -108,64 +108,80 @@ const get_tag_info = function(self) {
 			inner_html		: tag_id,
 			parent			: fragment_id_info
 		})
-	// wrap_tag_state_selector selector
-		const wrap_tag_state_selector = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrap_tag_state_selector',
-			inner_html		: get_label.state || "State",
-			parent			: common_line
-		})
-	// state selector
-		const tag_state_selector = ui.create_dom_element({
-			element_type	: 'select',
-			class_name		: 'tag_state_selector',
-			inner_html		: get_label.state || "State",
-			parent			: common_line
-		})
-		const states =  [
-			{ label	: get_label.etiqueta_normal,	value : "n"},
-			{ label	: get_label.etiqueta_borrada,	value : "d"},
-			{ label	: get_label.etiqueta_revisar,	value : "r"}
-		]
-		for (let i = 0; i < states.length; i++) {
-			ui.create_dom_element({
-				element_type	: 'option',
-				text_content	: states[i].label,
-				value			: states[i].value,
-				parent			: tag_state_selector
-			})
-		}
 
-	// div_delete_tag
-		const div_delete_tag = ui.create_dom_element({
+	// state
+		// wrap_tag_state_selector selector
+			const wrap_tag_state_selector = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'wrap_tag_state_selector',
+				inner_html		: get_label.state || "State",
+				parent			: common_line
+			})
+		// state selector
+			const tag_state_selector = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'tag_state_selector',
+				inner_html		: get_label.state || "State",
+				parent			: common_line
+			})
+			const states = [
+				{ label	: get_label.etiqueta_normal,	value : "n"},
+				{ label	: get_label.etiqueta_borrada,	value : "d"},
+				{ label	: get_label.etiqueta_revisar,	value : "r"}
+			]
+			for (let k = 0; k < states.length; k++) {
+				ui.create_dom_element({
+					element_type	: 'option',
+					text_content	: states[k].label,
+					value			: states[k].value,
+					parent			: tag_state_selector
+				})
+			}
+			tag_state_selector.addEventListener("change", function(e){
+				event_manager.publish('change_tag_state_' + self.id, {
+					tag_id	: tag_id,
+					value	: this.value
+				})
+			})
+
+	// delete_tag
+		// wrap_delete_tag
+		const wrap_delete_tag = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'div_delete_tag',
-			dataset			: {tag_id : tag_id},
+			class_name		: 'wrap_delete_tag',
 			parent			: common_line
 		})
-		// button delete
+		// button delete tag
 			const button_delete = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove',
-				parent			: div_delete_tag
+				parent			: wrap_delete_tag
 			})
+			button_delete.addEventListener("click", function(e){
+				event_manager.publish('delete_tag_' + self.id, {
+					tag_id : tag_id
+				})
+			})
+		// label
 			const button_delete_label = ui.create_dom_element({
 				element_type	: 'label',
 				inner_html		: get_label.borrar,
-				parent			: div_delete_tag
+				parent			: wrap_delete_tag
 			})
-			div_delete_tag.addEventListener("click", function(e){
-				alert("Deleting " + this.dataset.tag_id);
-			})
+			
 
 	// active values
 		self.active_value("tag_id", function(value){
-			fragment_id_tag_id.textContent	= value
-			div_delete_tag.dataset.tag_id	= value
-			button_delete_label.textContent	= get_label.borrar + " " + value
+			fragment_id_tag_id.textContent	= value // update fragment label
+			button_delete_label.textContent	= get_label.borrar + " " + value // update delete label
+			tag_id							= value // update current tag_id var
+
+			if (self.info_container.classList.contains('hide')) {
+				self.info_container.classList.remove('hide')
+			}
 		})
 		self.active_value("state", function(value){
-			tag_state_selector.value		= value
+			tag_state_selector.value = value
 		})
 
 
@@ -244,7 +260,7 @@ const get_content_data_edit = async function(self) {
 		// info container
 			const info_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'info_container',
+				class_name		: 'info_container hide',
 				parent			: right_container
 			})
 			// fix
