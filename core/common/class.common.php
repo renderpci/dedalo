@@ -1787,7 +1787,7 @@ abstract class common {
 					$ar_current_section_tipo	= $dd_object->section_tipo ?? $dd_object->tipo;
 					$mode						= $dd_object->mode ?? $this->get_modo();
 					$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					$label						= $dd_object->label;
+					$label						= $dd_object->label ?? '';
 
 				// current_section_tipo
 					$current_section_tipo = is_array($ar_current_section_tipo)
@@ -2299,6 +2299,9 @@ abstract class common {
 							// replace default sqo whith the already stored in session (except section_tipo to void loose labels and limit to avoid overwrite list in edit and viceversa)
 							foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
 								if($key==='section_tipo' || $key==='limit') continue;
+								if (!isset($dedalo_request_config->sqo)) {
+									$dedalo_request_config->sqo = new stdClass();
+								}
 								$dedalo_request_config->sqo->{$key} = $value;
 							}
 							// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
