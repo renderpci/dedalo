@@ -234,9 +234,9 @@ export const trigger_request = async function(trigger_url, body) {
 		.catch(error => {
 			console.error("!!!!! REQUEST ERROR: ",error)
 			return {
-				result 	: false,
-				msg 	: error.message,
-				error 	: error
+				result	: false,
+				msg		: error.message,
+				error	: error
 			}
 		});
 
