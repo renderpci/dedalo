@@ -59,18 +59,18 @@ $start_time=microtime(1);
 			session_write_close();
 
 
-		} catch (Throwable $e) { // For PHP 7
+		// } catch (Throwable $e) { // For PHP 7
 			
-			$result = new stdClass();
-				$result->result	= false;
-				$result->msg	= (SHOW_DEBUG===true)
-					? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-					: 'Throwable Exception when calling Dédalo API. Contact with your admin';
-				$result->debug	= (object)[
-					'rqo' => $rqo
-				];
+		// 	$result = new stdClass();
+		// 		$result->result	= false;
+		// 		$result->msg	= (SHOW_DEBUG===true)
+		// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
+		// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
+		// 		$result->debug	= (object)[
+		// 			'rqo' => $rqo
+		// 		];
 			
-			trigger_error($e->getMessage());
+		// 	trigger_error($e->getMessage());
 		
 		} catch (Exception $e) { // For PHP 5
 			
