@@ -1035,8 +1035,8 @@ class component_relation_common extends component_common {
 
 		// properties . get the properties for get search section and component
 			$properties 				= $this->get_properties();
-			$ar_section_to_search 		= $properties->source->section_to_search;
-			$ar_component_to_search 	= $properties->source->component_to_search;
+			$ar_section_to_search 		= isset($properties->source->section_to_search) ? $properties->source->section_to_search: false;
+			$ar_component_to_search 	= isset($properties->source->component_to_search) ? $properties->source->component_to_search: false;
 
 		// current section tipo/id
 			$section_id 	= $this->get_section_id();
@@ -1086,7 +1086,10 @@ class component_relation_common extends component_common {
 					$locator = new locator();
 						$locator->set_section_id($section_id);
 						$locator->set_section_tipo($section_tipo);
-						$locator->set_from_component_tipo($component_to_search);
+						if($ar_component_to_search !== false){
+							$locator->set_from_component_tipo($component_to_search);
+						}
+						
 			}
 
 		// new dato
@@ -1212,7 +1215,7 @@ class component_relation_common extends component_common {
 					}
 
 					// if the current section_id is the same of the current instace update the dato of the current instance
-					// else update the dato of the other instances (references witht the same dato)
+					// else update the dato of the other instances (references with the same dato)
 					if($current_section->section_id == $this->section_id){
 						$this->set_dato($dato);
 					}

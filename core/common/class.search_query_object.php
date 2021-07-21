@@ -174,7 +174,7 @@ class search_query_object {
 	* }]
 	* @return bool true 
 	*/
-	public function set_select(a $value) {
+	public function set_select(array $value) {
 		
 		$this->select = $value;
 
@@ -188,9 +188,14 @@ class search_query_object {
 	* @param int $value like 10
 	* @return bool true
 	*/
-	public function set_limit(int $value) {
-		
-		$this->limit = $value;
+	public function set_limit($value) {
+		if(empty($value)){
+			$this->limit = 'ALL';
+			return true;
+
+		} 
+
+		$this->limit = (int)$value;
 
 		return true;
 	}//end set_limit
@@ -202,9 +207,9 @@ class search_query_object {
 	* @param int $value like 0
 	* @return bool true
 	*/
-	public function set_offset(int $value) {
-		
-		$this->offset = $value;
+	public function set_offset($value) {
+		if(empty($value)) return false;
+		$this->offset = (int)$value;
 
 		return true;
 	}//end set_offset

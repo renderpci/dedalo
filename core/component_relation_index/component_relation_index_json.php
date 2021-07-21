@@ -54,6 +54,36 @@
 
 	if($options->get_data===true && $permissions>0){
 
+
+		# Custom propiedades external dato
+		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
+			(isset($properties->source->mode) && $properties->source->mode==='external')) {
+			
+			$reference_locator = new locator();
+				$reference_locator->set_section_tipo($this->section_tipo);
+				$reference_locator->set_section_id($this->section_id);
+
+			# Get calculated inverse locators for all matrix tables
+			$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
+
+			$new_dato = [];
+			foreach ($ar_inverse_locators as $reference_locator) {
+				$locator = new locator();
+					$locator->set_type($reference_locator->type);
+					$locator->set_section_tipo($reference_locator->from_section_tipo);
+					$locator->set_section_id($reference_locator->from_section_id);
+					$locator->set_component_tipo($reference_locator->tag_component_tipo);
+					$locator->set_tag_id($reference_locator->tag_id);
+					$locator->set_section_top_id($reference_locator->section_top_id);
+					$locator->set_section_top_tipo($reference_locator->section_top_tipo);
+
+					$new_dato[] = $locator;
+
+			}
+			$this->set_dato($new_dato);
+
+		}
+
 		$dato = $this->get_dato();
 
 		if (!empty($dato)) {
