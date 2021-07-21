@@ -181,29 +181,30 @@ component_portal.prototype.build = async function(autoload=false){
 		await generate_rqo()
 
 	// debug check
-		if(SHOW_DEBUG===true) {
-			// console.log("portal generate_rqo 1 self.rqo_config:", JSON.parse( JSON.stringify(self.rqo_config) ));
-			// console.log("portal generate_rqo 1 self.rqo:", JSON.parse( JSON.stringify(self.rqo) ));
-			const ar_used = []
-			for(const element of self.datum.data) {
+		// if(SHOW_DEBUG===true) {
+		// 	// console.log("portal generate_rqo 1 self.rqo_config:", JSON.parse( JSON.stringify(self.rqo_config) ));
+		// 	// console.log("portal generate_rqo 1 self.rqo:", JSON.parse( JSON.stringify(self.rqo) ));
+		// 	const ar_used = []
+		// 	for(const element of self.datum.data) {
 
-				if (element.matrix_id) { continue; } // skip verification in matrix data
+		// 		if (element.matrix_id) { continue; } // skip verification in matrix data
 
-				const index = ar_used.findIndex(item => item.tipo===element.tipo &&
-														item.section_tipo===element.section_tipo &&
-														item.section_id==element.section_id &&
-														item.from_component_tipo===element.from_component_tipo &&
-														item.parent_section_id==element.parent_section_id &&
-														item.row_section_id==element.row_section_id
-														// && (item.matrix_id && item.matrix_id==element.matrix_id)
-														)
-				if (index!==-1) {
-					console.error("PORTAL ERROR. self.datum.data contains duplicated elements:", ar_used[index]);
-				}else{
-					ar_used.push(element)
-				}
-			}
-		}
+		// 		const index = ar_used.findIndex(item => item.tipo===element.tipo &&
+		// 												item.section_tipo===element.section_tipo &&
+		// 												item.section_id==element.section_id &&
+		// 												item.from_component_tipo===element.from_component_tipo &&
+		// 												item.parent_section_id==element.parent_section_id &&
+		// 												item.row_section_id==element.row_section_id
+		// 												// && (item.matrix_id && item.matrix_id==element.matrix_id)
+		// 												// && (item.tag_id && item.tag_id==element.tag_id)
+		// 												)
+		// 		if (index!==-1) {
+		// 			console.error("PORTAL ERROR. self.datum.data contains duplicated elements:", ar_used[index]);
+		// 		}else{
+		// 			ar_used.push(element)
+		// 		}
+		// 	}
+		// }
 	
 	// load data if not yet received as an option
 		if (autoload===true) {
@@ -381,6 +382,8 @@ component_portal.prototype.add_value = async function(value) {
 
 /**
 * UPDATE_PAGINATION_VALUES
+* @param string action
+* @return bool true
 */
 component_portal.prototype.update_pagination_values = function(action) {
 
@@ -437,10 +440,12 @@ component_portal.prototype.update_pagination_values = function(action) {
 			event_manager.subscribe('render_'+self.id, refresh_paginator)
 		)
 		function refresh_paginator(node) {
-			event_manager.unsubscribe('render_'+self.id)
-			if (self.paginator) {
-				self.paginator.refresh()
-			}
+			// remove the event to prevent multiple equal events
+				event_manager.unsubscribe('render_'+self.id)
+			// refresh paginator if already exists
+				if (self.paginator) {
+					self.paginator.refresh()
+				}
 		}
 
 	// set value
@@ -497,16 +502,17 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 /**
 * RESET_FILTER_DATA
 * reset filtered data to the original and full server data
-* @return true
+* @return bool true
 */
 component_portal.prototype.reset_filter_data = function(options){
 
 	const self = this
 
 	// refresh the data with the full data from datum and render portal.
-	self.data	= self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+		self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
 	
-	self.render({render_level : 'content'})
+	// re-render content
+		self.render({render_level : 'content'})
 
 	return true
 }// end reset_filter_data
