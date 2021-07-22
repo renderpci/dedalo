@@ -171,8 +171,8 @@ class component_relation_related extends component_relation_common {
 	public function get_dato_with_references() {
 
 		$dato 		= $this->get_dato();
-
 		$references = $this->get_calculated_references(true);
+
 		$dato_with_references = array_merge($dato, $references);
 
 		return $dato_with_references;

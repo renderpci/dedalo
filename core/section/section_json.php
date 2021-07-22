@@ -11,44 +11,45 @@
 
 
 // context
-	$context = [];
+	$context	= [];
+	$data		= [];
 	
-	if($options->get_context===true  && $permissions>0){
-		switch ($options->context_type) {
+	// if($options->get_context===true  && $permissions>0 && empty($context)){
+	// 	switch ($options->context_type) {
 			
-			case 'simple':
+	// 		case 'simple':
 
-				// Component structure context_simple (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context_simple($permissions, $add_rqo=false);
-				break;
+	// 			// Component structure context_simple (tipo, relations, properties, etc.)
+	// 				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=false);
+	// 			break;
 
-			default:
+	// 		default:
 				
-				// if ($modo==='tm99') {
-				// 	// Component structure context (tipo, relations, properties, etc.)
-				// 		$context = $this->get_tm_context($permissions);					
-				// }else{
+	// 			// if ($modo==='tm99') {
+	// 			// 	// Component structure context (tipo, relations, properties, etc.)
+	// 			// 		$context = $this->get_tm_context($permissions);					
+	// 			// }else{
 
-				// section structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $add_rqo=true);
+	// 			// section structure context (tipo, relations, properties, etc.)
+	// 				$context[] = $this->get_structure_context($permissions, $add_rqo=true);
 			
-				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
-					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);					
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
-				break;
-		}
+	// 			// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
+	// 				$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);					
+	// 				foreach ($ar_subcontext as $current_context) {
+	// 					$context[] = $current_context;
+	// 				}
+	// 			break;
+	// 	}
 
-		$this->context = $context;
-	}//end if($options->get_context===true)
+	// 	$this->context = $context;
+	// }//end if($options->get_context===true)
 
 
+	if($permissions>0){	
 
-// data
-	$data = [];
-
-	if($options->get_data===true && $permissions>0){
+		$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+		
+		$context[] = $this->context;
 
 		if ($modo==='tm') {
 			
@@ -69,8 +70,15 @@
 					$value = [$locator];
 
 				// subdata add
-					$sub_data = $this->get_ar_subdata($value);
-					foreach ($sub_data as $sub_value) {
+					$subdatum = $this->get_subdatum($tipo, $value);
+					
+					$ar_subcontext	= $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}					
+
+					$ar_subdata		= $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
 						$data[] = $sub_value;
 					}
 		}
