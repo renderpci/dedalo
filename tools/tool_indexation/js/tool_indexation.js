@@ -9,7 +9,7 @@
 	import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, trigger_request} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation, add_component} from './render_tool_indexation.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 
@@ -75,7 +75,7 @@ tool_indexation.prototype.init = async function(options) {
 	const self = this
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_indexation/trigger.tool_indexation.php"
+		self.trigger_url 	= DEDALO_TOOLS_URL + "/tool_indexation/trigger.tool_indexation.php"
 		self.lang 			= options.lang // from page_globals.dedalo_data_lang
 		self.langs 			= page_globals.dedalo_projects_default_langs
 
@@ -133,6 +133,8 @@ tool_indexation.prototype.init = async function(options) {
 			)
 			function fn_delete_tag(options) {
 				console.warn("fn_delete_tag options:",options);
+				const tag_id = options.tag_id
+				self.delete_tag(tag_id)
 			}
 		// click_no_tag
 			self.events_tokens.push(
@@ -565,5 +567,94 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 
 	return datum
 };//end load_related_sections_list
+
+
+
+/**
+* DELETE_TAG
+* Remove selected tag an all relations / indexes associated
+* Delete / remove current tag in all component langs, all references (inverse) in all portals and index record (matrix descriptors)
+* @param object button_obj
+* @return promise
+*/
+tool_indexation.prototype.delete_tag = function(tag_id) {
+
+	const self = this
+
+		console.warn("delete_tag tag_id:",tag_id); 
+
+	// Confirm action
+	if( !confirm( get_label.eliminar_etiqueta + "\n\n "+ tag_id +"\n\n") )  return false;
+	if( !confirm( get_label.atencion + "!! \n" + get_label.borrara_la_etiqueta_seleccionada ) )  return false;
+
+
+	const body = {
+		mode			: 'delete_tag', // name of trigger function to manage this request
+		section_tipo	: self.main_component.section_tipo, // current component_text_area section_tipo
+		section_id		: self.main_component.section_id, // component_text_area section_id
+		component_tipo	: self.main_component.tipo, // component_text_area tipo
+		lang			: self.main_component.lang, // component_text_area lang
+		tag_id			: tag_id // current selected tag (passed as param)
+	}
+		console.log("body:",body);
+	
+	return new Promise(function(resolve){
+		trigger_request(self.trigger_url, body)
+		.then(function(response){
+			console.warn("response:",response);
+
+			resolve(response.result)
+		})
+	})	 
+
+	return
+
+	const trigger_vars = {
+		mode 		 	: 'delete_tag',
+		section_tipo 	: tool_indexation.locator.section_tipo,
+		section_id 	 	: tool_indexation.locator.section_id,
+		component_tipo  : tool_indexation.locator.component_tipo,
+		tag_obj  		: tool_indexation.tag_obj,
+		tag_id  		: tool_indexation.locator.tag_id,
+		locator 	 	: tool_indexation.locator,
+		lang 			: tool_indexation.lang
+	}
+	//return console.log(trigger_vars)
+
+	// Return a promise of XMLHttpRequest
+	const js_promise = common.get_json_data(this.url_trigger, trigger_vars).then(function(response) {
+			if(SHOW_DEBUG===true) {
+				console.log("[tool_indexation.delete_tag] response",response)
+			}
+
+			if (!response || response.result!==true) {
+
+				alert("Error on remove tag: "+ tool_indexation.locator.tag_id)
+			}else{
+				/*
+				// Refresh fragment_info // tagName, tipo, parent, section_tipo, lang
+				tool_indexation.fragment_info(tool_indexation.tag,
+											  tool_indexation.component_tipo,
+											  tool_indexation.section_id,
+											  tool_indexation.section_tipo,
+											  tool_indexation.lang)
+				*/
+				// Refresh component text area
+				setTimeout(function(){
+					component_text_area.load_tr( document.querySelector('.css_text_area'), tinymce.activeEditor );
+				},1000)
+				
+
+				// Clean selected fragment info
+				var indexation_page_list = document.getElementById('indexation_page_list')
+					//indexation_page_list.html('');
+					var myNode = indexation_page_list; while (myNode.firstChild) {
+						myNode.removeChild(myNode.firstChild);
+					}
+			}
+	})
+
+	return js_promise
+};//end delete_tag
 
 
