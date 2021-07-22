@@ -14,36 +14,40 @@
 
 
 // context
-	$context = [];
 
-	if($options->get_context===true && $permissions>0){
-		switch ($options->context_type) {
-			case 'simple':
-				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
-				break;
+	// if($options->get_context===true && $permissions>0){
+	// 	switch ($options->context_type) {
+	// 		case 'simple':
+	// 			// Component structure context_simple (tipo, relations, properties, etc.)
+	// 			$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
+	// 			break;
 
-			default:
-				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $add_rqo=true);
+	// 		default:
+	// 			// Component structure context (tipo, relations, properties, etc.)
+	// 				$current_context = $this->get_structure_context($permissions, $add_rqo=true);
 
-					$context[] = $current_context;
+	// 				$context[] = $current_context;
 
-				// subcontext from element layout_map items (from_parent, parent_grouper)
-					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
-				break;
-		}
-	}//end if($options->get_context===true)
+	// 			// subcontext from element layout_map items (from_parent, parent_grouper)
+	// 				$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
+	// 				foreach ($ar_subcontext as $current_context) {
+	// 					$context[] = $current_context;
+	// 				}
+	// 			break;
+	// 	}
+	// }//end if($options->get_context===true)
 
 
 
 // data
+	$context = [];
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($permissions>0){
+
+		// Component structure context (tipo, relations, properties, etc.)
+			$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+			$context[] = $this->context;
 
 		$dato = $this->get_dato();
 
@@ -68,8 +72,17 @@
 				$data[] = $item;
 
 			// subcontext data from layout_map items
-				$ar_subdata = $this->get_ar_subdata($value);
+				// $ar_subdata = $this->get_ar_subdata($value);
 
+			$subdatum = $this->get_subdatum($tipo, $value);
+					
+			$ar_subcontext	= $subdatum->context;
+			foreach ($ar_subcontext as $current_context) {
+				$context[] = $current_context;
+			}					
+
+			
+			$ar_subdata		= $subdatum->data;
 			// subdata add
 			if ($modo==='list') {
 				foreach ($ar_subdata as $current_data) {

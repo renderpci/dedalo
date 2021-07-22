@@ -16,39 +16,43 @@
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
-		// $api_start_time=microtime(1);
-		switch ($options->context_type) {
-			case 'simple':
-				// Component structure context_simple (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
-				break;
+	// if($options->get_context===true && $permissions>0){
+	// 	// $api_start_time=microtime(1);
+	// 	switch ($options->context_type) {
+	// 		case 'simple':
+	// 			// Component structure context_simple (tipo, relations, properties, etc.)
+	// 				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
+	// 			break;
 
-			default:
+	// 		default:
 
-				// Component structure context (tipo, relations, properties, etc.)
-					$current_context	= $this->get_structure_context($permissions, $add_request_config=true);
-					$context[]			= $current_context;
+	// 			// Component structure context (tipo, relations, properties, etc.)
+	// 				$current_context	= $this->get_structure_context($permissions, $add_request_config=true);
+	// 				$context[]			= $current_context;
 
-				// subcontext from element layout_map items (from_parent, parent_grouper)
-					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
+	// 			// subcontext from element layout_map items (from_parent, parent_grouper)
+					// $ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
+	// 				foreach ($ar_subcontext as $current_context) {
+	// 					$context[] = $current_context;
+	// 				}
 
 
-				break;
-		}
-		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
-	}//end if($options->get_context===true)
+	// 			break;
+	// 	}
+	// 	// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
+	// }//end if($options->get_context===true)
 
 
 
 // data
+	$context = [];
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($permissions>0){
 		// $api_start_time_data=microtime(1);
+
+		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
+		$context[]		= $this->context;
 
 		$section_id	= $this->get_section_id();
 		$limit		= $this->pagination->limit;
@@ -95,25 +99,42 @@
 					$item->pagination = $pagination;
 
 				$data[] = $item;
+
+				$subdatum = $this->get_subdatum($tipo, $value);
+					
+				$ar_subcontext	= $subdatum->context;
+				foreach ($ar_subcontext as $current_context) {
+					$context[] = $current_context;
+				}					
+
+				$ar_subdata		= $subdatum->data;
+				foreach ($ar_subdata as $sub_value) {
+					$data[] = $sub_value;
+				}
 			
 
-			// subdata from subcontext items
-				$ar_subdata = $this->get_ar_subdata($value);
 
-				// if ($modo==='list') {
-					foreach ($ar_subdata as $current_data) {
 
-						// add subdata items parent_tipo/parent_section_id to identify indirect data
-							// $current_data->parent_tipo			= $tipo;
-							// $current_data->parent_section_id	= $current_data->section_id; //	$section_id;
 
-						$data[] = $current_data;
-					}
-				// }else{
-				// 	foreach ($ar_subdata as $current_data) {
-				// 		$data[] = $current_data;
-				// 	}
-				// }
+
+
+			// // subdata from subcontext items
+			// 	$ar_subdata = $this->get_ar_subdata($value);
+
+			// 	// if ($modo==='list') {
+			// 		foreach ($ar_subdata as $current_data) {
+
+			// 			// add subdata items parent_tipo/parent_section_id to identify indirect data
+			// 				// $current_data->parent_tipo			= $tipo;
+			// 				// $current_data->parent_section_id	= $current_data->section_id; //	$section_id;
+
+			// 			$data[] = $current_data;
+			// 		}
+			// 	// }else{
+			// 	// 	foreach ($ar_subdata as $current_data) {
+			// 	// 		$data[] = $current_data;
+			// 	// 	}
+			// 	// }
 
 
 		}//end if (!empty($dato))
