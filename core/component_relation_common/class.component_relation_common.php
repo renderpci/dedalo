@@ -139,7 +139,8 @@ class component_relation_common extends component_common {
 		// load. Load matrix data and set this->dato
 			$this->load_component_dato();
 
-		$dato = $this->dato;
+		$dato = $this->dato ?? [];
+			// dump($dato, ' dato ++ '.to_string($this->tipo));
 
 		return $dato;
 	}//end get_dato
@@ -1026,11 +1027,9 @@ class component_relation_common extends component_common {
 		$start_time=microtime(1);
 
 		// dato set
-			if ($current_dato!==false) {
-				$dato = $current_dato;
-			}else{
-				$dato = $this->get_dato();
-			}
+			$dato = ($current_dato!==false)
+				? $current_dato
+				: $this->get_dato();
 			#dump($dato, ' dato ++ '.to_string());
 
 		// properties . get the properties for get search section and component

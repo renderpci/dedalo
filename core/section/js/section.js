@@ -222,7 +222,8 @@ section.prototype.build = async function(autoload=false) {
 				mode	: self.mode
 			})
 			self.filter.build()
-		}	
+		}
+		// console.log("section build filter unactive (remember) ");	
 	
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -335,17 +336,6 @@ section.prototype.build = async function(autoload=false) {
 				})
 			)//end events push
 		}//end if (!self.paginator)
-
-	// filter search
-		// if (!self.filter && self.permissions>0) {
-		// 	self.filter = new search()
-		// 	self.filter.init({
-		// 		caller	: self,
-		// 		mode	: self.mode
-		// 	})
-		// 	self.filter.build()
-		// }
-		// console.log("section build filter unactive (remember) ");
 
 	// inspector
 		if (!self.inspector && self.permissions) {
