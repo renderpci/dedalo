@@ -418,7 +418,7 @@ component_text_area.prototype.update_tag = function(options) {
 	const self = this
 
 	// check options value
-		if (typeof options == "undefined") {
+		if (typeof options==="undefined") {
 			alert("Please select tag");
 			console.error("[component_text_area.update_tag] ERROR. Stopped update_tag. Empty options:", options);
 			console.trace();
