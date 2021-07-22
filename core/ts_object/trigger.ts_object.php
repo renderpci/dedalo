@@ -72,7 +72,7 @@ function get_children_data($json_data) {
 		# sort_elements
 		#if(SHOW_DEBUG===true) $start_time = start_time();
 		#$children = ts_object::sort_elements($children, 'asc');
-		#if(SHOW_DEBUG===true) debug_log(__METHOD__." Titme to sort children ".count($children)." - ".exec_time($start_time,""), logger::DEBUG);
+		#if(SHOW_DEBUG===true) debug_log(__METHOD__." Time to sort children ".count($children)." - ".exec_time($start_time,""), logger::DEBUG);
 	}
 
 
@@ -585,7 +585,7 @@ function save_order($json_data) {
 																  'edit',
 																  DEDALO_DATA_NOLAN,
 																  $section_tipo);
-	// Current component dato is replaced completly with the new dato
+	// Current component dato is replaced completely with the new dato
 	// This action returns the dato parsed with method component_relation_common->set_dato()
 	$component_relation_children->set_dato($dato);
 	$result = $component_relation_children->Save();

@@ -1762,7 +1762,7 @@ export const ts_object = new function() {
 
 		// component instance
 			let current_component, component_node
-			if (self.editing_component_instance && self.editing_component_instance.tipo===tipo) {
+			if (self.editing_component_instance && self.editing_component_instance.tipo===tipo && self.editing_component_instance.section_id===section_id) {
 			
 				current_component	= self.editing_component_instance
 				component_node		= current_component.node[0]
