@@ -215,14 +215,14 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// filter search
-		if (self.mode!=='tm' && !self.filter) {
-			self.filter = new search()
-			self.filter.init({
-				caller	: self,
-				mode	: self.mode
-			})
-			self.filter.build()
-		}
+		// if (self.mode!=='tm' && !self.filter) {
+		// 	self.filter = new search()
+		// 	self.filter.init({
+		// 		caller	: self,
+		// 		mode	: self.mode
+		// 	})
+		// 	self.filter.build()
+		// }
 		// console.log("section build filter unactive (remember) ");	
 	
 	// load data if is not already received as option
@@ -380,6 +380,7 @@ section.prototype.build = async function(autoload=false) {
 													item.parent_section_id==element.parent_section_id && 
 													item.row_section_id==element.row_section_id 
 													// && (item.matrix_id && item.matrix_id==element.matrix_id)
+													&& (item.tag_id && item.tag_id==element.tag_id)
 													)
 					if (index!==-1) {
 						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", ar_used[index]); // clone(self.datum.data)
