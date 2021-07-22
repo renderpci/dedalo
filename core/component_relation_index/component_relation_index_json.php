@@ -14,77 +14,50 @@
 
 
 // context
-	$context = [];
+	// if($options->get_context===true && $permissions>0){
 
-	if($options->get_context===true && $permissions>0){
-		switch ($options->context_type) {
-			case 'simple':
-				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
-				break;
+	// 	switch ($options->context_type) {
+	// 		case 'simple':
+	// 			// Component structure context_simple (tipo, relations, properties, etc.)
+	// 			$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
+	// 			break;
 
-			default:
-				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $add_rqo=true);
-					// // add records_mode to properties, if not already defined
-					// if (!isset($current_context->properties->source->records_mode)) {
-					// 	if (!property_exists($current_context, 'properties')) {
-					// 		$current_context->properties = new stdClass();
-					// 	}
-					// 	if (!property_exists($current_context->properties, 'source')) {
-					// 		$current_context->properties->source = new stdClass();
-					// 	}
-					// 	$current_context->properties->source->records_mode = 'list';
-					// }
-					$context[] = $current_context;
+	// 		default:
+	// 			// Component structure context (tipo, relations, properties, etc.)
+	// 				$current_context = $this->get_structure_context($permissions, $add_rqo=true);
+	// 				// // add records_mode to properties, if not already defined
+	// 				// if (!isset($current_context->properties->source->records_mode)) {
+	// 				// 	if (!property_exists($current_context, 'properties')) {
+	// 				// 		$current_context->properties = new stdClass();
+	// 				// 	}
+	// 				// 	if (!property_exists($current_context->properties, 'source')) {
+	// 				// 		$current_context->properties->source = new stdClass();
+	// 				// 	}
+	// 				// 	$current_context->properties->source->records_mode = 'list';
+	// 				// }
+	// 				$context[] = $current_context;
 
-				// subcontext from element layout_map items (from_parent, parent_grouper)
-					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
-				break;
-		}
-	}//end if($options->get_context===true)
+	// 			// subcontext from element layout_map items (from_parent, parent_grouper)
+	// 				$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
+	// 				foreach ($ar_subcontext as $current_context) {
+	// 					$context[] = $current_context;
+	// 				}
+	// 			break;
+	// 	}
+	// }//end if($options->get_context===true)
 
 
 
 // data
-	$data = [];
+	$context	= [];
+	$data		= [];
 
-	if($options->get_data===true && $permissions>0){
+	if($permissions>0){
 
+		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
+		$context[]		= $this->context;
 
-		# Custom propiedades external dato
-		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
-			(isset($properties->source->mode) && $properties->source->mode==='external')) {
-			
-			$reference_locator = new locator();
-				$reference_locator->set_section_tipo($this->section_tipo);
-				$reference_locator->set_section_id($this->section_id);
-
-			# Get calculated inverse locators for all matrix tables
-			$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
-
-			$new_dato = [];
-			foreach ($ar_inverse_locators as $reference_locator) {
-				$locator = new locator();
-					$locator->set_type($reference_locator->type);
-					$locator->set_section_tipo($reference_locator->from_section_tipo);
-					$locator->set_section_id($reference_locator->from_section_id);
-					$locator->set_component_tipo($reference_locator->tag_component_tipo);
-					$locator->set_tag_id($reference_locator->tag_id);
-					$locator->set_section_top_id($reference_locator->section_top_id);
-					$locator->set_section_top_tipo($reference_locator->section_top_tipo);
-
-					$new_dato[] = $locator;
-
-			}
-			$this->set_dato($new_dato);
-
-		}
-
-		$dato = $this->get_dato();
+		$dato = $this->get_data();
 
 		if (!empty($dato)) {
 
@@ -106,23 +79,80 @@
 
 				$data[] = $item;
 
-			// subcontext data from layout_map items
-				$ar_subdata = $this->get_ar_subdata($value);
 
-			// subdata add
-				if ($modo==='list') {
-					foreach ($ar_subdata as $current_data) {
+		
+			foreach ($value as $locator) {
+		
+				$current_section_tipo	= $locator->section_tipo;
+				$current_section_id		= $locator->section_id;
 
-						$current_data->parent_tipo			= $tipo;
-						$current_data->parent_section_id	= $section_id;
+				$section = section::get_instance($current_section_id, $current_section_tipo, 'list');
 
-						$data[] = $current_data;
-					}
-				}else{
-					foreach ($ar_subdata as $current_data) {
-						$data[] =$current_data;
-					}
+				$section_json = $section->get_json();
+
+				$ar_subcontext	= $section_json->context;
+				foreach ($ar_subcontext as $current_context) {
+					$current_context->parent = $tipo;
+					$context[] = $current_context;
+				}					
+
+				$ar_subdata		= $section_json->data;
+				foreach ($ar_subdata as $sub_value) {
+					$sub_value->parent = $tipo;
+					$data[] = $sub_value;
 				}
+			
+
+				// $context	= array_merge($context, $section_json->context);
+				// $data		= array_merge($data, $section_json->data);
+
+			}
+	
+			// if (!empty($ar_section_tipo)) {
+			// 	foreach ($ar_section_tipo as $current_section_tipo) {
+
+			// 		$section = section::get_instance(null, $current_section_tipo, 'list');
+
+			// 		$section_options = new stdClass();
+			// 				$section_options->get_context	= true;
+			// 				$section_options->get_data 	 	= false;
+			// 			$section_json = $section->get_json($section_options);
+
+			// 		$context = array_merge($context, $section_json->context);
+			// 	}
+			// }
+
+
+
+
+
+			// subcontext data from layout_map items
+				// $ar_subdata = $this->get_ar_subdata($value);
+
+			// $subdatum = $this->get_subdatum($tipo, $value);
+
+			// $ar_subcontext	= $subdatum->context;
+			// foreach ($ar_subcontext as $current_context) {
+			// 	$context[] = $current_context;
+			// }					
+			
+			// $ar_subdata		= $subdatum->data;
+
+
+			// // subdata add
+			// 	if ($modo==='list') {
+			// 		foreach ($ar_subdata as $current_data) {
+
+			// 			$current_data->parent_tipo			= $tipo;
+			// 			$current_data->parent_section_id	= $section_id;
+
+			// 			$data[] = $current_data;
+			// 		}
+			// 	}else{
+			// 		foreach ($ar_subdata as $current_data) {
+			// 			$data[] =$current_data;
+			// 		}
+			// 	}
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 
