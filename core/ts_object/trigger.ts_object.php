@@ -8,11 +8,9 @@ include(DEDALO_CORE_PATH . '/ts_object/class.ts_object.php');
 
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 $options = new stdClass();
-if (isset($_GET['mode']) && $_GET['mode']==='get_children_data') {
-	$options->source = 'GET';
-}else{
-	$options->source = 'php://input';
-}
+// $options->source = (isset($_GET['mode']) && $_GET['mode']==='get_children_data')
+// 	? 'GET'
+// 	: 'php://input';
 common::trigger_manager($options);
 
 # IGNORE_USER_ABORT
