@@ -2122,10 +2122,10 @@ abstract class common {
 
 	/**
 	* GET_SUBDATUM
-	* @return 
+	* @return object
+	* 	Object with two properties: context, data
 	*/
 	public function get_subdatum($from_parent=null, $ar_locators=[]) {
-
 		// dump(null, ' get_ar_subcontext call this **************************** '.to_string($this->tipo).' - $from_parent: '.$from_parent);
 
 		$ar_subcontext	= [];
@@ -2135,7 +2135,7 @@ abstract class common {
 			static $ar_subcontext_calculated = [];
 		
 
-		// request_config
+		// request_config. On empty return empty context and data object
 			$request_config = $this->context->request_config ?? null;
 			if(empty($request_config)) {
 				return (object)[
@@ -2209,7 +2209,7 @@ abstract class common {
 						$ar_current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
 						$mode						= $dd_object->mode ?? $this->get_modo();
 						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$label						= $dd_object->label;
+						$label						= $dd_object->label ?? '';
 
 					// current_section_tipo
 						$current_section_tipo = is_array($ar_current_section_tipo)
@@ -2223,7 +2223,7 @@ abstract class common {
 						// 	// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
 						// }
 
-					// common temporal excluded/mapped models *******					
+					// common temporal excluded/mapped models *******
 						$match_key = array_search($model, common::$ar_temp_map_models);
 						if (false!==$match_key) {
 							debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
@@ -2236,25 +2236,24 @@ abstract class common {
 					// related_element switch
 						switch (true) {
 
-							// section case
+							// section case ( ! ESTE CASO SE DA ????? - 22-07-2021)
 							case ($model==='section'):
-
-								$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
-
+								
 								// section
 									$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
+									
+								// datos column already resolved case, inject data in current section
+									$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
 									if (!is_null($datos)) {
 										$section->set_dato($datos);
 										$section->set_bl_loaded_matrix_data(true);
 									}
 
-								// get component json
-									$get_json_options = new stdClass();
-										$get_json_options->get_context 	= false;
-										$get_json_options->get_data 	= true;
-									$element_json = $section->get_json($get_json_options);
+								// get component json (inlcude context and data)
+									// $element_json = $section->get_json();
+									$related_element = $section;
+								
 								break;
-
 
 							// component case
 							case (strpos($model, 'component_')===0):
@@ -2268,7 +2267,6 @@ abstract class common {
 																					 $current_section_tipo);
 								// virtual request_config
 									$children = get_children_resursive($request_config_item->show->ddo_map, $dd_object);
-
 									if (!empty($children)) {
 										$new_rqo_config = unserialize(serialize($request_config_item));
 										$new_rqo_config->show->ddo_map = $children;
@@ -2277,13 +2275,13 @@ abstract class common {
 									}
 
 								// Inject this tipo as related component from_component_tipo
-									$source_model	= get_called_class();
+									$source_model = get_called_class();
 									if (strpos($source_model, 'component_')===0){
 										$related_element->from_component_tipo	= $this->tipo;
 										$related_element->from_section_tipo		= $this->section_tipo;
 									}
 
-								break;				
+								break;
 
 							// grouper case
 							case (in_array($model, common::$groupers)):
@@ -2316,13 +2314,8 @@ abstract class common {
 									// $item_options->context_type = 'simple';
 								$element_json = $related_element->get_json($item_options);
 
-							// temp ar_subcontext
-								if (is_null($ar_subcontext)) {
-									$bt = debug_backtrace();
-									dump($bt, ' ar_subcontext bt ++ '.to_string($current_tipo));
-								}
-								$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
-						
+							// ar_subcontext								
+								$ar_subcontext = array_merge($ar_subcontext, $element_json->context);						
 
 							// row_section_id
 							// add parent_section_id with the main locator section_id that define the row, to perserve row coherence between all columns
@@ -2335,7 +2328,7 @@ abstract class common {
 									$ar_final_subdata[] = $value_obj;
 								}
 
-							//dd_info, additional information to the component, like parents
+							// dd_info, additional information to the component, like parents
 								$value_with_parents = $dd_object->value_with_parents ?? false;
 								if ($value_with_parents===true) {
 									$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
@@ -2346,13 +2339,11 @@ abstract class common {
 								$ar_subdata = array_merge($ar_subdata, $ar_final_subdata);
 							// data add
 								#$ar_subdata[] = $element_json->data;
-						}
+						}//end if (isset($related_element))
 
 
 					// add calculated subcontext
-						$ar_subcontext_calculated[] = $cid;
-
-						
+						$ar_subcontext_calculated[] = $cid;						
 
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 			}// end foreach($ar_locators as $current_locator)
