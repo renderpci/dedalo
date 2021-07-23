@@ -8,6 +8,8 @@ require_once(DEDALO_LIB_BASE_PATH . '/common/class.TR.php');
 
 class tool_indexation extends tool_common {
 	
+
+
 	# media component
 	protected $component_obj ;
 
@@ -16,7 +18,11 @@ class tool_indexation extends tool_common {
 
 	public $context ;	//= 'inspector'; # inspector | tool_window
 
-	
+
+
+	/**
+	* __CONSTRUCT
+	*/
 	public function __construct($component_obj, $modo='button') {
 		
 		# Fix modo
@@ -24,11 +30,12 @@ class tool_indexation extends tool_common {
 
 		# Fix current media component
 		$this->component_obj = $component_obj;
-			#dump($component_obj,"component_obj");
 
 		$this->context = new stdClass();
 			$this->context->context_name = 'inspector';
-	}
+
+		return true;
+	}//end __construct
 
 
 
@@ -151,5 +158,4 @@ class tool_indexation extends tool_common {
 	
 
 	
-}
-?>
+}//end tool_indexation

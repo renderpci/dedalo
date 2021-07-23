@@ -67,7 +67,7 @@ class data_check {
 				}
 				$result_seq 	= JSON_RecordObj_matrix::search_free($sql);
 				if (pg_num_rows($result_seq) === 0) {
-					debug_log(__METHOD__." Warning. {$table_name}_id_seq not found in $search_table ".to_string(), logger::WARNING);
+					debug_log(__METHOD__." Warning. {$table_name}_id_seq not found in $search_table - v $server_major_version ".PHP_EOL.to_string($sql), logger::WARNING);
 					continue;	// Skip empty tables
 				}
 				$last_value 	= pg_fetch_result($result_seq, 0, 'last_value');
