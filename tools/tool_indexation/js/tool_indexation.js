@@ -133,9 +133,20 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
 			)
 			function fn_delete_tag(options) {
-				console.warn("fn_delete_tag options:",options);
+				
 				const tag_id = options.tag_id
+
 				self.delete_tag(tag_id)
+				.then(function(response){
+					if (response.result!==false) {
+						// indexing_component. Remember force refresh full data and datum before refresh
+							self.indexing_component.data	= null
+							self.indexing_component.datum	= null
+							self.indexing_component.refresh()
+						// main_component (text_area)
+							self.main_component.refresh()
+					}
+				})
 			}
 		// click_no_tag
 			self.events_tokens.push(
@@ -185,7 +196,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 */
 tool_indexation.prototype.load_indexing_component = async function() {
 
-	const self = this	
+	const self = this
 	
 	// indexing_component		
 		const component						= self.caller
@@ -240,6 +251,15 @@ tool_indexation.prototype.load_indexing_component = async function() {
 tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
+
+	// destroy previous component instances
+		if (self.main_component) {
+			const instance_index = self.ar_instances.findIndex( el => el.id===self.main_component.id)
+			if (instance_index!==-1) {
+				self.ar_instances.splice(instance_index, 1)
+			}
+			await self.main_component.destroy()
+		}
 	
 	const component		= self.caller
 	const context		= JSON.parse(JSON.stringify(component.context))
@@ -583,80 +603,44 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 
 	const self = this
 
-		console.warn("delete_tag tag_id:",tag_id); 
-
 	// Confirm action
-	if( !confirm( get_label.eliminar_etiqueta + "\n\n "+ tag_id +"\n\n") )  return false;
-	if( !confirm( get_label.atencion + "!! \n" + get_label.borrara_la_etiqueta_seleccionada ) )  return false;
+		if( !confirm( `${get_label.eliminar_etiqueta} \n ${tag_id} \n`) ) {
+			return Promise.resolve(false);
+		}
+		if( !confirm( `${get_label.atencion} !! \n ${get_label.borrara_la_etiqueta_seleccionada} \n` ) )  {
+			return Promise.resolve(false);
+		}
 
+	// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'delete_tag')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			section_tipo			: self.main_component.section_tipo, // current component_text_area section_tipo
+			section_id				: self.main_component.section_id, // component_text_area section_id
+			main_component_tipo		: self.main_component.tipo, // component_text_area tipo
+			main_component_lang		: self.main_component.lang, // component_text_area lang
+			indexing_component_tipo	: self.indexing_component.tipo, // component_relation_xxx used to store indexation locators 
+			tag_id					: tag_id // current selected tag (passed as param)	
+		}
 
-	const body = {
-		mode			: 'delete_tag', // name of trigger function to manage this request
-		section_tipo	: self.main_component.section_tipo, // current component_text_area section_tipo
-		section_id		: self.main_component.section_id, // component_text_area section_id
-		component_tipo	: self.main_component.tipo, // component_text_area tipo
-		lang			: self.main_component.lang, // component_text_area lang
-		tag_id			: tag_id // current selected tag (passed as param)
-	}
-		console.log("body:",body);
+	// rqo		
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
+		}
 	
-	return new Promise(function(resolve){
-		trigger_request(self.trigger_url, body)
-		.then(function(response){
-			console.warn("response:",response);
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
 
-			resolve(response.result)
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				console.warn("-> delete_tag API response:",response);
+				resolve(response)
+			})
 		})
-	})	 
-
-	return
-
-	const trigger_vars = {
-		mode 		 	: 'delete_tag',
-		section_tipo 	: tool_indexation.locator.section_tipo,
-		section_id 	 	: tool_indexation.locator.section_id,
-		component_tipo  : tool_indexation.locator.component_tipo,
-		tag_obj  		: tool_indexation.tag_obj,
-		tag_id  		: tool_indexation.locator.tag_id,
-		locator 	 	: tool_indexation.locator,
-		lang 			: tool_indexation.lang
-	}
-	//return console.log(trigger_vars)
-
-	// Return a promise of XMLHttpRequest
-	const js_promise = common.get_json_data(this.url_trigger, trigger_vars).then(function(response) {
-			if(SHOW_DEBUG===true) {
-				console.log("[tool_indexation.delete_tag] response",response)
-			}
-
-			if (!response || response.result!==true) {
-
-				alert("Error on remove tag: "+ tool_indexation.locator.tag_id)
-			}else{
-				/*
-				// Refresh fragment_info // tagName, tipo, parent, section_tipo, lang
-				tool_indexation.fragment_info(tool_indexation.tag,
-											  tool_indexation.component_tipo,
-											  tool_indexation.section_id,
-											  tool_indexation.section_tipo,
-											  tool_indexation.lang)
-				*/
-				// Refresh component text area
-				setTimeout(function(){
-					component_text_area.load_tr( document.querySelector('.css_text_area'), tinymce.activeEditor );
-				},1000)
-				
-
-				// Clean selected fragment info
-				var indexation_page_list = document.getElementById('indexation_page_list')
-					//indexation_page_list.html('');
-					var myNode = indexation_page_list; while (myNode.firstChild) {
-						myNode.removeChild(myNode.firstChild);
-					}
-			}
-	})
-
-	return js_promise
 };//end delete_tag
 
 
