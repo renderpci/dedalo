@@ -41,89 +41,146 @@ class tool_indexation { // extends tool_common
 
 	/**
 	* DELETE_TAG
+	* Deletes all tag relations (indexing_component) and finally removes
+	* the tag in all langs of main_component
+	* 
 	* @param object $request_options
 	* @return object $response
-	* Deletes all tag relations (index and portal) and finally removes the tag in all langs
-	* @see trigger.tool_indexation.php
 	*/
 	public static function delete_tag( $request_options ) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= [];
+
 		
-		$options = new stdClass();
-			$options->section_tipo 	= null;
-			$options->section_id 	= null;
-			$options->component_tipo= null;
-			$options->tag_id 		= null;
-			$options->lang 			= null;
-			foreach ($request_options as $key => $value) {
-				if (property_exists($options, $key)) {
-					$options->$key = $value;
-					$$key = $value; // Create simple variables for easy select
+		// options get and set
+			$options = new stdClass();
+				$options->section_tipo				= null;
+				$options->section_id				= null;
+				$options->main_component_tipo		= null; // component_text_area tipo
+				$options->main_component_lang		= null; // component_text_area lang
+				$options->indexing_component_tipo	= null; // component_relation_xxx used to store indexation locators
+				$options->tag_id					= null;
+				
+				foreach ($request_options as $key => $value) {
+					if (property_exists($options, $key)) {
+						$options->$key = $value;
+					}
 				}
+
+		// indexing_component. Remove locators with tag_id given
+			$model_name			= RecordObj_dd::get_modelo_name_by_tipo($options->indexing_component_tipo,true);
+			$indexing_lang		= common::get_element_lang($options->indexing_component_tipo, DEDALO_DATA_LANG);
+			$indexing_component	= component_common::get_instance($model_name,
+																 $options->indexing_component_tipo,
+																 $options->section_id,
+																 'list',
+																 $indexing_lang,
+																 $options->section_tipo);
+			// stored locator sample
+				// {
+				// 	"type": "dd96",
+				// 	"tag_id": "19",
+				// 	"section_id": "2",
+				// 	"section_tipo": "dc1",
+				// 	"section_top_id": "2",
+				// 	"section_top_tipo": "ich100",
+				// 	"tag_component_tipo": "rsc36",
+				// 	"from_component_tipo": "rsc860"
+				// }
+
+			$pseudo_locator = new stdClass();
+				$pseudo_locator->tag_id	= $options->tag_id;
+				$pseudo_locator->type	= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
+
+			$ar_properties = ['tag_id','type']; // properties to compare
+			
+			$removed = $indexing_component->remove_locator_from_dato($pseudo_locator, $ar_properties);
+			$response->msg[] = $removed===true 
+				? 'Removed locators with tag_id '.$options->tag_id
+				: 'No locators are removed with tag_id '.$options->tag_id;
+
+			if ($removed===true) {
+				$indexing_component->Save();
 			}
 
-		# GET INVERSE RELATIONS TO CURRENT TAG
-		# And remove it
-			$locator = new locator();
-				$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
-				$locator->set_component_tipo($component_tipo);
-				$locator->set_tag_id($tag_id);				
+		// component_text_area. Remove tag in all langs
+			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($options->main_component_tipo,true);
+			$component_text_area	= component_common::get_instance( $model_name,
+																	  $options->main_component_tipo,
+																	  $options->section_id,
+																	  'edit',
+																	  $options->main_component_lang,
+																	  $options->section_tipo);
 
-						
-			$ar_locators = search::calculate_inverse_locators( $locator );
-				dump($ar_locators, ' ar_locators ++ '.to_string());
-				dump($locator, ' locator ++ '.to_string());
-				die();
-
-			foreach ($ar_locators as $pseudo_locator) {
-
-				if (empty($pseudo_locator->from_component_tipo)) {
-					debug_log(__METHOD__." Error on locate property from_component_tipo in locator ".json_encode($pseudo_locator), logger::ERROR);
-					continue;
-				}
-
-				$current_component_tipo  = $pseudo_locator->from_component_tipo;
-				$current_section_tipo 	 = $pseudo_locator->from_section_tipo;
-				$current_section_id   	 = $pseudo_locator->from_section_id;
-
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $current_component_tipo,
-																 $current_section_id,
-																 'edit',
-																 DEDALO_DATA_NOLAN,
-																 $current_section_tipo);
-				$current_locator = clone($locator);
-				$component->remove_locator( $current_locator );
-				$component->Save();
-
-				debug_log(__METHOD__." Deleted inverse relation in $modelo_name - $current_section_tipo - $current_component_tipo - $current_section_id - ".json_encode($pseudo_locator), logger::DEBUG);
-
-				$response->msg[] = "Deleted locator: ".json_encode($pseudo_locator);
-			}//end oreach ($ar_locators as $current_locator)
+			$ar_tag_deleted		= (array)$component_text_area->delete_tag_from_all_langs($options->tag_id, $tag_type='index'); // note that "tag" is complete in or out tag like [index-n-8]
+			$n_deleted			= count($ar_tag_deleted) ?? 0;
+			$response->msg[]	= $n_deleted>0
+				? 'Deleted tag '.$options->tag_id.' in '.$n_deleted.' langs: '.to_string($ar_tag_deleted).' ('.$model_name.' - '.$options->main_component_tipo.')'
+				: 'No tags are deleted in '.$model_name.' tipo: '.$options->main_component_tipo.' with tag_id '.$options->tag_id;
+			
+			debug_log(__METHOD__." AR_TAG_DELETED: ".to_string($ar_tag_deleted), logger::DEBUG);
 
 
-		#
-		# TEXT AREA
-		# Remove tag from text
-		$component_text_area = component_common::get_instance('component_text_area',
-															  $component_tipo,
-															  $section_id,
-															  'edit',
-															  $lang,
-															  $section_tipo);		
-		$ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs($tag_id, $tag_type='index'); // note that "tag" is complete in or out tag like [index-n-8]
-			$response->msg[] = "Deleted in langs ".count($ar_tag_deleted)." the tag \"$tag_id\" from component_text_area $component_tipo [$section_tipo - $section_id]";
-			$response->debug['ar_tag_deleted'] = $ar_tag_deleted;	
+		// DES
+			// # GET INVERSE RELATIONS TO CURRENT TAG
+			// # And remove it
+			// 	$locator = new locator();
+			// 		$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
+			// 		$locator->set_section_tipo($section_tipo);
+			// 		$locator->set_section_id($section_id);
+			// 		$locator->set_component_tipo($component_tipo);
+			// 		$locator->set_tag_id($tag_id);				
+
+							
+			// 	$ar_locators = search::calculate_inverse_locators( $locator );
+			// 		dump($ar_locators, ' ar_locators ++ '.to_string());
+			// 		dump($locator, ' locator ++ '.to_string());
+			// 		die();
+
+			// 	foreach ($ar_locators as $pseudo_locator) {
+
+			// 		if (empty($pseudo_locator->from_component_tipo)) {
+			// 			debug_log(__METHOD__." Error on locate property from_component_tipo in locator ".json_encode($pseudo_locator), logger::ERROR);
+			// 			continue;
+			// 		}
+
+			// 		$current_component_tipo  = $pseudo_locator->from_component_tipo;
+			// 		$current_section_tipo 	 = $pseudo_locator->from_section_tipo;
+			// 		$current_section_id   	 = $pseudo_locator->from_section_id;
+
+			// 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+			// 		$component 		= component_common::get_instance($modelo_name,
+			// 														 $current_component_tipo,
+			// 														 $current_section_id,
+			// 														 'edit',
+			// 														 DEDALO_DATA_NOLAN,
+			// 														 $current_section_tipo);
+			// 		$current_locator = clone($locator);
+			// 		$component->remove_locator( $current_locator );
+			// 		$component->Save();
+
+			// 		debug_log(__METHOD__." Deleted inverse relation in $modelo_name - $current_section_tipo - $current_component_tipo - $current_section_id - ".json_encode($pseudo_locator), logger::DEBUG);
+
+			// 		$response->msg[] = "Deleted locator: ".json_encode($pseudo_locator);
+			// 	}//end oreach ($ar_locators as $current_locator)
+
+
+			// #
+			// # TEXT AREA
+			// # Remove tag from text
+			// $component_text_area = component_common::get_instance('component_text_area',
+			// 													  $component_tipo,
+			// 													  $section_id,
+			// 													  'edit',
+			// 													  $lang,
+			// 													  $section_tipo);		
+			// $ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs($tag_id, $tag_type='index'); // note that "tag" is complete in or out tag like [index-n-8]
+			// 	$response->msg[] = "Deleted in langs ".count($ar_tag_deleted)." the tag \"$tag_id\" from component_text_area $component_tipo [$section_tipo - $section_id]";
+			// 	$response->debug['ar_tag_deleted'] = $ar_tag_deleted;	
 				
-		
-		
-		$response->msg 	  = implode(PHP_EOL, $response->msg);	
+				
 		$response->result = true;
 
 		return (object)$response;
