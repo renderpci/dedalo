@@ -1586,7 +1586,7 @@ abstract class common {
 	* GET_AR_SUBCONTEXT
 	* @return array $ar_subcontext
 	*/
-	public function get_ar_subcontext_DES($from_parent=null, $from_parent_grouper=null) {
+	public function get_ar_subcontext_OLD_DES($from_parent=null, $from_parent_grouper=null) {
 
 		$ar_subcontext = [];
 
@@ -1725,7 +1725,7 @@ abstract class common {
 	* GET_AR_SUBCONTEXT
 	* @return array $ar_subcontext
 	*/
-	public function get_ar_subcontext($from_parent=null, $from_parent_grouper=null) {
+	public function get_ar_subcontext_NEW_DES($from_parent=null, $from_parent_grouper=null) {
 		// dump(null, ' get_ar_subcontext call this **************************** '.to_string($this->tipo).' - $from_parent: '.$from_parent);
 
 		$ar_subcontext = [];
@@ -1903,7 +1903,7 @@ abstract class common {
 	* @param array $ar_locators
 	* @return array $ar_subcontext
 	*/
-	public function get_ar_subdata($ar_locators) {
+	public function get_ar_subdata_DES($ar_locators) {
 		
 		$ar_subdata = [];
 

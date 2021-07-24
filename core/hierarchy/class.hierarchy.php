@@ -1316,7 +1316,7 @@ class hierarchy {
 		$element_tipo = null;
 
 		# Search map
-		$ar_elements = hierarchy::get_section_map_elemets($section_tipo);
+		$ar_elements = section::get_section_map($section_tipo);
 			#dump($ar_elements, ' $ar_elements ++ '.to_string($section_tipo));
 
 		foreach ($ar_elements as $object_value) {
@@ -1337,7 +1337,7 @@ class hierarchy {
 	* Get elements from section_list_thesaurus -> properties
 	* @return array ar_elements
 	*/
-	public static function get_section_map_elemets( $section_tipo ) {
+	public static function get_section_map_elemets_DES( $section_tipo ) {
 
 		$ar_elements = array();
 
