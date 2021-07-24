@@ -413,15 +413,15 @@ class ts_object extends Accessors {
 
 		foreach ((array)$ar_children as $key => $current_locator) {
 			
-			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );
+			$section_map = section::get_section_map( $current_locator->section_tipo );
 				// dump($section_map, ' section_map ++ '.to_string());
 
-			if (!isset($section_map['thesaurus']->is_descriptor)) {
+			if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
 				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
 				continue;
 			}
 
-			$component_tipo = $section_map['thesaurus']->is_descriptor;
+			$component_tipo = $section_map->thesaurus->is_descriptor;
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 	 	= component_common::get_instance($modelo_name,
 															 $component_tipo,
@@ -454,18 +454,18 @@ class ts_object extends Accessors {
 			return false;
 		}
 
-		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
-		if (!isset($section_map['thesaurus']->is_indexable)) {
+		$section_map = section::get_section_map( $section_tipo );
+		if (!isset($section_map->thesaurus->is_indexable)) {
 			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
 			return false;
 		}
 
-		if ($section_map['thesaurus']->is_indexable===false) {
+		if ($section_map->thesaurus->is_indexable===false) {
 			# properties set as false case
 			return false;
 		}
 
-		$component_tipo = $section_map['thesaurus']->is_indexable;
+		$component_tipo = $section_map->thesaurus->is_indexable;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$component 	 	= component_common::get_instance($modelo_name,
 														 $component_tipo,
@@ -497,7 +497,7 @@ class ts_object extends Accessors {
 
 		foreach ((array)$ar_children as $key => $current_locator) {
 
-			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );
+			$section_map = section::get_section_map( $current_locator->section_tipo );
 			#dump($section_map['thesaurus']->is_descriptor, ' $section_map ++ '.to_string($current_locator->section_tipo));
 
 			if (!isset($section_map['thesaurus']->is_descriptor)) {
