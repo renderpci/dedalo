@@ -159,14 +159,14 @@ function add_child($json_data) {
 						}
 
 	// section map
-		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
+		$section_map = section::get_section_map( $section_tipo );
 
 	// set new section component 'is_descriptor' value
-		if (!isset($section_map['thesaurus']->is_descriptor)) {
+		if (!isset($section_map->thesaurus->is_descriptor)) {
 			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
-			if ($section_map['thesaurus']->is_descriptor!==false) {
-				$component_tipo = $section_map['thesaurus']->is_descriptor;
+			if ($section_map->thesaurus->is_descriptor!==false) {
+				$component_tipo = $section_map->thesaurus->is_descriptor;
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				$component 	 	= component_common::get_instance($modelo_name,
 																 $component_tipo,
@@ -180,11 +180,11 @@ function add_child($json_data) {
 		}
 
 	// is_indexable default value set
-		if (!isset($section_map['thesaurus']->is_indexable)) {
+		if (!isset($section_map->thesaurus->is_indexable)) {
 			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
-			if ($section_map['thesaurus']->is_indexable!==false) {
-				$component_tipo = $section_map['thesaurus']->is_indexable;
+			if ($section_map->thesaurus->is_indexable!==false) {
+				$component_tipo = $section_map->thesaurus->is_indexable;
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				$component 	 	= component_common::get_instance($modelo_name,
 																 $component_tipo,
@@ -272,14 +272,14 @@ function add_child_from_hierarchy($json_data) {
 							return $response;
 						}
 	// section map
-		$section_map = hierarchy::get_section_map_elemets( $target_section_tipo );
+		$section_map = section::get_section_map( $target_section_tipo );
 
 	// set new section component 'is_descriptor' value
-		if (!isset($section_map['thesaurus']->is_descriptor)) {
+		if (!isset($section_map->thesaurus->is_descriptor)) {
 			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
-			if ($section_map['thesaurus']->is_descriptor!==false) {
-				$component_tipo = $section_map['thesaurus']->is_descriptor;
+			if ($section_map->thesaurus->is_descriptor!==false) {
+				$component_tipo = $section_map->thesaurus->is_descriptor;
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				$component 	 	= component_common::get_instance($modelo_name,
 																 $component_tipo,
@@ -292,11 +292,11 @@ function add_child_from_hierarchy($json_data) {
 		}
 
 	// set new section component 'is_indexable' value
-		if (!isset($section_map['thesaurus']->is_indexable)) {
+		if (!isset($section_map->thesaurus->is_indexable)) {
 			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
-			if ($section_map['thesaurus']->is_indexable!==false) {
-				$component_tipo = $section_map['thesaurus']->is_indexable;
+			if ($section_map->thesaurus->is_indexable!==false) {
+				$component_tipo = $section_map->thesaurus->is_indexable;
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				$component 	 	= component_common::get_instance($modelo_name,
 																 $component_tipo,
