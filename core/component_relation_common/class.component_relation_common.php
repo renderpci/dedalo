@@ -519,6 +519,8 @@ class component_relation_common extends component_common {
 
 	/**
 	* REMOVE_LOCATOR_FROM_DATO
+	* Removes from dato one or more locators that accomplish given locator equality
+	* @param array $ar_properties
 	* @return bool
 	*/
 	public function remove_locator_from_dato( $locator, $ar_properties=[] ) {
@@ -539,7 +541,7 @@ class component_relation_common extends component_common {
 
 		$removed 		= false;
 		$new_relations 	= array();
-		$dato = (array)$this->get_dato($ar_properties);
+		$dato = (array)$this->get_dato();
 		foreach($dato as $key => $current_locator_obj) {
 
 			# Test if already exists
@@ -553,7 +555,8 @@ class component_relation_common extends component_common {
 				$new_relations[] = $current_locator_obj;
 			}
 		}
-		#debug_log(__METHOD__." ".get_called_class()." $this->tipo, $this->section_tipo, $this->parent. To remove:".to_string($locator)." - final dato:".to_string($new_relations)." - removed: ".to_string($removed), logger::DEBUG);
+		// error_log("Removed: ".json_encode($removed));
+		// debug_log(__METHOD__." ".get_called_class()." $this->tipo, $this->section_tipo, $this->parent. To remove:".to_string($locator)." - final dato:".to_string($new_relations)." - removed: ".to_string($removed), logger::DEBUG);
 
 		# Updates current dato relations with clean array of locators
 		if ($removed===true) {

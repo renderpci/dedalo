@@ -7,7 +7,7 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, trigger_request} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation, add_component} from './render_tool_indexation.js'
@@ -35,6 +35,7 @@ export const tool_indexation = function () {
 	this.langs
 	this.caller // component text area base (user selects tool button from it)
 	this.main_component // component text area where we are working into the tool
+	this.indexing_component // component_relation_index used to store indexation locators
 	this.related_sections_list // datum of related_sections_list (to obtaim list of top_section_tipo/id)
 
 
@@ -269,6 +270,7 @@ tool_indexation.prototype.get_component = async function(lang) {
 	// store instances to remove on destroy
 	self.ar_instances.push(instance)
 
+	// fix instance
 	self.main_component = instance
 
 
@@ -563,7 +565,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 		const current_data_manager	= new data_manager()
 		const api_response			= await current_data_manager.request({body:rqo})
 	
-	const datum = api_response.result	
+	const datum = api_response.result
 
 	return datum
 };//end load_related_sections_list
