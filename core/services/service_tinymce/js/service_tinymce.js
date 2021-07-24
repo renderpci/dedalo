@@ -307,7 +307,7 @@ export const service_tinymce = function() {
 
 	/**
 	* GET_EDITOR_CONTENT_DATA
-	* @return
+	* @return DOM node | false
 	*/
 	this.get_editor_content_data = function() {
 
@@ -316,7 +316,13 @@ export const service_tinymce = function() {
 			// console.log("self:",self);
 			// console.log("self.editor:",self.editor);
 
+		if (!self.editor) {
+			console.error("Error on get self.editor. Not available. self:", self);
+			return false
+		}
+
 		const editor_content_data = self.editor.getBody();
+			console.warn("-- editor_content_data:",editor_content_data);
 
 		return editor_content_data
 	};//end get_editor_content_data
