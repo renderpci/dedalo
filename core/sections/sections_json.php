@@ -10,7 +10,7 @@
 
 
 // context
-	$context = [];
+
 	
 	// if($options->get_context===true){
 	// 	switch ($options->context_type) {
@@ -59,18 +59,39 @@
 
 
 // data
-	$data = [];
+	$context	= [];
+	$data		= [];
 
 	// if($options->get_data===true){
 	
 		// dato is the full result of a search using the search_query_object
 		$dato = $this->get_dato();
 
+		if (empty($dato)) {
 
+			$ar_section_tipo	= $this->get_ar_section_tipo();
 
-		if (!empty($dato)) {
+			foreach ((array)$ar_section_tipo as $current_section_tipo) {
+					
+				$section = $section_class::get_instance(null, $current_section_tipo, $modo);
 
-			// data item
+				// pagination. fix pagination vars (defined in class component_common)
+					$limit	= $this->search_query_object->limit;
+					$offset	= $this->search_query_object->offset;
+					$pagination = new stdClass();
+						$pagination->limit	= $limit;
+						$pagination->offset	= $offset;
+					$section->pagination = $pagination;
+			
+				// section JSON context
+					$section_json = $section->get_json();
+
+				$context = array_merge($context, $section_json->context);
+			}
+	
+
+		}else{
+				// data item
 				$value = array_map(function($item) use($modo){
 					
 					$locator = new stdClass();
@@ -112,26 +133,15 @@
 					// section instance
 						$section = $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
 
-
-					// switch ($options->context_type) {
-					// 	case 'simple':
-					// 		// Component structure context_simple (tipo, relations, properties, etc.)
-					// 		$context[] = $this->get_structure_context_simple($permissions);
-					// 		break;
-
-					// 	default:								
-							// pagination. fix pagination vars (defined in class component_common)
-								$limit	= $this->search_query_object->limit;
-								$offset	= $this->search_query_object->offset;
-								$pagination = new stdClass();
-									$pagination->limit	= $limit;
-									$pagination->offset	= $offset;
-								$section->pagination = $pagination;															
-					// 		break;
-					// }
-
-					
-
+							
+					// pagination. fix pagination vars (defined in class component_common)
+						$limit	= $this->search_query_object->limit;
+						$offset	= $this->search_query_object->offset;
+						$pagination = new stdClass();
+							$pagination->limit	= $limit;
+							$pagination->offset	= $offset;
+						$section->pagination = $pagination;															
+	
 					if ($modo==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
 					}else{
@@ -157,8 +167,8 @@
 
 				}//end foreach ($dato as $current_record)
 
-		}//end if (!empty($dato))
 
+		}
 	// }// end if $permissions > 0
 
 
