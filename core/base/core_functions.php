@@ -1591,3 +1591,25 @@ function insert_into(&$array, array $keys, $value) {
 }//end insert_into
 
 
+
+/**
+* GET_OBJECT_PROPERTY
+* Extract value from a object using dynamic path array
+*/
+function get_object_property($object, $ar_property_path) {
+  
+  foreach ($ar_property_path as $property_name) {
+    // basic protection against bad path 
+    if (!property_exists($object,$property_name)) return null;
+    // get the property 
+    $property = $object->{$property_name};
+    // if it is not an object it has to be the end point
+    if (!is_object($property)) return $property;
+    // if it is an object replace current object 
+    $object = $property;
+  }
+  
+  return $object;
+}//end get_object_property
+
+
