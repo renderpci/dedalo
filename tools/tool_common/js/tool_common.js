@@ -36,7 +36,7 @@ export const tool_common = function(){
 * }
 */
 tool_common.prototype.init = async function(options) {
-
+	
 	const self = this
 
 	// set vars
@@ -44,14 +44,14 @@ tool_common.prototype.init = async function(options) {
 		self.tool_section_tipo	= options.tool_object.section_tipo
 		self.tool_section_id	= options.tool_object.section_id
 		self.mode				= options.mode
+		self.lang				= options.lang
 		self.caller				= options.caller
 		self.node				= []
 		self.type				= 'tool'
 		self.ar_instances		= []
-		self.events_tokens		= []
-		self.lang				= options.lang
+		self.events_tokens		= []		
 		self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common	
-		self.get_label			= get_label // get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
+		self.get_label			= get_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 	// set status
 		self.status = 'initied'

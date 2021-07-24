@@ -681,40 +681,42 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 		// 	}
 		// }
 		for (let i = 0; i < ddo_map.length; i++) {
+			
 			const current_ddo = ddo_map[i]
-			if(current_ddo.parent !== caller_tipo) continue;
-			const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
+			
+			// skip ddo with parent different from current caller
+				if(current_ddo.parent !== caller_tipo) continue;
+			
+			// context
+				const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
 
-			if (!current_context) {
-				console.warn("Skip context not found for current ddo:", current_ddo);
-				console.warn("datum.context:", datum.context);
-				continue;
-			}	
+			// no context case. When context is calculated as subcontext, is associated to data. Therefore, sometimes show->ddo contains more items than 
+			// the calculated in context (empty portals for example). This is not an error really
+				if (!current_context) {
+					// console.warn("Skip context not found for current ddo:", current_ddo);
+					// console.warn("datum.context:", datum.context);
+					continue;
+				}
 
 			// rqo_config
-			const rqo_config	= current_context.request_config
-				? current_context.request_config.find(el => el.api_engine==='dedalo')
-				: null
+				const rqo_config	= current_context.request_config
+					? current_context.request_config.find(el => el.api_engine==='dedalo')
+					: null
 		
-			// if (!current_context) {
-			// 	console.warn("Ignored not found ddo: [current_tipo, self.datum.context]", current_context.tipo, datum.context);
-			// 	continue
-			// }
-			ar_ddo.push(current_ddo)
+			// add current_ddo
+				ar_ddo.push(current_ddo)
 
-			if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
-				const current_ddo_map = rqo_config.show.ddo_map
-				const sub_ddo_map = get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
-				ar_ddo.push(...sub_ddo_map)
-			}
-		}
+			// add sub_ddo_map
+				if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
+					const current_ddo_map	= rqo_config.show.ddo_map
+					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+					ar_ddo.push(...sub_ddo_map)
+				}
+		}//end for (let i = 0; i < ddo_map.length; i++) 
 
-		
-			// console.log("current_ddo:",current_ddo);
+	
 	return ar_ddo
 }//end build_request_show
-
-
 
 
 

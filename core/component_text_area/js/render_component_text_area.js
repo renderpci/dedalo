@@ -554,7 +554,7 @@ const get_custom_buttons = (self, i, service) => {
 		custom_buttons.push({
 			name 	: "button_delete_structuration",
 			options : {
-				text	: "Delete chapter",
+				text	: 'Delete chapter',
 				tooltip	: 'Delete structuration',
 				icon	: false,
 				onclick	: function(evt) {
@@ -568,7 +568,7 @@ const get_custom_buttons = (self, i, service) => {
 		custom_buttons.push({
 			name 	: "button_add_structuration",
 			options : {
-				text	: "Add chapter",
+				text	: 'Add chapter',
 				tooltip	: 'Add structuration',
 				icon	: false,
 				onclick	: function(evt) {
@@ -582,7 +582,7 @@ const get_custom_buttons = (self, i, service) => {
 		custom_buttons.push({
 			name 	: "button_change_structuration",
 			options : {
-				text	: "Change chapter",
+				text	: 'Change chapter',
 				tooltip	: 'Change structuration',
 				icon	: false,
 				onclick	: function(evt) {
@@ -758,6 +758,7 @@ const get_custom_events = (self, i, service) => {
 				// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
 				// }
 				event_manager.publish('click_no_tag' +'_'+ self.id_base, {caller: self})
+				// event_manager.publish('click_no_tag' +'_'+ self.id, {caller: self})
 			};//end click on img
 		};//end click
 

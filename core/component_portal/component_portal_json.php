@@ -14,7 +14,7 @@
 
 
 // context
-	$context = [];
+	// $context = [];
 
 	// if($options->get_context===true && $permissions>0){
 	// 	// $api_start_time=microtime(1);
@@ -45,46 +45,47 @@
 
 
 // data
-	$context = [];
-	$data = [];
+	$context	= [];
+	$data		= [];
 
 	if($permissions>0){
-		// $api_start_time_data=microtime(1);
 
-		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
-		$context[]		= $this->context;
+		// context get and fix
+			$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
+			$context[]		= $this->context;
 
-		$section_id	= $this->get_section_id();
-		$limit		= $this->pagination->limit;
-		$offset		= $this->pagination->offset;
+		// short vars
+			$section_id	= $this->get_section_id();
+			$limit		= $this->pagination->limit;
+			$offset		= $this->pagination->offset;
 
-
-		# Custom propiedades external dato
-		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
-			(isset($properties->source->mode) && $properties->source->mode==='external')) {
-			$this->set_dato_external(true, true);	// Forces update dato with calculated external dato
-		}
+		// custom properties external dato
+			if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
+				(isset($properties->source->mode) && $properties->source->mode==='external')) {
+				$this->set_dato_external(true, true);	// Forces update dato with calculated external dato
+			}
 
 		$dato = $this->get_dato();
-			// dump($dato, ' dato ++ '.to_string("$this->tipo - $this->section_tipo - $this->section_id - $this->modo"));
 
-		switch ($modo) {
-			case 'list':
-			// data item (list mode result don't include self data, only subdata)				
-				$limit  = 2; // (!) note than in list mode, limit is always 2
-				$value	= $this->get_dato_paginated($limit);
-				break;
+		// value
+			switch ($modo) {
+				case 'list':
+					// data item (list mode result don't include self data, only subdata)				
+					$limit  = 2; // (!) note than in list mode, limit is always 2
+					$value	= $this->get_dato_paginated($limit);
+					break;
 
-			case 'search':
-				$value	= $dato;
-				break;
+				case 'search':
+					$value	= $dato;
+					break;
 
-			case 'edit':
-			default:
-				$value	= $this->get_dato_paginated();
-				break;
-		}
+				case 'edit':
+				default:
+					$value	= $this->get_dato_paginated();
+					break;
+			}//end switch ($modo)
 
+		// data
 		if (!empty($dato)) {
 
 			// data item (list mode result don't include self data, only subdata)
@@ -101,46 +102,42 @@
 				$data[] = $item;
 
 				$subdatum = $this->get_subdatum($tipo, $value);
-					
-				$ar_subcontext	= $subdatum->context;
+
+				$ar_subcontext = $subdatum->context;
 				foreach ($ar_subcontext as $current_context) {
 					$context[] = $current_context;
-				}					
+				}
 
-				$ar_subdata		= $subdatum->data;
+				$ar_subdata = $subdatum->data;
 				foreach ($ar_subdata as $sub_value) {
 					$data[] = $sub_value;
 				}
-			
-
-
-
-
 
 
 			// // subdata from subcontext items
-			// 	$ar_subdata = $this->get_ar_subdata($value);
+				// 	$ar_subdata = $this->get_ar_subdata($value);
 
-			// 	// if ($modo==='list') {
-			// 		foreach ($ar_subdata as $current_data) {
+				// 	// if ($modo==='list') {
+				// 		foreach ($ar_subdata as $current_data) {
 
-			// 			// add subdata items parent_tipo/parent_section_id to identify indirect data
-			// 				// $current_data->parent_tipo			= $tipo;
-			// 				// $current_data->parent_section_id	= $current_data->section_id; //	$section_id;
+				// 			// add subdata items parent_tipo/parent_section_id to identify indirect data
+				// 				// $current_data->parent_tipo			= $tipo;
+				// 				// $current_data->parent_section_id	= $current_data->section_id; //	$section_id;
 
-			// 			$data[] = $current_data;
-			// 		}
-			// 	// }else{
-			// 	// 	foreach ($ar_subdata as $current_data) {
-			// 	// 		$data[] = $current_data;
-			// 	// 	}
-			// 	// }
+				// 			$data[] = $current_data;
+				// 		}
+				// 	// }else{
+				// 	// 	foreach ($ar_subdata as $current_data) {
+				// 	// 		$data[] = $current_data;
+				// 	// 	}
+				// 	// }
 
 
 		}//end if (!empty($dato))
 		// dump(null, 'Time to data portal 2 : '.exec_time_unit($api_start_time_data,'ms')." ms".to_string());
 	}//end if $options->get_data===true && $permissions>0
-
+	// dump($context, ' context ++ '.to_string($this->tipo));
+	// dump($data, ' data ++ '.to_string($this->tipo));
 
 
 // JSON string

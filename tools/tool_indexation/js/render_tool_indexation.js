@@ -172,9 +172,11 @@ const get_tag_info = function(self) {
 
 	// active values
 		self.active_value("tag_id", function(value){
+
+			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
 			button_delete_label.textContent	= get_label.borrar + " " + value // update delete label
-			tag_id							= value // update current tag_id var
+			
 
 			if (self.info_container.classList.contains('hide')) {
 				self.info_container.classList.remove('hide')

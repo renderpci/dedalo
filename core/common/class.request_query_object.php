@@ -6,7 +6,7 @@
 
 	// STRUCTURE
 		dd_api	: API class that will be used
-		action	: API method that will be used
+		action	: API method that will be used (like 'get_menu')
 		source	: component, section, menu, etc that made the call
 			action	: API method that will be used with the source
 		sqo		: search query object active width DDBB
@@ -15,7 +15,7 @@
 		search	: layout_map and sqo_config 
 			(it modify the show and it will create the choose, when these object is not sended)
 		choose	: layout_map 
-			(it modify search)
+			(it modify search)		
 		
 		// info about
 			Mandatory	: dd_api, action, source
