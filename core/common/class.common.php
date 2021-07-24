@@ -2704,41 +2704,41 @@ abstract class common {
 
 				// if($external===false && $item_request_config->sqo->type==='external') continue; // ignore external
 
-				$parsed_item = new stdClass();
-					// $parsed_item->typo = 'rqo';
-					// $parsed_item->sqo->tipo = $tipo;
+				// parsed_item. Base object to fulfill with the necessary properties (api_engine, sqo, show, search, choose)
+					$parsed_item = new stdClass();
+						// $parsed_item->typo = 'rqo';
+						// $parsed_item->sqo->tipo = $tipo;
 
 				// api_engine
 					$parsed_item->api_engine = isset($item_request_config->api_engine)
 						? $item_request_config->api_engine
 						: 'dedalo';
 
-				// SQO
+				// sqo. Add search query object property
 					$parsed_item->sqo = $item_request_config->sqo ?? new stdClass();
 
-				// section_tipo. get the ar_sections as ddo
-					if (isset($parsed_item->sqo->section_tipo)){
-						$ar_section_tipo = component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id);
-					}else{
-						$ar_section_tipo = [$section_tipo];
-					}
+					// section_tipo. get the ar_sections as ddo
+						$ar_section_tipo = isset($parsed_item->sqo->section_tipo)
+							? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id)
+							: [$section_tipo];
 
-					$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
-						$ddo = new dd_object();
-							$ddo->set_tipo($section_tipo);
-							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
-						return $ddo;
-					}, $ar_section_tipo);
+					// parsed_item (section_tipo). normalized ddo with tipo and label
+						$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
+							$ddo = new dd_object();
+								$ddo->set_tipo($section_tipo);
+								$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+							return $ddo;
+						}, $ar_section_tipo);
 
-				// filter_by_list. get the filter_by_list (to set the prefilter selector)
-					if (isset($item_request_config->sqo->filter_by_list)) {
-						$parsed_item->sqo->filter_by_list = component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
-					}
+					// filter_by_list. get the filter_by_list (to set the prefilter selector)
+						if (isset($item_request_config->sqo->filter_by_list)) {
+							$parsed_item->sqo->filter_by_list = component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
+						}
 
-				// fixed_filter
-					if (isset($item_request_config->sqo->fixed_filter)) {
-						$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
-					}
+					// fixed_filter
+						if (isset($item_request_config->sqo->fixed_filter)) {
+							$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
+						}
 
 				// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
 					// dump($mode, ' $mode ++ '.to_string($tipo));
@@ -2752,35 +2752,36 @@ abstract class common {
 					// ddo_map
 						$final_ddo_map = [];
 						foreach ($ar_ddo_map as $current_ddo_map) {
-							if (!isset($current_ddo_map->tipo)) {
-								dump($current_ddo_map, ' current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
-								continue;
-							}
-							// add label to ddo_map items
-							// $final_ddo_map[] = array_map(function($ddo){
-							// 	$ddo->set_label(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true));								
-							// 	return $ddo;
-							// }, $current_ddo_map);
-							$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 							
-							//set the default "self" value to the current section_tipo (the section_tipo of the parent)
-							$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
-								? $ar_section_tipo
-								: $current_ddo_map->section_tipo;
-							
-							//set the default "self" value to the current tipo (the parent)
-							$current_ddo_map->parent = $current_ddo_map->parent==='self'
-								? $tipo
-								: $current_ddo_map->parent;
+							// check without tipo case
+								if (!isset($current_ddo_map->tipo)) {
+									debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
+									dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));								
+									continue;
+								}
 
-							$current_ddo_map->mode = isset($current_ddo_map->mode)
-								? $current_ddo_map->mode
-								: ($model !== 'section'
-									? 'list'
-									: $mode);
+							// label. Add to all ddo_map items
+								$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+							
+							// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
+								$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+									? $ar_section_tipo
+									: $current_ddo_map->section_tipo;
+							
+							// parent. Set the default "self" value to the current tipo (the parent)
+								$current_ddo_map->parent = $current_ddo_map->parent==='self'
+									? $tipo
+									: $current_ddo_map->parent;
+
+							// mode
+								$current_ddo_map->mode = isset($current_ddo_map->mode)
+									? $current_ddo_map->mode
+									: ($model !== 'section'
+										? 'list'
+										: $mode);
 
 							$final_ddo_map[] = $current_ddo_map;
-						}
+						}//end foreach ($ar_ddo_map as $current_ddo_map)
 
 					$parsed_item->show->ddo_map = $final_ddo_map;
 
@@ -2827,18 +2828,19 @@ abstract class common {
 
 				// choose
 					if (isset($item_request_config->choose)) {
+						
 						$choose_ddo_map = $item_request_config->choose->ddo_map;
-
 						foreach ($choose_ddo_map as $current_ddo_map) {
 
-							$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
-								? $ar_section_tipo
-								: $current_ddo_map->section_tipo;
+							// section_tipo
+								$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+									? $ar_section_tipo
+									: $current_ddo_map->section_tipo;
 
-							//set the default "self" value to the current tipo (the parent)
-							$current_ddo_map->parent = $current_ddo_map->parent==='self'
-								? $tipo
-								: $current_ddo_map->parent;
+							// parent. Set the default "self" value to the current tipo (the parent)
+								$current_ddo_map->parent = $current_ddo_map->parent==='self'
+									? $tipo
+									: $current_ddo_map->parent;
 
 							$final_ddo_map[] = $current_ddo_map;
 						}
@@ -2849,10 +2851,10 @@ abstract class common {
 					}
 
 
-				// add parsed item
+				// add complete parsed item
 					$ar_request_query_objects[] = $parsed_item;
 						// dump($ar_request_query_objects, ' ar_request_query_objects ++ '.to_string($tipo)); die();
-			}
+			}//end foreach ($properties->source->request_config as $item_request_config)
 
 		}else{
 			// V5 model
