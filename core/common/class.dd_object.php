@@ -8,7 +8,7 @@ class dd_object extends stdClass {
 
 	// Format
 		# typo				: "ddo"  (ddo | sqo)
-		# type				: "component"  (section | component | groupper | button)
+		# type				: "component"  (section | component | groupper | button | tool ..)
 		# tipo 				: 'oh14',
 		# section_tipo 		: 'oh1',
 		# parent 			: 'oh2', // caller section / portal  tipo
@@ -25,7 +25,17 @@ class dd_object extends stdClass {
 		# tools 			: []
 		# css 				: {}
 
-	static $ar_type_allowed = ['section','component','grouper','button','area','widget','login','menu'];
+	static $ar_type_allowed = [
+		'section',
+		'component',
+		'grouper',
+		'button',
+		'area',
+		'widget',
+		'login',
+		'menu',
+		'tool'
+	];
 
 
 

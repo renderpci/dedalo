@@ -464,7 +464,7 @@ data_manager.prototype.delete_local_db_data = async function(id, table) {
 * DOWNLOAD_URL
 * @param string url
 * @param string filename
-* Donwload url blob data and create a temporal autofired link
+* Download url blob data and create a temporal autofired link
 */
 export function download_url(url, filename) {
 	fetch(url).then(function(t) {

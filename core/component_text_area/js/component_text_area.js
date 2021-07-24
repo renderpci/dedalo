@@ -571,7 +571,9 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 	// container . editor_content_data is a DOM node <body> from editor
 		const container = service.get_editor_content_data()	
 		if (!container) {
-			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container, service);
+			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
+			console.warn(`current service:`, service);
+			console.warn(`current service.editor:`, service.editor);
 			return false
 		}
 
@@ -679,6 +681,7 @@ component_text_area.prototype.create_fragment = function(key, service) {
 
 	// last_tag_id. Find last image of type index and returns id or 0
 		const last_tag_index_id = self.get_last_tag_id(key, 'index', service)
+			console.log("++++++++++++++++++++++++++++++++++ last_tag_index_id:",last_tag_index_id);
 
 	// create new string wrapping selection with new tags
 		// tag state. Default is 'n' (normal)

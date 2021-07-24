@@ -7,9 +7,9 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, trigger_request} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation, add_component} from './render_tool_indexation.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 
@@ -35,6 +35,7 @@ export const tool_indexation = function () {
 	this.langs
 	this.caller // component text area base (user selects tool button from it)
 	this.main_component // component text area where we are working into the tool
+	this.indexing_component // component_relation_index used to store indexation locators
 	this.related_sections_list // datum of related_sections_list (to obtaim list of top_section_tipo/id)
 
 
@@ -75,7 +76,7 @@ tool_indexation.prototype.init = async function(options) {
 	const self = this
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_indexation/trigger.tool_indexation.php"
+		self.trigger_url 	= DEDALO_TOOLS_URL + "/tool_indexation/trigger.tool_indexation.php"
 		self.lang 			= options.lang // from page_globals.dedalo_data_lang
 		self.langs 			= page_globals.dedalo_projects_default_langs
 
@@ -132,7 +133,20 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
 			)
 			function fn_delete_tag(options) {
-				console.warn("fn_delete_tag options:",options);
+				
+				const tag_id = options.tag_id
+
+				self.delete_tag(tag_id)
+				.then(function(response){
+					if (response.result!==false) {
+						// indexing_component. Remember force refresh full data and datum before refresh
+							self.indexing_component.data	= null
+							self.indexing_component.datum	= null
+							self.indexing_component.refresh()
+						// main_component (text_area)
+							self.main_component.refresh()
+					}
+				})
 			}
 		// click_no_tag
 			self.events_tokens.push(
@@ -182,7 +196,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 */
 tool_indexation.prototype.load_indexing_component = async function() {
 
-	const self = this	
+	const self = this
 	
 	// indexing_component		
 		const component						= self.caller
@@ -237,6 +251,15 @@ tool_indexation.prototype.load_indexing_component = async function() {
 tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
+
+	// destroy previous component instances
+		if (self.main_component) {
+			const instance_index = self.ar_instances.findIndex( el => el.id===self.main_component.id)
+			if (instance_index!==-1) {
+				self.ar_instances.splice(instance_index, 1)
+			}
+			await self.main_component.destroy()
+		}
 	
 	const component		= self.caller
 	const context		= JSON.parse(JSON.stringify(component.context))
@@ -267,6 +290,7 @@ tool_indexation.prototype.get_component = async function(lang) {
 	// store instances to remove on destroy
 	self.ar_instances.push(instance)
 
+	// fix instance
 	self.main_component = instance
 
 
@@ -561,9 +585,62 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 		const current_data_manager	= new data_manager()
 		const api_response			= await current_data_manager.request({body:rqo})
 	
-	const datum = api_response.result	
+	const datum = api_response.result
 
 	return datum
 };//end load_related_sections_list
+
+
+
+/**
+* DELETE_TAG
+* Remove selected tag an all relations / indexes associated
+* Delete / remove current tag in all component langs, all references (inverse) in all portals and index record (matrix descriptors)
+* @param object button_obj
+* @return promise
+*/
+tool_indexation.prototype.delete_tag = function(tag_id) {
+
+	const self = this
+
+	// Confirm action
+		if( !confirm( `${get_label.eliminar_etiqueta} \n ${tag_id} \n`) ) {
+			return Promise.resolve(false);
+		}
+		if( !confirm( `${get_label.atencion} !! \n ${get_label.borrara_la_etiqueta_seleccionada} \n` ) )  {
+			return Promise.resolve(false);
+		}
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'delete_tag')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			section_tipo			: self.main_component.section_tipo, // current component_text_area section_tipo
+			section_id				: self.main_component.section_id, // component_text_area section_id
+			main_component_tipo		: self.main_component.tipo, // component_text_area tipo
+			main_component_lang		: self.main_component.lang, // component_text_area lang
+			indexing_component_tipo	: self.indexing_component.tipo, // component_relation_xxx used to store indexation locators 
+			tag_id					: tag_id // current selected tag (passed as param)	
+		}
+
+	// rqo		
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
+		}
+	
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				console.warn("-> delete_tag API response:",response);
+				resolve(response)
+			})
+		})
+};//end delete_tag
 
 

@@ -417,48 +417,48 @@ export const ts_object = new function() {
 							// ADD . button + add element
 								if (ar_children_data[i].permissions_button_new>=2) {
 									if(is_descriptor===true) {
-										const link_add 			= ui.create_dom_element({
-																				element_type			: 'a',
-																				parent 					: id_colum_content,
-																				class_name 				: 'id_column_link ts_object_add',
-																				title_label 			: 'add',
-																			})
-											// link_add event click
-												link_add.addEventListener("click", function(e){
+										const link_add = ui.create_dom_element({
+											element_type			: 'a',
+											parent 					: id_colum_content,
+											class_name 				: 'id_column_link ts_object_add',
+											title_label 			: 'add',
+										})
+										// link_add event click
+											link_add.addEventListener("click", function(e){
 
-													// mode set in dataset
-														this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
+												// mode set in dataset
+													this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
 
-													// add_child
-														ts_object.add_child(this).then(function(response){
+												// add_child
+													ts_object.add_child(this).then(function(response){
 
-															// vars from response
-																// new_section_id . Generated as response by the trigger add_child
-																	const new_section_id 	= response.result
-																// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-																	const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
-																// button_obj. button plus that user clicks
-																	const button_obj 		= response.button_obj
-																// children_element. list_thesaurus_element of current wrapper
-																	const children_element 	= ts_object.get_link_children_from_wrap(response.wrap)
-																	if(!children_element) {
-																		return console.log("[ts_object.add_child] Error on find children_element 'link_children'");
-																	}
+														// vars from response
+															// new_section_id . Generated as response by the trigger add_child
+																const new_section_id 	= response.result
+															// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
+																const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
+															// button_obj. button plus that user clicks
+																const button_obj 		= response.button_obj
+															// children_element. list_thesaurus_element of current wrapper
+																const children_element 	= ts_object.get_link_children_from_wrap(response.wrap)
+																if(!children_element) {
+																	return console.log("[ts_object.add_child] Error on find children_element 'link_children'");
+																}
 
-															// refresh children container
-																ts_object.get_children(children_element).then(function(){
-																	// Open editor in new window
-																		ts_object.edit(button_obj, null, new_section_id, section_tipo)
-																})
-														})
-												})//end link_add.addEventListener("click", function(e)
+														// refresh children container
+															ts_object.get_children(children_element).then(function(){
+																// Open editor in new window
+																	ts_object.edit(button_obj, null, new_section_id, section_tipo)
+															})
+													})
+											})//end link_add.addEventListener("click", function(e)
 
 										// add icon
-										const add_icon_link_add = ui.create_dom_element({
-															element_type			: 'div',
-															parent 					: link_add,
-															class_name 				: 'ts_object_add_icon',
-														 })
+											const add_icon_link_add = ui.create_dom_element({
+												element_type	: 'div',
+												parent			: link_add,
+												class_name		: 'ts_object_add_icon',
+											})
 									}//if(is_descriptor===true)
 								}//end if (ar_children_data[i].permissions_button_new>=2) {
 
@@ -467,20 +467,20 @@ export const ts_object = new function() {
 									if(is_descriptor===true) {
 										// var event_function 	= [{'type':'mousedown','name':'ts_object.on_drag_mousedown'}];
 										const link_drag 		= ui.create_dom_element({
-																				element_type			: 'div',
-																				parent 					: id_colum_content,
-																				class_name 				: 'id_column_link ts_object_drag',
-																				title_label 			: 'drag'
-																			})
+																	element_type	: 'div',
+																	parent			: id_colum_content,
+																	class_name		: 'id_column_link ts_object_drag',
+																	title_label		: 'drag'
+																})
 																link_drag.addEventListener("mousedown",(e)=>{
 																	self.on_drag_mousedown(link_drag, e)
 																})
 																// drag icon
 																const drag_icon = ui.create_dom_element({
-																					element_type			: 'div',
-																					parent 					: link_drag,
-																					class_name 				: 'ts_object_drag_icon'
-																				})
+																	element_type	: 'div',
+																	parent			: link_drag,
+																	class_name		: 'ts_object_drag_icon'
+																})
 									}//if(is_descriptor===true)
 								}
 
@@ -488,11 +488,11 @@ export const ts_object = new function() {
 								if (ar_children_data[i].permissions_button_delete>=2) {
 									// var event_function 	= [{'type':'click','name':'ts_object.delete'}];
 									const link_delete 	= ui.create_dom_element({
-																			element_type			: 'a',
-																			parent 					: id_colum_content,
-																			class_name 				: 'id_column_link ts_object_delete',
-																			title_label 			: 'delete',
-																		 })
+															element_type	: 'a',
+															parent			: id_colum_content,
+															class_name		: 'id_column_link ts_object_delete',
+															title_label		: 'delete',
+														})
 														link_delete.addEventListener("click",(e)=>{
 															self.delete(link_delete, e)
 														})
@@ -525,29 +525,28 @@ export const ts_object = new function() {
 							// EDIT . button edit element
 								//if (node_type!=='hierarchy_node') {
 								// var event_function 		= [{'type':'click','name':'ts_object.edit'}];
-								const link_edit 		= ui.create_dom_element({
-																		element_type			: 'a',
-																		parent 					: id_colum_content,
-																		class_name 				: 'id_column_link ts_object_edit',
-																		title_label 			: 'edit',
-																	 })
-														link_edit.addEventListener("click",(e)=>{
-															self.edit(link_edit, e)
-														})
-														// section_id number
-														const section_id_number = ui.create_dom_element({
-																			element_type			: 'div',
-																			parent 					: link_edit,
-																			class_name 				: 'ts_object_section_id_number',
-																			text_node 				: ar_children_data[i].section_id,
-																		 })
-														// edit icon
-														const edit_icon = ui.create_dom_element({
-																			element_type			: 'div',
-																			parent 					: link_edit,
-																			class_name 				: 'ts_object_edit_icon',
-																		 })
-
+								const link_edit = ui.create_dom_element({
+									element_type	: 'a',
+									parent			: id_colum_content,
+									class_name		: 'id_column_link ts_object_edit',
+									title_label		: 'edit'
+								})
+								link_edit.addEventListener("click",(e)=>{
+									self.edit(link_edit, e)
+								})
+								// section_id number
+								const section_id_number = ui.create_dom_element({
+									element_type	: 'div',
+									parent			: link_edit,
+									class_name		: 'ts_object_section_id_number',
+									text_node		: ar_children_data[i].section_id
+								})
+								// edit icon
+								const edit_icon = ui.create_dom_element({
+									element_type	: 'div',
+									parent			: link_edit,
+									class_name		: 'ts_object_edit_icon'
+								})
 								//}//end if (node_type!=='hierarchy_node')
 
 					}//end switch(ts_object.thesaurus_mode)
@@ -1410,27 +1409,28 @@ export const ts_object = new function() {
 			return false
 		}
 
-		const wrap = button_obj.parentNode.parentNode;
+		// wrap
+			const wrap = button_obj.parentNode.parentNode;
 			if(!wrap) {
 				console.error("[ts_object.edit] Error on find wrap", wrap);
 				return false
 			}
 
-		if (typeof section_id==="undefined") {
-			section_id = wrap.dataset.section_id
-		}
+		// check mandatory vars fallback
+			if (typeof section_id==="undefined") {
+				section_id = wrap.dataset.section_id
+			}
+			if (typeof section_tipo==="undefined") {
+				section_tipo = wrap.dataset.section_tipo
+			}
 
-		if (typeof section_tipo==="undefined") {
-			section_tipo = wrap.dataset.section_tipo
-		}
-
-		let url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=no'
+		const url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=no'
 
 		const strWindowFeatures 	= "menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes";
 			//strWindowFeatures 	= null
 			//console.log(url);
 
-		if(ts_object.edit_window === null || ts_object.edit_window.closed) { //  || edit_window.location.href!=url || ts_object.edit_window.closed
+		if(ts_object.edit_window===null || ts_object.edit_window.closed) { //  || edit_window.location.href!=url || ts_object.edit_window.closed
 
 			ts_object.edit_window = window.open(
 				url,
@@ -1452,6 +1452,8 @@ export const ts_object = new function() {
 			}
 			ts_object.edit_window.focus();
 		}
+
+		return true
 	};//end edit
 
 
@@ -1742,81 +1744,117 @@ export const ts_object = new function() {
 	* Show and hide component data in ts_object content_data div
 	* @param object button_obj
 	*/
+	this.editing_component_instance = null
 	this.show_component_in_ts_object = async function(button_obj) {
 
-		const wrap 	  		= button_obj.parentNode.parentNode;
-		const section_tipo 	= wrap.dataset.section_tipo
-		const section_id 	= wrap.dataset.section_id
-		const tipo 			= button_obj.dataset.tipo
-		const type 			= button_obj.dataset.type
-		const modo 			= 'edit'
-		const lang 			= page_globals.dedalo_data_lang
-		const html_data 	= '...';	//" show_component_in_ts_object here! "
-		const role 	  		= section_tipo + '_' + section_id + '_' + tipo
+		const self = this
+		
+		// short vars
+			const wrap			= button_obj.parentNode.parentNode;
+			const section_tipo	= wrap.dataset.section_tipo
+			const section_id	= wrap.dataset.section_id
+			const tipo			= button_obj.dataset.tipo
+			const type			= button_obj.dataset.type
+			const modo			= 'edit'
+			const lang			= page_globals.dedalo_data_lang
+			const html_data		= '...';	//" show_component_in_ts_object here! "
+			const role			= section_tipo + '_' + section_id + '_' + tipo
 
-		const current_component = await instances.get_instance({
-				section_tipo 	: section_tipo,
-				section_id 		: section_id,
-				tipo 			: tipo,
-				mode 			: modo
-		})
+		// component instance
+			let current_component, component_node
+			if (self.editing_component_instance && self.editing_component_instance.tipo===tipo && self.editing_component_instance.section_id===section_id) {
+			
+				current_component	= self.editing_component_instance
+				component_node		= current_component.node[0]
 
-		if(type==='term'){
-			// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-			this.events_tokens.push(
-				event_manager.subscribe('update_value_'+current_component.id, update_value)
-			)
-			function update_value (changed_data) {
-				// change the value of the current dom element
-				button_obj.firstChild.innerHTML = changed_data.value
-			}
-		}
+			}else{
+
+				current_component = await instances.get_instance({
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					tipo			: tipo,
+					mode			: modo
+				})
+
+				// term edit case
+					if(type==='term'){
+
+						// delete the previous registered events
+							this.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+
+						// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+							this.events_tokens.push(
+								event_manager.subscribe('update_value_'+current_component.id, update_value)
+							)
+							function update_value (changed_data) {
+								// change the value of the current dom element
+								button_obj.firstChild.innerHTML = changed_data.value
+							}
+					}
+
+				// build and render component
+					await current_component.build(true)
+					component_node = await current_component.render()
+			}	
 
 
-		await current_component.build(true)
-		const component_node = await current_component.render()
+		// data_contanier
+			const element_data_contanier = wrap.querySelector(':scope > [data-role="data_container"]')
 
-		const element_data_contanier = wrap.querySelector(':scope > [data-role="data_container"]')
+		// get the children nodes of data_contanier
+			const all_element_data_div 	   = element_data_contanier.children // childNodes;
+			const all_element_data_div_len = all_element_data_div.length
 
-		//get the children nodes of data_contanier
-		const all_element_data_div 	   = element_data_contanier.children // childNodes;
-		const all_element_data_div_len = all_element_data_div.length
-
-		// if the data element is not empty
-		if (all_element_data_div_len > 0) {
+		
+		if (all_element_data_div_len > 0) { // if the data element is not empty
+			
 			// get the tipo in the classname of the node element
 			const element_is_different = element_data_contanier.firstChild.classList.contains(tipo) ? false : true
 			//if the element is different that user want to show
 			if(element_is_different){
-				//remove all nodes
+
+				// remove all nodes
 				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
 					all_element_data_div[i].remove()
 				}
-				// get the events that the instance was created
-					const events_tokens = this.events_tokens
+				
+				// // get the events that the instance was created
+				// 	const events_tokens = this.events_tokens
 
-				// delete the registred events
-					const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
-					current_component.destroy(true,true)
+				// // delete the registered events
+				// 	const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+					
+				// current_component.destroy(true,true)
 
-				// add the new onw
+				// destroy the old instance
+				self.editing_component_instance.destroy(true,true)
+
+				// add the new one
 				element_data_contanier.appendChild(component_node)
+
 			}else{
 				// only remove all nodes
 				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
 					all_element_data_div[i].remove()
 				}
-				// get the events that the instance was created
-					const events_tokens = this.events_tokens
+				
+				// // get the events that the instance was created
+				// 	const events_tokens = this.events_tokens
 
-				// delete the registred events
-					const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
-					current_component.destroy(true,true)
+				// // delete the registered events
+				// 	const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+				// 	current_component.destroy(true,true)
 			}
-		}else{
-			// if the data element is empty (first click to show)
-			element_data_contanier.appendChild(component_node)
+
+		}else{ // if the data element is empty (first click to show)
+
+			// add node
+				element_data_contanier.appendChild(component_node)
 		}
+
+		// fix current instance for re-use
+			this.editing_component_instance = current_component
+
 
 		return component_node;
 	};//end show_component_in_ts_object
