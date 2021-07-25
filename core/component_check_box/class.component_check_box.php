@@ -6,7 +6,12 @@
 */
 class component_check_box extends component_relation_common {
 
-	public $relation_type = DEDALO_RELATION_TYPE_LINK;
+
+
+	// relation_type defaults
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
+	protected $default_relation_type_rel	= null;
+
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
