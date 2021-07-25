@@ -57,7 +57,7 @@
 		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
 		$context[]		= $this->context;
 
-		$dato = $this->get_data();
+		$dato = $this->get_dato();
 
 		if (!empty($dato)) {
 
