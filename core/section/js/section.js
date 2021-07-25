@@ -230,7 +230,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
-					dd_console("SECTION api_response:", 'DEBUG', [self.id, api_response]);
+					dd_console("SECTION api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response))]);
 
 
 			// set the result to the datum
