@@ -93,7 +93,6 @@
 				$ar_subcontext	= $section_json->context;
 				
 				// the the different request_config to be used as configurated request_config of the component
-
 				foreach ($ar_subcontext as $current_context) {
 
 					if ($current_context->model ==='section' 
@@ -103,10 +102,10 @@
 						// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
 						$original_request_config = $current_context->request_config;
 						// select api_engine dedalo only configs
-							$ar_request_config = array_find($original_request_config, function($el){
+							$section_request_config = array_find($original_request_config, function($el){
 								return $el->api_engine==='dedalo';
 							});
-						$ddo_map = $ar_request_config->show->ddo_map;
+						$ddo_map = $section_request_config->show->ddo_map;
 						// change the ddo parent of the section to the component, only if the parent is the section_tipo
 						// is necesary don't change the ddo with deep dependence 
 						foreach ($ddo_map as $current_ddo) {						
@@ -114,7 +113,13 @@
 								 ? $tipo
 								 : $current_ddo->parent;
 						}
-						$this->context->request_config = [$ar_request_config];
+
+						$final_request_config = array_find($this->context->request_config, function($el){
+							return $el->api_engine==='dedalo';
+						});
+
+						$final_request_config->show->ddo_map = array_merge($final_request_config->show->ddo_map, $section_request_config->show->ddo_map);
+						$final_request_config->sqo->section_tipo = array_merge($final_request_config->sqo->section_tipo, $section_request_config->sqo->section_tipo);
 
 						$cache_request_config[] = $current_section_tipo;
 					}
