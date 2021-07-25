@@ -72,12 +72,12 @@
 				// subdata add
 					$subdatum = $this->get_subdatum($tipo, $value);
 					
-					$ar_subcontext	= $subdatum->context;
+					$ar_subcontext = $subdatum->context;
 					foreach ($ar_subcontext as $current_context) {
 						$context[] = $current_context;
-					}					
+					}
 
-					$ar_subdata		= $subdatum->data;
+					$ar_subdata	= $subdatum->data;
 					foreach ($ar_subdata as $sub_value) {
 						$data[] = $sub_value;
 					}

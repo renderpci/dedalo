@@ -124,7 +124,6 @@
 
 
 			// subdatum
-				$ar_calculated_context = [];
 				foreach ($dato as $key => $current_record) {
 
 					$section_id		= $current_record->section_id;
@@ -140,7 +139,7 @@
 						$pagination = new stdClass();
 							$pagination->limit	= $limit;
 							$pagination->offset	= $offset;
-						$section->pagination = $pagination;															
+						$section->pagination = $pagination;
 	
 					if ($modo==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
@@ -156,14 +155,22 @@
 					// get the JSON data of the related component
 						$section_json = $section->get_json();
 
-					$key_context = $section_tipo.'_'.$modo;
+					// context. prevent duplicated context. Get the unique context and subcontext that will be need to used in client.
+					// it's necessary to have all context called but only one it's necessary, in a list the context its calculated for every row and column, getting duplicated context and subcontext
+					// include the context that wasn't included in the previous loops.
+						$current_context = $section_json->context;
+						foreach ($current_context as $context_item) {
+							$found = array_find($context, function($el) use($context_item){
+								return $el->tipo===$context_item->tipo && $el->section_tipo===$context_item->section_tipo && $el->mode===$context_item->mode;
+							});
+							if ($found===null) {
+								// add
+								$context[] = $context_item;
+							}
+						}
 
-					// prevent duplicated context (get the first context only)
-					if (!isset($ar_calculated_context[$key_context])) {
-						$context	= array_merge($context, $section_json->context);
-						$ar_calculated_context[$key_context] = $context;
-					}
-					$data		= array_merge($data, $section_json->data);
+
+					$data = array_merge($data, $section_json->data);
 
 				}//end foreach ($dato as $current_record)
 
