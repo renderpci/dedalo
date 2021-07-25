@@ -17,18 +17,20 @@ NOTE: when a section is created will be assigned a default project and at least 
 class component_filter extends component_relation_common {
 
 
+
 	private $user_id;
 	public $propagate_filter = true;
 
+	// relation_type defaults
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
+	protected $default_relation_type_rel	= null;
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-	# RELATION_TYPE
-	protected $relation_type = DEDALO_RELATION_TYPE_FILTER;
-
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+
 
 
 	/**

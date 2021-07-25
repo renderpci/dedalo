@@ -8,8 +8,9 @@ class component_relation_index extends component_relation_common {
 	
 
 
-	// relation_type
-	public $relation_type = DEDALO_RELATION_TYPE_INDEX_TIPO;
+	// relation_type defaults
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_INDEX_TIPO;
+	protected $default_relation_type_rel	= null;
 
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id');
@@ -21,7 +22,7 @@ class component_relation_index extends component_relation_common {
 	*/
 	public function get_data() {
 
-		# Custom propiedades external dato
+		# Custom properties external dato
 		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
 			(isset($properties->source->mode) && $properties->source->mode==='external')) {
 			

@@ -9,14 +9,18 @@ class component_relation_related extends component_relation_common {
 	# relation_type . Determines inverse resolutions and locator format
 	# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
 	# protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
-	protected $relation_type ; // Set on construct from properties
+	// protected $relation_type ; // Set on construct from properties
 
-	# type of rel (like unidirectional, bidirectional, multidirectional, etc..) This info is inside each locator of current component dato
+	# type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component dato
 	# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
 	# DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
 	# DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-	protected $relation_type_rel ; // Set on construct from properties
+	// protected $relation_type_rel ; // Set on construct from properties
+
+	// relation_type defaults
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_RELATED_TIPO;
+	protected $default_relation_type_rel	= DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO;
 
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
@@ -34,24 +38,24 @@ class component_relation_related extends component_relation_common {
 		# relation_type
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
-		# Build the componente normally
+		# Build the component normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-		#
-		# RELATION CONFIG . Set current component relation_type Aand relation_type_rel based on properties config
-		$properties = $this->get_properties();
-		switch (true) {
-			case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
-				$this->relation_type 	 = $properties->config_relation->relation_type;
-				$this->relation_type_rel = $properties->config_relation->relation_type_rel;
-				break;
+		// #
+		// # RELATION CONFIG . Set current component relation_type and relation_type_rel based on properties config
+		// $properties = $this->get_properties();
+		// switch (true) {
+		// 	case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
+		// 		$this->relation_type 	 = $properties->config_relation->relation_type;
+		// 		$this->relation_type_rel = $properties->config_relation->relation_type_rel;
+		// 		break;
 
-			default:
-				$this->relation_type 	 = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
-				$this->relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-				debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behaviour".to_string(), logger::ERROR);
-				break;
-		}
+		// 	default:
+		// 		$this->relation_type 	 = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
+		// 		$this->relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
+		// 		debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behavior".to_string(), logger::ERROR);
+		// 		break;
+		// }
 
 		return true;
 	}//end __construct
