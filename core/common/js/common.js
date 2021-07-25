@@ -695,11 +695,11 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 				if (!current_context) {
 					// console.warn("Skip context not found for current ddo:", current_ddo);
 					// console.warn("datum.context:", datum.context);
-					continue;
+					// continue;
 				}
 
 			// rqo_config
-				const rqo_config	= current_context.request_config
+				const rqo_config	= (current_context && current_context.request_config)
 					? current_context.request_config.find(el => el.api_engine==='dedalo')
 					: null
 		
