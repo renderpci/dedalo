@@ -1,7 +1,7 @@
 <?php
 require_once( dirname(__FILE__) .'/class.v5_to_v6.php');
 /**
-* CLASS relation_index_v5_to_v6
+* CLASS RELATION_INDEX_V5_TO_V6
 *
 */
 class relation_index_v5_to_v6 extends v5_to_v6 {
@@ -116,4 +116,4 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 
 
 
-}//end class
+}//end class relation_index_v5_to_v6
