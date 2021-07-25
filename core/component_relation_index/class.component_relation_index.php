@@ -23,25 +23,35 @@ class component_relation_index extends component_relation_common {
 
 		# Custom propiedades external dato
 		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
-			(isset($properties->source->mode) && $properties->source->mode==='external')) {
+			(isset($this->properties->source->mode) && $this->properties->source->mode==='external')) {
 			
 			$reference_locator = new locator();
+				$reference_locator->set_type('dd96');
 				$reference_locator->set_section_tipo($this->section_tipo);
 				$reference_locator->set_section_id($this->section_id);
+
 
 			# Get calculated inverse locators for all matrix tables
 			$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
 
 			$new_dato = [];
-			foreach ($ar_inverse_locators as $reference_locator) {
+			foreach ($ar_inverse_locators as $current_locator) {
 				$locator = new locator();
-					$locator->set_type($reference_locator->type);
-					$locator->set_section_tipo($reference_locator->from_section_tipo);
-					$locator->set_section_id($reference_locator->from_section_id);
-					$locator->set_component_tipo($reference_locator->tag_component_tipo);
-					$locator->set_tag_id($reference_locator->tag_id);
-					$locator->set_section_top_id($reference_locator->section_top_id);
-					$locator->set_section_top_tipo($reference_locator->section_top_tipo);
+					$locator->set_type($current_locator->type);
+					$locator->set_section_tipo($current_locator->from_section_tipo);
+					$locator->set_section_id($current_locator->from_section_id);
+					if(isset($current_locator->tag_component_tipo)){
+						$locator->set_component_tipo($current_locator->tag_component_tipo);
+					}
+					if(isset($current_locator->tag_id)){
+						$locator->set_tag_id($current_locator->tag_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_id($current_locator->section_top_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_tipo($current_locator->section_top_tipo);
+					}
 
 					$new_dato[] = $locator;
 
