@@ -254,7 +254,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 		// console.log("section_tipo:",section_tipo);
 		// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
-		// console.log("_________________________________________________ ar_columns:",ar_columns);
+		// console.log("_________________________________________________ ar_columns:",JSON.parse(JSON.stringify(ar_columns)));
 
 		// get the columns that can be used with the current locator
 		// check the section_tipo of the last column and match with the current locator section_tipo
