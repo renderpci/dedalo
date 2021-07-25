@@ -108,18 +108,16 @@ class component_relation_common extends component_common {
 
 		// relation config . Set current component relation_type and relation_type_rel based on properties config
 			$properties = $this->get_properties();
-			switch (true) {
-				case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
-					$this->relation_type 	 = $properties->config_relation->relation_type;
-					$this->relation_type_rel = $properties->config_relation->relation_type_rel;
-					break;
 
-				default:
-					$this->relation_type 	 = $this->default_relation_type; // Default
-					$this->relation_type_rel = $this->default_relation_type_rel; // DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-					debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behavior".to_string(), logger::ERROR);
-					break;
-			}
+			// relation_type
+				$this->relation_type = isset($properties->config_relation->relation_type)
+					? $properties->config_relation->relation_type
+					: $this->default_relation_type;
+
+			// relation_type_rel
+				$this->relation_type_rel = isset($properties->config_relation->relation_type_rel)
+					? $properties->config_relation->relation_type_rel
+					: $this->default_relation_type_rel;
 
 		// if(SHOW_DEBUG) {
 		// 	$traducible = $this->RecordObj_dd->get_traducible();
