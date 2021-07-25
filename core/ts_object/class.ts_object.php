@@ -255,11 +255,12 @@ class ts_object extends Accessors {
 				$element_obj->tipo	= $element_tipo;
 
 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+				$lang			= common::get_element_lang($element_tipo, $data_lang=DEDALO_DATA_LANG);
 				$component		= component_common::get_instance($modelo_name,
 																 $element_tipo,
 																 $this->section_id,
 																 'list_thesaurus',
-																 DEDALO_DATA_LANG,
+																 $lang,
 																 $this->section_tipo);
 				$dato = $component->get_dato();
 				if ($modelo_name==='component_autocomplete_hi') {

@@ -20,7 +20,7 @@ ignore_user_abort(true);
 
 /**
 * GET_CHILDREN_DATA
-* Get json data of all children of current element
+* Get JSON data of all children of current element
 * @return object $response
 */
 function get_children_data($json_data) {
@@ -241,7 +241,7 @@ function add_child($json_data) {
 
 
 /**
-* add_child_FROM_HIERARCHY
+* ADD_CHILD_FROM_HIERARCHY
 * @return object $response
 */
 function add_child_from_hierarchy($json_data) {

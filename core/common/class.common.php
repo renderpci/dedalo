@@ -3013,7 +3013,7 @@ abstract class common {
 
 					$ar_related_clean[] = $current_tipo;
 				}
-				if (empty($ar_related_clean)) {
+				if (empty($ar_related_clean) && $model!=='component_relation_index') {
 					// $ar_related_clean = [$tipo]; Loop de la muerte (!)
 					debug_log(__METHOD__." Empty related items. Review your structure config to fix this error. $model - tipo: ".to_string($tipo), logger::ERROR);
 				}
