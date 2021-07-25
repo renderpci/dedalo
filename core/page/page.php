@@ -60,9 +60,43 @@
 
 					$section = section::get_instance($section_id, $tipo, MODE);
 					$section->set_lang(DEDALO_DATA_LANG);
-					
+
+					$current_context = $section->get_structure_context(1, true);
+						// dump($current_context, ' current_context ++ '.to_string());
+
+					// section_id given case. If is received section_id, we build a custom sqo with the proper filter
+					// and override default request_config sqo into the section context
+					if (!empty($section_id)) {
+
+						$current_context->mode			= 'edit'; // force edit mode
+						$current_context->section_id	= $section_id; // set section_id in context
+
+						// request_config
+							$request_config = array_find($current_context->request_config, function($el){
+								return $el->api_engine==='dedalo';
+							});
+							if ($request_config) {
+								// sqo
+									$filter_by_locators = [(object)[
+										'section_tipo'	=> $tipo,
+										'section_id'	=> $section_id
+									]];
+									$sqo = new search_query_object();
+										$sqo->set_section_tipo([(object)[
+											'tipo' => $tipo,
+											'label' => ''
+											]
+										]);
+										// $sqo->set_limit(1);
+										// $sqo->set_offset(0);
+										$sqo->set_filter_by_locators($filter_by_locators);
+								// overwrite default sqo
+								$request_config->sqo = $sqo;
+							}
+					}//end if (!empty($section_id))
+
 					// add to page context
-						$context[] = $section->get_structure_context(1, true);
+						$context[] = $current_context;
 					break;
 
 				case (strpos($model, 'area')===0):
