@@ -66,7 +66,7 @@ class search_related extends search {
 		// Set order to maintain results stable
 		// count and pagination optionals
 			if($full_count === false){
-				$str_query .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
+				$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
 				if($limit !== false){
 					$str_query .= PHP_EOL . 'LIMIT '.$limit;
 					if($offset !== false){
