@@ -9,16 +9,21 @@ class component_select_lang extends component_relation_common {
 
 
 
+	// relation_type defaults
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
+	protected $default_relation_type_rel	= null;
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
-
-	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 
 	# test_equal_properties is used to verify duplicates when add locators
 	#public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
 
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN

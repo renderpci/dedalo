@@ -7,7 +7,10 @@
 class component_portal extends component_relation_common {
 
 
-	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
+
+	// relation_type defaults
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
+	protected $default_relation_type_rel	= null;
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
@@ -20,6 +23,20 @@ class component_portal extends component_relation_common {
 
 	# referenced component tipo
 	// public $tipo_to_search;
+
+
+
+	/**
+	* __CONSTRUCT
+	*/
+	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+
+		# Build the component normally
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+
+
+		return true;
+	}//end __construct
 
 
 

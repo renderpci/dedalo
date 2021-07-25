@@ -6,7 +6,12 @@
 */
 class component_check_box extends component_relation_common {
 
-	public $relation_type = DEDALO_RELATION_TYPE_LINK;
+
+
+	// relation_type defaults
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
+	protected $default_relation_type_rel	= null;
+
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
@@ -57,6 +62,9 @@ class component_check_box extends component_relation_common {
 
 
 
+	/**
+	* GET_DATO_AS_STRING
+	*/
 	public function get_dato_as_string() {
 
 		return json_handler::encode($this->get_dato());
@@ -83,11 +91,16 @@ class component_check_box extends component_relation_common {
 
 
 
+	/**
+	* GET_DATAFRAME_VALUE
+	*/
 	public function get_dataframe_value($type){
 
 		$dataframe_value = RecordObj_dd::get_termino_by_tipo($type,DEDALO_APPLICATION_LANG, true);
 
 		return $dataframe_value;
+	}//end get_dataframe_value
 
-	}
-}
+
+
+}//end component_check_box
