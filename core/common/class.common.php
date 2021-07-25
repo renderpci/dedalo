@@ -2759,7 +2759,6 @@ abstract class common {
 
 					// get the ddo_map from ontology, defined by specific term, like "section_map"
 						$get_ddo_map = $parsed_item->show->get_ddo_map ?? false;
-						dump($parsed_item->show, ' show ++///////////////-------/////////////// '.to_string($tipo));
 						if($get_ddo_map!==false){
 							$ar_ddo_calcutaled = [];
 							switch ($get_ddo_map->model) {
@@ -2774,7 +2773,6 @@ abstract class common {
 											continue;
 										}
 
-										dump($section_map, ' section_map ++///////////////-------/////////////// '.to_string());
 										foreach ($get_ddo_map->columns as $current_column_path) {
 
 											$section_map_value = get_object_property($section_map, $current_column_path);
