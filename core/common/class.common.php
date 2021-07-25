@@ -2191,7 +2191,13 @@ abstract class common {
 				$section_id		= $current_locator->section_id;
 				$section_tipo	= $current_locator->section_tipo;
 
-				foreach($request_config_item->show->ddo_map as $dd_object) {
+				$ar_ddo = array_filter($request_config_item->show->ddo_map, function($ddo) use($section_tipo){
+					return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo));
+				});
+
+
+
+				foreach($ar_ddo as $dd_object) {
 
 					// prevent resolve non children from path ddo
 						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
@@ -2199,22 +2205,24 @@ abstract class common {
 							continue;
 						}
 
+
+
 					// skip security_areas
 						if($dd_object->tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
 							continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 						}
 				
 					// short vars
-						$current_tipo				= $dd_object->tipo;
-						$ar_current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
-						$mode						= $dd_object->mode ?? $this->get_modo();
-						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$label						= $dd_object->label ?? '';
+						$current_tipo			= $dd_object->tipo;
+						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
+						$mode					= $dd_object->mode ?? $this->get_modo();
+						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$label					= $dd_object->label ?? '';
 
 					// current_section_tipo
-						$current_section_tipo = is_array($ar_current_section_tipo)
-							? reset($ar_current_section_tipo)
-							: $ar_current_section_tipo;
+						// $current_section_tipo = is_array($ar_current_section_tipo)
+						// 	? reset($ar_current_section_tipo)
+						// 	: $ar_current_section_tipo;
 
 					// ar_subcontext_calculated
 						$cid = $current_tipo . '_' . $current_section_tipo;
@@ -2314,8 +2322,10 @@ abstract class common {
 									// $item_options->context_type = 'simple';
 								$element_json = $related_element->get_json($item_options);
 
+
 							// ar_subcontext								
-								$ar_subcontext = array_merge($ar_subcontext, $element_json->context);						
+								$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
+									// dump($ar_subcontext, ' ar_subcontext +---///////--------------+ '.to_string());
 
 							// row_section_id
 							// add parent_section_id with the main locator section_id that define the row, to perserve row coherence between all columns
@@ -2411,7 +2421,7 @@ abstract class common {
 	* BUILD_RERQUEST_CONFIG
 	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
 	* The search_query_object_context (request_config) have at least:
-	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
+	* one sqo, that define the search with filter, offset, limit, etc, the select option is not used (it will use the ddo)
 	* one ddo for the searched section (source ddo)
 	* one ddo for the component searched.
 	* 	is possible create more than one ddo for different components.
@@ -2445,9 +2455,10 @@ abstract class common {
 						//get the direct ddo linked by the source
 						if ($current_ddo->parent===$requested_source->tipo || $current_ddo->parent==='self') {
 							// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-							if(in_array($this->tipo, (array)$current_ddo->section_tipo) || $current_ddo->section_tipo==='self')
+							if(in_array($this->tipo, (array)$current_ddo->section_tipo) || $current_ddo->section_tipo==='self'){
 								$current_ddo->parent		= $this->tipo;
 								$current_ddo->section_tipo	= $this->tipo;
+							}
 						}
 						// added label & mode if not are already defined
 						if(!isset($current_ddo->label)) {
@@ -2456,7 +2467,7 @@ abstract class common {
 						if(!isset($current_ddo->mode)) {
 							$current_ddo->mode = $this->mode;
 						}
-					}//end oreach ($requested_show->ddo_map as $key => $current_ddo)
+					}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
 				// create the new request_config with the caller
 					$request_config = new stdClass();
@@ -2746,8 +2757,71 @@ abstract class common {
 						? $item_request_config->show_list
 						: $item_request_config->show;
 
+					// get the ddo_map from ontology, defined by specific term, like "section_map"
+						$get_ddo_map = $parsed_item->show->get_ddo_map ?? false;
+						dump($parsed_item->show, ' show ++///////////////-------/////////////// '.to_string($tipo));
+						if($get_ddo_map!==false){
+							$ar_ddo_calcutaled = [];
+							switch ($get_ddo_map->model) {
+								case 'section_map':
+
+									$procesed_component_tipo = [];
+									foreach ($ar_section_tipo as $current_section_tipo) {
+
+										$section_map = section::get_section_map( $current_section_tipo );
+										if(empty($section_map)) {
+											debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
+											continue;
+										}
+
+										dump($section_map, ' section_map ++///////////////-------/////////////// '.to_string());
+										foreach ($get_ddo_map->columns as $current_column_path) {
+
+											$section_map_value = get_object_property($section_map, $current_column_path);
+
+											// ignore value
+											if(empty($section_map_value)){
+												debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
+												continue;
+											}
+											$ar_component_tipo = (array)$section_map_value;
+
+											foreach ($ar_component_tipo as $current_component_tipo) {
+												if(in_array($current_component_tipo, $procesed_component_tipo)){
+
+													$to_change_ddo = array_find($ar_ddo_calcutaled, function($ddo) use($current_component_tipo){
+														return $ddo->tipo === $current_component_tipo;
+													});
+
+													$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
+
+												}else{
+													// $column_name = end($current_column_path);
+													$ddo = new dd_object();
+														$ddo->set_tipo($current_component_tipo);
+														$ddo->set_section_tipo($current_section_tipo);
+														$ddo->set_parent($tipo);
+														// $ddo->set_column($column_name);
+
+													$procesed_component_tipo[] = $current_component_tipo;
+													$ar_ddo_calcutaled[] = $ddo;
+												}
+											}
+										}
+									}
+dump($ar_ddo_calcutaled, ' ar_ddo_calcutaled +-----///////-----------+ '.to_string());
+									break;
+
+								default:
+									// code...
+									break;
+							}
+						}
+
 					// get the all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
-					$ar_ddo_map = $parsed_item->show->ddo_map;
+					$ar_ddo_map = isset($parsed_item->show->ddo_map)
+						? $parsed_item->show->ddo_map
+						: $ar_ddo_calcutaled;
 					
 					// ddo_map
 						$final_ddo_map = [];
@@ -2891,7 +2965,6 @@ abstract class common {
 							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
 						}
 					}
-						dump($ar_related, ' ar_related ++ '.to_string());
 
 					break;
 				case 'list':
@@ -2926,7 +2999,6 @@ abstract class common {
 			}//end switch ($mode)
 
 
-
 			// related_clean
 				$ar_related_clean 	 = [];
 				$target_section_tipo = $section_tipo;
@@ -2953,7 +3025,6 @@ abstract class common {
 				if (!isset($target_section_tipo)) {
 					$target_section_tipo = $section_tipo;
 				}
-
 
 			// sqo_config
 				$sqo_config = new stdClass();
@@ -3023,7 +3094,7 @@ abstract class common {
 					// $request_config_item->search		= $search;
 					// $request_config_item->select		= $select;
 
-					// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string()); die();
+					// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string());
 
 			// set item
 				$ar_request_query_objects[] = $request_config_item;

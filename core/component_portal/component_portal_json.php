@@ -136,7 +136,12 @@
 		}//end if (!empty($dato))
 		// dump(null, 'Time to data portal 2 : '.exec_time_unit($api_start_time_data,'ms')." ms".to_string());
 	}//end if $options->get_data===true && $permissions>0
-	// dump($context, ' context ++ '.to_string($this->tipo));
+	// if ($this->tipo==='rsc88') {
+		// dump($context, ' portal context ++ '.to_string($this->tipo));
+		// $bt = debug_backtrace();
+		// 	dump($bt, ' bt ++ '.to_string());
+	// }
+	
 	// dump($data, ' data ++ '.to_string($this->tipo));
 
 

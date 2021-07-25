@@ -1092,8 +1092,7 @@ class dd_core_api {
 				$result->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
 			}
-
-
+			
 		return $result;
 	}//end build_json_rows
 

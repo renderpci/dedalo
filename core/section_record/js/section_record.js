@@ -252,17 +252,44 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		const caller_column_id	= self.column_id
 		const ar_columns		= await self.columns || []
 
-			// console.log("section_tipo:",section_tipo);
-			// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
-			// console.log("_________________________________________________ ar_columns:",ar_columns);
+		// console.log("section_tipo:",section_tipo);
+		// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
+		// console.log("_________________________________________________ ar_columns:",ar_columns);
+
+		// get the columns that can be used with the current locator
+		// check the section_tipo of the last column and match with the current locator section_tipo
+		// the columns has reverse order, the last columns match with the component locator, (and the first columns is the most deep coponent in the path)
+
+			const get_valid_columns = function(section_tipo, ar_columns ){
+					const ar_column = []
+
+					for (var i = 0; i < ar_columns.length; i++) {
+						const current_column	= ar_columns[i]
+						const last_column		= current_column[current_column.length - 1];
+						// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the loctator
+						if(Array.isArray(last_column.section_tipo)){
+							const ddo_check = last_column.section_tipo.find(item => item === section_tipo)
+							if(ddo_check) {
+								ar_column.push(current_column)
+							}
+
+						}else if(last_column.section_tipo === section_tipo){
+							ar_column.push(current_column)
+						}
+
+					}
+					return ar_column
+				}
+			const valid_columns = get_valid_columns(section_tipo, ar_columns)
+
 
 	// instances
 		const ar_instances		= []
-		const ar_columns_length	=  ar_columns.length
+		const ar_columns_length	=  valid_columns.length
 		for (let i = 0; i < ar_columns_length; i++) {
 			
 			// ddo
-				const current_ddo_path	= ar_columns[i]
+				const current_ddo_path	= valid_columns[i]
 				const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
 				if (!current_ddo) {
 					console.warn("ignored empty current_ddo: [i, tipo, section_tipo, section_id, matrix_id]", i, tipo, section_tipo, section_id, matrix_id);
@@ -280,6 +307,8 @@ section_record.prototype.get_ar_columns_instances = async function(){
 				const current_context	= Array.isArray(current_ddo.section_tipo)
 					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+
+
 				// check is valid context
 					if (!current_context) {
 						console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
