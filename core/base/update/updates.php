@@ -29,7 +29,7 @@ $updates->$v = new stdClass();
 				$script_obj->info   		= "Change the component_relation_related_index data inside thesaurus to resources section data";
 				$script_obj->script_class   = "relation_index_v5_to_v6";
 				$script_obj->script_method  = "change_component_dato";
-				$script_obj->script_vars    = json_encode([]); // Note that only ONE argument encoded is sended
+				$script_obj->script_vars    = json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
 		return;
@@ -39,7 +39,7 @@ $updates->$v = new stdClass();
 
 
 	# DATABASE UPDATES
-		// alter the null option of the parent colum in jer_dd (NULL is now allowed)
+		// alter the null option of the parent column in jer_dd (NULL is now allowed)
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				ALTER TABLE \"jer_dd\"
 				ALTER \"parent\" TYPE character varying(32),
@@ -75,7 +75,7 @@ $updates->$v = new stdClass();
 				$script_obj->info   		= "Remove unused section data on components: valor, valor_list, empty datalist";
 				$script_obj->script_class   = "data_v5_to_v6";
 				$script_obj->script_method  = "clean_component_dato";
-				$script_obj->script_vars    = json_encode([]); // Note that only ONE argument encoded is sended
+				$script_obj->script_vars    = json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
 

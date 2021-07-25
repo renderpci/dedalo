@@ -208,4 +208,4 @@ class component_portal extends component_relation_common {
 
 
 
-}//end class
+}//end class component_portal
