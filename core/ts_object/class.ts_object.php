@@ -215,52 +215,52 @@ class ts_object extends Accessors {
 
 		# Global object
 		$children_data = new stdClass();
-			$children_data->section_tipo 	= $this->section_tipo;
-			$children_data->section_id		= $this->section_id;
-			$children_data->modo 			= 'edit';	//'list_thesaurus';
-			$children_data->lang 			= DEDALO_DATA_LANG;
-			$children_data->is_descriptor	= true;
-			$children_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);
+			$children_data->section_tipo				= $this->section_tipo;
+			$children_data->section_id					= $this->section_id;
+			$children_data->modo						= 'edit';	//'list_thesaurus';
+			$children_data->lang						= DEDALO_DATA_LANG;
+			$children_data->is_descriptor				= true;
+			$children_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
 			$children_data->permissions_button_new		= $this->get_permissions_element('button_new');
 			$children_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
 			$children_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
 			$children_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
+
 			$children_data->ar_elements 	= array();
 
 		$model = isset($this->options->model) ? $this->options->model : null;
 
-		# ELEMENTS
+		# elements
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
-			#dump($ar_elements, ' $ar_elements ++ '.to_string($children_data));
-			#debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 		foreach ($ar_elements as $k_element_tipo => $current_object) {
 
-			$element_tipo= $current_object->tipo;
-			$render_vars = $current_object;
-			#debug_log(__METHOD__."  ".to_string($render_vars), logger::DEBUG);
+			// element_tipo
+				$element_tipo = $current_object->tipo;
+				if (empty($element_tipo)) {
+					debug_log(__METHOD__." Error. Empty element_tipo in current_object: ".to_string($current_object), logger::DEBUG);
+					continue;
+				}
 
-			if (empty($element_tipo)) {
-				debug_log(__METHOD__." Error. Empty element_tipo in current_object: ".to_string($current_object), logger::DEBUG);
-				continue;
-			}
+			// render_vars
+				$render_vars = $current_object;
 
-			# No descriptors do not have children. Avoid calculate children
-			if ($children_data->is_descriptor===false && $render_vars->type==='link_children') {
-				continue;
-			}
+			// No descriptors do not have children. Avoid calculate children
+				if ($children_data->is_descriptor===false && $render_vars->type==='link_children') {
+					continue;
+				}
 
 			# Each element
 			$element_obj = new stdClass();
-				$element_obj->type = $render_vars->type;
-				$element_obj->tipo = $element_tipo;
+				$element_obj->type	= $render_vars->type;
+				$element_obj->tipo	= $element_tipo;
 
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-				$component 	 = component_common::get_instance($modelo_name,
-															  $element_tipo,
-															  $this->section_id,
-															  'list_thesaurus',
-															  DEDALO_DATA_LANG,
-															  $this->section_tipo);
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+				$component		= component_common::get_instance($modelo_name,
+																 $element_tipo,
+																 $this->section_id,
+																 'list_thesaurus',
+																 DEDALO_DATA_LANG,
+																 $this->section_tipo);
 				$dato = $component->get_dato();
 				if ($modelo_name==='component_autocomplete_hi') {
 
@@ -269,7 +269,6 @@ class ts_object extends Accessors {
 				}else if ($modelo_name==='component_input_text') {
 
 					$dato = $component->get_valor(0);
-						#debug_log(__METHOD__." $dato ".to_string($dato), logger::DEBUG);
 
 				}else if ($modelo_name==='component_relation_related') {
 
@@ -282,20 +281,16 @@ class ts_object extends Accessors {
 						#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
 						$dato = array_merge($dato, $component_rel);
 					}
-				}else if ($modelo_name==='component_svg'){
-						# file exsists check
-						$file_path = $component->get_file_path();
-						if (file_exists($file_path)===true) {
-							# URL
-							$file_url  = $component->get_url();
-							# Force refresh always
-							$file_url .= '?' . start_time();
-						}else{
-							$file_url = "";
-						}
 
-						$dato = $file_url;
-						#debug_log(__METHOD__." dato ".to_string($dato), logger::DEBUG);
+				}else if ($modelo_name==='component_svg'){
+
+					# file exists check
+					$file_path	= $component->get_file_path();
+					$file_url	= (file_exists($file_path)===true)
+						? $component->get_url() . '?' . start_time()
+						: '';
+
+					$dato = $file_url;
 				}
 
 
@@ -353,26 +348,24 @@ class ts_object extends Accessors {
 						if ($modelo_name==='component_relation_index' || $modelo_name==='component_relation_struct') {
 							#dump($dato, ' dato ++ '.to_string($element_tipo));
 							$total = count($dato);
-							$element_obj->value .= ":$total";
+							$element_obj->value .= ':' . $total;
 						}
 						break;
 
 					case ($element_obj->type==='link_children'):
 
 						# D : Descriptors
-						if($this->have_children_of_type($dato, 'descriptor')===true) {
-							$element_obj->value = 'button show children';
-						}else{
-							$element_obj->value = 'button show children unactive';
-						}
+						$element_obj->value = ($this->have_children_of_type($dato, 'descriptor')===true)
+							? 'button show children'
+							: 'button show children unactive';
 
 						# ND : No descriptors case
 						if($this->have_children_of_type($dato, 'nd')===true) {
 
 							$nd_element = new stdClass();
-								$nd_element->type = 'link_children_nd';
-								$nd_element->tipo = $element_tipo;
-								$nd_element->value = 'ND';
+								$nd_element->type	= 'link_children_nd';
+								$nd_element->tipo	= $element_tipo;
+								$nd_element->value	= 'ND';
 
 							$children_data->ar_elements[] = $nd_element;
 						}
@@ -389,11 +382,11 @@ class ts_object extends Accessors {
 		}
 
 		if(SHOW_DEBUG===true) {
-			$total=round( (microtime(1)-$start_time), 3 );
+			$total = round( (microtime(1)-$start_time), 3 );
 			#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
 			$children_data->total_time = $total;
 		}
-		#dump($children_data, ' $children_data ++ '.to_string());
+
 
 		return (object)$children_data;
 	}//end get_children_data
@@ -408,22 +401,19 @@ class ts_object extends Accessors {
 
 		if (empty($ar_children)) return false;
 
-
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 
 		foreach ((array)$ar_children as $key => $current_locator) {
 			
 			$section_map = section::get_section_map( $current_locator->section_tipo );
-				// dump($section_map, ' section_map ++ '.to_string());
-
 			if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
 				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
 				continue;
 			}
 
-			$component_tipo = $section_map->thesaurus->is_descriptor;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 	 	= component_common::get_instance($modelo_name,
+			$component_tipo	= $section_map->thesaurus->is_descriptor;
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance($modelo_name,
 															 $component_tipo,
 															 $current_locator->section_id,
 															 'list',
@@ -445,7 +435,7 @@ class ts_object extends Accessors {
 
 	/**
 	* IS_INDEXABLE
-	* @return
+	* @return bool
 	*/
 	public static function is_indexable($section_tipo, $section_id) {
 
@@ -729,11 +719,11 @@ class ts_object extends Accessors {
 					$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
 				}else{
 					$permissions = 0;
-					debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned as permissions ".to_string(), logger::DEBUG);
+					// debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned as permissions ".to_string(), logger::DEBUG);
 				}
 				break;
-		}
-		#dump($permissions, ' permissions ++ '.to_string($element_name.' - '.$this->section_tipo));
+		}//end switch ($element_name)
+
 
 		return (int)$permissions;
 	}//end get_permissions_element
@@ -741,4 +731,3 @@ class ts_object extends Accessors {
 
 
 }//end ts_object
-?>
