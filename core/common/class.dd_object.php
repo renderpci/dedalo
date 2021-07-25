@@ -24,6 +24,7 @@ class dd_object extends stdClass {
 		# pagination 		: true
 		# tools 			: []
 		# css 				: {}
+		# column 			: 'term'
 
 	static $ar_type_allowed = [
 		'section',
@@ -310,6 +311,16 @@ class dd_object extends stdClass {
 
 		$this->config_type = $value;
 	}
+
+
+	/**
+	* SET_COLUMN
+	*/
+	// public function set_column($value) {
+
+	// 	$this->column = $value;
+	// }
+
 
 
 

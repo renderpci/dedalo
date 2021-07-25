@@ -79,20 +79,48 @@
 
 				$data[] = $item;
 
+			//used to check if the component has the request_config of the section_tipo 
+			$cache_request_config = [];
 
-		
 			foreach ($value as $locator) {
 		
 				$current_section_tipo	= $locator->section_tipo;
 				$current_section_id		= $locator->section_id;
 
-				$section = section::get_instance($current_section_id, $current_section_tipo, 'list');
+				$section = section::get_instance($current_section_id, $current_section_tipo, 'related_list');
 
 				$section_json = $section->get_json();
-
 				$ar_subcontext	= $section_json->context;
+				
+				// the the different request_config to be used as configurated request_config of the component
+
 				foreach ($ar_subcontext as $current_context) {
+
+					if ($current_context->model ==='section' 
+						&& $current_context->tipo === $current_section_tipo
+						&& !in_array($current_section_tipo, $cache_request_config)) {
+						// get the section request config (we will use his request config)
+						// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
+						$original_request_config = $current_context->request_config;
+						// select api_engine dedalo only configs
+							$ar_request_config = array_find($original_request_config, function($el){
+								return $el->api_engine==='dedalo';
+							});
+						$ddo_map = $ar_request_config->show->ddo_map;
+						// change the ddo parent of the section to the component, only if the parent is the section_tipo
+						// is necesary don't change the ddo with deep dependence 
+						foreach ($ddo_map as $current_ddo) {						
+							 $current_ddo->parent = ($current_ddo->parent === $current_section_tipo)
+								 ? $tipo
+								 : $current_ddo->parent;
+						}
+						$this->context->request_config = [$ar_request_config];
+
+						$cache_request_config[] = $current_section_tipo;
+					}
+
 					$current_context->parent = $tipo;
+					
 					$context[] = $current_context;
 				}					
 
