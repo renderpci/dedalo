@@ -7,6 +7,7 @@
 class component_relation_common extends component_common {
 
 
+
 	/**
 	* CLASS VARS
 	*/
@@ -72,6 +73,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* __CONSTRUCT
+	* @return bool
 	*/
 	public function __construct($tipo=null, $parent=null, $modo='edit', $lang=null, $section_tipo=null) {
 
@@ -401,7 +403,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_VALOR_LANG
 	* Return the component lang depending of is translatable or not
-	* If the component need change this langs (selects, radiobuttons...) overwrite this function
+	* If the component need change this langs (selects, radio buttons...) overwrite this function
 	* @return string $lang
 	*/
 	public function get_valor_lang() {
@@ -1780,7 +1782,6 @@ class component_relation_common extends component_common {
 
 		return $ar_fixed_filter;
 	}//end get_fixed_filter
-
 
 
 

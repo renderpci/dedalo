@@ -379,4 +379,3 @@ class component_relation_struct extends component_relation_common {
 	
 
 }//end component_relation_struct
-?>

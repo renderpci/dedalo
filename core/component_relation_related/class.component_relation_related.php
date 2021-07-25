@@ -6,6 +6,8 @@
 */
 class component_relation_related extends component_relation_common {
 
+
+
 	# relation_type . Determines inverse resolutions and locator format
 	# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
 	# protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
@@ -32,6 +34,7 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
+	* @return bool
 	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
@@ -39,7 +42,7 @@ class component_relation_related extends component_relation_common {
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
 		# Build the component normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		$result = parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		// #
 		// # RELATION CONFIG . Set current component relation_type and relation_type_rel based on properties config
@@ -57,7 +60,7 @@ class component_relation_related extends component_relation_common {
 		// 		break;
 		// }
 
-		return true;
+		return $result;
 	}//end __construct
 
 

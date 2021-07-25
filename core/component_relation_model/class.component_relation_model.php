@@ -143,7 +143,7 @@ class component_relation_model extends component_relation_common {
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
+	}//end build_search_comparison_operators
 
 
 
@@ -188,6 +188,4 @@ class component_relation_model extends component_relation_common {
 
 
 
-
 }//end component_relation_model
-?>

@@ -35,7 +35,7 @@ class component_filter extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
-	* Component constructor
+	* @return bool
 	*/
 	function __construct( $tipo=false, $parent=null, $modo='list', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
@@ -780,6 +780,4 @@ class component_filter extends component_relation_common {
 
 
 
-
-}
-?>
+}//end class component_filter
