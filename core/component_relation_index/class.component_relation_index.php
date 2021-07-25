@@ -21,7 +21,7 @@ class component_relation_index extends component_relation_common {
 	* GET_DATA
 	* @return array $data
 	*/
-	public function get_data() {
+	public function get_dato() {
 
 		# Custom properties external dato
 		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
@@ -62,9 +62,7 @@ class component_relation_index extends component_relation_common {
 
 		}
 
-		$data = $this->get_dato();
-
-		return $data;
+		return $this->dato;;
 	}//end get_data
 
 

@@ -222,9 +222,9 @@ class ts_object extends Accessors {
 			$children_data->is_descriptor	= true;
 			$children_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);
 			$children_data->permissions_button_new		= $this->get_permissions_element('button_new');
-			$children_data->permissions_button_delete 	= $this->get_permissions_element('button_delete');
-			$children_data->permissions_indexation 	= $this->get_permissions_element('component_relation_index');
-			$children_data->permissions_structuration 	= $this->get_permissions_element('component_relation_struct');
+			$children_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
+			$children_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
+			$children_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
 			$children_data->ar_elements 	= array();
 
 		$model = isset($this->options->model) ? $this->options->model : null;
