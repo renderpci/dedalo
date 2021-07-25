@@ -51,6 +51,7 @@ class component_relation_children extends component_relation_common {
 	}//end get_valor
 
 
+
 	/**
 	* MAKE_ME_YOUR_CHILD
 	* Add one locator to current 'dato' from parent side

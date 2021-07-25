@@ -102,4 +102,5 @@ class component_select extends component_relation_common {
 	}//end get_diffusion_dato
 
 
+
 }//end class

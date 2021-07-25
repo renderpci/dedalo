@@ -1,5 +1,4 @@
 <?php
-#require_once(dirname(dirname(__FILE__)).'/component_filter/class.component_filter.php');
 /*
 * CLASS COMPONENT_SELECT_LANG
 *
@@ -23,6 +22,7 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
+	* @return bool
 	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
@@ -30,15 +30,18 @@ class component_select_lang extends component_relation_common {
 		$lang = $this->lang;
 
 		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		$result = parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		if(SHOW_DEBUG) {
+			// check lang is properly configurated
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
 				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
+
+		return $result;
 	}//end __construct
 
 

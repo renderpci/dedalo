@@ -27,20 +27,6 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* __CONSTRUCT
-	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Build the component normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-
-		return true;
-	}//end __construct
-
-
-
-	/**
 	* GET_properties
 	* Only to enable component_autocomplete_hi compatibility
 	* @return object $properties
@@ -219,6 +205,7 @@ class component_portal extends component_relation_common {
 				break;
 		}
 	}//end update_dato_version
+
 
 
 }//end class

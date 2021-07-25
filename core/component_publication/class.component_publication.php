@@ -6,6 +6,8 @@
 */
 class component_publication extends component_relation_common {
 
+
+
 	// relation_type defaults
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
 	protected $default_relation_type_rel	= null;
@@ -20,14 +22,15 @@ class component_publication extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
+	* @return bool
 	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
-		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		# construct the component normally
+		return parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 	}//end __construct
 
 
@@ -93,7 +96,7 @@ class component_publication extends component_relation_common {
 
 
 		return $valor;
-	}#end get_valor
+	}//end get_valor
 
 
 
@@ -106,6 +109,8 @@ class component_publication extends component_relation_common {
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators
+
+
 
 	/**
 	* GET_SEARCH_QUERY
@@ -148,4 +153,4 @@ class component_publication extends component_relation_common {
 
 
 
-}
+}//end component_publication

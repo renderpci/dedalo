@@ -112,5 +112,4 @@ class component_radio_button extends component_relation_common {
 
 
 
-}//end class
-?>
+}//end class component_radio_button

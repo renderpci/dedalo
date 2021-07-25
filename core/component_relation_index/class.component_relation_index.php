@@ -16,9 +16,10 @@ class component_relation_index extends component_relation_common {
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id');
 
 
+
 	/**
 	* GET_DATA
-	* @return 
+	* @return array $data
 	*/
 	public function get_data() {
 
@@ -55,7 +56,9 @@ class component_relation_index extends component_relation_common {
 
 		return $data;
 	}//end get_data
-	
+
+
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
