@@ -101,13 +101,9 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		# relation_type
-		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
 		// relation config . Set current component relation_type and relation_type_rel based on properties config
-			$properties = $this->get_properties();
+			$RecordObj_dd	= new RecordObj_dd($tipo);
+			$properties		= $RecordObj_dd->get_properties();
 
 			// relation_type
 				$this->relation_type = isset($properties->config_relation->relation_type)
@@ -118,6 +114,11 @@ class component_relation_common extends component_common {
 				$this->relation_type_rel = isset($properties->config_relation->relation_type_rel)
 					? $properties->config_relation->relation_type_rel
 					: $this->default_relation_type_rel;
+
+		# relation_type
+		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+		# Build the componente normally
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		// if(SHOW_DEBUG) {
 		// 	$traducible = $this->RecordObj_dd->get_traducible();
@@ -322,8 +323,12 @@ class component_relation_common extends component_common {
 			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 			# Verify all locators are well formed
-			$relation_type 		 = $this->relation_type;
-			$from_component_tipo = $this->tipo;
+			$relation_type			= $this->relation_type;
+			$from_component_tipo	= $this->tipo;
+
+			if (empty($this->relation_type)) {
+				dump($this->tipo, ' set dato this empty this->relation_type+ +++++++++++++++++++++++++++++++++++++++ ++ '.to_string($this->default_relation_type));
+			}
 
 			foreach ((array)$dato as $key => $current_locator) {
 
