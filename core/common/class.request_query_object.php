@@ -44,6 +44,13 @@
 					// all sqo definition in search_query_object class
 				}
 				"show"			: {
+					"get_ddo_map" 	:
+						{
+							//if isset this property ddo_map will be calculated. The value is the model of the ontology term to get the ddo_map, such as "section_map", different sections can define a component or multiple component to build common search and common columns (mint, type, es1, fr1, etc)
+							model : string // the ontology model to get the information
+							path : array // the path of properites into the object to get the information (stored into properties)
+
+						}
 					"ddo_map"		: array [{ddo}, {ddo}] // layout map will be used, with specific path, the ddo are linked by parent to create the path
 					"sqo_config"	: {
 						// specific sqo configuration for the show
@@ -114,6 +121,15 @@
 					"filter_by_locators": [{locator},{locator}]
 				},
 				"show":{
+					"get_ddo_map": {
+		                "model": "section_map",
+						"columns": [
+							[
+								"thesaurus",
+								"term"
+							]
+						]
+		            },
 					"ddo_map":[
 						{"section_tipo":"self","tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": false},
 						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"}, {"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
