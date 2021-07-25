@@ -26,11 +26,22 @@ class component_relation_common extends component_common {
 		// $dato_full. component dato with all langs
 		public $dato_full;
 
+		# relation_type . Determines inverse resolutions and locator format
+		# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
+		protected $relation_type ; // Set on construct from properties
+
+		# type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component dato
+		# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
+		# DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
+		# DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
+		# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
+		protected $relation_type_rel ; // Set on construct from properties
+
 
 
 	/**
 	* GET_COMPONENTS_WITH_RELATIONS
-	* Array of components modelo name that usin locators in dato and extends component_relation_common
+	* Array of components model name that using locators in dato and extends component_relation_common
 	* @return array
 	*/
 	public static function get_components_with_relations() {
@@ -64,36 +75,49 @@ class component_relation_common extends component_common {
 	*/
 	public function __construct($tipo=null, $parent=null, $modo='edit', $lang=null, $section_tipo=null) {
 
-		# Force always DEDALO_DATA_NOLAN
-		// $lang = $this->lang;
-
-		$translatable = RecordObj_dd::get_translatable($tipo);
-		if ($translatable===true) {
-			if (empty($lang)) {
-				$lang = DEDALO_DATA_LANG;
-			}else{
-				if ($lang===DEDALO_DATA_NOLAN) {
-					debug_log(__METHOD__." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
+		// lang. translatable conditioned
+			$translatable = RecordObj_dd::get_translatable($tipo);
+			if ($translatable===true) {
+				if (empty($lang)) {
 					$lang = DEDALO_DATA_LANG;
+				}else{
+					if ($lang===DEDALO_DATA_NOLAN) {
+						debug_log(__METHOD__." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
+						$lang = DEDALO_DATA_LANG;
+					}
 				}
-			}
-		}else{
-			if (empty($lang)) {
-				$lang = DEDALO_DATA_NOLAN;
 			}else{
-				if ($lang!==DEDALO_DATA_NOLAN) {
-					// $bt = debug_backtrace()[1];
-					debug_log(__METHOD__." Changed component wrong lang [NON TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_NOLAN, logger::ERROR);
-					// dump($bt, ' bt ++ '.to_string());
+				if (empty($lang)) {
 					$lang = DEDALO_DATA_NOLAN;
+				}else{
+					if ($lang!==DEDALO_DATA_NOLAN) {
+						// $bt = debug_backtrace()[1];
+						debug_log(__METHOD__." Changed component wrong lang [NON TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_NOLAN, logger::ERROR);
+						// dump($bt, ' bt ++ '.to_string());
+						$lang = DEDALO_DATA_NOLAN;
+					}
 				}
 			}
-		}
 
 		# relation_type
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 		# Build the componente normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+
+		// relation config . Set current component relation_type and relation_type_rel based on properties config
+			$properties = $this->get_properties();
+			switch (true) {
+				case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
+					$this->relation_type 	 = $properties->config_relation->relation_type;
+					$this->relation_type_rel = $properties->config_relation->relation_type_rel;
+					break;
+
+				default:
+					$this->relation_type 	 = $this->default_relation_type; // Default
+					$this->relation_type_rel = $this->default_relation_type_rel; // DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
+					debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behavior".to_string(), logger::ERROR);
+					break;
+			}
 
 		// if(SHOW_DEBUG) {
 		// 	$traducible = $this->RecordObj_dd->get_traducible();

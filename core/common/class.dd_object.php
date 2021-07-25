@@ -1,6 +1,6 @@
 <?php
 /**
-* CLASS DD_OBJECT
+* CLASS DD_OBJECT (ddo)
 * Defines object with normalized properties and checks
 *
 */
