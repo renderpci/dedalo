@@ -207,5 +207,74 @@ class component_portal extends component_relation_common {
 	}//end update_dato_version
 
 
+	/**
+	* GET_VALOR
+	* @return
+	*/
+	public function get_valor($lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ') {
+
+		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+
+	dump($real_model, ' real_model+-------------+ '.to_string());
+
+
+		if ($real_model==='component_portal') {
+			return 'unavailable';
+		}
+
+		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $real_model .'.php';
+		include $path;
+
+		// $_get_valor = Closure::bind($_get_valor, $this);
+		$valor =  Closure::bind($_get_valor, $this)($lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ');
+
+		return $valor;
+	}//end get_valor
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* @return
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
+
+		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+
+		if ($real_model==='component_portal') {
+			return 'unavailable';
+		}
+
+		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $real_model .'.php';
+		include $path;
+
+		// $_get_valor_export = Closure::bind($_get_valor_export, $this);
+		$valor =  Closure::bind($_get_valor_export, $this)( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null );
+
+		return $valor;
+	}//end get_valor_export
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* @return
+	*/
+	public function get_diffusion_value( $lang=DEDALO_DATA_LANG, $option_obj=null ) {
+
+		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+
+		if ($real_model==='component_portal') {
+			return 'unavailable';
+		}
+
+		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $real_model .'.php';
+		include $path;
+
+		// $_get_diffusion_value = Closure::bind($_get_diffusion_value, $this);
+		$valor =  Closure::bind($_get_diffusion_value, $this)( $lang=DEDALO_DATA_LANG, $option_obj=null );
+
+		return $valor;
+	}//end get_diffusion_value
+
+
 
 }//end class component_portal
