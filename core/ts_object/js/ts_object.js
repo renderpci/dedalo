@@ -348,11 +348,12 @@ export const ts_object = new function() {
 																	 })
 
 				// INDEXATIONS CONTAINER
+					const indexations_container_id = 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id
 					const indexations_container  = ui.create_dom_element({
 																		element_type			: 'div',
 																		parent 					: wrap_ts_object,
 																		class_name 				: 'indexations_container',
-																		id 						: 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id
+																		id 						: indexations_container_id
 																	 })
 
 				// ND CONTAINER

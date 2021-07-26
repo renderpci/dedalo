@@ -182,14 +182,16 @@ class diffusion_index_ts extends diffusion {
 		$ar_locators 		= $this->get_ar_locators();
 
 		foreach ((array)$ar_locators as $current_locator) {
-			#dump($current_locator,"current_locator");
+			// dump($current_locator,"current_locator");
 			# ID SECTION
-			$section_top_tipo		= $current_locator->section_top_tipo;	#dump($section_top_tipo,'$section_top_tipo')
-			$section_top_id			= $current_locator->section_top_id;
+
 			$section_tipo			= $current_locator->section_tipo;
 			$section_id				= $current_locator->section_id;
-			$component_tipo			= $current_locator->component_tipo;
-			$tag_id					= $current_locator->tag_id;
+
+			$section_top_tipo		= $current_locator->section_top_tipo ?? $current_locator->section_tipo;
+			$section_top_id			= $current_locator->section_top_id ?? $current_locator->section_id;
+			$component_tipo			= $current_locator->component_tipo ?? null;
+			$tag_id					= $current_locator->tag_id ?? null;
 
 			# SECTION_TOP_ID recalculate
 			# Como un recurso puede cambiar de 'bien', el locator 'section_top_id' de la indexación NO ES FIABLE !!
@@ -199,8 +201,10 @@ class diffusion_index_ts extends diffusion {
 
 			# AR_SECTION_TOP_TIPO MAP
 			$ar_section_top_tipo[$section_top_tipo][$section_top_id][] = $current_locator;	#$current_locator ;#substr($current_locator, strlen($id_section)+1);
+
+
 		}
-		#dump($ar_section_top_tipo,'$ar_section_top_tipo');
+		// dump($ar_section_top_tipo,'$ar_section_top_tipo');
 
 		#
 		# FILTER RESULT BY USER PROJECTS
@@ -299,4 +303,3 @@ class diffusion_index_ts extends diffusion {
 
 
 }
-?>
