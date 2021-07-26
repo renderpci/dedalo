@@ -24,11 +24,13 @@ export function dd_console(msg, level, items){
 		:	(level==='WARNING'
 				? 'warn'
 				: 'log')
+
+	const style = 'background: #000000; color: violet; font-size: 1.2em;'
 	
 	if (items) {
-		console[type](msg, items);
+		console[type]('%c' + msg, style, items);
 	}else{
-		console[type](msg);
+		console[type]('%c' + msg, style);
 	}	
 }//end clone
 
