@@ -1,0 +1,243 @@
+<?php
+
+///////// portal
+
+	/**
+	* GET VALOR
+	* Get resolved string representation of current values (locators)
+	* @return string | null
+	*/
+	$_get_valor = function( $lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ' ) {
+		$start_time = microtime(1);
+
+		$options = new stdClass();
+			$options->lang 				= $lang;
+			$options->data_to_be_used 	= $data_to_be_used;
+			$options->separator_rows 	= $separator_rows;
+			$options->separator_fields 	= $separator_fields;
+
+			$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
+				#dump($valor_from_ar_locators, ' valor_from_ar_locators');
+
+		if(SHOW_DEBUG===true) {
+			#$total_list_time = round(microtime(1)-$start_time,3);
+			#$bt = debug_backtrace();
+			#dump($bt, ' bt');
+			#debug_log(__METHOD__." WARNING CALLED GET VALOR IN COMPONENT PORTAL !! ({$total_list_time}ms) ".$this->tipo, logger::WARNING);
+		}
+
+		$valor = $valor_from_ar_locators->result;
+
+		return $valor;
+	};//end get_valor
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
+
+		if (empty($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$dato = $this->get_dato();
+
+		// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
+
+		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
+			$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+
+		// FIELDS
+			$fields=array();
+			foreach ($ar_terminos_relacionados as $key => $ar_value) {
+				foreach ($ar_value as $current_tipo) {
+
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					if (strpos($modelo_name, 'component_')!==false) {
+						$fields[] = $current_tipo;
+					}
+				}
+			}
+
+		$ar_resolved=array();
+		foreach( (array)$dato as $key => $value) {
+
+			$section_tipo 	= $value->section_tipo;
+			$section_id 	= $value->section_id;
+
+			// always add section_id
+				$item = new stdClass();
+					$item->section_id 			= $section_id;
+					$item->component_tipo 		= 'section_id';
+					$item->section_tipo 		= $section_tipo;
+					$item->from_section_tipo 	= $this->section_tipo;
+					$item->from_component_tipo 	= $this->tipo;
+					$item->model 				= null;
+					$item->value 				= $section_id;
+
+				$ar_resolved[] = $item;
+
+			foreach ($fields as $current_tipo) {
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $current_tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);
+				$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
+
+				$item = new stdClass();
+					$item->section_id 			= $section_id;
+					$item->component_tipo 		= $current_tipo;
+					$item->section_tipo 		= $section_tipo;
+					$item->from_section_tipo 	= $this->section_tipo;
+					$item->from_component_tipo 	= $this->tipo;
+					$item->model 				= $modelo_name;
+					$item->value 				= $current_value_export;
+
+				$ar_resolved[] = $item;
+			}
+		}//end foreach( (array)$dato as $key => $value)
+		#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
+
+		$valor_export = $ar_resolved;
+		#dump($valor_export, ' valor_export ++ '.to_string($this->tipo));
+
+		return $valor_export;
+	};//end get_valor_export
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	$get_diffusion_value =  function ( $lang=null ) {
+
+		$diffusion_value = null;
+
+		# Propiedades of diffusion element that references this component
+		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+		$diffusion_properties = $this->get_diffusion_properties();
+
+		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
+
+		switch ($data_to_be_used) {
+
+			case 'valor_list':
+				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows='<br>', $separator_fields=', ' );
+				break;
+
+			case 'valor':
+				$dato = $this->get_dato();
+				if (empty($dato)) {
+					$diffusion_value = null;
+				}else{
+					// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
+					// terminos_relacionados . Obtenemos los terminos relacionados del componente actual
+						$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+
+					// fields
+						$fields=array();
+						foreach ($ar_terminos_relacionados as $key => $ar_value) {
+							foreach ($ar_value as $current_tipo) {
+
+								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+								if (strpos($modelo_name, 'component_')!==false) {
+									$fields[] = $current_tipo;
+								}
+							}
+						}
+
+					$ar_resolved=array();
+					foreach( (array)$dato as $key => $current_locator) {
+
+						// Check target is publicable
+							$current_is_publicable = diffusion::get_is_publicable($current_locator);
+							if ($current_is_publicable!==true) {
+								// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								continue;
+							}
+
+						$section_tipo	= $current_locator->section_tipo;
+						$section_id		= $current_locator->section_id;
+
+						foreach ($fields as $current_tipo) {
+
+							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$component		= component_common::get_instance($modelo_name,
+																			 $current_tipo,
+																			 $section_id,
+																			 'list',
+																			 $lang,
+																			 $section_tipo);
+							$current_value_export = $component->get_diffusion_value( $lang );
+
+							$ar_resolved[] = $current_value_export;
+						}
+					}//end foreach( (array)$dato as $key => $current_locator)
+
+					$diffusion_value = implode(' | ', $ar_resolved);
+				}
+				break;
+
+			case 'dato_full':
+				$dato = $this->get_dato();
+				if (empty($dato)) {
+					$diffusion_value = null;
+				}else{
+					$diffusion_value = [];
+					foreach ((array)$dato as $current_locator) {
+
+						// Check target is publicable
+							$current_is_publicable = diffusion::get_is_publicable($current_locator);
+							if ($current_is_publicable!==true) {
+								// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								continue;
+							}
+
+						$diffusion_value[] = $current_locator;
+					}
+				}
+				break;
+
+			case 'dato':
+			default:
+				$dato = $this->get_dato();
+				if (empty($dato)) {
+					$diffusion_value = null;
+				}else{
+					$diffusion_value = [];
+					foreach ((array)$dato as $current_locator) {
+
+						// Check target is publicable
+							$current_is_publicable = diffusion::get_is_publicable($current_locator);
+							if ($current_is_publicable!==true) {
+								// debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								continue;
+							}
+
+						$diffusion_value[] = $current_locator->section_id;
+					}
+				}
+				break;
+		}
+
+
+		return $diffusion_value;
+	};//end get_diffusion_value
+

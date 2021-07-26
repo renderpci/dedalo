@@ -67,6 +67,9 @@
 
 		$dato = $this->get_dato();
 
+		// $valor = $this->get_valor();
+			dump($valor, ' valor ++ '.to_string());
+
 		// value
 			switch ($modo) {
 				case 'list':
