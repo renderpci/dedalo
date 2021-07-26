@@ -779,7 +779,7 @@ class component_text_area extends component_common {
 															  $modo='edit',
 															  DEDALO_DATA_LANG,
 															  $section_tipo);
-		$raw_text = $component_text_area->get_dato();
+		$raw_text = $component_text_area->get_dato()[0];
 
 		return component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $raw_text);
 	}//end get_fragment_text_from_rel_locator
@@ -808,7 +808,7 @@ class component_text_area extends component_common {
 																	 $current_lang,
 																	 $this->section_tipo,
 																	 false);
-			$text_raw 				= $component_text_area->get_dato();
+			$text_raw 				= $component_text_area->get_dato()[0];
 			$delete_tag_from_text 	= self::delete_tag_from_text($tag_id, $tag_type, $text_raw, $current_lang);
 			$remove_count 			= (int)$delete_tag_from_text->remove_count;
 			if ($remove_count>0) {
@@ -1429,7 +1429,7 @@ class component_text_area extends component_common {
 			$rel_locator_obj= $properties['rel_locator'];
 			#$rel_locator 	= component_common::build_locator_from_obj( $rel_locator_obj );
 			$fragment_info	= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
-			$texto 			= $this->get_dato();
+			$texto 			= $this->get_dato()[0];
 
 			# FRAGMENT
 			$diffusion_obj->columns['fragment']	= $fragment_info[0];

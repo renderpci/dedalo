@@ -44,17 +44,17 @@
 
 	  			# HEAD COMPONENTS : Iterate head components
 				foreach ($current_head_elements as $head_element_tipo) {
-					#dump($current_head_elements,'$current_head_elements');
+					// dump($current_head_elements,'$current_head_elements');
 
 					$RecordObj_dd	= new RecordObj_dd($head_element_tipo);
 					$current_lang	= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 					$properties		= $RecordObj_dd->get_properties();
 
 					$related_component_tipo = RecordObj_dd::get_ar_terminos_relacionados($head_element_tipo, $cache=true, $simple=true)[0];
-						#dump($related_component_tipo,'$related_component_tipo');
+						dump($related_component_tipo,'$related_component_tipo');
 
 					$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
-					#dump($related_component_tipo,'$related_component_tipo');
+					dump($component_modelo,'$component_modelo');
 					$current_component 	= component_common::get_instance($component_modelo,
 																		 $related_component_tipo,
 																		 $current_section_id,
@@ -64,6 +64,7 @@
 					#dump($current_component,'$current_component');
 
 					$ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $properties );
+
 				}
 				#dump($ar_diffusion_obj_head,'ar_diffusion_obj_head '.to_string($current_section_id));
 				include DEDALO_CORE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_head.phtml';
