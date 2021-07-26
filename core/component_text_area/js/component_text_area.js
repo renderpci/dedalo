@@ -91,14 +91,14 @@ component_text_area.prototype.init = async function(options) {
 				const service	= options.service
 
 			// create the HTML fragment inside the editor adding in/out tags. Returns new created tag_index_id
-				const tag_id = self.create_fragment(key, service)				
-				if (tag_id) {					
+				const tag_id = self.create_fragment(key, service)
+				if (tag_id) {
 					
 					// save modified content
 						const value = service.get_value()
 						self.save_value(key, value)
 						.then((response)=>{
-							if (response) {								
+							if (response) {
 								// select the new tag image in DOM
 								const image_node_selector	= `img.index[data-tag_id=${tag_id}]`
 								const image_node			= service.select_node(image_node_selector)
@@ -107,6 +107,8 @@ component_text_area.prototype.init = async function(options) {
 								}
 							}
 						})
+				}else{
+					console.error(`Error on create_fragment. tag_id is empty. key: ${key}, service:`,service);
 				}//end if (created!==false)
 
 			return true
@@ -115,7 +117,7 @@ component_text_area.prototype.init = async function(options) {
 
 	return common_init
 };//end  init
-	
+
 
 
 
@@ -574,6 +576,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
 			console.warn(`current service:`, service);
 			console.warn(`current service.editor:`, service.editor);
+			console.warn(`current service.editor.getBody():`, service.editor.getBody());
 			return false
 		}
 
@@ -681,7 +684,6 @@ component_text_area.prototype.create_fragment = function(key, service) {
 
 	// last_tag_id. Find last image of type index and returns id or 0
 		const last_tag_index_id = self.get_last_tag_id(key, 'index', service)
-			console.log("++++++++++++++++++++++++++++++++++ last_tag_index_id:",last_tag_index_id);
 
 	// create new string wrapping selection with new tags
 		// tag state. Default is 'n' (normal)

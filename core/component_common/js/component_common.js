@@ -106,19 +106,21 @@ component_common.prototype.init = async function(options) {
 		if(observe){
 			const l = observe.length
 			for (let i = l - 1; i >= 0; i--) {
-				const component_tipo	= observe[i].component_tipo
+				const component_tipo	= observe[i].component_tipo // target event component tipo
 				const event_name		= observe[i].event
 				const perform			= observe[i].perform || null
 
 				if(perform && typeof self[perform]==="function"){
 					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
-					// the id_base is build when the component is instantiated
+					// the id_base is built when the component is instantiated
 					// this event can be fired by:
 					// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
 					// or the sort format with the id_base of the observable component:
 					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
-					self.events_tokens.push(	
-						event_manager.subscribe(event_name +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ component_tipo, self[perform].bind(self))
+					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
+					// console.log("SUBSCRIBE self.id:", self.id, ' id_base:',id_base);
+					self.events_tokens.push(
+						event_manager.subscribe(event_name +'_'+ id_base, self[perform].bind(self))
 					)
 				}else{
 					console.warn(`Invalid observe perform. Target function '${perform}' don't exists in ${self.model}:`, observe[i], typeof self[perform]);
@@ -548,6 +550,7 @@ component_common.prototype.update_datum = async function(new_data) {
 		event_manager.publish('update_data_'+ self.id_base, '')
 
 
+
 	return self.datum
 };//end update_datum
 
@@ -567,7 +570,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 	if(SHOW_DEBUG===true) {
 		const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
-		console.log("======= update_data_value PRE:", clone(data_value) );
+		console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
 	}
 
 	const data_key 		= changed_data.key
@@ -588,7 +591,7 @@ component_common.prototype.update_data_value = function(changed_data){
 	if(SHOW_DEBUG===true) {
 		//console.log("***** update_data_value data_key:",clone(data_key));
 		//console.log("======= update_data_value:",clone(self.data.value));
-		console.log("======= update_data_value:",self.data.value, self.id);
+		console.log("======= update_data_value POST CHANGE:", clone(self.data.value), self.id);
 	}
 
 

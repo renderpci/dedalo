@@ -8,6 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	import {tr} from '../../common/js/tr.js'
+	import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
 /**
@@ -420,9 +421,10 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 				// text_selection
 					self.events_tokens.push(
-						event_manager.subscribe('text_selection'+'_'+ self.id, show_button_create_fragment)
+						event_manager.subscribe('text_selection_'+ self.id, show_button_create_fragment)
 					)
 					function show_button_create_fragment(options) {
+						dd_console('--> show_button_create_fragment options', 'DEBUG', options)
 
 						// options
 							const selection	= options.selection
@@ -647,43 +649,47 @@ const get_custom_events = (self, i, service) => {
 				switch(evt.target.className) {
 
 					case 'tc':
-						// Video goto timecode by tc tag
+						// Video go to timecode by tc tag
 						event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self})
 						break;
 
 					case 'index':
+						// click_tag_index_
+						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
+						// 'self.id' for specific uses like tool indexation
+						// console.log("PUBLISH self.id:",self.id, self.id_base);
+						event_manager.publish('click_tag_index_'+ self.id_base, {tag:tag_obj, caller: self})
+						// event_manager.publish('click_tag_index_'+ self.id, {tag:tag_obj, caller: self})
+						// des
+							// const tipo			= text_area_component.dataset.tipo
+							// const lang			= text_area_component.dataset.lang
+							// const section_tipo	= text_area_component.dataset.section_tipo
+							// const parent		= text_area_component.dataset.parent
 
-						event_manager.publish('click_tag_index' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+							// switch(page_globals.modo) {
 
-						// const tipo			= text_area_component.dataset.tipo
-						// const lang			= text_area_component.dataset.lang
-						// const section_tipo	= text_area_component.dataset.section_tipo
-						// const parent		= text_area_component.dataset.parent
+							// 	case 'edit' :
+							// 		// inspector : Show info about indexations in inspector
+							// 		tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
 
-						// switch(page_globals.modo) {
+							// 		// relations
+							// 		//component_text_area.load_relation(tag, tipo, parent, section_tipo);
+							// 		//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
 
-						// 	case 'edit' :
-						// 		// inspector : Show info about indexations in inspector
-						// 		tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
+							// 		// portal select fragment from tag button
+							// 		if (page_globals.context_name=='list_into_tool_portal') {
+							// 			// Show hidden button link_fragmet_to_portal and configure to add_resource
+							// 			component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
+							// 		}
+							// 		break;
 
-						// 		// relations
-						// 		//component_text_area.load_relation(tag, tipo, parent, section_tipo);
-						// 		//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
-
-						// 		// portal select fragment from tag button
-						// 		if (page_globals.context_name=='list_into_tool_portal') {
-						// 			// Show hidden button link_fragmet_to_portal and configure to add_resource
-						// 			component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
-						// 		}
-						// 		break;
-
-						// 	case 'tool_indexation' :
-						// 		// Show info about in tool relation window
-						// 		component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
-						// 		break;
-						// }
-						// // mask_tags on click image index
-						// mce_editor.mask_tags(ed, evt);
+							// 	case 'tool_indexation' :
+							// 		// Show info about in tool relation window
+							// 		component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
+							// 		break;
+							// }
+							// // mask_tags on click image index
+							// mce_editor.mask_tags(ed, evt);
 						break;
 
 					case 'svg' :
@@ -753,12 +759,8 @@ const get_custom_events = (self, i, service) => {
 					component_text_area.show_structuration_info(ed, evt, text_area_component)
 				}
 			}else{
-				// Sets styles on all paragraphs in the currently active editor
-				// if (ed.dom.select('img').length>0) {
-				// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
-				// }
-				event_manager.publish('click_no_tag' +'_'+ self.id_base, {caller: self})
-				// event_manager.publish('click_no_tag' +'_'+ self.id, {caller: self})
+				// click_no_tag_
+				event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
 			};//end click on img
 		};//end click
 
@@ -766,7 +768,7 @@ const get_custom_events = (self, i, service) => {
 		custom_events.MouseUp = (evt, options) => {
 			// user text selection event
 				const selection = options.selection
-				event_manager.publish('text_selection' +'_'+ self.id, {selection:selection, caller: self})
+				event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
 		};//end MouseUp
 
 	// keyup

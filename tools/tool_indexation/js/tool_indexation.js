@@ -133,7 +133,7 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
 			)
 			function fn_delete_tag(options) {
-				
+
 				const tag_id = options.tag_id
 
 				self.delete_tag(tag_id)
