@@ -83,17 +83,47 @@ tool_indexation.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = tool_common.prototype.init.call(this, options);
 
+	return common_init
+};//end init
+
+
+
+/**
+* BUILD_CUSTOM
+*/
+tool_indexation.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// config caller set tool
+		self.caller.caller = self
+
+	// load_indexing_component. Init and build the indexing_component (component_relation_index usually)
+		await self.load_indexing_component()
+
+	// main_component
+		self.main_component = await self.get_component(self.lang)
+
+	// load_related_sections_list. Get the relation list. This is used to build a select element to allow
+		// user select the top_section_tipo and top_section_id of current indexation
+		self.related_sections_list = await self.load_related_sections_list()
+
+	// call generic common tool build
+		const common_build = tool_common.prototype.build.call(self, autoload)
+
+
 	// events
 		// link_term. Observe thesaurus tree link index button click
 			self.events_tokens.push(
 				event_manager.subscribe('link_term', self.create_indexation.bind(self))
 			)
-		// click_tag_index. Observe user tag selection in text area
+		// click_tag_index. Observe user tag selection in text area.
+		// (!) Note subscribe uses 'id_base' instead 'self.id' to allow switch main component lang
 			self.events_tokens.push(
-				event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, click_tag_index)
+				event_manager.subscribe('click_tag_index_'+ self.main_component.id_base, click_tag_index)
 			)
 			function click_tag_index(options) {
-				// dd_console(`click_tag_index ${options.tag.dataset.tag_id}`, 'DEBUG', options)
+				// dd_console(`click_tag_index '${options.tag.dataset.tag_id}'`, 'DEBUG', options)
 
 				// options
 					const tag_element	= options.tag // DOM node selected
@@ -102,7 +132,7 @@ tool_indexation.prototype.init = async function(options) {
 				// fix selected tag
 					self.active_tag_id = tag_element.dataset.tag_id
 
-				// force to update registered active values 
+				// force to update registered active values
 					self.update_active_values([{
 						name	: "tag_id",
 						value	: tag_element.dataset.tag_id
@@ -150,40 +180,13 @@ tool_indexation.prototype.init = async function(options) {
 			}
 		// click_no_tag
 			self.events_tokens.push(
-				event_manager.subscribe('click_no_tag_' + self.id_base, fn_click_no_tag)
+				event_manager.subscribe('click_no_tag_' + self.main_component.id_base, fn_click_no_tag)
 			)
 			function fn_click_no_tag(options) {
 				if (!self.info_container.classList.contains('hide')) {
 					self.info_container.classList.add('hide')
 				}
 			}
-			
-
-	return common_init
-};//end init
-
-
-
-/**
-* BUILD_CUSTOM
-*/
-tool_indexation.prototype.build = async function(autoload=false) {
-
-	const self = this
-
-	// config caller set tool
-		self.caller.caller = self
-
-	// load_indexing_component. Init and build the indexing_component (component_relation_index usually)
-		await self.load_indexing_component()
-
-	// load_related_sections_list. Get the relation list. This is used to build a select element to allow
-		// user select the top_section_tipo and top_section_id of current indexation
-		self.related_sections_list = await self.load_related_sections_list()
-
-	// call generic common tool build
-		const common_build = tool_common.prototype.build.call(self, autoload)
-
 
 	return common_build
 };//end build_custom
