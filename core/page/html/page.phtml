@@ -18,6 +18,7 @@
 
 	// page instance
 	import {get_instance} from '../common/js/instances.js'
+	import {dd_console} from '../common/js/utils/index.js'
 	( async () => {
 
 		const main = document.getElementById("main")
@@ -39,7 +40,8 @@
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
+				// console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
+				dd_console(`Page instantiated and rendered total: ${performance.now()-t0} ms`)
 			}
 	})()
 </script>

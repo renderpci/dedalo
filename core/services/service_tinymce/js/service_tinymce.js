@@ -313,16 +313,16 @@ export const service_tinymce = function() {
 
 		const self = this
 
-			// console.log("self:",self);
-			// console.log("self.editor:",self.editor);
-
 		if (!self.editor) {
 			console.error("Error on get self.editor. Not available. self:", self);
 			return false
 		}
 
 		const editor_content_data = self.editor.getBody();
-			console.warn("-- editor_content_data:",editor_content_data);
+		if (!editor_content_data) {
+			console.error("! INVALID editor_content_data:", editor_content_data);
+		}
+
 
 		return editor_content_data
 	};//end get_editor_content_data
