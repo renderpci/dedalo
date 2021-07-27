@@ -32,8 +32,8 @@ class component_input_text extends component_common {
 
 			//check the dato for determinate the original format and if the $dato is correct.
 			$dato_trim				= trim($dato);
-			$dato_first_character 	= substr($dato_trim, 0, 1);
-			$dato_last_character  	= substr($dato_trim, -1);
+			$dato_first_character	= substr($dato_trim, 0, 1);
+			$dato_last_character	= substr($dato_trim, -1);
 
 			if ($dato_first_character==='[' && $dato_last_character===']') {
 				# dato is json encoded
@@ -162,18 +162,18 @@ class component_input_text extends component_common {
 	public static function update_dato_version($request_options) {
 
 		$options = new stdClass();
-			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
-			$options->reference_id 		= null;
-			$options->tipo 				= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
-			$reference_id 	= $options->reference_id;
+			$update_version	= $options->update_version;
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
 
 
 		$update_version = implode(".", $update_version);
@@ -188,17 +188,17 @@ class component_input_text extends component_common {
 					$new_dato = (array)$dato_unchanged;
 
 					$response = new stdClass();
-						$response->result   = 1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					return $response;
 
 				}else if(is_array($dato_unchanged)){
 
 					$response = new stdClass();
-						$response->result   = 1;
-						$response->new_dato = $dato_unchanged;
-						$response->msg = "[$reference_id] Dato is array ".to_string($dato_unchanged)." only save .<br />";
+						$response->result	= 1;
+						$response->new_dato	= $dato_unchanged;
+						$response->msg		= "[$reference_id] Dato is array ".to_string($dato_unchanged)." only save .<br />";
 					return $response;
 
 				}else{
@@ -258,22 +258,22 @@ class component_input_text extends component_common {
 
 				// Search empty only in current lang
 				// Resolve lang based on if is translatable
-					$path_end 		= end($query_object->path);
-					$component_tipo = $path_end->component_tipo;
-					$RecordObj_dd   = new RecordObj_dd($component_tipo);
-					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+					$RecordObj_dd	= new RecordObj_dd($component_tipo);
+					$lang			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
 					$clone = clone($query_object);
-						$clone->operator = '=';
-						$clone->q_parsed = '\'[]\'';
-						$clone->lang 	 = $lang;
+						$clone->operator	= '=';
+						$clone->q_parsed	= '\'[]\'';
+						$clone->lang		= $lang;
 
 					$new_query_json->$logical_operator[] = $clone;
 
 					// legacy data (set as null instead [])
 					$clone = clone($query_object);
-						$clone->operator = 'IS NULL';
-						$clone->lang 	 = $lang;
+						$clone->operator	= 'IS NULL';
+						$clone->lang		= $lang;
 
 					$new_query_json->$logical_operator[] = $clone;
 
@@ -310,9 +310,9 @@ class component_input_text extends component_common {
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
+				$query_object->unaccent	= false;
 
 				$logical_operator ='$and';
 				$new_query_json = new stdClass;
@@ -324,9 +324,9 @@ class component_input_text extends component_common {
 					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
 					foreach ($ar_all_langs as $current_lang) {
 						$clone = clone($query_object);
-							$clone->operator = '!=';
-							$clone->q_parsed = '\'[]\'';
-							$clone->lang 	 = $current_lang;
+							$clone->operator	= '!=';
+							$clone->q_parsed	= '\'[]\'';
+							$clone->lang		= $current_lang;
 
 						$ar_query_object[] = $clone;
 					}
@@ -342,65 +342,65 @@ class component_input_text extends component_common {
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '!~';
-				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$query_object->operator	= '!~';
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent	= false;
 				break;
 			# IS SIMILAR
 			case (strpos($q, '=')===0 || $q_operator==='='):
 				$operator = '=';
 				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '~*';
+				$query_object->operator	= '~*';
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent	= true;
 				break;
 			# NOT CONTAIN
 			case (strpos($q, '-')===0 || $q_operator==='-'):
 				$operator = '!~*';
 				$q_clean  = str_replace('-', '', $q);
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent	= true;
 				break;
 			# CONTAIN EXPLICIT
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent	= true;
 				break;
 			# ENDS WITH
 			case (substr($q, 0, 1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent	= true;
 				break;
 			# BEGINS WITH
 			case (substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent	= true;
 				break;
 			# LITERAL
 			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
 				$operator = '~';
 				$q_clean  = str_replace("'", '', $q);
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$query_object->unaccent	= false;
 				break;
 			# DEFAULT CONTAIN
 			default:
 				$operator = '~*';
 				$q_clean  = str_replace('+', '', $q);
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$query_object->unaccent	= true;
 				break;
 		}//end switch (true) {
 		#dump($query_object, ' query_object ++ '.to_string());
@@ -445,7 +445,7 @@ class component_input_text extends component_common {
 	*/
 	public function get_diffusion_value( $lang ) {
 
-		# Default behaviour is get value
+		# Default behavior is get value
 		$diffusion_value = $this->get_valor( $lang );
 
 		// Fallback to nolan dato
@@ -455,7 +455,7 @@ class component_input_text extends component_common {
 			$diffusion_value = $this->get_valor( DEDALO_DATA_NOLAN );
 		}
 
-		# strip_tags all values (remove untranslate mark elements)
+		# strip_tags all values (remove untranslated mark elements)
 		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
 
 

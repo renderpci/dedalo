@@ -1,7 +1,7 @@
 <?php
 /*
 * CLASS COMPONENT_RELATION_STRUCT
-* Manage indexations of type "struct" or structuration without overlaping
+* Manage indexations of type "struct" or structuration without overlapping
 *
 */
 class component_relation_struct extends component_relation_common {
