@@ -99,7 +99,7 @@ class component_pdf extends component_media_common {
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
-			$dato 		= trim($component->get_valor(0));
+			$dato 		= trim($component->get_valor());
 
 			# Add / at begin if not exits
 			if ( substr($dato, 0, 1) != '/' ) {

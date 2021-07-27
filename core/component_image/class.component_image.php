@@ -247,7 +247,7 @@ class component_image extends component_media_common {
 														 'edit',
 														 DEDALO_DATA_NOLAN,
 														 $this->section_tipo);
-			$dato 		= trim($component->get_valor(0));
+			$dato 		= trim($component->get_valor());
 				#dump($dato,"dato - compoent tipo $this->tipo - section_tipo: ".$this->section_tipo);
 
 			if(!empty($dato) && strlen($dato)>0) {
@@ -298,7 +298,7 @@ class component_image extends component_media_common {
 																 'edit',
 																 DEDALO_DATA_NOLAN,
 																 $this->get_section_tipo());
-					$dato 		= trim($component->get_valor(0));
+					$dato 		= trim($component->get_valor());
 
 					# Add / at begin if not exits
 					if ( substr($dato, 0, 1)!=='/' ) {
