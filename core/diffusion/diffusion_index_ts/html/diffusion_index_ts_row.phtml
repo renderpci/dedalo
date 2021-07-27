@@ -39,7 +39,7 @@
 																 DEDALO_DATA_LANG,
 																 $section_tipo);
 		if ($type===DEDALO_RELATION_TYPE_STRUCT_TIPO) {
-			$raw_text = $component_text_area->get_dato();
+			$raw_text = $component_text_area->get_dato()[0];
 			# Returns original lang transcription
 			$main_lang = component_text_area::force_change_lang($component_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
 			$pattern = TR::get_mark_pattern('struct', $standalone=true, $tag_id, false, false);
