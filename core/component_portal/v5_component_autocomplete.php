@@ -8,7 +8,8 @@
 	* Get resolved string representation of current value (expected id_matrix of section or array)
 	* @return array $this->valor
 	*/
-	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ') {
+
+	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $separator_fields=' | ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -51,14 +52,20 @@
 			}else{
 				$ar_componets_related = (array)$ar_related_terms;
 			}
-			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
+			dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
 
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
 
 
 		$ar_values = array();
-		$divisor   = $this->get_divisor();
+
+		// $divisor   = $this->get_divisor();
+
+		$divisor = (isset($propiedades->source->divisor))
+			? $propiedades->source->divisor
+			: ' | ';
+
 		foreach ($dato as $current_locator) {
 
 			if(isset($propiedades->source->search)){
@@ -178,7 +185,7 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$get_diffusion_value =  function ($lang=null) {
+	$_get_diffusion_value =  function ($lang=null) {
 
 		// force recalculate for each lang
 			unset($this->valor);

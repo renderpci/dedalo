@@ -9,7 +9,7 @@
 	* GET VALOR
 	* Get resolved string representation of current tesauro value
 	*/
-	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $separator='<br>') {
+	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		// load data
 			$dato = $this->get_dato();
@@ -84,7 +84,7 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$get_diffusion_value = function ($lang=DEDALO_DATA_LANG, $option_obj=null) {
+	$_get_diffusion_value = function ($lang=DEDALO_DATA_LANG, $option_obj=null) {
 
 		// separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$separator = ' - ';
