@@ -91,7 +91,7 @@ class component_relation_parent extends component_relation_common {
 	* Instead, is inserted in the related 'component_relation_children' the link to self
 	* Don't use this method regularly, is preferable use 'add_parent' method for every new relation
 	* @param array|string $dato
-	*	When dato is string is because is a json encoded dato
+	*	When dato is string is because is a JSON encoded dato
 	*/
 	public function set_dato($dato) {
 

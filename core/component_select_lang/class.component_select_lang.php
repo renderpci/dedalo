@@ -29,11 +29,11 @@ class component_select_lang extends component_relation_common {
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
-		# Build the componente normally
+		# Build the component normally
 		$result = parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		if(SHOW_DEBUG) {
-			// check lang is properly configurated
+			// check lang is properly configured
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
 				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
@@ -250,7 +250,7 @@ class component_select_lang extends component_relation_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string $diffusion_value
 	*
