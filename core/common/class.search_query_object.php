@@ -4,17 +4,15 @@
 * Defines object with normalized properties and checks.
 * SQO or Search Query Object definition is based on 
 * Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
-*/
-class search_query_object {
-
-	/* FORMAT
+*
+* 	// FORMAT
 
 		id						: 'oh1'		// optional. section_tipo and other params to define the unique id
 		section_tipo			: ['oh1']	// array of section_tipo for search
-		mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB		
+		mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB
 		filter					: {
 									operator : // string ('$and' || '$or')
-										[{ 
+										[{
 											q 			: '2'	// string to search
 											q_opeator	: '<'	// string || null
 											path		: [{	// array of components creating a sequential path
@@ -22,7 +20,7 @@ class search_query_object {
 												component_tipo
 											}]
 										}]
-						  		  } || null
+								  } || null
 		select					: [{	// array of objects optional
 									section_tipo
 									component_tipo
@@ -36,19 +34,39 @@ class search_query_object {
 											section_tipo
 											component_tipo
 										}]
-								  }]		
-		filter_by_locators		: [{
-										section_tipo
-										component_tipo
 								  }]
 		order_custom 			: {
 									column_name : [values]
 								  }
+		filter_by_locators		: [{
+										section_tipo
+										component_tipo
+								  }]
 		allow_sub_select_by_id	: (true || false)
 		remove_distinc			: (true || false)
-		skip_projects_filter	: (true || false)	
-		parsed					: (true || false) // boolean, state of the sqo	
-		*/
+		skip_projects_filter	: (true || false)
+		parsed					: (true || false) // boolean, state of the sqo
+*
+*/
+class search_query_object {
+
+
+
+	public $id;
+	public $section_tipo;
+	public $mode;
+	public $filter;
+	public $select;
+	public $limit;
+	public $offset;
+	public $full_count;
+	public $order;
+	public $order_custom;
+	public $filter_by_locators;
+	public $allow_sub_select_by_id;
+	public $remove_distinc;
+	public $skip_projects_filter;
+	public $parsed;
 
 
 
@@ -84,11 +102,26 @@ class search_query_object {
 	* @return bool true
 	*/
 	public function set_id(string $value) {
-		
+
 		$this->id = $value;
 
 		return true;
 	}//end set_id
+
+
+
+	/**
+	* SET_SECTION_TIPO
+	* Array of one or more values
+	* @param array $value like ['oh1']
+	* @return bool true
+	*/
+	public function set_section_tipo(array $value) {
+
+		$this->section_tipo = $value;
+
+		return true;
+	}//end set_section_tipo
 
 
 
@@ -100,26 +133,11 @@ class search_query_object {
 	* @return bool true
 	*/
 	public function set_mode(string $value) {
-		
+
 		$this->mode = $value;
 
 		return true;
 	}//end set_mode
-
-
-
-	/**
-	* SET_SECTION_TIPO
-	* Array of one or more values
-	* @param array $value like ['oh1']
-	* @return bool true 
-	*/
-	public function set_section_tipo(array $value) {
-		
-		$this->section_tipo = $value;
-
-		return true;
-	}//end set_section_tipo
 
 
 
@@ -143,10 +161,10 @@ class search_query_object {
 	*        }
 	*    ]
 	* }
-	* @return bool true 
+	* @return bool true
 	*/
 	public function set_filter(object $value) {
-		
+
 		$this->filter = $value;
 
 		return true;
@@ -172,10 +190,10 @@ class search_query_object {
 	*    ],
 	*    "type": "jsonb"
 	* }]
-	* @return bool true 
+	* @return bool true
 	*/
 	public function set_select(array $value) {
-		
+
 		$this->select = $value;
 
 		return true;
@@ -193,7 +211,7 @@ class search_query_object {
 			$this->limit = 'ALL';
 			return true;
 
-		} 
+		}
 
 		$this->limit = (int)$value;
 
@@ -218,7 +236,7 @@ class search_query_object {
 
 	/**
 	* SET_FULL_COUNT
-	* Note that if the request is made it using 'true' value, the sqo->full_count value 
+	* Note that if the request is made it using 'true' value, the sqo->full_count value
 	* will be modified with the result of the records count
 	* @param bool | int
 	* @return bool
@@ -229,7 +247,7 @@ class search_query_object {
 			debug_log(__METHOD__." ERROR on set_full_count. Invalid full_count type ".gettype($value).". Only integer|boolean are valid", logger::ERROR);
 			return false;
 		}
-		
+
 		$this->full_count = $value;
 
 		return true;
@@ -256,7 +274,7 @@ class search_query_object {
 	* @return bool true
 	*/
 	public function set_order(array $value) {
-		
+
 		$this->order = $value;
 
 		return true;
@@ -269,23 +287,23 @@ class search_query_object {
 	* Used mainly in portals to preserve data order
 	* @param array of objects like
 	* [
-    *    {
-    *        "column_name": "section_id",
-    *        "column_values": [
-    *            1, 3, 84, 2
-    *        ]
-    *    }
-    * ]
+	*    {
+	*        "column_name": "section_id",
+	*        "column_values": [
+	*            1, 3, 84, 2
+	*        ]
+	*    }
+	* ]
 	* @return bool true
 	*/
 	public function set_order_custom(array $value) {
-		
+
 		$this->order_custom = $value;
 
 		return true;
 	}//end set_order_custom
 
-	
+
 
 	/**
 	* SET_FILTER_BY_LOCATORS
@@ -298,7 +316,7 @@ class search_query_object {
 	* @return bool true
 	*/
 	public function set_filter_by_locators(array $value) {
-		
+
 		$this->filter_by_locators = $value;
 
 		return true;
@@ -309,13 +327,13 @@ class search_query_object {
 	/**
 	* SET_ALLOW_SUB_SELECT_BY_ID
 	* Allow / disallow the default sql query window created with selected ids for speed
-	* Sometimes, the default behavior (true) interferes with some search calls like 
-	* in autocomplete cases 
+	* Sometimes, the default behavior (true) interferes with some search calls like
+	* in autocomplete cases
 	* @param bool $value
 	* @return bool true
 	*/
 	public function set_allow_sub_select_by_id(bool $value) {
-		
+
 		$this->allow_sub_select_by_id = $value;
 
 		return true;
@@ -332,7 +350,7 @@ class search_query_object {
 	* @return bool true
 	*/
 	public function set_remove_distinc(bool $value) {
-		
+
 		$this->remove_distinc = $value;
 
 		return true;
@@ -343,13 +361,13 @@ class search_query_object {
 	/**
 	* SET_SKIP_PROJECTS_FILTER
 	* By default, for non global administrators, a fixed filter y applied to all search using
-	* the user projects value. Sometimes, is required to remove this filter to allow access 
+	* the user projects value. Sometimes, is required to remove this filter to allow access
 	* transversal data like common value lists etc.
 	* @param bool $value
 	* @return bool true
 	*/
 	public function set_skip_projects_filter(bool $value) {
-		
+
 		$this->skip_projects_filter = $value;
 
 		return true;
@@ -363,13 +381,13 @@ class search_query_object {
 	* 1 - Base object with basic path definitions
 	* 2 - Parsed object with resolved component paths and component specific properties
 	* When SQO is passed to the search class to exec a DDBB query, the object elements are passed
-	* to the respective components to parse the final usable object 
+	* to the respective components to parse the final usable object
 	* @see search.parse_search_query_object
 	* @param bool $value
 	* @return bool true
 	*/
 	public function set_parsed(bool $value) {
-		
+
 		$this->parsed = $value;
 
 		return true;
@@ -380,9 +398,9 @@ class search_query_object {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
-	*/	
+	*/
 	final public function __call($strFunction, $arArguments) {
-		
+
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -403,7 +421,6 @@ class search_query_object {
 			return false;
 		}
 	}
-
 
 
 
