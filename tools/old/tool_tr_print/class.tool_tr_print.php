@@ -461,7 +461,7 @@ class tool_tr_print extends tool_common {
 															  'edit',
 															  DEDALO_DATA_NOLAN,
 															  $current_locator->section_tipo);
-				$name = $component->get_valor(0);
+				$name = $component->get_valor();
 
 			# surname
 				$current_tipo= 'rsc86';
@@ -472,7 +472,7 @@ class tool_tr_print extends tool_common {
 															  'edit',
 															  DEDALO_DATA_NOLAN,
 															  $current_locator->section_tipo);
-				$surname = $component->get_valor(0);
+				$surname = $component->get_valor();
 
 
 			$informants_data[] = "$name $surname";

@@ -761,6 +761,21 @@ abstract class common {
 	}//end set_properties
 
 
+	/**
+	* GET_PROPIEDADES : V5 compatibility for diffusion
+	* Don't used it to V6!!!!!!!!!
+	*/
+	public function get_propiedades() {
+
+		# Read string from database str
+		$propiedades = $this->RecordObj_dd->get_propiedades();
+
+		$propiedades_obj = json_decode($propiedades);
+
+		return $propiedades_obj;
+	}//end get_propiedades
+
+
 
 	/**
 	* GET_AR_RELATED_COMPONENT_TIPO

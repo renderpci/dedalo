@@ -78,7 +78,7 @@ class component_svg extends component_media_common {
 																 'edit',
 																 DEDALO_DATA_NOLAN,
 																 $this->section_tipo);
-			$dato = trim($component->get_valor(0));
+			$dato = trim($component->get_valor());
 			if(!empty($dato) && strlen($dato)>0) {
 				$svg_id = $dato;
 			}
@@ -144,7 +144,7 @@ class component_svg extends component_media_common {
 																 'edit',
 																 DEDALO_DATA_NOLAN,
 																 $section_tipo);
-			$dato = trim($component->get_valor(0));
+			$dato = trim($component->get_valor());
 
 			# Add / at begin if not exits
 			if ( substr($dato, 0, 1)!=='/' ) {

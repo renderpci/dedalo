@@ -506,7 +506,7 @@ class diffusion_rdf extends diffusion {
 																				$section_tipo,
 																				false);
 							# get_valor($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor="<br> ")
-							$dato = $component_obj->get_valor(DEDALO_DATA_LANG, 'string', (array)$object_uri->value, ', ');	//  Ref. $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false
+							$dato = $component_obj->get_valor(DEDALO_DATA_LANG, $format='string', $separator_fields=', ',$separator_rows='<br>', $ar_related_terms=(array)$object_uri->value);	//  Ref. $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false
 							$value = $dato;
 							break;
 						default:

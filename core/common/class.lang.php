@@ -249,7 +249,7 @@ class lang {
 														  'edit',
 														  DEDALO_DATA_NOLAN,
 														  $section_tipo);
-		$code = $component->get_valor(0);
+		$code = $component->get_valor();
 
 		if ($add_prefix===true) {
 			$code = 'lg-'.$code;
