@@ -102,7 +102,7 @@ class dd_core_api {
 	/**
 	* READ
 	* @param request query object $rqo
-	*	arrray $json_data->context
+	*	array $json_data->context
 	* @return object $result
 	*	array $result->context
 	*	array $result->data
@@ -610,10 +610,10 @@ class dd_core_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$user_id				= navigator::get_user_id();
-			$target_section_tipo	= $json_data->target_section_tipo;
-			
-			$editing_preset			= search::get_preset($user_id, $target_section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
+		$user_id				= navigator::get_user_id();
+		$target_section_tipo	= $json_data->target_section_tipo;
+
+		$editing_preset = search::get_preset($user_id, $target_section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -637,14 +637,14 @@ class dd_core_api {
 		global $start_time;
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$user_id 		= navigator::get_user_id();
-			$section_tipo 	= $json_data->section_tipo;
-			$filter_obj 	= $json_data->filter_obj;
+		$user_id		= navigator::get_user_id();
+		$section_tipo	= $json_data->section_tipo;
+		$filter_obj		= $json_data->filter_obj;
 
-			$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
+		$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -652,8 +652,8 @@ class dd_core_api {
 					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 			}
 
-		$response->result 		= $save_temp_preset;
-		$response->msg 	  		= 'Ok. Request done';
+		$response->result	= $save_temp_preset;
+		$response->msg		= 'Ok. Request done';
 
 		return (object)$response;
 	}//end filter_set_editing_preset
@@ -673,10 +673,10 @@ class dd_core_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$user_id			= navigator::get_user_id();
-			$target_section_tipo= $json_data->target_section_tipo;
+		$user_id				= navigator::get_user_id();
+		$target_section_tipo	= $json_data->target_section_tipo;
 
-			$filter_components = search::filter_get_user_presets($user_id, $target_section_tipo);
+		$filter_components = search::filter_get_user_presets($user_id, $target_section_tipo);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -1167,6 +1167,47 @@ class dd_core_api {
 
 		return $clean_context;
 	}//end smart_remove_context_duplicates
+
+
+
+
+	/**
+	* GET_INDEXATION_GRID
+	* @see class.request_query_object.php
+	* @return dd_grid object $result
+	*/
+	public static function get_indexation_grid($rqo){
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// validate input data
+			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
+				return $response;
+			}
+
+		// ddo_source
+			$ddo_source = $rqo->source;
+
+		// source vars
+			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
+			$section_id		= $ddo_source->section_id ?? null;
+			$tipo			= $ddo_source->tipo ?? null;
+			$value			= $ddo_source->value ?? null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+
+
+		# DIFFUSION_INDEX_TS
+			$diffusion_index_ts	= new diffusion_index_ts($section_tipo, $section_id, $tipo);
+			$indexation_grid	= $diffusion_index_ts->build_indexation_grid();
+
+
+			$response->msg		= 'Ok. Request done';
+			$response->result	= $indexation_grid;
+
+		return $response;
+	}//end get_indexation_grid
 
 
 
