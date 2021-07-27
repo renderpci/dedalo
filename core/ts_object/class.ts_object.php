@@ -269,7 +269,7 @@ class ts_object extends Accessors {
 
 				}else if ($modelo_name==='component_input_text') {
 
-					$dato = $component->get_valor(0);
+					$dato = $component->get_valor();
 
 				}else if ($modelo_name==='component_relation_related') {
 

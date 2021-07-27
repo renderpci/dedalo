@@ -7,7 +7,7 @@
 import {ui} from '../../common/js/ui.js'
 import * as instances from '../../common/js/instances.js'
 import {event_manager} from '../../common/js/event_manager.js'
-
+import {data_manager} from '../../common/js/data_manager.js'
 
 
 export const ts_object = new function() {
@@ -672,14 +672,23 @@ export const ts_object = new function() {
 									// 						'name':'ts_object.show_indexations',
 									// 						'function_arguments':[ar_children_data[i].section_tipo,ar_children_data[i].section_id,ar_children_data[i].ar_elements[j].tipo,indexations_container_id]}]
 									const element_show_indexations	= ui.create_dom_element({
-																				element_type			: 'div',
-																				parent 					: elements_container,
-																				class_name 				: class_for_all,
-																				data_set 				: children_dataset,
-																				text_node 				: ar_children_data[i].ar_elements[j].value,
-																		 })
+											element_type			: 'div',
+											parent 					: elements_container,
+											class_name 				: class_for_all,
+											data_set 				: children_dataset,
+											text_node 				: ar_children_data[i].ar_elements[j].value
+									 })
 										element_show_indexations.addEventListener("click",(e)=>{
-											self.show_indexations(element_show_indexations, e, ar_children_data[i].section_tipo, ar_children_data[i].section_id, ar_children_data[i].ar_elements[j].tipo, indexations_container_id)
+
+											self.show_indexations({
+												button_obj		: element_show_indexations,
+												event			: e,
+												section_tipo	: ar_children_data[i].section_tipo,
+												section_id		: ar_children_data[i].section_id,
+												component_tipo	: ar_children_data[i].ar_elements[j].tipo,
+												container_id	: indexations_container_id,
+												value			: null
+											})
 										})
 									// Build indexations container
 										/*var indexations_container 	= ui.create_dom_element({
@@ -1865,7 +1874,15 @@ export const ts_object = new function() {
 	/**
 	* SHOW_INDEXATIONS : Carga el listado de fragmentos indexados
 	*/
-	this.show_indexations = function(button_obj, event, section_tipo, section_id, component_tipo, container_id) {
+	this.show_indexations = async function(options) {
+
+		const button_obj		= options.button_obj
+		const event				= options.event
+		const section_tipo		= options.section_tipo
+		const section_id		= options.section_id
+		const component_tipo	= options.component_tipo
+		const container_id		= options.container_id
+		const value				= options.value || null
 
 		const target_div = document.getElementById(container_id);
 			if (!target_div) {
@@ -1873,55 +1890,77 @@ export const ts_object = new function() {
 				return false
 			}
 
-		let js_promise
-
-		if(target_div.offsetHeight>0) {
-
-			// si está visible, la ocultamos
-			target_div.style.display = 'none'
-
-			js_promise = new Promise((resolve, reject) => {
-			   resolve("Hidden target_div")
-			});
-
-		}else{
-
-			target_div.innerHTML = "<div><span class=\"blink\">Loading indexations. Please wait..</span> <span class=\"css_spinner\"></span></div>"
-			target_div.style.display = 'inline-table'
-
-			// si no está visible, hacemos la búsqueda y cargamos los datos
-			const trigger_vars = {
-					mode	 		: 'show_indexations',
-					section_tipo 	: section_tipo,
-					section_id 		: section_id,
-					component_tipo 	: component_tipo
+		// data_manager. create
+			const rqo = {
+				action	: 'get_indexation_grid',
+				source	: {
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					tipo			: component_tipo,
+					value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 				}
+			}
+			const current_data_manager	= new data_manager()
+			const api_response			= await current_data_manager.request({body:rqo})
+			if (api_response.result && api_response.result>0) {
+			}
 
-			// JSON GET CALL
-			js_promise = ts_object.get_json(trigger_vars).then(function(response) {
-					if(SHOW_DEBUG===true) {
-						console.log("[ts_object.show_indexations] response",response);
-					}
+			console.log("api_response:",api_response.result);
 
-					if (response && response.result) {
-						target_div.innerHTML 	 = response.result
-						target_div.style.display = 'inline-table'
-					}else{
-						target_div.innerHTML = "<div>Sorry. A broken link was found</div>"
-						setTimeout(function(){
-							target_div.innerHTML     = ""
-							target_div.style.display = "none"
-						},4000)
-						console.log("An error was happened. null value is received. See server log for details.");
-					}
-
-				}, function(error) {
-					console.error("Failed get_json!", error);
-				});
-		}//end if(target_div.offsetHeight>0)
+			return
 
 
-		return js_promise
+
+
+		// let js_promise
+
+		// if(target_div.offsetHeight>0) {
+
+		// 	// si está visible, la ocultamos
+		// 	target_div.style.display = 'none'
+
+		// 	js_promise = new Promise((resolve, reject) => {
+		// 	   resolve("Hidden target_div")
+		// 	});
+
+		// }else{
+
+		// 	target_div.innerHTML = "<div><span class=\"blink\">Loading indexations. Please wait..</span> <span class=\"css_spinner\"></span></div>"
+		// 	target_div.style.display = 'inline-table'
+
+		// 	// si no está visible, hacemos la búsqueda y cargamos los datos
+		// 	const trigger_vars = {
+		// 			mode	 		: 'show_indexations',
+		// 			section_tipo 	: section_tipo,
+		// 			section_id 		: section_id,
+		// 			component_tipo 	: component_tipo
+		// 		}
+
+		// 	// JSON GET CALL
+		// 	js_promise = ts_object.get_json(trigger_vars).then(function(response) {
+		// 			if(SHOW_DEBUG===true) {
+		// 				console.log("[ts_object.show_indexations] response",response);
+		// 			}
+
+		// 			if (response && response.result) {
+		// 				target_div.innerHTML 	 = response.result
+		// 				target_div.style.display = 'inline-table'
+		// 			}else{
+		// 				target_div.innerHTML = "<div>Sorry. A broken link was found</div>"
+		// 				setTimeout(function(){
+		// 					target_div.innerHTML     = ""
+		// 					target_div.style.display = "none"
+		// 				},4000)
+		// 				console.log("An error was happened. null value is received. See server log for details.");
+		// 			}
+
+		// 		}, function(error) {
+		// 			console.error("Failed get_json!", error);
+		// 		});
+		// }//end if(target_div.offsetHeight>0)
+
+
+		// return js_promise
 	};//end show_indexations
 
 
