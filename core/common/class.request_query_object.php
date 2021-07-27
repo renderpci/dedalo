@@ -38,7 +38,7 @@
 					"section_id"	: string || int || null // section_id of the ddo 
 					"mode"			: string (edit || list || search || ...), mode of the ddo
 					"lang"			: string // lang of the ddo
-					"value"			: array (optional) [{locator}] || ["text"] || [""] // value of the component to resolve, used by portal in seach mode
+					"value"			: array (optional) [{locator}] || ["text"] || [""] // value of the component to resolve, used by portal in search mode
 				},			
 				"sqo"			: {
 					// all sqo definition in search_query_object class
@@ -48,7 +48,7 @@
 						{
 							//if isset this property ddo_map will be calculated. The value is the model of the ontology term to get the ddo_map, such as "section_map", different sections can define a component or multiple component to build common search and common columns (mint, type, es1, fr1, etc)
 							model : string // the ontology model to get the information
-							path : array // the path of properites into the object to get the information (stored into properties)
+							path : array // the path of properties into the object to get the information (stored into properties)
 
 						}
 					"ddo_map"		: array [{ddo}, {ddo}] // layout map will be used, with specific path, the ddo are linked by parent to create the path
@@ -56,7 +56,7 @@
 						// specific sqo configuration for the show
 					}
 					"interface"		:{
-						"button_tree" : true || false // control of the imput interface button tree
+						"button_tree" : true || false // control of the input interface button tree
 						"button_external" : true || false // control of the refresh button when the data of the portal is external
 					}
 				},
