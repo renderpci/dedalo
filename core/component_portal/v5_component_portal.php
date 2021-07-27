@@ -2,12 +2,14 @@
 
 ///////// portal
 
+
+
 	/**
 	* GET VALOR
 	* Get resolved string representation of current values (locators)
 	* @return string | null
 	*/
-	$_get_valor = function( $lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ' ) {
+	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
 		$start_time = microtime(1);
 
 		$options = new stdClass();
@@ -16,8 +18,147 @@
 			$options->separator_rows 	= $separator_rows;
 			$options->separator_fields 	= $separator_fields;
 
-			$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
-				#dump($valor_from_ar_locators, ' valor_from_ar_locators');
+		/**
+		* GET_VALOR_FROM_AR_LOCATORS
+		* Return resolved string from all values of all locators. Used by component_portal
+		* @param object $request_options
+		* @return object $valor_from_ar_locators {result,info}
+		*/
+		$get_valor_from_ar_locators = function ( $request_options ) {
+
+			$start_time = microtime(1);
+			$valor_from_ar_locators	= new stdClass();
+
+			$options = new stdClass();
+				$options->lang 				= DEDALO_DATA_LANG;
+				$options->data_to_be_used 	= 'valor';
+				$options->separator_fields 	= ', ';
+				$options->separator_rows 	= '<br>';
+				$options->separator_fields 	= ', ';
+				$options->ar_locators 		= false;
+				foreach ($request_options as $key => $value) {
+					if (property_exists($options, $key)) $options->$key = $value;
+				}
+
+			#
+			# LOCATORS (If empty, return '') if we sent the ar_locator property to resolve it, the resolution will be directly wihtout check the structure of the component.
+			# if the caller is a component that send your own dato is necesary calculate the component structure.
+			if($options->ar_locators === false){
+				$ar_locators = (array)$this->get_dato();
+				if (empty($ar_locators)) {
+					$valor_from_ar_locators->result = '';
+					$valor_from_ar_locators->debug  = 'No locators found '.$this->get_tipo();
+					return $valor_from_ar_locators;
+				}
+
+				#
+				# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
+				$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+
+				#
+				# FIELDS AND MATRIX_TABLE
+				$fields=array();
+				foreach ($ar_terminos_relacionados as $key => $ar_value) {
+
+					$modelo 	 = key($ar_value);
+					$tipo 		 = $ar_value[$modelo];
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					if ($modelo_name==='section') {
+						$section_tipo = $tipo;
+						$matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
+					}else{
+						$fields[] = $tipo;
+					}
+				}
+			}else{
+				$fields=array();
+				$ar_locators = $options->ar_locators;
+				foreach ($options->ar_locators as $current_locator) {
+					$fields[] = $current_locator->component_tipo;
+					$current_section_tipo = $current_locator->section_tipo;
+				}
+				$matrix_table = common::get_matrix_table_from_tipo( $current_section_tipo );
+
+			}// end if(!isset($options->ar_locators))
+
+
+			# Selector de terminos relacionados en DB
+			# SELECT :
+			$strQuery_select='';
+			foreach ($fields as $current_tipo) {
+
+				#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				#if (strpos($modelo_name,'component_')===false) {
+				#	debug_log(__METHOD__." Skipped  $current_tipo - $modelo_name ".to_string(), logger::DEBUG);
+				#	continue;
+				#}
+
+				# SELECCIÓN EN EL LENGUAJE ACTUAL
+				$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+				$current_lang 	= $RecordObj_dd->get_traducible() ==='no' ? DEDALO_DATA_NOLAN : $options->lang;
+				$strQuery_select .= "\n datos #>>'{components,$current_tipo,$options->data_to_be_used,$current_lang}' AS $current_tipo";
+				if($current_tipo !== end($fields)) $strQuery_select .= ',';
+			}
+
+			#
+			# WHERE : Filtro de locators en DB
+			$strQuery_where='';
+			foreach ($ar_locators as $current_locator) {
+				if (empty($current_locator->section_id)) {
+					#throw new Exception("Error Processing Request BAD LOCATOR", 1);
+
+					debug_log(__METHOD__." IGNORED BAD LOCATOR:  ".to_string($current_locator), logger::ERROR);
+					continue;
+				}
+				$current_section_id 	= $current_locator->section_id;
+				$current_section_tipo 	= $current_locator->section_tipo;
+
+				$strQuery_where .= "\n (section_id = $current_section_id AND section_tipo = '$current_section_tipo') OR";
+			}
+			if (!empty($strQuery_where)) {
+				$strQuery_where = substr($strQuery_where, 0, -2);
+			}
+			$strQuery_where = '('.$strQuery_where.')';
+
+			# QUERY
+			$strQuery = "-- ".__METHOD__."\n SELECT $strQuery_select FROM $matrix_table WHERE $strQuery_where";
+
+			$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+			$ar_final = array();
+			while ($rows = pg_fetch_assoc($result)) {
+				$string ='';
+				foreach ($fields as $current_tipo) {
+					$string .= (string)$rows[$current_tipo];
+					if($current_tipo !== end($fields)) $string .= $options->separator_fields;
+				}
+				$ar_final[] = $string;
+			}//end while
+
+			$valor_from_ar_locators->result = implode($options->separator_rows, $ar_final);
+
+			if(SHOW_DEBUG===true) {
+				$html_info='';
+				$limit_time=SLOW_QUERY_MS/100;
+				$total_list_time = round(microtime(1)-$start_time,3);
+				$style='';
+				if ($total_list_time>$limit_time || $total_list_time>0.020) {
+					$style = "color:red";
+				}
+				$html_info .= "<div class=\"debug_info get_valor_from_ar_locators\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+				$html_info .= $total_list_time;
+				$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
+				$html_info .= "</div>";
+				$valor_from_ar_locators->debug = $html_info;
+				if ($total_list_time>$limit_time) {
+					debug_log(__METHOD__.' '.$total_list_time."ms. SLOW QUERY: ".$strQuery);
+				}
+				#debug_log(__METHOD__.' '.$total_list_time."ms. QUERY: ".$strQuery);
+			}//end if(SHOW_DEBUG===true)
+
+			return (object)$valor_from_ar_locators;
+		};//end get_valor_from_ar_locators
+
+		$valor_from_ar_locators 	= $get_valor_from_ar_locators($options);
 
 		if(SHOW_DEBUG===true) {
 			#$total_list_time = round(microtime(1)-$start_time,3);
@@ -30,7 +171,6 @@
 
 		return $valor;
 	};//end get_valor
-
 
 
 	/**
@@ -125,7 +265,7 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$get_diffusion_value =  function ( $lang=null ) {
+	$_get_diffusion_value =  function ( $lang=null ) {
 
 		$diffusion_value = null;
 
@@ -139,7 +279,7 @@
 		switch ($data_to_be_used) {
 
 			case 'valor_list':
-				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows='<br>', $separator_fields=', ' );
+				$diffusion_value = $this->get_valor( $lang, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used );
 				break;
 
 			case 'valor':
@@ -240,4 +380,10 @@
 
 		return $diffusion_value;
 	};//end get_diffusion_value
+
+
+
+
+
+
 

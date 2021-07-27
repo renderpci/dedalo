@@ -211,22 +211,22 @@ class component_portal extends component_relation_common {
 	* GET_VALOR
 	* @return
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ') {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
 
-	dump($real_model, ' real_model+-------------+ '.to_string());
 
-
-		if ($real_model==='component_portal') {
-			return 'unavailable';
-		}
+		// if ($real_model==='component_portal') {
+		// 	return 'unavailable';
+		// }
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $real_model .'.php';
 		include $path;
 
 		// $_get_valor = Closure::bind($_get_valor, $this);
-		$valor =  Closure::bind($_get_valor, $this)($lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ');
+		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> '
+
+		$valor =  Closure::bind($_get_valor, $this)($lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor');
 
 		return $valor;
 	}//end get_valor
