@@ -293,6 +293,7 @@ abstract class diffusion  {
 		foreach ($diffusion_domains as $current_tipo) {
 
 			$current_name = RecordObj_dd::get_termino_by_tipo($current_tipo,null,true);
+
 			if($current_name===$diffusion_domain_name) {
 
 				#
@@ -300,9 +301,9 @@ abstract class diffusion  {
 				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
 				foreach ($ar_childrens as $current_children) {
 
-					$RecordObj_dd	= new RecordObj_dd($current_children);
-					$properties		= $RecordObj_dd->get_properties();
-					#dump($properties, ' properties '.$current_children);
+				 	$RecordObj_dd = new RecordObj_dd($current_children);
+					$properties  = json_decode( $RecordObj_dd->get_properties() );
+						#dump($properties, ' properties '.$current_children);
 
 					if ($properties && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
@@ -423,10 +424,14 @@ abstract class diffusion  {
 			$name = RecordObj_dd::get_termino_by_tipo($current_diffusion_domain_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			if ($name===$diffusion_domain_name) {
 				$diffusion_domain_tipo = $current_diffusion_domain_tipo;
+				break;
 					#dump($diffusion_domain_tipo, ' $diffusion_domain_tipo ++ '.to_string($diffusion_domain_name));
 			}
 		}
-		if (!isset($diffusion_domain_tipo)) return $ar_diffusion_map; // Not found entity name as diffusion domain
+		if (!isset($diffusion_domain_tipo)) {
+			debug_log(__METHOD__." Not found diffusion_domain_tipo for diffusion_domain: ".to_string($diffusion_domain_name), logger::WARNING);
+			return $ar_diffusion_map; // Not found entity name as diffusion domain
+		}
 
 		#
 		# DIFFUSION_GROUP
@@ -445,22 +450,40 @@ abstract class diffusion  {
 			foreach ($ar_diffusion_element_tipo as $element_tipo) {
 
 				$RecordObj_dd = new RecordObj_dd($element_tipo);
-					$properties  = $RecordObj_dd->get_properties();
+					$properties  = json_decode($RecordObj_dd->get_properties());
 					$diffusion_class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
 					$name = RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					# Database of current diffusion element
-					$ar_children 			 = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='children', $search_exact=true);
-					$diffusion_database_tipo = reset($ar_children);
-					$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					$ar_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='children', $search_exact=true);
+
+					$diffusion_database_tipo = !empty($ar_children)
+						? reset($ar_children)
+						: null;
+
+					// database_alias case try
+						if (empty($diffusion_database_tipo)) {
+							$ar_children			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database_alias', $relation_type='children', $search_exact=true);
+							$database_alias_tipo	= reset($ar_children);
+							$ar_real_database_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', false);
+
+							$diffusion_database_tipo = reset($ar_real_database_tipo);
+							$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($database_alias_tipo, DEDALO_STRUCTURE_LANG, true, false);
+							// dump($ar_real_database_tipo, ' ar_real_database_tipo ++ diffusion_database_name: '.to_string($diffusion_database_name));
+
+							// overwrite element_tipo (!)
+							// $element_tipo = $diffusion_database_tipo;
+
+						}else{
+							$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						}
 
 					$data = new stdClass();
-						$data->element_tipo = $element_tipo;
-						$data->name 		= $name;
-						$data->class_name 	= $diffusion_class_name;
-						$data->database_name= $diffusion_database_name;
-						$data->database_tipo= $diffusion_database_tipo;
-							#dump($ar_diffusion_map->$diffusion_group_tipo[]=4, ' ar_diffusion_map_elements ++ '.to_string());
+						$data->element_tipo		= $element_tipo;
+						$data->name				= $name;
+						$data->class_name		= $diffusion_class_name;
+						$data->database_name	= $diffusion_database_name;
+						$data->database_tipo	= $diffusion_database_tipo;
 
 					$ar_diffusion_map->{$diffusion_group_tipo}[] = $data;
 
@@ -619,7 +642,7 @@ abstract class diffusion  {
 
 		// Diffusion element (current column/field)
 			$diffusion_term  = new RecordObj_dd($tipo);
-			$properties 	 = $diffusion_term->get_properties();	# Format: {"data_to_be_used": "dato"}
+			$properties 	 = $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
 			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// Component
@@ -725,8 +748,8 @@ abstract class diffusion  {
 	* @return mixed $value
 	*/
 	public static function resolve_component_value( $options, $dato ) {
-		#dump($options, ' options ++ '.to_string());
-		#dump($dato, ' dato ++ '.to_string());
+		// dump($options, ' options ++ '.to_string());
+		// dump($dato, ' dato ++ '.to_string());
 
 		# Ref. $options
 		# [typology] =>
@@ -757,9 +780,19 @@ abstract class diffusion  {
 		$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
+		$section_id = !empty($options->section_id)
+			? $options->section_id
+			: $options->parent;
+
+
+		if ($method==='get_diffusion_value') {
+			// inject mandatory lang
+			array_unshift($custom_arguments, $options->lang);
+		}
+
 		$component 		= component_common::get_instance($modelo_name,
 														 $component_tipo,
-														 $options->section_id,
+														 $section_id,
 														 'list',
 														 $options->lang,
 														 $options->section_tipo,
@@ -798,6 +831,7 @@ abstract class diffusion  {
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
 				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
+
 				# Merge all
 				$ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
 			}
@@ -899,8 +933,17 @@ abstract class diffusion  {
 	*/
 	public static function get_is_publicable($locator) {
 
+		$section_tipo	= $locator->section_tipo;
+		$section_id		= $locator->section_id;
+		$uid			= $section_tipo.'_'.$section_id;
+
+		static $resolved_is_publicable;
+		if (isset($resolved_is_publicable[$uid])) {
+			return $resolved_is_publicable[$uid];
+		}
+
 		// Locate component_publication in current section
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$locator->section_tipo,
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$section_tipo,
 																				'component_publication',
 																				$from_cache=true,
 																				$resolve_virtual=true,
@@ -915,9 +958,12 @@ abstract class diffusion  {
 		$component_publication_tipo = reset($ar_children);
 
 
-		$is_publicable = self::get_component_publication_bool_value( $component_publication_tipo, $locator->section_id, $locator->section_tipo );
+		$is_publicable = (bool)self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
 
-		return (bool)$is_publicable;
+		// cache
+		$resolved_is_publicable[$uid] = $is_publicable;
+
+		return $is_publicable;
 	}//end get_is_publicable
 
 
@@ -972,7 +1018,6 @@ abstract class diffusion  {
 
 		return false;
 	}//end get_component_publication_bool_value
-
 
 
 
@@ -1063,7 +1108,7 @@ abstract class diffusion  {
 
 		$response = new stdClass();
 			$response->result 		= false;
-			$response->msg 			= __METHOD__ . ' Error. Request failed ';
+			$response->msg 			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
 			$response->ar_deleted 	= [];
 
 		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
@@ -1263,5 +1308,22 @@ abstract class diffusion  {
 
 
 
+	/**
+	* GET_PUBLICATION_UNIX_TIMESTAMP
+	* @return
+	*/
+	public static function get_publication_unix_timestamp() {
+		static $publication_ux_tm;
+
+		if (isset($publication_ux_tm)) {
+			return $publication_ux_tm;
+		}
+
+		$publication_ux_tm = time();
+
+		return $publication_ux_tm;
+	}//end get_publication_unix_timestamp
+
+
+
 }//end class
-?>

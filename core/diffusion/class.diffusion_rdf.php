@@ -33,7 +33,7 @@ class diffusion_rdf extends diffusion {
 
 		parent::__construct($options=null);
 
-		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_EXTRAS_URL;
+		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
 	}//end __construct
 
 
@@ -56,7 +56,7 @@ class diffusion_rdf extends diffusion {
 
 		// target_section_tipo
 			$RecordObj_dd 		 = new RecordObj_dd($options->diffusion_element_tipo);
-			$properties 		 = $RecordObj_dd->get_properties();
+			$properties 		 = $RecordObj_dd->get_properties(true);
 			#$target_section_tipo = $properties->diffusion->target_section_tipo;
 
 		// Fix vars
@@ -90,7 +90,7 @@ class diffusion_rdf extends diffusion {
 
 		// Directory
 			$sub_path    = '/rdf/nomisma/';
-			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
+			$folder_path = DEDALO_MEDIA_BASE_PATH . $sub_path;
 			if (!is_dir($folder_path)) {
 				if(!mkdir($folder_path, 0777, true)) {
 					$response->msg = trim(" Error on read or create directory. Permission denied");
@@ -126,8 +126,8 @@ class diffusion_rdf extends diffusion {
 				$xml_options->xml_tipo 			= $xml_tipo;	// Numisma RDF : modelo_name : xml
 				$xml_options->section_tipo  	= $options->section_tipo; // $target_section_tipo;	// Fichero
 				$xml_options->ar_section_id 	= $ar_section_id;	// Array like [45001,45002,45003];
-				$xml_options->save_to_file_path = DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name; // Target file
-				$xml_options->url_file 			= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
+				$xml_options->save_to_file_path = DEDALO_MEDIA_BASE_PATH . $sub_path . $rdf_file_name; // Target file
+				$xml_options->url_file 			= DEDALO_MEDIA_BASE_URL  . $sub_path . $rdf_file_name;
 
 			$response = $this->build_xml_file( $xml_options );
 				#dump($response, ' response ++ '.to_string($options));
@@ -341,18 +341,18 @@ class diffusion_rdf extends diffusion {
 	*/
 	public function build_rdf_object( $rdf_tipo ) {
 
-		$RecordObj_dd	= new RecordObj_dd($rdf_tipo);
-		$name			= RecordObj_dd::get_termino_by_tipo($rdf_tipo);
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
-		$ar_elements	= $RecordObj_dd->get_ar_childrens_of_this();
+		$RecordObj_dd 	 = new RecordObj_dd($rdf_tipo);
+		$name 		 	 = RecordObj_dd::get_termino_by_tipo($rdf_tipo);
+		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
+		$ar_elements 	 = $RecordObj_dd->get_ar_childrens_of_this();
 
-		$rdf_object = new stdClass();
-			$rdf_object->name			= $name;
-			$rdf_object->modelo_name	= $modelo_name;
-			$rdf_object->tipo			= $rdf_tipo;
-			$rdf_object->properties		= $RecordObj_dd->get_properties();
-			$rdf_object->ar_related		= $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
-			$rdf_object->data			= array();
+		$rdf_object 			 = new stdClass();
+		$rdf_object->name 		 = $name;
+		$rdf_object->modelo_name = $modelo_name;
+		$rdf_object->tipo 		 = $rdf_tipo;
+		$rdf_object->properties = $RecordObj_dd->get_properties(true);
+		$rdf_object->ar_related	 = $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
+		$rdf_object->data = array();
 
 		#
 		# RDF ELEMENTS
@@ -681,28 +681,28 @@ class diffusion_rdf extends diffusion {
 
 		$ar_lines = array();
 
-		$RecordObj_dd	= new RecordObj_dd($rdf_tipo);
-		$name			= RecordObj_dd::get_termino_by_tipo($rdf_tipo);
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
-		$ar_elements	= $RecordObj_dd->get_ar_childrens_of_this();
+		$RecordObj_dd 	 = new RecordObj_dd($rdf_tipo);
+		$name 		 	 = RecordObj_dd::get_termino_by_tipo($rdf_tipo);
+		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
+		$ar_elements 	 = $RecordObj_dd->get_ar_childrens_of_this();
 
-		$rdf_object = new stdClass();
-			$rdf_object->name			= $name;
-			$rdf_object->modelo_name	= $modelo_name;
-			$rdf_object->tipo			= $rdf_tipo;
-			$rdf_object->properties		= (object)$RecordObj_dd->get_properties();
-			$rdf_object->ar_related		= $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
-			$rdf_object->data			= array();
+		$rdf_object 			 = new stdClass();
+		$rdf_object->name 		 = $name;
+		$rdf_object->modelo_name = $modelo_name;
+		$rdf_object->tipo 		 = $rdf_tipo;
+		$rdf_object->properties = (object)$RecordObj_dd->get_properties(true);
+		$rdf_object->ar_related	 = $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
+		$rdf_object->data = array();
 
 		# XML LINE
 		$ar_lines['xml'] = $rdf_object->properties->value;	// Like '<?xml version="1.0" encoding="utf-8" ..'
 
 
 		# RDF
-		$rdf_element	= new RecordObj_dd($ar_elements[0]);
-		$name			= RecordObj_dd::get_termino_by_tipo($ar_elements[0]);
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($ar_elements[0],true);
-		$ar_elements	= $rdf_element->get_ar_childrens_of_this();
+		$rdf_element 	= new RecordObj_dd($ar_elements[0]);
+		$name 		  	= RecordObj_dd::get_termino_by_tipo($ar_elements[0]);
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($ar_elements[0],true);
+		$ar_elements 	= $rdf_element->get_ar_childrens_of_this();
 			#dump($ar_elements, ' ar_elements ++ '.to_string());
 
 			# RDF PREDICATES
@@ -717,7 +717,7 @@ class diffusion_rdf extends diffusion {
 						#dump($head_element_tipo, ' head_element_tipo ++ '.to_string());
 						$head_name 			= RecordObj_dd::get_termino_by_tipo($head_element_tipo);
 						$head_element		= new RecordObj_dd($head_element_tipo);
-						$head_properties 	= (object)$head_element->get_properties();
+						$head_properties 	= (object)$head_element->get_properties(true);
 						// Eg. xmlns:dcterms="http://purl.org/dc/terms/"
 						$base_uri = isset($head_properties->base_uri) ? $head_properties->base_uri : null;
 						$value = " $head_name=\"$base_uri\"";
@@ -1007,9 +1007,9 @@ class diffusion_rdf extends diffusion {
 					$search_query_object = json_decode($query);
 
 				// search
-					$search = search::get_instance($search_query_object);
-					$result = $search->search();
-					$row 	= reset($result->ar_records);
+					$search_development2 = new search_development2($search_query_object);
+					$result 			 = $search_development2->search();
+					$row 				 = reset($result->ar_records);
 
 				// base_uri
 					if (empty($row)) {
@@ -1020,7 +1020,7 @@ class diffusion_rdf extends diffusion {
 					}else{
 
 
-						$iri_object_data = $row->{$component_tipo};
+						$iri_object_data = json_decode($row->{$component_tipo});
 						$ar_result 		 = array_filter((array)$iri_object_data, function($item) use($title){
 							return $item->title === $title;
 						});
@@ -1065,7 +1065,7 @@ class diffusion_rdf extends diffusion {
 
 						$iri_object_data = (array)$dato;
 						$ar_result 		 = array_filter((array)$iri_object_data, function($item) use($title){
-							return $item->title === $title;
+							return isset($item->title) && $item->title===$title;
 						});
 
 						$base_uri = isset($ar_result[0]) ? $ar_result[0]->iri : null;
@@ -1156,9 +1156,9 @@ class diffusion_rdf extends diffusion {
 		#dump(null, 'search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
 		// search
-			$search = search::get_instance($search_query_object);
-			$result = $search->search();
-			$rows 	= $result->ar_records;
+			$search_development2 = new search_development2($search_query_object);
+			$result 			 = $search_development2->search();
+			$rows 				 = $result->ar_records;
 
 		return (array)$rows;
 	}//end get_target_rows
@@ -1213,9 +1213,9 @@ class diffusion_rdf extends diffusion {
 			#dump($query, 'search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
 		// search
-			$search 	= search::get_instance($search_query_object);
-			$result		= $search->search();
-			$ar_records = $result->ar_records;
+			$search_development2 = new search_development2($search_query_object);
+			$result 			 = $search_development2->search();
+			$ar_records 		 = $result->ar_records;
 
 		// format output as array of id's
 			$ar_section_id_clean = array_map(function($item){
@@ -1229,3 +1229,4 @@ class diffusion_rdf extends diffusion {
 
 
 }//end class
+

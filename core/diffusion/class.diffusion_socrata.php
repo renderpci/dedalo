@@ -6,7 +6,7 @@ include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
 * CLASS DIFFUSION_SOCRATA
 */
 class diffusion_socrata extends diffusion  {
-		
+
 	public static $database_name;
 	public static $database_tipo;
 	public static $ar_table;
@@ -18,7 +18,7 @@ class diffusion_socrata extends diffusion  {
 	* @param object $options . Default null
 	*/
 	function __construct($options=null) {
-		
+
 		parent::__construct($options=null);
 	}//end __construct
 
@@ -32,13 +32,13 @@ class diffusion_socrata extends diffusion  {
 	* @return obj $response
 	*/
 	public function update_record( $request_options, $resolve_references=false ) {
-		
+
 		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
-	
+
 		// options
 			$options = new stdClass();
 				$options->section_tipo 			= null;
@@ -61,13 +61,13 @@ class diffusion_socrata extends diffusion  {
 					$json_row_options->section_tipo 		  = $options->section_tipo;
 					$json_row_options->section_id 			  = $options->section_id;
 					$json_row_options->diffusion_element_tipo = $options->diffusion_element_tipo;
-					$json_row_options->lang 				  = $current_lang;				
+					$json_row_options->lang 				  = $current_lang;
 				$json_row = $this->build_json_row($json_row_options);
 				// Add
 				$ar_rows[] = $json_row;
 			}
 			#dump(json_encode($ar_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ' ar_rows ++ '.to_string());
-			
+
 		// Configure final objects to build upsert bulk action
 			$socrata_id 	= ':id';
 			$socrata_delete = ':deleted';
@@ -75,9 +75,9 @@ class diffusion_socrata extends diffusion  {
 				// socrata_id. Add normalized socrata id
 				//$row->$socrata_id = $row->id;
 				// socrata_delete. Set to delete when publication is false
-				
 
-				// publish_date. Format as Socrata need (date_time float with miliseconds)				
+
+				// publish_date. Format as Socrata need (date_time float with miliseconds)
 				#$row->publish_date->value = date('Y-m-d\TH:i:s.u');
 
 				// Simplify values to plain value instead object
@@ -96,11 +96,11 @@ class diffusion_socrata extends diffusion  {
 								$socrata_value = null;
 							}
 							break;
-						
+
 						default:
 							$socrata_value = $value_obj->value;
 							break;
-					}					
+					}
 
 					$row->$key = $socrata_value;
 				}
@@ -112,9 +112,9 @@ class diffusion_socrata extends diffusion  {
 					}
 					unset($row->publication);
 				}
-				
+
 				return $row;
-			}, $ar_rows);			
+			}, $ar_rows);
 			#dump($ar_socrata_rows, ' ar_socrata_rows ++ '.to_string());
 			#dump(json_encode($ar_socrata_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ' ar_socrata_rows ++ '.to_string());
 			debug_log(__METHOD__." ar_socrata_rows ".json_encode($ar_socrata_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), logger::DEBUG);
@@ -125,10 +125,10 @@ class diffusion_socrata extends diffusion  {
 				$ar_socrata_rows = [];
 				$socrata_row = new stdClass();
 					#$socrata_row->{$socrata_id}		= 3;
-					$socrata_row->id 				= 'oh1_1_lg-eng';				
+					$socrata_row->id 				= 'oh1_1_lg-eng';
 					$socrata_row->{$socrata_delete} = true;
 				$ar_socrata_rows[] = $socrata_row;
-				
+
 				$socrata_row = new stdClass();
 					#$socrata_row->{$socrata_id}	= 10;
 					$socrata_row->id 				= 6;
@@ -139,7 +139,7 @@ class diffusion_socrata extends diffusion  {
 
 				#$ar_socrata_rows = [$ar_socrata_rows[1]];
 
-		// Get socrata path from 'table' item 
+		// Get socrata path from 'table' item
 			$socrata_config = (object)SOCRATA_CONFIG;
 			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map($options->diffusion_element_tipo);
 			$table_obj = $diffusion_element_tables_map->{$options->section_tipo};
@@ -256,4 +256,3 @@ class diffusion_socrata extends diffusion  {
 
 
 }
-?>
