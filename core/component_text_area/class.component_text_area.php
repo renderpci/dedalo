@@ -1805,7 +1805,7 @@ class component_text_area extends component_common {
 															 'list',
 															 DEDALO_DATA_NOLAN,
 															 $locator->section_tipo);
-			$dato = $component->get_valor(0);
+			$dato = $component->get_valor();
 
 			switch ($key) {
 				

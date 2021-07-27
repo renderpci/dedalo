@@ -15,7 +15,7 @@
 		search	: layout_map and sqo_config 
 			(it modify the show and it will create the choose, when these object is not sended)
 		choose	: layout_map 
-			(it modify search)		
+			(it modify search)
 		
 		// info about
 			Mandatory	: dd_api, action, source
@@ -46,7 +46,7 @@
 				"show"			: {
 					"get_ddo_map" 	:
 						{
-							//if isset this property ddo_map will be calculated. The value is the model of the ontology term to get the ddo_map, such as "section_map", different sections can define a component or multiple component to build common search and common columns (mint, type, es1, fr1, etc)
+							// if isset this property ddo_map will be calculated. The value is the model of the ontology term to get the ddo_map, such as "section_map", different sections can define a component or multiple component to build common search and common columns (mint, type, es1, fr1, etc)
 							model : string // the ontology model to get the information
 							path : array // the path of properties into the object to get the information (stored into properties)
 
@@ -135,7 +135,9 @@
 						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"}, {"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
 						{"section_tipo":"self","tipo":"numisdata81","label":"key", "parent": "numisdata3","value_with_parents": true}
 					],
-					"divisor": ", ",
+
+					"separator_fields" : " | ",
+					"separator_rows" : "<br>",
 					"sqo_config": {
 						 "operator": "$or",
 						 "limit" : 5
@@ -168,9 +170,17 @@
 			}
 		]
 
-
 */
 class request_query_object {
+
+
+	public $dd_api;
+	public $action;
+	public $source;
+	public $sqo;
+	public $show;
+	public $search;
+	public $choose;
 
 
 	
@@ -204,32 +214,12 @@ class request_query_object {
 
 
 	/**
-	* SET_TYPO
-	*/
-	public function set_typo(string $value) {
-		
-		$this->typo = $value;
-	}//end set_typo
-
-
-
-	/**
 	* SET_DD_API
 	*/
 	public function set_dd_api(string $value) {
 		
 		$this->dd_api = $value;
 	}//end set_dd_api
-
-
-
-	/**
-	* SET_API_ENGINE
-	*/
-	public function set_api_engine(string $value) {
-		
-		$this->api_engine = $value;
-	}//end set_api_engine
 
 
 
@@ -244,83 +234,19 @@ class request_query_object {
 
 
 	/**
-	* SET_ACTION_OPT
+	* SET_SOURCE
 	*/
-	// public function set_action_opt($value) {
-		
-	// 	$this->action_opt = $value;
-	// }//end set_action_opt
+	public function set_source(object $value) {
 
-
-
-	/**
-	* SET_TIPO
-	*/
-	public function set_tipo(string $value) {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
-		}
-		$this->tipo = $value;
-	}//end set_tipo
-
-
-
-	/**
-	* SET_SECTION_TIPO
-	*/
-	public function set_section_tipo(string $value) {
-		
-		$this->section_tipo = $value;
-	}//end set_section_tipo
-
-
-
-	/**
-	* SET_SECTION_ID
-	*/
-	public function set_section_id($value) {
-		
-		$this->section_id = $value;
-	}//end set_section_id
-
-
-
-	/**
-	* SET_LANG
-	*/
-	public function set_lang(string $value) {
-		if(strpos($value, 'lg-')!==0) {
-			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
-		}
-		$this->lang = $value;
-	}//end set_lang
-
-
-
-	/**
-	* SET_MODE
-	*/
-	public function set_mode(string $value) {
-
-		$this->mode = $value;
-	}//end set_mode
-
-
-
-	/**
-	* SET_MODEL
-	*/
-	public function set_model(string $value) {
-
-		$this->model = $value;
-	}//end set_model
+		$this->source = $value;
+	}//end set_source
 
 
 
 	/**
 	* SET_SQO
 	*/
-	public function set_sqo($value) {
+	public function set_sqo(object $value) {
 
 		$this->sqo = $value;
 	}//end set_sqo
@@ -330,7 +256,7 @@ class request_query_object {
 	/**
 	* SET_SHOW
 	*/
-	public function set_show($value) {
+	public function set_show(object $value) {
 
 		$this->show = $value;
 	}//end set_show
@@ -340,7 +266,7 @@ class request_query_object {
 	/**
 	* SET_SEARCH
 	*/
-	public function set_search($value) {
+	public function set_search(object $value) {
 
 		$this->search = $value;
 	}//end set_search
@@ -350,7 +276,7 @@ class request_query_object {
 	/**
 	* SET_CHOOSE
 	*/
-	public function set_choose($value) {
+	public function set_choose(object $value) {
 
 		$this->choose = $value;
 	}//end set_choose
