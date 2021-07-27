@@ -498,51 +498,51 @@ function update_parent_data($json_data) {
 
 
 /**
-* SHOW_INDEXATIONS
+* SHOW_INDEXATIONS | Moved to dd_api 27-07-2021
 * @return object $response
 */
-function show_indexations($json_data) {
-	global $start_time;
+// function show_indexations_DES($json_data) {
+// 	global $start_time;
 
-	session_write_close();
+// 	session_write_close();
 
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+// 	$response = new stdClass();
+// 		$response->result 	= false;
+// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	# set vars
-	$vars = array('section_tipo','section_id','component_tipo');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			#if ($name==='dato') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-				return $response;
-			}
-		}
+// 	# set vars
+// 	$vars = array('section_tipo','section_id','component_tipo');
+// 		foreach($vars as $name) {
+// 			$$name = common::setVarData($name, $json_data);
+// 			# DATA VERIFY
+// 			#if ($name==='dato') continue; # Skip non mandatory
+// 			if (empty($$name)) {
+// 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+// 				return $response;
+// 			}
+// 		}
 
-	# DIFFUSION_INDEX_TS
-	$diffusion_index_ts = new diffusion_index_ts($section_tipo, $section_id, $component_tipo);
-	$html 				= $diffusion_index_ts->get_html();
+// 	# DIFFUSION_INDEX_TS
+// 	$diffusion_index_ts = new diffusion_index_ts($section_tipo, $section_id, $component_tipo);
+// 	$html 				= $diffusion_index_ts->get_html();
 
-	$response->result 	= $html;
-	$response->msg 		= "Request done successufully";
+// 	$response->result 	= $html;
+// 	$response->msg 		= "Request done successufully";
 
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
+// 	# Debug
+// 	if(SHOW_DEBUG===true) {
+// 		$debug = new stdClass();
+// 			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+// 			foreach($vars as $name) {
+// 				$debug->{$name} = $$name;
+// 			}
 
-		$response->debug = $debug;
-	}
+// 		$response->debug = $debug;
+// 	}
 
 
-	return (object)$response;
-}//end show_indexations
+// 	return (object)$response;
+// }//end show_indexations
 
 
 
