@@ -31,4 +31,3 @@ class event
         self::$events[$event][] = $func;
     }
 }
-?>
