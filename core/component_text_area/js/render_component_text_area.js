@@ -357,7 +357,7 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element li
+* @return DOM element li
 */
 const get_input_element = (i, current_value, self, is_inside_tool) => {
 
@@ -894,8 +894,8 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 
 	const add_layer = ui.create_dom_element({
 		element_type	: 'span',
-		class_name 		: 'button add',
-		parent 			: fragment,
+		class_name		: 'button add',
+		parent			: fragment
 	})
 	add_layer.addEventListener("click", (e) =>{
 		e.preventDefault()
@@ -908,15 +908,15 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 
 	const layer_icon = ui.create_dom_element({
 		element_type	: 'span',
-		class_name 		: 'layer_icon',
-		parent 			: fragment,
+		class_name		: 'layer_icon',
+		parent			: fragment,
 		text_node		: data_tag.type
 	})
 
 	const close = ui.create_dom_element({
 		element_type	: 'span',
-		class_name 		: 'button close',
-		parent 			: fragment,
+		class_name		: 'button close',
+		parent			: fragment
 	})
 	close.addEventListener("click", (e) =>{
 		e.preventDefault()
@@ -926,8 +926,8 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 	// inputs container
 		const layer_ul = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'layer_ul',
-			parent 			: fragment
+			class_name		: 'layer_ul',
+			parent			: fragment
 		})
 
 		for (let i = 0; i < ar_layers.length; i++) {
@@ -935,28 +935,28 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 
 			const layer_li = ui.create_dom_element({
 				element_type	: 'li',
-				parent 			: layer_ul
+				parent			: layer_ul
 			})
 			layer_li.addEventListener("click", (e) =>{
 				e.preventDefault()
 
 				data_tag.data = "["+layer.layer_id+"]"
-				const tag 	= build_node_tag(data_tag, tag_id)
+				const tag = build_node_tag(data_tag, tag_id)
 				service.set_content(tag.outerHTML)
 				layer_selector.remove()
 			})
 
 				const layer_id = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'layer_id',
-					parent 			: layer_li,
+					class_name		: 'layer_id',
+					parent			: layer_li,
 					text_node		: layer.layer_id
 				})
 
 				const user_layer_name = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'user_layer_name',
-					parent 			: layer_li,
+					class_name		: 'user_layer_name',
+					parent			: layer_li,
 					text_node		: layer.user_layer_name
 				})
 
@@ -977,7 +977,7 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 
 	const layer_selector = ui.create_dom_element({
 		element_type	: 'div',
-		class_name 		: 'layer_selector',
+		class_name		: 'layer_selector',
 	})
 	layer_selector.appendChild(fragment)
 

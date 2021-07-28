@@ -139,7 +139,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
 		}
 
 

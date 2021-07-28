@@ -70,7 +70,7 @@ export const service_tinymce = function() {
 				container		: container
 			}
 
-		// add to dom
+		// add to DOM
 			container.appendChild(dd_tinny)
 
 
@@ -392,12 +392,13 @@ export const service_tinymce = function() {
 
 	/**
 	* SELECT_NODE
-	* @return 
+	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
+	* @return DOM node
 	*/
 	this.select_node = function(selector_str) {
 
-		const self 	 = this
-		const editor = self.editor
+		const self		= this
+		const editor	= self.editor
 
 		const select_result = editor.selection.select(editor.dom.select(selector_str)[0]);
 

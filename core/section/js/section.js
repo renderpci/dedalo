@@ -365,7 +365,7 @@ section.prototype.build = async function(autoload=false) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			// load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
 			// console.log("__Time to build", self.model, "(ms):", performance.now()-t0);
-			dd_console(`__Time to build ${self.model} (ms): ${performance.now()-t0}`, 'DEBUG')
+			dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
 
 			// debug duplicates check
 				const ar_used = []
