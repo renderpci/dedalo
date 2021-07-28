@@ -1,10 +1,10 @@
 <?php
 /*
-* CLASS RELATION_LIST
-* Manage the relations of the sections
-* build the list of the relations between sections
+* CLASS INDEXATION_LIST
+* Manage the indexations of the sections
+* build the list of the indexation to show in the thesaurus
 */
-class relation_list extends common {
+class indexation_list extends common {
 
 	protected $tipo;
 	protected $section_id;
@@ -19,12 +19,12 @@ class relation_list extends common {
 	* CONSTRUCT
 	*
 	*/
-	public function __construct($tipo, $section_id, $section_tipo, $modo='edit') {
+	public function __construct($tipo, $section_id, $section_tipo, $value) {
 
 		$this->tipo 		= $tipo;
 		$this->section_id 	= $section_id;
 		$this->section_tipo = $section_tipo;
-		$this->modo 		= $modo;
+		$this->value 		= $value; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 
 	}//end __construct
 
