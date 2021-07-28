@@ -54,7 +54,7 @@ common.prototype.build = async function () {
 * @param object options
 *	render_level : level of deep that is rendered (full | content)
 * @return promise
-*	node first dom node stored in instance 'node' array
+*	node first DOM node stored in instance 'node' array
 */
 common.prototype.render = async function (options={render_level:'full'}) {
 	const t0 = performance.now()
@@ -211,12 +211,12 @@ common.prototype.render = async function (options={render_level:'full'}) {
 	
 	// debug
 		if(SHOW_DEBUG===true) {
-			const total = performance.now()-t0
+			const total = (performance.now()-t0).toFixed(3)
 			const msg = `__Time to render: model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
 			if (total>100) {
 				console.warn(msg, total);
 			}else{
-				console.log(msg, total);
+				// console.log(msg, total);
 			}
 		}
 
@@ -434,7 +434,6 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 		self.status = 'destroyed'
 
 
-	//console.log("self.ar_instances final:",clone(self.ar_instances));
 	return result
 }//end destroy
 
@@ -518,7 +517,7 @@ common.prototype.load_style = function (src) {
 /**
 * LOAD_SCRIPT
 * @param object self
-*//**/
+*/
 common.prototype.load_script = async function(src) {
 
 	const js_promise = new Promise(function(resolve, reject) {

@@ -903,7 +903,7 @@ abstract class component_common extends common {
 
 		if(isset($current_observer->filter) && $current_observer->filter !== false){
 			// get the from_component_tipo of the filter to set at observable locator
-			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplet, etc)
+			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
 			$elements 	= reset($current_observer->filter);
 			$element 	= reset($elements);
 			$from_component_tipo = end($element->path)->component_tipo;
@@ -931,12 +931,12 @@ abstract class component_common extends common {
 			$result = $search->search();
 			$ar_section = $result->ar_records;
 		}else{
-			// if observer don't has filter to get the sections to be updated, get the obervable section to use
+			// if observer don't has filter to get the sections to be updated, get the observable section to use
 			// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
 			$ar_section = [$locator];
 		}
 		// get the dato of the observable component to be used to create the observer component
-		// in case of any relation component will be used to find "the compoment that I call" or "use my relations"
+		// in case of any relation component will be used to find "the component that I call" or "use my relations"
 		if(isset($current_observer->mode) && $current_observer->mode=== 'use_observable_dato'){
 			$ar_section = array_merge($ar_section, $observable_dato);
 		}
@@ -944,7 +944,7 @@ abstract class component_common extends common {
 		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
 		$ar_data = [];
 
-		// with all locators collected by the differents methods, it will create the observables components to be updated.
+		// with all locators collected by the differents methods, it will create the observable components to be updated.
 		foreach ($ar_section as $current_section) {
 			// create the observer component that will be update
 			$component = component_common::get_instance($component_name,
@@ -964,7 +964,7 @@ abstract class component_common extends common {
 				// force to update the dato of the observer component
 				$dato = $component->get_dato();
 
-				// save the new dato into the database, this will be used for search into components calculations of infos
+				// save the new dato into the database, this will be used for search into components calculations of info's
 				$component->Save();
 			}
 
@@ -972,7 +972,7 @@ abstract class component_common extends common {
 			// this section is the section that user is changed and need to be update width the new data
 			// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
 			if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
-				// get the json of the component to send witht the save of the observable compoment data
+				// get the json of the component to send witht the save of the observable component data
 				$component_json = $component->get_json();
 				$ar_data = array_merge($ar_data, $component_json->data);
 			}
@@ -1181,7 +1181,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET DATO AS STRING
-	* Get dato formated as string
+	* Get dato formatted as string
 	*/
 	public function get_dato_as_string() {
 
@@ -1288,7 +1288,7 @@ abstract class component_common extends common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				#dump(nul, ' filter ++ '.json_encode($filter, JSON_PRETTY_PRINT));
+				#dump(null, ' filter ++ '.json_encode($filter, JSON_PRETTY_PRINT));
 			}
 
 
@@ -1711,7 +1711,7 @@ abstract class component_common extends common {
 	/*
 	* GET_VALOR_LANG
 	* Return the component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
+	* If the component need change this langs (selects, radiobuttons...) overwrite this function
 	*/
 	public function get_valor_lang(){
 
@@ -1770,7 +1770,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string $diffusion_value
 	*
@@ -1996,7 +1996,7 @@ abstract class component_common extends common {
 
 				// Try all projects langs sequence
 					if (empty($dato_fb[$key])) {
-						$data_langs = common::get_ar_all_langs(); # Langs from config projectsç
+						$data_langs = common::get_ar_all_langs(); # Langs from config projects
 						foreach ($data_langs as $current_lang) {
 							if ($current_lang===$lang || $current_lang===$main_lang) {
 								continue; // Already checked
@@ -2029,7 +2029,7 @@ abstract class component_common extends common {
 	*/
 	public static function extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT) {
 
-		# Try directe value
+		# Try direct value
 		$value = $component->get_valor($lang);
 
 		if (empty($value)) {
@@ -2081,7 +2081,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_VALUE_WITH_FALLBACK_FROM_DATO_FULL
-	* Recive a full dato of translatable component and try to find a no empty lang
+	* Receive a full dato of translatable component and try to find a no empty lang
 	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
 	* @return string $value
 	*/
@@ -2146,7 +2146,7 @@ abstract class component_common extends common {
 			// Current lang
 			$value = $decoded_obj->$current_lang;
 		}else{
-			// Fallbacks
+			// Fallback
 			if($current_lang!==DEDALO_APPLICATION_LANGS_DEFAULT && !empty($decoded_obj->$default_lang)) {
 				$value = $decoded_obj->$default_lang;
 				$is_fallback = true;
@@ -2213,7 +2213,7 @@ abstract class component_common extends common {
 		$current_dataframe 	= (array)$this->get_dataframe();
 		$final_dataframe 	= array();
 
-		# Generate a new array with all other locators (differents to current requested $from_key, $type)
+		# Generate a new array with all other locators (different to current requested $from_key, $type)
 		# This removes previous element
 		foreach ((array)$current_dataframe as $key => $current_locator) {
 
@@ -2254,7 +2254,7 @@ abstract class component_common extends common {
 	* it call to the section for get the full component data and select you own part.
 	* the dataframe is a array of objects (dataframes):
 	* every object (dataframe) normally will be a locator with the dataframe section that define the frame of the data
-	* with the "type" key that say the diferents dataframes of the dato
+	* with the "type" key that say the different dataframes of the dato
 	* dataframe for certainty 	- dd558	-	DEDALO_DATAFRAME_TYPE_UNCERTAINTY
 	* dataframe for time 		- dd559	-	DEDALO_DATAFRAME_TYPE_TIME
 	* dataframe for space 		- dd560	-	DEDALO_DATAFRAME_TYPE_SPACE
