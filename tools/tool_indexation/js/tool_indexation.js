@@ -155,8 +155,14 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			self.events_tokens.push(
 				event_manager.subscribe('change_tag_state_' + self.id, fn_change_tag_state)
 			)
-			function fn_change_tag_state(value) {
-				console.warn("tag_state value:",value);
+			function fn_change_tag_state(options) {
+				console.warn("tag_state options:",options);
+
+				// options
+					const tag_id	= options.tag_id
+					const value		= options.value
+
+
 			}
 		// delete tag
 			self.events_tokens.push(
@@ -169,7 +175,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 				self.delete_tag(tag_id)
 				.then(function(response){
 					if (response.result!==false) {
-						// indexing_component. Remember force refresh full data and datum before refresh
+						// indexing_component. Remember force clean full data and datum before refresh
 							self.indexing_component.data	= null
 							self.indexing_component.datum	= null
 							self.indexing_component.refresh()

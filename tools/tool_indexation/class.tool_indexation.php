@@ -22,19 +22,21 @@ class tool_indexation { // extends tool_common
 	*/
 	public function __construct($component_obj, $modo='button') {
 
-		# Fix modo
+		// Fix modo
 		$this->modo = $modo;
 
-		# Para unificar el acceso, se copia el componente a $this->component_obj
+		// To unify the access, the component will be copied to $this->component_obj
 		$this->component_obj 	= $component_obj;
 
-		# Fix component
+		// Fix component and set modo
 		$this->source_component = $component_obj;
 		$this->source_component->set_modo('tool_indexation');
 		#$this->source_component->set_variant( tool_indexation::$source_variant );
-			#dump($component_obj,'component_obj');
+
 
 		$this->section_tipo = $component_obj->get_section_tipo();
+
+		return true;
 	}//end __construct
 
 
@@ -187,4 +189,5 @@ class tool_indexation { // extends tool_common
 	}//end delete_tag
 
 
-}//end class
+
+}//end class tool_indexation

@@ -509,9 +509,9 @@ class component_text_area extends component_common {
 
 	/**
 	* CHANGE TAG STATE
-	* Cambia el estado de la etiqueta dada dentro del texto.
-	* Ejemplo: [index-n-1] -> [index-r-1]
-	* @param $ar_tag (formated as tag in, like [index-n-1]. Can be string or array)
+	* Changes the tag state from given tag inside the text
+	* Sample: [index-n-1] -> [index-r-1]
+	* @param $ar_tag (formatted as tag in, like [index-n-1]. Can be string or array)
 	* @param $state (default 'r')
 	* @param $text_raw
 	* @return $text_raw_updated
@@ -521,42 +521,39 @@ class component_text_area extends component_common {
 		# Force array
 		if (is_string($ar_tag)) $ar_tag = array($ar_tag);
 
-		# Default no change text
+		# Default unchanged text
 		$text_raw_updated = $text_raw;
 
-		if(is_array($ar_tag)) foreach ($ar_tag as $tag) {
+		foreach ($ar_tag as $tag) {
 
-			$id 				= TR::tag2value($tag);
+			$id = TR::tag2value($tag);
 
-			# patrón válido tanto para 'in' como para 'out' tags
-			#$pattern 			= "/(\[\/{0,1}index-)([a-z])(-$id\])/";  /\[\/{0,1}index-[a-z]-1(-.{0,8}-data:.*?:data)?\]/
-			$pattern 			= TR::get_mark_pattern($mark='index', $standalone=true, false, $data=false);
-
+			// match. Pattern allow both tags, in and out
+			$pattern = TR::get_mark_pattern($mark='index', $standalone=true, false, $data=false);
 			preg_match_all($pattern, $text_raw, $matches);
 
-			foreach ((array)$matches[3] as $key => $value) {
+			foreach ((array)$matches[3] as $value) {
 				if ($value==$id) {
-					if (strpos($tag, '[/index')!==false) {
-						$type = 'indexOut';
-					}else if (strpos($tag, '[index')!==false) {
-						$type = 'indexIn';
-					}else{
-						$type = $matches[1][0];
-					}
-					$label = $matches[5][0];
-					$data  = $matches[6][0];
-					$new_tag = TR::build_tag($type, $state, $id, $label, $data);
 
-					# reemplazamos sólo la letra correspondiente al estado de la etiqueta
+					$type = strpos($tag, '[/index')!==false
+						? 'indexOut'
+						: (strpos($tag, '[index')!==false
+							? 'indexIn'
+							: $matches[1][0]);
+
+					$label		= $matches[5][0];
+					$data		= $matches[6][0];
+
+					// new tag build
+					$new_tag	= TR::build_tag($type, $state, $id, $label, $data);
+
+					// replace only the state tag char
 					$text_raw_updated = str_replace($tag, $new_tag, $text_raw);
-					break;
+
+					break; // actually, only first match is parsed
 				}
 			}
-
-			# reemplazamos sólo la letra correspondiente al estado de la etiqueta
-			#$replacement		= "$1".$state."$2";
-			#$text_raw_updated 	= preg_replace($pattern, $replacement, $text_raw);
-		}
+		}//end foreach ($ar_tag as $tag)
 
 		return $text_raw_updated ;
 	}//end change_tag_state
@@ -626,36 +623,37 @@ class component_text_area extends component_common {
 	*/
 	public static function get_fragment_text_from_tag( $tag_id, $tag_type, $raw_text ) {
 
-		# Test if la etiqueta no está bien formada
-		if(empty($tag_id) || empty($tag_type)) {
-			$msg = "Warning: tag '$tag_id' is not valid! (get_fragment_text_from_tag tag_id:$tag_id - tag_type:$tag_type - raw_text:$raw_text)";
-			trigger_error($msg);
-			if(SHOW_DEBUG) {
-				error_log( 'get_fragment_text_from_tag : '.print_r(debug_backtrace(),true) );
+		// check tag_id, tag_type are valid
+			if(empty($tag_id) || empty($tag_type)) {
+				$msg = "Warning: tag '$tag_id' is not valid! (get_fragment_text_from_tag tag_id:$tag_id - tag_type:$tag_type - raw_text:$raw_text)";
+				trigger_error($msg);
+				if(SHOW_DEBUG) {
+					error_log( 'get_fragment_text_from_tag : '.print_r(debug_backtrace(),true) );
+				}
+				return null;
 			}
-			return NULL;
-		}
 
-		switch ($tag_type) {
-			case 'index':
-				$tag_in  = TR::get_mark_pattern('indexIn',  $standalone=false, $tag_id, $data=false);
-				$tag_out = TR::get_mark_pattern('indexOut', $standalone=false, $tag_id, $data=false);
-				break;
-			case 'struct':
-				$tag_in  = TR::get_mark_pattern('structIn',  $standalone=false, $tag_id, $data=false);
-				$tag_out = TR::get_mark_pattern('structOut', $standalone=false, $tag_id, $data=false);
-				break;
-			default:
-				throw new Exception("Error Processing Request. Invalid tag type: $tag_type", 1);
-				break;
-		}
+		// tag build (based on tag_type)
+			switch ($tag_type) {
+				case 'index':
+					$tag_in  = TR::get_mark_pattern('indexIn',  $standalone=false, $tag_id, $data=false);
+					$tag_out = TR::get_mark_pattern('indexOut', $standalone=false, $tag_id, $data=false);
+					break;
+				case 'struct':
+					$tag_in  = TR::get_mark_pattern('structIn',  $standalone=false, $tag_id, $data=false);
+					$tag_out = TR::get_mark_pattern('structOut', $standalone=false, $tag_id, $data=false);
+					break;
+				default:
+					throw new Exception("Error Processing Request. Invalid tag type: $tag_type", 1);
+					break;
+			}
 
 		# Build in/out regex pattern to search
 		$regexp = $tag_in ."(.*)". $tag_out;
 
 		# Search fragment_text
 			# Dato raw from matrix db
-			$dato = $raw_text ;	#parent::get_dato();
+			$dato = $raw_text;
 			#if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER) ) {
 			if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER|PREG_OFFSET_CAPTURE) ) {
 				$key_fragment = 3;
@@ -679,7 +677,7 @@ class component_text_area extends component_common {
 				}
 			}
 
-		return NULL;
+		return null;
 	}//end get_fragment_text_from_tag
 
 
