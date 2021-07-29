@@ -223,9 +223,9 @@ const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
+			event_manager.subscribe('update_value_'+self.id, fn_update_value)
 		)
-		function update_value(changed_data) {
+		function fn_update_value(changed_data) {
 			//console.log("-------------- - event update_value changed_data:", changed_data);
 			// change the value of the current dom element
 			const changed_node = wrapper.querySelector(element_type + '[data-key="'+changed_data.key+'"]')
@@ -234,9 +234,9 @@ const add_events = function(self, wrapper) {
 
 	// add element, subscription to the events
 		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
+			event_manager.subscribe('add_element_'+self.id, fn_add_element)
 		)
-		function add_element(changed_data) {
+		function fn_add_element(changed_data) {
 			//console.log("-------------- + event add_element changed_data:", changed_data);
 			const inputs_container = wrapper.querySelector('.inputs_container')
 			// add new dom input element

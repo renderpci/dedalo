@@ -1657,10 +1657,6 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 	// })
 
 	// show
-		// event_manager.subscribe('render_'+self.id, function(node){
-		// 	//console.log("node:",node);
-		// 	debug.classList.remove("hide")
-		// })
 		debug.classList.remove("hide")
 
 

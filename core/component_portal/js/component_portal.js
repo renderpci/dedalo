@@ -119,10 +119,11 @@ component_portal.prototype.init = async function(options) {
 		const common_init = component_common.prototype.init.call(self, options);
 
 	// events subscribe
-		self.events_tokens.push(
-			// user click over list record
-			event_manager.subscribe('initiator_link_' + self.id, async (locator)=>{
-
+		// initiator_link. user click over list record_
+			self.events_tokens.push(
+				event_manager.subscribe('initiator_link_' + self.id, fn_initiator_link)
+			)
+			async function fn_initiator_link(locator) {
 				// add locator selected
 					const result = await self.add_value(locator)
 					if (result===false) {
@@ -133,8 +134,7 @@ component_portal.prototype.init = async function(options) {
 					if (self.modal) {
 						self.modal.close()
 					}
-			})
-		)
+			}//end fn_initiator_link
 
 
 	return common_init
@@ -250,15 +250,17 @@ component_portal.prototype.build = async function(autoload=false){
 					await self.paginator.build()
 
 					self.events_tokens.push(
-						event_manager.subscribe('paginator_goto_'+self.paginator.id , async (offset) => {
-							self.rqo.sqo.offset = offset
-
-							// set value
-							current_data_manager.set_local_db_data(self.rqo, 'rqo')
-
-							self.refresh()
-						})
+						event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
 					)//end events push
+					function fn_paginator_goto(offset) {
+
+						self.rqo.sqo.offset = offset
+
+						// set value
+						current_data_manager.set_local_db_data(self.rqo, 'rqo')
+
+						self.refresh()
+					}//end fn_paginator_goto
 
 				}else{
 					// refresh existing
@@ -437,9 +439,9 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	// paginator content data update (after self update to avoid artifacts (!))
 		self.events_tokens.push(
-			event_manager.subscribe('render_'+self.id, refresh_paginator)
+			event_manager.subscribe('render_'+self.id, fn_refresh_paginator)
 		)
-		function refresh_paginator(node) {
+		function fn_refresh_paginator(node) {
 			// remove the event to prevent multiple equal events
 				event_manager.unsubscribe('render_'+self.id)
 			// refresh paginator if already exists

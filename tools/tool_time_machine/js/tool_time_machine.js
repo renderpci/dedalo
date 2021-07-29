@@ -67,20 +67,20 @@ tool_time_machine.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url = DEDALO_TOOLS_URL + "/tool_time_machine/trigger.tool_time_machine.php"
 
-	// events subscribe
+	// events subscribe. User click over list record eye icon
 		self.events_tokens.push(
-			// user click over list record eye icon
-			event_manager.subscribe('tm_edit_record', async (e)=>{
-				const matrix_id = e.matrix_id
-				// render. Create and add new component to preview container
-				const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
-				add_component(self, self.preview_component_container, self.lang, e.date, load_mode, matrix_id)				
-				// fix selected matrix_id
-				self.selected_matrix_id = matrix_id
-				// show Appy button
-				self.button_apply.classList.remove('hide')
-			})
+			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
 		)
+		async function fn_tm_edit_record(e) {
+			const matrix_id = e.matrix_id
+			// render. Create and add new component to preview container
+			const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
+			add_component(self, self.preview_component_container, self.lang, e.date, load_mode, matrix_id)
+			// fix selected matrix_id
+			self.selected_matrix_id = matrix_id
+			// show Appy button
+			self.button_apply.classList.remove('hide')
+		}//end fn_tm_edit_record
 
 	// call the generic commom tool init
 		const common_init = tool_common.prototype.init.call(this, options);
