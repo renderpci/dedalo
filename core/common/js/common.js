@@ -240,7 +240,7 @@ common.prototype.refresh = async function () {
 			self.node[i].classList.add('loading')
 		}
 
-	// destroy dependences only
+	// destroy dependencies only
 		if (self.status==='rendered') {
 			const destroyed = await self.destroy(false, true)
 		}else{
@@ -317,22 +317,22 @@ common.prototype.refresh = async function () {
 * but it not delete the own section instance.
 * @return
 */
-common.prototype.destroy = async function (delete_self=true, delete_dependences=false, remove_dom=false) {
+common.prototype.destroy = async function (delete_self=true, delete_dependencies=false, remove_dom=false) {
 
 	const self = this
 
 	const result = {}
 
 	// destroy all instances associated
-		if(delete_dependences===true){
+		if(delete_dependencies===true){
 
-			const do_delete_dependences = async function() {
+			const do_delete_dependencies = async function() {
 
 				const ar_instances_length = self.ar_instances.length
 
 				if(SHOW_DEBUG===true) {
 					if (ar_instances_length<1) {
-						// console.warn("[common.destroy.delete_dependences] Ignored empty ar_instances as dependences ", self);
+						// console.warn("[common.destroy.delete_dependencies] Ignored empty ar_instances as dependencies ", self);
 					}
 				}
 

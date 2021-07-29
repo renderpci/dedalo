@@ -27,7 +27,7 @@ export const tool_indexation = function () {
 	this.node
 	this.ar_instances
 	this.status
-	this.events_tokens
+	this.events_tokens = []
 	this.type
 
 	this.source_lang

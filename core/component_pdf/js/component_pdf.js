@@ -55,7 +55,7 @@ export const component_pdf = function(){
 	component_pdf.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_pdf.prototype.update_datum		= component_common.prototype.update_datum
 	component_pdf.prototype.change_value		= component_common.prototype.change_value
-	component_pdf.prototype.build_rqo	= common.prototype.build_rqo
+	component_pdf.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_pdf.prototype.mini				= render_component_pdf.prototype.mini

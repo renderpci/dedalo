@@ -144,8 +144,9 @@ component_text_area.prototype.tags_to_html = function(value) {
 *	defined in container dataset key
 * @param string value
 *	value from active text editor
+* @return promise
 */
-component_text_area.prototype.set_value = async function(value) {
+component_text_area.prototype.set_value = function(value) {
 
 	const self = this
 
@@ -154,12 +155,10 @@ component_text_area.prototype.set_value = async function(value) {
 		key		: value.key,
 		value	: value.value
 	})
-	self.change_value({
-		changed_data : changed_data,
-		refresh 	 : true
+	return self.change_value({
+		changed_data	: changed_data,
+		refresh			: true
 	})
-
-	return true
 };//end set_value
 
 
@@ -400,14 +399,14 @@ const unwrap_element = function(el) {
 * IS_TINY
 * @return bool
 */
-const is_tiny = function(ed) {
+	// const is_tiny = function(ed) {
 
-	const is_tiny = (ed===null || typeof ed!=='object' || ed.type!=='setupeditor')
-		? false // USING DIV AS EDITOR (LIKE STRUCT)
-		: true  // USING TINYMCE EDITOR
+	// 	const is_tiny = (ed===null || typeof ed!=='object' || ed.type!=='setupeditor')
+	// 		? false // USING DIV AS EDITOR (LIKE STRUCT)
+	// 		: true  // USING TINYMCE EDITOR
 
-	return is_tiny
-};//end is_tiny
+	// 	return is_tiny
+	// };//end is_tiny
 
 
 
@@ -550,6 +549,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 /**
 * GET_LAST_TAG_ID
+* Calculates all current service editor tags id of given type (ex. 'reference') and get last used id
 * @param ed
 *	Text editor instance (tinyMCE)
 * @param tag_type
@@ -571,7 +571,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 		}
 
 	// container . editor_content_data is a DOM node <body> from editor
-		const container = service.get_editor_content_data()	
+		const container = service.get_editor_content_data()
 		if (!container) {
 			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
 			console.warn(`current service:`, service);
@@ -640,7 +640,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 						? parseInt(ar_parts[2])
 						: 0
 
-					// Insert id formated as number in final array
+					// Insert id formatted as number in final array
 						ar_id_final.push(number)
 				}
 				break;

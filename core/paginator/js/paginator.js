@@ -196,7 +196,7 @@ paginator.prototype.get_offset = function() {
 /**
 * PAGINATE
 * @return promise
-*	bool true on successfull, false on error
+*	bool true on successful, false on error
 * Upadate self offset and publish a public event 'paginator_goto_' that is listened by section/portal to load another record data
 */
 paginator.prototype.paginate = async function(offset) {
