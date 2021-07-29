@@ -79,10 +79,10 @@ page.prototype.init = async function(options) {
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 		// user_navigation
 			self.events_tokens.push(
-				event_manager.subscribe('user_navigation', user_navigation)
+				event_manager.subscribe('user_navigation', fn_user_navigation)
 			)
-		// user_navigation fn
-			async function user_navigation(user_navigation_options) {				
+		// fn_user_navigation
+			async function fn_user_navigation(user_navigation_options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
 				// check valid vars
@@ -164,7 +164,7 @@ page.prototype.init = async function(options) {
 
 					resolve(new_page_element_instance.id)
 				})
-			};//end user_navigation
+			};//end fn_user_navigation
 
 
 	// window onpopstate. Triggered when user make click on browser navigation buttons
@@ -183,13 +183,10 @@ page.prototype.init = async function(options) {
 
 
 	// observe tool calls
-		self.events_tokens.push(
-			// load_tool from tool_common/js/tool_common.js
-			// event_manager.subscribe('load_tool', load_tool)
-			event_manager.subscribe('load_tool', function(e) {
-				load_tool(e)
-			})
-		)
+		// load_tool from tool_common/js/tool_common.js
+			self.events_tokens.push(
+				event_manager.subscribe('load_tool', load_tool)
+			)
 
 
 	// beforeunload (event)

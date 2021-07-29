@@ -212,10 +212,15 @@ render_menu.prototype.edit = async function() {
 		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 			let current_instance
 			self.events_tokens.push(
-				event_manager.subscribe('render_instance', update_section_label)
+				event_manager.subscribe('render_instance', fn_update_section_label)
 			)
-			function update_section_label (instance) {
-				if(instance.mode!=='tm' && (instance.model==='section'|| instance.model==='area')){
+			function fn_update_section_label (instance) {
+
+				if(instance.mode!=='tm' && (instance.type==='section'|| instance.type==='area')){
+
+					if (current_instance && instance.tipo===current_instance.tipo) {
+						return
+					}
 					// change the value of the current dom element
 					// section_label.innerHTML = instance.label
 					// clean
@@ -224,6 +229,8 @@ render_menu.prototype.edit = async function() {
 					}
 					section_label.insertAdjacentHTML('afterbegin', instance.label);
 					current_instance = instance
+
+						console.log("added fn_update_section_label instance:",instance );
 				}
 			}
 			section_label.addEventListener("click", e => {

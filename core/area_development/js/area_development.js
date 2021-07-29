@@ -103,24 +103,15 @@ area_development.prototype.build = async function(autoload=true) {
 
 			// rqo build
 				self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					self.events_tokens.push(
-						event_manager.subscribe('render_'+self.id, function(){
-							load_data_debug(self, api_response, rqo_original)
-						})
-					)
-				}
 		}//end if (autoload===true)
 
 		self.label = self.context.label
+
 
 	// debug
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-
 		}
 
 	// status update

@@ -100,6 +100,9 @@ const get_content_data = async function(self) {
 			}
 		}
 
+	// event page rendered (used by menu..)
+		event_manager.publish('render_page', self)
+
 	// // content_data
 	// 	const content_data = document.createElement("div")
 	// 		  content_data.classList.add("content_data", self.type)
