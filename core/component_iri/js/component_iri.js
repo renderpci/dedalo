@@ -46,7 +46,7 @@ export const component_iri = function(){
 	component_iri.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_iri.prototype.update_datum		= component_common.prototype.update_datum
 	component_iri.prototype.change_value		= component_common.prototype.change_value
-	component_iri.prototype.build_rqo	= common.prototype.build_rqo
+	component_iri.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_iri.prototype.mini				= render_component_iri.prototype.mini
@@ -56,16 +56,6 @@ export const component_iri = function(){
 	component_iri.prototype.tm					= render_component_iri.prototype.edit
 	component_iri.prototype.search				= render_component_iri.prototype.search
 	component_iri.prototype.change_mode			= component_common.prototype.change_mode
-
-
-
-// /**
-// * BUILD
-// */
-// component_iri.prototype.build = function() {
-
-// 	return true
-// };//end build
 
 
 
@@ -89,7 +79,6 @@ component_iri.prototype.open_iri = function(component_obj) {
 /**
 * SET_VALUE
 * @return
-
 render_component_iri.prototype.set_value = function() {
 
 	const self = this

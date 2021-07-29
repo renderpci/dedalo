@@ -24,4 +24,3 @@ define('MYSQL_DEDALO_PASSWORD_CONN'	,'password');
 define('MYSQL_DEDALO_DATABASE_CONN'	,'web_dedalo'); 	# Only for Oral History
 define('MYSQL_DEDALO_DB_PORT_CONN'	,'port'); 			# like 3306 or null for socket
 define('MYSQL_DEDALO_SOCKET_CONN'	,'/tmp/mysql.sock'); # Like /tmp/mysql.sock if use
-?>

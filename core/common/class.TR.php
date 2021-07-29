@@ -555,16 +555,17 @@ abstract class TR {
 
 	/**
 	* MATCH_PATTERN_INDEX_FROM_TAG
+	* Using pattern like: \[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]
 	*/
 	public static function match_pattern_index_from_tag( $tag, $type='index' ) {
 
 		$pattern = TR::get_mark_pattern($mark=$type, $standalone=false);
-
 		if(preg_match_all("/$pattern/", $tag, $matches, PREG_PATTERN_ORDER)) {
-
 			#dump($matches,'$matches',"tag: $tag");
 			return $matches;
 		}
+
+		return false;
 	}//end match_pattern_index_from_tag
 
 
@@ -585,11 +586,11 @@ abstract class TR {
 
 		return $state;
 	}
-	# CONVERT tag to value
+	# TAG2VALUE. Convert tag to value
 	public static function tag2value($tag) {
 
-		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
-		$value 					= isset($match_pattern[3][0]) ? (int)$match_pattern[3][0] : null;
+		$match_pattern	= TR::match_pattern_index_from_tag($tag);
+		$value			= isset($match_pattern[3][0]) ? (int)$match_pattern[3][0] : null;
 
 		return $value;
 	}

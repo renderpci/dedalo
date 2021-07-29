@@ -134,15 +134,15 @@ render_component_text_area.prototype.edit = async function(options={render_level
 const add_events = function(self, wrapper) {
 
 	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
-		)
-		function add_element(changed_data) {
-			const inputs_container = wrapper.querySelector('.inputs_container')
-			// add new dom input element
-			const input_element = get_input_element(changed_data.key, changed_data.value, self)
-			inputs_container.appendChild(input_element)
-		}
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('add_element_'+self.id, add_element)
+		// )
+		// function add_element(changed_data) {
+		// 	const inputs_container = wrapper.querySelector('.inputs_container')
+		// 	// add new DOM input element
+		// 	const input_element = get_input_element(changed_data.key, changed_data.value, self)
+		// 	inputs_container.appendChild(input_element)
+		// }
 
 	// focus
 		// wrapper.addEventListener('focus', async (e) => {

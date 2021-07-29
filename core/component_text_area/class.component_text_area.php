@@ -6,7 +6,10 @@
 */
 class component_text_area extends component_common {
 
+
+
 	public $arguments;
+
 
 
 	/**
@@ -518,8 +521,10 @@ class component_text_area extends component_common {
 	*/
 	public static function change_tag_state($ar_tag, $state='r', $text_raw='') {
 
-		# Force array
-		if (is_string($ar_tag)) $ar_tag = array($ar_tag);
+		# Force array format
+			$ar_tag = (is_string($ar_tag))
+				? [$ar_tag]
+				: $ar_tag;
 
 		# Default unchanged text
 		$text_raw_updated = $text_raw;
@@ -2542,5 +2547,3 @@ class component_text_area extends component_common {
 
 
 }//end component_text_area
-
-
