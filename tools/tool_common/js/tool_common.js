@@ -97,7 +97,7 @@ tool_common.prototype.build = async function(autoload=false) {
 					return false
 				}
 
-			// rqo. Create the basic rqo
+			// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
 				const rqo = {
 					action	: 'read',
 					// tool source for component JSON that stores full tool config
