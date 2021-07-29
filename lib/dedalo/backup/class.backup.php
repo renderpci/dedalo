@@ -1400,13 +1400,13 @@ abstract class backup {
 	public static function check_remote_server() {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		$data = array(
-				"code" 				=> STRUCTURE_SERVER_CODE,
-				"check_connection" 	=> true
-			);
+			"code"				=> STRUCTURE_SERVER_CODE,
+			"check_connection"	=> true
+		);
 		$data_string = "data=" . json_encode($data);
 		
 
@@ -1456,6 +1456,10 @@ abstract class backup {
 				break;
 		}
 
+		if(curl_errno($ch)){
+			$msg .= '. Curl error: ' . curl_error($ch);
+		}
+
 		#$response->result = true;
 		#$httpcode = 200; // Force fake 200
 		#$msg = "Ok";
@@ -1467,8 +1471,8 @@ abstract class backup {
 			$msg = "<div class=\"error\">".$msg."</div>";
 		}
 
-		$response->msg 	= $msg;
-		$response->code = $httpcode;
+		$response->msg	= $msg;
+		$response->code	= $httpcode;
 
 
 		return $response;
