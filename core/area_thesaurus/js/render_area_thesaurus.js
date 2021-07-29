@@ -293,10 +293,10 @@ const build_widget = (item, self) => {
 		// item info
 		if (item.info) {
 			const widget_info = ui.create_dom_element({
-				element_type : 'div',
-				class_name 	 : "link",
-				parent 		 : body,
-				inner_html	 : item.info || ''
+				element_type	: 'div',
+				class_name		: "link",
+				parent			: body,
+				inner_html		: item.info || ''
 			})
 
 			// action
@@ -314,9 +314,9 @@ const build_widget = (item, self) => {
 					// data_manager
 					const api_response = await data_manager.prototype.request({
 						body : {
-							dd_api		: item.trigger.dd_api,
-							action 		: item.trigger.action,
-							options 	: item.trigger.options
+							dd_api	: item.trigger.dd_api,
+							action	: item.trigger.action,
+							options	: item.trigger.options
 						}
 					})
 					// console.log("api_response:",api_response);
@@ -337,28 +337,25 @@ const build_widget = (item, self) => {
 		})
 
 		const body_response = ui.create_dom_element({
-			element_type : 'div',
-			class_name 	 : "body_response",
-			parent 		 : body,
+			element_type	: 'div',
+			class_name		: "body_response",
+			parent			: body
 		})
 
 	// run widget scripts
 		if(item.run) {
-			//event_manager.subscribe('render_page', (page_wrapper) => {
+			for (let i = 0; i < item.run.length; i++) {
 
-				for (let i = 0; i < item.run.length; i++) {
+				const func			= item.run[i].fn
+				const func_options	= item.run[i].options
 
-					const func 			= item.run[i].fn
-					const func_options  = item.run[i].options
-
-					const js_promise = self[func].apply(self, [{
-						...item,
-						...func_options,
-						body_response  : body_response,
-						print_response : print_response
-					}])
-				}
-			//})
+				const js_promise = self[func].apply(self, [{
+					...item,
+					...func_options,
+					body_response  : body_response,
+					print_response : print_response
+				}])
+			}
 		}
 
 
