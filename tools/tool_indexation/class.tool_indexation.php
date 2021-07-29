@@ -190,4 +190,61 @@ class tool_indexation { // extends tool_common
 
 
 
+	/**
+	* CHANGE_TAG_STATE
+	* @return object $response
+	*/
+	public static function change_tag_state($request_options) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= [];
+
+
+		// options get and set
+			$options = new stdClass();
+				$options->section_tipo			= null;
+				$options->section_id			= null;
+				$options->main_component_tipo	= null; // component_text_area tipo
+				$options->main_component_lang	= null; // component_text_area lang
+				$options->tag_id				= null;
+				$options->state					= null;
+
+				foreach ($request_options as $key => $value) {
+					if (property_exists($options, $key)) {
+						$options->$key = $value;
+					}
+				}
+
+		// component_text_area
+			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($options->main_component_tipo,true);
+			$component_text_area	= component_common::get_instance( $model_name,
+																	  $options->main_component_tipo,
+																	  $options->section_id,
+																	  'edit',
+																	  $options->main_component_lang,
+																	  $options->section_tipo);
+			$ar_tag		= [$options->tag_id];
+			$state		= $options->state;
+			$dato		= $component_text_area->get_dato();
+			$text_raw	= $dato[0];
+				dump($text_raw, ' text_raw ++ '.to_string());
+
+			if (!empty($text_raw)) {
+				$result_text = component_text_area::change_tag_state($ar_tag, $state, $text_raw);
+					dump($result_text, ' result_text ++ '.to_string());
+
+				$component_text_area->set_dato([$result_text]);
+				$component_text_area->Save();
+
+				$response->result 	= true;
+				$response->msg 		= 'OK. Tag: '.$options->tag_id.' successful updated to state: '.$state;
+			}
+
+
+		return $response;
+	}//end change_tag_state
+
+
+
 }//end class tool_indexation
