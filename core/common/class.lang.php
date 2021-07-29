@@ -7,9 +7,11 @@
 class lang {
 
 
-	# fixed matrix table where are stored all langs
+
+	// fixed matrix table where are stored all langs
 	public static $langs_matrix_table = 'matrix_langs';
-	
+
+
  
 	/**
 	* RESOLVE
@@ -750,4 +752,3 @@ class lang {
 
 
 }//end class lang
-?>

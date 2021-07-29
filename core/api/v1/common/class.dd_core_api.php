@@ -881,7 +881,7 @@ class dd_core_api {
 			// 					if ($mode==='tm') {
 			// 						// set matrix_id value to component to allow it search dato in
 			// 						// matrix_time_machine component function 'get_dato' will be
-			// 						// overwrited to get time machine dato instead the real dato
+			// 						// overwritten to get time machine dato instead the real dato
 			// 						$element->matrix_id = $ddo_source->matrix_id;
 			// 					}
 			// 			}else if(strpos($model, 'area')===0) {
@@ -895,7 +895,7 @@ class dd_core_api {
 			// 			break;
 
 			// 		default:
-			// 			# not defined modelfro context / data
+			// 			# not defined model from context / data
 			// 			debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
 			// 			break;
 			// 	}// end switch (true)
@@ -1036,7 +1036,7 @@ class dd_core_api {
 						break;
 
 					default:
-						# not defined modelfro context / data
+						# not defined model from context / data
 						debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
 						break;
 				}// end switch (true)
@@ -1084,7 +1084,7 @@ class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->sqo						= $sqo ?? null;
-					// $debug->rqo						= $rqo;
+					// $debug->rqo					= $rqo;
 					// $debug->context_exec_time	= $context_exec_time;
 					$debug->data_exec_time			= $data_exec_time;
 					$debug->exec_time				= exec_time_unit($start_time,'ms')." ms";
@@ -1199,12 +1199,12 @@ class dd_core_api {
 
 
 		# DIFFUSION_INDEX_TS
-			$diffusion_index_ts	= new diffusion_index_ts($section_tipo, $section_id, $tipo);
-			$indexation_grid	= $diffusion_index_ts->build_indexation_grid();
+			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
+			$index_grid			= $indexation_grid->build_indexation_grid();
 
 
 			$response->msg		= 'Ok. Request done';
-			$response->result	= $indexation_grid;
+			$response->result	= $index_grid;
 
 		return $response;
 	}//end get_indexation_grid
