@@ -410,6 +410,8 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 				editor_config	: editor_config
 			})
 
+		// fix current_service
+			self.service[i] = current_service
 
 		// add button create fragment (Only when caller is a tool_indexation instance)
 			if (self.caller && self.caller.constructor.name==="tool_indexation") {
@@ -419,55 +421,56 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 					// 	event_manager.subscribe('create_fragment'+'_'+ self.id, self.create_fragment.bind(self))
 					// )
 
-				// text_selection
-					self.events_tokens.push(
-						event_manager.subscribe('text_selection_'+ self.id, show_button_create_fragment)
-					)
-					function show_button_create_fragment(options) {
-						dd_console('--> show_button_create_fragment options', 'DEBUG', options)
+				// // text_selection
+				// 	console.log("event_manager.events:",event_manager.events);
+				// 	self.events_tokens.push(
+				// 		event_manager.subscribe('text_selection_'+ self.id, show_button_create_fragment)
+				// 	)
+				// 	function show_button_create_fragment(options) {
+				// 		dd_console('--> show_button_create_fragment options', 'DEBUG', options)
 
-						// options
-							const selection	= options.selection
-							const callet	= options.caller
+				// 		// options
+				// 			const selection	= options.selection
+				// 			const callet	= options.caller
 
-						const component_container	= li
-						const button				= component_container.querySelector(".create_fragment")
-						const last_tag_id			= self.get_last_tag_id(i, 'index', current_service)
-						const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+				// 		const component_container	= li
+				// 		const button				= component_container.querySelector(".create_fragment")
+				// 		const last_tag_id			= self.get_last_tag_id(i, 'index', current_service)
+				// 		const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 
-						const create_button = function(selection) {
-							const button_create_fragment = ui.create_dom_element({
-								element_type	: 'button',
-								class_name 		: 'warning compress create_fragment',
-								inner_html 		: label,
-								parent 			: component_container
-							})
+				// 		const create_button = function(selection) {
+				// 			const button_create_fragment = ui.create_dom_element({
+				// 				element_type	: 'button',
+				// 				class_name 		: 'warning compress create_fragment',
+				// 				inner_html 		: label,
+				// 				parent 			: component_container
+				// 			})
 
-							// event create_fragment add publish on click								
-								button_create_fragment.addEventListener("click", () => {
+				// 			// event create_fragment add publish on click
+				// 				button_create_fragment.addEventListener("click", () => {
 
-									event_manager.publish('create_fragment_'+ self.id, {
-										caller	: self,
-										key		: i,
-										service	: current_service
-									})
-								})
+				// 					event_manager.publish('create_fragment_'+ self.id, {
+				// 						caller	: self,
+				// 						key		: i,
+				// 						service	: current_service
+				// 					})
+				// 				})
 
-							return button_create_fragment
-						}
+				// 			return button_create_fragment
+				// 		}
 
-						if (selection.length<1) {
-							if (button) {
-								button.remove()
-							}
-						}else{
-							if (!button) {
-								create_button(selection)
-							}else{
-								button.innerHTML = label
-							}
-						}
-					}
+				// 		if (selection.length<1) {
+				// 			if (button) {
+				// 				button.remove()
+				// 			}
+				// 		}else{
+				// 			if (!button) {
+				// 				create_button(selection)
+				// 			}else{
+				// 				button.innerHTML = label
+				// 			}
+				// 		}
+				// 	}
 			};//end if (self.caller && self.caller.constructor.name==="tool_indexation")
 
 	// button remove
@@ -650,7 +653,7 @@ const get_custom_events = (self, i, service) => {
 
 					case 'tc':
 						// Video go to timecode by tc tag
-						event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+						event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
 						break;
 
 					case 'index':
@@ -658,7 +661,7 @@ const get_custom_events = (self, i, service) => {
 						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
 						// 'self.id' for specific uses like tool indexation
 						// console.log("PUBLISH self.id:",self.id, self.id_base);
-						event_manager.publish('click_tag_index_'+ self.id_base, {tag:tag_obj, caller: self})
+						event_manager.publish('click_tag_index_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
 						// event_manager.publish('click_tag_index_'+ self.id, {tag:tag_obj, caller: self})
 						// des
 							// const tipo			= text_area_component.dataset.tipo
@@ -698,37 +701,38 @@ const get_custom_events = (self, i, service) => {
 
 					case 'draw' :
 						// Load draw editor
-						event_manager.publish('click_tag_draw' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+						event_manager.publish('click_tag_draw' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
 
-						// switch(page_globals.modo) {
+						// des
+							// switch(page_globals.modo) {
 
-						// 	case 'tool_transcription' :
-						// 		if (typeof component_image==="undefined") {
-						// 			console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
-						// 		}else{
-						// 			component_image.load_draw_editor(tag_obj);
-						// 		}
-						// 		break;
+							// 	case 'tool_transcription' :
+							// 		if (typeof component_image==="undefined") {
+							// 			console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
+							// 		}else{
+							// 			component_image.load_draw_editor(tag_obj);
+							// 		}
+							// 		break;
 
-						// 	case 'edit' :
-						// 		var canvas_id = text_area_component.dataset.canvas_id;
-						// 		if (typeof component_image_read!=="undefined") {
-						// 			component_image_read.load_draw_editor_read(tag_obj, canvas_id);
-						// 		}else{
-						// 			console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
-						// 		}
-						// 	break;
-						// }
+							// 	case 'edit' :
+							// 		var canvas_id = text_area_component.dataset.canvas_id;
+							// 		if (typeof component_image_read!=="undefined") {
+							// 			component_image_read.load_draw_editor_read(tag_obj, canvas_id);
+							// 		}else{
+							// 			console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
+							// 		}
+							// 	break;
+							// }
 						break;
 
 					case 'geo' :
 						// Load geo editor
-						event_manager.publish('click_tag_geo' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+						event_manager.publish('click_tag_geo' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
 						break;
 
 					case 'page':
 						// PDF go to the specific page
-						event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+						event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
 						break;
 
 					case 'person':

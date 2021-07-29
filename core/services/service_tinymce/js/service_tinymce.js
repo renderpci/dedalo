@@ -87,7 +87,7 @@ export const service_tinymce = function() {
 	*	Current saved value for current key data
 	* @return bool
 	*/
-	this.save = function() {
+	this.save = async function() {
 
 		const self = this
 
@@ -101,7 +101,7 @@ export const service_tinymce = function() {
 		const value = self.get_value()	// editor.getContent({format:'raw'})
 		// const value = self.editor.getBody()
 
-		self.caller.save_value(key, value)
+		await self.caller.save_value(key, value)
 
 		return true
 	};//end save
@@ -318,11 +318,10 @@ export const service_tinymce = function() {
 			return false
 		}
 
-		const editor_content_data = self.editor.getBody();
+		const editor_content_data = self.editor.getBody(); // Returns the root element of the editable area. For a non-inline iframe-based editor, returns the iframe's body element.
 		if (!editor_content_data) {
-			console.error("! INVALID editor_content_data:", editor_content_data);
+			console.error("! INVALID editor_content_data (getBody) editor_content_data:", editor_content_data, " editor:", self.editor);
 		}
-
 
 		return editor_content_data
 	};//end get_editor_content_data
@@ -391,19 +390,36 @@ export const service_tinymce = function() {
 
 
 	/**
-	* SELECT_NODE
+	* DOM_SELECT
 	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
-	* @return DOM node
+	* @return DOM node (one or more)
 	*/
-	this.select_node = function(selector_str) {
+	this.dom_select = function(selector_str) {
 
 		const self		= this
 		const editor	= self.editor
 
-		const select_result = editor.selection.select(editor.dom.select(selector_str)[0]);
+		const node = editor.dom.select(selector_str)
 
-		return select_result
-	};//end select_node
+		return node
+	};//end dom_select
+
+
+
+	/**
+	* SET_DIRTY
+	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
+	* @return DOM node (one or more)
+	*/
+	this.set_dirty = function(value) {
+
+		const self = this
+
+		self.editor.setDirty(value);
+
+		return true
+	};//end set_dirty
+
 
 
 

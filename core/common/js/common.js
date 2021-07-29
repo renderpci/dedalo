@@ -227,6 +227,8 @@ common.prototype.render = async function (options={render_level:'full'}) {
 
 /**
 * REFRESH
+* Destroy current instance dependencies and build and render again
+* (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
 * @return promise
 */
 common.prototype.refresh = async function () {
@@ -365,7 +367,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependencies
 				return result
 			}
 
-			result.delete_dependences = await do_delete_dependences()
+			result.delete_dependencies = await do_delete_dependencies()
 		}
 
 
@@ -374,11 +376,11 @@ common.prototype.destroy = async function (delete_self=true, delete_dependencies
 
 			const do_delete_self = async function() {
 
-				// get the events that the instance was created
+				// events_tokens. get the events that the instance was created
 					const events_tokens = self.events_tokens
 
-				// delete the registred events
-					const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+				// events. delete the registered events
+					const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token)) // remove all subscriptions
 
 				// delete paginator
 					if(self.paginator){
@@ -1692,5 +1694,35 @@ common.prototype.load_data_from_datum = function() {
 
 	return self.data
 }//end load_data_from_datum
+
+
+
+/**
+* REMOVE_NON_INIT_EVENTS
+* Applied in build moment to prevent duplicate events on refresh
+* @return array delete_events
+*/
+export const remove_non_init_events = function(self) {
+
+	return true;
+
+	// const events_tokens			= self.events_tokens || []
+	// const events_tokens_init	= self.events_tokens_init || null
+	// const delete_events			= events_tokens_init && events_tokens_init.length>0
+	// 	? (() =>{
+	// 		// delete only non init tokens
+	// 		for (let i = 0; i < events_tokens.length; i++) {
+	// 			const token = events_tokens[i] // token name
+	// 			// console.warn("++++++ token",token)
+	// 			if( events_tokens_init.indexOf(token)===-1 ) {
+	// 				event_manager.unsubscribe(token)
+	// 					console.log("removed event not in events_tokens_init. token:", token, self.id);
+	// 			}
+	// 		}
+	// 	  })()
+	// 	: null // events_tokens.map(current_token => event_manager.unsubscribe(current_token)) // remove all
+
+	// return delete_events
+}//end remove_non_init_events
 
 
