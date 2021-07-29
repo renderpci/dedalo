@@ -1,15 +1,11 @@
 <?php
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
-#require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php');
-
 /**
 * LABEL
 * Manage all labels and messages of Dedalo
 * Get all labels from file or data base and convert all variables to static vars
 */
+abstract class label {
 
-# LABEL  
- abstract class label {
 
 
  	static $ar_label;
@@ -22,7 +18,7 @@
  	* Class static array 
  	* Priority:
  	* 1 - Class static 
- 	* 2 - Session ['config4']['ar_label']
+ 	* 2 - Session ['config']['ar_label']
  	* 3 - Calculate method 'set_static_label_vars'
  	*/
  	public static function get_ar_label( $lang=DEDALO_APPLICATION_LANG ) {
@@ -53,15 +49,16 @@
 
 		return $ar_label;
  	}//end get_ar_label
- 	
+
+
 
  	/**
 	* GET_LABEL_CACHE_KEY_NAME
 	*//*
 	public function get_label_cache_key_name() {
 		return DEDALO_DATABASE_CONN.'_label_'.DEDALO_APPLICATION_LANG;
-	}
-	*/
+	}*/
+
 
 
 	/**
@@ -87,7 +84,8 @@
 		#dump(label::$ar_label,'label::$ar_label');
 
 		return label::$ar_label[$lang][$name];
-	}
+	}//end get_label
+
 
 
 	/**
@@ -114,7 +112,7 @@
 				return $key;
 			}
 		}
-	}
+	}//end get_var_from_label
 
 
 
@@ -217,6 +215,4 @@
 
 
 
-
-}
-?>
+}//end class label

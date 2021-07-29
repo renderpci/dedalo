@@ -1,34 +1,33 @@
 <?php
-/*
+/**
 * CLASS LOCATOR
+*
+*	Format:
+*
+*		$locator->section_top_tipo		= (string)$section_top_tipo;
+*		$locator->section_top_id		= (string)$section_top_id;
+*		$locator->section_id			= (string)$section_id;
+*		$locator->section_tipo			= (string)$section_tipo;
+*		$locator->component_tipo		= (string)$component_tipo; //destination component tipo
+*		$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
+*		$locator->tag_id				= (string)$tag_id;
+*		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
+*		$locator->state					= (object)$state;
+*		$locator->semantic				= (object)$semantic;
+*		$locator->from_key				= (int)$from_key; //dataframe index array number of the data taht reference
+*
+*	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
+*	For example, component portal only use section_tipo an section_id in many cases.
+*
 */
-
-/*
-	Format:
-
-	$locator->section_top_tipo		= (string)$section_top_tipo;
-	$locator->section_top_id		= (string)$section_top_id;
-	$locator->section_id			= (string)$section_id; 
-	$locator->section_tipo			= (string)$section_tipo; 
-	$locator->component_tipo		= (string)$component_tipo; //destination component tipo
-	$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
-	$locator->tag_id				= (string)$tag_id;
-	$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
-	$locator->state					= (object)$state;
-	$locator->semantic				= (object)$semantic;
-	$locator->from_key				= (int)$from_key; //dataframe index array number of the data taht reference
-
-	Note that properties can exists or not (are created on the fly). Final result object only contain set properties and locator object can be empty or partially set.
-	For example, component portal only use section_tipo an section_id in many cases
-
-*/
-
-
 class locator extends stdClass {
+
+
 
 	/* Created on the fly
 		private $section_top_tipo;
 		private $section_top_id;
+		private $from_component_tipo;
 		private $section_id;
 		private $section_tipo;
 		private $component_tipo;
@@ -42,6 +41,17 @@ class locator extends stdClass {
 	# Mandatory and protected (use set/get to access)
 	#protected $section_id;
 	#protected $section_tipo;
+
+	/*
+		#$rel_locator->set_section_top_tipo( $section_top_tipo );
+		$rel_locator->set_section_top_id( $section_top_id );
+		$rel_locator->set_section_tipo( $section_tipo );
+		$rel_locator->set_section_id( $parent );
+		$rel_locator->set_component_tipo( $tipo );
+		$rel_locator->set_tag_id( $tag_value );
+	*/
+
+
 
 	const DELIMITER = '_';
 
@@ -70,16 +80,6 @@ class locator extends stdClass {
 	}//end __construct
 
 
-/*
-			#$rel_locator->set_section_top_tipo( $section_top_tipo );
-			$rel_locator->set_section_top_id( $section_top_id );
-			$rel_locator->set_section_tipo( $section_tipo );
-			$rel_locator->set_section_id( $parent );
-			$rel_locator->set_component_tipo( $tipo );
-			$rel_locator->set_tag_id( $tag_value );
-*/
-
-
 
 	/**
 	* SET  METHODDS
@@ -102,6 +102,15 @@ class locator extends stdClass {
 			throw new Exception("Error Processing Request. Invalid section_top_id: $value", 1);
 		}
 		$this->section_top_id = (string)$value;
+	}
+	/**
+	* SET_FROM_COMPONENT_TIPO
+	*/
+	public function set_from_component_top_tipo($value) {
+		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid from_component_tipo: $value", 1);
+		}
+		$this->from_component_top_tipo = (string)$value;
 	}
 	/**
 	* SET_SECTION_ID
@@ -224,7 +233,7 @@ class locator extends stdClass {
 			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
 		}
 		$this->lang = (string)$value;
-	}// end set_lang
+	}//end set_lang
 
 
 

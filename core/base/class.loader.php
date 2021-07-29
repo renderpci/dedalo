@@ -105,7 +105,7 @@ class class_loader {
 				die();
 			}
 			throw new Exception(__METHOD__ . "<hr> A loader call was made to class <b>$className</b><br> File not exits at: <b>$file_path</b><br>
-				Please, remember require this file in main class (like component_common) or create standar dedalo lib path folder
+				Please, remember require this file in main class (like component_common) or create standard dedalo lib path folder
 				like '/component_input_text/class.component_input_text.php' for loader calls. ");
 		}
 
@@ -122,8 +122,8 @@ class class_loader {
 			return ($php_version_supported);
 		}
 
-		$current_php_version		= phpversion();
-		$minimun_php_version		= '7.2.0';
+		$current_php_version	= phpversion();
+		$minimun_php_version	= '7.2.0';
 
 
 		$ar_current_php_version = explode('.',$current_php_version);
