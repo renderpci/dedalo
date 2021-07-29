@@ -1864,7 +1864,7 @@
 	
 	Valencia 26-09-2020 5.6.4
 		Update Dedalo_basic_library_pack
-		Updated dedalo4_install database. Changed format from custom to pgsl zipped)
+		Updated dedalo4_install database. Changed format from custom to PGSQL zipped)
 	
 
 	Valencia 27-09-2020 5.6.4c
@@ -2106,7 +2106,7 @@
 	
 	Valencia 03-02-2021 5.7.49
 		Add get_archive_states widget to the mdcat extras
-		Fixed issue in Publication API json_environment where protocol https is not detected correctly
+		Fixed issue in Publication API json_environment where protocol HTTPS is not detected correctly
 		Fixed error in component_iri read mode
 		Fixed error in component_email read mode
 
@@ -2184,7 +2184,7 @@
 	
 	
 	Valencia 11-02-2021 5.7.65
-		Fixed class difussion sql map_locator_to_int method to static
+		Fixed class diffusion sql map_locator_to_int method to static
 
 
 	Valencia 11-02-2021 5.7.66
@@ -2431,6 +2431,9 @@
 		16-07-2021		
 		Fixed issue on updates when matrix_stats already exists cases
 		Fixed error in publication web_data when lang 'lg-vlca' don't pass the security verification regex 
+		29-07-2021
+		Added check_remote_server curl error notification on error
+
 
 
 	[/HISTORY]
@@ -2462,7 +2465,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '16-07-2021');
+	define('DEDALO_BUILD'	, '29-07-2021');
 
 
 	/*
