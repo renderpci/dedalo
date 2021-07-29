@@ -1421,14 +1421,13 @@ abstract class backup {
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);    // we want headers
 		#curl_setopt($ch, CURLOPT_NOBODY, true);    // we don't need body
-		curl_setopt($ch, CURLOPT_TIMEOUT,10);
 		#curl_setopt($ch, CURLOPT_VERBOSE,true);
 
 		# Avoid verify ssl certificates (very slow)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-		// A given cURL operation should only take 4 seconds max.
-		curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+		// A given cURL operation should only take 5 seconds max.
+		curl_setopt($ch, CURLOPT_TIMEOUT, 5);
 
 		//execute post
 		$result = curl_exec($ch);
@@ -1442,17 +1441,17 @@ abstract class backup {
 		# Generate msg human readable
 		switch ($httpcode) {
 			case 200:
-				$response->result 	= true;
-				$msg 	= "Ok. check_remote_server passed successfully (status code: $httpcode)";
+				$response->result = true;
+				$msg = "Ok. check_remote_server passed successfully (status code: $httpcode)";
 				break;
 			case 401:
-				$msg 	= "Error. Unauthorized code (status code: $httpcode)";
+				$msg = "Error. Unauthorized code (status code: $httpcode)";
 				break;
 			case 400:
-				$msg 	= "Error. Server has problems collect structure files (status code: $httpcode)";
+				$msg = "Error. Server has problems collect structure files (status code: $httpcode)";
 				break;
 			default:
-				$msg 	= "Error. check_remote_server problem found (status code: $httpcode)";
+				$msg = "Error. check_remote_server problem found (status code: $httpcode)";
 				break;
 		}
 
