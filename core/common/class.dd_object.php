@@ -4,27 +4,27 @@
 * Defines object with normalized properties and checks
 *
 */
-class dd_object extends stdClass {
+class dd_object {
 
 	// Format
 		# typo				: "ddo"  (ddo | sqo)
 		# type				: "component"  (section | component | groupper | button | tool ..)
-		# tipo 				: 'oh14',
-		# section_tipo 		: 'oh1',
-		# parent 			: 'oh2', // caller section / portal  tipo
+		# tipo				: 'oh14',
+		# section_tipo		: 'oh1',
+		# parent			: 'oh2', // caller section / portal  tipo
 		# parent_grouper	: 'oh7', // structure parent
-		# lang 				: 'lg-eng',
-		# label 			: 'Title'
-		# mode 				: "list",
+		# lang				: 'lg-eng',
+		# label				: 'Title'
+		# mode				: "list",
 		# model				: 'component_input_text',
-		# properties 		: {}
-		# permissions 		: 1
-		# translatable 		: true
-		# search 			: true
-		# pagination 		: true
-		# tools 			: []
-		# css 				: {}
-		# column 			: 'term'
+		# properties		: {}
+		# permissions		: 1
+		# translatable		: true
+		# search			: true
+		# pagination		: true
+		# tools				: []
+		# css				: {}
+		# column			: 'term' (!) used ?
 
 	static $ar_type_allowed = [
 		'section',
@@ -428,6 +428,7 @@ class dd_object extends stdClass {
 
 		return $founded;
 	}//end in_array_ddo
+
 
 
 }//end dd_object

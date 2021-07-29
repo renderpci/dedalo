@@ -250,5 +250,4 @@ abstract class filter {
 
 
 
-}
-?>
+}//end class filter

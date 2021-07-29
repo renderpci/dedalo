@@ -1,9 +1,8 @@
 <?php
 require_once(DEDALO_CORE_PATH . '/common/class.Accessors.php');
-
-
 /**
 * NAVIGATOR CLASS
+*
 */
 class navigator extends Accessors {
 	
@@ -22,7 +21,9 @@ class navigator extends Accessors {
 	static $user_id;			# section_id
 	static $username;			# name like "Ramón"
 	#static $page_query_string;	# 
-	
+
+
+
 	public function __construct() {
 		
 		self::$ar_vars = array('root','area','module','section','modo','id','caller_id','caller_tipo'); // ,'context'
@@ -53,6 +54,7 @@ class navigator extends Accessors {
 	}
 
 
+
 	public static function get_user_id() {
 		return navigator::$user_id;	
 	}
@@ -61,12 +63,15 @@ class navigator extends Accessors {
 		return navigator::get_user_id();	
 	}
 	
+
+
 	public static function get_username() {
 		return navigator::$username;	
 	}
 	
+
 	
-	private function get_session_vars() {		
+	private function get_session_vars() {
 		
 		foreach(self::$ar_vars as $name) {
 			#eval( "if( isset(\$_SESSION['dedalo']['config'][\$name]) ) self::\$selected_$name = \$_SESSION['dedalo']['config'][\$name];" );
@@ -77,6 +82,7 @@ class navigator extends Accessors {
 		}
 	}
 	
+
 		
 	private function set_session_vars() {
 		/*
@@ -122,7 +128,9 @@ class navigator extends Accessors {
 		
 		return NULL;
 	}
-	
+
+
+
 	/**
 	* SET SELECTED VALUE FROM NAME
 	* @param $name 
@@ -139,6 +147,7 @@ class navigator extends Accessors {
 		#$_SESSION['dedalo']['config'][$name]	= $value;		
 	}
 	
+
 
 	static function show_vars() {
 		
@@ -180,8 +189,8 @@ class navigator extends Accessors {
 		#$html .= '<hr>';
 		
 		return 	$html;
-	}
+	}//end show_vars
+
+
 	
-	
-}
-?>
+}//end class navigator

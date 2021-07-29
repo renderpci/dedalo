@@ -1,10 +1,10 @@
 <?php
 /**
 * DD_DATE CLASS
-* Build dd_date objects like common dates but without restictions/limitations of 
+* Build dd_date objects like common dates but without restrictions/limitations of
 * negative dates and similar issues of timestamps
 */
-class dd_date extends stdClass {
+class dd_date {
 
 	// Errors Optional
 	#public $errors;
@@ -48,7 +48,7 @@ class dd_date extends stdClass {
 			if (method_exists($this, $method)) {
 				$this->$method($value, $constrain);
 			}else{
-				debug_log(__METHOD__." Ignored received property: $key not defined as set metohd. Data: ".to_string($data), logger::DEBUG);
+				debug_log(__METHOD__." Ignored received property: $key not defined as set method. Data: ".to_string($data), logger::DEBUG);
 			}			
 		}
 
@@ -236,7 +236,7 @@ class dd_date extends stdClass {
 
 	/**
 	* SET_OP
-	* Only for search purposses
+	* Only for search purposes
 	* @return bool true
 	*/
 	public function set_op($value) {
@@ -505,8 +505,8 @@ class dd_date extends stdClass {
 	public static function convert_seconds_to_period( $seconds ) {
 		
 		$response = new stdClass();
-			$response->result 	= new stdClass();
-			$response->msg 		= '';
+			$response->result	= new stdClass();
+			$response->msg		= '';
 
 		# minutes (reliable measurement)
 		$minutes_total = ceil( (int)$seconds / 60 ); // Round to up	
@@ -517,29 +517,29 @@ class dd_date extends stdClass {
 		# days_total (reliable measurement)
 		$days_total = ceil( (int)$seconds / 60 / 60 / 24 ); // Round to up
 		
-		# years (aproximate measurement)
+		# years (approximated measurement)
 		$years  	= $days_total/365;
 		$years_int  = floor($years); // Round to bottom
 		$rest_days 	= ceil( ($years - $years_int) *365);
 
-		# months (aproximate measurement)
+		# months (approximated measurement)
 		$months 	= $rest_days/30;
 		$months_int = floor($months); // Round to bottom
 		$rest_days 	= ceil( ($months - $months_int)*30 );
 
-		# days (aproximate measurement)
+		# days (approximated measurement)
 		$days_int 	= $rest_days;
 
 
 		# Absolute values
-		$response->result->seconds_total = (int)$seconds;
-		$response->result->minutes_total = (int)$minutes_total;
-		$response->result->days_total 	 = (int)$days_total;
+		$response->result->seconds_total	= (int)$seconds;
+		$response->result->minutes_total	= (int)$minutes_total;
+		$response->result->days_total		= (int)$days_total;
 
-		# Aproximations
-		$response->result->years 		 = (int)$years_int;
-		$response->result->months 		 = (int)$months_int;
-		$response->result->days 		 = (int)$days_int;
+		# Approximations
+		$response->result->years	= (int)$years_int;
+		$response->result->months	= (int)$months_int;
+		$response->result->days		= (int)$days_int;
 
 		return (object)$response;
 	}//end convert_seconds_to_period 
@@ -565,4 +565,3 @@ class dd_date extends stdClass {
 
 
 }//end class dd_date
-?>
