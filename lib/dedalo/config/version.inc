@@ -2433,7 +2433,8 @@
 		Fixed error in publication web_data when lang 'lg-vlca' don't pass the security verification regex 
 		29-07-2021
 		Added check_remote_server curl error notification on error
-
+		30-07-2021
+		Added proxy options for CURL and get_file_contents in Dédalo external connections like 'Download structure' and 'Update Dédalo code'
 
 
 	[/HISTORY]
@@ -2459,7 +2460,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2';
+	$DEDALO_VERSION = '5.8.2c';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
