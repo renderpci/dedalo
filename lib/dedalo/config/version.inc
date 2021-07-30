@@ -2435,6 +2435,7 @@
 		Added check_remote_server curl error notification on error
 		30-07-2021
 		Added proxy options for CURL and get_file_contents in Dédalo external connections like 'Download structure' and 'Update Dédalo code'
+		Fixed component_image regenerate error when only the image in the original format (like TIF) is available
 
 
 	[/HISTORY]
@@ -2460,7 +2461,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2c';
+	$DEDALO_VERSION = '5.8.2e';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
