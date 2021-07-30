@@ -1,7 +1,14 @@
 <?php
+/**
+* TOOLS
+*
+*/
 abstract class tools extends common {
 
+
+
 	public static $globals;
+
 
 
 	/**
@@ -69,6 +76,8 @@ abstract class tools extends common {
 
 		return print "<pre>" . $value . "</pre>";
 	}
+
+
 
 	# PRINT_R PRE
 	public static function print_r_pre($array) {
@@ -266,7 +275,6 @@ abstract class tools extends common {
 		if( !empty($argumens['target']) ) $target = $argumens['target'];
 
 		return "<a href=\"$url\" target=\"$target\" class=\"$css\">$string</a>";
-
 	}
 
 
@@ -358,11 +366,8 @@ abstract class tools extends common {
 
 		
 		return $id_path;
-	}
-
-	
+	}//end get_id_path
 	
 
 
-}
-?>
+}//end class tools
