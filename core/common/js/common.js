@@ -685,27 +685,32 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 			
 			const current_ddo = ddo_map[i]
 			
+
 			// skip ddo with parent different from current caller
 				if(current_ddo.parent !== caller_tipo) continue;
+
+			// add current_ddo
+				ar_ddo.push(current_ddo)
 			
 			// context
 				const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
 
 			// no context case. When context is calculated as subcontext, is associated to data. Therefore, sometimes show->ddo contains more items than 
 			// the calculated in context (empty portals for example). This is not an error really
-				if (!current_context) {
+				//if (!current_context) {
 					// console.warn("Skip context not found for current ddo:", current_ddo);
 					// console.warn("datum.context:", datum.context);
 					// continue;
-				}
+				//}
 
 			// rqo_config
 				const rqo_config	= (current_context && current_context.request_config)
 					? current_context.request_config.find(el => el.api_engine==='dedalo')
 					: null
-		
-			// add current_ddo
-				ar_ddo.push(current_ddo)
+
+
+			console.log("rqo_config:",rqo_config);
+
 
 			// add sub_ddo_map
 				if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
@@ -715,7 +720,7 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 				}
 		}//end for (let i = 0; i < ddo_map.length; i++) 
 
-	
+console.log("ar_ddo:",ar_ddo);
 	return ar_ddo
 }//end build_request_show
 
@@ -870,7 +875,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 				? sqo_config.limit
 				: self.mode==='edit'
 					? (self.context.model==='section' ? 1 : 10)
-					: 10
+					: (self.context.model==='section' ? 10 : 1)
 
 		sqo.offset = (sqo.offset)
 			? sqo.offset
