@@ -25,7 +25,7 @@ export function dd_console(msg, level, items){
 				? 'warn'
 				: 'log')
 
-	const style = 'background: #000000; color: violet; font-size: 1.2em;'
+	const style = 'background: #000000; color: violet; font-size: 1.2em; padding:2px; padding-left:4px; padding-right:4px;'
 	
 	if (items) {
 		console[type]('%c' + msg, style, items);

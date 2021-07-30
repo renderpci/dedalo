@@ -5,10 +5,12 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_text_area, build_node_tag} from '../../component_text_area/js/render_component_text_area.js'
 	import {tr} from '../../common/js/tr.js'
+	import {ui} from '../../common/js/ui.js'
 	//import '../../../prosemirror/dist/prosemirror.js';
 
 
@@ -30,6 +32,9 @@ export const component_text_area = function(){
 		this.node
 		this.id
 
+		this.tag // user selected tag DOM element (set on event click_tag_index_)
+		this.service = [] // array. current active service (service_tinymce) for current node
+		this.events_tokens = []
 		// this.services = []
 
 	return true
@@ -69,51 +74,115 @@ export const component_text_area = function(){
 
 /**
 * INIT
-* @return bool
+* @return promise bool
 */
 component_text_area.prototype.init = async function(options) {
 	
 	const self = this
-	
+
+	// events subscribe
+		// create_fragment_ . User click over button 'create_fragment'
+			self.events_tokens.push(
+				event_manager.subscribe('create_fragment_' + self.id, fn_create_fragment)
+			)
+			function fn_create_fragment(options) {
+
+				// options
+					const key		= options.key
+					const service	= options.service
+
+				// create the HTML fragment inside the editor adding in/out tags. Returns new created tag_index_id
+					const tag_id = self.create_fragment(key, service)
+					if (tag_id) {
+
+						// save modified content
+							const value = service.get_value()
+							self.save_value(key, value)
+							.then((response)=>{
+								if (response) {
+									// select the new tag image in DOM
+									const image_node_selector	= `img.index[data-tag_id=${tag_id}]`
+									const image_node			= service.dom_select(image_node_selector)[0]
+									if (image_node) {
+										image_node.click()
+									}
+								}
+							})
+					}else{
+						console.error(`Error on create_fragment. tag_id is empty. key: ${key}, service:`,service);
+					}//end if (created!==false)
+
+				return true
+			}//end fn_create_fragment
+		// click_tag_index_. User click over image index tag
+			self.events_tokens.push(
+				event_manager.subscribe('click_tag_index_' + self.id_base, fn_click_tag_index)
+			)
+			function fn_click_tag_index(options) {
+
+				// options
+					const tag		= options.tag // DOM tag element
+					const service	= options.service
+
+				// fix selected tag element
+					self.tag = tag
+
+				return true
+			}//end fn_create_fragment
+		// text_selection
+			self.events_tokens.push(
+				event_manager.subscribe('text_selection_'+ self.id, fn_show_button_create_fragment)
+			)
+			function fn_show_button_create_fragment(options) {
+				// dd_console('--> show_button_create_fragment options', 'DEBUG', options)
+
+				// options
+					const selection	= options.selection
+					const caller	= options.caller
+
+				const key					= 0; // key (only one editor is available but component could support multiple)
+				const current_service		= self.service[key]
+				const inputs_container		= self.node[key].querySelector('.inputs_container'); // (first ul)
+				const component_container	= inputs_container.querySelector('li'); // li (first li)
+				const button				= component_container.querySelector(".create_fragment") // could exists or not
+
+				if (selection.length<1) {
+					if (button) {
+						button.remove()
+					}
+				}else{
+					const last_tag_id	= self.get_last_tag_id(key, 'index', current_service)
+					const label			= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+					if (!button) {
+						const create_button = function(selection) {
+							const button_create_fragment = ui.create_dom_element({
+								element_type	: 'button',
+								class_name 		: 'warning compress create_fragment',
+								inner_html 		: label,
+								parent 			: component_container
+							})
+							// event create_fragment add publish on click
+								button_create_fragment.addEventListener("click", () => {
+									event_manager.publish('create_fragment_'+ self.id, {
+										caller	: self,
+										key		: key,
+										service	: current_service
+									})
+								})
+
+							return button_create_fragment
+						}//end fn create_button
+						create_button(selection)
+					}else{
+						button.innerHTML = label
+					}
+				}
+
+				return true
+			}//end fn_show_button_create_fragment
 
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
-
-	// events subscribe
-		self.events_tokens.push(
-			// user click over button 'create_fragment'
-			event_manager.subscribe('create_fragment_' + self.id, fn_create_fragment)
-		)
-		function fn_create_fragment(options) {
-
-			// options
-				const key		= options.key
-				const service	= options.service
-
-			// create the HTML fragment inside the editor adding in/out tags. Returns new created tag_index_id
-				const tag_id = self.create_fragment(key, service)
-				if (tag_id) {
-					
-					// save modified content
-						const value = service.get_value()
-						self.save_value(key, value)
-						.then((response)=>{
-							if (response) {
-								// select the new tag image in DOM
-								const image_node_selector	= `img.index[data-tag_id=${tag_id}]`
-								const image_node			= service.select_node(image_node_selector)
-								if (image_node) {
-									image_node.click()
-								}
-							}
-						})
-				}else{
-					console.error(`Error on create_fragment. tag_id is empty. key: ${key}, service:`,service);
-				}//end if (created!==false)
-
-			return true
-		}//end fn_create_fragment
-
 
 	return common_init
 };//end  init
@@ -144,8 +213,9 @@ component_text_area.prototype.tags_to_html = function(value) {
 *	defined in container dataset key
 * @param string value
 *	value from active text editor
+* @return promise
 */
-component_text_area.prototype.set_value = async function(value) {
+component_text_area.prototype.set_value = function(value) {
 
 	const self = this
 
@@ -154,12 +224,10 @@ component_text_area.prototype.set_value = async function(value) {
 		key		: value.key,
 		value	: value.value
 	})
-	self.change_value({
-		changed_data : changed_data,
-		refresh 	 : true
+	return self.change_value({
+		changed_data	: changed_data,
+		refresh			: true
 	})
-
-	return true
 };//end set_value
 
 
@@ -172,7 +240,7 @@ component_text_area.prototype.set_value = async function(value) {
 * @param string value
 *	value from active text editor
 */
-component_text_area.prototype.save_value = async function(key, value) {
+component_text_area.prototype.save_value = function(key, value) {
 
 	const self = this
 
@@ -187,16 +255,16 @@ component_text_area.prototype.save_value = async function(key, value) {
 		key		: key,
 		value	: (new_data.length>0) ? new_data : null,
 	})
-	self.change_value({
-		changed_data : changed_data,
-		refresh 	 : false
+	const js_promise = self.change_value({
+		changed_data	: changed_data,
+		refresh			: false
 	})
 	.then((save_response)=>{
 		// event to update the dom elements of the instance
 		event_manager.publish('update_value_'+self.id, changed_data)
 	})
 
-	return true
+	return js_promise
 };//end save_value
 
 
@@ -400,14 +468,14 @@ const unwrap_element = function(el) {
 * IS_TINY
 * @return bool
 */
-const is_tiny = function(ed) {
+	// const is_tiny = function(ed) {
 
-	const is_tiny = (ed===null || typeof ed!=='object' || ed.type!=='setupeditor')
-		? false // USING DIV AS EDITOR (LIKE STRUCT)
-		: true  // USING TINYMCE EDITOR
+	// 	const is_tiny = (ed===null || typeof ed!=='object' || ed.type!=='setupeditor')
+	// 		? false // USING DIV AS EDITOR (LIKE STRUCT)
+	// 		: true  // USING TINYMCE EDITOR
 
-	return is_tiny
-};//end is_tiny
+	// 	return is_tiny
+	// };//end is_tiny
 
 
 
@@ -415,7 +483,7 @@ const is_tiny = function(ed) {
 * UPDATE_TAG
 * Edit selected tag and add or modify datasets
 */
-component_text_area.prototype.update_tag = function(options) {
+component_text_area.prototype.update_tag = async function(options) {
 
 	const self = this
 
@@ -445,56 +513,40 @@ component_text_area.prototype.update_tag = function(options) {
 			? '[data-type^="' + type.replace(/In|Out/, '') + '"][data-tag_id="'+tag_id+'"]'
 			: '[data-type="'+type+'"][data-tag_id="'+tag_id+'"]'
 
-	const ed_is_tiny = is_tiny(container)
+	// update_tag_state function
+		const update_tag_state = (current_elements, new_data_obj)=>{
+			// debug
+				console.log("Elements to update_tag_state:", current_elements);
+				console.log("new_data_obj:",new_data_obj);
 
-	const update_tag_state = (current_elements, new_data_obj)=>{
-		// Iterate and update tag state
-		const len = current_elements.length
-		for (let i = len - 1; i >= 0; i--) {
-			// Set new state to dataset of each dataset
-			for (let key in new_data_obj) {
-				current_elements[i].dataset[key] = new_data_obj[key]
+			// Iterate and update tag state
+			const len = current_elements.length
+			for (let i = len - 1; i >= 0; i--) {
+				// Set new state to dataset of each dataset
+				for (let key in new_data_obj) {
+					current_elements[i].dataset[key] = new_data_obj[key]
+				}
 			}
 		}
-	}
 
-	// Select current tag in dom
-	if (ed_is_tiny===true) {
-		// tinyMCE editor
-		const ed = container
-		const tiny_current_elements = ed.dom.select(selection_pattern)
-		if (!tiny_current_elements.length) {
-			alert("[component_text_area.update_tag] Error on dom select (tinymce) tag to update_tag tag_id:" +tag_id + " type:" + type)
-			return false;
-		}
-		update_tag_state(tiny_current_elements, new_data_obj)
+	// editor
+		// image tags selection from DOM
+			const key = 0
+			const image_tag_nodes = self.service[key].dom_select(selection_pattern)
+			if (!image_tag_nodes.length) {
+				alert("[component_text_area.update_tag] Error on DOM select (service) tag to update_tag tag_id:" +tag_id + " type:" + type)
+				return false;
+			}
 
-		ed.focus();
-		// Force ed dirty state
-		ed.setDirty(true);	 // Force dirty state
+		// update DOM nodes dataset
+			update_tag_state(image_tag_nodes, new_data_obj)
 
-		if (typeof save!=="undefined" && save===true) {
-
-			const key 	= 0 // fixed unique key 0
-			const value = ed.getContent({format:'raw'})
-
-			// Save modified content
-			self.save_value(key, value)
-		}
-	}else{
-		// Standard dom container content editable
-		const current_elements = container.querySelectorAll(selection_pattern)
-		if (!current_elements.length) {
-			alert("[component_text_area.update_tag] Error on dom select (textpreview) tag to update_tag tag_id:" +tag_id + " type:" + type)
-			return false;
-		}
-		update_tag_state(current_elements, new_data_obj)
-
-		if (typeof save!=="undefined" && save===true) {
-
-			return tool_structuration.save_structuration_text()
-		}
-	}
+		// save and refresh
+			self.service[key].set_dirty(true) // Force dirty state
+			if (save===true) {
+				await self.service[key].save()
+				self.refresh()
+			}
 
 	return true
 };//end update_tag
@@ -550,6 +602,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 /**
 * GET_LAST_TAG_ID
+* Calculates all current service editor tags id of given type (ex. 'reference') and get last used id
 * @param ed
 *	Text editor instance (tinyMCE)
 * @param tag_type
@@ -571,7 +624,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 		}
 
 	// container . editor_content_data is a DOM node <body> from editor
-		const container = service.get_editor_content_data()	
+		const container = service.get_editor_content_data()
 		if (!container) {
 			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
 			console.warn(`current service:`, service);
@@ -640,7 +693,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 						? parseInt(ar_parts[2])
 						: 0
 
-					// Insert id formated as number in final array
+					// Insert id formatted as number in final array
 						ar_id_final.push(number)
 				}
 				break;

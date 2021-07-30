@@ -67,11 +67,11 @@ tool_upload.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// call generic commom tool build
-		const common_build = tool_common.prototype.build.call(this, autoload);
-
 	// fetch system info
 		const system_info = await get_system_info(self)
+
+	// call generic commom tool build
+		const common_build = tool_common.prototype.build.call(this, autoload);
 
 
 	return common_build

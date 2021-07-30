@@ -87,7 +87,6 @@ area_common.prototype.init = async function(options) {
 	self.permissions 		= options.permissions 	|| null
 
 
-
 	// events subscription
 
 

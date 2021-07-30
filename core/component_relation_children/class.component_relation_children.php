@@ -16,13 +16,13 @@ class component_relation_children extends component_relation_common {
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 	// ar_target_section_tipo
-	public $ar_target_section_tipo;		# Used to fix section tipo (calculado a partir del componente relacionado de tipo section) Puede ser virtual o real
+	public $ar_target_section_tipo;	// Used to fix section tipo (calculated from the related component of type section) Could be virtual or real
 
 
 
 	/**
 	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
+	* Get value . Default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {

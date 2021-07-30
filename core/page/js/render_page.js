@@ -56,13 +56,13 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 
 	// events
 		// page click
-		wrapper_page.addEventListener("click", unactive_components)
-		function unactive_components() {
-			const active_component = document.querySelector(".wrapper_component.active")
-			if (active_component) {
-				active_component.classList.remove("active")
+			wrapper_page.addEventListener("click", unactive_components)
+			function unactive_components() {
+				const active_component = document.querySelector(".wrapper_component.active")
+				if (active_component) {
+					active_component.classList.remove("active")
+				}
 			}
-		}
 
 
  	return wrapper_page
@@ -99,6 +99,9 @@ const get_content_data = async function(self) {
 				content_data.appendChild(await child_item)
 			}
 		}
+
+	// event page rendered (used by menu..)
+		event_manager.publish('render_page', self)
 
 	// // content_data
 	// 	const content_data = document.createElement("div")
