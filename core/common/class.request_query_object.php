@@ -132,7 +132,7 @@
 		            },
 					"ddo_map":[
 						{"section_tipo":"self","tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": false},
-						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"}, {"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
+						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3","separator_fields" : " | "}, {"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
 						{"section_tipo":"self","tipo":"numisdata81","label":"key", "parent": "numisdata3","value_with_parents": true}
 					],
 
@@ -174,13 +174,18 @@
 class request_query_object {
 
 
-	public $dd_api;
-	public $action;
-	public $source;
-	public $sqo;
-	public $show;
-	public $search;
-	public $choose;
+	/**
+	* VARS
+	*/
+		// mandatory
+			public $dd_api;
+			public $action;
+			public $source;
+		// optional (disable to prevent null values)
+			// public $sqo;
+			// public $show;
+			// public $search;
+			// public $choose;
 
 
 	

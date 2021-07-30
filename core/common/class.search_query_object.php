@@ -52,21 +52,24 @@ class search_query_object {
 
 
 
-	public $id;
-	public $section_tipo;
-	public $mode;
-	public $filter;
-	public $select;
-	public $limit;
-	public $offset;
-	public $full_count;
-	public $order;
-	public $order_custom;
-	public $filter_by_locators;
-	public $allow_sub_select_by_id;
-	public $remove_distinc;
-	public $skip_projects_filter;
-	public $parsed;
+	/**
+	* VARS
+	*/
+		// public $id;
+		// public $section_tipo;
+		// public $mode;
+		// public $filter;
+		// public $select;
+		// public $limit;
+		// public $offset;
+		// public $full_count;
+		// public $order;
+		// public $order_custom;
+		// public $filter_by_locators;
+		// public $allow_sub_select_by_id;
+		// public $remove_distinc;
+		// public $skip_projects_filter;
+		// public $parsed;
 
 
 
