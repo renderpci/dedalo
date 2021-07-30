@@ -132,7 +132,6 @@
 					// section instance
 						$section = $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
 
-							
 					// pagination. fix pagination vars (defined in class component_common)
 						$limit	= $this->search_query_object->limit;
 						$offset	= $this->search_query_object->offset;

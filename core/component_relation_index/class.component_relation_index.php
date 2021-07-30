@@ -107,6 +107,7 @@ class component_relation_index extends component_relation_common {
 	*/
 	public function add_locator( $locator ) {
 
+
 		$locator = clone($locator);
 
 		# Verify exists locator type
