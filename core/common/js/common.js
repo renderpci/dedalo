@@ -581,6 +581,7 @@ common.prototype.get_columns = async function(){
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
 	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
+
 	full_ddo_map.push(...sub_ddo_map)
 
 	const ar_columns = get_ar_inverted_paths(full_ddo_map)
