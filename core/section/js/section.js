@@ -126,9 +126,9 @@ section.prototype.init = async function(options) {
 	
 	// events subscription
 		self.events_tokens.push(
-			event_manager.subscribe('new_section_' + self.id, create_new_section)
+			event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
 		)
-		async function create_new_section() {
+		async function fn_create_new_section() {
 
 			// data_manager. create
 			const rqo = {
@@ -161,7 +161,7 @@ section.prototype.init = async function(options) {
 					sqo		: sqo
 				})
 			}
-		}
+		}//end fn_create_new_section
 
 
 	// status update
@@ -312,9 +312,12 @@ section.prototype.build = async function(autoload=false) {
 			})
 			self.paginator.build()
 
-			self.events_tokens.push(
-				event_manager.subscribe('paginator_goto_'+self.paginator.id , async (offset) => {
-
+			// event paginator_goto_
+				self.events_tokens.push(
+					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
+				)
+				// fn_paginator_goto
+				async function fn_paginator_goto(offset) {
 					// loading
 						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
 						const node		= self.node && self.node[0]
@@ -324,7 +327,7 @@ section.prototype.build = async function(autoload=false) {
 
 					// fix new offset value
 						self.rqo.sqo.offset = offset
-					
+
 					// set_local_db_data updated rqo
 						current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
@@ -333,8 +336,7 @@ section.prototype.build = async function(autoload=false) {
 
 					// loading
 						if (node) node.classList.remove('loading')
-				})
-			)//end events push
+				}
 		}//end if (!self.paginator)
 
 	// inspector
@@ -360,12 +362,13 @@ section.prototype.build = async function(autoload=false) {
 	// columns. Get the columns to use into the list
 		self.columns = self.get_columns()
 
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			// load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
 			// console.log("__Time to build", self.model, "(ms):", performance.now()-t0);
-			dd_console(`__Time to build ${self.model} (ms): ${performance.now()-t0}`, 'DEBUG')
+			dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
 
 			// debug duplicates check
 				const ar_used = []

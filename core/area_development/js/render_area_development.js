@@ -213,26 +213,24 @@ const build_widget = (item, self) => {
 
 	// run widget scripts
 		if(item.run) {
-			//event_manager.subscribe('render_page', (page_wrapper) => {
-				for (let i = 0; i < item.run.length; i++) {
+			for (let i = 0; i < item.run.length; i++) {
 
-					const func			= item.run[i].fn
-					const func_options	= item.run[i].options
+				const func			= item.run[i].fn
+				const func_options	= item.run[i].options
 
-					const js_promise = self[func].apply(self, [{
-						...item,
-						...func_options,
-						body_info		: body_info,
-						body_response	: body_response,
-						print_response	: print_response
-					}])
-				}
-			//})
+				const js_promise = self[func].apply(self, [{
+					...item,
+					...func_options,
+					body_info		: body_info,
+					body_response	: body_response,
+					print_response	: print_response
+				}])
+			}
 		}
 
 
 	return container
-};//end  build_widget
+};//end build_widget
 
 
 

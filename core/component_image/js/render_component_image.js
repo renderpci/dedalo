@@ -220,20 +220,7 @@ const content_data_edit = async function(self) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
-	// event_manager.subscribe('render_'+self.id, (node) => {
-	// event_manager.subscribe('render_instance', (node) => {
-	// 	if (node.id==='page_list_lg-eng') {
-	// 		console.log("node ++++++:",node);
-	// 		const h = content_data.getBoundingClientRect()
-	// 		console.log("h:",h);
-	// 	}
 
-		// setTimeout(()=>{
-		// 	const h = node.getBoundingClientRect()
-		// 	console.log("h:",h);
-		// },1000)
-
-	// })
 
 	return content_data
 };//end content_data_edit

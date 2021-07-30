@@ -130,12 +130,13 @@ search.prototype.init = async function(options) {
 	// update value, subscription to the changes: if the dom input value was changed,
 	// observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
-			event_manager.subscribe('change_search_element', (instance)=>{
-				self.parse_dom_to_json_filter({mode:self.mode})
-				// Set as changed
-				self.update_state({state:'changed'})
-			})
+			event_manager.subscribe('change_search_element', fn_change_search_element)
 		)
+		function fn_change_search_element(instance) {
+			self.parse_dom_to_json_filter({mode:self.mode})
+			// Set as changed
+			self.update_state({state:'changed'})
+		}
 
 
 	return true
@@ -250,6 +251,7 @@ search.prototype.build = async function(){
 
 	// wait until all request are resolved
 		await Promise.allSettled(ar_promises);
+
 
 	// status update
 		self.status = 'builded'

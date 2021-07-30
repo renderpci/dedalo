@@ -27,7 +27,7 @@ export const tool_indexation = function () {
 	this.node
 	this.ar_instances
 	this.status
-	this.events_tokens
+	this.events_tokens = []
 	this.type
 
 	this.source_lang
@@ -76,9 +76,93 @@ tool_indexation.prototype.init = async function(options) {
 	const self = this
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url 	= DEDALO_TOOLS_URL + "/tool_indexation/trigger.tool_indexation.php"
-		self.lang 			= options.lang // from page_globals.dedalo_data_lang
-		self.langs 			= page_globals.dedalo_projects_default_langs
+		self.lang	= options.lang // from page_globals.dedalo_data_lang
+		self.langs	= page_globals.dedalo_projects_default_langs
+
+	// events
+		// link_term. Observe thesaurus tree link index button click
+			self.events_tokens.push(
+				event_manager.subscribe('link_term', self.create_indexation.bind(self))
+			)
+		// change_tag_state_. change tag state selector
+			self.events_tokens.push(
+				event_manager.subscribe('change_tag_state_' + self.id, fn_change_tag_state)
+			)
+			function fn_change_tag_state(options) {
+				console.warn("tag_state options:",options);
+
+				// options
+					const tag_id	= options.tag_id
+					const value		= options.value
+
+				// update_tag
+					return self.main_component.update_tag({
+						type	: 'indexIn',
+						tag_id	: tag_id,
+						dataset	: {
+							state : value
+						},
+						save	: true
+					})
+			}
+		// delete_tag_
+			self.events_tokens.push(
+				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
+			)
+			function fn_delete_tag(options) {
+
+				// options
+				const tag_id = options.tag_id
+
+				self.delete_tag(tag_id)
+				.then(function(response){
+					if (response.result!==false) {
+						// indexing_component. Remember force clean full data and datum before refresh
+							self.indexing_component.data	= null
+							self.indexing_component.datum	= null
+							self.indexing_component.refresh()
+						// main_component (text_area)
+							self.main_component.refresh()
+					}
+				})
+			}
+		// click_no_tag_
+			self.events_tokens.push(
+				event_manager.subscribe('click_no_tag_' + options.caller.id_base, fn_click_no_tag)
+			)
+			function fn_click_no_tag(options) {
+				if (!self.info_container.classList.contains('hide')) {
+					self.info_container.classList.add('hide')
+				}
+			}
+		// click_tag_index_. Observe user tag selection in text area.
+		// (!) Note subscribe uses 'id_base' instead 'self.id' to allow switch main component lang
+			self.events_tokens.push(
+				event_manager.subscribe('click_tag_index_'+ options.caller.id_base, fn_click_tag_index)
+			)
+			function fn_click_tag_index(options) {
+				// dd_console(`click_tag_index '${options.tag.dataset.tag_id}'`, 'DEBUG', options)
+
+				// options
+					const tag_element	= options.tag // DOM node selected
+					const caller		= options.caller // instance of component text area
+
+				// fix selected tag
+					self.active_tag_id = tag_element.dataset.tag_id
+
+				// force to update registered active values
+					self.update_active_values([{
+						name	: "tag_id",
+						value	: tag_element.dataset.tag_id
+					},
+					{
+						name	: "state",
+						value	: tag_element.dataset.state
+					}])
+
+				return true
+			}//end fn_click_tag_index
+
 
 	// call the generic common tool init
 		const common_init = tool_common.prototype.init.call(this, options);
@@ -111,82 +195,6 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = tool_common.prototype.build.call(self, autoload)
 
-
-	// events
-		// link_term. Observe thesaurus tree link index button click
-			self.events_tokens.push(
-				event_manager.subscribe('link_term', self.create_indexation.bind(self))
-			)
-		// click_tag_index. Observe user tag selection in text area.
-		// (!) Note subscribe uses 'id_base' instead 'self.id' to allow switch main component lang
-			self.events_tokens.push(
-				event_manager.subscribe('click_tag_index_'+ self.main_component.id_base, click_tag_index)
-			)
-			function click_tag_index(options) {
-				// dd_console(`click_tag_index '${options.tag.dataset.tag_id}'`, 'DEBUG', options)
-
-				// options
-					const tag_element	= options.tag // DOM node selected
-					const caller		= options.caller // instance of component text area
-
-				// fix selected tag
-					self.active_tag_id = tag_element.dataset.tag_id
-
-				// force to update registered active values
-					self.update_active_values([{
-						name	: "tag_id",
-						value	: tag_element.dataset.tag_id
-					},
-					{
-						name	: "state",
-						value	: tag_element.dataset.state
-					}])
-
-				return true
-			}
-		// create fragment. Observe text area user selection text text_selection' +'_'+ self.id,
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('text_selection' +'_'+ self.caller.id, text_selection)
-			// )
-			// function text_selection(options) {
-			// 	console.log("event text_selection options:",options);
-			// }
-		// change tag state selector
-			self.events_tokens.push(
-				event_manager.subscribe('change_tag_state_' + self.id, fn_change_tag_state)
-			)
-			function fn_change_tag_state(value) {
-				console.warn("tag_state value:",value);
-			}
-		// delete tag
-			self.events_tokens.push(
-				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
-			)
-			function fn_delete_tag(options) {
-
-				const tag_id = options.tag_id
-
-				self.delete_tag(tag_id)
-				.then(function(response){
-					if (response.result!==false) {
-						// indexing_component. Remember force refresh full data and datum before refresh
-							self.indexing_component.data	= null
-							self.indexing_component.datum	= null
-							self.indexing_component.refresh()
-						// main_component (text_area)
-							self.main_component.refresh()
-					}
-				})
-			}
-		// click_no_tag
-			self.events_tokens.push(
-				event_manager.subscribe('click_no_tag_' + self.main_component.id_base, fn_click_no_tag)
-			)
-			function fn_click_no_tag(options) {
-				if (!self.info_container.classList.contains('hide')) {
-					self.info_container.classList.add('hide')
-				}
-			}
 
 	return common_build
 };//end build_custom
@@ -645,5 +653,52 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 			})
 		})
 };//end delete_tag
+
+
+
+/**
+* CHANGE_TAG_STATE
+* @return promise
+*/
+tool_indexation.prototype.change_tag_state = async function(tag_id, value) {
+
+	const self = this
+
+	// text area update tag
+
+
+	return
+
+	// // source. Note that second argument is the name of the function to manage the tool request like 'change_tag_state'
+	// // this generates a call as my_tool_name::my_function_name(arguments)
+	// 	const source = create_source(self, 'change_tag_state')
+	// 	// add the necessary arguments used in the given function
+	// 	source.arguments = {
+	// 		section_tipo			: self.main_component.section_tipo, // current component_text_area section_tipo
+	// 		section_id				: self.main_component.section_id, // component_text_area section_id
+	// 		main_component_tipo		: self.main_component.tipo, // component_text_area tipo
+	// 		main_component_lang		: self.main_component.lang, // component_text_area lang
+	// 		tag_id					: tag_id, // current selected tag (passed as param)
+	// 		state					: value // string like 'r'
+	// 	}
+
+	// // rqo
+	// 	const rqo = {
+	// 		dd_api	: 'dd_utils_api',
+	// 		action	: 'tool_request',
+	// 		source	: source
+	// 	}
+
+	// // call to the API, fetch data and get response
+	// 	return new Promise(function(resolve){
+
+	// 		const current_data_manager = new data_manager()
+	// 		current_data_manager.request({body : rqo})
+	// 		.then(function(response){
+	// 			console.warn("-> change_tag_state API response:",response);
+	// 			resolve(response)
+	// 		})
+	// 	})
+};//end change_tag_state
 
 
