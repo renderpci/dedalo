@@ -645,7 +645,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 * @param datum self instance_caller datum (section, component_portal) with all contex and data of the caller. In the recursion
 * @param caller_tipo tipo from section or portal that call to get the sub_ddo_map
 * @param ddo_map the requested tipos
-* @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
+* @param sub_ddo used for create the path for the component, path is used to get the full path
 * @return array ar_ddo with all ddo in all portals and sections config_rqo that has dependency of the caller.
 */
 const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
@@ -682,11 +682,29 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 		// 		ar_valid_ddo.push(current_ar_valid_ddo[j])
 		// 	}
 		// }
+
+	// get all children of the current ddo recursively
+	// when the section or portal doesn't has data the context will not created
+	// in those cases get the sub_ddo with the current ddo_map
+		function get_children(ddo_map, parent_ddo) {
+			const ar_children = []
+
+			const children = ddo_map.filter(item => item.parent === parent_ddo.tipo)
+
+			for (let i = 0; i < children.length; i++) {
+				ar_children.push(children[i])
+
+				const valid_child = get_children(ddo_map, children[i])
+				ar_children.push(...valid_child)
+			}
+			return ar_children;
+		}
+
+
 		for (let i = 0; i < ddo_map.length; i++) {
 			
 			const current_ddo = ddo_map[i]
 			
-
 			// skip ddo with parent different from current caller
 				if(current_ddo.parent !== caller_tipo) continue;
 
@@ -710,7 +728,6 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 					: null
 
 
-			console.log("rqo_config:",rqo_config);
 
 
 			// add sub_ddo_map
@@ -718,10 +735,14 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 					const current_ddo_map	= rqo_config.show.ddo_map
 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
 					ar_ddo.push(...sub_ddo_map)
+				}else{
+					const current_ddo_map	= get_children( ddo_map, current_ddo)
+					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+					ar_ddo.push(...sub_ddo_map)
 				}
 		}//end for (let i = 0; i < ddo_map.length; i++) 
 
-console.log("ar_ddo:",ar_ddo);
+
 	return ar_ddo
 }//end build_request_show
 
