@@ -649,12 +649,19 @@ class component_image extends component_common {
 		}
 
 		if (!file_exists($original_image_path)) {
-			return false;
+
+			// original file in Dédalo format extension (jpg) doesn't exists. Check original in native extension like tif
+				$this->generate_default_from_original_real(true);
+
+			// check again
+			if (!file_exists($original_image_path)) {
+				return false;
+			}
 		}
 
 		# target data (target quality is thumb)
-		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
-		$image_default_path  = $ImageObj->get_local_full_path();
+		$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+		$image_default_path	= $ImageObj->get_local_full_path();
 
 		if ($overwrite===true || !file_exists($image_default_path)) {
 			$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );
