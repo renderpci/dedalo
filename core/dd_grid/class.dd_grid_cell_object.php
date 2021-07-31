@@ -110,6 +110,7 @@ class dd_grid_cell_object {
 	// Format
 	//    	class_list  		: string - "caption bold"
 	//    	column      		: strings - "name" - one column of the grid (every column is a object)
+	// 		row_count 			: number - total rows of the component, used by portals to define the rows that could be separated individually.
 	// 		separator_fields 	: string -  ", " - with the glue of the fields
 	//		separator_rows 		: string -  "<br>" - with the glue of the rows
 	//    	type      			: string - type of the element to represent in the row
@@ -173,6 +174,13 @@ class dd_grid_cell_object {
 	*/
 	public function set_column(string $value) {
 		$this->column = $value;
+	}
+
+	/**
+	* SET_VALUE
+	*/
+	public function set_row_count(int $value) {
+		$this->row_count = $value;
 	}
 
 	/**

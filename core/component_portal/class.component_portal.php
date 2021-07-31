@@ -16,7 +16,7 @@ class component_portal extends component_relation_common {
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 	# ar_target_section_tipo
-	public $ar_target_section_tipo;		# Used to fix section tipo (calculado a partir del componente relacionado de tipo section) Puede ser virtual o real
+	public $ar_target_section_tipo;		# Used to fix section tipo (get the section from relation terms, section can be real or virtual.
 
 	# Array of related terms in structure (one or more)
 	// protected $ar_terminos_relacionados;
@@ -205,6 +205,104 @@ class component_portal extends component_relation_common {
 				break;
 		}
 	}//end update_dato_version
+
+
+	/**
+	* GET_VALUE
+	* Get the value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* Some the text components can set the value with the dato directly
+	* the relation components need to process the locator to resolve the value
+	* @return
+	*/
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null, $format_columns=null) {
+
+		$value = new dd_grid_cell_object();
+
+		$data = $this->get_dato();
+
+		// get the total of locators of the data, it will be use to render the rows separated.
+		$row_count = sizeof($data);
+		// set the label of the component as column label
+		$column = $this->get_label();
+		// get the request request_config of the component
+		// the caller can built a request_config that will used instead the default request_config
+		$request_config = isset($this->request_config)
+			? $this->request_config
+			: $this->build_request_config();
+
+		// get the correct rqo (use only the dedalo api_engine)
+		$dedalo_request_config = array_find($request_config, function($el){
+			return $el->api_engine==='dedalo';
+		});
+
+		// get the ddo_map to be used to create the components related to the portal
+		$ddo_map = $dedalo_request_config->show->ddo_map;
+
+		$ar_cells = [];
+		foreach ($ddo_map as $ddo) {
+			// ar_values are the values of the component without the gird_cell_object context, only the values
+			// these values will be inject to de column.
+			// grid_cell_object only use one column with all values of the all locators, in an unique value.
+			$ar_values = [];
+			// the same with the fallback_values
+			$ar_fallback_values = [];
+			$current_column = new stdClass();
+			foreach($data as $locator){
+				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
+				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				// dump($component_model,'$component_model');
+				$current_component 	= component_common::get_instance($component_model,
+																	 $ddo->tipo,
+																	 $locator->section_id,
+																	 $this->modo,
+																	 $current_lang,
+																	 $locator->section_tipo);
+
+				$current_component->set_locator($this->locator);
+
+				// get the value and fallback_value of the component and stored to be joined
+				$current_column = $current_component->get_value($lang, $separator_fields, $separator_rows, $format_columns);
+				$ar_values = isset($current_column->value)
+					? array_merge($ar_values, $current_column->value)
+					: [];
+				$ar_fallback_values = isset($current_column->fallback_value)
+					? array_merge($ar_fallback_values, $current_column->fallback_value)
+					: [];
+
+				// set the final value and fallback_value to the unique column
+				$current_column->value = $ar_values;
+				$current_column->fallback_value = $ar_fallback_values;
+			}
+			// store the current column with all values
+			$ar_cells[] = $current_column;
+		}
+		// set the separator text that will be used to render the column
+		// separator will be the "glue" to join data in the client and can be set by caller or could be defined in preferences of the component.
+		$properties = $this->get_properties();
+
+		$separator_fields = isset($separator_fields)
+			? $separator_fields
+			: (isset($properties->separator_fields)
+				? $properties->separator_fields
+				: ', ');
+
+		$separator_rows = isset($separator_rows)
+			? $separator_rows
+			: (isset($properties->separator_rows)
+				? $properties->separator_rows
+				: ' | ');
+
+		$value->set_row_count($row_count);
+		$value->set_column($column);
+		$value->set_separator_fields($separator_fields);
+		$value->set_separator_rows($separator_rows);
+		$value->set_value($ar_cells);
+
+		return $value;
+	}//end get_value
+
 
 
 	/**
