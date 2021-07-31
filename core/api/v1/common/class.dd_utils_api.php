@@ -206,17 +206,19 @@ class dd_utils_api {
 			debug_log(__METHOD__." Checking remote_server status. Expected header code 200 .... ".to_string(), logger::DEBUG);
 
 			# Check remote server status before begins
-			$remote_server_status = (object)backup::check_remote_server();
+			$remote_server_response = (object)backup::check_remote_server();
 
 			if(SHOW_DEBUG===true) {
 				$check_status_exec_time = exec_time_unit($start_time,'ms')." ms";
-				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_status), logger::DEBUG);
+				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_response), logger::DEBUG);
 			}				
 			
-			if ($remote_server_status->result===true) {
-				$response->msg		.= $remote_server_status->msg;
+			if (	$remote_server_response->result!==false
+				 && $remote_server_response->code===200
+				 && $remote_server_response->error===false) {
+				$response->msg		.= $remote_server_response->msg;
 			}else{
-				$response->msg		.= $remote_server_status->msg;
+				$response->msg		.= $remote_server_response->msg;
 				$response->result	= false;
 				return (object)$response;
 			}
