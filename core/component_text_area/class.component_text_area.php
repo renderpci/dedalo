@@ -217,6 +217,51 @@ class component_text_area extends component_common {
 
 
 
+	/**
+	* GET_VALUE
+	* Get the value of the components.
+	* if the mode is "relation_list" create the fragments of the indexation
+	* @return
+	*/
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null, $format_columns=null) {
+
+		$value = new dd_grid_cell_object();
+
+		$data = $this->get_dato();
+
+		$procesed_data = [];
+		foreach ($data as $current_value) {
+			$current_value = trim($current_value);
+			if (!empty($current_value)) {
+				$procesed_data[] = TR::addTagImgOnTheFly($current_value);
+			}
+		}
+
+		if($this->modo === 'indexation_list'){
+
+			// process data for build the columns
+				$procesed_data = include 'component_text_area_value.php';
+		}
+
+		$column = $this->get_label();
+
+		$properties = $this->get_properties();
+
+		$separator_rows = isset($separator_rows)
+			? $separator_rows
+			: (isset($properties->separator_rows)
+				? $properties->separator_rows
+				: ' | ');
+
+
+		$value->set_column($column);
+		$value->set_separator_rows($separator_rows);
+		$value->set_value($procesed_data);
+
+		return $value;
+	}//end get_value
+
+
 
 	/**
 	* GET_VALOR
@@ -252,6 +297,42 @@ class component_text_area extends component_common {
 
 		return (string)$valor;
 	}//end get_valor
+
+
+	/**
+	* GET_VALUE_FRAGMENT
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* NOTA : El valor a guardar del text area NO es un string sino un objeto que contine los fragmentos en que se divide
+	* el texto (1 si no hay fragmentos definidos) limitados a un largo apropiado a los listados (ej. 25 chars)
+	*
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_value_fragment($max_char=256) {
+
+		// value . Get value with images and html tags
+		$data = $this->get_dato();
+
+		$value = '';
+		foreach ($data as $current_value) {
+			$current_value = trim($current_value);
+			if (!empty($current_value)) {
+				$value = TR::addTagImgOnTheFly($current_value);
+			}
+		}
+		 // truncate string
+			$text_fragment = common::truncate_html($max_char, $value, $isUtf8=true);
+
+
+		 // set the fragment
+		 	$object_fragment[] = $text_fragment;
+
+		 	return $object_fragment;
+
+	}//end get_value_fragment
 
 
 

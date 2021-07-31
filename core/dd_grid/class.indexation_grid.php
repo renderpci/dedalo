@@ -1,16 +1,15 @@
 <?php
 /*
-* CLASS INDEXATION_LIST
-* Manage the indexations of the sections
-* build the list of the indexation to show in the thesaurus
+* CLASS INDEXATION_GRID
+* Manage the indexations of the thesaurus term
+* build the grid of the indexation to show in the thesaurus
 */
-class indexation_list extends common {
+class indexation_grid {
 
 	protected $tipo;
 	protected $section_id;
 	protected $section_tipo;
-	protected $modo;
-	protected $value_resolved;
+	protected $value;
 	protected $limit;
 	protected $offset;
 	protected $count;
@@ -19,198 +18,353 @@ class indexation_list extends common {
 	* CONSTRUCT
 	*
 	*/
-	public function __construct($tipo, $section_id, $section_tipo, $value) {
+	public function __construct($section_tipo, $section_id, $tipo, $value=false) {
 
 		$this->tipo 		= $tipo;
 		$this->section_id 	= $section_id;
 		$this->section_tipo = $section_tipo;
-		$this->value 		= $value; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+		$this->value 		= ($value!==false) ? $value : null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 
 	}//end __construct
 
 
-	/**
-	* GET_INVERSE_REFERENCES
-	* Get calculated inverse locators for all matrix tables
-	* @see search::calculate_inverse_locator
-	* @return array $inverse_locators
-	*/
-	public function get_inverse_references($limit=1, $offset=0, $count=false) {
 
-		if (empty($this->section_id)) {
-			# Section not exists yet. Return empty $arrayName = array('' => , );
-			return array();
+	/**
+	* BUILD_INDEXATION_GRID
+	* @return
+	*/
+	public function build_indexation_grid() {
+
+		$ar_indexation_grid = [];
+
+		$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
+
+		foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values) {
+			// get the label of the current section
+				$column = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
+
+			// create the grid cell of the section
+				$section_grid = new dd_grid_cell_object();
+					$section_grid->set_column($column);
+					$section_grid->set_class_list('section_caption');
+
+			// get the term in the section that has the indexation_list information
+				$indexation_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, 'indexation_list', 'children');
+
+				if (!isset($indexation_list)) {
+					$msg  = "Error Processing Request build_indexation_grid:  section indexation_list is empty. Please configure structure for ($current_section_tipo) ";
+					$msg .= "Please check the consistency and model for 'relation_list'.";
+					throw new Exception($msg, 1);
+				}
+			// get the properties of the indexation_list with all ddo_map
+			// the ddo_map need to be processed to get a full ddo_map with all section_tipo resolved.
+				$RecordObj_dd	= new RecordObj_dd($indexation_list[0]);
+				$properties		= $RecordObj_dd->get_properties();
+
+				$head_ddo_map = isset($properties->head)
+					? $this->process_ddo_map($properties->head->show->ddo_map, $current_section_tipo)
+					: false;
+
+				$row_ddo_map = isset($properties->row)
+					? $this->process_ddo_map($properties->row->show->ddo_map, $current_section_tipo)
+					: false;
+
+			// get the class_list that will used to render the head and row, it could be set in the preferences of the indexation_list
+				$head_class_list	= $properties->head->class_list ?? null;
+				$row_class_list		= $properties->row->class_list ?? null;
+
+
+			#
+			# get the section values
+			$section_grid_values = [];
+			foreach ($ar_values as $current_section_id => $ar_locators) {
+				// dump($ar_locators, ' current_section_id ++ '.to_string());
+
+				$head_grid = new dd_grid_cell_object();
+					$head_grid->set_class_list($head_class_list);
+					$ar_head_value = $this->get_value($head_ddo_map, $ar_locators[0]);
+					$head_grid->set_value($ar_head_value);
+
+				$section_grid_values[] = $head_grid;
+
+				foreach ($ar_locators as $current_locator) {
+					$row_grid = new dd_grid_cell_object();
+						$row_grid->set_class_list($row_class_list);
+						$ar_row_value = $this->get_value($row_ddo_map, $current_locator);
+						$row_grid->set_value($ar_row_value);
+					$section_grid_values[] = $row_grid;
+				}
+
+			}//end foreach ($ar_values as $current_section_id => $ar_locators) {
+
+			$section_grid->set_value($section_grid_values);
+
+			$ar_indexation_grid[] = $section_grid;
 		}
 
-		# Create a minimal locator based on current section
-		$reference_locator = new locator();
-			$reference_locator->set_section_tipo($this->section_tipo);
-			$reference_locator->set_section_id($this->section_id);
-
-		# Get calculated inverse locators for all matrix tables
-		$inverse_locators = search::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
+		return $ar_indexation_grid;
+	}//end build_indexation_grid
 
 
-		return (array)$inverse_locators;
-	}//end get_inverse_references
+	/**
+	* GET_VALUE
+	* @return
+	*/
+	public function get_value($ar_ddo, $locator) {
+
+		$locator->section_top_tipo		= $locator->section_top_tipo ?? $locator->section_tipo;
+		$locator->section_top_id		= $locator->section_top_id ?? $locator->section_id;
+
+		// get only the ddo that are children of the section top_tipo
+		// the other ddo are sub components that will be injected to the portal as request_config->show
+		$ar_children_ddo = array_filter($ar_ddo, function($ddo) use($locator){
+			return $ddo->section_tipo===$locator->section_top_tipo;
+		});
+
+
+		$ar_cells = [];
+		foreach ($ar_children_ddo as $ddo) {
+
+			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+				$separator_fields	= $ddo->separator_fields ?? null;
+				$separator_rows		= $ddo->separator_rows ?? null;
+				$format_columns		= $ddo->format_columns ?? null;
+
+			// check if the locator has section_top_tipo and set the section_tipo to be used
+			// some locators has top_tipo and top_id because are indexation of the resources and the locator stored the inventory section that call the resource
+			// but some indexation are direct to the resource or inventory section and doesn't has top_tipo and top_id
+			$current_section_tipo = ($ddo->section_tipo === $locator->section_tipo)
+				? $locator->section_tipo
+				: (($ddo->section_tipo === $locator->section_top_tipo)
+					? $locator->section_top_tipo
+					: false);
+
+			$current_section_id = ($ddo->section_tipo === $locator->section_tipo)
+				? $locator->section_id
+				: $locator->section_top_id;
+
+			// create the component to get the value of the column
+			$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
+			$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+
+			$current_component 	= component_common::get_instance($component_model,
+																 $ddo->tipo,
+																 $current_section_id,
+																 'indexation_list',
+																 $current_lang,
+																 $current_section_tipo);
+			$current_component->set_locator($locator);
+
+			// check if the component has ddo children,
+			// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
+			$sub_ddo_map = [];
+			$sub_section_tipo = '';
+			foreach ($ar_ddo as $child_ddo) {
+				if($child_ddo->parent===$ddo->tipo){
+					$sub_section_tipo = $child_ddo->section_tipo;
+					$sub_ddo_map[] = $child_ddo;
+				}
+			}
+			// if the component has sub_ddo, create the request_config to be injected to component
+			// the request_config will be used instead the default request_config.
+			if (!empty($sub_ddo_map)) {
+
+				$show = new stdClass();
+					$show->ddo_map = $sub_ddo_map;
+
+				$request_config = new stdClass();
+					$request_config->api_engine = 'dedalo';
+					// $rqo->set_sqo($sqo);
+					$request_config->show = $show;
+
+				$current_component->request_config = [$request_config];
+
+				// check section_tipo of the current locator are the same of the component are referred.
+				// if the locator has the same section_tipo than component (IMPORTANT: NOT the section_top_tipo) the locator need to be injected to the component.
+				// ex: oh1 has more than one audiovisual, the locator of the indexation locator has the reference to the row of the audiovisual portal to get the columns.
+				if($sub_section_tipo === $locator->section_tipo){
+					$ar_dato = [$locator];
+					$current_component->set_dato($ar_dato);
+				}
+			}
+
+			#dump($current_component,'$current_component');
+			$ar_cells[] = $current_component->get_value($current_lang, $separator_fields, $separator_rows, $format_columns);
+		}// end foreach ($ar_children_ddo as $ddo)
+
+		return $ar_cells;
+
+	}//end get_value
+
+	/**
+	* PROCESS_DDO_MAP
+	* @return
+	*/
+	public function process_ddo_map($ar_ddo_map, $section_tipo ) {
+
+		$final_ddo_map = [];
+		foreach ($ar_ddo_map as $current_ddo_map) {
+
+			// check without tipo case
+				if (!isset($current_ddo_map->tipo)) {
+					debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
+					dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
+					continue;
+				}
+
+			// label. Add to all ddo_map items
+				$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+
+			// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
+				$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+					? $section_tipo
+					: $current_ddo_map->section_tipo;
+
+			// parent. Set the default "self" value to the current tipo (the parent)
+				$current_ddo_map->parent = $current_ddo_map->parent==='self'
+					? $section_tipo
+					: $current_ddo_map->parent;
+
+			// mode
+				$current_ddo_map->mode = isset($current_ddo_map->mode)
+					? $current_ddo_map->mode
+					: 'indexation_list';
+
+			$final_ddo_map[] = $current_ddo_map;
+		}//end foreach ($ar_ddo_map as $current_ddo_map)
+
+		return $final_ddo_map;
+	}//end process_ddo_map
 
 
 
 	/**
-	* GET_RELATION_LIST_OBJ
-	*
+	* GET_AR_SECTION_TOP_TIPO
+	* Map/group ar_locators (indexations of current term) as formated array section[id] = ar_data
+	* Filter locators for current user (by project)
+	* @return array $ar_section_top_tipo
 	*/
-	public function get_relation_list_obj($ar_inverse_references, $value_resolved=false){
+	protected function get_ar_section_top_tipo() {
 
-		$json 			= new stdClass;
-		$ar_context 	= [];
-		$ar_data		= [];
+		$start_time=microtime(1);
 
-		$sections_related 		= [];
-		$ar_relation_components	= [];
-		# loop the locators that call to the section
-		foreach ((array)$ar_inverse_references as $current_locator) {
+		$ar_section_top_tipo= array();
+		$user_id 			= navigator::get_user_id();
+		$ar_locators 		= $this->get_ar_locators();
 
-			$current_section_tipo = $current_locator->from_section_tipo;
+		foreach ($ar_locators as $current_locator) {
+			// dump($current_locator,"current_locator");
+			# ID SECTION
 
-			# 1 get the @context
-			if (!in_array($current_section_tipo, $sections_related )){
+			$section_tipo			= $current_locator->section_tipo;
+			$section_id				= $current_locator->section_id;
 
-				$sections_related[] =$current_section_tipo;
-
-				//get the id
-				$current_id = new stdClass;
-					$current_id->section_tipo 		= $current_section_tipo;
-					$current_id->section_label 		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
-					$current_id->component_tipo		= 'id';
-					$current_id->component_label	= 'id';
-
-					$ar_context[] = $current_id;
-
-				//get the columns of the @context
-				$ar_modelo_name_required = array('relation_list');
-				$resolve_virtual 		 = false;
-
-				// Locate relation_list element in current section (virtual ot not)
-				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
-
-				// If not found children, try resolving real section
-				if (empty($ar_children)) {
-					$resolve_virtual = true;
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
-				}// end if (empty($ar_children))
+			// if the locator couldn't has section_top_tipo or section_top_id, because it's a direct locator, copy the section_tipo and section_id to the top_* properties
+			$section_top_tipo		= $current_locator->section_top_tipo ?? $current_locator->section_tipo;
+			$section_top_id			= $current_locator->section_top_id ?? $current_locator->section_id;
+			$component_tipo			= $current_locator->component_tipo ?? null;
+			$tag_id					= $current_locator->tag_id ?? null;
 
 
-				if( isset($ar_children[0]) ) {
-					$current_children 		= reset($ar_children);
-					$recordObjdd 			= new RecordObj_dd($current_children);
-					$ar_relation_components[$current_section_tipo] = $recordObjdd->get_relaciones();
-					if(isset($ar_relation_components[$current_section_tipo])){
-						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
-							foreach ($current_relation_component as $modelo => $tipo) {
+			# AR_SECTION_TOP_TIPO MAP
+			$ar_section_top_tipo[$section_top_tipo][$section_top_id][] = $current_locator;
 
-								$current_relation_list = new stdClass;
-									$current_relation_list->section_tipo 	= $current_section_tipo;
-									$current_relation_list->section_label 	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
-									$current_relation_list->component_tipo	= $tipo;
-									$current_relation_list->component_label	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
+		}
+		// dump($ar_section_top_tipo,'$ar_section_top_tipo');
 
-									$ar_context[] = $current_relation_list;
-							}
+		#
+		# FILTER RESULT BY USER PROJECTS
+		if( false===security::is_global_admin($user_id) ) {
+
+			# USER PROJECTS : All projects that current user can view
+			$ar_user_projects = (array)filter::get_user_projects( $user_id );
+				#dump($ar_user_projects, ' ar_user_projects ++ '.to_string());
+
+			# Filter
+			foreach ($ar_section_top_tipo as $section_top_tipo => $ar_values) {
+
+				# COMPONENT FILTER BY SECTION TIPO
+				$section_real_tipo 		= section::get_section_real_tipo_static($section_top_tipo);
+				$component_filter_tipo  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter')[0];
+				if (empty($component_filter_tipo)) {
+					if(SHOW_DEBUG===true) {
+						throw new Exception("Error Processing Request. component_filter_tipo not found in section tipo: $section_top_tipo", 1);
+					}
+					continue;	// Skip this
+				}
+
+				# ar_keys are section_id of current section tipo records
+				$ar_keys = array_keys($ar_values);
+					#dump($ar_keys,"ar_keys for $section_top_tipo , $component_filter_tipo");
+
+				foreach ($ar_keys as $current_id_section) {
+					// get the user projects
+					$component_filter 	= component_common::get_instance('component_filter',
+																		$component_filter_tipo,
+																		$current_id_section,
+																		'edit',
+																		DEDALO_DATA_NOLAN,
+																		$section_top_tipo
+																		);
+					$component_filter_dato = (array)$component_filter->get_dato();
+
+					$in_user_projects = false;
+					foreach ($ar_user_projects as $user_project_locator) {
+						if (true===locator::in_array_locator($user_project_locator, $component_filter_dato, $ar_properties=['section_id','section_tipo'])) {
+							$in_user_projects = true;
+							break;
 						}
 					}
-				}
-
-			}// end if (!in_array($current_section_tipo, $sections_related )
-
-			# 2 get ar_data
-			if (isset($ar_relation_components[$current_section_tipo])) {
-				$current_component 	= $ar_relation_components[$current_section_tipo];
-			}else{
-				$current_component 	= null;
-				debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
-			}
-			$ar_data_result = $this->get_ar_data($current_locator, $current_component, $value_resolved);
-			$ar_data 		= array_merge($ar_data, $ar_data_result);
-		}// end foreach
-
-		$context = 'context';
-		$json->$context = $ar_context;
-		$json->data 	= $ar_data;
-
-		return $json;
-	}//get_relation_list_obj
-
-
-
-	/**
-	* GET_DATA
-	*
-	*/
-	public function get_ar_data($locator, $ar_components, $value_resolved=false){
-
-		$data = [];
-
-		$section_tipo 	= $locator->from_section_tipo;
-		$section_id 	= $locator->from_section_id;
-
-		$current_id = new stdClass;
-					$current_id->section_tipo 		= $section_tipo;
-					$current_id->section_id 		= $section_id;
-					$current_id->component_tipo		= 'id';
-
-		$data[] = $current_id;
-
-		if($value_resolved===true && isset($ar_components)){
-			foreach ($ar_components as $current_relation_component) {
-				foreach ($current_relation_component as $modelo => $tipo) {
-					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
-					$current_component	= component_common::get_instance(
-																		$modelo_name,
-																		$tipo,
-																		$section_id,
-																		'list',
-																		DEDALO_DATA_LANG,
-																		$section_tipo
-																		);
-					$value = $current_component->get_valor();
-
-					$component_object = new stdClass;
-						$component_object->section_tipo		= $section_tipo;
-						$component_object->section_id 		= $section_id;
-						$component_object->component_tipo	= $tipo;
-						$component_object->value 			= $value;
-
-					$data[] = $component_object;
+					if ($in_user_projects===false) {
+						debug_log(__METHOD__." Removed row from thesaurus index_ts list (project not mathc with user projects) ".to_string($ar_section_top_tipo[$section_top_tipo][$current_id_section]), logger::DEBUG);
+						unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);
+					}
 				}
 			}
-		}
-
-		return $data;
-	}//end get_data
-
-
-
-	/**
-	* GET_JSON
-	*
-	*/
-	public function get_json($request_options=false){
-
-		if(SHOW_DEBUG===true) $start_time = start_time();
-
-			# Class name is called class (ex. component_input_text), not this class (common)
-			include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
+		}//end if( ($is_global_admin = security::is_global_admin($user_id))!==true ) {
 
 		if(SHOW_DEBUG===true) {
-			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			$total=round(microtime(1)-$start_time,3);
+			$slow = 0.125;
+			if ($total>$slow) {
+				dump($total,"SLOW METHOD (>$slow): total secs $total");
+			}
 		}
 
-		return $json;
-	}//end get_json
+		return $ar_section_top_tipo;
+	}//end get_ar_section_top_tipo
 
 
 
-}//relation_list
-?>
+	/**
+	* GET_AR_LOCATORS
+	* Get all indexations (locators) of current thesaurus term
+	* @return array of locator objects $ar_locators
+	*/
+	public function get_ar_locators() {
+
+		#if (isset($this->ar_locators)) {
+		#	return $this->ar_locators;
+		#}
+
+		$model 	= RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
+
+		# INDEXATIONS
+		$component 		= component_common::get_instance($model, //'component_relation_index',
+														 $this->tipo,
+														 $this->section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $this->section_tipo);
+
+		$ar_locators = $component->get_dato();
+
+		return (array)$ar_locators;
+	}
+
+
+
+
+}//indexation_grid
+

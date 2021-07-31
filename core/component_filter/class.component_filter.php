@@ -208,6 +208,66 @@ class component_filter extends component_relation_common {
 	}//end propagate_filter
 
 
+	/**
+	* GET_VALUE
+	* Get the value of the component.
+	* component filter return a array of values
+	* @return
+	*/
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = null, $separator_rows = null) {
+
+		$value = new dd_grid_cell_object();
+
+		# User loged now
+		$user_id 	 = navigator::get_user_id();
+		$ar_projects = filter::get_user_authorized_projects($user_id, $this->tipo);
+
+		$dato 		= $this->get_dato();
+		$ar_final 	= [];
+		//check if the dato is available to the projects of the user has permissions.
+		foreach ((array)$ar_projects as $key => $row) {
+			if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
+				$ar_final[] = $row;
+			}
+		}//end foreach
+
+		// with the clean dato for the user, get the label
+		$ar_label = [];
+		foreach ($ar_final as $row) {
+			$ar_label[] = $row->label;
+		}
+
+		// set the label of the component as column label
+		$column = $this->get_label();
+
+		$properties = $this->get_properties();
+
+		// set the separator text that will be used to render the column
+		$separator_fields = isset($separator_fields)
+			? $separator_fields
+			: (isset($properties->separator_fields)
+				? $properties->separator_fields
+				: ', ');
+
+		$separator_rows = isset($separator_rows)
+			? $separator_rows
+			: (isset($properties->separator_rows)
+				? $properties->separator_rows
+				: ' | ');
+
+
+		$value->set_column($column);
+		$value->set_separator_fields($separator_fields);
+		$value->set_separator_rows($separator_rows);
+		$value->set_value($ar_label);
+
+		return $value;
+	}//end get_value
+
+
+
+
+
 
 	/**
 	* GET VALOR

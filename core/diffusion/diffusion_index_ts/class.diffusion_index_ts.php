@@ -342,8 +342,8 @@ class diffusion_index_ts extends diffusion {
 																			 $current_section_tipo);
 						#dump($current_component,'$current_component');
 
-						$ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $properties );
-
+						// $ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $properties );
+						$ar_diffusion_obj_head[] = $current_component->get_value( );
 
 					}
 					dump($ar_diffusion_obj_head,'ar_diffusion_obj_head '.to_string($current_section_id));

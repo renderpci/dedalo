@@ -21,6 +21,7 @@ abstract class component_common extends common {
 		protected $valor;					# string usually dato
 		protected $dataframe;				# object dataframe
 		public $version_date;				# date normalmente despejado de time machine y asignado al component actual
+		public $locator;					# full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
 
 		# STRUCTURE DATA
 		public $RecordObj_dd;				# obj ts
@@ -161,7 +162,36 @@ abstract class component_common extends common {
 						debug_log(__METHOD__." Error: section_id is array! : ".to_string($bt), logger::ERROR);
 					}
 				// modo (mode) validation
-					$ar_valid_modo = array('edit','list','search','simple','tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','related_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit','tool_description','view_tool_description','player','json');
+					$ar_valid_modo = array(
+						'edit',
+						'list',
+						'search',
+						'simple',
+						'tm',
+						'tool_portal',
+						'tool_lang',
+						'edit_tool',
+						'indexation',
+						'indexation_list',
+						'selected_fragment',
+						'tool_indexation',
+						'tool_transcription',
+						'print',
+						'edit_component',
+						'load_tr',
+						'update',
+						'portal_list',
+						'related_list',
+						'list_thesaurus',
+						'portal_list_view_mosaic',
+						'edit_in_list',
+						'edit_note',
+						'tool_structuration',
+						'dataframe_edit',
+						'tool_description',
+						'view_tool_description',
+						'player',
+						'json');
 					if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 						if(SHOW_DEBUG===true) {
 							throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);	;
@@ -598,7 +628,7 @@ abstract class component_common extends common {
 	* the relation components need to process the locator to resolve the value
 	* @return
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = false, $separator_rows = false) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields, $separator_rows) {
 
 		$value = new dd_grid_cell_object();
 
@@ -608,13 +638,13 @@ abstract class component_common extends common {
 
 		$properties = $this->get_properties();
 
-		$separator_fields = ($separator_fields !== false)
+		$separator_fields = isset($separator_fields)
 			? $separator_fields
 			: (isset($properties->separator_fields)
 				? $properties->separator_fields
 				: ', ');
 
-     	$separator_rows = ($separator_rows !== false)
+		$separator_rows = isset($separator_rows)
 			? $separator_rows
 			: (isset($properties->separator_rows)
 				? $properties->separator_rows

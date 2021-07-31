@@ -54,6 +54,9 @@ class component_relation_index extends component_relation_common {
 					if(isset($current_locator->section_top_id)){
 						$locator->set_section_top_tipo($current_locator->section_top_tipo);
 					}
+					if(isset($current_locator->from_component_tipo)){
+						$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
+					}
 
 					$new_dato[] = $locator;
 

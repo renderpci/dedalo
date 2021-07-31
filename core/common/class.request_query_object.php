@@ -221,9 +221,9 @@ class request_query_object {
 	/**
 	* SET_DD_API
 	*/
-	public function set_dd_api(string $value) {
+	public function set_api_engine(string $value) {
 		
-		$this->dd_api = $value;
+		$this->api_engine = $value;
 	}//end set_dd_api
 
 
