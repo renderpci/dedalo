@@ -21,6 +21,7 @@ abstract class component_common extends common {
 		protected $valor;					# string usually dato
 		protected $dataframe;				# object dataframe
 		public $version_date;				# date normalmente despejado de time machine y asignado al component actual
+		public $locator;					# full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
 
 		# STRUCTURE DATA
 		public $RecordObj_dd;				# obj ts
@@ -627,7 +628,7 @@ abstract class component_common extends common {
 	* the relation components need to process the locator to resolve the value
 	* @return
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = false, $separator_rows = false) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields, $separator_rows) {
 
 		$value = new dd_grid_cell_object();
 
@@ -637,13 +638,13 @@ abstract class component_common extends common {
 
 		$properties = $this->get_properties();
 
-		$separator_fields = ($separator_fields !== false)
+		$separator_fields = isset($separator_fields)
 			? $separator_fields
 			: (isset($properties->separator_fields)
 				? $properties->separator_fields
 				: ', ');
 
-		$separator_rows = ($separator_rows !== false)
+		$separator_rows = isset($separator_rows)
 			? $separator_rows
 			: (isset($properties->separator_rows)
 				? $properties->separator_rows
