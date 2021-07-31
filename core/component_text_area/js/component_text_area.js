@@ -8,7 +8,9 @@
 	import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_text_area, build_node_tag} from '../../component_text_area/js/render_component_text_area.js'
+	import {render_edit_component_text_area, build_node_tag} from '../../component_text_area/js/render_edit_component_text_area.js'
+	import {render_list_component_text_area} from '../../component_text_area/js/render_list_component_text_area.js'
+	import {render_mini_component_text_area} from '../../component_text_area/js/render_mini_component_text_area.js'
 	import {tr} from '../../common/js/tr.js'
 	import {ui} from '../../common/js/ui.js'
 	//import '../../../prosemirror/dist/prosemirror.js';
@@ -48,7 +50,7 @@ export const component_text_area = function(){
 */
 // prototypes assign
 	// lifecycle
-	// component_text_area.prototype.init				= component_common.prototype.init
+	// component_text_area.prototype.init			= component_common.prototype.init
 	component_text_area.prototype.build				= component_common.prototype.build
 	component_text_area.prototype.render			= common.prototype.render
 	component_text_area.prototype.refresh			= common.prototype.refresh
@@ -62,12 +64,12 @@ export const component_text_area = function(){
 	component_text_area.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_text_area.prototype.mini				= render_component_text_area.prototype.mini
-	component_text_area.prototype.list				= render_component_text_area.prototype.list
-	component_text_area.prototype.edit				= render_component_text_area.prototype.edit
-	component_text_area.prototype.edit_in_list		= render_component_text_area.prototype.edit
-	component_text_area.prototype.tm				= render_component_text_area.prototype.edit // time machine render alias of edit
-	component_text_area.prototype.search			= render_component_text_area.prototype.search
+	component_text_area.prototype.mini				= render_mini_component_text_area.prototype.mini
+	component_text_area.prototype.list				= render_list_component_text_area.prototype.list
+	component_text_area.prototype.edit				= render_edit_component_text_area.prototype.edit
+	component_text_area.prototype.edit_in_list		= render_edit_component_text_area.prototype.edit
+	component_text_area.prototype.tm				= render_edit_component_text_area.prototype.edit // time machine render alias of edit
+	component_text_area.prototype.search			= render_edit_component_text_area.prototype.search
 	component_text_area.prototype.change_mode		= component_common.prototype.change_mode
 
 
