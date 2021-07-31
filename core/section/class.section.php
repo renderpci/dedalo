@@ -3347,16 +3347,13 @@ class section extends common {
 		
 		$context = [];
 
-		// section self
-			$context[] = $this->get_structure_context($permissions, $add_rqo=true);
-
 		// fixed columns
 			// ddo matrix id
 			$context[] = (object)[
 				'typo'			=> 'ddo',
 				'type'			=> 'component',
 				'model'			=> 'component_section_id',
-				'tipo'			=> 'section_id_tipo', // fake tipo only used to match ddo with data
+				'tipo'			=> 'dd784', // fake tipo only used to match ddo with data 'dd784'
 				'section_tipo'	=> $this->tipo,
 				'label'			=> 'matrix ID',
 				'mode'			=> 'list',
@@ -3601,7 +3598,7 @@ class section extends common {
 			$user_id		= $current_record->userID;
 			$component_dato	= $current_record->dato;
 		
-		// matrix ID
+		// matrix ID (component_section_id)
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id) {			
 
 				$fake_tipo = 'dd784'; // fake tipo from projects, only used to allow get tm column id data
@@ -3621,7 +3618,7 @@ class section extends common {
 				return $current_item;
 			})($tipo, $section_tipo, $section_id, $lang, $id);			
 
-		// timestamp
+		// timestamp (component_date)
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $timestamp) {
 
 				$timestamp_tipo	= DEDALO_SECTION_INFO_MODIFIED_DATE; // 'dd201' Modification date
@@ -3653,7 +3650,7 @@ class section extends common {
 				return $current_item;
 			})($tipo, $section_tipo, $section_id, $lang, $id, $timestamp);
 
-		// user_id
+		// user_id (component_select)
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $user_id) {
 
 				$user_id_tipo	= DEDALO_SECTION_INFO_MODIFIED_BY_USER; // 'dd197' Modified by user
@@ -3689,29 +3686,30 @@ class section extends common {
 		// component. Data of actual component to show in section list
 			// $data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $component_dato) {
 
-			// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			// 	$component 		= component_common::get_instance($modelo_name,
-			// 													 $tipo,
-			// 													 $section_id,
-			// 													 'list',
-			// 													 $lang,
-			// 													 $section_tipo);				
-			// 	$component->set_dato($component_dato); // inject dato from time machine record
+			// des
+				// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				// 	$component 		= component_common::get_instance($modelo_name,
+				// 													 $tipo,
+				// 													 $section_id,
+				// 													 'list',
+				// 													 $lang,
+				// 													 $section_tipo);
+				// 	$component->set_dato($component_dato); // inject dato from time machine record
 
-			// 	// get component json
-			// 		$get_json_options = new stdClass();
-			// 			$get_json_options->get_context	= false;
-			// 			$get_json_options->get_data		= true;
-			// 		$element_json = $component->get_json($get_json_options);
+				// 	// get component json
+				// 		$get_json_options = new stdClass();
+				// 			$get_json_options->get_context	= false;
+				// 			$get_json_options->get_data		= true;
+				// 		$element_json = $component->get_json($get_json_options);
 
-			// 	// edit section_id to match section locator data item
-			// 		$current_item = reset($element_json->data);
-			// 		if (!empty($current_item)) {
-			// 			$current_item->matrix_id = $id;						
-			// 		}			
+				// 	// edit section_id to match section locator data item
+				// 		$current_item = reset($element_json->data);
+				// 		if (!empty($current_item)) {
+				// 			$current_item->matrix_id = $id;
+				// 		}
 
-			// 	return $current_item;
-			// })($tipo, $section_tipo, $section_id, $lang, $id, $component_dato);
+				// 	return $current_item;
+				// })($tipo, $section_tipo, $section_id, $lang, $id, $component_dato);
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$mode			= 'list';
 			$element_json	= $this->build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $component_dato);
@@ -3719,7 +3717,7 @@ class section extends common {
 				// $value_obj->row_section_id	= $section_id; // they are not necessary here !
 				// $value_obj->parent_tipo		= $this->tipo; // they are not necessary here !
 				$value_obj->matrix_id		= $id; // (!) needed to match context and data in tm mode section
-
+				// $value_obj->row_section_id  = $id;
 				return $value_obj;
 			}, $element_json->data);
 
