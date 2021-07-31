@@ -7,6 +7,9 @@
 abstract class filter {
 
 
+	public static $user_authorized_projects_cache;
+
+
 
 	/**
 	* GET_PROFILES_FOR_AREAS
@@ -92,6 +95,12 @@ abstract class filter {
 	*/
 	public static function get_user_authorized_projects( $user_id, $from_component_tipo ) {
 		$start_time=microtime(1);
+
+		// cache
+			$cache_key = $user_id .'_'. $from_component_tipo;
+			if (isset($user_authorized_projects_cache[$cache_key])) {
+				return $user_authorized_projects_cache[$cache_key];
+			}
 
 		// projects_section_tipo
 			$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT; // Default is Projects but it can be another
@@ -188,12 +197,11 @@ abstract class filter {
 		$result = $search->search();
 
 		$ar_projects = [];
-		foreach ($result->ar_records as $key => $row) {
-			#dump($row->{$projects_name_tipo}, ' row ++ '.to_string());
+		foreach ($result->ar_records as $row) {
 
 			$label = !empty($row->{$projects_name_tipo})
-						? component_common::get_value_with_fallback_from_dato_full( $row->{$projects_name_tipo}, true)
-						: '';
+				? component_common::get_value_with_fallback_from_dato_full( $row->{$projects_name_tipo}, true)
+				: '';
 
 			$locator = new locator();
 				$locator->set_section_tipo($row->section_tipo);
@@ -204,12 +212,17 @@ abstract class filter {
 			$typology = $row->{$typology_tipo} ?? null;
 
 			$element = new stdClass();
-				$element->label 	= $label;
-				$element->locator 	= $locator;
-				$element->typology 	= $typology;
+				$element->label		= $label;
+				$element->locator	= $locator;
+				$element->typology	= $typology;
 
 			$ar_projects[] = $element;
-		}
+		}//end foreach ($result->ar_records as $row)
+
+
+		// cache
+		$user_authorized_projects_cache[$cache_key] = $ar_projects;
+
 
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
