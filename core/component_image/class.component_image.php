@@ -175,6 +175,37 @@ class component_image extends component_media_common {
 	}//end set_dato
 
 
+	/**
+	* GET_VALUE
+	* Get the value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* Some the text components can set the value with the dato directly
+	* the relation components need to process the locator to resolve the value
+	* @return
+	*/
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = false, $separator_rows = false) {
+
+		$value = new dd_grid_cell_object();
+
+		$dato 		= $this->get_dato();
+
+		$image_quality 	= ($this->modo==='edit')
+			? DEDALO_IMAGE_QUALITY_DEFAULT
+			: DEDALO_IMAGE_THUMB_DEFAULT;
+
+		$current_url = $this->get_image_url($image_quality, $test_file=false, $absolute=false, $default_add=false); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+
+		$column = $this->get_label();
+
+		$value->set_column($column);
+		$value->set_type('img');
+		$value->set_value([$current_url]);
+
+		return $value;
+	}//end get_value
+
+
+
 
 	/**
 	* GET VALOR
