@@ -273,6 +273,12 @@ export const service_tinymce = function() {
 
 				// show dd-tiny after resize
 				self.dd_tinny.style.opacity = 1
+
+				// debug
+					// console.log("container_height:",container_height, self.dd_tinny);
+					// console.log("toolbar_height:",toolbar_height);
+					// console.log("statusbar_height:",statusbar_height);
+					// console.log("resizeTo h:",h);
 			})
 
 

@@ -56,7 +56,7 @@ class DDTiny extends HTMLElement {
 					|| DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/skins/lightgray",
 				// theme_url. enables you to specify the location of the theme file
 				theme_url 				: self.options.theme_url
-					|| DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/themes/modern/theme.min.js?" +page_globals.dedalo_version,
+					|| DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/themes/modern/theme.min.js?" + page_globals.dedalo_version,
 				// entity_encoding. Allows you to get XML escaped content out of TinyMCE.
 				// By setting this option to xml, posted content will be converted to an XML
 				// string escaping characters such as <, >, ", and & to <, >, ", and &.

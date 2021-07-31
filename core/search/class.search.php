@@ -239,11 +239,10 @@ class search {
 
 	/**
 	* SEARCH
-	* Exec a sql query search against the database
+	* Exec a SQL query search against the database
 	* @return array $result_table
 	*/
 	public function search() {
-
 		$start_time=microtime(1);
 
 		# Converts json search_query_object to sql query string
@@ -261,8 +260,8 @@ class search {
 		$ar_relations_cache_solved = [];
 
 		# Build a temporal table with array of records found in query
-		$ar_records  	= [];
-		$pg_num_fields 	= pg_num_fields($result);
+		$ar_records		= [];
+		$pg_num_fields	= pg_num_fields($result);
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$row = new stdClass();

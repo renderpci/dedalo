@@ -105,6 +105,13 @@ class dd_manager {
 				// if ($rqo->action==='read') {
 				// 	dump($dedalo_data, ' dedalo_data ++ '.to_string());
 				// }
+
+				// end line info
+					$text			= 'API REQUEST ' . $rqo->action .' END IN '.$total_time_api_exec;
+					$text_lenght	= strlen($text) +1;
+					$nchars			= 200;
+					$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL;
+					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
 		
 
