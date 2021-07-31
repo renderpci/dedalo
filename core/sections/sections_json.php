@@ -140,14 +140,18 @@
 							$pagination->offset	= $offset;
 						$section->pagination = $pagination;
 	
+					//set dato
 					if ($modo==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
 					}else{
-						// inject datos to section and set as loaded
+						// inject dato to section when the dato come from db and set as loaded
 						$datos = $current_record->datos ?? null;
 						if (!is_null($datos)) {
 							$section->set_dato($datos);
 							$section->set_bl_loaded_matrix_data(true);
+						}else{
+							// inject dato when the dato come from ar_locators
+							$section->set_dato($current_record);
 						}
 					}
 
