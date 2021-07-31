@@ -2072,7 +2072,7 @@ abstract class common {
 							$element_json = $related_element->get_json($get_json_options);
 						break;
 
-					// oters
+					// others
 					default:
 						# not defined model from context / data
 						debug_log(__METHOD__." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
@@ -2148,7 +2148,6 @@ abstract class common {
 
 		// already_calculated
 			static $ar_subcontext_calculated = [];
-		
 
 		// request_config. On empty return empty context and data object
 			$request_config = $this->context->request_config ?? null;
@@ -2210,8 +2209,7 @@ abstract class common {
 					return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo));
 				});
 
-
-
+				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
 
 					// prevent resolve non children from path ddo
@@ -2219,8 +2217,6 @@ abstract class common {
 							// dump($dd_object, ' dd_object SKIP dd_object ++ '.to_string($this->tipo));
 							continue;
 						}
-
-
 
 					// skip security_areas
 						if($dd_object->tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
@@ -2280,7 +2276,6 @@ abstract class common {
 
 							// component case
 							case (strpos($model, 'component_')===0):
-
 								$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 								$related_element	= component_common::get_instance($model,
 																					 $current_tipo,
@@ -2303,7 +2298,6 @@ abstract class common {
 										$related_element->from_component_tipo	= $this->tipo;
 										$related_element->from_section_tipo		= $this->section_tipo;
 									}
-
 								break;
 
 							// grouper case
@@ -2348,8 +2342,10 @@ abstract class common {
 							// add parent_tipo with the caller tipo, it define the global context (portal or section) that are creating the rows.
 								$ar_final_subdata = [];
 								foreach ($element_json->data as $value_obj) {
+
 									$value_obj->row_section_id	= $section_id;
 									$value_obj->parent_tipo		= $this->tipo;
+
 									$ar_final_subdata[] = $value_obj;
 								}
 

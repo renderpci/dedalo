@@ -45,18 +45,28 @@
 	// }//end if($options->get_context===true)
 
 
-	if($permissions>0){	
-
-		$this->context = $this->get_structure_context($permissions, $add_rqo=true);
-		
-		$context[] = $this->context;
+	if($permissions>0){
 
 		if ($modo==='tm') {
+
+			// context
+				// section context is a normal context like in any other mode
+				$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+				$context[] = $this->context;
+
+				// subcontext. Is specific for tm and is calculated in class section
+				$ar_subcontext = $this->get_tm_context($permissions);
+				foreach ($ar_subcontext as $current_context) {
+					$context[] = $current_context;
+				}
 			
-			// subdata add
+			// subdata. Is specific for tm and is calculated in class section
 				$data = $this->get_tm_ar_subdata();
 
 		}else{
+
+			$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+			$context[] = $this->context;
 
 			// subdata
 				// default locator build with this section params
@@ -82,6 +92,8 @@
 						$data[] = $sub_value;
 					}
 		}
+			// dump($context, ' context ++ '.to_string());
+			// dump($data, ' data ++ '.to_string());
 
 	}//end if($options->get_data===true && $permissions>0)
 

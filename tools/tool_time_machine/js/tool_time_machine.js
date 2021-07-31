@@ -135,6 +135,9 @@ tool_time_machine.prototype.load_section = async function() {
 			//  matrix id
 			{
 				tipo			: 'dd784', // fake tipo from projects, only used to allow get tm column id data,
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_section_id',
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				label			: 'Matrix id',
@@ -143,24 +146,34 @@ tool_time_machine.prototype.load_section = async function() {
 			// modification date DEDALO_SECTION_INFO_MODIFIED_DATE dd201
 			{
 				tipo			: 'dd201',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_date',
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
+				label			: 'Modification date',
 				mode			: 'list'
 			},
 			// modification user id DEDALO_SECTION_INFO_MODIFIED_BY_USER dd197
 			{
 				tipo			: 'dd197',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_select',
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
+				label			: 'Modification user',
 				mode			: 'list'
 			},
 			// component itself. Remember add component show y exists (portals) to ddo_map
 			{
 				tipo			: component_tipo,
+				type			: 'component',
+				typo			: 'ddo',
 				section_tipo	: section_tipo,
 				model			: model,
-				label			: label,
 				parent			: section_tipo,
+				label			: label,
 				mode			: 'list'
 			}
 		]
