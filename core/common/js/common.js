@@ -1618,7 +1618,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		return false
 	}
 
-	if (self.model!=="section" && self.model!=="area" && self.model.indexOf("area_")===-1) {
+	if (self.type!=="section" && self.type!=="area") {
 		return false
 	}
 
@@ -1638,53 +1638,59 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
 	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
 
-	const debug = document.getElementById("debug")
-	// debug.classList.add("hide")
+	// fragment
+		const fragment = new DocumentFragment();
 
-	// clean
-		while (debug.firstChild) {
-			debug.removeChild(debug.firstChild)
-		}
+		// request to API
+			// const sqo = dd_request_show_original.find(el => el.typo==='sqo') || null
+			const sqo			= rqo_show_original.sqo
+			const request_pre	= ui.create_dom_element({
+				element_type	: 'pre',
+				text_content	: "dd_request sent to API: \n\n" + JSON.stringify(rqo_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
+				parent			: fragment
+			})
 
-	// request to api
-		// const sqo = dd_request_show_original.find(el => el.typo==='sqo') || null 
-		const sqo = rqo_show_original.sqo
-		const request_pre = ui.create_dom_element({
-			element_type	: 'pre',
-			text_content	: "dd_request sended to api: \n\n" + JSON.stringify(rqo_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
-			parent			: debug
-		})
+		// context
+			const context_pre = ui.create_dom_element({
+				element_type	: 'pre',
+				text_content	: "context: " + JSON.stringify(response.result.context, null, "  "),
+				parent			: fragment
+			})
 
+		// data
+			const data_pre = ui.create_dom_element({
+				element_type	: 'pre',
+				text_content	: "data: " + JSON.stringify(response.result.data, null, "  "),
+				parent			: fragment
+			})
 
-	// context
-		const context_pre = ui.create_dom_element({
-			element_type	: 'pre',
-			text_content	: "context: " + JSON.stringify(response.result.context, null, "  "),
-			parent			: debug
-		})
+	// time
+		// const time_info = "" +
+		// 	"Total time: " + response.debug.exec_time +
+		// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
+		// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
 
-	// data
-		const data_pre = ui.create_dom_element({
-			element_type	: 'pre',
-			text_content	: "data: " + JSON.stringify(response.result.data, null, "  "),
-			parent			: debug
-		})
+		// const time_info_pre = ui.create_dom_element({
+		// 	element_type : "pre",
+		// 	class_name   : "total_time",
+		// 	id   		 : "total_time",
+		// 	inner_html   : time_info,
+		// 	parent 		 : fragment
+		// })
 
-	// const time_info = "" +
-	// 	"Total time: " + response.debug.exec_time +
-	// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
-	// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
+	// debug node container
+		const debug = document.getElementById("debug")
+		// debug.classList.add("hide")
 
-	// const time_info_pre = ui.create_dom_element({
-	// 	element_type : "pre",
-	// 	class_name   : "total_time",
-	// 	id   		 : "total_time",
-	// 	inner_html   : time_info,
-	// 	parent 		 : debug
-	// })
+		// clean
+			while (debug.firstChild) {
+				debug.removeChild(debug.firstChild)
+			}
 
-	// show
-		debug.classList.remove("hide")
+		debug.appendChild(fragment)
+
+		// show
+			debug.classList.remove("hide")
 
 
 	return true

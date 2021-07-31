@@ -130,7 +130,8 @@ tool_time_machine.prototype.load_section = async function() {
 		const model				= component.model
 		const label				= component.label
 
-	// ddo_map
+	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
+	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
 		const ddo_map = [
 			//  matrix id
 			{

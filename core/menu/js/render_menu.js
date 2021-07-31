@@ -229,8 +229,6 @@ render_menu.prototype.edit = async function() {
 					}
 					section_label.insertAdjacentHTML('afterbegin', instance.label);
 					current_instance = instance
-
-						console.log("added fn_update_section_label instance:",instance );
 				}
 			}
 			section_label.addEventListener("click", e => {
