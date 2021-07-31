@@ -18,6 +18,7 @@ include(DEDALO_CORE_PATH . '/common/class.counter.php');
 include(DEDALO_CORE_PATH . '/common/class.tools.php');
 include(DEDALO_CORE_PATH . '/common/class.label.php');
 include(DEDALO_CORE_PATH . '/common/class.TR.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.OptimizeTC.php');
 #include(DEDALO_CORE_PATH . '/common/class.operator.php');
 include(DEDALO_CORE_PATH . '/common/class.locator.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
@@ -115,7 +116,7 @@ class class_loader {
 
 
 
-	# Test if PHP versiion is supported
+	# Test if PHP version is supported
 	static private function test_php_version_supported() {
 
 		static $php_version_supported;
@@ -125,7 +126,7 @@ class class_loader {
 		}
 
 		$current_php_version	= phpversion();
-		$minimun_php_version	= '7.2.0';
+		$minimun_php_version	= '7.4.0';
 
 
 		$ar_current_php_version = explode('.',$current_php_version);
