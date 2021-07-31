@@ -13,8 +13,8 @@
 	import {search} from '../../search/js/search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_section} from './render_section.js'
-
+	import {render_edit_section} from './render_edit_section.js'
+	import {render_list_section} from './render_list_section.js'
 
 
 /**
@@ -70,11 +70,11 @@ export const section = function() {
 	section.prototype.build_rqo_search	= common.prototype.build_rqo_search
 
 	// render
-	section.prototype.edit				= render_section.prototype.edit
-	section.prototype.list				= render_section.prototype.list
-	section.prototype.list_portal		= render_section.prototype.list
-	section.prototype.tm				= render_section.prototype.list
-	section.prototype.list_header		= render_section.prototype.list_header
+	section.prototype.edit				= render_edit_section.prototype.edit
+	section.prototype.list				= render_list_section.prototype.list
+	section.prototype.list_portal		= render_list_section.prototype.list
+	section.prototype.tm				= render_list_section.prototype.list
+	section.prototype.list_header		= render_list_section.prototype.list_header
 
 	section.prototype.get_columns		= common.prototype.get_columns
 
@@ -125,6 +125,7 @@ section.prototype.init = async function(options) {
 	self.columns = options.columns
 	
 	// events subscription
+		// new_section_
 		self.events_tokens.push(
 			event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
 		)
