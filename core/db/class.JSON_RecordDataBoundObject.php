@@ -193,6 +193,8 @@ abstract class JSON_RecordDataBoundObject {
 			// $totaltime_static2 = $totaltime_static2 + $totaltime;
 			// debug_log(__METHOD__." Total: $totaltime ms - $strQuery + sum ms: $totaltime_static2 ".to_string(), logger::DEBUG);
 		}
+
+		return true;
 	}//end load
 
 
@@ -362,7 +364,7 @@ abstract class JSON_RecordDataBoundObject {
 		$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
 		if ($statement===false) {
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
+				debug_log(__METHOD__." Error when pg_prepare statement for strQuery: ".to_string($strQuery), logger::ERROR);
 				return false;
 			}
 		}
@@ -430,7 +432,7 @@ abstract class JSON_RecordDataBoundObject {
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
-		$strQuery_limit 	= '';
+		$strQuery_limit		= '';
 
 		if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
 
@@ -438,40 +440,47 @@ abstract class JSON_RecordDataBoundObject {
 
 				# SI $key ES 'strPrimaryKeyName', LO USAREMOS COMO strPrimaryKeyName A BUSCAR
 				case ($key==='strPrimaryKeyName'):
-									# If is json selection, strPrimaryKeyName is literal as 'selection'
-									if ( strpos($value, '->') ) {
-										$strPrimaryKeyName = $value;
-									}
-									# Else (default) is a column key and we use '"column_name"'
-									else{
-										$strPrimaryKeyName = '"'.$value.'"';
-									}
-									break;
+						// # If is json selection, strPrimaryKeyName is literal as 'selection'
+						// if ( strpos($value, '->') ) {
+						// 	$strPrimaryKeyName = $value;
+						// }
+						// # Else (default) is a column key and we use '"column_name"'
+						// else{
+						// 	$strPrimaryKeyName = '"'.$value.'"';
+						// }
+						$strPrimaryKeyName = (strpos($value, '->')!==false)
+							? $value // If is json selection, strPrimaryKeyName is literal as 'selection'
+							: '"'.$value.'"'; // Else (default) is a column key and we use '"column_name"'
+						break;
 				# LIMIT
 				case ($key==='sql_limit'):
-									$strQuery_limit = "LIMIT $value ";
-									break;
+
+						$strQuery_limit = "LIMIT $value ";
+						break;
 
 				# NOT
 				case (strpos($key,':!=')!==false):
-									$campo = substr($key, 0, strpos($key,':!='));
-									$strQuery .= "AND $campo != '{$value}' ";
-									break;
+
+						$campo = substr($key, 0, strpos($key,':!='));
+						$strQuery .= "AND $campo != '{$value}' ";
+						break;
 
 				# SI $key ES 'sql_code', INTERPRETAMOS $value LITERALMENTE, COMO SQL
 				case ($key==='sql_code'):
-									$strQuery .= $value.' ';
-									break;
+
+						$strQuery .= $value.' ';
+						break;
 
 				# OR (formato lang:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
 				case (strpos($key,':or')!==false):
-									$campo = substr($key, 0, strpos($key,':or'));
-									$strQuery_temp ='';
-									foreach ($value as $value_string) {
-										$strQuery_temp .= "$campo = '$value_string' OR ";
-									}
-									$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
-									break;
+
+						$campo = substr($key, 0, strpos($key,':or'));
+						$strQuery_temp ='';
+						foreach ($value as $value_string) {
+							$strQuery_temp .= "$campo = '$value_string' OR ";
+						}
+						$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
+						break;
 
 				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
 				default :
@@ -499,7 +508,7 @@ abstract class JSON_RecordDataBoundObject {
 		# Verify query format
 		if(strpos($strQuery, 'AND')===0) {
 			$strQuery = substr($strQuery, 4);
-		}else  if( strpos($strQuery, ' AND')===0 ) {
+		}else if( strpos($strQuery, ' AND')===0 ) {
 			$strQuery = substr($strQuery, 5);
 		}
 
@@ -507,7 +516,7 @@ abstract class JSON_RecordDataBoundObject {
 			$strQuery = "\n-- search : ".debug_backtrace()[1]['function']."\n".$strQuery;
 		}
 
-		$strQuery = 'SELECT '.$strPrimaryKeyName. ' AS key FROM "'.$this->strTableName.'" WHERE '. $strQuery .' '. $strQuery_limit;
+		$strQuery = 'SELECT '.$strPrimaryKeyName.' AS key FROM "'.$this->strTableName.'" WHERE '. $strQuery .' '. $strQuery_limit;
 			#dump($strQuery,'strQuery');
 			#debug_log(__METHOD__." $strQuery ".to_string($strQuery), logger::DEBUG);
 

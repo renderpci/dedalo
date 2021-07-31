@@ -14,13 +14,13 @@
 
 
 /**
-* RENDER_EDIT_COMPONENT_PORTAL
-* Manages the component's logic and apperance in client side
+* RENDER_LIST_COMPONENT_PORTAL
+* Manages the component's logic and appearance in client side
 */
 export const render_list_component_portal = function() {
 
 	return true
-};//end render_edit_component_portal
+};//end render_list_component_portal
 
 
 

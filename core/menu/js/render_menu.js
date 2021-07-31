@@ -218,7 +218,7 @@ render_menu.prototype.edit = async function() {
 
 				if(instance.mode!=='tm' && (instance.type==='section'|| instance.type==='area')){
 
-					if (current_instance && instance.tipo===current_instance.tipo) {
+					if (current_instance && instance.tipo===current_instance.tipo && current_instance.mode!=='edit') {
 						return
 					}
 					// change the value of the current dom element

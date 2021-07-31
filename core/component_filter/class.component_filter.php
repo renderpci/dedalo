@@ -341,7 +341,7 @@ class component_filter extends component_relation_common {
 
 		// typology groupers
 			$ar_groupers = [];
-			foreach ($search_result->ar_records as $key => $row) {
+			foreach ($search_result->ar_records as $row) {
 
 				$section_id 	= $row->section_id;
 				$section_tipo 	= $row->section_tipo;
@@ -361,9 +361,10 @@ class component_filter extends component_relation_common {
 				return strcasecmp($a->label, $b->label);
 			});
 
-		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
+			}
 
 		return $ar_datalist;
 	}//end get_datalist
