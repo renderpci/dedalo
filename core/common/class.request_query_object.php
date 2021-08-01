@@ -14,8 +14,7 @@
 			(it will create the search and choose, when these objects are not sended)
 		search	: layout_map and sqo_config 
 			(it modify the show and it will create the choose, when these object is not sended)
-		choose	: layout_map 
-			(it modify search)
+		choose	: layout_map 			(it modify search)
 		
 		// info about
 			Mandatory	: dd_api, action, source
@@ -221,9 +220,9 @@ class request_query_object {
 	/**
 	* SET_DD_API
 	*/
-	public function set_api_engine(string $value) {
+	public function set_dd_api(string $value) {
 		
-		$this->api_engine = $value;
+		$this->dd_api = $value;
 	}//end set_dd_api
 
 

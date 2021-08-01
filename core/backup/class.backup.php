@@ -1053,7 +1053,7 @@ abstract class backup {
 	* DB_SYSTEM_CONFIG_VERIFY
 	* Check current database status to properly configuration
 	* Test pgpass file existence and permissions
-	* If pgpass if not correctly configurated, die current script showing a error
+	* If pgpass if not correctly configured, die current script showing a error
 	*/
 	public static function db_system_config_verify() {
 

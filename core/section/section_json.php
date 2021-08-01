@@ -49,12 +49,11 @@
 
 		if ($modo==='tm') {
 
-			// context
-				// section context is a normal context like in any other mode
+			// context. Section context is a normal context like in any other mode
 				$this->context = $this->get_structure_context($permissions, $add_rqo=true);
 				$context[] = $this->context;
 
-				// subcontext. Is specific for tm and is calculated in class section
+			// subcontext. Is specific for tm and is calculated in class section
 				$ar_subcontext = $this->get_tm_context($permissions);
 				foreach ($ar_subcontext as $current_context) {
 					$context[] = $current_context;
