@@ -40,13 +40,24 @@ class indexation_grid {
 		$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
 
 		foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values) {
+
+			// create the row of the section
+			$section_grid_row = new dd_grid_cell_object();
+				$section_grid_row->set_type('row');
+
 			// get the label of the current section
-				$column = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
+				$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 			// create the grid cell of the section
 				$section_grid = new dd_grid_cell_object();
-					$section_grid->set_column($column);
-					$section_grid->set_class_list('section_caption');
+					$section_grid->set_type('column');
+					$section_grid->set_label($label);
+					$section_grid->set_render_label(true);
+					$section_grid->set_class_list('caption section');
+					// $section_grid->set_cell_type('text');
+
+			// add the column to the row
+				$section_grid_row->set_value([$section_grid]);
 
 			// get the term in the section that has the indexation_list information
 				$indexation_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, 'indexation_list', 'children');
@@ -73,33 +84,62 @@ class indexation_grid {
 				$head_class_list	= $properties->head->class_list ?? null;
 				$row_class_list		= $properties->row->class_list ?? null;
 
+			// get the render label of the section rows
+				$head_render_label	= $properties->head->render_label ?? false;
+				$row_render_label	= $properties->row->render_label ?? false;
+
 
 			#
 			# get the section values
-			$section_grid_values = [];
+			$section_grid_values	= [];
+			// store the rows count for every portal inside the section
+			$ar_section_rows_count	= [];
 			foreach ($ar_values as $current_section_id => $ar_locators) {
 				// dump($ar_locators, ' current_section_id ++ '.to_string());
+				$ar_head_value = $this->get_value($head_ddo_map, $ar_locators[0]);
+				// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
+				$head_row_count = max($ar_head_value->ar_row_count);
 
 				$head_grid = new dd_grid_cell_object();
+					$head_grid->set_type('row');
+					$head_grid->set_row_count($head_row_count);
 					$head_grid->set_class_list($head_class_list);
-					$ar_head_value = $this->get_value($head_ddo_map, $ar_locators[0]);
-					$head_grid->set_value($ar_head_value);
+					$head_grid->set_render_label($head_render_label);
+					$head_grid->set_value($ar_head_value->ar_cells);
 
 				$section_grid_values[] = $head_grid;
 
+				// store the head rows to sum up with the total rows
+				$rows_max_count = [$head_row_count];
 				foreach ($ar_locators as $current_locator) {
+
+					$ar_row_value = $this->get_value($row_ddo_map, $current_locator);
+					// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
+					$row_count = max($ar_row_value->ar_row_count);
+					// store the result to sum with the head rows
+					$rows_max_count[] = $row_count;
+
 					$row_grid = new dd_grid_cell_object();
+						$row_grid->set_type('row');
+						$row_grid->set_row_count($row_count);
 						$row_grid->set_class_list($row_class_list);
-						$ar_row_value = $this->get_value($row_ddo_map, $current_locator);
-						$row_grid->set_value($ar_row_value);
+						$row_grid->set_render_label($row_render_label);
+						$row_grid->set_value($ar_row_value->ar_cells);
+
+
 					$section_grid_values[] = $row_grid;
 				}
+				// sum the total rows for this locator
+				$ar_section_rows_count[] = array_sum($rows_max_count);
 
 			}//end foreach ($ar_values as $current_section_id => $ar_locators) {
 
 			$section_grid->set_value($section_grid_values);
 
-			$ar_indexation_grid[] = $section_grid;
+			// sum the total rows for the sectiona and add the total rows to the section row
+				$section_grid_row->set_row_count(array_sum($ar_section_rows_count));
+
+			$ar_indexation_grid[] = $section_grid_row;
 		}
 
 		return $ar_indexation_grid;
@@ -123,6 +163,7 @@ class indexation_grid {
 
 
 		$ar_cells = [];
+		$ar_row_count = [];
 		foreach ($ar_children_ddo as $ddo) {
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
@@ -190,11 +231,19 @@ class indexation_grid {
 			}
 
 			#dump($current_component,'$current_component');
-			$ar_cells[] = $current_component->get_value($current_lang, $separator_fields, $separator_rows, $format_columns);
+			$component_value = $current_component->get_value($current_lang, $separator_fields, $separator_rows, $format_columns);
+
+			$ar_row_count[] = $component_value->row_count ?? 0;
+			$ar_cells[] = $component_value;
+
 		}// end foreach ($ar_children_ddo as $ddo)
 
-		return $ar_cells;
+		$value = new stdClass();
+			$value->ar_row_count 	= $ar_row_count;
+			$value->ar_cells 		= $ar_cells;
 
+
+		return $value;
 	}//end get_value
 
 	/**

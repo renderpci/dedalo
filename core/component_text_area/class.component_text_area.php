@@ -237,13 +237,16 @@ class component_text_area extends component_common {
 			}
 		}
 
+		$cell_type = 'text';
+
 		if($this->modo === 'indexation_list'){
 
 			// process data for build the columns
 				$procesed_data = include 'component_text_area_value.php';
+				$cell_type = null;
 		}
 
-		$column = $this->get_label();
+		$label = $this->get_label();
 
 		$properties = $this->get_properties();
 
@@ -254,7 +257,11 @@ class component_text_area extends component_common {
 				: ' | ');
 
 
-		$value->set_column($column);
+		$value->set_type('column');
+		$value->set_label($label);
+		if(isset($cell_type)){
+			$value->set_cell_type($cell_type);
+		}
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($procesed_data);
 

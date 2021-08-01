@@ -49,7 +49,7 @@ tool_common.prototype.init = async function(options) {
 		self.node				= []
 		self.type				= 'tool'
 		self.ar_instances		= []
-		self.events_tokens		= []		
+		self.events_tokens		= []
 		self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common	
 		self.get_label			= get_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
@@ -207,48 +207,48 @@ export const load_tool = async (options) => {
 * TRIGGER_REQUEST
 * This is a common tool API request way
 */
-export const trigger_request = async function(trigger_url, body) {
-	const t0 = performance.now()
+	// export const trigger_request = async function(trigger_url, body) {
+	// 	const t0 = performance.now()
 
-	const handle_errors = function(response) {
-		if (!response.ok) {
-			throw Error(response.statusText);
-		}
-		return response;
-	}
+	// 	const handle_errors = function(response) {
+	// 		if (!response.ok) {
+	// 			throw Error(response.statusText);
+	// 		}
+	// 		return response;
+	// 	}
 
-	const trigger_response = await fetch(
- 		trigger_url,
- 		{
-			method		: 'POST',
-			mode		: 'cors',
-			cache		: 'no-cache',
-			credentials	: 'same-origin',
-			headers		: {'Content-Type': 'application/json'},
-			redirect	: 'follow',
-			referrer	: 'no-referrer',
-			body		: JSON.stringify(body)
-		})
-		.then(handle_errors)
-		.then(response => response.json()) // parses JSON response into native Javascript objects
-		.catch(error => {
-			console.error("!!!!! REQUEST ERROR: ",error)
-			return {
-				result	: false,
-				msg		: error.message,
-				error	: error
-			}
-		});
-
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("__Time to trigger_request", self.model, " ms:", performance.now()-t0);
-		}
+	// 	const trigger_response = await fetch(
+	//  		trigger_url,
+	//  		{
+	// 			method		: 'POST',
+	// 			mode		: 'cors',
+	// 			cache		: 'no-cache',
+	// 			credentials	: 'same-origin',
+	// 			headers		: {'Content-Type': 'application/json'},
+	// 			redirect	: 'follow',
+	// 			referrer	: 'no-referrer',
+	// 			body		: JSON.stringify(body)
+	// 		})
+	// 		.then(handle_errors)
+	// 		.then(response => response.json()) // parses JSON response into native Javascript objects
+	// 		.catch(error => {
+	// 			console.error("!!!!! REQUEST ERROR: ",error)
+	// 			return {
+	// 				result	: false,
+	// 				msg		: error.message,
+	// 				error	: error
+	// 			}
+	// 		});
 
 
-	return trigger_response
-};//end trigger_request
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			console.log("__Time to trigger_request", self.model, " ms:", performance.now()-t0);
+	// 		}
+
+
+	// 	return trigger_response
+	// };//end trigger_request
 
 
 
