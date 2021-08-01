@@ -212,18 +212,18 @@ class component_filter extends component_relation_common {
 	* GET_VALUE
 	* Get the value of the component.
 	* component filter return a array of values
-	* @return
+	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = null, $separator_rows = null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
-		# User loged now
-		$user_id 	 = navigator::get_user_id();
-		$ar_projects = filter::get_user_authorized_projects($user_id, $this->tipo);
+		# User logged now
+		$user_id		= navigator::get_user_id();
+		$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
-		$dato 		= $this->get_dato();
-		$ar_final 	= [];
+		$dato		= $this->get_dato();
+		$ar_final	= [];
 		//check if the dato is available to the projects of the user has permissions.
 		foreach ((array)$ar_projects as $key => $row) {
 			if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
@@ -263,9 +263,6 @@ class component_filter extends component_relation_common {
 
 		return $value;
 	}//end get_value
-
-
-
 
 
 

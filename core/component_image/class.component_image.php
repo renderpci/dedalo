@@ -175,21 +175,22 @@ class component_image extends component_media_common {
 	}//end set_dato
 
 
+
 	/**
 	* GET_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return
+	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = false, $separator_rows = false) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
-		$dato 		= $this->get_dato();
+		$dato = $this->get_dato();
 
-		$image_quality 	= ($this->modo==='edit')
+		$image_quality = ($this->modo==='edit')
 			? DEDALO_IMAGE_QUALITY_DEFAULT
 			: DEDALO_IMAGE_THUMB_DEFAULT;
 
@@ -203,7 +204,6 @@ class component_image extends component_media_common {
 
 		return $value;
 	}//end get_value
-
 
 
 

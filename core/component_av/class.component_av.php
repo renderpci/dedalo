@@ -111,21 +111,21 @@ class component_av extends component_media_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return
+	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = false, $separator_rows = false) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
-		$dato 		= $this->get_dato();
+		$dato = $this->get_dato();
 		if (!is_array($dato)) {
 			$dato = [$dato];
 		}
 
 		// data item
 		$item  = new stdClass();
-			$item->posterframe_url 	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
-			$item->video_url 		= $this->av_file_exist()
+			$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
+			$item->video_url		= $this->av_file_exist()
 				? $this->get_video_url(false)
 				: null;
 
@@ -138,8 +138,6 @@ class component_av extends component_media_common {
 
 		return $value;
 	}//end get_value
-
-
 
 
 
