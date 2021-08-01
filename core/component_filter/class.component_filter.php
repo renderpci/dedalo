@@ -214,7 +214,7 @@ class component_filter extends component_relation_common {
 	* component filter return a array of values
 	* @return
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = null, $separator_rows = null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
@@ -232,13 +232,13 @@ class component_filter extends component_relation_common {
 		}//end foreach
 
 		// with the clean dato for the user, get the label
-		$ar_label = [];
+		$ar_values = [];
 		foreach ($ar_final as $row) {
-			$ar_label[] = $row->label;
+			$ar_values[] = $row->label;
 		}
 
 		// set the label of the component as column label
-		$column = $this->get_label();
+		$label = $this->get_label();
 
 		$properties = $this->get_properties();
 
@@ -256,10 +256,12 @@ class component_filter extends component_relation_common {
 				: ' | ');
 
 
-		$value->set_column($column);
+		$value->set_type('column');
+		$value->set_label($label);
+		$value->set_cell_type('text');
 		$value->set_separator_fields($separator_fields);
 		$value->set_separator_rows($separator_rows);
-		$value->set_value($ar_label);
+		$value->set_value($ar_values);
 
 		return $value;
 	}//end get_value
