@@ -1,11 +1,12 @@
 <?php
-require_once(DEDALO_CORE_PATH.'/media_engine/class.OptimizeTC.php');
-
-/*
+/**
 * CLASS TOOL_TC
+*
 */
-class tool_tc {//extends tool_common {
+class tool_tc {
 	
+
+
 	protected $component_obj;
 
 	

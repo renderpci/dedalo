@@ -2,9 +2,6 @@
 
 	if(SHOW_DEBUG) $start_time = start_time();
 
-	# CONTROLLER
-	require_once(DEDALO_CORE_PATH .'/media_engine/class.OptimizeTC.php');
-
 	#$terminoID 				= $this->terminoID;
 	$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
 		#dump($ar_section_top_tipo,'$ar_section_top_tipo'); die();
