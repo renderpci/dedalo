@@ -221,7 +221,7 @@ class component_text_area extends component_common {
 	* GET_VALUE
 	* Get the value of the components.
 	* if the mode is "relation_list" create the fragments of the indexation
-	* @return
+	* @return object $value
 	*/
 	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null, $format_columns=null) {
 

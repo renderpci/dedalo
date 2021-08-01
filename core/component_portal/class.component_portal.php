@@ -213,7 +213,7 @@ class component_portal extends component_relation_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return
+	* @return object $value
 	*/
 	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null, $format_columns=null) {
 

@@ -620,21 +620,21 @@ abstract class component_common extends common {
 	}//end load_component_dato
 
 
+
 	/**
 	* GET_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return
+	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields, $separator_rows) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
-
-		$data = $this->get_dato();
-		$column = $this->get_label();
+		$data	= $this->get_dato();
+		$column	= $this->get_label();
 
 		$properties = $this->get_properties();
 

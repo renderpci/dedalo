@@ -66,21 +66,22 @@ class component_input_text extends component_common {
 	}//end set_dato
 
 
+
 	/**
 	* GET_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return
+	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = null, $separator_rows = null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
-		$dato 				= $this->get_dato();
-		$fallback_value		= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-		$column = $this->get_label();
+		$dato			= $this->get_dato();
+		$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+		$column			= $this->get_label();
 
 		$properties = $this->get_properties();
 
@@ -90,7 +91,6 @@ class component_input_text extends component_common {
 				? $properties->separator_rows
 				: ' | ');
 
-
 		$value->set_column($column);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($dato);
@@ -98,6 +98,7 @@ class component_input_text extends component_common {
 
 		return $value;
 	}//end get_value
+
 
 
 	/**
