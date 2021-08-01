@@ -58,7 +58,6 @@ class tags extends widget_common {
 					: 0;
 
 				# TC WRONG
-				require_once(DEDALO_CORE_PATH.'/media_engine/class.OptimizeTC.php');
 				$ar_secs 	 = [];
 				$ar_tc_wrong = [];
 				foreach ($matches_tc[1] as $tc_key => $tc_value) {

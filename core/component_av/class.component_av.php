@@ -1,12 +1,13 @@
 <?php
-/*
-* CLASS COMPONENT AV
-*/
 include_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
 include_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
-include_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
-include_once( DEDALO_CORE_PATH . '/media_engine/class.OptimizeTC.php');
 
+
+
+/**
+* CLASS COMPONENT_AV
+*
+*/
 class component_av extends component_media_common {
 
 	# Overwrite __construct var lang passed in this component

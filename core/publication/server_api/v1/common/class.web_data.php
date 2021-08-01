@@ -7,8 +7,8 @@ include(dirname(__FILE__).'/class.video_view_data.php');
 include(dirname(__FILE__).'/class.map.php');
 include(dirname(__FILE__).'/class.image.php');
 include(dirname(__FILE__).'/class.notes.php');
-include(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/media_engine/class.OptimizeTC.php');
-require_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php');
+include_once dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/media_engine/class.OptimizeTC.php';
+include_once dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php';
 /**
 * WEB_DATA
 * Manage web source data with mysql

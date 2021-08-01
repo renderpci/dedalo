@@ -1,6 +1,4 @@
 <?php
-
-
 $start_time=microtime(1);
 include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
@@ -9,7 +7,7 @@ common::trigger_manager();
 
 require_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
 require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
-require_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
+
 
 
 // if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -311,4 +309,3 @@ if($mode=='generate_identifying_image') {
 }//end generate_identifying_image
 
 
-?>

@@ -100,9 +100,6 @@
 					return null;
 				}
 
-				require_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
-				require_once( DEDALO_CORE_PATH . '/media_engine/class.OptimizeTC.php');
-
 				$total_duration = 0;
 				$ar_duration 	= array();
 				$ar_resolved 	= array();

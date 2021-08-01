@@ -282,9 +282,6 @@ class diffusion_index_ts extends diffusion {
 	*/
 	public function build_indexation_grid() {
 
-
-		require_once(DEDALO_CORE_PATH .'/media_engine/class.OptimizeTC.php');
-
 		#$terminoID 				= $this->terminoID;
 		$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
 			#dump($ar_section_top_tipo,'$ar_section_top_tipo'); die();
