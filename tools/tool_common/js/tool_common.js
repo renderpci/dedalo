@@ -154,40 +154,40 @@ tool_common.prototype.build = async function(autoload=false) {
 
 /**
 * LOAD_TOOL
-*
+* Init, build and render the tool requested.
 * Called by page observe event (init)
 * To load tool, don't call directly, publish a event as
 *	event_manager.publish('load_tool', {
 *		self 		: self,
 *		tool_object : tool_object
 *	})
-* 
+* The event is fired by the tool button created with method ui.build_tool_button.
+* When the user triggers the click event, a publish 'load_tool' is made
 * @param tool_object options
 * @param self instance_caller
 *
-* @return instance tool
+* @return tool instance | bool false
 */
 export const load_tool = async (options) => {
 
-	const self 			= options.self
-	const tool_object 	= options.tool_object
-	const lang 			= page_globals.dedalo_data_lang
+	// options
+		const caller		= options.caller
+		const tool_object	= options.tool_object
 
 	// instance load / recover
 		const tool_instance = await get_instance({
 			model 			: tool_object.name,
-			tipo 			: self.tipo,
-			section_tipo 	: self.section_tipo,
-			section_id 		: self.section_id,
-			mode 			: self.mode,
-			lang 			: lang,
-			caller 			: self,
+			tipo 			: caller.tipo,
+			section_tipo 	: caller.section_tipo,
+			section_id 		: caller.section_id,
+			mode 			: caller.mode,
+			lang 			: page_globals.dedalo_data_lang,
+			caller 			: caller,
 			tool_object		: tool_object
 		})
 
-	// destroy if already loaded (toggle tool)
+	// stop if already loaded (toggle tool)
 		if (tool_instance.status && tool_instance.status!=='initied') {
-			// tool_instance.destroy(true, true, true)
 			return false
 		}
 

@@ -68,10 +68,10 @@ abstract class backup {
 				$current_time_secs 			 = time();
 				$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
 				if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
-					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
+					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. It is not necessary to build another one";
 					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-					$response->result 	= true;
-					$response->msg 		= $msg . " ".__METHOD__;
+					$response->result	= true;
+					$response->msg		= $msg . " ".__METHOD__;
 					return $response;
 				}
 			}
@@ -81,10 +81,10 @@ abstract class backup {
 			# Backup file exists (less than an hour apart)
 			$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
 			if (file_exists($mysqlExportPath)) {
-				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";
+				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). It is not necessary to build another one";
 				debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-				$response->result 	= true;
-				$response->msg 		= $msg . " ".__METHOD__;
+				$response->result	= true;
+				$response->msg		= $msg . " ".__METHOD__;
 				return $response;
 			}
 
@@ -131,7 +131,7 @@ abstract class backup {
 					if(file_exists($prgfile)) {
 						chmod($prgfile, 0755);
 					}else{
-						throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);
+						throw new Exception("Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions", 1);
 					}
 				}
 
@@ -179,7 +179,7 @@ abstract class backup {
 			return $response;
 		}
 
-		# BK Filesize
+		# BK file size
 		$file_bk_size = "0 MB";
 		if(file_exists($mysqlExportPath)) {
 			$file_bk_size = format_size_units( filesize($mysqlExportPath) );
@@ -342,7 +342,7 @@ abstract class backup {
 
 	/**
 	* EXPORT_STRUCTURE
-	* Exec pg_dump of selected tables and generate postgres 'copy' of tld indepedent files
+	* Exec pg_dump of selected tables and generate postgres 'copy' of tld independent files
 	* By default, jer_dd and matrix_descriptors_dd (and sequences) are excluded because they are saved as independent tld files
 	* When export structure is done, two versions are created: full and partial. Full contain all tlds and sequences of dedalo *_dd tables
 	* and partial the same except jer_dd and matrix_descriptors_dd
