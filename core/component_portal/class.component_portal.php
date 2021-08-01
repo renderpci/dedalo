@@ -221,10 +221,8 @@ class component_portal extends component_relation_common {
 
 		$data = $this->get_dato();
 
-		// get the total of locators of the data, it will be use to render the rows separated.
-		$row_count = sizeof($data);
 		// set the label of the component as column label
-		$column = $this->get_label();
+		$label = $this->get_label();
 		// get the request request_config of the component
 		// the caller can built a request_config that will used instead the default request_config
 		$request_config = isset($this->request_config)
@@ -240,15 +238,51 @@ class component_portal extends component_relation_common {
 		$ddo_map = $dedalo_request_config->show->ddo_map;
 
 		$ar_cells = [];
-		foreach ($ddo_map as $ddo) {
-			// ar_values are the values of the component without the gird_cell_object context, only the values
-			// these values will be inject to de column.
-			// grid_cell_object only use one column with all values of the all locators, in an unique value.
-			$ar_values = [];
-			// the same with the fallback_values
-			$ar_fallback_values = [];
-			$current_column = new stdClass();
-			foreach($data as $locator){
+		// OLD
+			// foreach ($ddo_map as $ddo) {
+			// 	// ar_values are the values of the component without the gird_cell_object context, only the values
+			// 	// these values will be inject to de column.
+			// 	// grid_cell_object only use one column with all values of the all locators, in an unique value.
+			// 	$ar_values = [];
+			// 	// the same with the fallback_values
+			// 	$ar_fallback_values = [];
+			// 	$current_column = new stdClass();
+			// 	foreach($data as $locator){
+			// 		$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
+			// 		$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			// 		$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+			// 		// dump($component_model,'$component_model');
+			// 		$current_component 	= component_common::get_instance($component_model,
+			// 															 $ddo->tipo,
+			// 															 $locator->section_id,
+			// 															 $this->modo,
+			// 															 $current_lang,
+			// 															 $locator->section_tipo);
+
+			// 		$current_component->set_locator($this->locator);
+
+			// 		// get the value and fallback_value of the component and stored to be joined
+			// 		$current_column = $current_component->get_value($lang, $separator_fields, $separator_rows, $format_columns);
+			// 		$ar_values = isset($current_column->value)
+			// 			? array_merge($ar_values, $current_column->value)
+			// 			: [];
+			// 		$ar_fallback_values = isset($current_column->fallback_value)
+			// 			? array_merge($ar_fallback_values, $current_column->fallback_value)
+			// 			: [];
+
+			// 		// set the final value and fallback_value to the unique column
+			// 		$current_column->value = $ar_values;
+			// 		$current_column->fallback_value = $ar_fallback_values;
+			// 	}
+			// 	// store the current column with all values
+			// 	$ar_cells[] = $current_column;
+			// }
+
+		$sub_row_count = null;
+		foreach($data as $locator){
+
+			$ar_columns = [];
+			foreach ($ddo_map as $ddo) {
 				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
 				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
@@ -264,20 +298,28 @@ class component_portal extends component_relation_common {
 
 				// get the value and fallback_value of the component and stored to be joined
 				$current_column = $current_component->get_value($lang, $separator_fields, $separator_rows, $format_columns);
-				$ar_values = isset($current_column->value)
-					? array_merge($ar_values, $current_column->value)
-					: [];
-				$ar_fallback_values = isset($current_column->fallback_value)
-					? array_merge($ar_fallback_values, $current_column->fallback_value)
-					: [];
 
-				// set the final value and fallback_value to the unique column
-				$current_column->value = $ar_values;
-				$current_column->fallback_value = $ar_fallback_values;
+				$sub_row_count = $current_column->row_count ?? null;
+
+				$grid_column = new dd_grid_cell_object();
+					$grid_column->set_type('column');
+					$grid_column->set_value([$current_column]);
+				$ar_columns[] = $grid_column;
 			}
+
+			//create the row of the portal
+			$grid_row = new dd_grid_cell_object();
+				$grid_row->set_type('row');
+				$grid_row->set_value($ar_columns);
+
 			// store the current column with all values
-			$ar_cells[] = $current_column;
+			$ar_cells[] = $grid_row;
 		}
+
+		// get the total of locators of the data, it will be use to render the rows separated.
+			$locator_count = sizeof($data);
+			$row_count = $sub_row_count ?? $locator_count + $sub_row_count;
+
 		// set the separator text that will be used to render the column
 		// separator will be the "glue" to join data in the client and can be set by caller or could be defined in preferences of the component.
 		$properties = $this->get_properties();
@@ -294,8 +336,9 @@ class component_portal extends component_relation_common {
 				? $properties->separator_rows
 				: ' | ');
 
+		$value->set_type('column');
 		$value->set_row_count($row_count);
-		$value->set_column($column);
+		$value->set_label($label);
 		$value->set_separator_fields($separator_fields);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($ar_cells);
