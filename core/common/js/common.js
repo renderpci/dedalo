@@ -22,6 +22,44 @@ export const common = function(){
 }//end common
 
 
+/**
+* INITING
+* Generic agnostic init function created to maintain
+* unity of calls.
+* (!) For components, remember use always common.init()
+* @return bool true
+*/
+common.prototype.init = async function(options) {
+
+	const self = this
+
+	// status update
+		self.status = 'initializing'
+
+	// instance key used vars
+		self.model			= options.model // structure model like 'component_input_text'
+		self.tipo			= options.tipo // structure tipo of current component like 'dd345'
+		self.section_tipo	= options.section_tipo // structure tipo like 'oh1'
+		self.section_id		= options.section_id // record section_id like 1
+		self.mode			= options.mode // current component mode like 'edit'
+		self.lang			= options.lang // current component lang like 'lg-nolan'
+
+	// RQO - optional, used to define specific rqo for the instance, used in dd_grid (every dd_grind is loaded with specific rqo)
+		self.rqo 			= options.rqo
+
+	// DOM
+		self.node			= [] // array of component nodes places in light DOM
+
+		self.events_tokens	= [] // array of events of current component
+		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
+
+	// status update
+		self.status = 'initiated'
+
+	return true
+}//end common.prototype.init
+
+
 
 /**
 * BUILD
