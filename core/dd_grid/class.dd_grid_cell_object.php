@@ -109,15 +109,16 @@ class dd_grid_cell_object {
 
 	// Format
 	//    	class_list  		: string - "caption bold"
-	//    	column      		: strings - "name" - one column of the grid (every column is a object)
+	//    	type      			: string | row column - type of the element
+	//    	label      			: strings - "name" - one column of the grid (every column is a object)
 	// 		row_count 			: number - total rows of the component, used by portals to define the rows that could be separated individually.
 	// 		separator_fields 	: string -  ", " - with the glue of the fields
 	//		separator_rows 		: string -  "<br>" - with the glue of the rows
-	//    	type      			: string - type of the element to represent in the row
+	//    	cell_type   		: string - type of the element to represent in the cell
 	//    	action    			: string -  name of the method will be used by the element
 	//    	value       		: array of strings || array of objects - every object define one column of data and action - [{"type": "button","action": "hello","data": []}] - every item inside the array will be a row of the column of his position inside the array
 	// 		fallback_value 		: array of strings - when a component doesn't has value in the current lang, use the fallback_value with one value in other languages
-
+	// 		render_label		: bool - default: false - define if the label of the columns will be rendered.
 
 	// public $class_list;
 	// public $column;
@@ -170,10 +171,17 @@ class dd_grid_cell_object {
 	}
 
 	/**
-	* SET_COLUMN
+	* SET_TYPE
 	*/
-	public function set_column(string $value) {
-		$this->column = $value;
+	public function set_type(string $value) {
+		$this->type = $value;
+	}
+
+	/**
+	* SET_LABEL
+	*/
+	public function set_label(string $value) {
+		$this->label = $value;
 	}
 
 	/**
@@ -198,10 +206,10 @@ class dd_grid_cell_object {
 	}
 
 	/**
-	* SET_TYPE
+	* SET_CELL_TYPE
 	*/
-	public function set_type(string $value) {
-		$this->type = $value;
+	public function set_cell_type(string $value) {
+		$this->cell_type = $value;
 	}
 
 	/**
@@ -223,6 +231,13 @@ class dd_grid_cell_object {
 	*/
 	public function set_fallback_value(array $value) {
 		$this->fallback_value = $value;
+	}
+
+	/**
+	* SET_RENDER_LABEL
+	*/
+	public function set_render_label(bool $value) {
+		$this->render_label = $value;
 	}
 
 

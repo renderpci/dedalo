@@ -196,10 +196,11 @@ class component_image extends component_media_common {
 
 		$current_url = $this->get_image_url($image_quality, $test_file=false, $absolute=false, $default_add=false); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 
-		$column = $this->get_label();
+		$label = $this->get_label();
 
-		$value->set_column($column);
-		$value->set_type('img');
+		$value->set_type('column');
+		$value->set_label($label);
+		$value->set_cell_type('img');
 		$value->set_value([$current_url]);
 
 		return $value;

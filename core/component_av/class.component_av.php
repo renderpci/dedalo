@@ -131,10 +131,11 @@ class component_av extends component_media_common {
 				: null;
 
 
-		$column = $this->get_label();
+		$label = $this->get_label();
 
-		$value->set_column($column);
-		$value->set_type('av');
+		$value->set_type('column');
+		$value->set_label($label);
+		$value->set_cell_type('av');
 		$value->set_value([$item]);
 
 		return $value;

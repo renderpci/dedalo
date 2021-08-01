@@ -7,8 +7,6 @@
 import {ui} from '../../common/js/ui.js'
 import * as instances from '../../common/js/instances.js'
 import {event_manager} from '../../common/js/event_manager.js'
-import {data_manager} from '../../common/js/data_manager.js'
-
 
 export const ts_object = new function() {
 
@@ -1890,7 +1888,7 @@ export const ts_object = new function() {
 				return false
 			}
 
-		// data_manager. create
+		// rqo. create
 			const rqo = {
 				action	: 'get_indexation_grid',
 				source	: {
@@ -1900,12 +1898,23 @@ export const ts_object = new function() {
 					value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 				}
 			}
-			const current_data_manager	= new data_manager()
-			const api_response			= await current_data_manager.request({body:rqo})
-			if (api_response.result && api_response.result>0) {
-			}
 
-			console.log("api_response:",api_response.result);
+			const dd_grid	= await instances.get_instance({
+					model 			: 'dd_grid',
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					tipo			: component_tipo,
+					mode 			: 'list',
+					lang 			: page_globals.dedalo_data_lang,
+					rqo 			: rqo
+				})
+
+			await dd_grid.build()
+
+			const node = await dd_grid.render()
+
+				console.log("node:",node);
+			target_div.appendChild(node)
 
 			return
 
