@@ -74,13 +74,13 @@ class component_input_text extends component_common {
 	* the relation components need to process the locator to resolve the value
 	* @return
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields = null, $separator_rows = null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
 		$dato 				= $this->get_dato();
 		$fallback_value		= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-		$column = $this->get_label();
+		$label = $this->get_label();
 
 		$properties = $this->get_properties();
 
@@ -91,7 +91,9 @@ class component_input_text extends component_common {
 				: ' | ');
 
 
-		$value->set_column($column);
+		$value->set_type('column');
+		$value->set_label($label);
+		$value->set_cell_type('text');
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($dato);
 		$value->set_fallback_value($fallback_value);
