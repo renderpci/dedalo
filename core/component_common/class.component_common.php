@@ -628,13 +628,13 @@ abstract class component_common extends common {
 	* the relation components need to process the locator to resolve the value
 	* @return
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields, $separator_rows) {
+	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
 
 		$value = new dd_grid_cell_object();
 
 
 		$data = $this->get_dato();
-		$column = $this->get_label();
+		$label = $this->get_label();
 
 		$properties = $this->get_properties();
 
@@ -651,7 +651,9 @@ abstract class component_common extends common {
 				: ' | ');
 
 
-		$value->set_column($column);
+		$value->set_type('column');
+		$value->set_label($label);
+		$value->set_cell_type('text');
 		$value->set_separator_fields($separator_fields);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($data);
