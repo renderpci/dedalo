@@ -796,7 +796,7 @@ export const ui = {
 					//common.prototype.load_tool(self, tool_object)
 					// ui.tool.load_tool(self, tool_object)
 					event_manager.publish('load_tool', {
-						self		: self,
+						caller		: self,
 						tool_object	: tool_object
 					})
 				}
