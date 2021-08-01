@@ -72,46 +72,62 @@
 			// columns
 				// section_id
 					$cell_id = new dd_grid_cell_object();
+						$cell_id->set_type('column');
+						$cell_id->set_cell_type('text');
 						$cell_id->set_value([$section_id]); // array value
 				// tag_id
 					$cell_tag_id = new dd_grid_cell_object();
+						$cell_tag_id->set_type('column');
+						$cell_tag_id->set_cell_type('text');
 						$cell_tag_id->set_value([$tag_id]); // array value
 				// button_tool_indexation
 					$cell_button_tool_indexation = new dd_grid_cell_object();
-						$cell_button_tool_indexation->set_type('button');
+						$cell_button_tool_indexation->set_type('column');
+						$cell_button_tool_indexation->set_cell_type('button');
 						$cell_button_tool_indexation->set_value([(object)[
 							'dataset' => (object)[],
 							'..'
 						]]); // array value
 				// button_tool_transcription
 					$cell_button_tool_transcription = new dd_grid_cell_object();
-						$cell_button_tool_transcription->set_type('button');
+						$cell_button_tool_transcription->set_type('column');
+						$cell_button_tool_transcription->set_cell_type('button');
 						$cell_button_tool_transcription->set_value([(object)[
 							'dataset' => (object)[],
 							'..'
 						]]); // array value
 				// button_av_player
 					$cell_button_av_player = new dd_grid_cell_object();
-						$cell_button_av_player->set_type('button');
+						$cell_button_av_player->set_type('column');
+						$cell_button_av_player->set_cell_type('button');
 						$cell_button_av_player->set_value([(object)[
 							'dataset' => (object)[],
 							'..'
 						]]); // array value
 				// text_fragment
 					$cell_text_fragment = new dd_grid_cell_object();
+						$cell_text_fragment->set_type('column');
+						$cell_text_fragment->set_cell_type('text');
 						$cell_text_fragment->set_value([$text_fragment]); // array value
 				// tc_in
 					$cell_tc_in = new dd_grid_cell_object();
+						$cell_tc_in->set_type('column');
+						$cell_tc_in->set_cell_type('text');
 						$cell_tc_in->set_value([$tc_in]); // array value
 				// tc_out
 					$cell_tc_out = new dd_grid_cell_object();
+						$cell_tc_out->set_type('column');
+						$cell_tc_out->set_cell_type('text');
 						$cell_tc_out->set_value([$tc_out]); // array value
 				// duration_tc
 					$cell_duration_tc = new dd_grid_cell_object();
+						$cell_duration_tc->set_type('column');
+						$cell_duration_tc->set_cell_type('text');
 						$cell_duration_tc->set_value([$duration_tc]); // array value
 				// button_download_av
 					$cell_button_download_av = new dd_grid_cell_object();
-						$cell_button_download_av->set_type('button');
+						$cell_button_download_av->set_type('column');
+						$cell_button_download_av->set_cell_type('button');
 						$cell_button_download_av->set_value([(object)[
 							'dataset' => (object)[],
 							'..'
