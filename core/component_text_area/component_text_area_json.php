@@ -14,14 +14,17 @@
 
 	if($options->get_context===true && $permissions>0){
 		switch ($options->context_type) {
+
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$this->context	= $this->get_structure_context_simple($permissions);
+				$context[]		=$this->context;
 				break;
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions);
+				$this->context	= $this->get_structure_context($permissions);
+				$context[]		=$this->context;
 
 				// add buttons
 				//	$context = array_merge($context, $this->get_structure_buttons($permissions));

@@ -1,12 +1,13 @@
 <?php
 // JSON data component controller
-
+if(SHOW_DEBUG===true) $start_time = start_time();
+// error_log('input text json .......................................................');
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-	$properties			= $this->get_properties();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$properties		= $this->get_properties();
 
 
 
@@ -16,18 +17,20 @@
 	if($options->get_context===true && $permissions>0){
 		$add_rqo = isset($properties->unique) ? true : false;
 		switch ($options->context_type) {
+
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions, $add_rqo);
+				$this->context	= $this->get_structure_context_simple($permissions, $add_rqo);
+				$context[]		= $this->context;
 				break;
 
 			default:
-				
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $add_rqo);
+				$this->context	= $this->get_structure_context($permissions, $add_rqo);
+				$context[]		= $this->context;
 
 				// add buttons
-					$context = array_merge($context, $this->get_structure_buttons($permissions));
+				$context = array_merge($context, $this->get_structure_buttons($permissions));
 				break;
 		}
 	}//end if($options->get_context===true)
@@ -41,22 +44,21 @@
 
 		// Value
 		switch ($modo) {
+
 			case 'list':
-				$value					= $this->get_dato();
-				$fallback_value			= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-				// $fallback_lang_applied	= $value!==$fallback_value;
+				$value			= $this->get_dato();
+				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 				break;
 
 			case 'search':
 				$value	= [];
-				$fallback_value			= false;
-
+				$fallback_value	= false;
 				break;
 
 			case 'edit':
 			default:
-				$value 					= $this->get_dato();
-				$fallback_value			= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$value			= $this->get_dato();
+				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 				break;
 		}
 
@@ -83,6 +85,14 @@
 				$item->parent_section_id		= $this->get_section_id();
 				$item->fallback_value			= $fallback_value;
 				// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+
+				$item->debug = $debug;
+			}
 
 
 		$data[] = $item;

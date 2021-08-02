@@ -1357,6 +1357,7 @@ abstract class common {
 	* @return object $dd_object
 	*/
 	public function get_structure_context($permissions=0, $add_request_config=false) {
+		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		// short vars
 			$model			= get_class($this);
@@ -1562,6 +1563,15 @@ abstract class common {
 
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
+
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+
+				$dd_object->debug = $debug;
+			}
 
 
 		return $dd_object;
