@@ -404,7 +404,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			elseif ($model==='component_relation_struct') {
 				$model='component_relation_index';
 			}
-
 		return $model;
 	}//end get_modelo_name
 

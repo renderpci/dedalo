@@ -73,7 +73,7 @@ class area extends area_common  {
 				// group_areas. get the all children areas and sections of current
 					$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 
-					// get the JSON format of the ontology for all childrens
+					// get the JSON format of the ontology for all children
 					foreach ($ar_group_areas as $children_area) {
 						$areas[] = ontology::tipo_to_json_item($children_area,[
 						'tipo'			=> true,
