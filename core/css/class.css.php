@@ -44,6 +44,7 @@ class css {
 			# COMMON css
 			css::$ar_url_basic[] = DEDALO_CORE_URL . '/common/css/common.css';
 			css::$ar_url_basic[] = DEDALO_CORE_URL . '/common/css/buttons.css';
+			// css::$ar_url_basic[] = DEDALO_CORE_URL . '/dd_grid/css/dd_grid.css';
 
 			# COMMON services
 			css::$ar_url_basic[] = DEDALO_CORE_URL . '/services/service_autocomplete/css/service_autocomplete.css';
