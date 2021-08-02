@@ -77,6 +77,9 @@
 				$duration_secs	= $tcout_secs - $tcin_secs;
 				$duration_tc	= OptimizeTC::seg2tc($duration_secs);
 
+				$section_top_tipo	= $locator->section_top_tipo ?? null;
+				$section_top_id		= $locator->section_top_id ?? null;
+
 			// columns
 				// section_id
 					$cell_id = new dd_grid_cell_object();
@@ -93,24 +96,61 @@
 						$cell_button_tool_indexation->set_type('column');
 						$cell_button_tool_indexation->set_cell_type('button');
 						$cell_button_tool_indexation->set_value([(object)[
-							'dataset' => (object)[],
-							'..'
+							'class_list'	=> 'button indexation',
+							'action'		=> (object)[
+								'event'			=> 'click',
+								'method'		=> 'open_tool',
+								'module_path'	=> '../../../tools/tool_common/js/tool_common.js',
+								'options'		=> (object)[
+									'tool_name'			=> 'tool_indexation',
+									'section_tipo'		=> $section_tipo,
+									'section_id'		=> $section_id,
+									'component_tipo'	=> $component_tipo,
+									'tag_id'			=> $tag_id,
+									'section_top_tipo'	=> $section_top_tipo,
+									'section_top_id'	=> $section_top_id
+								]
+							]
 						]]); // array value
 				// button_tool_transcription
 					$cell_button_tool_transcription = new dd_grid_cell_object();
 						$cell_button_tool_transcription->set_type('column');
 						$cell_button_tool_transcription->set_cell_type('button');
 						$cell_button_tool_transcription->set_value([(object)[
-							'dataset' => (object)[],
-							'..'
+							'class_list'	=> 'button tr',
+							'action'		=> (object)[
+								'event'			=> 'click',
+								'method'		=> 'open_tool',
+								'module_path'	=> '../../../tools/tool_common/js/tool_common.js',
+								'options'		=> (object)[
+									'tool_name'			=> 'tool_transcription',
+									'section_tipo'		=> $section_tipo,
+									'section_id'		=> $section_id,
+									'component_tipo'	=> $component_tipo,
+									'tag_id'			=> $tag_id,
+									'section_top_tipo'	=> $section_top_tipo,
+									'section_top_id'	=> $section_top_id
+								]
+							]
 						]]); // array value
 				// button_av_player
 					$cell_button_av_player = new dd_grid_cell_object();
 						$cell_button_av_player->set_type('column');
 						$cell_button_av_player->set_cell_type('button');
 						$cell_button_av_player->set_value([(object)[
-							'dataset' => (object)[],
-							'..'
+							'class_list'	=> 'button film',
+							'action'		=> (object)[
+								'event'			=> 'click',
+								'method'		=> 'open_player',
+								'module_path'	=> '../../component_av/js/component_av.js',
+								'options'		=> (object)[
+									'section_tipo'		=> $section_tipo,
+									'section_id'		=> $section_id,
+									'component_tipo'	=> $this->get_related_component_av_tipo(),
+									'tc_in'				=> $tcin_secs,
+									'tc_out'			=> $tcout_secs,
+								]
+							]
 						]]); // array value
 				// text_fragment
 					$cell_text_fragment = new dd_grid_cell_object();
@@ -137,8 +177,19 @@
 						$cell_button_download_av->set_type('column');
 						$cell_button_download_av->set_cell_type('button');
 						$cell_button_download_av->set_value([(object)[
-							'dataset' => (object)[],
-							'..'
+							'class_list'	=> 'button download',
+							'action'		=> (object)[
+								'event'			=> 'click',
+								'method'		=> 'download_av_fragment',
+								'module_path'	=> '../../component_av/js/component_av.js',
+								'options'		=> (object)[
+									'section_tipo'		=> $section_tipo,
+									'section_id'		=> $section_id,
+									'component_tipo'	=> $this->get_related_component_av_tipo(),
+									'tc_in'				=> $tc_in,
+									'tc_out'			=> $tc_out,
+								]
+							]
 						]]); // array value
 			// data
 				$data = [
