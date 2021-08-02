@@ -55,7 +55,8 @@
 		}
 
 		img {
-			object-fit: contain;
+			object-fit: cover;
+			object-position: center;
 			width: 160px;
 			height: 96px;
 		}
@@ -81,11 +82,12 @@
 
 			&.indexation.oh {
 				width: 100%;
+				padding-left: 160px;
 
 				>.column >.row >.column >.column {
 					background-color: #8dd2f0;
-					// display: grid;
-					// grid-template-columns: repeat(10, 1fr);
+					display: grid;
+					grid-template-columns: repeat(10, 1fr);
 				}
 			}
 
