@@ -433,6 +433,19 @@ const build_id_column = function(self) {
 					})
 				break
 
+			case (self.caller.config && self.caller.config.source_model==='section_tool'):
+
+				// button edit (pen)
+					if (permissions>0) {
+						const edit_button = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: '',
+							inner_html 		: " "+self.caller.config.tool_name,
+							parent			: edit_line
+						})
+					}
+				break;
+
 			default:
 				// button edit (pen)
 					if (permissions>0) {

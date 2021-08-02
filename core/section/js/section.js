@@ -52,6 +52,8 @@ export const section = function() {
 	this.rqo_config
 	this.rqo
 
+	this.config
+
 	return true
 };//end section
 
@@ -123,6 +125,9 @@ section.prototype.init = async function(options) {
 
 	// columns
 	self.columns = options.columns
+
+	self.config = options.config || null
+		console.log("options.config:",options.config, self.id);
 	
 	// events subscription
 		// new_section_
@@ -418,6 +423,7 @@ section.prototype.get_ar_instances = async function(){
 		// 		value : []
 		// 	}
 		// }
+			console.log("********** section self:",self);
 	
 	// iterate records
 		const lang 			= self.lang
