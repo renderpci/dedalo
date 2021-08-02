@@ -215,7 +215,14 @@ class component_portal extends component_relation_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null, $format_columns=null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$separator_fields	= $ddo->separator_fields ?? null;
+			$separator_rows		= $ddo->separator_rows ?? null;
+			$format_columns		= $ddo->format_columns ?? null;
+			$class_list 		= $ddo->class_list ?? null;
+
 
 		$value = new dd_grid_cell_object();
 
@@ -297,7 +304,7 @@ class component_portal extends component_relation_common {
 				$current_component->set_locator($this->locator);
 
 				// get the value and fallback_value of the component and stored to be joined
-				$current_column = $current_component->get_value($lang, $separator_fields, $separator_rows, $format_columns);
+				$current_column = $current_component->get_value($lang, $ddo);
 
 				$sub_row_count = $current_column->row_count ?? null;
 
@@ -339,6 +346,9 @@ class component_portal extends component_relation_common {
 		$value->set_type('column');
 		$value->set_row_count($row_count);
 		$value->set_label($label);
+		if(isset($class_list)){
+			$value->set_class_list($class_list);
+		}
 		$value->set_separator_fields($separator_fields);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($ar_cells);
