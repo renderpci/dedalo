@@ -4929,6 +4929,60 @@ li.search_component_label.has_subquery.active::after {
 .attenuated {
   opacity: 0.5;
 }
+.wrapper_dd_grid {
+  background-color: #f0f0f0;
+  width: 100%;
+  display: block;
+}
+.wrapper_dd_grid .column {
+  background-color: #a3dfac8c;
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  outline: 1px solid #8f8f8f;
+}
+.wrapper_dd_grid .column.caption {
+  background-color: #5a625f;
+  color: #ffffff;
+  padding: 0.5em;
+  font-weight: 400;
+}
+.wrapper_dd_grid span {
+  background-color: #bfbfbf;
+  color: #000;
+  padding: 0.25em;
+  display: inline-block;
+  width: 100%;
+}
+.wrapper_dd_grid label {
+  padding: 0.5em;
+  background-color: #343434;
+  width: 100%;
+  display: block;
+  font-size: 1.1em;
+  padding: 0.25em;
+}
+.wrapper_dd_grid img {
+  object-fit: contain;
+  width: 160px;
+  height: 96px;
+}
+.wrapper_dd_grid .row {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.wrapper_dd_grid .row.head.oh {
+  background-color: #f89292;
+  display: grid;
+  grid-template-columns: 160px 1fr 1fr 1fr 1fr;
+}
+.wrapper_dd_grid .row.indexation.oh {
+  width: 100%;
+}
+.wrapper_dd_grid .row.indexation.oh > .column > .row > .column > .column {
+  background-color: #8dd2f0;
+}
 /*
 MENU
 #menu_div_wrap {
