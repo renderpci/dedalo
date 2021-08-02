@@ -511,7 +511,9 @@ const item_hierarchy = async (options) => {
 							tipo	: item.tipo,
 							model	: item.model,
 							mode	: 'list'
-						}
+						},
+						// this config come from properties (used by section_tool to define the config of the section that its called)
+						config	: item.config || null
 					})
 				}
 
