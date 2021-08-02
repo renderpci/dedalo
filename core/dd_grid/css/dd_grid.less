@@ -8,18 +8,31 @@
 		width: 100%;
 		display: block;
 
+		@padding_left: 140px;
 
-		// .row {
-		// 	// padding: 0.5em;
-		// 	display: flex;
-		// 	flex-wrap: wrap;
-		// 	width: 100%;
 
-		// 	&.head {
-		// 		background-color: #f89292;
-		// 	}
+		.row {
+			// padding: 0.5em;
+			display: flex;
+			flex-wrap: wrap;
+			width: 100%;
 
-		// }
+			&.head {
+
+				// oral history
+				&.oh {
+					background-color: #f89292;
+					display: grid;
+					grid-template-columns: @padding_left 1fr 1fr 1fr 1fr;
+				}
+				// publications (bibliography)
+				&.publication {
+					background-color: #f89292;
+					display: grid;
+					grid-template-columns: @padding_left 1fr 1fr 1fr 1fr 1fr;
+				}
+			}
+		}
 
 		.column {
 			background-color: #a3dfac8c;
@@ -27,7 +40,7 @@
 			flex-wrap: wrap;
 			flex: 1 1 auto;
 			outline: 1px solid #8f8f8f;
-			// padding: 0.25em;
+			overflow-x: hidden;
 
 			&.caption {
 				background-color: #5a625f;
@@ -35,12 +48,33 @@
 				padding: 0.5em;
 				font-weight: 400;
 			}
+
+			&.indexation {
+				width: 100%;
+				padding-left: @padding_left;
+				height: 2em;
+
+				// oral history
+				&.oh {
+					// background-color: #8dd2f0;
+					display: grid;
+					grid-template-columns: repeat(10, 1fr);
+				}
+
+				// publications (bibliography)
+				&.publication {
+					// background-color: #8dd2f0;
+					display: grid;
+					grid-template-columns: repeat(3, 1fr);
+				}
+			}
 		}
 
+		// value
 		span {
 			background-color: #bfbfbf;
 			color: #000;
-			padding: 0.25em;
+			padding: 0.5em;
 			display: inline-block;
 			width: 100%;
 		}
@@ -57,40 +91,22 @@
 		img {
 			object-fit: cover;
 			object-position: center;
-			width: 160px;
-			height: 96px;
-		}
-
-	}//end .wrapper_dd_grid
-
-
-
-// oh
-	.wrapper_dd_grid {
-
-		.row {
-			// padding: 0.5em;
-			display: flex;
-			flex-wrap: wrap;
 			width: 100%;
-
-			&.head.oh {
-				background-color: #f89292;
-				display: grid;
-				grid-template-columns: 160px 1fr 1fr 1fr 1fr;
-			}
-
-			&.indexation.oh {
-				width: 100%;
-				padding-left: 160px;
-
-				>.column >.row >.column >.column {
-					background-color: #8dd2f0;
-					display: grid;
-					grid-template-columns: repeat(10, 1fr);
-				}
-			}
-
+			height: 5em;
 		}
 
+		.button {
+			height: 100%;
+			object-fit: contain;
+			object-position: center;
+			padding: 0.5em;
+			display: inline-block;
+		}
+
+
 	}//end .wrapper_dd_grid
+
+
+
+
+
