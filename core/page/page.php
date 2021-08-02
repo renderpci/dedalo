@@ -56,6 +56,16 @@
 		// section/area/tool. Get the page element from get url vars
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			switch (true) {
+
+				case ($model==='section_tool'):
+
+					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$properties		= $RecordObj_dd->get_properties();
+
+					$model	= 'section';
+					$tipo	= $properties->config->target_section_tipo ?? $tipo;
+					$config	= $properties->config ?? null;
+
 				case ($model==='section'):
 
 					$section = section::get_instance($section_id, $tipo, MODE);
@@ -63,6 +73,9 @@
 
 					$current_context = $section->get_structure_context(1, true);
 						// dump($current_context, ' current_context ++ '.to_string());
+					if (isset($config)) {
+						$current_context->config = $config;
+					}
 
 					// section_id given case. If is received section_id, we build a custom sqo with the proper filter
 					// and override default request_config sqo into the section context

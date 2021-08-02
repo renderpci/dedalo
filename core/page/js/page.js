@@ -109,13 +109,16 @@ page.prototype.init = async function(options) {
 						const caller_id			= user_navigation_options.caller_id || null
 						const source			= user_navigation_options.source
 						const sqo				= user_navigation_options.sqo || null
+						const config 			= user_navigation_options.config || null
 						const request_config	= [{
 							api_engine	: 'dedalo',
 							sqo			: sqo,
 						}]
-						source.request_config = request_config
-				
-					// check if new source of page element is actually valid for instantiation
+						source.request_config	= request_config
+						source.config			= config
+
+					// check only if new source of page element is actually valid for instantiation
+					// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
 						const new_page_element_instance = await instantiate_page_element(self, source)
 						if (!new_page_element_instance) {
 							console.error("error on get new_page_element_instance:", new_page_element_instance);
@@ -144,10 +147,14 @@ page.prototype.init = async function(options) {
 
 					// url history track
 						if(refresh_result===true && user_navigation_options.event_in_history!==true)  {
+
+							const current_tipo = (config && config.source_section_tipo)
+								? config.source_section_tipo
+								: source.tipo
 							
 							// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');							
 							const title	= new_page_element_instance.id
-							const url	= "?t="+ source.tipo + '&m=' + source.mode
+							const url	= "?t="+ current_tipo + '&m=' + source.mode
 
 							const new_user_navigation_options = Object.assign({
 								event_in_history : false
@@ -161,6 +168,7 @@ page.prototype.init = async function(options) {
 
 					// loading css remove
 						// if (node) { node.classList.remove('loading') }
+
 
 					resolve(new_page_element_instance.id)
 				})
@@ -253,7 +261,6 @@ page.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < context_length; i++) {
 
 			const current_ddo = self.context[i]
-				console.log("PAGE get_ar_instances current_ddo:", current_ddo); 
 			ar_promises.push( new Promise(function(resolve){
 			
 				instantiate_page_element(self, current_ddo)
@@ -291,6 +298,7 @@ const instantiate_page_element = function(self, ddo) {
 	const mode			= ddo.mode
 	const lang			= ddo.lang
 	const context		= ddo
+	const config		= ddo.config || null
 
 	
 	// instance options
@@ -309,8 +317,16 @@ const instantiate_page_element = function(self, ddo) {
 				instance_options.id_variant = self.id_variant
 			}
 
+		// config
+			if (config && config.source_section_tipo) {
+				instance_options.id_variant	= config.source_section_tipo
+				instance_options.config		= config
+			}
+
+
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
+
 
 
 	return instance_promise
