@@ -62,7 +62,7 @@ class indexation_grid {
 			// get the term in the section that has the indexation_list information
 				$indexation_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, 'indexation_list', 'children');
 
-				if (!isset($indexation_list)) {
+				if (!isset($indexation_list[0])) {
 					$msg  = "Error Processing Request build_indexation_grid:  section indexation_list is empty. Please configure structure for ($current_section_tipo) ";
 					$msg .= "Please check the consistency and model for 'relation_list'.";
 					throw new Exception($msg, 1);
