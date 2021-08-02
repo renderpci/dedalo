@@ -184,7 +184,10 @@ class component_image extends component_media_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$class_list 		= $ddo->class_list ?? null;
 
 		$value = new dd_grid_cell_object();
 
@@ -201,6 +204,9 @@ class component_image extends component_media_common {
 		$value->set_type('column');
 		$value->set_label($label);
 		$value->set_cell_type('img');
+		if(isset($class_list)){
+			$value->set_class_list($class_list);
+		}
 		$value->set_value([$current_url]);
 
 		return $value;

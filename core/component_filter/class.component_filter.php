@@ -214,7 +214,13 @@ class component_filter extends component_relation_common {
 	* component filter return a array of values
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $separator_fields=null, $separator_rows=null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$separator_fields	= $ddo->separator_fields ?? null;
+			$separator_rows		= $ddo->separator_rows ?? null;
+			$class_list 		= $ddo->class_list ?? null;
+
 
 		$value = new dd_grid_cell_object();
 
@@ -259,6 +265,9 @@ class component_filter extends component_relation_common {
 		$value->set_type('column');
 		$value->set_label($label);
 		$value->set_cell_type('text');
+		if(isset($class_list)){
+			$value->set_class_list($class_list);
+		}
 		$value->set_separator_fields($separator_fields);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($ar_values);
