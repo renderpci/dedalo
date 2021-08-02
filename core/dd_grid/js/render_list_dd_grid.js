@@ -64,6 +64,7 @@ const get_grid_nodes = function( data ){
 		const current_data = data[i]
 
 		const cell_nodes = []
+
 		if (current_data.type) {
 			const node = get_div_container(current_data)
 
@@ -83,6 +84,12 @@ const get_grid_nodes = function( data ){
 					case 'img':
 						const img_node = get_img_column(current_data)
 						node.appendChild(img_node)
+
+					break;
+
+					case 'button':
+						const button_node = get_button_column(current_data)
+						node.appendChild(button_node)
 
 					break;
 
@@ -190,6 +197,37 @@ const get_img_column = function(current_data){
 
 
 	return image
+}
+
+
+const get_button_column = function(current_data){
+
+	const value = current_data.value[0]
+
+	const class_list = value.class_list || ''
+
+	// image
+		const button = ui.create_dom_element({
+			element_type	: "img",
+			class_name		: class_list
+		})
+
+		if (value.action && value.action.event) {
+
+			button.addEventListener(value.action.event, async (e)=>{
+				const options			= value.action.options
+				options.button_caller	= e.target
+
+				const module = await import (value.action.module_path)
+				module[value.action.method](options)
+			})
+		}
+		// ui.component.add_image_fallback(image)
+
+
+	return button
+
+
 }
 
 
