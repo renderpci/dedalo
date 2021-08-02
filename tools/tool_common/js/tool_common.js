@@ -51,7 +51,7 @@ tool_common.prototype.init = async function(options) {
 		self.ar_instances		= []
 		self.events_tokens		= []
 		self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common	
-		self.get_label			= get_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
+		self.get_label			= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 	// set status
 		self.status = 'initied'
@@ -203,6 +203,22 @@ export const load_tool = async (options) => {
 
 
 
+
+/**
+* OPEN_TOOL
+* Open the tool requested. Create the necessary elements
+* to load a tool from basic options (called from 'grid_indexation')
+* @param tool_object options
+*
+* @return tool instance | bool false
+*/
+export const open_tool = async (options) => {
+	console.log("open_tool options:",options);
+
+	alert("Called Open Tool");
+};//end open_tool
+
+
 /**
 * TRIGGER_REQUEST
 * This is a common tool API request way
@@ -253,14 +269,14 @@ export const load_tool = async (options) => {
 
 
 /**
-* GET_LABEL
+* GET_TOOL_LABEL
 * Return the label in the current language.
 * If the label is not defined, try with lang_default, not lang and received label_name if nothing is found
 * 
 * @param string label_name like 'indexation_tool'
 * @return string label_item like 'Indexation Tool'
 */
-const get_label = function(label_name) {
+const get_tool_label = function(label_name) {
 
 	const self = this
 
@@ -284,6 +300,6 @@ const get_label = function(label_name) {
 	
 
 	return label_item
-};//end get_label
+};//end get_tool_label
 
 
