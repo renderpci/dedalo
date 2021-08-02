@@ -4963,7 +4963,8 @@ li.search_component_label.has_subquery.active::after {
   padding: 0.25em;
 }
 .wrapper_dd_grid img {
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   width: 160px;
   height: 96px;
 }
@@ -4979,9 +4980,12 @@ li.search_component_label.has_subquery.active::after {
 }
 .wrapper_dd_grid .row.indexation.oh {
   width: 100%;
+  padding-left: 160px;
 }
 .wrapper_dd_grid .row.indexation.oh > .column > .row > .column > .column {
   background-color: #8dd2f0;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
 }
 /*
 MENU
