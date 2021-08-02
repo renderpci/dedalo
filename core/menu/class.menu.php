@@ -34,7 +34,7 @@ class menu extends common {
 
 	/**
 	* GET_TREE_DATALIST
-	* Get the autorized areas for current user, datalist will be used for build menu tree.
+	* Get the authorized areas for current user, datalist will be used for build menu tree.
 	* $data->datalist = [{ontology_items}]
 	* @return array $ar_areas
 	*/
@@ -46,17 +46,36 @@ class menu extends common {
 		$is_global_admin	= security::is_global_admin($user_id);
 
 		if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
-			// get all aras of the current instalation
+			// get all areas of the current installation
 			$ar_areas = area::get_areas();
 
 		}else{
-			// get autorizaed areas for the current user with the data of component_security_access
+			// get authorized areas for the current user with the data of component_security_access
 			$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
 
 			foreach ($ar_permisions_areas as $item) {
 				$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
 			}
 		}
+
+		// section_tool case
+		// section_tool is a alias of the section that will be use to load the information to the specific tool
+		// all process use the target_section_tipo, because it has the information inside the db and the instances need to be connected to these section_tipo
+		// menu replace the model and the tipo with the target section, and add the config for use to change the behavior of the real section.
+			$ar_areas_length = sizeof($ar_areas);
+			for ($i=0; $i < $ar_areas_length ; $i++) {
+				$current_area = $ar_areas[$i];
+
+				if($current_area->model === 'section_tool'){
+
+					$RecordObj_dd	= new RecordObj_dd($current_area->tipo);
+					$properties		= $RecordObj_dd->get_properties();
+
+					$current_area->model	= 'section';
+					$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
+					$current_area->config	= $properties->config ?? null;
+				}
+			}
 
 		$tree_datalist = $ar_areas;
 
