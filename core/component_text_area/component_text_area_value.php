@@ -30,6 +30,7 @@
 			$fragment_info	= component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $full_raw_text);
 		}else{
 			$fragment_info = $this->get_value_fragment(100);
+			$tag_id = '';
 		}
 
 		$text_fragment	= $fragment_info[0] ?? '';
@@ -39,12 +40,18 @@
 		case 'pdf':
 			// section_id
 					$cell_id = new dd_grid_cell_object();
+						$cell_id->set_type('column');
+						$cell_id->set_cell_type('text');
 						$cell_id->set_value([$section_id]); // array value
 			// tag_id
 					$cell_tag_id = new dd_grid_cell_object();
+						$cell_tag_id->set_type('column');
+						$cell_tag_id->set_cell_type('text');
 						$cell_tag_id->set_value([$tag_id]); // array value
 			// text_fragment
 					$cell_text_fragment = new dd_grid_cell_object();
+						$cell_text_fragment->set_type('column');
+						$cell_text_fragment->set_cell_type('text');
 						$cell_text_fragment->set_value([$text_fragment]); // array value
 
 			// data
@@ -53,6 +60,7 @@
 					$cell_tag_id,
 					$cell_text_fragment,
 				];
+
 			break;
 
 		case 'av':
