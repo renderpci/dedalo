@@ -170,6 +170,7 @@ class indexation_grid {
 				$separator_fields	= $ddo->separator_fields ?? null;
 				$separator_rows		= $ddo->separator_rows ?? null;
 				$format_columns		= $ddo->format_columns ?? null;
+				$class_list 		= $ddo->class_list ?? null;
 
 			// check if the locator has section_top_tipo and set the section_tipo to be used
 			// some locators has top_tipo and top_id because are indexation of the resources and the locator stored the inventory section that call the resource
@@ -231,7 +232,7 @@ class indexation_grid {
 			}
 
 			#dump($current_component,'$current_component');
-			$component_value = $current_component->get_value($current_lang, $separator_fields, $separator_rows, $format_columns);
+			$component_value = $current_component->get_value($current_lang, $ddo);
 
 			$ar_row_count[] = $component_value->row_count ?? 0;
 			$ar_cells[] = $component_value;
