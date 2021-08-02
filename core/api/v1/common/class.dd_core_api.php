@@ -762,6 +762,8 @@ class dd_core_api {
 			// 	}
 			// 	$ddo_source = reset($ar_source);
 
+
+
 		// source vars
 			$action			= $ddo_source->action ?? 'search';
 			$mode			= $ddo_source->mode ?? 'list';
@@ -770,6 +772,8 @@ class dd_core_api {
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo ?? null;
 			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
+
+
 
 		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values 
 			$sqo_id	= implode('_', [$model,$section_tipo]);
