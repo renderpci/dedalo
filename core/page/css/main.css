@@ -4964,6 +4964,12 @@ li.search_component_label.has_subquery.active::after {
   margin: 0.5em;
   margin-left: 90px;
 }
+.wrapper_dd_grid .column.caption > label {
+  background-color: #424242;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  line-height: 0.8em;
+}
 .wrapper_dd_grid .column.indexation {
   width: 100%;
   padding-left: 140px;
