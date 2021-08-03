@@ -4,15 +4,16 @@
 
 // wrapper_dd_grid
 	.wrapper_dd_grid {
-		background-color: #f0f0f0;
+		// background-color: #f0f0f0;
 		width: 100%;
 		display: block;
 
 		@padding_left: 140px;
+		@color_grey_light: #bfbfbf;
 
 
+		// row
 		.row {
-			// padding: 0.5em;
 			display: flex;
 			flex-wrap: wrap;
 			width: 100%;
@@ -34,73 +35,87 @@
 			}
 		}
 
+		// column
 		.column {
-			background-color: #a3dfac8c;
+			// background-color: #a3dfac8c;
 			display: flex;
 			flex-wrap: wrap;
 			flex: 1 1 auto;
-			outline: 1px solid #8f8f8f;
-			overflow-x: hidden;
+			outline: 1px solid @color_grey_light;
+			overflow: hidden;
 
 			&.caption {
-				background-color: #5a625f;
+				// background-color: #f2f2f2;
 				color: #ffffff;
 				padding: 0.5em;
 				font-weight: 400;
+				outline: none;
+				padding: 0;
+				margin: 0.5em;
+				margin-left: 90px;
 			}
 
 			&.indexation {
+				// background-color: #8dd2f0;
 				width: 100%;
 				padding-left: @padding_left;
 				height: 2em;
 
 				// oral history
 				&.oh {
-					// background-color: #8dd2f0;
 					display: grid;
 					grid-template-columns: repeat(10, 1fr);
 				}
 
 				// publications (bibliography)
 				&.publication {
-					// background-color: #8dd2f0;
 					display: grid;
 					grid-template-columns: repeat(3, 1fr);
 				}
 			}
 		}
 
-		// value
-		span {
-			background-color: #bfbfbf;
-			color: #000;
-			padding: 0.5em;
-			display: inline-block;
-			width: 100%;
-		}
-
+		// label
 		label {
+			// background-color: #343434;
 			padding: 0.5em;
-			background-color: #343434;
 			width: 100%;
 			display: block;
 			font-size: 1.1em;
 			padding: 0.25em;
 		}
 
+		// value (text values)
+		span {
+			background-color: #e6e6e6;
+			color: #000;
+			padding: 0.5em;
+			display: inline-block;
+			width: 100%;
+			font-size: 0.94em;
+			line-height: 1em;
+		}
+
+		// img
 		img {
+			background-color: #e6e6e6;
 			object-fit: cover;
 			object-position: center;
 			width: 100%;
 			height: 5em;
+			padding: 0;
+			margin: 0;
 		}
 
-		.button {
-			height: 100%;
+		// button
+		img.button {
+			background-color: #e6e6e6;
+			display: inline-block;
 			object-fit: contain;
 			object-position: center;
-			padding: 0.5em;
-			display: inline-block;
+			height: 100%;
+			padding: 0;
+			margin: 0;
 		}
 
 
