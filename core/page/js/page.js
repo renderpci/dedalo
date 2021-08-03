@@ -106,16 +106,14 @@ page.prototype.init = async function(options) {
 					// basic vars
 						// Only source is mandatory but if sqo is received, is placed in a new request_config 
 						// to allow sections and components manage properly the offset and limit
-						const caller_id			= user_navigation_options.caller_id || null
 						const source			= user_navigation_options.source
+						const caller_id			= user_navigation_options.caller_id || null
 						const sqo				= user_navigation_options.sqo || null
-						const config 			= user_navigation_options.config || null
 						const request_config	= [{
 							api_engine	: 'dedalo',
 							sqo			: sqo,
 						}]
-						source.request_config	= request_config
-						source.config			= config
+						source.request_config = request_config
 
 					// check only if new source of page element is actually valid for instantiation
 					// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
@@ -148,8 +146,8 @@ page.prototype.init = async function(options) {
 					// url history track
 						if(refresh_result===true && user_navigation_options.event_in_history!==true)  {
 
-							const current_tipo = (config && config.source_section_tipo)
-								? config.source_section_tipo
+							const current_tipo = (source.config && source.config.source_section_tipo)
+								? source.config.source_section_tipo
 								: source.tipo
 							
 							// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');							
@@ -249,6 +247,9 @@ page.prototype.build = async function() {
 
 /**
 * GET_AR_INSTANCES
+* Create and build one instance for each self.context item
+* @return promise array self.ar_instances
+* 	Array of instance objects (like menu, section, area..)
 */
 page.prototype.get_ar_instances = async function(){
 
@@ -268,17 +269,17 @@ page.prototype.get_ar_instances = async function(){
 					// build (load data)
 					const autoload = current_instance.status==="initiated" // avoid reload menu data
 					current_instance.build(autoload)
-					.then(function(response){
+					.then(function(){
 						resolve(current_instance)
 					})
 				})
 			}))
-		};//end for (let i = 0; i < elements_length; i++)
+		}//end for (let i = 0; i < elements_length; i++)
 
 	// set on finish
 		await Promise.all(ar_promises).then((ar_instances) => {
 			self.ar_instances = ar_instances
-		});
+		})
 
 	return self.ar_instances
 };//end get_ar_instances
@@ -287,19 +288,20 @@ page.prototype.get_ar_instances = async function(){
 
 /**
 * INSTANTIATE_PAGE_ELEMENT
+* @param object self (instance)
+* @param object ddo (source)
 * @return promise current_instance_promise
 */
 const instantiate_page_element = function(self, ddo) {
 
+	const context		= ddo
 	const tipo			= ddo.tipo
 	const section_tipo	= ddo.section_tipo || tipo
 	const model			= ddo.model
 	const section_id	= ddo.section_id || null
 	const mode			= ddo.mode
 	const lang			= ddo.lang
-	const context		= ddo
 	const config		= ddo.config || null
-
 	
 	// instance options
 		const instance_options = {
@@ -326,7 +328,6 @@ const instantiate_page_element = function(self, ddo) {
 
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
-
 
 
 	return instance_promise

@@ -107,7 +107,8 @@ class dd_manager {
 				// }
 
 				// end line info
-					$text			= 'API REQUEST ' . $rqo->action .' END IN '.$total_time_api_exec;
+					$id = $rqo->id ?? $rqo->source->tipo ?? '';
+					$text			= 'API REQUEST ' . $rqo->action . ' ' . $id . ' END IN '.$total_time_api_exec;
 					$text_lenght	= strlen($text) +1;
 					$nchars			= 200;
 					$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL;
