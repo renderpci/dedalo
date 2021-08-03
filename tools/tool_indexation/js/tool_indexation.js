@@ -9,7 +9,7 @@
 	import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common, trigger_request} from '../../tool_common/js/tool_common.js'
+	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation, add_component} from './render_tool_indexation.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 

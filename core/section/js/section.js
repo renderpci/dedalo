@@ -127,7 +127,6 @@ section.prototype.init = async function(options) {
 	self.columns = options.columns
 
 	self.config = options.config || null
-		console.log("options.config:",options.config, self.id);
 	
 	// events subscription
 		// new_section_
@@ -276,12 +275,12 @@ section.prototype.build = async function(autoload=false) {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					const event_token = event_manager.subscribe('render_'+self.id, show_debug_info)
-					self.events_tokens.push(event_token)
-					function show_debug_info() {
+					const fn_show_debug_info = function() {
 						event_manager.unsubscribe(event_token)
 						load_data_debug(self, api_response, self.rqo)
 					}
+					const event_token = event_manager.subscribe('render_'+self.id, fn_show_debug_info)
+					self.events_tokens.push(event_token)
 				}
 		}//end if (autoload===true)
 	
@@ -319,11 +318,8 @@ section.prototype.build = async function(autoload=false) {
 			self.paginator.build()
 
 			// event paginator_goto_
-				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
-				)
 				// fn_paginator_goto
-				async function fn_paginator_goto(offset) {
+				const fn_paginator_goto = async function(offset) {
 					// loading
 						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
 						const node		= self.node && self.node[0]
@@ -343,7 +339,12 @@ section.prototype.build = async function(autoload=false) {
 					// loading
 						if (node) node.classList.remove('loading')
 				}
+				self.events_tokens.push(
+					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
+				)
 		}//end if (!self.paginator)
+
+
 
 	// inspector
 		if (!self.inspector && self.permissions) {
@@ -423,7 +424,6 @@ section.prototype.get_ar_instances = async function(){
 		// 		value : []
 		// 	}
 		// }
-			console.log("********** section self:",self);
 	
 	// iterate records
 		const lang 			= self.lang

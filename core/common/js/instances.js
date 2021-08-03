@@ -163,7 +163,8 @@ export const get_instance = async function(options){
 						try {
 							current_element = await import(path)
 						}catch(error){
-							console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] Error: \n`, error);
+							console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
+
 							resolve(false)
 							return
 						}						

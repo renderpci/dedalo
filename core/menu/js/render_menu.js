@@ -492,8 +492,9 @@ const item_hierarchy = async (options) => {
 		// when the user do click publish the tipo to go and set the mode in list
 		// the action can be executed mainly in page, but it can be used for any instance.
 			link.addEventListener("click", e => {
+					console.warn("click item:",item);
 
-				// unactive menu case
+				// nonactive menu case
 				if (self.menu_active===false) {
 					return false
 				}//end if self.menu_active
@@ -510,10 +511,10 @@ const item_hierarchy = async (options) => {
 						source : {
 							tipo	: item.tipo,
 							model	: item.model,
-							mode	: 'list'
-						},
-						// this config come from properties (used by section_tool to define the config of the section that its called)
-						config	: item.config || null
+							mode	: 'list',
+							// this config comes from properties (used by section_tool to define the config of the section that its called)
+							config	: item.config || null
+						}
 					})
 				}
 

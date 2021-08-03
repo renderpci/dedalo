@@ -8,6 +8,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -169,6 +170,7 @@ tool_common.prototype.build = async function(autoload=false) {
 * @return tool instance | bool false
 */
 export const load_tool = async (options) => {
+	dd_console(`load tool options`, 'DEBUG', options)
 
 	// options
 		const caller		= options.caller

@@ -57,9 +57,9 @@ function get_children_data($json_data) {
 	}else{
 
 		// Calculate children from parent
-		$modelo_name='component_relation_children';
-		$modo 		='list_thesaurus';
-		$lang		=DEDALO_DATA_NOLAN;
+		$modelo_name	= 'component_relation_children';
+		$modo			= 'list_thesaurus';
+		$lang			= DEDALO_DATA_NOLAN;
 		$component_relation_children = component_common::get_instance($modelo_name,
 																	  $tipo,
 																	  $section_id,
@@ -75,32 +75,32 @@ function get_children_data($json_data) {
 		#if(SHOW_DEBUG===true) debug_log(__METHOD__." Time to sort children ".count($children)." - ".exec_time($start_time,""), logger::DEBUG);
 	}
 
+	// model
+		$options = new stdClass();
+		if (isset($_SESSION['dedalo']['config']['thesaurus_view_mode']) && $_SESSION['dedalo']['config']['thesaurus_view_mode']==='model') {
+			$options->model = true;
+		}
 
-	$options = new stdClass();
-	if (isset($_SESSION['dedalo']['config']['thesaurus_view_mode']) && $_SESSION['dedalo']['config']['thesaurus_view_mode']==='model') {
-		$options->model = true;
-	}
-
-	try{
+	try {
 
 		$children_data = array();
 		foreach ((array)$children as $locator) {
 
-			$section_id 		= $locator->section_id;
-			$section_tipo 		= $locator->section_tipo;
+			$section_id		= $locator->section_id;
+			$section_tipo	= $locator->section_tipo;
 
-			$ts_object  		= new ts_object( $section_id, $section_tipo, $options );
-			$children_object 	= $ts_object->get_children_data();
+			$ts_object			= new ts_object( $section_id, $section_tipo, $options );
+			$children_object	= $ts_object->get_children_data();
 			#debug_log(__METHOD__." children_object ".to_string($children_object), logger::DEBUG);
 
 			# Add only descriptors
 			#if ($children_object->is_descriptor===true) {
-				$children_data[] 	= $children_object;
+				$children_data[]	= $children_object;
 			#}
 		}
 
-		$response->result 	= (array)$children_data;
-		$response->msg 		= 'Ok. Request done [get_children_data]';
+		$response->result	= (array)$children_data;
+		$response->msg		= 'OK. Request done [get_children_data]';
 
 	}catch(Exception $e) {
 
@@ -110,16 +110,22 @@ function get_children_data($json_data) {
 
 
 
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
+	// debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
+			$response->debug = $debug;
 
-		$response->debug = $debug;
-	}
+			// end line info
+				$text			= 'TRIGGER TS_OBJECT REQUEST '.$section_tipo.'_'.$section_id.' END IN '. $debug->exec_time;
+				$text_lenght	= strlen($text) +1;
+				$nchars			= 200;
+				$line			= $text .' '. str_repeat("<", $nchars - $text_lenght);
+				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
+		}
 
 	return (object)$response;
 }//end get_ar_children_data_real
