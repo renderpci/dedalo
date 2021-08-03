@@ -6,44 +6,49 @@
 */
 class indexation_grid {
 
-	protected $tipo;
-	protected $section_id;
-	protected $section_tipo;
-	protected $value;
-	protected $limit;
-	protected $offset;
-	protected $count;
+
+	/**
+	* VARS
+	*/
+		protected $tipo;
+		protected $section_id;
+		protected $section_tipo;
+		protected $value;
+		protected $limit;
+		protected $offset;
+		protected $count;
+
+
 
 	/**
 	* CONSTRUCT
-	*
 	*/
 	public function __construct($section_tipo, $section_id, $tipo, $value=false) {
 
-		$this->tipo 		= $tipo;
-		$this->section_id 	= $section_id;
-		$this->section_tipo = $section_tipo;
-		$this->value 		= ($value!==false) ? $value : null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+		$this->tipo			= $tipo;
+		$this->section_id	= $section_id;
+		$this->section_tipo	= $section_tipo;
+		$this->value		= ($value!==false) ? $value : null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 
+		return true;
 	}//end __construct
 
 
 
 	/**
 	* BUILD_INDEXATION_GRID
-	* @return
+	* @return array $ar_indexation_grid
 	*/
 	public function build_indexation_grid() {
 
 		$ar_indexation_grid = [];
 
-		$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
-
+		$ar_section_top_tipo = $this->get_ar_section_top_tipo();
 		foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values) {
 
-			// create the row of the section
-			$section_grid_row = new dd_grid_cell_object();
-				$section_grid_row->set_type('row');
+			// dd_grid_cell_object. Create the row of the section
+				$section_grid_row = new dd_grid_cell_object();
+					$section_grid_row->set_type('row');
 
 			// get the label of the current section
 				$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
@@ -89,7 +94,6 @@ class indexation_grid {
 				$row_render_label	= $properties->row->render_label ?? false;
 
 
-			#
 			# get the section values
 			$section_grid_values	= [];
 			// store the rows count for every portal inside the section
@@ -126,126 +130,136 @@ class indexation_grid {
 						$row_grid->set_render_label($row_render_label);
 						$row_grid->set_value($ar_row_value->ar_cells);
 
-
 					$section_grid_values[] = $row_grid;
 				}
+
 				// sum the total rows for this locator
 				$ar_section_rows_count[] = array_sum($rows_max_count);
-
 			}//end foreach ($ar_values as $current_section_id => $ar_locators) {
 
 			$section_grid->set_value($section_grid_values);
 
 			// sum the total rows for the sectiona and add the total rows to the section row
-				$section_grid_row->set_row_count(array_sum($ar_section_rows_count));
+			$section_grid_row->set_row_count(array_sum($ar_section_rows_count));
 
+			// add row
 			$ar_indexation_grid[] = $section_grid_row;
-		}
+		}//end foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values)
+
 
 		return $ar_indexation_grid;
 	}//end build_indexation_grid
 
 
+
 	/**
 	* GET_VALUE
-	* @return
+	*
+	* @param array $ar_ddo
+	* @param obejct $locator
+	*
+	* @return object $value
 	*/
 	public function get_value($ar_ddo, $locator) {
 
-		$locator->section_top_tipo		= $locator->section_top_tipo ?? $locator->section_tipo;
-		$locator->section_top_id		= $locator->section_top_id ?? $locator->section_id;
+		// top properties add
+			$locator->section_top_tipo	= $locator->section_top_tipo ?? $locator->section_tipo;
+			$locator->section_top_id	= $locator->section_top_id ?? $locator->section_id;
 
-		// get only the ddo that are children of the section top_tipo
+		// children_ddo. get only the ddo that are children of the section top_tipo
 		// the other ddo are sub components that will be injected to the portal as request_config->show
-		$ar_children_ddo = array_filter($ar_ddo, function($ddo) use($locator){
-			return $ddo->section_tipo===$locator->section_top_tipo;
-		});
+			$ar_children_ddo = array_filter($ar_ddo, function($ddo) use($locator){
+				return $ddo->section_tipo===$locator->section_top_tipo;
+			});
 
 
-		$ar_cells = [];
-		$ar_row_count = [];
+		$ar_cells		= [];
+		$ar_row_count	= [];
 		foreach ($ar_children_ddo as $ddo) {
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 				$separator_fields	= $ddo->separator_fields ?? null;
 				$separator_rows		= $ddo->separator_rows ?? null;
 				$format_columns		= $ddo->format_columns ?? null;
-				$class_list 		= $ddo->class_list ?? null;
+				$class_list			= $ddo->class_list ?? null;
 
-			// check if the locator has section_top_tipo and set the section_tipo to be used
+			// section_tipo. Check if the locator has section_top_tipo and set the section_tipo to be used
 			// some locators has top_tipo and top_id because are indexation of the resources and the locator stored the inventory section that call the resource
 			// but some indexation are direct to the resource or inventory section and doesn't has top_tipo and top_id
-			$current_section_tipo = ($ddo->section_tipo === $locator->section_tipo)
-				? $locator->section_tipo
-				: (($ddo->section_tipo === $locator->section_top_tipo)
-					? $locator->section_top_tipo
-					: false);
+				$current_section_tipo = ($ddo->section_tipo===$locator->section_tipo)
+					? $locator->section_tipo
+					: (($ddo->section_tipo === $locator->section_top_tipo)
+						? $locator->section_top_tipo
+						: false);
 
-			$current_section_id = ($ddo->section_tipo === $locator->section_tipo)
-				? $locator->section_id
-				: $locator->section_top_id;
+			// section_id
+				$current_section_id = ($ddo->section_tipo===$locator->section_tipo)
+					? $locator->section_id
+					: $locator->section_top_id;
 
-			// create the component to get the value of the column
-			$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
-			$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+			// component. Create the component to get the value of the column
+				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
+				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
 
-			$current_component 	= component_common::get_instance($component_model,
-																 $ddo->tipo,
-																 $current_section_id,
-																 'indexation_list',
-																 $current_lang,
-																 $current_section_tipo);
-			$current_component->set_locator($locator);
+				$current_component 	= component_common::get_instance($component_model,
+																	 $ddo->tipo,
+																	 $current_section_id,
+																	 'indexation_list',
+																	 $current_lang,
+																	 $current_section_tipo);
+				$current_component->set_locator($locator);
 
 			// check if the component has ddo children,
 			// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
-			$sub_ddo_map = [];
-			$sub_section_tipo = '';
-			foreach ($ar_ddo as $child_ddo) {
-				if($child_ddo->parent===$ddo->tipo){
-					$sub_section_tipo = $child_ddo->section_tipo;
-					$sub_ddo_map[] = $child_ddo;
+				$sub_ddo_map		= [];
+				$sub_section_tipo	= '';
+				foreach ($ar_ddo as $child_ddo) {
+					if($child_ddo->parent===$ddo->tipo){
+						$sub_section_tipo = $child_ddo->section_tipo;
+						$sub_ddo_map[] = $child_ddo;
+					}
 				}
-			}
-			// if the component has sub_ddo, create the request_config to be injected to component
-			// the request_config will be used instead the default request_config.
-			if (!empty($sub_ddo_map)) {
+				// if the component has sub_ddo, create the request_config to be injected to component
+				// the request_config will be used instead the default request_config.
+				if (!empty($sub_ddo_map)) {
 
-				$show = new stdClass();
-					$show->ddo_map = $sub_ddo_map;
+					$show = new stdClass();
+						$show->ddo_map = $sub_ddo_map;
 
-				$request_config = new stdClass();
-					$request_config->api_engine = 'dedalo';
-					// $rqo->set_sqo($sqo);
-					$request_config->show = $show;
+					$request_config = new stdClass();
+						$request_config->api_engine = 'dedalo';
+						// $rqo->set_sqo($sqo);
+						$request_config->show = $show;
 
-				$current_component->request_config = [$request_config];
+					$current_component->request_config = [$request_config];
 
-				// check section_tipo of the current locator are the same of the component are referred.
-				// if the locator has the same section_tipo than component (IMPORTANT: NOT the section_top_tipo) the locator need to be injected to the component.
-				// ex: oh1 has more than one audiovisual, the locator of the indexation locator has the reference to the row of the audiovisual portal to get the columns.
-				if($sub_section_tipo === $locator->section_tipo){
-					$ar_dato = [$locator];
-					$current_component->set_dato($ar_dato);
+					// check section_tipo of the current locator are the same of the component are referred.
+					// if the locator has the same section_tipo than component (IMPORTANT: NOT the section_top_tipo) the locator need to be injected to the component.
+					// ex: oh1 has more than one audiovisual, the locator of the indexation locator has the reference to the row of the audiovisual portal to get the columns.
+					if($sub_section_tipo === $locator->section_tipo){
+						$ar_dato = [$locator];
+						$current_component->set_dato($ar_dato);
+					}
 				}
-			}
 
-			#dump($current_component,'$current_component');
-			$component_value = $current_component->get_value($current_lang, $ddo);
-
-			$ar_row_count[] = $component_value->row_count ?? 0;
-			$ar_cells[] = $component_value;
-
+			// component_value add
+				$component_value	= $current_component->get_value($current_lang, $ddo);
+				$ar_row_count[]		= $component_value->row_count ?? 0;
+				$ar_cells[]			= $component_value;
 		}// end foreach ($ar_children_ddo as $ddo)
 
-		$value = new stdClass();
-			$value->ar_row_count 	= $ar_row_count;
-			$value->ar_cells 		= $ar_cells;
+
+		// value final
+			$value = new stdClass();
+				$value->ar_row_count	= $ar_row_count;
+				$value->ar_cells		= $ar_cells;
 
 
 		return $value;
 	}//end get_value
+
+
 
 	/**
 	* PROCESS_DDO_MAP
@@ -296,25 +310,24 @@ class indexation_grid {
 	* @return array $ar_section_top_tipo
 	*/
 	protected function get_ar_section_top_tipo() {
-
 		$start_time=microtime(1);
 
-		$ar_section_top_tipo= array();
-		$user_id 			= navigator::get_user_id();
-		$ar_locators 		= $this->get_ar_locators();
+		$ar_section_top_tipo	= array();
+		$user_id				= navigator::get_user_id();
+		$ar_locators			= $this->get_ar_locators();
 
 		foreach ($ar_locators as $current_locator) {
 			// dump($current_locator,"current_locator");
 			# ID SECTION
 
-			$section_tipo			= $current_locator->section_tipo;
-			$section_id				= $current_locator->section_id;
+			$section_tipo	= $current_locator->section_tipo;
+			$section_id		= $current_locator->section_id;
 
 			// if the locator couldn't has section_top_tipo or section_top_id, because it's a direct locator, copy the section_tipo and section_id to the top_* properties
-			$section_top_tipo		= $current_locator->section_top_tipo ?? $current_locator->section_tipo;
-			$section_top_id			= $current_locator->section_top_id ?? $current_locator->section_id;
-			$component_tipo			= $current_locator->component_tipo ?? null;
-			$tag_id					= $current_locator->tag_id ?? null;
+			$section_top_tipo	= $current_locator->section_top_tipo ?? $current_locator->section_tipo;
+			$section_top_id		= $current_locator->section_top_id ?? $current_locator->section_id;
+			$component_tipo		= $current_locator->component_tipo ?? null;
+			$tag_id				= $current_locator->tag_id ?? null;
 
 
 			# AR_SECTION_TOP_TIPO MAP
@@ -374,13 +387,14 @@ class indexation_grid {
 			}
 		}//end if( ($is_global_admin = security::is_global_admin($user_id))!==true ) {
 
-		if(SHOW_DEBUG===true) {
-			$total=round(microtime(1)-$start_time,3);
-			$slow = 0.125;
-			if ($total>$slow) {
-				dump($total,"SLOW METHOD (>$slow): total secs $total");
+		// debug
+			if(SHOW_DEBUG===true) {
+				$total=round(microtime(1)-$start_time,3);
+				$slow = 0.125;
+				if ($total>$slow) {
+					dump($total,"SLOW METHOD (>$slow): total secs $total");
+				}
 			}
-		}
 
 		return $ar_section_top_tipo;
 	}//end get_ar_section_top_tipo
@@ -394,27 +408,24 @@ class indexation_grid {
 	*/
 	public function get_ar_locators() {
 
-		#if (isset($this->ar_locators)) {
-		#	return $this->ar_locators;
-		#}
+		$model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
 
-		$model 	= RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
-
-		# INDEXATIONS
-		$component 		= component_common::get_instance($model, //'component_relation_index',
-														 $this->tipo,
-														 $this->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $this->section_tipo);
+		// indexations
+		$component 	= component_common::get_instance($model, //'component_relation_index',
+													 $this->tipo,
+													 $this->section_id,
+													 'list',
+													 DEDALO_DATA_NOLAN,
+													 $this->section_tipo);
 
 		$ar_locators = $component->get_dato();
 
 		return (array)$ar_locators;
-	}
+	}//end get_ar_locators
 
 
 
+}//end class indexation_grid
 
-}//indexation_grid
+
 
