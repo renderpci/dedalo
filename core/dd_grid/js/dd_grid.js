@@ -1,3 +1,6 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
 
 
 // imports
@@ -40,7 +43,7 @@ export const dd_grid = function(){
 // prototypes assign
 	// lifecycle
 	dd_grid.prototype.init			= common.prototype.init
-	// dd_grid.prototype.build			= common.prototype.build
+	// dd_grid.prototype.build		= common.prototype.build
 	dd_grid.prototype.render		= common.prototype.render
 	dd_grid.prototype.refresh		= common.prototype.refresh
 	dd_grid.prototype.destroy		= common.prototype.destroy

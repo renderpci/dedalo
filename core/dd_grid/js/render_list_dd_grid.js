@@ -6,7 +6,6 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
@@ -25,7 +24,7 @@ export const render_list_dd_grid = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_dd_grid.prototype.list = async function() {
 
@@ -35,18 +34,15 @@ render_list_dd_grid.prototype.list = async function() {
 		const data		= self.data
 
 	// wrapper
-
-	const wrapper = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'wrapper_dd_grid' + ' ' + self.tipo + ' ' + self.mode
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper_dd_grid' + ' ' + self.tipo + ' ' + self.mode
 		})
 
-console.log("data:",data);
-	// Value as string
+	// grid. Value as string
 		const grid = get_grid_nodes( data )
 
 	// Set value
-		// wrapper.innerHTML = value_string
 		wrapper.appendChild(grid)
 
 
@@ -54,12 +50,15 @@ console.log("data:",data);
 };//end list
 
 
-const get_grid_nodes = function( data ){
 
+/**
+* GET_GRID_NODES
+*/
+const get_grid_nodes = function(data) {
 
 	const fragment = new DocumentFragment()
-	const data_len = data.length
 
+	const data_len = data.length
 	for (let i = 0; i < data_len; i++) {
 		const current_data = data[i]
 
@@ -68,60 +67,66 @@ const get_grid_nodes = function( data ){
 		if (current_data.type) {
 			const node = get_div_container(current_data)
 
-			if(current_data.type === 'column' && current_data.render_label){
-				const label_node = get_label_column(current_data)
-				node.appendChild(label_node)
-			}
+			// label
+				if(current_data.type==='column' && current_data.render_label){
+					const label_node = get_label_column(current_data)
+					node.appendChild(label_node)
+				}
 
-			if(current_data.type === 'column' && current_data.cell_type){
+			// column
+				if(current_data.type==='column' && current_data.cell_type){
 
-				switch(current_data.cell_type) {
-					case 'av':
-						const av_node = get_av_column(current_data)
-						node.appendChild(av_node)
-					break;
+					switch(current_data.cell_type) {
+						case 'av':
+							const av_node = get_av_column(current_data)
+							node.appendChild(av_node)
+							break;
 
-					case 'img':
-						const img_node = get_img_column(current_data)
-						node.appendChild(img_node)
+						case 'img':
+							const img_node = get_img_column(current_data)
+							node.appendChild(img_node)
+							break;
 
-					break;
+						case 'button':
+							const button_node = get_button_column(current_data)
+							node.appendChild(button_node)
+							break;
 
-					case 'button':
-						const button_node = get_button_column(current_data)
-						node.appendChild(button_node)
+						case 'text':
+						default:
+							const column_node = get_text_column(current_data)
+							node.appendChild(column_node)
+							break;
+					}//end switch(current_data.cell_type)
+				}// end if(current_data.type==='column' && current_data.cell_type)
 
-					break;
-
-					case 'text':
-					default:
-						const column_node = get_text_column(current_data)
-						node.appendChild(column_node)
-
-				}//end switch(current_data.cell_type)
-
-
-			}// end if
-
-
-			if(current_data.value){
-				const child_node = get_grid_nodes(current_data.value)
-				node.appendChild(child_node)
-			}
+			// value
+				if(current_data.value){
+					const child_node = get_grid_nodes(current_data.value)
+					node.appendChild(child_node)
+				}
 
 			cell_nodes.push(node)
 		}else{
 			continue;
 		}
 
+		// add cell_nodes (array of one value)
 		fragment.appendChild(...cell_nodes)
-	}
+	}//end for (let i = 0; i < data_len; i++)
 
- return fragment
-}
 
-const get_div_container = function(current_data){
+	return fragment
+}//end get_grid_nodes
 
+
+
+/**
+* GET_DIV_CONTAINER
+* @param object current_data
+* @return DOM node div_container (div)
+*/
+const get_div_container = function(current_data) {
 
 	const class_list = (current_data.class_list)
 		? current_data.type + ' ' + current_data.class_list
@@ -129,13 +134,20 @@ const get_div_container = function(current_data){
 
 	const div_container = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: class_list,
+		class_name		: class_list
 	})
 
 	return div_container
-}
+}//end get_div_container
 
-const get_label_column = function(current_data){
+
+
+/**
+* GET_DIV_CONTAINER
+* @param object current_data
+* @return DOM node label_node (label)
+*/
+const get_label_column = function(current_data) {
 
 	const label_node = ui.create_dom_element({
 		element_type	: 'label',
@@ -143,10 +155,15 @@ const get_label_column = function(current_data){
 	})
 
 	return label_node
-}
+}//end get_label_column
 
 
-const get_text_column = function(current_data){
+/**
+* GET_TEXT_COLUMN
+* @param object current_data
+* @return DOM node text_node (span)
+*/
+const get_text_column = function(current_data) {
 
 	const class_list = current_data.class_list || ''
 
@@ -156,55 +173,67 @@ const get_text_column = function(current_data){
 		text_content	: current_data.value.join('')
 	})
 
-
 	return text_node
-}
+}//end get_text_column
 
 
-const get_av_column = function(current_data){
+
+/**
+* GET_AV_COLUMN
+* @param object current_data
+* @return DOM node image (img)
+*/
+const get_av_column = function(current_data) {
 
 	const class_list = current_data.class_list || ''
 
 	// url
 		const posterframe_url 	= current_data.value[0].posterframe_url
 		const url 				= posterframe_url
+
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
 			class_name		: class_list,
 			src 			: url
 		})
-		// ui.component.add_image_fallback(image)
-
 
 	return image
-}
+}//end get_av_column
 
 
+/**
+* GET_IMG_COLUMN
+* @param object current_data
+* @return DOM node image (img)
+*/
 const get_img_column = function(current_data){
 
 	const class_list = current_data.class_list || ''
 
 	// url
-		const url 	= current_data.value[0]
+		const url = current_data.value[0]
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
 			class_name		: class_list,
 			src 			: url
 		})
-		// ui.component.add_image_fallback(image)
-
 
 	return image
-}
+}//end get_img_column
 
 
+
+/**
+* GET_BUTTON_COLUMN
+* @param object current_data
+* @return DOM node button (img)
+*/
 const get_button_column = function(current_data){
 
-	const value = current_data.value[0]
-
-	const class_list = value.class_list || ''
+	const value			= current_data.value[0]
+	const class_list	= value.class_list || ''
 
 	// image
 		const button = ui.create_dom_element({
@@ -212,6 +241,7 @@ const get_button_column = function(current_data){
 			class_name		: class_list
 		})
 
+	// event
 		if (value.action && value.action.event) {
 
 			button.addEventListener(value.action.event, async (e)=>{
@@ -222,15 +252,8 @@ const get_button_column = function(current_data){
 				module[value.action.method](options)
 			})
 		}
-		// ui.component.add_image_fallback(image)
-
 
 	return button
-
-
-}
-
-
-
+}//end get_button_column
 
 
