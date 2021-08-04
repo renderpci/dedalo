@@ -21,22 +21,21 @@
 */
 export const tool_indexation = function () {
 	
-	this.id
-	this.model
-	this.mode
-	this.node
-	this.ar_instances
-	this.status
-	this.events_tokens = []
-	this.type
-
-	this.source_lang
-	this.target_lang
-	this.langs
-	this.caller // component text area base (user selects tool button from it)
-	this.main_component // component text area where we are working into the tool
-	this.indexing_component // component_relation_index used to store indexation locators
-	this.related_sections_list // datum of related_sections_list (to obtaim list of top_section_tipo/id)
+	this.id							= null
+	this.model						= null
+	this.mode						= null
+	this.node						= null
+	this.ar_instances				= null
+	this.status						= null
+	this.events_tokens				= []
+	this.type						= null
+	this.source_lang				= null
+	this.target_lang				= null
+	this.langs						= null
+	this.caller						= null // component text area base optional
+	this.transcription_component	= null // component text area where we are working into the tool
+	this.indexing_component			= null // component_relation_index used to store indexation locators
+	this.related_sections_list		= null // datum of related_sections_list (to obtaim list of top_section_tipo/id)
 
 
 	return true
@@ -61,14 +60,13 @@ export const tool_indexation = function () {
 * @param object options
 * Sample:
 * {
-* 	caller: component_text_area {id: "component_text_area_rsc36_rsc167_1_edit_lg-eng_rsc167", …}
 *	lang: "lg-eng"
 *	mode: "edit"
 *	model: "tool_indexation"
 *	section_id: "1"
 *	section_tipo: "rsc167"
 *	tipo: "rsc36"
-*	tool_object: {section_id: "2", section_tipo: "dd1324", name: "tool_indexation", label: "Tool Indexation", icon: "/v6/tools/tool_indexation/img/icon.svg", …}
+*	tool_config: {section_id: "2", section_tipo: "dd1324", name: "tool_indexation", label: "Tool Indexation", icon: "/v6/tools/tool_indexation/img/icon.svg", …}
 * }
 */
 tool_indexation.prototype.init = async function(options) {
@@ -78,6 +76,10 @@ tool_indexation.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.lang	= options.lang // from page_globals.dedalo_data_lang
 		self.langs	= page_globals.dedalo_projects_default_langs
+
+	// id_base from transcription_component. Needed to set event subscriptions on init
+		const transcription_component_ddo = options.tool_config.ddo_map.find(el => el.role==='transcription_component')
+		const id_base = transcription_component_ddo.section_tipo +'_'+ transcription_component_ddo.section_id +'_'+ transcription_component_ddo.tipo
 
 	// events
 		// link_term. Observe thesaurus tree link index button click
@@ -96,7 +98,7 @@ tool_indexation.prototype.init = async function(options) {
 					const value		= options.value
 
 				// update_tag
-					return self.main_component.update_tag({
+					return self.transcription_component.update_tag({
 						type	: 'indexIn',
 						tag_id	: tag_id,
 						dataset	: {
@@ -121,14 +123,14 @@ tool_indexation.prototype.init = async function(options) {
 							self.indexing_component.data	= null
 							self.indexing_component.datum	= null
 							self.indexing_component.refresh()
-						// main_component (text_area)
-							self.main_component.refresh()
+						// transcription_component (text_area)
+							self.transcription_component.refresh()
 					}
 				})
 			}
 		// click_no_tag_
 			self.events_tokens.push(
-				event_manager.subscribe('click_no_tag_' + options.caller.id_base, fn_click_no_tag)
+				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
 			)
 			function fn_click_no_tag(options) {
 				if (!self.info_container.classList.contains('hide')) {
@@ -138,10 +140,10 @@ tool_indexation.prototype.init = async function(options) {
 		// click_tag_index_. Observe user tag selection in text area.
 		// (!) Note subscribe uses 'id_base' instead 'self.id' to allow switch main component lang
 			self.events_tokens.push(
-				event_manager.subscribe('click_tag_index_'+ options.caller.id_base, fn_click_tag_index)
+				event_manager.subscribe('click_tag_index_'+ id_base, fn_click_tag_index)
 			)
 			function fn_click_tag_index(options) {
-				// dd_console(`click_tag_index '${options.tag.dataset.tag_id}'`, 'DEBUG', options)
+				dd_console(`click_tag_index '${options}'`, 'DEBUG', options)
 
 				// options
 					const tag_element	= options.tag // DOM node selected
@@ -179,21 +181,28 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// config caller set tool
-		self.caller.caller = self
-
-	// load_indexing_component. Init and build the indexing_component (component_relation_index usually)
-		await self.load_indexing_component()
-
-	// main_component
-		self.main_component = await self.get_component(self.lang)
-
-	// load_related_sections_list. Get the relation list. This is used to build a select element to allow
-		// user select the top_section_tipo and top_section_id of current indexation
-		self.related_sections_list = await self.load_related_sections_list()
-
 	// call generic common tool build
-		const common_build = tool_common.prototype.build.call(self, autoload)
+		const common_build = await tool_common.prototype.build.call(self, autoload)
+
+
+	// transcription_component. fix transcription_component for convenience
+		const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
+		self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
+
+	// indexing_component. fix indexing_component for convenience
+		const indexing_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="indexing_component")
+		self.indexing_component			= self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo)
+
+	// area_thesaurus. fix area_thesaurus for convenience
+		const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==="area_thesaurus")
+		self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
+		// set instance in thesaurus mode 'relation'
+		self.area_thesaurus.thesaurus_mode = "relation"
+
+	// related_sections_list. load_related_sections_list. Get the relation list.
+	// This is used to build a select element to allow
+	// user select the top_section_tipo and top_section_id of current indexation
+		self.related_sections_list = await self.load_related_sections_list()
 
 
 	return common_build
@@ -205,50 +214,50 @@ tool_indexation.prototype.build = async function(autoload=false) {
 * LOAD_INDEXING_COMPONENT
 * @return promise bool true
 */
-tool_indexation.prototype.load_indexing_component = async function() {
+	// tool_indexation.prototype.load_indexing_component = async function() {
 
-	const self = this
-	
-	// indexing_component		
-		const component						= self.caller
-		const indexing_component_tipo		= component.context.properties.indexing_component
+	// 	const self = this
 
-	// search the component instance in the global array of instances first
-		const found_instance = instances.find(el => el.tipo===indexing_component_tipo 
-												 && el.section_id===component.section_id
-												 && el.section_tipo===component.section_tipo )
-	
-		if (found_instance) {
+	// 	// indexing_component
+	// 		const component					= self.caller
+	// 		const indexing_component_tipo	= component.context.properties.indexing_component
 
-			// use existing instance
-			
-			self.indexing_component = found_instance
-		
-		}else{
+	// 	// search the component instance in the global array of instances first
+	// 		const found_instance = instances.find(el => el.tipo===indexing_component_tipo
+	// 												 && el.section_id===component.section_id
+	// 												 && el.section_tipo===component.section_tipo )
 
-			// create a new one
-			
-			const indexing_component_options = {
-				model			: 'component_relation_index',
-				tipo			: indexing_component_tipo,
-				section_tipo	: component.section_tipo,
-				section_id		: component.section_id,
-				mode			: 'edit',
-				lang			: 'lg-nolan', // The only different property from caller
-				context			: {},
-				id_variant		: 'tool_indexation'
-			}
+	// 		if (found_instance) {
 
-			// init and build instance
-				self.indexing_component = await get_instance(indexing_component_options)
-				await self.indexing_component.build(true)
+	// 			// use existing instance
 
-			// store instances to remove on destroy
-				self.ar_instances.push(self.indexing_component)
-		}		
+	// 			self.indexing_component = found_instance
 
-	return true
-};//end load_indexing_component
+	// 		}else{
+
+	// 			// create a new one
+
+	// 			const indexing_component_options = {
+	// 				model			: 'component_relation_index',
+	// 				tipo			: indexing_component_tipo,
+	// 				section_tipo	: component.section_tipo,
+	// 				section_id		: component.section_id,
+	// 				mode			: 'edit',
+	// 				lang			: 'lg-nolan', // The only different property from caller
+	// 				context			: {},
+	// 				id_variant		: 'tool_indexation'
+	// 			}
+
+	// 			// init and build instance
+	// 				self.indexing_component = await get_instance(indexing_component_options)
+	// 				await self.indexing_component.build(true)
+
+	// 			// store instances to remove on destroy
+	// 				self.ar_instances.push(self.indexing_component)
+	// 		}
+
+	// 	return true
+	// };//end load_indexing_component
 
 
 
@@ -263,36 +272,41 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
 
-	// destroy previous component instances
-		if (self.main_component) {
-			const instance_index = self.ar_instances.findIndex( el => el.id===self.main_component.id)
-			if (instance_index!==-1) {
-				self.ar_instances.splice(instance_index, 1)
-			}
-			await self.main_component.destroy()
-		}
-	
-	const component		= self.caller
+	const component		= self.transcription_component
+	const section_id	= component.section_id
 	const context		= JSON.parse(JSON.stringify(component.context))
 		  context.lang 	= lang
 
-	const instance_options = {
-		model			: component.model,
-		tipo			: component.tipo,
-		section_tipo	: component.section_tipo,
-		section_id		: component.section_id,
-		mode			: 'edit',
-		lang			: lang, // The only different property from caller
-		section_lang	: component.lang,
-		context			: context,
-		id_variant		: 'tool_indexation'
-		// data			: {value:[]},
-		// datum		: null
-	}
+	// destroy previous component instances
+		const instance_index = self.ar_instances.findIndex( el => el.id===self.transcription_component.id)
+		// remove from array of instances
+		if (instance_index!==-1) {
+			// destroy instance
+			await self.transcription_component.destroy()
+			self.ar_instances.splice(instance_index, 1)
+		}else{
+			console.error("Error on delete previous transcription_component instance")
+		}
+
+	// new instance options
+		const instance_options = {
+			model			: context.model,
+			tipo			: context.tipo,
+			section_tipo	: context.section_tipo,
+			section_id		: section_id,
+			mode			: 'edit',
+			lang			: lang, // The only different property from self.transcription_component
+			section_lang	: context.lang,
+			context			: context,
+			id_variant		: 'tool_indexation'
+			// data			: {value:[]},
+			// datum		: null
+		}
+	// dd_console(`instance_options`,'DEBUG', instance_options)
 
 	const instance = await get_instance(instance_options)
 
-	// set tool as caller
+	// set tool as caller of the component :-)
 	instance.caller = self
 
 	// build instance
@@ -302,7 +316,12 @@ tool_indexation.prototype.get_component = async function(lang) {
 	self.ar_instances.push(instance)
 
 	// fix instance
-	self.main_component = instance
+	self.transcription_component = instance
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			// dd_console('self.ar_instances','DEBUG',self.ar_instances)
+		}
 
 
 	return instance
@@ -311,55 +330,105 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 
 /**
+* LOAD_RELATED_SECTIONS_LIST
+* Get the list of related sections with the actual resource
+* @return object datum
+*/
+tool_indexation.prototype.load_related_sections_list = async function() {
+
+	const self = this
+
+	const transcription_component = self.transcription_component
+
+	const source = {
+		action			: 'related_search',
+		model			: transcription_component.model,
+		tipo			: transcription_component.tipo,
+		section_tipo	: transcription_component.section_tipo,
+		section_id		: transcription_component.section_id,
+		lang			: transcription_component.lang,
+		mode			: 'related_list'
+	}
+
+	const sqo = {
+		section_tipo		: ['all'],
+		mode				: 'related',
+		limit				: 10,
+		offset				: 0,
+		full_count			: false,
+		filter_by_locators	: [{
+			section_tipo	: transcription_component.section_tipo,
+			section_id		: transcription_component.section_id
+		}]
+	}
+
+	const rqo = {
+		action	: 'read',
+		source	: source,
+		sqo		: sqo
+	}
+
+	// get context and data
+		const current_data_manager	= new data_manager()
+		const api_response			= await current_data_manager.request({body:rqo})
+
+	const datum = api_response.result
+
+	return datum
+};//end load_related_sections_list
+
+
+
+/**
 * GET_THESAURUS
 * Creates a instance of area_thesaurus ready to render
 * @return instance
 */
-tool_indexation.prototype.get_thesaurus = async function() {
+	// tool_indexation.prototype.get_thesaurus = async function() {
 
-	// short vars
-		const tipo	= 'dd100';
-		const model	= 'area_thesaurus';
-		const lang	= self.lang || page_globals.dedalo_data_lang
-		const mode	= 'list';
-
-
-	// context
-		const context = {
-			type			: 'area',
-			typo			: 'ddo',
-			tipo			: tipo,
-			section_tipo	: tipo,
-			lang			: lang,
-			mode			: mode,
-			model			: 'section',
-			parent			: tipo,
-			// request_config	: request_config
-		}
-
-	// instance options
-		const instance_options = {
-			model			: model,
-			tipo			: tipo,
-			section_tipo	: tipo,
-			mode			: mode,
-			lang			: lang,
-			context			: context,
-			caller			: self
-		}
-
-	// init section instance
-		const area_thesaurus = await get_instance(instance_options)
-
-	// set instance in thesaurus mode 'relation'
-		area_thesaurus.thesaurus_mode = "relation"
-
-	// build instance
-		await area_thesaurus.build()
+	// 	// short vars
+	// 		const tipo	= 'dd100';
+	// 		const model	= 'area_thesaurus';
+	// 		const lang	= self.lang || page_globals.dedalo_data_lang
+	// 		const mode	= 'list';
 
 
-	return area_thesaurus
-};//end get_thesaurus
+	// 	// context
+	// 		const context = {
+	// 			type			: 'area',
+	// 			typo			: 'ddo',
+	// 			tipo			: tipo,
+	// 			section_tipo	: tipo,
+	// 			lang			: lang,
+	// 			mode			: mode,
+	// 			model			: 'section',
+	// 			parent			: tipo,
+	// 			// request_config	: request_config
+	// 		}
+
+	// 	// instance options
+	// 		const instance_options = {
+	// 			model			: model,
+	// 			tipo			: tipo,
+	// 			section_tipo	: tipo,
+	// 			mode			: mode,
+	// 			lang			: lang,
+	// 			context			: context,
+	// 			caller			: self
+	// 		}
+
+	// 	// init section instance
+	// 		const area_thesaurus = await get_instance(instance_options)
+
+	// 	// set instance in thesaurus mode 'relation'
+	// 		area_thesaurus.thesaurus_mode = "relation"
+
+	// 	// build instance
+	// 		await area_thesaurus.build()
+
+
+	// 	return area_thesaurus
+	// };//end get_thesaurus
 
 
 
@@ -469,7 +538,7 @@ tool_indexation.prototype.create_indexation = async function ( data ) {
 			console.warn("Needs to be selected a index tag in text to continue");
 			alert("Please select a tag");
 			// should activate the component (focus)
-			event_manager.publish('active_component', self.main_component)
+			event_manager.publish('active_component', self.transcription_component)
 			return false
 		}
 
@@ -478,9 +547,9 @@ tool_indexation.prototype.create_indexation = async function ( data ) {
 			section_id			: data.section_id, // thesaurus term section_id
 			section_tipo		: data.section_tipo, // thesaurus term section_tipo
 			tag_id				: tag_id, // user selected tag id
-			tag_component_tipo	: self.caller.tipo, // (component_text_area tag source)
-			section_top_tipo	: self.top_locator.section_top_tipo, // the caller section_tipo to the resource like oh1
-			section_top_id		: self.top_locator.section_top_id // the caller section_id to the resource like 4
+			tag_component_tipo	: self.transcription_component.tipo, // (component_text_area tag source)
+			section_top_tipo	: self.top_locator.section_top_tipo, // the transcription_component section_tipo to the resource like oh1
+			section_top_id		: self.top_locator.section_top_id // the transcription_component section_id to the resource like 4
 		}
 
 	// add value to the indexing component
@@ -519,8 +588,10 @@ tool_indexation.prototype.active_value = function(name, callback) {
 			callback	: callback
 		})
 
-	console.warn("self.active_elements added one:", name, self.active_elements);
-
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.warn("self.active_elements added one:", name, self.active_elements);
+		}
 
 	return true
 };//end active_value
@@ -556,54 +627,6 @@ tool_indexation.prototype.update_active_values = function(values) {
 
 
 /**
-* LOAD_RELATED_SECTIONS_LIST
-* Get the list of related sections with the actual resource
-* @return boolean
-*/
-tool_indexation.prototype.load_related_sections_list = async function() {
-
-	const self = this
-
-	const source = {
-		action			: 'related_search',
-		model			: self.caller.model,
-		tipo			: self.caller.tipo,
-		section_tipo	: self.caller.section_tipo,
-		section_id		: self.caller.section_id,
-		mode			: 'related_list',
-		lang			: self.caller.lang
-	}
-
-	const sqo = {
-		section_tipo		: ['all'],
-		mode				: 'related',
-		limit				: 10,
-		offset				: 0,
-		full_count			: false,
-		filter_by_locators	: [{
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id
-		}]
-	}
-
-	const rqo = {
-		action	: 'read',
-		source	: source,
-		sqo		: sqo
-	}
-
-	// get context and data
-		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.request({body:rqo})
-	
-	const datum = api_response.result
-
-	return datum
-};//end load_related_sections_list
-
-
-
-/**
 * DELETE_TAG
 * Remove selected tag an all relations / indexes associated
 * Delete / remove current tag in all component langs, all references (inverse) in all portals and index record (matrix descriptors)
@@ -627,12 +650,12 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 		const source = create_source(self, 'delete_tag')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			section_tipo			: self.main_component.section_tipo, // current component_text_area section_tipo
-			section_id				: self.main_component.section_id, // component_text_area section_id
-			main_component_tipo		: self.main_component.tipo, // component_text_area tipo
-			main_component_lang		: self.main_component.lang, // component_text_area lang
-			indexing_component_tipo	: self.indexing_component.tipo, // component_relation_xxx used to store indexation locators 
-			tag_id					: tag_id // current selected tag (passed as param)	
+			section_tipo					: self.transcription_component.section_tipo, // current component_text_area section_tipo
+			section_id						: self.transcription_component.section_id, // component_text_area section_id
+			transcription_component_tipo	: self.transcription_component.tipo, // component_text_area tipo
+			transcription_component_lang	: self.transcription_component.lang, // component_text_area lang
+			indexing_component_tipo			: self.indexing_component.tipo, // component_relation_xxx used to store indexation locators
+			tag_id							: tag_id // current selected tag (passed as param)
 		}
 
 	// rqo		
@@ -660,45 +683,45 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 * CHANGE_TAG_STATE
 * @return promise
 */
-tool_indexation.prototype.change_tag_state = async function(tag_id, value) {
+	// tool_indexation.prototype.change_tag_state = async function(tag_id, value) {
 
-	const self = this
+	// 	const self = this
 
-	// text area update tag
+	// 	// text area update tag
 
 
-	return
+	// 	return
 
-	// // source. Note that second argument is the name of the function to manage the tool request like 'change_tag_state'
-	// // this generates a call as my_tool_name::my_function_name(arguments)
-	// 	const source = create_source(self, 'change_tag_state')
-	// 	// add the necessary arguments used in the given function
-	// 	source.arguments = {
-	// 		section_tipo			: self.main_component.section_tipo, // current component_text_area section_tipo
-	// 		section_id				: self.main_component.section_id, // component_text_area section_id
-	// 		main_component_tipo		: self.main_component.tipo, // component_text_area tipo
-	// 		main_component_lang		: self.main_component.lang, // component_text_area lang
-	// 		tag_id					: tag_id, // current selected tag (passed as param)
-	// 		state					: value // string like 'r'
-	// 	}
+	// 	// // source. Note that second argument is the name of the function to manage the tool request like 'change_tag_state'
+	// 	// // this generates a call as my_tool_name::my_function_name(arguments)
+	// 	// 	const source = create_source(self, 'change_tag_state')
+	// 	// 	// add the necessary arguments used in the given function
+	// 	// 	source.arguments = {
+	// 	// 		section_tipo			: self.transcription_component.section_tipo, // current component_text_area section_tipo
+	// 	// 		section_id				: self.transcription_component.section_id, // component_text_area section_id
+	// 	// 		transcription_component_tipo		: self.transcription_component.tipo, // component_text_area tipo
+	// 	// 		transcription_component_lang		: self.transcription_component.lang, // component_text_area lang
+	// 	// 		tag_id					: tag_id, // current selected tag (passed as param)
+	// 	// 		state					: value // string like 'r'
+	// 	// 	}
 
-	// // rqo
-	// 	const rqo = {
-	// 		dd_api	: 'dd_utils_api',
-	// 		action	: 'tool_request',
-	// 		source	: source
-	// 	}
+	// 	// // rqo
+	// 	// 	const rqo = {
+	// 	// 		dd_api	: 'dd_utils_api',
+	// 	// 		action	: 'tool_request',
+	// 	// 		source	: source
+	// 	// 	}
 
-	// // call to the API, fetch data and get response
-	// 	return new Promise(function(resolve){
+	// 	// // call to the API, fetch data and get response
+	// 	// 	return new Promise(function(resolve){
 
-	// 		const current_data_manager = new data_manager()
-	// 		current_data_manager.request({body : rqo})
-	// 		.then(function(response){
-	// 			console.warn("-> change_tag_state API response:",response);
-	// 			resolve(response)
-	// 		})
-	// 	})
-};//end change_tag_state
+	// 	// 		const current_data_manager = new data_manager()
+	// 	// 		current_data_manager.request({body : rqo})
+	// 	// 		.then(function(response){
+	// 	// 			console.warn("-> change_tag_state API response:",response);
+	// 	// 			resolve(response)
+	// 	// 		})
+	// 	// 	})
+	// };//end change_tag_state
 
 
