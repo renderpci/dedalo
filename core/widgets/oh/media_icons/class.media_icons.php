@@ -100,6 +100,7 @@ class media_icons extends widget_common {
 							case 'indexation':
 							case 'translation':
 							default:
+								$value = null;
 								//get the section_tool of the $data_map
 								$section_tool_tipo = $data_map->process_section_tipo;
 								$section_tool = new RecordObj_dd($section_tool_tipo);
@@ -137,7 +138,9 @@ class media_icons extends widget_common {
 								$current_data->widget		= get_class($this);
 								$current_data->key			= $key;
 								$current_data->id			= $data_map->id;
-								$current_data->value		= $value;
+								if (isset($value)) {
+									$current_data->value		= $value;
+								}
 								$current_data->locator		= $locator;
 								if (isset($tool_context)) {
 									$current_data->tool_context	= $tool_context;
