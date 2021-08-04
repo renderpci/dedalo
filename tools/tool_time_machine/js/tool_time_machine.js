@@ -5,8 +5,9 @@
 
 // import
 	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source, get_ar_inverted_paths} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
@@ -19,23 +20,22 @@
 */
 export const tool_time_machine = function () {
 	
-	this.id
-	this.model
-	this.mode
-	this.lang
-	this.node
-	this.ar_instances
-	this.status
-	this.events_tokens = []
-	this.type
+	this.id					= null
+	this.model				= null
+	this.mode				= null
+	this.lang				= null
+	this.node				= null
+	this.ar_instances		= null
+	this.status				= null
+	this.events_tokens		= []
+	this.type				= null
 
-	this.caller
+	this.caller				= null
 	// this.section_tm
-	this.section // custom section generated in tm mode on build
-	this.button_apply
-	this.selected_matrix_id
-	this.trigger_url
-	this.modal_container
+	this.section			= null// custom section generated in tm mode on build
+	this.button_apply		= null
+	this.selected_matrix_id	= null
+	this.modal_container	= null
 
 	return true
 };//end page
@@ -63,9 +63,6 @@ tool_time_machine.prototype.init = async function(options) {
 
 	// fix dedalo_projects_langs
 		self.langs = page_globals.dedalo_projects_default_langs
-
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url = DEDALO_TOOLS_URL + "/tool_time_machine/trigger.tool_time_machine.php"
 
 	// events subscribe. User click over list record eye icon
 		self.events_tokens.push(
@@ -98,10 +95,16 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	self.section = self.load_section() // don't wait here
 
-	// call generic commom tool build
-		const common_build = tool_common.prototype.build.call(self, autoload);
+	// call generic common tool build
+		const common_build = await tool_common.prototype.build.call(self, autoload);
+
+	// main_component. fix main_component for convenience
+		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
+		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+
+	// section list
+		self.section = self.load_section() // don't wait here
 
 
 	return common_build
@@ -119,8 +122,8 @@ tool_time_machine.prototype.load_section = async function() {
 
 	const self = this	
 
-	// caller component
-		const component = self.caller
+	// component
+		const component = self.main_component
 	
 	// short vars
 		const component_tipo	= component.tipo
@@ -241,7 +244,7 @@ tool_time_machine.prototype.load_section = async function() {
 			lang			: lang,
 			context			: context,
 			caller			: self,
-			id_variant		: 'time_machine' // avoid conflicts
+			id_variant		: self.model // 'time_machine' // avoid conflicts
 		}
 
 	// init section instance
@@ -273,11 +276,8 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 
 	const self = this
 
-	// source component (is the caller)
-		const component	= self.caller
-		// const source	= create_source(component, 'get_data')
-		// const context	= JSON.parse(JSON.stringify(component.context))
-			  // context.request_config = [source]
+	// main_component
+		const component	= self.main_component
 
 	// short vars
 		const model				= component.model
@@ -286,26 +286,10 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		const section_id		= component.section_id
 		const section_lang		= component.section_lang
 		const type				= component.type
-	
-	// console.log("-> tool_time_machine load_component component:", component);
-	
-	// request_config
-		const request_config = component.context.request_config
-			? JSON.parse( JSON.stringify(component.context.request_config) )
-			: null
-	
+
 	// context
-		const context = {
-			type			: 'component',
-			typo			: 'ddo',
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			lang			: lang,
-			mode			: mode,
-			model			: model,
-			parent			: section_tipo,
-			request_config	: request_config
-		}
+		const context 			= clone(component.context)
+			  context.lang 		= lang
 
 	// console.log("-> tool_time_machine load_component context:",context);
 
@@ -318,12 +302,11 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 			mode			: mode,
 			lang			: lang,
 			section_lang	: section_lang,
-			//parent		: component.parent,
 			type			: type,
 			context			: context,
 			// data			: {value:[]},
 			// datum		: component.datum,
-			id_variant		: 'time_machine' // avoid conflicts
+			id_variant		: self.model // 'time_machine' // avoid conflicts
 		}
 
 		if (matrix_id) {
@@ -342,12 +325,27 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 
 		// console.log("-> tool_time_machine load_component new component_instance:", component_instance);
 
-	// add created component instance to current ar_instances if not already added
-		const instance_found = self.ar_instances.find( el => el===component_instance )
-		if (component_instance!==self.caller && typeof instance_found==="undefined") {
-			self.ar_instances.push(component_instance)
+	// clean instances
+		for (let i = self.ar_instances.length - 1; i >= 0; i--) {
+			const current_instance = self.ar_instances[i]
+			if (current_instance.tipo===self.main_component.tipo && current_instance.matrix_id) {
+				// destroy previous preview component instances
+				const instance_index = self.ar_instances.findIndex( el => el.id===current_instance.id)
+				// remove from array of instances
+				if (instance_index!==-1) {
+					self.ar_instances.splice(instance_index, 1)
+					// destroy instance
+					await current_instance.destroy()
+				}else{
+					console.error("Error on delete previous component instance")
+				}
+			}
 		}
 
+	// add component instance to current ar_instances
+		self.ar_instances.push(component_instance)
+
+	// console.warn("_________________________________________________self.ar_instances:",self.ar_instances);
 
 	return component_instance
 };//end load_component
@@ -356,49 +354,55 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 
 /**
 * APPLY_VALUE
-* Loads component to place in respective containers: current and version preview
+* Set selected version value to active component and close the tool
+* @return promise
 */
-tool_time_machine.prototype.apply_value = async function() {
+tool_time_machine.prototype.apply_value = function() {
 
 	const self = this
 
 	// vars 'section_id','section_tipo','tipo','lang','matrix_id'
 
-	const lang		= self.lang
-	const matrix_id	= self.selected_matrix_id
-
-	const body = {
-		url				: self.trigger_url,
-		mode			: 'apply_value',
-		section_id		: self.caller.section_id,
-		section_tipo	: self.caller.section_tipo,
-		tipo			: self.caller.tipo,
-		lang			: lang,
-		matrix_id		: matrix_id
-	}
-	const trigger_response = await trigger_request(self.trigger_url, body);
-
-	// // user messages
-		// 	const msg_type = (trigger_response.result===false) ? 'error' : 'ok'
-		// 	//if (trigger_response.result===false) {
-		// 		ui.show_message(buttons_container, trigger_response.msg, msg_type)
-		// 	//}
-
-	// close tool modal
-		const close_promise = self.modal_container.close()
-
-	// reload source component on finish close
-		close_promise.then(()=>{
-			self.caller.refresh()
-		})
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[tool_time_machine.apply_value] trigger_response:",trigger_response);
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'apply_value')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			section_id		: self.main_component.section_id,
+			section_tipo	: self.main_component.section_tipo,
+			tipo			: self.main_component.tipo,
+			lang			: self.main_component.lang,
+			matrix_id		: self.selected_matrix_id
 		}
 
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
+		}
 
-	return trigger_response
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				dd_console("-> apply_value API response:",'DEBUG',response);
+
+				// close tool modal
+					const close_promise = self.modal_container.close()
+
+				// reload source component on finish close
+					close_promise.then(()=>{
+						if (self.caller) {
+							self.caller.refresh()
+						}
+					})
+
+				resolve(response)
+			})
+		})
 };//end apply_value
 
 

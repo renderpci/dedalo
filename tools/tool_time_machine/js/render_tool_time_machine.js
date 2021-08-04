@@ -96,7 +96,7 @@ const content_data_edit = async function(self) {
 			class_name 		: 'current_component_container disabled_component',
 			parent 			: fragment
 		})
-		await add_component(self, current_component_container, self.caller.lang, get_label['ahora'], 'edit', null)
+		await add_component(self, current_component_container, self.main_component.lang, get_label.ahora, 'edit', null)
 
 	// preview_component_container
 		const preview_component_container = ui.create_dom_element({
@@ -115,10 +115,18 @@ const content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 		// lang selector
-			if (self.caller.lang!=='lg-nolan') {
+			if (self.main_component.lang!=='lg-nolan') {
+				const on_change_select = function(e) {
+					const lang = e.target.value
+					if (lang!==self.lang) {
+						self.lang					= lang
+						self.main_component.lang	= lang
+						self.refresh()
+					}
+				}
 				const selector_label = ui.create_dom_element({
 					element_type	: 'label',
-					text_content 	: get_label['idioma'],
+					text_content 	: get_label.idioma,
 					parent 			: tool_bar
 				})
 				const lang_selector = ui.build_select_lang({
@@ -127,14 +135,6 @@ const content_data_edit = async function(self) {
 					class_name	: '',
 					action 		: on_change_select
 				})
-				function on_change_select(e) {
-					const lang = e.target.value
-					if (lang!==self.lang) {
-						self.lang = lang
-						self.caller.lang = lang
-						self.refresh()
-					}
-				}
 
 				// lang_selector.addEventListener('change', async (e) => {
 				// 	e.stopPropagation()
@@ -152,7 +152,7 @@ const content_data_edit = async function(self) {
 			self.button_apply = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning button_apply hide',
-				text_content	: get_label['aplicar_y_salvar'] || 'Apply and save',
+				text_content	: get_label.aplicar_y_salvar || 'Apply and save',
 				parent			: tool_bar
 			})
 			self.button_apply.addEventListener("click", self.apply_value.bind(self))
@@ -206,8 +206,11 @@ export const add_component = async (self, component_container, lang_value, label
 			return false
 		}
 
+	// console.log("self.main_component:", self.main_component);
+
+
 	const component = matrix_id===null
-		? self.caller
+		? self.main_component // self.caller
 		: await self.load_component(lang_value, mode, matrix_id)
 
 	// render node
