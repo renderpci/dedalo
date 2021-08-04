@@ -4,6 +4,7 @@
 
 
 // imports
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'
@@ -793,12 +794,31 @@ export const ui = {
 				function publish_load_tool(e) {
 					e.stopPropagation();
 
-					// parse ddo_map section_id
-						tool_context.tool_config.ddo_map.map(el => {
-							if (el.section_id==='self') {
-								el.section_id = self.section_id
+					// tool_config. If is received, parse section_id. Else create a new one on the fly
+					// to preserve the format of tool_context.tool_config ddo_map
+						if (!tool_context.tool_config) {
+
+							// create a new one on the fly
+							tool_context.tool_config = {
+								ddo_map : [{
+									tipo			: self.tipo,
+									section_tipo	: self.section_tipo,
+									section_id		: self.section_id,
+									model			: self.model,
+									mode			: 'edit',
+									role			: 'main_component'
+								}]
 							}
-						})
+
+						}else{
+
+							// parse ddo_map section_id
+							tool_context.tool_config.ddo_map.map(el => {
+								if (el.section_id==='self') {
+									el.section_id = self.section_id
+								}
+							})
+						}
 
 					// lang set
 						tool_context.lang = self.lang

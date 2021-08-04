@@ -536,7 +536,7 @@ component_common.prototype.update_datum = async function(new_data) {
 						const inst		= current_instances[j]
 						// inst.data	= self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
 						inst.data		= self.datum.data.find(el => el.tipo===inst.tipo && el.section_tipo===inst.section_tipo && el.section_id==inst.section_id) || {}						
-						console.log("____ updated instance data:", inst);
+						// console.log("____ updated instance data:", inst);
 					}
 				}else{
 					console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)

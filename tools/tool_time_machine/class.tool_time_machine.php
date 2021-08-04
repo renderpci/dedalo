@@ -27,7 +27,7 @@ class tool_time_machine { // extends tool_common
 	* @param $lang
 	* @param $matrix_id
 	*/
-	function apply_value($request_options) {
+	public static function apply_value($request_options) {
 		global $start_time;
 
 		#debug_log(__METHOD__." TOP_TIPO: ".TOP_TIPO." - TOP_ID: ".TOP_ID.to_string(), logger::DEBUG);
@@ -85,10 +85,6 @@ class tool_time_machine { // extends tool_common
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-					foreach($request_options as $name) {
-						$debug->{$name} = $$name;
-					}
-					#$debug->dato_time_machine = $dato_time_machine;
 				$response->debug = $debug;
 			}
 
