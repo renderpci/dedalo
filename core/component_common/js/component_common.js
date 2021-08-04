@@ -59,7 +59,7 @@ component_common.prototype.init = async function(options) {
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 	self.tools			= []
 	//rqo
-	// self.rqo 			= {}
+	// self.rqo 		= {}
 
 	// pagination info
 	// self.pagination = (self.data && self.data.pagination)
@@ -76,12 +76,11 @@ component_common.prototype.init = async function(options) {
 	// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
 
 	// set_context_vars. context vars re-updated after new build
-	set_context_vars(self, self.context)
+		set_context_vars(self, self.context)
 
 	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
-	self.change_value_pool = []
+		self.change_value_pool = []
 
-	self.permissions = null
 
 	// events subscription
 		// active_component (when user focus it in DOM)
@@ -97,99 +96,56 @@ component_common.prototype.init = async function(options) {
 				})
 			)
 
-	// events subscription (from component properties)
-	// the ontology can define a observer property that specify the tipo that this component will listen
-	// the event has a scope of the same section_tipo and same section_id for the observer and observable
-		const observe = (self.context.properties && typeof self.context.properties.observe!=="undefined")
-			? (self.context.properties.observe || null)
-			: null
-		if(observe){
-			const l = observe.length
-			for (let i = l - 1; i >= 0; i--) {
-				const component_tipo	= observe[i].component_tipo // target event component tipo
-				const event_name		= observe[i].event
-				const perform			= observe[i].perform || null
+	// subscribe to the observer events (important: only once)
+		init_events_subscription(self)
 
-				if(perform && typeof self[perform]==="function"){
-					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
-					// the id_base is built when the component is instantiated
-					// this event can be fired by:
-					// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
-					// or the sort format with the id_base of the observable component:
-					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
-					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
-					// console.log("SUBSCRIBE self.id:", self.id, ' id_base:',id_base);
-					self.events_tokens.push(
-						event_manager.subscribe(event_name +'_'+ id_base, self[perform].bind(self))
-					)
-				}else{
-					console.warn(`Invalid observe perform. Target function '${perform}' don't exists in ${self.model}:`, observe[i], typeof self[perform]);
-					console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
-				}
-			}
-		}
 
-	// component_save (when user change component value) every component is looking if the own the instance was changed.
-		/*
-		self.events_tokens.push(
-			event_manager.subscribe('save_component_'+self.id, (saved_component) => {
-				// call component
-					console.log("saved_component:",saved_component);
-				self.save(saved_component)
-				.then( response => { // response is saved_component object
+	// DES
+		// component_save (when user change component value) every component is looking if the own the instance was changed.
+			/*
+			self.events_tokens.push(
+				event_manager.subscribe('save_component_'+self.id, (saved_component) => {
+					// call component
+						console.log("saved_component:",saved_component);
+					self.save(saved_component)
+					.then( response => { // response is saved_component object
 
+					})
 				})
-			})
-		)
-		*/
-		//console.log("self.model:",self.model);
-		//console.log("self.model:",self.tipo);
-		//console.log("self.paginator_id:",self.paginator_id);
+			)
+			*/
+			//console.log("self.model:",self.model);
+			//console.log("self.model:",self.tipo);
+			//console.log("self.paginator_id:",self.paginator_id);
 
-	//	self.events_tokens.push(
-	//		event_manager.subscribe('paginator_destroy'+self.paginator_id, (active_section_record) => {
-	//			// debug
-	//			if (typeof self.destroy!=="function") {
-	//				console.error("Error. Component without destroy method: ",self);
-	//			}
-	//			self.destroy()
-	//		})
-	//	)
+		//	self.events_tokens.push(
+		//		event_manager.subscribe('paginator_destroy'+self.paginator_id, (active_section_record) => {
+		//			// debug
+		//			if (typeof self.destroy!=="function") {
+		//				console.error("Error. Component without destroy method: ",self);
+		//			}
+		//			self.destroy()
+		//		})
+		//	)
 
-	// component_save (when user change component value) every component is looking if the own the instance was changed.
-	//event_manager.subscribe('rebuild_nodes_'+self.id, (changed_component) => {
-	//	// call component
-	//
-	//	self.rebuild_nodes(changed_component)
-	//	.then( response => { // response is changed_component object
-	//
-	//	})
-	//})
+		// component_save (when user change component value) every component is looking if the own the instance was changed.
+		//event_manager.subscribe('rebuild_nodes_'+self.id, (changed_component) => {
+		//	// call component
+		//
+		//	self.rebuild_nodes(changed_component)
+		//	.then( response => { // response is changed_component object
+		//
+		//	})
+		//})
 
-	//event_manager.publish('component_init', self)
+		//event_manager.publish('component_init', self)
+
 
 	// status update
 		self.status = 'initiated'
 
 	return true
 };//end init
-
-
-
-/**
-* SET_CONTEXT_VARS
-* type, label, tools, divisor, permissions
-*/
-export const set_context_vars = function(self, context) {
-// console.log("context", self);
-	self.type			= self.context.type 	// typology of current instance, usually 'component'
-	self.label			= self.context.label // label of current component like 'summary'
-	self.tools			= self.context.tools || [] //set the tools of the component
-	self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
-	self.permissions	= self.context.permissions
-
-	return true
-};//end set_context_vars
 
 
 
@@ -237,14 +193,8 @@ component_common.prototype.build = async function(autoload=false){
 				}
 
 			// set context and data to current instance
-				// if (api_response.result) {
-
-					await self.update_datum(api_response.result.data)
-					self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-
-					// update instance properties from context
-						set_context_vars(self, self.context)
-				// }
+				await self.update_datum(api_response.result.data)
+				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 
 			// rqo. build again rqo with updated request_config if exists
 				if (self.context.request_config) {
@@ -252,8 +202,11 @@ component_common.prototype.build = async function(autoload=false){
 				}
 		}
 
+	// update instance properties from context
+		set_context_vars(self, self.context)
+
 	// permissions. calculate and set (used by section records later)
-		self.permissions = self.context.permissions
+		// self.permissions = self.context.permissions
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -274,6 +227,71 @@ component_common.prototype.build = async function(autoload=false){
 
 	return true
 };//end component_common.prototype.build
+
+
+
+/**
+* SET_CONTEXT_VARS
+* type, label, tools, divisor, permissions
+*/
+export const set_context_vars = function(self, context) {
+
+	self.type			= self.context.type // typology of current instance, usually 'component'
+	self.label			= self.context.label // label of current component like 'summary'
+	self.tools			= self.context.tools || [] //set the tools of the component
+	self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
+	self.permissions	= self.context.permissions || null
+
+	return true
+};//end set_context_vars
+
+
+
+/**
+* INIT_EVENTS_SUBSCRIPTION
+* Executed once
+*/
+const init_events_subscription = function (self) {
+
+	if(self.init_events_subscribed===true) return
+
+	// events subscription (from component properties)
+	// the ontology can define a observer property that specify the tipo that this component will listen
+	// the event has a scope of the same section_tipo and same section_id for the observer and observable
+		const observe = (self.context.properties && typeof self.context.properties.observe!=="undefined")
+			? (self.context.properties.observe || null)
+			: null
+		if(observe){
+			const l = observe.length
+			for (let i = l - 1; i >= 0; i--) {
+				const component_tipo	= observe[i].component_tipo // target event component tipo
+				const event_name		= observe[i].event
+				const perform			= observe[i].perform || null
+
+				if(perform && typeof self[perform]==="function"){
+					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
+					// the id_base is built when the component is instantiated
+					// this event can be fired by:
+					// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
+					// or the sort format with the id_base of the observable component:
+					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
+					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
+					// console.log("SUBSCRIBE self.id:", self.id, ' id_base:',id_base, " perform:"+perform);
+					self.events_tokens.push(
+						event_manager.subscribe(event_name +'_'+ id_base, self[perform].bind(self))
+					)
+
+				}else{
+					console.warn(`Invalid observe perform. Target function '${perform}' don't exists in ${self.model}:`, observe[i], typeof self[perform]);
+					console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
+				}
+			}
+
+			self.init_events_subscribed = true
+		}
+
+	return true
+}//end init_events_subscription
 
 
 

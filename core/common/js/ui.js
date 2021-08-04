@@ -102,7 +102,7 @@ export const ui = {
 		*/
 		build_wrapper_edit : (instance, items={}) => {
 			if(SHOW_DEBUG===true) {
-				//console.log("[ui.build_wrapper_edit] instance:",instance)
+				// console.log("[ui.build_wrapper_edit] instance:",instance)
 			}
 
 			const id			= instance.id || 'id is not set'
@@ -762,28 +762,28 @@ export const ui = {
 		* Generate button element for open the target tool
 		* @return dom element tool_button
 		*/
-		build_tool_button : (tool_object, self) => {
+		build_tool_button : (tool_context, self) => {
 
 			// button
 				const tool_button = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button tool',
-					title_label		: tool_object.label,
+					title_label		: tool_context.label,
 					style			: {
-						"-webkit-mask"	: "url('" +tool_object.icon +"')",
-						"mask"			: "url('" +tool_object.icon +"')"
+						"-webkit-mask"	: "url('" +tool_context.icon +"')",
+						"mask"			: "url('" +tool_context.icon +"')"
 					},
 					dataset			: {
-						tool : tool_object.name
+						tool : tool_context.name
 					}
 				})
 				// const tool_button = ui.create_dom_element({
 				// 	element_type	: 'img',
 				// 	class_name		: 'button tool',
-				// 	// style		: { "background-image": "url('" +tool_object.icon +"')" },
-				// 	src				: tool_object.icon,
-				// 	dataset			: { tool : tool_object.name },
-				// 	title_label		: tool_object.label
+				// 	// style		: { "background-image": "url('" +tool_context.icon +"')" },
+				// 	src				: tool_context.icon,
+				// 	dataset			: { tool : tool_context.name },
+				// 	title_label		: tool_context.label
 				// })
 
 
@@ -793,11 +793,20 @@ export const ui = {
 				function publish_load_tool(e) {
 					e.stopPropagation();
 
-					//common.prototype.load_tool(self, tool_object)
-					// ui.tool.load_tool(self, tool_object)
+					// parse ddo_map section_id
+						tool_context.tool_config.ddo_map.map(el => {
+							if (el.section_id==='self') {
+								el.section_id = self.section_id
+							}
+						})
+
+					// lang set
+						tool_context.lang = self.lang
+
+					//common.prototype.load_tool(self, tool_context)
 					event_manager.publish('load_tool', {
-						caller		: self,
-						tool_object	: tool_object
+						tool_context	: tool_context,
+						caller			: self
 					})
 				}
 
