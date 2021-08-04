@@ -116,8 +116,14 @@ tool_common.prototype.build = async function(autoload=false) {
 
 				// context
 					if (!el.context) {
-						const api_response	= await current_data_manager.get_element_context(el)
-						el.context			= api_response.result[0]
+						if (self.caller && self.caller.tipo===el.tipo && self.caller.section_tipo===el.section_tipo) {
+							// get context from available caller
+							el.context =self.caller.context
+						}else{
+							// resolve whole context from API (init event observer problem..)
+							const api_response	= await current_data_manager.get_element_context(el)
+							el.context			= api_response.result[0]
+						}
 					}
 
 				const element_options = {
@@ -128,7 +134,7 @@ tool_common.prototype.build = async function(autoload=false) {
 					mode			: el.mode,
 					lang			: self.lang,
 					context			: el.context,
-					id_variant		: 'tool_indexation'
+					id_variant		: self.model
 				}
 
 				// init and build instance
@@ -215,6 +221,7 @@ tool_common.prototype.build = async function(autoload=false) {
 		if(SHOW_DEBUG===true) {
 			// console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
 			// dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
+			dd_console(`tool common build. self.ar_instances`, 'DEBUG', self.ar_instances)
 		}
 
 
