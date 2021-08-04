@@ -57,7 +57,7 @@ component_common.prototype.init = async function(options) {
 
 	self.events_tokens	= [] // array of events of current component
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-
+	self.tools			= []
 	//rqo
 	// self.rqo 			= {}
 

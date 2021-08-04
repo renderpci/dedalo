@@ -8,7 +8,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source, get_ar_inverted_paths} from '../../../core/common/js/common.js'
-	import {tool_common, trigger_request} from '../../tool_common/js/tool_common.js'
+	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 
 

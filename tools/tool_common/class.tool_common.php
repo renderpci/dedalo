@@ -12,6 +12,7 @@ abstract class tool_common {
 	public $config;
 
 
+
 	/**
 	* __CONSTRUCT
 	* @return bool true
@@ -55,4 +56,5 @@ abstract class tool_common {
 	}//end get_config
 
 
-}
+
+}//end class tool_common

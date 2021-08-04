@@ -135,8 +135,6 @@ if($mode==='export_ontology') {
 
 	if(empty($terminoID)) die(" Error. Need more data! terminoID:$terminoID ");
 
-	// include(dirname(__FILE__) . '/class.ontology.php');
-
 	$response = ontology::export($terminoID);
 
 	echo json_encode($response, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
