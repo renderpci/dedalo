@@ -1495,7 +1495,8 @@ abstract class common {
 			$tools		= [];
 			foreach ($tools_list as $tool_object) {
 				$tool_config	= $properties->tool_config->{$tool_object->name} ?? null;
-				$tools[]		= common::create_tool_context($tool_object, $tool_config);
+				$tools[]		= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
+
 			}//end foreach ($tools_list as $item)
 
 
@@ -3763,7 +3764,7 @@ abstract class common {
 	* @param object $tool_config (from properties)
 	* @return object $tool_context
 	*/
-	public static function create_tool_context($tool_object, $tool_config=null) {
+	public static function create_tool_context($tool_object, $tool_config=null, $tipo=null, $section_tipo=null) {
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){
@@ -3793,12 +3794,12 @@ abstract class common {
 
 				// parse and resolve ddo_map self
 					if (isset($tool_config->ddo_map)) {
-						$tool_config->ddo_map = array_map(function($el){
+						$tool_config->ddo_map = array_map(function($el) use($tipo, $section_tipo){
 							if ($el->tipo==='self') {
-								$el->tipo = $this->tipo;
+								$el->tipo = $tipo;
 							}
 							if ($el->section_tipo==='self') {
-								$el->section_tipo = $this->section_tipo;
+								$el->section_tipo = $section_tipo;
 							}
 							if (!isset($el->model)) {
 								$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
