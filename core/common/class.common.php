@@ -1494,9 +1494,23 @@ abstract class common {
 			$tools_list	= $this->get_tools();
 			$tools		= [];
 			foreach ($tools_list as $tool_object) {
-				$tool_config	= $properties->tool_config->{$tool_object->name} ?? null;
-				$tools[]		= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
-
+				$tool_config	= isset($properties->tool_config->{$tool_object->name})
+					? $properties->tool_config->{$tool_object->name}
+					: (function(){
+						return null; // will be created in client (!)
+						// create an automatic ddo_map
+						// return [
+						// 	(object)[
+						// 		'tipo'			=> $this->tipo,
+						// 		'section_tipo'	=> $this->section_tipo,
+						// 		'model'			=> get_class($this),
+						// 		'role'			=> 'component',
+						// 		'section_tipo'	=> 'self'
+						// 	]
+						// ];
+					  })();
+				$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
+				$tools[]		= $tool_context;
 			}//end foreach ($tools_list as $item)
 
 

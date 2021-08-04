@@ -215,6 +215,7 @@ tool_common.prototype.build = async function(autoload=false) {
 		if(SHOW_DEBUG===true) {
 			// console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
 			// dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
+			dd_console(`tool common build. self.ar_instances`, 'DEBUG', self.ar_instances)
 		}
 
 

@@ -281,9 +281,9 @@ tool_indexation.prototype.get_component = async function(lang) {
 		const instance_index = self.ar_instances.findIndex( el => el.id===self.transcription_component.id)
 		// remove from array of instances
 		if (instance_index!==-1) {
+			self.ar_instances.splice(instance_index, 1)
 			// destroy instance
 			await self.transcription_component.destroy()
-			self.ar_instances.splice(instance_index, 1)
 		}else{
 			console.error("Error on delete previous transcription_component instance")
 		}
