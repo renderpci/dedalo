@@ -37,22 +37,42 @@ export const tool_common = function(){
 * }
 */
 tool_common.prototype.init = async function(options) {
+	// dd_console(`init tool options`, 'DEBUG', options)
 	
 	const self = this
 
+	// options
+		self.model			= options.model
+		self.section_tipo	= options.section_tipo
+		self.section_id		= options.section_id
+		self.lang			= options.lang
+		self.tool_config	= options.tool_config
+		self.mode			= options.mode || 'edit'
+		self.label			= options.label
+		self.description	= options.description
+		self.caller			= options.caller // optional, only for refresh on tool exit
+
 	// set vars
-		self.model				= options.model
-		self.tool_section_tipo	= options.tool_object.section_tipo
-		self.tool_section_id	= options.tool_object.section_id
-		self.mode				= options.mode
-		self.lang				= options.lang
-		self.caller				= options.caller
 		self.node				= []
 		self.type				= 'tool'
 		self.ar_instances		= []
 		self.events_tokens		= []
 		self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common	
 		self.get_label			= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
+
+	// set vars
+		// self.model				= options.model
+		// self.tool_section_tipo	= options.tool_object.section_tipo
+		// self.tool_section_id		= options.tool_object.section_id
+		// self.mode				= options.mode
+		// self.lang				= options.lang
+		// self.caller				= options.caller
+		// self.node				= []
+		// self.type				= 'tool'
+		// self.ar_instances		= []
+		// self.events_tokens		= []
+		// self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common
+		// self.get_label			= get_tool_label
 
 	// set status
 		self.status = 'initied'
@@ -78,69 +98,123 @@ tool_common.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
-	// component_json simple_tool_object
-		const simple_tool_object_tipo = 'dd1353'
-
 	// load self style
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
 		common.prototype.load_style(tool_css_url)
 
+	// data manager
+		const current_data_manager = new data_manager();
+
+	// ddo_map load all elements inside ddo_map
+		const ar_promises = []
+		const ddo_map = self.tool_config.ddo_map
+		for (let i = 0; i < ddo_map.length; i++) {
+
+			const el = ddo_map[i]
+
+			ar_promises.push( new Promise(async function(resolve){
+
+				// context
+					if (!el.context) {
+						const api_response	= await current_data_manager.get_element_context(el)
+						el.context			= api_response.result[0]
+					}
+
+				const element_options = {
+					model			: el.model,
+					tipo			: el.tipo,
+					section_tipo	: el.section_tipo,
+					section_id		: el.section_id,
+					mode			: el.mode,
+					lang			: self.lang,
+					context			: el.context,
+					id_variant		: 'tool_indexation'
+				}
+
+				// init and build instance
+					// const component_instance = await get_instance(element_options);
+					// await component_instance.build(true);
+
+					get_instance(element_options)
+					.then(function(element_instance){
+
+						// set tool as caller of the component :-)
+						element_instance.caller = self
+
+						// build
+						element_instance.build(true)
+						.then(function(){
+							resolve(element_instance)
+						})
+					})
+			}))
+		}//end for (let i = 0; i < ddo_map.length; i++)
+
+		// set on finish
+			await Promise.all(ar_promises).then((ar_instances) => {
+				self.ar_instances = ar_instances
+			})
+
+	// component_json simple_tool_object
+		// const simple_tool_object_tipo = 'dd1353'
+
 	// load data if is not already received as option
-		if (autoload===true) {
+		// if (autoload===true) {
 
-			// mandatory vars check
-				if (!self.tool_section_tipo || self.tool_section_tipo.lenght<2) {
-					console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_tipo:", self.tool_section_tipo);
-					return false
-				}
-				if (!self.tool_section_id || self.tool_section_id.lenght<2) {
-					console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_id:", self.tool_section_id);
-					return false
-				}
+		// 	// mandatory vars check
+		// 		if (!self.tool_section_tipo || self.tool_section_tipo.lenght<2) {
+		// 			console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_tipo:", self.tool_section_tipo);
+		// 			return false
+		// 		}
+		// 		if (!self.tool_section_id || self.tool_section_id.lenght<2) {
+		// 			console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_id:", self.tool_section_id);
+		// 			return false
+		// 		}
 
-			// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
-				const rqo = {
-					action	: 'read',
-					// tool source for component JSON that stores full tool config
-					source : {
-						action			: 'get_data',
-						model			: 'component_json',
-						tipo			: 'dd1353',
-						section_tipo	: self.tool_section_tipo,
-						section_id		: self.tool_section_id,
-						mode			: 'edit',
-						lang			: 'lg-nolan'
-					},
-					prevent_lock : true
-				}
+		// 	// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
+		// 		const rqo = {
+		// 			action	: 'read',
+		// 			// tool source for component JSON that stores full tool config
+		// 			source : {
+		// 				action			: 'get_data',
+		// 				model			: 'component_json',
+		// 				tipo			: 'dd1353',
+		// 				section_tipo	: self.tool_section_tipo,
+		// 				section_id		: self.tool_section_id,
+		// 				mode			: 'edit',
+		// 				lang			: 'lg-nolan'
+		// 			},
+		// 			prevent_lock : true
+		// 		}
 
-			// load data. Load section data from db of the current tool.
-			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
-			// The tool info was generated when it was imported / registered by admin
-				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:rqo})
-				const data					= api_response.result.data
+		// 	// load data. Load section data from db of the current tool.
+		// 	// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
+		// 	// The tool info was generated when it was imported / registered by admin
+		// 		const current_data_manager	= new data_manager()
+		// 		const api_response			= await current_data_manager.request({body:rqo})
+		// 		const data					= api_response.result.data
 
-			// config set
-				// simple_tool_object
-					const simple_tool_object	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
-					self.simple_tool_object		= simple_tool_object[0];
-				// label
-					const label					= self.simple_tool_object.label.find(item => item.lang===self.lang);
-					self.label					= typeof label!=='undefined' ? label.value : self.model
-				// description
-					const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
-					self.description			= typeof description!=='undefined' ? description.value : null
+		// 	// config set
+		// 		// simple_tool_object
+		// 			const simple_tool_object	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
+		// 			self.simple_tool_object		= simple_tool_object[0];
+		// 		// label
+		// 			const label					= self.simple_tool_object.label.find(item => item.lang===self.lang);
+		// 			self.label					= typeof label!=='undefined' ? label.value : self.model
+		// 		// description
+		// 			const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
+		// 			self.description			= typeof description!=='undefined' ? description.value : null
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					console.log("[tool_common.build] api_response:", api_response);
-				}
-		}
+		// 	// debug
+		// 		if(SHOW_DEBUG===true) {
+		// 			console.log("[tool_common.build] api_response:", api_response);
+		// 		}
+		// }
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
+			// console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
+			// dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
 		}
 
 
@@ -170,23 +244,31 @@ tool_common.prototype.build = async function(autoload=false) {
 * @return tool instance | bool false
 */
 export const load_tool = async (options) => {
-	dd_console(`load tool options`, 'DEBUG', options)
+	// dd_console(`load tool options`, 'DEBUG', options)
 
 	// options
+		const tool_context	= options.tool_context
 		const caller		= options.caller
-		const tool_object	= options.tool_object
+
+	// sample
+		// description: "Create links between text fragments and thesaurus terms"
+		// icon: "/v6/tools/tool_indexation/img/icon.svg"
+		// label: "Tool Indexation"
+		// lang: "lg-eng"
+		// name: "tool_indexation"
+		// model: "tool_indexation"
+		// mode: "edit"
+		// section_id: "2"
+		// section_tipo: "dd1324"
+		// show_in_component: true
+		// show_in_inspector: false
+		// tool_config: {ddo_map:
+
+	// add caller (only to refresh it on close tool)
+		tool_context.caller = caller
 
 	// instance load / recover
-		const tool_instance = await get_instance({
-			model 			: tool_object.name,
-			tipo 			: caller.tipo,
-			section_tipo 	: caller.section_tipo,
-			section_id 		: caller.section_id,
-			mode 			: caller.mode,
-			lang 			: page_globals.dedalo_data_lang,
-			caller 			: caller,
-			tool_object		: tool_object
-		})
+		const tool_instance = await get_instance(tool_context)
 
 	// stop if already loaded (toggle tool)
 		if (tool_instance.status && tool_instance.status!=='initied') {
@@ -201,6 +283,37 @@ export const load_tool = async (options) => {
 
 
 	return tool_instance
+
+
+	// // options
+	// 	const caller		= options.caller
+	// 	const tool_object	= options.tool_object
+
+	// // instance load / recover
+	// 	const tool_instance = await get_instance({
+	// 		model 			: tool_object.name,
+	// 		tipo 			: caller.tipo,
+	// 		section_tipo 	: caller.section_tipo,
+	// 		section_id 		: caller.section_id,
+	// 		mode 			: caller.mode,
+	// 		lang 			: page_globals.dedalo_data_lang,
+	// 		caller 			: caller,
+	// 		tool_object		: tool_object
+	// 	})
+
+	// // stop if already loaded (toggle tool)
+	// 	if (tool_instance.status && tool_instance.status!=='initied') {
+	// 		return false
+	// 	}
+
+	// // build
+	// 	await tool_instance.build(true)
+
+	// // render tool (don't wait here)
+	// 	tool_instance.render()
+
+
+	// return tool_instance
 };//end load_tool
 
 
