@@ -64,18 +64,45 @@ class menu extends common {
 		// menu replace the model and the tipo with the target section, and add the config for use to change the behavior of the real section.
 			$ar_areas_length = sizeof($ar_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
+
 				$current_area = $ar_areas[$i];
 
-				if($current_area->model === 'section_tool'){
+				if($current_area->model==='section_tool'){
 
-					$RecordObj_dd	= new RecordObj_dd($current_area->tipo);
+					$section_tool_tipo = $current_area->tipo;
+
+					$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
 					$properties		= $RecordObj_dd->get_properties();
 
-					$current_area->model	= 'section';
-					$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
-					$current_area->config	= $properties->config ?? null;
+					// overwrite current_area (!)
+						$current_area->model	= 'section';
+						$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
+						$current_area->config	= $properties->config ?? null;
+					$section_tool_tipo = $current_area->tipo;
+
+					$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
+					$properties		= $RecordObj_dd->get_properties();
+
+					// overwrite current_area (!)
+						$current_area->model	= 'section';
+						$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
+						$current_area->config	= $properties->config ?? null;
+
+					// tool_context
+						$tool_name = $properties->config->tool_name ?? false;
+						if ($tool_name) {
+							$ar_tool_object	= common::get_client_registered_tools([$tool_name]);
+							if (empty($ar_tool_object)) {
+								debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in current_area ".to_string($current_area), logger::ERROR);
+							}else{
+								$tool_config	= $properties->config->tool_config->$tool_name ?? false;
+								$tool_context	= common::create_tool_context($ar_tool_object[0], $tool_config);
+								$current_area->config->tool_context = $tool_context;
+								// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+							}
+						}
 				}
-			}
+			}//end for ($i=0; $i < $ar_areas_length ; $i++)
 
 		$tree_datalist = $ar_areas;
 

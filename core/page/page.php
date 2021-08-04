@@ -59,12 +59,29 @@
 
 				case ($model==='section_tool'):
 
-					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$section_tool_tipo = $tipo;
+
+					$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
 					$properties		= $RecordObj_dd->get_properties();
 
-					$model	= 'section';
-					$tipo	= $properties->config->target_section_tipo ?? $tipo;
-					$config	= $properties->config ?? null;
+					// overwrite (!)
+						$model	= 'section';
+						$tipo	= $properties->config->target_section_tipo ?? $tipo;
+						$config	= $properties->config ?? null;
+
+					// tool_context
+						$tool_name = $properties->config->tool_name ?? false;
+						if ($tool_name) {
+							$ar_tool_object	= common::get_client_registered_tools([$tool_name]);
+							if (empty($ar_tool_object)) {
+								debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
+							}else{
+								$tool_config	= $properties->config->tool_config->$tool_name ?? false;
+								$tool_context	= common::create_tool_context($ar_tool_object[0], $tool_config);
+								$config->tool_context = $tool_context;
+								// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+							}
+						}
 
 				case ($model==='section'):
 

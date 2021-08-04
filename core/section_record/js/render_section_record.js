@@ -434,7 +434,6 @@ const build_id_column = function(self) {
 				break
 
 			case (self.caller.config && self.caller.config.source_model==='section_tool'):
-
 				// button edit (pen)
 					if (permissions>0) {
 						const edit_button = ui.create_dom_element({
@@ -442,6 +441,27 @@ const build_id_column = function(self) {
 							class_name		: '',
 							inner_html 		: " "+self.caller.config.tool_name,
 							parent			: edit_line
+						})
+						edit_button.addEventListener("click", function(e){
+							e.stopPropagation();
+
+							// tool_context (clone always to prevent modify original object)
+								const tool_context = JSON.parse( JSON.stringify(self.caller.config.tool_context) )
+
+							// parse ddo_map section_id
+								tool_context.tool_config.ddo_map.map(el => {
+									if (el.section_id==='self') {
+										el.section_id = self.section_id
+									}
+								})
+
+							// lang set
+								tool_context.lang = self.lang
+
+							event_manager.publish('load_tool', {
+								tool_context	: tool_context,
+								caller			: self.caller
+							})
 						})
 					}
 				break;
