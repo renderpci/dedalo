@@ -50,7 +50,9 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 			// tool destroy
 				await self.destroy(true, true, true)
 			// refresh source component text area
-				self.caller.refresh()
+				if (self.caller) {
+					self.caller.refresh()
+				}
 		}
 
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation		
@@ -207,11 +209,15 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'thesaurus_container',
 			parent			: fragment
 		})
-		const thesaurus = self.get_thesaurus()
-		thesaurus.then(function(thesaurus_instance){
-			thesaurus_instance.render().then(function(node){
-				thesaurus_container.appendChild(node)
-			})
+		// const thesaurus = self.get_thesaurus()
+		// thesaurus.then(function(thesaurus_instance){
+		// 	thesaurus_instance.render().then(function(node){
+		// 		thesaurus_container.appendChild(node)
+		// 	})
+		// })
+		self.area_thesaurus.render()
+		.then(function(node){
+			thesaurus_container.appendChild(node)
 		})
 
 	// right_container 
@@ -249,7 +255,7 @@ const get_content_data_edit = async function(self) {
 				component_container.appendChild(lang_selector)
 
 			// component. render another node of component caller and append to container
-				const component = self.main_component || await self.get_component(self.lang)
+				const component = self.transcription_component || await self.get_component(self.lang)
 				component.render()
 				.then(function(node){
 					component_container.appendChild(node)
