@@ -3757,10 +3757,11 @@ abstract class common {
 					}
 
 				}else{
+
 					$tools[] = $tool;
 				}
 			}
-		}
+		}//end foreach ($registered_tools as $tool)
 
 
 		return $tools;
@@ -3838,7 +3839,8 @@ abstract class common {
 				: null;
 
 			$registered_tools[] = $current_value;
-		}
+		}//end foreach ($result->ar_records as $record)
+
 
 		// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
 		// write_session_value('registered_tools', $registered_tools);

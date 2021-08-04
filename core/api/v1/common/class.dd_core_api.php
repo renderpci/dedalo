@@ -282,8 +282,8 @@ class dd_core_api {
 				$result->debug->exec_time = exec_time_unit($start_time,'ms')." ms";
 			}
 
-		$response->result 		= $result;
-		$response->msg 	  		= 'Ok. Request done';
+		$response->result	= $result;
+		$response->msg		= 'Ok. Request done';
 
 		return (object)$response;
 	}//end count
@@ -351,14 +351,14 @@ class dd_core_api {
 					break;
 			}
 
-		// element json
+		// element JSON
 			$get_json_options = new stdClass();
 				$get_json_options->get_context	= true;
 				$get_json_options->get_data		= false;
 			$element_json = $element->get_json($get_json_options);
 
 		// context add
-			$context = $element_json->context; //dump($context, ' $context ++ '.to_string($model));
+			$context = $element_json->context;
 
 		// response
 			$response->result	= $context;
