@@ -1491,28 +1491,58 @@ abstract class common {
 
 
 		// tools
-			$tools = array_map(function($item){
+			$tools_list	= $this->get_tools();
+			$tools		= [];
+			foreach ($tools_list as $item) {
 
-				// $label = array_reduce($item->label, function($carry, $el){
-				// 	return ($el->lang===DEDALO_DATA_LANG) ? $el->value : $carry;
-				// }, null);
-				$label = array_find($item->label, function($el){
-					return $el->lang===DEDALO_DATA_LANG;
-				})->value ?? reset($item->label)->value;
+				// label. (JSON list) Try match current lang else use the first lang value
+					$tool_label = array_find($item->label, function($el){
+						return $el->lang===DEDALO_DATA_LANG;
+					})->value ?? reset($item->label)->value;
 
-				//dump($label, ' label ++ '.to_string());
+				// description. (text_area) Try match current lang else use the first lang value
+					$description = array_find((array)$item->description, function($el){
+						return $el->lang===DEDALO_DATA_LANG;
+					})->value[0] ?? reset($item->description)->value[0];
 
-				$tool = new stdClass();
-					$tool->section_id			= $item->section_id;
-					$tool->section_tipo			= $item->section_tipo;
-					$tool->name					= $item->name;
-					$tool->label				= $label;
-					$tool->icon					= DEDALO_TOOLS_URL . '/' . $item->name . '/img/icon.svg';
-					$tool->show_in_inspector	= $item->show_in_inspector;
-					$tool->show_in_component	= $item->show_in_component;
+				$tool_context = new stdClass();
+					$tool_context->section_id			= $item->section_id;
+					$tool_context->section_tipo			= $item->section_tipo;
+					$tool_context->model				= $item->name;
+					$tool_context->name					= $item->name;
+					$tool_context->mode					= 'edit';
+					$tool_context->label				= $tool_label;
+					$tool_context->description			= $description;
+					$tool_context->icon					= DEDALO_TOOLS_URL . '/' . $item->name . '/img/icon.svg';
+					$tool_context->show_in_inspector	= $item->show_in_inspector;
+					$tool_context->show_in_component	= $item->show_in_component;
 
-				return $tool;
-			}, $this->get_tools());
+				// tool_config add
+					if (isset($properties->tool_config) && isset($properties->tool_config->{$tool_context->name})) {
+
+						$tool_config = $properties->tool_config->{$tool_context->name};
+
+						// parse and resolve ddo_map self
+							$tool_config->ddo_map = array_map(function($el){
+								if ($el->tipo==='self') {
+									$el->tipo = $this->tipo;
+								}
+								if ($el->section_tipo==='self') {
+									$el->section_tipo = $this->section_tipo;
+								}
+								if (!isset($el->model)) {
+									$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
+								}
+								return $el;
+							}, $tool_config->ddo_map);
+
+						// set parsed tool_config
+							$tool_context->tool_config = $tool_config;
+					}//end if (isset($properties->tool_config)
+
+				$tools[] = $tool_context;
+			}//end foreach ($tools_list as $item)
+
 
 
 		// request_config
@@ -3021,18 +3051,20 @@ abstract class common {
 				$ar_related_clean 	 = [];
 				$target_section_tipo = $section_tipo;
 
-				foreach ((array)$ar_related as $key => $current_tipo) {
-					$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					if ($current_model==='section') {
-						$target_section_tipo = $current_tipo; // Overwrite
-						continue;
-					}else if ($current_model==='section' || $current_model==='exclude_elements') {
-						continue;
-					}else if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO){ 
-						continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
-					}
+				if (!empty($ar_related)) {
+					foreach ((array)$ar_related as $key => $current_tipo) {
+						$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						if ($current_model==='section') {
+							$target_section_tipo = $current_tipo; // Overwrite
+							continue;
+						}else if ($current_model==='section' || $current_model==='exclude_elements') {
+							continue;
+						}else if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO){
+							continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+						}
 
-					$ar_related_clean[] = $current_tipo;
+						$ar_related_clean[] = $current_tipo;
+					}
 				}
 				if (empty($ar_related_clean) && $model!=='component_relation_index') {
 					// $ar_related_clean = [$tipo]; Loop de la muerte (!)
