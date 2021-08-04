@@ -4,6 +4,7 @@
 
 
 // imports
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'

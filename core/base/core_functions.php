@@ -224,9 +224,9 @@ function start_time() {
 # EXEC_TIME
 function exec_time($start, $method=NULL, $result=NULL) {
 
-	$end = start_time();
-	$total = $end - $start;
-	$total = $total*1000;
+	$end		= start_time();
+	$total	= $end - $start;
+	$total	= $total*1000;
 	if($total>100){
 		$exec  = sprintf(' Exec in <span style=\'color:red\'>%.3f ms.</span>', $total) ;
 	}else{
