@@ -236,6 +236,165 @@ class component_date extends component_common {
 
 
 	/**
+	* GET_VALUE
+	* Get the value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* Some the text components can set the value with the dato directly
+	* the relation components need to process the locator to resolve the value
+	* @return object $value
+	*/
+	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$separator_fields	= $ddo->separator_fields ?? null;
+			$separator_rows		= $ddo->separator_rows ?? null;
+			$format_columns		= $ddo->format_columns ?? null;
+			$class_list 		= $ddo->class_list ?? null;
+
+		$value = new dd_grid_cell_object();
+
+		$data	= $this->get_dato();
+		$label	= $this->get_label();
+
+		$properties = $this->get_properties();
+
+		$date_mode	= $this->get_date_mode();
+
+		foreach ($data as $key => $current_dato) {
+
+			$ar_values[$key] = ''; // default
+
+			if(empty($current_dato)) {
+				continue;
+			}
+
+			switch ($date_mode) {
+
+				case 'range':
+					# Start
+					$value_start = '';
+					if(isset($current_dato->start)) {
+						$dd_date = new dd_date($current_dato->start);
+						
+						if(isset($current_dato->start->day)) {
+							$value_start = $dd_date->get_dd_timestamp("Y-m-d");
+						}else{
+							$value_start = $dd_date->get_dd_timestamp("Y-m");
+							if(isset($current_dato->start->month)) {
+							}else{
+								$value_start = $dd_date->get_dd_timestamp("Y", $padding=false);
+							}
+						}
+
+						$ar_values[$key] .= $value_start;
+					}
+
+					# End
+					$value_end = '';
+					if(isset($current_dato->end)) {
+						$dd_date	= new dd_date($current_dato->end);
+						/*
+						$value_end 	= isset($properties->method->get_valor_local)
+									? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
+									: component_date::get_valor_local( $dd_date, false );
+						*/
+
+						if(isset($current_dato->end->day)) {
+								$value_end = $dd_date->get_dd_timestamp("Y-m-d");
+							}else{
+								if(isset($current_dato->end->month)) {
+									$value_end = $dd_date->get_dd_timestamp("Y-m");
+								}else{
+									$value_end = $dd_date->get_dd_timestamp("Y", $padding=false);
+								}
+							}
+						$ar_values[$key] .= ' <> '. $value_end;
+					}
+					break;
+
+				case 'period':
+					if(!empty($current_dato->period)) {
+
+						$ar_string_period = [];
+
+						$dd_date = new dd_date($current_dato->period);
+						# Year
+						$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
+						# Month
+						$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
+						# Day
+						$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
+
+						$ar_values[$key] = implode(' ', $ar_string_period);
+					}
+					break;
+
+				case 'time':
+					$dd_date = new dd_date($current_dato);
+					$ar_values[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
+					break;
+
+				case 'date_time':
+					if(isset($current_dato->start)) {
+						$dd_date 		= new dd_date($current_dato->start);
+						$ar_values[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
+					}
+					break;
+
+				case 'date':
+				default:
+					# Start
+					$value_start = '';
+					if(isset($current_dato->start)) {
+						$dd_date = new dd_date($current_dato->start);
+
+						if(isset($current_dato->start->day)) {
+							$value_start = $dd_date->get_dd_timestamp('Y-m-d');
+						}else{
+							$value_start = $dd_date->get_dd_timestamp('Y-m');
+							if(isset($current_dato->start->month)) {
+							}else{
+								$value_start = $dd_date->get_dd_timestamp('Y', $padding=false);
+							}
+						}
+
+						$ar_values[$key] .= $value_start;
+					}
+					break;
+			}
+		}
+
+		$separator_fields = isset($separator_fields)
+			? $separator_fields
+			: (isset($properties->separator_fields)
+				? $properties->separator_fields
+				: ' <> ');
+
+		$separator_rows = isset($separator_rows)
+			? $separator_rows
+			: (isset($properties->separator_rows)
+				? $properties->separator_rows
+				: ' | ');
+
+
+		$value->set_type('column');
+		$value->set_label($label);
+		$value->set_cell_type('text');
+		if(isset($class_list)){
+			$value->set_class_list($class_list);
+		}
+		$value->set_separator_fields($separator_fields);
+		$value->set_separator_rows($separator_rows);
+		$value->set_value($ar_values);
+
+		return $value;
+	}//end get_value
+
+
+
+
+
+	/**
 	* GET VALOR (Ojo: Se usa para ordenar, por lo que mantiene el formato DB. Para visualizar usar 'get_valor_local()')
 	* Dato formated as timestamp '2012-11-07 17:33:49'
 	*/
