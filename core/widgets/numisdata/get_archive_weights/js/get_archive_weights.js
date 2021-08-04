@@ -22,6 +22,8 @@ export const get_archive_weights = function(){
 
 	this.node = []
 
+	this.events_tokens = []
+
 	this.status
 
 	return true

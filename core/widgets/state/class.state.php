@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS WIDGET_COMMON
+* CLASS STATE
 *
 *
 */
