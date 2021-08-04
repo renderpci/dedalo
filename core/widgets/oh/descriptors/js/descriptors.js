@@ -1,73 +1,78 @@
-/**
-* DESCRIPTORS
-*
-*
-*
-*/
-var descriptors = new function() {
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
 
 
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/extras/oh/widgets/descriptors/trigger.descriptors.php';
+// imports
+	import {widget_common} from '../../../widget_common/widget_common.js'
+	import {render_descriptors} from '../js/render_descriptors.js'
 
 
 
-	/**
-	* LOAD_TERMS
-	* @return promise
-	*/
-	this.load_terms = function(button_obj) {
+export const descriptors = function(){
 
-		const response_div = button_obj.parentNode //.querySelector('.descriptors_container')
-			  response_div.innerHTML = '<div class="descriptors_button">Loading..</div>'
+	this.id
 
-		const trigger_url  = descriptors.trigger_url
-		const trigger_vars = {
-			mode 		 			 : 'load_terms',
-			component_tipo 			 : button_obj.dataset.component_tipo,
-			section_tipo 			 : button_obj.dataset.section_tipo,
-			section_id 	 			 : button_obj.dataset.section_id,
-			component_portal_tipo 	 : button_obj.dataset.component_portal_tipo,
-			component_text_area_tipo : button_obj.dataset.component_text_area_tipo,
-		}; //return  console.log(trigger_vars);
-		
-		const jsPromise = common.get_json_data(trigger_url, trigger_vars).then(function(response){
-				if(SHOW_DEBUG===true) {
-					console.log("[descriptors.load_terms] response",response);
-				}
-				
-				response_div.innerHTML = response.result
+	this.section_tipo
+	this.section_id
+	this.lang
+	this.mode
 
-				// Hide button
-				button_obj.remove()
+	this.value
 
-				// Open list action exec
-				//var tab_title = response_div.querySelector('.tab_title')
-				//if (tab_title) {
-				//	tab_title.click()
-				//}
+	this.node = []
 
-			})
+	this.events_tokens = []
 
+	this.status
 
-		return jsPromise
-	};//end load_terms
-
-
-
-	/**
-	* TOGGLE_TAB_CONTENT
-	* @return 
-	*/
-	this.toggle_tab_content = function(button) {
-		
-		const tab_content = button.parentNode.querySelector(".tab_content")
-
-		$(tab_content).toggle()
-
-		return true
-	};//end toggle_tab_content
-
-
-
+	return true
 }//end descriptors
+
+
+
+/**
+* COMMON FUNCTIONS
+* extend functions from common
+*/
+// prototypes assign
+	// lifecycle
+	// descriptors.prototype.init 	 	= component_common.prototype.init
+	// render
+	descriptors.prototype.edit 			= render_descriptors.prototype.edit
+	descriptors.prototype.list 			= render_descriptors.prototype.list
+
+
+
+/**
+* INIT
+*/
+descriptors.prototype.init = async function(options) {
+
+	const self = this
+
+	// call the generic commom init
+		const common_init = widget_common.prototype.init.call(this, options);
+
+}//end init
+
+
+
+/**
+* RENDER
+*/
+descriptors.prototype.render = async function(options={render_level:'full'}) {
+
+	const self = this
+
+	const render_level 	= options.render_level || 'full'
+	const render_mode 	= self.mode || 'edit'
+
+	const node = await self[render_mode]({
+		render_level : render_level
+	})
+
+	self.node.push(node)
+
+	return node
+}//end render
