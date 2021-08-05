@@ -276,76 +276,21 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 
 	const self = this
 
-	// main_component
-		const component	= self.main_component
+	// to_delete_instances. Select instances with same tipo and property matrix_id not empty
+		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_component.tipo && el.matrix_id)
 
-	// short vars
-		const model				= component.model
-		const component_tipo	= component.tipo
-		const section_tipo		= component.section_tipo
-		const section_id		= component.section_id
-		const section_lang		= component.section_lang
-		const type				= component.type
-
-	// context
-		const context 			= clone(component.context)
-			  context.lang 		= lang
-
-	// console.log("-> tool_time_machine load_component context:",context);
-
-	// component instance_options
-		const instance_options = {
-			model			: model,
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			section_lang	: section_lang,
-			type			: type,
-			context			: context,
-			// data			: {value:[]},
-			// datum		: component.datum,
-			id_variant		: self.model // 'time_machine' // avoid conflicts
+	// options
+		const options = {
+			reference_component	: self.main_component, // reference tipo, section_tipo, context ...
+			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new one
+			lang				: lang,
+			mode				: mode,
+			matrix_id			: matrix_id
 		}
 
-		if (matrix_id) {
-			instance_options.matrix_id = matrix_id
-		}
+	// call generic common tool build
+		const component_instance = tool_common.prototype.load_component.call(self, options);
 
-	// get instance and build
-		const component_instance = await get_instance(instance_options)
-
-	// set current tool as component caller (to check if component is inside tool or not)
-		if (matrix_id) {
-			component_instance.caller = self
-		}
-
-		await component_instance.build(true)
-
-		// console.log("-> tool_time_machine load_component new component_instance:", component_instance);
-
-	// clean instances
-		for (let i = self.ar_instances.length - 1; i >= 0; i--) {
-			const current_instance = self.ar_instances[i]
-			if (current_instance.tipo===self.main_component.tipo && current_instance.matrix_id) {
-				// destroy previous preview component instances
-				const instance_index = self.ar_instances.findIndex( el => el.id===current_instance.id)
-				// remove from array of instances
-				if (instance_index!==-1) {
-					self.ar_instances.splice(instance_index, 1)
-					// destroy instance
-					await current_instance.destroy()
-				}else{
-					console.error("Error on delete previous component instance")
-				}
-			}
-		}
-
-	// add component instance to current ar_instances
-		self.ar_instances.push(component_instance)
-
-	// console.warn("_________________________________________________self.ar_instances:",self.ar_instances);
 
 	return component_instance
 };//end load_component

@@ -1,49 +1,51 @@
 <?php
 /*
-* CLASS TOOL_UPLOAD
+* CLASS TOOL_PDF_EXTRACTOR
 *
 *
 */
-class tool_pdf_extractor extends tool_common{ // extends tool_common
+class tool_pdf_extractor extends tool_common {
+
+
 
 	/**
-	* GET_SYSTEM_INFO
-	* @return
+	* GET_PDF_DATA
+	* @return object $response
 	*/
-	public function get_pdf_data($options) {
+	public function get_pdf_data(object $options) {
 
-		$response=new stdClass();
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$component_options 	= $options->component;
-		$extractor_config 	= $options->extractor_config;
-		$config 			= $this->get_config();
+		// options
+			$component_options 	= $options->component;
+			$extractor_config 	= $options->extractor_config;
 
-		// check the component_pdf will be created
-		if(!isset($component_options)){
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: impossible know the caller component";
-			return $response;
-		}
+		// config
+			$config = tool_common::get_config(get_called_class());
+
+
 		// create the component to get the file path
-		$model 		= RecordObj_dd::get_modelo_name_by_tipo($component_options->component_tipo,true);
-		$component 	= component_common::get_instance($model,
-													$component_options->component_tipo,
-													$component_options->section_id,
-													'list',
-													DEDALO_DATA_NOLAN,
-													$component_options->section_tipo);
-		$pdf_path = $component->get_pdf_path();
-		// error on missing properties
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($component_options->component_tipo,true);
+			$component	= component_common::get_instance($model,
+														 $component_options->component_tipo,
+														 $component_options->section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $component_options->section_tipo);
+			$pdf_path = $component->get_pdf_path();
+
+		// pdf_path error on missing properties
 			if (empty($pdf_path) || !file_exists($pdf_path)) {
 				$response->result = 'error';
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
 				return $response;
 			}
 
-
-		// test engine pdf to text
-			$method = $extractor_config->method;
-		 	$extactor_engine = $config->{$method}->default;
+		// test engine PDF to text
+			$method				= $extractor_config->method;
+			$extactor_engine	= $config->{$method}->default;
 
 			if (!isset($extactor_engine)) {
 				$response->result = 'error';
@@ -94,30 +96,31 @@ class tool_pdf_extractor extends tool_common{ // extends tool_common
 			}
 
 		// FILE TEXT FROM PDF . Create a new text file from pdf text content (.txt for text, .html for html)
-		$extraction_filename 	= substr($pdf_path, 0, -4) . $file_extension;
+		$extraction_filename = substr($pdf_path, 0, -4) . $file_extension;
 
 		// exec the extraction
-		$command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path";
-		dump($command, ' command ++ '.to_string());
-		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
-		if ( strpos( strtolower($output), 'error')) {
-			$response->result = 'error';
-			$response->msg 	  = "$output";
-			return $response;
-		}
+			$command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path";
+			dump($command, ' command ++ '.to_string());
+			$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
+			if ( strpos( strtolower($output), 'error')) {
+				$response->result = 'error';
+				$response->msg 	  = "$output";
+				return $response;
+			}
 		// test if the file is saved
-		if (!file_exists($extraction_filename)) {
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Extraction file not found";
-			return $response;
-		}
-		$pdf_text = file_get_contents($extraction_filename);	# Read current text file
+			if (!file_exists($extraction_filename)) {
+				$response->result = 'error';
+				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Extraction file not found";
+				return $response;
+			}
 
-		// dump($pdf_text, ' $pdf_text ++ '.to_string()); die();
+		// pdf_text contents
+			$pdf_text = file_get_contents($extraction_filename); // Read current text file
 
-		$response->result  = $pdf_text;
-		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
-		// $response->original = trim($original_text);
+		// response
+			$response->result  = $pdf_text;
+			$response->msg 	   = "OK Processing Request pdf_automatic_transcription: text processed";
+			// $response->original = trim($original_text);
 
 		// #
 		// # PAGES TAGS
@@ -198,4 +201,4 @@ class tool_pdf_extractor extends tool_common{ // extends tool_common
 
 
 
-}//end class
+}//end class tool_pdf_extractor
