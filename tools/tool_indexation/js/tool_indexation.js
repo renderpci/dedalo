@@ -272,59 +272,26 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
 
-	const component		= self.transcription_component
-	const section_id	= component.section_id
-	const context		= JSON.parse(JSON.stringify(component.context))
-		  context.lang 	= lang
 
-	// destroy previous component instances
-		const instance_index = self.ar_instances.findIndex( el => el.id===self.transcription_component.id)
-		// remove from array of instances
-		if (instance_index!==-1) {
-			self.ar_instances.splice(instance_index, 1)
-			// destroy instance
-			await self.transcription_component.destroy()
-		}else{
-			console.error("Error on delete previous transcription_component instance")
+	// to_delete_instances. Select current self.transcription_component
+		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
+
+	// options
+		const options = {
+			reference_component	: self.transcription_component, // reference tipo, section_tipo, context ...
+			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new one
+			lang				: lang,
+			mode				: 'edit'
 		}
 
-	// new instance options
-		const instance_options = {
-			model			: context.model,
-			tipo			: context.tipo,
-			section_tipo	: context.section_tipo,
-			section_id		: section_id,
-			mode			: 'edit',
-			lang			: lang, // The only different property from self.transcription_component
-			section_lang	: context.lang,
-			context			: context,
-			id_variant		: 'tool_indexation'
-			// data			: {value:[]},
-			// datum		: null
-		}
-	// dd_console(`instance_options`,'DEBUG', instance_options)
+	// call generic common tool build
+		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
-	const instance = await get_instance(instance_options)
-
-	// set tool as caller of the component :-)
-	instance.caller = self
-
-	// build instance
-	await instance.build(true)
-
-	// store instances to remove on destroy
-	self.ar_instances.push(instance)
-
-	// fix instance
-	self.transcription_component = instance
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			// dd_console('self.ar_instances','DEBUG',self.ar_instances)
-		}
+	// fix instance (overwrite)
+		self.transcription_component = component_instance
 
 
-	return instance
+	return component_instance
 };//end get_component
 
 

@@ -37,7 +37,7 @@ export const tool_common = function(){
 * }
 */
 tool_common.prototype.init = async function(options) {
-	// dd_console(`init tool options`, 'DEBUG', options)
+	dd_console(`init tool options`, 'DEBUG', options)
 	
 	const self = this
 
@@ -46,10 +46,11 @@ tool_common.prototype.init = async function(options) {
 		self.section_tipo	= options.section_tipo
 		self.section_id		= options.section_id
 		self.lang			= options.lang
-		self.tool_config	= options.tool_config
 		self.mode			= options.mode || 'edit'
 		self.label			= options.label
 		self.description	= options.description
+		self.tool_config	= options.tool_config
+		self.config			= options.config
 		self.caller			= options.caller // optional, only for refresh on tool exit
 
 	// set vars
@@ -57,7 +58,7 @@ tool_common.prototype.init = async function(options) {
 		self.type				= 'tool'
 		self.ar_instances		= []
 		self.events_tokens		= []
-		self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common	
+		// self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common
 		self.get_label			= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 	// set vars
@@ -125,6 +126,7 @@ tool_common.prototype.build = async function(autoload=false) {
 							el.context			= api_response.result[0]
 						}
 					}
+						console.log("el:",el);
 
 				const element_options = {
 					model			: el.model,
@@ -231,6 +233,93 @@ tool_common.prototype.build = async function(autoload=false) {
 
 	return true
 };//end build
+
+
+
+/**
+* LOAD_COMPONENT
+* Loads component to place in respective containers: current preview and preview version
+*/
+tool_common.prototype.load_component = async function(options) {
+	// console.log("load_component:",lang, mode, matrix_id);
+
+	const self = this
+
+	// options
+		const reference_component	= options.reference_component
+		const to_delete_instances	= options.to_delete_instances
+		const lang					= options.lang
+		const mode					= options.mode==='edit_in_list' ? 'edit' : options.mode
+		const matrix_id				= options.matrix_id || null
+
+	// short vars
+		const model				= reference_component.model
+		const component_tipo	= reference_component.tipo
+		const section_tipo		= reference_component.section_tipo
+		const section_id		= reference_component.section_id
+		const section_lang		= reference_component.section_lang
+		const type				= reference_component.type
+
+	// context (clone and edit)
+		const context 			= clone(reference_component.context)
+			  context.lang 		= lang
+
+	// component instance_options
+		const instance_options = {
+			model			: model,
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: mode,
+			lang			: lang,
+			section_lang	: section_lang,
+			type			: type,
+			context			: context,
+			// data			: {value:[]},
+			// datum		: component.datum,
+			id_variant		: self.model, // id_variant prevents id conflicts
+			caller			: self // set current tool as component caller (to check if component is inside tool or not)
+		}
+
+		if (matrix_id) {
+			instance_options.matrix_id = matrix_id
+		}
+
+	// get instance and build
+		const component_instance = await get_instance(instance_options)
+
+	// clean instances
+		if (to_delete_instances && to_delete_instances.length>0) {
+			for (let i = self.ar_instances.length - 1; i >= 0; i--) {
+				const current_instance = self.ar_instances[i]
+				if (to_delete_instances.indexOf(current_instance)!==-1) {
+					// destroy previous preview component instances
+					const instance_index = self.ar_instances.findIndex( el => el.id===current_instance.id)
+					dd_console(`To delete instance index:`, 'DEBUG', instance_index)
+					// remove from array of instances
+					if (instance_index!==-1) {
+						self.ar_instances.splice(instance_index, 1)
+						// destroy instance
+						await current_instance.destroy()
+					}else{
+						console.error("Error on delete previous component instance")
+					}
+				}
+			}
+		}
+
+	// add component instance to current ar_instances if not already done
+		const instance_found = self.ar_instances.find( el => el===component_instance )
+		if (!instance_found) {
+			self.ar_instances.push(component_instance)
+		}
+
+	// build
+		await component_instance.build(true)
+
+
+	return component_instance
+};//end load_component
 
 
 
