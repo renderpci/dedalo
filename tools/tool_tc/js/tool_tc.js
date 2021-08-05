@@ -60,12 +60,9 @@ tool_tc.prototype.init = async function(options) {
 	const self = this
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url 	= DEDALO_TOOLS_URL + "/tool_tc/trigger.tool_tc.php"
 		self.lang 			= options.lang
 		self.langs 			= page_globals.dedalo_projects_default_langs
 		self.source_lang 	= options.caller.lang
-		//self.target_lang 	= null
-
 
 	// call the generic commom tool init
 		const common_init = tool_common.prototype.init.call(this, options);
@@ -83,10 +80,12 @@ tool_tc.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// call generic commom tool build
-		const common_build = tool_common.prototype.build.call(this, autoload);
+	// call generic common tool build
+		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// specific actions..
+	// main_component. fix main_component for convenience
+		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
+		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
 
 
 	return common_build
@@ -101,36 +100,19 @@ tool_tc.prototype.load_component = async function(lang) {
 
 	const self = this
 
-	const component = self.caller
+	// to_delete_instances. Select instances with different lang to the desired
+		const to_delete_instances = self.ar_instances.filter(el => el.lang!==lang)
 
-	const context = JSON.parse(JSON.stringify(component.context))
-		  context.lang = lang
-
-	const component_instance = await get_instance({
-		model 			: component.model,
-		tipo 			: component.tipo,
-		section_tipo 	: component.section_tipo,
-		section_id 		: component.section_id,
-		mode 			: component.mode==='edit_in_list' ? 'edit' : component.mode,
-		lang 			: lang,
-		section_lang 	: component.lang,
-		//parent 			: component.parent,
-		type 			: component.type,
-		context 		: context,
-		data 			: {value:[]},
-		datum 			: component.datum
-	})
-
-	// set current tool as component caller (to check if component is inside tool or not)
-		component_instance.caller = this
-
-	await component_instance.build(true)
-
-	// add
-		const instance_found = self.ar_instances.find( el => el===component_instance )
-		if (component_instance!==self.caller && typeof instance_found==="undefined") {
-			self.ar_instances.push(component_instance)
+	// options
+		const options = {
+			reference_component	: self.main_component, // reference tipo, section_tipo, context ...
+			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new one
+			lang				: lang,
+			mode				: 'edit'
 		}
+
+	// call generic common tool build
+		const component_instance = tool_common.prototype.load_component.call(self, options);
 
 
 	return component_instance
@@ -142,8 +124,6 @@ tool_tc.prototype.load_component = async function(lang) {
 * CHANGE_ALL_TIME_CODES
 */
 tool_tc.prototype.change_all_time_codes = async function(save) {
-
-	//this.change_all_timecodes = function( button_obj, save ) {
 
 	const self = this
 
@@ -297,3 +277,5 @@ tool_tc.prototype.add_and_save_time_code_offset = async function (wrapper, offse
 
 	return trigger_response
 };//end add_and_save_time_code_offset
+
+

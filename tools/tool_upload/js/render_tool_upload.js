@@ -71,14 +71,6 @@ render_tool_upload.prototype.edit = async function (options={render_level:'full'
 			self.destroy(true, true, true)
 		}
 
-	// events
-		// click
-			// wrapper.addEventListener("click", function(e){
-			// 	e.stopPropagation()
-			// 	console.log("e:",e);
-			// 	return
-			// })
-
 
 	return wrapper
 };//end render_tool_upload
