@@ -28,6 +28,7 @@
 
 	define('DEDALO_CONFIG'			,'config');
 	define('DEDALO_CORE'			,'core');
+	define('DEDALO_SHARED'			,'shared');
 	define('DEDALO_TOOLS'			,'tools');
 	define('DEDALO_LIB'				,'lib');
 
@@ -37,6 +38,10 @@
 	#core
 	define('DEDALO_CORE_PATH'		, DEDALO_ROOT. '/'. DEDALO_CORE);
 	define('DEDALO_CORE_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_CORE );
+
+	#shared
+	define('DEDALO_SHARED_PATH'		, DEDALO_ROOT.'/'. DEDALO_SHARED);
+	define('DEDALO_SHARED_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_SHARED );
 
 	#tools
 	define('DEDALO_TOOLS_PATH'		, DEDALO_ROOT.'/'. DEDALO_TOOLS);
