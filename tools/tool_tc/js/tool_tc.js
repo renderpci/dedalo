@@ -1,4 +1,10 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -15,19 +21,19 @@
 */
 export const tool_tc = function () {
 	
-	this.id
-	this.model
-	this.mode
-	this.node
-	this.ar_instances
-	this.status
-	this.events_tokens
-	this.type
+	this.id				= null
+	this.model			= null
+	this.mode			= null
+	this.node			= null
+	this.ar_instances	= null
+	this.status			= null
+	this.events_tokens	= null
+	this.type			= null
 
-	this.source_lang
+	this.source_lang	= null
 	//this.target_lang
-	this.langs
-	this.caller
+	this.langs			= null
+	this.caller			= null
 
 
 	return true

@@ -43,11 +43,11 @@ render_tool_upload.prototype.edit = async function (options={render_level:'full'
 		})
 
 	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: wrapper
-	// 	})
+		// 	const buttons_container = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name 		: 'buttons_container',
+		// 		parent 			: wrapper
+		// 	})
 
 
 	// tool_container
@@ -120,9 +120,9 @@ const get_content_data = async function(self) {
 	// filedrag label
 		const filedrag = ui.create_dom_element({
 			element_type	: 'label',
-			class_name 		: 'filedrag',
-			// text_content 	: 'Select a file to upload or drop it here', // get_label.seleccione_un_fichero ||
-			parent 			: form
+			class_name		: 'filedrag',
+			// text_content	: 'Select a file to upload or drop it here', // get_label.seleccione_un_fichero ||
+			parent			: form
 		})
 		filedrag.setAttribute("for",'file_to_upload')
 		filedrag.addEventListener("dragover", file_drag_hover, false);
@@ -149,7 +149,7 @@ const get_content_data = async function(self) {
 				break; // only one is allowed
 			}
 		})
-		console.log("self",self)
+
 		// label icon
 		ui.create_dom_element({
 			element_type	: 'img',
@@ -370,44 +370,44 @@ const file_select_handler = function(e) {
 
 
 // Removed for the time being (!)
-// // output information
-// function msg_output(msg) {
-// 	// file_info.innerHTML = msg + file_info.innerHTML;
-// 	file_info.innerHTML += msg;
-// }
+	// // output information
+	// function msg_output(msg) {
+	// 	// file_info.innerHTML = msg + file_info.innerHTML;
+	// 	file_info.innerHTML += msg;
+	// }
 
-// // output file information
-// function parse_local_file(file) {
+	// // output file information
+	// function parse_local_file(file) {
 
-// 	msg_output(
-// 		"<div><span>Name:</span> <strong>" + file.name + "</strong></div>" +
-// 		"<div><span>Type:</span> <strong>" + file.type + "</strong></div>" +
-// 		"<div><span>Size:</span> <strong>" + parseInt(file.size/1024) + "</strong> Kbytes</div>"
-// 	);
+	// 	msg_output(
+	// 		"<div><span>Name:</span> <strong>" + file.name + "</strong></div>" +
+	// 		"<div><span>Type:</span> <strong>" + file.type + "</strong></div>" +
+	// 		"<div><span>Size:</span> <strong>" + parseInt(file.size/1024) + "</strong> Kbytes</div>"
+	// 	);
 
-// 	// display an image
-// 	if (file.type.indexOf("image") == 0) {
-// 		var reader = new FileReader();
-// 		reader.onload = function(e) {
-// 			msg_output(
-// 				'<div><img src="' + e.target.result + '" /></div>'
-// 			);
-// 		}
-// 		reader.readAsDataURL(file);
-// 	}
+	// 	// display an image
+	// 	if (file.type.indexOf("image") == 0) {
+	// 		var reader = new FileReader();
+	// 		reader.onload = function(e) {
+	// 			msg_output(
+	// 				'<div><img src="' + e.target.result + '" /></div>'
+	// 			);
+	// 		}
+	// 		reader.readAsDataURL(file);
+	// 	}
 
-// 	// display text
-// 	if (file.type.indexOf("text") == 0) {
-// 		var reader = new FileReader();
-// 		reader.onload = function(e) {
-// 			msg_output(
-// 				"<p><strong>" + file.name + ":</strong></p><pre>" +
-// 				e.target.result.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-// 				"</pre>"
-// 			);
-// 		}
-// 		reader.readAsText(file);
-// 	}
+	// 	// display text
+	// 	if (file.type.indexOf("text") == 0) {
+	// 		var reader = new FileReader();
+	// 		reader.onload = function(e) {
+	// 			msg_output(
+	// 				"<p><strong>" + file.name + ":</strong></p><pre>" +
+	// 				e.target.result.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+	// 				"</pre>"
+	// 			);
+	// 		}
+	// 		reader.readAsText(file);
+	// 	}
 
-// 	return true
-// };//end parse_local_file
+	// 	return true
+	// };//end parse_local_file

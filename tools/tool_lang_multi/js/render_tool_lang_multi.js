@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -29,7 +30,7 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 	const self = this
 
-	const render_level 	= options.render_level
+	const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -56,7 +57,7 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 
 /**
-* get_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
