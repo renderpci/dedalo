@@ -11,6 +11,7 @@
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
 	import {render_list_component_av} from '../../component_av/js/render_list_component_av.js'
 	import {render_mini_component_av} from '../../component_av/js/render_mini_component_av.js'
+	import {render_player_component_av} from '../../component_av/js/render_player_component_av.js'
 
 
 
@@ -67,6 +68,7 @@ export const component_av = function(){
 	component_av.prototype.edit					= render_edit_component_av.prototype.edit
 	component_av.prototype.edit_in_list			= render_edit_component_av.prototype.edit
 	component_av.prototype.search				= render_edit_component_av.prototype.search
+	component_av.prototype.player				= render_player_component_av.prototype.player
 	component_av.prototype.change_mode			= component_common.prototype.change_mode
 
 
