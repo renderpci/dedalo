@@ -10,83 +10,13 @@
 
 
 /**
-* RENDER_COMPONENT_AV
+* RENDER_EDIT_COMPONENT_AV
 * Manages the component's logic and appearance in client side
 */
-export const render_component_av = function() {
+export const render_edit_component_av = function() {
 
 	return true
-};//end  render_component_av
-
-
-/**
-* MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
-*/
-render_component_av.prototype.mini = async function() {
-
-	const self = this
-
-	// Options vars
-		const context	= self.context
-		const data		= self.data
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-
-	// url
-		const posterframe_url	= data.posterframe_url
-		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
-
-	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			src				: url,
-			parent			: wrapper
-		})
-		// ui.component.add_image_fallback(image)
-
-
-	return wrapper
-};//end  mini
-
-
-
-/**
-* LIST
-* Render node for use in list
-* @return DOM node
-*/
-render_component_av.prototype.list = async function() {
-
-	const self = this
-
-	// Options vars
-		const context 	= self.context
-		const data 		= self.data
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
-
-	// url
-		const posterframe_url 	= data.posterframe_url
-		const url 				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
-
-	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			src 			: url,
-			parent 			: wrapper
-		})
-		ui.component.add_image_fallback(image)
-
-
-	return wrapper
-};//end  list
-
+};//end  render_edit_component_av
 
 
 /**
@@ -94,7 +24,7 @@ render_component_av.prototype.list = async function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_component_av.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_av.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 

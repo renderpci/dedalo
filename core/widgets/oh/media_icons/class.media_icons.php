@@ -146,8 +146,6 @@ class media_icons extends widget_common {
 									$current_data->tool_context	= $tool_context;
 								}
 
-
-
 							// set the final data to the widget
 							$dato[] = $current_data;
 					}
