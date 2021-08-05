@@ -115,7 +115,7 @@ component_av.prototype.play_pause = function(){
 		self.video.pause();
 	}
 
-	return self.video.currentTime
+	return self.video.paused
 };//end play_pause
 
 
@@ -189,18 +189,34 @@ component_av.prototype.tc_to_seconds = function(tc) {
 */
 component_av.prototype.time_to_tc = function(time) {
 
-	// const seconds = (typeof frames !== 'number' ? this.video.currentseconds : frames)
 	const date = (new Date())
 
 	date.setHours(0); // reset the hours to 0
 	date.setMinutes(0); // reset the minutes to 0
 	date.setSeconds(0); // reset the seconds to 0
-	date.setMilliseconds(time * 1000); // set the date with the time of the video
+	date.setMilliseconds(time * 1000); // set the date with the time of the video in ms
 
-	function wrap(n) { return ((n < 10) ? '0' + n : n);}
-	function wrap_ms(n) { return ((n < 1) ? '000' : (n < 10) ? '00' + n :  (n < 100) ? '0' + n : n);}
+	// format the tc with 09
+	// current_date can be; hour, min or second
+	function wrap(current_date) {
+		return ((current_date < 10)
+			? '0' + current_date
+			: current_date);
+	}
+	//format the ms with 001 or 010 or 100
+	function wrap_ms(ms) {
+		return ((ms < 1)
+			? '000'
+			: (ms < 10)
+				? '00' + ms
+				:  (ms < 100)
+					? '0' + ms
+					: ms);
+	}
 
-	const hours 	= wrap(date.getHours() < 13 ? date.getHours() : (date.getHours() - 12));
+	const hours 	= wrap(date.getHours() < 13
+		? date.getHours()
+		: (date.getHours() - 12));
 	const minutes 	= wrap(date.getMinutes());
 	const seconds 	= wrap(date.getSeconds());
 	const mseconds 	= wrap_ms(date.getMilliseconds()) //fps: wrap(Math.floor(((time % 1) * frame_rate)));
@@ -209,3 +225,6 @@ component_av.prototype.time_to_tc = function(time) {
 
 	return tc
 };//end  time_to_tc
+
+
+

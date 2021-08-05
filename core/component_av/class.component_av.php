@@ -1034,5 +1034,23 @@ class component_av extends component_media_common {
 	}//end process_uploaded_file
 
 
+	/**
+	* GET_MEDIA_STREAMS
+	* Check the file to get the head streams of the video file
+	* @return
+	*/
+	public function get_media_streams($quality=false) {
+
+		//get the video file path
+			$video_path = $this->get_video_path($quality);
+
+		// get_media_streams from av file
+			$media_streams = Ffmpeg::get_media_streams($video_path);
+
+
+		return $media_streams;
+	}//end get_media_streams
+
+
 
 }//end class component_av
