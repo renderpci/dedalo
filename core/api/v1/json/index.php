@@ -49,7 +49,7 @@ $start_time=microtime(1);
 		
 
 	// dd_dd_manager
-		try {
+		// try {
 
 			$dd_manager	= new dd_manager();
 			$result		= $dd_manager->manage_request( $rqo );
@@ -72,19 +72,19 @@ $start_time=microtime(1);
 			
 		// 	trigger_error($e->getMessage());
 		
-		} catch (Exception $e) { // For PHP 5
+		// } catch (Exception $e) { // For PHP 5
 			
-			$result = new stdClass();
-				$result->result	= false;
-				$result->msg	= (SHOW_DEBUG===true)
-					? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-					: 'Exception when calling Dédalo API. Contact with your admin';
-				$result->debug	= (object)[
-					'rqo' => $rqo
-				];
+		// 	$result = new stdClass();
+		// 		$result->result	= false;
+		// 		$result->msg	= (SHOW_DEBUG===true)
+		// 			? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
+		// 			: 'Exception when calling Dédalo API. Contact with your admin';
+		// 		$result->debug	= (object)[
+		// 			'rqo' => $rqo
+		// 		];
 
-			trigger_error($e->getMessage());
-		}
+		// 	trigger_error($e->getMessage());
+		// }
 		
 	
 	// output the result json string
