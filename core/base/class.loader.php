@@ -17,8 +17,6 @@ include(DEDALO_CORE_PATH . '/common/class.filter.php');
 include(DEDALO_CORE_PATH . '/common/class.counter.php');
 include(DEDALO_CORE_PATH . '/common/class.tools.php');
 include(DEDALO_CORE_PATH . '/common/class.label.php');
-include(DEDALO_SHARED_PATH . '/class.TR.php');
-include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 #include(DEDALO_CORE_PATH . '/common/class.operator.php');
 include(DEDALO_CORE_PATH . '/common/class.locator.php');
@@ -39,7 +37,10 @@ include(DEDALO_CORE_PATH . '/search/class.search_related.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
-
+# include the shared classes
+include(DEDALO_SHARED_PATH . '/class.TR.php');
+include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
+include(DEDALO_SHARED_PATH . '/class.subtitles.php');
 
 
 /**
