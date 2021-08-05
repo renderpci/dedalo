@@ -28,7 +28,6 @@ export const tool_lang = function () {
 	this.status			= null
 	this.events_tokens	= null
 	this.type			= null
-
 	this.source_lang	= null
 	this.target_lang	= null
 	this.langs			= null
@@ -167,7 +166,7 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 			const current_data_manager = new data_manager()
 			current_data_manager.request({body : rqo})
 			.then(function(response){
-				dd_console("-> automatic_trnslation API response:",'DEBUG',response);
+				dd_console("-> automatic_translation API response:",'DEBUG',response);
 
 				// user messages
 					const msg_type = (response.result===false) ? 'error' : 'ok'

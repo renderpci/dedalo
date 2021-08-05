@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -105,15 +106,6 @@ render_tool_lang.prototype.edit = async function(options={render_level:'full'}) 
 		modal.on_close = () => {
 			self.destroy(true, true, true)
 		}
-
-
-	// events
-		// click
-			// wrapper.addEventListener("click", function(e){
-			// 	e.stopPropagation()
-			// 	console.log("e:",e);
-			// 	return
-			// })
 
 
 	return wrapper

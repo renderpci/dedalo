@@ -1,7 +1,13 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_upload} from './render_tool_upload.js'
 
@@ -35,9 +41,9 @@ export const tool_upload = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_upload.prototype.render 		= common.prototype.render
-	tool_upload.prototype.destroy 		= common.prototype.destroy
-	tool_upload.prototype.edit 			= render_tool_upload.prototype.edit
+	tool_upload.prototype.render	= common.prototype.render
+	tool_upload.prototype.destroy	= common.prototype.destroy
+	tool_upload.prototype.edit		= render_tool_upload.prototype.edit
 
 
 
@@ -70,7 +76,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// fetch system info
 		const system_info = await get_system_info(self)
 
-	// call generic commom tool build
+	// call generic common tool build
 		const common_build = tool_common.prototype.build.call(this, autoload);
 
 
