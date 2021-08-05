@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_EDIT_COMPONENT_AV
+* RENDER_PLAYER_COMPONENT_AV
 * Manages the component's logic and appearance in client side
 */
-export const render_edit_component_av = function() {
+export const render_player_component_av = function() {
 
 	return true
-};//end  render_edit_component_av
+};//end  render_player_component_av
 
 
 /**
@@ -24,7 +24,7 @@ export const render_edit_component_av = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_av.prototype.edit = async function(options={render_level:'full'}) {
+render_player_component_av.prototype.player = async function(options={render_level:'full'}) {
 
 	const self = this
 
@@ -35,7 +35,7 @@ render_edit_component_av.prototype.edit = async function(options={render_level:'
 		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await get_content_data_edit(self)
+		const current_content_data = await get_content_data_player(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -43,18 +43,23 @@ render_edit_component_av.prototype.edit = async function(options={render_level:'
 	// buttons
 		const buttons = get_buttons(self)
 
+	// av_control_buttons
+		const av_control_buttons = get_av_control_buttons(self)
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : current_content_data,
 			buttons 	 : buttons
 		})
 
+		wrapper.appendChild(av_control_buttons)
+
 	// add events
 		//add_events(self, wrapper)
 
 
 	return wrapper
-};//end  edit
+};//end  player
 
 
 
@@ -110,9 +115,8 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_player = async function(self) {
 
-	const is_inside_tool = self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -137,31 +141,21 @@ const get_content_data_edit = async function(self) {
 			video.appendChild(source)
 	
 
-		// keyup event
-			video.addEventListener("timeupdate", async (e) => {
+		// timeupdate event
+			//video.addEventListener("timeupdate", async (e) => {
 				// e.stopPropagation()
 
 				// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
 				// console.log("aqui:",frame);
-			})
+			//})
 
 		// append the video node to the instance
 			self.video = video
 			fragment.appendChild(video)
-
-		// set video src only when it is in DOM (to save browser resources)
-			// const observer = new IntersectionObserver(function(entries) {				
-			// 	const entry = entries[0]
-			// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-			// 		observer.disconnect();
-			// 		source.src  = video_url
-			// 	}
-			// }, { threshold: [0] });
-			// observer.observe(video);
 	}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
+		const content_data = document.createElement("div")
 			  content_data.appendChild(fragment)
 
 
@@ -177,7 +171,6 @@ const get_content_data_edit = async function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
 	const mode 			= self.mode
 
 	const fragment = new DocumentFragment()
@@ -194,17 +187,14 @@ const get_buttons = (self) => {
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		})
 
-	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
-
 		const button_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name 		: 'button full_screen',
 			parent 			: fragment
 		})
 		button_info.addEventListener("mouseup", (e) =>{
+
+
 			
 		})
 	// buttons container
@@ -216,10 +206,96 @@ const get_buttons = (self) => {
 };//end  get_buttons
 
 
+/**
+* GET_AV_CONTROL_BUTTONS
+* @param object instance
+* @return DOM node av_control_buttons
+*/
+const get_av_control_buttons =  (self) =>{
+
+	const fragment = new DocumentFragment()
+
+
+	const av_begin = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button av_player_btn',
+			parent 			: fragment
+		})
+		av_begin.addEventListener("mouseup", (e) =>{
+			self.go_to_time(0);
+		})
+
+	const av_play = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button av_player_btn',
+			parent 			: fragment
+		})
+		av_play.addEventListener("mouseup", (e) =>{
+			self.play_pause();
+		})
+
+	const av_smpte = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: ' av_player_smpte',
+			parent 			: fragment,
+			inner_html 		: self.get_current_tc()
+		})
+		self.video.addEventListener("timeupdate", async (e) =>{
+			av_smpte.innerHTML = self.get_current_tc();
+		})
+
+	const av_minus_10 = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button av_player_btn',
+			parent 			: fragment
+		})
+		av_minus_10.addEventListener("mouseup", (e) =>{
+			const seconds = self.video.currentTime - 10
+			self.go_to_time(seconds);
+		})
+
+	const av_minus_5 = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button av_player_btn',
+			parent 			: fragment
+		})
+		av_minus_5.addEventListener("mouseup", (e) =>{
+			const seconds = self.video.currentTime - 5
+			self.go_to_time(seconds);
+		})
+
+	const av_plus_10 = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button av_player_btn',
+			parent 			: fragment
+		})
+		av_plus_10.addEventListener("mouseup", (e) =>{
+			const seconds = self.video.currentTime + 10
+			self.go_to_time(seconds);
+		})
+
+	const av_plus_5 = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button av_player_btn',
+			parent 			: fragment
+		})
+		av_plus_5.addEventListener("mouseup", (e) =>{
+			const seconds = self.video.currentTime + 5
+			self.go_to_time(seconds);
+		})
+
+
+
+	const av_control_buttons = fragment
+
+	return av_control_buttons
+};//end get_av_control_buttons
+
+
 
 /**
 * BUILD_VIDEO_HTML5
-* @return dom element vide
+* @return dom element video
 *//*
 const build_video_html5 = function(request_options) {
 

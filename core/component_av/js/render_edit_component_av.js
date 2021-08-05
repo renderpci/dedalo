@@ -1,7 +1,8 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_URL*/
 /*eslint no-undef: "error"*/
 
-
+//provisional
+import * as instances from '../../common/js/instances.js'
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -204,8 +205,26 @@ const get_buttons = (self) => {
 			class_name 		: 'button full_screen',
 			parent 			: fragment
 		})
-		button_info.addEventListener("mouseup", (e) =>{
-			
+		button_info.addEventListener("mouseup", async (e) =>{
+
+			const player_av = await instances.get_instance({
+				model 			: 'component_av',
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				tipo			: self.tipo,
+				context			: {},
+				mode 			: 'player'
+			})
+
+			await player_av.build(true)
+			const node = await player_av.render()
+
+			// cotainer, for every ipo will create a li node
+				const cotainer = ui.create_dom_element({
+					element_type	: 'div'
+				})
+
+				self.node[0].appendChild(node)
 		})
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
