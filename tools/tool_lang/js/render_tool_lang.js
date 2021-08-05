@@ -25,7 +25,7 @@ export const render_tool_lang = function() {
 * Render node for use like button
 * @return DOM node
 */
-render_tool_lang.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_lang.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
@@ -164,7 +164,7 @@ const get_content_data_edit = async function(self) {
 		components_container.appendChild(target_select_lang)
 
 
-	// source
+	// source component
 		const source_component_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'source_component_container disabled_component',
@@ -172,11 +172,15 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// source default value check
-			if (source_select_lang.value) {
-				add_component(self, source_component_container, source_select_lang.value)
-			}
+			// if (source_select_lang.value) {
+			// 	add_component(self, source_component_container, source_select_lang.value)
+			// }
+			self.main_component.render()
+			.then(function(node){
+				source_component_container.appendChild(node)
+			})
 
-	// target
+	// target component
 		const target_component_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'target_component_container',
@@ -196,8 +200,8 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// automatic_translation
-			const translator_engine = (self.simple_tool_object.config)
-				? self.simple_tool_object.config.translator_engine.value
+			const translator_engine = (self.config)
+				? self.config.translator_engine.value
 				: false
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
@@ -232,7 +236,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		const button_automatic_translation = ui.create_dom_element({
 			element_type 	: 'button',
 			class_name 		: 'warning button_automatic_translation',
-			text_content 	: get_label['traduccion_automatica'] || "Automatic translation",
+			text_content 	: get_label.traduccion_automatica || "Automatic translation",
 			parent 			: automatic_translation_container
 		})
 
