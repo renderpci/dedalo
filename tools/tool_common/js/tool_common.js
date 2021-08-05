@@ -104,7 +104,7 @@ tool_common.prototype.build = async function(autoload=false) {
 		common.prototype.load_style(tool_css_url)
 
 	// data manager
-		const current_data_manager = new data_manager();
+		const current_data_manager = new data_manager()
 
 	// ddo_map load all elements inside ddo_map
 		const ar_promises = []
@@ -113,20 +113,22 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			const el = ddo_map[i]
 
-			ar_promises.push( new Promise(async function(resolve){
+			ar_promises.push( new Promise(async (resolve) => {
 
 				// context
-					if (!el.context) {
-						if (self.caller && self.caller.tipo===el.tipo && self.caller.section_tipo===el.section_tipo) {
-							// get context from available caller
-							el.context =self.caller.context
-						}else{
+					const context = el.context
+						? el.context
+						: (async function(){
+							// caller context
+							const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
+							if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
+								// get context from available caller
+								return caller_context
+							}
 							// resolve whole context from API (init event observer problem..)
 							const api_response	= await current_data_manager.get_element_context(el)
-							el.context			= api_response.result[0]
-						}
-					}
-						console.log("el:",el);
+							return api_response.result[0]
+						  })()
 
 				const element_options = {
 					model			: el.model,
@@ -135,7 +137,7 @@ tool_common.prototype.build = async function(autoload=false) {
 					section_id		: el.section_id,
 					mode			: el.mode,
 					lang			: self.lang,
-					context			: el.context,
+					context			: context,
 					id_variant		: self.model
 				}
 
@@ -343,28 +345,32 @@ export const load_tool = async (options) => {
 	// dd_console(`load tool options`, 'DEBUG', options)
 
 	// options
-		const tool_context	= options.tool_context
 		const caller		= options.caller
+		const tool_context	= clone(options.tool_context) // (!) full clone here to avoid circular references
 
-	// sample
-		// description: "Create links between text fragments and thesaurus terms"
-		// icon: "/v6/tools/tool_indexation/img/icon.svg"
-		// label: "Tool Indexation"
+	// tool_context sample
+		// config: null
+		// description: "Allow users recover old versions of data stored in matrix_time_machine"
+		// icon: "/v6/tools/tool_time_machine/img/icon.svg"
+		// label: "Tool time machine"
 		// lang: "lg-eng"
-		// name: "tool_indexation"
-		// model: "tool_indexation"
 		// mode: "edit"
-		// section_id: "2"
+		// model: "tool_time_machine"
+		// name: "tool_time_machine"
+		// section_id: "8"
 		// section_tipo: "dd1324"
 		// show_in_component: true
-		// show_in_inspector: false
-		// tool_config: {ddo_map:
+		// show_in_inspector: true
+		// tool_config: {ddo_map: Array(1)}
 
-	// add caller (only to refresh it on close tool)
-		tool_context.caller = caller
+	// instance options
+		const intance_options = Object.assign({
+			caller : caller // add caller to tool_context (only to refresh it on close the tool)
+		}, tool_context)
+		// dd_console(`instance_options`, 'DEBUG', intance_options)
 
 	// instance load / recover
-		const tool_instance = await get_instance(tool_context)
+		const tool_instance = await get_instance(intance_options)
 
 	// stop if already loaded (toggle tool)
 		if (tool_instance.status && tool_instance.status!=='initied') {
