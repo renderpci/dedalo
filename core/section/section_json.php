@@ -72,11 +72,13 @@
 					$section_id		= $this->get_section_id();
 					$section_tipo	= $this->get_tipo();
 
-					$locator = new locator();
-					 	$locator->set_section_tipo($section_tipo);
-					 	$locator->set_section_id($section_id);
+			if(!empty($section_id)){
 
-					$value = [$locator];
+				$locator = new locator();
+				 	$locator->set_section_tipo($section_tipo);
+				 	$locator->set_section_id($section_id);
+
+				$value = [$locator];
 
 				// subdata add
 					$subdatum = $this->get_subdatum($tipo, $value);
@@ -90,6 +92,7 @@
 					foreach ($ar_subdata as $sub_value) {
 						$data[] = $sub_value;
 					}
+			}
 		}
 			// dump($context, ' context ++ '.to_string());
 			// dump($data, ' data ++ '.to_string());
