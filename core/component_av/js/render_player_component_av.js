@@ -40,16 +40,13 @@ render_player_component_av.prototype.player = async function(options={render_lev
 			return current_content_data
 		}
 
-	// buttons
-		const buttons = get_buttons(self)
 
 	// av_control_buttons
 		const av_control_buttons = get_av_control_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data,
-			buttons 	 : buttons
+			content_data : current_content_data
 		})
 
 		wrapper.appendChild(av_control_buttons)
@@ -60,54 +57,6 @@ render_player_component_av.prototype.player = async function(options={render_lev
 
 	return wrapper
 };//end  player
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
-		)
-		function update_value (changed_data) {
-			//console.log("-------------- - event update_value changed_data:", changed_data);
-			// change the value of the current dom element
-			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
-			changed_node.value = changed_data.value
-		}
-
-	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
-		)
-		function add_element(changed_data) {
-			//console.log("-------------- + event add_element changed_data:", changed_data);
-			const inputs_container = wrapper.querySelector('.inputs_container')
-			// add new dom input element
-			input_element(changed_data.key, changed_data.value, inputs_container, self)
-		}
-
-	// click event [click]
-		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-			// change_mode
-				if (e.target.matches('.button.close')) {
-
-					//change mode
-					self.change_mode('list', false)
-
-					return true
-				}
-
-		})
-
-
-	return true
-};//end  add_events
 
 
 
@@ -139,15 +88,21 @@ const get_content_data_player = async function(self) {
 			video.classList.add("posterframe")
 			video.setAttribute("tabindex", 0)
 			video.appendChild(source)
-	
 
-		// timeupdate event
-			//video.addEventListener("timeupdate", async (e) => {
-				// e.stopPropagation()
+		// Creates subtitles track
+			const subtitles		= self.data.subtitles
 
-				// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-				// console.log("aqui:",frame);
-			//})
+			if(subtitles.subtitles_url){
+				const subtitles_track = document.createElement('track')
+				subtitles_track.type 	= 'text/vtt'
+					subtitles_track.label	= subtitles.lang_name
+					subtitles_track.srclang	= subtitles.lang
+					subtitles_track.src		= subtitles.subtitles_url
+					subtitles_track.default	= true
+
+					// Add new track to video
+					video.appendChild(subtitles_track)
+			}
 
 		// append the video node to the instance
 			self.video = video
@@ -163,49 +118,6 @@ const get_content_data_player = async function(self) {
 };//end  get_content_data_edit
 
 
-
-/**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	const mode 			= self.mode
-
-	const fragment = new DocumentFragment()
-
-	// button full_screen
-		const button_full_screen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button full_screen',
-			parent 			: fragment
-		})
-		button_full_screen.addEventListener("mouseup", (e) =>{
-			self.node[0].classList.toggle('fullscreen')
-			const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
-			event_manager.publish('full_screen_'+self.id, fullscreen_state)
-		})
-
-		const button_info = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button full_screen',
-			parent 			: fragment
-		})
-		button_info.addEventListener("mouseup", (e) =>{
-
-
-			
-		})
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
-
-
-	return buttons_container
-};//end  get_buttons
-
-
 /**
 * GET_AV_CONTROL_BUTTONS
 * @param object instance
@@ -215,28 +127,35 @@ const get_av_control_buttons =  (self) =>{
 
 	const fragment = new DocumentFragment()
 
-
+	//button go to begin of av
 	const av_begin = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button av_player_btn',
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: get_label.inicio,
 			parent 			: fragment
 		})
 		av_begin.addEventListener("mouseup", (e) =>{
 			self.go_to_time(0);
 		})
 
+	// play / pause
 	const av_play = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button av_player_btn',
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: get_label.play,
 			parent 			: fragment
 		})
 		av_play.addEventListener("mouseup", (e) =>{
-			self.play_pause();
+			const playing = self.play_pause();
+			av_play.textContent =  (playing)
+				? get_label.pause
+				: get_label.play
 		})
 
+	// show the smpte (time code)
 	const av_smpte = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: ' av_player_smpte',
+			class_name 		: 'av_player_smpte',
 			parent 			: fragment,
 			inner_html 		: self.get_current_tc()
 		})
@@ -244,49 +163,103 @@ const get_av_control_buttons =  (self) =>{
 			av_smpte.innerHTML = self.get_current_tc();
 		})
 
-	const av_minus_10 = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button av_player_btn',
+	// go to 10 secons before of the current time ( - 10 seconds )
+	const av_minus_10_seg = ui.create_dom_element({
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: '< 10s',
 			parent 			: fragment
 		})
-		av_minus_10.addEventListener("mouseup", (e) =>{
+		av_minus_10_seg.addEventListener("mouseup", (e) =>{
 			const seconds = self.video.currentTime - 10
 			self.go_to_time(seconds);
 		})
 
-	const av_minus_5 = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button av_player_btn',
+	// go to 5 secons before of the current time ( - 5 seconds )
+	const av_minus_5_seg = ui.create_dom_element({
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: '< 5s',
 			parent 			: fragment
 		})
-		av_minus_5.addEventListener("mouseup", (e) =>{
+		av_minus_5_seg.addEventListener("mouseup", (e) =>{
 			const seconds = self.video.currentTime - 5
 			self.go_to_time(seconds);
 		})
 
-	const av_plus_10 = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button av_player_btn',
+	// go to 1 frame before of the current time ( - 1 frame )
+	// the server send the head information in the media_info streams
+	// the video is the first item of the streams array
+	const av_minus_1_frame = ui.create_dom_element({
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: '- 1',
 			parent 			: fragment
 		})
-		av_plus_10.addEventListener("mouseup", (e) =>{
-			const seconds = self.video.currentTime + 10
+		av_minus_1_frame.addEventListener("mouseup", (e) =>{
+
+			//get the r_frame_rate of the video stream and get the time for 1 frame
+			const r_frame_rate = self.data.media_info.streams[0].r_frame_rate
+			const ar_frame_rate_opeartor = r_frame_rate.split('/')
+			const frame_rate =  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
+			const time_for_frame = 1 / frame_rate
+
+			const seconds = (self.video.currentTime - time_for_frame).toFixed(3)
 			self.go_to_time(seconds);
 		})
 
-	const av_plus_5 = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button av_player_btn',
+	// go to 1 frame after of the current time ( + 1 frame )
+	// the server send the head information in the media_info streams
+	// the video is the first item of the streams array
+	const av_plus_1_frame = ui.create_dom_element({
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: '+ 1',
 			parent 			: fragment
 		})
-		av_plus_5.addEventListener("mouseup", (e) =>{
+		av_plus_1_frame.addEventListener("mouseup", (e) =>{
+
+			//get the r_frame_rate of the video stream and get the time for 1 frame
+			const r_frame_rate = self.data.media_info.streams[0].r_frame_rate
+			const ar_frame_rate_opeartor = r_frame_rate.split('/')
+			const frame_rate =  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
+
+			const time_for_frame = (1 / frame_rate)
+			const seconds = (self.video.currentTime + time_for_frame).toFixed(3)
+
+			self.go_to_time(seconds);
+		})
+
+	// go to 5 secons after of the current time ( + 5 seconds )
+	const av_plus_5_seg = ui.create_dom_element({
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: '> 5s',
+			parent 			: fragment
+		})
+		av_plus_5_seg.addEventListener("mouseup", (e) =>{
 			const seconds = self.video.currentTime + 5
 			self.go_to_time(seconds);
 		})
 
+	// go to 10 secons after of the current time ( + 10 seconds )
+	const av_plus_10_seg = ui.create_dom_element({
+			element_type	: 'button',
+			class_name 		: 'primary',
+			text_content 	: '> 10s',
+			parent 			: fragment
+		})
+		av_plus_10_seg.addEventListener("mouseup", (e) =>{
+			const seconds = self.video.currentTime + 10
+			self.go_to_time(seconds);
+		})
 
-
-	const av_control_buttons = fragment
+	// main button cotainer
+	const av_control_buttons = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'av_control_buttons'
+		})
+	av_control_buttons.appendChild(fragment)
 
 	return av_control_buttons
 };//end get_av_control_buttons

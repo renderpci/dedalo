@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
+	$mode				= $this->get_modo();
 
 
 
@@ -53,6 +53,16 @@
 				$item->video_url 		= $this->av_file_exist()
 					? $this->get_video_url(false)
 					: null;
+
+				// send the media header when the component are working as player
+				if($mode === 'player'){
+					$item->media_info	= $this->get_media_streams();
+
+					$item->subtitles 	= new stdClass();
+						$item->subtitles->subtitles_url	= $this->get_subtitles_url();
+						$item->subtitles->lang_name		= lang::get_name_from_code(DEDALO_DATA_LANG);
+						$item->subtitles->lang			= lang::get_alpha2_from_code(DEDALO_DATA_LANG);
+				}
 
 			$data[] = $item;
 
