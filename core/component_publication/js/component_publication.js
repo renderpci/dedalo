@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -44,7 +49,7 @@ export const component_publication = function(){
 	component_publication.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_publication.prototype.update_datum		= component_common.prototype.update_datum
 	component_publication.prototype.change_value		= component_common.prototype.change_value
-	component_publication.prototype.build_rqo	= common.prototype.build_rqo
+	component_publication.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_publication.prototype.mini				= render_component_publication.prototype.mini

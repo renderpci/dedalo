@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -12,6 +17,7 @@ export const render_component_section_id = function(component) {
 
 	return true
 };//end render_component_section_id
+
 
 
 /**
@@ -37,6 +43,7 @@ render_component_section_id.prototype.mini = function(options) {
 
 	return node
 };//end mini
+
 
 
 /**
