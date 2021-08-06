@@ -217,6 +217,9 @@ const get_buttons = (self) => {
 			})
 
 			await player_av.build(true)
+
+			player_av.fragment = {tc_in: 3, tc_out: 5}
+
 			const node = await player_av.render()
 
 			// cotainer, for every ipo will create a li node
