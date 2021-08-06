@@ -76,10 +76,30 @@ const get_content_data_player = async function(self) {
 		const video_url			= self.data.video_url
 
 	if (video_url) {
+
+		//fragment
+		const tc_in = (!self.fragment)
+			? null
+			: (self.fragment && self.fragment.tc_in)
+				? 'vbegin='+ self.fragment.tc_in
+				: 'vbegin=0';
+		const tc_out = (!self.fragment)
+			? null
+			:(self.fragment && self.fragment.tc_out)
+				? 'vend='+ self.fragment.tc_out
+				: 'vend='+ self.video.duration;
+
+
+		const fragment_url = (tc_in)
+			? tc_in + '&' + tc_out
+			: null
+
 		// source tag
 			const source = document.createElement("source")
 			source.type = "video/mp4"
-			source.src  = video_url
+			source.src  = (self.fragment)
+				? video_url + '?' + fragment_url
+				: video_url
 
 		// video tag
 			const video = document.createElement("video")

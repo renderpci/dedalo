@@ -37,6 +37,8 @@ export const component_av = function(){
 
 	this.video
 
+	this.fragment = null
+
 
 	return true
 };//end  component_av
