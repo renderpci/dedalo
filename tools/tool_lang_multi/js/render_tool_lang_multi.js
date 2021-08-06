@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -29,7 +30,7 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 	const self = this
 
-	const render_level 	= options.render_level
+	const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -56,7 +57,7 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 
 /**
-* get_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
@@ -67,29 +68,33 @@ const get_content_data_edit = async function(self) {
 	// components container
 		const components_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'components_container',
-			parent 			: fragment
+			class_name		: 'components_container',
+			parent			: fragment
 		})
 
-	// target
-		const length = self.langs.length
-		for (let i = 0; i < length; i++) {
-			add_target_component(self.langs[i], components_container, self)
+	// components list (source and targets)
+		const langs_length = self.langs.length
+		for (let i = 0; i < langs_length; i++) {
+			const current_lang = self.langs[i] // object as {label:Spanish,value:lg-spa}
+			const target_component_container = create_target_component(current_lang, self)
+			components_container.appendChild(target_component_container)
 		}
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: components_container
+			class_name		: 'buttons_container',
+			parent			: components_container
 		})
 
 		// automatic_translation
-			const translator_engine = self.simple_tool_object.translator_engine
+			const translator_engine = (self.config)
+				? self.config.translator_engine.value
+				: false
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_tranlation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)
-			}
+			}//end if (translator_engine)
 
 
 	// content_data
@@ -103,92 +108,42 @@ const get_content_data_edit = async function(self) {
 
 
 
-const build_automatic_tranlation = (self, translator_engine, source_select_lang, target_select_lang, components_container) => {
-
-	// container
-		const automatic_translation_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'automatic_translation_container'
-		})
-
-	// button
-		const button_automatic_translation = document.createElement('button');
-			  button_automatic_translation.type = 'button'
-			  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-			  automatic_translation_container.appendChild(button_automatic_translation)
-			  button_automatic_translation.addEventListener("click", (e) => {
-
-			  	components_container.classList.add("loading")
-
-			  	const translator  = translator_engine_select.value
-			  	const source_lang = source_select_lang.value
-			  	const target_lang = target_select_lang.value
-			  	const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
-			  		components_container.classList.remove("loading")
-			  	})
-			  })
-
-	// select
-		const translator_engine_select = ui.create_dom_element({
-			element_type	: 'select',
-			parent 			: automatic_translation_container
-		})
-		for (let i = 0; i < translator_engine.length; i++) {
-			const translator = translator_engine[i]
-			ui.create_dom_element({
-				element_type	: 'option',
-				value 			: JSON.stringify(translator),
-				text_content 	: translator.label,
-				parent 			: translator_engine_select
-			})
-		}
-
-	return automatic_translation_container
-};//end build_automatic_tranlation
-
-
-
 /**
-* ADD_COMPONENT
+* CREATE_TARGET_COMPONENT
+* @param object lang
+* @param object instance
 */
-export const add_component = async (self, component_container, value) => {
-
-	const component = await self.load_component(value)
-	const node = await component.render()
-
-	component_container.appendChild(node)
-
-	return true
-};//end add_component
-
-
-
-/**
-* ADD_TARGET_COMPONENT
-*/
-export const add_target_component = async (lang, components_container, self) => {
+export const create_target_component = (lang, self) => {
 
 	const target_component_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'target_component_container',
-			parent 			: components_container
-		})
+		element_type	: 'div',
+		class_name		: 'target_component_container'
+	})
 
 	const target_component_title = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'target_component_title',
-			text_content	: lang.label,
-			parent 			: target_component_container
-		})
+		element_type	: 'div',
+		class_name		: 'target_component_title',
+		text_content	: lang.label,
+		parent			: target_component_container
+	})
 
 	if (lang.value===self.source_lang){
-		target_component_title.className = 'target_component_title source'
+		target_component_container.classList.add('source')
+		self.main_component.render()
+		.then(function(node){
+			target_component_container.appendChild(node)
+		})
+	}else{
+		self.load_component(lang.value)
+		.then(function(component){
+			component.render()
+				.then(function(node){
+				target_component_container.appendChild(node)
+			})
+		})
 	}
 
-	const component = await self.load_component(lang.value)
-	const node = await component.render()
+	return target_component_container
+};//end create_target_component
 
-	target_component_title.appendChild(node)
 
-	return true
-};//end add_target_component

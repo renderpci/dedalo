@@ -110,7 +110,12 @@ const content_data_edit = async function(self) {
 		}
 		// source default value check
 			if (source_select_lang.value) {
-				add_component(self, source_component_container, source_select_lang.value)
+				// left side component (use already loaded on build, self.main_component)
+				self.main_component.render()
+				.then(function(node){
+					source_component_container.appendChild(node)
+				})
+				// right side component
 				add_component(self, target_component_container, source_select_lang.value)
 			}
 		tc_management_container.appendChild(source_select_lang)
@@ -118,19 +123,19 @@ const content_data_edit = async function(self) {
 	// offset_input in seconds
 		const offset_input = ui.create_dom_element({
 			id				: 'tc_offset',
-			element_type 	: 'input',
-			type 		 	: 'text',
-			class_name 		: 'input_value',
-			placeholder 	: '0',
-			parent 		 	: tc_management_container
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_value',
+			placeholder		: '0',
+			parent			: tc_management_container
 		})
 
 	// preview button
 		const button_preview = ui.create_dom_element({
-			element_type 	: 'button',
-			class_name 		: 'secondary button_preview',
-			text_content 	: get_label['preview'] || "Preview",
-			parent 			: tc_management_container
+			element_type	: 'button',
+			class_name		: 'secondary button_preview',
+			text_content	: get_label.preview || "Preview",
+			parent			: tc_management_container
 		})
 		button_preview.addEventListener("click", () => {
 
@@ -186,7 +191,7 @@ const content_data_edit = async function(self) {
 /**
 * ADD_COMPONENT
 */
-export const add_component = async (self, component_container, value) => {
+export const add_component = (self, component_container, value) => {
 
 	// user select blank value case
 		if (!value) {
@@ -197,13 +202,18 @@ export const add_component = async (self, component_container, value) => {
 			return false
 		}
 
-	const component = await self.load_component(value)
-	const node = await component.render()
-
-	while (component_container.firstChild) {
-		component_container.removeChild(component_container.firstChild)
-	}
-	component_container.appendChild(node)
+	self.load_component(value)
+	.then(async function(component){
+		component.render()
+		.then(function(node){
+			while (component_container.firstChild) {
+				component_container.removeChild(component_container.firstChild)
+			}
+			component_container.appendChild(node)
+		})
+	})
 
 	return true
 };//end add_component
+
+

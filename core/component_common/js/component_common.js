@@ -329,23 +329,27 @@ component_common.prototype.save = async function(changed_data) {
 				const data = JSON.parse(JSON.stringify(self.data))
 				data.changed_data = changed_data
 
+				// context. isolated cloned var
+				const context = JSON.parse(JSON.stringify(self.context))
+
 				// data_manager
 					const current_data_manager	= new data_manager()
 					const api_response			= await current_data_manager.request({
 						body : {
 							action		: 'save',
-							context		: self.context,
+							context		: context,
 							data		: data,
 							section_id	: self.section_id
 						}
 					})
+					dd_console(`component_common save api_response`, 'DEBUG', api_response)
 
 				// debug
 					if(SHOW_DEBUG===true) {
 						if (api_response.result) {
 							const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
 							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
-							console.log(`[component_common.save] action:'${changed_data.action}' lang:'${self.context.lang}', key:'${changed_data.key}', value:`, changed_data_value);
+							console.log(`[component_common.save] action:'${changed_data.action}' lang:'${self.context.lang}', key:'${changed_data.key}'`);
 							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
 							console.log("[component_common.save] api_response:", api_response);
 						}else{
@@ -392,7 +396,7 @@ component_common.prototype.save = async function(changed_data) {
 					alert("Error on save self "+self.model+" data: \n" + response.msg)
 				}
 
-				console.error("response:",response);
+				console.error("ERROR response:",response);
 
 			}else{
 				// success

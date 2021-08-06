@@ -1393,7 +1393,7 @@ export const ui = {
 						const debug_div = document.getElementById("debug")
 							  if(debug_div) debug_div.classList.add("hide")
 
-					// show hidded elements again on close
+					// show hidden elements again on close
 						event_manager.subscribe('modal_close', () => {
 							content_data_page.classList.remove("hide")
 							menu_wrapper.classList.remove("hide")
