@@ -86,6 +86,8 @@ tool_lang.prototype.build = async function(autoload=false) {
 	// main_component. fix main_component for convenience
 		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
 		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+		dd_console(`main_component_ddo`, 'DEBUG', main_component_ddo, self.main_component)
+
 
 	// specific actions..
 
@@ -105,12 +107,18 @@ tool_lang.prototype.load_component = async function(lang) {
 	// to_delete_instances. Select instances with different lang to main_component
 		const to_delete_instances = self.ar_instances.filter(el => el.lang!==self.main_component.lang)
 
+
+	// context (clone and edit)
+		const context = Object.assign(clone(self.main_component.context),{
+			lang		: lang,
+			mode		: 'edit',
+			section_id	: self.main_component.section_id
+		})
+
 	// options
 		const options = {
-			reference_component	: self.main_component, // reference tipo, section_tipo, context ...
-			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new one
-			lang				: lang,
-			mode				: 'edit'
+			context				: context,
+			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
 		}
 
 	// call generic common tool build
