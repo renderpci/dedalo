@@ -96,6 +96,7 @@ component_common.prototype.init = async function(options) {
 				})
 			)
 
+
 	// subscribe to the observer events (important: only once)
 		init_events_subscription(self)
 

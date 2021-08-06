@@ -115,10 +115,10 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			ar_promises.push( new Promise(async (resolve) => {
 
-				// context
+				// context. In is not given get from caller or request to the API
 					const context = el.context
 						? el.context
-						: (async function(){
+						: await (async function(){
 							// caller context
 							const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
 							if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
@@ -134,8 +134,6 @@ tool_common.prototype.build = async function(autoload=false) {
 					// const element_instance = load_component_generic({
 					// 	self				: self,
 					// 	context				: context,
-					// 	section_id			: (el.section_id || null),
-					// 	matrix_id			: (el.matrix_id || null),
 					// 	to_delete_instances	: null
 					// })
 					// resolve(element_instance)
@@ -149,16 +147,13 @@ tool_common.prototype.build = async function(autoload=false) {
 					lang			: self.lang,
 					type			: el.type,
 					context			: context,
-					id_variant		: self.model,
-					caller			: self
+					id_variant		: self.model,  // id_variant prevents id conflicts
+					caller			: self // set tool as caller of the component :-)
 				}
 				// init and build instance
-					get_instance(element_options)
+					get_instance(element_options) // load and init
 					.then(function(element_instance){
-						// set tool as caller of the component :-)
-						// element_instance.caller = self
-						// build
-						element_instance.build(true)
+						element_instance.build(true) // build, loading data
 						.then(function(){
 							resolve(element_instance)
 						})
@@ -248,6 +243,10 @@ tool_common.prototype.build = async function(autoload=false) {
 /**
 * LOAD_COMPONENT
 * Loads component to place in respective containers: current preview and preview version
+* @param object options
+* 	context: object
+* 	to_delete_instances: array of instance object
+* @return promise: object component_instance
 */
 tool_common.prototype.load_component = async function(options) {
 	// console.log("load_component:",lang, mode, matrix_id);
@@ -268,6 +267,7 @@ tool_common.prototype.load_component = async function(options) {
 		const type			= context.type
 		const section_id	= context.section_id || null
 		const matrix_id		= context.matrix_id || null
+		const id_variant	= self.model
 
 	// component instance_options
 		const instance_options = {
@@ -280,9 +280,7 @@ tool_common.prototype.load_component = async function(options) {
 			section_lang	: section_lang,
 			type			: type,
 			context			: context,
-			// data			: {value:[]},
-			// datum		: component.datum,
-			id_variant		: self.model, // id_variant prevents id conflicts
+			id_variant		: id_variant, // id_variant prevents id conflicts
 			caller			: self // set current tool as component caller (to check if component is inside tool or not)
 		}
 
@@ -290,7 +288,7 @@ tool_common.prototype.load_component = async function(options) {
 			instance_options.matrix_id = matrix_id
 		}
 
-	// get instance and build
+	// get instance and init
 		const component_instance = await get_instance(instance_options)
 
 	// clean instances

@@ -272,6 +272,7 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
 
+
 	// to_delete_instances. Select current self.transcription_component
 		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
 
