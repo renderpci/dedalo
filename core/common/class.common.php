@@ -3802,6 +3802,7 @@ abstract class common {
 				$tool_context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
 				$tool_context->show_in_inspector	= $tool_object->show_in_inspector;
 				$tool_context->show_in_component	= $tool_object->show_in_component;
+				$tool_context->config				= $tool_object->config;
 
 		// tool_config add
 			if (!empty($tool_config)) {
@@ -3825,7 +3826,7 @@ abstract class common {
 				// set parsed tool_config
 					$tool_context->tool_config = $tool_config;
 			}//end if (!empty($tool_config))
-
+			// dump($tool_context, ' tool_context ++ '.to_string());
 
 		return $tool_context;
 	}//end create_tool_context

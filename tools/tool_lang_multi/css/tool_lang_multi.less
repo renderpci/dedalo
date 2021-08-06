@@ -25,7 +25,20 @@
 			display: grid;
 		    grid-template-columns: 1fr 1fr;
 		    grid-gap: 1em;
-		    //background-color: #D6F737;	    
+		    //background-color: #D6F737;
+
+		    .target_component_container {
+
+			    &.source {
+		    		border-bottom: 1px solid #f78a1c;
+				}
+
+			    .target_component_title  {
+			    	padding: 0.5em;
+			    	padding-left: 0;
+			    }
+			}
+
 		}
 	}
 

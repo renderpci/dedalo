@@ -1,7 +1,13 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_upload} from './render_tool_upload.js'
 
@@ -13,17 +19,17 @@
 */
 export const tool_upload = function () {
 	
-	this.id
-	this.model
-	this.mode
-	this.node
-	this.ar_instances
-	this.status
-	this.events_tokens
-	this.type
-	this.caller
+	this.id				= null
+	this.model			= null
+	this.mode			= null
+	this.node			= null
+	this.ar_instances	= null
+	this.status			= null
+	this.events_tokens	= null
+	this.type			= null
+	this.caller			= null
 
-	this.max_size_bytes
+	this.max_size_bytes	= null
 
 	return true
 };//end page
@@ -35,9 +41,9 @@ export const tool_upload = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_upload.prototype.render 		= common.prototype.render
-	tool_upload.prototype.destroy 		= common.prototype.destroy
-	tool_upload.prototype.edit 			= render_tool_upload.prototype.edit
+	tool_upload.prototype.render	= common.prototype.render
+	tool_upload.prototype.destroy	= common.prototype.destroy
+	tool_upload.prototype.edit		= render_tool_upload.prototype.edit
 
 
 
@@ -51,7 +57,7 @@ tool_upload.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url = DEDALO_TOOLS_URL + "/tool_upload/trigger.tool_upload.php"
 
-	// call the generic commom tool init
+	// call the generic common tool init
 		const common_init = tool_common.prototype.init.call(this, options);
 
 
@@ -70,7 +76,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// fetch system info
 		const system_info = await get_system_info(self)
 
-	// call generic commom tool build
+	// call generic common tool build
 		const common_build = tool_common.prototype.build.call(this, autoload);
 
 
@@ -85,49 +91,38 @@ tool_upload.prototype.build = async function(autoload=false) {
 */
 const get_system_info = async function(self) {
 
-	// errors
-		const handle_errors = function(response) {
-			if (!response.ok) {
-				throw Error(response.statusText);
-			}
-			return response;
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'get_system_info')
+		// add the necessary arguments used in the given function
+		source.arguments = {}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
 		}
 
-	// trigger call
-		const trigger_response = await fetch(
-	 		self.trigger_url,
-	 		{
-				method		: 'POST',
-				mode		: 'cors',
-				cache		: 'no-cache',
-				credentials	: 'same-origin',
-				headers		: {'Content-Type': 'application/json'},
-				redirect	: 'follow',
-				referrer	: 'no-referrer',
-				body		: JSON.stringify({
-					mode : 'get_system_info'
-				})
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				dd_console("-> get_system_info API response:",'DEBUG',response);
+
+				// set
+					self.max_size_bytes			= response.result.max_size_bytes
+					self.sys_get_temp_dir		= response.result.sys_get_temp_dir
+					self.upload_tmp_dir			= response.result.upload_tmp_dir
+					self.upload_tmp_perms		= response.result.upload_tmp_perms
+					self.session_cache_expire	= response.result.session_cache_expire
+
+				resolve(response)
 			})
-			.then(handle_errors)
-			.then(response => response.json()) // parses JSON response into native Javascript objects
-			.catch(error => {
-				console.error("!!!!! REQUEST ERROR: ",error)
-				return {
-					result 	: false,
-					msg 	: error.message,
-					error 	: error
-				}
-			});
-
-	// set
-		self.max_size_bytes 		= trigger_response.result.max_size_bytes
-		self.sys_get_temp_dir 		= trigger_response.result.sys_get_temp_dir
-		self.upload_tmp_dir 		= trigger_response.result.upload_tmp_dir
-		self.upload_tmp_perms 		= trigger_response.result.upload_tmp_perms
-		self.session_cache_expire 	= trigger_response.result.session_cache_expire
-
-
-	return trigger_response.result
+		})
 };//end get_system_info
 
 
@@ -154,7 +149,7 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 			return false
 		}
 
-	// elemenmts
+	// elements
 		const progress_info = progress_bar_container.querySelector('.progress_info')
 		const progress_line = progress_bar_container.querySelector('.progress_line')
 		const filedrag 		= content_data.querySelector('.filedrag')
@@ -271,7 +266,7 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 
 			// open connection
 			xhr.open("POST", self.trigger_url, true);
-	console.log("file.name:",file);
+
 			// request header
 			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
@@ -281,3 +276,5 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 
 	return true
 };//end upload_file
+
+
