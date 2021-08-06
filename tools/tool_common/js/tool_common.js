@@ -37,7 +37,7 @@ export const tool_common = function(){
 * }
 */
 tool_common.prototype.init = async function(options) {
-	dd_console(`init tool options`, 'DEBUG', options)
+	// dd_console(`init tool options`, 'DEBUG', options)
 	
 	const self = this
 
@@ -168,7 +168,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 		// set on finish
 			await Promise.all(ar_promises).then((ar_instances) => {
-				dd_console(`ar_instances`, 'DEBUG', ar_instances)
+				// dd_console(`ar_instances`, 'DEBUG', ar_instances)
 				self.ar_instances = ar_instances
 			})
 
@@ -232,7 +232,7 @@ tool_common.prototype.build = async function(autoload=false) {
 		if(SHOW_DEBUG===true) {
 			// console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
 			// dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
-			dd_console(`tool common build. self.ar_instances`, 'DEBUG', self.ar_instances)
+			// dd_console(`tool common build. self.ar_instances`, 'DEBUG', self.ar_instances)
 		}
 
 
@@ -300,7 +300,7 @@ tool_common.prototype.load_component = async function(options) {
 				if (to_delete_instances.indexOf(current_instance)!==-1) {
 					// destroy previous preview component instances
 					const instance_index = self.ar_instances.findIndex( el => el.id===current_instance.id)
-					dd_console(`To delete instance index:`, 'DEBUG', instance_index)
+					// dd_console(`To delete instance index:`, 'DEBUG', instance_index)
 					// remove from array of instances
 					if (instance_index!==-1) {
 						self.ar_instances.splice(instance_index, 1)

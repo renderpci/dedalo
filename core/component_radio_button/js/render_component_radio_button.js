@@ -1,4 +1,4 @@
-	/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -43,6 +43,7 @@ render_component_radio_button.prototype.mini = async function() {
 
 	return wrapper
 };//end mini
+
 
 
 /**

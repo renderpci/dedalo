@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager, download_url} from '../../common/js/data_manager.js'
