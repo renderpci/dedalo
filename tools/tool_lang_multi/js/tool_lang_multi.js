@@ -113,12 +113,17 @@ tool_lang_multi.prototype.load_component = async function(lang) {
 	// to_delete_instances. Select instances with different lang to main_component
 		const to_delete_instances = null // self.ar_instances.filter(el => el.lang!==self.main_component.lang)
 
+	// context (clone and edit)
+		const context = Object.assign(clone(self.main_component.context),{
+			lang		: lang,
+			mode		: 'edit',
+			section_id	: self.main_component.section_id
+		})
+
 	// options
 		const options = {
-			reference_component	: self.main_component, // reference tipo, section_tipo, context ...
-			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new one
-			lang				: lang,
-			mode				: 'edit'
+			context				: context,
+			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
 		}
 
 	// call generic common tool build

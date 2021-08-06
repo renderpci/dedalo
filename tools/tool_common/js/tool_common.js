@@ -130,27 +130,33 @@ tool_common.prototype.build = async function(autoload=false) {
 							return api_response.result[0]
 						  })()
 
+				// generic try
+					// const element_instance = load_component_generic({
+					// 	self				: self,
+					// 	context				: context,
+					// 	section_id			: (el.section_id || null),
+					// 	matrix_id			: (el.matrix_id || null),
+					// 	to_delete_instances	: null
+					// })
+					// resolve(element_instance)
+
 				const element_options = {
 					model			: el.model,
+					mode			: el.mode,
 					tipo			: el.tipo,
 					section_tipo	: el.section_tipo,
 					section_id		: el.section_id,
-					mode			: el.mode,
 					lang			: self.lang,
+					type			: el.type,
 					context			: context,
-					id_variant		: self.model
+					id_variant		: self.model,
+					caller			: self
 				}
-
 				// init and build instance
-					// const component_instance = await get_instance(element_options);
-					// await component_instance.build(true);
-
 					get_instance(element_options)
 					.then(function(element_instance){
-
 						// set tool as caller of the component :-)
-						element_instance.caller = self
-
+						// element_instance.caller = self
 						// build
 						element_instance.build(true)
 						.then(function(){
@@ -162,6 +168,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 		// set on finish
 			await Promise.all(ar_promises).then((ar_instances) => {
+				dd_console(`ar_instances`, 'DEBUG', ar_instances)
 				self.ar_instances = ar_instances
 			})
 
@@ -248,31 +255,27 @@ tool_common.prototype.load_component = async function(options) {
 	const self = this
 
 	// options
-		const reference_component	= options.reference_component
+		const context				= clone(options.context)
 		const to_delete_instances	= options.to_delete_instances
-		const lang					= options.lang
-		const mode					= options.mode==='edit_in_list' ? 'edit' : options.mode
-		const matrix_id				= options.matrix_id || null
 
 	// short vars
-		const model				= reference_component.model
-		const component_tipo	= reference_component.tipo
-		const section_tipo		= reference_component.section_tipo
-		const section_id		= reference_component.section_id
-		const section_lang		= reference_component.section_lang
-		const type				= reference_component.type
-
-	// context (clone and edit)
-		const context 			= clone(reference_component.context)
-			  context.lang 		= lang
+		const model			= context.model
+		const mode			= context.mode
+		const tipo			= context.tipo
+		const section_tipo	= context.section_tipo
+		const section_lang	= context.section_lang
+		const lang			= context.lang
+		const type			= context.type
+		const section_id	= context.section_id || null
+		const matrix_id		= context.matrix_id || null
 
 	// component instance_options
 		const instance_options = {
 			model			: model,
-			tipo			: component_tipo,
+			mode			: mode,
+			tipo			: tipo,
 			section_tipo	: section_tipo,
 			section_id		: section_id,
-			mode			: mode,
 			lang			: lang,
 			section_lang	: section_lang,
 			type			: type,

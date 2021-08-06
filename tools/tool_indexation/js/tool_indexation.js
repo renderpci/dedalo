@@ -272,16 +272,21 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
 
-
 	// to_delete_instances. Select current self.transcription_component
 		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
 
+
+	// context (clone and edit)
+		const context = Object.assign(clone(self.transcription_component.context),{
+			lang		: lang,
+			mode		: 'edit',
+			section_id	: self.transcription_component.section_id
+		})
+
 	// options
 		const options = {
-			reference_component	: self.transcription_component, // reference tipo, section_tipo, context ...
-			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new one
-			lang				: lang,
-			mode				: 'edit'
+			context				: context, // reference context ...
+			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
 		}
 
 	// call generic common tool build
