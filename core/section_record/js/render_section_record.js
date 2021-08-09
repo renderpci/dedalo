@@ -33,8 +33,12 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 
 	const render_level = options.render_level
 
+	const ar_instances = self.ar_instances && self.ar_instances.length>0
+		? self.ar_instances
+		: await self.get_ar_instances()
+
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data_edit(self, ar_instances)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -55,9 +59,7 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 * GET_CONTENT_DATA_EDIT
 * @return DOM node get_content_data_edit
 */
-const get_content_data_edit = async function(self) {
-
-	const ar_instances = await self.get_ar_instances()
+const get_content_data_edit = async function(self, ar_instances) {
 		
 	const fragment = new DocumentFragment()
 
@@ -152,10 +154,8 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	const self = this
 	
-	const ar_instances = await self.get_ar_columns_instances()
-
-
-// const ar_instances = await self.get_ar_instances()
+	// ar_columns_instances
+		const ar_instances = await self.get_ar_columns_instances()
 
 	const fragment = new DocumentFragment()
 
