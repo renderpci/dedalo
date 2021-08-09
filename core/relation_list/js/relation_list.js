@@ -489,7 +489,7 @@ var relation_list = new function() {
           //console.log("Edit window is closed for record "+section_id +". Calling refresh_element section_tipo:"+section_tipo+" section_id:"+section_id);
           ts_object.refresh_element(section_tipo, section_id)
 
-        }, false);
+        });
       }
       */
     };//end edit_relation

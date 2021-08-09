@@ -179,8 +179,7 @@ const add_events = function(self, wrapper) {
 
 					return true
 				}
-
-		}, false)
+		})
 
 	// click event
 		wrapper.addEventListener("click", e => {
@@ -226,8 +225,7 @@ const add_events = function(self, wrapper) {
 					return true
 				}
 
-
-		},false)
+		})
 
 	// focus event
 		// wrapper.addEventListener("focus", e => {
@@ -305,7 +303,7 @@ render_component_radio_button.prototype.search = async function() {
 						return
 					}
 				}
-			}, false)
+			})
 
 		// change event, for every change the value in the inputs of the component
 			wrapper.addEventListener('change', (e) => {
@@ -352,7 +350,7 @@ render_component_radio_button.prototype.search = async function() {
 
 						return true
 					}
-			}, false)
+			})
 
 		// change event, for every change the value in the imputs of the component
 			// wrapper.addEventListener('change', (e) => {
@@ -399,7 +397,7 @@ render_component_radio_button.prototype.search = async function() {
 			// 		event_manager.publish('change_search_element', self)
 			// 		return true
 			// 	}
-			// }, false)
+			// })
 
 
 

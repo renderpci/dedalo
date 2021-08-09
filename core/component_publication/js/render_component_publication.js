@@ -152,7 +152,7 @@ const add_events = function(self, wrapper) {
 
 				return true
 			}
-		},false)
+		})
 
 	// click event
 		wrapper.addEventListener("click", e => {
@@ -180,7 +180,7 @@ const add_events = function(self, wrapper) {
 
 			 	return true
 			}
-		},true)
+		})
 
 	return true
 };//end add_events

@@ -182,8 +182,7 @@ const add_events = function(self, wrapper) {
 
 				return true
 			}
-
-		}, false)
+		})
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {

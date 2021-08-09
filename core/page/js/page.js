@@ -207,7 +207,7 @@ page.prototype.init = async function(options) {
 		// 	// return confirmationMessage;				// Gecko, WebKit, Chrome <34
 
 		// 	return null
-		// }, false)//end beforeunload
+		// })//end beforeunload
 
 
 	// window messages

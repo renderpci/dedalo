@@ -274,7 +274,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 		wrapper.addEventListener("click", (e) => {
 			// e.stopPropagation()
 			e.target.classList.add("row_active")
-		},false)
+		})
 
 
 	return wrapper
