@@ -1,0 +1,9 @@
+tinymce.min.js
+
+Valencia 09-08-2021
+
+
+This file is modified to prevent some modern browsers issues:
+
+1 document.write lock (unused in Dédalo) (lin 20009)
+2 addEventListener passive mode forced as options (line 477)
