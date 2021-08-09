@@ -3719,6 +3719,12 @@ abstract class common {
 	*/
 	public function get_tools() {
 
+		// cache
+			$cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
+			if (isset($_SESSION['dedalo']['config']['tools'][$cache_key])) {
+				return $_SESSION['dedalo']['config']['tools'][$cache_key];
+			}
+
 		$registered_tools	= common::get_client_registered_tools();
 		$model				= get_class($this);
 		$tipo				= $this->tipo;
@@ -3755,6 +3761,9 @@ abstract class common {
 				}
 			}
 		}//end foreach ($registered_tools as $tool)
+
+		// cache
+			$_SESSION['dedalo']['config']['tools'][$cache_key] = $tools;
 
 
 		return $tools;
