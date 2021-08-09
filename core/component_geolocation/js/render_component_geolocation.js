@@ -166,7 +166,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 			}
 
 
-		}, false)
+		})
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
@@ -292,7 +292,7 @@ render_component_geolocation.prototype.search = async function() {
 					event_manager.publish('change_search_element', self)
 					return true
 				}
-			}, false)
+			})
 
 
 

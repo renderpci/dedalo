@@ -41,7 +41,7 @@ var inspector = new function() {
 					if (html_page.on_dialog_window === 1) {
 						//$('#button_toggle_inspector').addClass('button_toggle_inspector_in_dialog')
 						document.getElementById("button_toggle_inspector").addClass('button_toggle_inspector_in_dialog')
-					};
+					}
 
 					// AVOID RESET COMPONENT SELECT ON CLICK
 					//$('#inspector_div').find('.tab_content').click(function(e) {
@@ -49,7 +49,7 @@ var inspector = new function() {
 					//});	
 					document.getElementById("inspector_div").addEventListener("click",function(e){
 						e.stopPropagation();
-					},false)
+					})
 					break;
 
 				default:

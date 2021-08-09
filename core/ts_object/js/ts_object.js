@@ -1450,7 +1450,7 @@ export const ts_object = new function() {
 				//console.log("Edit window is closed for record "+section_id +". Calling refresh_element section_tipo:"+section_tipo+" section_id:"+section_id);
 				ts_object.refresh_element(section_tipo, section_id)
 
-			}, false);
+			});
 		}else{
 
 			const current_query = ts_object.edit_window.location.href.split("?")[1]
@@ -1704,7 +1704,7 @@ export const ts_object = new function() {
 					first_input.addEventListener("change", function(e){
 						//ts_object.refresh_element(section_tipo, section_id)
 						element_data_div.style.display = 'none'
-					}, false);
+					});
 				}
 
 		return true
@@ -2322,12 +2322,12 @@ export const ts_object = new function() {
 				   ts_object.save_order(button_obj, parseInt(this.value) )
 				   //this.remove()
 				}
-			}, false);
+			});
 			input.addEventListener("blur", function(e){
 				e.preventDefault()
 				this.remove()
 				button_obj.style.display = ''
-			}, false);
+			});
 
 		// Add input element after
 			button_obj.parentNode.insertBefore(input, button_obj.nextSibling);

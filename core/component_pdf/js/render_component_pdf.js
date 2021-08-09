@@ -152,7 +152,7 @@ const add_events = function(self, wrapper) {
 
 				return true
 			}
-		}, false)
+		})
 
 	// click event [mousedown]
 		wrapper.addEventListener("click", e => {

@@ -99,7 +99,7 @@ var tool_transcription = new function() {
 				}
 
 				//tool_transcription.verify_tc_tags(tinyMCE.activeEditor)
-			}, false)//end load
+			})//end load
 
 
 			// BEFOREUNLOAD (EVENT)
@@ -116,7 +116,7 @@ var tool_transcription = new function() {
 					event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
 					return confirmationMessage;					// Gecko, WebKit, Chrome <34
 				}
-			}, false)//end beforeunload
+			})//end beforeunload
 
 
 			// UNLOAD (EVENT)
@@ -135,13 +135,13 @@ var tool_transcription = new function() {
 				if(typeof lock_components!=="undefined") {
 					lock_components.update_lock_components_state( tool_transcription.wrap_text_area, 'blur' );
 				}
-			}, false)//end unload
+			})//end unload
 
 
 			// RESIZE (EVENT)
 			window.addEventListener("resize", function (event) {
 				tool_transcription.fix_height_of_texteditor();
-			}, false)//end resize
+			})//end resize
 
 
 			// VISIBILITYCHANGE (EVENT)
@@ -158,13 +158,13 @@ var tool_transcription = new function() {
 					console.warn("[tool_transcription.visibilitychange_action] locator:", locator)
 				}
 				tool_common.update_tracking_status(event,{locator:locator})
-			}, false)//end resize
+			})//end resize
 
 
 			// GRID_IMAGE_CLICK_EVENT (lanunched from component_autocomplete_hi)
 			window.addEventListener('grid_image_click_event', function(e){
 				console.log("grid_image_click_event e:",e);
-			}, false)//end grid_image_click_event
+			})//end grid_image_click_event
 
 		}//end if (this.initiated!==true)		
 

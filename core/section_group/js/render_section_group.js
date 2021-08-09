@@ -55,7 +55,7 @@ render_section_group.prototype.edit = async function(options={render_level : 'fu
 			if (e.target.matches('.label')) {
 				e.target.nextSibling.classList.toggle('hide')
 			}
-		}, false)
+		})
 
 	return wrapper
 };//end edit

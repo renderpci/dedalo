@@ -157,7 +157,7 @@ function create_dom_element(element_options){
 			var function_name = click_event;	//'ts_object.test_name2'
 			element.addEventListener("click", function(e){
 				call_custom_function(function_name,this)
-			}, false);
+			});
 			}*/
 	}//end if(custom_function_events){
 	

@@ -128,7 +128,7 @@ const content_data = async function(self) {
 			if(page_number>1) {
 				paginator_first.addEventListener("mousedown",function(){
 					self.paginate(offset_first)
-				},false)
+				})
 			}else{
 				paginator_first.classList.add("unactive")
 			}
@@ -142,7 +142,7 @@ const content_data = async function(self) {
 			if(prev_page_offset>=0) {
 				paginator_prev.addEventListener("mousedown",function(){
 					self.paginate(offset_prev)
-				},false)
+				})
 			}else{
 				paginator_prev.classList.add("unactive")
 			}
@@ -156,7 +156,7 @@ const content_data = async function(self) {
 			if(next_page_offset<total) {
 				paginator_next.addEventListener("mousedown",function(){
 					self.paginate(offset_next)
-				},false)
+				})
 			}else{
 				paginator_next.classList.add("unactive")
 			}
@@ -170,7 +170,7 @@ const content_data = async function(self) {
 			if(page_number<total_pages) {
 				paginator_last.addEventListener("mousedown",function(){
 					self.paginate(offset_last)
-				},false)
+				})
 			}else{
 				paginator_last.classList.add("unactive")
 			}
@@ -213,7 +213,7 @@ const content_data = async function(self) {
 			// add the Even onchage to the select, whe it change the section selected will be loaded
 			input_go_to_page.addEventListener('keyup',function(event){
 				self.go_to_page_json(this, event, total_pages, limit)
-			},false)
+			})
 
 		// let text = ""
 		// 	text += get_label["pagina"] || "Page"

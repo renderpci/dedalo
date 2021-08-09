@@ -207,8 +207,7 @@ const add_events = function(self, wrapper) {
 
 			//const current_buttons_editor = document.querySelector(".buttons_editor")
 			//if (current_buttons_editor) current_buttons_editor.remove()
-
-		}, false)
+		})
 
 
 	return true
