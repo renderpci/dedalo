@@ -391,7 +391,7 @@
 		# TYPE normally jpeg
 		define('DEDALO_IMAGE_TYPE'					, 'jpeg');
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, serialize(['jpg','jpeg','png','tif','tiff','bmp','psd','raw']));
+		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, ['jpg','jpeg','png','tif','tiff','bmp','psd','raw']);
 		# QUALITY ORIGINAL normally 'original'
 		define('DEDALO_IMAGE_QUALITY_ORIGINAL'		, 'original');
 		# QUALITY MODIFY of original normally 'modify'
@@ -428,7 +428,7 @@
 		# EXTENSION normally pdf
 		define('DEDALO_PDF_EXTENSION'				, 'pdf');
 		# DEDALO_PDF_EXTENSIONS_SUPPORTED
-		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, serialize(['pdf']));
+		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
 		# QUALITY DEFAULT normally 'standar'
 		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standard');
 		# QUALITY ORIGINAL normally 'original'
