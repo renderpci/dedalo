@@ -1376,9 +1376,6 @@ abstract class common {
 
 		// properties
 			$properties = $this->get_properties() ?? new stdClass();
-			// if (empty($properties)) {
-			// 	$properties = new stdClass();
-			// }
 
 		// css
 			$css = new stdClass();
@@ -1496,30 +1493,16 @@ abstract class common {
 			foreach ($tools_list as $tool_object) {
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
-					: (function(){
-						return null; // will be created in client (!)
-						// create an automatic ddo_map
-						// return [
-						// 	(object)[
-						// 		'tipo'			=> $this->tipo,
-						// 		'section_tipo'	=> $this->section_tipo,
-						// 		'model'			=> get_class($this),
-						// 		'role'			=> 'component',
-						// 		'section_tipo'	=> 'self'
-						// 	]
-						// ];
-					  })();
+					: null;
 				$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
 				$tools[]		= $tool_context;
 			}//end foreach ($tools_list as $item)
-
 
 
 		// request_config
 			$request_config = $add_request_config===true
 				? ($this->build_request_config() ?? [])
 				:  null;
-
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -1571,6 +1554,8 @@ abstract class common {
 					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
 
 				$dd_object->debug = $debug;
+
+				error_log("------------------------- get_structure_context ------- $this->tipo ----". exec_time_unit($start_time,'ms')." ms");
 			}
 
 
@@ -2151,6 +2136,7 @@ abstract class common {
 	* 	Object with two properties: context, data
 	*/
 	public function get_subdatum($from_parent=null, $ar_locators=[]) {
+		$start_time=microtime(1);
 		// dump(null, ' get_ar_subcontext call this **************************** '.to_string($this->tipo).' - $from_parent: '.$from_parent);
 
 		$ar_subcontext	= [];
@@ -2383,6 +2369,11 @@ abstract class common {
 		$subdatum = new stdClass();
 			$subdatum->context	= $ar_subcontext;
 			$subdatum->data		= $ar_subdata;
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				error_log("------------------------- get_subdatum ------- $this->tipo ----". exec_time_unit($start_time,'ms')." ms");
+			}
 			
 		return $subdatum;
 	}//end get_subdatum

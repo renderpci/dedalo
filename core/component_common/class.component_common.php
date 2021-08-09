@@ -92,6 +92,7 @@ abstract class component_common extends common {
 	* @returns array array of component objects by key
 	*/
 	public static function get_instance($component_name=null, $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
+		$start_time=microtime(1);
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -102,7 +103,7 @@ abstract class component_common extends common {
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			if (empty($component_name)) {
 
-				// calculate component name (is ontology elemnent model)
+				// calculate component name (is ontology element model)
 					$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 
 			}else if (!empty($component_name) && $model_name!==$component_name) {
@@ -137,12 +138,13 @@ abstract class component_common extends common {
 				return null;
 			}
 
-		// debug verifications
-			if(SHOW_DEBUG===true) {
+		// debug verification
+			$check_instance_params = false;
+			if(SHOW_DEBUG===true && $check_instance_params===true) {
 				// model received check
 					if ( !empty($component_name) && strpos($component_name, 'component_')===false ) {
 						dump($tipo," tipo");
-						throw new Exception("Error Processing Request. section or ($component_name) intented to load as component", 1);
+						throw new Exception("Error Processing Request. section or ($component_name) intended to load as component", 1);
 					}
 				// tipo format check
 					if ( is_numeric($tipo) || !is_string($tipo) || !RecordObj_dd::get_prefix_from_tipo($tipo) ) {
@@ -243,7 +245,7 @@ abstract class component_common extends common {
 								$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
 								$real_section 			 = section::get_section_real_tipo_static($section_tipo);
 								$is_real 				 = $real_section===$section_tipo ? true : false;
-								if ( $is_real && $section_tipo!=$calculated_section_tipo && $modo!=='search' && SHOW_DEBUG===true) {
+								if ( $is_real && $section_tipo!==$calculated_section_tipo && $modo!=='search' && SHOW_DEBUG===true) {
 									#dump(debug_backtrace(), ' debug_backtrace '.to_string());
 									#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
 								}
@@ -252,6 +254,7 @@ abstract class component_common extends common {
 					}
 			}//end if(SHOW_DEBUG===true)
 
+
 		// no cache. Direct construct without cache instance. Use this config in imports
 			if ($cache===false) {
 				return new $component_name($tipo, $section_id, $modo, $lang, $section_tipo);
@@ -259,11 +262,12 @@ abstract class component_common extends common {
 
 		static $ar_component_instances;
 
-		# key for cache
+		// key for cache
 		$key = $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang;
 
 		$max_cache_instances = 160; // 500
 		$cache_slice_on 	 = 40; // 200 //$max_cache_instances/2;
+
 
 		// overload : If ar_component_instances > 99 , not add current element to cache to avoid overload
 			if ( isset($ar_component_instances) && count($ar_component_instances)>$max_cache_instances ) {
@@ -281,7 +285,7 @@ abstract class component_common extends common {
 
 			}else{
 
-				// Change modo if need
+				// Change modo if is needed
 					if ($ar_component_instances[$key]->get_modo()!==$modo) {
 						$ar_component_instances[$key]->set_modo($modo);
 					}
@@ -296,6 +300,7 @@ abstract class component_common extends common {
 				// 	#throw new Exception($msg, 1);
 				// 	debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 				// }
+				error_log("------------------------- get_instance ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
 			}
 
 
