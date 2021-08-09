@@ -235,7 +235,9 @@ section.prototype.build = async function(autoload=false) {
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
-					dd_console("SECTION api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response))]);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("SECTION api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug.exec_time]);
+				}
 
 
 			// set the result to the datum
@@ -275,9 +277,12 @@ section.prototype.build = async function(autoload=false) {
 
 			// debug
 				if(SHOW_DEBUG===true) {
+
 					const fn_show_debug_info = function() {
 						event_manager.unsubscribe(event_token)
-						load_data_debug(self, api_response, self.rqo)
+						setTimeout(function(){
+							load_data_debug(self, api_response, self.rqo)
+						}, 1600)
 					}
 					const event_token = event_manager.subscribe('render_'+self.id, fn_show_debug_info)
 					self.events_tokens.push(event_token)

@@ -32,8 +32,13 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 
 	const render_level = options.render_level
 
+	// ar_section_record. section_record instances (initied and builded)
+		const ar_section_record = self.ar_instances && self.ar_instances.length>0
+			? self.ar_instances
+			: await self.get_ar_instances()
+
 	// content_data
-		const content_data = await get_content_data(self)
+		const content_data = await get_content_data(self, ar_section_record)
 		if (render_level==='content') {
 
 			self.paginator.refresh()
@@ -114,10 +119,7 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = async function(self) {
-
-	// section_record instances (initied and builded)
-	const ar_section_record = await self.get_ar_instances()
+const get_content_data = async function(self, ar_section_record) {
 	
 	const fragment = new DocumentFragment()
 
@@ -136,17 +138,17 @@ const get_content_data = async function(self) {
 					fragment.appendChild(row_item)
 				}
 
-			// // parallel mode
-			// 	const ar_promises = []
-			// 	for (let i = 0; i < ar_section_record_length; i++) {
-			// 		const render_promise = ar_section_record[i].render()
-			// 		ar_promises.push(render_promise)
-			// 	}
-			// 	await Promise.all(ar_promises).then(function(values) {
-			// 	  for (let i = 0; i < ar_section_record_length; i++) {
-			// 	  	fragment.appendChild(values[i])
-			// 	  }
-			// 	});
+			// parallel mode
+				// const ar_promises = []
+				// for (let i = 0; i < ar_section_record_length; i++) {
+				// 	const render_promise = ar_section_record[i].render()
+				// 	ar_promises.push(render_promise)
+				// }
+				// await Promise.all(ar_promises).then(function(values) {
+				//   for (let i = 0; i < ar_section_record_length; i++) {
+				//   	fragment.appendChild(values[i])
+				//   }
+				// });
 		}
 
 	// content_data
