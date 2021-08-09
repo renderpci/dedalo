@@ -47,6 +47,7 @@ render_media_icons.prototype.edit = async function(options) {
 }//end edit
 
 
+
 /**
 * EDIT
 * Render node for use in modes: list, list_in_list
@@ -72,8 +73,6 @@ render_media_icons.prototype.list = async function(options) {
 
 	return wrapper
 }//end list
-
-
 
 
 
@@ -119,27 +118,26 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, values_container, self) => {
 
-	console.log("data:",data);
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class 			: 'media_icons',
-			parent 			: values_container
+			class			: 'media_icons',
+			parent			: values_container
 		})
 
 	//column_id
 		const column_id = ui.create_dom_element({
-			type 		: 'div',
-			parent 		: li
+			type	: 'div',
+			parent	: li
 		})
 		// value
 		const data_id = data.find(item => item.id === 'id')
 
 		const column_id_value = ui.create_dom_element({
-			type 		: 'span',
+			type		: 'span',
 			class_name	: 'value',
-			inner_html 	: data_id.value,
-			parent 		: column_id
+			inner_html	: data_id.value,
+			parent		: column_id
 		})
 
 		column_id_value.addEventListener("click", e => {
@@ -153,21 +151,20 @@ const get_value_element = (i, data, values_container, self) => {
 						mode		: 'edit'
 					}
 				})
-
 		})
 
 	//transcription
 		const transcription = ui.create_dom_element({
-			type 		: 'div',
-			parent 		: li
+			type	: 'div',
+			parent	: li
 		})
 		// value
 		const data_transcription = data.find(item => item.id === 'transcription')
 		const transcription_value = ui.create_dom_element({
-			type 		: 'span',
+			type		: 'span',
 			class_name	: 'value',
-			inner_html 	: 'TR ',
-			parent 		: transcription
+			inner_html	: 'TR ',
+			parent		: transcription
 		})
 		if(data_transcription.tool_context){
 			transcription_value.addEventListener("click", e => {
@@ -182,14 +179,13 @@ const get_value_element = (i, data, values_container, self) => {
 						}
 					})
 			})
-
 		}
 
 
 	//indexation
 		const indexation = ui.create_dom_element({
-			type 		: 'div',
-			parent 		: li
+			type	: 'div',
+			parent	: li
 		})
 		// value
 		const data_indexation = data.find(item => item.id === 'indexation')
@@ -247,8 +243,6 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 
-
-
 		// even manager model to use in other widgets_properties
 		// this widget don't use it, because the info is not in the same section
 		// than the components that changed our value
@@ -263,3 +257,5 @@ const get_value_element = (i, data, values_container, self) => {
 
 	return li
 }//end get_value_element
+
+
