@@ -70,7 +70,7 @@ var lock_components = new function() {
 			//var dato = JSON.stringify(e.data)
 			lock_components.procces_msg(e)
 
-		}, false);
+		});
 	};//end init_node_msg
 
 
@@ -91,7 +91,7 @@ var lock_components = new function() {
 	   	// MESSAGE
 		lock_components.sse_source.addEventListener('message', function(e) {
 			lock_components.procces_msg(e)
-		}, false);
+		});
 
 		// OPEN
 		lock_components.sse_source.addEventListener('open', function(e) {
@@ -99,13 +99,13 @@ var lock_components = new function() {
 				console.log("[lock_components.init_php]->lock_components: opened EventSource connection successfully");
 				//console.log(e);
 			}
-		}, false);
+		});
 
 		// ERROR
 		lock_components.sse_source.addEventListener('error', function(e) {
 			console.log("[lock_components.init_php] Error [lock_components:init] on addEventListener to lock_components msg: ", lock_components.msg_url);
 			if(SHOW_DEBUG===true) {console.log("[lock_components.init_php] Error:", e);}
-		}, false);
+		});
 	};//end init_php
 
 

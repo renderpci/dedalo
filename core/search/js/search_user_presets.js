@@ -155,9 +155,9 @@
 				})
 				button_new.addEventListener("click",function(e){
 					self.save_new_preset(this)
-				},false)
+				})
 
-			};//end if (response)
+			}//end if (response)
 
 		}, function(error) {
 			console.log("[search2.new_preset] Error.", error);

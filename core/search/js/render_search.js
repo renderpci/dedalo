@@ -128,7 +128,7 @@ render_search.prototype.render_base = async function() {
 		})
 		.addEventListener('click',function(){
 			self.save_preset(this)
-		},false)
+		})
 
 	// button toggle fields (Show/hide where section fields list are loaded)
 		const toggle_container_selector = ui.create_dom_element({
@@ -139,7 +139,7 @@ render_search.prototype.render_base = async function() {
 		})
 		.addEventListener('click',function(){
 			toggle_fields(self)
-		},false)
+		})
 
 	// fields list . List of section fields usable in search
 		const search_container_selector = ui.create_dom_element({
@@ -186,7 +186,7 @@ render_search.prototype.render_base = async function() {
 			})
 			.addEventListener('click',function(){
 				self.new_preset(this)
-			},false)
+			})
 		// create the new_preset_div
 			const new_preset_div = ui.create_dom_element({
 				element_type		: 'div',
@@ -209,7 +209,7 @@ render_search.prototype.render_base = async function() {
 		})
 		.addEventListener('click',function(){
 			toggle_presets(self)
-		},false)
+		})
 
 
 	// wrapper . Top div where elements are placed
@@ -299,7 +299,7 @@ render_search.prototype.render_components_list = async function(options) {
 						target_div.innerHTML = ""
 					}
 
-				}, false);
+				});
 				break;
 
 			case element.model==='section_group' || element.model==='section_tab':
@@ -381,13 +381,13 @@ render_search.prototype.render_components_list = async function(options) {
 						}
 						// Active current
 						this.classList.add('active');
-					}, false);
+					});
 
 				}
 				break;
-		};//end switch (true)
+		}//end switch (true)
 
-	};//end for (let i = 0; i < len; i++)
+	}//end for (let i = 0; i < len; i++)
 
 	// Scroll window to top always
 		window.scrollTo(0, 0);
@@ -485,7 +485,7 @@ render_search.prototype.render_search_buttons = function(){
 		reset_button.addEventListener("click", function(e){
 			self.reset(this)
 			//self.toggle_search_panel()
-		}, false)
+		})
 	// Show all
 		const show_all_button = ui.create_dom_element({
 			element_type 			: "button",
@@ -497,7 +497,7 @@ render_search.prototype.render_search_buttons = function(){
 			self.show_all(this)
 			// Close search div
 			//self.toggle_search_panel()
-		}, false)
+		})
 	// Submit button
 		const submit_button = ui.create_dom_element({
 			element_type 			: "button",
@@ -511,7 +511,7 @@ render_search.prototype.render_search_buttons = function(){
 			document.activeElement.blur()
 			// exec search command
 			self.exec_search()
-		},false)
+		})
 
 
 	return search_buttons_container
@@ -578,7 +578,7 @@ render_search.prototype.render_search_group = async function(parent_div, options
 			toggle_operator_value(this)
 			// Set initial state as unchanged
 			self.update_state({state:'changed'})
-		},false)
+		})
 
 	// Add button close
 		if (options.is_root===false) {
@@ -592,7 +592,7 @@ render_search.prototype.render_search_group = async function(parent_div, options
 			search_group.parentNode.removeChild(search_group);
 			// Set as changed
 			self.update_state({state:'changed'})
-		},false)
+		})
 		}
 
 	// Add button + group
@@ -607,7 +607,7 @@ render_search.prototype.render_search_group = async function(parent_div, options
 			self.render_search_group( search_group )
 			// Set as changed
 			self.update_state({state:'changed'})
-		},false)
+		})
 
 
 
@@ -780,7 +780,7 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			})
 			icon_load.addEventListener("click",function(e){
 				self.load_search_preset(this)
-			},false)
+			})
 
 			// Span label name
 			const span_name = ui.create_dom_element({
@@ -797,7 +797,7 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			if (permissions>=2) {
 				span_name.addEventListener("click",function(e){
 					self.edit_preset(this)
-				},false)
+				})
 			}
 
 			// Button delete preset
@@ -809,7 +809,7 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			})
 			icon_delete.addEventListener("click",function(e){
 				self.delete_preset(this)
-			},false)
+			})
 			}
 
 			// DIV edit
@@ -861,7 +861,7 @@ const render_sections_selector = (self) => {
 			typology_selector.addEventListener('change',function(event){
 				const typology_id 	= event.target.value
 				build_sections_check_boxes(self, typology_id, wrapper_sections_selector_ul)
-			},false)
+			})
 
 		// options for selector
 			const typologies_length = typologies.length
@@ -956,7 +956,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 						path 		 : []
 					})
 
-				},false)
+				})
 
 
 			// label

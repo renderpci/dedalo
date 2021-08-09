@@ -181,7 +181,7 @@ const add_events = function(self, wrapper) {
 
 				return true
 			}
-		}, false)
+		})
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
@@ -297,9 +297,7 @@ render_component_email.prototype.search = async function() {
 					event_manager.publish('change_search_element', self)
 					return true
 				}
-
-			}, false)
-
+			})
 
 
 	return wrapper

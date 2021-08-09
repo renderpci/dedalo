@@ -80,7 +80,7 @@ var button_trigger = new function() {
 					target_div.addEventListener("dblclick", function(){
 						this.innerHTML 	   = ''
 						this.style.display = 'none'
-					}, false);
+					});
 
 				// Spinner OFF
 					html_page.loading_content( target_div, 0 );

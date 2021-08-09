@@ -392,7 +392,7 @@ const get_buttons = (self) => {
 			// add listener to the select
 			button_tree_selector.addEventListener('mouseup',function(){
 
-			},false)
+			})
 		}
 
 

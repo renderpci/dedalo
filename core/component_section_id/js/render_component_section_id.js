@@ -163,7 +163,7 @@ render_component_section_id.prototype.search = async function() {
 					event_manager.publish('change_search_element', self)
 					return true
 				}
-			}, false)
+			})
 
 
 	return wrapper
