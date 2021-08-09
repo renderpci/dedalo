@@ -1555,7 +1555,7 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
-				error_log("------------------------- get_structure_context ------- $this->tipo ----". exec_time_unit($start_time,'ms')." ms");
+				error_log("------------------------- get_structure_context ------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms");
 			}
 
 
@@ -2372,7 +2372,7 @@ abstract class common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				error_log("------------------------- get_subdatum ------- $this->tipo ----". exec_time_unit($start_time,'ms')." ms");
+				error_log("------------------------- get_subdatum ---------------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms");
 			}
 			
 		return $subdatum;

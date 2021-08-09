@@ -300,7 +300,7 @@ abstract class component_common extends common {
 				// 	#throw new Exception($msg, 1);
 				// 	debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 				// }
-				error_log("------------------------- get_instance ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
+				// error_log("------------------------- get_instance ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
 			}
 
 

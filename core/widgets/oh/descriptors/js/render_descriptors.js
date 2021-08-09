@@ -10,7 +10,6 @@
 
 
 
-
 /**
 * RENDER_descriptors
 * Manages the component's logic and apperance in client side
@@ -77,7 +76,6 @@ render_descriptors.prototype.list = async function(options) {
 
 
 
-
 /**
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
@@ -120,12 +118,11 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, values_container, self) => {
 
-	console.log("data:",data);
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class 			: 'media_icons',
-			parent 			: values_container
+			class			: 'media_icons',
+			parent			: values_container
 		})
 
 	//column_id
@@ -165,3 +162,5 @@ const get_value_element = (i, data, values_container, self) => {
 
 	return li
 }//end get_value_element
+
+
