@@ -78,7 +78,6 @@ class menu extends common {
 						$current_area->model	= 'section';
 						$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
 						$current_area->config	= $properties->config ?? null;
-					$section_tool_tipo = $current_area->tipo;
 
 					$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
 					$properties		= $RecordObj_dd->get_properties();
@@ -89,13 +88,15 @@ class menu extends common {
 						$current_area->config	= $properties->config ?? null;
 
 					// tool_context
-						$tool_name = $properties->config->tool_name ?? false;
+						$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
+							? key($properties->tool_config)
+							: false;
 						if ($tool_name) {
 							$ar_tool_object	= common::get_client_registered_tools([$tool_name]);
 							if (empty($ar_tool_object)) {
 								debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in current_area ".to_string($current_area), logger::ERROR);
 							}else{
-								$tool_config	= $properties->config->tool_config->$tool_name ?? false;
+								$tool_config	= $properties->tool_config->{$tool_name} ?? false;
 								$tool_context	= common::create_tool_context($ar_tool_object[0], $tool_config);
 								$current_area->config->tool_context = $tool_context;
 								// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
