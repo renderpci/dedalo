@@ -108,7 +108,7 @@ class media_icons extends widget_common {
 								$tool_name = $data_map->label ?? false;
 								// get the config for this tool, and get the ddo_map
 								$properties = $section_tool->get_properties();
-								$tool_config = $properties->config->tool_config->{$tool_name} ?? false;
+								$tool_config = $properties->tool_config->{$tool_name} ?? false;
 								$ar_tool_ddo_map = $tool_config->ddo_map;
 
 								// add the section_id to the ddo_map, only when the section_id is for components in audiovisual section. (ts doesn't has section_id)
