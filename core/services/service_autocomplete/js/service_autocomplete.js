@@ -142,7 +142,7 @@ export const service_autocomplete = function() {
 			// add listener to the select
 			button_options.addEventListener('mouseup',function(){
 				options_container.classList.toggle('visible');
-			},false)
+			})
 
 		// datalist
 			const datalist = ui.create_dom_element({
@@ -227,7 +227,7 @@ export const service_autocomplete = function() {
 				// console.log("self.ar_search_section_tipo", self.ar_search_section_tipo);
 				self.destroy()
 				self.render()
-			},false)
+			})
 
 		// set default value
 			// self.build_filter_fields(select.value, options)
@@ -261,7 +261,7 @@ export const service_autocomplete = function() {
 				search_input.addEventListener('input', async function(){
 					const api_response	= await self.autocomplete_search(this.value)
 					self.render_datalist(api_response)
-				}, false);
+				});
 
 		return search_input
 	};//end get_input
@@ -441,7 +441,7 @@ export const service_autocomplete = function() {
 						inputs[i].dispatchEvent(new Event('change'));
 					}
 				}
-			}, false);
+			});
 
 		// items
 			for (let i = 0; i < filter_items.length; i++) {
@@ -536,8 +536,7 @@ export const service_autocomplete = function() {
 								},250)
 							}
 						}
-
-				}, false);
+				});
 
 
 			const update_local_storage_ar_id = function(element) {
@@ -658,8 +657,7 @@ export const service_autocomplete = function() {
 					select.addEventListener("change",function(e){
 						// set the new operator selected
 						self.operator 		= e.target.value
-						
-					},false)
+					})
 					const option_or = ui.create_dom_element({
 						element_type	: "option",
 						parent			: select,
@@ -777,7 +775,7 @@ export const service_autocomplete = function() {
 					// self.instance_caller.datum.data.push({value: current_locator})
 				}
 				self.instance_caller.add_value(value)
-			}, false);
+			});
 
 			// values. build the text of the row with label nodes in correct order (the ddo order in context).
 				const columns_length = columns.length

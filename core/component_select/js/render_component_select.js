@@ -163,7 +163,7 @@ const add_events = (self, wrapper) => {
 
 					return true
 				}
-		}, false)
+		})
 
 	// click event
 		wrapper.addEventListener("click", e => {
@@ -184,7 +184,7 @@ const add_events = (self, wrapper) => {
 
 			// 		return true
 			// 	}
-		},false)
+		})
 
 	// focus event
 		// wrapper.addEventListener("focus", e => {

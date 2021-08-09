@@ -164,8 +164,7 @@ render_component_input_text.prototype.search = async function() {
 
 					return true
 				}
-			}, false)
-
+			})
 
 
 	return wrapper
