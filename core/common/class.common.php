@@ -3740,9 +3740,13 @@ abstract class common {
 			$affected_models = isset($tool->affected_models) ? (array)$tool->affected_models : [];
 			$requirement_translatable = isset($tool->requirement_translatable) ? (bool)$tool->requirement_translatable : false;
 
+
+			$in_properties = $properties->tool_config->{$tool->name} ?? null;
+
 			if( 	in_array($model, $affected_models)
 				||  in_array($tipo,  $affected_tipos)
 				||  ($is_component===true && in_array('all_components', $affected_models))
+				|| 	!is_null($in_properties)
 			  ) {
 
 				if ($requirement_translatable===true) {
