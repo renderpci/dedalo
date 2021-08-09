@@ -1,0 +1,142 @@
+{
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1331"
+        },
+        {
+            "type": "dd151",
+            "section_id": "8",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "20",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "inf": "Fecha de creación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 6,
+                            "hour": 17,
+                            "time": 64975800428,
+                            "year": 2021,
+                            "month": 8,
+                            "minute": 27,
+                            "second": 8
+                        }
+                    }
+                ]
+            }
+        },
+        "dd201": {
+            "inf": "Fecha de modificación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 6,
+                            "hour": 19,
+                            "time": 64975806806,
+                            "year": 2021,
+                            "month": 8,
+                            "minute": 13,
+                            "second": 26
+                        }
+                    }
+                ]
+            }
+        },
+        "dd612": {
+            "inf": "Descripción [component_text_area]",
+            "dato": {
+                "lg-eng": [
+                    "Used to do audiovisual transcriptions"
+                ]
+            }
+        },
+        "dd799": {
+            "inf": "Etiqueta [component_input_text]",
+            "dato": {
+                "lg-eng": [
+                    "Transcription"
+                ]
+            }
+        },
+        "dd1326": {
+            "inf": "Nombre de la herramienta [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "tool_transcription"
+                ]
+            }
+        },
+        "dd1327": {
+            "inf": "Versión [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "1.0.0"
+                ]
+            }
+        },
+        "dd1328": {
+            "inf": "Versión Dédalo mínima [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            }
+        }
+    },
+    "section_id": 4,
+    "created_date": "2021-08-06 17:27:08",
+    "section_tipo": "dd1340",
+    "modified_date": "2021-08-06 19:13:26",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd73",
+    "modified_by_userID": -1,
+    "section_creator_top_tipo": "",
+    "section_creator_portal_tipo": "",
+    "section_creator_portal_section_tipo": ""
+}
