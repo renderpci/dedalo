@@ -18,6 +18,7 @@ include(DEDALO_CORE_PATH . '/common/class.counter.php');
 include(DEDALO_CORE_PATH . '/common/class.tools.php');
 include(DEDALO_CORE_PATH . '/common/class.label.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 #include(DEDALO_CORE_PATH . '/common/class.operator.php');
 include(DEDALO_CORE_PATH . '/common/class.locator.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
