@@ -200,35 +200,35 @@ const get_buttons = (self) => {
 			ui.add_tools(self, fragment)
 		}
 
-		const button_info = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button full_screen',
-			parent 			: fragment
-		})
-		button_info.addEventListener("mouseup", async (e) =>{
+		// const button_info = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name 		: 'button full_screen',
+		// 	parent 			: fragment
+		// })
+		// button_info.addEventListener("mouseup", async (e) =>{
 
-			const player_av = await instances.get_instance({
-				model 			: 'component_av',
-				section_tipo	: self.section_tipo,
-				section_id		: self.section_id,
-				tipo			: self.tipo,
-				context			: {},
-				mode 			: 'player'
-			})
+		// 	const player_av = await instances.get_instance({
+		// 		model 			: 'component_av',
+		// 		section_tipo	: self.section_tipo,
+		// 		section_id		: self.section_id,
+		// 		tipo			: self.tipo,
+		// 		context			: {},
+		// 		mode 			: 'player'
+		// 	})
 
-			await player_av.build(true)
+		// 	await player_av.build(true)
 
-			player_av.fragment = {tc_in: 3, tc_out: 5}
+		// 	player_av.fragment = {tc_in: 3, tc_out: 5}
 
-			const node = await player_av.render()
+		// 	const node = await player_av.render()
 
-			// cotainer, for every ipo will create a li node
-				const cotainer = ui.create_dom_element({
-					element_type	: 'div'
-				})
+		// 	// cotainer, for every ipo will create a li node
+		// 		const cotainer = ui.create_dom_element({
+		// 			element_type	: 'div'
+		// 		})
 
-				self.node[0].appendChild(node)
-		})
+		// 		self.node[0].appendChild(node)
+		// })
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		buttons_container.appendChild(fragment)
