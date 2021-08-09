@@ -372,6 +372,12 @@ class layout_map {
 	*/
 	public static function search_user_preset_layout_map($tipo, $section_tipo, $user_id, $modo, $view=null) {
 
+		// cache
+			$key_cache = implode('_', [$tipo, $section_tipo, $user_id, $modo, $view]);
+			if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache])) {
+				return $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache];
+			}
+
 		// preset const
 			$user_locator = new locator();
 				$user_locator->set_section_tipo('dd128');
@@ -518,6 +524,9 @@ class layout_map {
 				$result = false;
 			}
 		}
+
+		// cache
+			$_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache] = $result;
 
 
 		return $result;
