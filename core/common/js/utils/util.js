@@ -36,6 +36,20 @@ export function dd_console(msg, level, items){
 
 
 
+/**
+* GROUP_OBJECTS_BY
+* Group object inside an array by a given property
+*/
+export function group_objects_by(xs, key) {
+
+	return xs.reduce(function(rv, x) {
+		(rv[x[key]] = rv[x[key]] || []).push(x);
+		return rv;
+	}, {});
+}//end group_objects_by
+
+
+
 
 /**
 * WAIT_FOR_GLOBAL
@@ -47,27 +61,27 @@ export function dd_console(msg, level, items){
 * @return promise
 */
 export function wait_for_global(name, timeout=300) {
-  return new Promise((resolve, reject) => {
-    let waited = 0
+	return new Promise((resolve, reject) => {
+		let waited = 0
 
-    function wait(interval) {
-    	console.log("waiting interval...... :",interval);
-      setTimeout(() => {
-        waited += interval
-        // some logic to check if script is loaded
-        // usually it something global in window object
-        if (window[name] !== undefined) {
-          return resolve()
-        }
-        if (waited >= timeout * 1000) {
-          return reject({ message: 'Timeout' })
-        }
-        wait(interval * 2)
-      }, interval)
-    }
+		function wait(interval) {
+			console.log("waiting interval...... :",interval);
+			setTimeout(() => {
+				waited += interval
+				// some logic to check if script is loaded
+				// usually it something global in window object
+				if (window[name] !== undefined) {
+					return resolve()
+				}
+				if (waited >= timeout * 1000) {
+					return reject({ message: 'Timeout' })
+				}
+				wait(interval * 2)
+			}, interval)
+		}
 
-    wait(30)
-  })
+		wait(30)
+	})
 }//end wait_for_global
 
 
@@ -83,25 +97,25 @@ export async function observe_changes(element, config, once) {
 	return new Promise((resolve, reject) => {
 		// Callback function to execute when mutations are observed
 		const callback = function(mutationsList, observer) {
-		    // Use traditional 'for loops' for IE 11
-		    for(let mutation of mutationsList) {
-		        if (mutation.type === 'childList') {
-		            console.log('A child node has been added or removed.');
+				// Use traditional 'for loops' for IE 11
+				for(let mutation of mutationsList) {
+						if (mutation.type === 'childList') {
+								console.log('A child node has been added or removed.');
 
-		            if (once===true) {
+								if (once===true) {
 						observer.disconnect();
-		       		}
-		        	resolve( mutation.type )
-		        }
-		        else if (mutation.type === 'attributes') {
-		            console.log('The ' + mutation.attributeName + ' attribute was modified.');
+							}
+							resolve( mutation.type )
+						}
+						else if (mutation.type === 'attributes') {
+								console.log('The ' + mutation.attributeName + ' attribute was modified.');
 
-		        	if (once===true) {
+							if (once===true) {
 						observer.disconnect();
-		       		}
-		        	resolve( mutation.attributeName )
-		        }
-		    }
+							}
+							resolve( mutation.attributeName )
+						}
+				}
 		};
 
 		// Create an observer instance linked to the callback function
