@@ -1498,6 +1498,9 @@ abstract class common {
 				$tools[]		= $tool_context;
 			}//end foreach ($tools_list as $item)
 
+		// buttons
+			$buttons = $this->get_buttons_context();
+
 
 		// request_config
 			$request_config = $add_request_config===true
@@ -1519,9 +1522,9 @@ abstract class common {
 				'css'				=> $css,
 				'permissions'		=> $permissions,
 				'tools'				=> $tools,
+				'buttons'			=> $buttons,
 				'request_config'	=> $request_config
 			]);
-
 
 		// optional properties		
 			// Filter_by_list
@@ -3823,6 +3826,9 @@ abstract class common {
 							if (!isset($el->model)) {
 								$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
 							}
+
+							$el->label = RecordObj_dd::get_termino_by_tipo($el->tipo);
+
 							return $el;
 						}, $tool_config->ddo_map);
 					}
@@ -3923,6 +3929,81 @@ abstract class common {
 
 
 
-}//end class
+	/**
+	* GET_BUTTONS_CONTEXT
+	* @return array $ar_button_ddo
+	* 	Array of dd_object
+	*/
+	public function get_buttons_context() {
+
+		// model validation (only areas and section are allowed)
+			$model = get_called_class();
+			if ($model!=='section' && strpos($model, 'area')===false) {
+				return null;
+			}
+
+		$ar_button_ddo = [];
+
+		// tipo
+			$tipo = $this->tipo;
+
+		// ar_buttons_tipo
+			$ar_buttons_tipo = (get_called_class()==='section')
+				? $this->get_section_buttons_tipo()
+				: RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'button_', 'children', false);
+
+		// ar_button_objects create
+		foreach ($ar_buttons_tipo as $current_button_tipo) {
+
+			// permissions
+				$permissions = common::get_permissions($tipo, $current_button_tipo);
+				if($permissions<1) continue;
+
+			// model
+				$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
+
+			// label
+				$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo);
+
+			// properties
+				$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
+				$button_properties	= $RecordObj_dd->get_properties();
+
+			// toool_context
+				$tools = null;
+
+				if($model === 'button_import'){
+					// tools
+						$tools_list	= common::get_client_registered_tools();
+
+						$tools		= [];
+						foreach ($tools_list as $tool_object) {
+							$tool_config	= isset($button_properties->tool_config->{$tool_object->name})
+								? $button_properties->tool_config->{$tool_object->name}
+								: null;
+							if(!isset($tool_config)) continue;
+							$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
+							$tools[]		= $tool_context;
+						}//end foreach ($tools_list as $item)
+				}
+
+			// button object
+				$button_obj = new dd_object();
+					$button_obj->set_type('button');
+					$button_obj->set_tipo($current_button_tipo);
+					$button_obj->set_model($model);
+					$button_obj->set_label($button_label);
+					$button_obj->set_properties($button_properties);
+					$button_obj->set_tools($tools);
+
+			$ar_button_ddo[] = $button_obj;
+		}
+
+		return $ar_button_ddo;
+	}//end get_buttons_context
+
+
+
+}//end class common
 
 
