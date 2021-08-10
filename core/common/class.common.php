@@ -3802,6 +3802,7 @@ abstract class common {
 				$tool_context->name					= $tool_object->name;
 				$tool_context->mode					= 'edit';
 				$tool_context->label				= $tool_label;
+				$tool_context->labels				= $tool_object->labels;
 				$tool_context->description			= $description;
 				$tool_context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
 				$tool_context->show_in_inspector	= $tool_object->show_in_inspector;
