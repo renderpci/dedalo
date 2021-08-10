@@ -8,7 +8,7 @@ class dd_object {
 
 	// Format
 		# typo				: "ddo"  (ddo | sqo)
-		# type				: "component"  (section | component | groupper | button | tool ..)
+		# type				: "component"  (section | component | grouper | button | tool ..)
 		# tipo				: 'oh14',
 		# section_tipo		: 'oh1',
 		# parent			: 'oh2', // caller section / portal  tipo
@@ -22,7 +22,8 @@ class dd_object {
 		# translatable		: true
 		# search			: true
 		# pagination		: true
-		# tools				: []
+		# tools				: [] // array of tools dd_objects (context)
+		# buttons			: [] // array of buttons dd_objects (context)
 		# css				: {}
 		# column			: 'term' (!) used ?
 
@@ -261,6 +262,16 @@ class dd_object {
 	* SET_TOOLS
 	*/
 	public function set_tools(array $value) {
+
+		$this->tools = $value;
+	}
+
+
+
+	/**
+	* SET_BUTTONS
+	*/
+	public function set_buttons(array $value) {
 
 		$this->tools = $value;
 	}
