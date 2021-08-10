@@ -2846,7 +2846,7 @@ abstract class component_common extends common {
 	*/
 	public function update_data_value($changed_data) {
 
-		$dato				= $this->get_dato();
+		$dato				= $this->get_dato() ?? [];
 		$lang				= $this->get_lang();
 		$properties			= $this->get_properties();
 		$with_lang_versions	= $properties->with_lang_versions ?? false;
@@ -2858,8 +2858,8 @@ abstract class component_common extends common {
 
 			case 'insert':
 			case 'update':
-				// check if the key exist in the $dato if the key exist chage it directly, else create all positions with null value for coherence
-				if(isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato)){
+				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
+				if( isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato) ) {
 					$dato[$changed_data->key] = $changed_data->value;
 				}else{
 					// fill gaps in array
