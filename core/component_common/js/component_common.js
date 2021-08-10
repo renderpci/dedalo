@@ -27,6 +27,7 @@ export const component_common = function(){
 * @return bool true
 */
 component_common.prototype.init = async function(options) {
+	const t0 = performance.now()
 
 	const self = this
 
@@ -145,6 +146,8 @@ component_common.prototype.init = async function(options) {
 	// status update
 		self.status = 'initiated'
 
+
+
 	return true
 };//end init
 
@@ -225,6 +228,7 @@ component_common.prototype.build = async function(autoload=false){
 	// status update
 		self.status = 'builded'
 
+	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
 
 	return true
 };//end component_common.prototype.build
