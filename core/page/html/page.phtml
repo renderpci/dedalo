@@ -28,7 +28,7 @@
 			const page = await get_instance({
 				model	: 'page',
 				context	: <?php echo json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
-			})
+			});
 
 		// page instance build and render
 			const build			= await page.build()
@@ -41,7 +41,7 @@
 		// debug
 			if(SHOW_DEBUG===true) {
 				// console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
-				dd_console(`Page instantiated and rendered total: ${Math.round(performance.now()-t0)} ms`)
+				dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
 			}
 	})()
 </script>

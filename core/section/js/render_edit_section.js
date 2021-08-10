@@ -5,6 +5,7 @@
 
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -120,6 +121,7 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 * @return DOM node content_data
 */
 const get_content_data = async function(self, ar_section_record) {
+	const t0 = performance.now()
 	
 	const fragment = new DocumentFragment()
 
@@ -156,6 +158,13 @@ const get_content_data = async function(self, ar_section_record) {
 			  content_data.classList.add("content_data", self.type) // ,"nowrap","full_width"
 			  content_data.appendChild(fragment)
 
+	// debug
+		if(SHOW_DEVELOPER===true) {
+			// const total = (performance.now()-t0).toFixed(3)
+			// dd_console(`__Time [render_edit_section.get_content_data]: ${total} ms`,'DEBUG', [ar_section_record, total/ar_section_record_length])
+		}
+
+
 
 	return content_data
 };//end get_content_data
@@ -190,3 +199,5 @@ const no_records_node = () => {
 
 	return node
 };//end no_records_node
+
+

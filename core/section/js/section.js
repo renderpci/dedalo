@@ -349,8 +349,6 @@ section.prototype.build = async function(autoload=false) {
 				)
 		}//end if (!self.paginator)
 
-
-
 	// inspector
 		if (!self.inspector && self.permissions) {
 			// if (initiator && initiator.model==='component_portal') {
@@ -399,7 +397,6 @@ section.prototype.build = async function(autoload=false) {
 													)
 					if (index!==-1) {
 						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", ar_used[index]); // clone(self.datum.data)
-
 					}else{
 						ar_used.push(element)
 					}

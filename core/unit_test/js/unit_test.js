@@ -70,30 +70,30 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		return value
 	}
 	function fn_random_date() {
-		let day 	= fn_random_number(30) || 1
-		let month 	= fn_random_number(12) || 1
-		let year  	= fn_random_number(2020) || 1
-		const time  = component_date.prototype.convert_date_to_seconds({
-			day 	: day,
-			month 	: month,
-			year 	: year
+		let day		= fn_random_number(30) || 1
+		let month	= fn_random_number(12) || 1
+		let year	= fn_random_number(2020) || 1
+		const time	= component_date.prototype.convert_date_to_seconds({
+			day		: day,
+			month	: month,
+			year	: year
 		}, 'date')
 
 		const value =  {
 			start : {
-				day 	: day,
-				time 	: time,
-				year 	: year,
-				month 	: month
+				day		: day,
+				time	: time,
+				year	: year,
+				month	: month
 			}
 		}
 		return value
 	}
 	function fn_random_email() {
-		let result           	= ''
-		const length 		 	= 40
-		const characters       	= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-		const charactersLength 	= characters.length;
+		let result				= ''
+		const length			= 40
+		const characters		= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+		const charactersLength	= characters.length;
 		for ( var i = 0; i < length; i++ ) {
 		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
 		}
@@ -534,9 +534,9 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 					if (stage==='destroy') {
 
-						const instance_id 	= new_instance.id
+						const instance_id	= new_instance.id
 						//const instance_key 	= options.key || key_instances_builder(options, true)
-						const instances 	= get_all_instances()
+						const instances	= get_all_instances()
 
 						// console.log("instances:",instances)
 						// 	console.log("instance_id:",instance_id)
@@ -565,7 +565,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 							break;
 						case 'permissions':
 							assert.equal(new_instance.permissions, expected)
-							break;						
+							break;
 						default:
 							assert.equal(new_instance.status, expected)
 							break;
@@ -740,7 +740,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 						// console.log("new_instance.datum:",new_instance.datum);
 						const expected	= new_instance.data.value && new_instance.data.value.length>0
 							? JSON.stringify(new_instance.data.value[0])
-							: null						
+							: null
 						const equal_to	= JSON.stringify(old_value)
 						assert.notEqual( expected, equal_to, "Compares notEqual data value and old value" )
 					}
