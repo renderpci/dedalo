@@ -5,6 +5,7 @@
 
 // imports
 	//import {event_manager} from '../../common/js/event_manager.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {render_section_record} from '../../section_record/js/render_section_record.js'
 	import * as instances from '../../common/js/instances.js'
@@ -128,9 +129,10 @@ section_record.prototype.init = async function(options) {
 
 /**
 * ADD_INSTANCE
+* @return promise current_instance
 */
 const add_instance = async (self, current_context, section_id, current_data, column_id) => {
-
+	// const t0 = performance.now()
 	
 	const instance_options = {
 		model			: current_context.model,
@@ -171,9 +173,12 @@ const add_instance = async (self, current_context, section_id, current_data, col
 		}
 		// instance build await
 		await current_instance.build()
+		// current_instance.build()
 
 	// add
 		// ar_instances.push(current_instance)
+		// dd_console(`__Time to add_instance section_record: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [current_context.tipo,current_context.model])
+
 	return current_instance
 }; //end add_instance
 
@@ -185,6 +190,7 @@ const add_instance = async (self, current_context, section_id, current_data, col
 * @return array ar_instances
 */
 section_record.prototype.get_ar_instances = async function(){
+	const t0 = performance.now()
 
 	const self = this
 
@@ -223,12 +229,20 @@ section_record.prototype.get_ar_instances = async function(){
 
 		}//end for loop
 
-	await Promise.all(ar_promises).then(function(ar_instances){
-		// sort by instance_order_key asc to guarantee original order
-		ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
-		// fix
-		self.ar_instances = ar_instances
-	})
+	// instances
+		await Promise.all(ar_promises).then(function(ar_instances){
+			// sort by instance_order_key asc to guarantee original order
+			ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
+			// fix
+			self.ar_instances = ar_instances
+		})
+
+	// debug
+		if(SHOW_DEVELOPER===true) {
+			// const total = (performance.now()-t0).toFixed(3)
+			// dd_console(`__Time to get_ar_instances section_record: ${total} ms`,'DEBUG', [self.ar_instances, total/self.ar_instances.length])
+		}
+
 
 	return self.ar_instances
 };//end get_ar_instances

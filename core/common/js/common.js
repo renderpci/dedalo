@@ -99,8 +99,8 @@ common.prototype.render = async function (options={render_level:'full'}) {
 
 	const self = this
 
-	const render_level 	= options.render_level || 'full'
-	let render_mode 	= self.mode
+	// options
+		const render_level = options.render_level || 'full'
 
 	// status check to prevent duplicated actions
 		if (self.status==='rendering') {
@@ -120,12 +120,13 @@ common.prototype.render = async function (options={render_level:'full'}) {
 		//}
 		//console.log("typeof self[render_mode]:",typeof self[render_mode], self.model);
 
-	// render node. Method name is element node like 'edit' or 'list'
-		if (typeof self[render_mode]!=='function') {
-			console.warn(`Invalid function (render_mode: ${render_mode} ) using fallbact to LIST mode on ` +
-						 'instance: ', self);
-			render_mode = 'list'
-		}
+	// render node. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
+		const render_mode = (typeof self[self.mode]!=='function')
+			? (function(){
+				console.warn(`Invalid function (render_mode: ${render_mode} ) using fallback to 'list' mode on instance:`, self);
+				return 'list';
+			  })()
+			: self.mode
 		const node = await self[render_mode]({
 			render_level : render_level
 		})
@@ -152,81 +153,80 @@ common.prototype.render = async function (options={render_level:'full'}) {
 
 						// 	wrapper.replaceChild(new_content_data_node, old_content_data_node)
 						// }
-						const nodes_length = self.node.length
-						for (let i = nodes_length - 1; i >= 0; i--) {
+					const nodes_length = self.node.length
+					for (let i = nodes_length - 1; i >= 0; i--) {
 
-							const wrapper = self.node[i]
+						const wrapper = self.node[i]
 
-							// old content_data node
-								const old_content_data_node = self.model==='section' && (self.mode==='list' || self.mode==='tm')
-									? wrapper.querySelector(":scope >.list_body >.content_data")
-									: wrapper.querySelector(":scope >.content_data")
+						// old content_data node
+							const old_content_data_node = self.model==='section' && (self.mode==='list' || self.mode==='tm')
+								? wrapper.querySelector(":scope >.list_body >.content_data")
+								: wrapper.querySelector(":scope >.content_data")
 
-								// const old_content_data_nodes = wrapper.querySelectorAll(":scope >.content_data")
-								// const get_content_data_node = () => {
-								// 	let result = null
-								// 	for (let v = 0; v < old_content_data_nodes.length; v++) {
-								// 		if (v===0) {
-								// 			result = old_content_data_nodes[v]
-								// 		}else{
-								// 			old_content_data_nodes[v].remove()
-								// 			console.warn("!!! Removed additional content_data noded:", v, self.model);
-								// 		}
-								// 	}
-								// 	return result
-								// }
-								// const old_content_data_node = get_content_data_node()
+							// const old_content_data_nodes = wrapper.querySelectorAll(":scope >.content_data")
+							// const get_content_data_node = () => {
+							// 	let result = null
+							// 	for (let v = 0; v < old_content_data_nodes.length; v++) {
+							// 		if (v===0) {
+							// 			result = old_content_data_nodes[v]
+							// 		}else{
+							// 			old_content_data_nodes[v].remove()
+							// 			console.warn("!!! Removed additional content_data noded:", v, self.model);
+							// 		}
+							// 	}
+							// 	return result
+							// }
+							// const old_content_data_node = get_content_data_node()
 
-								// warning if not found
-									if (typeof old_content_data_node==="undefined" || !old_content_data_node) {
-										console.warn("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
-									}
-								//console.log("typeof old_content_data_node:",typeof old_content_data_node, old_content_data_node);
-								//console.log("-----------------old_node:", old_content_data_node, self.model);
+							// warning if not found
+								if (typeof old_content_data_node==="undefined" || !old_content_data_node) {
+									console.warn("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
+								}
+							//console.log("typeof old_content_data_node:",typeof old_content_data_node, old_content_data_node);
+							//console.log("-----------------old_node:", old_content_data_node, self.model);
 
-							// new content data node (first is new rendered node, others are clones of it)
-								// const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true) (!) Removed 25-03-2020
-								// Note : In some context like dd-tiny, it is necessary to generate a fresh DOM node for each
-								// component node like text_area in a time machine refresh scenario
-								const new_content_data_node = (i===0)
-									? node // use already calculated node
-									: await self[render_mode]({render_level : render_level});
+						// new content data node (first is new rendered node, others are clones of it)
+							// const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true) (!) Removed 25-03-2020
+							// Note : In some context like dd-tiny, it is necessary to generate a fresh DOM node for each
+							// component node like text_area in a time machine refresh scenario
+							const new_content_data_node = (i===0)
+								? node // use already calculated node
+								: await self[render_mode]({render_level : render_level});
 
-							// replace child from parent wrapper
-								// if (self.model==='section' && (self.mode==='list' || self.mode==='tm') ) {
-								// 	const list_body = wrapper.querySelector(":scope >.list_body")
-								// 	if (!list_body.contains( old_content_data_node )) {
-								// 		console.warn("------------- list_body:", list_body);
-								// 		console.warn("------------- old_content_data_node:", old_content_data_node);
-								// 	}else{
-								// 		list_body.replaceChild(new_content_data_node, old_content_data_node)
-								// 	}
-								// }else{
-									
-								// 	if (!wrapper.contains( old_content_data_node )) {
-								// 		console.warn("------------- wrapper:", wrapper);
-								// 		console.warn("------------- old_content_data_node:", old_content_data_node);
-								// 	}else{
-								// 		wrapper.replaceChild(new_content_data_node, old_content_data_node)
-								// 	}
-								// }
+						// replace child from parent wrapper
+							// if (self.model==='section' && (self.mode==='list' || self.mode==='tm') ) {
+							// 	const list_body = wrapper.querySelector(":scope >.list_body")
+							// 	if (!list_body.contains( old_content_data_node )) {
+							// 		console.warn("------------- list_body:", list_body);
+							// 		console.warn("------------- old_content_data_node:", old_content_data_node);
+							// 	}else{
+							// 		list_body.replaceChild(new_content_data_node, old_content_data_node)
+							// 	}
+							// }else{
 
-								const base_container = ( self.model==='section' && (self.mode==='list' || self.mode==='tm') )
-									? wrapper.querySelector(":scope >.list_body")
-									: wrapper
+							// 	if (!wrapper.contains( old_content_data_node )) {
+							// 		console.warn("------------- wrapper:", wrapper);
+							// 		console.warn("------------- old_content_data_node:", old_content_data_node);
+							// 	}else{
+							// 		wrapper.replaceChild(new_content_data_node, old_content_data_node)
+							// 	}
+							// }
 
-								if (!base_container.contains( old_content_data_node )) {
-									console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
-									console.warn("------------- base_container:", base_container);
-									console.warn("------------- old_content_data_node:", old_content_data_node);
+							const base_container = ( self.model==='section' && (self.mode==='list' || self.mode==='tm') )
+								? wrapper.querySelector(":scope >.list_body")
+								: wrapper
 
-									// old_content_data_node.remove()
-									// base_container.appendChild(new_content_data_node)
-								}else{
-									base_container.replaceChild(new_content_data_node, old_content_data_node)
-								}		
-								
-						}//end for (let i = nodes_length - 1; i >= 0; i--) 
+							if (!base_container.contains( old_content_data_node )) {
+								console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
+								console.warn("------------- base_container:", base_container);
+								console.warn("------------- old_content_data_node:", old_content_data_node);
+
+								// old_content_data_node.remove()
+								// base_container.appendChild(new_content_data_node)
+							}else{
+								base_container.replaceChild(new_content_data_node, old_content_data_node)
+							}
+					}//end for (let i = nodes_length - 1; i >= 0; i--)
 
 					return self.node[0]
 					break;
@@ -238,7 +238,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 					return node
 					break;
 			}
-		})()
+		})()//end result_node fn
 
 	// status update
 		self.status = 'rendered'
@@ -250,11 +250,16 @@ common.prototype.render = async function (options={render_level:'full'}) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			const total = (performance.now()-t0).toFixed(3)
-			const msg = `__Time to render: model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
-			if (total>100) {
-				console.warn(msg, total);
+
+			if (self.model==='section') {
+				dd_console(`__Time [common.render] to render section: ${total} ms`,'DEBUG')
 			}else{
-				// console.log(msg, total);
+				const msg = `__Time [common.render] to render model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
+				if (total>100) {
+					console.warn(msg, total);
+				}else{
+					// console.log(msg, total);
+				}
 			}
 		}
 
