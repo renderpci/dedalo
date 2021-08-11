@@ -7,8 +7,10 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_input_text} from '../../component_input_text/js/render_component_input_text.js'
-
+	import {render_edit_component_input_text} from '../../component_input_text/js/render_edit_component_input_text.js'
+	import {render_list_component_input_text} from '../../component_input_text/js/render_list_component_input_text.js'
+	import {render_search_component_input_text} from '../../component_input_text/js/render_search_component_input_text.js'
+	import {render_mini_component_input_text} from '../../component_input_text/js/render_mini_component_input_text.js'
 
 
 export const component_input_text = function(){
@@ -59,12 +61,13 @@ export const component_input_text = function(){
 	component_input_text.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_input_text.prototype.mini					= render_component_input_text.prototype.mini
-	component_input_text.prototype.list					= render_component_input_text.prototype.list
-	component_input_text.prototype.edit					= render_component_input_text.prototype.edit
-	component_input_text.prototype.edit_in_list			= render_component_input_text.prototype.edit
-	component_input_text.prototype.tm					= render_component_input_text.prototype.edit
-	component_input_text.prototype.search				= render_component_input_text.prototype.search
+	component_input_text.prototype.list					= render_list_component_input_text.prototype.list
+	component_input_text.prototype.search				= render_search_component_input_text.prototype.search
+	component_input_text.prototype.mini					= render_mini_component_input_text.prototype.mini
+	component_input_text.prototype.edit					= render_edit_component_input_text.prototype.edit
+	component_input_text.prototype.edit_in_list			= render_edit_component_input_text.prototype.edit
+	component_input_text.prototype.tm					= render_edit_component_input_text.prototype.edit
+
 	component_input_text.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -153,5 +156,38 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 	return record
 };//end is_unique
+
+
+
+/**
+* GET_FALLBACK_VALUE
+* Get the fallback values when the current language version of the data is missing
+* @return array values data with fallback
+*/
+component_input_text.prototype.get_fallback_value = (value, fallback_value)=>{
+
+	const fallback		= []
+	const value_length	= (value.length===0)
+		? 1
+		: value.length
+
+	for (let i = 0; i < value_length; i++) {
+
+		if(value[i]){
+
+			fallback.push(value[i])
+
+		}else{
+
+			const marked_value = (fallback_value && fallback_value[i])
+				? "<mark>"+fallback_value[i]+"</mark>"
+				: ""
+
+			fallback.push(marked_value)
+		}
+	}
+
+	return fallback
+};//end get_fallback_value
 
 
