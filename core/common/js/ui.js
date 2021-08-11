@@ -104,6 +104,8 @@ export const ui = {
 		build_wrapper_edit : (instance, items={}) => {
 			if(SHOW_DEBUG===true) {
 				// console.log("[ui.build_wrapper_edit] instance:",instance)
+				// console.log(`build_wrapper_edit items ${instance.tipo}:`,items);
+				// console.log("instance:",instance);
 			}
 
 			const id			= instance.id || 'id is not set'
@@ -196,7 +198,7 @@ export const ui = {
 				const wrapper = ui.create_dom_element({
 					element_type : 'div'
  				})
- 				// css
+ 				// CSS
 	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
