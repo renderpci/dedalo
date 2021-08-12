@@ -503,6 +503,13 @@ const create_template = async function(self) {
 			class_name 		: 'all_delete_checkbox',
 			parent 			: column_left
 		})
+		delete_check_box.addEventListener('change',function(e){
+			const delete_check_nodes = document.querySelectorAll(".delete_checkbox")
+			const len = delete_check_nodes.length
+			for (let i = len - 1; i >= 0; i--) {
+				delete_check_nodes[i].checked = delete_check_box.checked
+			}
+		})
 
 	// column_rigth
 		const column_rigth = ui.create_dom_element({
@@ -800,13 +807,16 @@ const create_template = async function(self) {
 
 		const current_name = (file.upload && file.upload.filename) ? file.upload.filename : file.name;
 
+		console.log("current_name:",current_name);
+
     	for (var i = data_length - 1; i >= 0; i--) {
     		const current_data = self.files_data[i]
     		if(current_data.name === current_name){
     			self.files_data.splice(i,1);
     		}
     	}
-    	if(file.url){
+
+    	if(file.url || file.status === "success"){
 
 	    	const source = create_source(self, 'delete_uploaded_file')
 				// add the necessary arguments used in the given function
@@ -825,6 +835,7 @@ const create_template = async function(self) {
 				const delete_data_manager = new data_manager()
 				const response = await delete_data_manager.request({body : rqo})
 		}
+
 
     });
 
@@ -865,37 +876,15 @@ const create_template = async function(self) {
 
     	const delete_checkbox_nodes	= document.querySelectorAll(".delete_checkbox")
 		const len					= delete_checkbox_nodes.length
-		const ar_names_to_delete	= []
-
 		for (let i = len - 1; i >= 0; i--) {
 			if(delete_checkbox_nodes[i].checked){
-				ar_names_to_delete.push(delete_checkbox_nodes[i].value)
-				const row_delete_checkbox_node	= document.querySelector("[data-dz-remove]")
-				if(row_delete_checkbox_node){
-					const event = new Event('click');
-					row_delete_checkbox_node.dispatchEvent(event)
-				}
+				const row_delete_node	= delete_checkbox_nodes[i].parentNode.querySelector("button.delete")
 
+				if(row_delete_node){
+					row_delete_node.click()
+				}
 			}
 		}
-
-		const source = create_source(self, 'delete_uploaded_file')
-		// add the necessary arguments used in the given function
-			source.arguments = {
-				key_dir		: self.key_dir,
-				file_name	: ar_names_to_delete
-			}
-		// rqo
-			const rqo = {
-				dd_api	: 'dd_utils_api',
-				action	: 'tool_request',
-				source	: source
-			}
-
-		// call to the API, fetch data and get response
-			const delete_data_manager = new data_manager()
-			const response = await delete_data_manager.request({body : rqo})
-
     }
 
     myDropzone.on("success", function(file, response) {
