@@ -123,7 +123,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 	// render node. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
 		const render_mode = (typeof self[self.mode]!=='function')
 			? (function(){
-				console.warn(`Invalid function (render_mode: ${render_mode} ) using fallback to 'list' mode on instance:`, self);
+				console.warn(`Invalid function (render_mode: ${self.mode} ) using fallback to 'list' mode on instance:`, self);
 				return 'list';
 			  })()
 			: self.mode
