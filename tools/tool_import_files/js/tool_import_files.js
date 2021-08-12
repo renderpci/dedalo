@@ -33,7 +33,8 @@ export const tool_import_files = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-
+	this.key_dir		= null
+	this.files_data 	= []
 
 	return true
 };//end page
@@ -65,10 +66,10 @@ tool_import_files.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	console.log("self-----:",self);
+
 	// upload_manager_init
-		const key_dir = self.caller.tipo + '_' + self.caller.section_tipo
-		upload_manager_init({key_dir : key_dir})
+		self.key_dir = self.caller.tipo + '_' + self.caller.section_tipo
+		await upload_manager_init({key_dir : self.key_dir})
 
 
 	return common_init
@@ -76,28 +77,103 @@ tool_import_files.prototype.init = async function(options) {
 
 
 
+
 /**
-* BUILD_CUSTOM
+* BUILD
+* Generic tool build function. Load basic tool config info (stored in component_json dd1353) and css files
+*
+* @param bool autoload
+* @return promise bool
 */
 tool_import_files.prototype.build = async function(autoload=false) {
+	const t0 = performance.now()
 
 	const self = this
 
-	// call generic common tool build
-		const common_build = await tool_common.prototype.build.call(this, autoload);
+	// status update
+		self.status = 'building'
 
-	// // main_component. fix main_component for convenience
-	// 	const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
-	// 	self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
-	// 	dd_console(`main_component_ddo`, 'DEBUG', main_component_ddo, self.main_component)
+	// load self style
+		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
+		common.prototype.load_style(tool_css_url)
+
+	// data manager
+		const current_data_manager = new data_manager()
+
+	// ddo_map load all elements inside ddo_map
+		const ar_promises = []
+		const ddo_map_input = self.tool_config.ddo_map.filter(el => el.role === 'input_component')
+		for (let i = 0; i < ddo_map_input.length; i++) {
+
+			const el = ddo_map_input[i]
+
+			ar_promises.push( new Promise(async (resolve) => {
+
+				// context. In is not given get from caller or request to the API
+					// const context = el.context
+					// 	? el.context
+					// 	: await (async function(){
+					// 		// resolve whole context from API (init event observer problem..)
+					// 		const api_response	= await current_data_manager.get_element_context(el)
+					// 		return api_response.result[0]
+					// 	  })()
+					const context = {}
+
+				const element_options = {
+					model			: el.model,
+					mode			: el.mode,
+					tipo			: el.tipo,
+					section_tipo	: el.section_tipo,
+					section_id		: 'tmp',
+					lang			: self.lang,
+					type			: el.type,
+					context			: context,
+					id_variant		: self.model,  // id_variant prevents id conflicts
+					caller			: self // set tool as caller of the component :-)
+				}
+				// init and build instance
+					get_instance(element_options) // load and init
+					.then(function(element_instance){
+						element_instance.build(true) // build, loading data
+						.then(function(){
+							resolve(element_instance)
+						})
+					})
+			}))
+		}//end for (let i = 0; i < ddo_map.length; i++)
+
+		// set on finish
+			await Promise.all(ar_promises).then((ar_instances) => {
+				// dd_console(`ar_instances`, 'DEBUG', ar_instances)
+				self.ar_instances = ar_instances
+			})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			// console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
+			// dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
+			// dd_console(`tool common build. self.ar_instances`, 'DEBUG', self.ar_instances)
+		}
 
 
-	// specific actions..
+	// status update
+		self.status = 'builded'
 
 
-	return common_build
-};//end build_custom
+	return true
+};//end build
 
+
+
+/**
+* PROCESS_FILES
+* Process the files uploaded to the server
+*
+* @return promise bool
+*/
+tool_import_files.prototype.process_files = function(){
+
+}
 
 
 
