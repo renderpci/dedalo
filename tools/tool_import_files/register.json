@@ -63,13 +63,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 9,
-                            "hour": 19,
-                            "time": 64976067701,
+                            "day": 10,
+                            "hour": 21,
+                            "time": 64976158889,
                             "year": 2021,
                             "month": 8,
-                            "minute": 41,
-                            "second": 41
+                            "minute": 1,
+                            "second": 29
                         }
                     }
                 ]
@@ -114,12 +114,31 @@
                     "6.0.0"
                 ]
             }
+        },
+        "dd1372": {
+            "inf": "Etiquetas [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    [
+                        {
+                            "lang": "lg-spa",
+                            "name": "crop_50",
+                            "value": "separa imágenes 50%"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "crop_50",
+                            "value": "Split image 50%"
+                        }
+                    ]
+                ]
+            }
         }
     },
     "section_id": 5,
     "created_date": "2021-08-08 18:48:26",
     "section_tipo": "dd1340",
-    "modified_date": "2021-08-09 19:41:41",
+    "modified_date": "2021-08-10 21:01:29",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd73",
