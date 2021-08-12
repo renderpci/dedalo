@@ -793,36 +793,7 @@ export const ui = {
 
 				function publish_load_tool(e) {
 					e.stopPropagation();
-
-					// tool_config. If is received, parse section_id. Else create a new one on the fly
-					// to preserve the format of tool_context.tool_config ddo_map
-						if (!tool_context.tool_config) {
-
-							// create a new one on the fly
-							tool_context.tool_config = {
-								ddo_map : [{
-									tipo			: self.tipo,
-									section_tipo	: self.section_tipo,
-									section_id		: self.section_id,
-									model			: self.model,
-									mode			: 'edit',
-									role			: 'main_component'
-								}]
-							}
-
-						}else{
-
-							// parse ddo_map section_id
-							tool_context.tool_config.ddo_map.map(el => {
-								if (el.section_id==='self') {
-									el.section_id = self.section_id
-								}
-							})
-						}
-
-					// lang set
-						tool_context.lang = self.lang
-
+					
 					//common.prototype.load_tool(self, tool_context)
 					event_manager.publish('load_tool', {
 						tool_context	: tool_context,
