@@ -100,24 +100,31 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_EDIT
+		* Component wrapper unified builder
+		* @param object instance (self component instance)
+		* @param object items
+		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
 		*/
 		build_wrapper_edit : (instance, items={}) => {
 			if(SHOW_DEBUG===true) {
 				// console.log("[ui.build_wrapper_edit] instance:",instance)
+				// console.log(`build_wrapper_edit items ${instance.tipo}:`,items);
+				// console.log("instance:",instance);
 			}
 
-			const id			= instance.id || 'id is not set'
-			const model			= instance.model 	// like component_input-text
-			const type			= instance.type 	// like 'component'
-			const tipo			= instance.tipo 	// like 'rsc26'
-			const mode			= instance.mode 	// like 'edit'
-			const view			= instance.view || null
-			const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
-			const component_css	= instance.context.css || {}
+			// short vars
+				const id			= instance.id || 'id is not set'
+				const model			= instance.model 	// like component_input-text
+				const type			= instance.type 	// like 'component'
+				const tipo			= instance.tipo 	// like 'rsc26'
+				const mode			= instance.mode 	// like 'edit'
+				const view			= instance.view || null
+				const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
+				const component_css	= instance.context.css || {}
 
 			const fragment = new DocumentFragment()
 
-			// label
+			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
 				if (label===null || items.label===null) {
 					// no label add
 				}else if(items.label) {
@@ -196,14 +203,13 @@ export const ui = {
 				const wrapper = ui.create_dom_element({
 					element_type : 'div'
  				})
- 				// css
+ 				// CSS
 	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
-				// event click activate component
-				// focus event [focusin]
+				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
 						event_manager.publish('active_component', instance)

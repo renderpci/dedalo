@@ -1,13 +1,14 @@
-// util
-'use strict';
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
 
 
 
 /**
 * CLONE
-* Exec a deeep safe clone of object
+* Exec a deep safe clone of object
 */
 export function clone(item){
+
 	return JSON.parse(JSON.stringify(item));
 }//end clone
 
@@ -53,9 +54,9 @@ export function group_objects_by(xs, key) {
 
 /**
 * WAIT_FOR_GLOBAL
-* Waits for global is available with timeuot
+* Waits for global is available with timeout
 * @param string name
-*	global name like 'titnymce'
+*	global name like 'tinymce'
 * @param int timeout
 *	time limit to wait in seconds
 * @return promise
