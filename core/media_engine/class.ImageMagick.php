@@ -324,7 +324,7 @@ class ImageMagick {
 
 		$command = MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
 	    $output  = shell_exec($command);
-	   		#dump($output, ' output ++ '.to_string( $command ));
+	   		// dump($output, ' output ++ '.to_string( $command ));
 	    	#debug_log(__METHOD__." COMMAND ".to_string($command), logger::DEBUG);
 
 	   	$output  = trim($output);

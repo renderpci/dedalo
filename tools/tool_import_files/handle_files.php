@@ -1,16 +1,21 @@
 <?php
+$start_time=microtime(1);
 // Turn off output buffering
 ini_set('output_buffering', 'off');
 // header print as json data
 header('Content-Type: application/json');
 
-$start_time=microtime(1);
-include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+
+
+// config
+	include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+	session_write_close();
+	ignore_user_abort();
+
 
 
 // tipo
 	$key_dir = $_REQUEST['key_dir'] ?? null;
-
 
 
 // tool_import_files
@@ -41,22 +46,22 @@ include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 			$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height; //. ' -format jpeg'
 			ImageMagick::convert($uploaded_file, $thumbnail_file, $flags);
 
-			$thumbnail_url	= $upload_url . 'thumbnail/' . $basemane . '.jpg';
+			$thumbnail_url = $upload_url . 'thumbnail/' . $basemane . '.jpg';
 
-			$response = (object) [
-				'thumbnail_file'	=>	$thumbnail_url,
-				'result' 			=> true,
-				'msg' 				=> 'Ok'
+			$response = (object)[
+				'result'			=> true,
+				'msg'				=> 'OK',
+				'thumbnail_file'	=> $thumbnail_url
 			];
 
-		   echo json_encode($response);
 		}else{
 
-			$response = (object) [
-				'thumbnail_file'	=> null,
-				'result' 			=> false,
-				'msg' 				=> 'Error Processing'
+			$response = (object)[
+				'result'			=> false,
+				'msg'				=> 'Error Processing',
+				'thumbnail_file'	=> null
 			];
-
-		   echo json_encode($response);
 		}
+
+// JSON output
+	echo json_encode($response);
