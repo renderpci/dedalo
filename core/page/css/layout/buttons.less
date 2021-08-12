@@ -4,8 +4,8 @@
 
 // fn_add_mask . buttons with icons
 	.fn_add_mask(@icon_name) {
-				mask: url("@{images_base_path}/icons/@{icon_name}");
-		-webkit-mask: url("@{images_base_path}/icons/@{icon_name}");
+				mask-image: url("@{images_base_path}/icons/@{icon_name}");
+		-webkit-mask-image: url("@{images_base_path}/icons/@{icon_name}");
 				mask-size: contain;
 		-webkit-mask-size: contain;
 				mask-repeat: no-repeat;
@@ -125,12 +125,15 @@
 		border-radius: .25rem;
 		transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
 
-		display: flex;
-    	align-items: center;
-    	justify-content: center;
+		// display: flex;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 
-    	// color
-    	color: #212529; // default dark grey
+		margin-right: 0.15em;
+
+		// color
+		color: #212529; // default dark grey
 
 		&.primary {
 			color: #ffffff;
