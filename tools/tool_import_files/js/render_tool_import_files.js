@@ -466,7 +466,7 @@ const create_template = async function(self) {
 	// button_add_files
 		const button_add_files = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'success dz-clickable',
+			class_name		: 'success add dz-clickable',
 			inner_html		: get_label.add_file || 'Add files',
 			parent			: column_left
 		})
@@ -474,7 +474,7 @@ const create_template = async function(self) {
 	// button_submit_files
 		const button_submit_files = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary start',
+			class_name		: 'primary upload start',
 			inner_html		: get_label.submit || 'Start upload',
 			parent			: column_left
 		})
@@ -535,7 +535,7 @@ const create_template = async function(self) {
 				element_type	: 'div',
 				class_name		: 'progress-bar progress-bar-success',
 				dataset 		: {dzUploadprogress : ""},
-				parent			: fileupload_process
+				parent			: global_progress_bar_active
 			})
 
 	// grid template used for rows
@@ -675,7 +675,7 @@ const create_template = async function(self) {
 					element_type	: 'div',
 					class_name		: 'progress-bar progress-bar-success',
 					dataset 		: {dzUploadprogress : ''},
-					parent			: row_progress_bar
+					parent			: row_progress_bar_active
 				})
 
 		// row_buttons
