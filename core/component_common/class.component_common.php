@@ -152,17 +152,19 @@ abstract class component_common extends common {
 						throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);
 					}
 				// section_id format check
-					if ( (!empty($section_id)
-						 && ( (!is_numeric($section_id) || abs($section_id)<1)) && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) )
-						{
-						dump($section_id," section_id - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
-						throw new Exception("Error Processing Request. trying to use wrong var: '$section_id' as section_id to load as component", 1);
+					if ( !empty($section_id) ) {
+
+						if (is_array($section_id)) {
+							trigger_error("Error: section_id is array!");
+							$bt = debug_backtrace();
+							debug_log(__METHOD__." Error: section_id is array! : ".to_string($bt), logger::ERROR);
+						}
+						if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+							dump($section_id," section_id - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
+							throw new Exception("Error Processing Request. trying to use wrong var: '$section_id' as section_id to load as component", 1);
+						}
 					}
-					if (is_array($section_id)) {
-						trigger_error("Error: section_id is array!");
-						$bt = debug_backtrace();
-						debug_log(__METHOD__." Error: section_id is array! : ".to_string($bt), logger::ERROR);
-					}
+
 				// modo (mode) validation
 					$ar_valid_modo = array(
 						'edit',
@@ -814,7 +816,8 @@ abstract class component_common extends common {
 
 
 		# PARENT : Verify section_id
-		if(abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
+		if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+
 			if(SHOW_DEBUG===true) {
 				dump($this, "this section_tipo:$section_tipo - section_id:$section_id - tipo:$tipo - lang:$lang");
 				throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without section_id ($section_id) ", 1);;
@@ -823,8 +826,9 @@ abstract class component_common extends common {
 		}
 
 		# Verify component minimum vars before save
-		if( empty($section_id) || empty($tipo) || empty($lang) )
+		if( empty($section_id) || empty($tipo) || empty($lang) ) {
 			throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang", 1);
+		}
 
 
 		# DATO
@@ -866,7 +870,8 @@ abstract class component_common extends common {
 
 
 		# ID : Check valid id returned
-		if (abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
+		// if (abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
+		if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 			throw new Exception("Save: received id ($section_id) not valid!", 1);
 		}
 

@@ -75,12 +75,61 @@ const get_content_data = async function(self) {
 * BUTTONS
 * @return DOM node buttons
 */
-const buttons = async function(self) {
+const buttons = function(self) {
 
-	const buttons = []
+	const ar_buttons = self.context.buttons
+
+	if(!ar_buttons) return null;
+
+	const fragment = new DocumentFragment()
+
+	// buttons node
+		const buttons_wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons',
+			parent 			: fragment
+		})
+
+		const ar_buttons_length = ar_buttons.length;
+
+		for (var i = 0; i < ar_buttons_length; i++) {
+			const current_button = ar_buttons[i]
+
+			if(current_button.model === 'button_delete') continue
+
+				const class_name = 'button light ' + current_button.model
+
+			// button_new section
+				const button_node = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: class_name,
+					text_content	: current_button.label,
+					parent 			: buttons_wrapper
+				})
+				button_node.addEventListener('click', (e) => {
+					e.stopPropagation()
+
+					switch(current_button.model){
+						case 'button_new':
+							event_manager.publish('new_section_' + self.id)
+						break;
+
+						case 'button_import':
+
+							event_manager.publish('load_tool', {
+								tool_context	: current_button.tools[0],
+								caller			: self
+							})
+
+						break;
+						default:
+							event_manager.publish('click_' + current_button.model)
+					}
+				})
+		}
 
 
-	return buttons
+	return fragment
 };//end buttons
 
 
@@ -93,6 +142,8 @@ const buttons = async function(self) {
 render_list_section.prototype.list = async function(options={render_level:'full'}) {
 
 	const self = this
+
+		console.log("self:",self);
 
 	const render_level 		= options.render_level
 	const ar_section_record = self.ar_instances
@@ -114,24 +165,11 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 	// buttons
 		if (self.mode!=='tm') {
 
-			// buttons node
-				const buttons = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'buttons',
-					parent 			: fragment
-				})
+			const buttons_node = buttons(self);
 
-			// button_new section
-				const button_new = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light add',
-					text_content	: get_label.nuevo || "New",
-					parent 			: buttons
-				})
-				button_new.addEventListener('click', (e) => {
-					e.stopPropagation()
-					event_manager.publish('new_section_' + self.id)
-				})
+			if(buttons_node){
+				fragment.appendChild(buttons_node)
+			}
 
 			// search filter node
 				if (self.filter) {

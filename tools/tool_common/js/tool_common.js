@@ -48,6 +48,7 @@ tool_common.prototype.init = async function(options) {
 		self.lang			= options.lang
 		self.mode			= options.mode || 'edit'
 		self.label			= options.label
+		self.tool_labels	= options.tool_labels
 		self.description	= options.description
 		self.tool_config	= options.tool_config
 		self.config			= options.config
@@ -59,7 +60,7 @@ tool_common.prototype.init = async function(options) {
 		self.ar_instances		= []
 		self.events_tokens		= []
 		// self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common
-		self.get_label			= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
+		self.get_tool_label			= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 	// set vars
 		// self.model				= options.model
@@ -349,20 +350,35 @@ export const load_tool = async (options) => {
 		const caller		= options.caller
 		const tool_context	= clone(options.tool_context) // (!) full clone here to avoid circular references
 
-	// tool_context sample
-		// config: null
-		// description: "Allow users recover old versions of data stored in matrix_time_machine"
-		// icon: "/v6/tools/tool_time_machine/img/icon.svg"
-		// label: "Tool time machine"
-		// lang: "lg-eng"
-		// mode: "edit"
-		// model: "tool_time_machine"
-		// name: "tool_time_machine"
-		// section_id: "8"
-		// section_tipo: "dd1324"
-		// show_in_component: true
-		// show_in_inspector: true
-		// tool_config: {ddo_map: Array(1)}
+
+		// tool_config. If is received, parse section_id. Else create a new one on the fly
+		// to preserve the format of tool_context.tool_config ddo_map
+			if (!tool_context.tool_config) {
+
+				// create a new one on the fly
+				tool_context.tool_config = {
+					ddo_map : [{
+						tipo			: caller.tipo,
+						section_tipo	: caller.section_tipo,
+						section_id		: caller.section_id,
+						model			: caller.model,
+						mode			: 'edit',
+						role			: 'main_component'
+					}]
+				}
+
+			}else{
+
+				// parse ddo_map section_id
+				tool_context.tool_config.ddo_map.map(el => {
+					if (el.section_id==='self' && el.section_tipo === caller.section_tipo) {
+						el.section_id = caller.section_id
+					}
+				})
+			}
+
+		// lang set
+			tool_context.lang = caller.lang
 
 	// instance options
 		const intance_options = Object.assign({
@@ -372,6 +388,7 @@ export const load_tool = async (options) => {
 
 	// instance load / recover
 		const tool_instance = await get_instance(intance_options)
+
 
 	// stop if already loaded (toggle tool)
 		if (tool_instance.status && tool_instance.status!=='initied') {
@@ -498,7 +515,7 @@ const get_tool_label = function(label_name) {
 
 	const self = this
 
-	const tool_labels 	= self.simple_tool_object.labels
+	const tool_labels 	= self.tool_labels
 	const lang_default 	= page_globals.dedalo_application_langs_default
 
 	let label_item = tool_labels.find(item => item.name===label_name && item.lang===self.lang).value

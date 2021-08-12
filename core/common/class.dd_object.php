@@ -261,7 +261,11 @@ class dd_object {
 	/**
 	* SET_TOOLS
 	*/
-	public function set_tools(array $value) {
+	public function set_tools($value) {
+
+		if(!is_null($value) && !is_array($value)){
+			throw new Exception("Error Processing Request, Tools only had allowed array or null values. ".gettype($value). " is received" , 1);
+		}
 
 		$this->tools = $value;
 	}
@@ -271,9 +275,13 @@ class dd_object {
 	/**
 	* SET_BUTTONS
 	*/
-	public function set_buttons(array $value) {
+	public function set_buttons($value) {
 
-		$this->tools = $value;
+		if(!is_null($value) && !is_array($value)){
+			throw new Exception("Error Processing Request, Buttons only had allowed array or null values. ".gettype($value). " is received" , 1);
+		}
+
+		$this->buttons = $value;
 	}
 
 
