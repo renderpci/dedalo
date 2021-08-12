@@ -300,10 +300,10 @@ class ImageMagick {
 	public static function get_image_file_info( $source_file ) {
 					# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
 		$commnad = MAGICK_PATH . "convert $source_file json: ";
-	    $output  = json_decode( shell_exec($command) );
-	   		#dump($output, ' output ++ '.to_string( $command ));
+		$output  = json_decode( shell_exec($command) );
+			#dump($output, ' output ++ '.to_string( $command ));
 
-	   	return $output;
+		return $output;
 	}//end get_image_file_info
 	*/
 
@@ -315,45 +315,38 @@ class ImageMagick {
 	public static function get_layers_file_info( $source_file ) {
 
 		$ar_layers = array();
-		# get the type of TIFF format
-		# 1 single image
-		# 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT OAND CONVERT
-		# 3 true layer tiff
-		$command 		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
-		$tiff_format  	= shell_exec($command);
 
-		$command = MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
-	    $output  = shell_exec($command);
-	   		// dump($output, ' output ++ '.to_string( $command ));
-	    	#debug_log(__METHOD__." COMMAND ".to_string($command), logger::DEBUG);
+		// tiff info. Get the type of TIFF format:
+			// 1 single image
+			// 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT OAND CONVERT
+			// 3 true layer tiff
+			$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
+			$tiff_format	= shell_exec($command);
 
-	   	$output  = trim($output);
-	    $ar_part = explode("\n", $output);
-
-	    foreach ($ar_part as $key => $value) {
-
-	    	$ar_part2 = explode(":", $value);
-
-	    	$layer_key 	= $ar_part2[0];
-
-	    	if($tiff_format <= 2 && $key > 0){
-	    		$layer_type = 'REDUCEDIMAGE';
-	    	}else{
-	    		$layer_type = $ar_part2[1];
-	    	}
+		// image format
+			$command	= MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
+			$output		= shell_exec($command);
 
 
-	    	$ar_layers[$layer_key] = $layer_type;
-	    }
-		#dump($ar_layers, ' $ar_layers ++ '.to_string());
+		$output		= trim($output);
+		$ar_lines	= explode("\n", $output);
+		foreach ($ar_lines as $key => $value) {
 
-	   	return (array)$ar_layers;
+			$ar_part2	= explode(":", $value);
+			$layer_key	= $ar_part2[0];
+
+			$layer_type = ($tiff_format<=2 && $key>0)
+				? 'REDUCEDIMAGE'
+				: ($ar_part2[1] ?? null);
+
+			$ar_layers[$layer_key] = $layer_type;
+		}
+
+		return (array)$ar_layers;
 	}//end get_layers_file_info
 
 
 
+}//end ImageMagick class
 
 
-
-}//end ImageMagick
-?>
