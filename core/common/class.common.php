@@ -3805,7 +3805,7 @@ abstract class common {
 				$tool_context->name					= $tool_object->name;
 				$tool_context->mode					= 'edit';
 				$tool_context->label				= $tool_label;
-				$tool_context->labels				= $tool_object->labels;
+				$tool_context->tool_labels			= $tool_object->labels;
 				$tool_context->description			= $description;
 				$tool_context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
 				$tool_context->show_in_inspector	= $tool_object->show_in_inspector;
@@ -3983,7 +3983,8 @@ abstract class common {
 								? $button_properties->tool_config->{$tool_object->name}
 								: null;
 							if(!isset($tool_config)) continue;
-							$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
+							$current_section_tipo = $this->section_tipo ?? $this->tipo;
+							$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
 							$tools[]		= $tool_context;
 						}//end foreach ($tools_list as $item)
 				}
