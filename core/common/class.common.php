@@ -3954,28 +3954,28 @@ abstract class common {
 				: RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'button_', 'children', false);
 
 		// ar_button_objects create
-		foreach ($ar_buttons_tipo as $current_button_tipo) {
+			foreach ($ar_buttons_tipo as $current_button_tipo) {
 
-			// permissions
-				$permissions = common::get_permissions($tipo, $current_button_tipo);
-				if($permissions<1) continue;
+				// permissions
+					$permissions = common::get_permissions($tipo, $current_button_tipo);
+					if($permissions<1) continue;
 
-			// model
-				$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
+				// model
+					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
 
-			// label
-				$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo);
+				// label
+					$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo);
 
-			// properties
-				$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
-				$button_properties	= $RecordObj_dd->get_properties();
+				// properties
+					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
+					$button_properties	= $RecordObj_dd->get_properties();
 
-			// toool_context
-				$tools = null;
+				// toool_context
+					$tools = null;
 
-				if($model === 'button_import'){
-					// tools
-						$tools_list	= common::get_client_registered_tools();
+					if($model === 'button_import'){
+						// tools
+							$tools_list	= common::get_client_registered_tools();
 
 						$tools		= [];
 						foreach ($tools_list as $tool_object) {
@@ -3987,7 +3987,7 @@ abstract class common {
 							$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
 							$tools[]		= $tool_context;
 						}//end foreach ($tools_list as $item)
-				}
+					}//end if($model === 'button_import')
 
 					// button object
 						$button_obj = new dd_object();
@@ -3999,8 +3999,9 @@ abstract class common {
 							$button_obj->set_tools($tools);
 
 					$ar_button_ddo[] = $button_obj;
-				}
-			}
+
+			}//end foreach ($ar_buttons_tipo as $current_button_tipo)
+
 
 		return $ar_button_ddo;
 	}//end get_buttons_context
