@@ -3954,51 +3954,53 @@ abstract class common {
 				: RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'button_', 'children', false);
 
 		// ar_button_objects create
-		foreach ($ar_buttons_tipo as $current_button_tipo) {
+			if (!empty($ar_buttons_tipo)) {
+				foreach ($ar_buttons_tipo as $current_button_tipo) {
 
-			// permissions
-				$permissions = common::get_permissions($tipo, $current_button_tipo);
-				if($permissions<1) continue;
+					// permissions
+						$permissions = common::get_permissions($tipo, $current_button_tipo);
+						if($permissions<1) continue;
 
-			// model
-				$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
+					// model
+						$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
 
-			// label
-				$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo);
+					// label
+						$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo);
 
-			// properties
-				$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
-				$button_properties	= $RecordObj_dd->get_properties();
+					// properties
+						$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
+						$button_properties	= $RecordObj_dd->get_properties();
 
-			// toool_context
-				$tools = null;
+					// toool_context
+						$tools = null;
 
-				if($model === 'button_import'){
-					// tools
-						$tools_list	= common::get_client_registered_tools();
+						if($model === 'button_import'){
+							// tools
+								$tools_list	= common::get_client_registered_tools();
 
-						$tools		= [];
-						foreach ($tools_list as $tool_object) {
-							$tool_config	= isset($button_properties->tool_config->{$tool_object->name})
-								? $button_properties->tool_config->{$tool_object->name}
-								: null;
-							if(!isset($tool_config)) continue;
-							$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
-							$tools[]		= $tool_context;
-						}//end foreach ($tools_list as $item)
+								$tools		= [];
+								foreach ($tools_list as $tool_object) {
+									$tool_config	= isset($button_properties->tool_config->{$tool_object->name})
+										? $button_properties->tool_config->{$tool_object->name}
+										: null;
+									if(!isset($tool_config)) continue;
+									$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
+									$tools[]		= $tool_context;
+								}//end foreach ($tools_list as $item)
+						}
+
+					// button object
+						$button_obj = new dd_object();
+							$button_obj->set_type('button');
+							$button_obj->set_tipo($current_button_tipo);
+							$button_obj->set_model($model);
+							$button_obj->set_label($button_label);
+							$button_obj->set_properties($button_properties);
+							$button_obj->set_tools($tools);
+
+					$ar_button_ddo[] = $button_obj;
 				}
-
-			// button object
-				$button_obj = new dd_object();
-					$button_obj->set_type('button');
-					$button_obj->set_tipo($current_button_tipo);
-					$button_obj->set_model($model);
-					$button_obj->set_label($button_label);
-					$button_obj->set_properties($button_properties);
-					$button_obj->set_tools($tools);
-
-			$ar_button_ddo[] = $button_obj;
-		}
+			}
 
 		return $ar_button_ddo;
 	}//end get_buttons_context
