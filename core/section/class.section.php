@@ -1703,64 +1703,108 @@ class section extends common {
 	* Calcula los bonones de esta sección y los deja disponibles como : $this->ar_buttons
 	* @see section_records.php modo:list
 	*/
-	public function get_ar_buttons() {
+		// public function get_ar_buttons() {
 
-		if (isset($this->ar_buttons)) return $this->ar_buttons;
+		// 	if (isset($this->ar_buttons)) return $this->ar_buttons;
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
+		// 	if(SHOW_DEBUG===true) {
+		// 		global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		// 	}
 
-		# SECTION_REAL_TIPO
-		$section_real_tipo  = $this->get_section_real_tipo();	# Fija $this->section_real_tipo que es necesario luego
+		// 	# SECTION_REAL_TIPO
+		// 	$section_real_tipo  = $this->get_section_real_tipo();	# Fija $this->section_real_tipo que es necesario luego
 
-		#
-		# VIRTUAL SECTION
-		#
-		# SECTION VIRTUAL CASE
+		// 	#
+		// 	# VIRTUAL SECTION
+		// 	#
+		// 	# SECTION VIRTUAL CASE
+		// 	if ($this->section_virtual===true ) {
+		// 		# Exclude elements of layout edit.
+		// 		# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
+		// 		# $exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements')[0];
+		// 		$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements');
+		// 		$ar_excluded_tipo 		  = array();
+		// 		if (!isset($ar_exclude_elements_tipo[0])) {
+		// 			#throw new Exception("Error Processing Request. exclude_elements of section $this->tipo not found. Exclude elements is mandatory (2)", 1);
+		// 			error_log("Warning. exclude_elements of section $this->tipo not found (2)");
+		// 		}else{
+		// 			# Localizamos los elementos a excluir que son los términos relacionados con este elemento ('exclude_elements')
+		// 			$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);
+		// 		}
+
+		// 		$ar_obj_button_all = $this->get_ar_children_objects_by_modelo_name_in_section('button_',true);
+		// 		$ar_secton_real_buttons = array();
+		// 		foreach ($ar_obj_button_all as $current_obj_button) {
+		// 			if(!in_array($current_obj_button->get_tipo(), $ar_excluded_tipo)){
+		// 				$ar_secton_real_buttons[] = $current_obj_button;
+		// 			}
+		// 		}
+		// 		#add the specific buttons of the virtual section, if the virtual have buttons add to the list.
+		// 		$ar_section_virtual_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
+		// 		$ar_buttons = array_merge($ar_section_virtual_buttons,$ar_secton_real_buttons);
+
+		// 	}else{
+		// 		#if the section is a real section see the buttons directly
+		// 		#$ar_buttons = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_');
+		// 		$ar_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
+		// 	}#end if ($this->section_virtual==true )
+
+		// 	# Group result by modelo name
+		// 	if($ar_buttons) foreach ($ar_buttons as $current_obj_button) {
+		// 		$current_modelo_name = get_class($current_obj_button);
+		// 		$this->ar_buttons[$current_modelo_name][] = $current_obj_button;
+		// 	}
+
+		// 	if(SHOW_DEBUG===true) {
+		// 		global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		// 	}
+
+		// 	return $this->ar_buttons;
+		// }//end get_ar_buttons
+
+
+
+	/**
+	* GET_SECTION_BUTTONS_TIPO
+	* Calculates current section buttons tipo considering virtual section cases
+	*/
+	public function get_section_buttons_tipo() {
+
+		// section_real_tipo
+			$section_real_tipo = $this->get_section_real_tipo();
+
+		// section virtual case
 		if ($this->section_virtual===true ) {
-			# Exclude elements of layout edit.
-			# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
-			# $exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements')[0];
-			$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements');
-			$ar_excluded_tipo 		  = array();
+
+			# ar_excluded_tipo. Exclude elements of layout edit
+			$ar_excluded_tipo			= false;
+			$ar_exclude_elements_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements');
 			if (!isset($ar_exclude_elements_tipo[0])) {
-				#throw new Exception("Error Processing Request. exclude_elements of section $this->tipo not found. Exclude elements is mandatory (2)", 1);
-				error_log("Warning. exclude_elements of section $this->tipo not found (2)");
+				error_log("Warning. exclude_elements of section $this->tipo not found (2). All virtual section must has defined exclude_elements");
 			}else{
-				# Localizamos los elementos a excluir que son los términos relacionados con este elemento ('exclude_elements')
+				// locate excluded tipos (related terms) in this virtual section
 				$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);
 			}
 
-			$ar_obj_button_all = $this->get_ar_children_objects_by_modelo_name_in_section('button_',true);
-			$ar_secton_real_buttons = array();
-			foreach ($ar_obj_button_all as $current_obj_button) {
-				if(!in_array($current_obj_button->get_tipo(), $ar_excluded_tipo)){
-					$ar_secton_real_buttons[] = $current_obj_button;
-				}
-			}
-			#add the specific buttons of the virtual section, if the virtual have buttons add to the list.
-			$ar_section_virtual_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
-			$ar_buttons = array_merge($ar_section_virtual_buttons,$ar_secton_real_buttons);
+			// real section
+			$children_real_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_', $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_excluded_tipo);
+
+			// virtual section. Add the specific buttons of the virtual section, if the virtual have buttons add to the list.
+			$children_virtual_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=false, $ar_excluded_tipo);
+
+			$ar_buttons_tipo = array_merge($children_virtual_tipo, $children_real_tipo);
 
 		}else{
-			#if the section is a real section see the buttons directly
-			#$ar_buttons = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_');
-			$ar_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
-		}#end if ($this->section_virtual==true )
 
-		# Group result by modelo name
-		if($ar_buttons) foreach ($ar_buttons as $current_obj_button) {
-			$current_modelo_name = get_class($current_obj_button);
-			$this->ar_buttons[$current_modelo_name][] = $current_obj_button;
-		}
+			// if the section is a real section, add the buttons directly
+			$ar_buttons_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=false, $ar_excluded_tipo=false);
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
+		}//end if ($this->section_virtual==true )
 
-		return $this->ar_buttons;
-	}//end get_ar_buttons
+
+		return $ar_buttons_tipo;
+	}//end get_section_buttons_tipo
+
 
 
 
