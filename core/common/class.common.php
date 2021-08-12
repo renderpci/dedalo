@@ -3972,34 +3972,38 @@ abstract class common {
 
 				// toool_context
 					$tools = null;
-
 					if($model === 'button_import'){
-						// tools
-							$tools_list	= common::get_client_registered_tools();
 
-						$tools		= [];
+						// tools_list
+						$tools_list	= common::get_client_registered_tools();
+
+						$tools = [];
 						foreach ($tools_list as $tool_object) {
-							$tool_config	= isset($button_properties->tool_config->{$tool_object->name})
+
+							$tool_config = isset($button_properties->tool_config->{$tool_object->name})
 								? $button_properties->tool_config->{$tool_object->name}
 								: null;
+
 							if(!isset($tool_config)) continue;
-							$current_section_tipo = $this->section_tipo ?? $this->tipo;
-							$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
-							$tools[]		= $tool_context;
+
+							$current_section_tipo	= $this->section_tipo ?? $this->tipo;
+							$tool_context			= common::create_tool_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
+
+							$tools[] = $tool_context;
 						}//end foreach ($tools_list as $item)
 					}//end if($model === 'button_import')
 
-					// button object
-						$button_obj = new dd_object();
-							$button_obj->set_type('button');
-							$button_obj->set_tipo($current_button_tipo);
-							$button_obj->set_model($model);
-							$button_obj->set_label($button_label);
-							$button_obj->set_properties($button_properties);
-							$button_obj->set_tools($tools);
+				// button object
+					$button_obj = new dd_object();
+						$button_obj->set_type('button');
+						$button_obj->set_tipo($current_button_tipo);
+						$button_obj->set_model($model);
+						$button_obj->set_label($button_label);
+						$button_obj->set_properties($button_properties);
+						$button_obj->set_tools($tools);
 
-					$ar_button_ddo[] = $button_obj;
-
+				// add button ddo
+				$ar_button_ddo[] = $button_obj;
 			}//end foreach ($ar_buttons_tipo as $current_button_tipo)
 
 
