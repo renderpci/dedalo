@@ -96,6 +96,7 @@ paginator.prototype.init = function(options) {
 * @return bool true
 */
 paginator.prototype.build = async function(){
+	const t0 = performance.now()
 
 	const self = this
 
@@ -127,6 +128,10 @@ paginator.prototype.build = async function(){
 	if(SHOW_DEBUG===true) {
 		// console.log("paginator [build] self:",self);
 		// console.log("paginator total:",total);
+		const time = performance.now()-t0
+		if (time>2) {
+			console.log("+ Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
+		}
 	}
 
 
@@ -162,7 +167,9 @@ paginator.prototype.destroy = async function(){
 */
 paginator.prototype.get_total = async function() {
 
-	const total = await this.caller.total
+	const total = (Boolean(this.caller.total && typeof this.caller.total.then==="function"))
+		? await this.caller.total()
+		: this.caller.total
 
 	return total
 };//end get_total
