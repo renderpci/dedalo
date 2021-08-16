@@ -39,7 +39,7 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		}
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = await ui.tool.build_wrapper_edit(self, {
+		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
 
