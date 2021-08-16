@@ -143,19 +143,14 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 
 	const self = this
 
-		console.log("self:",self);
-
-	const render_level 		= options.render_level
-	const ar_section_record = self.ar_instances
+	const render_level		= options.render_level
+	const ar_section_record	= self.ar_instances
 
 	// const row = self.get_ar_instances()
 
 	// content_data
 		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-
-			self.paginator.refresh()
-
 			return content_data
 		}
 

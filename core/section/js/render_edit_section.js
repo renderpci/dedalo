@@ -41,9 +41,6 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)
 		if (render_level==='content') {
-
-			self.paginator.refresh()
-
 			return content_data
 		}
 
