@@ -42,7 +42,7 @@ render_tool_import_files.prototype.edit = async function(options={render_level:'
 		}
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = await ui.tool.build_wrapper_edit(self, {
+		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
 
@@ -539,18 +539,18 @@ const create_template = async function(self) {
 			parent			: column_rigth
 		})
 		// The global file processing state
-			const global_progress_bar_active = ui.create_dom_element({
+			const global_progress = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'progress progress-striped active',
 				parent			: fileupload_process
 			})
-		// The global file processing state
-			const global_progress_bar_success = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'progress-bar progress-bar-success',
-				dataset 		: {dzUploadprogress : ""},
-				parent			: global_progress_bar_active
-			})
+			// global_progress_bar
+				const global_progress_bar = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'progress-bar progress-bar-success',
+					dataset			: {dzUploadprogress : ''},
+					parent			: global_progress
+				})
 
 	// grid template used for rows
 		const previews_container = ui.create_dom_element({
@@ -688,7 +688,7 @@ const create_template = async function(self) {
 				const row_progress_bar_success = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'progress-bar progress-bar-success',
-					dataset 		: {dzUploadprogress : ''},
+					dataset			: {dzUploadprogress : ''},
 					parent			: row_progress_bar_active
 				})
 
@@ -855,13 +855,13 @@ const create_template = async function(self) {
     // Update the total progress bar
     myDropzone.on("totaluploadprogress", function(progress) {
 		// document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
-		global_progress_bar_active.style.width = progress + "%";
+		global_progress_bar.style.width = progress + "%";
     });
 
     myDropzone.on("sending", function(file) {
 		// Show the total progress bar when upload starts
 		// document.querySelector("#total-progress").style.opacity = "1";
-		global_progress_bar_active.style.opacity = "1";
+		global_progress.style.opacity = "1";
 		// And disable the start button
 		file.previewElement.querySelector(".start").setAttribute("disabled", "disabled");
     });
@@ -869,7 +869,7 @@ const create_template = async function(self) {
     // Hide the total progress bar when nothing's uploading anymore
     myDropzone.on("queuecomplete", function(progress) {
 		// document.querySelector("#total-progress").style.opacity = "0";
-		global_progress_bar_active.style.opacity = "0";
+		global_progress.style.opacity = "0";
 
     });
 
