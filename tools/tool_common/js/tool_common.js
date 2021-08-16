@@ -127,8 +127,9 @@ tool_common.prototype.build = async function(autoload=false) {
 								return caller_context
 							}
 							// resolve whole context from API (init event observer problem..)
-							const api_response	= await current_data_manager.get_element_context(el)
-							return api_response.result[0]
+							// const api_response	= await current_data_manager.get_element_context(el)
+							// return api_response.result[0]
+							return {}
 						  })()
 
 				// generic try

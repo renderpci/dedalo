@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {create_source} from '../../common/js/common.js'
+	import {common, create_source} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -18,6 +18,9 @@ export const component_common = function(){
 
 	return true
 };//end component_common
+
+
+// component_common.prototype.build_rqo_show = common.prototype.build_rqo_show
 
 
 
@@ -97,11 +100,6 @@ component_common.prototype.init = async function(options) {
 					})
 				})
 			)
-
-
-	// subscribe to the observer events (important: only once)
-		// init_events_subscription(self)
-
 
 	// DES
 		// component_save (when user change component value) every component is looking if the own the instance was changed.
@@ -313,11 +311,13 @@ component_common.prototype.build_OLD = async function(autoload=false){
 */
 export const set_context_vars = function(self, context) {
 
-	self.type			= self.context.type // typology of current instance, usually 'component'
-	self.label			= self.context.label // label of current component like 'summary'
-	self.tools			= self.context.tools || [] //set the tools of the component
-	self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
-	self.permissions	= self.context.permissions || null
+	if (self.context) {
+		self.type			= self.context.type // typology of current instance, usually 'component'
+		self.label			= self.context.label // label of current component like 'summary'
+		self.tools			= self.context.tools || [] //set the tools of the component
+		self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
+		self.permissions	= self.context.permissions || null
+	}
 
 	return true
 };//end set_context_vars

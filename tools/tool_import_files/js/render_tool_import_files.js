@@ -382,8 +382,8 @@ const get_content_data_edit = async function(self) {
 	// button process import
 		const button_process_import = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'processing_import',
-			text_content 	: 'ok',
+			class_name		: 'processing_import success',
+			text_content 	: 'OK',
 			parent			: fragment
 		})
 		button_process_import.addEventListener('click', function(e){

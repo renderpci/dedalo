@@ -170,7 +170,7 @@ component_portal.prototype.build = async function(autoload=false){
 	// rqo
 		const generate_rqo = async function(){
 			// rqo_config. get the rqo_config from context
-			self.rqo_config	= self.context.request_config
+			self.rqo_config	= self.context && self.context.request_config
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
 				: {}
 			// rqo build
