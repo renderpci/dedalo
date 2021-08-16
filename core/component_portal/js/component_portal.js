@@ -4,12 +4,12 @@
 
 
 // imports
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
-	import {component_common, set_context_vars} from '../../component_common/js/component_common.js'
+	import {component_common, set_context_vars, init_events_subscription} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	// import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
 	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
@@ -18,40 +18,43 @@
 	import {render_mini_component_portal} from '../../component_portal/js/render_mini_component_portal.js'
 
 
+
 /**
 * COMPONENT_PORTAL
 */
 export const component_portal = function(){
 
-	this.id
+	this.id = null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
-	this.column_id
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
+	this.section_lang	= null
+	this.column_id		= null
+	this.parent			= null
+	this.node			= null
+	this.modal			= null
 
-	this.section_lang
+	// context - data
+	this.datum		= null
+	this.context	= null
+	this.data		= null
 
-	this.datum
-	this.context
-	this.data
-	this.parent
-	this.node
-	this.total
+	// pagination
+	this.total		= null
+	this.paginator	= null
 
-	this.modal
+	// autocomplete service
+	this.autocomplete			= null
+	this.autocomplete_active	= null
 
-	this.paginator
-
-	this.autocomplete
-	this.autocomplete_active
-
-	this.rqo_config
-	this.rqo
+	// rqo
+	this.rqo_config	= null
+	this.rqo		= null
 
 	return true
 };//end  component_portal
@@ -112,7 +115,7 @@ component_portal.prototype.init = async function(options) {
 		self.autocomplete			= null
 		self.autocomplete_active	= false
 
-	// // columns
+	// columns
 		self.columns = options.columns
 
 	// call the generic common tool init
@@ -211,22 +214,28 @@ component_portal.prototype.build = async function(autoload=false){
 
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
-					console.log("COMPONENT PORTAL api_response:",self.id, api_response);
+					// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
+					dd_console(`[component_portal.build] COMPONENT ${self.model} api_response:`, 'DEBUG', api_response)
 
 			// set context and data to current instance
 				await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
 
 			// context. update instance properties from context (type, label, tools, divisor, permissions)
-				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-				set_context_vars(self, self.context)
-
-				self.datum.context = api_response.result.context
+				self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				self.datum.context	= api_response.result.context
 
 			// rqo regenerate
 				await generate_rqo()
 				// console.log("portal generate_rqo 2 self.rqo:",self.rqo);
 		}//end if (autoload===true)
-	
+
+	// update instance properties from context
+		set_context_vars(self, self.context)
+
+	// subscribe to the observer events (important: only once)
+		init_events_subscription(self)
+
+	// mode cases
 		if (self.mode==="edit") {
 			// pagination vars only in edit mode
 
@@ -290,8 +299,6 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 		}// end if(self.mode==="edit")
 
-	// permissions. calculate and set (used by section records later)
-		self.permissions = self.context.permissions
 
 	// target_section
 		self.target_section = self.rqo_config.sqo.section_tipo
