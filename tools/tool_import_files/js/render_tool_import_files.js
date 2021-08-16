@@ -807,7 +807,6 @@ const create_template = async function(self) {
 
 		const current_name = (file.upload && file.upload.filename) ? file.upload.filename : file.name;
 
-		console.log("current_name:",current_name);
 
     	for (var i = data_length - 1; i >= 0; i--) {
     		const current_data = self.files_data[i]
@@ -869,7 +868,14 @@ const create_template = async function(self) {
     };
     // document.querySelector("#actions .cancel").onclick = function() {
     button_cancel_upload.onclick = function() {
-      myDropzone.removeAllFiles(true);
+      // myDropzone.removeAllFiles(true);
+
+      const files = myDropzone.getFilesWithStatus(Dropzone.UPLOADING)
+      for (let i = files.length - 1; i >= 0; i--) {
+      	const current_file = files[i]
+			myDropzone.cancelUpload(current_file)
+			current_file.status = Dropzone.ADDED
+      }
     };
 
     button_delete.onclick= async function() {
