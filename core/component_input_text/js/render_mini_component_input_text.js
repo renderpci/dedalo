@@ -33,7 +33,7 @@ render_mini_component_input_text.prototype.mini = async function() {
 		const data				= self.data
 		const value				= data.value || []
 		const fallback_value	= data.fallback_value || []
-		const fallback			= self.self.get_fallback_value(value, fallback_value)
+		const fallback			= self.get_fallback_value(value, fallback_value)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
