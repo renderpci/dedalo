@@ -954,7 +954,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		})
 
 	// clean and replace old DOM nodes
-		await ui.update_dom_nodes(ar_node, node)
+		ui.update_dom_nodes(ar_node, node)
 
 	// active component at end
 		event_manager.publish('active_component', new_instance)
