@@ -163,10 +163,15 @@ const get_content_data_edit = async function(self) {
 
 
 	// file name control
+		// hidden the options when the tool is caller by components, the import_mode is defined in preferences.
+			const class_name_configuration = (self.tool_config.import_mode && self.tool_config.import_mode === 'section')
+				? ''
+				: ' hidden'
+
 		//tool_configuration_options
 			const tool_configuration_options = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'tool_configuration_options',
+				class_name 		: 'tool_configuration_options'+class_name_configuration,
 				parent 			: fragment
 			})
 
@@ -189,7 +194,7 @@ const get_content_data_edit = async function(self) {
 
 					const label_field_check_box = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'ios-toggle',
+							class_name 		: 'checkbox-label',
 							text_content 	: get_label.name_to_field || 'Name indicates field',
 							parent 			: name_control_field
 						})
@@ -241,7 +246,7 @@ const get_content_data_edit = async function(self) {
 							element_type	: 'span',
 							class_name 		: 'checkbox-label',
 							text_content 	: get_label.name_to_record_id || 'Name indicates id',
-							parent 			: control_section_id_check_box
+							parent 			: name_control_section_id
 						})
 
 
@@ -271,7 +276,7 @@ const get_content_data_edit = async function(self) {
 							element_type	: 'span',
 							class_name 		: 'checkbox-label',
 							text_content 	: get_label.same_name_same_record || 'Same name same record',
-							parent 			: same_name_check_box
+							parent 			: same_name_same_section
 						})
 
 
@@ -400,13 +405,22 @@ const get_content_data_edit = async function(self) {
 				components_temp_data.push(current_instance.data)
 			}
 
-				console.log("components_temp_data:",components_temp_data);
+			self.tool_config.import_file_name_mode = (self.tool_config.import_mode === 'section' && control_section_id_check_box.checked)
+			 	? 'enumerate'
+			 	: (self.tool_config.import_mode === 'section' && same_name_check_box.checked)
+			 		? 'named'
+			 		: null
+
+
 
 			// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
 			// this generates a call as my_tool_name::my_function_name(arguments)
 				const source = create_source(self, 'import_files')
 				// add the necessary arguments used in the given function
 				source.arguments = {
+					tipo 					: self.caller.tipo,
+					section_tipo 			: self.caller.section_tipo,
+					section_id 				: self.caller.section_id,
 					tool_config				: self.tool_config,
 					files_data				: self.files_data,
 					components_temp_data	: components_temp_data
