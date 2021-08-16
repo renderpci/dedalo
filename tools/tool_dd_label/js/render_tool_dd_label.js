@@ -38,7 +38,7 @@ render_tool_dd_label.prototype.edit = async function (options={render_level:'ful
 		}
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = await ui.tool.build_wrapper_edit(self, {
+		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : current_content_data
 		})
 
