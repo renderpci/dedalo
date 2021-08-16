@@ -239,8 +239,10 @@ class component_svg extends component_media_common {
 	*/
 	public function get_file_content() {
 
-		$file_path 		= $this->get_file_path();
-		$file_content	= file_get_contents($file_path);
+		$file_path		= $this->get_file_path();
+		$file_content	= (file_exists($file_path))
+			? file_get_contents($file_path)
+			: null;
 
 		return $file_content;
 	}//end get_file_content
