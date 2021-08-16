@@ -31,50 +31,51 @@ component_common.prototype.init = async function(options) {
 
 	const self = this
 
-	if(SHOW_DEBUG===true) {
-		//console.log("======+ INIT options.data:",options.data);
-	}
+	// status update
+		self.status = 'initializing'
 
 	// instance key used vars
-	self.model			= options.model // structure model like 'component_input_text'
-	self.tipo			= options.tipo // structure tipo of current component like 'dd345'
-	self.section_tipo	= options.section_tipo // structure tipo like 'oh1'
-	self.section_id		= options.section_id // record section_id like 1
-	self.matrix_id		= options.matrix_id || null // record matrix_id like 1 (list_tm mode only)
-	self.mode			= options.mode // current component mode like 'edit'
-	self.lang			= options.lang // current component lang like 'lg-nolan'
-	self.column_id		= options.column_id // id of the column when the instance is created to render a column list.
+		self.model			= options.model // structure model like 'component_input_text'
+		self.tipo			= options.tipo // structure tipo of current component like 'dd345'
+		self.section_tipo	= options.section_tipo // structure tipo like 'oh1'
+		self.section_id		= options.section_id // record section_id like 1
+		self.matrix_id		= options.matrix_id || null // record matrix_id like 1 (list_tm mode only)
+		self.mode			= options.mode // current component mode like 'edit'
+		self.lang			= options.lang // current component lang like 'lg-nolan'
+		self.column_id		= options.column_id // id of the column when the instance is created to render a column list.
 
-	self.section_lang	= options.section_lang // current section lang like 'lg-eng'
-	self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
+		self.section_lang	= options.section_lang // current section lang like 'lg-eng'
+		self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
 
-	// Optional vars
-	self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
-	self.data			= options.data		|| null // current specific data of this component
-	self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
+		// Optional vars
+		self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
+		self.data			= options.data		|| null // current specific data of this component
+		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 
-	// DOM
-	self.node			= [] // array of component nodes places in light DOM
+		// DOM
+		self.node			= [] // array of component nodes places in light DOM
 
-	self.events_tokens	= [] // array of events of current component
-	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-	self.tools			= []
-	//rqo
-	// self.rqo 		= {}
+		self.events_tokens	= [] // array of events of current component
+		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
+		self.tools			= []
+		//rqo
+		// self.rqo 		= {}
 
-	// pagination info
-	// self.pagination = (self.data && self.data.pagination)
-	// 	? self.data.pagination
-	// 	: { // pagination info (used in portals, etc.)
-	// 		total	: 0,
-	// 		offset	: 0,
-	// 		limit	: 0
-	// 	}
+		self.init_events_subscribed = false // initial value (false) is changed on build
 
-	// self.type	= self.context.type 	// typology of current instance, usually 'component'
-	// self.label	= self.context.label // label of current component like 'summary'
-	// self.tools	= self.context.tools || [] //set the tools of the component
-	// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
+		// pagination info
+		// self.pagination = (self.data && self.data.pagination)
+		// 	? self.data.pagination
+		// 	: { // pagination info (used in portals, etc.)
+		// 		total	: 0,
+		// 		offset	: 0,
+		// 		limit	: 0
+		// 	}
+
+		// self.type	= self.context.type 	// typology of current instance, usually 'component'
+		// self.label	= self.context.label // label of current component like 'summary'
+		// self.tools	= self.context.tools || [] //set the tools of the component
+		// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
 
 	// set_context_vars. context vars re-updated after new build
 		set_context_vars(self, self.context)
@@ -99,7 +100,7 @@ component_common.prototype.init = async function(options) {
 
 
 	// subscribe to the observer events (important: only once)
-		init_events_subscription(self)
+		// init_events_subscription(self)
 
 
 	// DES
@@ -147,7 +148,6 @@ component_common.prototype.init = async function(options) {
 		self.status = 'initiated'
 
 
-
 	return true
 };//end init
 
@@ -159,6 +159,78 @@ component_common.prototype.init = async function(options) {
 * @return bool
 */
 component_common.prototype.build = async function(autoload=false){
+	const t0 = performance.now()
+
+	const self = this
+
+	// status update
+		self.status = 'building'
+
+	// self.datum. On building, if datum is not created, creation is needed
+		// if (!self.datum) self.datum = {data:[]}
+		self.datum = self.datum || {
+			data	: [],
+			context	: []
+		}
+		self.data = self.data || {}
+
+	const current_data_manager = new data_manager()
+
+
+	// load data on auto-load true
+		if (autoload===true) {
+
+			// rqo
+				const rqo = {
+					source	: create_source(self, 'get_data'),
+					action	: 'read'
+				}
+
+			// get context and data
+				const api_response = await current_data_manager.request({body : rqo})
+					// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
+					dd_console(`[component_common.build] COMPONENT ${self.model} api_response:`, 'DEBUG', api_response)
+
+			// set context and data to current instance
+				await self.update_datum(api_response.result.data)
+				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+
+			// rqo. build again rqo with updated request_config if exists
+				if (self.context.request_config) {
+					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
+				}
+		}
+
+	// update instance properties from context
+		set_context_vars(self, self.context)
+
+	// subscribe to the observer events (important: only once)
+		init_events_subscription(self)
+
+	// build_custom optional
+		// if (typeof self.build_custom==='function') {
+		// 	await self.build_custom()
+		// }
+
+	// is_inside_tool
+		self.is_inside_tool = ui.inside_tool(self)
+
+	// status update
+		self.status = 'builded'
+
+	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
+
+	return true
+};//end component_common.prototype.build
+
+
+
+/**
+* BUILD_OLD
+* @param object value (locator)
+* @return bool
+*/
+component_common.prototype.build_OLD = async function(autoload=false){
 	const t0 = performance.now()
 
 	const self = this
@@ -218,9 +290,9 @@ component_common.prototype.build = async function(autoload=false){
 		}
 
 	// build_custom optional
-		if (typeof self.build_custom==='function') {
-			await self.build_custom()
-		}
+		// if (typeof self.build_custom==='function') {
+		// 	await self.build_custom()
+		// }
 
 	// is_inside_tool
 		self.is_inside_tool = ui.inside_tool(self)
@@ -254,11 +326,22 @@ export const set_context_vars = function(self, context) {
 
 /**
 * INIT_EVENTS_SUBSCRIPTION
-* Executed once
+* Set component structure properties defined events (used in component info mainly)
+* This method is called in 'build' life cycle, but must be execute only one time to prevent
+* duplicated events attach
+* Executed once !
+* @param object self
+* 	Is the self component instance
+* @return bool
+* 	True when new events are subscribed, false when already are subscribed (var self.init_events_subscribed as true)
 */
-const init_events_subscription = function (self) {
+export const init_events_subscription = function(self) {
 
-	if(self.init_events_subscribed===true) return
+	// check already subscribed
+		if(self.init_events_subscribed===true) {
+			// console.log("-->> [component_common.init_events_subscription] already subscribed events:", self);
+			return false
+		}
 
 	// events subscription (from component properties)
 	// the ontology can define a observer property that specify the tipo that this component will listen
@@ -291,9 +374,10 @@ const init_events_subscription = function (self) {
 					console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
 				}
 			}
-
-			self.init_events_subscribed = true
 		}
+
+	// set as subscribed
+		self.init_events_subscribed = true
 
 	return true
 }//end init_events_subscription
