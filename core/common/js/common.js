@@ -297,7 +297,7 @@ common.prototype.refresh = async function () {
 		if(SHOW_DEBUG===true) {
 			// console.group("Refresh "+self.model +" "+ (self.tipo ? self.tipo : '') );
 			// console.log("+ Time to destroy:", self.model, performance.now()-t0);
-			var t1 = performance.now()
+			// var t1 = performance.now()
 		}
 
 	// build. Update the instance with new data
@@ -311,8 +311,8 @@ common.prototype.refresh = async function () {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("+ Time to build:", self.model, performance.now()-t1);
-			var t2 = performance.now()
+			// console.log("+ Time to build [inside common.refresh]:", self.model, performance.now()-t1);
+			// var t2 = performance.now()
 		}
 
 	// copy original ar_node

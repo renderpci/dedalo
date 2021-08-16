@@ -824,7 +824,7 @@ export const ui = {
 
 
 
-		build_wrapper_edit : async(instance, items)=>{
+		build_wrapper_edit : (instance, items)=>{
 
 			const id	= instance.id || 'id is not set'
 			const mode	= instance.mode 	// like 'edit'
@@ -1022,7 +1022,7 @@ export const ui = {
 	/**
 	* UPDATE_DOM_NODES
 	*/
-	update_dom_nodes : async function(ar_nodes, new_node) {
+	update_dom_nodes : function(ar_nodes, new_node) {
 
 		const ar_nodes_length = ar_nodes.length
 		// replace content data node in each element dom node
