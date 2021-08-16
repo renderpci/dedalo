@@ -90,16 +90,15 @@ component_common.prototype.init = async function(options) {
 	// events subscription
 		// active_component (when user focus it in DOM)
 			self.events_tokens.push(
-				event_manager.subscribe('active_component', (actived_component) => {
-					// call ui.component
-					ui.component.active(self, actived_component)
-					.then( response => { // response is bool value
-						if (response===true && typeof self.active==="function" ) {
-							self.active()
-						}
-					})
-				})
+				event_manager.subscribe('active_component', fn_active_component)
 			)
+			function fn_active_component(actived_component) {
+				// call ui.component
+				const response = ui.component.active(self, actived_component) // response is bool value
+				if (response===true && typeof self.active==="function" ) {
+					self.active()
+				}
+			}
 
 	// DES
 		// component_save (when user change component value) every component is looking if the own the instance was changed.

@@ -317,6 +317,10 @@ export const ui = {
 		},//end build_wrapper_list
 
 
+
+		/**
+		* BUILD_WRAPPER_MINI
+		*/
 		build_wrapper_mini : (instance) => {
 			// if(SHOW_DEBUG===true) {
 			// 	//console.log("[ui.build_wrapper_mini] instance:",instance)
@@ -350,7 +354,7 @@ export const ui = {
 		*	Note that this function return always a promise to allow the caller
 		*	continue aplying another custom actions
 		*/
-		active : async (component, actived_component) => {
+		active : (component, actived_component) => {
 
 			if (typeof actived_component==="undefined") {
 				console.warn("[ui.component.active]: WARNING. Received undefined actived_component!");
@@ -396,7 +400,7 @@ export const ui = {
 		*	Component that has to be set as valid or with data errors
 		* @return boolean
 		*/
-		error : async (error, component) => {
+		error : (error, component) => {
 
 			if (error) {
 				component.classList.add("error")
@@ -413,7 +417,7 @@ export const ui = {
 		/**
 		* REGENERATE
 		*/
-		regenerate : async (current_node, new_node) => {
+		regenerate : (current_node, new_node) => {
 
 			//// clean
 			//	while (current_node.firstChild) {
@@ -690,7 +694,7 @@ export const ui = {
 
 
 
-		build_wrapper_edit : async(instance, items={})=>{
+		build_wrapper_edit : (instance, items={})=>{
 
 			const id	= instance.id || 'id is not set'
 			const model	= instance.model 	// like component_input_text
