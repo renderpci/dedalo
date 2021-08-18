@@ -396,7 +396,7 @@ const get_content_data_edit = async function(self) {
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
 				self.files_data[i].file_processor = current_value.previewElement.querySelector(".file_processor_select").value
-				self.files_data[i].option_component = current_value.previewElement.querySelector(".option_component_select").value;
+				self.files_data[i].component_option = current_value.previewElement.querySelector(".option_component_select").value;
 			}
 			const ar_instances = self.ar_instances
 			const components_temp_data = []
@@ -423,7 +423,8 @@ const get_content_data_edit = async function(self) {
 					section_id 				: self.caller.section_id,
 					tool_config				: self.tool_config,
 					files_data				: self.files_data,
-					components_temp_data	: components_temp_data
+					components_temp_data	: components_temp_data,
+					key_dir					: self.key_dir
 				}
 
 			// process the images in the server (uploaded previously)
