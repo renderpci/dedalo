@@ -52,28 +52,22 @@ class dd_core_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		# set vars
-		$vars = array('section_tipo');
-			foreach($vars as $name) {
-				$$name = common::setVarData($name, $json_data);
-				# DATA VERIFY
-				# if ($name==='max_records' || $name==='offset') continue; # Skip non mandatory
-				if (empty($$name)) {
-					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-					return $response;
-				}
+		// section_tipo
+			$section_tipo = $json_data->section_tipo;
+			if (empty($section_tipo)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
+				return $response;
 			}
 
-		# FIX SECTION TIPO
-		define('SECTION_TIPO', $section_tipo);
+		// fix section tipo
+			// define('SECTION_TIPO', $section_tipo);
 
-		$section = section::get_instance( NULL, $section_tipo );
-
-		# Section save returns the section_id created
-		$section_id = $section->Save();
+		// section
+			$section	= section::get_instance(null, $section_tipo);
+			$section_id	= $section->Save(); // Section save, returns the created section_id
 
 		// OJO : Aquí, cuando guardemos las opciones de búsqueda, resetearemos el count para forzar a recalculat el total
-		//		 esto está ahora en 'section_records' pero puede cambiar..
+			//   esto está ahora en 'section_records' pero puede cambiar..
 			// Update search_query_object full_count property
 				// $search_options = section_records::get_search_options($section_tipo);
 				// if (isset($search_options->search_query_object)) {
@@ -81,18 +75,18 @@ class dd_core_api {
 				// }
 
 		$response->result	= $section_id;
-		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
-		# Debug
-		if(SHOW_DEBUG===true) {
-			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-				foreach($vars as $name) {
-					$debug->{$name} = $$name;
-				}
+		// debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					foreach($vars as $name) {
+						$debug->{$name} = $$name;
+					}
 
-			$response->debug = $debug;
-		}
+				$response->debug = $debug;
+			}
 
 		return (object)$response;
 	}//end create
@@ -145,7 +139,7 @@ class dd_core_api {
 
 	/**
 	* SAVE
-	* @return array $result
+	* @return object $response
 	*/
 	static function save($json_data) {
 		global $start_time;
@@ -155,10 +149,10 @@ class dd_core_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// get the context and data sended
-		$context	= $json_data->context;
-		$data		= $json_data->data;
-		$section_id	= $json_data->section_id;
+		// json_data. get the context and data sended
+			$context	= $json_data->context;
+			$data		= $json_data->data;
+			$section_id	= $json_data->section_id;
 
 		//get the type of the dd_object that is calling to update
 		$context_type = $context->type;
@@ -242,6 +236,85 @@ class dd_core_api {
 
 		return (object)$response;
 	}//end save
+
+
+
+	/**
+	* ADD_NEW_ELEMENT
+	* Used by component_portal to add created target section to current component with project values inheritance
+	* @return object $response
+	*/
+	static function add_new_element($json_data) {
+		global $start_time;
+
+		// create the default response
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// json_data. get the context and data sended
+			$source					= $json_data->source;
+			$target_section_tipo	= $json_data->target_section_tipo;
+
+		// get the component information
+			$model			= $source->model;
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+			$lang			= $source->lang;
+			$mode			= $source->mode;
+
+			$RecordObj_dd	= new RecordObj_dd($tipo);
+			$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+
+		// build the component
+			$component = component_common::get_instance($model,
+														$tipo,
+														$section_id,
+														$mode,
+														$component_lang,
+														$section_tipo);
+		// get the component permissions
+			$permissions = $component->get_component_permissions();
+		// check if the user can update the component
+			if($permissions < 2) return $response;
+
+		// component add_new_element
+			$component->add_new_element((object)[
+				'target_section_tipo' => $target_section_tipo
+			]);
+
+		// // element json
+		// 	$get_json_options = new stdClass();
+		// 		$get_json_options->get_context 	= true;
+		// 		$get_json_options->get_data 	= true;
+		// 	$element_json = $component->get_json($get_json_options);
+
+		// // observers_data
+		// 	if (isset($component->observers_data)) {
+		// 		$element_json->data = array_merge($element_json->data, $component->observers_data);
+		// 	}
+
+		// // context and data as result
+		// 	$result = $element_json;
+
+		// result. if the process is correct, we return the $result to the client
+			$response->result 	= true;
+			$response->msg 	  	= 'OK. Request done';
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->json_data 	= $json_data;
+
+				$response->debug = $debug;
+				// dump($debug->exec_time, ' debug->exec_time ++ '.to_string());
+			}
+
+
+		return (object)$response;
+	}//end add_new_element
 
 
 
