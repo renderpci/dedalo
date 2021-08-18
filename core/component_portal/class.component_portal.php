@@ -133,6 +133,183 @@ class component_portal extends component_relation_common {
 	}//end regenerate_component
 
 
+	/**
+	* ADD_NEW_ELEMENT
+	* Creates a new record in target section and propagates filter data
+	* Add the new record section id to current component data (as locator) and save
+	* @return object $response
+	*/
+	public function add_new_element( $request_options ) {
+
+		$options = new stdClass();
+			$options->section_target_tipo 	= null;
+			$options->top_tipo 				= TOP_TIPO;
+			$options->top_id 				= TOP_ID;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		#
+		# 1 PROJECTS GET. Obtenemos los datos del filtro (proyectos) de la sección actual para heredarlos en el registro del portal
+		# We get current portal filter data (projects) to heritage in the new portal record
+			$section_id				= $this->get_section_id();
+			$component_filter_dato	= (strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false)
+				? null
+				: $this->get_current_section_filter_data();
+			if(empty($component_filter_dato)) {
+
+				debug_log(__METHOD__." Empty filter value in current section. Default project value will be used (section tipo: $this->section_tipo, section_id: $section_id) ".to_string(), logger::WARNING);
+
+				# Default value is used
+				# Temp section case Use default project here
+				$locator = new locator();
+					$locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
+					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+				$component_filter_dato = [$locator];
+
+				#$msg = __METHOD__." Error on get filter data from this section ! ";
+				#trigger_error($msg);
+				#$response->msg .= $msg;
+				#return $response;
+			}
+
+		#
+		# 2 SECTION . Creamos un nuevo registro vacío en la sección a que apunta el portal
+		# Section record . create new empty section in target section tipo
+		# TRUE : Se le pasa 'true' al comando "Save" para decirle que SI es un portal
+			if (empty($options->section_target_tipo)) {
+				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+				$section_target_tipo 	= reset($ar_target_section_tipo);
+			}else{
+				$section_target_tipo 	= $options->section_target_tipo;
+			}
+			$section_new = section::get_instance(null, $section_target_tipo);
+
+			$save_options = new stdClass();
+				$save_options->is_portal 	= true; // Important set true !
+				$save_options->portal_tipo 	= $this->tipo;
+				$save_options->top_tipo 	= $options->top_tipo;
+				$save_options->top_id 		= $options->top_id;
+
+			$new_section_id = $section_new->Save( $save_options );
+
+
+			if($new_section_id<1) {
+				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
+				trigger_error($msg);
+				$response->msg .= $msg;
+				return $response;
+			}
+
+		#
+		# 3 PROYECTOS SET. Creamos un nuevo registro de filtro ('component_filter') hijo de la nueva sección creada, que heredará los datos del filtro de la sección principal
+		# Set target section projects filter settings as current secion
+		# Los proyectos se heredan desde el registro actual donde está el portal hacia el registro destino del portal
+			#$ar_component_filter = (array)$section_new->get_ar_children_objects_by_modelo_name_in_section('component_filter',true);
+			$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_target_tipo, 'component_filter', $from_cache=true, $resolve_virtual=true);
+			if (!isset($ar_tipo_component_filter[0])) {
+				$msg = __METHOD__." Error target section 'component_filter' not found in $section_target_tipo ! ";
+				trigger_error($msg);
+				$response->msg .= $msg;
+				return $response;
+			}else{
+				$component_filter 	= component_common::get_instance('component_filter',
+																	 $ar_tipo_component_filter[0],
+																	 $new_section_id,
+																	 'list', // Important 'list' to avoid auto save default value !!
+																	 DEDALO_DATA_NOLAN,
+																	 $section_target_tipo
+																	);
+				$component_filter->set_dato($component_filter_dato);
+				$component_filter->Save();
+			}
+
+		#
+		# 4 PORTAL . Insertamos en dato (el array de 'id_madrix' del component_portal actual) el nuevo registro creado
+		# Portal dato. add current section id to component portal dato array
+
+			# Basic locator
+			$locator = new locator();
+				$locator->set_section_id($new_section_id);
+				$locator->set_section_tipo($section_target_tipo);
+				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$locator->set_from_component_tipo($this->tipo);
+
+			$added = $this->add_locator_to_dato($locator);
+			if ($added!==true) {
+				$msg = __METHOD__." Error add_locator_to_dato. New locator is not added ! ";
+				trigger_error($msg);
+				$response->msg .= $msg;
+				return $response;
+			}
+
+
+		# Save current component updated data
+		$this->Save();
+
+
+		$response->result 		= true;
+		$response->section_id 	= $new_section_id;
+		$response->added_locator= $locator;
+		$response->msg 			= 'Ok. Request done '.__METHOD__;
+
+		return $response;
+	}//end add_new_element
+
+
+
+	/**
+	* REMOVE_ELEMENT
+	* @return object $response
+	*/
+	public function remove_element( $request_options ) {
+
+		$options = new stdClass();
+			$options->locator 		= null;
+			$options->remove_mode	= 'delete_link';	// delete_link | delete_all (deletes link and resource)
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$locator = $options->locator;
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		# Remove locator from data
+		$result = $this->remove_locator( $locator );
+		if ($result!==true) {
+			$response->msg .= " Error on remove locator. Skipped action ";
+			return $response;
+		}
+
+		# Remove target record
+		if ($options->remove_mode==='delete_all') {
+
+			$section = section::get_instance($locator->section_id, $locator->section_tipo);
+			$delete  = $section->Delete($delete_mode='delete_record');
+			if ($delete!==true) {
+				$response->msg .= " Error on remove target section ($locator->section_tipo - $locator->section_id). Skipped action ";
+				return $response;
+			}
+		}
+
+		# Update state
+		# DELETE AND UPDATE the component state of this section and his parents
+		$state = $this->remove_state_from_locator( $locator );
+
+		# Save current component updated data
+		$this->Save();
+
+		$response->result 		= true;
+		$response->remove_mode 	= $options->remove_mode;
+		$response->msg 			= 'Ok. Request done '.__METHOD__;
+
+		return $response;
+	}//end remove_element
+
+
 
 	/**
 	* UPDATE_DATO_VERSION
