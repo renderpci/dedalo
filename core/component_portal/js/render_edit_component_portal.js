@@ -5,7 +5,8 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
@@ -285,31 +286,35 @@ const get_buttons = (self) => {
 	const fragment = new DocumentFragment()
 
 	// button_add
-		// const button_add = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button add',
-		// 	parent			: fragment
-		// })
-		// button_add.addEventListener("click", async function(e){
+		const button_add = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button add',
+			parent			: fragment
+		})
+		button_add.addEventListener("click", async function(e){
 
-		// 	// data_manager. create new record
-		// 		const api_response = await data_manager.prototype.request({
-		// 			body : {
-		// 				action			: 'create',
-		// 				section_tipo	: select_section.value
-		// 			}
-		// 		})
-		// 		// add value to current data
-		// 		if (api_response.result && api_response.result>0) {
-		// 			const value = {
-		// 				section_tipo	: select_section.value,
-		// 				section_id		: api_response.result
-		// 			}
-		// 			self.add_value(value)
-		// 		}else{
-		// 			console.error("Error on api_response on try to create new row:", api_response);
-		// 		}
-		// })
+			//TO ADD SECTION SELECTOR
+				const section_tipo = target_section_lenght >1
+					? false
+					: target_section[0].tipo
+
+
+				// data_manager. create new record
+				const api_response = await data_manager.prototype.request({
+					body : {
+						action				: 'add_new_element',
+						source				: create_source(self),
+						target_section_tipo	: section_tipo
+					}
+				})
+				// add value to current data
+				if (api_response.result) {
+					self.refresh()
+				}else{
+					console.error("Error on api_response on try to create new row:", api_response);
+				}
+
+		})
 
 	// button_link
 		const button_link = ui.create_dom_element({
