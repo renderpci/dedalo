@@ -133,23 +133,28 @@ class component_portal extends component_relation_common {
 	}//end regenerate_component
 
 
+
 	/**
 	* ADD_NEW_ELEMENT
 	* Creates a new record in target section and propagates filter data
-	* Add the new record section id to current component data (as locator) and save
+	* Add the new record section id to current component data (as locator) and save it
 	* @return object $response
 	*/
 	public function add_new_element( $request_options ) {
 
 		$options = new stdClass();
-			$options->section_target_tipo 	= null;
-			$options->top_tipo 				= TOP_TIPO;
-			$options->top_id 				= TOP_ID;
+			$options->target_section_tipo 	= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
+
+
+		if(empty($options->target_section_tipo)){
+			$response->msg .= ' Is mandatory to specify target_section_tipo';
+			return $response;
+		}
 
 		#
 		# 1 PROJECTS GET. Obtenemos los datos del filtro (proyectos) de la sección actual para heredarlos en el registro del portal
@@ -168,33 +173,17 @@ class component_portal extends component_relation_common {
 					$locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
 					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
 				$component_filter_dato = [$locator];
-
-				#$msg = __METHOD__." Error on get filter data from this section ! ";
-				#trigger_error($msg);
-				#$response->msg .= $msg;
-				#return $response;
 			}
 
 		#
 		# 2 SECTION . Creamos un nuevo registro vacío en la sección a que apunta el portal
 		# Section record . create new empty section in target section tipo
-		# TRUE : Se le pasa 'true' al comando "Save" para decirle que SI es un portal
-			if (empty($options->section_target_tipo)) {
-				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-				$section_target_tipo 	= reset($ar_target_section_tipo);
-			}else{
-				$section_target_tipo 	= $options->section_target_tipo;
-			}
-			$section_new = section::get_instance(null, $section_target_tipo);
+			$target_section_tipo	= $options->target_section_tipo;
+			$section_new			= section::get_instance(null, $target_section_tipo);
 
 			$save_options = new stdClass();
-				$save_options->is_portal 	= true; // Important set true !
-				$save_options->portal_tipo 	= $this->tipo;
-				$save_options->top_tipo 	= $options->top_tipo;
-				$save_options->top_id 		= $options->top_id;
-
+				$save_options->component_filter_dato = $component_filter_dato;
 			$new_section_id = $section_new->Save( $save_options );
-
 
 			if($new_section_id<1) {
 				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
@@ -204,36 +193,12 @@ class component_portal extends component_relation_common {
 			}
 
 		#
-		# 3 PROYECTOS SET. Creamos un nuevo registro de filtro ('component_filter') hijo de la nueva sección creada, que heredará los datos del filtro de la sección principal
-		# Set target section projects filter settings as current secion
-		# Los proyectos se heredan desde el registro actual donde está el portal hacia el registro destino del portal
-			#$ar_component_filter = (array)$section_new->get_ar_children_objects_by_modelo_name_in_section('component_filter',true);
-			$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_target_tipo, 'component_filter', $from_cache=true, $resolve_virtual=true);
-			if (!isset($ar_tipo_component_filter[0])) {
-				$msg = __METHOD__." Error target section 'component_filter' not found in $section_target_tipo ! ";
-				trigger_error($msg);
-				$response->msg .= $msg;
-				return $response;
-			}else{
-				$component_filter 	= component_common::get_instance('component_filter',
-																	 $ar_tipo_component_filter[0],
-																	 $new_section_id,
-																	 'list', // Important 'list' to avoid auto save default value !!
-																	 DEDALO_DATA_NOLAN,
-																	 $section_target_tipo
-																	);
-				$component_filter->set_dato($component_filter_dato);
-				$component_filter->Save();
-			}
-
-		#
-		# 4 PORTAL . Insertamos en dato (el array de 'id_madrix' del component_portal actual) el nuevo registro creado
+		# 3 PORTAL . Insertamos en dato (el array de 'id_madrix' del component_portal actual) el nuevo registro creado
 		# Portal dato. add current section id to component portal dato array
-
 			# Basic locator
 			$locator = new locator();
 				$locator->set_section_id($new_section_id);
-				$locator->set_section_tipo($section_target_tipo);
+				$locator->set_section_tipo($target_section_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 				$locator->set_from_component_tipo($this->tipo);
 
@@ -309,6 +274,52 @@ class component_portal extends component_relation_common {
 		return $response;
 	}//end remove_element
 
+
+
+	/**
+	* GET_CURRENT_SECTION_FILTER_DATA
+	* Search component filter in current section and get the component data
+	* @return array $component_filter_dato
+	*/
+	public function get_current_section_filter_data() {
+
+		$section_id		= $this->get_section_id();
+		$section_tipo	= $this->get_section_tipo();
+
+		# 1.1 PROYECTOS DE PROYECTOS : Portales de la sección proyectos
+		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
+
+			#$component_filter_dato 	= array($section_id=>"2"); # Será su propio filtro
+			$filter_locator = new locator();
+				$filter_locator->set_section_tipo($section_tipo);
+				$filter_locator->set_section_id($section_id);
+			$component_filter_dato = [$filter_locator];
+
+		}else{
+			// $section		= section::get_instance($section_id, $section_tipo);
+			$search_model	= 'component_filter';
+			$ar_children_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $search_model, true, true);
+
+			if (empty($ar_children_tipo[0])) {
+				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
+			}else {
+				$component_filter_tipo	= $ar_children_tipo[0];
+				$model					= RecordObj_dd::get_modelo_name_by_tipo($component_filter_tipo, true);
+
+				$component_filter = component_common::get_instance($model,
+																$component_filter_tipo,
+																$section_id,
+																'edit',
+																DEDALO_DATA_LANG,
+																$section_tipo
+																);
+
+				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
+			}
+		}
+
+		return $component_filter_dato;
+	}//end get_current_section_filter_data
 
 
 	/**
