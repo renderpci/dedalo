@@ -249,7 +249,6 @@ section.prototype.build = async function(autoload=false) {
 				self.section_id	= self.mode!=='list' && self.data && self.data.value
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
-						console.log("section_id:",self.section_id, self.data);
 
 			// rqo regenerate
 				await generate_rqo()
