@@ -674,14 +674,15 @@ class section extends common {
 
 		// Options default
 			$options = new stdClass();
-				$options->is_portal			 	= false;
-				$options->portal_tipo 		 	= false;
 				$options->main_components_obj 	= false;
 				$options->main_relations 		= false;
-				$options->top_tipo				= TOP_TIPO;
-				$options->top_id				= TOP_ID;
 				$options->new_record			= false;
 				$options->forced_create_record	= false;
+				$options->component_filter_dato = false;
+				// $options->is_portal			= false;
+				// $options->portal_tipo		= false;
+				// $options->top_tipo			= TOP_TIPO;
+				// $options->top_id				= TOP_ID;
 
 				# Time machine options (overwrite when save component)
 				$options->time_machine_data			= false;
@@ -845,30 +846,30 @@ class section extends common {
 						$section_dato->diffusion_info 	 = array(); // Empty array by default
 
 					// Section creator info
-						switch (true) {
-							# ACTIVITY CASE
-							case ($tipo===DEDALO_ACTIVITY_SECTION_TIPO):
-								# Nothing to do
-								break;
+						// switch (true) {
+						// 	# ACTIVITY CASE
+						// 	case ($tipo===DEDALO_ACTIVITY_SECTION_TIPO):
+						// 		# Nothing to do
+						// 		break;
 
-							# PORTAL CASE
-							case ($options->is_portal===true):
-								$ar_section_creator	= section::build_ar_section_creator($options->top_tipo, $tipo, $options->portal_tipo);
-								# Section creator
-								$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
-								$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
-								$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
-								break;
+						// 	# PORTAL CASE
+						// 	case ($options->is_portal===true):
+						// 		$ar_section_creator	= section::build_ar_section_creator($options->top_tipo, $tipo, $options->portal_tipo);
+						// 		# Section creator
+						// 		$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
+						// 		$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
+						// 		$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
+						// 		break;
 
-							# DEFAULT CASE (Normal sections)
-							default:
-								$ar_section_creator	= section::build_ar_section_creator($options->top_tipo);
-								# Section creator
-								$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
-								$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
-								$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
-								break;
-						}
+						// 	# DEFAULT CASE (Normal sections)
+						// 	default:
+						// 		$ar_section_creator	= section::build_ar_section_creator($options->top_tipo);
+						// 		# Section creator
+						// 		$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
+						// 		$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
+						// 		$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
+						// 		break;
+						// }
 
 					// Update modified section data . Resolve and add creation date and user to current section dato
 						$this->update_modified_section_data(array(
@@ -951,7 +952,7 @@ class section extends common {
 
 
 				// TOP_ID : Si se crea desde un portal, el top_id está fijado en sesion "TOP_ID". Si no, es el propio section_id de la sección creada
-					$top_id = ($options->is_portal===true) ? TOP_ID : $this->section_id;
+					// $top_id = ($options->is_portal===true) ? TOP_ID : $this->section_id;
 
 				// Logger activity
 					logger::$obj['activity']->log_message(
@@ -961,14 +962,14 @@ class section extends common {
 						NULL,
 						array(	"msg"			=> "Created section record",
 								"section_id"	=> $this->section_id,
+								"section_tipo"	=> $this->tipo,
 								"tipo"			=> $this->tipo,
-								"is_portal"		=> intval($options->is_portal),
-								"top_id"		=> $top_id,
-								"top_tipo"		=> TOP_TIPO,
-								"table"			=> $matrix_table,
-								"tm_id"			=> 'desactivo',#$time_machine_last_id,
-								#"counter"		=> counter::get_counter_value($this->tipo, $matrix_table_counter),
-								"section_tipo"	=> $this->tipo
+								"table"			=> $matrix_table
+								// "is_portal"	=> intval($options->is_portal),
+								// "top_id"		=> $top_id,
+								// "top_tipo"	=> TOP_TIPO,
+								// "tm_id"		=> 'desactivo',#$time_machine_last_id,
+								// "counter"	=> counter::get_counter_value($this->tipo, $matrix_table_counter),
 								)
 					);
 
@@ -1002,31 +1003,49 @@ class section extends common {
 				}else{
 
 					# Filter defaults. Note that portal already saves inherited project to new created section
-					# To avoid saves twice, only set default project when not is a portal call to crete new record
-						if ($options->is_portal!==true) {
+					# To avoid saves twice, only set default project when not is a portal call to create new record
 
-							##
-							# DEFAULT PROJECT FOR CREATE STANDAR SECTIONS
-							# Cuando se crea un registro de sección, se auto asigna el proyecto por defecto (definido en config DEDALO_DEFAULT_PROJECT)
-							# cuando la sección tiene definido un 'component_filter'
-							$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter', $from_cache=true, $resolve_virtual=false, true);
-							if (isset($ar_tipo_component_filter[0])) {
-								# When component_filter is called in edit mode, the component check if dato is empty and if is,
-								# add default user project and save it
-								// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
-								$component_filter 	= component_common::get_instance('component_filter',
-																					 $ar_tipo_component_filter[0],
-																					 $this->section_id,
-																					 'edit', // Important edit !! # Already saves default project when load in edit mode
-																					 DEDALO_DATA_NOLAN,
-																					 $tipo);
-							}else{
-								if(SHOW_DEBUG===true) {
-									#throw new Exception("Error Processing Request. Too much component_filter elements found", 1);
-								}
-								debug_log(__METHOD__." Ignored set filter default in section without filter: $this->tipo ".to_string(), logger::WARNING);
-							}
+
+					##
+					# DEFAULT PROJECT FOR CREATE STANDAR SECTIONS
+					# Cuando se crea un registro de sección, se auto asigna el proyecto por defecto (definido en config DEDALO_DEFAULT_PROJECT)
+					# cuando la sección tiene definido un 'component_filter'
+					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter', $from_cache=true, $resolve_virtual=false, true);
+					if (empty($ar_tipo_component_filter[0])) {
+
+						if(SHOW_DEBUG===true) {
+							#throw new Exception("Error Processing Request. Too much component_filter elements found", 1);
 						}
+						debug_log(__METHOD__." Ignored set filter default in section without filter: $this->tipo ".to_string(), logger::WARNING);
+
+					}else{
+
+						if (!empty($options->component_filter_dato)) {
+							// set the component_filter with the dato sended by the caller (portals)
+							$component_filter 	= component_common::get_instance('component_filter',
+															 $ar_tipo_component_filter[0],
+															 $this->section_id,
+															 'list', // Important 'list' to avoid auto save default value !!
+															 DEDALO_DATA_NOLAN,
+															 $tipo
+															);
+							$component_filter->set_dato($options->component_filter_dato);
+							$component_filter->Save();
+
+						}else{
+							# When component_filter is called in edit mode, the component check if dato is empty and if is,
+							# add default user project and save it
+							// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
+							$component_filter 	= component_common::get_instance('component_filter',
+																				 $ar_tipo_component_filter[0],
+																				 $this->section_id,
+																				 'edit', // Important edit !! # Already saves default project when load in edit mode
+																				 DEDALO_DATA_NOLAN,
+																				 $tipo);
+							// note that section is auto-saved here
+						}
+					}//end if (empty($ar_tipo_component_filter[0]))
+
 
 				}//end if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO)
 
@@ -2927,74 +2946,74 @@ class section extends common {
 	* @param object $temp_section_data
 	* @param object $current_section
 	*/
-	public static function propagate_temp_section_data($temp_section_data, $section_tipo, $section_id) {
+	// public static function propagate_temp_section_data($temp_section_data, $section_tipo, $section_id) {
 
-		# COMPONENTS
-		if (isset($temp_section_data->components)) {
-			foreach ($temp_section_data->components as $current_tipo => $current_component) {
+	// 	# COMPONENTS
+	// 	if (isset($temp_section_data->components)) {
+	// 		foreach ($temp_section_data->components as $current_tipo => $current_component) {
 
-				if ($current_tipo==='relations') {
-					trigger_error("BAD SECTION DATA IN temp_section_data !! ".json_encode($temp_section_data));
-					continue;
-				}
+	// 			if ($current_tipo==='relations') {
+	// 				trigger_error("BAD SECTION DATA IN temp_section_data !! ".json_encode($temp_section_data));
+	// 				continue;
+	// 			}
 
-				$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-				$traducible  	= $RecordObj_dd->get_traducible();
-				$current_lang   = $traducible!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+	// 			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+	// 			$traducible  	= $RecordObj_dd->get_traducible();
+	// 			$current_lang   = $traducible!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
-				$component_dato_current_lang = $current_component->dato->$current_lang;
+	// 			$component_dato_current_lang = $current_component->dato->$current_lang;
 
-				if (!isset($component_dato_current_lang)) {
-					if(SHOW_DEBUG===true) {
-						dump($current_component, ' $current_component ++ '.to_string());
-						trigger_error("Error: element $current_tipo without dato");
-					}
-					continue;
-				}
+	// 			if (!isset($component_dato_current_lang)) {
+	// 				if(SHOW_DEBUG===true) {
+	// 					dump($current_component, ' $current_component ++ '.to_string());
+	// 					trigger_error("Error: element $current_tipo without dato");
+	// 				}
+	// 				continue;
+	// 			}
 
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$component 	 = component_common::get_instance(	$modelo_name,
-																$current_tipo,
-																$section_id,
-																'edit',
-																$current_lang,
-																$section_tipo);
-				$component->set_dato( $component_dato_current_lang );
-				$component->Save();
+	// 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+	// 			$component 	 = component_common::get_instance(	$modelo_name,
+	// 															$current_tipo,
+	// 															$section_id,
+	// 															'edit',
+	// 															$current_lang,
+	// 															$section_tipo);
+	// 			$component->set_dato( $component_dato_current_lang );
+	// 			$component->Save();
 
-			}//end foreach ($temp_section_data as $key => $value) {
-		}//end if (isset($temp_section_data->components))
-
-
-		# RELATION COMPONENTS
-		if (isset($temp_section_data->relations)) {
-			$ar_locators = [];
-			# Group locator by from_component_tipo
-			foreach ($temp_section_data->relations as $current_locator) {
-				$current_tipo = $current_locator->from_component_tipo;
-				$ar_locators[$current_tipo][] = $current_locator;
-			}
-			# iterate relation components and set dato/save
-			foreach ($ar_locators as $current_tipo => $ar_current_locator) {
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$component 	 = component_common::get_instance(	$modelo_name,
-																$current_tipo,
-																$section_id,
-																'edit',
-																DEDALO_DATA_NOLAN,
-																$section_tipo,
-																false);
-				$component->get_dato();
-				$component->set_dato( $ar_current_locator );
-				$component->Save();
-
-				#debug_log(__METHOD__." Saved $modelo_name $current_tipo ($section_tipo - $section_id) dato: ".json_encode($ar_current_locator), logger::DEBUG);
-			}
-		}//end if (isset($temp_section_data->relations))
+	// 		}//end foreach ($temp_section_data as $key => $value) {
+	// 	}//end if (isset($temp_section_data->components))
 
 
-		return true;
-	}//nd propagate_temp_section_data
+	// 	# RELATION COMPONENTS
+	// 	if (isset($temp_section_data->relations)) {
+	// 		$ar_locators = [];
+	// 		# Group locator by from_component_tipo
+	// 		foreach ($temp_section_data->relations as $current_locator) {
+	// 			$current_tipo = $current_locator->from_component_tipo;
+	// 			$ar_locators[$current_tipo][] = $current_locator;
+	// 		}
+	// 		# iterate relation components and set dato/save
+	// 		foreach ($ar_locators as $current_tipo => $ar_current_locator) {
+	// 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+	// 			$component 	 = component_common::get_instance(	$modelo_name,
+	// 															$current_tipo,
+	// 															$section_id,
+	// 															'edit',
+	// 															DEDALO_DATA_NOLAN,
+	// 															$section_tipo,
+	// 															false);
+	// 			$component->get_dato();
+	// 			$component->set_dato( $ar_current_locator );
+	// 			$component->Save();
+
+	// 			#debug_log(__METHOD__." Saved $modelo_name $current_tipo ($section_tipo - $section_id) dato: ".json_encode($ar_current_locator), logger::DEBUG);
+	// 		}
+	// 	}//end if (isset($temp_section_data->relations))
+
+
+	// 	return true;
+	// }//nd propagate_temp_section_data
 
 
 

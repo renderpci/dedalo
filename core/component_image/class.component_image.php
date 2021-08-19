@@ -1269,7 +1269,7 @@ class component_image extends component_media_common {
 						$upload_date 	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_upload_date' 	: 'retouched_upload_date';
 						$dato  = $this->get_dato();
 						$value = empty($dato) ? new stdClass() : reset($dato);
-						dump($value);
+						// dump($value);
 							$value->$file_name 		= $original_file_name;
 							$value->$upload_date	= component_date::get_date_now();
 						$this->set_dato([$value]);
