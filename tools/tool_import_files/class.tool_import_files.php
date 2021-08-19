@@ -219,110 +219,106 @@ class tool_import_files extends tool_common {
 		switch ($model) {
 			case 'component_image':
 
-				#
-				# COMPONENT IMAGE
-				# (Is autosaved with defaults on create)
-				$component 	 = component_common::get_instance($model,
-																$target_component_tipo,
-																$current_section_id,
-																'list',
-																DEDALO_DATA_LANG,
-																$target_section_tipo);
-				#
-				# get_image_id
-				$image_id 		= $component->get_image_id();
-				$image_path 	= $component->get_image_path();
-				$aditional_path = $component->get_aditional_path();
+				// component_image (Is autosaved with defaults on create)
+					$component 	 = component_common::get_instance($model,
+																	$target_component_tipo,
+																	$current_section_id,
+																	'list',
+																	DEDALO_DATA_LANG,
+																	$target_section_tipo);
+				// get_image_id
+					$image_id		= $component->get_image_id();
+					$image_path		= $component->get_image_path();
+					$aditional_path	= $component->get_aditional_path();
 
-				#
-				# FILE VARS
-				# Path of file like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/'
-				$source_path 		= $media_file['dir_path'];
-				# Full path to file located in temporal files uploads like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
-				$source_full_path 	= $media_file['file_path'];
-				# File current extension like 'jpg'
-				$extension 			= $media_file['extension'];
-				# File name full like '1253-2.jpg'
-				$file_name_full 	= $media_file['file_name_full'];
-				# File name without extension
-				$file_name 			= $media_file['file_name'];
+				// file vars
+					# Path of file like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/'
+					$source_path		= $media_file['dir_path'];
+					# Full path to file located in temporal files uploads like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
+					$source_full_path	= $media_file['file_path'];
+					# File current extension like 'jpg'
+					$extension			= $media_file['extension'];
+					# File name full like '1253-2.jpg'
+					$file_name_full		= $media_file['file_name_full'];
+					# File name without extension
+					$file_name			= $media_file['file_name'];
 
-				# Safe paths
-				if (strpos($source_path, '../')!==false ||
-					strpos($source_full_path, '../')!==false ||
-					strpos($extension, '../')!==false ||
-					strpos($file_name_full, '../')!==false ||
-					strpos($file_name, '../')!==false
-					) {
-					throw new Exception("Error Processing Request. Unauthorized path", 1);
-					return false;
-				}
-
-				#
-				# ORIGINAL IMAGE DESIRED STORE
-				$original_path 		= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path;
-				$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension);
-				if( !is_dir($original_path) ) {
-					if(!mkdir($original_path, 0777,true)) {
-						throw new Exception(" Error on read or create directory. Permission denied $original_path");
+				// safe paths check
+					if (strpos($source_path, '../')!==false ||
+						strpos($source_full_path, '../')!==false ||
+						strpos($extension, '../')!==false ||
+						strpos($file_name_full, '../')!==false ||
+						strpos($file_name, '../')!==false
+						) {
+						throw new Exception("Error Processing Request. Unauthorized path", 1);
+						return false;
 					}
-				}
 
-				# Copy the original
-				if (!copy($source_full_path, $original_file_path)) {
-					throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
-				}
+				// original image desired store
+					$original_path 		= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path;
+					$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension);
+					if( !is_dir($original_path) ) {
+						if(!mkdir($original_path, 0777,true)) {
+							throw new Exception(" Error on read or create directory. Permission denied $original_path");
+						}
+					}
 
-				# JPG : convert to jpg
-				if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
-					$original_file_path_jpg = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
-					ImageMagick::convert($original_file_path, $original_file_path_jpg );
-					#chmod($original_file_path, 0777);
-					#chmod($original_file_path_jpg, 0777);
-				}
+				// copy the original
+					if (!copy($source_full_path, $original_file_path)) {
+						throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
+					}
 
-				# DEFAULT QUALITY
-				# Generate dedalo default quality version (usually 1.5MB) and thumb image
-				# $default_quality_image = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT .'/'. $image_id  .'.'. DEDALO_IMAGE_EXTENSION;
-				$source_image 	= $original_file_path;
-				$source_quality = DEDALO_IMAGE_QUALITY_ORIGINAL;
-				$target_quality = DEDALO_IMAGE_QUALITY_DEFAULT;
+				// extension unify. convert JPG to jpg
+					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
+						$original_file_path_jpg = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+						ImageMagick::convert($original_file_path, $original_file_path_jpg );
+					}
 
-				$component->convert_quality( $source_quality, $target_quality );
+				// default quality
+					// Generate dedalo default quality version (usually 1.5MB) and thumb image
+					// $default_quality_image = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT .'/'. $image_id  .'.'. DEDALO_IMAGE_EXTENSION;
+					$source_image	= $original_file_path;
+					$source_quality	= DEDALO_IMAGE_QUALITY_ORIGINAL;
+					$target_quality	= DEDALO_IMAGE_QUALITY_DEFAULT;
 
-				$value = new stdClass();
-					$value->original_file_name 		= $file_name_full;
-					$value->original_upload_date	= component_date::get_date_now();
-				$component->set_dato([$value]);
-				$component->Save();
+					$component->convert_quality( $source_quality, $target_quality );
+
+					$value = new stdClass();
+						$value->original_file_name		= $file_name_full;
+						$value->original_upload_date	= component_date::get_date_now();
+					$component->set_dato([$value]);
+					$component->Save();
 
 				// generate the svg file
 					$svg_string_node = $component->create_default_svg_file();
 
-				# REMOVE ORIGINAL IMAGE AFTER IMPORT
-				unlink(	$source_full_path );
+				// remove original image after import
+					unlink(	$source_full_path );
 				break;
 
 			default:
 				trigger_error("Error. Media type not allowed");
 				break;
 		}
+
+		return true;
 	}//end set_media_file
 
 
 
 	/**
 	* GET_MEDIA_FILE_DATE
-	* @return dd_date
+	* @return object dd_date $dd_date
 	*/
 	public static function get_media_file_date($media_file, $model) {
-		$dd_date = null;
-		$source_full_path 	= $media_file['file_path'];
+
+		$dd_date			= null;
+		$source_full_path	= $media_file['file_path'];
 
 		switch ($model) {
 			case 'component_image':
 
-				# exif try to get date from file
+				# EXIF try to get date from file metadata
 				$DateTimeOriginal=false;
 				try {
 					$command			= MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .$source_full_path;
@@ -348,6 +344,7 @@ class tool_import_files extends tool_common {
 					if(isset($matches[6])) $dd_date->set_second((int)$matches[6]);
 				}
 				break;
+
 			default:
 				trigger_error("Error. Model is not defined");
 				break;
@@ -360,7 +357,7 @@ class tool_import_files extends tool_common {
 
 	/**
 	* FILE_PROCESSOR
-	* @return
+	* @return object $response
 	*/
 	public static function file_processor($request_options) {
 
@@ -369,7 +366,7 @@ class tool_import_files extends tool_common {
 			$response->msg 		= 'Error. Request failed';
 
 		$options = new stdClass();
-			$options->file_processor 			= null;
+			$options->file_processor			= null;
 			$options->file_processor_properties	= null;
 			$options->file_name					= null;
 			$options->file_path					= null;
@@ -379,12 +376,10 @@ class tool_import_files extends tool_common {
 			$options->tool_config				= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-
-		#
 		# FILE_PROCESSOR
-		# Global var button propiedades json data array
-		# Optional aditional file script processor defined in button import propiedaes
-		# Note that var $file_processor_properties is the button propiedades json data, NOT current element processor selection
+		# Global var button properties JSON data array
+		# Optional additional file script processor defined in button import properties
+		# Note that var $file_processor_properties is the button properties JSON data, NOT current element processor selection
 
 		# Iterate each processor
 		foreach ((array)$options->file_processor_properties as $key => $file_processor_obj) {
@@ -479,12 +474,12 @@ class tool_import_files extends tool_common {
 		// user_id
 			$user_id = navigator::get_user_id();
 
-		$ar_msg = [];
-		$total  = 0;
-		$imput_components_section_tipo = [];
+		// init vars
+			$ar_msg							= [];	// messages for response info
+			$imput_components_section_tipo	= [];	// all different used section tipo in section_temp
+			$total							= 0;	// n of files processed
 
-		# AR_DATA
-		# All files collected from siles upload form
+		// ar_data. All files collected from files upload form
 			$ar_processed	= [];
 			$files_dir		= TOOL_IMPORT_FILES_UPLOAD_DIR;
 			foreach ((array)$files_data as $value_obj) {
@@ -493,7 +488,7 @@ class tool_import_files extends tool_common {
 				$current_file_processor			= $value_obj->file_processor; # Note that var $current_file_processor is only the current element processor selection
 				$current_component_option_tipo	= $value_obj->component_option;
 
-				# Check file exists
+				// Check file exists
 					$file_full_path = $files_dir . $current_file_name;
 					if (!file_exists($file_full_path)) {
 						$msg = "File ignored (not found) $current_file_name";
@@ -501,7 +496,7 @@ class tool_import_files extends tool_common {
 						$ar_msg[] = $msg;
 						continue; // Skip file
 					}
-				# Check proper mode config
+				// Check proper mode config
 					if ($import_file_name_mode==='enumerate' && $import_mode!=='section') {
 						$msg = "Invalid import mode: $import_mode . Ignored action";
 						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
@@ -509,104 +504,98 @@ class tool_import_files extends tool_common {
 						continue; // Skip file
 					}
 
-				# Init file import
-				//debug_log(__METHOD__." Init file import_mode:$import_mode - import_file_name_mode:$import_file_name_mode - file_full_path ".to_string($file_full_path), logger::DEBUG);
+				// debug.  Init file import
+				// debug_log(__METHOD__." Init file import_mode:$import_mode - import_file_name_mode:$import_file_name_mode - file_full_path ".to_string($file_full_path), logger::DEBUG);
 
-				# FILE_DATA
-				$file_data = tool_import_files::get_file_data($files_dir, $current_file_name);
+				// file_data
+					$file_data = tool_import_files::get_file_data($files_dir, $current_file_name);
 
+				// target_ddo
+					if ($import_mode==='section') {
+						// switch import_file_name_mode
+						switch ($import_file_name_mode) {
+							case 'enumerate':
+								if (!empty($file_data['regex']->section_id)) {
+									// Direct numeric case like 1.jpg
+									$section = section::get_instance($file_data['regex']->section_id, $section_tipo);
+									$section->forced_create_record(); // First record of current section_id force create record. Next files with same section_id, not.
+									$_base_section_id = $section->get_section_id();
+								}else{
+									$section = section::get_instance(null, $section_tipo,'edit',false);
+									$section->Save();
+									$_base_section_id = $section->get_section_id();
+								}
+								$section_id = (int)$_base_section_id;
+								break;
 
-				if ($import_mode==='section') {
-					# SWITCH IMPORT_FILE_NAME_MODE
-					switch ($import_file_name_mode) {
-						case 'enumerate':
-							if (!empty($file_data['regex']->section_id)) {
-								// Direct numeric case like 1.jpg
-								$section = section::get_instance($file_data['regex']->section_id, $section_tipo);
-								$section->forced_create_record(); // First record of current section_id force create record. Next files with same section_id, not.
-								$_base_section_id = $section->get_section_id();
-							}else{
-								$section = section::get_instance(null, $section_tipo,'edit',false);
+							case 'named':
+								// String case like ánfora.jpg
+								// Look already imported files
+								$ar_filter_result = array_filter($ar_processed, function($element) use($file_data) {
+									return $file_data['regex']->base_name === $element->file_data['regex']->base_name;
+								});
+								$filter_result = reset($ar_filter_result);
+								if (!empty($filter_result->section_id)) {
+									# Re-use safe already created section_id (file with same base_name like 'ánforas')
+									$_base_section_id = $filter_result->section_id;
+								}else{
+									$section = section::get_instance(null, $section_tipo,'edit',false);
+									$section->Save();
+									$_base_section_id = $section->get_section_id();
+								}
+								$section_id = (int)$_base_section_id;
+								break;
+
+							default:
+								# IMPORT
+								# Create new section
+								$section 		= section::get_instance(null, $section_tipo);
 								$section->Save();
-								$_base_section_id = $section->get_section_id();
-							}
-							$section_id = (int)$_base_section_id;
-							break;
+								$section_id 	= $section->get_section_id();
+								break;
+						}//end switch ($import_file_name_mode)
+						// set target_ddo from tool_config ddo_map
+						$target_ddo = array_find($ar_ddo_map, function($item) use($current_component_option_tipo){
+							return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
+						});
+					}else{
+						// target ddo will be the caller portal, used when the tool is loaded by specific portal and all files will be stored inside these portal
+						$target_ddo = new dd_object();
+							$target_ddo->set_tipo($tipo);
+							$target_ddo->set_section_tipo($section_tipo);
+							$target_ddo->set_model(RecordObj_dd::get_modelo_name_by_tipo($tipo, true));
+					}//end if($import_mode==='section')
 
-						case 'named':
-							// String case like ánfora.jpg
-							// Look already imported files
-							$ar_filter_result = array_filter($ar_processed, function($element) use($file_data) {
-								return $file_data['regex']->base_name === $element->file_data['regex']->base_name;
-							});
-							$filter_result = reset($ar_filter_result);
-							if (!empty($filter_result->section_id)) {
-								# Re-use safe already created section_id (file with same base_name like 'ánforas')
-								$_base_section_id = $filter_result->section_id;
-							}else{
-								$section = section::get_instance(null, $section_tipo,'edit',false);
-								$section->Save();
-								$_base_section_id = $section->get_section_id();
-							}
-							$section_id = (int)$_base_section_id;
-							break;
+				// target_ddo check
+					if(empty($target_ddo)){
+						debug_log(__METHOD__." target_ddo is empty will be ignored ".to_string(), logger::ERROR);
+						continue;
+					}
 
-						default:
-							# IMPORT
-							# Create new section
-							$section 		= section::get_instance(null, $section_tipo);
-							$section->Save();
-							$section_id 	= $section->get_section_id();
-							break;
-					}//end switch ($import_file_name_mode)
-					// set target_ddo from tool_config ddo_map
-					$target_ddo = array_find($ar_ddo_map, function($item) use($current_component_option_tipo){
-						return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
-					});
-				}else{
-					// target ddo will be the caller portal, used when the tool is loaded by specific portal and all files will be stored inside these portal
-					$target_ddo = new dd_object();
-						$target_ddo->set_tipo($tipo);
-						$target_ddo->set_section_tipo($section_tipo);
-						$target_ddo->set_model(RecordObj_dd::get_modelo_name_by_tipo($tipo, true));
-				}//end if($import_mode==='section')
-
-
-				if(empty($target_ddo)){
-					debug_log(__METHOD__." target_ddo is empty will be ignored ".to_string(), logger::ERROR);
-					continue;
-				}
-
-				#
-				# COMPONENT PORTAL
-				# Component (expected portal)
+				// component portal. Component (expected portal)
 					$component_portal = component_common::get_instance( $target_ddo->model,
 																		$target_ddo->tipo,
 																		$section_id,
 																		'edit',
 																		DEDALO_DATA_NOLAN,
 																		$target_ddo->section_tipo);
-					# Portal target_section_tipo
+					// Portal target_section_tipo
 					$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
 
-				#
-				# SECTION
-				# Create a new section for each file from current portal
-				$request_options = new stdClass();
-					$request_options->target_section_tipo = $target_section_tipo;
+				// section. Create a new section for each file from current portal
+					$request_options = new stdClass();
+						$request_options->target_section_tipo = $target_section_tipo;
 
-				$portal_response = (object)$component_portal->add_new_element( $request_options );
-				if ($portal_response->result===false) {
-					$response->result 	= false;
-					$response->msg 		= "Error on create portal children: ".$portal_response->msg;
-					return $response;
-				}
-				// Fix new section created as current_section_id
-				$target_section_id = $portal_response->section_id;
+					$portal_response = (object)$component_portal->add_new_element( $request_options );
+					if ($portal_response->result===false) {
+						$response->result 	= false;
+						$response->msg 		= "Error on create portal children: ".$portal_response->msg;
+						return $response;
+					}
+					// Fix new section created as current_section_id
+					$target_section_id = $portal_response->section_id;
 
-				#
-				# COMPONENT PORTAL NEW SECTION ORDER
-				# Order portal record when is $import_file_name_mode=enumerate
+				// component portal new section order. Order portal record when is $import_file_name_mode=enumerate
 					if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
 						$portal_norder = $file_data['regex']->portal_order!=='' ? (int)$file_data['regex']->portal_order : false;
 						if ($portal_norder!==false) {
@@ -618,10 +607,11 @@ class tool_import_files extends tool_common {
 						}
 					}
 
-				# create the ddo components with the data to store with the import
-				# when the component has a input in the tool propagate temp section_data
-				# Update created section with temp section data
-				# when the component stored the filename, get the filename and save it
+				// ar_ddo_map iterate. role based actions
+					// Create the ddo components with the data to store with the import
+					// when the component has a input in the tool propagate temp section_data
+					// Update created section with temp section data
+					// when the component stored the filename, get the filename and save it
 					foreach ($ar_ddo_map as $ddo) {
 
 						$RecordObj_dd	= new RecordObj_dd($ddo->tipo);
@@ -641,51 +631,53 @@ class tool_import_files extends tool_common {
 						switch ($ddo->role) {
 							case 'target_filename':
 
-								$component->set_dato($current_file_name);
-								$component->Save();
+								// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
+									$component->set_dato($current_file_name);
+									$component->Save();
 								break;
 
 							case 'target_date':
 
-								$dd_date = tool_import_files::get_media_file_date($file_data, $target_component_model);
-
-								if (!empty($dd_date)) {
-									$dato = new stdClass();
-										$dato->start = $dd_date;
-									$component->set_dato([$dato]);
-									$component->Save();
-								}
+								// media_file_date (using EXIF or similar metadata source into the file)
+									$dd_date = tool_import_files::get_media_file_date($file_data, $target_component_model);
+									if (!empty($dd_date)) {
+										$dato = new stdClass();
+											$dato->start = $dd_date;
+										$component->set_dato([$dato]);
+										$component->Save();
+									}
 								break;
 
 							case 'input_component':
 
-								if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
-									$imput_components_section_tipo[] = $ddo->section_tipo;
-								}
+								// imput_components_section_tipo store
+									if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
+										$imput_components_section_tipo[] = $ddo->section_tipo;
+									}
 
-								$component_data = array_find($components_temp_data, function($item) use($ddo){
-									return isset($item->tipo) && $item->tipo === $ddo->tipo && $item->section_tipo===$ddo->section_tipo;
-								});
-								if(!empty($component_data) && !empty($component_data->value)){
-									$component->set_dato($component_data->value);
-									$component->Save();
-								}
+								// component_data. Get from request and save
+									$component_data = array_find($components_temp_data, function($item) use($ddo){
+										return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
+									});
+									if(!empty($component_data) && !empty($component_data->value)){
+										$component->set_dato($component_data->value);
+										$component->Save();
+									}
 
-								// propagate the project to the media section, that will be the target_section_tipo
-									if($model === 'component_filter'){
+								// component_filter. Propagate the project to the media section, that will be the target_section_tipo
+									if($model==='component_filter'){
 										// get the component_filter of the target_ddo section_tipo
 										$ar_children_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($target_ddo_component->section_tipo, $model, true, true);
 										$component_filter_tipo	= $ar_children_tipo[0];
 
-										$target_component	= component_common::get_instance($model,
-																						 $component_filter_tipo,
-																						 $target_section_id,
-																						 'list',
-																						 $current_lang,
-																						 $target_ddo_component->section_tipo);
+										$target_component = component_common::get_instance(	$model,
+																							$component_filter_tipo,
+																							$target_section_id,
+																							'list',
+																							$current_lang,
+																							$target_ddo_component->section_tipo );
 										$target_component->set_dato($component_data->value);
 										$target_component->Save();
-
 									}
 
 								// move temp data from temp section to real component
@@ -717,47 +709,42 @@ class tool_import_files extends tool_common {
 					}//end foreach ($ar_ddo_map as $ddo)
 
 					// $input_elements_in_source = array_filter($ar_ddo_map, function($item) use($current_component_option_tipo){
-					// 	return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
+					// 	return $item->role==='component_option' && $item->tipo===$current_component_option_tipo;
 					// });
 
 					// $input_elements_in_target = array_filter($ar_ddo_map, function($item) use($target_section_tipo){
 					// 	return $item->role === 'component_option' && $item->section_tipo===$target_section_tipo;
 					// });
 
-				#
-				# FILE_PROCESSOR
-				# Global var button properties json data array
-				# Optional additional file script processor defined in button import properties
-				# Note that var $file_processor_properties is the button properties json data, NOT current element processor selection
-				if (!empty($current_file_processor) && !empty($file_processor_properties)) {
-					$processor_options = new stdClass();
-						$processor_options->file_processor				= $current_file_processor;
-						$processor_options->file_processor_properties	= $file_processor_properties;
-						# Standard arguments
-						$processor_options->file_name					= $current_file_name;
-						$processor_options->file_path					= $files_dir;
-						$processor_options->section_tipo				= $section_tipo;
-						$processor_options->section_id					= $section_id;
-						$processor_options->target_section_tipo			= $target_section_tipo;
-						$processor_options->tool_config					= $tool_config;
-					$response_file_processor = tool_import_files::file_processor($processor_options);
-				}//end if (!empty($file_processor_properties))
+				// file_processor
+					// Global var button properties json data array
+					// Optional additional file script processor defined in button import properties
+					// Note that var $file_processor_properties is the button properties json data, NOT current element processor selection
+					if (!empty($current_file_processor) && !empty($file_processor_properties)) {
+						$processor_options = new stdClass();
+							$processor_options->file_processor				= $current_file_processor;
+							$processor_options->file_processor_properties	= $file_processor_properties;
+							# Standard arguments
+							$processor_options->file_name					= $current_file_name;
+							$processor_options->file_path					= $files_dir;
+							$processor_options->section_tipo				= $section_tipo;
+							$processor_options->section_id					= $section_id;
+							$processor_options->target_section_tipo			= $target_section_tipo;
+							$processor_options->tool_config					= $tool_config;
+						$response_file_processor = tool_import_files::file_processor($processor_options);
+					}//end if (!empty($file_processor_properties))
 
+				// set_media_file. Move uploaded file to media folder and create default versions
+					tool_import_files::set_media_file($file_data, $target_section_tipo, $target_section_id, $target_component_tipo);
 
-				#
-				# SET_MEDIA_FILE
-				# Move uploaded file to media folder and create default versions
-				tool_import_files::set_media_file($file_data, $target_section_tipo, $target_section_id, $target_component_tipo);
-
-
-				// Add as processed
-				$processed_info = new stdClass();
-					$processed_info->file_name				= $value_obj->name;
-					$processed_info->file_processor			= $value_obj->file_processor;
-					$processed_info->target_component_tipo	= $target_component_tipo;
-					$processed_info->section_id				= $section_id;
-					$processed_info->file_data				= $file_data;
-				$ar_processed[] = $processed_info;
+				// ar_processed. Add as processed
+					$processed_info = new stdClass();
+						$processed_info->file_name				= $value_obj->name;
+						$processed_info->file_processor			= $value_obj->file_processor;
+						$processed_info->target_component_tipo	= $target_component_tipo;
+						$processed_info->section_id				= $section_id;
+						$processed_info->file_data				= $file_data;
+					$ar_processed[] = $processed_info;
 
 				debug_log(__METHOD__." Imported files and data from $section_tipo - $section_id".to_string(), logger::WARNING);
 
@@ -772,7 +759,6 @@ class tool_import_files extends tool_common {
 				}
 			}
 
-
 		// Consolidate counter. Set counter value to last section_id in section
 			// if ($total>0) {
 			// 	$matrix_table = 'matrix';//common::get_matrix_table_from_tipo($section_tipo);
@@ -784,8 +770,8 @@ class tool_import_files extends tool_common {
 			// }
 
 		// response
-			$response->result 	= true;
-			$response->msg 		= 'Import files done successfully. Total: '.$total ." of " .count($files_data);
+			$response->result	= true;
+			$response->msg		= 'Import files done successfully. Total: '.$total ." of " .count($files_data);
 
 
 		// debug
@@ -836,8 +822,8 @@ class tool_import_files extends tool_common {
 			$tool_import_files->set_up($key_dir);
 
 			// dir
-				$upload_dir = TOOL_IMPORT_FILES_UPLOAD_DIR; // like /home/httpdocs/dedalo/media/upload/temp/files/user_2/rsc56/';
-				$upload_url = TOOL_IMPORT_FILES_UPLOAD_URL; // like /dedalo/media/upload/temp/files/user_2/rsc56/';
+				$upload_dir	= TOOL_IMPORT_FILES_UPLOAD_DIR; // like /home/httpdocs/dedalo/media/upload/temp/files/user_2/rsc56/';
+				$upload_url	= TOOL_IMPORT_FILES_UPLOAD_URL; // like /dedalo/media/upload/temp/files/user_2/rsc56/';
 
 			// read files dir
 				$files		= [];
@@ -846,8 +832,8 @@ class tool_import_files extends tool_common {
 					$file_path = $upload_dir . $file_name;
 					if (strlen($file_name) > 0 && $file_name[0]!=='.' && is_file($file_path)) {
 
-						$info			= pathinfo($file_name);
-						$basemane		= basename($file_name,'.'.$info['extension']);
+						$info		= pathinfo($file_name);
+						$basemane	= basename($file_name,'.'.$info['extension']);
 
 						$files[] = (object)[
 							'url'	=> $upload_url .'/thumbnail/'. $basemane . '.jpg',
@@ -857,9 +843,9 @@ class tool_import_files extends tool_common {
 					}
 				}
 
-
-			$response->result 	= $files;
-			$response->msg 		= 'OK. Request done';
+		// response
+			$response->result	= $files;
+			$response->msg		= 'OK. Request done';
 
 		return $response;
 	}//end list_uploaded_files
@@ -937,8 +923,9 @@ class tool_import_files extends tool_common {
 					}
 			}//end foreach ($file_names as $file_name)
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done';
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
 
 
 		return $response;
