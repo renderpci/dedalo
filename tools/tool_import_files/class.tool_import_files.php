@@ -481,6 +481,7 @@ class tool_import_files extends tool_common {
 
 		$ar_msg = [];
 		$total  = 0;
+		$imput_components_section_tipo = [];
 
 		# AR_DATA
 		# All files collected from siles upload form
@@ -658,6 +659,10 @@ class tool_import_files extends tool_common {
 
 							case 'input_component':
 
+								if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
+									$imput_components_section_tipo[] = $ddo->section_tipo;
+								}
+
 								$component_data = array_find($components_temp_data, function($item) use($ddo){
 									return isset($item->tipo) && $item->tipo === $ddo->tipo && $item->section_tipo===$ddo->section_tipo;
 								});
@@ -760,9 +765,13 @@ class tool_import_files extends tool_common {
 			}//end foreach ((array)$files_data as $key => $value_obj)
 
 		// Reset the temporary section of the components, for empty the fields.
-			// if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-			// 	unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
-			// }
+			foreach ($imput_components_section_tipo as $current_section_tipo) {
+				$temp_data_uid = $current_section_tipo .'_'. DEDALO_SECTION_ID_TEMP; // Like 'rsc197_tmp'
+				if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
+					unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
+				}
+			}
+
 
 		// Consolidate counter. Set counter value to last section_id in section
 			// if ($total>0) {
