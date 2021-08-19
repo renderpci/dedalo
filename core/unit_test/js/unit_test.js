@@ -172,7 +172,23 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 			}
 		})('component_portal', 'test80', section_tipo, section_id, mode, lang, fn_random_locator, ['test38', 'test80', 0]) )
 
-	// component_portal v6 toponymy A
+
+	// component_number
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_number', 'test139', section_tipo, section_id, mode, lang, fn_random_number, []) )
+
+
+	// des
+		// component_portal v6 toponymy A
 		// options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
 		// 	return {
 		// 		model				: model,
@@ -185,21 +201,6 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		// 		new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
 		// 	}
 		// })('component_portal', 'test204', section_tipo, section_id, mode, lang, fn_custom_locator, ['es1', 'test204', 0, 1]) )
-
-	
-	// des
-		// options.push( (function(model, tipo){
-		// 	return {
-		// 		model				: model,
-		// 		tipo				: tipo,
-		// 		section_tipo		: section_tipo,
-		// 		section_id			: section_id,
-		// 		mode				: mode,
-		// 		lang				: lang,
-		// 		new_value			: fn_random_number
-		// 	}
-		// })('component_number', 'test139') )
-
 
 		// options.push( (function(model, tipo){
 		// 	return {
@@ -699,7 +700,8 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 					// destroy
 						if (old_instance) {
-							await old_instance.destroy(true, true, true)
+							// await old_instance.destroy(true, true, true)
+							old_instance.destroy(true, true, true)
 						}
 
 				// new instance

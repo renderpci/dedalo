@@ -379,7 +379,7 @@ export const init_events_subscription = function(self) {
 		self.init_events_subscribed = true
 
 	return true
-}//end init_events_subscription
+};//end init_events_subscription
 
 
 
@@ -604,7 +604,7 @@ component_common.prototype.update_datum = async function(new_data) {
 		// It's necessary update the data in all components (self, observers), not only the caller.
 			const ar_instances = instances.get_all_instances()
 			/* OLD WAY MONO 
-				for (let i = new_data_length - 1; i >= 0; i--) {					
+				for (let i = new_data_length - 1; i >= 0; i--) {
 					const data_item = new_data[i]
 					const current_instance = ar_instances.find(inst => inst.tipo===data_item.tipo && inst.section_tipo===data_item.section_tipo && inst.section_id==data_item.section_id)
 					if (current_instance) {
@@ -620,18 +620,18 @@ component_common.prototype.update_datum = async function(new_data) {
 			for (let i = new_data_length - 1; i >= 0; i--) {
 				
 				const data_item			= new_data[i]
-				const current_instances	= ar_instances.filter(inst => inst.tipo===data_item.tipo && inst.section_tipo===data_item.section_tipo && inst.section_id==data_item.section_id)
+				const current_instances	= ar_instances.filter(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
 				const instances_length	= current_instances.length
 				if (instances_length>0) {
 					// add
 					for (let j = 0; j < instances_length; j++) {
 						const inst		= current_instances[j]
 						// inst.data	= self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
-						inst.data		= self.datum.data.find(el => el.tipo===inst.tipo && el.section_tipo===inst.section_tipo && el.section_id==inst.section_id) || {}						
+						inst.data		= self.datum.data.find(el => el.tipo===inst.tipo && el.section_tipo===inst.section_tipo && el.section_id==inst.section_id) || {}
 						// console.log("____ updated instance data:", inst);
 					}
 				}else{
-					console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
+					console.warn(`(!) [update_datum] Not found current instance: tipo:${data_item.tipo}, section_tipo:${data_item.section_tipo}, section_id:${data_item.section_id} in instances:`, current_instances)
 				}
 			}
 			
