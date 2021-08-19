@@ -270,7 +270,6 @@ class tool_import_files extends tool_common {
 
 				// Delete the thumbnail copy
 					$original_file_thumb = $source_path .'/thumbnail/'. $file_name_full;
-					dump($original_file_thumb, ' original_file_thumb +---------////////////-------------------+ '.to_string());
 					if(!unlink($original_file_thumb)){
 						throw new Exception("Thumb Delete ERROR of: ".$original_file_thumb);
 					}
