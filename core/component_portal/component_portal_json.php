@@ -60,7 +60,7 @@
 			$offset		= $this->pagination->offset;
 
 		// custom properties external dato
-			if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
+			if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
 				(isset($properties->source->mode) && $properties->source->mode==='external')) {
 				$this->set_dato_external(true, true);	// Forces update dato with calculated external dato
 			}
@@ -74,7 +74,7 @@
 			switch ($modo) {
 				case 'list':
 					// data item (list mode result don't include self data, only subdata)				
-					$limit  = 2; // (!) note than in list mode, limit is always 2
+					$limit	= 2; // (!) note than in list mode, limit is always 2
 					$value	= $this->get_dato_paginated($limit);
 					break;
 
