@@ -100,8 +100,8 @@ paginator.prototype.build = async function(){
 
 	const self = this
 
-	const total		= await self.get_total();
-	const limit		= self.caller.rqo.sqo.limit; //self.get_limit() // 
+	const total		= await self.get_total()
+	const limit		= self.caller.rqo.sqo.limit // self.get_limit()
 	const offset	= self.get_offset()
 
 	// pages fix vars

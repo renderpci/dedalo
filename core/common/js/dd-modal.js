@@ -152,7 +152,7 @@ class DDModal extends HTMLElement {
 			this._closeModal()
 		}
 	}
-	async _closeModal() {
+	_closeModal() {
 
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
@@ -169,7 +169,7 @@ class DDModal extends HTMLElement {
 
 		// remove caller instance if exists on close
 			// if (this.caller_instance) {
-			// 	// destroy recursivelly
+			// 	// destroy recursively
 			// 	this.caller_instance.destroy(true, true, true)
 
 		// clean header

@@ -135,7 +135,7 @@ export const ui = {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
-						inner_html 		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+						inner_html		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
 					})
 					fragment.appendChild(component_label)
 					// css
@@ -771,7 +771,7 @@ export const ui = {
 		/**
 		* BUILD_TOOL_BUTTON
 		* Generate button element for open the target tool
-		* @return dom element tool_button
+		* @return DOM element tool_button
 		*/
 		build_tool_button : (tool_context, self) => {
 
@@ -1065,8 +1065,8 @@ export const ui = {
 	*/
 	add_tools : function(self, buttons_container) {
 
-		const tools 		= self.tools
-		const tools_length 	= tools.length
+		const tools			= self.tools
+		const tools_length	= tools.length
 
 		for (let i = 0; i < tools_length; i++) {
 			if(tools[i].show_in_component){
@@ -1332,9 +1332,9 @@ export const ui = {
 			// if (previous_modal) {
 			// 	previous_modal.remove()
 			// }
-			const modal_container 	= document.createElement('dd-modal')
+			const modal_container	= document.createElement('dd-modal')
 			// document.body.appendChild(modal_container)
-			const wrapper_page  	= document.querySelector('.wrapper_page')
+			const wrapper_page		= document.querySelector('.wrapper_page')
 			wrapper_page.appendChild(modal_container)
 
 
