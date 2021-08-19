@@ -295,10 +295,12 @@ class tool_import_files extends tool_common {
 						}					
 						if ($DateTimeOriginal && !empty($DateTimeOriginal)) {
 							
-							$dd_date 			= new dd_date();							
-							$original_dato 		= (string)$DateTimeOriginal;
+							$dd_date		= new dd_date();
+							$original_dato	= (string)$DateTimeOriginal;
 
-							$regex   = "/^(-?[0-9]+)-?:?\/?.?([0-9]+)?-?:?\/?.?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+							// $regex	= "/^(-?[0-9]+)-?:?\/?.?([0-9]+)?-?:?\/?.?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+							$regex		= "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
+
 							preg_match($regex, $original_dato, $matches);    
 							if(isset($matches[1])) $dd_date->set_year((int)$matches[1]); 
 							if(isset($matches[2])) $dd_date->set_month((int)$matches[2]);
