@@ -8,8 +8,8 @@ class tool_import_files extends tool_common {
 
 
 
-	// protected $component_obj;	# received section
 	protected $valid_extensions;
+
 
 
 	/**
@@ -85,24 +85,25 @@ class tool_import_files extends tool_common {
 
 	/**
 	* FIND_ALL_FILES
-	* Read dir (can be accessible)
+	* Read dir (must be accessible)
 	*/
-	public function find_all_files($dir, $recursive=false) {
+	public function find_all_files($dir) {
 
 		#$dir = str_replace('//', '/', $dir);
 
-		$ar_data = array();
+		$ar_data = [];
+
 		try {
 			if (!file_exists($dir)) {
-				$create_dir 	= mkdir($dir, 0777,true);
+				$create_dir = mkdir($dir, 0777,true);
 				if(!$create_dir) throw new Exception(" Error on create directory. Permission denied \"$dir\" (1)");
 			}
-			$root 	 = scandir($dir);
+			$root = scandir($dir);
 		} catch (Exception $e) {
 			//return($e);
 		}
 		if (!$root) {
-			return array();
+			return $ar_data;
 		}
 
 		natsort($root);
@@ -116,19 +117,12 @@ class tool_import_files extends tool_common {
 			if(is_file("$dir/$value")) {
 
 				$ar_data[] = $this->get_file_data($dir, $value);
-
 				continue;
 			}
-			/*
-			# Case dir ($recursive==true)
-			if($recursive) foreach(self::find_all_files("$dir/$value", $recursive) as $value) {
-				$ar_data[] = $value;
-			}
-			*/
 		}
 
 		# SORT ARRAY (By custom core function build_sorter)
-		#usort($ar_data, build_sorter('numero_recurso'));
+		# usort($ar_data, build_sorter('numero_recurso'));
 
 		return $ar_data;
 	}//end find_all_files
@@ -150,52 +144,58 @@ class tool_import_files extends tool_common {
 
 	/**
 	* GET_FILE_DATA
-	* Extrae información de la imágen recibida usando una expresión regular para interpretar un patrón dado
-	* Devuelve un array con los datos extraidos
+	* Extract the information about given file using regex to get the file name patterns
+	* @param string $dir
+	* 	Directory absolute path where file is located
+	* @param string $file
+	* 	Full file name like 'my_photo.today.tif'
+	*
+	* @return array $ar_data
+	* 	Associative array with all extracted data
 	*/
 	public static function get_file_data($dir, $file) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/"
 
 		$ar_data = array();
 
-		$file_name  = pathinfo($file,PATHINFO_FILENAME);
-		$extension 	= pathinfo($file,PATHINFO_EXTENSION);
+		$file_name	= pathinfo($file,PATHINFO_FILENAME);
+		$extension	= pathinfo($file,PATHINFO_EXTENSION);
 
-		# AR_DATA
-		$ar_data['dir_path'] 					= $dir; 				# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/
-		$ar_data['file_path'] 					= $dir.$file; 			# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
-		$ar_data['file_name'] 					= $file_name; 			# 04582_01_EsCuieram_Terracota_AD_ORIG
-		$ar_data['file_name_full'] 				= $file; 				# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG
-		$ar_data['extension'] 					= $extension;			# JPG (respetamos mayúsculas/minúsculas)
-		$ar_data['file_size'] 					= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB
+		// ar_data values
+			$ar_data['dir_path']		= $dir;					# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/
+			$ar_data['file_path']		= $dir.$file;			# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
+			$ar_data['file_name']		= $file_name;			# 04582_01_EsCuieram_Terracota_AD_ORIG
+			$ar_data['file_name_full']	= $file;				# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG
+			$ar_data['extension']		= $extension;			# JPG (respetamos mayúsculas/minúsculas)
+			$ar_data['file_size']		= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB
 
-		// $ar_data['image']['image_url'] 			= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
-		// $ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
+		// des
+			// $ar_data['image']['image_url']			= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
+			// $ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
 
-		# Regeg file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
-		# Format result preg_match '1-2-A.jpg' and 'gato-2-A.jpg'
-		# 0	=>	1-2-A.jpg 	: gato-2-A.jpg 	# full_name
-		# 1	=>	1-2-A 		: gato-2-A 		# name
-		# 2	=>	1 			: gato 			# base_name (name without order and letter)
-		# 3	=>	1 			: 				# section_id (empty when not numeric)
-		# 4	=>				: gato 			# base_string_name (empty when numeric)
-		# 5	=>	-2 			: -2 			# not used
-		# 6	=>	2 			: 2 			# portal_order
-		# 7	=>	-A 			: -A 			# not used
-		# 8	=>	A 			: A 			# target map (A,B,C..)
-		# 9	=>	jpg 		: jpg 			# extension
 
-		preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
-
-		$regex_data = new stdClass();
-			$regex_data->full_name 	  = $ar_match[0];
-			$regex_data->name 		  = $ar_match[1];
-			$regex_data->base_name    = $ar_match[2];
-			$regex_data->section_id   = $ar_match[3];
-			$regex_data->portal_order = $ar_match[6];
-			$regex_data->letter 	  = $ar_match[8];
-			$regex_data->extension 	  = $ar_match[9];
-
-		$ar_data['regex'] = $regex_data;
+		// Regex file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
+			// Format result preg_match '1-2-A.jpg' and 'gato-2-A.jpg'
+			// 0	=>	1-2-A.jpg 	: gato-2-A.jpg 	# full_name
+			// 1	=>	1-2-A 		: gato-2-A 		# name
+			// 2	=>	1 			: gato 			# base_name (name without order and letter)
+			// 3	=>	1 			: 				# section_id (empty when not numeric)
+			// 4	=>				: gato 			# base_string_name (empty when numeric)
+			// 5	=>	-2 			: -2 			# not used
+			// 6	=>	2 			: 2 			# portal_order
+			// 7	=>	-A 			: -A 			# not used
+			// 8	=>	A 			: A 			# target map (A,B,C..)
+			// 9	=>	jpg 		: jpg 			# extension
+		// regex values
+			preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
+			$regex_data = new stdClass();
+				$regex_data->full_name		= $ar_match[0];
+				$regex_data->name			= $ar_match[1];
+				$regex_data->base_name		= $ar_match[2];
+				$regex_data->section_id		= $ar_match[3];
+				$regex_data->portal_order	= $ar_match[6];
+				$regex_data->letter			= $ar_match[8];
+				$regex_data->extension		= $ar_match[9];
+			$ar_data['regex'] = $regex_data;
 
 
 		return $ar_data;
@@ -310,6 +310,7 @@ class tool_import_files extends tool_common {
 	}//end set_media_file
 
 
+
 	/**
 	* GET_MEDIA_FILE_DATE
 	* @return dd_date
@@ -324,8 +325,8 @@ class tool_import_files extends tool_common {
 				# exif try to get date from file
 				$DateTimeOriginal=false;
 				try {
-					$command 		 = MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .$source_full_path;
-					$DateTimeOriginal= shell_exec($command);
+					$command			= MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .$source_full_path;
+					$DateTimeOriginal	= shell_exec($command);
 				} catch (Exception $e) {
 					if(SHOW_DEBUG) {
 						error_log("Error on get DateTimeOriginal from image metadata");
@@ -333,11 +334,12 @@ class tool_import_files extends tool_common {
 				}
 				if (!empty($DateTimeOriginal)) {
 
-					$dd_date 			= new dd_date();
-					$original_dato 		= (string)$DateTimeOriginal;
+					$dd_date		= new dd_date();
+					$original_dato	= (string)$DateTimeOriginal;
 
 					$regex   = "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
 					preg_match($regex, $original_dato, $matches);
+
 					if(isset($matches[1])) $dd_date->set_year((int)$matches[1]);
 					if(isset($matches[2])) $dd_date->set_month((int)$matches[2]);
 					if(isset($matches[3])) $dd_date->set_day((int)$matches[3]);
@@ -345,12 +347,12 @@ class tool_import_files extends tool_common {
 					if(isset($matches[5])) $dd_date->set_minute((int)$matches[5]);
 					if(isset($matches[6])) $dd_date->set_second((int)$matches[6]);
 				}
-
 				break;
 			default:
 				trigger_error("Error. Model is not defined");
 				break;
 		}
+
 		return $dd_date;
 	}//end get_media_file_date
 
@@ -871,8 +873,8 @@ class tool_import_files extends tool_common {
 			ignore_user_abort();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
 
 		// options
 			$options = new stdClass();
@@ -936,5 +938,3 @@ class tool_import_files extends tool_common {
 
 
 }//end class tool_import_files
-
-
