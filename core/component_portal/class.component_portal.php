@@ -135,6 +135,194 @@ class component_portal extends component_relation_common {
 
 
 	/**
+	* ADD_NEW_ELEMENT
+	* Creates a new record in target section and propagates filter data
+	* Add the new record section id to current component data (as locator) and save it
+	* @return object $response
+	*/
+	public function add_new_element( $request_options ) {
+
+		$options = new stdClass();
+			$options->target_section_tipo 	= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+
+		if(empty($options->target_section_tipo)){
+			$response->msg .= ' Is mandatory to specify target_section_tipo';
+			return $response;
+		}
+
+		#
+		# 1 PROJECTS GET. Obtenemos los datos del filtro (proyectos) de la sección actual para heredarlos en el registro del portal
+		# We get current portal filter data (projects) to heritage in the new portal record
+			$section_id				= $this->get_section_id();
+			$component_filter_dato	= (strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false)
+				? null
+				: $this->get_current_section_filter_data();
+			if(empty($component_filter_dato)) {
+
+				debug_log(__METHOD__." Empty filter value in current section. Default project value will be used (section tipo: $this->section_tipo, section_id: $section_id) ".to_string(), logger::WARNING);
+
+				# Default value is used
+				# Temp section case Use default project here
+				$locator = new locator();
+					$locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
+					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+				$component_filter_dato = [$locator];
+			}
+
+		#
+		# 2 SECTION . Creamos un nuevo registro vacío en la sección a que apunta el portal
+		# Section record . create new empty section in target section tipo
+			$target_section_tipo	= $options->target_section_tipo;
+			$section_new			= section::get_instance(null, $target_section_tipo);
+
+			$save_options = new stdClass();
+				$save_options->component_filter_dato = $component_filter_dato;
+			$new_section_id = $section_new->Save( $save_options );
+
+			if($new_section_id<1) {
+				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
+				trigger_error($msg);
+				$response->msg .= $msg;
+				return $response;
+			}
+
+		#
+		# 3 PORTAL . Insertamos en dato (el array de 'id_madrix' del component_portal actual) el nuevo registro creado
+		# Portal dato. add current section id to component portal dato array
+			# Basic locator
+			$locator = new locator();
+				$locator->set_section_id($new_section_id);
+				$locator->set_section_tipo($target_section_tipo);
+				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$locator->set_from_component_tipo($this->tipo);
+
+			$added = $this->add_locator_to_dato($locator);
+			if ($added!==true) {
+				$msg = __METHOD__." Error add_locator_to_dato. New locator is not added ! ";
+				trigger_error($msg);
+				$response->msg .= $msg;
+				return $response;
+			}
+
+
+		# Save current component updated data
+		$this->Save();
+
+
+		$response->result 		= true;
+		$response->section_id 	= $new_section_id;
+		$response->added_locator= $locator;
+		$response->msg 			= 'Ok. Request done '.__METHOD__;
+
+		return $response;
+	}//end add_new_element
+
+
+
+	/**
+	* REMOVE_ELEMENT
+	* @return object $response
+	*/
+	public function remove_element( $request_options ) {
+
+		$options = new stdClass();
+			$options->locator 		= null;
+			$options->remove_mode	= 'delete_link';	// delete_link | delete_all (deletes link and resource)
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$locator = $options->locator;
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		# Remove locator from data
+		$result = $this->remove_locator( $locator );
+		if ($result!==true) {
+			$response->msg .= " Error on remove locator. Skipped action ";
+			return $response;
+		}
+
+		# Remove target record
+		if ($options->remove_mode==='delete_all') {
+
+			$section = section::get_instance($locator->section_id, $locator->section_tipo);
+			$delete  = $section->Delete($delete_mode='delete_record');
+			if ($delete!==true) {
+				$response->msg .= " Error on remove target section ($locator->section_tipo - $locator->section_id). Skipped action ";
+				return $response;
+			}
+		}
+
+		# Update state
+		# DELETE AND UPDATE the component state of this section and his parents
+		$state = $this->remove_state_from_locator( $locator );
+
+		# Save current component updated data
+		$this->Save();
+
+		$response->result 		= true;
+		$response->remove_mode 	= $options->remove_mode;
+		$response->msg 			= 'Ok. Request done '.__METHOD__;
+
+		return $response;
+	}//end remove_element
+
+
+
+	/**
+	* GET_CURRENT_SECTION_FILTER_DATA
+	* Search component filter in current section and get the component data
+	* @return array $component_filter_dato
+	*/
+	public function get_current_section_filter_data() {
+
+		$section_id		= $this->get_section_id();
+		$section_tipo	= $this->get_section_tipo();
+
+		# 1.1 PROYECTOS DE PROYECTOS : Portales de la sección proyectos
+		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
+
+			#$component_filter_dato 	= array($section_id=>"2"); # Será su propio filtro
+			$filter_locator = new locator();
+				$filter_locator->set_section_tipo($section_tipo);
+				$filter_locator->set_section_id($section_id);
+			$component_filter_dato = [$filter_locator];
+
+		}else{
+			// $section		= section::get_instance($section_id, $section_tipo);
+			$search_model	= 'component_filter';
+			$ar_children_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $search_model, true, true);
+
+			if (empty($ar_children_tipo[0])) {
+				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
+			}else {
+				$component_filter_tipo	= $ar_children_tipo[0];
+				$model					= RecordObj_dd::get_modelo_name_by_tipo($component_filter_tipo, true);
+
+				$component_filter = component_common::get_instance($model,
+																$component_filter_tipo,
+																$section_id,
+																'edit',
+																DEDALO_DATA_LANG,
+																$section_tipo
+																);
+
+				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
+			}
+		}
+
+		return $component_filter_dato;
+	}//end get_current_section_filter_data
+
+
+	/**
 	* UPDATE_DATO_VERSION
 	* @return object $response
 	*/
