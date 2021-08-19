@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
@@ -46,10 +46,16 @@ render_tool_import_files.prototype.edit = async function(options={render_level:'
 			content_data : content_data
 		})
 
-	// modal container
+	// tool container
 		const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
-		modal.on_close = () => {
+		self.tool_container  = ui.attach_to_modal(header, wrapper, null, 'big')
+		self.tool_container.on_close = () => {
+			// set the images in the dropzone instance, that were uploaded and stay in the server, to ADDED status, to prevent delete them in the server when the tool close
+			const files = self.active_dropzone.files
+			for (var i = files.length - 1; i >= 0; i--) {
+				files[i].status = Dropzone.ADDED
+			}
+			self.active_dropzone.destroy()
 			self.destroy(true, true, true)
 		}
 
@@ -392,26 +398,27 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 		button_process_import.addEventListener('click', function(e){
-
+			// get the options from the every file uploaded
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
-				self.files_data[i].file_processor = current_value.previewElement.querySelector(".file_processor_select").value
+				if(ar_file_processor){
+					self.files_data[i].file_processor = current_value.previewElement.querySelector(".file_processor_select").value
+				}
 				self.files_data[i].component_option = current_value.previewElement.querySelector(".option_component_select").value;
 			}
+			// get the data from every component used to propagate to every file uploaded
 			const ar_instances = self.ar_instances
 			const components_temp_data = []
 			for (let i = ar_instances.length - 1; i >= 0; i--) {
 				const current_instance = ar_instances[i]
 				components_temp_data.push(current_instance.data)
 			}
-
+			// get the global configuration (to apply in the server)
 			self.tool_config.import_file_name_mode = (self.tool_config.import_mode === 'section' && control_section_id_check_box.checked)
 			 	? 'enumerate'
 			 	: (self.tool_config.import_mode === 'section' && same_name_check_box.checked)
 			 		? 'named'
 			 		: null
-
-
 
 			// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
 			// this generates a call as my_tool_name::my_function_name(arguments)
@@ -441,7 +448,13 @@ const get_content_data_edit = async function(self) {
 					const current_data_manager = new data_manager()
 					current_data_manager.request({body : rqo})
 					.then(function(response){
-						console.warn("-> delete_tag API response:",response);
+						console.warn("-> API response:",response);
+						if(response.result === true){
+							if(self.caller){
+								self.caller.refresh()
+							}
+							self.tool_container.close()
+						}
 						resolve(response)
 					})
 				})
@@ -511,7 +524,7 @@ const create_template = async function(self) {
 			parent			: column_left
 		})
 
-	//delete_check_box
+	// delete_check_box
 		const delete_check_box = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox',
@@ -733,15 +746,13 @@ const create_template = async function(self) {
 						parent 			: row_buttons
 					})
 
-
-
-    // Get the template HTML and remove it from the doumenthe template HTML and remove it from the document
+    // Get the template HTML and remove it from the document the template HTML and remove it from the document
 		const previewNode		= template;
 		previewNode.id			= "";
 		const previewTemplate	= previewNode.parentNode.innerHTML;
 		previewNode.parentNode.removeChild(previewNode);
 
-    const myDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
+    const current_dropzone = self.active_dropzone || new Dropzone(document.body, { // Make the whole body a dropzone
 		url					: DEDALO_ROOT_WEB + "/tools/tool_import_files/handle_files.php", // Set the url
 		// thumbnailWidth	: 192,
 		thumbnailHeight		: 96,
@@ -771,7 +782,9 @@ const create_template = async function(self) {
 							}
     });
 
-    myDropzone.on("addedfile", function(file) {
+    self.active_dropzone = current_dropzone
+
+    current_dropzone.on("addedfile", function(file) {
 
 		const button_start = file.previewElement.querySelector(".start")
 		const button_cancel = file.previewElement.querySelector(".cancel")
@@ -803,7 +816,7 @@ const create_template = async function(self) {
  		const current_name = (file.upload && file.upload.filename) ? file.upload.filename : file.name
 
 		// Hookup the start button
-		button_start.onclick = function() { myDropzone.enqueueFile(file); };
+		button_start.onclick = function() { current_dropzone.enqueueFile(file); };
 		file.previewElement.querySelector(".name").innerHTML = current_name
 		button_delete_check_box.value = current_name
 
@@ -816,7 +829,7 @@ const create_template = async function(self) {
 
     });
 
-    myDropzone.on("removedfile", async function(file) {
+    current_dropzone.on("removedfile", async function(file) {
 
     	const data_length = self.files_data.length
 
@@ -854,12 +867,12 @@ const create_template = async function(self) {
     });
 
     // Update the total progress bar
-    myDropzone.on("totaluploadprogress", function(progress) {
+    current_dropzone.on("totaluploadprogress", function(progress) {
 		// document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
 		global_progress_bar.style.width = progress + "%";
     });
 
-    myDropzone.on("sending", function(file) {
+    current_dropzone.on("sending", function(file) {
 		// Show the total progress bar when upload starts
 		// document.querySelector("#total-progress").style.opacity = "1";
 		global_progress.style.opacity = "1";
@@ -868,7 +881,7 @@ const create_template = async function(self) {
     });
 
     // Hide the total progress bar when nothing's uploading anymore
-    myDropzone.on("queuecomplete", function(progress) {
+    current_dropzone.on("queuecomplete", function(progress) {
 		// document.querySelector("#total-progress").style.opacity = "0";
 		global_progress.style.opacity = "0";
 
@@ -879,16 +892,16 @@ const create_template = async function(self) {
     // `clickable` has already been specified.
     // document.querySelector("#actions .start").onclick = function() {
     button_submit_files.onclick = function() {
-      myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
+      current_dropzone.enqueueFiles(current_dropzone.getFilesWithStatus(Dropzone.ADDED));
     };
     // document.querySelector("#actions .cancel").onclick = function() {
     button_cancel_upload.onclick = function() {
-      // myDropzone.removeAllFiles(true);
+      // current_dropzone.removeAllFiles(true);
 
-      const files = myDropzone.getFilesWithStatus(Dropzone.UPLOADING)
+      const files = current_dropzone.getFilesWithStatus(Dropzone.UPLOADING)
       for (let i = files.length - 1; i >= 0; i--) {
       	const current_file = files[i]
-			myDropzone.cancelUpload(current_file)
+			current_dropzone.cancelUpload(current_file)
 			current_file.status = Dropzone.ADDED
       }
     };
@@ -908,7 +921,7 @@ const create_template = async function(self) {
 		}
     }
 
-    myDropzone.on("success", function(file, response) {
+    current_dropzone.on("success", function(file, response) {
 
 		//showing an image created by the server after upload
 		this.emit('thumbnail', file, response.thumbnail_file);
@@ -927,6 +940,9 @@ const create_template = async function(self) {
 		button_cancel.classList.add('hide')
 		button_delete.classList.remove('hide')
 		button_delete_check_box.classList.remove('hide')
+
+ 		const row_progress_bar = file.previewElement.querySelector(".progress")
+		row_progress_bar.style.opacity = "0";
 
     });
 
@@ -969,7 +985,7 @@ const create_template = async function(self) {
 
 		for (var i = 0; i < files_length; i++) {
 			const current_file = files[i]
-			myDropzone.displayExistingFile(current_file, current_file.url, callback, crossOrigin, resizeThumbnail);
+			current_dropzone.displayExistingFile(current_file, current_file.url, callback, crossOrigin, resizeThumbnail);
 		}
 
 
