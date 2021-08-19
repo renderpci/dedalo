@@ -317,16 +317,24 @@ class tool_import_files extends tool_common {
 				#
 				# ORIGINAL IMAGE DESIRED STORE
 				$original_path 		= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path;
-				$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension); 
+				$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension);
 				if( !is_dir($original_path) ) {
 					if(!mkdir($original_path, 0777,true)) {
 						throw new Exception(" Error on read or create directory. Permission denied $original_path");
 					}
 				}
+
 				
 				# Copy the original
 				if (!copy($source_full_path, $original_file_path)) {
-					throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
+					throw new Exception("Copy ERROR for: ".$source_full_path." to ".$original_file_path);
+				}
+
+				// Delete the thumbnail copy
+				$original_file_thumb = $source_path .'/thumbnail/'. $file_name_full;
+				dump($original_file_thumb, ' original_file_thumb +---------////////////-------------------+ '.to_string());
+				if(!unlink($original_file_thumb)){
+					throw new Exception("Thumb Delete ERROR of: ".$original_file_thumb);
 				}
 
 				# JPG : la convertimos a jpg si no lo es ya
