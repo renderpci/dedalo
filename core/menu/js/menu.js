@@ -95,14 +95,15 @@ menu.prototype.build = async function(autoload=true){
 
 	if (autoload===true) {
 
-		const current_data_manager = new data_manager()
-		const cache_data = await current_data_manager.get_local_db_data(self.id, 'data')
+		const current_data_manager	= new data_manager()
+		const cache_data			= await current_data_manager.get_local_db_data(self.id, 'data')
+
 		if(cache_data){
 
 			// set the result to the datum
 				self.datum = cache_data.value
 
-			console.warn("returned menu datum from local_db ", self.id);
+			console.log("[menu.build] returned menu datum from local_db ", self.id, performance.now()-t0);
 
 		}else{
 
@@ -138,7 +139,7 @@ menu.prototype.build = async function(autoload=true){
 	// debug
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-			console.log("__Time to build [autoload:"+autoload+"]", self.model, " ms:", performance.now()-t0);
+			console.log(`__Time to build ${self.model} [autoload:${autoload}] ms:`, performance.now()-t0);
 		}
 
 	// status update
