@@ -276,7 +276,7 @@ data_manager.prototype.get_local_db = async function() {
 			console.error("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
 		}
 
-	// open db. Let us open our database
+	// open db. Let us open our database (name, version)
 		const db_request = indexedDB.open("dedalo", 6);
 
 
@@ -284,16 +284,15 @@ data_manager.prototype.get_local_db = async function() {
 
 		// error case
 			db_request.onerror = function(event) {
+
 				console.error("-> get_local_db error:", event.target);
 				reject(false)
 			};
 
 		// success case
 			db_request.onsuccess = function(event) {
-				// console.log("-> get_local_db success:", event.target);
-				
-				const db = event.target.result;			
 
+				const db = event.target.result;
 				resolve(db)
 			};
 
@@ -380,11 +379,13 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 * GET_LOCAL_DB_DATA
 */
 data_manager.prototype.get_local_db_data = async function(id, table) {
+	const t0 = performance.now()
 
 	const self = this
 
 	// get local db
 		const db = await self.get_local_db()
+		console.log("[data_manager.get_local_db_data] ms: ", performance.now()-t0);
 
 	return new Promise(function(resolve, reject){
 
