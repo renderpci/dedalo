@@ -679,27 +679,6 @@ class tool_import_files extends tool_common {
 										$target_component->set_dato($component_data->value);
 										$target_component->Save();
 									}
-
-								// move temp data from temp section to real component
-									// $temp_data_uid = $ddo->section_tipo .'_'. DEDALO_SECTION_ID_TEMP; // Like 'rsc197_tmp'
-									// if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-
-									// 	$temp_component = component_common::get_instance( $model,
-									// 													  $ddo->tipo,
-									// 													  $temp_data_uid,
-									// 													  'list',
-									// 													  $current_lang,
-									// 													  $ddo->section_tipo);
-									// 	$temp_dato = $temp_component->get_dato();
-
-									// 		dump($temp_dato, ' temp_dato +-----///----+ '.to_string("tipo:$ddo->tipo, section_tipo:$ddo->section_tipo, temp_data_uid:$temp_data_uid"));
-									// 	if (!empty($temp_dato)) {
-									// 		$component->set_dato($temp_dato);
-									// 		$component->Save();
-									// 	}
-									// }else{
-									// 	debug_log(__METHOD__." Ignored component $model - $ddo->tipo - $ddo->section_tipo without data in session. temp_data_uid: ".to_string($temp_data_uid), logger::DEBUG);
-									// }
 								break;
 
 							default:
@@ -707,6 +686,7 @@ class tool_import_files extends tool_common {
 								break;
 						}//end switch ($ddo->role)
 					}//end foreach ($ar_ddo_map as $ddo)
+
 
 					// $input_elements_in_source = array_filter($ar_ddo_map, function($item) use($current_component_option_tipo){
 					// 	return $item->role==='component_option' && $item->tipo===$current_component_option_tipo;
@@ -745,6 +725,7 @@ class tool_import_files extends tool_common {
 						$processed_info->section_id				= $section_id;
 						$processed_info->file_data				= $file_data;
 					$ar_processed[] = $processed_info;
+
 
 				debug_log(__METHOD__." Imported files and data from $section_tipo - $section_id".to_string(), logger::WARNING);
 
