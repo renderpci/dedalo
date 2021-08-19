@@ -4,7 +4,7 @@
 
 
 // import
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
@@ -12,6 +12,7 @@
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_files} from './render_tool_import_files.js'
 	import {upload_manager_init} from './upload_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 
 
 
@@ -21,20 +22,22 @@
 */
 export const tool_import_files = function () {
 	
-	this.id				= null
-	this.model			= null
-	this.mode			= null
-	this.node			= null
-	this.ar_instances	= null
-	this.status			= null
-	this.events_tokens	= null
-	this.type			= null
-	this.source_lang	= null
-	this.target_lang	= null
-	this.langs			= null
-	this.caller			= null
-	this.key_dir		= null
-	this.files_data 	= []
+	this.id					= null
+	this.model				= null
+	this.mode				= null
+	this.node				= null
+	this.ar_instances		= null
+	this.status				= null
+	this.events_tokens		= null
+	this.type				= null
+	this.source_lang		= null
+	this.target_lang		= null
+	this.langs				= null
+	this.caller				= null
+	this.key_dir			= null
+	this.active_dropzone	= null
+	this.tool_contanier		= null
+	this.files_data			= []
 
 	return true
 };//end page
@@ -69,8 +72,7 @@ tool_import_files.prototype.init = async function(options) {
 
 	// upload_manager_init
 		self.key_dir = self.caller.tipo + '_' + self.caller.section_tipo
-		await upload_manager_init({key_dir : self.key_dir})
-
+		await upload_manager_init()
 
 	return common_init
 };//end init
