@@ -8,7 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {quit} from '../../login/js/login.js'
-
+	// import {instances} from '../../common/js/instances.js'
 
 
 /**
@@ -214,26 +214,32 @@ render_menu.prototype.edit = async function() {
 			self.events_tokens.push(
 				event_manager.subscribe('render_instance', fn_update_section_label)
 			)
-			function fn_update_section_label (instance) {
-
-				if(instance.mode!=='tm' && (instance.type==='section'|| instance.type==='area')){
+			function fn_update_section_label(instance) {
+				// console.log("------ fn_update_section_label instance:",instance);
+				// console.log("------ instances:", instances.filter(el => el.type==='section'));
+				if((instance.type==='section'|| instance.type==='area') && instance.mode!=='tm'){
 
 					if (current_instance && instance.tipo===current_instance.tipo && current_instance.mode!=='edit') {
-						return
+						// nothing to do. We are already on a list
+					}else{
+						// update section label
+						// change the value of the current DOM element
+						// section_label.innerHTML = instance.label
+						// clean
+						while (section_label.firstChild) {
+							section_label.removeChild(section_label.firstChild)
+						}
+						section_label.insertAdjacentHTML('afterbegin', instance.label);
 					}
-					// change the value of the current dom element
-					// section_label.innerHTML = instance.label
-					// clean
-					while (section_label.firstChild) {
-						section_label.removeChild(section_label.firstChild)
-					}
-					section_label.insertAdjacentHTML('afterbegin', instance.label);
+
+					// update current instance
 					current_instance = instance
 				}
 			}
 			section_label.addEventListener("click", e => {
 				event.stopPropagation();
-				// event_manager
+
+				// navigate browser from edit to list
 				if (current_instance.mode==='edit'){
 					event_manager.publish('user_navigation', {
 						source : {

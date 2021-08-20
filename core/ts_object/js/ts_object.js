@@ -1792,9 +1792,9 @@ export const ts_object = new function() {
 
 						// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 							this.events_tokens.push(
-								event_manager.subscribe('update_value_'+current_component.id, update_value)
+								event_manager.subscribe('update_value_'+current_component.id, fn_update_value)
 							)
-							function update_value (changed_data) {
+							function fn_update_value(changed_data) {
 								// change the value of the current dom element
 								button_obj.firstChild.innerHTML = changed_data.value
 							}
