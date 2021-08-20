@@ -17,42 +17,44 @@
 	import {render_list_section} from './render_list_section.js'
 
 
+
 /**
 * SECTION
 */
 export const section = function() {
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.type
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
-	this.column_id
+	this.model			= null
+	this.type			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
+	this.column_id		= null
 
-	this.datum
-	this.context
-	this.data
-	this.total
+	this.datum			= null
+	this.context		= null
+	this.data			= null
+	this.total			= null
 
-	this.ar_section_id
+	this.ar_section_id	= null
 
-	this.node
-	this.ar_instances
+	this.node			= null
+	this.ar_instances	= null
 
-	this.status
-	this.paginator
+	this.status			= null
+	this.paginator		= null
 
-	this.id_variant
+	this.id_variant		= null
 
-	this.rqo_config
-	this.rqo
+	this.rqo_config		= null
+	this.rqo			= null
 
-	this.config
+	this.config			= null
+
 
 	return true
 };//end section
@@ -449,19 +451,19 @@ section.prototype.get_ar_instances = async function(){
 			const offset = (self.rqo.sqo.offset + i)
 
 			const instance_options = {
-					model			: 'section_record',
-					tipo			: current_section_tipo,
-					section_tipo	: current_section_tipo,
-					section_id		: current_section_id,
-					mode			: self.mode,
-					lang			: lang,
-					context			: current_context,
-					// data			: current_data,
-					datum			: self.datum,
-					caller			: self,
-					offset			: offset,
-					columns 		: self.columns,
-					column_id		: self.column_id
+				model			: 'section_record',
+				tipo			: current_section_tipo,
+				section_tipo	: current_section_tipo,
+				section_id		: current_section_id,
+				mode			: self.mode,
+				lang			: lang,
+				context			: current_context,
+				// data			: current_data,
+				datum			: self.datum,
+				caller			: self,
+				offset			: offset,
+				columns			: self.columns,
+				column_id		: self.column_id
 			}
 
 			// id_variant . Propagate a custom instance id to children

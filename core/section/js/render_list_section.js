@@ -35,12 +35,13 @@ const get_content_data = async function(self) {
 	// add all section_record rendered nodes
 		const ar_section_record_length = ar_section_record.length
 		if (ar_section_record_length===0) {
+
 			// no records found case
 			const row_item = no_records_node()
 			fragment.appendChild(row_item)
+
 		}else{
 			// rows
-
 			// sequential mode
 				for (let i = 0; i < ar_section_record_length; i++) {
 					const row_item = await ar_section_record[i].render()
@@ -92,19 +93,18 @@ const buttons = function(self) {
 
 		const ar_buttons_length = ar_buttons.length;
 
-		for (var i = 0; i < ar_buttons_length; i++) {
+		for (let i = 0; i < ar_buttons_length; i++) {
 			const current_button = ar_buttons[i]
 
-			if(current_button.model === 'button_delete') continue
-
-				const class_name = 'button light ' + current_button.model
+			if(current_button.model==='button_delete') continue
 
 			// button_new section
-				const button_node = ui.create_dom_element({
+				const class_name	= 'button light ' + current_button.model
+				const button_node	= ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: class_name,
 					text_content	: current_button.label,
-					parent 			: buttons_wrapper
+					parent			: buttons_wrapper
 				})
 				button_node.addEventListener('click', (e) => {
 					e.stopPropagation()
@@ -112,21 +112,19 @@ const buttons = function(self) {
 					switch(current_button.model){
 						case 'button_new':
 							event_manager.publish('new_section_' + self.id)
-						break;
-
+							break;
 						case 'button_import':
-
 							event_manager.publish('load_tool', {
 								tool_context	: current_button.tools[0],
 								caller			: self
 							})
-
-						break;
+							break;
 						default:
 							event_manager.publish('click_' + current_button.model)
+							break;
 					}
 				})
-		}
+		}//end for (let i = 0; i < ar_buttons_length; i++)
 
 
 	return fragment
@@ -177,7 +175,6 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 						filter.appendChild(filter_wrapper)
 					})
 				}
-
 		}//end if (self.mode!=='tm')
 
 	// paginator node
@@ -219,7 +216,7 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
 			id				: self.id,
-			//class_name		: self.model + ' ' + self.tipo + ' ' + self.mode
+			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
 			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 		})
 		wrapper.appendChild(fragment)
@@ -313,7 +310,7 @@ render_list_section.prototype.list_header = async function(){
 
 	const ar_nodes			= []
 	const columns_length	= columns.length
-	for (let i = 0;  i < columns_length; i++) {
+	for (let i = 0; i < columns_length; i++) {
 
 		const component = columns[i][0]
 
@@ -338,7 +335,7 @@ render_list_section.prototype.list_header = async function(){
 			})
 
 			ar_nodes.push(header_item)
-	}
+	}//end for (let i = 0; i < columns_length; i++)
 
 	// header_wrapper
 		const header_wrapper = ui.create_dom_element({
@@ -360,8 +357,8 @@ render_list_section.prototype.list_header = async function(){
 	// id column
 		const id_column = ui.create_dom_element({
 			element_type	: "div",
-			text_content 	: "ID",
-			parent 			: header_wrapper
+			text_content	: "ID",
+			parent			: header_wrapper
 		})
 
 	// columns append

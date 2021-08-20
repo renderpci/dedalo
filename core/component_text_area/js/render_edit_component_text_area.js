@@ -41,7 +41,7 @@ render_edit_component_text_area.prototype.edit = async function(options={render_
 		const render_level = options.render_level
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -211,7 +211,7 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	const value 		 = self.data.value
 	const is_inside_tool = self.is_inside_tool
@@ -263,8 +263,8 @@ const get_content_data_edit = async function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
@@ -409,7 +409,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 					// 			}
 					// 		}
 					// 	}
-			};//end if (self.caller && self.caller.constructor.name==="tool_indexation")
+			}//end if (self.caller && self.caller.constructor.name==="tool_indexation")
 
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -694,7 +694,7 @@ const get_custom_events = (self, i, service) => {
 						// nothing to do here
 
 						break;
-				};//end switch
+				}//end switch
 			}else if(evt.target.nodeName==='LABEL') {
 				// Fix text area selection values
 				if (page_globals.modo==='tool_lang') {
@@ -703,7 +703,7 @@ const get_custom_events = (self, i, service) => {
 			}else{
 				// click_no_tag_
 				event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
-			};//end click on img
+			}//end click on img
 		};//end click
 
 	// mouseup

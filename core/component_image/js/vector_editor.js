@@ -1393,7 +1393,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 					}]
 				})
 				// create the response event of the alert
-				const event = event_manager.subscribe('user_option_'+self.id, (user_option))
+				const event = event_manager.subscribe('user_option_'+self.id, user_option)
 				self.events_tokens.push( event )
 				function user_option(user_option) {
 					// success, any other option will be ignored

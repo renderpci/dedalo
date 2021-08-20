@@ -341,14 +341,12 @@ tool_time_machine.prototype.apply_value = function() {
 				dd_console("-> apply_value API response:",'DEBUG',response);
 
 				// close tool modal
-					const close_promise = self.modal_container.close()
+					self.modal_container.close()
 
 				// reload source component on finish close
-					close_promise.then(()=>{
-						if (self.caller) {
-							self.caller.refresh()
-						}
-					})
+					if (self.caller) {
+						self.caller.refresh()
+					}
 
 				resolve(response)
 			})
