@@ -8,7 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common,create_source,load_data_debug} from '../../common/js/common.js'
+	import {common, set_context_vars, create_source, load_data_debug} from '../../common/js/common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
@@ -296,10 +296,9 @@ section.prototype.build = async function(autoload=false) {
 			permissions	: 0
 		}
 		self.mode 	= section_context.mode
-		self.label 	= section_context.label
 
-	// permissions. calculate and set (used by section records later)
-		self.permissions = section_context.permissions || 0
+	// update instance properties from context
+		set_context_vars(self, self.context)
 
 	// initiator . Url defined var or Caller of parent section
 	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
