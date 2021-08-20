@@ -526,7 +526,8 @@
 			>.button {
 				background-color: #FD891D;
 				color: #ffffff;
-				display: block;
+				// display: block;
+				display: flex;
 				width: auto;
 				padding: 1em;
 				padding-top: 0.5em;
@@ -575,14 +576,20 @@
 			>.button {
 				background-color: #FD891D;
 				color: #ffffff;
-				display: block;
+				display: inherit;
 				width: auto;
 				padding: 1em;
-				padding-top: 0.5em;
-				padding-bottom: 0.5em;
+				padding-top: 0.25em;
+				padding-bottom: 0.25em;
 				border-radius: 0.25em;
-				margin: 0.5em;
+				margin: 0.25em;
+				// margin-top: 0.25em;
+				// margin-bottom: 0.25em;
 				height: auto;
+
+				>.button {
+					margin-left: 0;
+				}
 
 				&:hover {
 					color: #000000;

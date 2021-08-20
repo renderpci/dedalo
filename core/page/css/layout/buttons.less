@@ -60,20 +60,21 @@
 	.button { // @icon_name:null, @color:black, @opacity:0.7, @size:1em
 		cursor: pointer;
 		user-select: none;
-		display: inline-block;
+		// display: inline-block;
+		display: flex;
 		width: 1em;
 		min-width: 1em;
 		height: 1em;
+		line-height: 1em;
 		opacity: 0.8;
 		background-color: #000000;
 		// background-repeat: no-repeat;
 		// background-position: center;
 		// background-size: contain;
 		//padding: 0.5em;
-		line-height: 1em;
 		margin: 0.5em;
-		margin-top: 0.25em;
-		margin-bottom: 0.25em;
+		// margin-top: 0.25em;
+		// margin-bottom: 0.25em;
 
 		&:hover {
 			opacity: 1 !important;
@@ -84,11 +85,11 @@
 
 	// inside buttons_container, all buttons are white
 		.buttons_container & {
-			background-color: #ffffff;
+			background-color: #ffffff !important;
 		}
 	// variants after create button
 		&.white {
-			background-color: #ffffff;
+			background-color: #ffffff !important;
 		}
 	}//end .button
 
@@ -207,6 +208,15 @@
 			color: @color_primary;
 			text-decoration: none;
 		}
+
+		// bg means the button have a custom background image
+		// &.bg {
+		// 	background-repeat: no-repeat;
+		// 	background-size: contain;
+		// 	background-position: -1.5em 0;
+		// 	background-origin: content-box;
+		// 	padding-left: 2em !important;
+		// }
 	}
 
 
