@@ -1,0 +1,142 @@
+{
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1331"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1333"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "inf": "Fecha de creación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 20,
+                            "hour": 9,
+                            "time": 64976982390,
+                            "year": 2021,
+                            "month": 8,
+                            "minute": 46,
+                            "second": 30
+                        }
+                    }
+                ]
+            }
+        },
+        "dd201": {
+            "inf": "Fecha de modificación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 20,
+                            "hour": 10,
+                            "time": 64976983350,
+                            "year": 2021,
+                            "month": 8,
+                            "minute": 2,
+                            "second": 30
+                        }
+                    }
+                ]
+            }
+        },
+        "dd612": {
+            "inf": "Descripción [component_text_area]",
+            "dato": {
+                "lg-eng": [
+                    "Data export to different formats, csv, excel, html, etc"
+                ]
+            }
+        },
+        "dd799": {
+            "inf": "Etiqueta [component_input_text]",
+            "dato": {
+                "lg-eng": [
+                    "Export"
+                ],
+                "lg-spa": [
+                    "Exportar"
+                ]
+            }
+        },
+        "dd1326": {
+            "inf": "Nombre de la herramienta [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "tool_export"
+                ]
+            }
+        },
+        "dd1327": {
+            "inf": "Versión [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "1.0.0"
+                ]
+            }
+        },
+        "dd1328": {
+            "inf": "Versión Dédalo mínima [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            }
+        }
+    },
+    "section_id": 6,
+    "created_date": "2021-08-20 09:46:30",
+    "section_tipo": "dd1340",
+    "modified_date": "2021-08-20 10:02:30",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd73",
+    "modified_by_userID": -1
+}
