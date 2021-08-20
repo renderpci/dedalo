@@ -778,19 +778,30 @@ export const ui = {
 		build_section_tool_button : (tool_context, self) => {
 
 			// button
-				const class_name = 'button light bg ' + tool_context.model
+				const class_name = 'button light ' + tool_context.model
 
 				const tool_button = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: class_name,
-					text_content	: tool_context.label,
+					// text_content	: tool_context.label,
 					dataset			: {
 						tool : tool_context.name
-					},
-					style			: {
-						"background-image"		: "url('" +tool_context.icon +"')"
-					},
+					}
+					// style			: {
+					// 	"background-image"		: "url('" +tool_context.icon +"')"
+					// }
 				})
+				// icon inside
+				const tool_icon = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button white tool',
+					style			: {
+						"-webkit-mask"		: "url('" +tool_context.icon +"')",
+						"mask"				: "url('" +tool_context.icon +"')"
+					},
+					parent : tool_button
+				})
+				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
 
 			// Events
 				tool_button.addEventListener('click', publish_load_tool)
