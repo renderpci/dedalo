@@ -36,7 +36,7 @@ render_edit_component_input_text.prototype.edit = async function(options={render
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -238,7 +238,7 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	// sort vars
 		const value				= self.data.value

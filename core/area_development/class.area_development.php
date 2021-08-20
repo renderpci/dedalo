@@ -49,18 +49,18 @@ class area_development extends area_common {
 				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('hacer_backup');
 				$item->info		= null;
-				$file_name 		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
+				$file_name		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
 				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';					
 				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[						
+					'fn'		=> 'init_form',
+					'options'	=> (object)[
 						'confirm_text' => label::get_label('seguro')
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'make_backup',
-					'options' 	=> null
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'make_backup',
+					'options'	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -75,23 +75,23 @@ class area_development extends area_common {
 				$item->info		= null;
 				$item->body		= 'Delete and create again table relations records based on locators data of sections in current table';					
 				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
-						'inputs' 		=> [
+					'fn'		=> 'init_form',
+					'options'	=> (object)[
+						'inputs' => [
 							(object)[
-								'type' => 'text',
-								'name' => 'tables',
-								'label' => 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
-								'mandatory' => true
+								'type'		=> 'text',
+								'name'		=> 'tables',
+								'label'		=> 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
+								'mandatory'	=> true
 							]
 						],
 						'confirm_text' => label::get_label('seguro')
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'regenerate_relations',
-					'options' 	=> null
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'regenerate_relations',
+					'options'	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -104,7 +104,7 @@ class area_development extends area_common {
 				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('actualizar_estructura');
 				$item->info		= null;
-				$item->body 	= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
+				$item->body		= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
 					'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
 					'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
 					label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
@@ -130,9 +130,9 @@ class area_development extends area_common {
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'update_structure',
-					'options' 	=> null
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'update_structure',
+					'options'	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -167,9 +167,9 @@ class area_development extends area_common {
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'structure_to_json',
-					'options' 	=> null
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'structure_to_json',
+					'options'	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -182,7 +182,7 @@ class area_development extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('importar_estructura_json');
-				$item->info		= null;				
+				$item->info		= null;
 
 				$file_name		= 'structure.json';
 				$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
@@ -190,8 +190,8 @@ class area_development extends area_common {
 				$item->body		= $file_path;
 				$confirm_text	= label::get_label('seguro');
 				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
+					'fn'		=> 'init_form',
+					'options'	=> (object)[
 						'inputs' => [
 							(object)[
 								'type'		=> 'text',
@@ -205,9 +205,9 @@ class area_development extends area_common {
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'import_structure_from_json',
-					'options' 	=> null
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'import_structure_from_json',
+					'options'	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -238,7 +238,7 @@ class area_development extends area_common {
 				$item->body 	.= implode('<br>', array_filter($list));					
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_form',
-					'options' => (object)[						
+					'options' => (object)[
 						'confirm_text' => label::get_label('seguro')
 					]
 				];
@@ -260,50 +260,50 @@ class area_development extends area_common {
 				$item->body 	= 'Regenerate css from actual structure (Ontology)';									
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_form',
-					'options' => (object)[						
+					'options' => (object)[
 						'confirm_text' => label::get_label('seguro')
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'build_structure_css',
-					'options' 	=> null
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'build_structure_css',
+					'options'	=> null
 				];
 			$ar_widgets[] = $item;
 
 
 		// update data version
 			include(DEDALO_CORE_PATH . '/base/update/class.update.php');
-			$updates 		= update::get_updates();
-			$update_version = update::get_update_version();
+			$updates		= update::get_updates();
+			$update_version	= update::get_update_version();
 			if(empty($update_version)) {
 
 				$item = new stdClass();
-					$item->id 		= 'update_data_version';
-					$item->typo 	= 'widget';
-					$item->tipo 	= $this->tipo;
-					$item->parent 	= $this->tipo;
-					$item->label 	= label::get_label('actualizar').' '.label::get_label('datos');
-					$item->info 	= null;
-					$item->body 	= '<span style="color:green">Data format is updated: '.implode(".", get_current_version_in_db()).'</span>';
-					$item->trigger 	= (object)[
+					$item->id		= 'update_data_version';
+					$item->typo		= 'widget';
+					$item->tipo		= $this->tipo;
+					$item->parent	= $this->tipo;
+					$item->label	= label::get_label('actualizar').' '.label::get_label('datos');
+					$item->info		= null;
+					$item->body		= '<span style="color:green">Data format is updated: '.implode(".", get_current_version_in_db()).'</span>';
+					$item->trigger	= (object)[
 					];
 				$ar_widgets[] = $item;
 
 			}else{
 
-				$current_dedalo_version = implode(".", get_dedalo_version());
-				$current_version_in_db  = implode(".", get_current_version_in_db());
-				$update_version_plain 	= implode('', $update_version);
+				$current_dedalo_version	= implode(".", get_dedalo_version());
+				$current_version_in_db	= implode(".", get_current_version_in_db());
+				$update_version_plain	= implode('', $update_version);
 
 				$item = new stdClass();
-					$item->id 		= 'update_data_version';
-					$item->typo 	= 'widget';
-					$item->tipo 	= $this->tipo;
-					$item->parent 	= $this->tipo;
-					$item->label 	= label::get_label('actualizar').' '.label::get_label('datos');
-					$item->info 	= 'Click to update dedalo data version';
-					$item->body 	= '<span style="color:red">Current data version: '.$current_version_in_db . '</span> -----> '. implode('.', $update_version);
+					$item->id		= 'update_data_version';
+					$item->typo		= 'widget';
+					$item->tipo		= $this->tipo;
+					$item->parent	= $this->tipo;
+					$item->label	= label::get_label('actualizar').' '.label::get_label('datos');
+					$item->info		= 'Click to update dedalo data version';
+					$item->body		= '<span style="color:red">Current data version: '.$current_version_in_db . '</span> -----> '. implode('.', $update_version);
 					// Actions list
 						#dump($updates->$update_version_plain, '$updates->$update_version_plain ++ '.to_string());
 						if (isset($updates->$update_version_plain)) {
@@ -322,9 +322,9 @@ class area_development extends area_common {
 							}
 						}
 					$item->trigger 	= (object)[
-						'dd_api' 		=> 'dd_utils_api',
-						'action' 	 	=> 'update_version',
-						'options' 	 	=> null
+						'dd_api'	=> 'dd_utils_api',
+						'action'	=> 'update_version',
+						'options'	=> null
 					];
 				$ar_widgets[] = $item;
 			}
@@ -567,9 +567,9 @@ class area_development extends area_common {
 
 				while($rows = pg_fetch_assoc($result)) {
 
-					$section_id 	= $rows['section_id'];
-					$section_tipo 	= $rows['section_tipo'];
-					$datos 			= json_decode($rows['datos']);
+					$section_id		= $rows['section_id'];
+					$section_tipo	= $rows['section_tipo'];
+					$datos			= json_decode($rows['datos']);
 
 					if (!empty($datos) && isset($datos->relations)) {
 
@@ -587,10 +587,10 @@ class area_development extends area_common {
 							foreach ($component_dato as $from_component_tipo => $ar_locators) {
 								
 								$propagate_options = new stdClass();
-									$propagate_options->ar_locators  		= $ar_locators;
-									$propagate_options->section_id 	 		= $section_id;
-									$propagate_options->section_tipo 		= $section_tipo;
-									$propagate_options->from_component_tipo = $from_component_tipo;
+									$propagate_options->ar_locators			= $ar_locators;
+									$propagate_options->section_id			= $section_id;
+									$propagate_options->section_tipo		= $section_tipo;
+									$propagate_options->from_component_tipo	= $from_component_tipo;
 								
 								// propagate_component_dato_to_relations_table takes care of delete and insert new relations
 								$propagate_response = search::propagate_component_dato_to_relations_table($propagate_options);
@@ -625,7 +625,7 @@ class area_development extends area_common {
 
 		// response
 			$response->result = true;
-			$response->msg[0] = "Ok. All data is propagated successfully"; // Override first message
+			$response->msg[0] = "OK. All data is propagated successfully"; // Override first message
 			$response->msg    = "<br>".implode('<br>', $response->msg);
 
 		

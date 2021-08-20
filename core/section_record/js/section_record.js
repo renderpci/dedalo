@@ -19,37 +19,38 @@
 */
 export const section_record = function() {
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.datum
-	this.context
-	this.data
+	this.datum			= null
+	this.context		= null
+	this.data			= null
 
-	this.paginated_key
+	this.paginated_key	= null
 
 	// control
-	//this.builded = false
+	//this.builded		= false
 
-	this.node
+	this.node			= null
 
-	this.events_tokens
-	this.ar_instances
-	this.caller
+	this.events_tokens	= null
+	this.ar_instances	= null
+	this.caller			= null
 
-	this.matrix_id
-	this.id_variant
+	this.matrix_id		= null
+	this.id_variant		= null
 
-	this.column_id
+	this.column_id		= null
 
-	this.offset
+	this.offset			= null
+
 
 	return true
 };//end section
@@ -63,11 +64,11 @@ export const section_record = function() {
 // prototypes assign
 	section_record.prototype.build		= common.prototype.build
 	section_record.prototype.destroy	= common.prototype.destroy
-	section_record.prototype.render 	= common.prototype.render
-	section_record.prototype.list 		= render_section_record.prototype.list
+	section_record.prototype.render		= common.prototype.render
+	section_record.prototype.list		= render_section_record.prototype.list
 	section_record.prototype.tm			= render_section_record.prototype.list
 	section_record.prototype.search		= render_section_record.prototype.list
-	section_record.prototype.edit 		= render_section_record.prototype.edit
+	section_record.prototype.edit		= render_section_record.prototype.edit
 
 
 
@@ -275,22 +276,22 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		// the columns has reverse order, the last columns match with the component locator, (and the first columns is the most deep coponent in the path)
 
 			const get_valid_columns = function(section_tipo, ar_columns ){
+
 					const ar_column = []
 
-					for (var i = 0; i < ar_columns.length; i++) {
+					const ar_columns_length = ar_columns.length
+					for (let i = 0; i < ar_columns_length; i++) {
 						const current_column	= ar_columns[i]
 						const last_column		= current_column[current_column.length - 1];
 						// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the loctator
 						if(Array.isArray(last_column.section_tipo)){
-							const ddo_check = last_column.section_tipo.find(item => item === section_tipo)
+							const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
 							if(ddo_check) {
 								ar_column.push(current_column)
 							}
-
-						}else if(last_column.section_tipo === section_tipo){
+						}else if(last_column.section_tipo===section_tipo){
 							ar_column.push(current_column)
 						}
-
 					}
 					return ar_column
 				}
@@ -417,7 +418,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 		
 	// undefined case. If the current item don't has data will be instanciated with the current section_id	
 		if(!component_data) {
-			// empy component data build
+			// empty component data build
 			return {
 				tipo			: ddo.tipo,
 				section_tipo	: section_tipo,
