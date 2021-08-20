@@ -1127,13 +1127,14 @@ export const ui = {
 
 			// target_instance node not ready case
 			source_instance.events_tokens.push(
-				event_manager.subscribe('render_'+target_instance.id , async (instance_wrapper) => {
-					const target_container = instance_wrapper.querySelector(container_selector)
-					if (target_container) {
-						target_container.appendChild(source_node)
-					}
-				})
-			)//end events push
+				event_manager.subscribe('render_'+target_instance.id , fn_render_target)
+			)
+			function fn_render_target(instance_wrapper) {
+				const target_container = instance_wrapper.querySelector(container_selector)
+				if (target_container) {
+					target_container.appendChild(source_node)
+				}
+			}
 		}
 
 
