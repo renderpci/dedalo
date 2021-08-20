@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common, create_source} from '../../common/js/common.js'
+	import {common, set_context_vars, create_source} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -302,24 +302,6 @@ component_common.prototype.build_OLD = async function(autoload=false){
 	return true
 };//end component_common.prototype.build
 
-
-
-/**
-* SET_CONTEXT_VARS
-* type, label, tools, divisor, permissions
-*/
-export const set_context_vars = function(self, context) {
-
-	if (self.context) {
-		self.type			= self.context.type // typology of current instance, usually 'component'
-		self.label			= self.context.label // label of current component like 'summary'
-		self.tools			= self.context.tools || [] //set the tools of the component
-		self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
-		self.permissions	= self.context.permissions || null
-	}
-
-	return true
-};//end set_context_vars
 
 
 
