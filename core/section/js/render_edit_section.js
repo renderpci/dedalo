@@ -53,7 +53,6 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 			// buttons 	 : current_buttons
 		})
 
-
 	// CSS INJECT
 		// function create_new_CSS_style_sheet() {
 		// 	// Create the <style> tag
@@ -162,7 +161,6 @@ const get_content_data = async function(self, ar_section_record) {
 		}
 
 
-
 	return content_data
 };//end get_content_data
 
@@ -191,7 +189,7 @@ const no_records_node = () => {
 	const node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'no_records',
-		inner_html		: get_label["no_records"] || "No records found"
+		inner_html		: get_label.no_records || "No records found"
 	})
 
 	return node

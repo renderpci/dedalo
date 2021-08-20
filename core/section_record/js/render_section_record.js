@@ -515,7 +515,6 @@ const build_id_column = function(self) {
 									},
 									sqo : {
 										section_tipo	: [{tipo : self.section_tipo}],
-										filter			: null,
 										limit			: 1,
 										offset			: offset,
 										filter			: self.caller.rqo.sqo.filter || null										
