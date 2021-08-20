@@ -86,6 +86,23 @@ common.prototype.build = async function () {
 }//end common.prototype.build
 
 
+/**
+* SET_CONTEXT_VARS
+* type, label, tools, divisor, permissions
+*/
+export const set_context_vars = function(self, context) {
+
+	if (self.context) {
+		self.type			= self.context.type // typology of current instance, usually 'component'
+		self.label			= self.context.label // label of current component like 'summary'
+		self.tools			= self.context.tools || [] //set the tools of the component
+		self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
+		self.permissions	= self.context.permissions || null
+	}
+
+	return true
+};//end set_context_vars
+
 
 /**
 * RENDER
