@@ -134,11 +134,11 @@ class ImageMagick {
 		switch ($mode) {
 			case 'list':
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
 				break;
 			case 'edit':
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 jpg -quality 72 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 -quality 72 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 -auto-orient -quality 72 \"$target_file\" ";
 				break;
 			default:
 				throw new Exception("Error Processing file. Thumb mode is not valid", 1);
@@ -266,7 +266,7 @@ class ImageMagick {
 				break;
 		}
 
-		$flags .= " -quiet "; // Always add
+		$flags .= " -auto-orient -quiet "; // Always add
 
 
 		$command = MAGICK_PATH . "convert $source_file_with_layers $flags \"$target_file\" ";	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB
