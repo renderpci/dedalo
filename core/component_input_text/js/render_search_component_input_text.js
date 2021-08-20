@@ -33,7 +33,7 @@ render_search_component_input_text.prototype.search = async function() {
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const content_data = await get_content_data_search(self)
+	const content_data = get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -102,7 +102,7 @@ render_search_component_input_text.prototype.search = async function() {
 * GET_CONTENT_DATA_SEARCH
 * @return DOM node content_data
 */
-const get_content_data_search = async function(self) {
+const get_content_data_search = function(self) {
 
 	const value	= self.data.value
 	const mode	= self.mode
