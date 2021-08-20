@@ -268,6 +268,12 @@ class tool_import_files extends tool_common {
 						throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
 					}
 
+				// Delete the thumbnail copy
+					$original_file_thumb = $source_path .'/thumbnail/'. $file_name_full;
+					if(!unlink($original_file_thumb)){
+						throw new Exception("Thumb Delete ERROR of: ".$original_file_thumb);
+					}
+
 				// extension unify. convert JPG to jpg
 					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
 						$original_file_path_jpg = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
@@ -321,19 +327,28 @@ class tool_import_files extends tool_common {
 				# EXIF try to get date from file metadata
 				$DateTimeOriginal=false;
 				try {
-					$command			= MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .$source_full_path;
+					$command			= MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .'"'.$source_full_path.'"';
 					$DateTimeOriginal	= shell_exec($command);
+					$regex   = "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
+
+					if(empty($DateTimeOriginal)){
+						$command			= MAGICK_PATH . 'identify -format "%[date:modify]" ' .'"'.$source_full_path.'"';
+						$DateTimeOriginal	= shell_exec($command);
+						$regex   = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
+					}
+
+
 				} catch (Exception $e) {
 					if(SHOW_DEBUG) {
 						error_log("Error on get DateTimeOriginal from image metadata");
 					}
 				}
+
 				if (!empty($DateTimeOriginal)) {
 
 					$dd_date		= new dd_date();
 					$original_dato	= (string)$DateTimeOriginal;
 
-					$regex   = "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
 					preg_match($regex, $original_dato, $matches);
 
 					if(isset($matches[1])) $dd_date->set_year((int)$matches[1]);
@@ -342,6 +357,9 @@ class tool_import_files extends tool_common {
 					if(isset($matches[4])) $dd_date->set_hour((int)$matches[4]);
 					if(isset($matches[5])) $dd_date->set_minute((int)$matches[5]);
 					if(isset($matches[6])) $dd_date->set_second((int)$matches[6]);
+					if(isset($matches[7])) $dd_date->set_ms((int)$matches[7]);
+					// if(isset($matches[8])) $dd_date->set_timezonehh((int)$matches[8]);
+					// if(isset($matches[9])) $dd_date->set_timezonemm((int)$matches[9]);
 				}
 				break;
 
