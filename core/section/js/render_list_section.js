@@ -72,10 +72,10 @@ const get_content_data = async function(self) {
 
 
 /**
-* BUTTONS
-* @return DOM node buttons
+* GET_BUTTONS
+* @return DOM node fragment
 */
-const buttons = function(self) {
+const get_buttons = function(self) {
 
 	const ar_buttons = self.context.buttons
 
@@ -128,9 +128,10 @@ const buttons = function(self) {
 				})
 		}
 
+	ui.add_tools(self, buttons_wrapper)
 
 	return fragment
-};//end buttons
+};//end get_buttons
 
 
 
@@ -160,7 +161,7 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 	// buttons
 		if (self.mode!=='tm') {
 
-			const buttons_node = buttons(self);
+			const buttons_node = get_buttons(self);
 
 			if(buttons_node){
 				fragment.appendChild(buttons_node)
