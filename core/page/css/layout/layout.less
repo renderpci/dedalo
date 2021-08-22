@@ -2800,27 +2800,29 @@
 		width: fit-content;
 		border-right: 1px solid @color_grey_dark;
 		font-size: 1em;
+		background-color: @color_white_dirty;
 
-		// Standard section container (receive all json elements inside)
-		ul.list_container {
-			// background-color: #e27b5e;
 
+		ul {
+			display: block;
+			position: relative;
+			// width: fit-content;
+
+			// Standard section container (receive all json elements inside)
+			&.list_container {
+				// background-color: #e27b5e;
+			}
 			&.target_list_container {
 				display: flex;
 				border-left: 1px solid @color_grey_dark;
 			}
 
-		}
-		ul {
-			position: relative;
-			width: fit-content;
-			position: relative;
 
 			li {
 				position: relative;
 				line-height: 1em;
 				padding: 0.25em;
-
+				display: block;
 				// // padding: 4px;
 				// // padding-right: 1em;
 				// border-right: 1px solid #a5a5a5;
@@ -2830,14 +2832,14 @@
 
 				// Section label bar
 				&.section_bar_label {
-					background-color: #575a5c;;
+					display: block;
+					background-color: #575a5c;
 					color: #ffffff;
 					// font-family: "Oxygen-light";
 					// border-right: 1px solid #a5a5a5;
 		    		// line-height: 1em;
 					// Avoid click events affect here (received with :after)
 					pointer-events: none;
-					padding-right: 1em;
 
 					&:after {
 						content: "X";
@@ -2853,7 +2855,6 @@
 						cursor: pointer;
 						// Allow receive here the click button of real dom element
 						pointer-events: all;
-						padding-left: 1em;
 					}
 				}//end section_bar_label
 
