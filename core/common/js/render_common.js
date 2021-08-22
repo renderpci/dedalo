@@ -78,12 +78,10 @@ export const render_components_list = async function(options) {
 					inner_html		: element.label
 				})
 				section_bar.addEventListener("click", function(e){
-				//this.parentNode.parentNode.innerHTML = ""
 					if (target_div.classList.contains("target_container")) {
 						target_div.innerHTML = ""
 					}
-
-				});
+				})
 				break;
 
 			case element.model==='section_group' || element.model==='section_tab':
@@ -100,7 +98,6 @@ export const render_components_list = async function(options) {
 						class_name		: "section_group_label",
 						inner_html		: element.label
 					})
-
 				break;
 
 			default:
@@ -118,24 +115,22 @@ export const render_components_list = async function(options) {
 				// }else if (element.model==="component_portal"){
 				// 	class_names = "search_component_label"
 				// 	is_draggable 		= false
-
 				// }
 
-				const section_id = self.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
-				const component = ui.create_dom_element({
-					element_type 			: 'li',
-					parent 		 			: section_group,
-					class_name 	 			: class_names,
-					inner_html 				: element.label,
-					draggable 	 			: is_draggable,
-					data_set 				: {
-												path			: JSON.stringify(calculated_component_path),
-												tipo			: element.tipo,
-												section_tipo	: element.section_tipo,
-												section_id		: section_id
-											  }
+				const section_id	= self.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
+				const component		= ui.create_dom_element({
+					element_type	: 'li',
+					parent			: section_group,
+					class_name		: class_names,
+					inner_html		: element.label,
+					draggable		: is_draggable,
+					data_set		: {
+						path			: JSON.stringify(calculated_component_path),
+						tipo			: element.tipo,
+						section_tipo	: element.section_tipo,
+						section_id		: section_id
+					}
 				})
-			
 
 				// if (element.model!=="component_portal"){
 					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
@@ -151,7 +146,7 @@ export const render_components_list = async function(options) {
 					component.classList.add('has_subquery')
 
 					// Event on click load "children" section inside target_container recursively
-					const target_section  = element.target_section_tipo[0] // Select first only
+					const target_section = element.target_section_tipo[0] // Select first only
 					component.addEventListener("click", function(e){
 
 						// recursion
