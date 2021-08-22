@@ -78,6 +78,9 @@ export const search = function() {
 	search.prototype.delete_preset			= delete_preset
 	search.prototype.edit_preset			= edit_preset
 
+	search.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
+	search.prototype.calculate_component_path		= common.prototype.calculate_component_path
+
 
 
 /**
@@ -318,49 +321,48 @@ search.prototype.build = async function(){
 
 
 /**
-* get_section_elements_context
+* GET_SECTION_ELEMENTS_CONTEXT
 * Call to dd_core_api to obtain the list of components associated to current options section_tipo
 * @param object options
 *	string options.section_tipo
 * @return promise
 */
-search.prototype.get_section_elements_context = async function(options) {
+	// search.prototype.get_section_elements_context = async function(options) {
 
-	const self = this
+	// 	const self = this
 
-	// section_tipo (string|array)
-		const section_tipo 	= options.section_tipo
+	// 	// section_tipo (string|array)
+	// 		const section_tipo 	= options.section_tipo
 
-	// components
-		const get_components = async () => {
-			if (self.components_list[section_tipo]) {
+	// 	// components
+	// 		const get_components = async () => {
+	// 			if (self.components_list[section_tipo]) {
 
-				return self.components_list[section_tipo]
+	// 				return self.components_list[section_tipo]
 
-			}else{
+	// 			}else{
 
-				// load data
-					const current_data_manager 	= new data_manager()
-					const api_response 			= await current_data_manager.request({
-						//url  : self.url_trigger,
-						body : {
-							action			: "get_section_elements_context",
-							context_type	: 'simple',
-							ar_section_tipo	: section_tipo
-						}
-					})
+	// 				// load data
+	// 					const current_data_manager 	= new data_manager()
+	// 					const api_response 			= await current_data_manager.request({
+	// 						body : {
+	// 							action			: "get_section_elements_context",
+	// 							context_type	: 'simple',
+	// 							ar_section_tipo	: section_tipo
+	// 						}
+	// 					})
 
-				// fix
-					self.components_list[section_tipo] = api_response.result
+	// 				// fix
+	// 					self.components_list[section_tipo] = api_response.result
 
-				return api_response.result
-			}
-		}
-		const components = get_components()
+	// 				return api_response.result
+	// 			}
+	// 		}
+	// 		const components = get_components()
 
-	
-	return components
-};//end get_section_elements_context
+
+	// 	return components
+	// };//end get_section_elements_context
 
 
 
@@ -371,41 +373,41 @@ search.prototype.get_section_elements_context = async function(options) {
 // *	string options.section_tipo
 // * @return promise
 // */
-// search.prototype.load_component_context = async function(options) {
+	// search.prototype.load_component_context = async function(options) {
 
-// 	const self = this
+	// 	const self = this
 
-// 	// vars
-// 		const section_tipo 	= options.section_tipo
+	// 	// vars
+	// 		const section_tipo 	= options.section_tipo
 
-// 	// components
-// 		const get_components = async () => {
-// 			if (self.components_list[section_tipo]) {
+	// 	// components
+	// 		const get_components = async () => {
+	// 			if (self.components_list[section_tipo]) {
 
-// 				return self.components_list[section_tipo]
+	// 				return self.components_list[section_tipo]
 
-// 			}else{
+	// 			}else{
 
-// 				// load data
-// 					const current_data_manager 	= new data_manager()
-// 					const api_response 			= await current_data_manager.request({
-// 						body : {
-// 							action			: "get_section_components",
-// 							ar_section_tipo	: [section_tipo]
-// 						}
-// 					})
+	// 				// load data
+	// 					const current_data_manager 	= new data_manager()
+	// 					const api_response 			= await current_data_manager.request({
+	// 						body : {
+	// 							action			: "get_section_components",
+	// 							ar_section_tipo	: [section_tipo]
+	// 						}
+	// 					})
 
-// 				// fix
-// 					self.components_list[section_tipo] = api_response.result
+	// 				// fix
+	// 					self.components_list[section_tipo] = api_response.result
 
-// 				return api_response.result
-// 			}
-// 		}
-// 		const components = get_components()
+	// 				return api_response.result
+	// 			}
+	// 		}
+	// 		const components = get_components()
 
 
-// 	return components
-// };//end load_component_context
+	// 	return components
+	// };//end load_component_context
 
 
 
@@ -420,31 +422,31 @@ search.prototype.get_section_elements_context = async function(options) {
 * @return array component_path
 *	Array of objects
 */
-search.prototype.calculate_component_path = function(component_context, path) {
+	// search.prototype.calculate_component_path = function(component_context, path) {
 
-	if (!Array.isArray(path)) {
-		console.log("[search2.calculate_component_path] Fixed bad path as array! :",path);
-		path = []
-	}
+	// 	if (!Array.isArray(path)) {
+	// 		console.log("[search2.calculate_component_path] Fixed bad path as array! :",path);
+	// 		path = []
+	// 	}
 
-	const calculate_component_path = []
+	// 	const calculate_component_path = []
 
-	// Add current path data
-	const path_len = path.length
-	for (let i = 0; i < path_len; i++) {
-		calculate_component_path.push(path[i])
-	}
+	// 	// Add current path data
+	// 	const path_len = path.length
+	// 	for (let i = 0; i < path_len; i++) {
+	// 		calculate_component_path.push(path[i])
+	// 	}
 
-	// Add component path data
-	calculate_component_path.push({
-		section_tipo 	: component_context.section_tipo,
-		component_tipo 	: component_context.tipo,
-		modelo  		: component_context.model,
-		name  			: component_context.label.replace(/<[^>]+>/g, '')
-	})
+	// 	// Add component path data
+	// 	calculate_component_path.push({
+	// 		section_tipo 	: component_context.section_tipo,
+	// 		component_tipo 	: component_context.tipo,
+	// 		modelo  		: component_context.model,
+	// 		name  			: component_context.label.replace(/<[^>]+>/g, '')
+	// 	})
 
-	return calculate_component_path
-};//end calculate_component_path
+	// 	return calculate_component_path
+	// };//end calculate_component_path
 
 
 search.prototype.get_section_id = function() {
@@ -452,6 +454,8 @@ search.prototype.get_section_id = function() {
 	self.section_id = ++self.section_id
 	return 'tmp_seach_' + self.section_id 
 }
+
+
 
 /**
 * BUILD_DOM_GROUP

@@ -4,6 +4,7 @@
 
 
 // imports
+	import {render_components_list} from '../../common/js/render_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/cookie.js'
@@ -36,7 +37,8 @@ render_search.prototype.list = async function() {
 		const filter_wrapper = await self.render_base()
 
 	// components_list. render section component list [left]
-		await self.render_components_list({		
+		await render_components_list({
+			self			: self,
 			section_tipo	: self.target_section_tipo,
 			target_div		: self.search_container_selector,
 			path			: []
@@ -144,7 +146,7 @@ render_search.prototype.render_base = async function() {
 	// fields list . List of section fields usable in search
 		const search_container_selector = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'search_container_selector display_none',
+			class_name		: 'components_list_container search_container_selector display_none',
 			parent			: search_global_container
 		})
 		// set
@@ -238,163 +240,163 @@ render_search.prototype.render_base = async function() {
 *
 * @return promise
 */
-render_search.prototype.render_components_list = async function(options) {
+	// render_search.prototype.render_components_list = async function(options) {
 
-	const self = this
+	// 	const self = this
 
-	const section_tipo	= options.section_tipo
-	const target_div	= options.target_div
-	const path			= options.path
+	// 	const section_tipo	= options.section_tipo
+	// 	const target_div	= options.target_div
+	// 	const path			= options.path
 
-	// load components from api
-		const ar_elements = await self.get_section_elements_context({
-			section_tipo : section_tipo
-		})
-		//console.log("ar_elements:",ar_elements);
+	// 	// load components from api
+	// 		const ar_elements = await self.get_section_elements_context({
+	// 			section_tipo : section_tipo
+	// 		})
+	// 		//console.log("ar_elements:",ar_elements);
 
-	// Clean target_div
-		while (target_div.hasChildNodes()) {
-			target_div.removeChild(target_div.lastChild);
-		}
+	// 	// Clean target_div
+	// 		while (target_div.hasChildNodes()) {
+	// 			target_div.removeChild(target_div.lastChild);
+	// 		}
 
-	// First item check
-		if (!ar_elements || typeof ar_elements[0]==="undefined") {
-			console.warn(`[render_components_list] Error. Empty ar_elements on get_section_elements_context ${section_tipo}`, ar_elements);
-			return false
-		}
+	// 	// First item check
+	// 		if (!ar_elements || typeof ar_elements[0]==="undefined") {
+	// 			console.warn(`[render_components_list] Error. Empty ar_elements on get_section_elements_context ${section_tipo}`, ar_elements);
+	// 			return false
+	// 		}
 
-	// Div container
-		const top_parent = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name 	 	: "search_section_container",
-			parent 		    : target_div
-		})
+	// 	// Div container
+	// 		const top_parent = ui.create_dom_element({
+	// 			element_type	: 'ul',
+	// 			class_name 	 	: "search_section_container",
+	// 			parent 		    : target_div
+	// 		})
 
-	// Div target_container
-		const target_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name 	 	: "search_section_container target_container",
-			parent 		    : target_div
-		})
+	// 	// Div target_container
+	// 		const target_container = ui.create_dom_element({
+	// 			element_type	: 'ul',
+	// 			class_name 	 	: "search_section_container target_container",
+	// 			parent 		    : target_div
+	// 		})
 
-	let section_group
+	// 	let section_group
 
-	const len = ar_elements.length
-	for (let i = 0; i < len; i++) {
-		const element = ar_elements[i]
+	// 	const len = ar_elements.length
+	// 	for (let i = 0; i < len; i++) {
+	// 		const element = ar_elements[i]
 
-		switch (true) {
+	// 		switch (true) {
 
-			case element.model==='section':
-				// section title bar
-				const section_bar = ui.create_dom_element({
-					element_type : 'li',
-					parent 		 : top_parent,
-					class_name 	 : "search_section_bar_label ",
-					inner_html 	 : element.label
-				})
-				section_bar.addEventListener("click", function(e){
-				//this.parentNode.parentNode.innerHTML = ""
-					if (target_div.classList.contains("target_container")) {
-						target_div.innerHTML = ""
-					}
+	// 			case element.model==='section':
+	// 				// section title bar
+	// 				const section_bar = ui.create_dom_element({
+	// 					element_type : 'li',
+	// 					parent 		 : top_parent,
+	// 					class_name 	 : "search_section_bar_label ",
+	// 					inner_html 	 : element.label
+	// 				})
+	// 				section_bar.addEventListener("click", function(e){
+	// 				//this.parentNode.parentNode.innerHTML = ""
+	// 					if (target_div.classList.contains("target_container")) {
+	// 						target_div.innerHTML = ""
+	// 					}
 
-				});
-				break;
+	// 				});
+	// 				break;
 
-			case element.model==='section_group' || element.model==='section_tab':
-				// Section group container (ul)
-					section_group = ui.create_dom_element({
-						element_type : 'ul',
-						parent 		 : top_parent
-					})
-					// Section group label (li)
-					ui.create_dom_element({
-						element_type : 'li',
-						parent 		 : section_group,
-						class_name 	 : "search_section_group_label",
-						inner_html 	 : element.label
-					})
+	// 			case element.model==='section_group' || element.model==='section_tab':
+	// 				// Section group container (ul)
+	// 					section_group = ui.create_dom_element({
+	// 						element_type : 'ul',
+	// 						parent 		 : top_parent
+	// 					})
+	// 					// Section group label (li)
+	// 					ui.create_dom_element({
+	// 						element_type : 'li',
+	// 						parent 		 : section_group,
+	// 						class_name 	 : "search_section_group_label",
+	// 						inner_html 	 : element.label
+	// 					})
 
-				break;
+	// 				break;
 
-			default:
-				// Calculated path (from dom position)
-				const calculated_component_path = self.calculate_component_path( element, path )
+	// 			default:
+	// 				// Calculated path (from dom position)
+	// 				const calculated_component_path = self.calculate_component_path( element, path )
 
-				const class_names 	= "search_component_label element_draggable"
-				const is_draggable 	= true
-				// if (element.model==="component_portal") {
-				// 	// Autocompletes only
-				// 	// Pointer to open "children" section (portals and aurocompletes)
-				// 	// Builds li element
-				// 	class_names = "search_component_label element_draggable"
-				// }else if (element.model==="component_portal"){
-				// 	class_names = "search_component_label"
-				// 	is_draggable 		= false
+	// 				const class_names 	= "search_component_label element_draggable"
+	// 				const is_draggable 	= true
+	// 				// if (element.model==="component_portal") {
+	// 				// 	// Autocompletes only
+	// 				// 	// Pointer to open "children" section (portals and aurocompletes)
+	// 				// 	// Builds li element
+	// 				// 	class_names = "search_component_label element_draggable"
+	// 				// }else if (element.model==="component_portal"){
+	// 				// 	class_names = "search_component_label"
+	// 				// 	is_draggable 		= false
 
-				// }
+	// 				// }
 
-				const section_id = self.get_section_id()
-				const component = ui.create_dom_element({
-					element_type 			: 'li',
-					parent 		 			: section_group,
-					class_name 	 			: class_names,
-					inner_html 				: element.label,
-					draggable 	 			: is_draggable,
-					data_set 				: { path : JSON.stringify(calculated_component_path),
-												tipo 			: element.tipo,
-												section_tipo 	: element.section_tipo,
-												section_id 		: section_id
-											}
-				})
-			
-
-				// if (element.model!=="component_portal"){
-					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
-					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-					component.addEventListener('drop',function(e){self.on_drop(this,e)})
-				// }
-
-				// Portals and autocomplete only
-				// Pointer to open "children" target section (portals and autocompletes)
-				// Builds li element
-				if (element.target_section_tipo){
-
-					component.classList.add('has_subquery')
-
-					// Event on click load "children" section inside target_container recursively
-					const target_section  = element.target_section_tipo[0] // Select first only
-					component.addEventListener("click", function(e){
-
-						// component_tipo : component.component_tipo
-						self.render_components_list({
-							section_tipo : target_section,
-							target_div 	 : target_container,
-							path 		 : calculated_component_path
-						})
-						// Reset active in current wrap
-						const ar_active_now = top_parent.querySelectorAll("li.active")
-						const len = ar_active_now.length
-						for (let i = len - 1; i >= 0; i--) {
-							ar_active_now[i].classList.remove('active');
-						}
-						// Active current
-						this.classList.add('active');
-					});
-
-				}
-				break;
-		}//end switch (true)
-
-	}//end for (let i = 0; i < len; i++)
-
-	// Scroll window to top always
-		window.scrollTo(0, 0);
+	// 				const section_id = self.get_section_id()
+	// 				const component = ui.create_dom_element({
+	// 					element_type 			: 'li',
+	// 					parent 		 			: section_group,
+	// 					class_name 	 			: class_names,
+	// 					inner_html 				: element.label,
+	// 					draggable 	 			: is_draggable,
+	// 					data_set 				: { path : JSON.stringify(calculated_component_path),
+	// 												tipo 			: element.tipo,
+	// 												section_tipo 	: element.section_tipo,
+	// 												section_id 		: section_id
+	// 											}
+	// 				})
 
 
-	return true
-};//end render_components_list
+	// 				// if (element.model!=="component_portal"){
+	// 					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
+	// 					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
+	// 					component.addEventListener('drop',function(e){self.on_drop(this,e)})
+	// 				// }
+
+	// 				// Portals and autocomplete only
+	// 				// Pointer to open "children" target section (portals and autocompletes)
+	// 				// Builds li element
+	// 				if (element.target_section_tipo){
+
+	// 					component.classList.add('has_subquery')
+
+	// 					// Event on click load "children" section inside target_container recursively
+	// 					const target_section  = element.target_section_tipo[0] // Select first only
+	// 					component.addEventListener("click", function(e){
+
+	// 						// component_tipo : component.component_tipo
+	// 						self.render_components_list({
+	// 							section_tipo : target_section,
+	// 							target_div 	 : target_container,
+	// 							path 		 : calculated_component_path
+	// 						})
+	// 						// Reset active in current wrap
+	// 						const ar_active_now = top_parent.querySelectorAll("li.active")
+	// 						const len = ar_active_now.length
+	// 						for (let i = len - 1; i >= 0; i--) {
+	// 							ar_active_now[i].classList.remove('active');
+	// 						}
+	// 						// Active current
+	// 						this.classList.add('active');
+	// 					});
+
+	// 				}
+	// 				break;
+	// 		}//end switch (true)
+
+	// 	}//end for (let i = 0; i < len; i++)
+
+	// 	// Scroll window to top always
+	// 		window.scrollTo(0, 0);
+
+
+	// 	return true
+	// };//end render_components_list
 
 
 
