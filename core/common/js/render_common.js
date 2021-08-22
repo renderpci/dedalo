@@ -16,7 +16,7 @@
 *	dom element options.target_div (Target dom element on new data will be added)
 *	array path (Cumulative array of component path objects)
 *
-* @return promise
+* @return promise bool
 */
 export const render_components_list = async function(options) {
 
@@ -26,14 +26,12 @@ export const render_components_list = async function(options) {
 		const target_div	= options.target_div
 		const path			= options.path
 
-	// load components from api
-	// this function could be defined by the caller or use the standard function in common.js
+	// load components from api. this function could be defined by the caller or use the standard function in common.js
 		const ar_elements = await self.get_section_elements_context({
 			section_tipo : section_tipo
 		})
-		//console.log("ar_elements:",ar_elements);
 
-	// Clean target_div
+	// clean target_div
 		while (target_div.hasChildNodes()) {
 			target_div.removeChild(target_div.lastChild);
 		}
@@ -44,19 +42,19 @@ export const render_components_list = async function(options) {
 			return false
 		}
 
-	// Div container
-		const top_parent = ui.create_dom_element({
+	// list_container
+		const list_container = ui.create_dom_element({
 			element_type	: 'ul',
-			// class_name		: "search_section_container",
-			class_name		: "components_list_section_container",
+			// class_name	: "search_section_container",
+			class_name		: "list_container",
 			parent			: target_div
 		})
 
-	// Div target_container
-		const target_container = ui.create_dom_element({
+	// target_list_container
+		const target_list_container = ui.create_dom_element({
 			element_type	: 'ul',
-			// class_name		: "search_section_container target_container",
-			class_name		: "components_list_section_container target_container",
+			// class_name	: "search_section_container target_container",
+			class_name		: "list_container target_list_container",
 			parent			: target_div
 		})
 
@@ -72,13 +70,13 @@ export const render_components_list = async function(options) {
 				// section title bar
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
-					parent			: top_parent,
+					parent			: list_container,
 					// class_name	: "search_section_bar_label",
 					class_name		: "section_bar_label",
 					inner_html		: element.label
 				})
 				section_bar.addEventListener("click", function(e){
-					if (target_div.classList.contains("target_container")) {
+					if (target_div.classList.contains("target_list_container")) {
 						target_div.innerHTML = ""
 					}
 				})
@@ -86,18 +84,18 @@ export const render_components_list = async function(options) {
 
 			case element.model==='section_group' || element.model==='section_tab':
 				// Section group container (ul)
-					section_group = ui.create_dom_element({
-						element_type : 'ul',
-						parent 		 : top_parent
-					})
-					// Section group label (li)
-					ui.create_dom_element({
-						element_type	: 'li',
-						parent			: section_group,
-						// class_name	: "search_section_group_label",
-						class_name		: "section_group_label",
-						inner_html		: element.label
-					})
+				section_group = ui.create_dom_element({
+					element_type : 'ul',
+					parent 		 : list_container
+				})
+				// Section group label (li)
+				ui.create_dom_element({
+					element_type	: 'li',
+					parent			: section_group,
+					// class_name	: "search_section_group_label",
+					class_name		: "section_group_label",
+					inner_html		: element.label
+				})
 				break;
 
 			default:
@@ -141,31 +139,30 @@ export const render_components_list = async function(options) {
 				// Portals and autocomplete only
 				// Pointer to open "children" target section (portals and autocompletes)
 				// Builds li element
-				if (element.target_section_tipo){
+					if (element.target_section_tipo){
 
-					component.classList.add('has_subquery')
+						component.classList.add('has_subquery')
 
-					// Event on click load "children" section inside target_container recursively
-					const target_section = element.target_section_tipo[0] // Select first only
-					component.addEventListener("click", function(e){
-
-						// recursion
-						render_components_list({
-							self			: self,
-							section_tipo	: target_section,
-							target_div		: target_container,
-							path			: calculated_component_path
+						// Event on click load "children" section inside target_list_container recursively
+						const target_section = element.target_section_tipo[0] // Select first only
+						component.addEventListener("click", function(e){
+							// recursion render_components_list
+								render_components_list({
+									self			: self,
+									section_tipo	: target_section,
+									target_div		: target_list_container,
+									path			: calculated_component_path
+								})
+							// Reset active in current wrap
+								const ar_active_now	= list_container.querySelectorAll("li.active")
+								const len			= ar_active_now.length
+								for (let i = len - 1; i >= 0; i--) {
+									ar_active_now[i].classList.remove('active');
+								}
+							// Active current
+							this.classList.add('active');
 						})
-						// Reset active in current wrap
-						const ar_active_now = top_parent.querySelectorAll("li.active")
-						const len = ar_active_now.length
-						for (let i = len - 1; i >= 0; i--) {
-							ar_active_now[i].classList.remove('active');
-						}
-						// Active current
-						this.classList.add('active');
-					})
-				}
+					}
 				break;
 		}//end switch (true)
 
