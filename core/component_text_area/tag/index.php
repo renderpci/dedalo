@@ -355,8 +355,8 @@ if($text!==false) {
 
 
 	// Get your Text Width and Height
-	$text_width  = abs($bbox[2])-abs($bbox[0]);
-	$text_height = abs($bbox[7])-abs($bbox[1]);
+	$text_width  = abs(intval($bbox[2]))-abs(intval($bbox[0]));
+	$text_height = abs(intval($bbox[7]))-abs(intval($bbox[1]));
 
 	// Calculate coordinates of the text
 	$x = ($image_width/2)  - ($text_width/2) 	+ $offsetX ;
