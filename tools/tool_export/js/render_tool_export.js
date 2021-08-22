@@ -77,17 +77,17 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 		// fields list . List of section fields usable in search
-			const search_container_selector = ui.create_dom_element({
-				element_type	: 'ul',
-				class_name		: 'search_section_container target_container',
-				parent			: components_list_container
-			})
+			// const search_container_selector = ui.create_dom_element({
+			// 	element_type	: 'ul',
+			// 	class_name		: 'search_section_container target_container',
+			// 	parent			: components_list_container
+			// })
 
 		// components_list. render section component list [left]
 			await render_components_list({
 				self			: self,
 				section_tipo	: self.target_section_tipo,
-				target_div		: search_container_selector,
+				target_div		: components_list_container,
 				path			: []
 			})
 

@@ -3795,26 +3795,28 @@ ul.inputs_container > li:focus-within .hidden_button {
   width: fit-content;
   border-right: 1px solid #949494;
   font-size: 1em;
+  background-color: #faf9f9;
 }
-.components_list_container ul.list_container {
-  width: fit-content;
+.components_list_container ul {
+  display: block;
   position: relative;
 }
-.components_list_container ul.list_container.target_list_container {
+.components_list_container ul.target_list_container {
   display: flex;
   border-left: 1px solid #949494;
 }
 .components_list_container ul li {
-  position: inherit;
+  position: relative;
   line-height: 1em;
   padding: 0.25em;
+  display: block;
   user-select: none;
 }
 .components_list_container ul li.section_bar_label {
+  display: block;
   background-color: #575a5c;
   color: #ffffff;
   pointer-events: none;
-  padding-right: 1em;
 }
 .components_list_container ul li.section_bar_label:after {
   content: "X";
@@ -3824,7 +3826,6 @@ ul.inputs_container > li:focus-within .hidden_button {
   text-align: center;
   cursor: pointer;
   pointer-events: all;
-  padding-left: 1em;
 }
 .components_list_container ul li.section_group_label {
   background-color: #949494;
@@ -4915,32 +4916,6 @@ div.tool_inspector_div .icon_bs {
 .toggle_container_selector:active,
 .toggle_container_selection_presets:active {
   opacity: 0.7;
-}
-.search_section_container.target_container {
-  display: flex;
-  background-color: rgba(201, 201, 201, 0.3);
-}
-ul.search_section_container ul {
-  position: relative;
-}
-ul.search_section_container ul li {
-  padding: 4px;
-  padding-right: 1em;
-  border-right: 1px solid #a5a5a5;
-  -moz-user-select: none;
-  -khtml-user-select: none;
-  -webkit-user-select: none;
-  user-select: none;
-  display: grid;
-}
-ul.search_section_container ul li > * {
-  display: grid;
-  width: 99.99%;
-  padding-right: 1em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  height: inherit;
 }
 .search_global_container[draggable] {
   -moz-user-select: none;
