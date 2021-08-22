@@ -2795,7 +2795,121 @@
 
 
 
+// components_list_container
+	.components_list_container {
+		display: flex;
 
+		// Standard section container (receive all json elements inside)
+		ul.components_list_section_container {
+			//background-color: #88D6E4;
+			width: fit-content;
+
+			// Section label bar
+			>.section_bar_label {
+				font-family: "Oxygen-light";
+				padding: 0.25em;
+				border-right: 1px solid #a5a5a5;
+				background-color: #575a5c;;
+				color: #ffffff;
+				font-size: 1em;
+	    		line-height: 1em;
+				// Avoid click events affect here (received with :after)
+				pointer-events: none;
+
+				.target_container >.components_list_section_container &:after {
+					content: "X";
+					display: block;
+					// background-color: #a0a0a0;
+					float: right;
+					width: 1em;
+					text-align: center;
+					//border-radius: 50%;
+					//line-height: 15px;
+					//position: relative;
+					//top: 2px;
+					cursor: pointer;
+					// Allow receive here the click button of real dom element
+					pointer-events: all;
+					padding-left: 1em;
+				}
+			}
+
+			li.search_section_group_label {
+				background-color: @bg_section_group_color; //#575A5C;
+				color: #ffffff;
+			}
+
+			li.component_label {
+				background-color: @bg_component_color;
+				//background-color: rgba(251, 251, 251, 0.48);
+				border-bottom: 0.5px solid #666;
+
+				&:hover {
+					background-color: @component_color_hover;
+					color: #ffffff;
+				}
+				&:active {
+					//background-color: initial;
+					//color: initial;
+					opacity: 0.6;
+				}
+			}
+
+			// has_subquery
+			li.component_label.has_subquery {
+				//background-color: #A71B0C
+				cursor: pointer;
+				background-position: right 17px bottom 7px;
+
+				// Flecha
+				&::after {
+					content: " ";
+					display: inline-block;
+					width: 7px;
+					height: 12px;
+					border-bottom: 5px solid transparent;
+					border-top: 5px solid transparent;
+					border-left: 5px solid #000;
+					pointer-events: none;
+					position: absolute;
+					right: 6px;
+					margin-top: 4px;
+				}
+
+
+				&.active {
+					background-color: @selected_color !important;
+					//font-weight: bold;
+					border-right: 1px solid @selected_color;
+					color: #ffffff;
+
+					&::after {
+						border-left: 5px solid #ffffff;
+					}
+				}
+			}//end li.component_label.has_subquery
+
+			// Draggable backgroud svg
+			.element_draggable {
+				cursor: move;
+				background: url('../../themes/default/draggable.svg');
+				background-color: rgba(0, 0, 0, 0);
+				background-repeat: repeat;
+				background-position-x: 0%;
+				background-position-y: 0%;
+				background-size: auto auto;
+				background-color: rgba(0,0,0,0);
+				background-repeat: repeat;
+				background-position-x: 0;
+				background-position-y: 0;
+				background-size: auto auto;
+				background-position: right 5px bottom 7px;
+				background-repeat: no-repeat;
+				background-size: 12px;
+			}
+
+		}//end ul.components_list_container
+	}
 
 
 
