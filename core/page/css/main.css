@@ -3794,12 +3794,13 @@ ul.inputs_container > li:focus-within .hidden_button {
   display: flex;
   width: fit-content;
   border-right: 1px solid #949494;
+  font-size: 1em;
 }
-.components_list_container ul.components_list_section_container {
+.components_list_container ul.list_container {
   width: fit-content;
   position: relative;
 }
-.components_list_container ul.components_list_section_container.target_container {
+.components_list_container ul.list_container.target_list_container {
   display: flex;
   border-left: 1px solid #949494;
 }
