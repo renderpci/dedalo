@@ -4,7 +4,9 @@
 
 
 // imports
+	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -43,10 +45,10 @@ render_tool_export.prototype.edit = async function (options={render_level:'full'
 			content_data : content_data
 		})
 
-	// modal container
+	// tool_container container
 		const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
-		modal.on_close = async () => {
+		const tool_container  = ui.attach_to_modal(header, wrapper, null, 'big')
+		tool_container.on_close = async () => {
 			// tool destroy
 				await self.destroy(true, true, true)
 			// refresh source component text area
@@ -54,14 +56,6 @@ render_tool_export.prototype.edit = async function (options={render_level:'full'
 					self.caller.refresh()
 				}
 		}
-
-	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation		
-		const related_list_node = render_related_list(self)
-		header.appendChild(related_list_node)
-
-	// get_tag_info. Fires build tag info panel nodes at begin
-		get_tag_info(self)
-
 
 	return wrapper
 };//end render_tool_export
@@ -76,14 +70,59 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// right_container 
-		const right_container = ui.create_dom_element({
+	// components_list_container
+		const components_list_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'right_container',
+			class_name		: 'components_list_container',
+			parent			: fragment
+		})
+		// fields list . List of section fields usable in search
+			const search_container_selector = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'search_section_container target_container',
+				parent			: components_list_container
+			})
+
+		// components_list. render section component list [left]
+			await render_components_list({
+				self			: self,
+				section_tipo	: self.target_section_tipo,
+				target_div		: search_container_selector,
+				path			: []
+			})
+
+	// export_components_container
+		const export_components_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_components_container',
+			parent			: fragment
+		})
+			const list_title = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'list_title',
+				text_content 	: get_label.elementos_activos,
+				parent			: export_components_container
+			})
+			// drag and drop events
+		export_components_container.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
+		export_components_container.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
+		export_components_container.addEventListener('drop',function(e){self.on_drop(this,e)})
+		export_components_container.addEventListener('dragover',function(e){self.on_dragover(this,e)})
+		export_components_container.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
+
+	// export_buttons_config
+		const export_buttons_config = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_buttons_config',
 			parent			: fragment
 		})
 
-
+	// export_buttons_options
+		const export_buttons_options = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_buttons_options',
+			parent			: fragment
+		})
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -98,6 +137,99 @@ const get_content_data_edit = async function(self) {
 };//end get_content_data_edit
 
 
+
+
+
+/**
+* BUILD_export_COMPONENT
+* @return dom object
+*/
+render_tool_export.prototype.build_export_component = async function(parent_div, path_plain, current_value, q_operator, section_id) {
+
+	const self = this
+
+	const path			= JSON.parse(path_plain)
+	const last_item		= path[path.length-1]
+	const first_item	= path[0]
+
+
+	// export_component container. Create dom element before load html from trigger
+		const export_component = ui.create_dom_element({
+			element_type	: 'div',
+			parent			: parent_div,
+			class_name		: "export_component",
+			data_set		: {
+				path		: path_plain,
+				section_id	: section_id
+			}
+		})
+
+	// component_instance. Get functional component to render
+		const component_options = {
+			section_id		: section_id,
+			section_tipo	: last_item.section_tipo,
+			component_tipo	: last_item.component_tipo,
+			model			: last_item.modelo,
+			mode			: 'search'
+		}
+
+		const value = last_item.value || []
+
+	// Render component
+		// await component_instance.build(true)
+		const component_instance = await instances.get_instance(component_options)
+	console.log("component_instance:",component_instance);
+	// inject value from search user preset
+		component_instance.data = {value : value}
+
+	// inject value from search user preset
+		component_instance.datum = {
+			data	: [{value : value}]
+		}
+
+	// render the component
+		const component_node = await component_instance.render()
+
+	// Inject component html
+		export_component.appendChild(component_node)
+
+	// button close
+		const export_component_button_close = ui.create_dom_element({
+			element_type	: 'span',
+			parent			: export_component,
+			class_name		: "button close"
+		})
+		export_component_button_close.addEventListener("click",function(e){
+			// remove search box and content (component) from dom
+			export_component.parentNode.removeChild(export_component)
+			// delete the instance from search ar_instances
+			const delete_instance_index = self.ar_instances.findIndex( instance => instance.id === component_instance.id )
+			self.ar_instances.splice(delete_instance_index, 1)
+			// destroy component instance
+			// component_instance.destroy(true);
+			// Set as changed
+			// self.update_state({state:'changed'})
+		})
+
+	// label component source if exists
+		if (first_item!==last_item) {
+			//console.log("first_item:",first_item);
+			const label_add = parent_div.querySelector("span.label_add")
+			if (label_add) {
+				label_add.innerHTML = first_item.name +" "+ label_add.innerHTML
+			}
+		}
+
+	// Check update_component_with_value_state
+	// If component have any value or q_operator, set style with different color to remark it
+	//	component_common.update_component_with_value_state( export_component.querySelector("div.wrap_component") )
+
+	// show hidden parent cantainer
+		parent_div.classList.remove("hide")
+
+
+	return true
+};//end build_export_component
 
 
 
