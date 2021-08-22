@@ -91,28 +91,28 @@ danger {
 	// }
 
 
-// loading
-	.loading {
-		opacity: 0.5;
-		pointer-events: none; // avoid user click actions
-		// animation: loading_fade_out 300ms ease-out;
-		transition: opacity 0.25s
-	}
-	@keyframes loading_fade_out {
-		0%  { opacity: 1; }
-		100% { opacity: 0.5; }
-	}
-// hide
-	.hide {
-		//display: none !important;
-		visibility: hidden !important;
-		opacity: 0 !important;
-		// transition: visibility 0.25s, height 0.25s, opacity 0.25s linear;
-		height: 0 !important;
-		width: 0 !important;
-		padding: 0!important;
-		margin: 0!important;
-	}
+// loading (moved to inline page.phtml)
+	// .loading {
+	// 	opacity: 0.5;
+	// 	pointer-events: none; // avoid user click actions
+	// 	// animation: loading_fade_out 300ms ease-out;
+	// 	transition: opacity 0.25s
+	// }
+	// @keyframes loading_fade_out {
+	// 	0%  { opacity: 1; }
+	// 	100% { opacity: 0.5; }
+	// }
+// hide (moved to inline page.phtml)
+	// .hide {
+	// 	//display: none !important;
+	// 	visibility: hidden !important;
+	// 	opacity: 0 !important;
+	// 	// transition: visibility 0.25s, height 0.25s, opacity 0.25s linear;
+	// 	height: 0 !important;
+	// 	width: 0 !important;
+	// 	padding: 0!important;
+	// 	margin: 0!important;
+	// }
 // hidden
 	.hidden {
 		visibility: hidden;
@@ -124,26 +124,26 @@ danger {
 	.display_none {
 		display: none !important;
 	}
-// debug
-	.debug {
-		display: grid;
-		grid-template-columns: 1fr 1fr 1fr;
-		background-color: #f1f2f3;
-		padding: 1em;
-		overflow: auto;
+// debug (moved to inline page.phtml)
+	// .debug {
+	// 	display: grid;
+	// 	grid-template-columns: 1fr 1fr 1fr;
+	// 	background-color: #f1f2f3;
+	// 	padding: 1em;
+	// 	overflow: auto;
 
-		pre {
-			z-index: 0;
-			outline: 1px solid #cad0d4;
-			overflow-wrap: anywhere;
-		}
+	// 	pre {
+	// 		z-index: 0;
+	// 		outline: 1px solid #cad0d4;
+	// 		overflow-wrap: anywhere;
+	// 	}
 
-		.total_time {
-			position: fixed;
-			right:2em;
-			top:1em;
-		}
-	}
+	// 	.total_time {
+	// 		position: fixed;
+	// 		right:2em;
+	// 		top:1em;
+	// 	}
+	// }
 // text_unselectable
 	.text_unselectable {
 		-webkit-user-select: none !important;
