@@ -1494,7 +1494,8 @@ abstract class common {
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
-				$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $this->section_tipo);
+				$current_tool_section_tipo = $this->section_tipo ?? $this->tipo;
+				$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
 				$tools[]		= $tool_context;
 			}//end foreach ($tools_list as $item)
 
