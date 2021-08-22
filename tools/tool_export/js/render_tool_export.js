@@ -91,6 +91,8 @@ const get_content_data_edit = async function(self) {
 				path			: []
 			})
 
+				console.log("self.components_list:",self.components_list);
+
 	// export_components_container
 		const export_components_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -144,7 +146,7 @@ const get_content_data_edit = async function(self) {
 * BUILD_export_COMPONENT
 * @return dom object
 */
-render_tool_export.prototype.build_export_component = async function(parent_div, path_plain, current_value, q_operator, section_id) {
+render_tool_export.prototype.build_export_component = async function(parent_div, path_plain, ddo) {
 
 	const self = this
 
@@ -160,35 +162,22 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			class_name		: "export_component",
 			data_set		: {
 				path		: path_plain,
-				section_id	: section_id
+				// section_id	: section_id
 			}
 		})
 
-	// component_instance. Get functional component to render
-		const component_options = {
-			section_id		: section_id,
-			section_tipo	: last_item.section_tipo,
-			component_tipo	: last_item.component_tipo,
-			model			: last_item.modelo,
-			mode			: 'search'
-		}
-
-		const value = last_item.value || []
-
-	// Render component
-		// await component_instance.build(true)
-		const component_instance = await instances.get_instance(component_options)
-	console.log("component_instance:",component_instance);
-	// inject value from search user preset
-		component_instance.data = {value : value}
-
-	// inject value from search user preset
-		component_instance.datum = {
-			data	: [{value : value}]
-		}
-
-	// render the component
-		const component_node = await component_instance.render()
+	// component  node
+	const component_node		= ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: 'component_label',
+			inner_html		: ddo.label,
+			// draggable		: is_draggable,
+			data_set		: {
+				path			: path,
+				tipo			: ddo.tipo,
+				section_tipo	: ddo.section_tipo,
+			}
+		})
 
 	// Inject component html
 		export_component.appendChild(component_node)
@@ -203,7 +192,7 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			// remove search box and content (component) from dom
 			export_component.parentNode.removeChild(export_component)
 			// delete the instance from search ar_instances
-			const delete_instance_index = self.ar_instances.findIndex( instance => instance.id === component_instance.id )
+			const delete_ddo_index = self.ar_ddo_to_export.findIndex( el => el.id === ddo.id )
 			self.ar_instances.splice(delete_instance_index, 1)
 			// destroy component instance
 			// component_instance.destroy(true);
@@ -219,10 +208,6 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 				label_add.innerHTML = first_item.name +" "+ label_add.innerHTML
 			}
 		}
-
-	// Check update_component_with_value_state
-	// If component have any value or q_operator, set style with different color to remark it
-	//	component_common.update_component_with_value_state( export_component.querySelector("div.wrap_component") )
 
 	// show hidden parent cantainer
 		parent_div.classList.remove("hide")
