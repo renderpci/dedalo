@@ -1,10 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title><?php echo $tipo .' ' . $section_id ?></title>
-	<link href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>" rel="stylesheet">
-	<?php /*<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet"> */?>
 	<link rel="shortcut icon" href="../../favicon.ico" />
+	<title><?php echo $tipo .' ' . $section_id ?></title>
+	<style type="text/css">
+		.loading {
+			opacity: 0.5;
+			pointer-events: none;
+			transition: opacity 0.25s
+		}
+		.hide {
+			visibility: hidden !important;
+			opacity: 0 !important;
+			height: 0 !important;
+			width: 0 !important;
+			padding: 0!important;
+			margin: 0!important;
+		}
+		.debug {
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
+			background-color: #f1f2f3;
+			padding: 1em;
+			overflow: auto;
+		}
+		.debug pre {
+			z-index: 0;
+			outline: 1px solid #cad0d4;
+			overflow-wrap: anywhere;
+		}
+		.debug .total_time {
+			position: fixed;
+			right:2em;
+			top:1em;
+		}
+	</style>
+	<link rel="stylesheet" type="text/css" href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>" />
+	<?php /*<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet"> */?>
+	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce.woff" as="font" type="font/woff" crossorigin>
+	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce-small.woff" as="font" type="font/woff" crossorigin>
 </head>
 <body>
 	<div id="main" class="hide"></div>
@@ -22,22 +56,23 @@
 	import {dd_console} from '../common/js/utils/index.js'
 	( async () => {
 
-		const main = document.getElementById("main")
-			  main.classList.add("loading")
+		// main CSS add loading
+			const main = document.getElementById("main")
+				  main.classList.add("loading")
 
 		// page instance
 			const page = await get_instance({
 				model	: 'page',
 				context	: <?php echo json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
-			});
+			})
 
 		// page instance build and render
 			const build			= await page.build()
 			const wrapper_page	= await page.render()
 
-		// main add and restore class
+		// main. Add node and restore class
 			main.appendChild(wrapper_page)
-	 		main.classList.remove("loading","hide")
+			main.classList.remove("loading","hide")
 
 		// debug
 			if(SHOW_DEBUG===true) {
