@@ -53,7 +53,7 @@ class DDModal extends HTMLElement {
 			}
 
 			/* The Close Button */
-			.close {
+			.close_modal {
 				color: white;
 				float: right;
 				font-size: 1.75em;
@@ -63,8 +63,8 @@ class DDModal extends HTMLElement {
     			right: 0.5em;
     			z-index: 3;
 			}
-			.close:hover,
-			.close:focus {
+			.close_modal:hover,
+			.close_modal:focus {
 				color: #000;
 				text-decoration: none;
 				cursor: pointer;
@@ -98,7 +98,7 @@ class DDModal extends HTMLElement {
 		<div class="modal">
 			<div class="modal-content">
 				<div class="modal-header">
-					<span class="close">&times;</span>
+					<span class="close_modal">&times;</span>
 					<slot name="header" class="header">Modal box default header</slot>
 				</div>
 				<div class="modal-body">
@@ -114,14 +114,14 @@ class DDModal extends HTMLElement {
 	connectedCallback() {
 		this._modal = this.shadowRoot.querySelector(".modal");
 		// this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
-		this.shadowRoot.querySelector(".close").addEventListener('click', this._hideModal.bind(this));
+		this.shadowRoot.querySelector(".close_modal").addEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").addEventListener('click', this._hideModal.bind(this));
 		document.addEventListener('keyup', this.detect_key)
 		window.modal = this // fix modal in window for easy access to close
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
-		this.shadowRoot.querySelector(".close").removeEventListener('click', this._hideModal.bind(this));
+		this.shadowRoot.querySelector(".close_modal").removeEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('click', this._hideModal.bind(this));
 		document.removeEventListener('keyup', this.detect_key);
 	}
@@ -148,7 +148,7 @@ class DDModal extends HTMLElement {
 	_hideModal(e) {
 		e.stopPropagation();
 		// only click over base modal or button close are aceppted
-		if (e.target.matches('.modal') || e.target.matches('.close')) {
+		if (e.target.matches('.modal') || e.target.matches('.close_modal')) {
 			this._closeModal()
 		}
 	}
