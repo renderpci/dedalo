@@ -330,86 +330,107 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// 	parent 		 	: li
 		// })
 
-	// service_tinymce
-		const current_service = new service_tinymce()
+	// init_current_service
+		const init_current_service = function() {
 
-		// editor_config
-			const editor_config = {
-				plugins			: ["paste","image","print","searchreplace","code","fullscreen","noneditable"],
-				toolbar			: "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save",
-				custom_buttons	: get_custom_buttons(self, i, current_service),
-				custom_events	: get_custom_events(self, i, current_service)
+			// service_tinymce
+				const current_service = new service_tinymce()
+
+			// editor_config
+				const editor_config = {
+					plugins			: ["paste","image","print","searchreplace","code","fullscreen","noneditable"],
+					toolbar			: "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save",
+					custom_buttons	: get_custom_buttons(self, i, current_service),
+					custom_events	: get_custom_events(self, i, current_service)
+				}
+
+			// init editor
+				current_service.init(self, li, {
+					value			: value,
+					key				: i,
+					editor_config	: editor_config
+				})
+				.then(function(initied){
+					// fix current_service
+					self.service[i] = current_service
+				})
+
+			return current_service
+		}//end init_current_service
+
+	// observer. init the editor when container node is in DOM
+		const observer = new IntersectionObserver(function(entries) {
+			// if(entries[0].isIntersecting === true) {}
+			const entry = entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+				observer.disconnect();
+
+				init_current_service()
+
+				// observer.unobserve(entry.target);
 			}
+		}, { threshold: [0] });
+		observer.observe(li);
 
-		// init editor
-			current_service.init(self, li, {
-				value			: value,
-				key				: i,
-				editor_config	: editor_config
-			})
+	// add button create fragment (Only when caller is a tool_indexation instance)
+		if (self.caller && self.caller.constructor.name==="tool_indexation") {
 
-		// fix current_service
-			self.service[i] = current_service
+			// create_fragment event subscription
+				// self.events_tokens.push(
+				// 	event_manager.subscribe('create_fragment'+'_'+ self.id, self.create_fragment.bind(self))
+				// )
 
-		// add button create fragment (Only when caller is a tool_indexation instance)
-			if (self.caller && self.caller.constructor.name==="tool_indexation") {
+			// // text_selection
+				// 	console.log("event_manager.events:",event_manager.events);
+				// 	self.events_tokens.push(
+				// 		event_manager.subscribe('text_selection_'+ self.id, show_button_create_fragment)
+				// 	)
+				// 	function show_button_create_fragment(options) {
+				// 		dd_console('--> show_button_create_fragment options', 'DEBUG', options)
 
-				// create_fragment event subscription
-					// self.events_tokens.push(
-					// 	event_manager.subscribe('create_fragment'+'_'+ self.id, self.create_fragment.bind(self))
-					// )
+				// 		// options
+				// 			const selection	= options.selection
+				// 			const callet	= options.caller
 
-				// // text_selection
-					// 	console.log("event_manager.events:",event_manager.events);
-					// 	self.events_tokens.push(
-					// 		event_manager.subscribe('text_selection_'+ self.id, show_button_create_fragment)
-					// 	)
-					// 	function show_button_create_fragment(options) {
-					// 		dd_console('--> show_button_create_fragment options', 'DEBUG', options)
+				// 		const component_container	= li
+				// 		const button				= component_container.querySelector(".create_fragment")
+				// 		const last_tag_id			= self.get_last_tag_id(i, 'index', current_service)
+				// 		const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 
-					// 		// options
-					// 			const selection	= options.selection
-					// 			const callet	= options.caller
+				// 		const create_button = function(selection) {
+				// 			const button_create_fragment = ui.create_dom_element({
+				// 				element_type	: 'button',
+				// 				class_name 		: 'warning compress create_fragment',
+				// 				inner_html 		: label,
+				// 				parent 			: component_container
+				// 			})
 
-					// 		const component_container	= li
-					// 		const button				= component_container.querySelector(".create_fragment")
-					// 		const last_tag_id			= self.get_last_tag_id(i, 'index', current_service)
-					// 		const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+				// 			// event create_fragment add publish on click
+				// 				button_create_fragment.addEventListener("click", () => {
 
-					// 		const create_button = function(selection) {
-					// 			const button_create_fragment = ui.create_dom_element({
-					// 				element_type	: 'button',
-					// 				class_name 		: 'warning compress create_fragment',
-					// 				inner_html 		: label,
-					// 				parent 			: component_container
-					// 			})
+				// 					event_manager.publish('create_fragment_'+ self.id, {
+				// 						caller	: self,
+				// 						key		: i,
+				// 						service	: current_service
+				// 					})
+				// 				})
 
-					// 			// event create_fragment add publish on click
-					// 				button_create_fragment.addEventListener("click", () => {
+				// 			return button_create_fragment
+				// 		}
 
-					// 					event_manager.publish('create_fragment_'+ self.id, {
-					// 						caller	: self,
-					// 						key		: i,
-					// 						service	: current_service
-					// 					})
-					// 				})
-
-					// 			return button_create_fragment
-					// 		}
-
-					// 		if (selection.length<1) {
-					// 			if (button) {
-					// 				button.remove()
-					// 			}
-					// 		}else{
-					// 			if (!button) {
-					// 				create_button(selection)
-					// 			}else{
-					// 				button.innerHTML = label
-					// 			}
-					// 		}
-					// 	}
-			}//end if (self.caller && self.caller.constructor.name==="tool_indexation")
+				// 		if (selection.length<1) {
+				// 			if (button) {
+				// 				button.remove()
+				// 			}
+				// 		}else{
+				// 			if (!button) {
+				// 				create_button(selection)
+				// 			}else{
+				// 				button.innerHTML = label
+				// 			}
+				// 		}
+				// 	}
+		}//end if (self.caller && self.caller.constructor.name==="tool_indexation")
 
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -443,10 +464,10 @@ const get_custom_buttons = (self, i, service) => {
 
 	// button_person
 		custom_buttons.push({
-			name 	: "button_person",
-			options : {
+			name	: "button_person",
+			options	: {
 				tooltip	: 'Add person',
-				image	:  '../themes/default/icons/person.svg',
+				image	: '../themes/default/icons/person.svg',
 				onclick	: function(evt) {
 					alert("Adding person !");
 					// component_text_area.load_tags_person() //ed, evt, text_area_component
@@ -456,10 +477,10 @@ const get_custom_buttons = (self, i, service) => {
 
 	// button_geo
 		custom_buttons.push({
-			name 	: "button_geo",
-			options : {
+			name	: "button_geo",
+			options	: {
 				tooltip	: 'Add georef',
-				image	:  '../themes/default/icons/geo.svg',
+				image	: '../themes/default/icons/geo.svg',
 				onclick	: function(evt) {
 					alert("Adding georef !");
 					// component_text_area.load_tags_geo(ed, evt, text_area_component) //ed, evt, text_area_component
@@ -469,10 +490,10 @@ const get_custom_buttons = (self, i, service) => {
 
 	// button_note
 		custom_buttons.push({
-			name 	: "button_note",
-			options : {
+			name	: "button_note",
+			options	: {
 				tooltip	: 'Add note',
-				image	:  '../themes/default/icons/note.svg',
+				image	: '../themes/default/icons/note.svg',
 				onclick	: function(evt) {
 					alert("Adding note !");
 					// component_text_area.create_new_note(ed, evt, text_area_component)
@@ -482,10 +503,10 @@ const get_custom_buttons = (self, i, service) => {
 
 	// button_reference
 		custom_buttons.push({
-			name 	: "button_reference",
-			options : {
+			name	: "button_reference",
+			options	: {
 				tooltip	: 'Add reference',
-				image	:  '../themes/default/icons/reference.svg',
+				image	: '../themes/default/icons/reference.svg',
 				onclick	: function(evt) {
 					alert("Adding reference !");
 					// component_text_area.create_new_reference(ed, evt, text_area_component)
@@ -495,8 +516,8 @@ const get_custom_buttons = (self, i, service) => {
 
 	// button_delete_structuration
 		custom_buttons.push({
-			name 	: "button_delete_structuration",
-			options : {
+			name	: "button_delete_structuration",
+			options	: {
 				text	: 'Delete chapter',
 				tooltip	: 'Delete structuration',
 				icon	: false,
@@ -509,8 +530,8 @@ const get_custom_buttons = (self, i, service) => {
 
 	// button_add_structuration
 		custom_buttons.push({
-			name 	: "button_add_structuration",
-			options : {
+			name	: "button_add_structuration",
+			options	: {
 				text	: 'Add chapter',
 				tooltip	: 'Add structuration',
 				icon	: false,
@@ -523,8 +544,8 @@ const get_custom_buttons = (self, i, service) => {
 
 	// button_change_structuration
 		custom_buttons.push({
-			name 	: "button_change_structuration",
-			options : {
+			name	: "button_change_structuration",
+			options	: {
 				text	: 'Change chapter',
 				tooltip	: 'Change structuration',
 				icon	: false,
@@ -538,8 +559,8 @@ const get_custom_buttons = (self, i, service) => {
 	// button_save
 		const save_label = get_label.salvar.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
 		custom_buttons.push({
-			name 	: "button_save",
-			options : {
+			name	: "button_save",
+			options	: {
 				text	: save_label,
 				tooltip	: save_label,
 				icon	: false,
