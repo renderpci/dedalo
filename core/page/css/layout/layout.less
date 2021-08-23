@@ -563,30 +563,28 @@
 			}
 		}
 
+		// section buttons container (export, new, print, etc.)
 		>.buttons {
-			padding: 0;
-			width: 100%;
-			// background-color: #f5f2e8;
-			// margin-top: 0.5em;
-			// margin-bottom: 0.5em;
-			// border-radius: 0.25em;
 			display: flex;
 			flex-direction: row-reverse;
+			width: 100%;
+			padding: 0;
 
 			>.button {
-				background-color: #FD891D;
+				background-color: @color_orange_dedalo;
 				color: #ffffff;
 				display: inherit;
 				width: auto;
+				height: auto;
 				padding: 1em;
-				padding-top: 0.25em;
-				padding-bottom: 0.25em;
+				padding-top: 0;
+				padding-bottom: 0;
 				border-radius: 0.25em;
 				margin: 0.25em;
 				// margin-top: 0.25em;
 				// margin-bottom: 0.25em;
-				height: auto;
 
+				// icons inside, like export icon
 				>.button {
 					margin-left: 0;
 				}
