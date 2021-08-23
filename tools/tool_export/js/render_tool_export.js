@@ -6,7 +6,7 @@
 // imports
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import * as instances from '../../../core/common/js/instances.js'
+	// import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -105,7 +105,7 @@ const get_content_data_edit = async function(self) {
 				text_content 	: get_label.elementos_activos,
 				parent			: export_components_container
 			})
-			// drag and drop events
+	// drag and drop events
 		export_components_container.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
 		export_components_container.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
 		export_components_container.addEventListener('drop',function(e){self.on_drop(this,e)})
@@ -118,6 +118,88 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_config',
 			parent			: fragment
 		})
+		// records info
+			const records_info = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'records_info',
+				parent			: export_buttons_config
+			})
+				const section_label = ui.create_dom_element({
+					element_type	: 'h1',
+					class_name		: 'section_label',
+					text_content 	: self.caller.label,
+					parent			: export_buttons_config
+				})
+				const total_records_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'total_records',
+					text_content 	: get_label.total_records + ': ',
+					parent			: export_buttons_config
+				})
+				const total_records = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'total_records',
+					text_content 	: self.caller.total,
+					parent			: total_records_label
+				})
+		// export format
+			const export_format = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'records_info',
+				text_content 	: get_label.formato,
+				parent			: export_buttons_config
+			})
+			// select
+				const select_data_format_export = ui.create_dom_element({
+					element_type	: 'select',
+					class_name		: 'select_data_format_export',
+					parent			: export_format
+				})
+					const select_option_standard= ui.create_dom_element({
+						element_type	: 'option',
+						text_content 	: get_label.estandar || 'standard',
+						value 			: 'standard',
+						parent			: select_data_format_export
+					})
+					const select_option_html= ui.create_dom_element({
+						element_type	: 'option',
+						text_content 	: get_label.html || 'HTML',
+						value 			: 'html',
+						parent			: select_data_format_export
+					})
+					const select_option_breakdown= ui.create_dom_element({
+						element_type	: 'option',
+						text_content 	: get_label.desglose || 'breakdown',
+						value 			: 'breakdown',
+						parent			: select_data_format_export
+					})
+					const select_option_breakdown_html = ui.create_dom_element({
+						element_type	: 'option',
+						text_content 	: (get_label.desglose || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
+						value 			: 'breakdown_html',
+						parent			: select_data_format_export
+					})
+					const select_option_dedalo = ui.create_dom_element({
+						element_type	: 'option',
+						text_content 	: 'Dédalo (Raw)',
+						value 			: 'dedalo',
+						parent			: select_data_format_export
+					})
+		//button export
+			const button_export = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success',
+				text_content 	: get_label.tool_export || 'Export',
+				parent			: export_buttons_config
+			})
+			button_export.addEventListener('click', function(e){
+				const request = {
+					source				: self.source,
+					export_format		: select_data_format_export.value,
+					ar_ddo_to_export	: self.ar_ddo_to_export,
+				}
+			})
+
 
 	// export_buttons_options
 		const export_buttons_options = ui.create_dom_element({
@@ -125,6 +207,30 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_options',
 			parent			: fragment
 		})
+			const button_export_csv = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success',
+				text_content 	: (get_label.descargar || 'Export') + ' csv',
+				parent			: export_buttons_options
+			})
+			const button_export_excel = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success',
+				text_content 	: (get_label.descargar || 'Export') + ' Excel',
+				parent			: export_buttons_options
+			})
+			const button_export_html = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success',
+				text_content 	: (get_label.descargar || 'Export') + ' html',
+				parent			: export_buttons_options
+			})
+			const button_export_print = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success',
+				text_content 	: get_label.imprimir || 'Print',
+				parent			: export_buttons_options
+			})
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -146,11 +252,10 @@ const get_content_data_edit = async function(self) {
 * BUILD_export_COMPONENT
 * @return dom object
 */
-render_tool_export.prototype.build_export_component = async function(parent_div, path_plain, ddo) {
+render_tool_export.prototype.build_export_component = async function(parent_div, path, ddo) {
 
 	const self = this
 
-	const path			= JSON.parse(path_plain)
 	const last_item		= path[path.length-1]
 	const first_item	= path[0]
 
@@ -160,10 +265,10 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			element_type	: 'div',
 			parent			: parent_div,
 			class_name		: "export_component",
-			data_set		: {
-				path		: path_plain,
-				// section_id	: section_id
-			}
+			// data_set		: {
+			// 	path		: path_plain,
+			// 	// section_id	: section_id
+			// }
 		})
 
 	// component  node
@@ -171,16 +276,13 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			element_type	: 'li',
 			class_name		: 'component_label',
 			inner_html		: ddo.label,
-			// draggable		: is_draggable,
+			parent 			: export_component,
 			data_set		: {
 				path			: path,
 				tipo			: ddo.tipo,
 				section_tipo	: ddo.section_tipo,
 			}
 		})
-
-	// Inject component html
-		export_component.appendChild(component_node)
 
 	// button close
 		const export_component_button_close = ui.create_dom_element({
@@ -191,13 +293,10 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 		export_component_button_close.addEventListener("click",function(e){
 			// remove search box and content (component) from dom
 			export_component.parentNode.removeChild(export_component)
-			// delete the instance from search ar_instances
+			// delete the ddo from the array to export ddos
 			const delete_ddo_index = self.ar_ddo_to_export.findIndex( el => el.id === ddo.id )
-			self.ar_instances.splice(delete_instance_index, 1)
-			// destroy component instance
-			// component_instance.destroy(true);
-			// Set as changed
-			// self.update_state({state:'changed'})
+			self.ar_ddo_to_export.splice(delete_ddo_index, 1)
+			console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
 		})
 
 	// label component source if exists
