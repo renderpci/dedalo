@@ -57,6 +57,14 @@ const event_manager_class = function(){
 
 		const self = this
 
+		// removeEventListener
+			// console.log("event_token:",event_token,self.events);
+			// const found = self.events.find(el => el.token===event_token)
+			// if (found) {
+			// 	removeEventListener(found.event_name, found.callback)
+			// 	console.log("removed listener to :", found);
+			// }
+
 		// find the event in the global events and remove it
 			const result = self.events.map( (current_event, key, events) => {
 				(current_event.token === event_token) ? events.splice(key, 1) : null
