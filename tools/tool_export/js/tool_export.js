@@ -99,6 +99,7 @@ tool_export.prototype.init = async function(options) {
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo
 		self.limit					= self.sqo.limit || 10
+		self.ar_ddo_to_export  		= []
 
 	return common_init
 };//end init
@@ -144,4 +145,54 @@ tool_export.prototype.get_section_id = function() {
 	return 'tmp_export_' + self.section_id
 }
 
+
+/**
+* GET_EXPORT_grid : load the export grid data
+*/
+this.get_export_grid = async function(options) {
+
+	const button_obj		= options.button_obj
+	const event				= options.event
+	const section_tipo		= options.section_tipo
+	const section_id		= options.section_id
+	const component_tipo	= options.component_tipo
+	const container_id		= options.container_id
+	const value				= options.value || null
+
+	const target_div = document.getElementById(container_id);
+		if (!target_div) {
+			alert('get_export_grid. Target div not exist for terminoID: '+terminoID+' !')
+			return false
+		}
+
+	// rqo. create
+		const rqo = {
+			action	: 'get_indexation_grid',
+			source	: {
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				tipo			: component_tipo,
+				value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+			}
+		}
+
+	const dd_grid	= await instances.get_instance({
+			model 			: 'dd_grid',
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			tipo			: component_tipo,
+			mode 			: 'list',
+			lang 			: page_globals.dedalo_data_lang,
+			rqo 			: rqo
+		})
+
+	await dd_grid.build()
+
+	const node = await dd_grid.render()
+
+		console.log("node:",node);
+	target_div.appendChild(node)
+
+	return
+}// end get_export_grid
 
