@@ -228,27 +228,43 @@ export const build_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// inputs contaniner
+	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'inputs_container'
 		})
 
 	// build values (add all nodes from the rendered_section_record)
-		const length = ar_section_record.length
-		for (let i = 0; i < length; i++) {
+		const build_values = async function() {
 
-			const current_section_record = ar_section_record[i]; 	//console.log("current_section_record:",current_section_record);
-			if (!current_section_record) {
-				console.warn("empty current_section_record:",current_section_record);
+			const length = ar_section_record.length
+			for (let i = 0; i < length; i++) {
+
+				const current_section_record = ar_section_record[i]
+				if (!current_section_record) {
+					console.warn("empty current_section_record:",current_section_record)
+				}
+				// const child_item = await ar_section_record[i].render()
+				// fragment.appendChild(child_item)
+
+				// input_element, also renders current section record
+				await input_element(current_section_record, inputs_container)
+
+				// const section_record_node = await ar_section_record[i].render()
 			}
-			// const child_item = await ar_section_record[i].render()
-			// fragment.appendChild(child_item)
-			await input_element(current_section_record, inputs_container)
-
-			const section_record_node = await ar_section_record[i].render()
 		}
 		fragment.appendChild(inputs_container)
+
+	// set video node only when it is in DOM (to save browser resources)
+		const observer = new IntersectionObserver(function(entries) {
+			const entry = entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+				observer.disconnect();
+				build_values()
+			}
+		}, { threshold: [0] });
+		observer.observe(inputs_container);
+
 
 	// build references
 		if(self.data.references && self.data.references.length > 0){
@@ -263,7 +279,7 @@ export const build_content_data = async function(self) {
 
 
 	return content_data
-};//end  build_content_data
+};//end build_content_data
 
  
 

@@ -36,7 +36,7 @@ render_edit_component_av.prototype.edit = async function(options={render_level:'
 		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await get_content_data_edit(self)
+		const current_content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -110,11 +110,18 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	const is_inside_tool = self.is_inside_tool
 
 	const fragment = new DocumentFragment()
+
+	// video_container
+		const video_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'video_container',
+			parent 			: fragment
+		})
 
 	// urls
 		// posterframe
@@ -122,42 +129,44 @@ const get_content_data_edit = async function(self) {
 		// media
 		const video_url			= self.data.video_url
 
+	// build_video_node
+		const build_video_node = function() {
+
+			// source tag
+				const source	= document.createElement("source")
+				source.type		= "video/mp4"
+				source.src		= video_url
+
+			// video tag
+				const video		= document.createElement("video")
+				video.poster	= posterframe_url
+				video.controls	= true
+				video.classList.add("posterframe")
+				video.setAttribute("tabindex", 0)
+				video.appendChild(source)
+
+			// keyup event
+				// video.addEventListener("timeupdate", async (e) => {
+				// 	// e.stopPropagation()
+				// 	// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
+				// })
+
+			// append the video node to the instance
+				self.video = video
+				video_container.appendChild(video)
+		}
+
 	if (video_url) {
-		// source tag
-			const source = document.createElement("source")
-			source.type = "video/mp4"
-			source.src  = video_url
 
-		// video tag
-			const video = document.createElement("video")
-			video.poster	= posterframe_url
-			video.controls	= true
-			video.classList.add("posterframe")
-			video.setAttribute("tabindex", 0)
-			video.appendChild(source)
-	
-
-		// keyup event
-			video.addEventListener("timeupdate", async (e) => {
-				// e.stopPropagation()
-
-				// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-				// console.log("aqui:",frame);
-			})
-
-		// append the video node to the instance
-			self.video = video
-			fragment.appendChild(video)
-
-		// set video src only when it is in DOM (to save browser resources)
-			// const observer = new IntersectionObserver(function(entries) {				
-			// 	const entry = entries[0]
-			// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-			// 		observer.disconnect();
-			// 		source.src  = video_url
-			// 	}
-			// }, { threshold: [0] });
-			// observer.observe(video);
+		// set video node only when it is in DOM (to save browser resources)
+			const observer = new IntersectionObserver(function(entries) {
+				const entry = entries[0]
+				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+					observer.disconnect();
+					build_video_node()
+				}
+			}, { threshold: [0] });
+			observer.observe(video_container);
 	}
 
 	// content_data
