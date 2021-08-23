@@ -3125,6 +3125,12 @@ li .section_record.list .id_column {
   padding: 1em;
   padding-top: 0.5em;
 }
+.list .section_record .wrapper_component > .content_data,
+.list .wrapper_tool .wrapper_component > .content_data,
+.list .search_group .wrapper_component > .content_data,
+.list .page .wrapper_component > .content_data {
+  padding: 0;
+}
 @media screen and (max-width: 960px) {
   .section_record .wrapper_component > .content_data,
   .wrapper_tool .wrapper_component > .content_data,
