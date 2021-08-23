@@ -1870,7 +1870,7 @@ export const ts_object = new function() {
 
 
 	/**
-	* SHOW_INDEXATIONS : Carga el listado de fragmentos indexados
+	* SHOW_INDEXATIONS : load the fragment list and render the grid
 	*/
 	this.show_indexations = async function(options) {
 
