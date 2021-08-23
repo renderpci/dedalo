@@ -20,24 +20,24 @@
 export const component_text_area = function(){
 
 	// element properties declare
-		this.model
-		this.tipo
-		this.section_tipo
-		this.section_id
-		this.mode
-		this.lang
+		this.model			= null
+		this.tipo			= null
+		this.section_tipo	= null
+		this.section_id		= null
+		this.mode			= null
+		this.lang			= null
 
-		this.section_lang
-		this.context
-		this.data
-		this.parent
-		this.node
-		this.id
+		this.section_lang	= null
+		this.context		= null
+		this.data			= null
+		this.parent			= null
+		this.node			= null
+		this.id				= null
 
-		this.tag // user selected tag DOM element (set on event click_tag_index_)
-		this.service = [] // array. current active service (service_tinymce) for current node
-		this.events_tokens = []
-		// this.services = []
+		this.tag			= null // user selected tag DOM element (set on event click_tag_index_)
+		this.service		= [] // array. current active service (service_tinymce) for current node
+		this.events_tokens	= []
+		// this.services	= []
 
 	return true
 };//end component_text_area
@@ -154,14 +154,14 @@ component_text_area.prototype.init = async function(options) {
 					}
 				}else{
 					const last_tag_id	= self.get_last_tag_id(key, 'index', current_service)
-					const label			= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+					const label			= (get_label.create_fragment || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 					if (!button) {
 						const create_button = function(selection) {
 							const button_create_fragment = ui.create_dom_element({
 								element_type	: 'button',
-								class_name 		: 'warning compress create_fragment',
-								inner_html 		: label,
-								parent 			: component_container
+								class_name		: 'warning compress create_fragment',
+								inner_html		: label,
+								parent			: component_container
 							})
 							// event create_fragment add publish on click
 								button_create_fragment.addEventListener("click", () => {
@@ -188,7 +188,6 @@ component_text_area.prototype.init = async function(options) {
 
 	return common_init
 };//end  init
-
 
 
 
@@ -319,8 +318,8 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				}
 
 				ar_section_id.push(tag_id)
-			};//end for (var i = len - 1; i >= 0; i--) {
-		};//end section_elements
+			}//end for (var i = len - 1; i >= 0; i--) {
+		}//end section_elements
 		//console.log("ar_section_id",ar_section_id);
 		if (ar_section_id_duplicates.length>0) {
 			if(SHOW_DEBUG===true) {
@@ -352,8 +351,8 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 
 				// Unwrap section tag node (removes tags and leaves only contents)
 				unwrap_element(reference_elements[i]);
-			};//end for (var i = len - 1; i >= 0; i--) {
-		};//end reference_elements
+			}//end for (var i = len - 1; i >= 0; i--) {
+		}//end reference_elements
 
 	// img tags (index, tc, svg, geo, person, etc.)
 		const image_elements = cloned_text.querySelectorAll('img') // ! use querySelectorAll to avoid loop problems on i++
@@ -396,7 +395,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 					unwrap_element(current_element)
 				}
 			}
-		};//end if (image_elements)
+		}//end if (image_elements)
 
 	// temporal elements. Remove after use
 		let temp_elements = []
@@ -517,9 +516,10 @@ component_text_area.prototype.update_tag = async function(options) {
 
 	// update_tag_state function
 		const update_tag_state = (current_elements, new_data_obj)=>{
+
 			// debug
-				console.log("Elements to update_tag_state:", current_elements);
-				console.log("new_data_obj:",new_data_obj);
+				// console.log("Elements to update_tag_state:", current_elements);
+				// console.log("new_data_obj:",new_data_obj);
 
 			// Iterate and update tag state
 			const len = current_elements.length

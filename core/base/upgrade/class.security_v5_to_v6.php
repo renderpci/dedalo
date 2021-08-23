@@ -1,6 +1,6 @@
 <?php
 /**
-* CLASS DATO_V4_TO_SECTION_DATA_V5
+* CLASS security_v5_to_v6
 *
 *
 */
@@ -113,7 +113,7 @@ class security_v5_to_v6 {
 
 				// remove unused old value
 				unset($dato->components->{DEDALO_USER_PROFILE_TIPO});
-				// add to realtions container
+				// add to relations container
 				$found = array_filter($dato->relations, function($item) use($new_dato){
 					if (true===locator::compare_locators($item, $new_dato)) {
 						return $item;
