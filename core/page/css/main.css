@@ -2082,22 +2082,22 @@ li .reset_input select {
   }
 }
 .wrapper_section > .buttons {
-  padding: 0;
-  width: 100%;
   display: flex;
   flex-direction: row-reverse;
+  width: 100%;
+  padding: 0;
 }
 .wrapper_section > .buttons > .button {
-  background-color: #FD891D;
+  background-color: #f78a1c;
   color: #ffffff;
   display: inherit;
   width: auto;
+  height: auto;
   padding: 1em;
-  padding-top: 0.25em;
-  padding-bottom: 0.25em;
+  padding-top: 0;
+  padding-bottom: 0;
   border-radius: 0.25em;
   margin: 0.25em;
-  height: auto;
 }
 .wrapper_section > .buttons > .button > .button {
   margin-left: 0;
@@ -3124,6 +3124,12 @@ li .section_record.list .id_column {
   align-items: flex-start;
   padding: 1em;
   padding-top: 0.5em;
+}
+.list .section_record .wrapper_component > .content_data,
+.list .wrapper_tool .wrapper_component > .content_data,
+.list .search_group .wrapper_component > .content_data,
+.list .page .wrapper_component > .content_data {
+  padding: 0;
 }
 @media screen and (max-width: 960px) {
   .section_record .wrapper_component > .content_data,

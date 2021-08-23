@@ -318,6 +318,12 @@ component_common.prototype.build_OLD = async function(autoload=false){
 */
 export const init_events_subscription = function(self) {
 
+	// check mode
+		if (self.mode!=='edit') {
+			// only in edit mode are attached the events
+			return false
+		}
+
 	// check already subscribed
 		if(self.init_events_subscribed===true) {
 			// console.log("-->> [component_common.init_events_subscription] already subscribed events:", self);

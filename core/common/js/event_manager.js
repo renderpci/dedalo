@@ -7,8 +7,8 @@
 * EVENT_MANAGER
 * the event_manager is created by the page and used by all instances: section, section_group, components, etc
 * the event manager is a observable-observer pattern but we implement connection with the instances with tokens
-* the token is stored in the instances and the events is a array of objects every event is auto-explained
-* the instances has control to create news and destroy it.
+* The token is stored in the instances and the events is a array of objects. Each event is auto-explained
+* The instances has control to create news and destroy it.
 *
 * events format:[{
 *					event_name 	: the common name of the events for fired by publish/changes,
@@ -56,6 +56,14 @@ const event_manager_class = function(){
 	this.unsubscribe = function(event_token) {
 
 		const self = this
+
+		// removeEventListener
+			// console.log("event_token:",event_token,self.events);
+			// const found = self.events.find(el => el.token===event_token)
+			// if (found) {
+			// 	removeEventListener(found.event_name, found.callback)
+			// 	console.log("removed listener to :", found);
+			// }
 
 		// find the event in the global events and remove it
 			const result = self.events.map( (current_event, key, events) => {
@@ -133,7 +141,7 @@ const event_manager_class = function(){
 
 
 
-};//end  event_manager
+};//end event_manager_class
 
 
 
