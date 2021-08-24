@@ -357,7 +357,7 @@ export const init_events_subscription = function(self) {
 					)
 
 				}else{
-					console.warn(`Invalid observe perform. Target function '${perform}' don't exists in ${self.model}:`, observe[i], typeof self[perform]);
+					console.warn(`Invalid observe perform. Target function '${perform}' does not exists in ${self.model}:`, observe[i], typeof self[perform]);
 					console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
 				}
 			}

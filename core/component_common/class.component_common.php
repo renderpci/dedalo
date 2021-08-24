@@ -214,7 +214,7 @@ abstract class component_common extends common {
 						if ($section_modelo_name!=='section') {
 							dump($section_tipo," Verify modelo_name is section: section_modelo_name: $section_modelo_name");
 							if (empty($section_modelo_name)) {
-								$msg = "Error. Current section ($section_tipo) don't exists or model is missing. Please fix structure ASAP";
+								$msg = "Error. Current section ($section_tipo) does not exists or model is missing. Please fix structure ASAP";
 								throw new Exception($msg, 1);
 							}
 							throw new Exception("Error Processing Request. Trying to use: $section_modelo_name ($section_tipo) as section. Verified modelo is: $section_modelo_name", 1);

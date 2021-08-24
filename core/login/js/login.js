@@ -12,8 +12,8 @@
 
 
 
-/**LOGIN
-*
+/**
+* LOGIN
 */
 export const login = function() {
 
@@ -135,28 +135,6 @@ login.prototype.build = async function(autoload=true) {
 
 
 	return true
-
-	// const t0 = performance.now()
-
-	// const self = this
-
-	// // set context and data to current instance
-	// 	self.context	= self.datum.context
-	// 	self.data 		= self.datum.data
-
-	// // Update section mode with context declaration
-	//  	self.mode 		= self.context.mode
-	//  	self.label 		= self.context.label
-
-	// // debug
-	// 	if(SHOW_DEBUG===true) {
-	// 		console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-	// 	}
-
-	// // status update
-	// 	self.status = 'builded'
-
-	// return true
 };//end build
 
 
@@ -166,7 +144,7 @@ login.prototype.build = async function(autoload=true) {
 */
 export const quit = async function() {
 
-	// data_manager api call
+	// data_manager API call
 		const api_response = await data_manager.prototype.request({
 			body : {
 				action	: 'quit',

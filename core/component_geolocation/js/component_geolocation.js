@@ -452,7 +452,7 @@ component_geolocation.prototype.load_layer = function(layer){
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
 	// if( self.map.hasLayer(self.ar_FeatureGroup[layer_id])===false ) {
 	if( typeof self.ar_FeatureGroup[layer_id] === 'undefined'){
-		// the FeatureGroup is not loaded and don't exist into the map
+		// the FeatureGroup is not loaded and does not exist into the map
 		// Create a new FeatureGroup
 		self.ar_FeatureGroup[layer_id] = new L.FeatureGroup();
 		// set the FeatureGroup to the map
