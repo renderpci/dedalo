@@ -272,8 +272,8 @@ common.prototype.render = async function (options={render_level:'full'}) {
 				dd_console(`__Time [common.render] to render section: ${total} ms`,'DEBUG')
 			}else{
 				const msg = `__Time [common.render] to render model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
-				if (total>100) {
-					console.warn(msg, total);
+				if (total>50) {
+					console.warn(msg, total, self);
 				}else{
 					// console.log(msg, total);
 				}

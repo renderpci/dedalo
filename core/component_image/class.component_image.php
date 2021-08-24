@@ -731,7 +731,7 @@ class component_image extends component_media_common {
 		// check default quality image
 			if (!file_exists($default_image_path)) {
 				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Default image quality don't exists. Skip create thumb. ".to_string(), logger::ERROR);
+					debug_log(__METHOD__." Default image quality does not exists. Skip create thumb. ".to_string(), logger::ERROR);
 				}
 				return false;
 			}

@@ -275,26 +275,27 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		// check the section_tipo of the last column and match with the current locator section_tipo
 		// the columns has reverse order, the last columns match with the component locator, (and the first columns is the most deep coponent in the path)
 
-			const get_valid_columns = function(section_tipo, ar_columns ){
+			const get_valid_columns = function(section_tipo, ar_columns){
 
-					const ar_column = []
+				const ar_column = []
 
-					const ar_columns_length = ar_columns.length
-					for (let i = 0; i < ar_columns_length; i++) {
-						const current_column	= ar_columns[i]
-						const last_column		= current_column[current_column.length - 1];
-						// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the loctator
-						if(Array.isArray(last_column.section_tipo)){
-							const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
-							if(ddo_check) {
-								ar_column.push(current_column)
-							}
-						}else if(last_column.section_tipo===section_tipo){
+				const ar_columns_length = ar_columns.length
+				for (let i = 0; i < ar_columns_length; i++) {
+
+					const current_column	= ar_columns[i];
+					const last_column		= current_column[current_column.length - 1];
+					// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the loctator
+					if(last_column && Array.isArray(last_column.section_tipo)){
+						const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
+						if(ddo_check) {
 							ar_column.push(current_column)
 						}
+					}else if(last_column && last_column.section_tipo===section_tipo){
+						ar_column.push(current_column)
 					}
-					return ar_column
 				}
+				return ar_column
+			}
 			const valid_columns = get_valid_columns(section_tipo, ar_columns)
 
 
