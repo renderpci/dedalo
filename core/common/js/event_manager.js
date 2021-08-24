@@ -87,17 +87,13 @@ const event_manager_class = function(){
 		//}
 
 		// find the events that has the same event_name for exec
-		const current_events = this.events.filter(current_event => current_event.event_name === event_name)
+		const current_events = this.events.filter(current_event => current_event.event_name===event_name)
 
-		// if don't find events don't exec
-		if(!current_events){
-			return false
+		const result = (current_events)
+			? current_events.map(current_event => current_event.callback(data)) // exec the subscribed events callbacks
+			: false // if don't find events, don't run
 
-		}else{
-			// exec the subscribed events callbacks
-			const result = current_events.map(current_event => current_event.callback(data))
-			return result
-		}
+		return result
 	};//end  publish
 
 

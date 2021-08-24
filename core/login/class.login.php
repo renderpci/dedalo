@@ -56,6 +56,7 @@ class login extends common {
 
 	/**
 	* LOGIN
+	* @param object $request_options
 	* @see Mandatory vars: 'username','password'
 	* Get post vars and search received user/password in db
 	* @return 'ok' / Error text
@@ -63,12 +64,12 @@ class login extends common {
 	public static function Login( $request_options ) {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed [Login]';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed [Login]';
 
 		$options = new stdClass();
-			$options->username 	= null;
-			$options->password 	= null;
+			$options->username	= null;
+			$options->password	= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// username
@@ -246,18 +247,20 @@ class login extends common {
 
 
 		// Login (all is ok) - init login secuence when all is ok
-			$full_username 				= login::get_full_username($user_id);
-			$init_user_login_sequence 	= login::init_user_login_sequence($user_id, $username, $full_username);
+			$full_username				= login::get_full_username($user_id);
+			$init_user_login_sequence	= login::init_user_login_sequence($user_id, $username, $full_username);
 			if ($init_user_login_sequence->result===false) {
 				# RETURN FALSE
-				$response->result = false;
-				$response->msg 	  = $init_user_login_sequence->msg;
-				$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+				$response->result			= false;
+				$response->msg				= $init_user_login_sequence->msg;
+				$response->errors			= isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+				$response->result_options	= $init_user_login_sequence->result_options;
 			}else if($init_user_login_sequence->result===true) {
 				# RETURN OK AND RELOAD PAGE
-				$response->result = true;
-				$response->msg 	  = " Login.. ";
-				$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+				$response->result			= true;
+				$response->msg				= " Login.. ";
+				$response->errors			= isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+				$response->result_options	= $init_user_login_sequence->result_options;
 			}
 
 
@@ -591,13 +594,13 @@ class login extends common {
 			$_SESSION['dedalo']['auth']['user_id']==$rest_config->user_id &&
 			($_SESSION['dedalo']['auth']['is_logged']==1)
 		 ) {
-			$response->logged 	= true;
-			$response->msg 		= 'User is already logged';
+			$response->logged	= true;
+			$response->msg		= 'User is already logged';
 			return $response;
 		}
 
 		$_SESSION['dedalo']['auth']['user_id']		= $rest_config->user_id;
-		$_SESSION['dedalo']['auth']['username']	= $rest_config->user;
+		$_SESSION['dedalo']['auth']['username']		= $rest_config->user;
 		$_SESSION['dedalo']['auth']['is_logged']	= 1;
 
 		# CONFIG KEY
@@ -627,13 +630,13 @@ class login extends common {
 		$response->logged 	= true;
 		$response->msg 		= 'Logged successfully';
 		return $response;
-	}//rest_login
+	}//end rest_login
 
 
 
 	/**
 	* INIT_USER_LOGIN_SEqUENCE
-	* Init login secuence when all is ok
+	* Init login sequence when all is OK
 	* @param int $user_id
 	* @param string $username
 	* @return bool
@@ -671,12 +674,12 @@ class login extends common {
 			$_SESSION['dedalo']['auth']['is_global_admin'] = (bool)security::is_global_admin($user_id);
 
 		// IS_DEVELOPER (before set user session vars)
-			$_SESSION['dedalo']['auth']['is_developer'] 	= (bool)login::is_developer($user_id);
+			$_SESSION['dedalo']['auth']['is_developer'] = (bool)login::is_developer($user_id);
 
 		// SESSION : If backup is ok, fix session data
 			$_SESSION['dedalo']['auth']['user_id']			= $user_id;
-			$_SESSION['dedalo']['auth']['username']		= $username;
-			$_SESSION['dedalo']['auth']['full_username'] 	= $full_username;
+			$_SESSION['dedalo']['auth']['username']			= $username;
+			$_SESSION['dedalo']['auth']['full_username']	= $full_username;
 			$_SESSION['dedalo']['auth']['is_logged']		= 1;
 
 		// CONFIG KEY
@@ -694,7 +697,7 @@ class login extends common {
 		if( DEDALO_BACKUP_ON_LOGIN ) {
 			# Close script session
 			session_write_close();
-			require(DEDALO_CORE_PATH.'/backup/class.backup.php');
+			require_once DEDALO_CORE_PATH.'/backup/class.backup.php';
 			$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
 			$backup_info = $backup_secuence_response->msg;
 		}else{
@@ -718,16 +721,15 @@ class login extends common {
 		}
 
 
-
 		# LOG : Prepare and save login action
 		$browser = $_SERVER["HTTP_USER_AGENT"];
 		if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
-		$activity_datos['result'] 	= "allow";
-		$activity_datos['cause'] 	= "correct user and password";
-		$activity_datos['username']	= $username;
-		$activity_datos['browser']	= $browser;
-		$activity_datos['DB-backup']= $backup_info;
+		$activity_datos['result']		= "allow";
+		$activity_datos['cause']		= "correct user and password";
+		$activity_datos['username']		= $username;
+		$activity_datos['browser']		= $browser;
+		$activity_datos['DB-backup']	= $backup_info;
 
 		# LOGIN ACTIVITY REPORT
 		self::login_activity_report(
@@ -737,9 +739,8 @@ class login extends common {
 			$activity_datos
 			);
 
-		$response->result 	= true;
-		$response->msg 	 	= 'Ok init_user_login_sequence is done';
-
+		$response->result	= true;
+		$response->msg		= 'OK init_user_login_sequence is done';
 
 		return $response;
 	}//end init_user_login_sequence
@@ -920,20 +921,22 @@ class login extends common {
 	* @return bool (true/false)
 	*/
 	public static function is_logged() {
+
 		return self::verify_login();
-	}
+	}//end is_logged
+
 
 
 	/**
 	* VERIFY_LOGIN
-	* Comprueba que el usuario está autentificado
+	* Check that the user is authenticated
 	* @return bool (true/false)
 	*/
 	private static function verify_login() {
 		#global $maintenance_mode;
 		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
 
-		# NO ESTÁ AUTENTIFICADO
+		// not authenticated case
 		if( empty($_SESSION['dedalo']['auth']['user_id']) ||
 			empty($_SESSION['dedalo']['auth']['is_logged']) ||
 			$_SESSION['dedalo']['auth']['is_logged'] !== 1 ||
@@ -944,8 +947,8 @@ class login extends common {
 			if (empty($_SESSION['dedalo']['auth']['user_id'])) {
 
 				# Store current lang for not loose
-				$dedalo_application_lang = isset($_SESSION['dedalo']['config']['dedalo_application_lang']) ? $_SESSION['dedalo']['config']['dedalo_application_lang'] : false;
-				$dedalo_data_lang 		 = isset($_SESSION['dedalo']['config']['dedalo_data_lang']) ? $_SESSION['dedalo']['config']['dedalo_data_lang'] : false;
+				$dedalo_application_lang	= $_SESSION['dedalo']['config']['dedalo_application_lang'] ?? false;
+				$dedalo_data_lang			= $_SESSION['dedalo']['config']['dedalo_data_lang'] ?? false;
 
 				# remove complete session
 				unset($_SESSION['dedalo']);
@@ -955,13 +958,13 @@ class login extends common {
 					$_SESSION['dedalo']['config']['dedalo_application_lang'] = $dedalo_application_lang;
 				}
 				if ( $dedalo_data_lang) {
-					$_SESSION['dedalo']['config']['dedalo_data_lang'] 		  = $dedalo_data_lang;
+					$_SESSION['dedalo']['config']['dedalo_data_lang'] = $dedalo_data_lang;
 				}
 			}
 
 			return false;
 
-		# SI ESTÁ UTENTIFICADO
+		// authenticated case
 		}else{
 
 			#if( $_SESSION['dedalo']['auth']['salt_secure'] != '7PVecu9VSxLHnawfGF2oDCISXvsq2khsOKvPiTJ_D7a_wVaxqQwzRJElPxsecePnFzmrP34RIG0J0ykg3Mbobg,,') {
@@ -998,8 +1001,8 @@ class login extends common {
 	public static function Quit($request_options) {
 
 		$options = new stdClass();
-			$options->mode 	= null;
-			$options->cause = 'called quit method';
+			$options->mode	= null;
+			$options->cause	= 'called quit method';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
@@ -1007,8 +1010,8 @@ class login extends common {
 			return false;
 		}
 
-		$user_id  = $_SESSION['dedalo']['auth']['user_id'];
-		$username = $_SESSION['dedalo']['auth']['username'];
+		$user_id	= $_SESSION['dedalo']['auth']['user_id'];
+		$username	= $_SESSION['dedalo']['auth']['username'];
 
 		// LOCK_COMPONENTS. Remove lock_components elements
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
@@ -1097,7 +1100,7 @@ class login extends common {
 	*/
 	public function test_su_default_password() {
 
-		$component  = component_common::get_instance('component_password',
+		$component = component_common::get_instance('component_password',
 													 DEDALO_USER_PASSWORD_TIPO,
 													 -1,
 													 'edit',
@@ -1170,12 +1173,12 @@ class login extends common {
 	public function get_structure_context($permissions=1, $add_rqo=false) {
 
 		// short vars
-			$model 		  = 'login';
-			$tipo 		  = $this->get_tipo();
-			$translatable = false;
-			$mode 		  = $this->get_modo();
-			$label 		  = $this->get_label();
-			$lang		  = $this->get_lang();
+			$model			= 'login';
+			$tipo			= $this->get_tipo();
+			$translatable	= false;
+			$mode			= $this->get_modo();
+			$label			= $this->get_label();
+			$lang			= $this->get_lang();
 
 		// properties
 			$properties   = $this->get_properties();

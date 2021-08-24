@@ -573,7 +573,7 @@ class dd_core_api {
 		// 					$properties  = $RecordObj_dd->get_properties(true);
 		//
 		// 					#$section_tipo = isset($properties->config->target_section_tipo) ? $properties->config->target_section_tipo :
-		// 					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
+		// 					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo does not exist) ".to_string(), logger::ERROR);
 		//
 		// 					$section_tipo 	= $tipo;
 		// 					$section_id		= null;

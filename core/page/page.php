@@ -7,12 +7,12 @@
 		$locator	= json_decode($_GET['locator']);
 		$tipo		= $locator->section_tipo ?? $default_section_tipo;
 		$section_id	= $locator->section_id ?? null;
-		// $mode		= !empty($section_id) ? 'edit' : 'list';
+		// $mode	= !empty($section_id) ? 'edit' : 'list';
 		$mode		= $locator->mode ?? 'list';
 	}else{
 		$tipo		= $_GET['t'] 	?? $_GET['tipo']		?? $default_section_tipo; //MAIN_FALLBACK_SECTION;
 		$section_id	= $_GET['id']	?? $_GET['section_id']	?? null;
-		// $mode		= $_GET['m'] 	?? $_GET['mode']		?? (!empty($section_id) ? 'edit' : 'list');
+		// $mode	= $_GET['m'] 	?? $_GET['mode']		?? (!empty($section_id) ? 'edit' : 'list');
 		$mode		= $_GET['m'] 	?? $_GET['mode']		?? 'list';	
 	}
 	define('MODE', $mode);
