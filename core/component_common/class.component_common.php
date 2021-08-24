@@ -678,6 +678,35 @@ abstract class component_common extends common {
 	}//end get_value
 
 
+	/**
+	* GET_RAW_VALUE
+	* Get the raw value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* The direct components can set the value with the dato directly
+	* The relation components will separate the locator in rows
+	* @return object $value
+	*/
+	public function get_raw_value() {
+
+		$raw_value = new dd_grid_cell_object();
+
+		$data	= $this->get_dato_full();
+		// get the total of locators of the data, it will be use to render the rows separated.
+			$row_count = 0;//sizeof($data);
+
+		$label	= $this->get_label();
+
+		$raw_value->set_type('column');
+		$raw_value->set_label($label);
+		$raw_value->set_cell_type('json');
+		$raw_value->set_row_count($row_count);
+		$raw_value->set_value($data);
+
+		return $raw_value;
+	}//end get_raw_value
+
+
+
 
 	/**
 	* RESOLVE_SECTION_TIPO
