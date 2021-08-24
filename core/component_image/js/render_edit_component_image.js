@@ -8,97 +8,15 @@
 	import {ui} from '../../common/js/ui.js'
 
 
+
 /**
-* Render_component
+* RENDER_EDIT_COMPONENT_IMAGE
 * Manage the components logic and appearance in client side
 */
-export const render_component_image = function(component) {
+export const render_edit_component_image = function(component) {
 
 	return true
-};//end render_component_image
-
-
-
-/**
-* MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
-*/
-render_component_image.prototype.mini = function(options) {
-
-	const self = this
-
-	// Options vars
-		const context 	= self.context
-		const datalist 	= self.data.datalist || []
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-
-	// url
-		const quality 			= "thumb"
-		const url_object 		= datalist.filter(item => item.quality===quality)[0]
-		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
-
-	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			src 			: url,
-			parent 			: wrapper
-		})
-		// ui.component.add_image_fallback(image)
-
-
-	return wrapper
-};//end list
-
-
-
-
-/**
-* LIST
-* Render node for use in list
-* @return DOM node
-*/
-render_component_image.prototype.list = function(options) {
-
-	const self = this
-
-	// Options vars
-		const context 	= self.context
-		const datalist 	= self.data.datalist || []
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
-
-	// url
-		// const value 			= data.value
-		const quality 			= "1.5MB"
-		const url_object 		= datalist.filter(item => item.quality===quality)[0]
-		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
-
-	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			src 			: url,
-			parent 			: wrapper
-		})
-		ui.component.add_image_fallback(image)
-
-	//const image_div = ui.create_dom_element({
-	//	element_type	: "div",
-	//	//class_name		: node_class_name,
-	//	style 			: {
-	//		"background-image" : "url("+url+")"
-	//	},
-	//	parent 			: wrapper
-	//})
-
-
-	return wrapper
-};//end list
+};//end render_edit_component_image
 
 
 
@@ -107,7 +25,7 @@ render_component_image.prototype.list = function(options) {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_image.prototype.edit = async function(options) {
+render_edit_component_image.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -115,7 +33,7 @@ render_component_image.prototype.edit = async function(options) {
 		const render_level = options.render_level
 
 	// content_data
-		const content_data = await content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -141,33 +59,33 @@ render_component_image.prototype.edit = async function(options) {
 
 
 /**
-* CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	const is_inside_tool = ui.inside_tool(self)
 
 	const fragment = new DocumentFragment()
 
 	// url
-		const datalist 		= self.data.datalist
-		const quality 		= "1.5MB" //"original" //
-		const url_object 	= datalist.filter(item => item.quality===quality)[0]
-		const url 			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
+		const datalist		= self.data.datalist
+		const quality		= "1.5MB" //"original" //
+		const url_object	= datalist.filter(item => item.quality===quality)[0]
+		const url			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 		
 	// ul
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name 		: '',
-			parent 			: ul
+			class_name		: '',
+			parent			: ul
 		})
 
 
@@ -223,7 +141,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-};//end content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -234,8 +152,8 @@ const content_data_edit = async function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
@@ -264,7 +182,7 @@ const get_buttons = (self) => {
 			title 			: 'Toggle vector editor',
 			parent 			: fragment
 		})
-		vector_editor.addEventListener("mouseup", (e) =>{
+		vector_editor.addEventListener("mouseup", (e) => {
 			vector_editor_tools.classList.toggle('hide')
 			if(!vector_editor_tools.classList.contains('hide')){
 				self.load_vector_editor({load:'full'})
@@ -331,3 +249,5 @@ const get_quality_selector = (self) => {
 
 	return quality_selector
 };//end get_quality_selector
+
+
