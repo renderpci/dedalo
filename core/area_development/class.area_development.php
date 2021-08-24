@@ -9,24 +9,25 @@ class area_development extends area_common {
 
 
 	static $ar_tables_with_relations = array(
-		"matrix_users",
-		"matrix_projects",
-		"matrix",
-		"matrix_list",
-		"matrix_activities",
-		"matrix_hierarchy",
-		"matrix_hierarchy_main",
-		"matrix_langs",
-		"matrix_layout",
-		"matrix_notes",
-		"matrix_profiles",
-		"matrix_test",
-		"matrix_indexations",
-		"matrix_structurations",
-		"matrix_dataframe",
-		"matrix_dd",
-		"matrix_layout_dd",
-		"matrix_activity"
+		'matrix_users',
+		'matrix_projects',
+		'matrix',
+		'matrix_list',
+		'matrix_activities',
+		'matrix_hierarchy',
+		'matrix_hierarchy_main',
+		'matrix_langs',
+		'matrix_layout',
+		'matrix_notes',
+		'matrix_profiles',
+		'matrix_test',
+		'matrix_indexations',
+		'matrix_structurations',
+		'matrix_dataframe',
+		'matrix_dd',
+		'matrix_layout_dd',
+		'matrix_activity',
+		'matrix_tools'
 	);//end ar_tables_with_relations
 
 
@@ -273,7 +274,7 @@ class area_development extends area_common {
 
 
 		// update data version
-			include(DEDALO_CORE_PATH . '/base/update/class.update.php');
+			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 			$updates		= update::get_updates();
 			$update_version	= update::get_update_version();
 			if(empty($update_version)) {
@@ -471,7 +472,7 @@ class area_development extends area_common {
 				$item->parent 	= $this->tipo;
 				$item->label 	= 'PHP INFO';
 				$item->info 	= null;
-				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
+				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
 			$ar_widgets[] = $item;
 
 
