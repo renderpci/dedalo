@@ -2416,8 +2416,18 @@
 				opacity: 0.6;
 
 				display: grid;
-				grid-template-columns: 1fr 2fr;
+				grid-template-columns: 1.2fr 2fr;
 				line-height: 1.3em;
+
+				>span {
+					padding: 0.20em;
+					line-height: 1.1em;
+
+					&.error {
+						padding-left: 0.5em;
+						color: white;
+					}
+				}
 			}
 
 			>.component_message {
