@@ -43,7 +43,8 @@
 */
 export const search = function() {
 	
-	this.id_variant
+	this.id_variant	= null
+	this.model		= 'search'
 
 	return true
 };//end search
