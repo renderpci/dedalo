@@ -4,7 +4,7 @@
 *
 *
 */
-require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
+require_once DEDALO_CORE_PATH . '/common/class.exec_.php';
 
 abstract class backup {
 

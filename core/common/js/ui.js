@@ -948,123 +948,132 @@ export const ui = {
 	* CREATE_DOM_ELEMENT
 	* Builds a DOM node based on received options
 	*/
-	create_dom_element : function(element_options){
+	create_dom_element : function(options){
 
-		const element_type				= element_options.element_type
-		const parent					= element_options.parent
-		const class_name				= element_options.class_name
-		const style						= element_options.style
-		const data_set					= (typeof element_options.dataset!=="undefined") ? element_options.dataset : element_options.data_set
-		const custom_function_events	= element_options.custom_function_events
-		const title_label				= element_options.title_label || element_options.title
-		const text_node					= element_options.text_node
-		const text_content				= element_options.text_content
-		const inner_html				= element_options.inner_html
-		const id						= element_options.id
-		const draggable					= element_options.draggable
-		const value						= element_options.value
-		const src						= element_options.src
-		const type						= element_options.type
-		const contenteditable			= element_options.contenteditable
-		const name						= element_options.name
-		const placeholder				= element_options.placeholder
-		const pattern					= element_options.pattern
+		// options
+			const element_type				= options.element_type
+			const type						= options.type
+			const id						= options.id
+			const parent					= options.parent
+			const class_name				= options.class_name
+			const style						= options.style
+			const data_set					= (typeof options.dataset!=="undefined") ? options.dataset : options.data_set
+			const custom_function_events	= options.custom_function_events
+			const title_label				= options.title_label || options.title
+			const text_node					= options.text_node
+			const text_content				= options.text_content
+			const inner_html				= options.inner_html
+			const draggable					= options.draggable
+			const value						= options.value
+			const src						= options.src
+			const contenteditable			= options.contenteditable
+			const name						= options.name
+			const placeholder				= options.placeholder
+			const pattern					= options.pattern
 
-		const element = document.createElement(element_type);
+		// DOM node element
+			const element = document.createElement(element_type)
 
-		// Add id property to element
-		if(id){
-			element.id = id;
-		}
-
-		// A element. Add href property to element
-		if(element_type==='a'){
-			element.href = 'javascript:;';
-		}
-
-		// Class name. Add css classes property to element
-		if(class_name){
-			element.className = class_name
-		}
-
-		// Style. Add css style property to element
-		if(style){
-			for(let key in style) {
-				element.style[key] = style[key]
-				//element.setAttribute("style", key +":"+ style[key]+";");
+		// id. Add id property to element
+			if(id){
+				element.id = id
 			}
-		}
 
-		// Title . Add title attribute to element
-		if(title_label){
-			element.title = title_label
-		}
-
-		// Dataset Add dataset values to element
-		if(data_set){
-			for (let key in data_set) {
-				element.dataset[key] = data_set[key]
+		// element_type. A element. Add default href property to element
+			if(element_type==='a'){
+				element.href = 'javascript:;'
 			}
-		}
 
-		// Value
-		if(value){
-			element.value = value
-		}
-
-		// Text content
-		if(text_node){
-			//element.appendChild(document.createTextNode(TextNode));
-			// Parse html text as object
-			if (element_type==='span') {
-				element.textContent = text_node
-			}else{
-				const el = document.createElement('span')
-					  // el.innerHTML = " "+text_node // Note that prepend a space to span for avoid Chrome bug on selection
-					  el.insertAdjacentHTML('afterbegin', " "+text_node);
-				element.appendChild(el)
+		// type
+			if (type && element_type!=='textarea') {
+				element.type = type
 			}
-		}else if(text_content) {
-			element.textContent = text_content
-		}else if(inner_html) {
-			// element.innerHTML = inner_html
-			element.insertAdjacentHTML('afterbegin', inner_html);
-		}
 
-		// Append created element to parent
-		if (parent) {
-			parent.appendChild(element)
-		}
+		// class_name. Add CSS classes property to element
+			if(class_name){
+				element.className = class_name
+			}
 
-		// Dragable
-		if(draggable){
-			element.draggable = draggable;
-		}
+		// style. Add CSS style property to element
+			if(style){
+				for(let key in style) {
+					element.style[key] = style[key]
+					//element.setAttribute("style", key +":"+ style[key]+";");
+				}
+			}
 
-		// Add id property to element
-		if(src){
-			element.src = src;
-		}
+		// title . Add title attribute to element
+			if(title_label){
+				element.title = title_label
+			}
 
-		if (type && element_type!=='textarea') {
-			element.type = type;
-		}
+		// dataset Add dataset values to element
+			if(data_set){
+				for (let key in data_set) {
+					element.dataset[key] = data_set[key]
+				}
+			}
 
-		if (contenteditable) {
-			element.contentEditable = contenteditable;
-		}
+		// value
+			if(value){
+				element.value = value
+			}
 
-		if(name){
-			element.name = name
-		}
+		// Text content: + span,
+			if(text_node){
+				//element.appendChild(document.createTextNode(TextNode));
+				// Parse HTML text as object
+				if (element_type==='span') {
+					element.textContent = text_node
+				}else{
+					const el = document.createElement('span')
+						  // Note that prepend a space to span to prevent Chrome bug on selection
+						  // el.innerHTML = " "+text_node
+						  el.insertAdjacentHTML('afterbegin', " "+text_node)
+					element.appendChild(el)
+				}
+			}else if(text_content) {
+				element.textContent = text_content
+			}else if(inner_html) {
+				// element.innerHTML = inner_html
+				element.insertAdjacentHTML('afterbegin', inner_html)
+			}
 
-		if(placeholder){
-			element.placeholder = placeholder
-		}
 
-		if(pattern){
-			element.pattern = pattern
-		}
+		// draggable
+			if(draggable){
+				element.draggable = draggable
+			}
+
+		// src
+			if(src){
+				element.src = src
+			}
+
+		// contenteditable
+			if (contenteditable) {
+				element.contentEditable = contenteditable
+			}
+
+		// name
+			if(name){
+				element.name = name
+			}
+
+		// placeholder
+			if(placeholder){
+				element.placeholder = placeholder
+			}
+
+		// pattern
+			if(pattern){
+				element.pattern = pattern
+			}
+
+		// parent. Append created element to parent
+			if (parent) {
+				parent.appendChild(element)
+			}
 
 		return element;
 	},//end create_dom_element

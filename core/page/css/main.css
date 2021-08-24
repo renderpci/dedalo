@@ -557,15 +557,15 @@ template {
   background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
 }
 .button {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   width: 1em;
   min-width: 1em;
   height: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
 }
 .button:hover {
@@ -1373,13 +1373,13 @@ button.cancel:before {
   vertical-align: text-bottom;
 }
 .contenteditable_buttons > .button.bold:before {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -1407,13 +1407,13 @@ button.cancel:before {
   background-color: #ffffff !important;
 }
 .contenteditable_buttons > .button.italic:before {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -1441,13 +1441,13 @@ button.cancel:before {
   background-color: #ffffff !important;
 }
 .contenteditable_buttons > .button.underline:before {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -1475,13 +1475,13 @@ button.cancel:before {
   background-color: #ffffff !important;
 }
 .contenteditable_buttons > .button.replace:before {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -1870,13 +1870,13 @@ li .reset_input select {
 }
 .area .widget_container > .widget_label:before {
   content: " ";
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -1924,13 +1924,13 @@ li .reset_input select {
 }
 .area .widget_container > .widget_body > .link:before {
   content: " ";
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -3392,13 +3392,13 @@ dd-modal .footer > * {
 }
 .disabled_component:after {
   content: " ";
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -3429,13 +3429,13 @@ dd-modal .footer > * {
   background-color: #ffffff !important;
 }
 .preload {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -3616,8 +3616,16 @@ dd-modal .footer > * {
   font-size: 0.8em;
   opacity: 0.6;
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1.2fr 2fr;
   line-height: 1.3em;
+}
+.wrapper_login > .content_data > .info > span {
+  padding: 0.2em;
+  line-height: 1.1em;
+}
+.wrapper_login > .content_data > .info > span.error {
+  padding-left: 0.5em;
+  color: white;
 }
 .wrapper_login > .content_data > .component_message {
   position: relative !important;
@@ -4410,15 +4418,15 @@ div.tool_inspector_div .icon_bs {
   cursor: default !important;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_first_icon {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   width: 1em;
   min-width: 1em;
   height: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 2em;
   height: 2em;
@@ -4449,15 +4457,15 @@ div.tool_inspector_div .icon_bs {
   background-color: #ffffff !important;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_prev_icon {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   width: 1em;
   min-width: 1em;
   height: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 2em;
   height: 2em;
@@ -4486,15 +4494,15 @@ div.tool_inspector_div .icon_bs {
   background-color: #ffffff !important;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_next_icon {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   width: 1em;
   min-width: 1em;
   height: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 2em;
   height: 2em;
@@ -4522,15 +4530,15 @@ div.tool_inspector_div .icon_bs {
   background-color: #ffffff !important;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_last_icon {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   width: 1em;
   min-width: 1em;
   height: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 2em;
   height: 2em;
@@ -5303,13 +5311,13 @@ background-color: #FFFF00;
   opacity: 0.4;
 }
 .menu_wrapper > .section_label:before {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;
@@ -5809,13 +5817,13 @@ background-color: #FFFF00;
   color: #fe8000;
 }
 .map_inputs .map_reload {
+  background-color: #000000;
   cursor: pointer;
   user-select: none;
-  display: flex;
+  display: inline-flex;
   min-width: 1em;
   line-height: 1em;
   opacity: 0.8;
-  background-color: #000000;
   margin: 0.5em;
   width: 1em;
   height: 1em;

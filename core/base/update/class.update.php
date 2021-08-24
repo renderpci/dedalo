@@ -157,8 +157,8 @@ class update {
 	public static function SQL_update($SQL_update) {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
 
 		$result = pg_query(DBi::_getConnection(), $SQL_update);
 		if(!$result) {
@@ -173,8 +173,8 @@ class update {
 		}
 		debug_log(__METHOD__." Executed database update: ".to_string($SQL_update), logger::DEBUG);
 
-		$response->result 	= true;
-		$response->msg 		= "Executed database update: ".to_string($SQL_update);
+		$response->result	= true;
+		$response->msg		= "Executed database update: ".to_string($SQL_update);
 
 		return (object)$response;
 	}//end SQL_update

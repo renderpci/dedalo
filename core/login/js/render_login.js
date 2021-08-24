@@ -32,7 +32,7 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	const render_level = options.render_level
 
 	// content_data
-		const content_data = await get_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -99,7 +99,7 @@ const add_events = function(self, wrapper, content_data) {
 						button_label.classList.add("display_none")
 						preload.classList.remove("display_none")
 
-					// data_manager api call
+					// data_manager API call
 					const api_response = data_manager.prototype.request({
 						body : {
 							action	: 'login',
@@ -135,12 +135,11 @@ const add_events = function(self, wrapper, content_data) {
 
 
 
-
 /**
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = async function(self) {
+const get_content_data = function(self) {
 
 	const dedalo_application_langs = self.data.value.dedalo_application_langs
 
@@ -178,15 +177,14 @@ const get_content_data = async function(self) {
 		})
 		form.addEventListener("submit", (e) => {
 			e.preventDefault()
-			//e.stopPropagation()
-			e.target.querySelector('#auth_submit').click()
+			button_enter.click()
 		})
 
 	// login_items
 		const login_items = self.context.properties.login_items
 
 	// User name input
-		const login_item_username = login_items.reduce((carry, item) => {return (item.tipo==='dd255') ? item : carry;})
+		const login_item_username = login_items.find(el => el.tipo==='dd255')
 		const user_input = ui.create_dom_element({
 			id				: 'username',
 			element_type	: 'input',
@@ -197,7 +195,7 @@ const get_content_data = async function(self) {
 		user_input.autocomplete	= "username"
 
 	// Authorization input
-		const login_item_password = login_items.reduce((carry, item) => {return (item.tipo==='dd256') ? item : carry;})
+		const login_item_password = login_items.find(el => el.tipo==='dd256')
 		const auth_input = ui.create_dom_element({
 			id				: 'auth',
 			element_type	: 'input',
@@ -208,7 +206,7 @@ const get_content_data = async function(self) {
 		auth_input.autocomplete= "current-password"
 
 	// Button
-		const login_item_enter = login_items.reduce((carry, item) => { return (item.tipo==='dd259') ? item : carry; })
+		const login_item_enter = login_items.find(el => el.tipo==='dd259')
 		const button_enter = ui.create_dom_element({
 			id				: 'auth_submit',
 			element_type	: 'button',
@@ -216,12 +214,12 @@ const get_content_data = async function(self) {
 			class_name		: 'warning',
 			parent			: form
 		})
-		const button_loading = ui.create_dom_element({
+		const button_enter_loading = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'preload display_none',
 			parent			: button_enter
 		})
-		const button_content = ui.create_dom_element({
+		const button_enter_content = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button_label',
 			text_content	: login_item_enter.label,
