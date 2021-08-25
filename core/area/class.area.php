@@ -193,7 +193,7 @@ class area extends area_common  {
 
 	/**
 	* http://uk1.php.net/array_walk_recursive implementation that is used to remove nodes from the array.
-	* array_walk_recursive itself cannot unset values. Even though you can pass array by reference, unsetting the value in
+	* array_walk_recursive itself cannot unset values. Even though you can pass array by reference, unsettling the value in
 	* the callback will only unset the variable in that scope.
 	* @param array The input array.
 	* @param callable $callback Function must return boolean value indicating whether to remove the node.
@@ -228,7 +228,7 @@ class area extends area_common  {
 	* Intermediate method for cache and easy use.
 	* @see protected function get_ar_ts_children_areas_recursive($terminoID, $include_main_tipo=true)
 	* Calculate current area tipo an call recursive protected function get_ar_ts_children_areas_recursive
-	* to obtain hierarchycally the estructure children of current area component (example: area_root)
+	* to obtain hierarchically the structure children of current area component (example: area_root)
 	* Method common for all area objects (area_root, area_resource, area_admin)
 	* @param $include_main_tipo
 	*	bool(true) default true. Case 'false', current tipo is omited as parent in results

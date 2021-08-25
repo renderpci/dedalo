@@ -283,8 +283,26 @@ section.prototype.build = async function(autoload=false) {
 					const fn_show_debug_info = function() {
 						event_manager.unsubscribe(event_token)
 						setTimeout(function(){
+
+							// collect debug data
 							load_data_debug(self, api_response, self.rqo)
-						}, 1600)
+							.then(function(node){
+								console.log("node:",node);
+
+								const debug = document.getElementById("debug")
+								// debug.classList.add("hide")
+
+								// clean
+									while (debug.firstChild) {
+										debug.removeChild(debug.firstChild)
+									}
+
+								debug.appendChild(node)
+
+								// show
+									debug.classList.remove("hide")
+							})
+						}, 1800)
 					}
 					const event_token = event_manager.subscribe('render_'+self.id, fn_show_debug_info)
 					self.events_tokens.push(event_token)

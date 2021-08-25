@@ -12,14 +12,14 @@
 class security {
 
 	# VARS
-	private $permissions ;
+	private $permissions;
 
-	private $user_id ;
-	private $permissions_tipo ;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG)
-	private $permissions_dato ;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG) QUE CONTIENE LOS DATOS
+	private $user_id;
+	private $permissions_tipo;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG)
+	private $permissions_dato;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG) QUE CONTIENE LOS DATOS
 
 
-	private static $ar_permissions_in_matrix_for_current_user ;# AR DATO
+	private static $ar_permissions_in_matrix_for_current_user; # AR DATO
 	private static $ar_permissions_table;
 
 	private $filename_user_ar_permissions_table;
@@ -162,17 +162,17 @@ class security {
 	*/
 	private static function get_user_security_access() {
 
-		// Default behaviour is false (use logged user to calculate permissions)
+		// Default behavior is false (use logged user to calculate permissions)
 			$user_id = $_SESSION['dedalo']['auth']['user_id'];
 
 		// user profile
-			$component_profile_model 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
-			$component_profile 		 	= component_common::get_instance($component_profile_model,
-																	  	 DEDALO_USER_PROFILE_TIPO,
-																	  	 (int)$user_id,
-																	  	 'list',
-																	  	 DEDALO_DATA_NOLAN,
-																	  	 DEDALO_SECTION_USERS_TIPO);
+			$component_profile_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
+			$component_profile			= component_common::get_instance($component_profile_model,
+																		 DEDALO_USER_PROFILE_TIPO,
+																		 (int)$user_id,
+																		 'list',
+																		 DEDALO_DATA_NOLAN,
+																		 DEDALO_SECTION_USERS_TIPO);
 			$profile_dato = $component_profile->get_dato();
 			if (empty($profile_dato)) {
 				return false;
@@ -196,7 +196,7 @@ class security {
 
 	/**
 	* GET_PERMISSIONS_TABLE_OF_SPECIFIC_USER
-	* Custom user calcul
+	* Custom user calculus
 	*
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
@@ -275,13 +275,14 @@ class security {
 			}
 
 		// Resolve from component
-			$security_administrator_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
-			$component_security_administrator = component_common::get_instance($security_administrator_model,
-																			   DEDALO_SECURITY_ADMINISTRATOR_TIPO,
-																			   $user_id,
-																			   'edit',
-																			   DEDALO_DATA_NOLAN,
-																			   DEDALO_SECTION_USERS_TIPO);
+			$security_administrator_model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
+			$component_security_administrator	= component_common::get_instance($security_administrator_model,
+																				 DEDALO_SECURITY_ADMINISTRATOR_TIPO,
+																				 $user_id,
+																				 'edit',
+																				 DEDALO_DATA_NOLAN,
+																				 DEDALO_SECTION_USERS_TIPO);
+
 			$security_administrator_dato = $component_security_administrator->get_dato();
 
 			// empty user data case
@@ -292,11 +293,9 @@ class security {
 			// locator data
 				$dato = (int)$security_administrator_dato[0]->section_id;
 
-				if ($dato===1) {
-					$is_global_admin = true;
-				}else{
-					$is_global_admin = false;
-				}
+
+		$is_global_admin = ($dato===1);
+
 
 		return $is_global_admin;
 	}//end is_global_admin
@@ -311,9 +310,9 @@ class security {
 	private static function set_section_permissions( $request_options ) {
 
 		$options = new stdClass();
-			$options->section_tipo 	= null;
-			$options->section_id 	= null;
-			$options->ar_sections 	= null;
+			$options->section_tipo	= null;
+			$options->section_id	= null;
+			$options->ar_sections	= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		# user_id
@@ -376,4 +375,4 @@ class security {
 
 
 
-}//end class
+}//end security class

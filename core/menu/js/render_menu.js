@@ -61,9 +61,12 @@ render_menu.prototype.edit = async function() {
 
 	// logo image
 		const dedalo_icon = ui.create_dom_element({
-			element_type	: 'div',
+			element_type	: 'a',
 			id				: 'dedalo_icon_top',
 			parent			: fragment
+		})
+		dedalo_icon.addEventListener("click", function(e){
+			window.open('https://dedalo.dev', 'Dédalo Site', []);
 		})
 
 	// areas/sections hierarchy list

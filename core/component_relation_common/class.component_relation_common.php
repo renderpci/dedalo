@@ -1494,6 +1494,7 @@ class component_relation_common extends component_common {
 	public static function get_hierarchy_terms_filter($ar_terms) {
 
 		$filter = [];
+
 		foreach ($ar_terms as $current_item) {
 			$resursive = (bool)$current_item->recursive;
 			# Get children
@@ -1501,10 +1502,10 @@ class component_relation_common extends component_common {
 			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_item->section_tipo, ['component_section_id'], true, true, true, true, false);
 
 			$path = new stdClass();
-				$path->section_tipo 	= $current_item->section_tipo;
-				$path->component_tipo 	= reset($component_section_id_tipo);
-				$path->modelo 			= 'component_section_id';
-				$path->name 			= 'Id';
+				$path->section_tipo		= $current_item->section_tipo;
+				$path->component_tipo	= reset($component_section_id_tipo);
+				$path->modelo			= 'component_section_id';
+				$path->name				= 'Id';
 
 			$ar_section_id = array_map(function($children){
 				return $children->section_id;

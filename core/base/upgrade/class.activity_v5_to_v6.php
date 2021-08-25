@@ -130,7 +130,44 @@ class activity_v5_to_v6 extends v5_to_v6 {
 				if (!is_array($activity_ip_dato)) {
 					$dato->components->dd551->dato->{DEDALO_DATA_NOLAN} = [$activity_ip_dato]; // same dato but as array
 				}
-		}
+				// Clean unused properties in 'Created section record' activity record (dd551)
+					// changes
+					// {
+					//	"msg": "Created section record",
+					//	"tipo": "dd1340",
+					//	"table": "matrix_tools",
+					//	"tm_id": "desactivo",
+					//	"top_id": 2,
+					//	"top_tipo": "dd1340",
+					//	"is_portal": 0,
+					//	"section_id": 2,
+					//	"section_tipo": "dd1340"
+					// }
+					// to
+					// {
+					//	"msg": "Created section record",
+					//	"section_id": 2,
+					//	"section_tipo": "dd1340"
+					//	"tipo": "dd1340",
+					//	"table": "matrix_tools"
+					// }
+				if (	isset($dato->components->dd551->dato->{DEDALO_DATA_NOLAN}[0])
+					&& 	isset($dato->components->dd551->dato->{DEDALO_DATA_NOLAN}[0]->msg)
+					&& 	$dato->components->dd551->dato->{DEDALO_DATA_NOLAN}[0]->msg==='Created section record'
+					) {
+
+					$old_value = $dato->components->dd551->dato->{DEDALO_DATA_NOLAN}[0];
+					$new_value = (object)[
+						'msg'			=> $old_value->msg,
+						'section_id'	=> $old_value->section_id,
+						'section_tipo'	=> $old_value->section_tipo,
+						'tipo'			=> $old_value->tipo,
+						'table'			=> $old_value->table
+					];
+					// overwrite old value
+					$dato->components->dd551->dato->{DEDALO_DATA_NOLAN}[0] = $new_value;
+				}
+		}//end if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO)
 
 
 		return $dato;
