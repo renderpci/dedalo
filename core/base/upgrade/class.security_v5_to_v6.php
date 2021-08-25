@@ -43,14 +43,16 @@ class security_v5_to_v6 {
 						}
 						foreach ($current_ar_tipo as $current_tipo => $value) {
 							$current_dato = new stdClass();
-								$current_dato->tipo 	= $current_tipo;
-								$current_dato->parent 	= $current_parent;
-								$current_dato->value 	= $value;
+								$current_dato->tipo		= $current_tipo;
+								$current_dato->parent	= $current_parent;
+								$current_dato->value	= $value;
 							$new_access_dato[] = $current_dato;
 						}
 					}
 					// replace data
-					$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_access_dato;
+					if ( isset($dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato) && isset($dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}) ) {
+						$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_access_dato;
+					}
 					// remove unused old value
 					unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
 
@@ -62,15 +64,19 @@ class security_v5_to_v6 {
 				$security_tools_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
 
 				if (is_object($security_tools_dato)) {
-					$new_tool_dato =[];
+
+					$new_tool_dato = [];
 					foreach ($security_tools_dato as $tool => $value) {
+
 						$current_dato = new stdClass();
-							$current_dato->name 	= $tool;
-							$current_dato->value 	= $value;
+							$current_dato->name		= $tool;
+							$current_dato->value	= $value;
 						$new_tool_dato[] = $current_dato;
 					}
 					// replace data
-					$dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_tool_dato;
+					if ( isset($dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato) && isset($dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}) ) {
+						$dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_tool_dato;
+					}
 				}else{
 					debug_log(__METHOD__." 'security_tools_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($security_tools_dato).' - value: '.to_string($security_tools_dato), logger::ERROR);
 				}
@@ -79,8 +85,8 @@ class security_v5_to_v6 {
 		}else if ($section_tipo===DEDALO_SECTION_USERS_TIPO){	// USERS TABLE
 
 			// security_administrator
-				$security_admin_dato = $dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? 0;
-				$section_id 		 = ($security_admin_dato===1) ? '1' : '2';
+				$security_admin_dato	= $dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? 0;
+				$section_id				= ($security_admin_dato===1) ? '1' : '2';
 
 				$new_dato = new locator();
 					$new_dato->set_section_tipo('dd64');
