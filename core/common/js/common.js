@@ -1739,21 +1739,21 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		// })
 
 	// debug node container
-		const debug = document.getElementById("debug")
-		// debug.classList.add("hide")
+		// const debug = document.getElementById("debug")
+		// // debug.classList.add("hide")
 
-		// clean
-			while (debug.firstChild) {
-				debug.removeChild(debug.firstChild)
-			}
+		// // clean
+		// 	while (debug.firstChild) {
+		// 		debug.removeChild(debug.firstChild)
+		// 	}
 
-		debug.appendChild(fragment)
+		// debug.appendChild(fragment)
 
-		// show
-			debug.classList.remove("hide")
+		// // show
+		// 	debug.classList.remove("hide")
 
-
-	return true
+	return fragment
+	// return true
 }//end load_data_debug
 
 
