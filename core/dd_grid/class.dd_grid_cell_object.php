@@ -225,7 +225,7 @@ class dd_grid_cell_object {
 	/**
 	* SET_VALUE
 	*/
-	public function set_value(array $value) {
+	public function set_value($value) {
 		$this->value = $value;
 	}
 
