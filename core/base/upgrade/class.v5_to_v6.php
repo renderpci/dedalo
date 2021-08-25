@@ -14,6 +14,9 @@ class v5_to_v6 {
 	*/
 	public static function convert_table_data($ar_tables, $action) {
 
+		# Maximum execution time
+		set_time_limit(0);
+
 		foreach ($ar_tables as $key => $table) {
 
 			// Get last id in the table

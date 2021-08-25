@@ -60,9 +60,9 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 	public static function change_index( stdClass $datos_column ) {
 
 		$component_tipo = [
-			'rsc36' => 'rsc860',
-			'rsc30' => 'rsc860',
-			'rsc38' => 'rsc860'
+			'rsc36'	=> 'rsc860',
+			'rsc30'	=> 'rsc860',
+			'rsc38'	=> 'rsc860'
 		];
 		$dato = clone $datos_column;
 
@@ -71,7 +71,7 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 			$new_relations = [];
 
 			foreach ($dato->relations as $key => $locator) {
-				if($locator->type === 'dd96'){
+				if($locator->type==='dd96' && isset($locator->tag_id)){
 
 					$new_locator = new locator();
 						$new_locator->set_type($locator->type);
@@ -79,18 +79,24 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 						$new_locator->set_tag_component_tipo($locator->component_tipo);
 						$new_locator->set_section_tipo($dato->section_tipo);
 						$new_locator->set_section_id($dato->section_id);
-						$new_locator->set_section_top_id($locator->section_top_id);
-						$new_locator->set_section_top_tipo($locator->section_top_tipo);
+
+						if (!empty($locator->section_top_id)) {
+							$new_locator->set_section_top_id($locator->section_top_id);
+						}
+
+						if (!empty($locator->section_top_tipo)) {
+							$new_locator->set_section_top_tipo($locator->section_top_tipo);
+						}
 
 					$target_component_tipo = $component_tipo[$locator->component_tipo];
 					$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
 
 					$target_component = component_common::get_instance($model,
-																	 $target_component_tipo,
-																	 $locator->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $locator->section_tipo);
+																	   $target_component_tipo,
+																	   $locator->section_id,
+																	   'list',
+																	   DEDALO_DATA_NOLAN,
+																	   $locator->section_tipo);
 
 					$target_component->add_locator_to_dato($new_locator);
 					$saved = $target_component->Save();
