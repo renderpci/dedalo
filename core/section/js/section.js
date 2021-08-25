@@ -280,30 +280,41 @@ section.prototype.build = async function(autoload=false) {
 			// debug
 				if(SHOW_DEBUG===true) {
 
-					const fn_show_debug_info = function() {
-						event_manager.unsubscribe(event_token)
-						setTimeout(function(){
+					// fn_show_debug_info
+						const fn_show_debug_info = function() {
+							event_manager.unsubscribe(event_token)
+							setTimeout(function(){
 
-							// collect debug data
-							load_data_debug(self, api_response, self.rqo)
-							.then(function(node){
-								console.log("node:",node);
+								// collect debug data
+								load_data_debug(self, api_response, self.rqo)
+								.then(function(info_node){
 
-								const debug = document.getElementById("debug")
-								// debug.classList.add("hide")
+									const debug = document.getElementById("debug")
+									// debug.classList.add("hide")
 
-								// clean
-									while (debug.firstChild) {
-										debug.removeChild(debug.firstChild)
-									}
+									// clean
+										while (debug.firstChild) {
+											debug.removeChild(debug.firstChild)
+										}
 
-								debug.appendChild(node)
+									// button
+										const button_debug = ui.create_dom_element({
+											element_type	: 'button',
+											class_name		: 'primary eye',
+											inner_html		: get_label.debug || "Debug"
+										})
+										button_debug.addEventListener("click", function(e){
+											this.remove()
 
-								// show
-									debug.classList.remove("hide")
-							})
-						}, 1800)
-					}
+											debug.appendChild(info_node)
+										})
+										debug.appendChild(button_debug)
+
+									// show
+										debug.classList.remove("hide")
+								})
+							}, 1000)
+						}
 					const event_token = event_manager.subscribe('render_'+self.id, fn_show_debug_info)
 					self.events_tokens.push(event_token)
 				}
