@@ -192,14 +192,19 @@ const get_content_data_edit = async function(self) {
 				text_content 	: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
-			button_export.addEventListener('click', function(e){
-				const request = {
-					source				: self.source,
+			button_export.addEventListener('click', async function(e){
+				// clean target_div
+					while (export_data.hasChildNodes()) {
+						export_data.removeChild(export_data.lastChild);
+					}
+
+				const options = {
 					export_format		: select_data_format_export.value,
 					ar_ddo_to_export	: self.ar_ddo_to_export,
 				}
+				const dd_grid_expot_node = await self.get_export_grid(options)
+				export_data.appendChild(dd_grid_expot_node)
 			})
-
 
 	// export_buttons_options
 		const export_buttons_options = ui.create_dom_element({
@@ -232,12 +237,21 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 
+
+	// grid data container
+		const export_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_data',
+			parent			: fragment
+		})
+
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_data ' + self.type
 		})
 		content_data.appendChild(fragment)
+
 
 
 
@@ -296,7 +310,7 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			// delete the ddo from the array to export ddos
 			const delete_ddo_index = self.ar_ddo_to_export.findIndex( el => el.id === ddo.id )
 			self.ar_ddo_to_export.splice(delete_ddo_index, 1)
-			console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
+			// console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
 		})
 
 	// label component source if exists

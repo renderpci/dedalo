@@ -7,6 +7,7 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
+	import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_export} from './render_tool_export.js'
@@ -149,50 +150,51 @@ tool_export.prototype.get_section_id = function() {
 /**
 * GET_EXPORT_grid : load the export grid data
 */
-this.get_export_grid = async function(options) {
+tool_export.prototype.get_export_grid = async function(options) {
 
-	const button_obj		= options.button_obj
-	const event				= options.event
-	const section_tipo		= options.section_tipo
-	const section_id		= options.section_id
-	const component_tipo	= options.component_tipo
-	const container_id		= options.container_id
-	const value				= options.value || null
+	const self = this
 
-	const target_div = document.getElementById(container_id);
-		if (!target_div) {
-			alert('get_export_grid. Target div not exist for terminoID: '+terminoID+' !')
-			return false
+	const sqo = JSON.parse(JSON.stringify(self.sqo))
+		sqo.limit	= 0
+		sqo.offset	= 0
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'get_export_grid')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
+			model				: self.caller.model,
+			export_format		: options.export_format, // format selected by the user to get data
+			ar_ddo_to_export	: options.ar_ddo_to_export, // array with the ddo map and paths to get the info
+			sqo 				: sqo,
 		}
 
-	// rqo. create
+	// rqo
 		const rqo = {
-			action	: 'get_indexation_grid',
-			source	: {
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				tipo			: component_tipo,
-				value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
-			}
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
 		}
 
-	const dd_grid	= await instances.get_instance({
-			model 			: 'dd_grid',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			tipo			: component_tipo,
-			mode 			: 'list',
-			lang 			: page_globals.dedalo_data_lang,
-			rqo 			: rqo
-		})
+	// call to the API, fetch data and get response
+		const current_data_manager = new data_manager()
+		const dd_grid_data = await current_data_manager.request({body : rqo})
 
-	await dd_grid.build()
+		const dd_grid	= await instances.get_instance({
+					model 			: 'dd_grid',
+					section_tipo	: self.caller.section_tipo,
+					// section_id		: section_id,
+					tipo			: self.caller.section_tipo,
+					mode 			: 'list',
+					lang 			: page_globals.dedalo_data_lang,
+					// rqo 			: rqo
+				})
+
+	dd_grid.data = dd_grid_data.result
 
 	const node = await dd_grid.render()
 
-		console.log("node:",node);
-	target_div.appendChild(node)
-
-	return
+	return node
 }// end get_export_grid
 
