@@ -1670,7 +1670,7 @@ const build_request_select = function(self, request_config, action){
 
 /**
 * LOAD_DATA_DEBUG
-* @return
+* @return DOM node document fragment
 */
 export const load_data_debug = async function(self, load_data_promise, rqo_show_original) {
 
@@ -1753,7 +1753,6 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		// 	debug.classList.remove("hide")
 
 	return fragment
-	// return true
 }//end load_data_debug
 
 
