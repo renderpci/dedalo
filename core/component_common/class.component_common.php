@@ -1486,24 +1486,28 @@ abstract class component_common extends common {
 
 
 		// Search
-			$search 			= search::get_instance($search_query_object);
+			$search = search::get_instance($search_query_object);
 			// include_negative values to include root user in list
 				if ($include_negative===true) {
 					$search->include_negative = true;
 				}
-			$records_data 		= $search->search();
-			$ar_current_dato 	= $records_data->ar_records;
+			$records_data		= $search->search();
+			$ar_current_dato	= $records_data->ar_records;
 				#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
 				#dump($ar_current_dato, ' ar_current_dato ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
 
 		$result = [];
-		foreach ($ar_current_dato as $key => $current_row) {
+		// foreach ($ar_current_dato as $key => $current_row) {
+		$ar_current_dato_size = sizeof($ar_current_dato);
+		for ($i=0; $i < $ar_current_dato_size; $i++) {
+
+			$current_row = $ar_current_dato[$i];
 
 			# value. is a basic locator section_id, section_tipo
 			$value = new stdClass();
-				$value->section_id   = $current_row->section_id;
-				$value->section_tipo = $current_row->section_tipo;
+				$value->section_id		= $current_row->section_id;
+				$value->section_tipo	= $current_row->section_tipo;
 
 			# get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $divisor=', '
 			#$label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
@@ -1559,11 +1563,11 @@ abstract class component_common extends common {
 
 
 		$response = new stdClass();
-			$response->result   			= (array)$result;
-			$response->msg 	  				= 'Ok';
+			$response->result	= (array)$result;
+			$response->msg		= 'Ok';
 			if(SHOW_DEBUG===true) {
-				$response->search_query_object 	= json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-				$response->debug 				= 'Total time:' . exec_time_unit($start_time,'ms').' ms';
+				$response->search_query_object	= json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				$response->debug				= 'Total time:' . exec_time_unit($start_time,'ms').' ms';
 			}
 
 		// cache
