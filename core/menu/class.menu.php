@@ -1,8 +1,8 @@
 <?php
-
-
 /*
 * CLASS MENU
+*
+*
 */
 class menu extends common {
 
@@ -28,6 +28,8 @@ class menu extends common {
 
 		parent::load_structure_data();
 
+
+		return true;
 	}//end __construct
 
 
@@ -53,7 +55,10 @@ class menu extends common {
 			// get authorized areas for the current user with the data of component_security_access
 			$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
 
-			foreach ($ar_permisions_areas as $item) {
+			// foreach ($ar_permisions_areas as $item) {
+			$ar_permisions_areas_length = sizeof($ar_permisions_areas);
+			for ($i=0; $i < $ar_permisions_areas_length ; $i++) {
+				$item		= $ar_permisions_areas[$i];
 				$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
 			}
 		}
@@ -166,4 +171,4 @@ class menu extends common {
 
 
 
-}//end class
+}//end menu class

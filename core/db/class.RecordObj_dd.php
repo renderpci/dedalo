@@ -664,11 +664,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# IMPORTANTE: NO HACER CACHE DE ESTE MÉTODO (AFECTA A COMPONENT_FILTER_MASTER)
 
 		# creamos una instancia independiente de RecordObj_dd y sacamos los hijos directos
-		$ar_childrens_of_this 	= array();	# reset value every cycle
-		$RecordObj_dd 			= new RecordObj_dd($terminoID);
-		$ar_childrens_of_this 	= (array)$RecordObj_dd->get_ar_childrens_of_this(null, null, null);	# $esdescriptor='si', $esmodelo=NULL, $order_by='norden'
+		// $ar_childrens_of_this	= array();	# reset value every cycle
+		$RecordObj_dd				= new RecordObj_dd($terminoID);
+		$ar_childrens_of_this		= (array)$RecordObj_dd->get_ar_childrens_of_this(null, null, null);	# $esdescriptor='si', $esmodelo=NULL, $order_by='norden'
+		$ar_childrens_of_this_size	= sizeof($ar_childrens_of_this);
 
-		foreach($ar_childrens_of_this as $children_terminoID) {
+		// foreach($ar_childrens_of_this as $children_terminoID) {
+		for ($i=0; $i < $ar_childrens_of_this_size; $i++) {
+
+			$children_terminoID = $ar_childrens_of_this[$i];
 
 			# Add current element
 			$this->ar_recursive_childrens_of_this[] = $children_terminoID;
@@ -695,10 +699,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$ar_resolved[] = $terminoID;
 		}
 
-		$RecordObj_dd = new RecordObj_dd($terminoID);
-		$ar_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this('si',null, $order_by);
+		$RecordObj_dd		= new RecordObj_dd($terminoID);
+		$ar_childrens		= (array)$RecordObj_dd->get_ar_childrens_of_this('si',null, $order_by);
+		$ar_childrens_size	= sizeof($ar_childrens);
 
-		foreach($ar_childrens as $current_terminoID) {
+		// foreach($ar_childrens as $current_terminoID) {
+		for ($i=0; $i < $ar_childrens_size; $i++) {
+
+			$current_terminoID = $ar_childrens[$i];
 
 			# Exclude models optional
 			if ($ar_exclude_models!==false) {
@@ -744,11 +752,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 		foreach($ar_childrens as $current_terminoID) {
 
 			if (in_array($current_terminoID, $ar_exclude)) {
-				continue; # Skip this term and childrens
+				continue; # Skip this term and children
 			}
 
 			# Recursion
-			$ar_resolved = 	array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens( $current_terminoID, true ) );
+			$ar_resolved = array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens( $current_terminoID, true ) );
 		}
 
 		return $ar_resolved;
@@ -819,8 +827,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$ar_siblings_of_this_data[$this->terminoID] = $ar_siblings_of_this;
 
-		return $ar_siblings_of_this ;
-	}
+		return $ar_siblings_of_this;
+	}//end get_ar_siblings_of_this
+
 
 
 	# NUMERO DE HIJOS DESCRIPTORES

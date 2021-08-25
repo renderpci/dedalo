@@ -242,13 +242,18 @@ class component_relation_common extends component_common {
 		$relations  = $my_section->get_relations();
 
 		# Filtered case
-		$component_relations = [];
-		foreach ($relations as $locator) {
+		$all_data = [];
+
+		// foreach ($relations as $locator) {
+		$relations_size = sizeof($relations);
+		for ($i=0; $i < $relations_size; $i++) {
+
+			$locator = $relations[$i];
+
 			if(	isset($locator->from_component_tipo) && $locator->from_component_tipo===$this->tipo ) {
-				$component_relations[] = $locator;
+				$all_data[] = $locator;
 			}
 		}
-		$all_data = $component_relations;
 
 		return $all_data;
 	}//end get_all_data
@@ -1417,7 +1422,11 @@ class component_relation_common extends component_common {
 
 		// Parse results for stats
 			$ar_clean = [];
-			foreach ($result->ar_records as $key => $item) {
+			// foreach ($result->ar_records as $key => $item) {
+			$ar_records_size = sizeof($result->ar_records);
+			for ($i=0; $i < $ar_records_size; $i++) {
+
+				$item = $result->ar_records[$i];
 
 				#$uid = $locator->section_tipo.'_'.$locator->section_id;
 
@@ -1430,7 +1439,6 @@ class component_relation_common extends component_common {
 
 						$label = ts_object::get_term_by_locator( $locator, $lang, true );
 						$label = strip_tags(trim($label));
-
 
 						$uid = $locator->section_tipo.'_'.$locator->section_id;
 
@@ -1468,8 +1476,7 @@ class component_relation_common extends component_common {
 					$ar_clean[$uid]->count++;
 					$ar_clean[$uid]->value = $label;
 				}
-
-			}
+			}//end foreach
 			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
 
 

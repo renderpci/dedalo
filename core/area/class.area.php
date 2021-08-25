@@ -111,11 +111,11 @@ class area extends area_common  {
 	/**
 	* GET AR CHILDREN AREAS RECURSIVE
 	* Get all children areas (and sections) of current area (example: area_root)
-	* Look structure tesauro for find childrens with valid model name
+	* Look structure thesaurus for find children with valid model name
 	* @param $terminoID
-	*	tipo recursive. Firt tipo is null
+	*	tipo recursive. First tipo is null
 	* @return $ar_ts_children_areas
-	*	array recursive of tesauro structure childrens filtered by acepted model name
+	*	array recursive of thesaurus structure children filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
 	protected static function get_ar_children_areas_recursive($terminoID) {
@@ -123,16 +123,20 @@ class area extends area_common  {
 		$ar_children_areas_recursive	= [];
 		$RecordObj_dd					= new RecordObj_dd($terminoID);
 		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this();
+		$ar_ts_childrens_size			= sizeof($ar_ts_childrens);
 
-		if (count($ar_ts_childrens)>0) {
+		if ($ar_ts_childrens_size>0) {
 
-			foreach ($ar_ts_childrens as $children_terminoID) {
+			// foreach ($ar_ts_childrens as $children_terminoID) {
+			for ($i=0; $i < $ar_ts_childrens_size; $i++) {
+
+				$children_terminoID = $ar_ts_childrens[$i];
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$modelo 		= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
+				$modelo			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
 				$visible		= $RecordObj_dd->get_visible();
 
-				# Test if modelo name is accepted or not (more restrictive)
+				# Test if model is accepted or not (more restrictive)
 				if( $visible!=='no' && in_array($modelo, area::$ar_children_include_modelo_name) && !in_array($modelo, area::$ar_children_exclude_modelo_name) ) {
 
 					$ar_children_areas_recursive[] = $children_terminoID;
@@ -142,8 +146,7 @@ class area extends area_common  {
 					#if(count($ar_ts_childrens)>0)
 					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
 				}
-
-			}#end foreach
+			}//end foreach
 		}
 
 		return $ar_children_areas_recursive;
@@ -259,22 +262,27 @@ class area extends area_common  {
 	/**
 	* GET AR TS CHILDREN AREAS RECURSIVE
 	* Get all children areas (and sections) of current area (example: area_root)
-	* Look structure tesauro for find childrens with valid model name
+	* Look structure thesaurus for find children with valid model name
 	* @param $terminoID
-	*	tipo recursive. Firt tipo is null
+	*	tipo recursive. First tipo is null
 	* @return $ar_ts_children_areas
-	*	array recursive of tesauro structure childrens filtered by acepted model name
+	*	array recursive of thesaurus structure children filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
 	protected function get_ar_ts_children_areas_recursive($terminoID) {
 
-		$ar_ts_children_areas_recursive = array();
+		$ar_ts_children_areas_recursive	= array();
+
 		$RecordObj_dd					= new RecordObj_dd($terminoID);
-		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this();
+		$ar_ts_children					= $RecordObj_dd->get_ar_childrens_of_this();
+		$ar_ts_children_size			= sizeof($ar_ts_children);
 
-		if (count($ar_ts_childrens)>0) {
+		if ($ar_ts_children_size>0) {
 
-			foreach ($ar_ts_childrens as $children_terminoID) {
+			// foreach ($ar_ts_children as $children_terminoID) {
+			for ($i=0; $i < $ar_ts_children_size; $i++) {
+
+				$children_terminoID = $ar_ts_children[$i];
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
 				$modelo 		= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
@@ -285,13 +293,10 @@ class area extends area_common  {
 
 					$ar_temp = $this->get_ar_ts_children_areas_recursive($children_terminoID);
 
-					#if(count($ar_ts_childrens)>0)
+					#if(count($ar_ts_children)>0)
 					$ar_ts_children_areas_recursive[$children_terminoID] = $ar_temp;
 				}
-
-			}#end foreach
-
-			return $ar_ts_children_areas_recursive;
+			}//end foreach
 		}
 
 		return $ar_ts_children_areas_recursive;
@@ -299,5 +304,6 @@ class area extends area_common  {
 
 
 
-}
-?>
+}//end area class
+
+
