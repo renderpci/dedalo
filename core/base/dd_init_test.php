@@ -4,18 +4,21 @@
 # Comprueba la existencia de elementos / directorios / permisos necesarios para ejecutar Dédalo
 
 
+
 // RESPONSE
 	$init_response = new stdClass();
-		$init_response->result 	= false;
-		$init_response->msg 	= 'Error on init test '.PHP_EOL;
+		$init_response->result			= false;
+		$init_response->msg				= 'Error on init test '.PHP_EOL;
+		$init_response->result_options	= null;
+
 
 
 // PHP VERSION
-	if (version_compare(PHP_VERSION, '5.4.15', '<')) {
-
+	if (version_compare(PHP_VERSION, '7.2.0', '<')) {
 		$init_response->msg .= trim(" Error. This php version ".PHP_VERSION." is not supported by Dédalo");
 		return $init_response;
 	}
+
 
 
 // MBSTRING
@@ -23,6 +26,7 @@
 		$init_response->msg .= trim(" Error. mb_internal_encoding is required by Dédalo. Please install php mbstring to continue");
 		return $init_response;
 	}
+
 
 
 // BACKUPS
@@ -37,6 +41,7 @@
 	}
 
 
+
 // BACKUPS_STRUCTURE
 	# Target folder exists test
 	$folder_path = DEDALO_BACKUP_PATH_STRUCTURE;
@@ -49,6 +54,7 @@
 	}
 
 
+
 // BACKUP_TEMP
 	# Target folder exists test
 	$folder_path = DEDALO_BACKUP_PATH_TEMP;
@@ -59,6 +65,7 @@
 		}
 		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	}
+
 
 
 // BACKUP USERS DIR
@@ -87,6 +94,7 @@
 	}
 
 
+
 // DEDALO_PREFIX_TIPOS
 	# Maintain consitency on defined DEDALO_PREFIX_TIPOS and extras folder dirs
 	$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
@@ -102,6 +110,7 @@
 	}
 
 
+
 // MEDIA folder
 	# Target folder exists test
 	$folder_path = DEDALO_MEDIA_PATH;
@@ -112,6 +121,7 @@
 		}
 		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	}
+
 
 
 // MEDIA QUALITY FOLDERS (Important for ffmpeg conversions)
@@ -128,6 +138,7 @@
 	}
 
 
+
 // MEDIA AV POSTERFRAME
 	/*
 	# Target folder exists test
@@ -138,6 +149,7 @@
 		}
 	}
 	*/
+
 
 
 // MEDIA IMAGE
@@ -157,6 +169,7 @@
 	}
 
 
+
 // MEDIA PDF folder
 	# Target folder exists test
 	if(defined('DEDALO_PDF_FOLDER')) {
@@ -168,6 +181,7 @@
 		}
 		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	}}
+
 
 
 // MEDIA PDF THUMBS folder
@@ -183,6 +197,7 @@
 	}}
 
 
+
 // MEDIA HTML FILES folder
 	# Target folder exists test
 	if(defined('DEDALO_HTML_FILES_FOLDER')) {
@@ -194,6 +209,7 @@
 		}
 		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	}}
+
 
 
 // MEDIA WEB IMAGES folder
@@ -209,6 +225,7 @@
 	}}
 
 
+
 // MEDIA EXPORT folder
 	# Target folder exists test
 	if(defined('DEDALO_TOOL_EXPORT_FOLDER_PATH')) {
@@ -220,6 +237,7 @@
 		}
 		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	}}
+
 
 
 // MEDIA AV
@@ -237,6 +255,7 @@
 	}
 
 
+
 // MEDIA AVG
 	# Target folder exists test
 	$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER ;
@@ -247,6 +266,7 @@
 		}
 		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	}
+
 
 
 // MEDIA PROTECTION
@@ -262,6 +282,7 @@
 	}
 
 
+
 // LOGS FOLDER
 	# Target folder exists test
 	$folder_path = DEDALO_LOGS_DIR;
@@ -274,6 +295,7 @@
 	}
 
 
+
 // PSQL (Agus problem)
 	$path = DB_BIN_PATH . 'psql';
 	$psql = trim(shell_exec('command -v '. $path));
@@ -281,6 +303,7 @@
 		$init_response->msg .= trim('psql not found at: '.$path . PHP_EOL . ' Review your postgres intallation or your db config file');
 		return $init_response;
 	}
+
 
 
 // PGPASS FILE
@@ -316,12 +339,14 @@
 	}
 
 
+
 // FFMPEG
 	$ffmpeg = trim(shell_exec('command -v '.DEDALO_AV_FFMPEG_PATH));
 	if (empty($ffmpeg)) {
 		$init_response->msg .= trim("Error on system test. ffmpeg lib not found");
 		return $init_response;
 	}
+
 
 
 // QT-FASTSTART
@@ -338,6 +363,7 @@
 		$init_response->msg .= trim("Error on system test. ffprobe lib not found");
 		return $init_response;
 	}
+
 
 
 // NODE
@@ -360,12 +386,14 @@
 	}
 
 
+
 // DEFAULT PROJECT
 	if (!defined('DEDALO_DEFAULT_PROJECT') || !defined('DEDALO_FILTER_SECTION_TIPO_DEFAULT')) {
 	    #$init_response->msg .= trim("Error Processing Request. Please define DEDALO_DEFAULT_PROJECT");
 	    $init_response->msg .= trim("Error Processing Request. Please define congif DEDALO_DEFAULT_PROJECT and DEDALO_FILTER_SECTION_TIPO_DEFAULT");
 	    return $init_response;
 	}
+
 
 
 // CURL
@@ -375,10 +403,12 @@
 	}
 
 
+
 // LOCK COMPONENTS
 	if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 		lock_components::clean_locks_garbage();
 	}
+
 
 
 // Test mcrypt lib
@@ -386,6 +416,7 @@
 	#if (!function_exists('mcrypt_encrypt')) {
 	#	$init_response->msg .= trim("Error Processing Request: MCRYPT lib is not available");
 	#}
+
 
 
 // Test openSSL lib
@@ -441,7 +472,62 @@
 #	}
 
 
+
+// LANGS JS (moved to login.php !)
+	#	# Generate js files with all labels (in not extist current lang file)
+	#	$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
+	#	if( !is_dir($folder_path) ) {
+	#		if(!mkdir($folder_path, 0777,true)) {
+	#			$init_response->msg .= trim(" Error on read or create js/lang directory. Permission denied");
+	#			return $init_response;
+	#		}
+	#		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+	#	}
+	#	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
+	#	foreach ($ar_langs as $lang => $label) {
+	#		$label_path  = '/common/js/lang/' . $lang . '.js';
+	#		if (!file_exists(DEDALO_CORE_PATH.$label_path)) {
+	#			$ar_label = label::get_ar_label($lang); // Get all properties
+	#				#dump($ar_label, ' ar_label');
+	#
+	#			file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+	#			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+	#		}
+	#	}
+
+
+
+// STRUCTURE CSS (moved to login.php !)
+	// 	# Generate css structure file (in not extist)
+	// 	$file_path = DEDALO_CORE_PATH.'/common/css/structure.css';
+	// 	if (!file_exists($file_path)) {
+
+	// 		$response = (object)css::build_structure_css();
+	// 		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::DEBUG);
+	// 	}
+
+
+	// // SEQUENCES TEST
+	// 	require(DEDALO_CORE_PATH.'/db/class.data_check.php');
+	// 	$data_check = new data_check();
+	// 	$response 	= $data_check->check_sequences();
+	// 	if ($response->result!=true) {
+	// 		debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
+	// 		if(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER) {
+	// 			$init_response->msg .= trim("Error on ".$response->msg);
+	// 			return $init_response;
+	// 		}
+	// 	}
+
+
+
 // ALL IS OK
-	$init_response->result 	= true;
-	$init_response->msg 	= 'Ok. init test done';
+	$init_response->result	= true;
+	$init_response->msg		= 'OK. init test successful';
+
+
+	return $init_response;
+
+
+
 

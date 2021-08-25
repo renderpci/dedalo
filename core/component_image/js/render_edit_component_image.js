@@ -103,7 +103,7 @@ const get_content_data_edit = function(self) {
 
 
 
-	// opbject <object type="image/svg+xml" data="image.svg"></object>
+	// object <object type="image/svg+xml" data="image.svg"></object>
 		const object = ui.create_dom_element({
 			element_type	: "object",
 			class_name 		: 'image',

@@ -12,8 +12,8 @@ class login extends common {
 	protected $modo;
 
 	protected $modelo;
-	protected $tipo_active_account 	= 'dd131';
-	protected $tipo_button_login 	= 'dd259';
+	protected $tipo_active_account	= 'dd131';
+	protected $tipo_button_login	= 'dd259';
 
 	protected static $login_matrix_table = 'matrix';
 
@@ -683,15 +683,15 @@ class login extends common {
 			$_SESSION['dedalo']['auth']['is_logged']		= 1;
 
 		// CONFIG KEY
-			$_SESSION['dedalo']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_openssl(DEDALO_SALT_STRING);
 
 		// login_type
-			$_SESSION['dedalo']['auth']['login_type']  = $login_type;
+			$_SESSION['dedalo']['auth']['login_type'] = $login_type;
 
 		# Auth cookie
-		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
-			self::init_cookie_auth();
-		}
+			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
+				self::init_cookie_auth();
+			}
 
 		# BACKUP ALL
 		if( DEDALO_BACKUP_ON_LOGIN ) {
@@ -993,7 +993,6 @@ class login extends common {
 
 
 
-
 	/**
 	* QUIT
 	* Made logout
@@ -1249,27 +1248,28 @@ class login extends common {
 	/**
 	* CHECK_INSTALL
 	* @return
-	*//*
-	public function check_install() {
-
-
-		// Test su password
-			$su_default_password = (bool)$this->test_su_default_password();
-
-
-		// Test if superuser psw is default
-			if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $su_default_password===true ) {
-
-				# CSS includes
-				array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
-
-				$page_html	= 'html/' . get_class($this) . '_set_psw.phtml';
-				include($page_html);
-				return;
-			}
-	}//end check_install
 	*/
+		// public function check_install() {
+
+
+		// 	// Test su password
+		// 		$su_default_password = (bool)$this->test_su_default_password();
+
+
+		// 	// Test if superuser psw is default
+		// 		if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $su_default_password===true ) {
+
+		// 			# CSS includes
+		// 			array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
+
+		// 			$page_html	= 'html/' . get_class($this) . '_set_psw.phtml';
+		// 			include($page_html);
+		// 			return;
+		// 		}
+		// }//end check_install
 
 
 
-}//end login
+}//end login class
+
+

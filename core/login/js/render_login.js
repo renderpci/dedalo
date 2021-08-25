@@ -353,3 +353,5 @@ const validate_browser = function() {
 
 	return true;
 };//end validate_browser
+
+

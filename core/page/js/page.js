@@ -170,7 +170,7 @@ page.prototype.init = async function(options) {
 
 					resolve(new_page_element_instance.id)
 				})
-			};//end fn_user_navigation
+			}//end fn_user_navigation
 
 
 	// window onpopstate. Triggered when user make click on browser navigation buttons

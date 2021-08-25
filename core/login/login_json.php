@@ -4,9 +4,9 @@
 
 
 // configuration vars
-	$tipo				= $this->get_tipo();
-	$permissions		= 1;
-	$modo				= $this->get_modo();
+	$tipo			= $this->get_tipo();
+	$permissions	= 1;
+	$modo			= $this->get_modo();
 
 
 

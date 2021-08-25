@@ -20,8 +20,8 @@ class security_v5_to_v6 {
 		if($section_tipo===DEDALO_SECTION_PROFILES_TIPO){	// PROFILES TABLE
 
 			// security_access / areas
-				$security_acces_dato 	= $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
-				$security_acces_areas 	= $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}  ?? new stdClass(); // expected object
+				$security_acces_dato	= $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
+				$security_acces_areas	= $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}  ?? new stdClass(); // expected object
 
 				if (is_object($security_acces_dato)) {
 
@@ -29,10 +29,10 @@ class security_v5_to_v6 {
 					$new_access_dato = [];
 					foreach ($security_acces_areas as $current_tipo => $value) {
 						$current_dato = new stdClass();
-							$current_dato->tipo 	= $current_tipo;
-							$current_dato->parent 	= $current_tipo;
-							$current_dato->type 	= 'area';
-							$current_dato->value 	= $value;
+							$current_dato->tipo		= $current_tipo;
+							$current_dato->parent	= $current_tipo;
+							$current_dato->type		= 'area';
+							$current_dato->value	= $value;
 						$new_access_dato[] = $current_dato;
 					}
 					// change access dato
