@@ -7,6 +7,7 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
+	import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_export} from './render_tool_export.js'
@@ -99,6 +100,7 @@ tool_export.prototype.init = async function(options) {
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo
 		self.limit					= self.sqo.limit || 10
+		self.ar_ddo_to_export  		= []
 
 	return common_init
 };//end init
@@ -144,4 +146,55 @@ tool_export.prototype.get_section_id = function() {
 	return 'tmp_export_' + self.section_id
 }
 
+
+/**
+* GET_EXPORT_grid : load the export grid data
+*/
+tool_export.prototype.get_export_grid = async function(options) {
+
+	const self = this
+
+	const sqo = JSON.parse(JSON.stringify(self.sqo))
+		sqo.limit	= 0
+		sqo.offset	= 0
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'get_export_grid')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
+			model				: self.caller.model,
+			export_format		: options.export_format, // format selected by the user to get data
+			ar_ddo_to_export	: options.ar_ddo_to_export, // array with the ddo map and paths to get the info
+			sqo 				: sqo,
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		const current_data_manager = new data_manager()
+		const dd_grid_data = await current_data_manager.request({body : rqo})
+
+		const dd_grid	= await instances.get_instance({
+					model 			: 'dd_grid',
+					section_tipo	: self.caller.section_tipo,
+					// section_id		: section_id,
+					tipo			: self.caller.section_tipo,
+					mode 			: 'list',
+					lang 			: page_globals.dedalo_data_lang,
+					// rqo 			: rqo
+				})
+
+	dd_grid.data = dd_grid_data.result
+
+	const node = await dd_grid.render()
+
+	return node
+}// end get_export_grid
 

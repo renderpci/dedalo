@@ -129,7 +129,8 @@ export const render_components_list = async function(options) {
 						section_id		: section_id
 					}
 				})
-
+					component.ddo	= element
+					component.path	= calculated_component_path
 				// if (element.model!=="component_portal"){
 					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
 					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})

@@ -59,28 +59,25 @@ class component_relation_parent extends component_relation_common {
 			}
 
 		// rebuild dato option
-			/*
 			if (empty($dato)) {
-				$dato_clean = $dato;
+				$dato_fixed = $dato;
 			}else{
 				$tipo 		 = $this->get_tipo();
-				$dato_clean = [];
-				foreach ((array)$dato as $key => $item) {
-
+				$dato_fixed = [];
+				$dato_leng 	= sizeof($dato);
+				for ($i=0; $i < $dato_leng; $i++) {
+					$item = $dato[i];
 					// create a new locator and change from component tipo. Note that this component dont have relation type (!)
 					$locator = new locator();
 						$locator->set_section_tipo($item->section_tipo);
 						$locator->set_section_id($item->section_id);
 						$locator->set_from_component_tipo($tipo);
 
-					$dato_clean[] = $locator;
+					$dato_fixed[] = $locator;
 				}
 			}
 
-			return (array)$dato_clean;
-			*/
-
-		return (array)$dato;
+		return (array)$dato_fixed;
 	}//end get_dato
 
 
@@ -885,10 +882,10 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
-	* GET_DATO_EXPORT
+	* GET_DATO_full
 	* @return array $dato_export
 	*/
-	public function get_dato_export() {
+	public function get_dato_full() {
 
 		$dato = $this->get_dato();
 		$tipo = $this->get_tipo();
@@ -897,8 +894,9 @@ class component_relation_parent extends component_relation_common {
 			$dato_export = $dato;
 		}else{
 			$dato_export = [];
-			foreach ((array)$dato as $key => $item) {
-
+			$dato_leng 	= sizeof($dato);
+			for ($i=0; $i < $dato_leng; $i++) {
+				$item = $dato[i];
 				// create a new locator and change from component tipo. Note that this component dont have relation type (!)
 				$locator = new locator();
 					$locator->set_section_tipo($item->section_tipo);
@@ -910,7 +908,7 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		return $dato_export;
-	}//end get_dato_export
+	}//end get_dato_full
 
 
 
