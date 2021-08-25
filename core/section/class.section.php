@@ -265,7 +265,7 @@ class section extends common {
 	/**
 	* GET_COMPONENT_DATO
 	* Extrae del contenedor de la sección, el dato específico de cada componente en el idioma requerido
-	* will be depercated with the get_all_component_data (08-2017)
+	* will be deprecated with the get_all_component_data (08-2017)
 	*/
 	public function get_component_dato($component_tipo, $lang, $lang_fallback=false) {
 

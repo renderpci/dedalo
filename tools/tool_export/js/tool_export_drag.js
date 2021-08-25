@@ -7,12 +7,12 @@
 	* @return bool true
 	*/
 	export const on_dragstart = function(obj, event) {
-	console.log("on_drag:");
 		event.stopPropagation();
 
 		const data = JSON.stringify({
-			path		: obj.dataset.path,
-			section_id	: obj.dataset.section_id
+			path			: obj.path,
+			// section_id	: obj.dataset.section_id
+			ddo				: obj.ddo
 			})
 
 		event.dataTransfer.effectAllowed = 'move';
@@ -55,26 +55,38 @@
 	* @return bool true
 	*/
 	export const on_drop = function(obj, event) {
-	console.log("on_drop:");
+
 		event.preventDefault() // Necessary. Allows us to drop.
 		event.stopPropagation()
 
 		const self = this
 
-		//console.log("on_drop:",obj);
 		//console.log("on_drop event:", event.dataTransfer.getData('text/plain'));
 		const data 		  = event.dataTransfer.getData('text/plain');// element thats move
 		const wrap_target = obj 	 // element on user leaves source wrap
 
 		const data_parse = JSON.parse(data)
 		const path = data_parse.path
+		const ddo = data_parse.ddo
 
-		const section_id = data_parse.section_id
+		const new_ddo = {
+			id				: ddo.section_tipo +'_'+ ddo.tipo +'_list_'+ ddo.lang,
+			tipo			: ddo.tipo,
+			section_tipo	: ddo.section_tipo,
+			model			: ddo.model,
+			parent			: ddo.parent,
+			lang			: ddo.lang,
+			mode			: ddo.mode,
+			label 			: ddo.label,
+			path			: path
+		}
 
 		// Build component html
-		self.build_export_component(wrap_target, path, null, null, section_id).then(()=>{
-			//Update the state and save
-			// self.update_state({state:'changed'})
+		self.build_export_component(wrap_target, path, new_ddo).then(()=>{
+			//Update the ddo_export
+			self.ar_ddo_to_export.push(new_ddo)
+
+			// console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
 
 		});
 

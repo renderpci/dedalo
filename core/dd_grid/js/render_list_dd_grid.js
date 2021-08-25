@@ -32,7 +32,7 @@ render_list_dd_grid.prototype.list = async function() {
 
 	// Options vars
 		const data		= self.data
-
+	console.log("aquiiiiii", data);
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
@@ -91,6 +91,17 @@ const get_grid_nodes = function(data) {
 							const button_node = get_button_column(current_data)
 							node.appendChild(button_node)
 							break;
+
+						case 'json':
+							const json_node = get_json_column(current_data)
+							node.appendChild(json_node)
+							break;
+
+						case 'section_id':
+							const section_id_node = get_section_id_column(current_data)
+							node.appendChild(section_id_node)
+							break;
+
 
 						case 'text':
 						default:
@@ -256,4 +267,43 @@ const get_button_column = function(current_data){
 	return button
 }//end get_button_column
 
+
+
+/**
+* GET_JSON_COLUMN
+* @param object current_data
+* @return DOM node text_json (span)
+*/
+const get_json_column = function(current_data) {
+
+	const class_list = current_data.class_list || ''
+
+	const text_json = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: class_list,
+		text_content	: JSON.stringify(current_data.value)
+	})
+
+	return text_json
+}//end get_json_column
+
+
+
+/**
+* GET_SECTION_ID_COLUMN
+* @param object current_data
+* @return DOM node text_node (span)
+*/
+const get_section_id_column = function(current_data) {
+
+	const class_list = current_data.class_list || ''
+
+	const section_id_node = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: class_list,
+		text_content	: current_data.value
+	})
+
+	return section_id_node
+}//end get_section_id_column
 

@@ -12,7 +12,7 @@ class component_section_id extends component_common {
 	* GET_DATO
 	*/
 	public function get_dato() {
-		return (int)$this->parent;
+		return (int)$this->section_id;
 	}//end get_dato
 
 
@@ -23,6 +23,39 @@ class component_section_id extends component_common {
 	public function get_valor() {
 		return $this->get_dato();
 	}//end get_valor
+
+
+	/**
+	* GET_DATO_FULL
+	*/
+	public function get_dato_full() {
+		return $this->get_dato();
+	}//end get_dato_full
+
+	/**
+	* GET_RAW_VALUE
+	* Get the raw value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* The direct components can set the value with the dato directly
+	* The relation components will separate the locator in rows
+	* @return object $value
+	*/
+	public function get_value($lang=DEDALO_DATA_NOLAN, $ddo=null) {
+
+		$value = new dd_grid_cell_object();
+
+		$data	= $this->get_dato();
+		$label	= $this->get_label();
+
+		$value->set_type('column');
+		$value->set_label($label);
+		$value->set_cell_type('section_id');
+		$value->set_row_count(0);
+		$value->set_value($data);
+
+		return $value;
+	}//end get_raw_value
+
 
 
 	/**
