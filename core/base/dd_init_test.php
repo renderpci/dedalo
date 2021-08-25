@@ -426,50 +426,66 @@
 	}
 
 
-#// LANGS JS (moved to login.php !)
-#	# Generate js files with all labels (in not extist current lang file)
-#	$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
-#	if( !is_dir($folder_path) ) {
-#		if(!mkdir($folder_path, 0777,true)) {
-#			$init_response->msg .= trim(" Error on read or create js/lang directory. Permission denied");
-#			return $init_response;
-#		}
-#		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
-#	}
-#	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
-#	foreach ($ar_langs as $lang => $label) {
-#		$label_path  = '/common/js/lang/' . $lang . '.js';
-#		if (!file_exists(DEDALO_CORE_PATH.$label_path)) {
-#			$ar_label = label::get_ar_label($lang); // Get all properties
-#				#dump($ar_label, ' ar_label');
-#
-#			file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
-#			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
-#		}
-#	}
 
+// table matrix_tools - matrix_test
+	$tables = (array)backup::get_tables();
+	if (!in_array('matrix_test', $tables)) {
 
-#// STRUCTURE CSS (moved to login.php !)
-#	# Generate css structure file (in not extist)
-#	$file_path = DEDALO_CORE_PATH.'/common/css/structure.css';
-#	if (!file_exists($file_path)) {
-#
-#		$response = (object)css::build_structure_css();
-#		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::DEBUG);
-#	}
-#
-#
-#// SEQUENCES TEST
-#	require(DEDALO_CORE_PATH.'/db/class.data_check.php');
-#	$data_check = new data_check();
-#	$response 	= $data_check->check_sequences();
-#	if ($response->result!=true) {
-#		debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
-#		if(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER) {
-#			$init_response->msg .= trim("Error on ".$response->msg);
-#			return $init_response;
-#		}
-#	}
+		// matrix_test, auto create the necessary matrix_test table, used to generate test data in area development
+
+		include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
+
+		$current_query 	= PHP_EOL.sanitize_query("
+			CREATE TABLE IF NOT EXISTS public.matrix_test
+			(
+			   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
+			)
+			WITH (OIDS = FALSE);
+			CREATE SEQUENCE IF NOT EXISTS matrix_test_id_seq;
+			ALTER TABLE public.matrix_test ALTER COLUMN id SET DEFAULT nextval('matrix_test_id_seq'::regclass);
+		");
+		$SQL_update = update::SQL_update($current_query);
+
+		$init_response->msg .= ' Table matrix_test is not available. Auto-created table matrix_test';
+	}
+	if (!in_array('matrix_tools', $tables)) {
+
+		if ($user_id==DEDALO_SUPERUSER) {
+
+			// If user is 'root', auto create the necessary matrix_tools and redirect the browser to Development Area
+			// to admin de Dédalo data updates
+
+			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
+
+			$current_query 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_tools
+				(
+				   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
+				)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_tools_id_seq;
+				ALTER TABLE public.matrix_tools ALTER COLUMN id SET DEFAULT nextval('matrix_tools_id_seq'::regclass);
+			");
+			$SQL_update = update::SQL_update($current_query);
+
+			if ($SQL_update->result===false) {
+				$init_response->msg .= trim("Error Processing Request: Table matrix_tools is not available and it is not possible to create it");
+				return $init_response;
+			}
+
+			// $init_response->msg = 'Warning. Redirect to Area Development to update Dédalo data';
+			$init_response->result_options	= (object)[
+				'redirect'	=> DEDALO_CORE_URL.'/page/?t=dd770'
+			];
+
+		}else{
+
+			// Only user 'root' is allow to access Development Area. Stop execution here
+
+			$init_response->msg .= 'Table matrix_tools is not available. Please, login as Dédalo superuser (root) to grant access to Development Area. You need to update your Dédalo data, ontology and register the tools';
+			return $init_response;
+		}
+	}
 
 
 

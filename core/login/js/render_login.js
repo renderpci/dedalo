@@ -111,18 +111,23 @@ const add_events = function(self, wrapper, content_data) {
 						}
 					}).then((response)=>{
 
+						// hide spinner and show button label
+							button_label.classList.remove("display_none")
+							preload.classList.add("display_none")
+
 						const message	= response.msg
 						const msg_type	= response.result===true ? 'ok' : 'error'
 						ui.show_message(content_data, message, msg_type, 'component_message', true)
 
 						if (response.result===true) {
 
-							window.location.reload(false);
-
-						}else{
-							// hide spinner and show button label
-								button_label.classList.remove("display_none")
-								preload.classList.add("display_none")
+							if (response.result_options && response.result_options.redirect) {
+								setTimeout(function(){
+									window.location.replace(response.result_options.redirect)
+								}, 2000)
+							}else{
+								window.location.reload(false);
+							}
 						}
 					})
 
@@ -244,16 +249,34 @@ const get_content_data = function(self) {
 
 			const item = info_data[j]
 
-			ui.create_dom_element({
-				element_type	: 'span',
-				text_content	: item.label,
-				parent			: info
-			})
-			ui.create_dom_element({
-				element_type	: 'span',
-				text_content	: item.value,
-				parent			: info
-			})
+			// label
+				ui.create_dom_element({
+					element_type	: 'span',
+					text_content	: item.label,
+					parent			: info
+				})
+
+			// class_name custom for value
+				let class_name	= ''
+				let value		= item.value
+				switch(item.type){
+					case 'data_version':
+						class_name = (item.value[0]<6)
+							? 'error'
+							: ''
+						value = item.value.join('.') + ' - Outdated!'
+						break;
+					default:
+						break;
+				}
+
+			// value
+				ui.create_dom_element({
+					element_type	: 'span',
+					text_content	: value,
+					class_name		: class_name,
+					parent			: info
+				})
 		}
 		fragment.appendChild(info)
 
