@@ -646,29 +646,39 @@ class login extends common {
 		$start_time=microtime(1);
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 	 	= 'Error on init_user_login_sequence';
-			$response->errors 	= [];
+			$response->result			= false;
+			$response->msg				= 'Error on init_user_login_sequence';
+			$response->errors			= [];
+			$response->result_options	= null;
 
 		#ob_implicit_flush(true);
 
 		# RESET ALL SESSION VARS BEFORE INIT
 		#if(isset($_SESSION)) foreach ($_SESSION as $key => $value) {
-			# Nothint to delete
+			# Nothing to delete
 		#}
 
-		# DEDALO INIT TEST SECUENCE
-		if ($init_test===true) {
-			require(DEDALO_CORE_PATH.'/base/dd_init_test.php');
-			if ($init_response->result===false) {
-				debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
-				// Don't stop here. Only inform user of init error via jasvascript
-					# $response->result 	= false;
-					# $response->msg 		= $init_response->msg;
-					# return $response;
-				$response->errors[] = $init_response->msg;
+		// DEDALO INIT TEST SECUENCE
+			if ($init_test===true) {
+
+				// dd_init_test
+					$init_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
+
+				// errors found on init test (Don't stop execution here)
+					if ($init_response->result===false) {
+						debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
+						// Don't stop here. Only inform user of init error via jasvascript
+							# $response->result 	= false;
+							# $response->msg 		= $init_response->msg;
+							# return $response;
+						$response->errors[] = $init_response->msg;
+					}
+
+				// init_response result_options (like redirect)
+					if (isset($init_response->result_options)) {
+						$response->result_options = $init_response->result_options;
+					}
 			}
-		}
 
 		// IS_GLOBAL_ADMIN (before set user session vars)
 			$_SESSION['dedalo']['auth']['is_global_admin'] = (bool)security::is_global_admin($user_id);
@@ -1197,37 +1207,48 @@ class login extends common {
 					$properties->login_items[] = $item;
 				}
 
-		// Version : Dedalo version info
+		// Dedalo  info
 			$properties->info   = [];
+		// entity (from config)
 			$properties->info[] = [
 				'type'	=> 'dedalo_entity',
 				'label'	=> 'Dédalo entity',
 				'value'	=> DEDALO_ENTITY
 			];
+		// dedalo version
 			$properties->info[] = [
 				'type'	=> 'version',
-				'label'	=> 'Dédalo version',
+				'label'	=> 'Code version',
 				'value'	=> DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
 			];
+		// dedalo data version
 			$properties->info[] = [
-				'type'	=> 'db_user',
-				'label'	=> 'DB user',
-				'value'	=> (DEDALO_ENTITY==='development')
-					? DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN
-					: ''
+				'type'	=> 'data_version',
+				'label'	=> 'Data version',
+				'value'	=> get_current_version_in_db()
 			];
+		// ontology version
 			$properties->info[] = [
-				'type'	=> 'db_user',
-				'label'	=> 'DD version',
+				'type'	=> 'version',
+				'label'	=> 'Ontology version',
 				'value'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO)
 			];
-			$properties->info[] = [
-				'type'	=> 'db_user',
-				'label'	=> 'DB info',
-				'value'	=> (DEVELOPMENT_SERVER===true)
-					? DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
-					: ''
-			];
+		// database user (only developer)
+			if (DEDALO_ENTITY==='development') {
+				$properties->info[] = [
+					'type'	=> 'db_user',
+					'label'	=> 'DB user',
+					'value'	=> DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN
+				];
+			}
+		// db info
+			if (DEVELOPMENT_SERVER===true) {
+				$properties->info[] = [
+					'type'	=> 'db_user',
+					'label'	=> 'DB info',
+					'value'	=> DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
+				];
+			}
 
 		// dd_object
 			$dd_object = new dd_object((object)[
