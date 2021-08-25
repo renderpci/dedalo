@@ -516,7 +516,12 @@ class search {
 		$new_ar_query_object = new stdClass();
 			$new_ar_query_object->$op = [];
 
-		foreach ($ar_value as $search_object) {
+		// foreach ($ar_value as $search_object) {
+		$ar_value_size = sizeof($ar_value);
+		for ($i=0; $i < $ar_value_size; $i++) {
+
+			$search_object = $ar_value[$i];
+
 			if (!is_object($search_object)) {
 				dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
 				debug_log(__METHOD__." Invalid (ignored) non object search_object: ".to_string($search_object), logger::DEBUG);
@@ -2756,14 +2761,13 @@ class search {
 			return null;
 		}
 		while ($rows = pg_fetch_assoc($result)) {
+
 			$section_id  = $rows['section_id'];
 			$json_filter = json_decode($rows['json_filter']);
 
-
-
 			$preset_obj = new stdClass();
 				$preset_obj->section_id  = (int)$section_id;
-				$preset_obj->json_filter = reset($json_filter); // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
+				$preset_obj->json_filter = is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
 			break; // Only one expected
 		}
 		#debug_log(__METHOD__." preset_id: $preset_id ".PHP_EOL.to_string($strQuery), logger::DEBUG);
@@ -2867,11 +2871,15 @@ class search {
 		// ar_components_tipo
 			if (empty($layout_map)) {
 				// we obtain target components from section layout map
-					$layout_map 	= component_layout::get_layout_map_from_section( $section_obj );
+					$layout_map = component_layout::get_layout_map_from_section( $section_obj );
 			}
 
 		$ar_values = reset($layout_map);
-		foreach ($ar_values as $current_tipo) {
+		// foreach ($ar_values as $current_tipo) {
+		$ar_values_length = sizeof($ar_values);
+		for ($i=0; $i < $ar_values_length; $i++) {
+
+			$current_tipo = $ar_values[$i];
 
 			$path = new stdClass();
 				$path->section_tipo   = $section_tipo;

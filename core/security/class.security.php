@@ -325,35 +325,39 @@ class security {
 		# Permissions
 		$permissions = 2;
 
-		$component_security_access 		= self::get_user_security_access();
-		$component_security_access_dato = $component_security_access->get_dato();
+		$component_security_access		= self::get_user_security_access();
+		$component_security_access_dato	= $component_security_access->get_dato();
 
 		# Iterate sections (normally like ts1,ts2)
-		foreach ((array)$options->ar_sections as $current_section_tipo) {
+		// foreach ((array)$options->ar_sections as $current_section_tipo) {
+		$ar_sections_length = sizeof($options->ar_sections);
+		for ($i=0; $i < $ar_sections_length; $i++) {
+
+			$current_section_tipo = $options->ar_sections[$i];
 
 			$section_permisions = new stdClass();
-				$section_permisions->tipo = $current_section_tipo;
-				$section_permisions->parent = $current_section_tipo;
-				$section_permisions->type = 'area';
-				$section_permisions->value = $permissions;
+				$section_permisions->tipo	= $current_section_tipo;
+				$section_permisions->parent	= $current_section_tipo;
+				$section_permisions->type	= 'area';
+				$section_permisions->value	= $permissions;
 
 			$component_security_access_dato[] = $section_permisions;
 
 			# Components inside section
-			$real_section = section::get_section_real_tipo_static( $current_section_tipo );
-			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($real_section,
-																					$ar_modelo_name_required=array('component','button','section_group'),
-																					$from_cache=true,
-																					$resolve_virtual=false,
-																					$recursive=true,
-																					$search_exact=false);
+			$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
+			$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section($real_section,
+																					  $ar_modelo_name_required=array('component','button','section_group'),
+																					  $from_cache=true,
+																					  $resolve_virtual=false,
+																					  $recursive=true,
+																					  $search_exact=false);
 
 			foreach ($ar_children as $children_tipo) {
 
 				$component_permisions = new stdClass();
-					$component_permisions->tipo = $children_tipo;
-					$component_permisions->parent = $current_section_tipo;
-					$component_permisions->value = $permissions;
+					$component_permisions->tipo		= $children_tipo;
+					$component_permisions->parent	= $current_section_tipo;
+					$component_permisions->value	= $permissions;
 
 				$component_security_access_dato[] = $component_permisions;
 			}
