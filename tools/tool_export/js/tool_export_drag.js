@@ -69,14 +69,22 @@
 		const path = data_parse.path
 		const ddo = data_parse.ddo
 
-		const key = ddo.section_tipo +'_'+ ddo.tipo +'_list_'+ ddo.lang
-		ddo.id		= key
-		ddo.path	= path
+		const new_ddo = {
+			id				: ddo.section_tipo +'_'+ ddo.tipo +'_list_'+ ddo.lang,
+			tipo			: ddo.tipo,
+			section_tipo	: ddo.section_tipo,
+			model			: ddo.model,
+			parent			: ddo.parent,
+			lang			: ddo.lang,
+			mode			: ddo.mode,
+			label 			: ddo.label,
+			path			: path
+		}
 
 		// Build component html
-		self.build_export_component(wrap_target, path, ddo).then(()=>{
+		self.build_export_component(wrap_target, path, new_ddo).then(()=>{
 			//Update the ddo_export
-			self.ar_ddo_to_export.push(ddo)
+			self.ar_ddo_to_export.push(new_ddo)
 
 			// console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
 
