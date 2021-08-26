@@ -12,8 +12,8 @@ class login extends common {
 	protected $modo;
 
 	protected $modelo;
-	protected $tipo_active_account 	= 'dd131';
-	protected $tipo_button_login 	= 'dd259';
+	protected $tipo_active_account	= 'dd131';
+	protected $tipo_button_login	= 'dd259';
 
 	protected static $login_matrix_table = 'matrix';
 
@@ -969,8 +969,8 @@ class login extends common {
 			if (empty($_SESSION['dedalo4']['auth']['user_id'])) {
 
 				# Store current lang for not loose
-				$dedalo_application_lang = isset($_SESSION['dedalo4']['config']['dedalo_application_lang']) ? $_SESSION['dedalo4']['config']['dedalo_application_lang'] : false;
-				$dedalo_data_lang 		 = isset($_SESSION['dedalo4']['config']['dedalo_data_lang']) ? $_SESSION['dedalo4']['config']['dedalo_data_lang'] : false;
+				$dedalo_application_lang	= isset($_SESSION['dedalo4']['config']['dedalo_application_lang']) ? $_SESSION['dedalo4']['config']['dedalo_application_lang'] : false;
+				$dedalo_data_lang			= isset($_SESSION['dedalo4']['config']['dedalo_data_lang']) ? $_SESSION['dedalo4']['config']['dedalo_data_lang'] : false;
 
 				# remove complete session
 				unset($_SESSION['dedalo4']);
@@ -1040,8 +1040,8 @@ class login extends common {
 	public static function Quit($request_options) {
 
 		$options = new stdClass();
-			$options->mode 	= null;
-			$options->cause = 'called quit method';
+			$options->mode	= null;
+			$options->cause	= 'called quit method';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
@@ -1049,8 +1049,8 @@ class login extends common {
 			return false;
 		}
 
-		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
-		$username = $_SESSION['dedalo4']['auth']['username'];
+		$user_id	= $_SESSION['dedalo4']['auth']['user_id'];
+		$username	= $_SESSION['dedalo4']['auth']['username'];
 
 		// LOCK_COMPONENTS. Remove lock_components elements
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
@@ -1067,10 +1067,10 @@ class login extends common {
 				'LOG OUT',
 				// $activity_datos
 				array(
-					'result' 	=> 'quit',
-					'cause' 	=> $options->cause,
-					'username' 	=> $username,
-					'mode' 		=> $options->mode
+					'result'	=> 'quit',
+					'cause'		=> $options->cause,
+					'username'	=> $username,
+					'mode'		=> $options->mode
 				)
 			);
 
@@ -1188,12 +1188,12 @@ class login extends common {
 		#}
 
 		# Resolve from component
-		$component 	 = component_common::get_instance('component_radio_button',
-													   DEDALO_USER_DEVELOPER_TIPO,
-													   $user_id,
-													   'edit',
-													   DEDALO_DATA_NOLAN,
-													   DEDALO_SECTION_USERS_TIPO);
+		$component = component_common::get_instance('component_radio_button',
+													 DEDALO_USER_DEVELOPER_TIPO,
+													 $user_id,
+													 'edit',
+													 DEDALO_DATA_NOLAN,
+													 DEDALO_SECTION_USERS_TIPO);
 		$dato = $component->get_dato();
 
 		if (empty($dato)) {
@@ -1206,11 +1206,11 @@ class login extends common {
 			$is_developer = true;
 		}
 
-
 		return $is_developer;
 	}//end is_developer
 
 
 
-}//end login
-?>
+}//end login class
+
+

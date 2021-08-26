@@ -1440,6 +1440,7 @@ abstract class backup {
 	* @return object $response
 	* 	msg: string info about execution
 	* 	code: int httpcode response from server
+	* 	error: mixed error info from CURL if exists. Else false
 	* 	result: mixed data received from server
 	*/
 	public static function curl_request($options) {
