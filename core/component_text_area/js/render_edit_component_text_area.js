@@ -234,8 +234,8 @@ const get_content_data_edit = function(self) {
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// values (inputs)
@@ -604,7 +604,7 @@ const get_custom_events = (self, i, service) => {
 
 	// click
 		custom_events.click = (evt, options) => {
-			// use the observe property into ontology of the components to suscribe to this events
+			// use the observe property into ontology of the components to subscribe to this events
 			// img : click on img
 			if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
 				const tag_obj = evt.target
@@ -612,7 +612,7 @@ const get_custom_events = (self, i, service) => {
 
 					case 'tc':
 						// Video go to timecode by tc tag
-						event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_tc_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
 						break;
 
 					case 'index':
@@ -620,7 +620,7 @@ const get_custom_events = (self, i, service) => {
 						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
 						// 'self.id' for specific uses like tool indexation
 						// console.log("PUBLISH self.id:",self.id, self.id_base);
-						event_manager.publish('click_tag_index_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
 						// event_manager.publish('click_tag_index_'+ self.id, {tag:tag_obj, caller: self})
 						// des
 							// const tipo			= text_area_component.dataset.tipo
@@ -660,8 +660,7 @@ const get_custom_events = (self, i, service) => {
 
 					case 'draw' :
 						// Load draw editor
-						event_manager.publish('click_tag_draw' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
-
+						event_manager.publish('click_tag_draw_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
 						// des
 							// switch(page_globals.modo) {
 
@@ -685,23 +684,25 @@ const get_custom_events = (self, i, service) => {
 						break;
 
 					case 'geo' :
-						// Load geo editor
-						event_manager.publish('click_tag_geo' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
+						// subscribed by component_geolocation from properties like 'numisdata264'
+						event_manager.publish('click_tag_geo_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
 						break;
 
 					case 'page':
 						// PDF go to the specific page
-						event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_pdf_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
 						break;
 
 					case 'person':
 						// Show person info
 						component_text_area.show_person_info( ed, evt, text_area_component )
 						break;
+
 					case 'note':
 						// Show note info
 						component_text_area.show_note_info( ed, evt, text_area_component )
 						break;
+
 					case 'reference':
 						if(evt.altKey===true){
 							// Select all node to override content
@@ -711,11 +712,12 @@ const get_custom_events = (self, i, service) => {
 							component_text_area.show_reference_info( ed, evt, text_area_component )
 						}
 						break;
+
 					default:
 						// nothing to do here
 
 						break;
-				}//end switch
+				}//end switch evt.target.className
 			}else if(evt.target.nodeName==='LABEL') {
 				// Fix text area selection values
 				if (page_globals.modo==='tool_lang') {
