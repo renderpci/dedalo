@@ -55,7 +55,7 @@ export const component_geolocation = function(){
 	component_geolocation.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_geolocation.prototype.update_datum		= component_common.prototype.update_datum
 	component_geolocation.prototype.change_value		= component_common.prototype.change_value
-	component_geolocation.prototype.build_rqo	= common.prototype.build_rqo
+	component_geolocation.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_geolocation.prototype.mini				= render_component_geolocation.prototype.mini
@@ -65,7 +65,6 @@ export const component_geolocation = function(){
 	component_geolocation.prototype.tm					= render_component_geolocation.prototype.edit
 	component_geolocation.prototype.search				= render_component_geolocation.prototype.search
 	component_geolocation.prototype.change_mode			= component_common.prototype.change_mode
-
 
 
 
@@ -81,22 +80,22 @@ component_geolocation.prototype.init = async function(options) {
 	self.layer_control		= false
 
 	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
-	// We need a temporary value for the all current values of the inputs (lat, lon, zoom, alt)
+	// We need a temporary value for all current values of the inputs (lat, lon, zoom, alt)
 	// to will be used for save it when the user clicks on the save button
-	this.current_value 		= []
+	this.current_value = []
 
-	//draw editor vars
-	self.drawControl				= null
-	self.draw_editor_is_initated 	= false
-	self.ar_FeatureGroup 			= []
-	self.draw_state					= null
-	self.active_layer_id			= null
+	// draw editor vars
+		self.drawControl				= null
+		self.draw_editor_is_initated 	= false
+		self.ar_FeatureGroup 			= []
+		self.draw_state					= null
+		self.active_layer_id			= null
 
-	// call the generic commom tool init
+	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(this, options);
 
 	// set the self specific libraries and variables not defined by the generic init
-		// load dependences js/css
+		// load dependencies js/css
 			const load_promises = []
 
 			const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
@@ -115,30 +114,34 @@ component_geolocation.prototype.init = async function(options) {
 
 			})
 
+	// events
+
+
 	return common_init
 };//end init
 
+
+
 /**
-* get_MAP
+* GET_MAP
 * load the libraries and specific css
 */
-
 component_geolocation.prototype.get_map = async function(map_container, value) {
 
 	const self = this
 
 	// defaults
-		const default_lat 	= 39.462571
-		const default_lon 	= -0.376295
-		const default_zoom 	= 16
-		const default_alt 	= 0
+		const default_lat	= 39.462571
+		const default_lon	= -0.376295
+		const default_zoom	= 16
+		const default_alt	= 0
 
 	// get data
-		const key 			= JSON.parse(map_container.dataset.key)
-		const field_lat  	= value.lat 	|| default_lat
-		const field_lon  	= value.lon 	|| default_lon
-		const field_zoom 	= value.zoom 	|| default_zoom
-		const field_alt 	= value.alt 	|| default_alt
+		const key			= JSON.parse(map_container.dataset.key)
+		const field_lat		= value.lat 	|| default_lat
+		const field_lon		= value.lon 	|| default_lon
+		const field_zoom	= value.zoom 	|| default_zoom
+		const field_alt		= value.alt 	|| default_alt
 
 	// update the current_value with the data from DDBB
 	// current_value will be update with different changes to create change_data to save
@@ -152,23 +155,23 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 	// map_data
 		const map_data = (typeof value!=="undefined")
 			? {
-				x	  : field_lat,
-				y	  : field_lon,
-				zoom  : field_zoom,
-				alt   : field_alt,
+				x		: field_lat,
+				y		: field_lon,
+				zoom	: field_zoom,
+				alt		: field_alt,
 			  }
 			: {
-				x	 : default_lat,
-				y	 : default_lon,
-				zoom : default_zoom,
-				alt  : default_alt
+				x		: default_lat,
+				y		: default_lon,
+				zoom	: default_zoom,
+				alt		: default_alt
 			 }
 
 	// new map vars
-		let arcgis 		= null
-		let osm  		= null
-		let dare 		= null
-		let base_maps 	= {}
+		let arcgis		= null
+		let osm			= null
+		let dare		= null
+		let base_maps	= {}
 
 
 	// Add layer to map
@@ -388,43 +391,49 @@ component_geolocation.prototype.refresh_map = function(map) {
 
 /**
 * LOAD_GEO_EDITOR
-* Load all data information of the current selected tag or Full database.
+* Load all data information of the current selected tag or full database layer loaded.
 */
 component_geolocation.prototype.load_geo_editor = function(options) {
 
 	const self = this
-	const load = options.load || 'full'
 
-	switch(load) {
-		case ('full'):
-			const ar_layer 		= self.ar_layer_loaded
-			const ar_layer_len 	= ar_layer.length
-			for (let i = 0; i < ar_layer_len; i++) {
-				const layer = ar_layer[i]
-				self.load_layer(layer)
-			}
-		break;
-		case ('layer'):
-			const layer_id 		= options.layer_id
-			const loaded_layer	= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
-			// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
-			// create new layer data with the new id and set to ar_layer_loaded
-			const layer = (typeof (loaded_layer) !== 'undefined')
-			? loaded_layer
-			: (function(){
-				const new_layer = {
-					layer_id 	: layer_id,
-					layer_data 	: [],
+	// options
+		const load		= options.load || 'full'
+		const layer_id	= options.layer_id
+
+	// load_layer
+		switch(load) {
+			case ('full'):
+				const ar_layer		= self.ar_layer_loaded
+				const ar_layer_len	= ar_layer.length
+				for (let i = 0; i < ar_layer_len; i++) {
+					const layer = ar_layer[i]
+					self.load_layer(layer)
 				}
-				self.ar_layer_loaded.push(new_layer)
-				return new_layer
-			})()
-			self.load_layer(layer)
-		break;
+				break;
+			case ('layer'):
+				const loaded_layer = self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
+					console.log("loaded_layer:",loaded_layer);
+				// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
+				// create new layer data with the new id and set to ar_layer_loaded
+				const layer = typeof(loaded_layer)!=='undefined'
+					? loaded_layer
+					: (function(){
+						const new_layer = {
+							layer_id	: layer_id,
+							layer_data	: []
+						}
+						self.ar_layer_loaded.push(new_layer)
+						return new_layer
+					  })()
+				self.load_layer(layer)
+				break;
 
-		default:
-		break;
-	};//end switch
+			default:
+				break;
+		}//end switch
+
+	return true
 };//end load_geo_editor
 
 
@@ -439,7 +448,7 @@ component_geolocation.prototype.load_geo_editor = function(options) {
 */
 component_geolocation.prototype.load_layer = function(layer){
 
-		const self = this
+	const self = this
 
 	// set the layer data
 		const layer_id			= layer.layer_id
@@ -543,24 +552,72 @@ component_geolocation.prototype.load_layer = function(layer){
 };//end load_geo_editor
 
 
+
 /**
 * LOAD_TAG_INTO_GEO_EDITOR
-* called by the click into the tag (in component_text_area)
-* the tag will send the ar_layer_id that it's pointing to
+* Called by the user click on the tag (in component_text_area)
+* The tag will send the ar_layer_id that it's pointing to
 */
 component_geolocation.prototype.load_tag_into_geo_editor = async function(options) {
 
 	const self = this
-	// convert the tag dataset to 'real' object for manage it
-	const ar_layer_id = JSON.parse(options.tag.dataset.data)
-	// for every layer_id in the tag load the data from the DDBB
-	for (let i = 0; i < ar_layer_id.length; i++) {
-		self.load_geo_editor({
-			load 	 	: 'layer',
-			layer_id 	: parseInt(ar_layer_id[i])
+
+	// options
+		const tag_node = options.tag // DOM node image from component_text_area used click
+
+	// parts_of_tag (layer_id, tag_state, data)
+		const parts_of_tag = self.get_parts_of_tag(tag_node)
+
+	// load_layer
+		self.load_layer({
+			layer_id	: parts_of_tag.layer_id,
+			layer_data	: parts_of_tag.data
 		})
-	}
+
+	// des
+		// // convert the tag dataset to 'real' object for manage it
+		// 	const ar_layer_id = JSON.parse(data)
+
+		// // for every layer_id in the tag load the data from the DDBB
+		// 	for (let i = 0; i < ar_layer_id.length; i++) {
+		// 		self.load_geo_editor({
+		// 			load		: 'layer',
+		// 			layer_id	: parseInt(ar_layer_id[i])
+		// 		})
+		// 	}
+
+	return true
 };//end load_tag_into_geo_editor
+
+
+
+/**
+* GET_PARTS_OF_TAG
+* Get normalized info from given tag DOM node
+* @param DOM node tag_node
+* @return object parts_of_tag
+*/
+component_geolocation.prototype.get_parts_of_tag = function(tag_node) {
+
+	// type check
+		const type = tag_node.dataset.type
+		if (type!=='geo'){
+			alert("invalid tag here!!!!")
+			return false
+		}
+
+	const tag_state	= tag_node.dataset.state
+	const layer_id	= parseInt(tag_node.dataset.tag_id)
+	const data		= JSON.parse(tag_node.dataset.data.replaceAll("'",'"')) // restore quotes "
+
+	const parts_of_tag = {
+		layer_id	: layer_id,
+		tag_state	: tag_state,
+		data		: data
+	}
+
+	return parts_of_tag
+}//end get_parts_of_tag
 
 
 
@@ -575,22 +632,23 @@ component_geolocation.prototype.get_data_tag = function(){
 	const lib_data 		= self.get_lib_data()
 	const last_layer_id = self.get_last_layer_id()
 
-	const layers 		= lib_data.map((item) => {
+	// layers
+	const layers = lib_data.map((item) => {
 		const layer = {
-			layer_id 			: item.layer_id,
-			user_layer_name 	: item.user_layer_name
+			layer_id		: item.layer_id,
+			user_layer_name	: item.user_layer_name
 		}
 		return layer
 	})
 
 	const data_tag = {
-		type 			: 'geo',
-		tag_id 			: null,
-		state 			: 'n',
-		label 			: '',
-		data 			: '',
+		type			: 'geo',
+		tag_id			: null,
+		state			: 'n',
+		label			: '',
+		data			: '',
 		last_layer_id	: last_layer_id+1,
-		layers 			: layers
+		layers			: layers
 	}
 
 	return data_tag
@@ -681,7 +739,7 @@ component_geolocation.prototype.get_popup_content = function(layer) {
 
 /**
 * STR_LAT_LNG
-* @return
+* @return string
 * 	Helper method to format LatLng object (x.xxxxxx, y.yyyyyy)
 */
 component_geolocation.prototype.str_lat_lng = function(latlng) {
@@ -871,3 +929,5 @@ component_geolocation.prototype.update_draw_data = function() {
 
 	return true
 };//end update_draw_data
+
+
