@@ -1,10 +1,8 @@
 <?php
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
-
-
-
-/*
+#require_once DEDALO_CONFIG_PATH .'/config.php';
+/**
 * CLASS DATO_V4_TO_SECTION_DATA_V5
+*
 */
 class dato_v4_to_section_data_v5 {
 
@@ -12,7 +10,8 @@ class dato_v4_to_section_data_v5 {
 
 	/**
 	* CONVERT_SECTION_DATO_TO_DATA
-	* @return
+	* @param object $datos_column
+	* @return array $dato
 	{
 	  "label": "Web templates",
 	  "components": [
@@ -57,7 +56,6 @@ class dato_v4_to_section_data_v5 {
 	*/
 	public static function convert_section_dato_to_data__OLD( stdClass $datos_column ) {
 
-
 		#$dato = $section->get_dato();
 		$dato = $datos_column;
 
@@ -78,9 +76,9 @@ class dato_v4_to_section_data_v5 {
 			// dato
 			foreach ($component->dato as $clang => $cdato) {
 				$current_obj = new stdClass();
-					$current_obj->tipo 			= $key_tipo;
-					$current_obj->lang 			= $clang;
-					$current_obj->data 			= $cdato;
+					$current_obj->tipo	= $key_tipo;
+					$current_obj->lang	= $clang;
+					$current_obj->data	= $cdato;
 					if (isset($component->valor->$clang)) {
 						$current_obj->value 	= $component->valor->$clang;
 					}
@@ -102,8 +100,8 @@ class dato_v4_to_section_data_v5 {
 			// info
 			if (isset($component->info)) {
 				$current_obj = new stdClass();
-					$current_obj->tipo 	= $key_tipo;
-					$current_obj->info 	= $component->info;
+					$current_obj->tipo	= $key_tipo;
+					$current_obj->info	= $component->info;
 				$data->components[] = $current_obj;
 			}
 		}
@@ -142,13 +140,11 @@ class dato_v4_to_section_data_v5 {
 				}
 
 				$current_obj = new stdClass();
-					$current_obj->tipo 	= $component_tipo;
-					$current_obj->data 	= $component_dato;
+					$current_obj->tipo	= $component_tipo;
+					$current_obj->data	= $component_dato;
 				$data->components[] = $current_obj;
 			}
-
 		}
-
 
 		#dump($data, ' data ++ '.to_string());
 		#dump(json_encode($data), ' data json encoded ++ '.to_string());
@@ -158,13 +154,16 @@ class dato_v4_to_section_data_v5 {
 
 
 
+	/**
+	* CONVERT_SECTION_DATO_TO_DATA
+	*/
 	public static function convert_section_dato_to_data( stdClass $datos_column ) {
 
 		$dato = clone $datos_column;
 
 		// values and dataframe containers
-		$values 	= [];
-		$dataframes = [];
+		$values		= [];
+		$dataframes	= [];
 		foreach ($dato->components as $key_tipo => $component) {
 
 			$model = RecordObj_dd::get_modelo_name_by_tipo($key_tipo,true);
@@ -176,8 +175,8 @@ class dato_v4_to_section_data_v5 {
 
 					$value_obj = new stdClass();
 						$value_obj->from_component_tipo	= $key_tipo;
-						$value_obj->lang 				= $clang;
-						$value_obj->data 				= $component_dato;
+						$value_obj->lang				= $clang;
+						$value_obj->data				= $component_dato;
 
 					// component date exception
 						if ($model==='component_date') {
@@ -224,7 +223,7 @@ class dato_v4_to_section_data_v5 {
 
 	/**
 	* CONVERT_TABLE_DATA
-	* @return
+	* @return bool
 	*/
 	public static function convert_table_data($ar_tables=null) {
 
@@ -255,18 +254,15 @@ class dato_v4_to_section_data_v5 {
 		foreach ($ar_tables as $key => $table) {
 
 			// Get last id in the table
-			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
-			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-			$rows 		= pg_fetch_assoc($result);
+			$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
+			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+			$rows		= pg_fetch_assoc($result);
 			if (!$rows) {
 				continue;
 			}
-			$max 		= $rows['id'];
 
-			$min = 1;
-			if ($table==='matrix_users') {
-				$min = -1;
-			}
+			$max	= $rows['id'];
+			$min	= ($table==='matrix_users') ? -1 : 1;
 
 			// iterate from 1 to last id
 			$i_ref = 0; $start_time=microtime(1);
@@ -285,16 +281,15 @@ class dato_v4_to_section_data_v5 {
 
 				while($rows = pg_fetch_assoc($result)) {
 
-					$id 	= $rows['id'];
-					$datos 	= json_decode($rows['datos']);
-						#dump($datos, ' datos ++ '.to_string($id));
+					$id		= $rows['id'];
+					$datos	= json_decode($rows['datos']);
 
 					if (!empty($datos)) {
-						$section_data 			= self::convert_section_dato_to_data( $datos );
-						$section_data_encoded 	= json_encode($section_data);
+						$section_data			= self::convert_section_dato_to_data( $datos );
+						$section_data_encoded	= json_encode($section_data);
 
-						$strQuery 	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-						$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
 						if(!$result) {
 							$msg = "Failed Update section_data $i";
 							debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
@@ -321,5 +316,6 @@ class dato_v4_to_section_data_v5 {
 
 
 
-}//end class
-?>
+}//end class dato_v4_to_section_data_v5
+
+
