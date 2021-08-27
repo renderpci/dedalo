@@ -75,8 +75,8 @@ component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
-	self.ar_layer_loaded 	= []
-	self.map 				= null
+	self.ar_layer_loaded	= []
+	self.map				= null
 	self.layer_control		= false
 
 	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
@@ -86,8 +86,8 @@ component_geolocation.prototype.init = async function(options) {
 
 	// draw editor vars
 		self.drawControl				= null
-		self.draw_editor_is_initated 	= false
-		self.ar_FeatureGroup 			= []
+		self.draw_editor_is_initated	= false
+		self.ar_FeatureGroup			= []
 		self.draw_state					= null
 		self.active_layer_id			= null
 
@@ -113,8 +113,6 @@ component_geolocation.prototype.init = async function(options) {
 				common.prototype.load_style(draw_lib_css_file)
 
 			})
-
-	// events
 
 
 	return common_init
@@ -454,7 +452,7 @@ component_geolocation.prototype.load_layer = function(layer){
 		const layer_id			= layer.layer_id
 		const layer_data		= layer.layer_data
 		const layer_name		= 'layer_' +layer_id
-		const user_layer_name 	= typeof layer.user_layer_name !=='undefined'
+		const user_layer_name	= typeof(layer.user_layer_name)!=='undefined'
 			? layer.user_layer_name
 			: layer_name
 
@@ -908,24 +906,29 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 component_geolocation.prototype.update_draw_data = function() {
 
 	const self = this
-	// get the active draw data of the active_layer
-	const active_layer 			= self.ar_FeatureGroup[self.active_layer_id];
-	// get the active_layer_id
-	const layer_id				= self.active_layer_id
-	// get the layer from the loaded data
-	const current_layer 		= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
-	//get the GeoJson of the active layer (from leaflet)
-	current_layer.layer_data 	= active_layer.toGeoJSON()
 
-	const key  					= self.map.getContainer().dataset.key
+	// active_layer. get the active draw data of the active_layer
+		const active_layer = self.ar_FeatureGroup[self.active_layer_id];
+
+	// layer_id. get the active_layer_id
+		const layer_id = self.active_layer_id
+
+	// current_layer. get the layer from the loaded data
+		const current_layer = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
+
+	// layer_data. get the GeoJson of the active layer (from leaflet)
+		current_layer.layer_data = active_layer.toGeoJSON()
+
+	// value key
+		const key = self.map.getContainer().dataset.key
 
 	// current_layer.user_layer_name 	= current_layer.data.user_layer_name
 
 	// update the data in the instance previous to save
-	const value 			=  typeof (self.data.value[0]) !== 'undefined'
-		? JSON.parse(JSON.stringify(self.data.value[0]))
-		: {}
-	self.current_value[key].lib_data 			= self.ar_layer_loaded
+		const value = typeof (self.data.value[0])!=='undefined'
+			? JSON.parse(JSON.stringify(self.data.value[0]))
+			: {}
+		self.current_value[key].lib_data = self.ar_layer_loaded
 
 	return true
 };//end update_draw_data
