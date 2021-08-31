@@ -26,33 +26,70 @@
 		// height: calc(100vh - 20%);
 
 		>.content_data {
-			background-color: #f9eae0;
+			background-color: #faf6f7;
 			width: 100%;
-			height: 90vh;
+			min-height: 90vh;
    			display: grid;
-			grid-template-columns: auto 20% [active] 10% [button];
+			grid-template-columns: auto 20% 200px;
 
-			>.right_container {
+			// components_list_container. List of available section components to drag (at left)
+				>.components_list_container {
 
-				>.component_container {
-					background-color: #d8de48;
-				}
+				}//end components_list_container
 
-				>.info_container {
-					background-color: #c4c4f9;
+			// export_components_container. User dragged component list (at right)
+				>.export_components_container {
+					background-color: #ffffff;
+					padding: 1em;
 
-					.common_line {
+					>.list_title {
+						margin-bottom: 1em;
+						font-size: 1.2em;
+					}
+
+					>.export_component {
 						display: flex;
-						padding: 0.5em;
-						background-color: aliceblue;
-						align-items: baseline;
+						justify-content: space-between;
+						background-color: #faf9f9;
+						align-items: center;
+						margin-bottom: 1px;
+						list-style: none;
+						padding-left: 0.5em;
 
-						>* {
-							padding-right: 1em;
+						&:hover {
+							background-color: #b0c8f0;
+							color: white !important;
+
+							>.button {
+								color: white !important;
+							}
 						}
 					}
 				}
-			}
+
+			// export_buttons_config. Mode selector and export button (at right)
+				>.export_buttons_config {
+					padding: 1em;
+					padding-top: 0;
+
+					h1 {
+						font-size: 1.2em;
+					}
+				}
+
+			// export_buttons_options. Download buttons for CSV, excel, HTML etc.
+				>.export_buttons_options {
+					grid-column-start: 1;
+					grid-column-end: 4;
+					margin-top: 1em;
+				}
+
+			// export_data. Grid / table of result record values to save
+				>.export_data {
+					grid-column-start: 1;
+					grid-column-end: 4;
+					margin-top: 1em;
+				}
 		}
 	}//end .wrapper_tool.tool_export
 	
@@ -67,55 +104,6 @@
 
 
 
-// components_container
-	.components_container {
-		display: grid;
-	    grid-template-columns: 1fr 1fr;
-	    grid-gap: 1em;
-	    //background-color: #D6F737;
 
-	    >select {
-			.select_style;
-	    }
-
-	    >div {
-
-	    }
-	}
-
-
-
-// buttons_container
-	.buttons_container {
-		padding-top: 1em;
-		padding-bottom: 1em;
-	}
-
-
-
-// automatic_translation_container
-	.automatic_translation_container {
-		position: relative;
-
-		>button {
-			// .select_style;
-			// font-size: .9em;
-			// background-color: #a6a6a6;
-			// border-radius: 0.30em;
-			// cursor: pointer;
-			// color: #ffff;
-			// border: none;
-			// padding-left: 0.75em;
-			// padding-right: 0.75em;
-		}
-
-		>select {
-			margin-left: 0.75em;
-			// .select_style;
-			width: fit-content;
-			height: 2.75em;
-			font-size: 0.80em;
-		}
-	}
 
 

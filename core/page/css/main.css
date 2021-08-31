@@ -3842,6 +3842,9 @@ ul.inputs_container > li:focus-within .hidden_button {
   cursor: pointer;
   pointer-events: all;
 }
+.components_list_container ul li.section_bar_label.close_hide:after {
+  display: none;
+}
 .components_list_container ul li.section_group_label {
   background-color: #949494;
   color: #ffffff;
