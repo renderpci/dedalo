@@ -229,6 +229,216 @@ class component_relation_common extends component_common {
 	}//end load_component_dato
 
 
+/**
+	* GET_VALUE
+	* Get the value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* Some the text components can set the value with the dato directly
+	* the relation components need to process the locator to resolve the value
+	* @return object $value
+	*/
+	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$separator_fields	= $ddo->separator_fields ?? null;
+			$separator_rows		= $ddo->separator_rows ?? null;
+			$format_columns		= $ddo->format_columns ?? null;
+			$class_list 		= $ddo->class_list ?? null;
+
+
+		$value = new dd_grid_cell_object();
+
+		$data = $this->get_dato();
+
+		// set the label of the component as column label
+		$label = $this->get_label();
+		// get the request request_config of the component
+		// the caller can built a request_config that will used instead the default request_config
+		$request_config = isset($this->request_config)
+			? $this->request_config
+			: $this->build_request_config();
+
+		// get the correct rqo (use only the dedalo api_engine)
+		$dedalo_request_config = array_find($request_config, function($el){
+			return $el->api_engine==='dedalo';
+		});
+
+		// get the ddo_map to be used to create the components related to the portal
+		$ddo_map = $dedalo_request_config->show->ddo_map;
+
+		$ar_cells = [];
+
+		$sub_row_count		= 0;
+		$sub_column_count	= null;
+		$column_labels		= [];
+
+		// children_resursive function, get all ddo chain that depends of this component
+			if (!function_exists('get_children_resursive')) {
+				function get_children_resursive($ar_ddo, $dd_object) {
+					$ar_children = [];
+
+					foreach ($ar_ddo as $ddo) {
+						if($ddo->parent===$dd_object->tipo) {
+							$ar_children[] = $ddo;
+							$result = get_children_resursive($ar_ddo, $ddo);
+							if (!empty($result)) {
+								$ar_children = array_merge($ar_children, $result);
+							}
+						}
+					}
+					return $ar_children;
+				}
+			}
+
+		// get the column name of the current portal, use the ddo_map to get the columns,
+		// don't use the locator (inside foreach) because we need stable columns, independent of the data
+			$len = sizeof($ddo_map);
+			for ($i=0; $i < $len; $i++) {
+				$current_ddo	= $ddo_map[$i];
+				// only the direct components can create the column (sub components are the path of the column, but we only need one)
+				if($current_ddo->parent !== $this->tipo) continue;
+				// get the ddo model of the component to check if the component is a relation (it's not used the relation components to build the column only the inputs)
+				$component_model			= RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo,true);
+				$components_with_relations	= component_relation_common::get_components_with_relations();
+				// if the column has children don't stored (the ddo will be a portal or select, etc), else, the current ddo is input and it can create the column
+				if (in_array($component_model, $components_with_relations)) {
+					$RecordObj_dd		= new RecordObj_dd($current_ddo->tipo);
+					$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$section_tipo 		= is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
+
+					$current_component 	= component_common::get_instance($component_model,
+																	 $current_ddo->tipo,
+																	 null,
+																	 $this->modo,
+																	 $current_lang,
+																	 $section_tipo);
+					// get the ddo path for inject to the next component level resolution.
+						$sub_ddo_map = get_children_resursive($ddo_map, $current_ddo);
+					// if the component has sub_ddo, create the request_config to be injected to component
+					// the request_config will be used instead the default request_config.
+						if (!empty($sub_ddo_map)) {
+
+							$show = new stdClass();
+								$show->ddo_map = $sub_ddo_map;
+
+							$request_config = new stdClass();
+								$request_config->api_engine = 'dedalo';
+								// $rqo->set_sqo($sqo);
+								$request_config->show = $show;
+
+							$current_component->request_config = [$request_config];
+						}
+
+					// get the value and fallback_value of the component and stored to be joined
+						$current_column	= $current_component->get_value($lang, $current_ddo);
+						$column_labels	= array_merge($column_labels, $current_column->column_labels);
+
+				}else{
+					$column_labels[]	= $current_ddo->label.'_'.$current_ddo->tipo;//
+				}// end if
+			}// end for
+
+		// get only the direct_children of the current component, if the child component is a portal it will resolve his children
+			$ddo_direct_children = array_filter($ddo_map, function($el){
+				return $el->parent === $this->tipo;
+			});
+
+		foreach($data as $key => $locator){
+
+			$ar_columns = [];
+			foreach ($ddo_direct_children as $ddo) {
+				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
+				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				// dump($component_model,'$component_model');
+				$current_component 	= component_common::get_instance($component_model,
+																	 $ddo->tipo,
+																	 $locator->section_id,
+																	 $this->modo,
+																	 $current_lang,
+																	 $locator->section_tipo);
+
+				$current_component->set_locator($this->locator);
+
+				// get the ddo path for inject to the next component level resolution.
+				$sub_ddo_map = get_children_resursive($ddo_map, $ddo);
+
+				// if the component has sub_ddo, create the request_config to be injected to component
+				// the request_config will be used instead the default request_config.
+				if (!empty($sub_ddo_map)) {
+
+					$show = new stdClass();
+						$show->ddo_map = $sub_ddo_map;
+
+					$request_config = new stdClass();
+						$request_config->api_engine = 'dedalo';
+						// $rqo->set_sqo($sqo);
+						$request_config->show = $show;
+
+					$current_component->request_config = [$request_config];
+				}
+
+
+				// get the value and fallback_value of the component and stored to be joined
+				$current_column		= $current_component->get_value($lang, $ddo);
+
+				$sub_row_count		= $current_column->row_count ?? 0;
+
+				$grid_column = new dd_grid_cell_object();
+					$grid_column->set_type('column');
+					$grid_column->set_value([$current_column]);
+				$ar_columns[] = $grid_column;
+			}
+
+			//create the row of the portal
+			$grid_row = new dd_grid_cell_object();
+				$grid_row->set_type('row');
+				$grid_row->set_value($ar_columns);
+
+			// store the current column with all values
+			$ar_cells[] = $grid_row;
+		}
+
+		// get the total of locators of the data, it will be use to render the rows separated.
+			$locator_count	= sizeof($data);
+			$row_count		= $locator_count + $sub_row_count;
+			if($row_count === 0){
+				$row_count = 1;
+			}
+		// get the total of columns
+			$column_count	= sizeof($column_labels);
+
+		// set the separator text that will be used to render the column
+		// separator will be the "glue" to join data in the client and can be set by caller or could be defined in preferences of the component.
+		$properties = $this->get_properties();
+
+		$separator_fields = isset($separator_fields)
+			? $separator_fields
+			: (isset($properties->separator_fields)
+				? $properties->separator_fields
+				: ', ');
+
+		$separator_rows = isset($separator_rows)
+			? $separator_rows
+			: (isset($properties->separator_rows)
+				? $properties->separator_rows
+				: ' | ');
+
+		$value->set_type('column');
+		$value->set_row_count($row_count);
+		$value->set_column_count($column_count);
+		$value->set_label($label);
+		$value->set_column_labels($column_labels);
+		if(isset($class_list)){
+			$value->set_class_list($class_list);
+		}
+		$value->set_separator_fields($separator_fields);
+		$value->set_separator_rows($separator_rows);
+		$value->set_value($ar_cells);
+
+		return $value;
+	}//end get_value
+
 
 	/**
 	* GET_DATO_FULL
