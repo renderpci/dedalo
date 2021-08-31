@@ -218,6 +218,25 @@ const get_content_data_edit = async function(self) {
 				text_content 	: (get_label.descargar || 'Export') + ' csv',
 				parent			: export_buttons_options
 			})
+				button_export_csv.addEventListener('click',async function(event) {
+
+					const options = {
+						export_format		: select_data_format_export.value,
+						ar_ddo_to_export	: self.ar_ddo_to_export,
+					}
+					const dd_grid_expot_csv = await self.get_export_csv(options)
+
+					// Download it
+						const filename		= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.csv';
+						const link			= document.createElement('a');
+						link.style.display	= 'none';
+						link.setAttribute('target', '_blank');
+						link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(dd_grid_expot_csv));
+						link.setAttribute('download', filename);
+						document.body.appendChild(link);
+						link.click();
+						document.body.removeChild(link);
+				})
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
@@ -230,6 +249,19 @@ const get_content_data_edit = async function(self) {
 				text_content 	: (get_label.descargar || 'Export') + ' html',
 				parent			: export_buttons_options
 			})
+				button_export_html.addEventListener('click', function (event) {
+
+					// Download it
+						const filename		= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.html';
+						const link			= document.createElement('a');
+							link.style.display	= 'none';
+							link.setAttribute('target', '_blank');
+							link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data.innerHTML);
+							link.setAttribute('download', filename);
+							document.body.appendChild(link);
+							link.click();
+							document.body.removeChild(link);
+				})
 			const button_export_print = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',

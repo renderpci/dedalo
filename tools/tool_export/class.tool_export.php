@@ -99,52 +99,88 @@ class tool_export { // extends tool_common
 		$ar_ddo_map	= $this->ar_ddo_map;
 		$records	= $this->get_records();
 
-		# get the section values
-			$section_grid_values	= [];
+		// get the section values
+		$section_grid_values	= [];
 
 		$ar_head_columns = [];
-		foreach ($ar_ddo_map as $current_ddo) {
+		// $column_count = sizeof($ar_ddo_map) ?? 0;
+		// foreach ($ar_ddo_map as $current_ddo) {
 
+		// 	// create the grid cell of the section
+		// 		$section_grid = new dd_grid_cell_object();
+		// 			$section_grid->set_type('column');
+		// 			$section_grid->set_label($current_ddo->label);
+		// 			$section_grid->set_render_label(true);
+		// 			$section_grid->set_class_list('caption section');
+		// 			// $section_grid->set_cell_type('text');
+
+		// 			$ar_head_columns[] = $section_grid;
+		// }
+		// dd_grid_cell_object. Create the row of the section
+
+
+		// store the rows count for every portal inside the section
+			$ar_section_rows_count		= [];
+		// store the head rows to sum up with the total rows
+			$rows_max_count = [];
+		// store the column names
+			$ar_column_labels = [];
+		// rows values
+			$ar_row_values = [];
+
+		foreach ($records as $key => $current_locator) {
+
+			$ar_row_value = $this->get_value($ar_ddo_map, $current_locator);
+
+			if($key === 0){
+				$ar_column_labels = $ar_row_value->ar_column_labels;
+			}
+
+			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
+			$row_count = max($ar_row_value->ar_row_count);
+			// store the result to sum with the head rows
+			$rows_max_count[] = $row_count;
+
+			// take the columns
+			$columns_count = $ar_row_value->ar_column_count;
+
+			$row_grid = new dd_grid_cell_object();
+				$row_grid->set_type('row');
+				$row_grid->set_row_count($row_count);
+				$row_grid->set_column_count($columns_count);
+				$row_grid->set_column_labels($ar_row_value->ar_column_labels);
+				// $row_grid->set_class_list($row_class_list);
+				// $row_grid->set_render_label($row_render_label);
+				$row_grid->set_value($ar_row_value->ar_cells);
+
+			$ar_row_values[] = $row_grid;
+		}
+		// sum the total rows for this locator
+		$ar_section_rows_count[] = array_sum($rows_max_count);
+		// take the maximum number of columns (the columns can has 1, 2, 55 columns and we need the highest value, 55)
+		$ar_section_columns_count = sizeof($ar_column_labels);
+
+		for ($i=0; $i < $ar_section_columns_count; $i++) {
 			// create the grid cell of the section
 				$section_grid = new dd_grid_cell_object();
 					$section_grid->set_type('column');
-					$section_grid->set_label($current_ddo->label);
+					$section_grid->set_label($ar_column_labels[$i]);
 					$section_grid->set_render_label(true);
 					$section_grid->set_class_list('caption section');
 					// $section_grid->set_cell_type('text');
 
-					$ar_head_columns[] = $section_grid;
+			$ar_head_columns[] = $section_grid;
 		}
-		// dd_grid_cell_object. Create the row of the section
-			$section_grid_row = new dd_grid_cell_object();
-				$section_grid_row->set_type('row');
-				$section_grid_row->set_value($ar_head_columns);
+		$section_grid_row = new dd_grid_cell_object();
+			$section_grid_row->set_type('row');
+			$section_grid_row->set_value($ar_head_columns);
+			// sum the total rows for the section and add the total rows to the section row
+			$section_grid_row->set_row_count(1);
+			$section_grid_row->set_column_count($ar_section_columns_count);
 
 
 		$section_grid_values[] = $section_grid_row;
-
-		// store the rows count for every portal inside the section
-			$ar_section_rows_count	= [];
-		foreach ($records as $current_locator) {
-
-				$ar_row_value = $this->get_value($ar_ddo_map, $current_locator);
-
-				// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
-				$row_count = max($ar_row_value->ar_row_count);
-				// store the result to sum with the head rows
-				$rows_max_count[] = $row_count;
-
-				$row_grid = new dd_grid_cell_object();
-					$row_grid->set_type('row');
-					$row_grid->set_row_count($row_count);
-					// $row_grid->set_class_list($row_class_list);
-					// $row_grid->set_render_label($row_render_label);
-					$row_grid->set_value($ar_row_value->ar_cells);
-
-				$section_grid_values[] = $row_grid;
-			}
-			// sum the total rows for this locator
-			$ar_section_rows_count[] = array_sum($rows_max_count);
+		$section_grid_values = array_merge($section_grid_values, $ar_row_values);
 
 		return $section_grid_values;
 	}//end build_export_grid
@@ -199,8 +235,10 @@ class tool_export { // extends tool_common
 	*/
 	public function get_value($ar_ddo, $locator) {
 
-		$ar_cells		= [];
-		$ar_row_count	= [];
+		$ar_cells			= [];
+		$ar_row_count		= [];
+		$ar_column_labels	= [];
+
 		foreach ($ar_ddo as $current_ddo) {
 
 			// children_ddo. get only the ddo that are children of the section top_tipo
@@ -253,13 +291,11 @@ class tool_export { // extends tool_common
 
 					$request_config = new stdClass();
 						$request_config->api_engine = 'dedalo';
-						// $rqo->set_sqo($sqo);
 						$request_config->show = $show;
 
 					$current_component->request_config = [$request_config];
 
 					// inject the locator as dato for the component
-
 						$component_dato = array_filter($locator->datos->relations, function($el) use($ddo){
 							return $el->from_component_tipo === $ddo->component_tipo;
 						});
@@ -275,14 +311,28 @@ class tool_export { // extends tool_common
 					$component_value	= $current_component->get_value($current_lang, $ddo);
 				}
 
-				$ar_row_count[]		= $component_value->row_count ?? 0;
-				$ar_cells[]			= $component_value;
+			// get component label
+
+
+			$sub_component_labels	= $component_value->column_labels ?? [];
+			$len = sizeof($sub_component_labels);
+			if($len === 0){
+				$ar_column_labels[]		= $current_component->get_label();
+			}
+			for ($i=0; $i < $len; $i++) {
+				$ar_column_labels[] = $sub_component_labels[$i];
+			}
+			$ar_row_count[]		= $component_value->row_count ?? 1;
+			$ar_cells[]			= $component_value;
+
 		}// end foreach ($ar_children_ddo as $ddo)
 
 
 		// value final
 			$value = new stdClass();
 				$value->ar_row_count	= $ar_row_count;
+				$value->ar_column_count = sizeof($ar_column_labels);
+				$value->ar_column_labels = $ar_column_labels;
 				$value->ar_cells		= $ar_cells;
 
 
