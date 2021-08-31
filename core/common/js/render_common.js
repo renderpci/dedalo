@@ -7,6 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 
 
+
 /**
 * RENDER_COMPONENTS_LIST
 * Create dom elements to generate list of components and section groups of current section
@@ -19,6 +20,7 @@
 * @return promise bool
 */
 export const render_components_list = async function(options) {
+		console.log("options:",options);
 
 	// options
 		const self			= options.self
@@ -70,11 +72,14 @@ export const render_components_list = async function(options) {
 				// section title bar
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
-					parent			: list_container,
 					// class_name	: "search_section_bar_label",
 					class_name		: "section_bar_label",
-					inner_html		: element.label
+					inner_html		: element.label,
+					parent			: list_container,
 				})
+				if (path.length===0) {
+					section_bar.classList.add('close_hide')
+				}
 				section_bar.addEventListener("click", function(e){
 					if (target_div.classList.contains("target_list_container")) {
 						target_div.innerHTML = ""
