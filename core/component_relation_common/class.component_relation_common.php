@@ -1322,6 +1322,7 @@ class component_relation_common extends component_common {
 						$overwrite_dato = $component_overwrite->get_dato();
 
 						$this->set_dato($overwrite_dato);
+						debug_log(__METHOD__." Overwritten dato ($modelo_name - $data_from_field_tipo - $locator->section_tipo - $locator->section_id)".to_string(), logger::DEBUG);
 						$this->Save();
 					}
 
@@ -1379,6 +1380,7 @@ class component_relation_common extends component_common {
 				// $result = search::calculate_inverse_locators( $locator );
 
 			// sqo. new way done in relations field with standard sqo
+				$start_time2=microtime(1);
 				$sqo = new search_query_object();
 					$sqo->set_section_tipo(['all']);
 					$sqo->set_mode('related');
@@ -1389,6 +1391,12 @@ class component_relation_common extends component_common {
 				$rows_data	= $search->search();
 				// fix result ar_records as dato
 				$result	= $rows_data->ar_records;
+				if(SHOW_DEBUG===true) {
+					$total = exec_time_unit($start_time2,'ms');
+					if ($total>30) {
+						debug_log(__METHOD__." Search external data: $total ms".PHP_EOL.to_string($sqo), logger::DEBUG);
+					}
+				}
 
 			$component_tipo = $this->get_tipo();
 
@@ -1404,8 +1412,8 @@ class component_relation_common extends component_common {
 				$ar_result[] = $current_locator;
 			}
 
-			$total_ar_result	= count($ar_result);
-			$total_ar_dato		= count($dato);
+			$total_ar_result	= sizeof($ar_result);
+			$total_ar_dato		= sizeof($dato);
 
 			if ($total_ar_result>2000) {
 				# Not maintain order, is too expensive above 1000 locators
@@ -1434,7 +1442,7 @@ class component_relation_common extends component_common {
 
 				// dato update
 				if ($total_ar_dato!==$total_ar_result) {
-					foreach ($ar_result as $key => $current_locator) {
+					foreach ($ar_result as $current_locator) {
 						if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false ){
 							array_push($dato, $current_locator);
 							$changed = true;

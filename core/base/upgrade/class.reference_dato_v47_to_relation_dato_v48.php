@@ -1,10 +1,10 @@
 <?php
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
 /*
 * CLASS REFERENCE_DATO_V47_TO_RELATION_DATO_V48 - C
 *
 */
 class reference_dato_v47_to_relation_dato_v48 {
+
 
 
 	static $ar_models_to_change = array(
@@ -17,6 +17,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 			"component_publication", // Added 24-02-2018
 			"component_select_lang"  // Added 24-02-2018
 			);
+
 
 
 	/**
@@ -283,5 +284,6 @@ class reference_dato_v47_to_relation_dato_v48 {
 
 
 
-}//end class
-?>
+}//end class reference_dato_v47_to_relation_dato_v48
+
+

@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(__FILE__) .'/class.v5_to_v6.php');
+require_once dirname(__FILE__) .'/class.v5_to_v6.php';
 /**
 * CLASS RELATION_INDEX_V5_TO_V6
 *

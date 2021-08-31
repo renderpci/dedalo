@@ -1047,7 +1047,7 @@ class dd_core_api {
 								if ($mode==='tm') {
 									// set matrix_id value to component to allow it search dato in
 									// matrix_time_machine component function 'get_dato' will be
-									// overwrited to get time machine dato instead the real dato
+									// overwritten to get time machine dato instead the real dato
 									$element->matrix_id = $ddo_source->matrix_id;
 								}
 								// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
@@ -1094,7 +1094,7 @@ class dd_core_api {
 																				 $mode,
 																				 $component_lang,
 																				 $section_tipo);
-							// inject custom value to the component (ussually an array of locators)
+							// inject custom value to the component (usually an array of locators)
 								$value = $rqo->source->value ?? [];
 								$element->set_dato($value);
 
