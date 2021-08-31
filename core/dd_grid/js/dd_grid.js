@@ -9,6 +9,7 @@
 	import {common} from '../../common/js/common.js'
 	import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
 	import {render_list_dd_grid} from '../../dd_grid/js/render_list_dd_grid.js'
+	import {render_table_dd_grid} from '../../dd_grid/js/render_table_dd_grid.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -50,7 +51,7 @@ export const dd_grid = function(){
 
 	//render
 	dd_grid.prototype.list			= render_list_dd_grid.prototype.list
-
+	dd_grid.prototype.table			= render_table_dd_grid.prototype.table
 
 
 /**
