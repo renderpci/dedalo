@@ -397,7 +397,7 @@ abstract class common {
 				continue;
 			}
 			$properties = $RecordObj_dd->get_properties();
-			if (property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
+			if (isset($properties) && property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
 				$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			}
 		}
