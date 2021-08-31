@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(__FILE__) .'/class.v5_to_v6.php');
+require_once dirname(__FILE__) .'/class.v5_to_v6.php';
 /**
 * CLASS activity_v5_to_v6
 *

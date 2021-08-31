@@ -256,14 +256,15 @@ export const build_content_data = async function(self) {
 		fragment.appendChild(inputs_container)
 
 	// set video node only when it is in DOM (to save browser resources)
-		const observer = new IntersectionObserver(function(entries) {
-			const entry = entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-				observer.disconnect();
-				build_values()
-			}
-		}, { threshold: [0] });
-		observer.observe(inputs_container);
+		// const observer = new IntersectionObserver(function(entries) {
+		// 	const entry = entries[0]
+		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+		// 		observer.disconnect();
+		// 		build_values()
+		// 	}
+		// }, { threshold: [0] });
+		// observer.observe(inputs_container);
+		build_values()
 
 
 	// build references
