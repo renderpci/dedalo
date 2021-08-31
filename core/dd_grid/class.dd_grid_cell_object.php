@@ -108,10 +108,13 @@ class dd_grid_cell_object {
 
 
 	// Format
+	//    	id  				: string - "oh1_id" - the unique id of the column to identify data inside the same column
 	//    	class_list  		: string - "caption bold"
 	//    	type      			: string | row column - type of the element
 	//    	label      			: strings - "name" - one column of the grid (every column is a object)
 	// 		row_count 			: number - total rows of the component, used by portals to define the rows that could be separated individually.
+	//		column_count 		: number - total columns of the component, used by portals to define the columns that could be separated individually.
+	// 		column_labels 		: array of strings - name of the columns that will use the portal to define sub columns names
 	// 		separator_fields 	: string -  ", " - with the glue of the fields
 	//		separator_rows 		: string -  "<br>" - with the glue of the rows
 	//    	cell_type   		: string - type of the element to represent in the cell
@@ -167,6 +170,14 @@ class dd_grid_cell_object {
 
 
 	/**
+	* SET_id
+	*/
+	public function set_id(string $value) {
+		$this->id = $value;
+	}
+
+
+	/**
 	* SET_CLASS_LIST
 	*/
 	public function set_class_list(string $value) {
@@ -188,10 +199,24 @@ class dd_grid_cell_object {
 	}
 
 	/**
-	* SET_VALUE
+	* SET_ROW_COUNT
 	*/
 	public function set_row_count(int $value) {
 		$this->row_count = $value;
+	}
+
+	/**
+	* SET_COLUMN_COUNT
+	*/
+	public function set_column_count(int $value) {
+		$this->column_count = $value;
+	}
+
+	/**
+	* SET_COLUMN_LABELS
+	*/
+	public function set_column_labels(array $value) {
+		$this->column_labels = $value;
 	}
 
 	/**
