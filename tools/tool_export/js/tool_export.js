@@ -186,7 +186,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 					section_tipo	: self.caller.section_tipo,
 					// section_id		: section_id,
 					tipo			: self.caller.section_tipo,
-					mode 			: 'list',
+					mode 			: 'table',
 					lang 			: page_globals.dedalo_data_lang,
 					// rqo 			: rqo
 				})
@@ -197,4 +197,12 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 	return node
 }// end get_export_grid
+
+
+/**
+* GET_EXPORT_CSV : load the export grid data
+*/
+tool_export.prototype.get_export_csv = async function (options) {
+	// body...
+}// end get_export_csv
 
