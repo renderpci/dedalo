@@ -185,11 +185,11 @@ const get_content_data_edit = async function(self) {
 						value 			: 'dedalo',
 						parent			: select_data_format_export
 					})
-		//button export
+		// button export
 			const button_export = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
-				text_content 	: get_label.tool_export || 'Export',
+				class_name		: 'button_export success',
+				text_content	: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
 			button_export.addEventListener('click', async function(e){
@@ -198,12 +198,15 @@ const get_content_data_edit = async function(self) {
 						export_data.removeChild(export_data.lastChild);
 					}
 
-				const options = {
+				const export_grid_options = {
 					export_format		: select_data_format_export.value,
 					ar_ddo_to_export	: self.ar_ddo_to_export,
 				}
-				const dd_grid_expot_node = await self.get_export_grid(options)
-				export_data.appendChild(dd_grid_expot_node)
+				self.get_export_grid(export_grid_options)
+				.then(function(dd_grid_export_node){
+					export_data.appendChild(dd_grid_export_node)
+					export_data.scrollIntoView(true)
+				})
 			})
 
 	// export_buttons_options

@@ -27,17 +27,17 @@
 */
 export const tool_export = function () {
 	
-	this.id							= null
-	this.model						= null
-	this.mode						= null
-	this.node						= null
-	this.ar_instances				= null
-	this.status						= null
-	this.events_tokens				= []
-	this.type						= null
-	this.source_lang				= null
-	this.caller						= null // section or component
-	this.components_list 			= {}
+	this.id					= null
+	this.model				= null
+	this.mode				= null
+	this.node				= null
+	this.ar_instances		= null
+	this.status				= null
+	this.events_tokens		= []
+	this.type				= null
+	this.source_lang		= null
+	this.caller				= null // section or component
+	this.components_list	= {}
 
 
 	return true
@@ -50,19 +50,20 @@ export const tool_export = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_export.prototype.render					= common.prototype.render
-	tool_export.prototype.destroy					= common.prototype.destroy
-	tool_export.prototype.edit						= render_tool_export.prototype.edit
-	tool_export.prototype.build_export_component	= render_tool_export.prototype.build_export_component
+	tool_export.prototype.render						= common.prototype.render
+	tool_export.prototype.destroy						= common.prototype.destroy
+	tool_export.prototype.edit							= render_tool_export.prototype.edit
+	tool_export.prototype.build_export_component		= render_tool_export.prototype.build_export_component
 	// get and render list of components from common
 	tool_export.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
 	tool_export.prototype.calculate_component_path		= common.prototype.calculate_component_path
 
 	// drag
-	tool_export.prototype.on_dragstart			= on_dragstart
-	tool_export.prototype.on_dragover			= on_dragover
-	tool_export.prototype.on_dragleave			= on_dragleave
-	tool_export.prototype.on_drop				= on_drop
+	tool_export.prototype.on_dragstart					= on_dragstart
+	tool_export.prototype.on_dragover					= on_dragover
+	tool_export.prototype.on_dragleave					= on_dragleave
+	tool_export.prototype.on_drop						= on_drop
+
 
 
 /**
@@ -100,7 +101,7 @@ tool_export.prototype.init = async function(options) {
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo
 		self.limit					= self.sqo.limit || 10
-		self.ar_ddo_to_export  		= []
+		self.ar_ddo_to_export		= []
 
 	return common_init
 };//end init
@@ -114,7 +115,7 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-		console.log("self:",self);
+		console.log("tool_export build - self:",self);
 
 	// status update
 		self.status = 'building'
@@ -122,8 +123,6 @@ tool_export.prototype.build = async function(autoload=false) {
 	// load self style
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
 		common.prototype.load_style(tool_css_url)
-
-
 
 	// // get_section_elements_context
 	// 	const section_elements = await self.get_section_elements_context({
@@ -140,23 +139,33 @@ tool_export.prototype.build = async function(autoload=false) {
 
 
 
+/**
+* GET_SECTION_ID
+*/
 tool_export.prototype.get_section_id = function() {
-	const self = this
-	self.section_id = ++self.section_id
+	const self		= this
+	self.section_id	= ++self.section_id
+
 	return 'tmp_export_' + self.section_id
-}
+}//end get_section_id
+
 
 
 /**
-* GET_EXPORT_grid : load the export grid data
+* GET_EXPORT_GRID
+* Load the export grid data and build a DOM node with the result
 */
 tool_export.prototype.get_export_grid = async function(options) {
 
 	const self = this
 
+	// options
+		const export_format		= options.export_format
+		const ar_ddo_to_export	= options.ar_ddo_to_export
+
 	const sqo = JSON.parse(JSON.stringify(self.sqo))
-		sqo.limit	= 0
-		sqo.offset	= 0
+	sqo.limit	= 0
+	sqo.offset	= 0
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
 	// this generates a call as my_tool_name::my_function_name(arguments)
@@ -165,8 +174,8 @@ tool_export.prototype.get_export_grid = async function(options) {
 		source.arguments = {
 			section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
 			model				: self.caller.model,
-			export_format		: options.export_format, // format selected by the user to get data
-			ar_ddo_to_export	: options.ar_ddo_to_export, // array with the ddo map and paths to get the info
+			export_format		: export_format, // format selected by the user to get data
+			ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
 			sqo 				: sqo,
 		}
 
@@ -178,25 +187,29 @@ tool_export.prototype.get_export_grid = async function(options) {
 		}
 
 	// call to the API, fetch data and get response
-		const current_data_manager = new data_manager()
-		const dd_grid_data = await current_data_manager.request({body : rqo})
+		const current_data_manager	= new data_manager()
+		const dd_grid_data_request	= await current_data_manager.request({body : rqo})
+		const dd_grid_data			= dd_grid_data_request.result
 
-		const dd_grid	= await instances.get_instance({
-					model 			: 'dd_grid',
-					section_tipo	: self.caller.section_tipo,
-					// section_id		: section_id,
-					tipo			: self.caller.section_tipo,
-					mode 			: 'table',
-					lang 			: page_globals.dedalo_data_lang,
-					// rqo 			: rqo
-				})
+	// dd_grid
+		const dd_grid = await instances.get_instance({
+			model			: 'dd_grid',
+			section_tipo	: self.caller.section_tipo,
+			// section_id	: section_id,
+			tipo			: self.caller.section_tipo,
+			mode			: 'table',
+			lang			: page_globals.dedalo_data_lang
+			// rqo			: rqo
+		})
+		// set dd_grid data
+		dd_grid.data = dd_grid_data
+		// render dd_grid
+		const dd_grid_node = await dd_grid.render()
 
-	dd_grid.data = dd_grid_data.result
 
-	const node = await dd_grid.render()
-
-	return node
+	return dd_grid_node
 }// end get_export_grid
+
 
 
 /**
@@ -205,4 +218,5 @@ tool_export.prototype.get_export_grid = async function(options) {
 tool_export.prototype.get_export_csv = async function (options) {
 	// body...
 }// end get_export_csv
+
 
