@@ -50,7 +50,7 @@ class component_section_id extends component_common {
 		$value->set_type('column');
 		$value->set_label($label);
 		$value->set_cell_type('section_id');
-		$value->set_row_count(0);
+		$value->set_row_count(1);
 		$value->set_value($data);
 
 		return $value;
