@@ -6,6 +6,7 @@
 // imports
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
@@ -99,18 +100,36 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_components_container',
 			parent			: fragment
 		})
+		// title
 			const list_title = ui.create_dom_element({
-				element_type	: 'div',
+				element_type	: 'h1',
 				class_name		: 'list_title',
-				text_content 	: get_label.elementos_activos,
+				text_content	: get_label.elementos_activos || 'Active elements',
 				parent			: export_components_container
 			})
-	// drag and drop events
-		export_components_container.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
-		export_components_container.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-		export_components_container.addEventListener('drop',function(e){self.on_drop(this,e)})
-		export_components_container.addEventListener('dragover',function(e){self.on_dragover(this,e)})
-		export_components_container.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
+		// drag and drop events
+			export_components_container.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
+			export_components_container.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
+			export_components_container.addEventListener('drop',function(e){self.on_drop(this,e)})
+			export_components_container.addEventListener('dragover',function(e){self.on_dragover(this,e)})
+			export_components_container.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
+		// read saved ddo in local DB and restore elements if found
+			const current_data_manager	= new data_manager()
+			const id					= 'tool_export_config'
+			current_data_manager.get_local_db_data(id, 'data')
+			.then(function(response){
+				const target_section_tipo = self.target_section_tipo[0]
+				if (response && response.value && response.value[target_section_tipo]) {
+					// call for each saved ddo
+					for (let i = 0; i < response.value[target_section_tipo].length; i++) {
+						const ddo = response.value[target_section_tipo][i]
+						self.build_export_component(export_components_container, ddo.path, ddo)
+					}
+					if(SHOW_DEBUG===true) {
+						console.log(`Added saved local db ${target_section_tipo} ddo items:`, response.value[target_section_tipo]);
+					}
+				}
+			})
 
 	// export_buttons_config
 		const export_buttons_config = ui.create_dom_element({
@@ -361,6 +380,36 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 
 	// show hidden parent container
 		parent_div.classList.remove("hide")
+
+	// store ddo in local DB
+		const current_data_manager	= new data_manager()
+		const id					= 'tool_export_config'
+		current_data_manager.get_local_db_data(id, 'data')
+		.then(function(response){
+			// target_section_tipo. Used to create a object property key different for each section
+			const target_section_tipo	= self.target_section_tipo[0]
+			// tool_export_config. Current section tool_export_config (fallback to basic object)
+			const tool_export_config	= response && response.value
+				? response.value
+				: {
+					[target_section_tipo] : []
+				  }
+			// check if already exists current target section_tipo config ddo
+			const found = tool_export_config[target_section_tipo]
+				? tool_export_config[target_section_tipo].find(el => el.id===ddo.id)
+				: undefined
+			// if not exists current ddo (as expected), add it to local database using current target section_tipo as key
+			if (!found) {
+				tool_export_config[target_section_tipo] = tool_export_config[target_section_tipo] || []
+				tool_export_config[target_section_tipo].push(ddo)
+				// save
+				const cache_data = {
+					id		: 'tool_export_config',
+					value	: tool_export_config
+				}
+				current_data_manager.set_local_db_data(cache_data, 'data')
+			}
+		})
 
 
 	return true
