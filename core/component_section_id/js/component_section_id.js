@@ -6,26 +6,29 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_section_id} from '../../component_section_id/js/render_component_section_id.js'
+	import {render_edit_component_section_id} from '../../component_section_id/js/render_edit_component_section_id.js'
+	import {render_search_component_section_id} from '../../component_section_id/js/render_search_component_section_id.js'
+	import {render_mini_component_section_id} from '../../component_section_id/js/render_mini_component_section_id.js'
+	import {render_list_component_section_id} from '../../component_section_id/js/render_list_component_section_id.js'
 
 
 
 export const component_section_id = function(){
 
 	// element properties declare
-		this.model
-		this.tipo
-		this.section_tipo
-		this.section_id
-		this.mode
-		this.lang
+		this.model			= null
+		this.tipo			= null
+		this.section_tipo	= null
+		this.section_id		= null
+		this.mode			= null
+		this.lang			= null
 
-		this.section_lang
-		this.context
-		this.data
-		this.parent
-		this.node
-		this.id
+		this.section_lang	= null
+		this.context		= null
+		this.data			= null
+		this.parent			= null
+		this.node			= null
+		this.id				= null
 
 	return true
 };//end component_section_id
@@ -51,10 +54,10 @@ export const component_section_id = function(){
 	component_section_id.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_section_id.prototype.mini					= render_component_section_id.prototype.mini
-	component_section_id.prototype.list					= render_component_section_id.prototype.list
-	component_section_id.prototype.edit					= render_component_section_id.prototype.edit
-	component_section_id.prototype.edit_in_list			= render_component_section_id.prototype.edit
-	component_section_id.prototype.tm					= render_component_section_id.prototype.edit
-	component_section_id.prototype.search				= render_component_section_id.prototype.search
+	component_section_id.prototype.mini					= render_mini_component_section_id.prototype.mini
+	component_section_id.prototype.list					= render_list_component_section_id.prototype.list
+	component_section_id.prototype.edit					= render_edit_component_section_id.prototype.edit
+	component_section_id.prototype.edit_in_list			= render_edit_component_section_id.prototype.edit
+	component_section_id.prototype.tm					= render_edit_component_section_id.prototype.edit
+	component_section_id.prototype.search				= render_search_component_section_id.prototype.search
 	component_section_id.prototype.change_mode			= component_common.prototype.change_mode
