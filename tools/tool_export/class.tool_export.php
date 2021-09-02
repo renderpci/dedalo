@@ -305,19 +305,17 @@ class tool_export { // extends tool_common
 				$component_value = ($this->data_format==='dedalo')
 					? $current_component->get_raw_value()
 					: $current_component->get_value($current_lang, $ddo);
-				}
 
 			// get component label
+				$sub_component_labels	= $component_value->column_labels ?? [];
+				$len					= sizeof($sub_component_labels);
+				if($len===0){
+					$ar_column_labels[]	= $current_component->get_label();
+				}
+				for ($i=0; $i < $len; $i++) {
+					$ar_column_labels[] = $sub_component_labels[$i];
+				}
 
-
-			$sub_component_labels	= $component_value->column_labels ?? [];
-			$len = sizeof($sub_component_labels);
-			if($len === 0){
-				$ar_column_labels[]		= $current_component->get_label();
-			}
-			for ($i=0; $i < $len; $i++) {
-				$ar_column_labels[] = $sub_component_labels[$i];
-			}
 			$ar_row_count[]		= $component_value->row_count ?? 1;
 			$ar_cells[]			= $component_value;
 
@@ -336,9 +334,5 @@ class tool_export { // extends tool_common
 	}//end get_value
 
 
-
-
-
-	
 
 }//end class tool_export
