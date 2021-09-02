@@ -31,7 +31,7 @@ render_table_dd_grid.prototype.table = async function() {
 	const self = this
 
 	// Options vars
-		const data		= self.data
+		const data = self.data
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -59,7 +59,7 @@ const get_table_nodes = function(data) {
 	const fragment = new DocumentFragment()
 
 	const data_len = data.length
-		console.log("data:",data);
+		// console.log("render_table_dd_grid.get_table_nodes received data:",data);
 
 	for (let i = 0; i < data_len; i++) {
 		const current_data = data[i]
@@ -78,7 +78,7 @@ const get_table_nodes = function(data) {
 				for (let current_column = 0; current_column < column_count; current_column++) {
 					const column = current_data.value[current_column]
 					const column_nodes = get_table_columns(column, current_row, current_column)
-					console.log("column_nodes:",column_nodes);
+						// console.log("column_nodes:",column_nodes);
 					const len = column_nodes.length
 					for (let j = 0; j < len; j++) {
 						node.appendChild(column_nodes[j])
@@ -107,7 +107,7 @@ const get_table_columns = function(current_data, current_row, current_column){
 	// for (let i = 0; i < data_len; i++) {
 	// 	const current_data = data[i]
 
-		console.log("current_data:",current_data);
+		// console.log("get_table_columns current_data:",current_data);
 		if (current_data && current_data.type) {
 			// current_data.id = current_row+'_'+current_column
 

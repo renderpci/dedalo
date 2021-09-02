@@ -229,7 +229,7 @@ class tool_export { // extends tool_common
 	* GET_VALUE
 	*
 	* @param array $ar_ddo
-	* @param obejct $locator
+	* @param object $locator
 	*
 	* @return object $value
 	*/
@@ -243,11 +243,8 @@ class tool_export { // extends tool_common
 
 			// children_ddo. get only the ddo that are children of the section top_tipo
 			// the other ddo are sub components that will be injected to the portal as request_config->show
-			$ddo = null;
-			$first_path = $current_ddo->path[0];
-			if ($first_path->section_tipo === $locator->section_tipo) {
-				$ddo = $first_path ;
-			}
+			$first_path	= $current_ddo->path[0];
+			$ddo		= ($first_path->section_tipo===$locator->section_tipo) ? $first_path : null;
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 				$separator_fields	= $ddo->separator_fields ?? null;
@@ -260,7 +257,7 @@ class tool_export { // extends tool_common
 				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->component_tipo, true);
 
-				$current_component 	= component_common::get_instance($component_model,
+				$current_component	= component_common::get_instance($component_model,
 																	 $ddo->component_tipo,
 																	 $locator->section_id,
 																	 'edit',
@@ -290,8 +287,8 @@ class tool_export { // extends tool_common
 						$show->ddo_map = $sub_ddo_map;
 
 					$request_config = new stdClass();
-						$request_config->api_engine = 'dedalo';
-						$request_config->show = $show;
+						$request_config->api_engine	= 'dedalo';
+						$request_config->show		= $show;
 
 					$current_component->request_config = [$request_config];
 
@@ -305,10 +302,9 @@ class tool_export { // extends tool_common
 				}
 
 			// get component_value add
-				if($this->data_format === 'dedalo'){
-					$component_value	= $current_component->get_raw_value();
-				}else{
-					$component_value	= $current_component->get_value($current_lang, $ddo);
+				$component_value = ($this->data_format==='dedalo')
+					? $current_component->get_raw_value()
+					: $current_component->get_value($current_lang, $ddo);
 				}
 
 			// get component label
@@ -330,10 +326,10 @@ class tool_export { // extends tool_common
 
 		// value final
 			$value = new stdClass();
-				$value->ar_row_count	= $ar_row_count;
-				$value->ar_column_count = sizeof($ar_column_labels);
-				$value->ar_column_labels = $ar_column_labels;
-				$value->ar_cells		= $ar_cells;
+				$value->ar_row_count		= $ar_row_count;
+				$value->ar_column_count		= sizeof($ar_column_labels);
+				$value->ar_column_labels	= $ar_column_labels;
+				$value->ar_cells			= $ar_cells;
 
 
 		return $value;
