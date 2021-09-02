@@ -13,13 +13,14 @@
 			path			: obj.path,
 			// section_id	: obj.dataset.section_id
 			ddo				: obj.ddo
-			})
+		})
 
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', data);
 
 		return true
 	};//end ondrag_start
+
 
 
 	/**
@@ -55,19 +56,17 @@
 	* @return bool true
 	*/
 	export const on_drop = function(obj, event) {
-
 		event.preventDefault() // Necessary. Allows us to drop.
 		event.stopPropagation()
 
 		const self = this
 
 		//console.log("on_drop event:", event.dataTransfer.getData('text/plain'));
-		const data 		  = event.dataTransfer.getData('text/plain');// element thats move
-		const wrap_target = obj 	 // element on user leaves source wrap
-
-		const data_parse = JSON.parse(data)
-		const path = data_parse.path
-		const ddo = data_parse.ddo
+		const wrap_target	= obj 	 // element on user leaves source wrap
+		const data			= event.dataTransfer.getData('text/plain');// element that move
+		const parsed_data	= JSON.parse(data)
+		const path			= parsed_data.path
+		const ddo			= parsed_data.ddo
 
 		const new_ddo = {
 			id				: ddo.section_tipo +'_'+ ddo.tipo +'_list_'+ ddo.lang,
@@ -77,18 +76,18 @@
 			parent			: ddo.parent,
 			lang			: ddo.lang,
 			mode			: ddo.mode,
-			label 			: ddo.label,
+			label			: ddo.label,
 			path			: path
 		}
 
 		// Build component html
-		self.build_export_component(wrap_target, path, new_ddo).then(()=>{
-			//Update the ddo_export
+		self.build_export_component(wrap_target, path, new_ddo)
+		.then(()=>{
+			// Update the ddo_export
 			self.ar_ddo_to_export.push(new_ddo)
-
-			// console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
-
-		});
+		})
 
 		return true
 	};//end on_drop
+
+
