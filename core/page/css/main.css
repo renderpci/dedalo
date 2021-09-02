@@ -2721,6 +2721,24 @@ li .section_record.list .id_column {
   font-size: larger;
   letter-spacing: 0.05em;
 }
+.wrapper_component.edit.component_section_id.search,
+.wrapper_component.search.component_section_id.search,
+.wrapper_component.tm.component_section_id.search {
+  background-color: initial !important;
+  color: initial;
+  flex-grow: initial !important;
+}
+.wrapper_component.edit.component_section_id.search > .label,
+.wrapper_component.search.component_section_id.search > .label,
+.wrapper_component.tm.component_section_id.search > .label {
+  flex: initial;
+  color: black;
+}
+.wrapper_component.edit.component_section_id.search > .content_data,
+.wrapper_component.search.component_section_id.search > .content_data,
+.wrapper_component.tm.component_section_id.search > .content_data {
+  flex: auto;
+}
 .wrapper_component.list.component_text_area {
   max-height: 10em;
   overflow: hidden;
