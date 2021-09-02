@@ -30,7 +30,12 @@
 			width: 100%;
 			min-height: 90vh;
    			display: grid;
-			grid-template-columns: auto 20% 200px;
+			grid-template-columns: auto auto 200px;
+
+			h1 {
+				margin-bottom: 1em;
+				font-size: 1.2em;
+			}
 
 			// components_list_container. List of available section components to drag (at left)
 				>.components_list_container {
@@ -41,10 +46,12 @@
 				>.export_components_container {
 					background-color: #ffffff;
 					padding: 1em;
+					padding-top: 0;
+					border-left: 1px solid #bbbbbb;
+					border-right: 1px solid #bbb;
 
-					>.list_title {
-						margin-bottom: 1em;
-						font-size: 1.2em;
+					>h1.list_title {
+
 					}
 
 					>.export_component {
@@ -73,7 +80,7 @@
 					padding-top: 0;
 
 					h1 {
-						font-size: 1.2em;
+
 					}
 				}
 

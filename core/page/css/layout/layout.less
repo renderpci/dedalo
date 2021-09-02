@@ -1392,19 +1392,18 @@
 						}
 					}
 				}
-			}
+			}//end &.component_text_area
 
 			// component_section_id
 			&.component_section_id {
-				flex: 0 0 100%;
 				background-color: @color_orange_dedalo !important;
-				flex-direction: row-reverse;
 				color: white;
 				display: flex;
+				flex: 0 0 20%;
+				// flex-direction: row-reverse;
 
 				>.label {
 					color: white;
-					flex: auto;
 				}
 
 				>.content_data {
@@ -1415,6 +1414,18 @@
 						letter-spacing: 0.05em;
 					}
 				}
+
+				// &.search {
+				// 	background-color: initial !important;
+				// 	color: initial;
+				// 	>.label {
+				// 		flex: initial;
+				// 		color: black;
+				// 	}
+				// 	>.content_data {
+				// 		flex: auto;
+				// 	}
+				// }
 			}
 		}//end &.edit
 
