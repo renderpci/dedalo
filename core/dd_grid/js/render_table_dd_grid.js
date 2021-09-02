@@ -224,14 +224,19 @@ const get_label_column = function(current_data) {
 * @return DOM node text_node (span)
 */
 const get_text_column = function(current_data) {
+	// console.log("---> get_text_column current_data.value:", current_data.value);
 
 	const class_list = current_data.class_list || ''
+
+	const text = current_data.value && Array.isArray(current_data.value)
+		? current_data.value.join(' ')
+		: (current_data.value || '')
 
 	const text_node = ui.create_dom_element({
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		text_content	: current_data.value.join('')
+		text_content	: text
 	})
 
 	return text_node
