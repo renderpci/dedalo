@@ -9,7 +9,7 @@ abstract class component_common extends common {
 
 
 	# GENERAL VARS
-		protected $tipo;					# string component tipo in structur ex ('dd22') eq. terminoID
+		protected $tipo;					# string component tipo in ontology ex ('dd22') eq. terminoID
 		protected $parent;					# int parent section_id
 		protected $section_id;				# int parent section_id
 		protected $section_tipo;			# string parent section tipo
@@ -27,7 +27,7 @@ abstract class component_common extends common {
 		public $RecordObj_dd;				# obj ts
 		protected $modelo;
 		protected $norden;
-		protected $label;					# etiqueta
+		protected $label;					# component label in current lang like 'Transcription'
 
 		protected $required;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
 		protected $debugger;				# info for admin
@@ -120,7 +120,7 @@ abstract class component_common extends common {
 				if(SHOW_DEBUG===true) {
 					$bt = debug_backtrace();
 					dump($bt, ' bt ++ '.to_string($tipo));
-					throw new Exception("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__, 1);
+					throw new Exception("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__, 1);
 				}
 				return null;
 			}
@@ -439,7 +439,7 @@ abstract class component_common extends common {
 	/**
 	* SET_DATO_DEFAULT
 	* Set dato default when properties->dato_default exists and current component dato is empty
-	* properties are loaded always (structure data) at begining of build component. Because this
+	* properties are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool true
 	*/
@@ -508,7 +508,7 @@ abstract class component_common extends common {
 
 		$this->dato_resolved = $dato;
 
-		# Fix this component as data loaded to avoid overwite current dato setted, with database dato
+		# Fix this component as data loaded to avoid overwrite current fixed dato, with database dato
 		# Set as loaded
 		$this->bl_loaded_matrix_data = true;
 	}//end set_dato
@@ -642,7 +642,7 @@ abstract class component_common extends common {
 			$separator_fields	= $ddo->separator_fields ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
-			$class_list 		= $ddo->class_list ?? null;
+			$class_list			= $ddo->class_list ?? null;
 
 		$value = new dd_grid_cell_object();
 
@@ -2854,7 +2854,6 @@ abstract class component_common extends common {
 
 
 
-
 	/**
 	* GET_DATA_ITEM
 	* @param mixed $value
@@ -3086,4 +3085,4 @@ abstract class component_common extends common {
 
 
 
-}//end class
+}//end class component_common
