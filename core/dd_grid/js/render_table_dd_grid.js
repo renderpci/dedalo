@@ -70,14 +70,23 @@ const get_table_nodes = function(data) {
 
 			const row_count		= (current_data.row_count || 1)
 			const column_count	= (current_data.column_count || 1)
+			const column_len 	= current_data.value.length
 			// build all rows
 			for (let current_row = 0; current_row < row_count; current_row++) {
 				const node = get_div_container(current_data)
 
 				// columns
-				for (let current_column = 0; current_column < column_count; current_column++) {
+				for (let current_column = 0; current_column < column_len; current_column++) {
 					const column = current_data.value[current_column]
-					const column_nodes = get_table_columns(column, current_row, current_column)
+					const column_control ={
+						current_column: current_column,
+						column_count: column_count,
+					}
+					const column_nodes = (column.column_count)
+						? get_table_sub_columns(column, current_row, column_control)
+						: get_table_columns(column)
+
+
 					console.log("column_nodes:",column_nodes);
 					const len = column_nodes.length
 					for (let j = 0; j < len; j++) {
@@ -97,9 +106,37 @@ const get_table_nodes = function(data) {
 	return fragment
 }//end get_table_nodes
 
+const get_table_sub_columns = function(current_data, current_row, column_control){
 
+	// value
+		if(current_data.type==='row'){
+			const column_count = column_control.column_count
+			for (let current_column = 0; current_column < column_count; current_column++) {
+				const row_data = current_data.value[current_column]
+				const column_control ={
+					current_column: current_column,
+					column_count: column_count,
+				}
+				const ar_columns = get_table_sub_columns(row_data, current_row, column_control)
+				return ar_columns
+			}
 
-const get_table_columns = function(current_data, current_row, current_column){
+		}
+		if(current_data.type==='column' && typeof(current_data.cell_type)==='undefined'){
+			if(current_data.column_count){
+				column_control.column_count = current_data.column_count
+			}
+			const column_data = current_data.value[current_row]
+			const ar_columns = get_table_sub_columns(column_data, current_row, column_control)
+			return ar_columns
+
+		}else{
+			const ar_columns = get_table_columns(current_data)
+			return ar_columns
+		}
+}
+
+const get_table_columns = function(current_data){
 
 	// const data_len = data.length
 
@@ -109,7 +146,7 @@ const get_table_columns = function(current_data, current_row, current_column){
 
 		console.log("current_data:",current_data);
 		if (current_data && current_data.type) {
-			// current_data.id = current_row+'_'+current_column
+			// current_data.id = current_row+'_'+column_control
 
 			// label head
 				if(current_data.type==='column' && current_data.render_label){
@@ -119,7 +156,7 @@ const get_table_columns = function(current_data, current_row, current_column){
 
 			// column
 				if(current_data.type==='column' && current_data.cell_type){
-
+						console.log("get_node:",current_data.cell_type);
 					switch(current_data.cell_type) {
 						case 'av':
 							const av_node = get_av_column(current_data)
@@ -153,16 +190,6 @@ const get_table_columns = function(current_data, current_row, current_column){
 							break;
 					}//end switch(current_data.cell_type)
 				}// end if(current_data.type==='column' && current_data.cell_type)
-
-			// value
-				if(current_data.type==='row'){
-					const row_data = current_data.value[current_row]
-					get_table_columns(row_data, current_row, current_column)
-				}
-				if(current_data.type==='column', current_data.value && typeof(current_data.cell_type)==='undefined'){
-					const child_node = get_table_columns(current_data.value[current_column], current_row, current_column)
-					// column_nodes.push(child_node)
-				}
 
 		}else{
 
