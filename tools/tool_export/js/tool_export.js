@@ -163,9 +163,10 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const export_format		= options.export_format
 		const ar_ddo_to_export	= options.ar_ddo_to_export
 
-	const sqo = JSON.parse(JSON.stringify(self.sqo))
-	sqo.limit	= 0
-	sqo.offset	= 0
+	// sqo
+		const sqo = JSON.parse(JSON.stringify(self.sqo))
+		sqo.limit	= 0
+		sqo.offset	= 0
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
 	// this generates a call as my_tool_name::my_function_name(arguments)
@@ -176,7 +177,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 			model				: self.caller.model,
 			export_format		: export_format, // format selected by the user to get data
 			ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
-			sqo 				: sqo,
+			sqo					: sqo
 		}
 
 	// rqo

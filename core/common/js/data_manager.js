@@ -333,6 +333,12 @@ data_manager.prototype.get_local_db = async function() {
 
 /**
 * SET_LOCAL_DB_DATA
+* Save data into the browser local database (IndexdDB)
+* @param object data
+* @param string table
+* Calling sample:
+* 	current_data_manager.set_local_db_data(self.rqo, 'rqo')
+* @return promise
 */
 data_manager.prototype.set_local_db_data = async function(data, table) {
 
@@ -377,6 +383,11 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 
 /**
 * GET_LOCAL_DB_DATA
+* @param string id
+* @param string table
+* Calling sample:
+*	current_data_manager.get_local_db_data('tool_export_config', 'data')
+* @return promise
 */
 data_manager.prototype.get_local_db_data = async function(id, table) {
 	const t0 = performance.now()
