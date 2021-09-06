@@ -15,7 +15,7 @@ abstract class RecordDataBoundObject {
 	public $arModifiedRelations;
 
 	public $use_cache;
-	public $use_cache_manager = false;
+	public $use_cache_manager;
 
 	#protected static $db_connection;
 
@@ -32,7 +32,7 @@ abstract class RecordDataBoundObject {
 	# __CONSTRUCT
 	public function __construct($id=NULL) {
 
-		$this->strTableName 		= $this->defineTableName();
+		$this->strTableName			= $this->defineTableName();
 		$this->strPrimaryKeyName	= $this->definePrimaryKeyName();
 		$this->arRelationMap		= $this->defineRelationMap();
 
@@ -42,7 +42,8 @@ abstract class RecordDataBoundObject {
 		}
 		$this->arModifiedRelations	= array();
 
-		$this->use_cache = true;
+		$this->use_cache_manager	= false;
+		$this->use_cache			= true;
 	}
 
 
@@ -58,7 +59,7 @@ abstract class RecordDataBoundObject {
 		}
 
 		return $this->dato;
-	}
+	}//end get_dato
 
 
 
@@ -69,7 +70,7 @@ abstract class RecordDataBoundObject {
 		$this->arModifiedRelations['dato'] = 1;
 		
 		$this->dato = $dato;
-	}
+	}//end set_dato
 
 
 
@@ -88,17 +89,33 @@ abstract class RecordDataBoundObject {
 		if(!isset($this->ID) || $this->ID===false) return;		
 
 		# SQL QUERY
-		$strQuery = 'SELECT ';
-		foreach($this->arRelationMap as $key => $value) {
-			$strQuery .= '"'.$key.'",';
-		}
-		$strQuery 	 = substr($strQuery,0,strlen($strQuery)-1);
-		if (is_int($this->ID)) {
-			$strQuery	.= ' FROM "'. $this->strTableName .'" WHERE "'.$this->strPrimaryKeyName.'"='. $this->ID ;
-		}else{
-			$strQuery	.= ' FROM "'. $this->strTableName .'" WHERE "'.$this->strPrimaryKeyName.'"='. "'$this->ID'" ;
-		}
+			// $strQuery = 'SELECT ';
+			// foreach($this->arRelationMap as $key => $value) {
+			// 	$strQuery .= '"'.$key.'",';
+			// }
+			// $strQuery 	 = substr($strQuery,0,strlen($strQuery)-1);
+			// if (is_int($this->ID)) {
+			// 	$strQuery	.= ' FROM "'. $this->strTableName .'" WHERE "'.$this->strPrimaryKeyName.'"='. $this->ID ;
+			// }else{
+			// 	$strQuery	.= ' FROM "'. $this->strTableName .'" WHERE "'.$this->strPrimaryKeyName.'"='. "'$this->ID'" ;
+			// }
 
+		// query
+			$ar_query = [];
+
+		// select
+			$ar_query_select = [];
+			foreach($this->arRelationMap as $key => $value) {
+				$ar_query_select[] = '"'.$key.'"';
+			}
+			$ar_query[] = 'SELECT '.implode(',', $ar_query_select);
+
+		// from
+			$ar_query[] = 'FROM "'.$this->strTableName.'" WHERE "'.$this->strPrimaryKeyName.'"='.(is_int($this->ID) ? $this->ID : '\''.$this->ID.'\'');
+				// dump($ar_query, ' ar_query ++ '.to_string($ar_query));
+
+		// $strQuery
+			$strQuery = implode(PHP_EOL, $ar_query);
 
 		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
 		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
@@ -120,6 +137,7 @@ abstract class RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				#$totaltime = exec_time($start_time);
 				#$_SESSION['debug_content'][__METHOD__.' cache'][] = "<em> --". str_replace("\n",'',$strQuery) . "</em> [$totaltime ms]";
+				// debug_log(__METHOD__." Already calculated query !! ".to_string($strQuery), logger::DEBUG);
 			}
 
 		}else{
@@ -170,41 +188,42 @@ abstract class RecordDataBoundObject {
 			}
 		}
 
+		// old
+			// if(is_array($arRow)) foreach($arRow as $key => $value) {
+
+			// 	#try {
+			// 		$strMember = $this->arRelationMap[$key];
+			// 	#}catch(Exception $e){ echo $e->getMessage(); }
+
+			// 	if(property_exists($this, $strMember) || $key==='texto' ) {
+
+			// 		# special case texto substring
+			// 		if($key==='texto' && !$strMember) $strMember = 'texto';
+			// 			#echo " +property_exists: $strMember - $value <br>";
+
+			// 		$this->$strMember = $value ;
+			// 	}
+			// }
 
 		if(is_array($arRow)) foreach($arRow as $key => $value) {
 
-			#try {
-				$strMember = $this->arRelationMap[$key];
-			#}catch(Exception $e){ echo $e->getMessage(); }
-
-			if(property_exists($this, $strMember) || $key==='texto' ) {
-
-				# special case texto substring
-				if($key==='texto' && !$strMember) $strMember = 'texto';
-					#echo " +property_exists: $strMember - $value <br>";
-				
-				$this->$strMember = $value ;			
+			$strMember = $this->arRelationMap[$key];
+			if(property_exists($this, $strMember)) {
+				$this->{$strMember} = $value ;
 			}
 		}
 
 		# Fix loaded state
 		$this->blIsLoaded = true;
 		
-		/*
-		if(SHOW_DEBUG===true) {
-			global $contador_destruct;
-			if(!isset($contador_destruct)) $contador_destruct=0;		
-			$contador_destruct++;
-			error_log("Loaded: id:".$this->ID ." - contador:".$contador_destruct ." - $strQuery - ".exec_time_unit($start_time,'ms'));
-		}
-		*/
-		# DEBUG
-		if(SHOW_DEBUG===true) {
-			// $totaltime = exec_time_unit($start_time,'ms');
-			// static $totaltime_static;
-			// $totaltime_static = $totaltime_static + $totaltime;
-			// debug_log(__METHOD__." Total: $totaltime ms - $strQuery - sum time ms: ".to_string($totaltime_static), logger::DEBUG);
-		}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				// $totaltime = exec_time_unit($start_time,'ms');
+				// static $totaltime_static;
+				// $totaltime_static = $totaltime_static + $totaltime;
+				// debug_log(__METHOD__." Total: $totaltime ms - $strQuery - sum time ms: ".to_string($totaltime_static), logger::DEBUG);
+			}
 
 		return true;
 	}//end load
@@ -264,6 +283,9 @@ abstract class RecordDataBoundObject {
 				return $this->ID;
 			}
 
+			// prevent null encoded errors
+				$strQuery_set = str_replace(['\\u0000','\u0000'], ' ', $strQuery_set);
+
 			$strQuery	.= substr($strQuery_set,0,-2);
 			if (is_int($this->ID)) {
 				$strQuery	.= ' WHERE "'. $this->strPrimaryKeyName .'" = ' . $this->ID ;
@@ -309,19 +331,25 @@ abstract class RecordDataBoundObject {
 					}
 				}
 			}
+
+			// prevent null encoded errors
+				$strValueList = str_replace(['\\u0000','\u0000'], ' ', $strValueList);
+
 			$strQuery 	 = substr($strQuery,0,strlen($strQuery)-2);
 			$strValueList= substr($strValueList,0,strlen($strValueList)-2);
 			$strQuery	.= ') VALUES (';
-			$strQuery	.= $strValueList ;
+			$strQuery	.= $strValueList;
 			$strQuery	.= ') RETURNING "'.$this->strPrimaryKeyName.'" ';
 
+
 			#dump($strQuery,"strQuery");#die();
-			$result 	= pg_query(DBi::_getConnection(), $strQuery);
+			$result = pg_query(DBi::_getConnection(), $strQuery);
+
 
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
-					throw new Exception("Error Processing Save Insert Request ". pg_last_error(), 1);
+					throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(), 1);
 				}
 				return "Error: sorry an error ocurred on INSERT record. Data is not saved";
 			}
@@ -330,7 +358,7 @@ abstract class RecordDataBoundObject {
 			if ($id===false) {
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
-					throw new Exception("Error Processing Request: ".pg_last_error(), 1);
+					throw new Exception("Error Processing Request (1-b): ".pg_last_error(), 1);
 				}
 			}
 			# Fix new received id
