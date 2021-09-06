@@ -176,7 +176,8 @@ abstract class JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
 				#$_SESSION['debug_content'][__METHOD__][] = "". str_replace("\n",'',$strQuery) ." [$total_time_ms ms]";
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." ms - LOAD_SLOW_QUERY: $strQuery - records:".count($dato));
+				$n_records = is_countable($dato) ? sizeof($dato) : 0;
+				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." ms - LOAD_SLOW_QUERY: $strQuery - records:".$n_records);
 			}
 		}
 
@@ -275,7 +276,7 @@ abstract class JSON_RecordDataBoundObject {
 					if($result===false) {
 						if(SHOW_DEBUG===true) {
 							dump($strQuery,"strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));
-							throw new Exception("Error Processing Save Insert Request ". pg_last_error(), 1);;
+							throw new Exception("Error Processing Save Insert Request (2) error: ". pg_last_error(), 1);;
 						}
 						return "Error: sorry an error ocurred on INSERT record. Data is not saved";
 					}
@@ -566,7 +567,7 @@ abstract class JSON_RecordDataBoundObject {
 			# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
 			# the next results are 0 and duplicate records are built in matrix)
-			$n_records = count($ar_records);
+			$n_records = sizeof($ar_records);
 			if( $use_cache===true && $this->use_cache_manager===true && $n_records>0) {
 				# CACHE_MANAGER
 				cache::set($strQuery, serialize($ar_records));
@@ -580,7 +581,8 @@ abstract class JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
 				#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".count($ar_records));
+				$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
+				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".$n_records);
 				#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.microtime(1)]=microtime(1);
 			}
 

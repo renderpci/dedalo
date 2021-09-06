@@ -185,6 +185,10 @@ search.prototype.build = async function(){
 
 				}else{
 
+					if (editing_preset.result.json_filter && typeof(editing_preset.result.json_filter)!=='object') {
+						console.error("Editing_preset json_filter expected is object but received value is type:", typeof(editing_preset.result.json_filter));
+					}
+
 					self.json_filter = editing_preset.result.json_filter
 				}
 				// console.log("// SEARCH buld stored self.json_filter:",self.json_filter);
@@ -233,8 +237,8 @@ search.prototype.build = async function(){
 			
 			const user_presets = await current_data_manager.request({
 				body : {
-					action 	 	 		: "filter_get_user_presets",
-					target_section_tipo : self.section_tipo
+					action				: "filter_get_user_presets",
+					target_section_tipo	: self.section_tipo
 				}
 			})
 
@@ -463,13 +467,16 @@ search.prototype.get_section_id = function() {
 * @return
 */
 search.prototype.ar_resolved_elements = []
-search.prototype.build_dom_group = async function(filter, dom_element, options) {
+search.prototype.build_dom_group = async function(filter, dom_element, options={}) {
 
 	const self = this
 
-	let   dom_group 		= null
-	const allow_duplicates 	= (options && options.allow_duplicates) ? options.allow_duplicates : false
+	// options
+		const allow_duplicates	= options.allow_duplicates || false
+		const clean_q			= options.clean_q || false
+		const is_root			= options.is_root || false
 
+	let dom_group = null
 
 	for (const key in filter) {
 
@@ -485,7 +492,7 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 				const resolved_string = JSON.stringify(filter.path) + current_value
 				if (self.ar_resolved_elements.indexOf(resolved_string)===-1) {
 
-					if (options.clean_q===true) {
+					if (clean_q===true) {
 						current_value 	= ''
 						q_operator 		= ''
 					}
@@ -508,9 +515,9 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 				//console.log("key,ar_data:",key,ar_data);
 
 			// Build dom search_group
-				const current_search_group = await self.render_search_group( dom_element, {
-					operator : key,
-					is_root	 : options.is_root ? options.is_root : false
+				const current_search_group = self.render_search_group( dom_element, {
+					operator	: key,
+					is_root		: is_root
 				})
 
 			// Recursions
@@ -521,7 +528,7 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 					self.build_dom_group(current_json_object, current_search_group, options)
 				}
 		}
-	};//end for (const key in filter)
+	}//end for (const key in filter)
 
 
 	return dom_group

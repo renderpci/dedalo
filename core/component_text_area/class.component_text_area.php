@@ -392,25 +392,24 @@ class component_text_area extends component_common {
 		}
 
 		# Dato current assigned
-		$dato_current 	= $this->dato;
+		$dato_current = $this->dato;
 
-		# Alt_savr
-		# alternative save with relation components for store in relations and matrix relations the locators used inside the text
-		$properties = $this->get_properties();
-		if(isset($properties->alt_save)){
-			$this->alt_save();
-		}
-
-		# Clean dato
-		if ($clean_text) {
-			foreach ($dato_current as $key => $current_value) {
-				$dato_current[$key] = TR::limpiezaPOSTtr($current_value);
+		// alt_save. Alternative save with relation components for store in relations and matrix relations the locators used inside the text
+			$properties = $this->get_properties();
+			if(isset($properties->alt_save)){
+				$this->alt_save();
 			}
-		}
-		#$dato_clean 	= mb_convert_encoding($dato_clean, "UTF-8", "auto");
 
-		# Set dato again (cleaned)
-		$this->dato 	= $dato_current;
+		// clean dato
+			if ($clean_text) {
+				foreach ($dato_current as $key => $current_value) {
+					$dato_current[$key] = TR::limpiezaPOSTtr($current_value);
+				}
+			}
+			#$dato_clean 	= mb_convert_encoding($dato_clean, "UTF-8", "auto");
+
+		// Set dato again (cleaned)
+			$this->dato = $dato_current;
 
 
 		# From here, we save in the standard way
@@ -426,15 +425,15 @@ class component_text_area extends component_common {
 	*/
 	public function alt_save() {
 
-		//get the current dato with all text
-		$dato_current 	= $this->dato;
-		$section_id 	= $this->get_parent();
-		$section_tipo 	= $this->get_section_tipo();
+		// get the current dato with all text
+			$dato_current	= reset($this->dato); // (!) Note that only one value is expected in component_text_area but format is array
+			$section_id		= $this->get_parent();
+			$section_tipo	= $this->get_section_tipo();
 
-		//get the alt_save options
-		$properties = $this->get_properties();
-		$ar_mark_to_process = $properties->alt_save->mark;
-		$component_tipo = $properties->alt_save->component_tipo;
+		// get the alt_save options
+			$properties			= $this->get_properties();
+			$ar_mark_to_process	= $properties->alt_save->mark;
+			$component_tipo		= $properties->alt_save->component_tipo;
 
 		$ar_current_locator = [];
 		foreach ($ar_mark_to_process as $current_mark) {
@@ -2476,15 +2475,14 @@ class component_text_area extends component_common {
 		switch ($update_version) {
 
 			case '6.0.0':
-				if (!empty($dato_unchanged) && !is_array($dato_unchanged)) {
+				if ( (!empty($dato_unchanged) || $dato_unchanged==='') && !is_array($dato_unchanged)) {
 
-					/* 	Change the dato to array from string
-					*	From:
-					*	"some text"
-					*	To:
-					*	["some text"]
-					* 	change the img tag to new format into the image component.
-					*/
+					//  Change the dato from string to array
+					// 	From:
+					// 		"some text"
+					// 	To:
+					// 		["some text"]
+					//  	(!) change the img tags to new format into the image related component.
 
 					// new dato
 						$dato = $dato_unchanged;
@@ -2509,9 +2507,9 @@ class component_text_area extends component_common {
 
 								if(empty($image_dato[0]->lib_data)){
 									$raster_layer = new stdClass();
-										$raster_layer->layer_id 		= 0;
-										$raster_layer->user_layer_name 	= 'raster';
-										$raster_layer->layer_data 		= [];
+										$raster_layer->layer_id			= 0;
+										$raster_layer->user_layer_name	= 'raster';
+										$raster_layer->layer_data		= [];
 
 									$lib_data[] = $raster_layer;
 								}else{
@@ -2533,11 +2531,11 @@ class component_text_area extends component_common {
 								// The layer data inside the tag are with ' and is necessary change to "
 
 								foreach ($ar_draw_tags[4] as $match_key => $layer_id) {
-									$layer_id = (int)$layer_id;
-									$tag_data = new stdClass();
-										$tag_data->layer_id 		= $layer_id;
-										$tag_data->user_layer_name 	= 'layer_'.$layer_id;
-										$tag_data->layer_data 		= json_decode( str_replace('\'', '"', $ar_draw_tags[7][$match_key]) );
+									$layer_id	= (int)$layer_id;
+									$tag_data	= new stdClass();
+										$tag_data->layer_id			= $layer_id;
+										$tag_data->user_layer_name	= 'layer_'.$layer_id;
+										$tag_data->layer_data		= json_decode( str_replace('\'', '"', $ar_draw_tags[7][$match_key]) );
 									$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
 										if(isset($layer_item->layer_id) && $layer_item->layer_id === $layer_id){
 											return $layer_key;
@@ -2550,7 +2548,9 @@ class component_text_area extends component_common {
 									}
 								}
 
-								$image_dato[0]->lib_data = $lib_data;
+								if (isset($image_dato[0])) {
+									$image_dato[0]->lib_data = $lib_data;
+								}
 
 								$image_component->set_dato($image_dato);
 								$image_component->save();
@@ -2623,15 +2623,16 @@ class component_text_area extends component_common {
 						$new_dato = [$dato];
 
 					$response = new stdClass();
-						$response->result = 1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 
 					return $response;
 				}else{
 					$response = new stdClass();
-					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+
 					return $response;
 				}
 				break;

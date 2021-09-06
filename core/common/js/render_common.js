@@ -20,18 +20,19 @@
 * @return promise bool
 */
 export const render_components_list = async function(options) {
-		console.log("options:",options);
+	// console.log("render_components_list options:", options);
 
 	// options
-		const self			= options.self
-		const section_tipo	= options.section_tipo
-		const target_div	= options.target_div
-		const path			= options.path
+		const self				= options.self
+		const section_tipo		= options.section_tipo
+		const target_div		= options.target_div
+		const path				= options.path
+		const section_elements	= options.section_elements
 
 	// load components from api. this function could be defined by the caller or use the standard function in common.js
-		const ar_elements = await self.get_section_elements_context({
-			section_tipo : section_tipo
-		})
+		// const section_elements = await self.get_section_elements_context({
+		// 	section_tipo : section_tipo
+		// })
 
 	// clean target_div
 		while (target_div.hasChildNodes()) {
@@ -39,8 +40,8 @@ export const render_components_list = async function(options) {
 		}
 
 	// First item check
-		if (!ar_elements || typeof ar_elements[0]==="undefined") {
-			console.warn(`[render_components_list] Error. Empty ar_elements on get_section_elements_context ${section_tipo}`, ar_elements);
+		if (!section_elements || typeof section_elements[0]==="undefined") {
+			console.warn(`[render_components_list] Error. Empty section_elements on get_section_elements_context ${section_tipo}`, section_elements);
 			return false
 		}
 
@@ -62,9 +63,9 @@ export const render_components_list = async function(options) {
 
 	let section_group
 
-	const len = ar_elements.length
+	const len = section_elements.length
 	for (let i = 0; i < len; i++) {
-		const element = ar_elements[i]
+		const element = section_elements[i]
 
 		switch (true) {
 
@@ -151,13 +152,18 @@ export const render_components_list = async function(options) {
 
 						// Event on click load "children" section inside target_list_container recursively
 						const target_section = element.target_section_tipo[0] // Select first only
-						component.addEventListener("click", function(e){
+						component.addEventListener("click", async function(e){
+							// section_elements_context
+								const current_section_elements = await self.get_section_elements_context({
+									section_tipo : target_section
+								})
 							// recursion render_components_list
 								render_components_list({
-									self			: self,
-									section_tipo	: target_section,
-									target_div		: target_list_container,
-									path			: calculated_component_path
+									self				: self,
+									section_tipo		: target_section,
+									target_div			: target_list_container,
+									path				: calculated_component_path,
+									section_elements	: current_section_elements
 								})
 							// Reset active in current wrap
 								const ar_active_now	= list_container.querySelectorAll("li.active")
