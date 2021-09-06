@@ -1635,6 +1635,7 @@ button.cancel:before {
   flex: 1 1 50%;
   align-content: flex-start;
   z-index: auto;
+  overflow: hidden;
 }
 input[type="text"],
 input[type="number"],
@@ -2781,6 +2782,7 @@ li .section_record.list .id_column {
   flex: 1 1 50%;
   align-content: flex-start;
   z-index: auto;
+  overflow: hidden;
   background-color: rgba(251, 251, 251, 0.7);
   outline: 1px solid rgba(216, 216, 216, 0.43);
 }
@@ -2797,9 +2799,8 @@ li .section_record.list .id_column {
   overflow: hidden;
   white-space: nowrap;
   cursor: default;
-  font-family: Oxygen, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-weight: 100;
-  color: #9e9e9e;
+  font-weight: 300;
+  color: #949494;
 }
 .section_record .wrapper_component > .top,
 .wrapper_tool .wrapper_component > .top,
@@ -3588,6 +3589,7 @@ dd-modal .footer > * {
   flex: 1 1 50%;
   align-content: flex-start;
   z-index: auto;
+  overflow: hidden;
   background-color: rgba(243, 243, 243, 0.76);
   max-width: 24em;
   padding: 2em;
