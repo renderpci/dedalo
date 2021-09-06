@@ -105,6 +105,9 @@
 		//flex: 0 1 auto;
 		z-index: auto; // (!) important to allow fullscreen configs like tinymce
 
+		// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
+		overflow: hidden;
+
 		// input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
 
 		// 	li & {
@@ -1511,9 +1514,9 @@
 				overflow: hidden;
 				white-space: nowrap;
 				cursor: default;
-				font-family: Oxygen,"Helvetica Neue",Helvetica,Arial,sans-serif;
-				font-weight: 100;
-				color: #9e9e9e;
+				// font-family: Oxygen,"Helvetica Neue",Helvetica,Arial,sans-serif;
+				font-weight: 300;
+				color: @color_grey_dark; // #9e9e9e;
 			}//end >.label
 
 			>.top {
