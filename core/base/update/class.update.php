@@ -290,7 +290,7 @@ class update {
 			debug_log(__METHOD__." Updating components of section: $current_section_tipo (records: $n_rows, components $modelo_name: $n_components) Total: ". ($n_rows*$n_components), logger::WARNING);
 
 			$i=0; $tm=0;
-			// Iterate database resource directly to minimize memory requeriments on large arrays
+			// Iterate database resource directly to minimize memory requirements on large arrays
 			while ($rows = pg_fetch_assoc($result)) {
 
 				$section_id = $rows['section_id'];

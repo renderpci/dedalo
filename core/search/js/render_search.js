@@ -23,7 +23,6 @@ export const render_search = function() {
 
 
 
-
 /**
 * LIST
 * Render whole search in list mode
@@ -34,25 +33,29 @@ render_search.prototype.list = async function() {
 	const self = this
 
 	// wrapper base html bounds
-		const filter_wrapper = await self.render_base()
+		const filter_wrapper = self.render_base()
 
 	// components_list. render section component list [left]
-		await render_components_list({
-			self			: self,
-			section_tipo	: self.target_section_tipo,
-			target_div		: self.search_container_selector,
-			path			: []
+		const section_elements = await self.get_section_elements_context({
+			section_tipo : self.target_section_tipo
+		})
+		render_components_list({
+			self				: self,
+			section_tipo		: self.target_section_tipo,
+			target_div			: self.search_container_selector,
+			path				: [],
+			section_elements	: section_elements
 		})
 
 	// filter. render components from temp preset [center]
-		await render_filter({
+		render_filter({
 			self				: self,
 			editing_preset		: self.json_filter,
 			allow_duplicates	: true
 		})
 
 	// render buttons
-		await self.render_search_buttons()
+		self.render_search_buttons()
 
 	// panels status (close/open)
 		const ui_status = await self.get_panels_status()
@@ -88,7 +91,7 @@ render_search.prototype.list = async function() {
 * Render basic nodes
 * @return DOM node wrapper
 */
-render_search.prototype.render_base = async function() {
+render_search.prototype.render_base = function() {
 
 	const self = this
 
@@ -206,7 +209,7 @@ render_search.prototype.render_base = async function() {
 		const toggle_container_selection_presets = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toggle_container_selection_presets',
-			inner_html		: get_label["preset"],
+			inner_html		: get_label.preset || 'Preset',
 			parent			: search_global_container
 		})
 		.addEventListener('click',function(){
@@ -402,16 +405,21 @@ render_search.prototype.render_base = async function() {
 
 /**
 * RENDER_FILTER
+* Create the central filter group (components selected, max records, show all, apply button)
+* @param object options
+* @return DOM element search_group_container
 */
-const render_filter = async function(options){
+const render_filter = function(options){
 
-	const self						= options.self
-	const editing_preset			= options.editing_preset
-	const clean_q					= options.clean_q || false
-	const allow_duplicates			= options.allow_duplicates || false
-	const search_group_container	= self.search_group_container
+	// options
+		const self				= options.self
+		const editing_preset	= options.editing_preset
+		const clean_q			= options.clean_q || false
+		const allow_duplicates	= options.allow_duplicates || false
 
-	// Clean target_div
+	// search_group_container
+		const search_group_container = self.search_group_container
+		// Clean target_div
 		while (search_group_container.hasChildNodes()) {
 			search_group_container.removeChild(search_group_container.lastChild);
 		}
@@ -421,14 +429,14 @@ const render_filter = async function(options){
 
 	// Build global_group
 		self.build_dom_group(editing_preset, search_group_container, {
-			is_root 		 : true,
-			clean_q 		 : clean_q,
-			allow_duplicates : allow_duplicates
+			is_root				: true,
+			clean_q				: clean_q,
+			allow_duplicates	: allow_duplicates
 		})
 		//console.log("global_group:",global_group);
 
 
-	return true
+	return search_group_container
 };//end render_filter
 
 
@@ -442,46 +450,46 @@ render_search.prototype.render_search_buttons = function(){
 	const self = this
 
 	const search_buttons_container = ui.create_dom_element({
-			element_type : "div",
-			class_name 	 : "search_buttons_container",
-			parent 		 : self.search_group_container
-		})
+		element_type	: "div",
+		class_name		: "search_buttons_container",
+		parent			: self.search_group_container
+	})
 
 	// max group
 		const max_group = ui.create_dom_element({
-			element_type 			: "div",
-			class_name 	 			: "max_group",
-			parent 		 			: search_buttons_container
+			element_type	: "div",
+			class_name		: "max_group",
+			parent			: search_buttons_container
 		})
 	// max label
 		const max_input_label = ui.create_dom_element({
-			element_type 			: "span",
-			class_name 	 			: "max_input_label",
-			text_content 			: "max", // get_label["max"]
-			parent 		 			: max_group
+			element_type	: "span",
+			class_name		: "max_input_label",
+			text_content	: "max", // get_label["max"]
+			parent			: max_group
 		})
 	// max input
 		const max_input = ui.create_dom_element({
-			element_type 			: "input",
-			class_name 	 			: "max_input", // btn css_max_rows
-			value 					: self.limit, // default 10
-			parent 		 			: max_group,
+			element_type	: "input",
+			class_name		: "max_input", // btn css_max_rows
+			value			: self.limit, // default 10
+			parent			: max_group
 		})
 		max_input.addEventListener('change',function(){
 			self.limit = parseInt(max_input.value)
 		})
 	// reset group
 		const reset_group = ui.create_dom_element({
-			element_type 			: "div",
-			class_name 	 			: "reset_group",
-			parent 		 			: search_buttons_container
+			element_type	: "div",
+			class_name		: "reset_group",
+			parent			: search_buttons_container
 		})
 	// Reset button
 		const reset_button = ui.create_dom_element({
-			element_type 			: "button",
-			class_name 	 			: "button reload",
-			text_content 			: get_label["recargar"],
-			parent 		 			: reset_group
+			element_type	: "button",
+			class_name		: "button reload",
+			text_content	: get_label.recargar || 'Reload',
+			parent			: reset_group
 
 		})
 		reset_button.addEventListener("click", function(e){
@@ -490,10 +498,10 @@ render_search.prototype.render_search_buttons = function(){
 		})
 	// Show all
 		const show_all_button = ui.create_dom_element({
-			element_type 			: "button",
-			class_name 	 			: "button show_all",
-			text_content 			: get_label["mostrar_todos"], //"mostrar_todos",
-			parent 		 			: reset_group
+			element_type	: "button",
+			class_name		: "button show_all",
+			text_content	: get_label.mostrar_todos || 'Show all',
+			parent			: reset_group
 		})
 		show_all_button.addEventListener("click", function(e){
 			self.show_all(this)
@@ -502,11 +510,11 @@ render_search.prototype.render_search_buttons = function(){
 		})
 	// Submit button
 		const submit_button = ui.create_dom_element({
-			element_type 			: "button",
-			id 						: "button_submit",
-			class_name 	 			: "button submit",
-			text_content 			: get_label["aplicar"], //"Submit",
-			parent 		 			: search_buttons_container
+			element_type	: "button",
+			id				: "button_submit",
+			class_name		: "button submit",
+			text_content	: get_label.aplicar || 'Submit',
+			parent			: search_buttons_container
 		})
 		submit_button.addEventListener("click", function(e){
 			// always blur active component to force set dato (!)
@@ -525,7 +533,7 @@ render_search.prototype.render_search_buttons = function(){
 * RENDER_SEARCH_GROUP
 * @return dom object
 */
-render_search.prototype.render_search_group = async function(parent_div, options) {
+render_search.prototype.render_search_group = function(parent_div, options) {
 
 	const self = this
 
@@ -548,11 +556,11 @@ render_search.prototype.render_search_group = async function(parent_div, options
 
 	// search_group
 		const search_group = ui.create_dom_element({
-			element_type 			: 'div',
-			//id 					: options.is_root ? 'root_search_group' : null
-			class_name 	 			: "search_group",
-			data_set 				: {id:counter},
-			parent 		 			: parent_div
+			element_type	: 'div',
+			//id			: options.is_root ? 'root_search_group' : null
+			class_name		: "search_group",
+			data_set		: {id:counter},
+			parent			: parent_div
 		})
 		// Check already created root_search_group and store if not
 		if(options.is_root===true){
@@ -568,12 +576,12 @@ render_search.prototype.render_search_group = async function(parent_div, options
 
 	// Add operator
 		const search_group_operator = ui.create_dom_element({
-			element_type 			: 'div',
-			parent 		 			: search_group,
-			//text_content 			: options.operator.slice(1) + " "+counter,
-			text_content 			: localize_operator(options.operator)+ " ["+counter+"]",
-			data_set 				: { value : options.operator },
-			class_name 	 			: "operator search_group_operator" + (options.operator==="$and" ? " and" : " or")
+			element_type	: 'div',
+			parent			: search_group,
+			//text_content	: options.operator.slice(1) + " "+counter,
+			text_content	: localize_operator(options.operator)+ " ["+counter+"]",
+			data_set		: { value : options.operator },
+			class_name		: "operator search_group_operator" + (options.operator==="$and" ? " and" : " or")
 		})
 		search_group_operator.addEventListener("click",function(e){
 			//console.log("Clicked search_group_operator:",search_group_operator );
@@ -585,9 +593,9 @@ render_search.prototype.render_search_group = async function(parent_div, options
 	// Add button close
 		if (options.is_root===false) {
 		const search_group_button_close = ui.create_dom_element({
-			element_type 			: 'span',
-			parent 		 			: search_group,
-			class_name 	 			: "button close"
+			element_type	: 'span',
+			parent			: search_group,
+			class_name		: "button close"
 		})
 		search_group_button_close.addEventListener("click",function(e){
 			// remove from dom
@@ -599,18 +607,17 @@ render_search.prototype.render_search_group = async function(parent_div, options
 
 	// Add button + group
 		const search_group_button_plus = ui.create_dom_element({
-			element_type 			: 'span',
-			parent 		 			: search_group,
-			//text_content 			: "X",
-			class_name 	 			: "button add"
+			element_type	: 'span',
+			parent			: search_group,
+			//text_content	: "X",
+			class_name		: "button add"
 		})
-		search_group_button_plus.addEventListener("click",function(e){
+		search_group_button_plus.addEventListener("click", function(e){
 			//self.add_search_group_to_dom(this, search_group)
 			self.render_search_group( search_group )
 			// Set as changed
 			self.update_state({state:'changed'})
 		})
-
 
 
 	return search_group
@@ -703,10 +710,10 @@ render_search.prototype.build_search_component = async function(parent_div, path
 
 /**
 * RENDER_USER_PRESET_LIST
-* Auxiliar function to create dom elements needed for build components presets list
+* Auxiliary function to create dom elements needed for build components presets list
 * @return bool
 */
-render_search.prototype.render_user_preset_list = async function(ar_elements, permissions, target_section_tipo) {
+render_search.prototype.render_user_preset_list = function(ar_elements, permissions, target_section_tipo) {
 
 	const self = this
 
@@ -719,17 +726,14 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 	// first item check
 		if (typeof ar_elements[0]==="undefined") {
-
 			//console.warn("[search.render_user_preset_list] Warning. Empty ar_elements received",ar_elements);
 			return false
 		}
 
 	// Read cookie to track preset selected
-		const cookie_name 				= "search_presets"
-		let cookie_value 				= readCookie(cookie_name) || '{}'
-			cookie_value 				= JSON.parse(cookie_value)
-		let current_cookie_track 		= cookie_value[target_section_tipo] || false
-			//return console.log("current_cookie_track:",current_cookie_track);
+		const cookie_name			= "search_presets"
+		const cookie_value			= JSON.parse(readCookie(cookie_name) || '{}')
+		const current_cookie_track	= cookie_value[target_section_tipo] || false
 
 	let is_default = false
 	const len = ar_elements.length
@@ -737,48 +741,47 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 		let element = ar_elements[i]
 
-		if(current_cookie_track===false) {
-			// Default is defined by record data
-			if (element.default===true && is_default===false) {
-				is_default = true
+		// is_default calculate
+			if(current_cookie_track===false) {
+				// Default is defined by record data
+				if (element.default===true && is_default===false) {
+					is_default = true
+				}else{
+					is_default = false
+				}
 			}else{
-				is_default = false
-			}
-		}else{
-			// Default is defined by user selection (cookie)
-			if (current_cookie_track==element.section_id) {
-				is_default = true
-				/*
-				// Load current preset
-				self.parse_json_query_obj_to_dom(null, JSON.parse(element.json_preset))
+				// Default is defined by user selection (cookie)
+				if (current_cookie_track==element.section_id) {
+					is_default = true
+					// Load current preset
+						// self.parse_json_query_obj_to_dom(null, JSON.parse(element.json_preset))
 
-				// Update state
-				self.update_state({
-					state 					: 'unchanged',
-					editing_section_id 		: element.section_id,
-					editing_save_arguments 	: element.save_arguments
-				})
-				*/
-			}else{
-				is_default = false
+						// // Update state
+						// self.update_state({
+						// 	state					: 'unchanged',
+						// 	editing_section_id		: element.section_id,
+						// 	editing_save_arguments	: element.save_arguments
+						// })
+				}else{
+					is_default = false
+				}
 			}
-		}
 
 		// Builds li element
 			const li_element = ui.create_dom_element({
-				element_type 	: 'li',
-				class_name 	 	: (is_default===true) ? "selected" : "",
-				data_set 		: {
-					section_id  	: element.section_id,
-					json_preset 	: element.json_preset,
-					save_arguments 	: element.save_arguments
+				element_type	: 'li',
+				class_name		: (is_default===true) ? "selected" : "",
+				data_set		: {
+					section_id		: element.section_id,
+					json_preset		: element.json_preset,
+					save_arguments	: element.save_arguments
 				}
 			})
 			// Button load preset (<)
 			const icon_load = ui.create_dom_element({
-				element_type 			: 'span',
-				parent 		 			: li_element,
-				class_name 	 			: "icon_bs component_presets_button_load"
+				element_type	: 'span',
+				parent			: li_element,
+				class_name		: "icon_bs component_presets_button_load"
 			})
 			icon_load.addEventListener("click",function(e){
 				self.load_search_preset(this)
@@ -786,14 +789,14 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 			// Span label name
 			const span_name = ui.create_dom_element({
-				element_type 			: 'span',
-				parent 		 			: li_element,
-				text_content 			: element.name,
-				class_name 	 			: "css_span_dato",
-				data_set 				: {
-					parent 	 	 : element.section_id,
-					section_tipo : "dd623",
-					tipo 	 	 : "dd624"
+				element_type	: 'span',
+				parent			: li_element,
+				text_content	: element.name,
+				class_name		: "css_span_dato",
+				data_set		: {
+					parent			: element.section_id,
+					section_tipo	: "dd623",
+					tipo			: "dd624"
 				}
 			})
 			if (permissions>=2) {
@@ -805,9 +808,9 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			// Button delete preset
 			if (permissions>=2) {
 			const icon_delete = ui.create_dom_element({
-				element_type 			: 'span',
-				parent 		 			: li_element,
-				class_name 	 			: "icon_bs component_presets_button_delete"
+				element_type	: 'span',
+				parent			: li_element,
+				class_name		: "icon_bs component_presets_button_delete"
 			})
 			icon_delete.addEventListener("click",function(e){
 				self.delete_preset(this)
@@ -816,15 +819,15 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 			// DIV edit
 			const div_edit = ui.create_dom_element({
-				element_type 			: 'div',
-				parent 		 			: li_element,
-				class_name 	 			: "div_edit"
+				element_type	: 'div',
+				parent			: li_element,
+				class_name		: "div_edit"
 			})
 
 		// add
 			ar_nodes.push(li_element)
 
-	};//end for (var i = 0; i < ar_elements.length; i++)
+	}//end for (var i = 0; i < ar_elements.length; i++)
 
 
 	return ar_nodes
@@ -932,17 +935,17 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			// checkbox
 				const check_box = ui.create_dom_element({
-					element_type 	: 'input',
-					parent 		 	: li,
-					class_name 		: '',
-					id 				: 'section_option_'+item.target_section_tipo,
-					// name 			: item.hierarchy_target_section_tipo,
-					value 			: item.target_section_tipo,
+					element_type	: 'input',
+					parent			: li,
+					class_name		: '',
+					id				: 'section_option_'+item.target_section_tipo,
+					// name			: item.hierarchy_target_section_tipo,
+					value			: item.target_section_tipo
 				})
-				check_box.type = "checkbox"
-				check_box.checked = true
+				check_box.type		= "checkbox"
+				check_box.checked	= true
 
-				check_box.addEventListener('change',async function(event){
+				check_box.addEventListener('change', async function(event){
 
 					if(check_box.checked){
 						self.target_section_tipo.push(check_box.value)
@@ -951,21 +954,23 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 						self.target_section_tipo.splice(index, 1)
 					}
 
-					await self.get_section_elements_context( {section_tipo: self.target_section_tipo})
-					self.render_components_list({
-						section_tipo : self.target_section_tipo,
-						target_div 	 : self.search_container_selector,
-						path 		 : []
+					const section_elements = await self.get_section_elements_context({
+						section_tipo : self.target_section_tipo
 					})
-
+					self.render_components_list({
+						section_tipo		: self.target_section_tipo,
+						target_div			: self.search_container_selector,
+						path				: [],
+						section_elements	: section_elements
+					})
 				})
 
 
 			// label
 				const label = ui.create_dom_element({
-					element_type : 'label',
-					parent 		 : li,
-					inner_html 	 : item.target_section_name
+					element_type	: 'label',
+					parent			: li,
+					inner_html		: item.target_section_name
 				})
 				label.setAttribute("for", 'section_option_'+item.target_section_tipo)
 		}
@@ -1163,3 +1168,5 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 		return localized
 	};//end localize_operator
+
+

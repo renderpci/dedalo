@@ -67,7 +67,7 @@ class section extends common {
 
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
-	# Format is array or null
+	# Format is array or null
 	# protected $diffusion_info;
 
 
@@ -946,7 +946,7 @@ class section extends common {
 				}
 
 				// Store in cached sections . (!) Important
-					# key for cache
+					# key for cache
 					$key = $this->section_id .'_'. $tipo;
 					self::$ar_section_instances[$key] = $this;
 
@@ -2458,7 +2458,7 @@ class section extends common {
 			}
 
 			// Store in cached sections . Important
-				# key for CACHE
+				# key for CACHE
 				$key = $this->section_id .'_'. $this->tipo;
 				self::$ar_section_instances[$key] = $this;
 
