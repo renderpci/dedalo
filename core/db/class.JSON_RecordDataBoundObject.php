@@ -216,6 +216,9 @@ abstract class JSON_RecordDataBoundObject {
 		# DATOS : JSON ENCODE ALWAYS !!!
 		$datos = json_handler::encode($this->datos);
 
+		// prevent null encoded errors
+			$datos = str_replace(['\\u0000','\u0000'], ' ', $datos);
+
 		# SECTION_ID. Section_id is always int
 		$section_id = intval($this->section_id);
 
