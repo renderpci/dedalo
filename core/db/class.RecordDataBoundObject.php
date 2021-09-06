@@ -727,7 +727,7 @@ abstract class RecordDataBoundObject {
 
 
 	# ACCESSORS CALL
-	public function __call($strFunction, $arArguments) {
+	final public function __call($strFunction, $arArguments) {
 		#echo "call OK $strFunction - $arArguments";
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);

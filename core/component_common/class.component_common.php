@@ -2089,7 +2089,7 @@ abstract class component_common extends common {
 		// get and store initial lang
 			$inital_lang = $component->get_lang();
 
-		// Try directe dato
+		// Try direct dato
 			$dato = $component->get_dato();
 			$dato = !empty($dato)
 				? $dato
