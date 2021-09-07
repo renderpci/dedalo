@@ -25,8 +25,7 @@ class search_related extends search {
 		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
 
 		// reference locator it's the locator of the source section that will be used to get the sections with call to it.
-			$locator = reset($this->filter_by_locators);
-			$reference_locator = json_encode($locator);
+			$ar_locators = $this->filter_by_locators;
 
 
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
@@ -51,7 +50,13 @@ class search_related extends search {
 					? PHP_EOL . 'SELECT COUNT(*)'
 					: PHP_EOL . 'SELECT section_tipo, section_id, datos';
 				$query	.= PHP_EOL . 'FROM "'.$table.'"';
-				$query	.= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$reference_locator.']\'::jsonb';
+				$query	.= PHP_EOL . 'WHERE ';
+
+				$locators_query = [];
+				foreach ($ar_locators as $locator) {
+					$locators_query[]	= PHP_EOL.'datos#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
+				}
+				$query	.= '(' . implode(' OR ', $locators_query) . ')';
 				
 				if ($section_filter!==false) {
 					$query	.= PHP_EOL . ' AND (' . $section_filter .')';
