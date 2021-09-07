@@ -1385,9 +1385,9 @@ function format_size_units($bytes) {
 
 
 function encodeURIComponent($str) {
-    $revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
+	$revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
 
-    return strtr(rawurlencode($str), $revert);
+	return strtr(rawurlencode($str), $revert);
 }//end encodeURIComponent
 
 
@@ -1535,7 +1535,7 @@ function check_basic_system() {
 */
 function array_find($xs, $f) {
 
-	if (is_array($xs)) {	
+	if (is_array($xs)) {
 		foreach ($xs as $x) {
 			if (call_user_func($f, $x) === true)
 			return $x;
@@ -1557,12 +1557,12 @@ function array_find($xs, $f) {
 function write_session_value(array $session_keys, $value) {
 
 	$result = false;
-	
+
 	if(session_status()===PHP_SESSION_ACTIVE){
 		// write ready
 		// $result = $session = $value;
 		// $result = $_SESSION['dedalo'][$session_keys] = $value;
-		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);		
+		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);
 	}else{
 		error_log('!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_key) . ' - value: '. json_encode($value) );
 	}
@@ -1573,21 +1573,21 @@ function write_session_value(array $session_keys, $value) {
 
 /**
 * INSERT_INTO
-* Insert vallue into array using any number of keys sequence 
-* like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key] 
+* Insert vallue into array using any number of keys sequence
+* like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
 */
 function insert_into(&$array, array $keys, $value) {
-     $last = array_pop($keys);       
+	 $last = array_pop($keys);
 
-     foreach($keys as $key) {
-          if(!array_key_exists($key, $array) || 
-              array_key_exists($key, $array) && !is_array($array[$key])) {
-                  $array[$key] = array();
+	 foreach($keys as $key) {
+		  if(!array_key_exists($key, $array) ||
+			  array_key_exists($key, $array) && !is_array($array[$key])) {
+				  $array[$key] = array();
 
-          }
-          $array = &$array[$key];
-     }
-     $array[$last] = $value;
+		  }
+		  $array = &$array[$key];
+	 }
+	 $array[$last] = $value;
 }//end insert_into
 
 
@@ -1597,18 +1597,18 @@ function insert_into(&$array, array $keys, $value) {
 * Extract value from a object using dynamic path array
 */
 function get_object_property($object, $ar_property_path) {
-  
+
   foreach ($ar_property_path as $property_name) {
-    // basic protection against bad path 
-    if (!property_exists($object,$property_name)) return null;
-    // get the property 
-    $property = $object->{$property_name};
-    // if it is not an object it has to be the end point
-    if (!is_object($property)) return $property;
-    // if it is an object replace current object 
-    $object = $property;
+	// basic protection against bad path
+	if (!property_exists($object,$property_name)) return null;
+	// get the property
+	$property = $object->{$property_name};
+	// if it is not an object it has to be the end point
+	if (!is_object($property)) return $property;
+	// if it is an object replace current object
+	$object = $property;
   }
-  
+
   return $object;
 }//end get_object_property
 
@@ -1645,4 +1645,5 @@ function get_legacy_constant_value(string $constant_name) {
 
 	return $constant;
 }//end get_legacy_constant_value
+
 

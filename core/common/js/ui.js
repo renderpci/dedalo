@@ -120,7 +120,7 @@ export const ui = {
 				const mode			= instance.mode 	// like 'edit'
 				const view			= instance.view || null
 				const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
-				const component_css	= instance.context.css || {}
+				const element_css	= instance.context.css || {}
 
 			const fragment = new DocumentFragment()
 
@@ -139,7 +139,7 @@ export const ui = {
 					})
 					fragment.appendChild(component_label)
 					// css
-		 				const label_structure_css = typeof component_css.label!=="undefined" ? component_css.label : []
+		 				const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
 						component_label.classList.add(...ar_css)
 				}
@@ -182,7 +182,7 @@ export const ui = {
 				if (items.content_data) {
 					// const content_data = items.content_data
 					// // css
-					// 	const content_data_structure_css = typeof component_css.content_data!=="undefined" ? component_css.content_data : []
+					// 	const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
 					// 	const ar_css = ["content_data", type, ...content_data_structure_css]
 					// 	content_data.classList.add(...ar_css)
 					fragment.appendChild(items.content_data)
@@ -590,6 +590,7 @@ export const ui = {
 	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
 					wrapper.classList.add(...ar_css)
+
  				// append fragment
  					wrapper.appendChild(fragment)
 

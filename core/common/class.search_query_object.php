@@ -210,10 +210,10 @@ class search_query_object {
 	* @return bool true
 	*/
 	public function set_limit($value) {
+
 		if(empty($value)){
 			$this->limit = 'ALL';
 			return true;
-
 		}
 
 		$this->limit = (int)$value;

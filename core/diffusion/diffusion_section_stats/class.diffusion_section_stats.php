@@ -852,7 +852,7 @@ class diffusion_section_stats extends diffusion {
 										#if( is_string($key) && strlen($key)>2 ) {
 										$prefix_from_tipo = RecordObj_dd::get_prefix_from_tipo($key);
 										#}
-										if (in_array($prefix_from_tipo, unserialize(DEDALO_PREFIX_TIPOS))) {
+										if (in_array($prefix_from_tipo, (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS'))) {
 											# DEDALO TIPOS (Managed by RecordObj_dd)
 											$key_resolved = RecordObj_dd::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
 										}else{
