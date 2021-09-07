@@ -680,7 +680,7 @@ function verify_dedalo_prefix_tipos($tipo=null) {
 	return true; # Temporal hasta que se valore lo de los prefijos dinámicos de hierarchy
 
 	/*
-	$DEDALO_PREFIX_TIPOS = unserialize(DEDALO_PREFIX_TIPOS);
+	$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 
 	if (empty($tipo) || strlen($tipo)<2) {
 		return false;

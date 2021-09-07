@@ -253,9 +253,12 @@ class css {
 			// less line
 				if ($modelo_name==='section') {
 
-					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
-						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
-					}
+		// filter. use current config DEDALO_PREFIX_TIPOS to get all valid 'tipos'
+			$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
+			$ar_pairs = array_map(function($prefix){
+				return PHP_EOL . '"terminoID" LIKE \''.$prefix.'%\'';
+			}, $DEDALO_PREFIX_TIPOS);
+			$filter = implode(' OR ', $ar_pairs);
 
 					// Envolve code into custom wrapper
 					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";

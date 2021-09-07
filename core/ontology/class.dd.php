@@ -641,7 +641,7 @@ class dd extends dd_elements {
 		return (bool)verify_dedalo_prefix_tipos($terminoID);
 
 		/*
-		$DEDALO_PREFIX_TIPOS = unserialize(DEDALO_PREFIX_TIPOS);
+		$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 
 		if (empty($terminoID) || strlen($terminoID)<2) {
 			return false;
