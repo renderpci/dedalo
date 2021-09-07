@@ -152,12 +152,12 @@ class css {
 
 		// 	return $html;
 		// }//end get_css_link_code
-	}//end get_css_link_code
 
 
 
 	/**
 	* BUILD_TAG
+	* Legacy method used by the Ontology page
 	*/
 	static function build_tag($url, $media=null, $uncacheable=false) {
 
@@ -185,7 +185,7 @@ class css {
 		$tag = "\n<link href=\"$url\" rel=\"stylesheet\"{$media_attr}\">";
 
 		return $tag;
-	}//edn build_tag
+	}//end build_tag
 
 
 
@@ -197,64 +197,26 @@ class css {
 		$start_time=microtime(1);
 
 		$response = new stdClass();
-			$response->result = false;
-			$response->msg 	  = null;
-
-
-		$response = new stdClass();
-			$response->result = true;
-			$response->msg 	  = 'Ignored build_structure_css in v6';
+			$response->result	= true;
+			$response->msg		= 'Ignored build_structure_css in v6';
 		return $response; // STOPPED METHOD EXECUTION ON V6
 
 
-		include DEDALO_LIB_PATH . '/lessphp/lessc.inc.php';
-		$less = new lessc;
-		$less_code   = [];
-		$less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= null;
 
-		#
-		# SEARCH . Get all components custom css
-		// $ar_prefix = unserialize(DEDALO_PREFIX_TIPOS);
-		// $filter = '';
-		// foreach ($ar_prefix as $prefix) {
-		// 	// $filter .= "\n\"terminoID\" LIKE '$prefix%' ";
-		// 	// if ( $prefix != end($ar_prefix) ) {
-		// 	// 	$filter .= "OR ";
-		// 	// }
-		// }
-		$ar_pairs = array_map(function($prefix){
-			return PHP_EOL . '"terminoID" LIKE \''.$prefix.'%\'';
-		}, unserialize(DEDALO_PREFIX_TIPOS));
-		$filter = implode(' OR ', $ar_pairs);
+		// less lib
+			include DEDALO_LIB_PATH . '/lessphp/lessc.inc.php';
+			$less = new lessc();
 
-		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
-		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
-		$result   = pg_query(DBi::_getConnection(), $strQuery);
-		while ($rows = pg_fetch_assoc($result)) {
+		// less code
+			$full_ar_less_code = [];
 
-			$terminoID		= $rows["terminoID"];
-			$propiedades_str	= $rows["propiedades"];
-			$propiedades		= json_decode($propiedades_str);
-			if (!isset($propiedades->css)) {
-				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. propiedades: ".to_string($propiedades_str), logger::ERROR);
-				continue;
-			}
-			$css_obj = $propiedades->css;
+		// date of compile
+			$full_ar_less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
 
-			// Debug only
-			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
-			#if(!in_array($terminoID, $ar_term)) continue;
-
-			// css_prefix. get_css_prefix
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
-				if ($modelo_name==='box elements') {
-					continue;
-				}
-				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);
-
-
-			// less line
-				if ($modelo_name==='section') {
+		// search . Get all components custom css
 
 		// filter. use current config DEDALO_PREFIX_TIPOS to get all valid 'tipos'
 			$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
@@ -263,39 +225,77 @@ class css {
 			}, $DEDALO_PREFIX_TIPOS);
 			$filter = implode(' OR ', $ar_pairs);
 
-					// Envolve code into custom wrapper
-					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
+		// search exec query
+			$strQuery	= "SELECT \"terminoID\",\"properties\" \n FROM \"jer_dd\" \n WHERE cast(\"properties\" AS TEXT) LIKE '%\"css\":%' AND ($filter) \n ORDER BY \"terminoID\" ASC";
+			$result		= pg_query(DBi::_getConnection(), $strQuery);
 
-				}else{
+		// iterate records
+			while ($rows = pg_fetch_assoc($result)) {
 
-					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
-						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, false);
+				$terminoID		= $rows["terminoID"];
+				$properties_str	= $rows["properties"];
+				$properties		= json_decode($properties_str);
+
+				// properties check
+					if (!isset($properties->css)) {
+						debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. properties: ".to_string($properties_str), logger::ERROR);
+						continue;
 					}
 
-					// Envolve code into custom wrapper
-					$less_line = '.'.$css_prefix.'_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
-
-					// En pruebas (el ampliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
-					if($css_prefix==='wrap_component'){
-						$less_line = '.sgc_edit>' . $less_line;
+				// model check
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID, false); // set cache as false to prevent development issues when model is changed
+					if ($model_name==='box elements') {
+						continue;
 					}
-				}
 
-			// Add line code
-			$less_code[] = $less_line;
+				// css_obj. Parsed JSON object
+					$css_obj = $properties->css;
 
-		}//end while ($rows = pg_fetch_assoc($result)) {
-		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);
-		$less_code = implode(' ', $less_code);
+				// css_prefix. get_css_prefix
+					$css_prefix = css::get_css_prefix($terminoID, $model_name);
+
+				// less line
+					if ($model_name==='section') {
+
+						$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
+							$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
+						}
+
+						// Involve code into custom wrapper
+						$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
+
+					}else{
+
+						$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
+							$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, false);
+						}
+
+						// Envolve code into custom wrapper
+						$less_line = '.'.$css_prefix.'_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
+
+						// En pruebas (el ampliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
+						if($css_prefix==='wrap_component'){
+							$less_line = '.sgc_edit>' . $less_line;
+						}
+					}
+
+				// Add line code
+					$full_ar_less_code[] = $less_line;
+
+			}//end while ($rows = pg_fetch_assoc($result)) {
+			#debug_log(__METHOD__." less_code ".to_string($full_ar_less_code), logger::DEBUG);
+
+		// final less_code
+			$less_code = implode(' ', $full_ar_less_code);
 
 
-		// MXINS. Get mixixns file
-			$file_name = DEDALO_CORE_PATH . self::$mixins_file_path;
-			if ($mixins_code = file_get_contents($file_name)) {
-				$less_code = $mixins_code.$less_code;
-			}
+		// MXINS. Get mixins file.  Not used in version 6
+			// $file_name = DEDALO_CORE_PATH . self::$mixins_file_path;
+			// if ($mixins_code = file_get_contents($file_name)) {
+			// 	$less_code = $mixins_code.$less_code;
+			// }
 
-		// Write final file. Full path
+		// file_name full path
 			$file_name = DEDALO_CORE_PATH . self::$structure_file_path;
 
 		// Format : lessjs (default) | compressed | classic
@@ -351,50 +351,53 @@ class css {
 
 	/**
 	* CONVERT_TO_LESS
-	* @param $selector string
+	* @param string $selector
 	*	Is the css selector, like ".wrap_section_group_div_mdcat2576"
+	* @param object $obj_value
+	*
 	* @return string $less_value
 	*/
 	public static function convert_to_less($selector, $obj_value, $css_prefix, $terminoID, $enclose=false) {
 
-		$less_value  = '';
+		$less_value = '';
 
-		if (is_object($obj_value)) {
+		// obj_value check
+			if (!is_object($obj_value)) {
+				debug_log(__METHOD__." error. obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $selector - terminoID : $terminoID", logger::ERROR);
+				return $less_value;
+			}
 
-			// wrap_section_group_div_mdcat2576 wrap_section
+		// wrap_section_group_div_mdcat2576 wrap_section
 			if( strpos($selector, $css_prefix)===false
 				//&& ($css_prefix==='wrap_section')
 				&& ($css_prefix==='alias' && $selector==='.wrap_component')===false) {
 				$enclose = true;
 			}
 
-			# If current key is not defined as css_prefix, add as new style
+		// If current key is not defined as css_prefix, add as new style
 			if ($enclose===true) {
 				$less_value .= "\n$selector{";
 			}
 
-			// mixings
-				if (property_exists($obj_value, 'mixin')) {
-					foreach((array)$obj_value->mixin as $mixin_value) {
-						$less_value .= "\n $mixin_value;";
-					}
+		// mixings. (!) mixings are not used in version 6
+			// if (property_exists($obj_value, 'mixin')) {
+			// 	foreach((array)$obj_value->mixin as $mixin_value) {
+			// 		$less_value .= "\n $mixin_value;";
+			// 	}
+			// }
+
+		// style
+			if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
+				foreach((array)$obj_value->style as $style_key => $style_value) {
+					$less_value .= "\n $style_key:$style_value;";
 				}
+			}
 
-
-			// style
-				if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
-					foreach((array)$obj_value->style as $style_key => $style_value) {
-						$less_value .= "\n $style_key:$style_value;";
-					}
-				}
-
+		// enclose
 			if ($enclose===true) {
 				$less_value .= "\n}";
 			}
 
-		}else{
-			debug_log(__METHOD__." error. obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $selector - terminoID : $terminoID", logger::ERROR);
-		}
 
 		return $less_value;
 	}//end convert_to_less
