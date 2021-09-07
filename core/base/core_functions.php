@@ -1613,3 +1613,36 @@ function get_object_property($object, $ar_property_path) {
 }//end get_object_property
 
 
+
+/**
+* GET_LEGACY_CONSTANT_VALUE
+* Used to safe recover old config serialized values like 'DEDALO_PREFIX_TIPOS'
+* @param string $constant_name
+* @return mixed $constant_value
+*/
+function get_legacy_constant_value(string $constant_name) {
+
+	// check constant exists
+		if(!defined($constant_name)) {
+			throw new Exception("Error Processing Request. Constant '$constant_name' does not exists!", 1);
+			return false;
+		}
+
+	// get constant value
+		$constant = constant($constant_name);
+
+	// If it isn't a string, it isn't serialized, avoid this block
+	if (is_string($constant)) {
+		 // try to unserialize
+		if (false!==($value = @unserialize($constant)) ) {
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Current constant is serialized ! Please edit your Dédalo config file and set without legacy serialization to best performance. NAME: ". $constant_name, logger::WARNING);
+			}
+			return $value;
+		}
+	}
+
+
+	return $constant;
+}//end get_legacy_constant_value
+
