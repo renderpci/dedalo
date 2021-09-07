@@ -1464,14 +1464,14 @@ class component_relation_common extends component_common {
 																		$current_section->section_tipo,
 																		false);
 
-					// set the dato in all instances, included the same instance that current instance.
+					// set the dato in all instances, included the same instance that current.
 					$component_to_update->set_dato($dato);
 					if ($save===true) {
 						$component_to_update->Save();
 						debug_log(__METHOD__." Saved modified dato to preserve the order - Total: $total_ar_result locators in section_id: $section_id ".to_string(), logger::DEBUG);
 					}
 
-					// if the current section_id is the same of the current instace update the dato of the current instance
+					// if the current section_id is the same of the current instance update the dato of the current
 					// else update the dato of the other instances (references with the same dato)
 					if($current_section->section_id==$this->section_id){
 						$this->set_dato($dato);
@@ -1485,8 +1485,7 @@ class component_relation_common extends component_common {
 				//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) . to_string(), logger::DEBUG);
 			}
 
-		#return $dato;
-		#$this->set_dato($ar_result);
+
 		return true;
 	}//end set_dato_external
 

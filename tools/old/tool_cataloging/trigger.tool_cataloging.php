@@ -60,7 +60,7 @@ function set_new_thesaurus_value($json_data) {
 			$update_component_section_tipo 	= $update_component->section_tipo;
 			$update_component_section_id 	= $update_component->section_id;
 			
-			// Simply load in edit mode the compomponent to force update its data
+			// Simply load in edit mode the component to force update its data
 				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($update_component_tipo,true);
 				$update_component   = component_common::get_instance($modelo_name,
 																	 $update_component_tipo,

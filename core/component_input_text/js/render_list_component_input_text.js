@@ -27,7 +27,6 @@ export const render_list_component_input_text = function() {
 */
 render_list_component_input_text.prototype.list = async function() {
 
-
 	const self = this
 
 	// short vars

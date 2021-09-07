@@ -14,7 +14,6 @@
 */
 export const render_list_component_section_id = function(component) {
 
-
 	return true
 };//end render_list_component_section_id
 

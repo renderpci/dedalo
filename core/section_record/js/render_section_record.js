@@ -554,30 +554,30 @@ const build_id_column = function(self) {
 * RECURSIVE_RELATION_COLUMNS
 * Updates var 'ar_relations_columns' recursively
 */
-// const recursive_relation_columns = function(current_instance, datum) {
+	// const recursive_relation_columns = function(current_instance, datum) {
 
-// 	let n_relation_columns		= 0
-// 	const component_childrens	= datum.context.filter(instance => instance.parent===current_instance.tipo)
+	// 	let n_relation_columns		= 0
+	// 	const component_childrens	= datum.context.filter(instance => instance.parent===current_instance.tipo)
 
-// 	if(component_childrens.length>0) {
+	// 	if(component_childrens.length>0) {
 
-// 		const components_with_relations = get_components_with_subcolumns()
+	// 		const components_with_relations = get_components_with_subcolumns()
 
-// 		component_childrens.forEach(function(element){
+	// 		component_childrens.forEach(function(element){
 
-// 			if (components_with_relations.indexOf(element.model)!==-1) {
+	// 			if (components_with_relations.indexOf(element.model)!==-1) {
 
-// 				n_relation_columns += recursive_relation_columns(element, datum)
-// 			}else{
-// 				n_relation_columns++
-// 			}
-// 		})
-// 	}else{
-// 		n_relation_columns++
-// 	}
+	// 				n_relation_columns += recursive_relation_columns(element, datum)
+	// 			}else{
+	// 				n_relation_columns++
+	// 			}
+	// 		})
+	// 	}else{
+	// 		n_relation_columns++
+	// 	}
 
-// 	return n_relation_columns
-// };//end recursive_relation_columns
+	// 	return n_relation_columns
+	// };//end recursive_relation_columns
 
 
 
@@ -608,6 +608,7 @@ const get_components_with_subcolumns = () => {
 };//end get_components_with_subcolumns
 
 
+
 /**
 * DELETE_RECORD
 * Navigate to selected record in edit mode
@@ -621,3 +622,5 @@ const delete_record = (button, self) => {
 
 	return false
 };//end delete_record
+
+

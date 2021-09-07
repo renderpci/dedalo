@@ -61,7 +61,7 @@ class search_related extends search {
 			}
 
 		// final query union with all tables
-			$str_query = implode(' UNION ALL ', $ar_query);
+			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query);
 		
 		// Set order to maintain results stable
 		// count and pagination optionals
