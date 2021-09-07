@@ -1270,7 +1270,7 @@ class component_relation_common extends component_common {
 	* @see used by component_autocomplete and component_portal
 	* @return dato
 	*/
-	public function set_dato_external($save=false, $changed=false, $current_dato=false) {
+	public function set_dato_external($save=false, $changed=false, $current_dato=false, $references_limit=10) {
 		$start_time=microtime(1);
 
 		// dato set
@@ -1282,6 +1282,7 @@ class component_relation_common extends component_common {
 			$properties				= $this->get_properties();
 			$ar_section_to_search	= $properties->source->section_to_search ?? false;
 			$ar_component_to_search	= $properties->source->component_to_search ?? false;
+			$component_to_search	= is_array($ar_component_to_search) ? reset($ar_component_to_search) : $ar_component_to_search;
 
 		// current section tipo/id
 			$section_id		= $this->get_section_id();
@@ -1328,19 +1329,16 @@ class component_relation_common extends component_common {
 
 				// task done. return
 					return true;
-
 			}else{
 
 				// default normal case
 				// locator . get the locator of the current section for search in the component that call this section
-					$component_to_search = is_array($ar_component_to_search) ? reset($ar_component_to_search) : $ar_component_to_search;
 					$locator = new locator();
 						$locator->set_section_id($section_id);
 						$locator->set_section_tipo($section_tipo);
 						if($ar_component_to_search !== false){
 							$locator->set_from_component_tipo($component_to_search);
 						}
-						
 			}
 
 		// new dato
@@ -1365,6 +1363,8 @@ class component_relation_common extends component_common {
 						$locator_dato = new locator();
 							$locator_dato->set_section_id($current_locator->section_id);
 							$locator_dato->set_section_tipo($current_locator->section_tipo);
+							// from_component_tipo
+							$locator_dato->set_from_component_tipo($component_to_search);
 						$new_dato[] = $locator_dato;
 					}
 				}
@@ -1381,16 +1381,17 @@ class component_relation_common extends component_common {
 
 			// sqo. new way done in relations field with standard sqo
 				$start_time2=microtime(1);
+				$target_section_to_search = $ar_section_to_search ?? ['all'];
 				$sqo = new search_query_object();
-					$sqo->set_section_tipo(['all']);
-					$sqo->set_mode('related');
+					$sqo->set_section_tipo($target_section_to_search);
+					$sqo->set_mode('related'); // force use of class.search_related.php
 					$sqo->set_full_count(false);
-					$sqo->set_filter_by_locators([$locator]);
+					$sqo->set_filter_by_locators($new_dato);
+					$sqo->set_limit($references_limit); // default 0 ('ALL')
 
 				$search		= search::get_instance($sqo);
 				$rows_data	= $search->search();
-				// fix result ar_records as dato
-				$result	= $rows_data->ar_records;
+				$ar_records	= & $rows_data->ar_records; // create reference
 				if(SHOW_DEBUG===true) {
 					$total = exec_time_unit($start_time2,'ms');
 					if ($total>30) {
@@ -1398,19 +1399,19 @@ class component_relation_common extends component_common {
 					}
 				}
 
-			$component_tipo = $this->get_tipo();
+			// locators. Create a custom locator for each record
+				$component_tipo = $this->get_tipo();
+				$ar_result = [];
+				foreach ($ar_records as $inverse_section) {
 
-			$ar_result = [];
-			foreach ($result as $inverse_section) {
+					$current_locator = new locator();
+						$current_locator->set_section_tipo($inverse_section->section_tipo);
+						$current_locator->set_section_id($inverse_section->section_id);
+						// $current_locator->set_type($inverse_section->type);
+						$current_locator->set_from_component_tipo($component_tipo);
 
-				$current_locator = new locator();
-					$current_locator->set_section_tipo($inverse_section->section_tipo);
-				 	$current_locator->set_section_id($inverse_section->section_id);
-				 	// $current_locator->set_type($inverse_section->type);
-				 	$current_locator->set_from_component_tipo($component_tipo);
-
-				$ar_result[] = $current_locator;
-			}
+					$ar_result[] = $current_locator;
+				}
 
 			$total_ar_result	= sizeof($ar_result);
 			$total_ar_dato		= sizeof($dato);
@@ -1423,33 +1424,34 @@ class component_relation_common extends component_common {
 					debug_log(__METHOD__." Saving big result with different data (dato:$total_ar_dato - result:$total_ar_result) ".to_string(), logger::DEBUG);
 				}
 			}else{
-				# maintain order
-				foreach ((array)$dato as $key => $current_locator) {
+				// preserve order
+					foreach ((array)$dato as $key => $current_locator) {
 
-					// Array filter is more fast in this case for big arrays
-					$res = array_filter($ar_result, function($item) use($current_locator){
-						if ($item->section_id===$current_locator->section_id && $item->section_tipo===$current_locator->section_tipo) {
-							return $item;
-						}
-					});
-
-					//if( locator::in_array_locator( $current_locator, $ar_result, $ar_properties=array('section_id','section_tipo') )===false){
-					if (empty($res)) {
-						unset($dato[$key]);
-						$changed = true;
-					}
-				}
-
-				// dato update
-				if ($total_ar_dato!==$total_ar_result) {
-					foreach ($ar_result as $current_locator) {
-						if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false ){
-							array_push($dato, $current_locator);
+						// Array filter is faster in this case for big arrays
+						// $res = array_filter($ar_result, function($item) use($current_locator){
+						// 	if ($item->section_id===$current_locator->section_id && $item->section_tipo===$current_locator->section_tipo) {
+						// 		return $item;
+						// 	}
+						// });
+						$res = array_find($ar_result, function($el) use($current_locator){
+							return ($el->section_id===$current_locator->section_id && $el->section_tipo===$current_locator->section_tipo);
+						});
+						if (empty($res)) {
+							unset($dato[$key]);
 							$changed = true;
 						}
 					}
-				}
-			}
+
+				// dato update on change
+					if ($total_ar_dato!==$total_ar_result) {
+						foreach ($ar_result as $current_locator) {
+							if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false ){
+								array_push($dato, $current_locator);
+								$changed = true;
+							}
+						}
+					}
+			}//end if ($total_ar_result>2000)
 
 
 		// changed true
