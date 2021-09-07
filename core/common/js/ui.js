@@ -204,11 +204,37 @@ export const ui = {
 					element_type : 'div'
  				})
  				// CSS
-	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
+	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
+
+				// legacy CSS
+					const legacy_selector = '.wrap_component'
+					if (element_css[legacy_selector]) {
+						// mixin
+							if (element_css[legacy_selector].mixin){
+								// width from mixin
+								const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
+								if (found && found!=='.width_50') {
+									wrapper.style['flex-basis'] = found.substring(7) + '%'
+								}
+							}
+						// style
+							if (element_css[legacy_selector].style) {
+								// width from style
+								if (element_css[legacy_selector].style.width) {
+									wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+								}
+								// display none from style
+								if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
+									wrapper.classList.add('display_none')
+								}
+							}
+					}
+
+
 				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
