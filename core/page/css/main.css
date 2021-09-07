@@ -1628,13 +1628,16 @@ button.cancel:before {
   flex-wrap: wrap;
 }
 .component_base {
+  position: relative;
   margin: 0;
   padding: 0;
+  z-index: auto;
+  /**/
   display: flex;
   flex-wrap: wrap;
   flex: 1 1 50%;
   align-content: flex-start;
-  z-index: auto;
+  display: grid;
   overflow: hidden;
 }
 input[type="text"],
@@ -2167,8 +2170,6 @@ li .reset_input select {
   display: contents;
   width: 100%;
   height: 100%;
-  margin-right: 0.5em;
-  outline: 1px solid #EAEAEA;
 }
 li .section_record.list {
   display: flex;
@@ -2179,26 +2180,25 @@ li .section_record.list .id_column {
 .section > .section_record.list.section_record.list:hover div {
   background-color: #E4E4E4 !important;
 }
-.section_record.list > div {
+.section_record.list > * {
   height: auto;
-  padding: 1em;
   flex: 1 0;
   word-wrap: break-word;
   word-break: break-all;
   overflow: hidden;
-  outline: 1px solid rgba(216, 216, 216, 0.43);
+  border-bottom: 1px solid #e6e6e6;
 }
-.component_autocomplete .section_record.list > div {
+.component_autocomplete .section_record.list > * {
   display: inline-block;
 }
-.section_record.list > div.info {
+.section_record.list > *.info {
   border-left: 1px solid #eaeaea;
 }
-.section_record.list > div.id_column {
+.section_record.list > *.id_column {
   padding-left: 0.25em;
   padding-right: 0.5em;
 }
-.section_record.list > div.id_column > div {
+.section_record.list > *.id_column > div {
   flex: 1 1 100%;
   display: flex;
   flex-wrap: wrap;
@@ -2206,16 +2206,16 @@ li .section_record.list .id_column {
   justify-content: flex-end;
   min-height: 1.2em;
 }
-.section_record.list > div.id_column > .edit_line > span {
+.section_record.list > *.id_column > .edit_line > span {
   display: inline-block;
-  font-size: 1.22em;
+  font-size: 1.1em;
   margin-left: 0.2em;
   margin-right: 0.35em;
 }
-.section_record.list > div.id_column > .delete_line {
+.section_record.list > *.id_column > .delete_line {
   margin-top: 0.5em;
 }
-.section_record.list > div.id_column > .delete_line > span {
+.section_record.list > *.id_column > .delete_line > span {
   display: inline-block;
   font-size: 1.22em;
 }
@@ -2226,13 +2226,12 @@ li .section_record.list .id_column {
   width: 100%;
 }
 .section_record.edit .section_group.edit > .label {
-  background-color: #949494;
-  color: #ffffff;
-  padding: 1em;
+  background-color: #e6e6e6;
+  padding: 0.33em;
+  padding-left: 0.5em;
   cursor: pointer;
-}
-.section_record.edit .section_group.edit > .label:active {
-  opacity: 0.5;
+  text-transform: uppercase;
+  font-size: 0.85em;
 }
 .section_record.edit .section_group.edit > .content_data {
   margin: 0;
@@ -2245,12 +2244,16 @@ li .section_record.list .id_column {
 }
 .wrapper_component {
   position: relative;
-}
-.wrapper_component.active {
-  z-index: 1;
-}
-.wrapper_component.active .buttons_container {
-  display: block !important;
+  margin: 0;
+  padding: 0;
+  z-index: auto;
+  /**/
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 50%;
+  align-content: flex-start;
+  display: grid;
+  overflow: hidden;
 }
 .wrapper_component.edit > .label,
 .wrapper_component.search > .label,
@@ -2580,6 +2583,17 @@ li .section_record.list .id_column {
   background-color: unset;
   line-height: 0.5em;
 }
+.wrapper_component.edit.component_radio_button > .content_data ul.inputs_container,
+.wrapper_component.search.component_radio_button > .content_data ul.inputs_container,
+.wrapper_component.tm.component_radio_button > .content_data ul.inputs_container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8em, 1fr));
+}
+.wrapper_component.edit.component_radio_button > .content_data ul.inputs_container > li,
+.wrapper_component.search.component_radio_button > .content_data ul.inputs_container > li,
+.wrapper_component.tm.component_radio_button > .content_data ul.inputs_container > li {
+  padding-bottom: 0.25em;
+}
 .wrapper_component.edit.component_svg > .content_data,
 .wrapper_component.search.component_svg > .content_data,
 .wrapper_component.tm.component_svg > .content_data {
@@ -2700,10 +2714,13 @@ li .section_record.list .id_column {
 .wrapper_component.edit.component_section_id,
 .wrapper_component.search.component_section_id,
 .wrapper_component.tm.component_section_id {
-  background-color: #f78a1c !important;
+  background-color: #f78a1c;
   color: white;
-  display: flex;
-  flex: 0 0 20%;
+}
+.wrapper_component.edit.component_section_id.active,
+.wrapper_component.search.component_section_id.active,
+.wrapper_component.tm.component_section_id.active {
+  background-color: #949494 !important;
 }
 .wrapper_component.edit.component_section_id > .label,
 .wrapper_component.search.component_section_id > .label,
@@ -2754,6 +2771,7 @@ li .section_record.list .id_column {
   background-color: #ffffff;
   text-align: center;
   display: block;
+  min-height: 5em;
 }
 .wrapper_component.list.component_image > img,
 .wrapper_component.list.component_av > img,
@@ -2771,25 +2789,37 @@ li .section_record.list .id_column {
 .wrapper_component.edit_in_list > * {
   padding: 0 !important;
 }
+.wrapper_component.active {
+  background-color: #e6e6e6 !important;
+  overflow: initial !important;
+  z-index: 1;
+}
+.wrapper_component.active .buttons_container {
+  display: block !important;
+}
 .section_record .wrapper_component,
 .wrapper_tool .wrapper_component,
-.search_group .wrapper_component,
-.page .wrapper_component {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  flex: 1 1 50%;
-  align-content: flex-start;
-  z-index: auto;
-  overflow: hidden;
+.search_group .wrapper_component {
   background-color: rgba(251, 251, 251, 0.7);
   outline: 1px solid rgba(216, 216, 216, 0.43);
 }
+.section_record .wrapper_component.list,
+.wrapper_tool .wrapper_component.list,
+.search_group .wrapper_component.list {
+  padding: 0.5em;
+  outline: none;
+}
+.section_record .wrapper_component.list.component_image,
+.wrapper_tool .wrapper_component.list.component_image,
+.search_group .wrapper_component.list.component_image,
+.section_record .wrapper_component.list.component_portal,
+.wrapper_tool .wrapper_component.list.component_portal,
+.search_group .wrapper_component.list.component_portal {
+  padding: 0;
+}
 .section_record .wrapper_component > .label,
 .wrapper_tool .wrapper_component > .label,
-.search_group .wrapper_component > .label,
-.page .wrapper_component > .label {
+.search_group .wrapper_component > .label {
   padding: 1em;
   flex: 1 1 100%;
   padding-bottom: 0;
@@ -2804,8 +2834,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .top,
 .wrapper_tool .wrapper_component > .top,
-.search_group .wrapper_component > .top,
-.page .wrapper_component > .top {
+.search_group .wrapper_component > .top {
   display: flex;
   flex: 0 1 100%;
   align-items: center;
@@ -2815,8 +2844,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .top > select.mono,
 .wrapper_tool .wrapper_component > .top > select.mono,
-.search_group .wrapper_component > .top > select.mono,
-.page .wrapper_component > .top > select.mono {
+.search_group .wrapper_component > .top > select.mono {
   background-color: transparent;
   outline: none;
   -webkit-appearance: none;
@@ -2829,8 +2857,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container,
 .wrapper_tool .wrapper_component > .buttons_container,
-.search_group .wrapper_component > .buttons_container,
-.page .wrapper_component > .buttons_container {
+.search_group .wrapper_component > .buttons_container {
   background-color: #f78a1c;
   display: none;
   flex: 0 1 1em;
@@ -2848,8 +2875,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor,
-.search_group .wrapper_component > .buttons_container .vector_editor,
-.page .wrapper_component > .buttons_container .vector_editor {
+.search_group .wrapper_component > .buttons_container .vector_editor {
   mask-image: url("../../themes/default/icons/vector_editor.svg");
   -webkit-mask-image: url("../../themes/default/icons/vector_editor.svg");
   mask-size: contain;
@@ -2861,14 +2887,12 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools > .button,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools > .button,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools > .button,
-.page .wrapper_component > .buttons_container .vector_editor_tools > .button {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools > .button {
   background-color: #ffffff;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector {
   float: right;
   width: 11em;
   background-color: #f78a1c;
@@ -2880,22 +2904,19 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button {
   margin: 0.5em;
   float: none;
   display: inline-block;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > .button.add {
   float: left;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul {
   text-align: left;
   clear: both;
   max-height: 200px;
@@ -2903,8 +2924,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li {
   display: grid;
   grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
   height: 30px;
@@ -2917,29 +2937,25 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover {
   background-color: #f78a1c;
   color: #ffffff;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:hover.raster_layer {
   background-color: #ffffff;
   color: initial;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:active {
   background-color: #f78a1c;
   color: #000;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li.active {
   background-color: #e6e6e6;
   color: #000;
   font-weight: bold;
@@ -2947,49 +2963,42 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon {
   background-color: black;
   justify-self: center;
   opacity: 0.2;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon:hover {
   opacity: 0.5 !important;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_icon.active {
   opacity: 1;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_delete {
   background-color: black;
   justify-self: center;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li .layer_color {
   width: 12px;
   height: 12px;
   border-radius: 12px;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child,
-.page .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .layer_selector > ul.layer_ul > li:first-child {
   border-top: 0.5px solid #777;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector,
-.page .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector {
   text-align: center;
   border-radius: 2px;
   width: calc(100% - 0.6em);
@@ -2999,14 +3008,12 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
-.page .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active {
   background-color: #FFFFFF;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .pointer,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .pointer,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer,
-.page .wrapper_component > .buttons_container .vector_editor_tools .pointer {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer {
   mask-image: url("../../themes/default/icons/pointer.svg");
   -webkit-mask-image: url("../../themes/default/icons/pointer.svg");
   mask-size: contain;
@@ -3018,8 +3025,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt,
-.page .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .pointer_alt {
   mask-image: url("../../themes/default/icons/pointer_alt.svg");
   -webkit-mask-image: url("../../themes/default/icons/pointer_alt.svg");
   mask-size: contain;
@@ -3031,8 +3037,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .transform,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .transform,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .transform,
-.page .wrapper_component > .buttons_container .vector_editor_tools .transform {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .transform {
   mask-image: url("../../themes/default/icons/pointer.svg");
   -webkit-mask-image: url("../../themes/default/icons/pointer.svg");
   mask-size: contain;
@@ -3044,8 +3049,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .rectangle,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .rectangle,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .rectangle,
-.page .wrapper_component > .buttons_container .vector_editor_tools .rectangle {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .rectangle {
   mask-image: url("../../themes/default/icons/rectangle.svg");
   -webkit-mask-image: url("../../themes/default/icons/rectangle.svg");
   mask-size: contain;
@@ -3057,8 +3061,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .circle,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .circle,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .circle,
-.page .wrapper_component > .buttons_container .vector_editor_tools .circle {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .circle {
   mask-image: url("../../themes/default/icons/circle.svg");
   -webkit-mask-image: url("../../themes/default/icons/circle.svg");
   mask-size: contain;
@@ -3070,8 +3073,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .vector,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .vector,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector,
-.page .wrapper_component > .buttons_container .vector_editor_tools .vector {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector {
   mask-image: url("../../themes/default/icons/vector.svg");
   -webkit-mask-image: url("../../themes/default/icons/vector.svg");
   mask-size: contain;
@@ -3083,8 +3085,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .zoom,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .zoom,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .zoom,
-.page .wrapper_component > .buttons_container .vector_editor_tools .zoom {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .zoom {
   mask-image: url("../../themes/default/icons/find.svg");
   -webkit-mask-image: url("../../themes/default/icons/find.svg");
   mask-size: contain;
@@ -3096,8 +3097,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .move,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .move,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .move,
-.page .wrapper_component > .buttons_container .vector_editor_tools .move {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .move {
   mask-image: url("../../themes/default/icons/hand.svg");
   -webkit-mask-image: url("../../themes/default/icons/hand.svg");
   mask-size: contain;
@@ -3109,33 +3109,28 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker,
-.page .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .button_color_picker {
   border: 0.5px solid #3F3F3F;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner,
-.page .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .color_wheel_contaniner {
   float: right;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active,
-.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active,
-.page .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active {
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .vector_tool_active {
   opacity: 1;
   background-color: black;
 }
 .section_record .wrapper_component > .paginator,
 .wrapper_tool .wrapper_component > .paginator,
-.search_group .wrapper_component > .paginator,
-.page .wrapper_component > .paginator {
+.search_group .wrapper_component > .paginator {
   padding: 0;
 }
 .section_record .wrapper_component > .content_data,
 .wrapper_tool .wrapper_component > .content_data,
-.search_group .wrapper_component > .content_data,
-.page .wrapper_component > .content_data {
+.search_group .wrapper_component > .content_data {
   display: flex;
   flex: 1 1 100%;
   flex-wrap: wrap;
@@ -3145,28 +3140,24 @@ li .section_record.list .id_column {
 }
 .list .section_record .wrapper_component > .content_data,
 .list .wrapper_tool .wrapper_component > .content_data,
-.list .search_group .wrapper_component > .content_data,
-.list .page .wrapper_component > .content_data {
+.list .search_group .wrapper_component > .content_data {
   padding: 0;
 }
 @media screen and (max-width: 960px) {
   .section_record .wrapper_component > .content_data,
   .wrapper_tool .wrapper_component > .content_data,
-  .search_group .wrapper_component > .content_data,
-  .page .wrapper_component > .content_data {
+  .search_group .wrapper_component > .content_data {
     flex: 1 1 100%;
   }
 }
 .section_record .wrapper_component > .content_data > .q_operator,
 .wrapper_tool .wrapper_component > .content_data > .q_operator,
-.search_group .wrapper_component > .content_data > .q_operator,
-.page .wrapper_component > .content_data > .q_operator {
+.search_group .wrapper_component > .content_data > .q_operator {
   width: 3em;
 }
 .section_record .wrapper_component > .content_data > .close,
 .wrapper_tool .wrapper_component > .content_data > .close,
-.search_group .wrapper_component > .content_data > .close,
-.page .wrapper_component > .content_data > .close {
+.search_group .wrapper_component > .content_data > .close {
   position: absolute;
   top: -0.1em;
   right: -0.4em;
@@ -3174,8 +3165,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .content_data.vertical,
 .wrapper_tool .wrapper_component > .content_data.vertical,
-.search_group .wrapper_component > .content_data.vertical,
-.page .wrapper_component > .content_data.vertical {
+.search_group .wrapper_component > .content_data.vertical {
   flex: 1 1 100%;
   background-color: #a1cccc5c;
   justify-content: center;
@@ -3183,8 +3173,7 @@ li .section_record.list .id_column {
 }
 .section_record .wrapper_component > .content_data > .inputs_container,
 .wrapper_tool .wrapper_component > .content_data > .inputs_container,
-.search_group .wrapper_component > .content_data > .inputs_container,
-.page .wrapper_component > .content_data > .inputs_container {
+.search_group .wrapper_component > .content_data > .inputs_container {
   flex: 1 1 auto;
 }
 @media screen and (max-width: 1280px) {
@@ -3582,13 +3571,16 @@ dd-modal .footer > * {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  position: relative;
   margin: 0;
   padding: 0;
+  z-index: auto;
+  /**/
   display: flex;
   flex-wrap: wrap;
   flex: 1 1 50%;
   align-content: flex-start;
-  z-index: auto;
+  display: grid;
   overflow: hidden;
   background-color: rgba(243, 243, 243, 0.76);
   max-width: 24em;
@@ -4045,9 +4037,6 @@ danger {
 }
 #main {
   width: 100%;
-}
-.active.wrapper_component {
-  background-color: #e6e6e6 !important;
 }
 .error {
   transition: background-color 0.3s ease;

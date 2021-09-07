@@ -94,19 +94,25 @@
 		flex-wrap: wrap;
 	}
 	.component_base {
+		position: relative;
 		margin: 0;
 		padding: 0;
+		z-index: auto; // (!) important to allow fullscreen configs like tinymce
+
 		// flex config
+		/**/
 		display: flex;
 		flex-wrap: wrap;
 		// flex: 0 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'>
 		flex: 1 1 50%; // testing 11-06-2020
 		align-content: flex-start; // maintain items flow from top to bottom
 		//flex: 0 1 auto;
-		z-index: auto; // (!) important to allow fullscreen configs like tinymce
+
+		display: grid;
 
 		// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 		overflow: hidden;
+
 
 		// input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
 
@@ -701,22 +707,19 @@
 				// inside another content_data
 				>.content_data & {
 					margin-left: 0;
-
 				}
-
-
-		}//end &.edit
+		}//end section_record &.edit
 
 
 		&.list {
 			position: relative;
 			background-color: #f7f7f7;
-			// display: grid;
 			display: contents;
+
 			width: 100%;
 			height: 100%;
-			margin-right: 0.5em;
-			outline: 1px solid #EAEAEA;
+			// margin-right: 0.5em;
+			// outline: 1px solid #EAEAEA;
 
 			// portal and autocomplete
 			li & {
@@ -748,10 +751,10 @@
 				}
 			}
 
-			>div {
+			>* {
 				height: auto;
 				//display: inline-block;
-				padding: 1em;
+				// padding: 1em;
 				//padding-left: 1em;
 				//padding-right: 0;
 				flex: 1 0;
@@ -760,7 +763,8 @@
 				word-wrap: break-word;
 				word-break: break-all;
 				overflow: hidden;
-				outline: 1px solid rgba(216,216,216,.43);
+				// outline: 1px solid rgba(216,216,216,.43);
+				border-bottom: 1px solid @color_grey_medium;
 
 				.component_autocomplete & {
 					display: inline-block;
@@ -807,7 +811,8 @@
 
 						>span {
 							display: inline-block;
-							font-size: @height_line + 0.02;
+							// font-size: @height_line + 0.02;
+							font-size: @height_line - 0.1;
 							//height: @height_line;
 
 							margin-left: 0.2em;
@@ -827,7 +832,6 @@
 						// 		.fn_build_button('link.svg', black, 1);
 						// 	}
 						// }
-
 					}
 
 					>.delete_line {
@@ -849,14 +853,12 @@
 						// }
 					}
 				}//end id_column
-
-			}
+			}//end >div
 
 			>.breakdown {
 				padding: 0;
 			}
-
-		}//end &.list
+		}//end list &.list
 
 
 	}//end .section_record.edit
@@ -876,14 +878,20 @@
 				//border: 1px solid #BFBFBF;
 
 				>.label {
-					background-color: @color_grey_dark;
-					//background-image: url('../../themes/default/bg_black.png');
-					color: #ffffff;
-					padding: 1em;
-					cursor: pointer;
-					&:active {
-						opacity: 0.5;
-					}
+					// background-color: @color_grey_dark;
+					// //background-image: url('../../themes/default/bg_black.png');
+					// color: #ffffff;
+					// padding: 1em;
+					// cursor: pointer;
+					// &:active {
+					// 	opacity: 0.5;
+					// }
+					background-color: @color_grey_medium;
+				    padding: 0.33em;
+				    padding-left: 0.5em;
+				    cursor: pointer;
+				    text-transform: uppercase;
+				    font-size: 0.85em;
 				}
 				>.content_data {
 					// flex base config
@@ -910,15 +918,8 @@
 
 // component
 	.wrapper_component {
-		position: relative;
-
-		&.active {
-			// box-shadow: 3px 5px 8px 1px #c6c6c6;
-			z-index: 1;
-			.buttons_container {
-				display: block !important;
-			}
-		}
+		// base config
+		.component_base;
 
 		&.edit, &.search, &.tm {
 			>.label {
@@ -1263,7 +1264,14 @@
 			// component_radio_button
 			&.component_radio_button {
 				>.content_data {
-
+					ul.inputs_container {
+						// auto-create columns with min width of 8em
+						display: grid;
+						grid-template-columns: repeat( auto-fit, minmax(8em, 1fr) );
+						>li {
+							padding-bottom: 0.25em;
+						}
+					}
 				}
 			}
 
@@ -1399,11 +1407,15 @@
 
 			// component_section_id
 			&.component_section_id {
-				background-color: @color_orange_dedalo !important;
+				background-color: @color_orange_dedalo;
 				color: white;
-				display: flex;
-				flex: 0 0 20%;
+				// display: flex;
+				// flex: 0 0 20%;
 				// flex-direction: row-reverse;
+
+				&.active {
+					background-color: @color_grey_dark !important;
+				}
 
 				>.label {
 					color: white;
@@ -1433,8 +1445,8 @@
 			}
 		}//end &.edit
 
-
 		&.list {
+
 			&.component_text_area {
 				// background-color: #bc00ae;
 				max-height: 10em;
@@ -1449,6 +1461,7 @@
 				background-color: #ffffff;
 				text-align: center;
 				display: block;
+				min-height: 5em;
 
 				>img {
 					padding: 0;
@@ -1458,7 +1471,10 @@
 					// fit image contains
 					object-fit: contain;
 					object-position: center;
-					// center horizontally
+
+					// center horizontally.
+					// Note that img not crate space because his position is absolute.
+					// Use the component wrapper to give the img size
 					position: absolute;
 					left: 50%;
 					transform: translate(-50%);
@@ -1466,23 +1482,45 @@
 			}
 		}//end &.list
 
-
 		&.edit_in_list {
-
 			>*  {
 				padding: 0 !important;
 			}
 		}//end &.edit_in_list
 
+		&.active {
+			// box-shadow: 3px 5px 8px 1px #c6c6c6;
+
+			//transition: background-color 0.3s ease;
+			background-color: @color_grey_medium !important; // rgb(230, 230, 230)
+
+			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
+			overflow: initial !important;
+
+			z-index: 1;
+			.buttons_container {
+				display: block !important;
+			}
+		}//end &.active
+
 
 		// inside .section_record.edit context
 		//.section_record.edit &, .components_container & { 22
-		.section_record &, .wrapper_tool &, .search_group &, .page & {
-			// flex base config
-			.component_base;
+		.section_record &, .wrapper_tool &, .search_group & { // , .page &
 
 			background-color: rgba(251, 251, 251, 0.70); // #FBFBFB;
 			outline: 1px solid rgba(216, 216, 216, 0.43);
+
+			&.list {
+				padding: 0.5em;
+				outline: none;
+
+				&.component_image, &.component_portal {
+					padding: 0;
+				}
+			}
+
+
 
 			// DES
 				// >* {
