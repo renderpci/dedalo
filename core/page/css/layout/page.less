@@ -2,10 +2,21 @@
 
 
 html {
+	// font
+	// global_font. Defined in fonts.less
 	.global_font;
+	font-size: 1rem; // fallback base value
+	// font-size: 1vw;
+
+	color: @color_grey_ultradark;
+
 	//overflow-y: scroll;
 	//margin-left: calc(100vw - 100%);
 	margin-right: calc(100vw - 100%);
+
+	// @media only screen and (max-width: 400px) {
+	//     font-size: 14px;
+	// }
 }
 b, strong {
 	font-weight: bold;
