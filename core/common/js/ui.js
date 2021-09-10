@@ -189,15 +189,15 @@ export const ui = {
 				}
 
 			// tooltip
-				if (mode==="search" && instance.context.search_options_title) {
-					//fragment.classList.add("tooltip_toggle")
-					const tooltip = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'tooltip hidden_tooltip',
-						inner_html		: instance.context.search_options_title || '',
-						parent			: fragment
-					})
-				}
+				// if (mode==="search" && instance.context.search_options_title) {
+				// 	//fragment.classList.add("tooltip_toggle")
+				// 	const tooltip = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'tooltip hidden_tooltip',
+				// 		inner_html		: instance.context.search_options_title || '',
+				// 		parent			: fragment
+				// 	})
+				// }
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
@@ -319,8 +319,11 @@ export const ui = {
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
 			const mode			= instance.mode 	// like 'edit'
-			const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
 			const edit_in_list	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
+
+			// options
+				const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
+				const value_string	= options.value_string
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
@@ -328,16 +331,25 @@ export const ui = {
 					class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
  				})
 
+ 			// span value. Add span if value_string is received
+ 				if (value_string) {
+ 					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: value_string,
+						parent			: wrapper
+					})
+ 				}
+
  			// event dblclick change component mode
- 			if(edit_in_list){
+	 			if(edit_in_list){
 
- 				wrapper.addEventListener("dblclick", function(e){
-					e.stopPropagation()
+	 				wrapper.addEventListener("dblclick", function(e){
+						e.stopPropagation()
 
-					// change mode (from 'list' to 'edit_in_list')
-					instance.change_mode('edit_in_list', autoload)
-				})
- 			}
+						// change mode (from 'list' to 'edit_in_list')
+						instance.change_mode('edit_in_list', autoload)
+					})
+	 			}
 
 			return wrapper
 		},//end build_wrapper_list
@@ -347,20 +359,20 @@ export const ui = {
 		/**
 		* BUILD_WRAPPER_MINI
 		*/
-		build_wrapper_mini : (instance) => {
-			// if(SHOW_DEBUG===true) {
-			// 	//console.log("[ui.build_wrapper_mini] instance:",instance)
-			// }
-			// const model			= instance.model 	// like component_input-text
-			// const type			= instance.type 	// like 'component'
-			// const tipo			= instance.tipo 	// like 'rsc26'
-			// const mode			= instance.mode 	// like 'edit'
+		build_wrapper_mini : (instance, options={}) => {
+
+			// options
+				const value_string = options.value_string
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
-					element_type	: 'span',
-					// class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+					element_type	: 'span'
  				})
+
+ 			// value_string
+ 				if (value_string) {
+ 					wrapper.insertAdjacentHTML('afterbegin', value_string)
+ 				}
 
 			return wrapper
 		},//end build_wrapper_mini
@@ -378,7 +390,7 @@ export const ui = {
 		*	ID of clicked component
 		* @return async promise
 		*	Note that this function return always a promise to allow the caller
-		*	continue aplying another custom actions
+		*	continue applying another custom actions
 		*/
 		active : (component, actived_component) => {
 
@@ -404,7 +416,7 @@ export const ui = {
 					})
 
 				// remove service autocomplete if active
-					if(component.autocomplete_active === true){
+					if(component.autocomplete_active===true){
 						component.autocomplete.destroy()
 						component.autocomplete_active = false
 						component.autocomplete = null

@@ -443,7 +443,8 @@ const render_filter = function(options){
 
 /**
 * RENDER_SEARCH_BUTTONS
-* @return search_buttons_container dom object
+* Creates search buttons group: max, show all, apply
+* @return DOM node search_buttons_container
 */
 render_search.prototype.render_search_buttons = function(){
 
@@ -531,39 +532,39 @@ render_search.prototype.render_search_buttons = function(){
 
 /**
 * RENDER_SEARCH_GROUP
-* @return dom object
+* Create the basic search element node. Includes nodes:
+* 	operator, button add, search_component wrapper
+* @param DOM node parent_div
+* @param object options
+* @return DOM node search_group
 */
 render_search.prototype.render_search_group = function(parent_div, options) {
 
 	const self = this
 
-	// Create defaults when no received options
-		if (typeof options==="undefined") {
-			options = {
-				operator : '$and',
-				is_root  : false
-			}
-		}
+	// options
+		const operator	= options.operator || '$and'
+		const is_root	= options.is_root || false
 
 	// Check already created root_search_group
 		//if (options.is_root===true && document.getElementById("root_search_group")) {
 		//	return false
 		//}
 
-		const all_search_groups = self.search_group_container.querySelectorAll(".search_group")
-		const total  			= all_search_groups.length
-		const counter 		  	= total + 1
+		const all_search_groups	= self.search_group_container.querySelectorAll(".search_group")
+		const total				= all_search_groups.length
+		const counter			= total + 1
 
 	// search_group
 		const search_group = ui.create_dom_element({
 			element_type	: 'div',
-			//id			: options.is_root ? 'root_search_group' : null
+			//id			: is_root ? 'root_search_group' : null
 			class_name		: "search_group",
 			data_set		: {id:counter},
 			parent			: parent_div
 		})
 		// Check already created root_search_group and store if not
-		if(options.is_root===true){
+		if(is_root===true){
 			self.root_search_group = search_group
 		}
 
@@ -578,10 +579,10 @@ render_search.prototype.render_search_group = function(parent_div, options) {
 		const search_group_operator = ui.create_dom_element({
 			element_type	: 'div',
 			parent			: search_group,
-			//text_content	: options.operator.slice(1) + " "+counter,
-			text_content	: localize_operator(options.operator)+ " ["+counter+"]",
-			data_set		: { value : options.operator },
-			class_name		: "operator search_group_operator" + (options.operator==="$and" ? " and" : " or")
+			//text_content	: operator.slice(1) + " "+counter,
+			text_content	: localize_operator(operator)+ " ["+counter+"]",
+			data_set		: { value : operator },
+			class_name		: "operator search_group_operator" + (operator==="$and" ? " and" : " or")
 		})
 		search_group_operator.addEventListener("click",function(e){
 			//console.log("Clicked search_group_operator:",search_group_operator );
@@ -590,8 +591,8 @@ render_search.prototype.render_search_group = function(parent_div, options) {
 			self.update_state({state:'changed'})
 		})
 
-	// Add button close
-		if (options.is_root===false) {
+	// Add button x close
+		if (is_root===false) {
 		const search_group_button_close = ui.create_dom_element({
 			element_type	: 'span',
 			parent			: search_group,
@@ -627,46 +628,48 @@ render_search.prototype.render_search_group = function(parent_div, options) {
 
 /**
 * BUILD_SEARCH_COMPONENT
-* @return dom object
+* Creates a instance of component and render it placing result in given parent_div
+* Add too, button close and optional label
+* @return promise bool true
 */
 render_search.prototype.build_search_component = async function(parent_div, path_plain, current_value, q_operator, section_id) {
 
 	const self = this
 	
-	const path			= JSON.parse(path_plain)
-	const last_item		= path[path.length-1]
-	const first_item	= path[0]
-
+	// short vars
+		const path			= JSON.parse(path_plain)
+		const last_item		= path[path.length-1]
+		const first_item	= path[0]
 
 	// search_component container. Create dom element before load html from trigger
 		const search_component = ui.create_dom_element({
 			element_type	: 'div',
-			parent			: parent_div,
 			class_name		: "search_component",
-			data_set		: { 
+			data_set		: {
 				path		: path_plain,
-				section_id	: section_id 
-			}
+				section_id	: section_id
+			},
+			parent			: parent_div
 		})
 
-	// component_instance. Get functional component to render
-		const component_instance = await self.get_component_instance({
-			section_id		: section_id,
-			section_tipo	: last_item.section_tipo,
-			component_tipo	: last_item.component_tipo,
-			model			: last_item.modelo,
-			mode			:'search',
-			value			: current_value || null,
-			q_operator		: q_operator || null,
-			path			: path
-		})
+		// component_instance. Get functional component, build and returns it ready to render
+			const component_instance = await self.get_component_instance({
+				section_id		: section_id,
+				section_tipo	: last_item.section_tipo,
+				component_tipo	: last_item.component_tipo,
+				model			: last_item.modelo,
+				mode			: 'search',
+				value			: current_value || null, // value will be injected
+				q_operator		: q_operator || null,
+				path			: path
+			})
 
-	// Render component
-		// await component_instance.build(true)
-		const component_node = await component_instance.render()
+		// render component
+			// note that component here is already built with custom injected data
+			const component_node = await component_instance.render()
 
-	// Inject component html
-		search_component.appendChild(component_node)
+		// add component node
+			search_component.appendChild(component_node)
 
 	// button close
 		const search_component_button_close = ui.create_dom_element({
@@ -678,7 +681,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 			// remove search box and content (component) from dom
 			search_component.parentNode.removeChild(search_component)
 			// delete the instance from search ar_instances
-			const delete_instance_index = self.ar_instances.findIndex( instance => instance.id === component_instance.id )
+			const delete_instance_index = self.ar_instances.findIndex( instance => instance.id===component_instance.id )
 			self.ar_instances.splice(delete_instance_index, 1)
 			// destroy component instance
 			component_instance.destroy(true);
@@ -699,7 +702,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 	// If component have any value or q_operator, set style with different color to remark it
 	//	component_common.update_component_with_value_state( search_component.querySelector("div.wrap_component") )
 
-	// show hidden parent cantainer
+	// show hidden parent container
 		parent_div.classList.remove("hide")
 
 

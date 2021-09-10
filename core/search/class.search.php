@@ -2785,27 +2785,27 @@ class search {
 	*/
 	public static function save_temp_preset($user_id, $target_section_tipo, $filter_object) {
 
-		$section_tipo 	= DEDALO_TEMP_PRESET_SECTION_TIPO; // 'dd655'; // presets temp
-		$matrix_table 	= 'matrix_list';
+		$section_tipo	= DEDALO_TEMP_PRESET_SECTION_TIPO; // 'dd655'; // presets temp
+		$matrix_table	= 'matrix_list';
 
 		// Find existing preset (returns section_id if exists or null if not)
 		$preset_obj = search::get_preset($user_id, $target_section_tipo, $section_tipo);
 		if (empty($preset_obj)) {
 			# Create new section if not exists
-			$section 	= section::get_instance(null, $section_tipo);
-			$preset_id 	= $section->Save();
+			$section	= section::get_instance(null, $section_tipo);
+			$preset_id	= $section->Save();
 		}else{
-			#$section 	= section::get_instance($preset_id, $section_tipo);
-			$preset_id 	= $preset_obj->section_id;
+			#$section	= section::get_instance($preset_id, $section_tipo);
+			$preset_id	= $preset_obj->section_id;
 		}
 
 		$result = [];
 
 		#
 		# FILTER. COMPONENT_JSON
-			$tipo 			= 'dd625'; // component_json
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
+			$tipo			= 'dd625'; // component_json
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component		= component_common::get_instance($modelo_name,
 															 $tipo,
 															 $preset_id,
 															 'edit',
@@ -2817,9 +2817,9 @@ class search {
 
 		#
 		# SECTION_TIPO
-			$tipo 			= 'dd642'; // component_input_text
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
+			$tipo			= 'dd642'; // component_input_text
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component		= component_common::get_instance($modelo_name,
 															 $tipo,
 															 $preset_id,
 															 'edit',
@@ -2831,9 +2831,9 @@ class search {
 
 		#
 		# USER
-			$tipo 			= 'dd654'; // component_select
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
+			$tipo			= 'dd654'; // component_select
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component		= component_common::get_instance($modelo_name,
 															 $tipo,
 															 $preset_id,
 															 'edit',
@@ -2882,10 +2882,10 @@ class search {
 			$current_tipo = $ar_values[$i];
 
 			$path = new stdClass();
-				$path->section_tipo   = $section_tipo;
-				$path->component_tipo = $current_tipo;
-				$path->modelo 	  	  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$path->name 	  	  = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG , true, true);
+				$path->section_tipo		= $section_tipo;
+				$path->component_tipo	= $current_tipo;
+				$path->modelo			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$path->name				= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG , true, true);
 
 			$current_element = new stdClass();
 				$current_element->path[] = $path;
@@ -3059,3 +3059,5 @@ class search {
 
 
 }//end search_development
+
+

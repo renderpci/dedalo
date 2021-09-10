@@ -107,7 +107,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 				const parent_instance = ar_instances.find(instance =>  instance.tipo===parent_grouper
 																	&& instance.section_id===current_instance.section_id
 																	&& instance.section_tipo===current_instance.section_tipo)
-				// if parent_istance exist go to apped the current instace to it.
+				// if parent_istance exist go to append the current instance to it.
 				if(typeof parent_instance!=="undefined"){
 
 					const parent_node = parent_instance.node[0] || await parent_instance.render()
