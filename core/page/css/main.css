@@ -2486,6 +2486,11 @@ li .section_record.list .id_column {
   top: 0.25em;
   z-index: 1;
 }
+.wrapper_component.edit.component_iri input.input_value,
+.wrapper_component.search.component_iri input.input_value,
+.wrapper_component.tm.component_iri input.input_value {
+  flex: 1;
+}
 .wrapper_component.edit.component_pdf > .content_data,
 .wrapper_component.search.component_pdf > .content_data,
 .wrapper_component.tm.component_pdf > .content_data {
