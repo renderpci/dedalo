@@ -480,20 +480,21 @@ component_common.prototype.save = async function(changed_data) {
 				// update datum (centralized update datum call)
 					await self.update_datum(result.data)
 
-				// success. add save_success class to component wrappers (green line animation)
-					self.node.map(item => {
-						item.classList.add("save_success")
-					})
+				// // success. add save_success class to component wrappers (green line animation)
+				// 	self.node.map(item => {
+				// 		item.classList.add("save_success")
+				// 	})
 
-				// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
-					setTimeout(()=>{
-						self.node.map(item => {
-							// item.classList.remove("save_success")
-							// allow restart animation. Not set state pause before animation ends (2 secs)
-							item.style.animationPlayState = "paused";
-							item.style.webkitAnimationPlayState = "paused";
-						})
-					},2000)
+				// // remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
+				// 	setTimeout(()=>{
+				// 		self.node.map(item => {
+				// 			// item.classList.remove("save_success")
+				// 			// allow restart animation. Not set state pause before animation ends (2 secs)
+				// 			item.style.animationPlayState = "paused";
+				// 			item.style.webkitAnimationPlayState = "paused";
+				// 		})
+				// 	},2000)
+					ui.component.exec_save_successfully_animation(self)
 			}
 		})
 
