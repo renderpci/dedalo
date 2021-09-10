@@ -53,7 +53,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 					// self.portal_active = false
 
 				// content_data
-					const content_data = await build_content_data(self)
+					const content_data = build_content_data(self)
 					if (render_level==='content') {
 						return content_data
 					}
@@ -81,13 +81,12 @@ render_edit_component_portal.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end  edit
+};//end edit
 
 
 
 /**
 * ADD_EVENTS
-* Used too in search mode
 * @return bool
 */
 export const add_events = function(self, wrapper) {
@@ -190,7 +189,7 @@ export const add_events = function(self, wrapper) {
 
 
 	return true
-};//end  add_events
+};//end add_events
 
 
 
@@ -199,7 +198,7 @@ export const add_events = function(self, wrapper) {
 * Used too in search mode
 * @return DOM node content_data
 */
-export const build_content_data = async function(self) {
+export const build_content_data = function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -210,21 +209,25 @@ export const build_content_data = async function(self) {
 		})
 
 	// build values (add all nodes from the rendered_section_record)
-		const build_values = async function() {
+		const build_values = function() {
 
-			const ar_section_record	= await self.get_ar_instances()
-			const length			= ar_section_record.length
-			for (let i = 0; i < length; i++) {
+			// const ar_section_record	= await self.get_ar_instances()
+			self.get_ar_instances()
+			.then(function(ar_section_record){
 
-				const current_section_record = ar_section_record[i]
-				if (!current_section_record) {
-					console.warn("empty current_section_record:",current_section_record)
+				const length = ar_section_record.length
+				for (let i = 0; i < length; i++) {
+
+					const current_section_record = ar_section_record[i]
+					if (!current_section_record) {
+						console.warn("empty current_section_record:",current_section_record)
+					}
+
+					// input_element. Get_input_element, also renders current section record
+					const input_element = get_input_element(current_section_record)
+					inputs_container.appendChild(input_element)
 				}
-
-				// input_element. Get_input_element, also renders current section record
-				const input_element = get_input_element(current_section_record)
-				inputs_container.appendChild(input_element)
-			}
+			})
 		}
 		fragment.appendChild(inputs_container)
 

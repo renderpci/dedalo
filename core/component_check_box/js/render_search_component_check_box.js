@@ -51,7 +51,7 @@ render_search_component_check_box.prototype.search = async function() {
 */
 const add_events = function(self, wrapper) {
 
-	// change event, for every change the value in the imputs of the component
+	// change event, for every change the value in the inputs of the component
 	wrapper.addEventListener('change', (e) => {
 		//e.stopPropagation()
 

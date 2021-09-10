@@ -117,17 +117,6 @@ export const add_events = function(self, wrapper) {
 
 			event_manager.publish('active_component', self)
 
-			// self.node.map(function(item_node) {
-			// 	item_node.classList.add("active")
-			// })
-
-			// remove service autocomplete if active
-				// if(self.autocomplete && self.autocomplete_active === true){
-				// 	self.autocomplete.destroy()
-				// 	self.autocomplete_active = false
-				// 	self.autocomplete = null
-				// }
-
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
 
