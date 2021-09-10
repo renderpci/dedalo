@@ -16,6 +16,8 @@
 */
 export const render_list_section = function() {
 
+	this.id_column_width = '7.5em'
+
 	return true
 };//end render_list_section
 
@@ -204,7 +206,8 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 				{
 					//display: 'grid',
 					//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-					"grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)",
+					// "grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)"
+					"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
 				}
 			)
 			list_body.appendChild(list_header_node)
