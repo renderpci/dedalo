@@ -361,7 +361,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 	// observer. init the editor when container node is in DOM
 		const observer = new IntersectionObserver(function(entries) {
 			// if(entries[0].isIntersecting === true) {}
-			const entry = entries[0]
+			const entry = entries[1] || entries[0]
 			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
 				observer.disconnect();
 
