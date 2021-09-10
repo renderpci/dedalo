@@ -1,4 +1,8 @@
 /**/
+:root {
+  --component_width: 50%;
+  --component_height: auto;
+}
 html,
 body,
 div,
@@ -87,6 +91,7 @@ video {
   font: inherit;
   vertical-align: baseline;
   z-index: unset;
+  box-sizing: border-box;
 }
 article,
 aside,
@@ -576,6 +581,7 @@ template {
 }
 .buttons_container .button {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .button.white {
   background-color: #ffffff !important;
@@ -1403,6 +1409,7 @@ button.cancel:before {
 }
 .buttons_container .contenteditable_buttons > .button.bold:before {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .contenteditable_buttons > .button.bold:before.white {
   background-color: #ffffff !important;
@@ -1437,6 +1444,7 @@ button.cancel:before {
 }
 .buttons_container .contenteditable_buttons > .button.italic:before {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .contenteditable_buttons > .button.italic:before.white {
   background-color: #ffffff !important;
@@ -1471,6 +1479,7 @@ button.cancel:before {
 }
 .buttons_container .contenteditable_buttons > .button.underline:before {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .contenteditable_buttons > .button.underline:before.white {
   background-color: #ffffff !important;
@@ -1505,6 +1514,7 @@ button.cancel:before {
 }
 .buttons_container .contenteditable_buttons > .button.replace:before {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .contenteditable_buttons > .button.replace:before.white {
   background-color: #ffffff !important;
@@ -1632,10 +1642,10 @@ button.cancel:before {
   margin: 0;
   padding: 0;
   z-index: auto;
-  /**/
   display: flex;
   flex-wrap: wrap;
-  flex: 1 1 50%;
+  flex: 1 1 var(--component_width);
+  height: var(--component_height);
   align-content: flex-start;
   display: grid;
   overflow: hidden;
@@ -1907,6 +1917,7 @@ li .reset_input select {
 }
 .buttons_container .area .widget_container > .widget_label:before {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .area .widget_container > .widget_label:before.white {
   background-color: #ffffff !important;
@@ -1963,6 +1974,7 @@ li .reset_input select {
 }
 .buttons_container .area .widget_container > .widget_body > .link:before {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .area .widget_container > .widget_body > .link:before.white {
   background-color: #ffffff !important;
@@ -2166,7 +2178,6 @@ li .reset_input select {
 }
 .section_record.list {
   position: relative;
-  background-color: #f7f7f7;
   display: contents;
   width: 100%;
   height: 100%;
@@ -2186,7 +2197,7 @@ li .section_record.list .id_column {
   word-wrap: break-word;
   word-break: break-all;
   overflow: hidden;
-  border-bottom: 1px solid #e6e6e6;
+  box-shadow: 0 -1px 0 #e6e6e6;
 }
 .component_autocomplete .section_record.list > * {
   display: inline-block;
@@ -2195,22 +2206,26 @@ li .section_record.list .id_column {
   border-left: 1px solid #eaeaea;
 }
 .section_record.list > *.id_column {
-  padding-left: 0.25em;
-  padding-right: 0.5em;
+  overflow: visible;
+  min-width: 4.5em;
 }
-.section_record.list > *.id_column > div {
+.section_record.list > *.id_column > .edit_line {
+  background-color: #f8f8f8;
   flex: 1 1 100%;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  height: 100%;
+  align-items: flex-start;
   justify-content: flex-end;
   min-height: 1.2em;
+  padding: 0.5em;
 }
 .section_record.list > *.id_column > .edit_line > span {
   display: inline-block;
   font-size: 1.1em;
-  margin-left: 0.2em;
-  margin-right: 0.35em;
+  padding: 0;
+  margin-top: 0;
+  white-space: nowrap;
 }
 .section_record.list > *.id_column > .delete_line {
   margin-top: 0.5em;
@@ -2247,10 +2262,10 @@ li .section_record.list .id_column {
   margin: 0;
   padding: 0;
   z-index: auto;
-  /**/
   display: flex;
   flex-wrap: wrap;
-  flex: 1 1 50%;
+  flex: 1 1 var(--component_width);
+  height: var(--component_height);
   align-content: flex-start;
   display: grid;
   overflow: hidden;
@@ -2353,6 +2368,7 @@ li .section_record.list .id_column {
 .wrapper_component.search.component_geolocation > .content_data,
 .wrapper_component.tm.component_geolocation > .content_data {
   height: calc(100% - 1.75em);
+  min-height: 385px;
 }
 .wrapper_component.edit.component_geolocation > .content_data > ul,
 .wrapper_component.search.component_geolocation > .content_data > ul,
@@ -2526,46 +2542,73 @@ li .section_record.list .id_column {
   outline-color: #2b2b2b;
   color: white;
 }
+.wrapper_component.edit.component_portal > .content_data,
+.wrapper_component.search.component_portal > .content_data,
+.wrapper_component.tm.component_portal > .content_data,
 .wrapper_component.edit.portal > .content_data,
 .wrapper_component.search.portal > .content_data,
 .wrapper_component.tm.portal > .content_data {
   flex-wrap: wrap !important;
 }
+.wrapper_component.edit.component_portal > .content_data ul,
+.wrapper_component.search.component_portal > .content_data ul,
+.wrapper_component.tm.component_portal > .content_data ul,
 .wrapper_component.edit.portal > .content_data ul,
 .wrapper_component.search.portal > .content_data ul,
 .wrapper_component.tm.portal > .content_data ul {
   flex: 0 0 100%;
 }
+.wrapper_component.edit.component_portal > .content_data ul.references,
+.wrapper_component.search.component_portal > .content_data ul.references,
+.wrapper_component.tm.component_portal > .content_data ul.references,
 .wrapper_component.edit.portal > .content_data ul.references,
 .wrapper_component.search.portal > .content_data ul.references,
 .wrapper_component.tm.portal > .content_data ul.references {
   margin-top: 0.75em;
 }
+.wrapper_component.edit.component_portal > .content_data ul.references > *,
+.wrapper_component.search.component_portal > .content_data ul.references > *,
+.wrapper_component.tm.component_portal > .content_data ul.references > *,
 .wrapper_component.edit.portal > .content_data ul.references > *,
 .wrapper_component.search.portal > .content_data ul.references > *,
 .wrapper_component.tm.portal > .content_data ul.references > * {
   width: 100%;
 }
+.wrapper_component.edit.component_portal > .content_data ul.references > div,
+.wrapper_component.search.component_portal > .content_data ul.references > div,
+.wrapper_component.tm.component_portal > .content_data ul.references > div,
 .wrapper_component.edit.portal > .content_data ul.references > div,
 .wrapper_component.search.portal > .content_data ul.references > div,
 .wrapper_component.tm.portal > .content_data ul.references > div {
   margin-bottom: 0.5em;
 }
+.wrapper_component.edit.component_portal > .content_data ul.references > li,
+.wrapper_component.search.component_portal > .content_data ul.references > li,
+.wrapper_component.tm.component_portal > .content_data ul.references > li,
 .wrapper_component.edit.portal > .content_data ul.references > li,
 .wrapper_component.search.portal > .content_data ul.references > li,
 .wrapper_component.tm.portal > .content_data ul.references > li {
   padding-left: 2em;
 }
+.wrapper_component.edit.component_portal .select_section,
+.wrapper_component.search.component_portal .select_section,
+.wrapper_component.tm.component_portal .select_section,
 .wrapper_component.edit.portal .select_section,
 .wrapper_component.search.portal .select_section,
 .wrapper_component.tm.portal .select_section {
   margin-left: 1em;
 }
+.wrapper_component.edit.component_portal.view_autocomplete,
+.wrapper_component.search.component_portal.view_autocomplete,
+.wrapper_component.tm.component_portal.view_autocomplete,
 .wrapper_component.edit.portal.view_autocomplete,
 .wrapper_component.search.portal.view_autocomplete,
 .wrapper_component.tm.portal.view_autocomplete {
   background-color: #83e1ee;
 }
+.wrapper_component.edit.component_portal.view_autocomplete .section_record,
+.wrapper_component.search.component_portal.view_autocomplete .section_record,
+.wrapper_component.tm.component_portal.view_autocomplete .section_record,
 .wrapper_component.edit.portal.view_autocomplete .section_record,
 .wrapper_component.search.portal.view_autocomplete .section_record,
 .wrapper_component.tm.portal.view_autocomplete .section_record {
@@ -2574,6 +2617,9 @@ li .section_record.list .id_column {
   margin-bottom: 1px;
   line-height: 0.5em;
 }
+.wrapper_component.edit.component_portal.view_autocomplete .section_record > div,
+.wrapper_component.search.component_portal.view_autocomplete .section_record > div,
+.wrapper_component.tm.component_portal.view_autocomplete .section_record > div,
 .wrapper_component.edit.portal.view_autocomplete .section_record > div,
 .wrapper_component.search.portal.view_autocomplete .section_record > div,
 .wrapper_component.tm.portal.view_autocomplete .section_record > div {
@@ -2582,6 +2628,85 @@ li .section_record.list .id_column {
   outline: unset;
   background-color: unset;
   line-height: 0.5em;
+}
+.wrapper_component.edit.component_publication .switcher_publication,
+.wrapper_component.search.component_publication .switcher_publication,
+.wrapper_component.tm.component_publication .switcher_publication {
+  display: inline-block;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex: 0 0 45px !important;
+}
+.wrapper_component.edit.component_publication .switcher_publication > i,
+.wrapper_component.search.component_publication .switcher_publication > i,
+.wrapper_component.tm.component_publication .switcher_publication > i {
+  position: relative;
+  display: inline-block;
+  margin-right: 0.5rem;
+  width: 45px;
+  height: 26px;
+  background-color: #e6e6e6;
+  border-radius: 23px;
+  vertical-align: text-bottom;
+  transition: all 0.3s linear;
+}
+.wrapper_component.edit.component_publication .switcher_publication > i:before,
+.wrapper_component.search.component_publication .switcher_publication > i:before,
+.wrapper_component.tm.component_publication .switcher_publication > i:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 42px;
+  height: 22px;
+  background-color: #fff;
+  border-radius: 11px;
+  transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
+  transition: all 0.25s linear;
+}
+.wrapper_component.edit.component_publication .switcher_publication > i:after,
+.wrapper_component.search.component_publication .switcher_publication > i:after,
+.wrapper_component.tm.component_publication .switcher_publication > i:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  background-color: #fff;
+  border-radius: 11px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.24);
+  transform: translate3d(2px, 2px, 0);
+  transition: all 0.2s ease-in-out;
+}
+.wrapper_component.edit.component_publication .switcher_publication:active i::after,
+.wrapper_component.search.component_publication .switcher_publication:active i::after,
+.wrapper_component.tm.component_publication .switcher_publication:active i::after {
+  width: 28px;
+  transform: translate3d(2px, 2px, 0);
+}
+.wrapper_component.edit.component_publication .switcher_publication:active input:checked + i::after,
+.wrapper_component.search.component_publication .switcher_publication:active input:checked + i::after,
+.wrapper_component.tm.component_publication .switcher_publication:active input:checked + i::after {
+  transform: translate3d(16px, 2px, 0);
+}
+.wrapper_component.edit.component_publication .switcher_publication input,
+.wrapper_component.search.component_publication .switcher_publication input,
+.wrapper_component.tm.component_publication .switcher_publication input {
+  display: none;
+}
+.wrapper_component.edit.component_publication .switcher_publication input:checked + i,
+.wrapper_component.search.component_publication .switcher_publication input:checked + i,
+.wrapper_component.tm.component_publication .switcher_publication input:checked + i {
+  background-color: #13bf11;
+}
+.wrapper_component.edit.component_publication .switcher_publication input:checked + i::before,
+.wrapper_component.search.component_publication .switcher_publication input:checked + i::before,
+.wrapper_component.tm.component_publication .switcher_publication input:checked + i::before {
+  transform: translate3d(18px, 2px, 0) scale3d(0, 0, 0);
+}
+.wrapper_component.edit.component_publication .switcher_publication input:checked + i::after,
+.wrapper_component.search.component_publication .switcher_publication input:checked + i::after,
+.wrapper_component.tm.component_publication .switcher_publication input:checked + i::after {
+  transform: translate3d(22px, 2px, 0);
 }
 .wrapper_component.edit.component_radio_button > .content_data ul.inputs_container,
 .wrapper_component.search.component_radio_button > .content_data ul.inputs_container,
@@ -2624,15 +2749,14 @@ li .section_record.list .id_column {
 .wrapper_component.edit.component_text_area > .content_data,
 .wrapper_component.search.component_text_area > .content_data,
 .wrapper_component.tm.component_text_area > .content_data {
-  min-height: 392px;
-  max-height: inherit;
-  height: calc(100% - 1.75em);
   display: grid;
 }
 .wrapper_component.edit.component_text_area > .content_data > ul,
 .wrapper_component.search.component_text_area > .content_data > ul,
 .wrapper_component.tm.component_text_area > .content_data > ul {
-  height: 100%;
+  min-height: 392px;
+  max-height: inherit;
+  height: calc(100% - 1.75em);
 }
 .wrapper_component.edit.component_text_area > .content_data > ul > li,
 .wrapper_component.search.component_text_area > .content_data > ul > li,
@@ -2750,12 +2874,16 @@ li .section_record.list .id_column {
 .wrapper_component.search.component_section_id.search > .label,
 .wrapper_component.tm.component_section_id.search > .label {
   flex: initial;
-  color: black;
+  color: #949494;
 }
 .wrapper_component.edit.component_section_id.search > .content_data,
 .wrapper_component.search.component_section_id.search > .content_data,
 .wrapper_component.tm.component_section_id.search > .content_data {
   flex: auto;
+}
+.wrapper_component.search {
+  flex: 1 1 100%;
+  overflow: visible;
 }
 .wrapper_component.list.component_text_area {
   max-height: 10em;
@@ -2796,12 +2924,6 @@ li .section_record.list .id_column {
 }
 .wrapper_component.active .buttons_container {
   display: block !important;
-}
-.section_record .wrapper_component,
-.wrapper_tool .wrapper_component,
-.search_group .wrapper_component {
-  background-color: rgba(251, 251, 251, 0.7);
-  outline: 1px solid rgba(216, 216, 216, 0.43);
 }
 .section_record .wrapper_component.list,
 .wrapper_tool .wrapper_component.list,
@@ -3353,7 +3475,7 @@ dd-modal .footer > * {
   position: absolute;
   top: calc(100% + 1em);
   left: 1em;
-  z-index: 9999999999999999999;
+  z-index: 1;
   background-color: rgba(0, 0, 0, 0.9);
   color: #fff;
   padding: 1em;
@@ -3431,6 +3553,7 @@ dd-modal .footer > * {
 }
 .buttons_container .disabled_component:after {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .disabled_component:after.white {
   background-color: #ffffff !important;
@@ -3470,6 +3593,7 @@ dd-modal .footer > * {
 }
 .buttons_container .preload {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .preload.white {
   background-color: #ffffff !important;
@@ -3575,10 +3699,10 @@ dd-modal .footer > * {
   margin: 0;
   padding: 0;
   z-index: auto;
-  /**/
   display: flex;
   flex-wrap: wrap;
-  flex: 1 1 50%;
+  flex: 1 1 var(--component_width);
+  height: var(--component_height);
   align-content: flex-start;
   display: grid;
   overflow: hidden;
@@ -4021,6 +4145,8 @@ ul.inputs_container > li:focus-within .hidden_button {
 		*/
 html {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  color: #191919;
   margin-right: calc(100vw - 100%);
 }
 b,
@@ -4463,6 +4589,7 @@ div.tool_inspector_div .icon_bs {
 }
 .buttons_container .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_first_icon {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_first_icon.white {
   background-color: #ffffff !important;
@@ -4500,6 +4627,7 @@ div.tool_inspector_div .icon_bs {
 }
 .buttons_container .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_prev_icon {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_prev_icon.white {
   background-color: #ffffff !important;
@@ -4536,6 +4664,7 @@ div.tool_inspector_div .icon_bs {
 }
 .buttons_container .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_next_icon {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_next_icon.white {
   background-color: #ffffff !important;
@@ -4574,6 +4703,7 @@ div.tool_inspector_div .icon_bs {
 }
 .buttons_container .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_last_icon {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .wrapper_paginator > .content_data > .nav_buttons > .btn.paginator_last_icon.white {
   background-color: #ffffff !important;
@@ -5374,6 +5504,7 @@ background-color: #FFFF00;
 }
 .buttons_container .menu_wrapper > .section_label:before {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .menu_wrapper > .section_label:before.white {
   background-color: #ffffff !important;
@@ -5878,6 +6009,7 @@ background-color: #FFFF00;
 }
 .buttons_container .map_inputs .map_reload {
   background-color: #ffffff !important;
+  margin-top: 0;
 }
 .map_inputs .map_reload.white {
   background-color: #ffffff !important;
