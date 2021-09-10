@@ -455,11 +455,25 @@ search.prototype.build = async function(){
 	// };//end calculate_component_path
 
 
+
+/**
+* GET_SECTION_ID
+* Calculate tmp section id (incremental id)
+* @return string temp_section_id
+*/
 search.prototype.get_section_id = function() {
+
 	const self = this
+
+	// increment self section_id value
 	self.section_id = ++self.section_id
-	return 'tmp_seach_' + self.section_id 
-}
+
+	// build temp name
+	// const temp_section_id = 'tmp_search_' + self.section_id
+	const temp_section_id = 'search_' + self.section_id
+
+	return temp_section_id
+}//end get_section_id
 
 
 
@@ -561,38 +575,42 @@ search.prototype.get_component_instance = async function(options) {
 			const serial	= performance.now()
 			const key		= section_tipo +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
 		// context
-		const context = {
-			model			: model,
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'search'
-		}
-		const component_options = {
-			key				: key,
-			model			: model,
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'search',
-			lang			: lang,
-			context			: context,
-			// data			: current_data,
-			// datum		: current_datum
-		}
-		const component_instance = await instances.get_instance(component_options)	
+			const context = {
+				model			: model,
+				type			: 'component',
+				tipo			: component_tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: 'search'
+			}
+		// instance
+			const component_options = {
+				key				: key,
+				model			: model,
+				tipo			: component_tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: 'search',
+				lang			: lang,
+				context			: context
+				// data			: current_data,
+				// datum		: current_datum
+			}
+			const component_instance = await instances.get_instance(component_options)
 
-
-	// inject value from search user preset
-		component_instance.data = {value : value}
-
-	// inject value from search user preset
-		component_instance.datum = {
-			data	: [{value : value}]
+	// data. Inject value from search user preset before build is needed for portal 'resolve_data' API call
+		component_instance.data = {
+			value : value
 		}
 
-	// build component to force load datalist etc.
+	// build component to force load datalist, portal resolve_data etc.
 		await component_instance.build(true)
+
+	// data. Inject value again from search user preset is needed for regular components
+		component_instance.data.value = value
+
+	// inject permissions. Search is always enable for all users
+		component_instance.permissions = 2
 
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
