@@ -2125,10 +2125,6 @@ li .reset_input select {
 .wrapper_section > .buttons > .button:active {
   color: #ffffff;
 }
-.wrapper_section.list > .paginator {
-  margin-bottom: 0.25em;
-  margin-top: 0.25em;
-}
 .wrapper_section.edit {
   width: calc(100vw - 18em);
 }
@@ -2153,6 +2149,10 @@ li .reset_input select {
 }
 .wrapper_section.list > .content_data {
   width: 100%;
+}
+.wrapper_section.list > .paginator {
+  margin-bottom: 0.25em;
+  margin-top: 0.25em;
 }
 .section_record.edit {
   margin: 0;
@@ -2557,6 +2557,14 @@ li .section_record.list .id_column {
 .wrapper_component.search.portal > .content_data ul,
 .wrapper_component.tm.portal > .content_data ul {
   flex: 0 0 100%;
+}
+.search.wrapper_component.edit.component_portal > .content_data ul,
+.search.wrapper_component.search.component_portal > .content_data ul,
+.search.wrapper_component.tm.component_portal > .content_data ul,
+.search.wrapper_component.edit.portal > .content_data ul,
+.search.wrapper_component.search.portal > .content_data ul,
+.search.wrapper_component.tm.portal > .content_data ul {
+  flex: 1 1 auto;
 }
 .wrapper_component.edit.component_portal > .content_data ul.references,
 .wrapper_component.search.component_portal > .content_data ul.references,
