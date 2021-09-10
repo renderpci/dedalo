@@ -7,28 +7,28 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_email} from '../../component_email/js/render_component_email.js'
-
+	import {render_search_component_email} from '../../component_email/js/render_search_component_email.js'
 
 
 export const component_email = function(){
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.section_lang
-	this.context
-	this.data
-	this.parent
-	this.node
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
 
-	this.tools
+	this.tools			= null
 
 	return true
 };//end component_email
@@ -52,7 +52,7 @@ export const component_email = function(){
 	component_email.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_email.prototype.update_datum		= component_common.prototype.update_datum
 	component_email.prototype.change_value		= component_common.prototype.change_value
-	component_email.prototype.build_rqo	= common.prototype.build_rqo
+	component_email.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_email.prototype.mini				= render_component_email.prototype.mini
@@ -60,8 +60,9 @@ export const component_email = function(){
 	component_email.prototype.edit				= render_component_email.prototype.edit
 	component_email.prototype.edit_in_list		= render_component_email.prototype.edit
 	component_email.prototype.tm				= render_component_email.prototype.edit
-	component_email.prototype.search			= render_component_email.prototype.search
+	component_email.prototype.search			= render_search_component_email.prototype.search
 	component_email.prototype.change_mode		= component_common.prototype.change_mode
+
 
 
 /**
@@ -76,9 +77,9 @@ component_email.prototype.verify_email = function(email_value) {
 		return true;
 	}
 
-	let valid_email = false;
-	let ar_email 	= []
-	const emailRegEx= /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
+	let valid_email		= false;
+	const ar_email		= []
+	const emailRegEx	= /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
 
 	if (!Array.isArray(email_value)){
 		ar_email.push(email_value)
@@ -130,9 +131,9 @@ component_email.prototype.send_email = function(component_obj) {
 * SEND MULTIPLE EMAIL CALCULATION
 */
 component_email.prototype.send_multiple_email_calculation = function(component_obj) {
-/** TODO
-*   Not working currently. Adapt to version 6 and call it where/when it is needed.
-*/
+	/** TODO
+	*   Not working currently. Adapt to version 6 and call it where/when it is needed.
+	*/
 	let multiple_data_tipo 	= component_obj.dataset.multiple_data_tipo
 	let wrap_calculation 	= document.querySelector(".wrap_component[data-tipo="+multiple_data_tipo+"]")
 
@@ -145,3 +146,5 @@ component_email.prototype.send_multiple_email_calculation = function(component_o
 		window.location.href = "mailto:?bcc=" + emails ; //+ "&body=" +mail_body
 	});
 };//end send_multiple_email_calculation
+
+

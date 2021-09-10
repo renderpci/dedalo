@@ -6,48 +6,48 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
 
 /**
-* RENDER_SEARCH_COMPONENT_INPUT_TEXT
-* Manages the component's logic and appearance in client side
+* RENDER_SEARCH_COMPONENT_TEXT_AREA
+* Manage the components logic and appearance in client side
 */
-export const render_search_component_input_text = function() {
+export const render_search_component_text_area = function() {
 
 	return true
-};//end render_search_component_input_text
+};//end render_search_component_text_area
 
 
 
 /**
 * SEARCH
-* Render node for use in edit
+* Render node for use in current mode
 * @return DOM node wrapper
 */
-render_search_component_input_text.prototype.search = async function() {
+render_search_component_text_area.prototype.search = async function() {
 
 	const self = this
 
-	// content data
-		const content_data = get_content_data(self)
+	const content_data = get_content_data(self)
 
-	// wrapper. ui build_edit returns component wrapper
+	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
 
-	// events (delegated)
+	// add events
 		add_events(self, wrapper)
 
+
 	return wrapper
-};//end search
+};//end edit
 
 
 
 /**
 * ADD_EVENTS
-* @return bool
 */
 const add_events = function(self, wrapper) {
 
@@ -99,7 +99,6 @@ const add_events = function(self, wrapper) {
 			}
 	})
 
-
 	return true
 };//end add_events
 
@@ -111,26 +110,17 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data = function(self) {
 
-	const value	= self.data.value
+	// short vars
+		const value = self.data.value
 
 	const fragment = new DocumentFragment()
-
-	// q operator (search only)
-		// const q_operator = self.data.q_operator
-		// const input_q_operator = ui.create_dom_element({
-		// 	element_type	: 'input',
-		// 	type			: 'text',
-		// 	value			: q_operator,
-		// 	class_name		: 'q_operator',
-		// 	parent			: fragment
-		// })
 
 	// values (inputs)
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_input_element(i, inputs_value[i], self)
-			fragment.appendChild(input_element_node)
+			const input_element = get_input_element(i, inputs_value[i], self)
+			fragment.appendChild(input_element)
 		}
 
 	// content_data
@@ -145,7 +135,7 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM element input
+* @return DOM element li
 */
 const get_input_element = (i, current_value, self) => {
 

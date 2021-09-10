@@ -390,9 +390,9 @@ render_component_date.prototype.search = async function() {
 */
 const get_content_data_edit = async function(self) {
 
-	const value 		= self.data.value
-	const mode 			= self.mode
-	const is_inside_tool= self.is_inside_tool
+	const value				= self.data.value
+	const mode				= self.mode
+	const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 

@@ -30,60 +30,57 @@ export const render_edit_component_portal = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_edit_component_portal.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_portal.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
-		const render_level = options.render_level
+	// options
+		const render_level = options.render_level || 'full'
 
-	self.view = null // 'view_autocomplete'
+	// view
+		self.view = null // 'view_autocomplete'
+		const view = self.view || null
 
-	const view = self.view || null
+	const wrapper = (async ()=>{
 
-	let wrapper
-	switch(view) {
+		switch(view) {
 
-		case 'view_autocomplete99':
-			wrapper = view_autocomplete(self, options)
-			// return wrapper;
-			break;
+			case 'view_autocomplete99':
+				return view_autocomplete(self, options)
 
-		default:
-			// reset service state portal_active
-				// self.portal_active = false
+			default:
+				// reset service state portal_active
+					// self.portal_active = false
 
-			// content_data
-				const content_data = await build_content_data(self)
-				if (render_level==='content') {
-					return content_data
-				}
+				// content_data
+					const content_data = await build_content_data(self)
+					if (render_level==='content') {
+						return content_data
+					}
 
-			// buttons
-				const buttons = get_buttons(self)
+				// buttons
+					const buttons = get_buttons(self)
 
-			// top
-				const top = get_top(self)
+				// top
+					const top = get_top(self)
 
-			// wrapper. ui build_edit returns component wrapper
-				wrapper =	ui.component.build_wrapper_edit(self, {
-					content_data	: content_data,
-					buttons			: buttons
-					// top			: top
-				})
-				wrapper.classList.add("portal")
+				// wrapper. ui build_edit returns component wrapper
+					const _wrapper = ui.component.build_wrapper_edit(self, {
+						content_data	: content_data,
+						buttons			: buttons
+						// top			: top
+					})
+					_wrapper.classList.add("portal")
+
+				// events
+					add_events(self, _wrapper)
+
+				return _wrapper;
+		}
+	})()
 
 
-			// events
-				add_events(self, wrapper)
-			break;
-	}
-
-		
-
-	const js_promise = wrapper
-
-	return js_promise
+	return wrapper
 };//end  edit
 
 
@@ -115,7 +112,7 @@ export const add_events = function(self, wrapper) {
 		//	// inset the new section_record into the ar_section_record and build the node of the new locator
 		//	//ar_section_record.push(current_section_record)
 		//	//const inputs_container 	= wrapper.querySelector('.inputs_container')
-		//	//input_element(current_section_record, inputs_container)
+		//	//get_input_element(current_section_record, inputs_container)
 		//}
 
 	// subscribe to 'update_dom': if the dom was changed by other dom elements the value will be changed
@@ -134,7 +131,6 @@ export const add_events = function(self, wrapper) {
 				//	return false
 				//}
 
-
 			// remove row
 				if (e.target.matches('.button.remove')) {
 					e.preventDefault()
@@ -144,47 +140,29 @@ export const add_events = function(self, wrapper) {
 						key		: JSON.parse(e.target.dataset.key),
 						value	: null
 					})
-					switch(self.mode){
 
-						case 'search':
+					const changed = self.change_value({
+						changed_data	: changed_data,
+						label			: e.target.previousElementSibling.textContent,
+						refresh			: false
+					})
+					changed.then(async (api_response)=>{
 
-							// update . return bool
-								const update = self.update_data_value(changed_data)
-							
-							// publish search. Event to update the dom elements of the instance
-								event_manager.publish('change_search_element', self)
+						// update pagination offset
+							self.update_pagination_values('remove')
 
-							// refresh
-								self.refresh()
+						// refresh
+							await self.refresh()
 
-							break;
+						// check if the caller has active a tag_id
+							if(self.active_tag){
+								// filter component data by tag_id and re-render content
+								self.filter_data_by_tag_id(self.active_tag)
+							}
 
-						default:
-
-							const changed = self.change_value({
-								changed_data	: changed_data,
-								label			: e.target.previousElementSibling.textContent,
-								refresh			: false
-							})
-							changed.then(async (api_response)=>{
-
-								// update pagination offset
-									self.update_pagination_values('remove')
-
-								// refresh
-									await self.refresh()
-
-								// check if the caller has active a tag_id
-									if(self.active_tag){
-										// filter component data by tag_id and re-render content
-										self.filter_data_by_tag_id(self.active_tag)
-									}
-
-								// event to update the dom elements of the instance
-									event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-							})
-							break;
-					}
+						// event to update the dom elements of the instance
+							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+					})
 
 					return true
 				}
@@ -223,9 +201,6 @@ export const add_events = function(self, wrapper) {
 */
 export const build_content_data = async function(self) {
 
-	const ar_section_record = await self.get_ar_instances()
-	const is_inside_tool 	= self.is_inside_tool
-
 	const fragment = new DocumentFragment()
 
 	// inputs container
@@ -237,34 +212,32 @@ export const build_content_data = async function(self) {
 	// build values (add all nodes from the rendered_section_record)
 		const build_values = async function() {
 
-			const length = ar_section_record.length
+			const ar_section_record	= await self.get_ar_instances()
+			const length			= ar_section_record.length
 			for (let i = 0; i < length; i++) {
 
 				const current_section_record = ar_section_record[i]
 				if (!current_section_record) {
 					console.warn("empty current_section_record:",current_section_record)
 				}
-				// const child_item = await ar_section_record[i].render()
-				// fragment.appendChild(child_item)
 
-				// input_element, also renders current section record
-				await input_element(current_section_record, inputs_container)
-
-				// const section_record_node = await ar_section_record[i].render()
+				// input_element. Get_input_element, also renders current section record
+				const input_element = get_input_element(current_section_record)
+				inputs_container.appendChild(input_element)
 			}
 		}
 		fragment.appendChild(inputs_container)
 
-	// set video node only when it is in DOM (to save browser resources)
-		// const observer = new IntersectionObserver(function(entries) {
-		// 	const entry = entries[0]
-		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-		// 		observer.disconnect();
-		// 		build_values()
-		// 	}
-		// }, { threshold: [0] });
-		// observer.observe(inputs_container);
-		build_values()
+	// set node only when it is in DOM (to save browser resources)
+		const observer = new IntersectionObserver(function(entries) {
+			const entry = entries[1] || entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+				observer.disconnect();
+				build_values()
+			}
+		}, { threshold: [0] });
+		observer.observe(inputs_container);
+		// build_values()
 
 
 	// build references
@@ -275,12 +248,48 @@ export const build_content_data = async function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  // content_data.classList.add("nowrap")
 			  content_data.appendChild(fragment)
 
 
 	return content_data
 };//end build_content_data
+
+
+
+/**
+* GET_INPUT_ELEMENT
+* @return dom element li
+*/
+const get_input_element = function(current_section_record){
+
+	 // key. when portal is in search mode, is undefined, fallback to zero
+	const key = current_section_record.paginated_key || 0
+
+	// li
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			dataset			: { key : key }
+		})
+
+	// input field
+		current_section_record.render()
+		.then(function(section_record_node){
+
+			// section_record_node append
+				li.appendChild(section_record_node)
+
+			// button remove
+				const button_remove = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button remove',
+					dataset			: { key : key },
+					parent			: li
+				})
+		})
+
+	return li
+};//end  get_input_element
 
  
 
@@ -452,13 +461,13 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end  get_buttons
+};//end get_buttons
 
 
 
 /**
 * GET_TOP
-* Used to add special elements to the component,like custom buttons or info
+* Used to add special elements to the component, like custom buttons or info
 * @param object instance
 * @return DOM node top
 */
@@ -679,40 +688,6 @@ const get_top = function(self) {
 
 	return top
 };//end  get_top
-
-
-
-/**
-* INPUT_ELEMENT
-* @return dom element li
-*/
-const input_element = async function(current_section_record, inputs_container){
-
-	const caller_mode = current_section_record.caller.mode
-	const key = caller_mode==='search' ? 0 : current_section_record.paginated_key
-
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			dataset			: { key : key },
-			parent			: inputs_container
-		})
-
-	// input field
-		const section_record_node = await current_section_record.render()
-		li.appendChild(section_record_node)
-
-	// button remove
-		const button_remove = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button remove',
-			dataset			: { key : key },
-			parent			: li
-		})
-
-
-	return li
-};//end  input_element
 
 
 

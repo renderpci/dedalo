@@ -10,7 +10,7 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_SELECT
 * Manages the component's logic and apperance in client side
 */
 export const render_component_select = function(component) {
@@ -310,7 +310,7 @@ const get_buttons = (self) => {
 //const input_element = (i, current_value, inputs_container, self) => {
 const input_element = (inputs_container, self) => {
 
-	const value 	= self.data.value || []
+	const value		= self.data.value || []
 	const datalist	= self.data.datalist
 		? (JSON.parse(JSON.stringify(self.data.datalist)) || [])
 		: []
@@ -349,9 +349,9 @@ const input_element = (inputs_container, self) => {
 
 			const option = ui.create_dom_element({
 				element_type	: 'option',
-				value 			: JSON.stringify(datalist_item.value),
-				text_content 	: current_label,
-				parent 			: select
+				value			: JSON.stringify(datalist_item.value),
+				text_content	: current_label,
+				parent			: select
 			})
 			// selected options set on match
 			if (value_compare && datalist_item.value &&
@@ -363,5 +363,6 @@ const input_element = (inputs_container, self) => {
 		}
 
 	return li
-
 };//end input_element
+
+

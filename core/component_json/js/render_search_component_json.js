@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_SEARCH_COMPONENT_INPUT_TEXT
-* Manages the component's logic and appearance in client side
+* render_search_component_json
+* Manage the components logic and appearance in client side
 */
-export const render_search_component_input_text = function() {
+export const render_search_component_json = function(options) {
 
 	return true
-};//end render_search_component_input_text
+}; //end render_search_component_json
 
 
 
@@ -25,7 +25,7 @@ export const render_search_component_input_text = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_search_component_input_text.prototype.search = async function() {
+render_search_component_json.prototype.search = async function() {
 
 	const self = this
 
@@ -47,7 +47,6 @@ render_search_component_input_text.prototype.search = async function() {
 
 /**
 * ADD_EVENTS
-* @return bool
 */
 const add_events = function(self, wrapper) {
 
@@ -99,9 +98,8 @@ const add_events = function(self, wrapper) {
 			}
 	})
 
-
 	return true
-};//end add_events
+}; //end add_events
 
 
 

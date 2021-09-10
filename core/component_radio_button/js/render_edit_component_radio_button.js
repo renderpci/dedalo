@@ -3,99 +3,37 @@
 
 
 
-// import
+// imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* Render_component
+* RENDER_EDIT_COMPONENT_RADIO_BUTTON
 * Manage the components logic and appearance in client side
 */
-export const render_component_check_box = function() {
+export const render_edit_component_radio_button = function() {
 
 	return true
-};//end render_component_check_box
-
-
-
-/**
-* MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
-*/
-render_component_check_box.prototype.mini = async function() {
-
-	const self = this
-
-	// Options vars
-		const context 	= self.context
-		const data 		= self.data
-		const value 	= data.value || []
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-
-	// Value as string
-		const value_string = value.join(self.divisor)
-
-	// Set value
-		wrapper.textContent = value_string
-
-
-	return wrapper
-};//end mini
-
-
-
-/**
-* LIST
-* Render node for use in list
-* @return DOM node
-*/
-render_component_check_box.prototype.list = async function() {
-
-	const self = this
-
-	// Options vars
-		const context 	= self.context
-		const data 		= self.data
-		const value 	= data.value || []
-
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : true
-		})
-
-	// Value as string
-		const value_string = value.join(self.divisor)
-
-	// Set value
-		wrapper.textContent = value_string
-
-
-	return wrapper
-};//end list
+};//end render_edit_component_radio_button
 
 
 
 /**
 * EDIT
-* Render node for use in edit
+* Render node for use in modes: edit, edit_in_list
 * @return DOM node
 */
-render_component_check_box.prototype.edit = async function(options={render_level : 'full'}) {
+render_edit_component_radio_button.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
 	// render_level
 		const render_level = options.render_level || 'full'
-
-	// sort vars
-		const value		= self.data.value || []
-		const datalist 	= self.data.datalist || []
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -106,7 +44,7 @@ render_component_check_box.prototype.edit = async function(options={render_level
 	// buttons
 		const buttons = get_buttons(self)
 
-	// ui build_edit returns component wrapper
+	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : content_data,
 			buttons 	 : buttons
@@ -135,14 +73,13 @@ const add_events = function(self, wrapper) {
 			// change the value of the current dom element
 			const changed_data = component.data.changed_data
 			const changed_node = wrapper.querySelector('input[data-key="'+component.selected_key+'"]')
-			changed_node.checked = (changed_data.value === null) ? false : true
 		}
 
 	// add button element, subscription to the events
 		self.events_tokens.push(
 			event_manager.subscribe('edit_element_'+self.id, edit_element)
 		)
-		function edit_element(component) {
+		function edit_element(changed_data) {
 			// change the value of the current dom element
 			//const changed_data = component.data.changed_data
 			//const inputs_container = wrapper.querySelector('.inputs_container')
@@ -155,34 +92,32 @@ const add_events = function(self, wrapper) {
 		)
 		async function reset_element(instance) {
 			// change all elements inside of content_data
-			const new_content_data = await content_data_edit(instance)
+			const new_content_data = await get_content_data_edit(instance)
 			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
 			wrapper.childNodes[1].replaceWith(new_content_data)
 		}
 
-	// change event, for every change the value in the imputs of the component
+	// change event, for every change the value in the inputs of the component
 		wrapper.addEventListener('change', (e) => {
 			// e.stopPropagation()
 
-			// update / remove
-				if (e.target.matches('input[type="checkbox"]')) {
-					const action 		= (e.target.checked===true) ? 'insert' : 'remove'
+			// update
+				if (e.target.matches('input[type="radio"]')) {
+
 					const parsed_value 	= JSON.parse(e.target.value)
-					const changed_key 	= self.get_changed_key(action, parsed_value)
-					const changed_value = (action==='insert') ? parsed_value : null
 
 					const changed_data = Object.freeze({
-						action  : action,
-						key 	: changed_key,
-						value 	: changed_value,
+						action  : 'update',
+						key 	: 0,
+						value 	: parsed_value
 					})
+
 					self.change_value({
 						changed_data : changed_data,
-						//label 		 : e.target.nextElementSibling.textContent,
 						refresh 	 : false
 					})
 					.then((api_response)=>{
-						self.selected_key = e.target.dataset.key
+						//self.selected_key = e.target.dataset.key
 						// event to update the dom elements of the instance
 						event_manager.publish('update_value_'+self.id, self)
 					})
@@ -198,52 +133,59 @@ const add_events = function(self, wrapper) {
 			// remove all
 				if (e.target.matches('.button.reset')) {
 
-					if (self.data.value.length===0) {
+					if (self.data.value[0] !=null) {
+						// force possible input change before remove
+						document.activeElement.blur()
+
+						if (self.data.value.length===0) {
+							return true
+						}
+
+						const changed_data = Object.freeze({
+							action  : 'remove',
+							key 	: false,
+							value 	: null
+						})
+
+						self.change_value({
+							changed_data : changed_data,
+							label  		 : self.get_checked_value_label(),//'All',
+							refresh 	 : true
+						})
+						.then((api_response)=>{
+							// rebuild and save the component
+							// event_manager.publish('reset_element_'+self.id, self)
+							// event_manager.publish('save_component_'+self.id, self)
+						})
+
 						return true
 					}
-
-					const changed_data = Object.freeze({
-						action  : 'remove',
-						key 	: false,
-						value 	: null
-					})
-					self.change_value({
-						changed_data : changed_data,
-						label  		 : 'All',
-						refresh 	 : true
-					})
-					.then((api_response)=>{
-						// rebuild and save the component
-						// event_manager.publish('reset_element_'+self.id, self)
-						// event_manager.publish('save_component_'+self.id, self)
-					})
-
-					return true
 				}
 
 			// edit target section
 				if (e.target.matches('.button.edit')) {
-
 					// rebuild_nodes. event to render the component again
 					event_manager.publish('edit_element_'+self.id, self)
 
 					return true
 				}
+
 		})
 
 	// focus event
-		wrapper.addEventListener("focus", e => {
-			// e.stopPropagation()
+		// wrapper.addEventListener("focus", e => {
+		// 	// e.stopPropagation()
 
-			// selected_node. fix selected node
-			self.selected_node = wrapper
+		// 	// selected_node. fix selected node
+		// 	self.selected_node = wrapper
 
-			if (e.target.matches('input[type="checkbox"]')) {
-			 	event_manager.publish('active_component', self)
+		// 	if (e.target.matches('input[type="radio"]')) {
+		// 	 	event_manager.publish('active_component', self)
 
-			 	return true
-			}
-		})
+		// 	 	return true
+		// 	}
+		// },true)
+
 
 	return true
 };//end add_events
@@ -256,8 +198,9 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = async function(self) {
 
+	// Options vars
 	const value 		= self.data.value
-	const datalist		= self.data.datalist || []
+	const datalist		= self.data.datalist
 	const mode 			= self.mode
 	const is_inside_tool= self.is_inside_tool
 
@@ -271,8 +214,9 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// build options
-		const datalist_length = datalist.length
-		for (let i = 0; i < datalist_length; i++) {
+		const value_compare = value.length>0 ? value[0] : null
+		const length = datalist.length
+		for (let i = 0; i < length; i++) {
 			get_input_element_edit(i, datalist[i], inputs_container, self)
 		}
 
@@ -288,9 +232,7 @@ const get_content_data_edit = async function(self) {
 			autoload : true
 		})
 
-		content_data.classList.add("nowrap")
 		content_data.appendChild(fragment)
-
 
 	return content_data
 };//end get_content_data_edit
@@ -348,46 +290,50 @@ const get_buttons = (self) => {
 */
 const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
-	const value  		 = self.data.value || []
-	const value_length   = value.length
-	const datalist_item  = current_value
-	const datalist_value = datalist_item.value
-	const label 		 = datalist_item.label
-	const section_id	 = datalist_item.section_id
+	const input_id = self.id +"_"+ i + "_" + new Date().getUTCMilliseconds()
 
-	// create li
+	const value				= self.data.value || []
+	const value_length		= value.length
+	const datalist_item		= current_value
+	const datalist_value	= datalist_item.value
+	const label				= datalist_item.label
+	const section_id		= datalist_item.section_id
+
+	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			parent 			: inputs_container
 		})
 
 	// input checkbox
-		const option = ui.create_dom_element({
+		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type 			: 'checkbox',
-			id 				: self.id +"_"+ i,
-			dataset 	 	: { key : i },
-			value 			: JSON.stringify(datalist_value),
-			parent 			: li
+			type			: 'radio',
+			id				: input_id,
+			name			: self.id,
+			dataset			: { key : i },
+			value			: JSON.stringify(datalist_value),
+			parent			: li
 		})
-		// checked option set on match
+
+	// checked input set on match
 		for (let j = 0; j < value_length; j++) {
 			if (value[j] && datalist_value &&
 				value[j].section_id===datalist_value.section_id &&
 				value[j].section_tipo===datalist_value.section_tipo
 				) {
-					option.checked = 'checked'
+					input.checked = 'checked'
 			}
 		}
 
 	// label
 		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
-		const option_label = ui.create_dom_element({
+		const input_label = ui.create_dom_element({
 			element_type	: 'label',
 			text_content 	: label_string,
 			parent 			: li
 		})
-		option_label.setAttribute("for", self.id +"_"+ i)
+		input_label.setAttribute("for", input_id)
 
 
 	return li
