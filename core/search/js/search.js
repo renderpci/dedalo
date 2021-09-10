@@ -141,6 +141,8 @@ search.prototype.init = async function(options) {
 			self.parse_dom_to_json_filter({mode:self.mode})
 			// Set as changed
 			self.update_state({state:'changed'})
+			// show save animation. add save_success class to component wrappers (green line animation)
+			ui.component.exec_save_successfully_animation(instance)
 		}
 
 
