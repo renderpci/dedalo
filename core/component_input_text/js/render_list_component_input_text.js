@@ -38,13 +38,8 @@ render_list_component_input_text.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
-
-		const span_value = ui.create_dom_element({
-			element_type	: 'span',
-			inner_html		: value_string,
-			parent			: wrapper
+			autoload		: false,
+			value_string	: value_string
 		})
 
 

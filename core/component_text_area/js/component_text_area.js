@@ -8,11 +8,12 @@
 	import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {tr} from '../../common/js/tr.js'
+	import {ui} from '../../common/js/ui.js'
 	import {render_edit_component_text_area, build_node_tag} from '../../component_text_area/js/render_edit_component_text_area.js'
 	import {render_list_component_text_area} from '../../component_text_area/js/render_list_component_text_area.js'
 	import {render_mini_component_text_area} from '../../component_text_area/js/render_mini_component_text_area.js'
-	import {tr} from '../../common/js/tr.js'
-	import {ui} from '../../common/js/ui.js'
+	import {render_search_component_text_area} from '../../component_text_area/js/render_search_component_text_area.js'
 	//import '../../../prosemirror/dist/prosemirror.js';
 
 
@@ -69,7 +70,7 @@ export const component_text_area = function(){
 	component_text_area.prototype.edit				= render_edit_component_text_area.prototype.edit
 	component_text_area.prototype.edit_in_list		= render_edit_component_text_area.prototype.edit
 	component_text_area.prototype.tm				= render_edit_component_text_area.prototype.edit // time machine render alias of edit
-	component_text_area.prototype.search			= render_edit_component_text_area.prototype.search
+	component_text_area.prototype.search			= render_search_component_text_area.prototype.search
 	component_text_area.prototype.change_mode		= component_common.prototype.change_mode
 
 

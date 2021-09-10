@@ -7,6 +7,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_select} from '../../component_select/js/render_component_select.js'
+	import {render_search_component_select} from '../../component_select/js/render_search_component_select.js'
 
 
 
@@ -66,7 +67,7 @@ export const component_select = function(){
 	component_select.prototype.edit					= render_component_select.prototype.edit
 	component_select.prototype.edit_in_list			= render_component_select.prototype.edit
 	component_select.prototype.tm					= render_component_select.prototype.edit
-	component_select.prototype.search				= render_component_select.prototype.search
+	component_select.prototype.search				= render_search_component_select.prototype.search
 	component_select.prototype.change_mode			= component_common.prototype.change_mode
 
 

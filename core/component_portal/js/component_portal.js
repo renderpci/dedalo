@@ -85,21 +85,21 @@ export const component_portal = function(){
 	component_portal.prototype.build_rqo_choose		= common.prototype.build_rqo_choose
 
 	// render
-	// component_portal.prototype.mini			= render_component_portal.prototype.mini
-	// component_portal.prototype.list			= render_component_portal.prototype.list
-	// component_portal.prototype.edit			= render_component_portal.prototype.edit
-	// component_portal.prototype.edit_in_list	= render_component_portal.prototype.edit
-	// component_portal.prototype.tm			= render_component_portal.prototype.list
-	// component_portal.prototype.search		= render_component_portal.prototype.search
-	// component_portal.prototype.change_mode	= component_common.prototype.change_mode
+	// component_portal.prototype.mini				= render_component_portal.prototype.mini
+	// component_portal.prototype.list				= render_component_portal.prototype.list
+	// component_portal.prototype.edit				= render_component_portal.prototype.edit
+	// component_portal.prototype.edit_in_list		= render_component_portal.prototype.edit
+	// component_portal.prototype.tm				= render_component_portal.prototype.list
+	// component_portal.prototype.search			= render_component_portal.prototype.search
+	// component_portal.prototype.change_mode		= component_common.prototype.change_mode
 
-	component_portal.prototype.mini				= render_mini_component_portal.prototype.mini
-	component_portal.prototype.list				= render_list_component_portal.prototype.list
-	component_portal.prototype.edit				= render_edit_component_portal.prototype.edit
-	component_portal.prototype.edit_in_list		= render_edit_component_portal.prototype.edit
-	component_portal.prototype.tm				= render_list_component_portal.prototype.list
-	component_portal.prototype.search			= render_search_component_portal.prototype.search
-	component_portal.prototype.change_mode		= component_common.prototype.change_mode
+	component_portal.prototype.mini					= render_mini_component_portal.prototype.mini
+	component_portal.prototype.list					= render_list_component_portal.prototype.list
+	component_portal.prototype.edit					= render_edit_component_portal.prototype.edit
+	component_portal.prototype.edit_in_list			= render_edit_component_portal.prototype.edit
+	component_portal.prototype.tm					= render_list_component_portal.prototype.list
+	component_portal.prototype.search				= render_search_component_portal.prototype.search
+	component_portal.prototype.change_mode			= component_common.prototype.change_mode
 
 
 
@@ -291,12 +291,13 @@ component_portal.prototype.build = async function(autoload=false){
 		}else if(self.mode==="search"){
 			// active / prepare the autocomplete in search mode
 
+			// (!) Used ?
 			// autocomplete destroy. change the autocomplete service to false and deactivate it.
-				if(self.autocomplete && self.autocomplete_active===true){
-					self.autocomplete.destroy()
-					self.autocomplete_active = false
-					self.autocomplete 		 = null
-				}
+				// if(self.autocomplete && self.autocomplete_active===true){
+				// 	self.autocomplete.destroy()
+				// 	self.autocomplete_active = false
+				// 	self.autocomplete 		 = null
+				// }
 		}// end if(self.mode==="edit")
 
 
@@ -328,6 +329,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 /**
 * ADD_VALUE
+* Called from service autocomplete when user select an data list option
 * @param object value (locator)
 * @return bool
 */
@@ -366,12 +368,15 @@ component_portal.prototype.add_value = async function(value) {
 		switch(self.mode) {
 			case 'search' :
 				// publish change. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
+				event_manager.publish('change_search_element', self)
+				self.node.map(function(item_node) {
+					item_node.classList.remove("active")
+				})
 				break;
 
 			default:				
 				// update pagination offset
-					self.update_pagination_values('add')
+				self.update_pagination_values('add')
 				break;
 		}
 
@@ -380,7 +385,7 @@ component_portal.prototype.add_value = async function(value) {
 
 	// check if the caller has tag_id
 		if(self.active_tag){
-			// filter component data by tag_id and re-render contentent
+			// filter component data by tag_id and re-render content
 			self.filter_data_by_tag_id(self.active_tag)
 		}
 		

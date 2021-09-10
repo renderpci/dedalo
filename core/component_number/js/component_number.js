@@ -1,7 +1,13 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_number} from '../../component_number/js/render_component_number.js'
+	import {render_search_component_number} from '../../component_number/js/render_search_component_number.js'
 
 
 
@@ -45,7 +51,7 @@ export const component_number = function(){
 	component_number.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_number.prototype.update_datum			= component_common.prototype.update_datum
 	component_number.prototype.change_value			= component_common.prototype.change_value
-	component_number.prototype.build_rqo		= common.prototype.build_rqo
+	component_number.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_number.prototype.mini					= render_component_number.prototype.mini
@@ -53,7 +59,7 @@ export const component_number = function(){
 	component_number.prototype.edit					= render_component_number.prototype.edit
 	component_number.prototype.edit_in_list			= render_component_number.prototype.edit
 	component_number.prototype.tm					= render_component_number.prototype.edit
-	component_number.prototype.search				= render_component_number.prototype.search
+	component_number.prototype.search				= render_search_component_number.prototype.search
 	component_number.prototype.change_mode			= component_common.prototype.change_mode
 
 

@@ -10,7 +10,7 @@
 
 
 /**
-* render_mini_component_input_text
+* RENDER_MINI_COMPONENT_INPUT_TEXT
 * Manages the component's logic and appearance in client side
 */
 export const render_mini_component_input_text = function() {
@@ -22,7 +22,7 @@ export const render_mini_component_input_text = function() {
 
 /**
 * MINI
-* Render node to be used by service autocomplete or any data list
+* Render node to be used in current mode
 * @return DOM node wrapper
 */
 render_mini_component_input_text.prototype.mini = async function() {
@@ -34,15 +34,13 @@ render_mini_component_input_text.prototype.mini = async function() {
 		const value				= data.value || []
 		const fallback_value	= data.fallback_value || []
 		const fallback			= self.get_fallback_value(value, fallback_value)
+		const value_string		= fallback.join(self.divisor)
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
+		const wrapper = ui.component.build_wrapper_mini(self, {
+			value_string : value_string
+		})
 
-	// Value as string
-		const value_string = fallback.join(self.divisor)
-
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
 };//end mini
