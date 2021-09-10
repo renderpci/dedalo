@@ -217,15 +217,19 @@ export const ui = {
 							if (element_css[legacy_selector].mixin){
 								// width from mixin
 								const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
-								if (found && found!=='.width_50') {
-									wrapper.style['flex-basis'] = found.substring(7) + '%'
+								if (found) { //  && found!=='.width_50'
+									// wrapper.style['flex-basis'] = found.substring(7) + '%'
+									// wrapper.style['--width'] = found.substring(7) + '%'
+									wrapper.style.setProperty('--component_width', found.substring(7) + '%');
 								}
 							}
 						// style
 							if (element_css[legacy_selector].style) {
 								// width from style
 								if (element_css[legacy_selector].style.width) {
-									wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+									// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+									// wrapper.style['--width'] = element_css[legacy_selector].style.width
+									wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
 								}
 								// display none from style
 								if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
@@ -380,6 +384,157 @@ export const ui = {
 
 
 		/**
+		* BUILD_WRAPPER_search
+		* Component wrapper unified builder
+		* @param object instance (self component instance)
+		* @param object items
+		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
+		*/
+		build_wrapper_search : (instance, items={}) => {
+			if(SHOW_DEBUG===true) {
+				// console.log("[ui.build_wrapper_search] instance:",instance)
+				// console.log(`build_wrapper_search items ${instance.tipo}:`,items);
+				// console.log("instance:",instance);
+			}
+
+			// short vars
+				const id			= instance.id || 'id is not set'
+				const model			= instance.model 	// like component_input-text
+				const type			= instance.type 	// like 'component'
+				const tipo			= instance.tipo 	// like 'rsc26'
+				const mode			= instance.mode 	// like 'edit'
+				const view			= instance.view || null
+				const label			= instance.label // instance.context.label
+				const element_css	= instance.context.css || {}
+
+			const fragment = new DocumentFragment()
+
+			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
+				if (label===null || items.label===null) {
+					// no label add
+				}else if(items.label) {
+					// add custom label
+					fragment.appendChild(items.label)
+				}else{
+					// default
+					const component_label = ui.create_dom_element({
+						element_type	: 'div',
+						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
+						inner_html		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+					})
+					fragment.appendChild(component_label)
+					// css
+		 				const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
+						const ar_css = ['label', ...label_structure_css]
+						component_label.classList.add(...ar_css)
+				}
+
+			// top
+				// if (items.top) {
+				// 	fragment.appendChild(items.top)
+				// }
+
+			// buttons
+				// if (items.buttons) {
+				// 	fragment.appendChild(items.buttons)
+				// }
+
+			// filter
+				// if (instance.filter) {
+				// 	const filter = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'filter',
+				// 		parent			: fragment
+				// 	})
+				// 	instance.filter.render().then(filter_wrapper =>{
+				// 		filter.appendChild(filter_wrapper)
+				// 	})
+				// }
+
+			// paginator
+				// if (instance.paginator) {
+				// 	const paginator = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'paginator',
+				// 		parent			: fragment
+				// 	})
+				// 	instance.paginator.render().then(paginator_wrapper =>{
+				// 		paginator.appendChild(paginator_wrapper)
+				// 	})
+				// }
+
+			// content_data
+				if (items.content_data) {
+					fragment.appendChild(items.content_data)
+				}
+
+			// tooltip
+				if (instance.context.search_options_title) {
+					//fragment.classList.add("tooltip_toggle")
+					const tooltip = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'tooltip hidden_tooltip',
+						inner_html		: instance.context.search_options_title || '',
+						parent			: fragment
+					})
+				}
+
+			// wrapper
+				const wrapper = ui.create_dom_element({
+					element_type	: 'div',
+					id				: id // (!) set id
+ 				})
+ 				// CSS
+	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
+					if (view) {ar_css.push(view)}
+					if (mode==="search") ar_css.push("tooltip_toggle")
+					wrapper.classList.add(...ar_css)
+
+				// legacy CSS
+					// if (mode==='edit') {
+					// 	const legacy_selector = '.wrap_component'
+					// 	if (element_css[legacy_selector]) {
+					// 		// mixin
+					// 			if (element_css[legacy_selector].mixin){
+					// 				// width from mixin
+					// 				const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
+					// 				if (found) { //  && found!=='.width_50'
+					// 					// wrapper.style['flex-basis'] = found.substring(7) + '%'
+					// 					// wrapper.style['--width'] = found.substring(7) + '%'
+					// 					wrapper.style.setProperty('--component_width', found.substring(7) + '%');
+					// 				}
+					// 			}
+					// 		// style
+					// 			if (element_css[legacy_selector].style) {
+					// 				// width from style
+					// 				if (element_css[legacy_selector].style.width) {
+					// 					// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+					// 					// wrapper.style['--width'] = element_css[legacy_selector].style.width
+					// 					wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
+					// 				}
+					// 				// display none from style
+					// 				if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
+					// 					wrapper.classList.add('display_none')
+					// 				}
+					// 			}
+					// 	}
+					// }
+
+				// event click . Activate component on event
+					// wrapper.addEventListener("click", e => {
+					// 	e.stopPropagation()
+					// 	event_manager.publish('active_component', instance)
+					// })
+
+				wrapper.appendChild(fragment)
+
+			return wrapper
+		},//end build_wrapper_search
+
+
+
+		/**
 		* ACTIVE
 		* Set component state as active by callback event
 		* @see util.events event_manage.publish
@@ -494,7 +649,47 @@ export const ui = {
 
 
 			return true
-		}//end  add_image_fallback
+		},//end  add_image_fallback
+
+
+
+		/**
+		* EXEC_SAVE_SUCCESSFULLY_ANIMATION
+		* Used on component save successfully
+		* @return promise
+		*/
+		exec_save_successfully_animation : (self) => {
+
+			return new Promise(function(resolve){
+
+				// remove previous save_success classes
+					self.node.map(item => {
+						if (item.classList.contains("save_success")) {
+							item.classList.remove("save_success")
+						}
+					})
+
+				setTimeout(()=>{
+
+					// success. add save_success class to component wrappers (green line animation)
+						self.node.map(item => {
+							item.classList.add("save_success")
+						})
+
+					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
+						setTimeout(()=>{
+							self.node.map(item => {
+								// item.classList.remove("save_success")
+								// allow restart animation. Not set state pause before animation ends (2 secs)
+								item.style.animationPlayState = "paused";
+								item.style.webkitAnimationPlayState = "paused";
+							})
+
+							resolve(true)
+						},2000)
+				},50)
+			})
+		}//end exec_save_successfully_animation
 
 
 
