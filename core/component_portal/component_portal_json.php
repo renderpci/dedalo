@@ -60,15 +60,18 @@
 			$offset		= $this->pagination->offset;
 
 		// custom properties external dato
-			if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
-				(isset($properties->source->mode) && $properties->source->mode==='external')) {
+		// Only is recalculated in edit mode and when is not a pagination request (section request rqo is action=search)
+			if ($modo==='edit' && isset(dd_core_api::$rqo) && dd_core_api::$rqo->source->action==='search') {
+				if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
+					(isset($properties->source->mode) && $properties->source->mode==='external')) {
 
-				// set_dato_external: $save=false, $changed=false, $current_dato=false, $references_limit=0
-				$save				= true; // $modo==='edit' ? true : false;
-				$changed			= true; // $modo==='edit' ? true : false;
-				$current_dato		= false; // $this->get_dato();
-				$references_limit	= 0; // (!) Set to zero to get all references to enable sort
-				$this->set_dato_external($save, $changed, $current_dato, $references_limit);	// Forces update dato with calculated external dato
+					// set_dato_external: $save=false, $changed=false, $current_dato=false, $references_limit=0
+					$save				= true; // $modo==='edit' ? true : false;
+					$changed			= true; // $modo==='edit' ? true : false;
+					$current_dato		= false; // $this->get_dato();
+					$references_limit	= 0; // (!) Set to zero to get all references to enable sort
+					$this->set_dato_external($save, $changed, $current_dato, $references_limit);	// Forces update dato with calculated external dato
+				}
 			}
 
 		$dato = $this->get_dato();
