@@ -160,7 +160,7 @@ const get_content_data_edit = function(self) {
 
 		// set video node only when it is in DOM (to save browser resources)
 			const observer = new IntersectionObserver(function(entries) {
-				const entry = entries[0]
+				const entry = entries[1] || entries[0]
 				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
 					observer.disconnect();
 					build_video_node()
