@@ -183,7 +183,7 @@ export const service_autocomplete = function() {
 			ui.create_dom_element({
 				element_type	: "label",
 				class_name		: "css_label label",
-				text_content	: get_label["origen"] || "Source",
+				text_content	: get_label.origen || "Source",
 				parent			: source_selector
 			})
 			// select
@@ -293,9 +293,9 @@ export const service_autocomplete = function() {
 				const filter_items = []
 				for (let i = 0; i < ar_sections_length; i++) {
 
-					const ddo_section	= ar_sections[i]
-					// const id			= ddo_section.tipo
-					// const request_ddo 	= self.dd_request.find(item => item.typo === 'request_ddo').value
+					const ddo_section		= ar_sections[i]
+					// const id				= ddo_section.tipo
+					// const request_ddo	= self.dd_request.find(item => item.typo === 'request_ddo').value
 					// const ddo_section	= request_ddo.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
 					const datalist_item	= {
 						grouper	: 'sections',
@@ -398,7 +398,7 @@ export const service_autocomplete = function() {
 
 
 	/**
-	* build_filter
+	* BUILD_FILTER
 	* @return DOM node
 	*/
 	this.build_filter = function(filter_items, filter_name, filter_id) {
@@ -581,44 +581,43 @@ export const service_autocomplete = function() {
 			class_name		: "inputs_list" // css_autocomplete_hi_search_field
 		})
 
-			const ddo_map = self.dd_request.show.ddo_map
-			const ddo_map_length = ddo_map.length
+		const ddo_map = self.dd_request.show.ddo_map
+		const ddo_map_length = ddo_map.length
 
-			const ar_components = []
+		const ar_components = []
+		for (let i = 0; i < ddo_map_length; i++) {
+			const current_ddo = ddo_map[i]
+			// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo is the component
+			const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
+			if(current_ar_valid_ddo.length !== 0) continue
 
-			for (let i = 0; i < ddo_map_length; i++) {
-				const current_ddo = ddo_map[i]
-				// check if the current ddo has children asociated, it's necesary identify the last ddo in the path chain, the last ddo is the component
-				const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
-				if(current_ar_valid_ddo.length !== 0) continue
+			ar_components.push(current_ddo)
+		}
 
-				ar_components.push(current_ddo)
-			}
-
-			// const request_ddo = self.dd_request.find(item => item.typo === 'request_ddo').value
-			// const sqo_length = request_ddo.length
+		// const request_ddo = self.dd_request.find(item => item.typo === 'request_ddo').value
+		// const sqo_length = request_ddo.length
 
 
-			// for (let i = sqo_length - 1; i >= 0; i--) {
-			// 	const item = request_ddo[i]
-			// 	if(item.type==='component' && item.typo==='ddo' && ar_components.indexOf(item.tipo)===-1){
-			// 		ar_components.push(item.tipo)
-			// 	}
-			// }
+		// for (let i = sqo_length - 1; i >= 0; i--) {
+		// 	const item = request_ddo[i]
+		// 	if(item.type==='component' && item.typo==='ddo' && ar_components.indexOf(item.tipo)===-1){
+		// 		ar_components.push(item.tipo)
+		// 	}
+		// }
 
-			const ar_components_length = ar_components.length
-			for (let i = 0; i < ar_components_length; i++) {
-				const ddo_component		= ar_components[i]
-				// const ddo_component	= request_ddo.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
+		const ar_components_length = ar_components.length
+		for (let i = 0; i < ar_components_length; i++) {
+			const ddo_component = ar_components[i]
+			// const ddo_component	= request_ddo.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
 
-				const component_input = ui.create_dom_element({
-					element_type	: "input",
-					type			: "text",
-					parent			: inputs_list
-				})
-				const component_label = ddo_component.label.replace(/(<([^>]+)>)/ig,"");
-				component_input.setAttribute("placeholder", component_label )
-			}
+			const component_input = ui.create_dom_element({
+				element_type	: "input",
+				type			: "text",
+				parent			: inputs_list
+			})
+			const component_label = ddo_component.label.replace(/(<([^>]+)>)/ig,"");
+			component_input.setAttribute("placeholder", component_label )
+		}
 
 
 		return inputs_list
@@ -628,7 +627,7 @@ export const service_autocomplete = function() {
 
 	/**
 	* BUILD_OPERATOR_SELECTOR
-	* @return
+	* @return DOM node operator_selector
 	*/
 	this.render_operator_selector = function(){
 		const self = this
@@ -642,39 +641,39 @@ export const service_autocomplete = function() {
 				element_type 	: "div",
 				class_name 	 	: "search_operators_div"
 			})
-				//label
+			//label
 				ui.create_dom_element({
 					element_type	: "label",
 					class_name		: "css_label label",
 					parent			: operator_selector,
-					text_content	: get_label["operadores_de_busqueda"] || "Search operators"
-					})
+					text_content	: get_label.operadores_de_busqueda || "Search operators"
+				})
 				const select = ui.create_dom_element({
 					element_type	: "select",
 					class_name		: "operator_selector",
 					parent			: operator_selector
-					})
-					select.addEventListener("change",function(e){
-						// set the new operator selected
-						self.operator 		= e.target.value
-					})
-					const option_or = ui.create_dom_element({
-						element_type	: "option",
-						parent			: select,
-						value			: "$or",
-						text_content	: get_label.o
-						})
-					const option_and = ui.create_dom_element({
-						element_type	: "option",
-						parent			: select,
-						value			: "$and",
-						text_content	: get_label.y
-						})
-					if (operator==='$or') {
-						option_or.setAttribute("selected", true)
-					}else{
-						option_and.setAttribute("selected", true)
-					}
+				})
+				select.addEventListener("change",function(e){
+					// set the new operator selected
+					self.operator	= e.target.value
+				})
+				const option_or = ui.create_dom_element({
+					element_type	: "option",
+					parent			: select,
+					value			: "$or",
+					text_content	: get_label.o
+				})
+				const option_and = ui.create_dom_element({
+					element_type	: "option",
+					parent			: select,
+					value			: "$and",
+					text_content	: get_label.y
+				})
+				if (operator==='$or') {
+					option_or.setAttribute("selected", true)
+				}else{
+					option_and.setAttribute("selected", true)
+				}
 
 		return operator_selector
 	};//end render_operator_selector
@@ -683,22 +682,26 @@ export const service_autocomplete = function() {
 
 	/**
 	* AUTOCOMPLETE_BUILD_OPTIONS to choose it by user
-	* @return
+	* Render result data as DOM nodes and place it into self.datalist container
+	* @param object api_response
+	* @return DOM node datalist
 	*/
 	this.render_datalist = async function(api_response) {
 
 		const self = this
 
-		const datalist = self.datalist
+		// datalist container node
+			const datalist = self.datalist
 
-		//delete the last list
-		while (datalist.firstChild) {
-			datalist.removeChild(datalist.firstChild)
-		}
-		// get the result from the api response
-		const result	= api_response.result
-		const data		= result.data
-		const context 	= result.context
+		// clean the last list
+			while (datalist.firstChild) {
+				datalist.removeChild(datalist.firstChild)
+			}
+
+		// get the result from the API response
+			const result	= api_response.result
+			const data		= result.data
+			const context	= result.context
 
 		// get the sections that was searched
 		// const ar_search_sections = self.ar_search_section_tipo
@@ -711,16 +714,16 @@ export const service_autocomplete = function() {
 			? rqo_search.show.divisor
 			: ' | '
 
-		const columns 		= rqo_search.show.columns
+		const columns = rqo_search.show.columns
 
 		// get the ar_locator founded in sections
 		const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
 		const ar_locator	= (data_locator) ? data_locator.value : []
 
-		// folow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
-		// all others ddo in the midle of the chain are portals with locator value, and only will show the last component.
+		// follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
+		// all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
 		function get_last_ddo_data_value(current_path, value){
-			// check the path length sended, the first loop is the full path, but it is changed with the check data
+			// check the path length sent, the first loop is the full path, but it is changed with the check data
 			const current_path_length = current_path.length 
 			for (var i = 0; i < value.length; i++) {
 				const section_tipo 	= value[i].section_tipo
@@ -753,9 +756,9 @@ export const service_autocomplete = function() {
 			const section_tipo	= current_locator.section_tipo
 			const section_id	= current_locator.section_id
 
-			// get data that mach with the current section from the global data sended by the api
+			// get data that mach with the current section from the global data sent by the API
 			// get the full row with all items in the ddo that mach with the section_id
-			const current_row = data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
+			const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
 
 			// const current_ddo 	= ddo_map.filter(item => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
 
@@ -764,16 +767,15 @@ export const service_autocomplete = function() {
 				element_type	: 'li',
 				class_name		: "autocomplete_data_li",
 				dataset			: {value : JSON.stringify(current_locator)},
-				parent			: self.datalist
+				parent			: datalist
 			})
-
-			// when the user do click in one row send the data to the caller_instance for save it.
+			// click event. When the user do click in one row send the data to the caller_instance for save it.
 			li_node.addEventListener('click', function(e){
 				e.stopPropagation()
 				const value = JSON.parse(this.dataset.value)
-				if(self.instance_caller.mode === 'search'){
+				// if(self.instance_caller.mode==='search'){
 					// self.instance_caller.datum.data.push({value: current_locator})
-				}
+				// }
 				self.instance_caller.add_value(value)
 			});
 
@@ -782,14 +784,14 @@ export const service_autocomplete = function() {
 				for (let i = 0; i < columns_length; i++) {
 						const current_path = columns[i]
 					// the columns has the last element in the chain in the first position of the array, 
-					// the first position is the only component that is necesary to buil and show
+					// the first position is the only component that is necessary to build and show
 						const ddo_item = current_path[0]
 						const current_element_data = get_last_ddo_data_value(current_path, [current_locator])
 					// if the element doesn't has data continue to the next element.
 						if(current_element_data === false) continue;
 
 					// context of the element
-						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===current_element_data.section_tipo )
+						const current_element_context = context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===current_element_data.section_tipo)
 
 						if (typeof current_element_data==="undefined") {
 							console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
@@ -823,7 +825,6 @@ export const service_autocomplete = function() {
 						// 	inner_html		: current_value,
 						// 	parent			: li_node
 						// })// end create dom node
-
 				}//end for ddo_item
 
 			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
@@ -840,7 +841,6 @@ export const service_autocomplete = function() {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'attenuated',
@@ -848,9 +848,9 @@ export const service_autocomplete = function() {
 						parent			: li_node
 					});
 				}
-
-
 		}// end for of current_section (section_tipo)
+
+		return datalist
 	};//end render_datalist
 
 
@@ -882,7 +882,7 @@ export const service_autocomplete = function() {
 				console.error("ERROR. Received search_engine function not exists. Review your component properties source->request_config->search_engine :", self.search_engine);
 				return new Promise(()=>{})
 			}
-		//recombine the select ddo with the search ddo to get the list
+		// recombine the select ddo with the search ddo to get the list
 			// const select = self.instance_caller.dd_request.select
 			// const dd_request = (select)
 			// 	? self.dd_request.filter(item => item.typo!=='request_ddo')
@@ -1230,3 +1230,5 @@ export const service_autocomplete = function() {
 
 
 };//end service_autocomplete
+
+

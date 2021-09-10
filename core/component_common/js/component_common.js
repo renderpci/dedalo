@@ -715,10 +715,11 @@ component_common.prototype.change_value = async function(options) {
 			})
 		}
 	
-	const changed_data 	= options.changed_data
-	const action 		= changed_data.action
-	const label 		= options.label
-	const refresh 		= typeof options.refresh!=="undefined" ? options.refresh : false
+	// options
+		const changed_data 	= options.changed_data
+		const action 		= changed_data.action
+		const label 		= options.label
+		const refresh 		= typeof options.refresh!=="undefined" ? options.refresh : false
 
 	// user confirmation prevents remove accidentally
 		if (action==='remove' && label) {
