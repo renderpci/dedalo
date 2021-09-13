@@ -162,7 +162,7 @@ class search {
 			$this->matrix_table = common::get_matrix_table_from_tipo($this->main_section_tipo);
 		}
 
-		#matrix table for related seraches
+		# matrix table for related searches
 		if (get_class($this)!=='search_related') {
 			$this->ar_matrix_tables = common::get_matrix_tables_with_relations();
 		}

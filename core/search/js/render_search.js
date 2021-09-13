@@ -62,19 +62,19 @@ render_search.prototype.list = async function() {
 		if (ui_status) {
 			// search_panel cookie state track
 			// if(self.cookie_track("search_panel")===true) {
-				if(ui_status.value["search_panel"] && ui_status.value["search_panel"].is_open) {
+				if(ui_status.value.search_panel && ui_status.value.search_panel.is_open) {
 					// Open search panel
 					toggle_search_panel(self) // toggle to open from defult state close
 				}
 			// fields_panel cookie state track
 				// if(self.cookie_track("fields_panel")===true) {
-				if(ui_status.value["fields_panel"] && ui_status.value["fields_panel"].is_open) {
+				if(ui_status.value.fields_panel && ui_status.value.fields_panel.is_open) {
 					// Open search panel
 					toggle_fields(self) // toggle to open from defult state close
 				}
 			// presets_panel cookie state track
 				// if(self.cookie_track("presets_panel")===true) {
-				if(ui_status.value["presets_panel"] && ui_status.value["presets_panel"].is_open) {
+				if(ui_status.value.presets_panel && ui_status.value.presets_panel.is_open) {
 					// Open search panel
 					toggle_presets(self) // toggle to open from defult state close
 				}
@@ -118,7 +118,7 @@ render_search.prototype.render_base = function() {
 		// set
 		self.search_global_container = search_global_container
 
-	// thesaurus add ons
+	// thesaurus add on
 		if (self.caller.model==='area_thesaurus') {
 			const thesaurus_options_node = render_sections_selector(self)
 			search_global_container.appendChild(thesaurus_options_node)
@@ -128,7 +128,7 @@ render_search.prototype.render_base = function() {
 		const button_save_preset = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_save_preset hide99',
-			text_content	: get_label["salvar"]+' '+get_label["cambios"],
+			text_content	: get_label.salvar +' '+ get_label.cambios,
 			parent			: search_global_container
 		})
 		.addEventListener('click',function(){
@@ -139,7 +139,7 @@ render_search.prototype.render_base = function() {
 		const toggle_container_selector = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toggle_container_selector',
-			text_content	: get_label["campos"],
+			text_content	: get_label.campos,
 			parent			: search_global_container
 		})
 		.addEventListener('click',function(){
@@ -181,7 +181,7 @@ render_search.prototype.render_base = function() {
 			const component_presets_label = ui.create_dom_element({
 				element_type	: 'div',
 				class_name 		: 'component_presets_label',
-				inner_html		: get_label["presets_de_busqueda"],
+				inner_html		: get_label.presets_de_busqueda,
 				parent			: self.search_container_selection_presets
 			})
 			const button_new_preset = ui.create_dom_element({
@@ -489,7 +489,7 @@ render_search.prototype.render_search_buttons = function(){
 		const reset_button = ui.create_dom_element({
 			element_type	: "button",
 			class_name		: "button reload",
-			text_content	: get_label.recargar || 'Reload',
+			title			: get_label.recargar || 'Reload',
 			parent			: reset_group
 
 		})
