@@ -782,24 +782,36 @@ export const ui = {
 				}
 
 			// paginator
-				if (instance.paginator) {
+				if (items.paginator_div) {
 					// const paginator = ui.create_dom_element({
 					// 	element_type	: 'div',
 					// 	class_name		: 'paginator',
 					// 	parent			: fragment
 					// })
-					instance.paginator.render().then(paginator_wrapper =>{
-						//paginator.appendChild(paginator_wrapper)
 
-						// place paginator in inspector
-						ui.place_element({
-							source_node			: paginator_wrapper,
-							source_instance		: instance,
-							target_instance		: instance.inspector,
-							container_selector	: ".paginator_container",
-							target_selector		: ".wrapper_paginator"
-						})
+
+					// place paginator in inspector
+					ui.place_element({
+						source_node			: items.paginator_div,
+						source_instance		: instance,
+						target_instance		: instance.inspector,
+						container_selector	: ".paginator_container",
+						target_selector		: ".wrapper_paginator"
 					})
+
+
+					// self.paginator.build()
+					// .then(function(response){
+					// 	fn_render()
+					// })
+
+					// if (instance.paginator.status==='building') {
+					// 	// waiting records total count
+					// 	event_manager.subscribe('builded_'+instance.paginator.id, fn_render)
+					// }else{
+					// 	// total records is ready
+					// 	fn_render()
+					// }
 				}
 
 			// content_data
