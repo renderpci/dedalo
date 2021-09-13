@@ -195,7 +195,7 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// button edit
+	// button go to target section
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
 			const target_section		= self.data.target_section
@@ -228,10 +228,9 @@ const get_buttons = (self) => {
 						})
 				})
 			}
-
 		}
 
-	// buttons tools
+	// tools buttons
 		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
 		}

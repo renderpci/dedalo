@@ -12,6 +12,7 @@
 	import {render_mini_component_radio_button} from '../../component_radio_button/js/render_mini_component_radio_button.js'
 
 
+
 export const component_radio_button = function(){
 
 	this.id
