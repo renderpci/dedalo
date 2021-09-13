@@ -54,6 +54,15 @@
 			$item->datalist = $ar_list_of_values->result;
 		}
 
+		// target_section_tipo
+			$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
+			$item->target_section	= array_map(function($tipo){
+				return [
+					'tipo'	=> $tipo,
+					'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
+				];
+			}, $ar_target_section_tipo);
+
 		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)
