@@ -125,6 +125,11 @@ common.prototype.render = async function (options={render_level:'full'}) {
 			return false
 		}
 
+	if (self.status!=='builded') {
+		// event_manager.subscribe('builded_'+self.id, self.render.edit(options))
+		console.error("Illegal status. Expected 'builded' current:",self.status, self.model);
+	}
+
 	// status update
 		self.status = 'rendering'
 
@@ -279,6 +284,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 				}
 			}
 		}
+
 
 	return result_node
 }//end render

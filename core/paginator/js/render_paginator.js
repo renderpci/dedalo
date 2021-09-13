@@ -24,16 +24,17 @@ export const render_paginator = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_paginator.prototype.edit = async function(options={render_level:'full'}) {
+render_paginator.prototype.edit = async function(options) {
 	
 	const self = this
 
-	const render_level = options.render_level
+	// render_level
+		const render_level = options.render_level || 'full'
 
-	// content data
-		const current_content_data = await content_data(self)
+	// refresh case. Only content data is returned
 		if (render_level==='content') {
-			return current_content_data
+			await self.get_total()
+			return get_content_data(self)
 		}
 
 	// wrapper
@@ -42,8 +43,12 @@ render_paginator.prototype.edit = async function(options={render_level:'full'}) 
 			class_name		: 'wrapper_paginator full_width css_wrap_rows_paginator text_unselectable'
 		})
 
-	// add paginator_content
-		wrapper.appendChild(current_content_data)
+	// content data. Added when total is ready
+		self.get_total()
+		.then(function(response){
+			const content_data_node = get_content_data(self)
+			wrapper.appendChild(content_data_node)
+		})
 
 	// events
 		add_wrapper_events(wrapper, self)
@@ -75,13 +80,13 @@ const add_wrapper_events = (wrapper, self) => {
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = function(self) {
 	
 	// build vars
-		const total				= await self.get_total()
+		const total				= self.caller.total
 		const limit				= self.get_limit()
 		const offset			= self.get_offset()
 
@@ -101,7 +106,7 @@ const content_data = async function(self) {
 			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
-	// display none with empty case, chenck NaN!=NaN (always true) or when pages are <2
+	// display none with empty case, chenc NaN!=NaN (always true) or when pages are <2
 		if (total_pages!=total_pages || total_pages<2) {
 			const wrap_rows_paginator = ui.create_dom_element({
 				element_type	: 'div',
@@ -236,4 +241,4 @@ const content_data = async function(self) {
 
 
 	return content_data
-};//end content_data
+};//end get_content_data

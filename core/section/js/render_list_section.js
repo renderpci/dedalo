@@ -186,8 +186,11 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 			class_name		: 'paginator',
 			parent			: fragment
 		})
-		self.paginator.render().then(paginator_wrapper =>{
-			paginator_div.appendChild(paginator_wrapper)
+		self.paginator.build()
+		.then(function(){
+			self.paginator.render().then(paginator_wrapper =>{
+				paginator_div.appendChild(paginator_wrapper)
+			})
 		})
 
 	// list body
