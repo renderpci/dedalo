@@ -50,9 +50,9 @@
 		$item  = $this->get_data_item($value);
 
 		// dataset
-		if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-			$item->datalist = $ar_list_of_values->result;
-		}
+			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
+				$item->datalist = $ar_list_of_values->result;
+			}
 
 		// target_section_tipo
 			$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
