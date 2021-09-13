@@ -4,10 +4,10 @@
 
 
 // imports
+	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_check_box} from '../../component_check_box/js/render_component_check_box.js'
 	import {render_search_component_check_box} from '../../component_check_box/js/render_search_component_check_box.js'
-	import {common} from '../../common/js/common.js'
 
 
 
