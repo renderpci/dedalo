@@ -259,23 +259,29 @@
 						//background-color: #ea9cd2;
 						min-height: 6em;
 						display: flex;
+						padding: 0;
+						margin: 0;
 						padding: 0.25em;
 
 						>* {
 							height: 100%;
 							width: 100%;
+							margin: 0;
+							display: flex;
+							flex-direction: column;
 						}
 
 						.button {
 							height: 100%;
+							width: 100%;
+							margin: 0;
+							padding: 0;
 							font-size: 1em;
 							background-color: #f99c29;
 							opacity: 1;
 							color: #ffffff;
 							border: 1px solid #ffffff;
 							border-radius: 0.25em;
-
-							width: 96%;
 
 							&:hover {
 								background-color: darken(#f99c29, 10%);
@@ -284,8 +290,8 @@
 
 						// max_group
 						>.max_group {
-							display: flex;
-							flex-direction: column;
+							// display: flex;
+							// flex-direction: column;
 
 							background-color: #ffffff;
 							position: relative;
@@ -312,11 +318,18 @@
 
 						// reset group
 						>.reset_group{
-							display: flex;
-							flex-direction: column;
+							// display: flex;
+							// flex-direction: column;
+							padding-left: 0.25em;
+							padding-right: 0.25em;
 
 							.button.reload {
 								flex-grow: 1;
+								mask-size: 2em;
+								 -webkit-mask-size: 2em;
+								&:before {
+									background-color: transparent;
+								}
 							}
 							.button.show_all {
 								flex-grow: 1;
