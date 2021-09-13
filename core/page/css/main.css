@@ -1592,6 +1592,13 @@ button.cancel:before {
   height: 70vh !important;
   max-height: unset !important;
 }
+.unselectable {
+  -webkit-user-select: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -o-user-select: none !important;
+  user-select: none !important;
+}
 .dd_input {
   font-size: 1em;
   height: 2em;
@@ -1809,11 +1816,11 @@ li .reset_input select {
 }
 .wrapper_page {
   padding: 0;
-  width: calc(100vw - 1em);
   min-height: 100vh;
 }
 .wrapper_page > .content_data {
   padding: 1em;
+  overflow-x: hidden;
 }
 .area > .label {
   font-size: 1.6em;
@@ -2153,6 +2160,7 @@ li .reset_input select {
 .wrapper_section.list > .paginator {
   margin-bottom: 0.25em;
   margin-top: 0.25em;
+  min-height: 2.8em;
 }
 .section_record.edit {
   margin: 0;
@@ -2241,7 +2249,7 @@ li .section_record.list .id_column {
   width: 100%;
 }
 .section_record.edit .section_group.edit > .label {
-  background-color: #e6e6e6;
+  background-color: #f1f1f1;
   padding: 0.33em;
   padding-left: 0.5em;
   cursor: pointer;
@@ -2269,6 +2277,18 @@ li .section_record.list .id_column {
   align-content: flex-start;
   display: grid;
   overflow: hidden;
+}
+.wrapper_component.edit,
+.wrapper_component.search,
+.wrapper_component.tm {
+  box-shadow: -1px 1px 0 #e6e6e6;
+}
+@media screen and (max-width: 960px) {
+  .wrapper_component.edit,
+  .wrapper_component.search,
+  .wrapper_component.tm {
+    flex: 0 0 100% !important;
+  }
 }
 .wrapper_component.edit > .label,
 .wrapper_component.search > .label,
@@ -2935,6 +2955,11 @@ li .section_record.list .id_column {
   overflow: initial !important;
   z-index: 1;
 }
+@media screen and (max-width: 960px) {
+  .wrapper_component.active {
+    flex: 0 0 calc(100% - 2em) !important;
+  }
+}
 .wrapper_component.active .buttons_container {
   display: block !important;
 }
@@ -3459,6 +3484,7 @@ dd-modal .footer > * {
 .wrapper_component > .content_data ul.inputs_container > li {
   position: relative;
   flex: 1 1 100%;
+  align-items: baseline;
   z-index: 0;
 }
 .inspector {
@@ -4160,7 +4186,6 @@ html {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1rem;
   color: #191919;
-  margin-right: calc(100vw - 100%);
 }
 b,
 strong {
@@ -4176,6 +4201,7 @@ danger {
 }
 #main {
   width: 100%;
+  min-height: 80vh;
 }
 .error {
   transition: background-color 0.3s ease;
@@ -4258,7 +4284,6 @@ section {
   display: block;
   padding: 0px;
   margin: 0px;
-  width: 98.2%;
 }
 @media screen and (max-width: 980px) {
   .wrapper_inspector {
@@ -5401,15 +5426,18 @@ background-color: #FFFF00;
   left: 0px;
   position: sticky;
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  width: calc(100vw - 1.08em);
+  align-items: center;
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
   background: #2e2e2e;
-  font-family: "Oxygen-light", sans-serif;
   font-size: 0.84em;
   color: #ffffff;
   line-height: 1.2em;
+}
+@media screen and (max-width: 960px) {
+  .menu_wrapper {
+    position: initial;
+  }
 }
 .menu_wrapper.menu_wrapper_debug {
   background: linear-gradient(to bottom, rgba(210, 107, 25, 0.8) 0%, rgba(156, 62, 0, 0.8) 100%) !important;
@@ -5483,9 +5511,13 @@ background-color: #FFFF00;
 }
 .menu_wrapper > .section_label {
   cursor: pointer;
-  font-weight: bold;
   margin-right: 1em;
   padding-top: 1px;
+  -webkit-user-select: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -o-user-select: none !important;
+  user-select: none !important;
 }
 .menu_wrapper > .section_label:hover {
   opacity: 1;
@@ -5548,6 +5580,7 @@ background-color: #FFFF00;
   margin: 0;
   padding: 0;
   display: flex;
+  flex-wrap: wrap;
 }
 .menu_wrapper > .debug_info_bar > * {
   padding-left: 1em;
@@ -5556,7 +5589,6 @@ background-color: #FFFF00;
 }
 /*-- Toggle button in mobil version --*/
 #menu_hierarchy {
-  font-family: "Oxygen-light", sans-serif;
   z-index: 9999;
   padding: 0;
 }
@@ -5587,6 +5619,7 @@ background-color: #FFFF00;
 }
 #menu_hierarchy ul#dd1 {
   display: flex;
+  flex-wrap: wrap;
 }
 #menu_hierarchy ul#dd1 li {
   display: inline-block;
@@ -5750,7 +5783,6 @@ background-color: #FFFF00;
   letter-spacing: 0.7px;
   font-weight: 300 !important;
   font-size: 13px;
-  font-family: 'Oxygen-light';
   -webkit-font-smoothing: subpixel-antialiased;
   height: 29px;
   /*
@@ -5797,7 +5829,6 @@ background-color: #FFFF00;
 /* DEBUG_LINE_WRAP
 ------------------------------------------------- */
 .debug_line_wrap {
-  font-family: 'Oxygen-light';
   font-weight: 100;
   font-size: 0.82em;
   width: 100%;
