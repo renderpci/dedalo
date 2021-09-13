@@ -10,65 +10,13 @@
 
 
 /**
-* RENDER_COMPONENT_SELECT
+* render_edit_component_select
 * Manages the component's logic and apperance in client side
 */
-export const render_component_select = function(component) {
+export const render_edit_component_select = function(component) {
 
 	return true
-};//end render_component_select
-
-
-
-/**
-* MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
-*/
-render_component_select.prototype.mini = async function() {
-
-	const self = this
-
-	// short vars
-		const data			= self.data
-		const value_string	= data.value || ''
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string);
-
-
-	return wrapper
-};//end mini
-
-
-
-/**
-* LIST
-* Render node for use in list
-* @return DOM node
-*/
-render_component_select.prototype.list = async function() {
-
-	const self = this
-
-	// short vars
-		const data			= self.data
-		const value_string	= data.value || ''
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : true
-		})
-
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string);
-
-
-	return wrapper
-};//end list
+};//end render_edit_component_select
 
 
 
@@ -77,7 +25,7 @@ render_component_select.prototype.list = async function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_select.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_select.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
@@ -87,7 +35,7 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 	const render_level 	= options.render_level
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -210,26 +158,23 @@ const add_events = (self, wrapper) => {
 * get_CONTENT_DATA_EDIT
 * @return
 */
-const get_content_data_edit = async function(self) {
-
-	const mode 			= self.mode
-	const is_inside_tool= self.is_inside_tool
+const get_content_data_edit = function(self) {
 
 	const fragment = new DocumentFragment()
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
-	// build selectable options
+	// build select able options
 		input_element(inputs_container, self)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  // content_data.classList.add("nowrap")
 			  content_data.appendChild(fragment)
 
 
@@ -245,47 +190,45 @@ const get_content_data_edit = async function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
 	// button edit
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			
-			if (self.rqo && self.rqo.show) {
-				const show					= self.rqo.show
-				const target_section		= show.filter(item => item.model==='section')
-				const target_section_lenght	= target_section.length
-				// sort section by label asc
-					target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-				for (let i = 0; i < target_section_lenght; i++) {
+			const target_section		= self.data.target_section
+			const target_section_lenght	= target_section.length
+			// sort section by label asc
+				target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-					const item = target_section[i]
+			for (let i = 0; i < target_section_lenght; i++) {
 
-					const label = (SHOW_DEBUG===true)
-						? item.label + " [" + item.tipo + "]"
-						: item.label
+				const item = target_section[i]
 
-					const button_edit = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button edit',
-						title			: label,
-						parent			: fragment
-					})
-					button_edit.addEventListener("click", function(){
-						// navigate link
-							event_manager.publish('user_navigation', {
-								source : {
-									tipo	: item.tipo,
-									model	: 'section',
-									mode	: 'list'
-								}
-							})
-					})
-				}
+				const label = (SHOW_DEBUG===true)
+					? `${item.label} [${item.tipo}]`
+					: item.label
+
+				const button_edit = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button edit',
+					title			: label,
+					parent			: fragment
+				})
+				button_edit.addEventListener("click", function(){
+					// navigate link
+						event_manager.publish('user_navigation', {
+							source : {
+								tipo	: item.tipo,
+								model	: 'section',
+								mode	: 'list'
+							}
+						})
+				})
 			}
+
 		}
 
 	// buttons tools
