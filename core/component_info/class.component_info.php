@@ -21,7 +21,6 @@ class component_info extends component_common {
 			debug_log(__METHOD__." Empty defined widgets for $component_name : $label [$tipo] ".to_string($widgets), logger::WARNING);
 			return null;
 		}
-			dump($widgets, ' widgets ++ '.to_string());
 		// the component info dato will be the all widgets data
 		$dato = [];
 		// every widget will be created and calculate your own data

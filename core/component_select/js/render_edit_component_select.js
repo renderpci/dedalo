@@ -155,7 +155,7 @@ const add_events = (self, wrapper) => {
 
 
 /**
-* get_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return
 */
 const get_content_data_edit = function(self) {
