@@ -5,7 +5,6 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {common,create_source} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -31,7 +30,6 @@ render_search_component_date.prototype.search = async function() {
 	const self 	= this
 
 	const content_data = get_content_data_search(self)
-		console.log("content_data:",content_data);
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {

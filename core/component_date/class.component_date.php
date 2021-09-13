@@ -762,11 +762,19 @@ class component_date extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql($request_query_object) {
+			dump($request_query_object, ' request_query_object ++ '.to_string());
 
-		// Check if q is an valid object
-		// Note that if q is number, json_decode not will generate error here
+		// query_object clone
+		$query_object = clone $request_query_object;
+
+		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
+		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+
+		// q_object. Check if q is an valid object
+		// Note that if q is number, json_decode will not generate error here
 		if (!$q_object = json_decode($query_object->q)) {
+		// if (!$q_object = json_decode($q)) {
 			#debug_log(__METHOD__." Error on decode query_object->q ".to_string($query_object), logger::WARNING);
 		}
 
