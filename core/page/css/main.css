@@ -1599,6 +1599,13 @@ button.cancel:before {
   -o-user-select: none !important;
   user-select: none !important;
 }
+.noevents {
+  -webkit-user-select: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -o-user-select: none !important;
+  user-select: none !important;
+}
 .dd_input {
   font-size: 1em;
   height: 2em;
@@ -2160,7 +2167,7 @@ li .reset_input select {
 .wrapper_section.list > .paginator {
   margin-bottom: 0.25em;
   margin-top: 0.25em;
-  min-height: 2.8em;
+  min-height: 2.94rem;
 }
 .section_record.edit {
   margin: 0;
@@ -2358,13 +2365,23 @@ li .section_record.list .id_column {
 .wrapper_component.tm.component_date > .content_data .flatpickr > a {
   position: absolute;
   right: 0;
-  top: 0.25em;
+  top: 0;
   opacity: 0.5;
 }
 .wrapper_component.edit.component_date > .content_data .remove,
 .wrapper_component.search.component_date > .content_data .remove,
 .wrapper_component.tm.component_date > .content_data .remove {
   position: initial;
+}
+.wrapper_component.edit.component_date.search .remove,
+.wrapper_component.search.component_date.search .remove,
+.wrapper_component.tm.component_date.search .remove {
+  display: none;
+}
+.wrapper_component.edit.component_date.search .button.calendar,
+.wrapper_component.search.component_date.search .button.calendar,
+.wrapper_component.tm.component_date.search .button.calendar {
+  cursor: default;
 }
 .wrapper_component.edit.component_filter > .buttons_container,
 .wrapper_component.search.component_filter > .buttons_container,
