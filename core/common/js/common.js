@@ -297,7 +297,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 * (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
 * @return promise
 */
-common.prototype.refresh = async function () {
+common.prototype.refresh = async function() {
 	const t0 = performance.now()
 
 	const self = this
