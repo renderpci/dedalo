@@ -227,7 +227,7 @@ section.prototype.build = async function(autoload=false) {
 				caller	: self,
 				mode	: self.mode
 			})
-			self.filter.build()
+			// self.filter.build()
 		}
 		// console.log("section build filter unactive (remember) ");	
 	
