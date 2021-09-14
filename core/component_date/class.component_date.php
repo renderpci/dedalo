@@ -771,16 +771,12 @@ class component_date extends component_common {
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
 		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
-		// q_object. Check if q is an valid object
-		// Note that if q is number, json_decode will not generate error here
-		if (!$q_object = json_decode($query_object->q)) {
-		// if (!$q_object = json_decode($q)) {
-			#debug_log(__METHOD__." Error on decode query_object->q ".to_string($query_object), logger::WARNING);
-		}
-
 		if (empty($query_object->q) && empty($query_object->q_operator)) {
 			return $query_object;
 		}
+
+		// q_object
+		$q_object = $query_object->q ?? null;
 
 		// Case search with plain text like from autocomplete
 		if (!is_object($q_object)) {
