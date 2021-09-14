@@ -169,14 +169,17 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 
 			// search filter node
 				if (self.filter) {
-					const filter = ui.create_dom_element({
+					const filter_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
 						parent			: fragment
 					})
-					await self.filter.render().then(filter_wrapper =>{
-						filter.appendChild(filter_wrapper)
+					self.filter.build().then(()=>{
+						self.filter.render().then(filter_wrapper =>{
+							filter_container.appendChild(filter_wrapper)
+						})
 					})
+
 				}
 		}//end if (self.mode!=='tm')
 
