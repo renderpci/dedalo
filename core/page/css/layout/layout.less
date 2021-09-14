@@ -27,6 +27,13 @@
 		-o-user-select: none !important;
 		user-select: none !important;
 	}
+	.noevents {
+		-webkit-user-select: none !important;
+		-khtml-user-select: none !important;
+		-moz-user-select: none !important;
+		-o-user-select: none !important;
+		user-select: none !important;
+	}
 
 // mixins
 
@@ -676,7 +683,7 @@
 			>.paginator {
 				margin-bottom: 0.25em;
 				margin-top: 0.25em;
-				min-height: 2.8em;
+				min-height: 2.94rem;
 			}
 		}//end &.list
 	}//section
@@ -1014,12 +1021,20 @@
 						>a {
 							position: absolute;
 							right: 0;
-							top: 0.25em;
+							top: 0;
 							opacity: 0.5;
 						}
 					}
 					.remove {
 						position: initial;
+					}
+				}
+				&.search {
+					.remove {
+						display: none;
+					}
+					.button.calendar {
+						cursor: default;
 					}
 				}
 			}
