@@ -281,7 +281,7 @@ function indexations_list($json_data) {
 * Deletes all tag relations (index and portal) and finally removes the tag in all langs
 * @return object $response
 */
-function delete_tag($json_data) {	
+function delete_tag($json_data) {
 	global $start_time;
 
 	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang');
@@ -339,5 +339,3 @@ function new_index_data_record($json_data) {
 }//end new_index_data_record
 
 
-
-?>

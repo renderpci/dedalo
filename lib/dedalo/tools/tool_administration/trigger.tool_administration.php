@@ -127,14 +127,17 @@ function update_structure($json_data) {
 	if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
 
 		# Check remote server status before begins
-		$remote_server_status = (object)backup::check_remote_server();
-		if ($remote_server_status->result===true) {
-			$response->msg 		.= $remote_server_status->msg;
+		$check_remote_response = (object)backup::check_remote_server();
+		if (	$check_remote_response->result!==false
+			 && $check_remote_response->code===200
+			 && $check_remote_response->error===false) {
+
+			$response->msg 		.= $check_remote_response->msg;
 		}else{
-			$response->msg 		.= $remote_server_status->msg;
+			$response->msg 		.= $check_remote_response->msg;
 			$response->result 	= false;
 			return (object)$response;
-		}		
+		}
 	}
 
 
@@ -149,12 +152,12 @@ function update_structure($json_data) {
 			$response->msg .= $res_export_structure->msg;
 			# Exec time
 			$export_exec_time	= exec_time_unit($start_time,'secs')." secs";
-			$prev_time 			= microtime(1);	
+			$prev_time 			= microtime(1);
 		}
-		
+
 
 	# IMPORT
-		$res_import_structure = backup::import_structure();
+		$res_import_structure = (object)backup::import_structure();
 		if ($res_import_structure->result===false) {
 			$response->msg .= $res_import_structure->msg;
 			return $response;
@@ -163,7 +166,7 @@ function update_structure($json_data) {
 			# Exec time
 			$import_exec_time = exec_time_unit($prev_time,'ms')." ms";
 		}
-	
+
 
 	# Delete session config (force to recalculate)
 	#unset($_SESSION['dedalo4']['config']);
@@ -184,11 +187,11 @@ function update_structure($json_data) {
 	# UPDATE JAVASCRIPT LABELS
 		$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
 		foreach ($ar_langs as $lang => $label) {
-			$label_path  = '/common/js/lang/' . $lang . '.js';			
+			$label_path  = '/common/js/lang/' . $lang . '.js';
 			$ar_label 	 = label::get_ar_label($lang); // Get all properties
 				#dump($ar_label, ' ar_label');
-			
-			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
+
+			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
 			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 		}
 
@@ -203,14 +206,14 @@ function update_structure($json_data) {
 
 
 	$response->result 	= true;
-	
+
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time			= exec_time_unit($start_time,'secs')." secs";
 			$debug->export_exec_time	= $export_exec_time;
-			$debug->import_exec_time	= $import_exec_time;			
-					
+			$debug->import_exec_time	= $import_exec_time;
+
 		$response->debug = $debug;
 	}
 
@@ -350,7 +353,7 @@ function update_version($json_data) {
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";		
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 
 		$response->debug = $debug;
 	}
@@ -389,7 +392,7 @@ function skip_publication_state_check($json_data) {
 	$response = new stdClass();
 		$response->result 	= true;
 		$response->msg 		= 'Set skip_publication_state_check successfully: '.to_string($value);
-	
+
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
@@ -418,14 +421,14 @@ function remove_av_temporals($json_data) {
 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$result = tool_administration::remove_av_temporals();
-	
+
 	$response->result	= !empty($result) ? true : false;
 	$response->msg		= !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
 
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";		
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 
 		$response->debug = $debug;
 	}
@@ -463,7 +466,7 @@ function move_component_data($json_data) {
 		}else{
 			$source_section_id = (array)$source_section_id;
 		}
-	}	
+	}
 
 	$options = new stdClass();
 		# Source options
@@ -473,14 +476,14 @@ function move_component_data($json_data) {
 		$options->source_portal_tipo 	= $source_portal_tipo;	// portal tipo where hook the target section
 		# Target options
 		$options->target_section_tipo 	= $target_section_tipo;
-		$options->target_section_id 	= $target_section_id; // array or null for all records			
+		$options->target_section_id 	= $target_section_id; // array or null for all records
 		# Others
 		$options->map_components 		= json_decode($map_components); // key is source component tipo. value is target component tipo
 
 		#debug_log(__METHOD__." [trigger_tool_administration] Options ".to_string($options), logger::DEBUG);
 
-	$response = (object)tool_administration::move_component_data($options);	
-	
+	$response = (object)tool_administration::move_component_data($options);
+
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
@@ -508,17 +511,17 @@ function remove_inverse_locators_in_section($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	session_write_close();	
-	
+	session_write_close();
+
 	# set vars
 	$vars = array('section_tipo');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
-		}	
+		}
 
 	$result = (bool)tool_update_cache::remove_inverse_locators_in_section($section_tipo);
 	$response->result = $result;
@@ -560,12 +563,12 @@ function propagate_relations($json_data) {
 
 	ini_set('memory_limit', -1); // unlimited memory
 
-	session_write_close();	
-	
+	session_write_close();
+
 	# set vars
 	$vars = array('tables');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -600,7 +603,7 @@ function propagate_relations($json_data) {
 
 /**
 * UPDATE_JER_FROM_4_0_TO_4_1
-* @return 
+* @return
 */
 function update_jer_from_4_0_to_4_1($json_data) {
 	global $start_time;
@@ -614,7 +617,7 @@ function update_jer_from_4_0_to_4_1($json_data) {
 	# set vars
 	$vars = array('tld','modelo');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -626,7 +629,7 @@ function update_jer_from_4_0_to_4_1($json_data) {
 	if ($modelo!=='si') {
 		$modelo = 'no';
 	}
-	
+
 	$response =	(object)hierarchy::update_jer_from_4_0_to_4_1($tld, $modelo);
 
 	# Debug
@@ -647,7 +650,7 @@ function update_jer_from_4_0_to_4_1($json_data) {
 
 /**
 * CONVERT_SEARCH_OBJECT_TO_SQL_QUERY
-* @return 
+* @return
 */
 function convert_search_object_to_sql_query($json_data) {
 	global $start_time;
@@ -661,7 +664,7 @@ function convert_search_object_to_sql_query($json_data) {
 	# set vars
 	$vars = array('json_string');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -674,11 +677,11 @@ function convert_search_object_to_sql_query($json_data) {
 	#}
 
 	if($search_query_object = json_decode($json_string)) {
-		
+
 		$search_development2 = new search_development2($search_query_object);
-		
+
 		#$sql_query = $search_development2->parse_search_query_object();
-		#$sql_query = addslashes($sql_query);	
+		#$sql_query = addslashes($sql_query);
 		#$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
 
 		// search exec
@@ -697,12 +700,12 @@ function convert_search_object_to_sql_query($json_data) {
 			}, $ar_lines);
 			$sql_query = implode(PHP_EOL, $ar_final);
 			$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
-		
+
 		$response->result 	= true;
 		$response->msg 		= $sql_query;
 		$response->rows 	= $rows;
 	}
-	
+
 
 	# Debug
 	if(SHOW_DEVELOPER===true) {
@@ -722,7 +725,7 @@ function convert_search_object_to_sql_query($json_data) {
 
 /**
 * export_hierarchy
-* @return 
+* @return
 */
 function export_hierarchy($json_data) {
 	global $start_time;
@@ -736,17 +739,17 @@ function export_hierarchy($json_data) {
 	# set vars
 	$vars = array('section_tipo');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
 
-	
+
 	$response = (object)tool_administration::export_hierarchy($section_tipo);
 
-	
+
 
 	# Debug
 	if(SHOW_DEVELOPER===true) {
@@ -778,13 +781,13 @@ function export_structure_to_json($json_data) {
 	# set vars
 	$vars = array('tld_list');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
-	
+
 	try {
 
 		$ar_tld		= explode(',', $tld_list);
@@ -801,7 +804,7 @@ function export_structure_to_json($json_data) {
 		}
 
 	} catch (Exception $e) {
-	
+
 		$response->msg = $e->getMessage();
 	}
 
@@ -846,7 +849,7 @@ function import_structure_from_json($json_data) {
 
 	$ar_tld	= empty($tld_list) ? [] : explode(',', $tld_list);
 
-	
+
 
 	try {
 
@@ -859,7 +862,7 @@ function import_structure_from_json($json_data) {
 		$response	= backup::import_structure_json_data($data, $ar_tld);
 
 	} catch (Exception $e) {
-	
+
 		$response->msg = $e->getMessage();
 	}
 
@@ -873,7 +876,7 @@ function import_structure_from_json($json_data) {
 
 	return (object)$response;
 }//end import_structure_from_json
-	
+
 
 
 /**
@@ -884,14 +887,14 @@ function long_time_process($json_data) {
 	global $start_time;
 
 	session_write_close();
-	
+
 	$seconds = 0;
 	$range = range(0, 80);
 	foreach ($range as $key => $value) {
 		debug_log(__METHOD__." Exec iteration: $key , value: $value ".to_string(), logger::DEBUG);
 		sleep(1); // seconds
 		$seconds++;
-	}	
+	}
 
 	$response = new stdClass();
 		$response->result	= true;
@@ -907,7 +910,7 @@ function long_time_process($json_data) {
 * @return object $response
 */
 function update_dedalo_code($json_data) {
-	global $start_time;		
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result	= false;
@@ -916,19 +919,50 @@ function update_dedalo_code($json_data) {
 	# set vars
 	$vars = array('is_preview');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 		}
 
 	// is_preview (on true, exec rsync in preview mode --dry-run)
 		$is_preview = isset($is_preview) ? json_decode($is_preview) : false;
-	
+
 
 	try{
 
-		$result = new stdClass();	
-	
+		$result = new stdClass();
+
 		// Download zip file from server (master)
-			$contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
+			// $contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
+			$contents = (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+				? (function(){
+
+					// regular contaxt
+						$aContext = [
+							'http' => [
+								'proxy'				=> 'tcp://' . SERVER_PROXY,
+								'request_fulluri'	=> true
+							]
+						];
+						$context = stream_context_create($aContext);
+
+					// HTTPS fixed bug context
+						// $path		= DEDALO_SOURCE_VERSION_URL;
+						// $hostname	= parse_url($path, PHP_URL_HOST);
+						// $opts = array(
+						// 	'http' => array(
+						// 		'method'	=> 'GET',
+						// 		'proxy'		=> 'tcp://' . DEDALO_SOURCE_VERSION_URL,
+						// 	),
+						// 	'ssl' => array(
+						// 		'SNI_server_name'	=> $hostname,
+						// 		'SNI_enabled'		=> true
+						// 	)
+						// );
+						// $context = stream_context_create($opts);
+
+					return file_get_contents(DEDALO_SOURCE_VERSION_URL, false, $context);
+				  })()
+				: file_get_contents(DEDALO_SOURCE_VERSION_URL);
+
 			if (!$contents) {
 				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
 				debug_log(__METHOD__." $response->msg", logger::ERROR);

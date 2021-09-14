@@ -226,7 +226,7 @@ class web_data {
 				break;
 
 			case 'lang':
-				preg_match('/^lg-[a-z]{2,3}$/i', $value, $output_array);
+				preg_match('/^lg-[a-z]{2,5}$/i', $value, $output_array);
 				if (empty($output_array[0])) {
 					return false;
 				}

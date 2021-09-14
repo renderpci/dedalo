@@ -1864,7 +1864,7 @@
 	
 	Valencia 26-09-2020 5.6.4
 		Update Dedalo_basic_library_pack
-		Updated dedalo4_install database. Changed format from custom to pgsl zipped)
+		Updated dedalo4_install database. Changed format from custom to PGSQL zipped)
 	
 
 	Valencia 27-09-2020 5.6.4c
@@ -2106,7 +2106,7 @@
 	
 	Valencia 03-02-2021 5.7.49
 		Add get_archive_states widget to the mdcat extras
-		Fixed issue in Publication API json_environment where protocol https is not detected correctly
+		Fixed issue in Publication API json_environment where protocol HTTPS is not detected correctly
 		Fixed error in component_iri read mode
 		Fixed error in component_email read mode
 
@@ -2184,7 +2184,7 @@
 	
 	
 	Valencia 11-02-2021 5.7.65
-		Fixed class difussion sql map_locator_to_int method to static
+		Fixed class diffusion sql map_locator_to_int method to static
 
 
 	Valencia 11-02-2021 5.7.66
@@ -2428,7 +2428,14 @@
 		Minor fixes in updates.php file to prevent issues updating Dédalo from old versions
 		Fixed issue when DEDALO_DIFFUSION_RESOLVE_LEVELS is not defined in config. Now a value of 2 levels is used as default
 		Fixed error in component_text_area where geolocation tags were not updated correctly causing a failure to save (besides, refactorized update_tag function)
-
+		16-07-2021		
+		Fixed issue on updates when matrix_stats already exists cases
+		Fixed error in publication web_data when lang 'lg-vlca' don't pass the security verification regex 
+		29-07-2021
+		Added check_remote_server curl error notification on error
+		30-07-2021
+		Added proxy options for CURL and get_file_contents in Dédalo external connections like 'Download structure' and 'Update Dédalo code'
+		Fixed component_image regenerate error when only the image in the original format (like TIF) is available
 
 
 	[/HISTORY]
@@ -2454,13 +2461,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2';
+	$DEDALO_VERSION = '5.8.2e';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-07-2021-c');
+	define('DEDALO_BUILD'	, '30-07-2021');
 
 
 	/*
