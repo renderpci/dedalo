@@ -2436,6 +2436,8 @@
 		30-07-2021
 		Added proxy options for CURL and get_file_contents in Dédalo external connections like 'Download structure' and 'Update Dédalo code'
 		Fixed component_image regenerate error when only the image in the original format (like TIF) is available
+		14-09-2021
+		Fix close wrap div for component_number in list  mode
 
 
 	[/HISTORY]
@@ -2461,7 +2463,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2e';
+	$DEDALO_VERSION = '5.8.2f';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();

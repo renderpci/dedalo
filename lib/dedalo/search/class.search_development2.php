@@ -3210,19 +3210,19 @@ class search_development2 {
 					$section_group_label	= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
 					$section_group_model	= RecordObj_dd::get_modelo_name_by_tipo($section_group_tipo,true);
 				
-				// section group childrens (components)
+				// section group children (components)
 					// $ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');				
 					$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');
-								
+									dump($ar_section_group_childrens, ' ar_section_group_childrens ++ '.to_string());
 				
-				// iterate childrens (components)
+				// iterate children (components)
 					foreach ($ar_section_group_childrens as $component_tipo) {
 
 						if ($section_group_tipo!==DEDALO_SECTION_INFO_SECTION_GROUP && !in_array($component_tipo, $ar_children)) {
 							continue;
 						}
 
-						// avoid duplicates on deep resolve recursion childrens
+						// avoid duplicates on deep resolve recursion children
 							if (in_array($component_tipo, $ar_added_components)) {
 								continue;
 							}
