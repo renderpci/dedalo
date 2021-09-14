@@ -776,20 +776,15 @@ export const ui = {
 						class_name		: 'filter',
 						parent			: fragment
 					})
-					instance.filter.render().then(filter_wrapper =>{
-						filter.appendChild(filter_wrapper)
+					instance.filter.build().then(()=>{
+						instance.filter.render().then(filter_wrapper =>{
+							filter.appendChild(filter_wrapper)
+						})
 					})
 				}
 
 			// paginator
 				if (items.paginator_div) {
-					// const paginator = ui.create_dom_element({
-					// 	element_type	: 'div',
-					// 	class_name		: 'paginator',
-					// 	parent			: fragment
-					// })
-
-
 					// place paginator in inspector
 					ui.place_element({
 						source_node			: items.paginator_div,
@@ -798,20 +793,6 @@ export const ui = {
 						container_selector	: ".paginator_container",
 						target_selector		: ".wrapper_paginator"
 					})
-
-
-					// self.paginator.build()
-					// .then(function(response){
-					// 	fn_render()
-					// })
-
-					// if (instance.paginator.status==='building') {
-					// 	// waiting records total count
-					// 	event_manager.subscribe('builded_'+instance.paginator.id, fn_render)
-					// }else{
-					// 	// total records is ready
-					// 	fn_render()
-					// }
 				}
 
 			// content_data
