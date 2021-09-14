@@ -253,7 +253,7 @@ section.prototype.build = async function(autoload=false) {
 			// rqo regenerate
 				await generate_rqo()
 				// console.log("SECTION self.rqo after load:", clone(self.rqo) );
-		
+
 			// count rows
 				if (!self.total) {
 					const count_sqo = clone(self.rqo.sqo )

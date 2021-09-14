@@ -195,7 +195,7 @@ paginator.prototype.get_total = async function() {
 
 	paginator.loading_total_status = 'resolved'
 
-	console.warn(`++++++++++++++++++++++++++++++++ RESOLVED ${self.caller.tipo} total:`,total);
+	// console.warn(`++++++++++++++++++++++++++++++++ RESOLVED ${self.caller.tipo} total:`,total);
 	return total
 };//end get_total
 
