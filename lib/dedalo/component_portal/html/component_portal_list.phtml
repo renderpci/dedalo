@@ -89,10 +89,11 @@
 								$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : '';
 									#dump($column_value, ' column_value ++ '.to_string($rows_data->strQuery));
 								#echo $column_value;
+								$modo = $this->propiedades->elements_list_mode->$column_tipo->mode ?? 'list';
 								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
 																				 $column_tipo, // current component tipo
 																				 $section_id, // current row section id
-																				 'list', // mode fixed list
+																				 $modo, // mode fixed list
 																				 DEDALO_DATA_LANG, // current data lang
 																				 $target_section_tipo, // current section tipo
 																				 null,
@@ -103,6 +104,12 @@
 								# aditional td css selectors
 								$td_css_selector = 'column_'.$modelo_name.' column_'.$column_tipo;							
 								$table .= "<div class=\"$td_css_selector\">";
+
+								if($modo = 'edit_in_list'){
+									$table .= "<span class=\"label\">";
+										$table .= $column_label;
+									$table .= '</span>';
+								}
 								if (is_string($value)) {
 									$table .= $value;
 								}else{
