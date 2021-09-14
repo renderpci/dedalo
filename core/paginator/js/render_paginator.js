@@ -106,11 +106,11 @@ const get_content_data = function(self) {
 			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
-	// display none with empty case, chenc NaN!=NaN (always true) or when pages are <2
-		if (total_pages!=total_pages || total_pages<2) {
+	// display none with empty case, or when pages are <2
+		if (!total_pages || total_pages<2) {
 			const wrap_rows_paginator = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'content_data paginator display_none'
+				class_name		: 'content_data paginator display_none ' +total_pages
 			})
 			return wrap_rows_paginator
 		}
