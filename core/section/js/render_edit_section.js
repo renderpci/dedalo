@@ -47,15 +47,13 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 	// buttons
 		// const current_buttons = await buttons(self);
 
-	// paginator node
+	// paginator node (will be placed/moved into inspector)
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'paginator'
 		})
-		self.paginator.build()
-		.then(function(){
-			self.paginator.render()
-			.then(paginator_wrapper =>{
+		self.paginator.build().then(()=>{
+			self.paginator.render().then(paginator_wrapper =>{
 				paginator_div.appendChild(paginator_wrapper)
 			})
 		})
