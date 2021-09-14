@@ -26,24 +26,21 @@ export const render_edit_component_date = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_edit_component_date.prototype.edit = async function(options={render_level : 'full'}) {
+render_edit_component_date.prototype.edit = async function(options) {
 
 	const self = this
 
-	// date_mode . Defined in ontology properties
-		const date_mode = self.context.properties.date_mode || 'date'
-
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// render_level
 		const render_level = options.render_level || 'full'
+
+	// date_mode . Defined in ontology properties
+		const date_mode = self.context.properties.date_mode || 'date'
 
 	// load editor files (calendar)
 		await self.load_editor()
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -73,21 +70,21 @@ render_edit_component_date.prototype.edit = async function(options={render_level
 */
 const add_events = function(self, wrapper) {
 
-	const date_mode = self.context.properties.date_mode
+	const date_mode = self.context.properties.date_mode || 'date'
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
+			event_manager.subscribe('update_value_'+self.id, fn_update_value)
 		)
-		function update_value (changed_data) {
+		function fn_update_value (changed_data) {
 
 		}
 
 	// add element, subscription to the events
 		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
+			event_manager.subscribe('add_element_'+self.id, fn_add_element)
 		)
-		function add_element(changed_data) {
+		function fn_add_element(changed_data) {
 			const inputs_container = wrapper.querySelector('.inputs_container')
 			// add new dom input element
 			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
@@ -273,11 +270,13 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	const value				= self.data.value
-	const mode				= self.mode
-	const is_inside_tool	= self.is_inside_tool
+	const value	= self.data.value
+	const mode	= self.mode
+
+	// fix non value scenarios
+	// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	const fragment = new DocumentFragment()
 
@@ -289,10 +288,11 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// build values
-		const inputs_value = (value.length<1) ? [''] : value
-		const value_length = inputs_value.length
+		const inputs_value	= (value.length<1) ? [''] : value
+		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self)
+			const input_element_edit = get_input_element_edit(i, inputs_value[i], self)
+			inputs_container.appendChild(input_element_edit)
 		}
 
 	// content_data
@@ -347,15 +347,14 @@ const get_buttons = (self) => {
 * GET_INPUT_ELEMENT_EDIT
 * @return dom element li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+export const get_input_element_edit = (i, current_value, self) => {
 
-	const mode 		= self.mode
-	const date_mode = self.context.properties.date_mode
+	const mode		= self.mode
+	const date_mode	= self.context.properties.date_mode
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type : 'li'
 		})
 
 	// build date
@@ -383,9 +382,9 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		if(mode==='edit' || 'edit_in_list'){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button remove hidden_button',
+				class_name		: 'button remove hidden_button',
 				dataset			: { key : i },
-				parent 			: li
+				parent			: li
 			})
 		}
 
@@ -402,8 +401,8 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 
 	const date_mode = self.context.properties.date_mode
 
-	const input_value_start = (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode)	: ''
-	const input_value_end 	= (current_value && current_value.end) ? self.get_dd_timestamp(current_value.end, date_mode) 		: ''
+	const input_value_start	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode)	: ''
+	const input_value_end	= (current_value && current_value.end) ? self.get_dd_timestamp(current_value.end, date_mode) 		: ''
 
 		input_element_flatpicker(i, 'range_start', input_value_start, inputs_container, self)
 
@@ -411,7 +410,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 		const div = ui.create_dom_element({
 			element_type	: 'div',
 			text_content	: ' <> ',
-			parent 			: inputs_container
+			parent			: inputs_container
 		})
 
 		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container, self)
@@ -426,63 +425,63 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 */
 const input_element_period = (i, current_value, inputs_container) => {
 
-	const period = (current_value &&current_value.period) ? current_value.period : null
+	const period = (current_value && current_value.period) ? current_value.period : null
 
-	const year = (period) ? period.year : ''
-	const month =  (period) ? period.month : ''
-	const day =  (period) ? period.day : ''
+	const year	= (period) ? period.year : ''
+	const month	= (period) ? period.month : ''
+	const day	= (period) ? period.day : ''
 
-	const label_year = (year!=='' && year>1) ? get_label['anyos'] : get_label['anyo']
-	const label_month = (month!=='' && month>1) ? get_label['meses'] : get_label['mes']
-	const label_day = (day!=='' && day>1) ? get_label['dias'] : get_label['dia']
+	const label_year	= (year!=='' && year>1) 	? get_label.anyos : get_label.anyo
+	const label_month	= (month!=='' && month>1) 	? get_label.meses : get_label.mes
+	const label_day		= (day!=='' && day>1) 		? get_label.dias : get_label.dia
 
 
 	const input_year = ui.create_dom_element({
 		element_type	: 'input',
-		type 			: 'text',
-		class_name 		: 'input_value',
-		dataset 	 	: { key : i, role: 'period_year' },
-		value 			: year,
-		placeholder 	: 'Y',
-		parent 			: inputs_container
+		type			: 'text',
+		class_name		: 'input_value',
+		dataset			: { key : i, role: 'period_year' },
+		value			: year,
+		placeholder		: 'Y',
+		parent			: inputs_container
 	})
 
 	const span_year = ui.create_dom_element({
 		element_type	: 'label',
 		text_content	: label_year,
-		parent 			: inputs_container
+		parent			: inputs_container
 	})
 
 	const input_month = ui.create_dom_element({
 		element_type	: 'input',
-		type 			: 'text',
-		class_name 		: 'input_value',
-		dataset 	 	: { key : i, role: 'period_month' },
-		value 			: month,
-		placeholder 	: 'M',
-		parent 			: inputs_container
+		type			: 'text',
+		class_name		: 'input_value',
+		dataset			: { key : i, role: 'period_month' },
+		value			: month,
+		placeholder		: 'M',
+		parent			: inputs_container
 	})
 
 	const span_month = ui.create_dom_element({
 		element_type	: 'label',
 		text_content	: label_month,
-		parent 			: inputs_container
+		parent			: inputs_container
 	})
 
 	const input_day = ui.create_dom_element({
 		element_type	: 'input',
-		type 			: 'text',
-		class_name 		: 'input_value',
-		dataset 	 	: { key : i, role: 'period_day' },
-		value 			: day,
-		placeholder 	: 'D',
-		parent 			: inputs_container
+		type			: 'text',
+		class_name		: 'input_value',
+		dataset			: { key : i, role: 'period_day' },
+		value			: day,
+		placeholder		: 'D',
+		parent			: inputs_container
 	})
 
 	const span_day = ui.create_dom_element({
 		element_type	: 'label',
 		text_content	: label_day,
-		parent 			: inputs_container
+		parent			: inputs_container
 	})
 
 	return true
@@ -501,12 +500,12 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 
 	const input_time = ui.create_dom_element({
 		element_type	: 'input',
-		type 			: 'text',
-		class_name 		: 'input_value',
-		dataset 	 	: { key : i },
-		value 			: input_value,
-		placeholder 	: self.get_placeholder_value(),
-		parent 			: inputs_container
+		type			: 'text',
+		class_name		: 'input_value',
+		dataset			: { key : i },
+		value			: input_value,
+		placeholder		: self.get_placeholder_value(),
+		parent			: inputs_container
 	})
 
 	return true
@@ -517,7 +516,7 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 /**
 * INPUT_ELEMENT_DEFAULT
 */
-const input_element_default = (i, current_value, inputs_container, self) => {
+export const input_element_default = (i, current_value, inputs_container, self) => {
 
 	const date_mode		= self.context.properties.date_mode
 	const input_value	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode) : ''
@@ -532,7 +531,7 @@ const input_element_default = (i, current_value, inputs_container, self) => {
 /**
 * INPUT_ELEMENT_FLATPICKER
 */
-const input_element_flatpicker = (i, role_name, input_value, inputs_container, self) => {
+export const input_element_flatpicker = (i, role_name, input_value, inputs_container, self) => {
 
 	// create div end
 		const flatpickr_wrap = ui.create_dom_element({
