@@ -942,44 +942,44 @@ this.get_search_json_object = function() {
 
 		const self = this
 
-		// section
-			const section 		= self.caller;
-			const section_node 	= section.node[0]
+		// source search_action
+			self.source.search_action = 'search'
 
-		// loading css add
-			section_node.classList.add("loading")
+		// section
+			const section = self.caller
 
 		// filter_obj. Recalculate filter_obj from DOM in default mode (include components with empty values)
 			const filter_obj = self.parse_dom_to_json_filter({
 				mode : "search"
 			}).filter
 
-		// source search_action
-			self.source.search_action = 'search'
+		// // pagination
+		// 	section.total			= null
+		// 	section.rqo.sqo.limit	= self.limit
+		// 	section.rqo.sqo.offset	= 0
+		// 	section.rqo.sqo.filter	= filter_obj
 
-		// sqo
-			// self.sqo.filter	= filter_obj
-			// self.sqo.limit	= self.limit
-			// sqo.filter		= filter_obj
-			// sqo.limit		= self.limit
+		// 	// paginator_node
+		// 	const paginator_node = section.paginator.node[0] || null
+		// 	if (paginator_node) {
+		// 		paginator_node.classList.add('hide')
+		// 	}
 
-		// pagination
-			section.total			= null
-			section.rqo.sqo.limit	= self.limit
-			section.rqo.sqo.offset	= 0
-			section.rqo.sqo.filter	= filter_obj
+		// // section
+		// 	const js_promise = section.refresh()
+		// 	.then(()=>{
+		// 		// loading css remove
+		// 			section_node.classList.remove("loading")
+		// 		// refresh section paginator
+		// 			if (paginator_node) {
+		// 				section.paginator.refresh()
+		// 				.then(function(){
+		// 					paginator_node.classList.remove('hide')
+		// 				})
+		// 			}
+		// 	})
 
-		// section
-			const js_promise = section.refresh()
-			.then(()=>{
-				// loading css remove
-					section_node.classList.remove("loading")
-				// setTimeout(function(){
-				// 		alert("Refreshing paginator");
-				// 	section.paginator.status = 'rendered'
-				// 	section.paginator.refresh()
-				// }, 4000)				
-			})
+		const js_promise = update_section(section, filter_obj)
 
 		return js_promise
 	};//end exec_search
@@ -994,35 +994,70 @@ this.get_search_json_object = function() {
 
 		const self = this
 
+		// source search_action
+			self.source.search_action = 'show_all'
+
 		// section
-			const section 		= self.caller
-			const section_node 	= section.node[0]
+			const section = self.caller
+
+		// filter reset
+			const filter_obj = null
+
+		// pagination
+			// section.total			= null
+			// section.rqo.sqo.limit	= self.limit
+			// section.rqo.sqo.offset	= 0
+			// section.rqo.sqo.filter	= null
+
+		// update_section
+			const js_promise = update_section(section, filter_obj)
+
+		return js_promise
+	};//end show_all
+
+
+
+	/**
+	* UPDATE_SECTION
+	* @return promise
+	*/
+	const update_section = async function(section, filter_obj) {
+
+		const section_node = section.node[0]
 
 		// loading css add
 			section_node.classList.add("loading")
 
-		// source search_action
-			self.source.search_action = 'show_all'
-
-		// sqo
-			// self.sqo.filter = null
-			// self.sqo.limit 	= self.limit
+		const limit = self.limit && self.limit>0 ? self.limit : 10
 
 		// pagination
 			section.total			= null
-			section.rqo.sqo.limit	= self.limit
+			section.rqo.sqo.limit	= limit
 			section.rqo.sqo.offset	= 0
-			section.rqo.sqo.filter	= null
+			section.rqo.sqo.filter	= filter_obj
+
+		// paginator_node
+			const paginator_node = section.paginator.node[0] || null
+			if (paginator_node) {
+				paginator_node.classList.add('hide')
+			}
 
 		// section
 			const js_promise = section.refresh()
 			.then(()=>{
 				// loading css remove
 					section_node.classList.remove("loading")
+				// refresh section paginator
+					if (paginator_node) {
+						section.paginator.refresh()
+						.then(function(){
+							paginator_node.classList.remove('hide')
+						})
+					}
 			})
 
 		return js_promise
-	};//end show_all
+	}//end update_section
 
 
 
