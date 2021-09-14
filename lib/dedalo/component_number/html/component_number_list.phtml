@@ -16,42 +16,44 @@
 	print "data-component_info='{$component_info}' ";
 	print ">";
 		
-	# CONTENIDO (INPUT)
-	$html_content = '';
-	switch(true) {
-			
-		case ($permissions==0)	:
-			$html_content .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";		
-			break;
-					
-		case ($permissions==1)	:			
-			$html_content .= "\n <span class=\"css_span_dato\">$valor</span>";			
-			break;
+		# CONTENIDO (INPUT)
+		$html_content = '';
+		switch(true) {
 
-		case ($permissions>=2)	:
+			case ($permissions==0)	:
+				$html_content .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
+				break;
 
-			if($modo =='portal_list'){
+			case ($permissions==1)	:
+				$html_content .= "\n <span class=\"css_span_dato\">$valor</span>";
+				break;
 
-				if(empty($dato) && $dato!='0'){
-					$html_content .= " <span class=\"css_number_span_edit_in_portal\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
-					$html_content .= "</span>";
-					break;	
-					#$edit_class = 'css_number_span_edit_in_portal';	
+			case ($permissions>=2)	:
+
+				if($modo =='portal_list'){
+
+					if(empty($dato) && $dato!='0'){
+						$html_content .= " <span class=\"css_number_span_edit_in_portal\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+						$html_content .= "</span>";
+						break;
+						#$edit_class = 'css_number_span_edit_in_portal';
+					}else{
+						$html_content .= '<span class="css_number_span" onclick="component_common.change_mode_component(this, \'$modo\',\'edit\')">'.$valor.'</span>';
+						#$edit_class = 'css_number_span';
+					}
+					#$html_content .= " <span class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+
 				}else{
-					$html_content .= '<span class="css_number_span" onclick="component_common.change_mode_component(this, \'$modo\',\'edit\')">'.$valor.'</span>';
-					#$edit_class = 'css_number_span';
+
+					$html_content .= '<span class="number_in_list css_span_dato">'.$valor.'</span>';
 				}
-				#$html_content .= " <span class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
-					
-			}else{
+				break;
+		}
 
-				$html_content .= '<span class="number_in_list css_span_dato">'.$valor.'</span>';
-			}
-			break;
-	}
+		# Prepare content to show in page
+		tools::prepare_content($html_content);
 
-	# Prepare content to show in page
-	tools::prepare_content($html_content);
-	
-	# PRINT HTML	
-	print $html_content;	
+		# PRINT HTML
+		print $html_content;
+
+	print "</div>";

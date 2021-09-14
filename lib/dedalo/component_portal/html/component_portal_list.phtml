@@ -108,15 +108,15 @@
 								}else{
 									$table .= to_string($value);
 								}
-								$table .= "</div>";																			
+								$table .= "</div>"; //<!-- /column_ -->
 
 							}//end foreach ($ar_columns as $column_tipo => $column_label) {
-							$table .= "</div>";	
+							$table .= '</div>';	// <!-- /portal_item -->
 					
 					$row_number++;						
 					}//end foreach dato
 
-					$table .= '</div>';
+					$table .= '</div>'; // <!-- /portal_div -->
 
 					$html_content .= $table;
 
@@ -165,4 +165,3 @@
 	
 	print $html_content;
 
-?>
