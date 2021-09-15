@@ -28,11 +28,14 @@
 
 	$file_name = $modo;
 
-	
+						dump($modo, ' modo +--------------+ '.to_string());
 	switch($modo) {		
 
 		case 'tool_lang':
 				$file_name = 'edit';
+		case 'edit_in_list':
+				$file_name = 'edit';
+
 		case 'edit'	:
 				if ($this->get_filter_authorized_record()===false) return NULL;
 				

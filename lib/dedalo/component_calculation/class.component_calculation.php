@@ -1373,12 +1373,31 @@ class component_calculation extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
+
+		if($modo!=='list'){
+			$component 	= component_common::get_instance(__CLASS__,
+													 $tipo,
+												 	 $parent,
+												 	 $modo,
+													 DEDALO_DATA_NOLAN,
+												 	 $section_tipo);
+
+			# Use already query calculated values for speed
+			#$dato = json_handler::decode($value);
+			#$component->set_dato($dato);
+
+			$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
+
+			$clean_value = $component->get_html();
+
+		}else{
+
 		try{
-			$clean_value = json_decode($value);
-		}catch(Exception $e){
-			$clean_value = $value;
-		} 
+				$clean_value = json_decode($value);
+			}catch(Exception $e){
+				$clean_value = $value;
+			}
+		}
 		
 		return $clean_value;
 	}//end render_list_value

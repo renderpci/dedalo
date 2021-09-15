@@ -83,7 +83,10 @@
 		$html_content .= '</script>';
 
 		# PRINT HTML
-		print $html_label;
+		if ($modo==='edit') {
+			print $html_label;
+		}
+
 		print $html_content;
 	
 	
