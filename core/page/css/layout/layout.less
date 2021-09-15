@@ -34,6 +34,16 @@
 		-o-user-select: none !important;
 		user-select: none !important;
 	}
+	// label_top. Is used in section group and inspector labels
+	.label_top {
+		background-color: @color_grey_light;
+		padding: 0.33em;
+		padding-left: 0.5em;
+		cursor: pointer;
+		text-transform: uppercase;
+		font-size: 0.85em;
+		color: @color_grey_ultradark;
+	}
 
 // mixins
 
@@ -280,7 +290,7 @@
 			padding: 1em;
 			//padding-top: 2.1em;
 			// width: calc(100vw - 2em);
-			overflow-x: scroll;
+			overflow-x: auto;
 		}
 	}
 
@@ -589,6 +599,10 @@
 			}
 		}
 
+		.filter {
+			width: 100%;
+		}
+
 		// section buttons container (export, new, print, etc.)
 		>.buttons {
 			display: flex;
@@ -637,7 +651,7 @@
 			}
 
 			>.filter {
-				// min-height: 28px;
+
 			}
 
 			>.content_data {
@@ -680,10 +694,18 @@
 				//	flex-basis: 100%;
 				//}
 			}
+			>.filter {
+				background-color: #b0feee;
+			}
 			>.paginator {
-				margin-bottom: 0.25em;
-				margin-top: 0.25em;
-				min-height: 2.94rem;
+				// background-color: #ffd700;
+				// margin-bottom: 0.25em;
+				// margin-top: 0.25em;
+				margin: 0;
+				// min-height: 2.94rem;
+				min-height: 2.8rem;
+				display: grid;
+				align-content: center;
 			}
 		}//end &.list
 	}//section
@@ -918,12 +940,7 @@
 					// &:active {
 					// 	opacity: 0.5;
 					// }
-					background-color: @color_grey_light;
-					padding: 0.33em;
-					padding-left: 0.5em;
-					cursor: pointer;
-					text-transform: uppercase;
-					font-size: 0.85em;
+					.label_top; // defined in layout
 				}
 				>.content_data {
 					// flex base config
@@ -1531,7 +1548,7 @@
 
 			// component_section_id
 			&.component_section_id {
-				background-color: @color_orange_dedalo;
+				background-color: @color_grey_dark;
 				color: white;
 				// display: flex;
 				// flex: 0 0 20%;
@@ -1620,8 +1637,11 @@
 		&.active {
 			// box-shadow: 3px 5px 8px 1px #c6c6c6;
 
+			outline: 1px solid @color_orange_dedalo;
+
 			//transition: background-color 0.3s ease;
-			background-color: @color_grey_medium !important; // rgb(230, 230, 230)
+			// background-color: @color_grey_medium !important; // rgb(230, 230, 230)
+			background-color: @color_white_dirty !important;
 
 			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 			overflow: initial !important;
@@ -1631,8 +1651,12 @@
 			}
 
 			z-index: 1;
-			.buttons_container {
+
+			>.buttons_container {
 				display: block !important;
+			}
+			>.label {
+				color: @color_orange_dedalo !important;
 			}
 		}//end &.active
 
@@ -1727,6 +1751,11 @@
 				box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 				border-top-right-radius: 0.25em;
 				border-bottom-right-radius: 0.25em;
+
+				background: linear-gradient(90deg, rgba(251,148,44,1) 0%, rgba(247,138,28,1) 100%);
+				top: -1px;
+				min-height: calc(100% + 2px);
+				box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
 
 				// >.tools_buttons_container {
 					// border-top: 1px solid #ffe5cb;

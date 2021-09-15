@@ -1606,6 +1606,15 @@ button.cancel:before {
   -o-user-select: none !important;
   user-select: none !important;
 }
+.label_top {
+  background-color: #f1f1f1;
+  padding: 0.33em;
+  padding-left: 0.5em;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.85em;
+  color: #191919;
+}
 .dd_input {
   font-size: 1em;
   height: 2em;
@@ -1827,7 +1836,7 @@ li .reset_input select {
 }
 .wrapper_page > .content_data {
   padding: 1em;
-  overflow-x: scroll;
+  overflow-x: auto;
 }
 .area > .label {
   font-size: 1.6em;
@@ -2112,6 +2121,9 @@ li .reset_input select {
     margin-bottom: 1em;
   }
 }
+.wrapper_section .filter {
+  width: 100%;
+}
 .wrapper_section > .buttons {
   display: flex;
   justify-content: flex-end;
@@ -2161,10 +2173,14 @@ li .reset_input select {
 .wrapper_section.list > .content_data {
   width: 100%;
 }
+.wrapper_section.list > .filter {
+  background-color: #b0feee;
+}
 .wrapper_section.list > .paginator {
-  margin-bottom: 0.25em;
-  margin-top: 0.25em;
-  min-height: 2.94rem;
+  margin: 0;
+  min-height: 2.8rem;
+  display: grid;
+  align-content: center;
 }
 .section_record.edit {
   margin: 0;
@@ -2259,6 +2275,7 @@ li .section_record.list .id_column {
   cursor: pointer;
   text-transform: uppercase;
   font-size: 0.85em;
+  color: #191919;
 }
 .section_record.edit .section_group.edit > .content_data {
   margin: 0;
@@ -2885,7 +2902,7 @@ li .section_record.list .id_column {
 .wrapper_component.edit.component_section_id,
 .wrapper_component.search.component_section_id,
 .wrapper_component.tm.component_section_id {
-  background-color: #f78a1c;
+  background-color: #949494;
   color: white;
 }
 .wrapper_component.edit.component_section_id.active,
@@ -2965,7 +2982,8 @@ li .section_record.list .id_column {
   padding: 0 !important;
 }
 .wrapper_component.active {
-  background-color: #e6e6e6 !important;
+  outline: 1px solid #f78a1c;
+  background-color: #faf9f9 !important;
   overflow: initial !important;
   z-index: 1;
 }
@@ -2974,8 +2992,11 @@ li .section_record.list .id_column {
     flex: 0 0 calc(100% - 2em) !important;
   }
 }
-.wrapper_component.active .buttons_container {
+.wrapper_component.active > .buttons_container {
   display: block !important;
+}
+.wrapper_component.active > .label {
+  color: #f78a1c !important;
 }
 .section_record .wrapper_component.list,
 .wrapper_tool .wrapper_component.list,
@@ -3046,6 +3067,10 @@ li .section_record.list .id_column {
   box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
   border-top-right-radius: 0.25em;
   border-bottom-right-radius: 0.25em;
+  background: linear-gradient(90deg, #fb942c 0%, #f78a1c 100%);
+  top: -1px;
+  min-height: calc(100% + 2px);
+  box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
 }
 .section_record .wrapper_component > .buttons_container .vector_editor,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor,
@@ -4317,9 +4342,6 @@ section {
 .wrapper_inspector > .inspector_content_data > .paginator_container .content_data.paginator {
   flex-wrap: wrap;
 }
-.wrapper_inspector > .inspector_content_data > .paginator_container .content_data.paginator > div {
-  flex: 1 0 100%;
-}
 .wrapper_inspector > .inspector_content_data .wrapper_component {
   padding: 1em;
 }
@@ -4360,9 +4382,13 @@ section {
   display: none;
 }
 .wrapper_inspector > .label {
-  padding: 1em;
-  background-color: #949494;
-  color: #ffffff;
+  background-color: #f1f1f1;
+  padding: 0.33em;
+  padding-left: 0.5em;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.85em;
+  color: #191919;
 }
 .wrapper_inspector .nav_buttons {
   padding-bottom: 0.5em;
@@ -4577,13 +4603,11 @@ div.tool_inspector_div .icon_bs {
 }
 .wrapper_paginator > .content_data {
   display: flex;
+  align-items: center;
   width: 100%;
-  padding: 0.5em;
-  padding-bottom: 0;
   line-height: 1.5em;
-}
-.wrapper_paginator > .content_data > * {
-  align-self: center;
+  padding: 0;
+  margin-left: 0.5em;
 }
 .wrapper_paginator > .content_data > .nav_buttons {
   display: flex;
@@ -4802,7 +4826,6 @@ div.tool_inspector_div .icon_bs {
 .wrapper_search > .search_global_container {
   display: flex;
   background-color: rgba(239, 239, 239, 0.7);
-  padding-bottom: 0.5em;
   position: relative;
   width: 100%;
   z-index: 1;
@@ -4833,6 +4856,11 @@ div.tool_inspector_div .icon_bs {
   position: -moz-sticky;
   position: sticky;
   top: 60px;
+}
+@media screen and (max-width: 1024px) {
+  .wrapper_search > .search_global_container .search_container_selection .search_group_container {
+    flex-wrap: wrap;
+  }
 }
 .wrapper_search > .search_global_container .search_container_selection .search_group_container .search_group {
   border: 0.5px solid #b9b9b9;
@@ -4929,8 +4957,9 @@ div.tool_inspector_div .icon_bs {
   color: #080808;
 }
 .wrapper_search > .search_global_container .search_container_selection .search_group_container > .search_buttons_container {
-  min-height: 6em;
+  min-height: 5em;
   display: flex;
+  flex: 1 1 auto;
   padding: 0;
   margin: 0;
   padding: 0.25em;

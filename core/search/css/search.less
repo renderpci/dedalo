@@ -41,7 +41,7 @@
 			background-color: fade(@bg_color_global, 70%);
 			//background-color: rgba(239, 239, 239, 0.71);
 			// border-radius: 5px;
-			padding-bottom: 0.5em;
+			// padding-bottom: 0.5em;
 			position: relative;
 			width: 100%;
 			z-index: 1;
@@ -125,6 +125,10 @@
 					position: -moz-sticky;
 					position: sticky;
 					top: 60px;
+
+					@media screen and (max-width: @width_break_point_0) {
+						flex-wrap: wrap;
+					}
 
 					.search_group {
 						border: 0.5px solid #b9b9b9;
@@ -258,8 +262,9 @@
 					// search_buttons_container
 					>.search_buttons_container {
 						//background-color: #ea9cd2;
-						min-height: 6em;
+						min-height: 5em;
 						display: flex;
+						flex: 1 1 auto;
 						padding: 0;
 						margin: 0;
 						padding: 0.25em;
