@@ -132,8 +132,8 @@ search.prototype.init = async function(options) {
 
 
 	// events subscription
-	// update value, subscription to the changes: if the dom input value was changed,
-	// observers dom elements will be changed own value with the observable value
+		// change_search_element. Update value, subscription to the changes: if the DOM input value was changed,
+		// observers DOM elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('change_search_element', fn_change_search_element)
 		)
@@ -1022,7 +1022,8 @@ this.get_search_json_object = function() {
 
 		// section
 			const js_promise = section.refresh()
-			.then(()=>{
+
+			js_promise.then(()=>{
 				// loading css remove
 					section_node.classList.remove("loading")
 				// refresh section paginator
@@ -1049,9 +1050,9 @@ this.get_search_json_object = function() {
 		const self = this
 
 		self.render_filter({
-			editing_preset 	 : self.json_filter,
-			clean_q 		 : true,
-			allow_duplicates : true
+			editing_preset		: self.json_filter,
+			clean_q				: true,
+			allow_duplicates	: true
 		})
 
 		// render buttons
@@ -1176,8 +1177,8 @@ search.prototype.search_from_enter_key = function(button_submit) {
 */
 search.prototype.filter_is_empty = function(filter_obj) {
 
-	const first_property = filter_obj[Object.keys(filter_obj)[0]]
-	const is_empty 		 = (first_property.length<1) ? true : false
+	const first_property	= filter_obj[Object.keys(filter_obj)[0]]
+	const is_empty			= (first_property.length<1) ? true : false
 
 
 	return is_empty
@@ -1203,3 +1204,5 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 	// 	return true;
 	// };//end init_tipology_selector
+
+

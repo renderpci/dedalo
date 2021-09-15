@@ -45,8 +45,8 @@ render_edit_component_select.prototype.edit = async function(options={render_lev
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// add events delegated
@@ -198,7 +198,9 @@ const get_buttons = (self) => {
 	// button go to target section
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
-			const target_section		= self.data.target_section
+			const target_section = self.data.target_section && self.data.target_section.length>0
+				? self.data.target_section
+				: []
 			const target_section_lenght	= target_section.length
 			// sort section by label asc
 				target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)

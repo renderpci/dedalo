@@ -5,7 +5,7 @@
 
 // imports
 	import {render_components_list} from '../../common/js/render_common.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/cookie.js'
 	// import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/utils/index.js'
@@ -479,6 +479,7 @@ render_search.prototype.render_search_buttons = function(){
 		max_input.addEventListener('change',function(){
 			self.limit = parseInt(max_input.value)
 		})
+
 	// reset group
 		const reset_group = ui.create_dom_element({
 			element_type	: "div",
