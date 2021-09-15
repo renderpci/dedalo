@@ -736,24 +736,8 @@ export const ui = {
 				}
 
 			// inspector
-				if (instance.inspector) {
-					// // icon toggle inspector
-					// const toggle = ui.create_dom_element({
-					// 	element_type	: 'div',
-					// 	class_name		: 'toggle_inspector',
-					// 	parent 			: fragment
-					// }).addEventListener("click", function(e) {
-					// 	ui.toggle_inspector(e)
-					// })
-					const inspector = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'inspector',
-						parent			: fragment
-					})
-					// wrapper
-					instance.inspector.render().then(inspector_wrapper =>{
-						inspector.appendChild(inspector_wrapper)
-					})
+				if (items.inspector_div) {
+					fragment.appendChild(items.inspector_div)
 				}
 
 			// buttons

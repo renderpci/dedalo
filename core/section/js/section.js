@@ -401,7 +401,6 @@ section.prototype.build = async function(autoload=false) {
 					section_id		: self.section_id
 				})
 				current_inspector.caller = self
-				current_inspector.build()
 				// fix section inspector
 				self.inspector = current_inspector
 			// }

@@ -40,13 +40,16 @@ inspector.prototype.init = function(options) {
 
 	const self = this
 
-	self.id 			= 'inspector_' + options.section_tipo
-	self.model 			= 'inspector'
+	self.id				= 'inspector_' + options.section_tipo
+	self.model			= 'inspector'
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
-	self.mode 			= 'edit'
-	self.node 			= []
-	self.caller 		= options.caller
+	self.mode			= 'edit'
+	self.node			= []
+	self.caller			= options.caller
+
+	// status update
+		self.status = 'initiated'
 
 	return true
 };//end init
@@ -61,6 +64,13 @@ inspector.prototype.build = async function(){
 
 	const self = this
 
+	// status update
+		self.status = 'building'
+
+	// Noting to do here. Only for live cycle compatibility
+
+	// status update
+		self.status = 'builded'
 
 	return true
 };//end build
