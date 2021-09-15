@@ -47,7 +47,7 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 	// buttons
 		// const current_buttons = await buttons(self);
 
-	// paginator node (will be placed/moved into inspector)
+	// paginator container node (will be placed/moved into inspector)
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'paginator'
@@ -58,10 +58,22 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 			})
 		})
 
+	// inspector container node
+		const inspector_div = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'inspector'
+		})
+		self.inspector.build().then(()=>{
+			self.inspector.render().then(inspector_wrapper =>{
+				inspector_div.appendChild(inspector_wrapper)
+			})
+		})
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.section.build_wrapper_edit(self, {
 			content_data	: content_data,
-			paginator_div	: paginator_div
+			paginator_div	: paginator_div,
+			inspector_div	: inspector_div
 			// buttons		: current_buttons
 		})
 
