@@ -111,6 +111,18 @@ const get_content_data = async function(self) {
 			parent			: content_data
 		})
 
+		// button_search. Show and hide all search elements
+			const button_search = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light search',
+				inner_html		: get_label.buscar || "Search",
+				parent			: buttons_container
+			})
+			button_search.addEventListener('click', function(e){
+				e.stopPropagation()
+				event_manager.publish('toggle_search_panel', this)
+			})
+
 		// button_new . Call API to create new section and navigate to the new record
 			const button_new = ui.create_dom_element({
 				element_type	: 'button',
@@ -120,10 +132,8 @@ const get_content_data = async function(self) {
 			})
 			button_new.addEventListener('click', (e) => {
 				e.stopPropagation()
-				event_manager.publish('new_section_' + self.caller.id)				
+				event_manager.publish('new_section_' + self.caller.id)
 			})
-			// buttons_container.appendChild(button_new)
-
 
 	// project container
 		const project_container = ui.create_dom_element({
