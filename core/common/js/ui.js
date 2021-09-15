@@ -989,7 +989,8 @@ export const ui = {
 		build_section_tool_button : (tool_context, self) => {
 
 			// button
-				const class_name = 'button light ' + tool_context.model
+				const class_name = 'warning ' + tool_context.model
+
 
 				const tool_button = ui.create_dom_element({
 					element_type	: 'button',
