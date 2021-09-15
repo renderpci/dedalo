@@ -1231,7 +1231,7 @@ class login extends common {
 			$properties->info[] = [
 				'type'	=> 'version',
 				'label'	=> 'Ontology version',
-				'value'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO)
+				'value'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, true, true)
 			];
 		// database user (only developer)
 			if (DEDALO_ENTITY==='development') {

@@ -322,7 +322,7 @@ abstract class common {
 					if ( isset($ar_related[0]) ) {
 						// REAL OR VIRTUAL SECTION
 						# Set custom matrix table
-						$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
+						$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
 							#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
 						$table_is_resolved = true;
 					}
@@ -333,7 +333,7 @@ abstract class common {
 						if ( isset($ar_related[0]) ) {
 							// REAL SECTION
 							# Set custom matrix table
-							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
+							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
 								#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
 							$table_is_resolved = true;
 						}
@@ -355,7 +355,7 @@ abstract class common {
 				$ar_related = common::get_ar_related_by_model('matrix_table', $parent_section_tipo);
 				if ( isset($ar_related[0]) ) {
 					# Set custom matrix table
-					$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
+					$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
 				}
 			}
 			*/
@@ -3842,7 +3842,7 @@ abstract class common {
 								$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
 							}
 
-							$el->label = RecordObj_dd::get_termino_by_tipo($el->tipo);
+							$el->label = RecordObj_dd::get_termino_by_tipo($el->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 							return $el;
 						}, $tool_config->ddo_map);
@@ -3977,8 +3977,8 @@ abstract class common {
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
 
-				// label
-					$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo);
+				// label $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+					$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 				// properties
 					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);

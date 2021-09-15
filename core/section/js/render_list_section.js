@@ -90,13 +90,10 @@ const get_buttons = function(self) {
 		const buttons_wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons',
-			parent 			: fragment
+			parent			: fragment
 		})
 
-		const ar_buttons_length = ar_buttons.length;
-
-
-		// filter button . Show and hide all search elements
+		// filter button (search) . Show and hide all search elements
 			// const filter_button = ui.create_dom_element({
 			// 	element_type	: 'div',
 			// 	class_name		: 'filter_button button search',
@@ -105,7 +102,6 @@ const get_buttons = function(self) {
 			const filter_button	= ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button light',
-				// text_content	: get_label.buscar,
 				parent			: buttons_wrapper
 			})
 			filter_button.addEventListener("click", function() {
@@ -118,13 +114,14 @@ const get_buttons = function(self) {
 			})
 			filter_button.insertAdjacentHTML('beforeend', get_label.buscar)
 
-
+		const ar_buttons_length = ar_buttons.length;
 		for (let i = 0; i < ar_buttons_length; i++) {
+
 			const current_button = ar_buttons[i]
 
 			if(current_button.model==='button_delete') continue
 
-			// button_new section
+			// button node
 				const class_name	= 'button light ' + current_button.model
 				const button_node	= ui.create_dom_element({
 					element_type	: 'button',
@@ -151,6 +148,7 @@ const get_buttons = function(self) {
 					}
 				})
 		}//end for (let i = 0; i < ar_buttons_length; i++)
+
 
 	ui.add_tools(self, buttons_wrapper)
 

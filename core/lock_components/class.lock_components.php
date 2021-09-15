@@ -323,17 +323,17 @@ class lock_components {
 					
 					$ar_vars = array($current_event_element->full_username,
 									 $current_event_element->component_tipo,
-									 RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo),
+									 RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_APPLICATION_LANG, true, true),
 									 $current_event_element->section_tipo,
-									 RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo),
+									 RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_APPLICATION_LANG, true, true),
 									 $current_event_element->section_id,
 									 );
 					$msg = sprintf("User <b>%s</b> is editing component %s <b>%s</b> from section %s <b>%s</b> of record ID <b>%s</b> (%s)",
 										$current_event_element->full_username,
 										$current_event_element->component_tipo,
-										RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo),
+										RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_APPLICATION_LANG, true, true),
 										$current_event_element->section_tipo,
-										RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo),
+										RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_APPLICATION_LANG, true, true),
 										$current_event_element->section_id,
 										$current_event_element->date
 										);

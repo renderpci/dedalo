@@ -292,7 +292,7 @@ abstract class diffusion  {
 
 		foreach ($diffusion_domains as $current_tipo) {
 
-			$current_name = RecordObj_dd::get_termino_by_tipo($current_tipo,null,true);
+			$current_name = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 
 			if($current_name===$diffusion_domain_name) {
 
