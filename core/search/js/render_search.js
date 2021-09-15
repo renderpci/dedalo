@@ -100,20 +100,20 @@ render_search.prototype.render_base = function() {
 	const fragment = new DocumentFragment()
 
 	// filter button . Show and hide all search elements
-		const filter_button = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'filter_button button search',
-			parent 			: fragment
-		})
-		.addEventListener("click", () => {
-			toggle_search_panel(self)
-		})
+		// const filter_button = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'filter_button button search',
+		// 	parent			: fragment
+		// })
+		// .addEventListener("click", () => {
+		// 	toggle_search_panel(self)
+		// })
 
 	// search_global_container . Main search div
 		const search_global_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'search_global_container hide',
-			parent 			: fragment
+			parent			: fragment
 		})
 		// set
 		self.search_global_container = search_global_container

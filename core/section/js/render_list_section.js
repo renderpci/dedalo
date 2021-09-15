@@ -95,6 +95,30 @@ const get_buttons = function(self) {
 
 		const ar_buttons_length = ar_buttons.length;
 
+
+		// filter button . Show and hide all search elements
+			// const filter_button = ui.create_dom_element({
+			// 	element_type	: 'div',
+			// 	class_name		: 'filter_button button search',
+			// 	parent			: buttons_wrapper
+			// })
+			const filter_button	= ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'button light',
+				// text_content	: get_label.buscar,
+				parent			: buttons_wrapper
+			})
+			filter_button.addEventListener("click", function() {
+				event_manager.publish('toggle_search_panel', this)
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button white search',
+				parent			: filter_button
+			})
+			filter_button.insertAdjacentHTML('beforeend', get_label.buscar)
+
+
 		for (let i = 0; i < ar_buttons_length; i++) {
 			const current_button = ar_buttons[i]
 
