@@ -280,7 +280,7 @@
 			padding: 1em;
 			//padding-top: 2.1em;
 			// width: calc(100vw - 2em);
-			overflow-x: hidden;
+			overflow-x: scroll;
 		}
 	}
 
@@ -583,7 +583,7 @@
 			margin-bottom: 0.2em;
 			font-size: 1.2em;
 
-			@media screen and (max-width: @width_break_point_1) {
+			@media screen and (max-width: @width_break_point_0) {
 				position: initial;
 				margin-bottom: 1em;
 			}
@@ -592,7 +592,7 @@
 		// section buttons container (export, new, print, etc.)
 		>.buttons {
 			display: flex;
-			flex-direction: row-reverse;
+			justify-content: flex-end;
 			width: 100%;
 			padding: 0;
 
@@ -627,7 +627,7 @@
 		&.edit {
 			width: calc(100vw - 18em);
 
-			@media screen and (max-width: @width_break_point_1) {
+			@media screen and (max-width: @width_break_point_0) {
 				width: 100%;
 			}
 
@@ -637,7 +637,7 @@
 			}
 
 			>.filter {
-				min-height: 28px;
+				// min-height: 28px;
 			}
 
 			>.content_data {
@@ -1386,7 +1386,8 @@
 					ul.inputs_container {
 						// auto-create columns with min width of 8em
 						display: grid;
-						grid-template-columns: repeat( auto-fit, minmax(8em, 1fr) );
+						// grid-template-columns: repeat( auto-fit, minmax(8em, 1fr) );
+						grid-template-columns: repeat( auto-fit, minmax(8em, 0) );
 						>li {
 							padding-bottom: 0.25em;
 						}
@@ -2203,7 +2204,7 @@
 
 // inspector
 	.inspector {
-		@top_distance : 75px;
+		// @top_distance : 75px;
 		@inspector_width : 15em;
 
 		height: 100%;
@@ -2212,9 +2213,9 @@
 		position: fixed;
 		// top: @top_distance;
 		left: calc(100vw - 16.4em);
-		border: 1px solid #eee;
+		outline: 1px solid @color_grey_light;
 
-		@media screen and (max-width: @width_break_point_1) {
+		@media screen and (max-width: @width_break_point_0) {
 			width: 100%;
 			left: 0;
 			position: initial;
