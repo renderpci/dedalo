@@ -98,7 +98,7 @@ search.prototype.init = async function(options) {
 		self.context				= options.caller.context
 		self.mode					= options.mode
 
-	// shor vars
+	// short vars
 		self.section_tipo			= self.caller.section_tipo
 		self.events_tokens			= []
 		self.parent_node			= null
@@ -107,7 +107,7 @@ search.prototype.init = async function(options) {
 		self.source					= self.caller.rqo.source
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
-		self.limit					= self.sqo.limit || 10
+		self.limit					= self.sqo.limit || (self.caller.mode==='edit' ? 1 : 10)
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
 		
@@ -953,33 +953,7 @@ this.get_search_json_object = function() {
 				mode : "search"
 			}).filter
 
-		// // pagination
-		// 	section.total			= null
-		// 	section.rqo.sqo.limit	= self.limit
-		// 	section.rqo.sqo.offset	= 0
-		// 	section.rqo.sqo.filter	= filter_obj
-
-		// 	// paginator_node
-		// 	const paginator_node = section.paginator.node[0] || null
-		// 	if (paginator_node) {
-		// 		paginator_node.classList.add('hide')
-		// 	}
-
-		// // section
-		// 	const js_promise = section.refresh()
-		// 	.then(()=>{
-		// 		// loading css remove
-		// 			section_node.classList.remove("loading")
-		// 		// refresh section paginator
-		// 			if (paginator_node) {
-		// 				section.paginator.refresh()
-		// 				.then(function(){
-		// 					paginator_node.classList.remove('hide')
-		// 				})
-		// 			}
-		// 	})
-
-		const js_promise = update_section(section, filter_obj)
+		const js_promise = update_section(section, filter_obj, self)
 
 		return js_promise
 	};//end exec_search
@@ -1003,14 +977,8 @@ this.get_search_json_object = function() {
 		// filter reset
 			const filter_obj = null
 
-		// pagination
-			// section.total			= null
-			// section.rqo.sqo.limit	= self.limit
-			// section.rqo.sqo.offset	= 0
-			// section.rqo.sqo.filter	= null
-
 		// update_section
-			const js_promise = update_section(section, filter_obj)
+			const js_promise = update_section(section, filter_obj, self)
 
 		return js_promise
 	};//end show_all
@@ -1021,14 +989,15 @@ this.get_search_json_object = function() {
 	* UPDATE_SECTION
 	* @return promise
 	*/
-	const update_section = async function(section, filter_obj) {
+	const update_section = async function(section, filter_obj, self) {
 
 		const section_node = section.node[0]
 
 		// loading css add
 			section_node.classList.add("loading")
 
-		const limit = self.limit && self.limit>0 ? self.limit : 10
+		// limit
+			const limit = self.limit && self.limit>0 ? self.limit : 10
 
 		// pagination
 			section.total			= null
