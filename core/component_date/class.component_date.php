@@ -749,7 +749,7 @@ class component_date extends component_common {
 
 		}//end foreach
 
-		$label 		= RecordObj_dd::get_termino_by_tipo( $tipo ).':'.$stats_model;
+		$label 		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true ).':'.$stats_model;
 		$ar_final 	= array($label => $ar_final );
 			#dump($ar_final,'$ar_final '.$caller_component . " ".print_r($current_stats_value,true));
 

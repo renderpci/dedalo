@@ -1484,7 +1484,7 @@ class component_relation_common extends component_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				//$total = exec_time_unit($start_time,'ms')." ms";
-				//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) . to_string(), logger::DEBUG);
+				//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . to_string(), logger::DEBUG);
 			}
 
 

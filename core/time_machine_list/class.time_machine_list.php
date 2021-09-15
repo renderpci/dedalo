@@ -6,6 +6,8 @@
 */
 class time_machine_list extends common {
 
+
+
 	protected $tipo;
 	protected $section_id;
 	protected $section_tipo;
@@ -15,17 +17,20 @@ class time_machine_list extends common {
 	protected $offset;
 	protected $count;
 
+
+
 	/**
 	* CONSTRUCT
-	* 
 	*/
 	public function __construct($tipo, $section_id, $section_tipo, $modo='edit') {
 
-		$this->tipo 		= $tipo;
-		$this->section_id 	= $section_id;
-		$this->section_tipo = $section_tipo;
-		$this->modo 		= $modo;
+		$this->tipo			= $tipo;
+		$this->section_id	= $section_id;
+		$this->section_tipo	= $section_tipo;
+		$this->modo			= $modo;
 
+
+		return true;
 	}//end __construct
 
 
@@ -71,7 +76,7 @@ class time_machine_list extends common {
 			$RecordObj_time_machine	= new RecordObj_time_machine($id);
 
 			# Add current TM object
-			$ar_component_time_machine[]	= $RecordObj_time_machine;
+			$ar_component_time_machine[] = $RecordObj_time_machine;
 		}
 
 		foreach((array)$ar_component_time_machine as $tm_obj) {
@@ -88,13 +93,13 @@ class time_machine_list extends common {
 			
 			if(empty($component_tipo)) continue;
 
-			$component_label = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG);
+			$component_label = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			switch ($modelo_name) {
 				case 'component_text_area':
 					$value	= component_text_area::clean_raw_text_for_preview($dato);
-					$value 	= strip_tags($value);					
+					$value	= strip_tags($value);
 					break;
 				case 'component_state':
 					$value ='';
@@ -104,21 +109,19 @@ class time_machine_list extends common {
 					break;
 				default:
 					if (!is_string($dato)) {
-						$current_component = component_common::get_instance(
-																	$modelo_name, 
-																	$component_tipo, 
-																	$this->section_id,
-																	'list', 
-																	$lang,
-																	$this->section_tipo
-						);
+						$current_component = component_common::get_instance($modelo_name,
+																			$component_tipo,
+																			$this->section_id,
+																			'list',
+																			$lang,
+																			$this->section_tipo);
 						$current_component->set_dato($dato);
 						$value = $current_component->get_valor();
 						#$value = json_encode($dato, JSON_UNESCAPED_UNICODE);
 						
 					}else{
-						$value = $dato;
-						$value = strip_tags($value);
+						$value	= $dato;
+						$value	= strip_tags($value);
 					}
 					#$value	= to_string($dato);
 					break;
@@ -136,18 +139,18 @@ class time_machine_list extends common {
 					
 			// Row object
 			$row_obj = new stdClass();
-				$row_obj->date 					= $date;
-				$row_obj->userID 				= $userID;
-				$row_obj->mod_user_name 		= $mod_user_name;
-				$row_obj->id_time_machine 		= $id_time_machine;
-				$row_obj->tipo 					= $component_tipo; //change to component_tipo when the tipo go out
-				$row_obj->component_label 		= $component_label;
-				$row_obj->parent 				= $this->section_id; //change to section_id when the parent go out
-				$row_obj->section_tipo  		= $this->section_tipo;
-				$row_obj->lang 					= $lang;
-				$row_obj->lang_label			= $lang_label;
-				$row_obj->value 				= $value;
-				$row_obj->tool_name 			= 'tool_time_machine';
+				$row_obj->date				= $date;
+				$row_obj->userID			= $userID;
+				$row_obj->mod_user_name		= $mod_user_name;
+				$row_obj->id_time_machine	= $id_time_machine;
+				$row_obj->tipo				= $component_tipo; //change to component_tipo when the tipo go out
+				$row_obj->component_label	= $component_label;
+				$row_obj->parent			= $this->section_id; //change to section_id when the parent go out
+				$row_obj->section_tipo		= $this->section_tipo;
+				$row_obj->lang				= $lang;
+				$row_obj->lang_label		= $lang_label;
+				$row_obj->value				= $value;
+				$row_obj->tool_name			= 'tool_time_machine';
 
 			$ar_data[] = $row_obj;
 			
@@ -159,17 +162,17 @@ class time_machine_list extends common {
 
 		#dump($ar_data,'$ar_data');
 		$row_header = new stdClass();
-			$row_header->date =	label::get_label('tiempo');
-			$row_header->mod_user_name = label::get_label('modificado');
-			$row_header->component_label = label::get_label('donde');
-			$row_header->lang_label = label::get_label('idioma');
-			$row_header->value = label::get_label('que');
+			$row_header->date				=	label::get_label('tiempo');
+			$row_header->mod_user_name		= label::get_label('modificado');
+			$row_header->component_label	= label::get_label('donde');
+			$row_header->lang_label			= label::get_label('idioma');
+			$row_header->value				= label::get_label('que');
 
 		$ar_context[] = $row_header;
 
 		$context = 'context';
-		$json->$context = $ar_context;
-		$json->data 	= $ar_data;
+		$json->$context	= $ar_context;
+		$json->data		= $ar_data;
 
 		return (array)$json;	
 	}//end get_inverse_references
@@ -177,20 +180,20 @@ class time_machine_list extends common {
 
 
 	/**
-	* GET_DATA
-	* 
+	* GET_AR_DATA
+	* @return array of component objects $data
 	*/
 	public function get_ar_data($locator, $ar_components, $value_resolved=false){
 
 		$data = [];
 
-		$section_tipo 	= $locator->from_section_tipo;
-		$section_id 	= $locator->from_section_id;
+		$section_tipo	= $locator->from_section_tipo;
+		$section_id		= $locator->from_section_id;
 
 		$current_id = new stdClass;
-					$current_id->section_tipo 		= $section_tipo;
-					$current_id->section_id 		= $section_id;
-					$current_id->component_tipo		= 'id';
+			$current_id->section_tipo	= $section_tipo;
+			$current_id->section_id		= $section_id;
+			$current_id->component_tipo	= 'id';
 
 		$data[] = $current_id;
 		
@@ -198,21 +201,19 @@ class time_machine_list extends common {
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
 					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
-					$current_component	= component_common::get_instance(
-																		$modelo_name, 
-																		$tipo, 
-																		$section_id,
-																		'list', 
-																		DEDALO_DATA_LANG, 
-																		$section_tipo
-																		);
+					$current_component	= component_common::get_instance($modelo_name,
+																		 $tipo,
+																		 $section_id,
+																		 'list',
+																		 DEDALO_DATA_LANG,
+																		 $section_tipo);
 					$value = $current_component->get_valor();
 
 					$component_object = new stdClass;
 						$component_object->section_tipo		= $section_tipo;
-						$component_object->section_id 		= $section_id;
+						$component_object->section_id		= $section_id;
 						$component_object->component_tipo	= $tipo;
-						$component_object->value 			= $value;
+						$component_object->value			= $value;
 
 					$data[] = $component_object;
 				}
@@ -220,14 +221,13 @@ class time_machine_list extends common {
 		}
 	
 		return $data;
-
-	}//end get_data
+	}//end get_ar_data
 
 
 
 	/**
 	* GET_JSON
-	* 
+	* @return string $json
 	*/
 	public function get_json(){
 
@@ -248,7 +248,6 @@ class time_machine_list extends common {
 
 
 
-
 }//end time_machine_list
 
-?>
+

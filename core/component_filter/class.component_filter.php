@@ -542,7 +542,7 @@ class component_filter extends component_relation_common {
 				$ar_final[$valor[$key]] = $value;
 		}
 
-		$label 		= RecordObj_dd::get_termino_by_tipo( $tipo, null, true ).':'.$stats_model;
+		$label 		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
 		$ar_final 	= array($label => $ar_final );
 			#dump($ar_final,'$ar_final');
 
