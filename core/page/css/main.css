@@ -1827,7 +1827,7 @@ li .reset_input select {
 }
 .wrapper_page > .content_data {
   padding: 1em;
-  overflow-x: hidden;
+  overflow-x: scroll;
 }
 .area > .label {
   font-size: 1.6em;
@@ -2106,7 +2106,7 @@ li .reset_input select {
   margin-bottom: 0.2em;
   font-size: 1.2em;
 }
-@media screen and (max-width: 960px) {
+@media screen and (max-width: 1024px) {
   .wrapper_section > .label {
     position: initial;
     margin-bottom: 1em;
@@ -2114,7 +2114,7 @@ li .reset_input select {
 }
 .wrapper_section > .buttons {
   display: flex;
-  flex-direction: row-reverse;
+  justify-content: flex-end;
   width: 100%;
   padding: 0;
 }
@@ -2142,16 +2142,13 @@ li .reset_input select {
 .wrapper_section.edit {
   width: calc(100vw - 18em);
 }
-@media screen and (max-width: 960px) {
+@media screen and (max-width: 1024px) {
   .wrapper_section.edit {
     width: 100%;
   }
 }
 .wrapper_section.edit.full_width {
   width: 100%;
-}
-.wrapper_section.edit > .filter {
-  min-height: 28px;
 }
 .wrapper_section.edit > .content_data {
   display: flex;
@@ -2762,7 +2759,7 @@ li .section_record.list .id_column {
 .wrapper_component.search.component_radio_button > .content_data ul.inputs_container,
 .wrapper_component.tm.component_radio_button > .content_data ul.inputs_container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8em, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8em, 0));
 }
 .wrapper_component.edit.component_radio_button > .content_data ul.inputs_container > li,
 .wrapper_component.search.component_radio_button > .content_data ul.inputs_container > li,
@@ -3510,9 +3507,9 @@ dd-modal .footer > * {
   background-color: #fcfcfc;
   position: fixed;
   left: calc(100vw - 16.4em);
-  border: 1px solid #eee;
+  outline: 1px solid #f1f1f1;
 }
-@media screen and (max-width: 960px) {
+@media screen and (max-width: 1024px) {
   .inspector {
     width: 100%;
     left: 0;
@@ -4301,11 +4298,7 @@ section {
   display: block;
   padding: 0px;
   margin: 0px;
-}
-@media screen and (max-width: 980px) {
-  .wrapper_inspector {
-    width: 100% !important;
-  }
+  width: 100%;
 }
 .wrapper_inspector.inspector_fixed {
   position: fixed;
@@ -4829,6 +4822,7 @@ div.tool_inspector_div .icon_bs {
 }
 .wrapper_search > .search_global_container .search_container_selection {
   flex-grow: 1;
+  align-self: flex-start;
   background-color: #d0e2f5;
   position: relative;
   padding-top: 0;
