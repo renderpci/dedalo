@@ -571,7 +571,9 @@ template {
   height: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   opacity: 1;
 }
 .button:hover {
@@ -588,8 +590,8 @@ template {
   background-color: #ffffff !important;
 }
 button {
-  width: fit-content;
-  height: fit-content;
+  width: max-content;
+  height: min-content;
   padding-left: 1rem;
   padding-right: 1rem;
   padding-top: 0.275rem;
@@ -1394,7 +1396,9 @@ button.cancel:before {
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/bold.svg");
@@ -1429,7 +1433,9 @@ button.cancel:before {
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/italic.svg");
@@ -1464,7 +1470,9 @@ button.cancel:before {
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/underline.svg");
@@ -1499,7 +1507,9 @@ button.cancel:before {
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/exchange.svg");
@@ -1921,7 +1931,9 @@ li .reset_input select {
   display: inline-flex;
   min-width: 1em;
   line-height: 1em;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   opacity: 1;
   width: 1em;
   height: 1em;
@@ -1976,7 +1988,9 @@ li .reset_input select {
   display: inline-flex;
   min-width: 1em;
   line-height: 1em;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/arrow-circle-right.svg");
@@ -2375,6 +2389,11 @@ li .section_record.list .id_column {
 .wrapper_component.search.component_check_box > .content_data,
 .wrapper_component.tm.component_check_box > .content_data {
   overflow: auto;
+}
+.wrapper_component.edit.component_date .calendar,
+.wrapper_component.search.component_date .calendar,
+.wrapper_component.tm.component_date .calendar {
+  height: 1.3em;
 }
 .wrapper_component.edit.component_date > .content_data .flatpickr,
 .wrapper_component.search.component_date > .content_data .flatpickr,
@@ -3619,7 +3638,9 @@ dd-modal .footer > * {
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/lock.svg");
@@ -3657,7 +3678,9 @@ dd-modal .footer > * {
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/preload.svg");
@@ -4653,7 +4676,9 @@ div.tool_inspector_div .icon_bs {
   height: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 2em;
   height: 2em;
   mask-image: url("../../themes/default/icons/forward.svg");
@@ -4693,7 +4718,9 @@ div.tool_inspector_div .icon_bs {
   height: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 2em;
   height: 2em;
   mask-image: url("../../themes/default/icons/play.svg");
@@ -4731,7 +4758,9 @@ div.tool_inspector_div .icon_bs {
   height: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 2em;
   height: 2em;
   mask-image: url("../../themes/default/icons/play.svg");
@@ -4768,7 +4797,9 @@ div.tool_inspector_div .icon_bs {
   height: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 2em;
   height: 2em;
   mask-image: url("../../themes/default/icons/forward.svg");
@@ -4979,7 +5010,7 @@ div.tool_inspector_div .icon_bs {
 .wrapper_search > .search_global_container .search_container_selection .search_group_container > .search_buttons_container {
   min-height: 5em;
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   padding: 0;
   margin: 0;
   padding: 0.25em;
@@ -5593,7 +5624,9 @@ background-color: #FFFF00;
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   width: 1em;
   height: 1em;
   mask-image: url("../../themes/default/icons/list_white.svg");
@@ -6099,7 +6132,9 @@ background-color: #FFFF00;
   min-width: 1em;
   line-height: 1em;
   margin: 0;
-  margin-right: 0.5em;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+  margin-top: 0.25rem;
   opacity: 1;
   width: 1em;
   height: 1em;
