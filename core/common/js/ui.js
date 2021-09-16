@@ -1602,6 +1602,9 @@ export const ui = {
 	*/
 	attach_to_modal : (header, body, footer, size="normal") => {
 
+		// page_y_offset. Current window scroll position (used to restore later)
+			const page_y_offset = window.pageYOffset || 0
+
 		// modal container select from DOM (created hidden when page is builded)
 			// const modal_container = document.querySelector('dd-modal')
 		// modal container build new DOM on each call and remove on close
@@ -1656,6 +1659,12 @@ export const ui = {
 							content_data_page.classList.remove("hide")
 							menu_wrapper.classList.remove("hide")
 							if(debug_div) debug_div.classList.remove("hide")
+
+							// scroll window to previous scroll position
+								window.scrollTo({
+									top			: page_y_offset,
+									behavior	: "auto"
+								})
 						})
 
 					modal_container._showModalBig();
@@ -1667,7 +1676,7 @@ export const ui = {
 
 
 		return modal_container
-	},//attach_to_modal
+	},//end attach_to_modal
 
 
 
@@ -1856,7 +1865,7 @@ export const ui = {
 
 
 		return footer
-	}//end  create_dialog
+	}//end create_dialog
 
 
 
