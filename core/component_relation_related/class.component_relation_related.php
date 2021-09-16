@@ -198,9 +198,9 @@ class component_relation_related extends component_relation_common {
 			case DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO:
 			case DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO:
 				$current_locator = new stdClass();
-					$current_locator->section_tipo 			= $this->section_tipo;
-					$current_locator->section_id 			= $this->section_id;
-					$current_locator->from_component_tipo 	= $this->tipo;
+					$current_locator->section_tipo			= $this->section_tipo;
+					$current_locator->section_id			= $this->section_id;
+					$current_locator->from_component_tipo	= $this->tipo;
 				$references = component_relation_related::get_references_recursive($this->tipo, $current_locator, $this->relation_type_rel, false, $this->lang );
 				break;
 			case DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO:
@@ -215,7 +215,7 @@ class component_relation_related extends component_relation_common {
 		}
 
 
-		// get the request_config of the componet to get the show object, it will use to format the label of the reference.
+		// get the request_config of the component to get the show object, it will use to format the label of the reference.
 		$request_config = $this->get_request_query_object();
 		$show = $request_config->show;
 		$ar_componets_related = array_map(function($ddo){

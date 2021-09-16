@@ -25,11 +25,12 @@ export const render_tool_time_machine = function() {
 * Render node for use like button
 * @return DOM node
 */
-render_tool_time_machine.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_time_machine.prototype.edit = async function (options) {
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// options
+		const render_level 	= options.render_level || 'full'
 
 	// content_data
 		const current_content_data = await content_data_edit(self)
@@ -57,9 +58,9 @@ render_tool_time_machine.prototype.edit = async function (options={render_level:
 		//}
 
 	// modal container
-		const header 	= wrapper.querySelector('.tool_header')
-		const modal  	= ui.attach_to_modal(header, wrapper, null, 'big')
-		modal.on_close = () => {
+		const header	= wrapper.querySelector('.tool_header')
+		const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
+		modal.on_close	= () => {
 			self.destroy(true, true, true)
 		}
 		// fix
