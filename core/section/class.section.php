@@ -3648,6 +3648,10 @@ class section extends common {
 
 		$current_record = $this->get_record();
 
+		if (empty($current_record)) {
+			return $data;
+		}
+
 		$source_model	= get_called_class();
 		
 		// subdata time machine
@@ -3678,7 +3682,7 @@ class section extends common {
 				];
 				
 				return $current_item;
-			})($tipo, $section_tipo, $section_id, $lang, $id);			
+			})($tipo, $section_tipo, $section_id, $lang, $id);
 
 		// timestamp (component_date)
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $timestamp) {
