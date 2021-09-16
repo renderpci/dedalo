@@ -186,7 +186,7 @@ class login extends common {
 					return $response;
 				}//end if( $password_encrypted!==$password_dato )
 
-			// password lenght check
+			// password length check
 				if( empty($password_dato) || strlen($password_dato)<8 ) {
 					$response->msg = "Error: Wrong password [2]";
 					error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
@@ -246,7 +246,7 @@ class login extends common {
 			}//end if(!security::is_global_admin($user_id))
 
 
-		// Login (all is ok) - init login secuence when all is ok
+		// Login (all is ok) - init login sequence when all is ok
 			$full_username				= login::get_full_username($user_id);
 			$init_user_login_sequence	= login::init_user_login_sequence($user_id, $username, $full_username);
 			if ($init_user_login_sequence->result===false) {
@@ -642,7 +642,6 @@ class login extends common {
 	* @return bool
 	*/
 	private static function init_user_login_sequence($user_id, $username, $full_username, $init_test=true, $login_type='default') {
-
 		$start_time=microtime(1);
 
 		$response = new stdClass();
@@ -658,7 +657,7 @@ class login extends common {
 			# Nothing to delete
 		#}
 
-		// DEDALO INIT TEST SECUENCE
+		// dedalo init test sequence
 			if ($init_test===true) {
 
 				// dd_init_test
@@ -680,77 +679,76 @@ class login extends common {
 					}
 			}
 
-		// IS_GLOBAL_ADMIN (before set user session vars)
+		// is_global_admin (before set user session vars)
 			$_SESSION['dedalo']['auth']['is_global_admin'] = (bool)security::is_global_admin($user_id);
 
-		// IS_DEVELOPER (before set user session vars)
+		// is_developer (before set user session vars)
 			$_SESSION['dedalo']['auth']['is_developer'] = (bool)login::is_developer($user_id);
 
-		// SESSION : If backup is ok, fix session data
+		// session : If backup is ok, fix session data
 			$_SESSION['dedalo']['auth']['user_id']			= $user_id;
 			$_SESSION['dedalo']['auth']['username']			= $username;
 			$_SESSION['dedalo']['auth']['full_username']	= $full_username;
 			$_SESSION['dedalo']['auth']['is_logged']		= 1;
 
-		// CONFIG KEY
+		// config key
 			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_openssl(DEDALO_SALT_STRING);
 
 		// login_type
 			$_SESSION['dedalo']['auth']['login_type'] = $login_type;
 
-		# Auth cookie
+		// cookie authorization
 			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
 				self::init_cookie_auth();
 			}
 
-		# BACKUP ALL
-		if( DEDALO_BACKUP_ON_LOGIN ) {
-			# Close script session
-			session_write_close();
-			require_once DEDALO_CORE_PATH.'/backup/class.backup.php';
-			$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
-			$backup_info = $backup_secuence_response->msg;
-		}else{
-			$backup_info = 'Deactivated "on login backup" for this domain';
-		}
-
-
-		try {
-
-			# REMOVE LOCK_COMPONENTS ELEMENTS
-			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-				lock_components::force_unlock_all_components($user_id);
+		// backup all
+			if( DEDALO_BACKUP_ON_LOGIN ) {
+				# Close script session
+				session_write_close();
+				require_once DEDALO_CORE_PATH.'/backup/class.backup.php';
+				$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
+				$backup_info = $backup_secuence_response->msg;
+			}else{
+				$backup_info = 'Deactivated "on login backup" for this domain';
 			}
 
-			# GET ENTITY DIFFUSION TABLES / SECTIONS . Store for speed
-			# $entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
-			# $_SESSION['dedalo']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
+		// remove lock_components elements
+			try {
+				# remove lock_components elements
+				if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+					lock_components::force_unlock_all_components($user_id);
+				}
+				# GET ENTITY DIFFUSION TABLES / SECTIONS . Store for speed
+				# $entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
+				# $_SESSION['dedalo']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
 
-		} catch (Exception $e) {
-			debug_log(__METHOD__." $e ", logger::CRITICAL);
-		}
+			} catch (Exception $e) {
+				debug_log(__METHOD__." $e ", logger::CRITICAL);
+			}
 
 
-		# LOG : Prepare and save login action
-		$browser = $_SERVER["HTTP_USER_AGENT"];
-		if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
+		// log : Prepare and save login action
+			$browser = $_SERVER["HTTP_USER_AGENT"];
+			if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
-		$activity_datos['result']		= "allow";
-		$activity_datos['cause']		= "correct user and password";
-		$activity_datos['username']		= $username;
-		$activity_datos['browser']		= $browser;
-		$activity_datos['DB-backup']	= $backup_info;
+			$activity_datos['result']		= "allow";
+			$activity_datos['cause']		= "correct user and password";
+			$activity_datos['username']		= $username;
+			$activity_datos['browser']		= $browser;
+			$activity_datos['DB-backup']	= $backup_info;
 
-		# LOGIN ACTIVITY REPORT
-		self::login_activity_report(
-			"User $user_id is logged. Hello $username",
-			null,
-			'LOG IN',
-			$activity_datos
+		// login activity report
+			self::login_activity_report(
+				"User $user_id is logged. Hello $username",
+				null,
+				'LOG IN',
+				$activity_datos
 			);
 
-		$response->result	= true;
-		$response->msg		= 'OK init_user_login_sequence is done';
+		// OK response
+			$response->result	= true;
+			$response->msg		= 'OK init_user_login_sequence is done';
 
 		return $response;
 	}//end init_user_login_sequence
@@ -807,7 +805,7 @@ class login extends common {
 			}
 			# File cookie data
 			if( !file_put_contents($cookie_file, json_encode($data)) ){
-				throw new Exception("Error Processing Request. Media protecction error on create cookie_file", 1);
+				throw new Exception("Error Processing Request. Media protection error on create cookie_file", 1);
 			}
 
 			debug_log(__METHOD__." data 2 New data ".to_string($data), logger::DEBUG);
@@ -879,10 +877,28 @@ class login extends common {
 		}
 
 		$_SESSION['dedalo']['auth']['cookie_auth'] = $data;
-		# SET COOKIE
-		$cookie_properties = common::get_cookie_properties();
-		#setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
-		setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+
+		// set cookie
+			$cookie_properties = common::get_cookie_properties();
+			#setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
+			$cookie_values = (object)[
+				'name'		=> $data->{$ktoday}->cookie_name,
+				'value'		=> $data->{$ktoday}->cookie_value,
+				'expires'	=> (time() + (86400 * 1)),
+				'path'		=> '/',
+				'domain'	=> $cookie_properties->domain,
+				'secure'	=> $cookie_properties->secure,
+				'httponly'	=> $cookie_properties->httponly
+			];
+			setcookie(
+				$cookie_values->name,		// string $name
+				$cookie_values->value,		// string $value = ""
+				$cookie_values->expires,	// int $expires = 0
+				$cookie_values->path,		// string $path = ""
+				$cookie_values->domain,		// string $domain = ""
+				$cookie_values->secure,		// bool $secure = false
+				$cookie_values->httponly	// bool $httponly = false
+			);
 
 		return true;
 	}//end init_cookie_auth
