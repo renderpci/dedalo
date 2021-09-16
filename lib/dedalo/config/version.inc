@@ -2438,6 +2438,8 @@
 		Fixed component_image regenerate error when only the image in the original format (like TIF) is available
 		14-09-2021
 		Fix close wrap div for component_number in list  mode
+		15-09-2021
+		Add sum calculation to the coins in numisdata
 
 
 	[/HISTORY]
@@ -2463,13 +2465,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2h';
+	$DEDALO_VERSION = '5.8.2i';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-09-2021');
+	define('DEDALO_BUILD'	, '15-09-2021');
 
 
 	/*
