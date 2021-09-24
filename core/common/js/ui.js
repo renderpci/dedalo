@@ -161,8 +161,10 @@ export const ui = {
 						class_name		: 'filter',
 						parent			: fragment
 					})
-					instance.filter.render().then(filter_wrapper =>{
-						filter.appendChild(filter_wrapper)
+					instance.filter.build().then(function(){
+						instance.filter.render().then(filter_wrapper =>{
+							filter.appendChild(filter_wrapper)
+						})
 					})
 				}
 
