@@ -49,7 +49,7 @@
 					$value[$key] = common::truncate_html( ceil(200/$total), $current_value, true);
 				}
 				// check value fallback
-				if (!empty($dato) && empty($value[0])) {
+				if (!empty($dato) && (empty($value[0]) && $value[0]!=='')) {
 					$value[0] = 'Error on extract_component_dato_fallback ['.$lang.'] for '.json_encode($dato);
 				}
 				break;

@@ -6,7 +6,10 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_select} from '../../component_select/js/render_component_select.js'
+	import {render_edit_component_select} from '../../component_select/js/render_edit_component_select.js'
+	import {render_search_component_select} from '../../component_select/js/render_search_component_select.js'
+	import {render_mini_component_select} from '../../component_select/js/render_mini_component_select.js'
+	import {render_list_component_select} from '../../component_select/js/render_list_component_select.js'
 
 
 
@@ -54,19 +57,34 @@ export const component_select = function(){
 	component_select.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_select.prototype.update_datum			= component_common.prototype.update_datum
 	component_select.prototype.change_value			= component_common.prototype.change_value
-	component_select.prototype.build_rqo			= common.prototype.build_rqo
-	// component_select.prototype.load_data			= component_common.prototype.load_data
-	// component_select.prototype.get_value			= component_common.prototype.get_value
-	// component_select.prototype.set_value			= component_common.prototype.set_value
-	//component_select.prototype.load_datum			= component_common.prototype.load_datum
+	// component_select.prototype.build_rqo			= common.prototype.build_rqo
+	// component_select.prototype.build_rqo_show	= common.prototype.build_rqo_show
 
 	// render
-	component_select.prototype.mini					= render_component_select.prototype.mini
-	component_select.prototype.list					= render_component_select.prototype.list
-	component_select.prototype.edit					= render_component_select.prototype.edit
-	component_select.prototype.edit_in_list			= render_component_select.prototype.edit
-	component_select.prototype.tm					= render_component_select.prototype.edit
-	component_select.prototype.search				= render_component_select.prototype.search
+	component_select.prototype.mini					= render_mini_component_select.prototype.mini
+	component_select.prototype.list					= render_list_component_select.prototype.list
+	component_select.prototype.edit					= render_edit_component_select.prototype.edit
+	component_select.prototype.edit_in_list			= render_edit_component_select.prototype.edit
+	component_select.prototype.tm					= render_edit_component_select.prototype.edit
+	component_select.prototype.search				= render_search_component_select.prototype.search
 	component_select.prototype.change_mode			= component_common.prototype.change_mode
+
+
+
+/**
+* BUILD
+* @param object value (locator)
+* @return bool
+*/
+	// component_select.prototype.build = async function(autoload=false){
+
+	// 	const self = this
+
+	// 	// call the generic common tool init
+	// 		const common_init = component_common.prototype.build.call(self, autoload);
+
+
+	// 	return true
+	// };//end component_select.prototype.build
 
 

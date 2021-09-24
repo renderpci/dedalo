@@ -6,7 +6,11 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_radio_button} from '../../component_radio_button/js/render_component_radio_button.js'
+	import {render_list_component_radio_button} from '../../component_radio_button/js/render_list_component_radio_button.js'
+	import {render_edit_component_radio_button} from '../../component_radio_button/js/render_edit_component_radio_button.js'
+	import {render_search_component_radio_button} from '../../component_radio_button/js/render_search_component_radio_button.js'
+	import {render_mini_component_radio_button} from '../../component_radio_button/js/render_mini_component_radio_button.js'
+
 
 
 export const component_radio_button = function(){
@@ -52,12 +56,12 @@ export const component_radio_button = function(){
 	component_radio_button.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_radio_button.prototype.mini				= render_component_radio_button.prototype.mini
-	component_radio_button.prototype.list				= render_component_radio_button.prototype.list
-	component_radio_button.prototype.edit				= render_component_radio_button.prototype.edit
-	component_radio_button.prototype.edit_in_list		= render_component_radio_button.prototype.edit
-	component_radio_button.prototype.tm					= render_component_radio_button.prototype.edit
-	component_radio_button.prototype.search				= render_component_radio_button.prototype.search
+	component_radio_button.prototype.mini				= render_mini_component_radio_button.prototype.mini
+	component_radio_button.prototype.list				= render_list_component_radio_button.prototype.list
+	component_radio_button.prototype.edit				= render_edit_component_radio_button.prototype.edit
+	component_radio_button.prototype.edit_in_list		= render_edit_component_radio_button.prototype.edit
+	component_radio_button.prototype.tm					= render_edit_component_radio_button.prototype.edit
+	component_radio_button.prototype.search				= render_search_component_radio_button.prototype.search
 	component_radio_button.prototype.change_mode		= component_common.prototype.change_mode
 
 

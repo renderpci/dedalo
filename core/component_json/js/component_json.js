@@ -8,30 +8,31 @@
 	import {common,create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_json} from '../../component_json/js/render_component_json.js'
+	import {render_search_component_json} from '../../component_json/js/render_search_component_json.js'
 
 
 
 export const component_json = function(){
 
-	this.id
+	this.id				= null
 
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
-	this.section_lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
+	this.section_lang	= null
 
-	this.context
-	this.data
+	this.context		= null
+	this.data			= null
 
-	this.parent
-	this.node
+	this.parent			= null
+	this.node			= null
 
-	this.tools
+	this.tools			= null
 
-	this.editors = []
+	this.editors		= []
 
 	return true
 };//end component_json
@@ -55,7 +56,7 @@ export const component_json = function(){
 	component_json.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_json.prototype.update_datum		= component_common.prototype.update_datum
 	component_json.prototype.change_value		= component_common.prototype.change_value
-	component_json.prototype.build_rqo	= common.prototype.build_rqo
+	component_json.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_json.prototype.mini				= render_component_json.prototype.mini
@@ -63,7 +64,7 @@ export const component_json = function(){
 	component_json.prototype.edit				= render_component_json.prototype.edit
 	component_json.prototype.edit_in_list		= render_component_json.prototype.edit
 	component_json.prototype.tm					= render_component_json.prototype.edit
-	// component_json.prototype.search			= render_component_json.prototype.search
+	component_json.prototype.search				= render_search_component_json.prototype.search
 	component_json.prototype.change_mode		= component_common.prototype.change_mode
 
 

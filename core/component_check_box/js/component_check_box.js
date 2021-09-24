@@ -4,9 +4,10 @@
 
 
 // imports
+	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_check_box} from '../../component_check_box/js/render_component_check_box.js'
-	import {common} from '../../common/js/common.js'
+	import {render_search_component_check_box} from '../../component_check_box/js/render_search_component_check_box.js'
 
 
 
@@ -49,7 +50,7 @@ export const component_check_box = function(){
 	component_check_box.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_check_box.prototype.update_datum		= component_common.prototype.update_datum
 	component_check_box.prototype.change_value		= component_common.prototype.change_value
-	component_check_box.prototype.build_rqo	= common.prototype.build_rqo
+	component_check_box.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_check_box.prototype.mini				= render_component_check_box.prototype.mini
@@ -57,7 +58,7 @@ export const component_check_box = function(){
 	component_check_box.prototype.edit				= render_component_check_box.prototype.edit
 	component_check_box.prototype.edit_in_list		= render_component_check_box.prototype.edit
 	component_check_box.prototype.tm				= render_component_check_box.prototype.edit
-	component_check_box.prototype.search			= render_component_check_box.prototype.search
+	component_check_box.prototype.search			= render_search_component_check_box.prototype.search
 	component_check_box.prototype.change_mode		= component_common.prototype.change_mode
 
 
@@ -68,9 +69,6 @@ export const component_check_box = function(){
 component_check_box.prototype.get_changed_key = function(action, value) {
 
 	const self = this
-
-	console.log("action", action);
-	console.log("value", value);
 
 	const changed_key = (() => {
 

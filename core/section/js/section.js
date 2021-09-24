@@ -122,7 +122,6 @@ section.prototype.init = async function(options) {
 	self.filter				= null // (? used)
 	self.inspector			= null
 
-	self.id_column_width	= '7.5em'
 	self.permissions		= options.permissions || null
 
 	// columns
@@ -136,6 +135,10 @@ section.prototype.init = async function(options) {
 			event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
 		)
 		async function fn_create_new_section() {
+
+			if (!confirm(get_label.seguro || 'Sure?')) {
+				return false
+			}
 
 			// data_manager. create
 			const rqo = {
@@ -228,7 +231,7 @@ section.prototype.build = async function(autoload=false) {
 				caller	: self,
 				mode	: self.mode
 			})
-			self.filter.build()
+			// self.filter.build()
 		}
 		// console.log("section build filter unactive (remember) ");	
 	
@@ -240,7 +243,6 @@ section.prototype.build = async function(autoload=false) {
 				if(SHOW_DEVELOPER===true) {
 					dd_console("SECTION api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug.exec_time]);
 				}
-
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -255,7 +257,7 @@ section.prototype.build = async function(autoload=false) {
 			// rqo regenerate
 				await generate_rqo()
 				// console.log("SECTION self.rqo after load:", clone(self.rqo) );
-		
+
 			// count rows
 				if (!self.total) {
 					const count_sqo = clone(self.rqo.sqo )
@@ -268,8 +270,16 @@ section.prototype.build = async function(autoload=false) {
 						sqo				: count_sqo,
 						prevent_lock	: true
 					}
-					const api_count_response = await current_data_manager.request({body:rqo_count})
-					self.total = api_count_response.result.total
+					self.total = function() {
+						return new Promise(function(resolve){
+							current_data_manager.request({body:rqo_count})
+							.then(function(api_count_response){
+								self.total = api_count_response.result.total
+								resolve(self.total)
+							})
+						})
+					}
+
 					// set value
 					// current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
@@ -348,7 +358,7 @@ section.prototype.build = async function(autoload=false) {
 				caller	: self,
 				mode	: self.mode
 			})
-			self.paginator.build()
+			// self.paginator.build()
 
 			// event paginator_goto_
 				// fn_paginator_goto
@@ -391,7 +401,6 @@ section.prototype.build = async function(autoload=false) {
 					section_id		: self.section_id
 				})
 				current_inspector.caller = self
-				current_inspector.build()
 				// fix section inspector
 				self.inspector = current_inspector
 			// }

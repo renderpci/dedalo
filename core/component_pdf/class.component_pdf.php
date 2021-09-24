@@ -53,7 +53,7 @@ class component_pdf extends component_media_common {
 			# DEBUG
 			if(SHOW_DEBUG===true) {
 				$total=round(microtime(true)-$start_time,3);
-				$name = RecordObj_dd::get_termino_by_tipo($this->tipo,true);
+				$name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true);
 				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}
 		}//end if ($need_save)

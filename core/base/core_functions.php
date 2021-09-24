@@ -680,7 +680,7 @@ function verify_dedalo_prefix_tipos($tipo=null) {
 	return true; # Temporal hasta que se valore lo de los prefijos dinámicos de hierarchy
 
 	/*
-	$DEDALO_PREFIX_TIPOS = unserialize(DEDALO_PREFIX_TIPOS);
+	$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 
 	if (empty($tipo) || strlen($tipo)<2) {
 		return false;
@@ -1176,80 +1176,129 @@ function session_start_manager($request_options) {
 	global $sessiondb;
 	#if (session_status()===PHP_SESSION_ACTIVE) return false;
 
-	$options = new stdClass();
-		$options->save_handler					= 'files';
-		$options->timeout_seconds				= 1400;
-		$options->probability						= 100;
-		$options->cookie_path						= '/';
-		$options->cookie_domain					= null;
-		$options->save_path							= false; # /tmp/php
-		$options->aditional_save_path		= false; # /session_custom_sec
-		$options->session_name					= false;
-		$options->prevent_session_lock	= false;
-		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	// options
+		$options = new stdClass();
+			$options->save_handler					= 'files';
+			$options->timeout_seconds				= 1400;
+			$options->probability						= 100;
+			$options->cookie_path						= '/';
+			$options->cookie_domain					= '';
+			$options->cookie_secure					= false;
+			$options->cookie_samesite				= null;
+			$options->save_path							= false; # /tmp/php
+			$options->aditional_save_path		= false; # /session_custom_sec
+			$options->session_name					= false;
+			$options->prevent_session_lock	= false;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
+	// switch by save_handler
 	switch ($options->save_handler) {		
 
 		case 'files':
-			$timeout		= $options->timeout_seconds;
-			$probability	= $options->probability;
-			$cookie_path	= $options->cookie_path;
-			$cookie_domain	= $options->cookie_domain;
+			$timeout					= $options->timeout_seconds;
+			$probability			= $options->probability;
+			$cookie_path			= $options->cookie_path;
+			$cookie_domain		= $options->cookie_domain;
+			$save_path				= $options->save_path;
+			$cookie_secure		= $options->cookie_secure;
+			$cookie_samesite	= $options->cookie_samesite;
 
-			// Set lifetime of cache (this no affect to session duration)
-			session_cache_expire( intval($timeout*60) ); 	#in minutes (*60)	Default php usually : 180
+			// cache_expire. Set lifetime of cache (this no affect to session duration)
+				session_cache_expire( intval($timeout*60) ); 	#in minutes (*60)	Default php usually : 180
 
-			// Set the max lifetime
-			ini_set('session.gc_maxlifetime', $timeout);
+			// gc_maxlifetime. Set the max lifetime
+				ini_set('session.gc_maxlifetime', $timeout);
 
-			// Set the session cookie to timeout
-			ini_set('session.cookie_lifetime', $timeout);
+			// cookie_lifetime. Set the session cookie to timeout
+				ini_set('session.cookie_lifetime', $timeout);
 
-			if ($options->save_path!==false) {
-				ini_set('session.save_path', $options->save_path);
-			}
-
-			if ($options->session_name!==false) {
-				session_name($options->session_name);
-			}
-
-			if ($options->aditional_save_path!==false) {
-				// Change the save path. Sessions stored in the same path
-				// all share the same lifetime; the lowest lifetime will be
-				// used for all. Therefore, for this to work, the session
-				// must be stored in a directory where only sessions sharing
-				// it's lifetime are. Best to just dynamically create on.
-				$path = ini_get('session.save_path') . $options->aditional_save_path;
-				if(!file_exists($path)) {
-					if(!mkdir($path, 0700)) {
-						trigger_error("Failed to create session save path directory '$path'. Check permissions.", E_USER_ERROR);
-					}
+			// save_path
+				if ($options->save_path!==false) {
+					ini_set('session.save_path', $save_path);
 				}
-				ini_set('session.save_path', $path);
-			}
 
-			// Set the chance to trigger the garbage collection.
-			ini_set('session.gc_probability', $probability);
-			ini_set('session.gc_divisor', 100); // Should always be 100
+			// session_name
+				if ($options->session_name!==false) {
+					session_name($options->session_name);
+				}
 
-			// Start the session!
-			if ($options->prevent_session_lock===true) {
-				// read only but non locking session
-				session_start([
-					'read_and_close' => true
-				]);
-			}else{
-				session_start();
-			}
+			// save_path
+				if ($options->aditional_save_path!==false) {
+					// Change the save path. Sessions stored in the same path
+					// all share the same lifetime; the lowest lifetime will be
+					// used for all. Therefore, for this to work, the session
+					// must be stored in a directory where only sessions sharing
+					// it's lifetime are. Best to just dynamically create on.
+					$path = ini_get('session.save_path') . $options->aditional_save_path;
+					if(!file_exists($path)) {
+						if(!mkdir($path, 0700)) {
+							trigger_error("Failed to create session save path directory '$path'. Check permissions.", E_USER_ERROR);
+						}
+					}
+					ini_set('session.save_path', $path);
+				}
 
-			// Renew the time left until this session times out.
-			// If you skip this, the session will time out based
-			// on the time when it was created, rather than when
-			// it was last used.
-			if(isset($_COOKIE[session_name()])) {
-				#setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain);
-				setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain, TRUE, TRUE);
-			}
+			// gc_probability. Set the chance to trigger the garbage collection.
+				ini_set('session.gc_probability', $probability);
+
+			// gc_divisor
+				ini_set('session.gc_divisor', 100); // Should always be 100
+
+			// session_start. Start the session!
+				if ($options->prevent_session_lock===true) {
+					// read only but non locking session
+					session_start([
+						'read_and_close' => true
+					]);
+				}else{
+					session_start();
+				}
+
+			// cookie
+				// Renew the time left until this session times out.
+				// If you skip this, the session will time out based
+				// on the time when it was created, rather than when
+				// it was last used.
+				if(isset($_COOKIE[session_name()])) {
+					#setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain);
+					// setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain, TRUE, TRUE);
+
+					$cookie_values = (object)[
+						// name. The name of the cookie.
+						'name'			=> session_name(),
+						// value. The value of the cookie. This value is stored on the clients computer; do not store sensitive information. Assuming the name is 'cookiename', this value is retrieved through $_COOKIE['cookiename']
+						'value'			=> $_COOKIE[session_name()],
+						// expires. The time the cookie expires. This is a Unix timestamp so is in number of seconds since the epoch. In other words, you'll most likely set this with the time() function plus the number of seconds before you want it to expire. Or you might use mktime(). time()+60*60*24*30 will set the cookie to expire in 30 days. If set to 0, or omitted, the cookie will expire at the end of the session (when the browser closes).
+						'expires'		=> (time() + $timeout),
+						// path. The path on the server in which the cookie will be available on. If set to '/', the cookie will be available within the entire domain. If set to '/foo/', the cookie will only be available within the /foo/ directory and all sub-directories such as /foo/bar/ of domain. The default value is the current directory that the cookie is being set in.
+						'path'			=> $cookie_path,
+						// domain. The (sub)domain that the cookie is available to. Setting this to a subdomain (such as 'www.example.com') will make the cookie available to that subdomain and all other sub-domains of it (i.e. w2.www.example.com). To make the cookie available to the whole domain (including all subdomains of it), simply set the value to the domain name ('example.com', in this case).
+						'domain'		=> $cookie_domain,
+						// secure. Indicates that the cookie should only be transmitted over a secure HTTPS connection from the client. When set to true, the cookie will only be set if a secure connection exists. On the server-side, it's on the programmer to send this kind of cookie only on secure connection (e.g. with respect to $_SERVER["HTTPS"]).
+						'secure'		=> $cookie_secure,
+						// httponly. When true the cookie will be made accessible only through the HTTP protocol. This means that the cookie won't be accessible by scripting languages, such as JavaScript. It has been suggested that this setting can effectively help to reduce identity theft through XSS attacks (although it is not supported by all browsers), but that claim is often disputed. true or false
+						'httponly'	=> true
+					];
+
+					// setcookie(
+						// 	$cookie_values->name,			// string $name
+						// 	$cookie_values->value,		// string $value = ""
+						// 	$cookie_values->expires,	// int $expires = 0
+						// 	$cookie_values->path,			// string $path = ""
+						// 	$cookie_values->domain,		// string $domain = ""
+						// 	$cookie_values->secure,		// bool $secure = false
+						// 	$cookie_values->httponly	// bool $httponly = false
+						// );
+						$arr_cookie_options = array (
+							'expires'		=> $cookie_values->expires,
+							'path'			=> '/',
+							'domain'		=> $cookie_values->domain,	// leading dot for compatibility or use subdomain. ex. .example.com
+							'secure'		=> $cookie_values->secure,	// true or false
+							'httponly'	=> $cookie_values->secure,	// true or false
+							'samesite'	=> $cookie_samesite					// None || Lax || Strict
+						);
+						setcookie($cookie_values->name, $cookie_values->value, $arr_cookie_options);
+				}
 			break;
 
 		case 'memcached':
@@ -1385,9 +1434,9 @@ function format_size_units($bytes) {
 
 
 function encodeURIComponent($str) {
-    $revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
+	$revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
 
-    return strtr(rawurlencode($str), $revert);
+	return strtr(rawurlencode($str), $revert);
 }//end encodeURIComponent
 
 
@@ -1535,7 +1584,7 @@ function check_basic_system() {
 */
 function array_find($xs, $f) {
 
-	if (is_array($xs)) {	
+	if (is_array($xs)) {
 		foreach ($xs as $x) {
 			if (call_user_func($f, $x) === true)
 			return $x;
@@ -1557,12 +1606,12 @@ function array_find($xs, $f) {
 function write_session_value(array $session_keys, $value) {
 
 	$result = false;
-	
+
 	if(session_status()===PHP_SESSION_ACTIVE){
 		// write ready
 		// $result = $session = $value;
 		// $result = $_SESSION['dedalo'][$session_keys] = $value;
-		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);		
+		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);
 	}else{
 		error_log('!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_key) . ' - value: '. json_encode($value) );
 	}
@@ -1573,21 +1622,21 @@ function write_session_value(array $session_keys, $value) {
 
 /**
 * INSERT_INTO
-* Insert vallue into array using any number of keys sequence 
-* like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key] 
+* Insert vallue into array using any number of keys sequence
+* like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
 */
 function insert_into(&$array, array $keys, $value) {
-     $last = array_pop($keys);       
+	 $last = array_pop($keys);
 
-     foreach($keys as $key) {
-          if(!array_key_exists($key, $array) || 
-              array_key_exists($key, $array) && !is_array($array[$key])) {
-                  $array[$key] = array();
+	 foreach($keys as $key) {
+		  if(!array_key_exists($key, $array) ||
+			  array_key_exists($key, $array) && !is_array($array[$key])) {
+				  $array[$key] = array();
 
-          }
-          $array = &$array[$key];
-     }
-     $array[$last] = $value;
+		  }
+		  $array = &$array[$key];
+	 }
+	 $array[$last] = $value;
 }//end insert_into
 
 
@@ -1597,19 +1646,53 @@ function insert_into(&$array, array $keys, $value) {
 * Extract value from a object using dynamic path array
 */
 function get_object_property($object, $ar_property_path) {
-  
+
   foreach ($ar_property_path as $property_name) {
-    // basic protection against bad path 
-    if (!property_exists($object,$property_name)) return null;
-    // get the property 
-    $property = $object->{$property_name};
-    // if it is not an object it has to be the end point
-    if (!is_object($property)) return $property;
-    // if it is an object replace current object 
-    $object = $property;
+	// basic protection against bad path
+	if (!property_exists($object,$property_name)) return null;
+	// get the property
+	$property = $object->{$property_name};
+	// if it is not an object it has to be the end point
+	if (!is_object($property)) return $property;
+	// if it is an object replace current object
+	$object = $property;
   }
-  
+
   return $object;
 }//end get_object_property
+
+
+
+/**
+* GET_LEGACY_CONSTANT_VALUE
+* Used to safe recover old config serialized values like 'DEDALO_PREFIX_TIPOS'
+* @param string $constant_name
+* @return mixed $constant_value
+*/
+function get_legacy_constant_value(string $constant_name) {
+
+	// check constant exists
+		if(!defined($constant_name)) {
+			throw new Exception("Error Processing Request. Constant '$constant_name' does not exists!", 1);
+			return false;
+		}
+
+	// get constant value
+		$constant = constant($constant_name);
+
+	// If it isn't a string, it isn't serialized, avoid this block
+	if (is_string($constant)) {
+		 // try to unserialize
+		if (false!==($value = @unserialize($constant)) ) {
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Current constant is serialized ! Please edit your Dédalo config file and set without legacy serialization to best performance. NAME: ". $constant_name, logger::WARNING);
+			}
+			return $value;
+		}
+	}
+
+
+	return $constant;
+}//end get_legacy_constant_value
 
 

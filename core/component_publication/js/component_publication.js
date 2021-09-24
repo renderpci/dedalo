@@ -6,30 +6,35 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_publication} from '../../component_publication/js/render_component_publication.js'
+	import {render_list_component_publication} from '../../component_publication/js/render_list_component_publication.js'
+	import {render_edit_component_publication} from '../../component_publication/js/render_edit_component_publication.js'
+	import {render_search_component_publication} from '../../component_publication/js/render_search_component_publication.js'
+	import {render_mini_component_publication} from '../../component_publication/js/render_mini_component_publication.js'
+
 
 
 export const component_publication = function(){
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.section_lang
-	this.context
-	this.data
-	this.parent
-	this.node
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
 
 
 	return true
 };//end component_publication
+
 
 
 /**
@@ -52,9 +57,10 @@ export const component_publication = function(){
 	component_publication.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_publication.prototype.mini				= render_component_publication.prototype.mini
-	component_publication.prototype.list				= render_component_publication.prototype.list
-	component_publication.prototype.edit				= render_component_publication.prototype.edit
-	component_publication.prototype.edit_in_list		= render_component_publication.prototype.edit
-	component_publication.prototype.tm					= render_component_publication.prototype.edit
+	component_publication.prototype.mini				= render_mini_component_publication.prototype.mini
+	component_publication.prototype.list				= render_list_component_publication.prototype.list
+	component_publication.prototype.search				= render_search_component_publication.prototype.search
+	component_publication.prototype.edit				= render_edit_component_publication.prototype.edit
+	component_publication.prototype.edit_in_list		= render_edit_component_publication.prototype.edit
+	component_publication.prototype.tm					= render_edit_component_publication.prototype.edit
 	component_publication.prototype.change_mode			= component_common.prototype.change_mode

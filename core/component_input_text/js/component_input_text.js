@@ -13,27 +13,28 @@
 	import {render_mini_component_input_text} from '../../component_input_text/js/render_mini_component_input_text.js'
 
 
+
 export const component_input_text = function(){
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.section_lang
-	this.context
-	this.data
-	this.parent
-	this.node
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
 
-	this.tools
+	this.tools			= null
 
-	this.duplicates = false
+	this.duplicates		= false
 
 
 	return true

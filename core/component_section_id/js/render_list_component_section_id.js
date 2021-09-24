@@ -14,7 +14,6 @@
 */
 export const render_list_component_section_id = function(component) {
 
-
 	return true
 };//end render_list_component_section_id
 
@@ -23,31 +22,27 @@ export const render_list_component_section_id = function(component) {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_section_id.prototype.list = function() {
 
 	const self = this
 
-	// short vars
-		const context 	= self.context
-		const data 		= self.data
-
 	// Value as string
-		const value_string = data.value
+		const value_string = self.data.value
 
-	// Node create
-		const node = ui.create_dom_element({
-			element_type	: "div",
-			class_name		: self.model + '_list ' + self.tipo,
-			text_content	: value_string
+	// wrapper
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : false
 		})
 
-	// Debug
-		//console.log("++ context", context);
-		//console.log("++ data:", data);
+		const span_value = ui.create_dom_element({
+			element_type	: 'span',
+			text_content	: value_string,
+			parent			: wrapper
+		})
 
-	return node
+	return wrapper
 };//end list
 
 

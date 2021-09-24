@@ -1759,7 +1759,7 @@ abstract class component_common extends common {
 		}//end foreach
 
 
-		$label 		= RecordObj_dd::get_termino_by_tipo( $tipo,null,true ).':'.$stats_model;
+		$label 		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
 		$ar_final 	= array($label => $ar_final );
 
 		return $ar_final;
@@ -1879,7 +1879,7 @@ abstract class component_common extends common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				if ( empty($ar_target_section_tipo)) {
-					$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo,null,true);
+					$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
 					throw new Exception("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo", 1);
 				}
 			}
@@ -2089,7 +2089,7 @@ abstract class component_common extends common {
 		// get and store initial lang
 			$inital_lang = $component->get_lang();
 
-		// Try directe dato
+		// Try direct dato
 			$dato = $component->get_dato();
 			$dato = !empty($dato)
 				? $dato

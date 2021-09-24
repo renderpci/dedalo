@@ -7,32 +7,34 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {render_component_date} from '../../component_date/js/render_component_date.js'
-
+	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
+	import {render_search_component_date} from '../../component_date/js/render_search_component_date.js'
+	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
+	import {render_mini_component_date} from '../../component_date/js/render_mini_component_date.js'
 
 
 export const component_date = function(){
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.section_lang
-	this.context
-	this.data
-	this.parent
-	this.node
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
 
-	this.tools
+	this.tools			= null
 
-	this.separator 		= '-'
-	this.separator_time = ':'
+	this.separator		= '-'
+	this.separator_time	= ':'
 
 	return true
 };//end component_date
@@ -57,16 +59,18 @@ export const component_date = function(){
 	component_date.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_date.prototype.update_datum		= component_common.prototype.update_datum
 	component_date.prototype.change_value		= component_common.prototype.change_value
-	component_date.prototype.build_rqo	= common.prototype.build_rqo
+	component_date.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_date.prototype.mini				= render_component_date.prototype.mini
-	component_date.prototype.list				= render_component_date.prototype.list
-	component_date.prototype.edit				= render_component_date.prototype.edit
-	component_date.prototype.edit_in_list		= render_component_date.prototype.edit
-	component_date.prototype.tm					= render_component_date.prototype.edit
-	component_date.prototype.search				= render_component_date.prototype.search
+	component_date.prototype.mini				= render_mini_component_date.prototype.mini
+	component_date.prototype.list				= render_list_component_date.prototype.list
+	component_date.prototype.edit				= render_edit_component_date.prototype.edit
+	component_date.prototype.edit_in_list		= render_edit_component_date.prototype.edit
+	component_date.prototype.tm					= render_edit_component_date.prototype.edit
+	component_date.prototype.search				= render_search_component_date.prototype.search
 	component_date.prototype.change_mode		= component_common.prototype.change_mode
+
+
 
 /**
 * LOAD_EDITOR
@@ -178,7 +182,7 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 
 /**
 * GET VALOR LOCALE
-* Convert internal dato formated as timestamp '2012-11-07 17:33:49' to current lang data format like '07-11-2012 17:33:49'
+* Convert internal dato formatted as timestamp '2012-11-07 17:33:49' to current lang data format like '07-11-2012 17:33:49'
 */
 component_date.prototype.get_locale_value = function () {
 
@@ -402,9 +406,9 @@ component_date.prototype.get_dato_period = function(parentNode) {
 
 	let dato =  {}
 
-	const period_year 	= parentNode.querySelector('input[data-role=period_year]')
-	const period_month 	= parentNode.querySelector('input[data-role=period_month]')
-	const period_day 	= parentNode.querySelector('input[data-role=period_day]')
+	const period_year	= parentNode.querySelector('input[data-role=period_year]')
+	const period_month	= parentNode.querySelector('input[data-role=period_month]')
+	const period_day	= parentNode.querySelector('input[data-role=period_day]')
 
 	let dd_date = {}
 	if(parseInt(period_year.value)>0) 	dd_date.year  = parseInt(period_year.value)
@@ -424,7 +428,7 @@ component_date.prototype.get_dato_period = function(parentNode) {
 
 
 /**
-* get_dato_RANGE
+* GET_DATO_RANGE
 * Test data inside input text, verify format and send to parent Save
 */
 component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
@@ -501,7 +505,7 @@ component_date.prototype.get_dato_date = function(value) {
 
 	const self = this
 
-	let dato = {}
+	const dato = {}
 
 	// START
 		const value_formatted_start = self.format_date(value)

@@ -254,16 +254,17 @@ class ts_object extends Accessors {
 				$element_obj->type	= $render_vars->type;
 				$element_obj->tipo	= $element_tipo;
 
-				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-				$lang			= common::get_element_lang($element_tipo, $data_lang=DEDALO_DATA_LANG);
-				$component		= component_common::get_instance($modelo_name,
-																 $element_tipo,
-																 $this->section_id,
-																 'list_thesaurus',
-																 $lang,
-																 $this->section_tipo);
+				$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+				// $real_modelo_name	= RecordObj_dd::get_real_model_name_by_tipo($element_tipo);
+				$lang					= common::get_element_lang($element_tipo, $data_lang=DEDALO_DATA_LANG);
+				$component				= component_common::get_instance($modelo_name,
+																		 $element_tipo,
+																		 $this->section_id,
+																		 'list_thesaurus',
+																		 $lang,
+																		 $this->section_tipo);
 				$dato = $component->get_dato();
-				if ($modelo_name==='component_autocomplete_hi') {
+				if ($modelo_name==='component_autocomplete_hi' || $modelo_name==='component_portal') {
 
 					$dato = $component->get_valor();
 
@@ -587,25 +588,32 @@ class ts_object extends Accessors {
 
 		}else{
 
-			$tipo 		 	= $thesaurus_map->term;
-			$parent 		= $locator->section_id;
-			$section_tipo 	= $locator->section_tipo;
-			$modelo_name 	= 'component_input_text';
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			#if(SHOW_DEBUG===true) {
-			#	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			#	if ($real_modelo_name!==$modelo_name) {
-			#		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
-			#	}
-			#}
-			$component 		= component_common::get_instance( $modelo_name,
-															  $tipo,
-															  $parent,
-															  'edit',
-															  $lang,
-															  $section_tipo);
-			$valor = $component->get_valor($lang);
-				//dump($valor, ' valor ++ '.to_string($tipo));
+			$term		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term]; // source could be an array or string
+			$ar_valor	= [];
+			foreach ($term as $tipo) {
+
+				$parent			= $locator->section_id;
+				$section_tipo	= $locator->section_tipo;
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				#if(SHOW_DEBUG===true) {
+				#	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				#	if ($real_modelo_name!==$modelo_name) {
+				#		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
+				#	}
+				#}
+				$component 		= component_common::get_instance( $modelo_name,
+																  $tipo,
+																  $parent,
+																  'edit',
+																  $lang,
+																  $section_tipo);
+				$current_value = $component->get_valor($lang);
+				if (!empty($current_value)) {
+					$ar_valor[] = $current_value;
+				}
+			}
+			$valor = implode(', ', $ar_valor);
+
 			if (empty($valor)) {
 
 				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );

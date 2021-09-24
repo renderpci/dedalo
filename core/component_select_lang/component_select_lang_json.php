@@ -39,22 +39,22 @@
 				break;
 			case 'edit':
 			default:
-				$value 							= $this->get_dato();
+				$value							= $this->get_dato();
 				// datalist
-				$ar_all_project_select_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+				$ar_all_project_select_langs	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
 				$datalist = [];
 				foreach ((array)$ar_all_project_select_langs as $key => $item) {
 				
-					$label   	= lang::get_name_from_code($item);
-					$code 		= $item;
+					$label		= lang::get_name_from_code($item);
+					$code		= $item;
 					$list_value	= lang::get_lang_locator_from_code($item);
 					
-					$item_value = new stdClass();			
-						$item_value->value 		= $list_value;
-						$item_value->label 		= $label;
-						$item_value->section_id = $code;						
+					$item_value = new stdClass();
+						$item_value->value		= $list_value;
+						$item_value->label		= $label;
+						$item_value->section_id	= $code;
 					
-					$datalist[]= $item_value;							
+					$datalist[]= $item_value;
 				}	
 				break;
 		}			
@@ -63,9 +63,18 @@
 		$item  = $this->get_data_item($value);
 
 		// datalist
-		if (isset($datalist)) {
-			$item->datalist = $datalist;
-		}
+			if (isset($datalist)) {
+				$item->datalist = $datalist;
+			}
+
+		// target_section_tipo
+			$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
+			$item->target_section	= array_map(function($tipo){
+				return [
+					'tipo'	=> $tipo,
+					'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
+				];
+			}, $ar_target_section_tipo);
 
 		$data[] = $item;
 

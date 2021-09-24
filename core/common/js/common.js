@@ -125,6 +125,11 @@ common.prototype.render = async function (options={render_level:'full'}) {
 			return false
 		}
 
+	if (self.status!=='builded') {
+		// event_manager.subscribe('builded_'+self.id, self.render.edit(options))
+		console.error("Illegal status. Expected 'builded' current:",self.status, self.model);
+	}
+
 	// status update
 		self.status = 'rendering'
 
@@ -280,6 +285,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 			}
 		}
 
+
 	return result_node
 }//end render
 
@@ -291,7 +297,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 * (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
 * @return promise
 */
-common.prototype.refresh = async function () {
+common.prototype.refresh = async function() {
 	const t0 = performance.now()
 
 	const self = this
