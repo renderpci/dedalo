@@ -36,10 +36,6 @@ render_menu.prototype.edit = async function() {
 
 	const fragment = new DocumentFragment()
 
-	// menu_wrapper
-		const menu_wrapper = document.createElement("div")
-			  menu_wrapper.classList.add("menu_wrapper")
-
 	// quit_button
 		const quit_button = ui.create_dom_element({
 			element_type	: 'div',
@@ -52,7 +48,7 @@ render_menu.prototype.edit = async function() {
 				for (let i = 0; i < self.data.langs_datalist.length; i++) {
 					const lang	= self.data.langs_datalist[i].value
 					const regex	= /lg-[a-z]{2,5}$/
-					const id = self.id.replace(regex, lang)
+					const id	= self.id.replace(regex, lang)
 					current_data_manager.delete_local_db_data(id, 'data')
 				}
 			// exec login quit sequence
@@ -159,15 +155,13 @@ render_menu.prototype.edit = async function() {
 				  win.focus();
 		})
 
-
 	// user name link (go to list)
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
 			parent			: fragment,
-			text_content	: page_globals['username']
+			text_content	: page_globals.username
 		})
-
 
 	// application lang selector
 		const lang_datalist = self.data.langs_datalist
@@ -175,16 +169,15 @@ render_menu.prototype.edit = async function() {
 			id			: 'dd_app_lang',
 			langs		: lang_datalist,
 			action		: change_lang,
-			selected	: page_globals['dedalo_application_lang'],
+			selected	: page_globals.dedalo_application_lang,
 			class_name	: 'reset_input dedalo_aplication_langs_selector'
 		})
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
-
 	// data lang selector
 		const lang_datalist_data = lang_datalist.map(item =>{
 			return {
-				label	: (get_label['data'] || 'data') + ': ' + item.label,
+				label	: (get_label.data || 'data') + ': ' + item.label,
 				value	: item.value
 			}
 		})
@@ -192,11 +185,10 @@ render_menu.prototype.edit = async function() {
 			id			: 'dd_data_lang',
 			langs		: lang_datalist_data,
 			action		: change_lang,
-			selected	: page_globals['dedalo_data_lang'],
+			selected	: page_globals.dedalo_data_lang,
 			class_name	: 'reset_input dedalo_aplication_langs_selector'
 		})
 		fragment.appendChild(dedalo_data_langs_selector)
-
 
 	// spacer
 		const menu_spacer = ui.create_dom_element({
@@ -205,12 +197,11 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment
 		})
 
-
 	// section label button (go to list)
 		const section_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_label',
-			parent			: fragment,
+			parent			: fragment
 		})
 		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 			let current_instance
@@ -240,7 +231,7 @@ render_menu.prototype.edit = async function() {
 				}
 			}
 			section_label.addEventListener("click", e => {
-				event.stopPropagation();
+				e.stopPropagation();
 
 				// navigate browser from edit to list
 				if (current_instance.mode==='edit'){
@@ -254,7 +245,6 @@ render_menu.prototype.edit = async function() {
 				}
 				self.menu_active = false
 			})
-
 
 	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({
@@ -272,8 +262,10 @@ render_menu.prototype.edit = async function() {
 			fragment.appendChild( get_debug_info_bar(self) );
 		}
 
-
-	menu_wrapper.appendChild(fragment)
+	// menu_wrapper
+		const menu_wrapper = document.createElement("div")
+			  menu_wrapper.classList.add("menu_wrapper")
+			  menu_wrapper.appendChild(fragment)
 
 
 	return menu_wrapper
@@ -345,7 +337,7 @@ const get_debug_info_bar = (self) => {
 * LEVEL HIERARCHY
 * @return dom element ul
 */
-const level_hierarchy = async (options) => {
+const level_hierarchy = (options) => {
 
 	// options
 		const self			= options.self
@@ -385,9 +377,9 @@ const level_hierarchy = async (options) => {
 
 /**
 * ITEM_HIERARCHY
-* @return dom element li
+* @return DOM element li
 */
-const item_hierarchy = async (options) => {
+const item_hierarchy = (options) => {
 
 	// options
 		const self			= options.self
@@ -401,7 +393,7 @@ const item_hierarchy = async (options) => {
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'menu_li_inactive',
-			parent			: ul_container,
+			parent			: ul_container
 		})
 
 		self.li_nodes.push(li)
@@ -421,13 +413,13 @@ const item_hierarchy = async (options) => {
 				const len		= nodes_li.length
 				for (let i = len - 1; i >= 0; i--) {
 
-					//desactive all nodes
+					// inactive all nodes
 					nodes_li[i].classList.add("menu_li_inactive")
 					nodes_li[i].classList.remove("menu_li_active")
 					
 					// close all ul nodes dependent of the current li
 					const close_id = nodes_li[i].dataset.children
-					close_all_childrens(close_id)
+					close_all_children(close_id)
 
 					// check if the active li is the current loop node.
 					if(nodes_li[i]===active_li){
@@ -435,7 +427,7 @@ const item_hierarchy = async (options) => {
 						// active the current li
 						nodes_li[i].classList.add("menu_li_active");
 						nodes_li[i].classList.remove("menu_li_inactive");
-						// if the active li has childrens
+						// if the active li has children
 						const open_id = active_li.dataset.children
 
 						if(open_id){
@@ -463,11 +455,11 @@ const item_hierarchy = async (options) => {
 								}
 								// move the node to the right position of the selected li
 								open_ul.style.left = active_li.getBoundingClientRect().right+'px'
-							};//end if(active_li.parentNode.id === 'dd1')
-						};//end if(open_id)
+							}//end if(active_li.parentNode.id === 'dd1')
+						}//end if(open_id)
 
-					};//end if(nodes_li[i] == active_li)
-				};//end for
+					}//end if(nodes_li[i] == active_li)
+				}//end for
 			});//end mouseover
 
 		// mouseout
@@ -528,7 +520,7 @@ const item_hierarchy = async (options) => {
 				}
 
 				return true
-			})
+			})//end link.addEventListener("click")
 
 	// children_item. recursive generation of children nodes of the current li node.
 		const children_item	= datalist.find(children_item => children_item.parent===item.tipo)
@@ -546,14 +538,14 @@ const item_hierarchy = async (options) => {
 
 		}//end children_item
 
-	return true
+	return li
 };//end item_hierarchy
 
 
 
 /**
 * CLOSE_ALL_DROP_MENU
-* select all nodes in the menu instance and set the css to remove the visualization
+* Select all nodes in the menu instance and set the css to remove the visualization
 */
 const close_all_drop_menu = function(self) {
 
@@ -586,10 +578,10 @@ const close_all_drop_menu = function(self) {
 
 
 /**
-* CLOSE_ALL_CHILDRENs
-* Get all nodes childens of the tipo set to them the css to remove the visualization
+* CLOSE_ALL_CHILDREN
+* Get all nodes childen of the tipo set to them the css to remove the visualization
 */
-const close_all_childrens = function(tipo){
+const close_all_children = function(tipo){
 
 	if(tipo){
 		//get the children nodes of the sended tipo and add/remove the css
@@ -604,12 +596,12 @@ const close_all_childrens = function(tipo){
 			// get the children link node of the current li
 			const new_tipo = ar_children_nodes[i].dataset.children
 			// recursive action of the current children ul tipo
-			close_all_childrens(new_tipo)
+			close_all_children(new_tipo)
 		}
 	}
 
 	return true
-};//end close_all_childrens
+};//end close_all_children
 
 
 
