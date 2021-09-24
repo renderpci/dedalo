@@ -28,7 +28,6 @@
 
 	$file_name = $modo;
 
-						dump($modo, ' modo +--------------+ '.to_string());
 	switch($modo) {		
 
 		case 'tool_lang':
