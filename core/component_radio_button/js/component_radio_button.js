@@ -68,23 +68,23 @@ export const component_radio_button = function(){
 
 /**
 * GET_CHECKED_VALUE_LABEL
+* @return string label
 */
 component_radio_button.prototype.get_checked_value_label = function() {
 
 	const self = this
 
-	if (self.data.value[0] !=null) {
-
-		const checked_key = self.data.datalist.findIndex( (item) => {
-				return (item.section_id===self.data.value[0].section_id)
-			})
-
-		return self.data.datalist[checked_key].label
-
-	}else{
-
+	if (typeof self.data.value[0]==='undefined' || self.data.value[0]===null) {
 		return ''
-
 	}
 
+	const checked_key = self.data.datalist.findIndex( (item) => {
+		return (item.section_id===self.data.value[0].section_id)
+	})
+
+	const label = self.data.datalist[checked_key].label
+
+	return label
 };//end get_checked_value_label
+
+
