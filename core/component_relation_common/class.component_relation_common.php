@@ -290,6 +290,23 @@ class component_relation_common extends component_common {
 				}
 			}
 
+
+		// // get last column
+		// 	if (!function_exists('get_last_column_resursive')) {
+		// 		function get_last_column_resursive($ar_column) {
+		// 			$ar_last_children = [];
+		// 			foreach ($ar_column as $column) {
+		// 				if(isset($column->cell_type)) {
+		// 					$ar_last_children[] = $column;
+		// 				}else{
+		// 					$result				=  get_last_column_resursive($column->value);
+		// 					$ar_last_children	= array_merge($ar_last_children, $result);
+		// 				}
+		// 			}
+		// 			return $ar_last_children;
+		// 		}
+		// 	}
+
 		// get the column name of the current portal, use the ddo_map to get the columns,
 		// don't use the locator (inside foreach) because we need stable columns, independent of the data
 			$len = sizeof($ddo_map);
@@ -378,16 +395,19 @@ class component_relation_common extends component_common {
 					$current_component->request_config = [$request_config];
 				}
 
-
 				// get the value and fallback_value of the component and stored to be joined
 				$current_column		= $current_component->get_value($lang, $ddo);
 
 				$sub_row_count		= $current_column->row_count ?? 0;
 
+				// if (in_array($component_model, $components_with_relations)) {
+				// 	$current_column = get_last_column_resursive([$current_column]);
+				// }
+
 				$grid_column = new dd_grid_cell_object();
-					$grid_column->set_type('column');
-					$grid_column->set_value([$current_column]);
-				$ar_columns[] = $grid_column;
+						$grid_column->set_type('column');
+						$grid_column->set_value([$current_column]);
+					$ar_columns[] = $grid_column;
 			}
 
 			//create the row of the portal
