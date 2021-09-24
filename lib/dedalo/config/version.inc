@@ -2440,6 +2440,8 @@
 		Fix close wrap div for component_number in list  mode
 		15-09-2021
 		Add sum calculation to the coins in numisdata
+		24-09-2021
+		Removed temporal alert in tool_structuration
 
 
 	[/HISTORY]
@@ -2465,13 +2467,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2i';
+	$DEDALO_VERSION = '5.8.2j';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-09-2021');
+	define('DEDALO_BUILD'	, '24-09-2021');
 
 
 	/*
