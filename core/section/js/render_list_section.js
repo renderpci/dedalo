@@ -16,6 +16,8 @@
 */
 export const render_list_section = function() {
 
+	this.id_column_width = '7.5em'
+
 	return true
 };//end render_list_section
 
@@ -88,18 +90,35 @@ const get_buttons = function(self) {
 		const buttons_wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons',
-			parent 			: fragment
+			parent			: fragment
 		})
 
-		const ar_buttons_length = ar_buttons.length;
+		// filter button (search) . Show and hide all search elements
+			const filter_button	= ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning search',
+				inner_html		: get_label.buscar || 'Search',
+				parent			: buttons_wrapper
+			})
+			filter_button.addEventListener("click", function() {
+				event_manager.publish('toggle_search_panel', this)
+			})
+			// ui.create_dom_element({
+			// 	element_type	: 'span',
+			// 	class_name		: 'button white search',
+			// 	parent			: filter_button
+			// })
+			// filter_button.insertAdjacentHTML('beforeend', get_label.buscar)
 
+		const ar_buttons_length = ar_buttons.length;
 		for (let i = 0; i < ar_buttons_length; i++) {
+
 			const current_button = ar_buttons[i]
 
 			if(current_button.model==='button_delete') continue
 
-			// button_new section
-				const class_name	= 'button light ' + current_button.model
+			// button node
+				const class_name	= 'warning ' + current_button.model
 				const button_node	= ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: class_name,
@@ -126,7 +145,8 @@ const get_buttons = function(self) {
 				})
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
-	ui.add_tools(self, buttons_wrapper)
+	// tools
+		ui.add_tools(self, buttons_wrapper)
 
 	return fragment
 };//end get_buttons
@@ -167,14 +187,17 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 
 			// search filter node
 				if (self.filter) {
-					const filter = ui.create_dom_element({
+					const filter_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
 						parent			: fragment
 					})
-					await self.filter.render().then(filter_wrapper =>{
-						filter.appendChild(filter_wrapper)
+					self.filter.build().then(()=>{
+						self.filter.render().then(filter_wrapper =>{
+							filter_container.appendChild(filter_wrapper)
+						})
 					})
+
 				}
 		}//end if (self.mode!=='tm')
 
@@ -184,8 +207,11 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 			class_name		: 'paginator',
 			parent			: fragment
 		})
-		self.paginator.render().then(paginator_wrapper =>{
-			paginator_div.appendChild(paginator_wrapper)
+		self.paginator.build()
+		.then(function(){
+			self.paginator.render().then(paginator_wrapper =>{
+				paginator_div.appendChild(paginator_wrapper)
+			})
 		})
 
 	// list body
@@ -204,7 +230,8 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 				{
 					//display: 'grid',
 					//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-					"grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)",
+					// "grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)"
+					"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
 				}
 			)
 			list_body.appendChild(list_header_node)

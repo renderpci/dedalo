@@ -41,6 +41,8 @@ class area_development extends area_common {
 
 		$ar_widgets = [];
 
+		$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
+
 
 		// make_backup
 			$item = new stdClass();
@@ -107,7 +109,7 @@ class area_development extends area_common {
 				$item->info		= null;
 				$item->body		= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
 					'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
-					'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
+					'<hr>TLD: <tt>' . implode(', ', $DEDALO_PREFIX_TIPOS).'</tt>' :
 					label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
 				$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
 				$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
@@ -123,7 +125,7 @@ class area_development extends area_common {
 								'type'		=> 'text',
 								'name'		=> 'dedalo_prefix_tipos',
 								'label'		=> 'Dédalo prefix tipos to update',
-								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
 								'mandatory'	=> true
 							]
 						],
@@ -160,7 +162,7 @@ class area_development extends area_common {
 								'type'		=> 'text',
 								'name'		=> 'dedalo_prefix_tipos',
 								'label'		=> 'Dédalo prefix tipos to export',
-								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
 								'mandatory'	=> true
 							]
 						],
@@ -198,7 +200,7 @@ class area_development extends area_common {
 								'type'		=> 'text',
 								'name'		=> 'dedalo_prefix_tipos',
 								'label'		=> 'Dédalo prefix tipos to import',
-								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
 								'mandatory'	=> false
 							]
 						],

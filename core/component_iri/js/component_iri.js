@@ -7,7 +7,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_iri} from '../../component_iri/js/render_component_iri.js'
-
+	import {render_search_component_iri} from '../../component_iri/js/render_search_component_iri.js'
 
 
 export const component_iri = function(){
@@ -59,7 +59,7 @@ export const component_iri = function(){
 	component_iri.prototype.edit				= render_component_iri.prototype.edit
 	component_iri.prototype.edit_in_list		= render_component_iri.prototype.edit
 	component_iri.prototype.tm					= render_component_iri.prototype.edit
-	component_iri.prototype.search				= render_component_iri.prototype.search
+	component_iri.prototype.search				= render_search_component_iri.prototype.search
 	component_iri.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -78,6 +78,28 @@ component_iri.prototype.open_iri = function(component_obj) {
 
 	return true
 };//end open_iri
+
+
+
+/**
+* SET_VALUE
+* @return object value, null
+*/
+component_iri.prototype.set_value = function(node, key) {
+
+	const li_nodes		= node.querySelectorAll('li');
+	const title_value	= li_nodes[key].querySelector('input[type="text"]').value
+	const iri_value		= li_nodes[key].querySelector('input[type="url"]').value
+
+	const value = (title_value.length > 0 || iri_value.length > 0)
+		? {
+			iri		: iri_value,
+			title	: title_value
+		  }
+		: null
+
+	return value
+};//end set_value
 
 
 
@@ -113,23 +135,6 @@ render_component_iri.prototype.set_value = function() {
 		self.data.value = ar_value
 
 	return true
-
 };//end set_value*/
 
 
-
-/**
-* SET_VALUE
-* @return
-*/
-component_iri.prototype.set_value = function(node, key) {
-
-	const li_nodes 		= node.querySelectorAll('li');
-	const title_value 	= li_nodes[key].querySelector('input[type="text"]').value
-	const iri_value 	= li_nodes[key].querySelector('input[type="url"]').value
-
-
-	const value = (title_value.length > 0 || iri_value.length > 0) ? {iri 	: iri_value, title	: title_value}: null
-
-	return value
-};//end set_value

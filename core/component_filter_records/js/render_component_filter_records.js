@@ -147,7 +147,7 @@ const add_events = function(self, wrapper) {
 				const value 		= (e.target.value.length>0)
 					? {
 						tipo 	: e.target.dataset.tipo,
-						value 	: validate_value(e.target.value.split(','))
+						value 	: self.validate_value(e.target.value.split(','))
 					  }
 					: null;
 
@@ -316,32 +316,6 @@ const get_buttons = (self) => {
 
 	return buttons_container
 };//end get_buttons
-
-
-
-/**
-* VALIDATE_VALUE
-* @param array value
-*	Like [1,5,8]
-*/
-const validate_value = (value) => {
-
-	const safe_values  = []
-
-	if (value && value.length>0) {
-
-		const value_length = value.length
-		for (let i = 0; i < value_length; i++) {
-			const current_number = parseInt(value[i])
-			// if value is valid number and not already included, push it to safe values array
-			if (!isNaN(current_number) && current_number>0 && !safe_values.includes(current_number)) {
-				safe_values.push(current_number)
-			}
-		}
-	}
-
-	return safe_values
-};//end validate_value
 
 
 

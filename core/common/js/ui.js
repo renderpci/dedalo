@@ -120,7 +120,7 @@ export const ui = {
 				const mode			= instance.mode 	// like 'edit'
 				const view			= instance.view || null
 				const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
-				const component_css	= instance.context.css || {}
+				const element_css	= instance.context.css || {}
 
 			const fragment = new DocumentFragment()
 
@@ -139,7 +139,7 @@ export const ui = {
 					})
 					fragment.appendChild(component_label)
 					// css
-		 				const label_structure_css = typeof component_css.label!=="undefined" ? component_css.label : []
+		 				const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
 						component_label.classList.add(...ar_css)
 				}
@@ -182,33 +182,63 @@ export const ui = {
 				if (items.content_data) {
 					// const content_data = items.content_data
 					// // css
-					// 	const content_data_structure_css = typeof component_css.content_data!=="undefined" ? component_css.content_data : []
+					// 	const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
 					// 	const ar_css = ["content_data", type, ...content_data_structure_css]
 					// 	content_data.classList.add(...ar_css)
 					fragment.appendChild(items.content_data)
 				}
 
 			// tooltip
-				if (mode==="search" && instance.context.search_options_title) {
-					//fragment.classList.add("tooltip_toggle")
-					const tooltip = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'tooltip hidden_tooltip',
-						inner_html		: instance.context.search_options_title || '',
-						parent			: fragment
-					})
-				}
+				// if (mode==="search" && instance.context.search_options_title) {
+				// 	//fragment.classList.add("tooltip_toggle")
+				// 	const tooltip = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'tooltip hidden_tooltip',
+				// 		inner_html		: instance.context.search_options_title || '',
+				// 		parent			: fragment
+				// 	})
+				// }
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type : 'div'
  				})
  				// CSS
-	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
+	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
+
+				// legacy CSS
+					const legacy_selector = '.wrap_component'
+					if (element_css[legacy_selector]) {
+						// mixin
+							if (element_css[legacy_selector].mixin){
+								// width from mixin
+								const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
+								if (found) { //  && found!=='.width_50'
+									// wrapper.style['flex-basis'] = found.substring(7) + '%'
+									// wrapper.style['--width'] = found.substring(7) + '%'
+									wrapper.style.setProperty('--component_width', found.substring(7) + '%');
+								}
+							}
+						// style
+							if (element_css[legacy_selector].style) {
+								// width from style
+								if (element_css[legacy_selector].style.width) {
+									// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+									// wrapper.style['--width'] = element_css[legacy_selector].style.width
+									wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
+								}
+								// display none from style
+								if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
+									wrapper.classList.add('display_none')
+								}
+							}
+					}
+
+
 				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
@@ -293,8 +323,11 @@ export const ui = {
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
 			const mode			= instance.mode 	// like 'edit'
-			const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
 			const edit_in_list	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
+
+			// options
+				const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
+				const value_string	= options.value_string
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
@@ -302,16 +335,25 @@ export const ui = {
 					class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
  				})
 
+ 			// span value. Add span if value_string is received
+ 				if (value_string) {
+ 					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: value_string,
+						parent			: wrapper
+					})
+ 				}
+
  			// event dblclick change component mode
- 			if(edit_in_list){
+	 			if(edit_in_list){
 
- 				wrapper.addEventListener("dblclick", function(e){
-					e.stopPropagation()
+	 				wrapper.addEventListener("dblclick", function(e){
+						e.stopPropagation()
 
-					// change mode (from 'list' to 'edit_in_list')
-					instance.change_mode('edit_in_list', autoload)
-				})
- 			}
+						// change mode (from 'list' to 'edit_in_list')
+						instance.change_mode('edit_in_list', autoload)
+					})
+	 			}
 
 			return wrapper
 		},//end build_wrapper_list
@@ -321,23 +363,174 @@ export const ui = {
 		/**
 		* BUILD_WRAPPER_MINI
 		*/
-		build_wrapper_mini : (instance) => {
-			// if(SHOW_DEBUG===true) {
-			// 	//console.log("[ui.build_wrapper_mini] instance:",instance)
-			// }
-			// const model			= instance.model 	// like component_input-text
-			// const type			= instance.type 	// like 'component'
-			// const tipo			= instance.tipo 	// like 'rsc26'
-			// const mode			= instance.mode 	// like 'edit'
+		build_wrapper_mini : (instance, options={}) => {
+
+			// options
+				const value_string = options.value_string
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
-					element_type	: 'span',
-					// class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+					element_type	: 'span'
  				})
+
+ 			// value_string
+ 				if (value_string) {
+ 					wrapper.insertAdjacentHTML('afterbegin', value_string)
+ 				}
 
 			return wrapper
 		},//end build_wrapper_mini
+
+
+
+		/**
+		* BUILD_WRAPPER_search
+		* Component wrapper unified builder
+		* @param object instance (self component instance)
+		* @param object items
+		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
+		*/
+		build_wrapper_search : (instance, items={}) => {
+			if(SHOW_DEBUG===true) {
+				// console.log("[ui.build_wrapper_search] instance:",instance)
+				// console.log(`build_wrapper_search items ${instance.tipo}:`,items);
+				// console.log("instance:",instance);
+			}
+
+			// short vars
+				const id			= instance.id || 'id is not set'
+				const model			= instance.model 	// like component_input-text
+				const type			= instance.type 	// like 'component'
+				const tipo			= instance.tipo 	// like 'rsc26'
+				const mode			= instance.mode 	// like 'edit'
+				const view			= instance.view || null
+				const label			= instance.label // instance.context.label
+				const element_css	= instance.context.css || {}
+
+			const fragment = new DocumentFragment()
+
+			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
+				if (label===null || items.label===null) {
+					// no label add
+				}else if(items.label) {
+					// add custom label
+					fragment.appendChild(items.label)
+				}else{
+					// default
+					const component_label = ui.create_dom_element({
+						element_type	: 'div',
+						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
+						inner_html		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+					})
+					fragment.appendChild(component_label)
+					// css
+		 				const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
+						const ar_css = ['label', ...label_structure_css]
+						component_label.classList.add(...ar_css)
+				}
+
+			// top
+				// if (items.top) {
+				// 	fragment.appendChild(items.top)
+				// }
+
+			// buttons
+				// if (items.buttons) {
+				// 	fragment.appendChild(items.buttons)
+				// }
+
+			// filter
+				// if (instance.filter) {
+				// 	const filter = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'filter',
+				// 		parent			: fragment
+				// 	})
+				// 	instance.filter.render().then(filter_wrapper =>{
+				// 		filter.appendChild(filter_wrapper)
+				// 	})
+				// }
+
+			// paginator
+				// if (instance.paginator) {
+				// 	const paginator = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'paginator',
+				// 		parent			: fragment
+				// 	})
+				// 	instance.paginator.render().then(paginator_wrapper =>{
+				// 		paginator.appendChild(paginator_wrapper)
+				// 	})
+				// }
+
+			// content_data
+				if (items.content_data) {
+					fragment.appendChild(items.content_data)
+				}
+
+			// tooltip
+				if (instance.context.search_options_title) {
+					//fragment.classList.add("tooltip_toggle")
+					const tooltip = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'tooltip hidden_tooltip',
+						inner_html		: instance.context.search_options_title || '',
+						parent			: fragment
+					})
+				}
+
+			// wrapper
+				const wrapper = ui.create_dom_element({
+					element_type	: 'div',
+					id				: id // (!) set id
+ 				})
+ 				// CSS
+	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
+					if (view) {ar_css.push(view)}
+					if (mode==="search") ar_css.push("tooltip_toggle")
+					wrapper.classList.add(...ar_css)
+
+				// legacy CSS
+					// if (mode==='edit') {
+					// 	const legacy_selector = '.wrap_component'
+					// 	if (element_css[legacy_selector]) {
+					// 		// mixin
+					// 			if (element_css[legacy_selector].mixin){
+					// 				// width from mixin
+					// 				const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
+					// 				if (found) { //  && found!=='.width_50'
+					// 					// wrapper.style['flex-basis'] = found.substring(7) + '%'
+					// 					// wrapper.style['--width'] = found.substring(7) + '%'
+					// 					wrapper.style.setProperty('--component_width', found.substring(7) + '%');
+					// 				}
+					// 			}
+					// 		// style
+					// 			if (element_css[legacy_selector].style) {
+					// 				// width from style
+					// 				if (element_css[legacy_selector].style.width) {
+					// 					// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+					// 					// wrapper.style['--width'] = element_css[legacy_selector].style.width
+					// 					wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
+					// 				}
+					// 				// display none from style
+					// 				if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
+					// 					wrapper.classList.add('display_none')
+					// 				}
+					// 			}
+					// 	}
+					// }
+
+				// event click . Activate component on event
+					// wrapper.addEventListener("click", e => {
+					// 	e.stopPropagation()
+					// 	event_manager.publish('active_component', instance)
+					// })
+
+				wrapper.appendChild(fragment)
+
+			return wrapper
+		},//end build_wrapper_search
 
 
 
@@ -352,7 +545,7 @@ export const ui = {
 		*	ID of clicked component
 		* @return async promise
 		*	Note that this function return always a promise to allow the caller
-		*	continue aplying another custom actions
+		*	continue applying another custom actions
 		*/
 		active : (component, actived_component) => {
 
@@ -378,7 +571,7 @@ export const ui = {
 					})
 
 				// remove service autocomplete if active
-					if(component.autocomplete_active === true){
+					if(component.autocomplete_active===true){
 						component.autocomplete.destroy()
 						component.autocomplete_active = false
 						component.autocomplete = null
@@ -456,7 +649,47 @@ export const ui = {
 
 
 			return true
-		}//end  add_image_fallback
+		},//end  add_image_fallback
+
+
+
+		/**
+		* EXEC_SAVE_SUCCESSFULLY_ANIMATION
+		* Used on component save successfully
+		* @return promise
+		*/
+		exec_save_successfully_animation : (self) => {
+
+			return new Promise(function(resolve){
+
+				// remove previous save_success classes
+					self.node.map(item => {
+						if (item.classList.contains("save_success")) {
+							item.classList.remove("save_success")
+						}
+					})
+
+				setTimeout(()=>{
+
+					// success. add save_success class to component wrappers (green line animation)
+						self.node.map(item => {
+							item.classList.add("save_success")
+						})
+
+					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
+						setTimeout(()=>{
+							self.node.map(item => {
+								// item.classList.remove("save_success")
+								// allow restart animation. Not set state pause before animation ends (2 secs)
+								item.style.animationPlayState = "paused";
+								item.style.webkitAnimationPlayState = "paused";
+							})
+
+							resolve(true)
+						},2000)
+				},50)
+			})
+		}//end exec_save_successfully_animation
 
 
 
@@ -503,24 +736,8 @@ export const ui = {
 				}
 
 			// inspector
-				if (instance.inspector) {
-					// // icon toggle inspector
-					// const toggle = ui.create_dom_element({
-					// 	element_type	: 'div',
-					// 	class_name		: 'toggle_inspector',
-					// 	parent 			: fragment
-					// }).addEventListener("click", function(e) {
-					// 	ui.toggle_inspector(e)
-					// })
-					const inspector = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'inspector',
-						parent			: fragment
-					})
-					// wrapper
-					instance.inspector.render().then(inspector_wrapper =>{
-						inspector.appendChild(inspector_wrapper)
-					})
+				if (items.inspector_div) {
+					fragment.appendChild(items.inspector_div)
 				}
 
 			// buttons
@@ -543,29 +760,22 @@ export const ui = {
 						class_name		: 'filter',
 						parent			: fragment
 					})
-					instance.filter.render().then(filter_wrapper =>{
-						filter.appendChild(filter_wrapper)
+					instance.filter.build().then(()=>{
+						instance.filter.render().then(filter_wrapper =>{
+							filter.appendChild(filter_wrapper)
+						})
 					})
 				}
 
 			// paginator
-				if (instance.paginator) {
-					// const paginator = ui.create_dom_element({
-					// 	element_type	: 'div',
-					// 	class_name		: 'paginator',
-					// 	parent			: fragment
-					// })
-					instance.paginator.render().then(paginator_wrapper =>{
-						//paginator.appendChild(paginator_wrapper)
-
-						// place paginator in inspector
-						ui.place_element({
-							source_node			: paginator_wrapper,
-							source_instance		: instance,
-							target_instance		: instance.inspector,
-							container_selector	: ".paginator_container",
-							target_selector		: ".wrapper_paginator"
-						})
+				if (items.paginator_div) {
+					// place paginator in inspector
+					ui.place_element({
+						source_node			: items.paginator_div,
+						source_instance		: instance,
+						target_instance		: instance.inspector,
+						container_selector	: ".paginator_container",
+						target_selector		: ".wrapper_paginator"
 					})
 				}
 
@@ -590,6 +800,7 @@ export const ui = {
 	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
 					wrapper.classList.add(...ar_css)
+
  				// append fragment
  					wrapper.appendChild(fragment)
 
@@ -778,7 +989,8 @@ export const ui = {
 		build_section_tool_button : (tool_context, self) => {
 
 			// button
-				const class_name = 'button light ' + tool_context.model
+				const class_name = 'warning ' + tool_context.model
+
 
 				const tool_button = ui.create_dom_element({
 					element_type	: 'button',
@@ -1390,6 +1602,9 @@ export const ui = {
 	*/
 	attach_to_modal : (header, body, footer, size="normal") => {
 
+		// page_y_offset. Current window scroll position (used to restore later)
+			const page_y_offset = window.pageYOffset || 0
+
 		// modal container select from DOM (created hidden when page is builded)
 			// const modal_container = document.querySelector('dd-modal')
 		// modal container build new DOM on each call and remove on close
@@ -1444,6 +1659,12 @@ export const ui = {
 							content_data_page.classList.remove("hide")
 							menu_wrapper.classList.remove("hide")
 							if(debug_div) debug_div.classList.remove("hide")
+
+							// scroll window to previous scroll position
+								window.scrollTo({
+									top			: page_y_offset,
+									behavior	: "auto"
+								})
 						})
 
 					modal_container._showModalBig();
@@ -1455,7 +1676,7 @@ export const ui = {
 
 
 		return modal_container
-	},//attach_to_modal
+	},//end attach_to_modal
 
 
 
@@ -1644,7 +1865,7 @@ export const ui = {
 
 
 		return footer
-	}//end  create_dialog
+	}//end create_dialog
 
 
 

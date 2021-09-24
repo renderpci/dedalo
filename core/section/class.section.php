@@ -67,7 +67,7 @@ class section extends common {
 
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
-	# Format is array or null
+	# Format is array or null
 	# protected $diffusion_info;
 
 
@@ -98,29 +98,28 @@ class section extends common {
 			return new section($section_id, $tipo, $modo);
 		}
 
-		# key for cache
+		# key for cache
 		$key = $section_id .'_'. $tipo;
 
-		$max_cache_instances = 300*5; // Default 300
-		$cache_slice_on 	 = 100*5; // Default 100
+		$max_cache_instances = 300*3; // Default 300
+		$cache_slice_on 	 = 100*3; // Default 100
 
 		# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
 		# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
-		if (isset(self::$ar_section_instances) && count(self::$ar_section_instances)>$max_cache_instances) {
+		if (isset(self::$ar_section_instances) && sizeof(self::$ar_section_instances)>$max_cache_instances) {
 			self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__.' '.DEDALO_HOST." Overload secions prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
+				debug_log(__METHOD__.' '.DEDALO_HOST." Overload sections prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
 			}
 
 			// let GC do the memory job
 			//time_nanosleep(0, 10000000); // 10 ms
-			time_nanosleep(0, 5000000); // 05 ms
+			time_nanosleep(0, 2000000); // 02 ms
 		}
 
 		# FIND CURRENT INSTANCE IN CACHE
 		if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
 			self::$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
-			#debug_log(__METHOD__." NO exite una instancia de la sección $key. Se devuelve el objeto estático");
 		}
 
 
@@ -946,7 +945,7 @@ class section extends common {
 				}
 
 				// Store in cached sections . (!) Important
-					# key for cache
+					# key for cache
 					$key = $this->section_id .'_'. $tipo;
 					self::$ar_section_instances[$key] = $this;
 
@@ -2458,7 +2457,7 @@ class section extends common {
 			}
 
 			// Store in cached sections . Important
-				# key for CACHE
+				# key for CACHE
 				$key = $this->section_id .'_'. $this->tipo;
 				self::$ar_section_instances[$key] = $this;
 
@@ -3649,6 +3648,10 @@ class section extends common {
 
 		$current_record = $this->get_record();
 
+		if (empty($current_record)) {
+			return $data;
+		}
+
 		$source_model	= get_called_class();
 		
 		// subdata time machine
@@ -3679,7 +3682,7 @@ class section extends common {
 				];
 				
 				return $current_item;
-			})($tipo, $section_tipo, $section_id, $lang, $id);			
+			})($tipo, $section_tipo, $section_id, $lang, $id);
 
 		// timestamp (component_date)
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $timestamp) {

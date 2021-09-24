@@ -14,23 +14,23 @@
 
 export const component_filter_master = function(){
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.section_lang
-	this.context
-	this.data
-	this.parent
-	this.node
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
 
-	this.tools
+	this.tools			= null
 
 	return true
 };//end component_filter_master
@@ -52,7 +52,7 @@ export const component_filter_master = function(){
 	component_filter_master.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_filter_master.prototype.update_datum		= component_common.prototype.update_datum
 	component_filter_master.prototype.change_value		= component_common.prototype.change_value
-	component_filter_master.prototype.build_rqo	= common.prototype.build_rqo
+	component_filter_master.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render (from component_filter_master)
 	component_filter_master.prototype.mini				= component_filter.prototype.mini

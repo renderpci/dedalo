@@ -749,7 +749,7 @@ class component_date extends component_common {
 
 		}//end foreach
 
-		$label 		= RecordObj_dd::get_termino_by_tipo( $tipo ).':'.$stats_model;
+		$label 		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true ).':'.$stats_model;
 		$ar_final 	= array($label => $ar_final );
 			#dump($ar_final,'$ar_final '.$caller_component . " ".print_r($current_stats_value,true));
 
@@ -762,17 +762,21 @@ class component_date extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql($request_query_object) {
+			dump($request_query_object, ' request_query_object ++ '.to_string());
 
-		// Check if q is an valid object
-		// Note that if q is number, json_decode not will generate error here
-		if (!$q_object = json_decode($query_object->q)) {
-			#debug_log(__METHOD__." Error on decode query_object->q ".to_string($query_object), logger::WARNING);
-		}
+		// query_object clone
+		$query_object = clone $request_query_object;
+
+		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
+		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
 		if (empty($query_object->q) && empty($query_object->q_operator)) {
 			return $query_object;
 		}
+
+		// q_object
+		$q_object = $query_object->q ?? null;
 
 		// Case search with plain text like from autocomplete
 		if (!is_object($q_object)) {

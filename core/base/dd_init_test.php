@@ -97,7 +97,7 @@
 
 // DEDALO_PREFIX_TIPOS
 	# Maintain consitency on defined DEDALO_PREFIX_TIPOS and extras folder dirs
-	$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
+	$DEDALO_PREFIX_TIPOS = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 	foreach ($DEDALO_PREFIX_TIPOS as $current_tipo) {
 		$folder_path = DEDALO_EXTRAS_PATH . '/' . $current_tipo;
 		if( !is_dir($folder_path) ) {

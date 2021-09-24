@@ -2,10 +2,17 @@
 
 
 html {
+	// font
+	// global_font. Defined in fonts.less
 	.global_font;
+	font-size: 1rem; // fallback base value
+	// font-size: 1vw;
+
+	color: @color_grey_ultradark;
+
 	//overflow-y: scroll;
 	//margin-left: calc(100vw - 100%);
-	margin-right: calc(100vw - 100%);
+	// margin-right: calc(100vw - 100%);
 }
 b, strong {
 	font-weight: bold;
@@ -25,16 +32,17 @@ danger {
 		//transition: opacity 0.15s ; // linear
 		width: 100%;
 		//display: grid;
+		min-height: 80vh;
 	}
 
 
 
 // active. selected_wrap
 	.active {
-		&.wrapper_component {
-			//transition: background-color 0.3s ease;
-			background-color: @color_grey_medium !important; // rgb(230, 230, 230)
-		}
+		// &.wrapper_component {
+		// 	//transition: background-color 0.3s ease;
+		// 	background-color: @color_grey_medium !important; // rgb(230, 230, 230)
+		// }
 	}
 // error
 	.error {
@@ -53,9 +61,9 @@ danger {
 			display: block;
 			//padding: 2px 0;
 			//line-height: 1px;
-			border-top: 3px solid green;
+			border-top: 3px solid @color_green_success;
 			z-index: 9;
-			top: 0;
+			top: -3px;
 			left: 0;
 			position: absolute;
 

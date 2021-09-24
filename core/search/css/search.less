@@ -41,11 +41,18 @@
 			background-color: fade(@bg_color_global, 70%);
 			//background-color: rgba(239, 239, 239, 0.71);
 			// border-radius: 5px;
-			padding-bottom: 0.5em;
+			// padding-bottom: 0.5em;
 			position: relative;
 			width: 100%;
 			z-index: 1;
 			//background-color: #00CA00;
+
+			.list& {
+				margin-top: 0.5em;
+			}
+			.edit& {
+				margin-bottom: 0.5em;
+			}
 
 			&.hide {
 				padding: 0;
@@ -113,6 +120,7 @@
 			// Center selection drag area
 			.search_container_selection {
 				flex-grow: 1;
+				align-self: flex-start;
 				background-color: #d0e2f5;
 				position: relative;
 				padding-top: 0;
@@ -124,6 +132,10 @@
 					position: -moz-sticky;
 					position: sticky;
 					top: 60px;
+
+					@media screen and (max-width: @width_break_point_0) {
+						flex-wrap: wrap;
+					}
 
 					.search_group {
 						border: 0.5px solid #b9b9b9;
@@ -257,25 +269,32 @@
 					// search_buttons_container
 					>.search_buttons_container {
 						//background-color: #ea9cd2;
-						min-height: 6em;
+						min-height: 5em;
 						display: flex;
+						flex: 0 1 auto;
+						padding: 0;
+						margin: 0;
 						padding: 0.25em;
 
 						>* {
 							height: 100%;
 							width: 100%;
+							margin: 0;
+							display: flex;
+							flex-direction: column;
 						}
 
 						.button {
 							height: 100%;
+							width: 100%;
+							margin: 0;
+							padding: 0;
 							font-size: 1em;
 							background-color: #f99c29;
 							opacity: 1;
 							color: #ffffff;
 							border: 1px solid #ffffff;
 							border-radius: 0.25em;
-
-							width: 96%;
 
 							&:hover {
 								background-color: darken(#f99c29, 10%);
@@ -284,8 +303,8 @@
 
 						// max_group
 						>.max_group {
-							display: flex;
-							flex-direction: column;
+							// display: flex;
+							// flex-direction: column;
 
 							background-color: #ffffff;
 							position: relative;
@@ -312,11 +331,18 @@
 
 						// reset group
 						>.reset_group{
-							display: flex;
-							flex-direction: column;
+							// display: flex;
+							// flex-direction: column;
+							padding-left: 0.25em;
+							padding-right: 0.25em;
 
 							.button.reload {
 								flex-grow: 1;
+								mask-size: 2em;
+								 -webkit-mask-size: 2em;
+								&:before {
+									background-color: transparent;
+								}
 							}
 							.button.show_all {
 								flex-grow: 1;
@@ -490,6 +516,8 @@
 
 			}
 		}//end .search_global_container
+
+
 
 	}//end .wrapper_search
 

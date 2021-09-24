@@ -45,7 +45,7 @@
 		// set value based on format
 			$valor = ($format==='array')
 				? $ar_valor
-				: implode($separator, $ar_valor);
+				: implode($separator_rows, $ar_valor);
 
 
 		return $valor;

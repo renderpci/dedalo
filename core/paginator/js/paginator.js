@@ -15,31 +15,31 @@
 */
 export const paginator = function() {
 
-	this.id
+	this.id					= null
 
-	this.model
-	this.mode
-	this.events_tokens
-	this.node
+	this.model				= null
+	this.mode				= null
+	this.events_tokens		= null
+	this.node				= null
 
-	this.caller
+	this.caller				= null
 
-	this.total_pages
-	this.page_number
-	this.prev_page_offset
-	this.next_page_offset
+	this.total_pages		= null
+	this.page_number		= null
+	this.prev_page_offset	= null
+	this.next_page_offset	= null
 
-	this.page_row_begin
-	this.page_row_end
+	this.page_row_begin		= null
+	this.page_row_end		= null
 
-	this.offset_first
-	this.offset_prev
-	this.offset_next
-	this.offset_last
+	this.offset_first		= null
+	this.offset_prev		= null
+	this.offset_next		= null
+	this.offset_last		= null
 
-	this.status
+	this.status				= null
 
-	this.id_variant
+	this.id_variant			= null
 
 	return true
 };//end paginator
@@ -100,13 +100,16 @@ paginator.prototype.build = async function(){
 
 	const self = this
 
-	const total		= await self.get_total()
+	// status update
+		self.status = 'building'
+
+	const total		= await self.get_total();
 	const limit		= self.caller.rqo.sqo.limit // self.get_limit()
 	const offset	= self.get_offset()
 
 	// pages fix vars
 		self.limit				= limit
-		self.total_pages		= Math.ceil(total / limit)
+		self.total_pages		= limit>0 ? Math.ceil(total / limit) : 0
 		self.page_number		= self.get_page_number(limit, offset)
 		self.prev_page_offset	= offset - limit
 		self.next_page_offset	= offset + limit
@@ -121,18 +124,22 @@ paginator.prototype.build = async function(){
 		self.offset_last		= limit * (self.total_pages -1)
 
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			// console.log("paginator [build] self:",self);
+			// console.log("paginator total:",total);
+			const time = performance.now()-t0
+			if (time>2) {
+				console.log("+ Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
+			}
+		}
+
 	// status update
 		self.status = 'builded'
 
 
-	if(SHOW_DEBUG===true) {
-		// console.log("paginator [build] self:",self);
-		// console.log("paginator total:",total);
-		const time = performance.now()-t0
-		if (time>2) {
-			console.log("+ Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
-		}
-	}
+	// event publish
+		event_manager.publish('builded_'+self.id)
 
 
 	return true
@@ -165,12 +172,30 @@ paginator.prototype.destroy = async function(){
 /**
 * GET_TOTAL
 */
+paginator.loading_total_status = null
 paginator.prototype.get_total = async function() {
 
-	const total = (Boolean(this.caller.total && typeof this.caller.total.then==="function"))
+	const self = this
+
+	// queue. Prevent double resolution calls to API
+		if (paginator.loading_total_status==='resolving') {
+			return new Promise(function(resolve){
+				setTimeout(function(){
+					resolve( self.get_total() )
+				}, 100)
+			})
+		}
+
+	paginator.loading_total_status = 'resolving'
+
+	// const total = (Boolean(this.caller.total && typeof this.caller.total.then==="function"))
+	const total = (this.caller.total && typeof this.caller.total==="function")
 		? await this.caller.total()
 		: this.caller.total
 
+	paginator.loading_total_status = 'resolved'
+
+	// console.warn(`++++++++++++++++++++++++++++++++ RESOLVED ${self.caller.tipo} total:`,total);
 	return total
 };//end get_total
 
@@ -204,7 +229,7 @@ paginator.prototype.get_offset = function() {
 * PAGINATE
 * @return promise
 *	bool true on successful, false on error
-* Upadate self offset and publish a public event 'paginator_goto_' that is listened by section/portal to load another record data
+* Update self offset and publish a public event 'paginator_goto_' that is listened by section/portal to load another record data
 */
 paginator.prototype.paginate = async function(offset) {
 
@@ -212,7 +237,13 @@ paginator.prototype.paginate = async function(offset) {
 
 	// avoid overlap section calls if not ready
 		if (self.caller.status!=='rendered') {
-			console.warn(`/// [paginator.paginate] Ignored paginate offset (element is not ready status: ${self.caller.status}) :`, offset);
+			console.warn(`/// [paginator.paginate] Ignored (1) paginate offset (element is not ready status: ${self.caller.status}) :`, offset);
+			return false
+		}
+
+	// avoid overlap section calls if not ready
+		if (self.status!=='rendered') {
+			console.warn(`/// [paginator.paginate] Ignored (2) paginate offset (element is not ready status: ${self.status}) :`, offset);
 			return false
 		}
 
@@ -222,6 +253,7 @@ paginator.prototype.paginate = async function(offset) {
 	// publish event (section is listen this event to refresh)
 		event_manager.publish('paginator_goto_'+self.id, offset)
 
+		// self.status = 'rendered'
 	// paginator content data update
 		self.refresh()
 

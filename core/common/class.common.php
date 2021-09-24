@@ -322,7 +322,7 @@ abstract class common {
 					if ( isset($ar_related[0]) ) {
 						// REAL OR VIRTUAL SECTION
 						# Set custom matrix table
-						$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
+						$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
 							#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
 						$table_is_resolved = true;
 					}
@@ -333,7 +333,7 @@ abstract class common {
 						if ( isset($ar_related[0]) ) {
 							// REAL SECTION
 							# Set custom matrix table
-							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
+							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
 								#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
 							$table_is_resolved = true;
 						}
@@ -355,7 +355,7 @@ abstract class common {
 				$ar_related = common::get_ar_related_by_model('matrix_table', $parent_section_tipo);
 				if ( isset($ar_related[0]) ) {
 					# Set custom matrix table
-					$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
+					$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
 				}
 			}
 			*/
@@ -3554,16 +3554,17 @@ abstract class common {
 		$start_time=microtime(1);
 
 		$options = new stdClass();
-			$options->context_type 				= 'simple';
-			$options->ar_section_tipo 			= null;
-			$options->path 						= [];
-			$options->ar_tipo_exclude_elements 	= false;
-			$options->ar_components_exclude 	= [
+			$options->context_type				= 'simple';
+			$options->ar_section_tipo			= null;
+			$options->path						= [];
+			$options->ar_tipo_exclude_elements	= false;
+			$options->ar_components_exclude		= [
 				'component_password',
-				'component_filter_records',
+				// 'component_filter_records',
 				'component_image',
 				'component_av',
 				'component_pdf',
+				'component_security_administrator',
 				//'component_relation_children',
 				//'component_relation_related',
 				//'component_relation_model',
@@ -3573,10 +3574,9 @@ abstract class common {
 				'component_geolocation',
 				// 'component_info',
 				'component_state',
-				'section_tab',
-				'component_json'
+				'section_tab'
 			];
-			$options->ar_include_elements 		= [
+			$options->ar_include_elements		= [
 				'component',
 				'section_group',
 				'section_group_div',
@@ -3584,13 +3584,17 @@ abstract class common {
 			];
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
+		// options
+			$ar_section_tipo			= $options->ar_section_tipo;
+			$path						= $options->path;
+			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements;
+			$ar_components_exclude		= $options->ar_components_exclude;
+			$ar_include_elements		= $options->ar_include_elements;
+			$context_type				= $options->context_type;
 
-		$ar_section_tipo 			= $options->ar_section_tipo;
-		$path 						= $options->path;
-		$ar_tipo_exclude_elements 	= $options->ar_tipo_exclude_elements;
-		$ar_components_exclude 		= $options->ar_components_exclude;
-		$ar_include_elements 		= $options->ar_include_elements;
-		$context_type 				= $options->context_type;
+		// common section info
+			$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(DEDALO_SECTION_INFO_SECTION_GROUP, 'component', 'children', $search_exact=false);
+			$section_info_elements = array_merge([DEDALO_SECTION_INFO_SECTION_GROUP], $ar_elements);
 
 		# Manage multiple sections
 		# section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
@@ -3633,11 +3637,20 @@ abstract class common {
 
 			$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_include_elements, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
 
+			// Add common section info elements
+				foreach ($section_info_elements as $current_section_info_el) {
+					$ar_elements[] = $current_section_info_el;
+				}
+
 			foreach ($ar_elements as $element_tipo) {
 
-				if($element_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+				if($element_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 
 				$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+
+				if (in_array($model, $ar_components_exclude)) {
+					continue;
+				}
 
 				// common temporal excluded/mapped models *******
 					$match_key = array_search($model, common::$ar_temp_map_models);
@@ -3655,13 +3668,13 @@ abstract class common {
 						$recordObjdd = new RecordObj_dd($element_tipo);
 						$translatable = $recordObjdd->get_traducible()=== 'si';
 
-						$current_lang = $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$element  = component_common::get_instance(	$model,
-																	$element_tipo,
-																	null,
-																	'list',
-																	$current_lang,
-																	$section_tipo);
+						$current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$element		= component_common::get_instance($model,
+																		 $element_tipo,
+																		 null,
+																		 'list',
+																		 $current_lang,
+																		 $section_tipo);
 						break;
 
 					// grouper case
@@ -3829,7 +3842,7 @@ abstract class common {
 								$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
 							}
 
-							$el->label = RecordObj_dd::get_termino_by_tipo($el->tipo);
+							$el->label = RecordObj_dd::get_termino_by_tipo($el->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 							return $el;
 						}, $tool_config->ddo_map);
@@ -3964,8 +3977,8 @@ abstract class common {
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
 
-				// label
-					$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo);
+				// label $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+					$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 				// properties
 					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);

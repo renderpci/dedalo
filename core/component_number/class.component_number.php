@@ -129,41 +129,88 @@ class component_number extends component_common {
 	* NUMBER_TO_STRING
 	* Format the dato into the standard format or the properties format of the current intance of the component
 	*/
-	public function number_to_string( $dato_value ) {
+		// public function number_to_string_OLD( $dato_value ) {
 
-		if($dato_value===null || empty($dato_value)){
-			return $dato_value;
-		}
+		// 	if($dato_value===null || empty($dato_value)){
+		// 		return $dato_value;
+		// 	}
+
+		// 	$properties = $this->get_properties();
+		// 	if(empty($properties->type)){
+		// 		return (string)$dato_value;
+		// 	}else{
+		// 		foreach ($properties->type as $key => $value) {
+
+		// 			switch ($key) {
+		// 				case 'int':
+		// 					if($value === 0 || empty($value)){
+		// 						return (string)$dato_value;
+		// 					}
+		// 					if ( strpos($dato_value, '-')===0 )  {
+		// 						$dato_value = '-'.substr($dato_value,1,$value);
+		// 						$dato_value = (string)$dato_value;
+
+		// 					}else{
+		// 						$dato_value = (string)substr($dato_value,0,$value);
+		// 					}
+		// 					break;
+
+		// 				default:
+		// 					$dato_value = number_format($dato_value,$value,'.','');
+		// 					break;
+		// 			}
+
+		// 		}//end foreach ($properties->type as $key => $value)
+		// 	}//end if(empty($properties->type))
+
+		// 	return $dato_value;
+		// }//end number_to_string
+
+
+
+	/*
+	* NUMBER_TO_STRING
+	* Format the dato into the standard format or the properties format of the current intance of the component
+	*/
+	public function number_to_string( $dato ) {
 
 		$properties = $this->get_properties();
-		if(empty($properties->type)){
-			return (string)$dato_value;
-		}else{
+
+		// default value
+		$string_value = $dato;
+
+		if (!empty($dato) && !empty($properties->type)) {
+
 			foreach ($properties->type as $key => $value) {
 
 				switch ($key) {
 					case 'int':
-						if($value === 0 || empty($value)){
-							return (string)$dato_value;
-						}
-						if ( strpos($dato_value, '-')===0 )  {
-							$dato_value = '-'.substr($dato_value,1,$value);
-							$dato_value = (string)$dato_value;
+						if($value===0 || empty($value)){
+							// nothing to do
+
+						}elseif ( strpos($dato, '-')===0 )  {
+
+							$string_value = '-'.substr($dato,1,$value);
 
 						}else{
-							$dato_value = (string)substr($dato_value,0,$value);
+
+							$string_value = substr($dato,0,$value);
 						}
 						break;
 
 					default:
-						$dato_value = number_format($dato_value,$value,'.','');
+						$string_value = number_format($dato,$value,'.','');
 						break;
 				}
-
 			}//end foreach ($properties->type as $key => $value)
-		}//end if(empty($properties->type))
 
-		return $dato_value;
+		}//end if (!empty($dato))
+
+
+		$string_value = str_replace(',', '.', $string_value);
+
+
+		return (string)$string_value;
 	}//end number_to_string
 
 

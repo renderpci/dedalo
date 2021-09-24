@@ -7,32 +7,32 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_filter} from '../../component_filter/js/render_component_filter.js'
+	import {render_search_component_filter} from '../../component_filter/js/render_search_component_filter.js'
 
 
 
 export const component_filter = function(){
 
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.section_lang
-	this.context
-	this.data
-	this.parent
-	this.node
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
 
-	this.tools
+	this.tools			= null
 
 	return true
 };//end component_filter
-
 
 
 
@@ -53,14 +53,14 @@ export const component_filter = function(){
 	component_filter.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_filter.prototype.update_datum			= component_common.prototype.update_datum
 	component_filter.prototype.change_value			= component_common.prototype.change_value
-	component_filter.prototype.build_rqo		= common.prototype.build_rqo
+	component_filter.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_filter.prototype.mini					= render_component_filter.prototype.mini
 	component_filter.prototype.list					= render_component_filter.prototype.list
 	component_filter.prototype.edit					= render_component_filter.prototype.edit
 	component_filter.prototype.edit_in_list			= render_component_filter.prototype.edit
-	component_filter.prototype.search				= render_component_filter.prototype.edit
+	component_filter.prototype.search				= render_search_component_filter.prototype.search
 	component_filter.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -101,3 +101,5 @@ component_filter.prototype.get_changed_key = function(action, value) {
 
 	return false
 };//end get_changed_key
+
+

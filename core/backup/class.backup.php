@@ -876,7 +876,7 @@ abstract class backup {
 		# Iterate tlds from 'extras' folder
 		#
 			#$ar_extras_folders = (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
-			#$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
+			#$DEDALO_PREFIX_TIPOS = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 			/*
 				$obj->type  = "extras_jer_file";
 				$obj->table = "jer_dd";
@@ -1103,7 +1103,7 @@ abstract class backup {
 			return $ar_files;
 		}
 
-		$DEDALO_PREFIX_TIPOS = $DEDALO_PREFIX_TIPOS ?? (array)unserialize(DEDALO_PREFIX_TIPOS);
+		$DEDALO_PREFIX_TIPOS = $DEDALO_PREFIX_TIPOS ?? (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 
 		$ar_files = array();
 

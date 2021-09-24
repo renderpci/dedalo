@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
+	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 	import {
 		render_search,
@@ -57,27 +58,27 @@ export const search = function() {
 */
 // prototypes assign
 	// render	
-	search.prototype.render					= common.prototype.render
-	search.prototype.list					= render_search.prototype.list
-	search.prototype.edit					= render_search.prototype.list
-	search.prototype.render_base			= render_search.prototype.render_base
-	search.prototype.render_components_list	= render_search.prototype.render_components_list
-	search.prototype.render_search_buttons	= render_search.prototype.render_search_buttons
-	search.prototype.render_filter			= render_search.prototype.render_filter
-	search.prototype.render_search_group	= render_search.prototype.render_search_group
-	search.prototype.build_search_component	= render_search.prototype.build_search_component
+	search.prototype.render							= common.prototype.render
+	search.prototype.list							= render_search.prototype.list
+	search.prototype.edit							= render_search.prototype.list
+	search.prototype.render_base					= render_search.prototype.render_base
+	search.prototype.render_components_list			= render_search.prototype.render_components_list
+	search.prototype.render_search_buttons			= render_search.prototype.render_search_buttons
+	search.prototype.render_filter					= render_search.prototype.render_filter
+	search.prototype.render_search_group			= render_search.prototype.render_search_group
+	search.prototype.build_search_component			= render_search.prototype.build_search_component
 	// drag
-	search.prototype.on_dragstart			= on_dragstart
-	search.prototype.on_dragover			= on_dragover
-	search.prototype.on_dragleave			= on_dragleave
-	search.prototype.on_drop				= on_drop
+	search.prototype.on_dragstart					= on_dragstart
+	search.prototype.on_dragover					= on_dragover
+	search.prototype.on_dragleave					= on_dragleave
+	search.prototype.on_drop						= on_drop
 	// user presets
-	search.prototype.load_search_preset		= load_search_preset
-	search.prototype.new_preset				= new_preset
-	search.prototype.save_new_preset		= save_new_preset
-	search.prototype.save_preset			= save_preset
-	search.prototype.delete_preset			= delete_preset
-	search.prototype.edit_preset			= edit_preset
+	search.prototype.load_search_preset				= load_search_preset
+	search.prototype.new_preset						= new_preset
+	search.prototype.save_new_preset				= save_new_preset
+	search.prototype.save_preset					= save_preset
+	search.prototype.delete_preset					= delete_preset
+	search.prototype.edit_preset					= edit_preset
 
 	search.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
 	search.prototype.calculate_component_path		= common.prototype.calculate_component_path
@@ -86,7 +87,7 @@ export const search = function() {
 
 /**
 * INIT
-* @return bool true
+* @return bool promise true
 */
 search.prototype.init = async function(options) {
 
@@ -97,7 +98,7 @@ search.prototype.init = async function(options) {
 		self.context				= options.caller.context
 		self.mode					= options.mode
 
-	// shor vars
+	// short vars
 		self.section_tipo			= self.caller.section_tipo
 		self.events_tokens			= []
 		self.parent_node			= null
@@ -106,7 +107,7 @@ search.prototype.init = async function(options) {
 		self.source					= self.caller.rqo.source
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
-		self.limit					= self.sqo.limit || 10
+		self.limit					= self.sqo.limit || (self.caller.mode==='edit' ? 1 : 10)
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
 		
@@ -131,8 +132,8 @@ search.prototype.init = async function(options) {
 
 
 	// events subscription
-	// update value, subscription to the changes: if the dom input value was changed,
-	// observers dom elements will be changed own value with the observable value
+		// change_search_element. Update value, subscription to the changes: if the DOM input value was changed,
+		// observers DOM elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('change_search_element', fn_change_search_element)
 		)
@@ -140,7 +141,18 @@ search.prototype.init = async function(options) {
 			self.parse_dom_to_json_filter({mode:self.mode})
 			// Set as changed
 			self.update_state({state:'changed'})
+			// show save animation. add save_success class to component wrappers (green line animation)
+			ui.component.exec_save_successfully_animation(instance)
 		}
+
+		// toggle_search_panel. Triggered by button 'search' placed into section buttons
+		self.events_tokens.push(
+			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+		)
+		function fn_toggle_search_panel(button_node) {
+			toggle_search_panel(self)
+		}
+
 
 
 	return true
@@ -150,6 +162,7 @@ search.prototype.init = async function(options) {
 
 /**
 * BUILD
+* Load from API the user editing_preset (current state) and user_presets (stored states)
 * @return promise
 */
 search.prototype.build = async function(){
@@ -185,15 +198,18 @@ search.prototype.build = async function(){
 
 				}else{
 
+					if (editing_preset.result.json_filter && typeof(editing_preset.result.json_filter)!=='object') {
+						console.error("Editing_preset json_filter expected is object but received value is type:", typeof(editing_preset.result.json_filter));
+					}
+
 					self.json_filter = editing_preset.result.json_filter
 				}
-				// console.log("// SEARCH buld stored self.json_filter:",self.json_filter);
+				// console.log("// SEARCH build stored self.json_filter:",self.json_filter);
 
 			resolve(self.json_filter)
 		}))
-	
 
-	// get the section_tipo from editing_preset
+	// DES get the section_tipo from editing_preset
 		/*
 		const load_all_section_elements_context = async () => {
 
@@ -226,15 +242,14 @@ search.prototype.build = async function(){
 		}
 		//load_all_section_elements_context()
 		*/
-	
 
-	// load user preset data
+	// user_presets. load user preset data
 		ar_promises.push( new Promise(async function(resolve){
 			
 			const user_presets = await current_data_manager.request({
 				body : {
-					action 	 	 		: "filter_get_user_presets",
-					target_section_tipo : self.section_tipo
+					action				: "filter_get_user_presets",
+					target_section_tipo	: self.section_tipo
 				}
 			})
 
@@ -252,7 +267,6 @@ search.prototype.build = async function(){
 			// console.log("-> search build user_presets:", user_presets);
 		}
 
-
 	// wait until all request are resolved
 		await Promise.allSettled(ar_promises);
 
@@ -266,7 +280,7 @@ search.prototype.build = async function(){
 
 
 /**
-* RENDER
+* DES RENDER
 * @return promise resolve dom element filter_wrapper
 */
 	// search.prototype.render = async function() {
@@ -322,7 +336,7 @@ search.prototype.build = async function(){
 
 
 /**
-* GET_SECTION_ELEMENTS_CONTEXT
+* DES GET_SECTION_ELEMENTS_CONTEXT
 * Call to dd_core_api to obtain the list of components associated to current options section_tipo
 * @param object options
 *	string options.section_tipo
@@ -367,13 +381,13 @@ search.prototype.build = async function(){
 
 
 
-// /**
-// * LOAD_COMPONENT_CONTEXT
-// * Call to dd_core_api to obtain the list of components associated to current options section_tipo
-// * @param object options
-// *	string options.section_tipo
-// * @return promise
-// */
+/**
+* DES LOAD_COMPONENT_CONTEXT
+* Call to dd_core_api to obtain the list of components associated to current options section_tipo
+* @param object options
+*	string options.section_tipo
+* @return promise
+*/
 	// search.prototype.load_component_context = async function(options) {
 
 	// 	const self = this
@@ -413,7 +427,7 @@ search.prototype.build = async function(){
 
 
 /**
-* CALCULATE_COMPONENT_PATH
+* DES CALCULATE_COMPONENT_PATH
 * Resolve component full search path. Used to build json_search_object and
 * create later the filters and selectors for search
 * @param object element
@@ -450,26 +464,43 @@ search.prototype.build = async function(){
 	// };//end calculate_component_path
 
 
+
+/**
+* GET_SECTION_ID
+* Calculate tmp section id (incremental id)
+* @return string temp_section_id
+*/
 search.prototype.get_section_id = function() {
+
 	const self = this
+
+	// increment self section_id value
 	self.section_id = ++self.section_id
-	return 'tmp_seach_' + self.section_id 
-}
+
+	// build temp name
+	// const temp_section_id = 'tmp_search_' + self.section_id
+	const temp_section_id = 'search_' + self.section_id
+
+	return temp_section_id
+}//end get_section_id
 
 
 
 /**
 * BUILD_DOM_GROUP
-* @return
+* @return DOM node dom_group
 */
 search.prototype.ar_resolved_elements = []
-search.prototype.build_dom_group = async function(filter, dom_element, options) {
+search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 	const self = this
 
-	let   dom_group 		= null
-	const allow_duplicates 	= (options && options.allow_duplicates) ? options.allow_duplicates : false
+	// options
+		const allow_duplicates	= options.allow_duplicates || false
+		const clean_q			= options.clean_q || false
+		const is_root			= options.is_root || false
 
+	let dom_group = null
 
 	for (const key in filter) {
 
@@ -485,9 +516,9 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 				const resolved_string = JSON.stringify(filter.path) + current_value
 				if (self.ar_resolved_elements.indexOf(resolved_string)===-1) {
 
-					if (options.clean_q===true) {
-						current_value 	= ''
-						q_operator 		= ''
+					if (clean_q===true) {
+						current_value	= ''
+						q_operator		= ''
 					}
 					 const section_id = self.get_section_id()
 					// Add. If not already resolved, add
@@ -508,9 +539,9 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 				//console.log("key,ar_data:",key,ar_data);
 
 			// Build dom search_group
-				const current_search_group = await self.render_search_group( dom_element, {
-					operator : key,
-					is_root	 : options.is_root ? options.is_root : false
+				const current_search_group = self.render_search_group( dom_element, {
+					operator	: key,
+					is_root		: is_root
 				})
 
 			// Recursions
@@ -521,7 +552,7 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 					self.build_dom_group(current_json_object, current_search_group, options)
 				}
 		}
-	};//end for (const key in filter)
+	}//end for (const key in filter)
 
 
 	return dom_group
@@ -538,52 +569,57 @@ search.prototype.get_component_instance = async function(options) {
 
 	const self = this
 
-	const section_id		= options.section_id
-	const section_tipo		= options.section_tipo
-	const component_tipo	= options.component_tipo
-	const model				= options.model
-	const value				= options.value || []
-	const q_operator		= options.q_operator
-	const path				= options.path
+	// options
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		const component_tipo	= options.component_tipo
+		const model				= options.model
+		const value				= options.value || []
+		const q_operator		= options.q_operator
+		const path				= options.path
 
-	// test
+	// instance
 		// instance key. Custom to get unique key
-		const lang		= page_globals.dedalo_data_lang
-		const serial	= performance.now()
-		const key		= section_tipo +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
+			const lang		= page_globals.dedalo_data_lang
+			const serial	= performance.now()
+			const key		= section_tipo +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
 		// context
-		const context = {
-			model			: model,
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'search'
-		}
-		const component_options = {
-			key				: key,
-			model			: model,
-			tipo			: component_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'search',
-			lang			: lang,
-			context			: context,
-			// data			: current_data,
-			// datum		: current_datum
-		}
-		const component_instance = await instances.get_instance(component_options)	
+			const context = {
+				model			: model,
+				type			: 'component',
+				tipo			: component_tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: 'search'
+			}
+		// instance
+			const component_options = {
+				key				: key,
+				model			: model,
+				tipo			: component_tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: 'search',
+				lang			: lang,
+				context			: context
+				// data			: current_data,
+				// datum		: current_datum
+			}
+			const component_instance = await instances.get_instance(component_options)
 
-
-	// inject value from search user preset
-		component_instance.data = {value : value}
-
-	// inject value from search user preset
-		component_instance.datum = {
-			data	: [{value : value}]
+	// data. Inject value from search user preset before build is needed for portal 'resolve_data' API call
+		component_instance.data = {
+			value : value
 		}
 
-	// build component to force load datalist etc.
+	// build component to force load datalist, portal resolve_data etc.
 		await component_instance.build(true)
+
+	// data. Inject value again from search user preset is needed for regular components
+		component_instance.data.value = value
+
+	// inject permissions. Search is always enable for all users
+		component_instance.permissions = 2
 
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
@@ -915,44 +951,18 @@ this.get_search_json_object = function() {
 
 		const self = this
 
-		// section
-			const section 		= self.caller;
-			const section_node 	= section.node[0]
+		// source search_action
+			self.source.search_action = 'search'
 
-		// loading css add
-			section_node.classList.add("loading")
+		// section
+			const section = self.caller
 
 		// filter_obj. Recalculate filter_obj from DOM in default mode (include components with empty values)
 			const filter_obj = self.parse_dom_to_json_filter({
 				mode : "search"
 			}).filter
 
-		// source search_action
-			self.source.search_action = 'search'
-
-		// sqo
-			// self.sqo.filter	= filter_obj
-			// self.sqo.limit	= self.limit
-			// sqo.filter		= filter_obj
-			// sqo.limit		= self.limit
-
-		// pagination
-			section.total			= null
-			section.rqo.sqo.limit	= self.limit
-			section.rqo.sqo.offset	= 0
-			section.rqo.sqo.filter	= filter_obj
-
-		// section
-			const js_promise = section.refresh()
-			.then(()=>{
-				// loading css remove
-					section_node.classList.remove("loading")
-				// setTimeout(function(){
-				// 		alert("Refreshing paginator");
-				// 	section.paginator.status = 'rendered'
-				// 	section.paginator.refresh()
-				// }, 4000)				
-			})
+		const js_promise = update_section(section, filter_obj, self)
 
 		return js_promise
 	};//end exec_search
@@ -967,35 +977,66 @@ this.get_search_json_object = function() {
 
 		const self = this
 
+		// source search_action
+			self.source.search_action = 'show_all'
+
 		// section
-			const section 		= self.caller
-			const section_node 	= section.node[0]
+			const section = self.caller
+
+		// filter reset
+			const filter_obj = null
+
+		// update_section
+			const js_promise = update_section(section, filter_obj, self)
+
+		return js_promise
+	};//end show_all
+
+
+
+	/**
+	* UPDATE_SECTION
+	* @return promise
+	*/
+	const update_section = async function(section, filter_obj, self) {
+
+		const section_node = section.node[0]
 
 		// loading css add
 			section_node.classList.add("loading")
 
-		// source search_action
-			self.source.search_action = 'show_all'
-
-		// sqo
-			// self.sqo.filter = null
-			// self.sqo.limit 	= self.limit
+		// limit
+			const limit = self.limit && self.limit>0 ? self.limit : 10
 
 		// pagination
 			section.total			= null
-			section.rqo.sqo.limit	= self.limit
+			section.rqo.sqo.limit	= limit
 			section.rqo.sqo.offset	= 0
-			section.rqo.sqo.filter	= null
+			section.rqo.sqo.filter	= filter_obj
+
+		// paginator_node
+			const paginator_node = section.paginator.node[0] || null
+			if (paginator_node) {
+				paginator_node.classList.add('hide')
+			}
 
 		// section
 			const js_promise = section.refresh()
-			.then(()=>{
+
+			js_promise.then(()=>{
 				// loading css remove
 					section_node.classList.remove("loading")
+				// refresh section paginator
+					if (paginator_node) {
+						section.paginator.refresh()
+						.then(function(){
+							paginator_node.classList.remove('hide')
+						})
+					}
 			})
 
 		return js_promise
-	};//end show_all
+	}//end update_section
 
 
 
@@ -1009,9 +1050,9 @@ this.get_search_json_object = function() {
 		const self = this
 
 		self.render_filter({
-			editing_preset 	 : self.json_filter,
-			clean_q 		 : true,
-			allow_duplicates : true
+			editing_preset		: self.json_filter,
+			clean_q				: true,
+			allow_duplicates	: true
 		})
 
 		// render buttons
@@ -1136,8 +1177,8 @@ search.prototype.search_from_enter_key = function(button_submit) {
 */
 search.prototype.filter_is_empty = function(filter_obj) {
 
-	const first_property = filter_obj[Object.keys(filter_obj)[0]]
-	const is_empty 		 = (first_property.length<1) ? true : false
+	const first_property	= filter_obj[Object.keys(filter_obj)[0]]
+	const is_empty			= (first_property.length<1) ? true : false
 
 
 	return is_empty
@@ -1163,3 +1204,5 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 	// 	return true;
 	// };//end init_tipology_selector
+
+

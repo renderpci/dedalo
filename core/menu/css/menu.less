@@ -56,17 +56,21 @@ background-color: #FFFF00;
 
 		position: sticky;
 
+		@media screen and (max-width: @width_break_point_1) {
+			position: initial;
+		}
 
 		display: flex;
-		align-items: center;
 		flex-wrap: wrap;
+		align-items: center;
 
-		width: calc(100vw - 1.08em);
+		// width: calc(100vw - 1.08em);
+		// width: 100%;
 		// height: @menu_heigth;
 		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 		background: #2e2e2e;
 
-		font-family: "Oxygen-light", sans-serif;
+		// font-family: "Oxygen-light", sans-serif;
 		font-size: 0.84em;
 		color: #ffffff;
 	    line-height: 1.2em;
@@ -193,9 +197,11 @@ background-color: #FFFF00;
 			>.section_label {
 				//line-height: @menu_heigth;
 				cursor: pointer;
-				font-weight: bold;
+				// font-weight: bold;
 				margin-right: 1em;
 				padding-top: 1px;
+
+				.unselectable;
 
 				&:hover {
 					opacity: 1;
@@ -243,6 +249,7 @@ background-color: #FFFF00;
 				margin: 0;
 				padding: 0;
 				display: flex;
+				flex-wrap: wrap;
 
 				>* {
 					padding-left: 1em;
@@ -284,7 +291,7 @@ background-color: #FFFF00;
 	@menu_bg_color_active : #ffa43d;
 	@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
 	#menu_hierarchy {
-		font-family: "Oxygen-light", sans-serif;
+		// font-family: "Oxygen-light", sans-serif;
 		z-index: 9999;
 		//position:relative;
 		padding: 0;
@@ -327,6 +334,7 @@ background-color: #FFFF00;
 			//font-family: system, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Lucida Grande', "Oxygen-light", sans-serif;
 			//-webkit-font-smoothing: subpixel-antialiased;
 			display: flex;
+			flex-wrap: wrap;
 			//
 			//float: left;
 			li {
@@ -571,7 +579,7 @@ background-color: #FFFF00;
 			letter-spacing: .7px;
 			font-weight: 300 !important;
 			font-size: 13px;
-			font-family: 'Oxygen-light';
+			// font-family: 'Oxygen-light';
 			-webkit-font-smoothing: subpixel-antialiased;
 			height: 29px;
 				/*
@@ -650,7 +658,7 @@ background-color: #FFFF00;
 /* DEBUG_LINE_WRAP
 ------------------------------------------------- */
 .debug_line_wrap {
-	font-family: 'Oxygen-light';
+	// font-family: 'Oxygen-light';
 	font-weight: 100;
 	font-size: 0.82em;
 	width: 100%;
