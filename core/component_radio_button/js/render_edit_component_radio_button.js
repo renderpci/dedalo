@@ -25,18 +25,15 @@ export const render_edit_component_radio_button = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node
 */
-render_edit_component_radio_button.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_radio_button.prototype.edit = async function(options) {
 
 	const self = this
-
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -46,8 +43,8 @@ render_edit_component_radio_button.prototype.edit = async function(options={rend
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// events
@@ -194,37 +191,37 @@ const add_events = function(self, wrapper) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return
+* @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	// Options vars
-	const value 		= self.data.value
-	const datalist		= self.data.datalist
-	const mode 			= self.mode
-	const is_inside_tool= self.is_inside_tool
+	// short vars
+		const datalist	= self.data.datalist
+		const mode		= self.mode
 
 	const fragment = new DocumentFragment()
 
-	// inputs
+	// inputs_container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
-		// build options
-		const value_compare = value.length>0 ? value[0] : null
-		const length = datalist.length
-		for (let i = 0; i < length; i++) {
-			get_input_element_edit(i, datalist[i], inputs_container, self)
+	// inputs
+		const value				= (self.data.value.length<1) ? [null] : self.data.value
+		const value_compare		= value.length>0 ? value[0] : null
+		const datalist_length	= datalist.length
+		for (let i = 0; i < datalist_length; i++) {
+			const input_element = get_input_element_edit(i, datalist[i], self)
+			inputs_container.appendChild(input_element)
 		}
 
 	// buttons
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
+			class_name		: 'buttons_container',
+			parent			: fragment
 		})
 
 	// content_data
@@ -246,8 +243,8 @@ const get_content_data_edit = async function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
@@ -286,9 +283,9 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
-* @return dom element li
+* @return DOM element li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, self) => {
 
 	const input_id = self.id +"_"+ i + "_" + new Date().getUTCMilliseconds()
 
@@ -301,8 +298,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 	// li
 		const li = ui.create_dom_element({
-			element_type	: 'li',
-			parent 			: inputs_container
+			element_type	: 'li'
 		})
 
 	// input checkbox
@@ -330,8 +326,8 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
-			text_content 	: label_string,
-			parent 			: li
+			text_content	: label_string,
+			parent			: li
 		})
 		input_label.setAttribute("for", input_id)
 
