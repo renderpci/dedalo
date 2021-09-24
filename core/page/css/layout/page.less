@@ -1,29 +1,29 @@
 
 
+// page general
+	html {
+		// font
+		// global_font. Defined in fonts.less
+		.global_font;
+		font-size: 1rem; // fallback base value
+		// font-size: 1vw;
 
-html {
-	// font
-	// global_font. Defined in fonts.less
-	.global_font;
-	font-size: 1rem; // fallback base value
-	// font-size: 1vw;
+		color: @color_grey_ultradark;
 
-	color: @color_grey_ultradark;
-
-	//overflow-y: scroll;
-	//margin-left: calc(100vw - 100%);
-	// margin-right: calc(100vw - 100%);
-}
-b, strong {
-	font-weight: bold;
-}
-i, em {
-	font-style: italic;
-}
-danger {
-	color: @color_danger;
-	font-weight: bold;
-}
+		//overflow-y: scroll;
+		//margin-left: calc(100vw - 100%);
+		// margin-right: calc(100vw - 100%);
+	}
+	b, strong {
+		font-weight: bold;
+	}
+	i, em {
+		font-style: italic;
+	}
+	danger {
+		color: @color_danger;
+		font-weight: bold;
+	}
 
 
 
@@ -32,7 +32,7 @@ danger {
 		//transition: opacity 0.15s ; // linear
 		width: 100%;
 		//display: grid;
-		min-height: 80vh;
+		min-height: calc(100vh - 70px);
 	}
 
 
@@ -196,8 +196,5 @@ danger {
 	.mce-fullscreen {
 		z-index: 9999999 !important;
 	}
-
-
-
 
 

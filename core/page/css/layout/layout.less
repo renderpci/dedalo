@@ -45,6 +45,8 @@
 		color: @color_grey_ultradark;
 	}
 
+
+
 // mixins
 
 
@@ -115,6 +117,7 @@
 		align-items: stretch;
 		align-content: stretch;
 		flex-wrap: wrap;
+		// box-shadow: 1px 0px 0 @color_grey_medium;
 	}
 	.component_base {
 		position: relative;
@@ -721,7 +724,7 @@
 		&.edit {
 			.section_record_base; // flex base config
 				//background-color: #DBF5FF;
-				outline: 1px solid rgba(216, 216, 216, 0.43);
+				// outline: 1px solid rgba(216, 216, 216, 0.43);
 
 				//&:before {
 				//	content: "Section record";
@@ -933,6 +936,7 @@
 				//background-color: bisque;
 				//outline: 1px solid rgba(216, 216, 216, 0.43);
 				width: 100%;
+				margin-bottom: 0.5rem;
 				//border: 1px solid #BFBFBF;
 
 				>.label {
@@ -976,7 +980,8 @@
 
 		&.edit, &.search, &.tm {
 			// grey line left and down of wrapper
-			box-shadow: -1px 1px 0 @color_grey_medium;
+			// box-shadow: -1px 1px 0 @color_grey_medium;
+			box-shadow: -1px 1px 0 @color_grey_medium, inset -1px 1px 0 @color_grey_medium;
 
 			@media screen and (max-width: @width_break_point_1) {
 				flex: 0 0 100% !important;
@@ -1649,6 +1654,8 @@
 			// background-color: @color_grey_medium !important; // rgb(230, 230, 230)
 			background-color: @color_white_dirty !important;
 
+
+
 			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 			overflow: initial !important;
 
@@ -1666,6 +1673,10 @@
 			}
 		}//end &.active
 
+		&.error {
+			transition: background-color 0.3s ease;
+			background-color: red !important;
+		}
 
 		// inside .section_record.edit context
 		//.section_record.edit &, .components_container & { 22
