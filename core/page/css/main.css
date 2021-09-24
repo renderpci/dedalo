@@ -465,30 +465,6 @@ template {
 [hidden] {
   display: none;
 }
-@font-face {
-  font-family: 'Oxygen';
-  src: url('./fonts/oxigen-webfont/oxygen-regular-webfont.eot');
-  src: url('./fonts/oxigen-webfont/oxygen-regular-webfont.eot?#iefix') format('embedded-opentype'), url('./fonts/oxigen-webfont/oxygen-regular-webfont.woff2') format('woff2'), url('./fonts/oxigen-webfont/oxygen-regular-webfont.woff') format('woff'), url('./fonts/oxigen-webfont/oxygen-regular-webfont.ttf') format('truetype'), url('./fonts/oxigen-webfont/oxygen-regular-webfont.svg#oxygenregular') format('svg');
-  font-weight: normal;
-  font-style: normal;
-  font-display: fallback;
-}
-@font-face {
-  font-family: 'Oxygen-Bold';
-  src: url('./fonts/oxigen-webfont/oxygen-bold-webfont.eot');
-  src: url('./fonts/oxigen-webfont/oxygen-bold-webfont.eot?#iefix') format('embedded-opentype'), url('./fonts/oxigen-webfont/oxygen-bold-webfont.woff2') format('woff2'), url('./fonts/oxigen-webfont/oxygen-bold-webfont.woff') format('woff'), url('./fonts/oxigen-webfont/oxygen-bold-webfont.ttf') format('truetype'), url('./fonts/oxigen-webfont/oxygen-bold-webfont.svg#oxygenbold') format('svg');
-  font-weight: normal;
-  font-style: normal;
-  font-display: fallback;
-}
-@font-face {
-  font-family: 'Oxygen-light';
-  src: url('./fonts/oxigen-webfont/oxygen-light-webfont.eot');
-  src: url('./fonts/oxigen-webfont/oxygen-light-webfont.eot?#iefix') format('embedded-opentype'), url('./fonts/oxigen-webfont/oxygen-light-webfont.woff2') format('woff2'), url('./fonts/oxigen-webfont/oxygen-light-webfont.woff') format('woff'), url('./fonts/oxigen-webfont/oxygen-light-webfont.ttf') format('truetype'), url('./fonts/oxigen-webfont/oxygen-light-webfont.svg#oxygenlight') format('svg');
-  font-weight: normal;
-  font-style: normal;
-  font-display: fallback;
-}
 /*
 @font-face {
 	font-family: 'san_francisco_displayregular';
@@ -2212,7 +2188,6 @@ li .reset_input select {
   flex-wrap: wrap;
   flex-flow: column;
   width: 100%;
-  outline: 1px solid rgba(216, 216, 216, 0.43);
 }
 .section_record.edit > .content_data {
   display: flex;
@@ -2288,6 +2263,7 @@ li .section_record.list .id_column {
 }
 .section_record.edit .section_group.edit {
   width: 100%;
+  margin-bottom: 0.5rem;
 }
 .section_record.edit .section_group.edit > .label {
   background-color: #f1f1f1;
@@ -2323,7 +2299,7 @@ li .section_record.list .id_column {
 .wrapper_component.edit,
 .wrapper_component.search,
 .wrapper_component.tm {
-  box-shadow: -1px 1px 0 #e6e6e6;
+  box-shadow: -1px 1px 0 #e6e6e6, inset -1px 1px 0 #e6e6e6;
 }
 @media screen and (max-width: 960px) {
   .wrapper_component.edit,
@@ -3023,6 +2999,10 @@ li .section_record.list .id_column {
 }
 .wrapper_component.active > .label {
   color: #f78a1c !important;
+}
+.wrapper_component.error {
+  transition: background-color 0.3s ease;
+  background-color: red !important;
 }
 .section_record .wrapper_component.list,
 .wrapper_tool .wrapper_component.list,
@@ -4276,7 +4256,7 @@ danger {
 }
 #main {
   width: 100%;
-  min-height: 80vh;
+  min-height: calc(100vh - 70px);
 }
 .error {
   transition: background-color 0.3s ease;
