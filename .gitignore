@@ -207,3 +207,4 @@ saml_config.php
 .svn
 
 /lib/dedalo/config/config_auto.php
+.phpintel
