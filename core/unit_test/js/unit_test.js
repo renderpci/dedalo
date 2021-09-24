@@ -172,7 +172,6 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 			}
 		})('component_portal', 'test80', section_tipo, section_id, mode, lang, fn_random_locator, ['test38', 'test80', 0]) )
 
-
 	// component_number
 		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
 			return {
@@ -185,6 +184,73 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				new_value		: new_value
 			}
 		})('component_number', 'test139', section_tipo, section_id, mode, lang, fn_random_number, []) )
+
+	// component_date
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_date', 'test145', section_tipo, section_id, mode, lang, fn_random_date, []) )
+
+	// component_email
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_email', 'test140', section_tipo, section_id, mode, lang, fn_random_email, []) )
+
+	// component_json
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_json', 'test150', section_tipo, section_id, mode, lang, fn_random_json, []) )
+
+	// component_radio_button
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_radio_button', 'test144', section_tipo, section_id, mode, lang, fn_random_locator, ['dd501','test144']) )
+
+	// component_check_box
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_check_box', 'test146', section_tipo, section_id, mode, lang, fn_random_locator, ['dd501','test146']) )
 
 
 	// des
@@ -201,74 +267,6 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		// 		new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
 		// 	}
 		// })('component_portal', 'test204', section_tipo, section_id, mode, lang, fn_custom_locator, ['es1', 'test204', 0, 1]) )
-
-		// options.push( (function(model, tipo){
-		// 	return {
-		// 		model				: model,
-		// 		tipo				: tipo,
-		// 		section_tipo		: section_tipo,
-		// 		section_id			: section_id,
-		// 		mode				: mode,
-		// 		lang				: lang,
-		// 		new_value			: fn_random_date,
-		// 		new_value_params	: []
-		// 	}
-		// })('component_date', 'test145') )
-
-
-		// options.push( (function(model, tipo){
-		// 	return {
-		// 		model				: model,
-		// 		tipo				: tipo,
-		// 		section_tipo		: section_tipo,
-		// 		section_id			: section_id,
-		// 		mode				: mode,
-		// 		lang				: lang,
-		// 		new_value			: fn_random_email,
-		// 		new_value_params	: []
-		// 	}
-		// })('component_email', 'test140') )
-
-
-		// options.push( (function(model, tipo){
-		// 	return {
-		// 		model				: model,
-		// 		tipo				: tipo,
-		// 		section_tipo		: section_tipo,
-		// 		section_id			: section_id,
-		// 		mode				: mode,
-		// 		lang				: lang,
-		// 		new_value			: fn_random_json
-		// 	}
-		// })('component_json', 'test150') )
-		
-
-		// options.push( (function(model, tipo){
-		// 	return {
-		// 		model				: model,
-		// 		tipo				: tipo,
-		// 		section_tipo		: section_tipo,
-		// 		section_id			: section_id,
-		// 		mode				: mode,
-		// 		lang				: lang,
-		// 		new_value			: fn_random_locator,
-		// 		new_value_params	: ['dd501', tipo]
-		// 	}
-		// })('component_radio_button', 'test144') )	
-
-		
-		// options.push( (function(model, tipo){
-		// 	return {
-		// 		model				: model,
-		// 		tipo				: tipo,
-		// 		section_tipo		: section_tipo,
-		// 		section_id			: section_id,
-		// 		mode				: mode,
-		// 		lang				: lang,
-		// 		new_value			: fn_random_locator,
-		// 		new_value_params	: ['dd501', tipo]
-		// 	}
-		// })('component_check_box', 'test146') )	
 
 		
 		// options.push( (function(model, tipo){
