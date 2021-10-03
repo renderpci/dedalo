@@ -188,15 +188,18 @@
 				$canvas_id = null;
 				$ar_related_component_name = array();
 				$ar_relaciones = $this->RecordObj_dd->get_relaciones();
-				if(!empty($ar_relaciones)) foreach ($ar_relaciones as $key => $ar_values) {		
-					foreach ($ar_values as $relaciones_modelo => $relaciones_tipo) {
-						$modelo_name = RecordObj_dd::get_termino_by_tipo($relaciones_modelo,null,true);
-						$ar_related_component_name[] = $modelo_name;
-						#$ar_related_component_name_json	= json_encode($ar_related_component_name);
+				if(!empty($ar_relaciones)) foreach ($ar_relaciones as $key => $ar_values) {
+					foreach ($ar_values as $relaciones_tipo) {
+						$modelo_name					= RecordObj_dd::get_modelo_name_by_tipo($relaciones_tipo,true);
+						$ar_related_component_name[]	= $modelo_name;
 						if($modelo_name==='component_image') {
-							#$component_image 	= new component_image($relaciones_tipo, $parent, $modo);
-							$component_image 	= component_common::get_instance('component_image', $relaciones_tipo, $parent, $modo, DEDALO_DATA_NOLAN, $this->section_tipo);
-							$canvas_id 			= $component_image->get_identificador_unico();
+							$component_image	= component_common::get_instance(	'component_image',
+																					$relaciones_tipo,
+																					$parent,
+																					$modo,
+																					DEDALO_DATA_NOLAN,
+																					$this->section_tipo);
+							$canvas_id			= $component_image->get_identificador_unico();
 						}
 					}	
 				}
