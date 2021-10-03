@@ -2442,6 +2442,8 @@
 		Add sum calculation to the coins in numisdata
 		24-09-2021
 		Removed temporal alert in tool_structuration
+		03-10-2021
+		Fixed component_geolocation relation bug in compoent_text_area where model was calculated from model tipo instead tipo (old way)
 
 
 	[/HISTORY]
@@ -2467,13 +2469,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2j';
+	$DEDALO_VERSION = '5.8.2k';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-09-2021');
+	define('DEDALO_BUILD'	, '03-10-2021');
 
 
 	/*
