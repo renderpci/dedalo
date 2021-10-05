@@ -37,15 +37,15 @@ export const component_inverse = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_inverse.prototype.init				= component_common.prototype.init
-	component_inverse.prototype.build				= component_common.prototype.build
-	component_inverse.prototype.destroy				= common.prototype.destroy
-	component_inverse.prototype.save				= component_common.prototype.save
-	component_inverse.prototype.load_data			= component_common.prototype.load_data
+	component_inverse.prototype.init		= component_common.prototype.init
+	component_inverse.prototype.build		= component_common.prototype.build
+	component_inverse.prototype.destroy		= common.prototype.destroy
+	component_inverse.prototype.save		= component_common.prototype.save
+	component_inverse.prototype.load_data	= component_common.prototype.load_data
 	component_inverse.prototype.build_rqo	= common.prototype.build_rqo
 
-// render
-	component_inverse.prototype.render				= common.prototype.render
-	component_inverse.prototype.mini				= render_component_inverse.prototype.mini
-	component_inverse.prototype.list				= render_component_inverse.prototype.list
-	component_inverse.prototype.edit				= render_component_inverse.prototype.edit
+	// render
+	component_inverse.prototype.render		= common.prototype.render
+	component_inverse.prototype.mini		= render_component_inverse.prototype.mini
+	component_inverse.prototype.list		= render_component_inverse.prototype.list
+	component_inverse.prototype.edit		= render_component_inverse.prototype.edit
