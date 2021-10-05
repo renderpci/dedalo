@@ -85,14 +85,17 @@ const get_content_data_edit = async function(self) {
 			// })
 
 		// components_list. render section component list [left]
-			await render_components_list({
-				self			: self,
-				section_tipo	: self.target_section_tipo,
-				target_div		: components_list_container,
-				path			: []
+			const section_elements = await self.get_section_elements_context({
+				section_tipo : self.target_section_tipo
 			})
-
-				console.log("self.components_list:",self.components_list);
+			render_components_list({
+				self				: self,
+				section_tipo		: self.target_section_tipo,
+				target_div			: components_list_container,
+				path				: [],
+				section_elements	: section_elements
+			})
+			console.log("get_content_data_edit self.components_list:",self.components_list);
 
 	// export_components_container
 		const export_components_container = ui.create_dom_element({

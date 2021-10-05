@@ -266,6 +266,7 @@ page.prototype.get_ar_instances = async function(){
 			
 				instantiate_page_element(self, current_ddo)
 				.then(function(current_instance){
+
 					// build (load data)
 					const autoload = current_instance.status==="initiated" // avoid reload menu data
 					current_instance.build(autoload)

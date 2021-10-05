@@ -12,7 +12,6 @@
 	import {ui} from '../../common/js/ui.js'
 
 
-
 /**
 * COMMON
 */
@@ -22,11 +21,12 @@ export const common = function(){
 }//end common
 
 
+
 /**
 * INITING
 * Generic agnostic init function created to maintain
 * unity of calls.
-* (!) For components, remember use always common.init()
+* (!) For components, remember to use always common.init()
 * @return bool true
 */
 common.prototype.init = async function(options) {
@@ -52,6 +52,8 @@ common.prototype.init = async function(options) {
 
 		self.events_tokens	= [] // array of events of current component
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
+
+		self.render_level	= null
 
 	// status update
 		self.status = 'initiated'
@@ -86,6 +88,7 @@ common.prototype.build = async function () {
 }//end common.prototype.build
 
 
+
 /**
 * SET_CONTEXT_VARS
 * type, label, tools, divisor, permissions
@@ -101,7 +104,8 @@ export const set_context_vars = function(self, context) {
 	}
 
 	return true
-};//end set_context_vars
+}//end set_context_vars
+
 
 
 /**
@@ -111,7 +115,7 @@ export const set_context_vars = function(self, context) {
 * @return promise
 *	node first DOM node stored in instance 'node' array
 */
-common.prototype.render = async function (options={render_level:'full'}) {
+common.prototype.render = async function (options={}) {
 	const t0 = performance.now()
 
 	const self = this
@@ -121,17 +125,24 @@ common.prototype.render = async function (options={render_level:'full'}) {
 
 	// status check to prevent duplicated actions
 		if (self.status==='rendering') {
-			console.warn(`[common.render] Ignored render already rendering '${self.model}'. current status:`, self.status);
+			console.error(`[common.render] Ignored render already rendering '${self.model}'. current status:`, self.status, self.model, self.id);
 			return false
 		}
 
 	if (self.status!=='builded') {
-		// event_manager.subscribe('builded_'+self.id, self.render.edit(options))
-		console.error("Illegal status. Expected 'builded' current:",self.status, self.model);
+		// if render mode is equal than current already rendered node, return node 0
+		if (self.render_level===render_level) {
+			// event_manager.subscribe('builded_'+self.id, self.render.edit(options))
+			console.warn("Render illegal status. Expected 'builded' current:", clone(self.status), render_level, self.model, self.id);
+			return self.node[0]
+		}
 	}
 
 	// status update
 		self.status = 'rendering'
+
+	// fix current render level
+		self.render_level = render_level
 
 	// self data verification before render
 		//if (typeof self.data==="undefined") {
@@ -1673,7 +1684,6 @@ const build_request_select = function(self, request_config, action){
 
 
 
-
 /**
 * LOAD_DATA_DEBUG
 * @return DOM node document fragment
@@ -1863,7 +1873,8 @@ common.prototype.get_section_elements_context = async function(options) {
 
 
 	return components
-};//end get_section_elements_context
+}//end get_section_elements_context
+
 
 
 /**
@@ -1901,6 +1912,6 @@ common.prototype.calculate_component_path = function(component_context, path) {
 	})
 
 	return calculate_component_path
-};//end calculate_component_path
+}//end calculate_component_path
 
 

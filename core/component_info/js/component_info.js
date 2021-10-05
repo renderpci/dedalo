@@ -54,7 +54,7 @@ export const component_info = function(){
 	// component_info.prototype.update_data_value	= component_common.prototype.update_data_value
 	// component_info.prototype.update_datum		= component_common.prototype.update_datum
 	// component_info.prototype.change_value		= component_common.prototype.change_value
-	// component_info.prototype.build_rqo	= common.prototype.build_rqo
+	// component_info.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
 	component_info.prototype.mini					= render_component_info.prototype.mini
@@ -67,96 +67,140 @@ export const component_info = function(){
 
 
 
-	/**
-	* GET_WIDGETS
-	*/
-	component_info.prototype.get_widgets = async function(){
+/**
+* GET_WIDGETS
+*/
+component_info.prototype.get_widgets = async function(){
 
-		const self = this
+	const self = this
 
-		const value = self.data.value
+	const value = self.data.value
 
-		const datalist = self.data.datalist
-		// self data verification
-			if (!value || value.length===0) {
-				return false
+	const datalist = self.data.datalist
+	// self data verification
+		if (!value || value.length===0) {
+			return false
+		}
+
+	const widgets_properties		= self.context.properties.widgets
+	const widgets_properties_length	= widgets_properties.length
+
+	// iterate records
+		const ar_promises = []
+		for (let i = 0; i < widgets_properties_length; i++) {
+
+			const current_widget	= widgets_properties[i]
+			const widget_name		= current_widget.widget_name
+			const path				= current_widget.path
+			const widget_id			= self.id + '_'+ widget_name
+
+			const loaded_widget		= self.ar_instances.find(item => item.id === widget_id)
+
+			const widget_value		= value.filter(item => item.widget === widget_name)
+			const widget_datalist	= (datalist) ? datalist.filter(item => item.widget === widget_name) : []
+
+			if(loaded_widget){
+				loaded_widget.value		= widget_value
+				loaded_widget.datalist	= widget_datalist
+				continue
 			}
 
-		const widgets_properties = self.context.properties.widgets
-
-		// iterate records
-			for (var i = 0; i < widgets_properties.length; i++) {
-				const current_widget 	= widgets_properties[i]
-				const widget_name 		= current_widget.widget_name
-				const path 				= current_widget.path
-				const widget_id			= self.id + '_'+ widget_name
-
-				const loaded_widget 	= self.ar_instances.find(item => item.id === widget_id)
-
-				const widget_value 		= value.filter(item => item.widget === widget_name)
-				const widget_datalist	= (datalist) ? datalist.filter(item => item.widget === widget_name) : []
-
-				if(loaded_widget){
-					loaded_widget.value  = widget_value
-					loaded_widget.datalist  = widget_datalist
-					continue
-				}
-
-				// import widget js file
+			// import widget js file
 				const widget_path = "../../widgets" + path  + "/js/" + widget_name + ".js"
 
-				// import
-				const element_widget = await import(widget_path)
+			// sequential mode
+				// // import
+				// const element_widget = await import(widget_path)
 
-				const widget_options = {
-					id				: widget_id,
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					lang			: self.lang,
-					mode			: self.mode,
-					value			: widget_value,
-					datalist 		: widget_datalist,
-					ipo				: current_widget.ipo
-				}
+				// const widget_options = {
+				// 	id				: widget_id,
+				// 	section_tipo	: self.section_tipo,
+				// 	section_id		: self.section_id,
+				// 	lang			: self.lang,
+				// 	mode			: self.mode,
+				// 	value			: widget_value,
+				// 	datalist		: widget_datalist,
+				// 	ipo				: current_widget.ipo
+				// }
 
-				// instance
-				const new_widget = new element_widget[widget_name]()
+				// // instance
+				// const new_widget = new element_widget[widget_name]()
 
-				// init
-				new_widget.init(widget_options)
+				// // init
+				// new_widget.init(widget_options)
 
-				// add
-				self.ar_instances.push(new_widget)
-			};//end for loop
+				// // add
+				// self.ar_instances.push(new_widget)
 
-		return self.ar_instances
-	};//end get_widgets
+			// parallel mode
+				const current_promise = new Promise(async function(resolve){
+
+					// import module file
+						const element_widget = await import(widget_path)
+
+					// instance widget
+						const new_widget = new element_widget[widget_name]()
+
+					// init widget
+						new_widget.init({
+							id				: widget_id,
+							section_tipo	: self.section_tipo,
+							section_id		: self.section_id,
+							lang			: self.lang,
+							mode			: self.mode,
+							value			: widget_value,
+							datalist		: widget_datalist,
+							ipo				: current_widget.ipo
+						})
+						.then(function(){
+							resolve(new_widget)
+						}).catch((errorMsg) => {
+							console.error(errorMsg);
+						})
+				})
+				ar_promises.push(current_promise)
+
+		}//end for loop
+
+		// instances. Await all instances are parallel init and fix
+			await Promise.all(ar_promises).then(function(ar_instances){
+				self.ar_instances = ar_instances
+			})
+
+	return self.ar_instances
+};//end get_widgets
 
 
-	/**
-	* update_data
-	*/
-	component_info.prototype.update_data = async function(){
 
-		const self = this
+/**
+* UPDATE_DATA
+*/
+component_info.prototype.update_data = async function(){
 
-		const value = self.data.value || []
+	const self = this
 
-		// iterate records
-			const widgets_properties = self.context.properties.widgets
+	const value = self.data.value || []
 
-			for (var i = 0; i < widgets_properties.length; i++) {
-				const current_widget 	= widgets_properties[i]
+	// iterate records
+		const widgets_properties		= self.context.properties.widgets
+		const widgets_properties_length	= widgets_properties.length
+		for (let i = 0; i < widgets_properties_length; i++) {
 
-				const widget_name 		= current_widget.widget_name
-				const widget_id			= self.id + '_'+ widget_name
+			const current_widget	= widgets_properties[i]
 
-				const loaded_widget = self.ar_instances.find(item => item.id === widget_id)
-				const widget_value 	= value.filter(item => item.widget === widget_name && item.key === i)
-				
-				if(loaded_widget){
-					loaded_widget.value  = widget_value
-					event_manager.publish('update_widget_value_'+i+'_'+widget_id, widget_value)
-				}
-			};
-	};
+			const widget_name		= current_widget.widget_name
+			const widget_id			= self.id + '_'+ widget_name
+
+			const loaded_widget = self.ar_instances.find(item => item.id === widget_id)
+			const widget_value 	= value.filter(item => item.widget === widget_name && item.key === i)
+
+			if(loaded_widget){
+				loaded_widget.value  = widget_value
+				event_manager.publish('update_widget_value_'+i+'_'+widget_id, widget_value)
+			}
+		}
+
+	return true
+};
+
+

@@ -10,13 +10,14 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_FILTER
 * Manage the components logic and appearance in client side
 */
 export const render_component_filter = function() {
 
 	return true
 };//end render_component_filter
+
 
 
 /**
@@ -46,6 +47,7 @@ render_component_filter.prototype.mini = function() {
 
 	return wrapper
 };//end mini
+
 
 
 /**
@@ -93,10 +95,10 @@ render_component_filter.prototype.edit = async function(options={render_level:'f
 		const render_level 	= options.render_level
 
 	const value		= self.data.value || []
-	const datalist 	= self.data.datalist || []
+	const datalist	= self.data.datalist || []
 
 	// content_data
-		const content_data = await render_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -106,8 +108,8 @@ render_component_filter.prototype.edit = async function(options={render_level:'f
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// events (delegated)
@@ -151,7 +153,7 @@ const add_events = function(self, wrapper) {
 		)
 		async function reset_element(instance) {
 			// change all elements inside of content_data
-			const new_content_data = await render_content_data(instance)
+			const new_content_data = await get_content_data(instance)
 			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
 			wrapper.childNodes[1].replaceWith(new_content_data)
 		}
@@ -266,16 +268,16 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* RENDER_CONTENT_DATA
-* @return dom object content_data
+* GET_CONTENT_DATA
+* @return DOM node content_data
 */
-const render_content_data = async function(self) {
+const get_content_data = function(self) {
 
-	const value 			= self.data.value
+	const value				= self.data.value
 	const datalist			= self.data.datalist
-	const datalist_length 	= datalist.length
-	const mode 				= self.mode
-	const is_inside_tool 	= self.is_inside_tool
+	const datalist_length	= datalist.length
+	const mode				= self.mode
+	const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -293,10 +295,12 @@ const render_content_data = async function(self) {
 
 				if (datalist_item.type==='typology') {
 					// grouper
-					grouper_element(i, datalist_item, inputs_container, self)
+					const grouper_element = get_grouper_element(i, datalist_item, self)
+					inputs_container.appendChild(grouper_element)
 				}else{
 					// input
-					input_element(i, datalist_item, inputs_container, self)
+					const input_element = get_input_element(i, datalist_item, self)
+					inputs_container.appendChild(input_element)
 				}
 			}
 
@@ -322,7 +326,7 @@ const render_content_data = async function(self) {
 
 
 	return content_data
-};//end render_content_data
+};//end get_content_data
 
 
 
@@ -368,40 +372,39 @@ const get_buttons = (self) => {
 
 
 /**
-* GROUPER_ELEMENT
+* GET_GROUPER_ELEMENT
 *	Typology element
-* @return dom element li
+* @return DOM node li
 */
-const grouper_element = (i, datalist_item, inputs_container, self) => {
+const get_grouper_element = (i, datalist_item, self) => {
 
 	// grouper
 		const grouper = ui.create_dom_element({
 			element_type	: 'li',
-			class_name 		: 'grouper',
-			data_set 		: {
-				id 		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
-				parent 	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
-			},
-			parent 			: inputs_container
+			class_name		: 'grouper',
+			data_set		: {
+				id		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
+				parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
+			}
 		})
 
 		const grouper_label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'grouper_label',
-			text_content 	: datalist_item.label,
-			parent 			: grouper
+			class_name		: 'grouper_label',
+			text_content	: datalist_item.label,
+			parent			: grouper
 		})
 
 	return grouper
-};//end grouper_element
+};//end get_grouper_element
 
 
 
 /**
-* INPUT_ELEMENT
-* @return dom element li
+* GET_INPUT_ELEMENT
+* @return DOM node li
 */
-const input_element = (i, current_value, inputs_container, self) => {
+const get_input_element = (i, current_value, self) => {
 
 	const value  		 = self.data.value || []
 	const value_length   = value.length
@@ -413,21 +416,20 @@ const input_element = (i, current_value, inputs_container, self) => {
 	// create li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			data_set 		: {
-				id 		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
-				parent 	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
-			},
-			parent 			: inputs_container
+			data_set		: {
+				id		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
+				parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
+			}
 		})
 
 	// input checkbox
 		const option = ui.create_dom_element({
 			element_type	: 'input',
-			type 			: 'checkbox',
-			id 				: self.id +"_"+ i,
-			dataset 	 	: { key : i },
-			value 			: JSON.stringify(datalist_value),
-			parent 			: li
+			type			: 'checkbox',
+			id				: self.id +"_"+ i,
+			dataset			: { key : i },
+			value			: JSON.stringify(datalist_value),
+			parent			: li
 		})
 		// checked option set on match
 		for (let j = 0; j < value_length; j++) {
@@ -443,11 +445,13 @@ const input_element = (i, current_value, inputs_container, self) => {
 		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html	 	: label_string,
-			parent 			: li
+			inner_html		: label_string,
+			parent			: li
 		})
 		option_label.setAttribute("for", self.id +"_"+ i)
 
 
 	return li
-};//end input_element
+};//end get_input_element
+
+

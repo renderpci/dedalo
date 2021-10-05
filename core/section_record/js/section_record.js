@@ -130,6 +130,8 @@ section_record.prototype.init = async function(options) {
 
 /**
 * ADD_INSTANCE
+* Get and build a instance with the context given
+* Note that the returned promise await the build of the instance
 * @return promise current_instance
 */
 const add_instance = async (self, current_context, section_id, current_data, column_id) => {
@@ -191,20 +193,29 @@ const add_instance = async (self, current_context, section_id, current_data, col
 * @return array ar_instances
 */
 section_record.prototype.get_ar_instances = async function(){
-	const t0 = performance.now()
 
 	const self = this
 
+	// already calculated case
+		if (self.ar_instances && self.ar_instances.length>0) {
+			// console.warn("Returning already calculated instances:",self.ar_instances, self.id)
+			return self.ar_instances
+		}
+
 	// sort vars
-		const mode 			= self.mode
-		const section_tipo 	= self.section_tipo
-		const section_id 	= self.section_id
+		const mode			= self.mode
+		const section_tipo	= self.section_tipo
+		const section_id	= self.section_id
 		const caller_tipo	= self.caller.tipo
 
 	// items. Get the items inside the section/component of the record to render it
-		const items = (mode==="list")
-			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode===mode)
-			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo && el.mode===mode)
+		// const items = (mode==="list")
+		// 	? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode===mode)
+		// 	: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo && el.mode===mode)
+		const items = self.datum.context.filter(el => el.section_tipo===section_tipo
+											&& el.parent===caller_tipo
+											&& (el.type==='component' || el.type==='grouper')
+											&& el.mode===mode)
 
 	// instances
 		const ar_promises	= []
@@ -213,36 +224,34 @@ section_record.prototype.get_ar_instances = async function(){
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 			// const current_context = items[i]
 			// const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
-			// const current_instance	= await add_instance(self, current_context, section_id, current_data)
-			// // add
-			// 	ar_instances.push(current_instance)
 
-			const current_promise = new Promise(function(resolve){
-				const current_context	= items[i]
-				const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)				
-				add_instance(self, current_context, section_id, current_data)
-				.then(function(current_instance){
-					current_instance.instance_order_key = i
-					resolve(current_instance)
+			// sequential mode
+				// const current_instance = await add_instance(self, current_context, section_id, current_data)
+				// ar_instances.push(current_instance)
+
+			// parallel mode
+				const current_promise = new Promise(function(resolve){
+					const current_context	= items[i]
+					const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)
+					add_instance(self, current_context, section_id, current_data)
+					.then(function(current_instance){
+						// current_instance.instance_order_key = i
+						resolve(current_instance)
+					}).catch((errorMsg) => {
+						console.error(errorMsg);
+					})
 				})
-			})
-			ar_promises.push(current_promise)
+				ar_promises.push(current_promise)
 
 		}//end for loop
 
-	// instances
+	// instances. Await all instances are parallel builded and fix
 		await Promise.all(ar_promises).then(function(ar_instances){
 			// sort by instance_order_key asc to guarantee original order
-			ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
+			// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
 			// fix
 			self.ar_instances = ar_instances
 		})
-
-	// debug
-		if(SHOW_DEVELOPER===true) {
-			// const total = (performance.now()-t0).toFixed(3)
-			// dd_console(`__Time to get_ar_instances section_record: ${total} ms`,'DEBUG', [self.ar_instances, total/self.ar_instances.length])
-		}
 
 
 	return self.ar_instances
@@ -258,6 +267,12 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 	const self = this
 
+	// already calculated case
+		if (self.ar_instances && self.ar_instances.length>0) {
+			// console.warn("Returning already calculated instances:",self.ar_instances, self.id)
+			return self.ar_instances
+		}
+
 	// short vars
 		const mode				= self.mode
 		const tipo				= self.tipo
@@ -271,37 +286,36 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
 		// console.log("_________________________________________________ ar_columns:",JSON.parse(JSON.stringify(ar_columns)));
 
-		// get the columns that can be used with the current locator
+	// valid_columns
+		// Get the columns that can be used with the current locator
 		// check the section_tipo of the last column and match with the current locator section_tipo
 		// the columns has reverse order, the last columns match with the component locator, (and the first columns is the most deep coponent in the path)
+		const get_valid_columns = function(section_tipo, ar_columns){
 
-			const get_valid_columns = function(section_tipo, ar_columns){
+			const ar_column = []
 
-				const ar_column = []
+			const ar_columns_length = ar_columns.length
+			for (let i = 0; i < ar_columns_length; i++) {
 
-				const ar_columns_length = ar_columns.length
-				for (let i = 0; i < ar_columns_length; i++) {
-
-					const current_column	= ar_columns[i];
-					const last_column		= current_column[current_column.length - 1];
-					// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the loctator
-					if(last_column && Array.isArray(last_column.section_tipo)){
-						const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
-						if(ddo_check) {
-							ar_column.push(current_column)
-						}
-					}else if(last_column && last_column.section_tipo===section_tipo){
+				const current_column	= ar_columns[i];
+				const last_column		= current_column[current_column.length - 1];
+				// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the loctator
+				if(last_column && Array.isArray(last_column.section_tipo)){
+					const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
+					if(ddo_check) {
 						ar_column.push(current_column)
 					}
+				}else if(last_column && last_column.section_tipo===section_tipo){
+					ar_column.push(current_column)
 				}
-				return ar_column
 			}
-			const valid_columns = get_valid_columns(section_tipo, ar_columns)
-
+			return ar_column
+		}
+		const valid_columns = get_valid_columns(section_tipo, ar_columns)
 
 	// instances
-		const ar_instances		= []
-		const ar_columns_length	=  valid_columns.length
+		const ar_promises		= []
+		const ar_columns_length	= valid_columns.length
 		for (let i = 0; i < ar_columns_length; i++) {
 			
 			// ddo
@@ -324,7 +338,6 @@ section_record.prototype.get_ar_columns_instances = async function(){
 					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
 
-
 				// check is valid context
 					if (!current_context) {
 						console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
@@ -334,23 +347,37 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
 
-			// if the component has multiple section_tipo like hierarchy25, get the current section_tipo and inject to the context
-			// multiple sections [on1, ts1, es1,...] has the same component and server only send 1 verion of it.
-			// it's necesary create different instances for the same component, to mantain the coherence with the data.
-				if(current_context.section_tipo !== section_tipo){
+			// context section tipo
+				// if the component has multiple section_tipo like hierarchy25, get the current section_tipo and inject to the context
+				// multiple sections [on1, ts1, es1,...] has the same component and server only send 1 version of it.
+				// it's necessary to create different instances for the same component, to maintain the coherence with the data.
+				if(current_context.section_tipo!==section_tipo){
 					current_context.section_tipo = section_tipo
 				}
-			// clone the current_context to prevent changes in it.
+
+			// new_context. clone the current_context to prevent changes in it.
 				const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
 
 				const column_id = caller_column_id
 					? caller_column_id
 					: i+1
 
-				const current_instance	= await add_instance(self, new_context, section_id, current_data, column_id)
+				// get builded instance
+					// sequential mode
+						// const current_instance = await add_instance(self, new_context, section_id, current_data, column_id)
+						// self.ar_instances.push(current_instance)
 
-				// add instance
-				ar_instances.push(current_instance)
+					// parallel mode
+						const current_promise = new Promise(function(resolve){
+							add_instance(self, new_context, section_id, current_data, column_id)
+							.then(function(current_instance){
+								// current_instance.instance_order_key = i
+								resolve(current_instance)
+							}).catch((errorMsg) => {
+								console.error(errorMsg);
+							})
+						})
+						ar_promises.push(current_promise)
 
 			// }else{
 			// 	// the component don't has direct data into the section, it has a locator that will use for located the data of the column
@@ -366,10 +393,16 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 		}//end for loop
 
-	// fix
-		self.ar_instances = ar_instances
+		// instances. Await all instances are parallel builded and fix
+			await Promise.all(ar_promises).then(function(ar_instances){
+				// sort by instance_order_key asc to guarantee original order
+				// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
+				// fix
+				self.ar_instances = ar_instances
+			})
 
-	return ar_instances
+
+	return self.ar_instances
 };//end get_ar_columns_instances
 
 

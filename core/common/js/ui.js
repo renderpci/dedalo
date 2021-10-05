@@ -214,7 +214,7 @@ export const ui = {
 
 				// legacy CSS
 					const legacy_selector = '.wrap_component'
-					if (element_css[legacy_selector]) {
+					if (element_css[legacy_selector] && model!=='component_filter') {
 						// mixin
 							if (element_css[legacy_selector].mixin){
 								// width from mixin

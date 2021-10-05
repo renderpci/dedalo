@@ -24,7 +24,7 @@ export const render_player_component_av = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_player_component_av.prototype.player = async function(options={render_level:'full'}) {
+render_player_component_av.prototype.player = async function(options) {
 
 	const self = this
 
@@ -32,14 +32,13 @@ render_player_component_av.prototype.player = async function(options={render_lev
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await get_content_data_player(self)
+		const current_content_data = get_content_data_player(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
-
 
 	// av_control_buttons
 		const av_control_buttons = get_av_control_buttons(self)
@@ -64,8 +63,7 @@ render_player_component_av.prototype.player = async function(options={render_lev
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_player = async function(self) {
-
+const get_content_data_player = function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -135,7 +133,7 @@ const get_content_data_player = async function(self) {
 
 
 	return content_data
-};//end  get_content_data_edit
+};//end get_content_data_edit
 
 
 /**

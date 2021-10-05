@@ -86,7 +86,7 @@ render_component_html_text.prototype.list = async function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_html_text.prototype.edit = async function(options={render_level : 'full'}) {
+render_component_html_text.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -94,13 +94,13 @@ render_component_html_text.prototype.edit = async function(options={render_level
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	//load
 		//await self.init_editor()
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -219,10 +219,10 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOm node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	const value 		= self.data.value
-	const is_inside_tool= self.is_inside_tool
+	const value				= self.data.value
+	const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 

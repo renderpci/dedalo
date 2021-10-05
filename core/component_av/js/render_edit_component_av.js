@@ -1,8 +1,10 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_URL*/
 /*eslint no-undef: "error"*/
 
-//provisional
-import * as instances from '../../common/js/instances.js'
+
+
+// provisional
+	// import * as instances from '../../common/js/instances.js'
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -20,20 +22,18 @@ export const render_edit_component_av = function() {
 };//end  render_edit_component_av
 
 
+
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_av.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_av.prototype.edit = async function(options) {
 
 	const self = this
 
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const current_content_data = get_content_data_edit(self)
@@ -112,7 +112,10 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = function(self) {
 
-	const is_inside_tool = self.is_inside_tool
+	// const is_inside_tool = self.is_inside_tool
+
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	const fragment = new DocumentFragment()
 
@@ -186,16 +189,16 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button full_screen',
-			parent 			: fragment
+			class_name		: 'button full_screen',
+			parent			: fragment
 		})
 		button_full_screen.addEventListener("mouseup", (e) =>{
 			self.node[0].classList.toggle('fullscreen')
@@ -208,6 +211,7 @@ const get_buttons = (self) => {
 			ui.add_tools(self, fragment)
 		}
 
+	// des
 		// const button_info = ui.create_dom_element({
 		// 	element_type	: 'span',
 		// 	class_name 		: 'button full_screen',
@@ -237,6 +241,7 @@ const get_buttons = (self) => {
 
 		// 		self.node[0].appendChild(node)
 		// })
+
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		buttons_container.appendChild(fragment)
@@ -249,181 +254,181 @@ const get_buttons = (self) => {
 
 /**
 * BUILD_VIDEO_HTML5
-* @return dom element vide
-*//*
-const build_video_html5 = function(request_options) {
-
-	const self = this
-
-	// options
-		const options = {
-			// video type. (array) default ["video/mp4"]
-			type 	 : ["video/mp4"],
-			// video src. (array)
-			src  	 : [""],
-			// id. dom element video id (string) default "video_html5"
-			id 		 : "video_html5",
-			// controls. video control property (boolean) default true
-			controls : true,
-			// play (boolean). play video on ready. default false
-			play : false,
-			// poster image. (string) url of posterframe image
-			poster 	 : "",
-			// class css. video additional css classes
-			class 	 : "",
-			// preload (string) video element attribute preload
-			preload  : "auto",
-			// height (integer) video element attribute. default null
-			height 	 : null,
-			// width (integer) video element attribute. default null
-			width 	 : null,
-			// tcin_secs (integer). default null
-			tcin_secs  : 0,
-			// tcout_secs (integer). default null
-			tcout_secs : null,
-			// ar_subtitles (array). array of objects with subtitles full info. default null
-			ar_subtitles : null,
-			// ar_restricted_fragments. (array) default null
-			ar_restricted_fragments : null
-		}
-
-		// apply options
-		for (var key in request_options) {
-			if (request_options.hasOwnProperty(key)) {
-				options[key] = request_options[key]
-			}
-		}
-		// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[common.build_video_html5] options",options)
-		}
-
-	// video handler events
-		const handler_events = {
-			loadedmetadata 	: {},
-			timeupdate 		: {},
-			contextmenu 	: {}
-		}
-
-	// html5 video. dom element html5 video
-		const video 				= document.createElement("video")
-			  video.id 				= options.id
-			  video.controls 		= options.controls
-			  video.poster 			= options.poster
-			  video.className 		= options.class
-			  video.preload 		= options.preload
-			  video.controlsList 	= "nodownload"
-			  video.dataset.setup 	= '{}'
-
-			  if (options.height) {
-				video.height = options.height
-			  }
-			  if (options.width) {
-				video.width = options.width
-			  }
-			  options.play = true
-			  if (options.play && options.play===true) {
-
-				handler_events.loadedmetadata.play = (e) => {
-			  		try {
-						//video.play()
-					}catch(error){
-				  		console.warn("Error on video play:",error);
-				  	}
-				}
-			  }
-
-		// src. video sources
-			for (let i = 0; i < options.src.length; i++) {
-				let source 		= document.createElement("source")
-					source.src  = options.src[i]
-					source.type = options.type[i]
-				video.appendChild(source)
-			}
-
-		// restricted fragments. Set ar_restricted_fragments on build player to activate skip restricted fragments
-			if (options.ar_restricted_fragments) {
-				const ar_restricted_fragments = options.ar_restricted_fragments
-				const tcin_secs 			  = options.tcin_secs
-				if (typeof ar_restricted_fragments!=="undefined" && ar_restricted_fragments.length>0) {
-					handler_events.timeupdate.skip_restricted = () => {
-						self.skip_restricted(video, ar_restricted_fragments, tcin_secs)
-					}
-				}
-			}
-
-		// subtitles
-			if (options.ar_subtitles) {
-				const subtitles_tracks = []
-				for (let i = 0; i < options.ar_subtitles.length; i++) {
-
-					let subtitle_obj = options.ar_subtitles[i]
-
-					if (subtitle_obj.src===undefined) {
-						console.warn("Invalid subtitle object:",subtitle_obj);
-						continue
-					}
-
-					// Build track
-					let track = document.createElement("track")
-						track.kind 		= "captions" // subtitles | captions
-						track.src 		= subtitle_obj.src
-						track.srclang 	= subtitle_obj.srclang
-						track.label 	= subtitle_obj.label
-						if (subtitle_obj.default && subtitle_obj.default===true) {
-							track.default = true
-							track.addEventListener("load", function() {
-							   this.mode = "showing";
-							   video.textTracks[0].mode = "showing"; // thanks Firefox
-							});
-						}
-					// add track
-					subtitles_tracks.push(track)
-				}//end for (var i = 0; i < options.ar_subtitles.length; i++)
-
-				handler_events.loadedmetadata.add_subtitles_tracks = () => {
-					for (let i = 0; i < subtitles_tracks.length; i++) {
-						// add to video
-						video.appendChild(subtitles_tracks[i]);
-						//console.log("added subtitle track:",subtitles_tracks[i]);
-					}
-				}
-			}
-
-		// msj no html5
-			const msg_no_js = document.createElement("p")
-				  msg_no_js.className = "vjs-no-js"
-			const msj_text = document.createTextNode("To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video")
-				  msg_no_js.appendChild(msj_text)
-			video.appendChild(msg_no_js)
-
-		// disable_context_menu - (TEMPORAL DISABLED !)
-			// handler_events.contextmenu.disable_context_menu = (e) => {
-			// 	e.preventDefault();
-			// }
-
-
-
-		// REGISTER_EVENTS
-		const register_events = function(handler_object, handler_events) {
-
-			for (let event_name in handler_events) {
-				// add event
-				const event_functions = handler_events[event_name]
-				handler_object.addEventListener(event_name, function(e) {
-					for (let key in event_functions) {
-						event_functions[key](e)
-					}
-				})
-			}
-
-			return true
-		}
-
-		// video events	register
-			register_events(video, handler_events)
-
-
-	return video
-};//end  build_video_html5
+* @return DOM node video
 */
+	// const build_video_html5 = function(request_options) {
+
+	// 	const self = this
+
+	// 	// options
+	// 		const options = {
+	// 			// video type. (array) default ["video/mp4"]
+	// 			type 	 : ["video/mp4"],
+	// 			// video src. (array)
+	// 			src  	 : [""],
+	// 			// id. dom element video id (string) default "video_html5"
+	// 			id 		 : "video_html5",
+	// 			// controls. video control property (boolean) default true
+	// 			controls : true,
+	// 			// play (boolean). play video on ready. default false
+	// 			play : false,
+	// 			// poster image. (string) url of posterframe image
+	// 			poster 	 : "",
+	// 			// class css. video additional css classes
+	// 			class 	 : "",
+	// 			// preload (string) video element attribute preload
+	// 			preload  : "auto",
+	// 			// height (integer) video element attribute. default null
+	// 			height 	 : null,
+	// 			// width (integer) video element attribute. default null
+	// 			width 	 : null,
+	// 			// tcin_secs (integer). default null
+	// 			tcin_secs  : 0,
+	// 			// tcout_secs (integer). default null
+	// 			tcout_secs : null,
+	// 			// ar_subtitles (array). array of objects with subtitles full info. default null
+	// 			ar_subtitles : null,
+	// 			// ar_restricted_fragments. (array) default null
+	// 			ar_restricted_fragments : null
+	// 		}
+
+	// 		// apply options
+	// 		for (var key in request_options) {
+	// 			if (request_options.hasOwnProperty(key)) {
+	// 				options[key] = request_options[key]
+	// 			}
+	// 		}
+	// 		// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			console.log("[common.build_video_html5] options",options)
+	// 		}
+
+	// 	// video handler events
+	// 		const handler_events = {
+	// 			loadedmetadata 	: {},
+	// 			timeupdate 		: {},
+	// 			contextmenu 	: {}
+	// 		}
+
+	// 	// html5 video. dom element html5 video
+	// 		const video 				= document.createElement("video")
+	// 			  video.id 				= options.id
+	// 			  video.controls 		= options.controls
+	// 			  video.poster 			= options.poster
+	// 			  video.className 		= options.class
+	// 			  video.preload 		= options.preload
+	// 			  video.controlsList 	= "nodownload"
+	// 			  video.dataset.setup 	= '{}'
+
+	// 			  if (options.height) {
+	// 				video.height = options.height
+	// 			  }
+	// 			  if (options.width) {
+	// 				video.width = options.width
+	// 			  }
+	// 			  options.play = true
+	// 			  if (options.play && options.play===true) {
+
+	// 				handler_events.loadedmetadata.play = (e) => {
+	// 			  		try {
+	// 						//video.play()
+	// 					}catch(error){
+	// 				  		console.warn("Error on video play:",error);
+	// 				  	}
+	// 				}
+	// 			  }
+
+	// 		// src. video sources
+	// 			for (let i = 0; i < options.src.length; i++) {
+	// 				let source 		= document.createElement("source")
+	// 					source.src  = options.src[i]
+	// 					source.type = options.type[i]
+	// 				video.appendChild(source)
+	// 			}
+
+	// 		// restricted fragments. Set ar_restricted_fragments on build player to activate skip restricted fragments
+	// 			if (options.ar_restricted_fragments) {
+	// 				const ar_restricted_fragments = options.ar_restricted_fragments
+	// 				const tcin_secs 			  = options.tcin_secs
+	// 				if (typeof ar_restricted_fragments!=="undefined" && ar_restricted_fragments.length>0) {
+	// 					handler_events.timeupdate.skip_restricted = () => {
+	// 						self.skip_restricted(video, ar_restricted_fragments, tcin_secs)
+	// 					}
+	// 				}
+	// 			}
+
+	// 		// subtitles
+	// 			if (options.ar_subtitles) {
+	// 				const subtitles_tracks = []
+	// 				for (let i = 0; i < options.ar_subtitles.length; i++) {
+
+	// 					let subtitle_obj = options.ar_subtitles[i]
+
+	// 					if (subtitle_obj.src===undefined) {
+	// 						console.warn("Invalid subtitle object:",subtitle_obj);
+	// 						continue
+	// 					}
+
+	// 					// Build track
+	// 					let track = document.createElement("track")
+	// 						track.kind 		= "captions" // subtitles | captions
+	// 						track.src 		= subtitle_obj.src
+	// 						track.srclang 	= subtitle_obj.srclang
+	// 						track.label 	= subtitle_obj.label
+	// 						if (subtitle_obj.default && subtitle_obj.default===true) {
+	// 							track.default = true
+	// 							track.addEventListener("load", function() {
+	// 							   this.mode = "showing";
+	// 							   video.textTracks[0].mode = "showing"; // thanks Firefox
+	// 							});
+	// 						}
+	// 					// add track
+	// 					subtitles_tracks.push(track)
+	// 				}//end for (var i = 0; i < options.ar_subtitles.length; i++)
+
+	// 				handler_events.loadedmetadata.add_subtitles_tracks = () => {
+	// 					for (let i = 0; i < subtitles_tracks.length; i++) {
+	// 						// add to video
+	// 						video.appendChild(subtitles_tracks[i]);
+	// 						//console.log("added subtitle track:",subtitles_tracks[i]);
+	// 					}
+	// 				}
+	// 			}
+
+	// 		// msj no html5
+	// 			const msg_no_js = document.createElement("p")
+	// 				  msg_no_js.className = "vjs-no-js"
+	// 			const msj_text = document.createTextNode("To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video")
+	// 				  msg_no_js.appendChild(msj_text)
+	// 			video.appendChild(msg_no_js)
+
+	// 		// disable_context_menu - (TEMPORAL DISABLED !)
+	// 			// handler_events.contextmenu.disable_context_menu = (e) => {
+	// 			// 	e.preventDefault();
+	// 			// }
+
+
+
+	// 		// REGISTER_EVENTS
+	// 		const register_events = function(handler_object, handler_events) {
+
+	// 			for (let event_name in handler_events) {
+	// 				// add event
+	// 				const event_functions = handler_events[event_name]
+	// 				handler_object.addEventListener(event_name, function(e) {
+	// 					for (let key in event_functions) {
+	// 						event_functions[key](e)
+	// 					}
+	// 				})
+	// 			}
+
+	// 			return true
+	// 		}
+
+	// 		// video events	register
+	// 			register_events(video, handler_events)
+
+
+	// 	return video
+	// };//end  build_video_html5
+

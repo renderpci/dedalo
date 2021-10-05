@@ -11,7 +11,7 @@
 
 
 /**
-* RENDER_table_DD_GRID
+* RENDER_TABLE_DD_GRID
 * Manage the components logic and appearance in client side
 */
 export const render_table_dd_grid = function() {
@@ -26,7 +26,7 @@ export const render_table_dd_grid = function() {
 * Render node for use in table
 * @return DOM node wrapper
 */
-render_table_dd_grid.prototype.table = async function() {
+render_table_dd_grid.prototype.table = function() {
 
 	const self = this
 
@@ -108,6 +108,11 @@ const get_table_nodes = function(data) {
 	return fragment
 }//end get_table_nodes
 
+
+
+/**
+* GET_TABLE_SUB_COLUMNS
+*/
 const get_table_sub_columns = function(current_data, current_row, column_control){
 
 	// value
@@ -136,8 +141,13 @@ const get_table_sub_columns = function(current_data, current_row, column_control
 			const ar_columns = get_table_columns(current_data)
 			return ar_columns
 		}
-}
+}//end get_table_sub_columns
 
+
+
+/**
+* GET_TABLE_COLUMNS
+*/
 const get_table_columns = function(current_data){
 
 	// const data_len = data.length

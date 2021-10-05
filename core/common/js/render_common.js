@@ -19,7 +19,7 @@
 *
 * @return promise bool
 */
-export const render_components_list = async function(options) {
+export const render_components_list = function(options) {
 	// console.log("render_components_list options:", options);
 
 	// options
@@ -29,7 +29,7 @@ export const render_components_list = async function(options) {
 		const path				= options.path
 		const section_elements	= options.section_elements
 
-	// load components from api. this function could be defined by the caller or use the standard function in common.js
+	// load components from API. this function could be defined by the caller or use the standard function in common.js
 		// const section_elements = await self.get_section_elements_context({
 		// 	section_tipo : section_tipo
 		// })
@@ -41,7 +41,7 @@ export const render_components_list = async function(options) {
 
 	// First item check
 		if (!section_elements || typeof section_elements[0]==="undefined") {
-			console.warn(`[render_components_list] Error. Empty section_elements on get_section_elements_context ${section_tipo}`, section_elements);
+			console.error(`[render_components_list] Error. Empty section_elements on get_section_elements_context ${section_tipo}`, section_elements);
 			return false
 		}
 
@@ -76,7 +76,7 @@ export const render_components_list = async function(options) {
 					// class_name	: "search_section_bar_label",
 					class_name		: "section_bar_label",
 					inner_html		: element.label,
-					parent			: list_container,
+					parent			: list_container
 				})
 				if (path.length===0) {
 					section_bar.classList.add('close_hide')
@@ -186,3 +186,5 @@ export const render_components_list = async function(options) {
 
 	return true
 };//end render_components_list
+
+

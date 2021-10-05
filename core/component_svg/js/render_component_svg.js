@@ -75,13 +75,13 @@ render_component_svg.prototype.list = function(options) {
 		const value_length = value.length
 		for (let i = 0; i < value_length; i++) {
 
-			const item_value = value[i]
-			const url 		 = item_value.url
+			const item_value	= value[i]
+			const url			= item_value.url
 
 			const image = ui.create_dom_element({
 				element_type	: "img",
-				src 			: url,
-				parent 			: fragment
+				src				: url,
+				parent			: fragment
 			})
 			ui.component.add_image_fallback(image)
 
@@ -104,7 +104,7 @@ render_component_svg.prototype.list = function(options) {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_svg.prototype.edit = async function(options={render_level:'full'}) {
+render_component_svg.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -112,7 +112,7 @@ render_component_svg.prototype.edit = async function(options={render_level:'full
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -122,8 +122,8 @@ render_component_svg.prototype.edit = async function(options={render_level:'full
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 
@@ -136,7 +136,7 @@ render_component_svg.prototype.edit = async function(options={render_level:'full
 * CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	const is_inside_tool = self.is_inside_tool
 
@@ -145,12 +145,11 @@ const get_content_data_edit = async function(self) {
 	// value (array)
 		const value = self.data.value || []
 
-
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// svg elements
@@ -198,7 +197,7 @@ const get_buttons = (self) => {
 
 /**
 * GET_SVG_ELEMENT
-* @return dom node image
+* @return DOM node image
 */
 const get_svg_element = function(item_value) {
 
@@ -214,9 +213,9 @@ const get_svg_element = function(item_value) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
-			src 			: url,
-			class_name 		: 'image svg_element',
-			parent 			: li
+			src				: url,
+			class_name		: 'image svg_element',
+			parent			: li
 		})
 		image.setAttribute("tabindex", 0)
 		ui.component.add_image_fallback(image)
@@ -225,3 +224,5 @@ const get_svg_element = function(item_value) {
 
 	return li
 };//end get_svg_element
+
+

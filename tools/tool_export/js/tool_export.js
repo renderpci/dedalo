@@ -192,6 +192,69 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const dd_grid_data_request	= await current_data_manager.request({body : rqo})
 		const dd_grid_data			= dd_grid_data_request.result
 
+		console.log("get_export_grid dd_grid_data_request:",dd_grid_data);
+		console.log("dd_grid_data 1:", JSON.stringify(dd_grid_data[1]));
+
+		const parsed_data = []
+		for (let i = 0; i < dd_grid_data.length; i++) {
+
+			const item = dd_grid_data[i]
+
+			if (i===0) {
+				parsed_data.push(item) // skip process labels row
+			}else{
+				// parsed_value (return array of objects)
+				const parsed_value	= parse_grid_data_value(item)
+					// console.log("parsed_value:",parsed_value);
+
+				parsed_value.map(el => {
+					el.value = el._values
+					// delete el._values
+				})
+
+				// // parsed_item
+				// const parsed_item	= clone(dd_grid_data[0]) // clone menu item
+				// parsed_item.value	= parsed_value
+
+				// parsed_data.push(parsed_item)
+
+
+				// iterate parsed_value columns
+					for (let k = 0; k < parsed_value.length; k++) {
+
+						const item = parsed_value[k]
+						// console.log("item:", item, k);
+
+						for (let j = 0; j < item.value.length; j++) {
+
+							const column_values = item.value[j]
+								// console.log("column_values:",column_values);
+
+							const found = parsed_data.find(el => el.label===item.label)
+							if (found) {
+								// for (let h = 0; h < found.value.length; h++) {
+								// 	found.value[h]
+								// }
+								found.value.push(column_values)
+
+							}else{
+
+								const parsed_item = clone(dd_grid_data[0]) // clone menu item
+									parsed_item.label			= item.label
+									parsed_item.type			= 'column'
+									parsed_item.column_count	= 1
+									parsed_item.row_count		= null
+									parsed_item.value			= [column_values]
+
+								parsed_data.push(parsed_item)
+							}
+						}
+					}
+			}
+		}
+		console.log("____ parsed_data:",parsed_data);
+
+
 	// dd_grid
 		const dd_grid = await instances.get_instance({
 			model			: 'dd_grid',
@@ -214,9 +277,74 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 
 /**
+* PARSE_GRID_DATA_VALUE
+* @return array value
+*/
+const parse_grid_data_value = function(grid_data_object) {
+		// console.log("grid_data_object:",grid_data_object);
+
+	const ar_values = []
+
+	const value = grid_data_object.value
+
+	// value NOT contains another value inside case. Add directly
+	if (value && value.length>0 && typeof(value[0].value)!=='object') { // && typeof(value[0].value[0]==='undefined')
+
+		// console.log("Added direct grid_data_object:", clone(grid_data_object));
+
+		// normalize section_id value
+		if (value[0].cell_type==='section_id') {
+			grid_data_object.value = [value[0].value]
+		}
+
+		grid_data_object._values = grid_data_object._values || [grid_data_object.value]
+		ar_values.push( grid_data_object )
+		// console.log("Added direct grid_data_object:",grid_data_object);
+
+	// value already contains values inside. Iterate recursively
+	}else if(value && value[0]){
+
+		for (let i = 0; i < value.length; i++) {
+			const result = parse_grid_data_value(value[i])
+				// console.log("result:", result, value);
+
+			for (let j = 0; j < result.length; j++) {
+
+				const current_grid_data_object = result[j]
+
+				const found = ar_values.find(el => el.label===current_grid_data_object.label)
+				if (found) {
+					// console.log("found 1:", clone(found));
+					// console.log("Added to already existing value:",current_grid_data_object.value);
+					found._values = found._values || []
+					found._values.push(current_grid_data_object.value)
+					// console.log("found 2:", clone(found));
+				}else{
+
+					current_grid_data_object._values = current_grid_data_object._values || [current_grid_data_object.value]
+					ar_values.push( current_grid_data_object )
+					// console.log("Added new value:",current_grid_data_object);
+				}
+			}
+		}
+	}else{
+		console.warn("++++ value:", value, grid_data_object);
+
+		grid_data_object._values = grid_data_object._values || [grid_data_object.value]
+		ar_values.push( grid_data_object )
+	}
+
+
+	return ar_values
+}//end parse_grid_data_value
+
+
+
+/**
 * GET_EXPORT_CSV : load the export grid data
 */
 tool_export.prototype.get_export_csv = async function (options) {
+
 	// body...
 }// end get_export_csv
 

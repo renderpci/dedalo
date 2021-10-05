@@ -45,7 +45,7 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 		}
 
 	// buttons
-		// const current_buttons = await buttons(self);
+		// const current_buttons = get_buttons(self);
 
 	// paginator container node (will be placed/moved into inspector)
 		const paginator_div = ui.create_dom_element({
@@ -155,22 +155,22 @@ const get_content_data = async function(self, ar_section_record) {
 			// rows
 
 			// sequential mode
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const row_item = await ar_section_record[i].render()
-					fragment.appendChild(row_item)
-				}
+				// for (let i = 0; i < ar_section_record_length; i++) {
+				// 	const row_item = await ar_section_record[i].render()
+				// 	fragment.appendChild(row_item)
+				// }
 
 			// parallel mode
-				// const ar_promises = []
-				// for (let i = 0; i < ar_section_record_length; i++) {
-				// 	const render_promise = ar_section_record[i].render()
-				// 	ar_promises.push(render_promise)
-				// }
-				// await Promise.all(ar_promises).then(function(values) {
-				//   for (let i = 0; i < ar_section_record_length; i++) {
-				//   	fragment.appendChild(values[i])
-				//   }
-				// });
+				const ar_promises = []
+				for (let i = 0; i < ar_section_record_length; i++) {
+					const render_promise = ar_section_record[i].render()
+					ar_promises.push(render_promise)
+				}
+				await Promise.all(ar_promises).then(function(values) {
+				  for (let i = 0; i < ar_section_record_length; i++) {
+				  	fragment.appendChild(values[i])
+				  }
+				});
 		}
 
 	// content_data
@@ -191,16 +191,16 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 /**
-* BUTTONS
+* GET_BUTTONS
 * @return DOM node buttons
 */
-const buttons = async function(self) {
+const get_buttons = function(self) {
 
 	const buttons = []
 
 
 	return buttons
-};//end buttons
+};//end get_buttons
 
 
 
