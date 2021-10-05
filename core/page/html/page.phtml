@@ -36,12 +36,28 @@
 			top:1em;
 		}
 	</style>
-	<link rel="stylesheet" type="text/css" href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>" />
+	<link rel="stylesheet" type="text/css" href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>">
+	<link rel="preload" href="../common/js/environment.js.php" as="script">
 	<?php /*
 	<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet">
 	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce.woff" as="font" type="font/woff" crossorigin>
 	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce-small.woff" as="font" type="font/woff" crossorigin>
+	<link rel="modulepreload" href="../common/js/components_list.js?v=<?php echo DEDALO_VERSION ?>">
 	*/?>
+	<link rel="modulepreload" href="../page/js/page.js">
+	<link rel="modulepreload" href="../common/js/data_manager.js">
+	<link rel="modulepreload" href="../common/js/event_manager.js">
+	<link rel="modulepreload" href="../common/js/instances.js">
+	<link rel="modulepreload" href="../common/js/common.js">
+	<link rel="modulepreload" href="../common/js/ui.js">
+	<link rel="modulepreload" href="../menu/js/menu.js">
+	<link rel="modulepreload" href="../section/js/section.js">
+	<link rel="modulepreload" href="../section_record/js/section_record.js">
+	<link rel="modulepreload" href="../../tools/tool_common/js/tool_common.js">
+
+	<link rel="preload" href="../../lib/tinymce/js/tinymce/tinymce.min.js" as="script">
+	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce.woff" as="font" type="font/woff" crossorigin>
+	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce-small.woff" as="font" type="font/woff" crossorigin>
 </head>
 <body>
 	<div id="main" class="hide"></div>
@@ -49,7 +65,6 @@
 </body>
 <script rel="preload" defer="defer" src="../common/js/environment.js.php"></script>
 <script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
-<link rel="modulepreload" href="../common/js/components_list.js?v=<?php echo DEDALO_VERSION ?>">
 <script type="module">
 	const t0 = performance.now()
 
