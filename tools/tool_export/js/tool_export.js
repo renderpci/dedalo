@@ -192,67 +192,70 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const dd_grid_data_request	= await current_data_manager.request({body : rqo})
 		const dd_grid_data			= dd_grid_data_request.result
 
-		console.log("get_export_grid dd_grid_data_request:",dd_grid_data);
-		console.log("dd_grid_data 1:", JSON.stringify(dd_grid_data[1]));
 
-		const parsed_data = []
-		for (let i = 0; i < dd_grid_data.length; i++) {
+		/* TEST
+			console.log("get_export_grid dd_grid_data_request:",dd_grid_data);
+			console.log("dd_grid_data 1:", JSON.stringify(dd_grid_data[1]));
 
-			const item = dd_grid_data[i]
+			const parsed_data = []
+			for (let i = 0; i < dd_grid_data.length; i++) {
 
-			if (i===0) {
-				parsed_data.push(item) // skip process labels row
-			}else{
-				// parsed_value (return array of objects)
-				const parsed_value	= parse_grid_data_value(item)
-					// console.log("parsed_value:",parsed_value);
+				const item = dd_grid_data[i]
 
-				parsed_value.map(el => {
-					el.value = el._values
-					// delete el._values
-				})
+				if (i===0) {
+					parsed_data.push(item) // skip process labels row
+				}else{
+					// parsed_value (return array of objects)
+					const parsed_value	= parse_grid_data_value(item)
+						// console.log("parsed_value:",parsed_value);
 
-				// // parsed_item
-				// const parsed_item	= clone(dd_grid_data[0]) // clone menu item
-				// parsed_item.value	= parsed_value
+					parsed_value.map(el => {
+						el.value = el._values
+						// delete el._values
+					})
 
-				// parsed_data.push(parsed_item)
+					// // parsed_item
+					// const parsed_item	= clone(dd_grid_data[0]) // clone menu item
+					// parsed_item.value	= parsed_value
+
+					// parsed_data.push(parsed_item)
 
 
-				// iterate parsed_value columns
-					for (let k = 0; k < parsed_value.length; k++) {
+					// iterate parsed_value columns
+						for (let k = 0; k < parsed_value.length; k++) {
 
-						const item = parsed_value[k]
-						// console.log("item:", item, k);
+							const item = parsed_value[k]
+							// console.log("item:", item, k);
 
-						for (let j = 0; j < item.value.length; j++) {
+							for (let j = 0; j < item.value.length; j++) {
 
-							const column_values = item.value[j]
-								// console.log("column_values:",column_values);
+								const column_values = item.value[j]
+									// console.log("column_values:",column_values);
 
-							const found = parsed_data.find(el => el.label===item.label)
-							if (found) {
-								// for (let h = 0; h < found.value.length; h++) {
-								// 	found.value[h]
-								// }
-								found.value.push(column_values)
+								const found = parsed_data.find(el => el.label===item.label)
+								if (found) {
+									// for (let h = 0; h < found.value.length; h++) {
+									// 	found.value[h]
+									// }
+									found.value.push(column_values)
 
-							}else{
+								}else{
 
-								const parsed_item = clone(dd_grid_data[0]) // clone menu item
-									parsed_item.label			= item.label
-									parsed_item.type			= 'column'
-									parsed_item.column_count	= 1
-									parsed_item.row_count		= null
-									parsed_item.value			= [column_values]
+									const parsed_item = clone(dd_grid_data[0]) // clone menu item
+										parsed_item.label			= item.label
+										parsed_item.type			= 'column'
+										parsed_item.column_count	= 1
+										parsed_item.row_count		= null
+										parsed_item.value			= [column_values]
 
-								parsed_data.push(parsed_item)
+									parsed_data.push(parsed_item)
+								}
 							}
 						}
-					}
+				}
 			}
-		}
-		console.log("____ parsed_data:",parsed_data);
+			console.log("____ parsed_data:",parsed_data);
+			*/
 
 
 	// dd_grid
@@ -277,7 +280,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 
 /**
-* PARSE_GRID_DATA_VALUE
+* PARSE_GRID_DATA_VALUE ------- TEST METHOD. REMOVE IF NOT IS USED (!) -------
 * @return array value
 */
 const parse_grid_data_value = function(grid_data_object) {
