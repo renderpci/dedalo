@@ -19,6 +19,7 @@ export const render_component_password = function() {
 };//end render_component_password
 
 
+
 /**
 * LIST
 * Render node to be used by service autocomplete or any datali
@@ -86,15 +87,12 @@ render_component_password.prototype.list = async function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_component_password.prototype.edit = async function(options={render_level:'full'}) {
+render_component_password.prototype.edit = async function(options) {
 
 	const self = this
 
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const current_content_data = await get_content_data_edit(self)
@@ -152,7 +150,6 @@ const add_events = function(self, wrapper) {
 						// event to update the dom elements of the instance
 						//event_manager.publish('update_value_'+self.id, changed_data)
 					})
-
 				}
 
 				return true
@@ -168,22 +165,23 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	const value = self.data.value
-	const mode 	= self.mode
+	const value	= (self.data.value.length<1) ? [null] : self.data.value
+	const mode	= self.mode
 
 	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// value (input)
-		input_element(inputs_container, self)
+		const input_element = get_input_element(self)
+		inputs_container.appendChild(input_element)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -197,27 +195,28 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* INPUT_ELEMENT
-* @return dom element li
+* GET_INPUT_ELEMENT
+* @return DOM node li
 */
-const input_element = (inputs_container, self) => {
+const get_input_element = (self) => {
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type : 'li'
 		})
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: 'input',
-			type 		 	: 'password',
-			class_name 		: 'password_value',
-			value 		 	: 'XXXXXXXXX',
-			parent 		 	: li
+			element_type	: 'input',
+			type			: 'password',
+			class_name		: 'password_value',
+			value			: 'XXXXXXXXX',
+			parent			: li
 		})
 
 		input.autocomplete = 'new-password'
 
 	return li
-};//end input_element
+};//end get_input_element
+
+

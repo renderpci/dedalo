@@ -29,10 +29,10 @@ render_get_archive_weights.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -52,7 +52,7 @@ render_get_archive_weights.prototype.edit = async function(options) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	// sort vars
 		const value = self.value
@@ -68,9 +68,9 @@ const get_content_data_edit = async function(self) {
 
 	// values
 		const value_length = value.length
-
 		for (let i = 0; i < value_length; i++) {
-			get_value_element(i, value[i], values_container, self)
+			const value_element = get_value_element(i, value[i], self)
+			values_container.appendChild(value_element)
 		}
 
 	// content_data
@@ -89,12 +89,11 @@ const get_content_data_edit = async function(self) {
 * GET_VALUE_ELEMENT
 * @return DOM node li
 */
-const get_value_element = (i, current_value, values_container, self) => {
+const get_value_element = (i, current_value, self) => {
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : values_container
+			element_type : 'li'
 		})
 
 	// iterate object properties
@@ -102,18 +101,18 @@ const get_value_element = (i, current_value, values_container, self) => {
 
 			// label
 				const span_label = ui.create_dom_element({
-					type 		: 'span',
+					type		: 'span',
 					class_name	: 'label',
-					inner_html 	: label,
-					parent 		: li
+					inner_html	: label,
+					parent		: li
 				})
 
 			// value
 				const span_value = ui.create_dom_element({
-					type 		: 'span',
+					type		: 'span',
 					class_name	: 'value',
-					inner_html 	: JSON.stringify(value),
-					parent 		: li
+					inner_html	: JSON.stringify(value),
+					parent		: li
 				})
 		}
 		// event update_widget_value_
@@ -127,3 +126,5 @@ const get_value_element = (i, current_value, values_container, self) => {
 
 	return li
 };//end get_value_element
+
+

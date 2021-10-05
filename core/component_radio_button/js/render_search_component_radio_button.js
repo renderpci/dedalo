@@ -33,7 +33,7 @@ render_search_component_radio_button.prototype.search = async function() {
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// content data
-		const content_data = await get_content_data_search(self)
+		const content_data = get_content_data_search(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
@@ -143,7 +143,7 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_SEARCH
 * @return DOM node content_data
 */
-const get_content_data_search = async function(self) {
+const get_content_data_search = function(self) {
 
 	const value		= self.data.value
 	const mode		= self.mode

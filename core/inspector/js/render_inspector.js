@@ -34,7 +34,7 @@ render_inspector.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// content data
-		const content_data = await get_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -89,7 +89,7 @@ const add_events = (wrapper, self) => {
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = async function(self) {
+const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -178,3 +178,5 @@ const get_content_data = async function(self) {
 
 	return content_data
 };//end get_content_data
+
+

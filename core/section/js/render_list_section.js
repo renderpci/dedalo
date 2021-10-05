@@ -24,13 +24,115 @@ export const render_list_section = function() {
 
 
 /**
+* LIST
+* Render node for use in list
+* @return DOM node
+*/
+render_list_section.prototype.list = async function(options) {
+
+	const self = this
+
+	const render_level		= options.render_level || 'full'
+	const ar_section_record = await self.get_ar_instances()
+
+	// content_data
+		const content_data = await get_content_data(ar_section_record, self)
+		if (render_level==='content') {
+			return content_data
+		}
+
+
+	const fragment = new DocumentFragment()
+
+	// buttons
+		if (self.mode!=='tm') {
+
+			const buttons_node = get_buttons(self);
+
+			if(buttons_node){
+				fragment.appendChild(buttons_node)
+			}
+
+			// search filter node
+				if (self.filter) {
+					const filter_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'filter',
+						parent			: fragment
+					})
+					self.filter.build().then(()=>{
+						self.filter.render().then(filter_wrapper =>{
+							filter_container.appendChild(filter_wrapper)
+						})
+					})
+
+				}
+		}//end if (self.mode!=='tm')
+
+	// paginator node
+		const paginator_div = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'paginator',
+			parent			: fragment
+		})
+		self.paginator.build()
+		.then(function(){
+			self.paginator.render().then(paginator_wrapper =>{
+				paginator_div.appendChild(paginator_wrapper)
+			})
+		})
+
+	// list body
+		const list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_body',
+			parent			: fragment
+		})
+
+	// list_header_node
+		if (self.ar_instances.length>0) {
+
+			const columns			= await self.columns
+			const list_header_node	= get_list_header(columns)
+
+			Object.assign(
+				list_body.style,
+				{
+					//display: 'grid',
+					//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
+					// "grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)"
+					"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
+				}
+			)
+			list_body.appendChild(list_header_node)
+		}
+
+	// content_data append
+		list_body.appendChild(content_data)
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'section',
+			id				: self.id,
+			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+		})
+		wrapper.appendChild(fragment)
+
+
+	return wrapper
+};//end list
+
+
+
+/**
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = async function(self) {
+const get_content_data = async function(ar_section_record, self) {
 
 	// section_record instances (initied and builded)
-	const ar_section_record = await self.get_ar_instances()
+	// const ar_section_record = await self.get_ar_instances()
 	
 	const fragment = new DocumentFragment()
 
@@ -45,22 +147,22 @@ const get_content_data = async function(self) {
 		}else{
 			// rows
 			// sequential mode
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const row_item = await ar_section_record[i].render()
-					fragment.appendChild(row_item)
-				}
+				// for (let i = 0; i < ar_section_record_length; i++) {
+				// 	const row_item = await ar_section_record[i].render()
+				// 	fragment.appendChild(row_item)
+				// }
 
-			// // parallel mode
-			// 	const ar_promises = []
-			// 	for (let i = 0; i < ar_section_record_length; i++) {
-			// 		const render_promise = ar_section_record[i].render()
-			// 		ar_promises.push(render_promise)
-			// 	}
-			// 	await Promise.all(ar_promises).then(function(values) {
-			// 	  for (let i = 0; i < ar_section_record_length; i++) {
-			// 	  	fragment.appendChild(values[i])
-			// 	  }
-			// 	});
+			// parallel mode
+				const ar_promises = []
+				for (let i = 0; i < ar_section_record_length; i++) {
+					const render_promise = ar_section_record[i].render()
+					ar_promises.push(render_promise)
+				}
+				await Promise.all(ar_promises).then(function(values) {
+				  for (let i = 0; i < ar_section_record_length; i++) {
+				  	fragment.appendChild(values[i])
+				  }
+				});
 		}
 
 	// content_data
@@ -154,108 +256,6 @@ const get_buttons = function(self) {
 
 
 /**
-* LIST
-* Render node for use in list
-* @return DOM node
-*/
-render_list_section.prototype.list = async function(options={render_level:'full'}) {
-
-	const self = this
-
-	const render_level		= options.render_level
-	const ar_section_record	= self.ar_instances
-
-	// const row = self.get_ar_instances()
-
-	// content_data
-		const content_data = await get_content_data(self)
-		if (render_level==='content') {
-			return content_data
-		}
-
-
-	const fragment = new DocumentFragment()
-
-	// buttons
-		if (self.mode!=='tm') {
-
-			const buttons_node = get_buttons(self);
-
-			if(buttons_node){
-				fragment.appendChild(buttons_node)
-			}
-
-			// search filter node
-				if (self.filter) {
-					const filter_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'filter',
-						parent			: fragment
-					})
-					self.filter.build().then(()=>{
-						self.filter.render().then(filter_wrapper =>{
-							filter_container.appendChild(filter_wrapper)
-						})
-					})
-
-				}
-		}//end if (self.mode!=='tm')
-
-	// paginator node
-		const paginator_div = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'paginator',
-			parent			: fragment
-		})
-		self.paginator.build()
-		.then(function(){
-			self.paginator.render().then(paginator_wrapper =>{
-				paginator_div.appendChild(paginator_wrapper)
-			})
-		})
-
-	// list body
-		const list_body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'list_body',
-			parent			: fragment
-		})
-
-	// list_header_node
-		if (self.ar_instances.length>0) {
-			const list_header_node = await self.list_header()
-
-			Object.assign(
-				list_body.style,
-				{
-					//display: 'grid',
-					//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-					// "grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)"
-					"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
-				}
-			)
-			list_body.appendChild(list_header_node)
-		}
-
-	// content_data append
-		list_body.appendChild(content_data)
-
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'section',
-			id				: self.id,
-			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
-		})
-		wrapper.appendChild(fragment)
-
-
-	return wrapper
-};//end list
-
-
-
-/**
 * LIST_TM
 * Render node for use in list_tm
 * @return DOM node
@@ -327,14 +327,10 @@ render_list_section.prototype.list = async function(options={render_level:'full'
 
 
 /**
-* LIST_HEADER
+* GET_LIST_HEADER
 * @return object component_data
 */
-render_list_section.prototype.list_header = async function(){
-
-	const self = this
-
-	const columns = await self.columns
+const get_list_header = function(columns){
 
 	const ar_nodes			= []
 	const columns_length	= columns.length
@@ -353,7 +349,7 @@ render_list_section.prototype.list_header = async function(){
 			? component.label + " [" + component.tipo + "]"
 			: component.label
 		label.push(current_label)
-	
+
 		// node header_item
 			const id			=  component.tipo + "_" + component.section_tipo +  "_"+ component.parent
 			const header_item	= ui.create_dom_element({
@@ -362,7 +358,7 @@ render_list_section.prototype.list_header = async function(){
 				inner_html		: label.join('')
 			})
 
-			ar_nodes.push(header_item)
+		ar_nodes.push(header_item)
 	}//end for (let i = 0; i < columns_length; i++)
 
 	// header_wrapper
@@ -406,7 +402,7 @@ render_list_section.prototype.list_header = async function(){
 		// )
 
 	return header_wrapper
-};//end list_header
+};//end get_list_header
 
 
 

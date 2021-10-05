@@ -3,7 +3,7 @@
 <head>
 	<meta name="viewport" content="width=device-width">
 	<link rel="shortcut icon" href="../../favicon.ico" />
-	<title><?php echo $tipo .' ' . $section_id ?></title>
+	<title><?php echo $tipo .' '. $section_id ?></title>
 	<style type="text/css">
 		.loading {
 			opacity: 0.5;
@@ -67,7 +67,7 @@
 			const page = await get_instance({
 				model	: 'page',
 				context	: <?php echo json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
-			})
+			});
 
 		// page instance build and render
 			const build			= await page.build()

@@ -122,7 +122,7 @@ render_component_json.prototype.list = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_json.prototype.edit = async function(options={render_level:'full'}) {
+render_component_json.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -130,7 +130,7 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 		self.data.value = (!self.data.value || self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -143,8 +143,8 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// fix

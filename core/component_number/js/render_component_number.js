@@ -81,18 +81,15 @@ render_component_number.prototype.list = async function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_component_number.prototype.edit = async function(options={render_level : 'full'}) {
+render_component_number.prototype.edit = async function(options) {
 
 	const self 	= this
-
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -230,26 +227,26 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	const value 		= self.data.value
-	const mode 			= self.mode
-	const is_inside_tool= self.is_inside_tool
+	const value	= (self.data.value.length<1) ? [null] : self.data.value
+	const mode	= self.mode
 
 	const fragment = new DocumentFragment()
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// build values
-		const inputs_value = value//(value.length<1) ? [''] : value
-		const value_length = inputs_value.length
+		const inputs_value	= value//(value.length<1) ? [''] : value
+		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self)
+			const input_element = get_input_element_edit(i, inputs_value[i], self)
+			inputs_container.appendChild(input_element)
 		}
 
 	// content_data
@@ -300,36 +297,35 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
-* @return dom element li
+* @return DOM element li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, self) => {
 
 	const mode 				= self.mode
 	const is_inside_tool	= self.is_inside_tool
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type	: 'li'
 		})
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: 'input',
-			type 		 	: 'number',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i },
-			value 		 	: current_value,
-			parent 		 	: li
+			element_type	: 'input',
+			type			: 'number',
+			class_name		: 'input_value',
+			dataset			: { key : i },
+			value			: current_value,
+			parent			: li
 		})
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button remove hidden_button',
+				class_name		: 'button remove hidden_button',
 				dataset			: { key : i },
-				parent 			: li
+				parent			: li
 			})
 		}
 

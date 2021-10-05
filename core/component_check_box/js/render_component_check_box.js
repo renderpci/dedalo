@@ -86,19 +86,15 @@ render_component_check_box.prototype.list = async function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_check_box.prototype.edit = async function(options={render_level : 'full'}) {
+render_component_check_box.prototype.edit = async function(options) {
 
 	const self = this
 
 	// render_level
 		const render_level = options.render_level || 'full'
 
-	// sort vars
-		const value		= self.data.value || []
-		const datalist 	= self.data.datalist || []
-
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -108,8 +104,8 @@ render_component_check_box.prototype.edit = async function(options={render_level
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// events
@@ -254,33 +250,34 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	const value 		= self.data.value
-	const datalist		= self.data.datalist || []
-	const mode 			= self.mode
-	const is_inside_tool= self.is_inside_tool
+	const value				= self.data.value
+	const datalist			= self.data.datalist || []
+	const mode				= self.mode
+	const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 		// build options
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			get_input_element_edit(i, datalist[i], inputs_container, self)
+			const input_element = get_input_element_edit(i, datalist[i], self)
+			inputs_container.appendChild(input_element)
 		}
 
 	// buttons
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
+			class_name		: 'buttons_container',
+			parent			: fragment
 		})
 
 	// content_data
@@ -344,21 +341,20 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
-* @return dom element li
+* @return DOM node li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, self) => {
 
-	const value  		 = self.data.value || []
-	const value_length   = value.length
-	const datalist_item  = current_value
-	const datalist_value = datalist_item.value
-	const label 		 = datalist_item.label
-	const section_id	 = datalist_item.section_id
+	const value				= self.data.value || []
+	const value_length		= value.length
+	const datalist_item		= current_value
+	const datalist_value	= datalist_item.value
+	const label				= datalist_item.label
+	const section_id		= datalist_item.section_id
 
 	// create li
 		const li = ui.create_dom_element({
-			element_type	: 'li',
-			parent 			: inputs_container
+			element_type	: 'li'
 		})
 
 	// input checkbox

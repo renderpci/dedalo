@@ -37,14 +37,14 @@ render_area_development.prototype.list = async function(options={render_level:'f
 * Render node for use in edit
 * @return DOM node
 */
-render_area_development.prototype.edit = async function(options={render_level:'full'}) {
+render_area_development.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await content_data(self)
+		const current_content_data = get_content_data(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -68,7 +68,7 @@ render_area_development.prototype.edit = async function(options={render_level:'f
 * CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -297,30 +297,28 @@ const buttons = async function(self) {
 /**
 * BUILD_FORM
 */
-export const build_form = async function(widget_object) {
+export const build_form = function(widget_object) {
 
 	const self = this
 
-
-	const trigger			= widget_object.trigger
-	const body_info			= widget_object.body_info
-	const body_response		= widget_object.body_response
-	const print_response	= widget_object.print_response
-	const confirm_text		= widget_object.confirm_text
-
-	const inputs			= widget_object.inputs || []
-
+	// widget_object
+		const trigger			= widget_object.trigger
+		const body_info			= widget_object.body_info
+		const body_response		= widget_object.body_response
+		const print_response	= widget_object.print_response
+		const confirm_text		= widget_object.confirm_text
+		const inputs			= widget_object.inputs || []
 
 	// create the form
 		const form_container = ui.create_dom_element({
-			element_type : "form",
-			class_name 	 : "form_container",
-			parent 		 : body_info
+			element_type	: "form",
+			class_name		: "form_container",
+			parent			: body_info
 		})
 		form_container.addEventListener("submit", async function(e){
 			e.preventDefault()
 
-			if ( confirm( (confirm_text || get_label["seguro"] || "Sure?") ) ) {
+			if ( confirm( (confirm_text || get_label.seguro || "Sure?") ) ) {
 
 				// check mandatory values
 					for (let i = 0; i < input_nodes.length; i++) {
@@ -335,11 +333,11 @@ export const build_form = async function(widget_object) {
 					form_container.classList.add("lock")
 					body_response.classList.add("preload")
 
-					// colect values from inputs
+					// collect values from inputs
 					const values = input_nodes.map((el)=>{
 						return {
-							name  : el.name,
-							value : el.value
+							name	: el.name,
+							value	: el.value
 						}
 					})
 
@@ -347,16 +345,14 @@ export const build_form = async function(widget_object) {
 						? Object.assign(widget_object.trigger.options, values)
 						: values
 
-
 					// data_manager
 					const api_response = await data_manager.prototype.request({
 						body : {
-							dd_api		: widget_object.trigger.dd_api,
-							action 		: widget_object.trigger.action,
-							options 	: options
+							dd_api	: widget_object.trigger.dd_api,
+							action	: widget_object.trigger.action,
+							options	: options
 						}
 					})
-					// *----------console.log("api_response:",api_response); return
 
 					print_response(body_response, api_response)
 
@@ -418,3 +414,5 @@ export const build_form = async function(widget_object) {
 
 	return form_container
 };//end  build_form
+
+

@@ -2313,6 +2313,11 @@ li .section_record.list .id_column {
 .wrapper_component.tm > .label {
   height: 1.75em;
 }
+.error.wrapper_component.edit > .label,
+.error.wrapper_component.search > .label,
+.error.wrapper_component.tm > .label {
+  color: white !important;
+}
 .wrapper_component.edit > .content_data,
 .wrapper_component.search > .content_data,
 .wrapper_component.tm > .content_data {

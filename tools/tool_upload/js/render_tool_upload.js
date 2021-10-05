@@ -25,14 +25,14 @@ export const render_tool_upload = function() {
 * Render node for use like button
 * @return DOM node
 */
-render_tool_upload.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_upload.prototype.edit = async function (options) {
 
 	const self = this
 
-	const render_level 	= options.render_level
+	const render_level 	= options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await get_content_data(self)
+		const current_content_data = get_content_data(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -81,28 +81,27 @@ render_tool_upload.prototype.edit = async function (options={render_level:'full'
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = async function(self) {
+const get_content_data = function(self) {
 
 	const fragment = new DocumentFragment()
-
 
 	// form
 		const form = ui.create_dom_element({
 			element_type	: 'form',
-			id 				: 'form_upload',
-			parent 			: fragment
+			id				: 'form_upload',
+			parent			: fragment
 		})
-		form.name 		= 'form_upload'
-		form.enctype 	= 'multipart/form-data'
-		form.method 	= 'post'
+		form.name		= 'form_upload'
+		form.enctype	= 'multipart/form-data'
+		form.method		= 'post'
 
 
 	// input
 		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type 			: 'file',
-			id 				: 'file_to_upload',
-			parent 			: form
+			type			: 'file',
+			id				: 'file_to_upload',
+			parent			: form
 		})
 		input.addEventListener("change", function(e){
 			const file = this.files[0]
@@ -146,14 +145,14 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'img',
 			src				: DEDALO_TOOLS_URL + '/' + self.model + '/img/icon.svg',
-			parent 			: filedrag
+			parent			: filedrag
 		})
 		// label text
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: '',
-			text_content 	: 'Select or drop a file it here',
-			parent 			: filedrag
+			text_content	: 'Select or drop a file it here',
+			parent			: filedrag
 		})
 
 	// filedrag
@@ -169,8 +168,8 @@ const get_content_data = async function(self) {
 		const file_info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'file_info',
-			text_content 	: '',
-			parent 			: form
+			text_content	: '',
+			parent			: form
 		})
 
 	// progress_bar_container
@@ -181,19 +180,19 @@ const get_content_data = async function(self) {
 		const response_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'response_container',
-			parent 			: fragment
+			parent			: fragment
 		})
 		// response_msg
 		const response_msg = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'response_msg',
-			parent 			: response_container
+			parent			: response_container
 		})
 		// preview_image
 		const preview_image = ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'preview_image',
-			parent 			: response_container
+			parent			: response_container
 		})
 		preview_image.addEventListener("click", function(e){
 			window.open(this.src)
@@ -203,53 +202,53 @@ const get_content_data = async function(self) {
 		// container info
 		const info = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'info',
-			// text_content 	: '',
-			parent 			: fragment
+			class_name		: 'info',
+			// text_content	: '',
+			parent			: fragment
 		})
 		// caller component
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>Caller component</label>' + self.caller.model,
-			parent 			: info
+			inner_html		: '<label>Caller component</label>' + self.caller.model,
+			parent			: info
 		})
 		// target quality
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>Target quality</label>' + self.caller.context.default_target_quality,
-			parent 			: info
+			inner_html		: '<label>Target quality</label>' + self.caller.context.default_target_quality,
+			parent			: info
 		})
 		// allowed extensions
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>Allowed extensions</label>' + self.caller.context.allowed_extensions.join(", "),
-			parent 			: info
+			inner_html		: '<label>Allowed extensions</label>' + self.caller.context.allowed_extensions.join(", "),
+			parent			: info
 		})
 		// max upload file size
 		const max_mb = Math.floor(self.max_size_bytes / (1024*1024))
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: (max_mb < 100) ? 'warning' : '',
-			inner_html	 	: '<label>Max file size</label>' + max_mb.toLocaleString() + ' MB',
-			parent 			: info
+			class_name		: (max_mb < 100) ? 'warning' : '',
+			inner_html		: '<label>Max file size</label>' + max_mb.toLocaleString() + ' MB',
+			parent			: info
 		})
 		// sys_get_temp_dir
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>System temp dir</label>' + self.sys_get_temp_dir,
-			parent 			: info
+			inner_html		: '<label>System temp dir</label>' + self.sys_get_temp_dir,
+			parent			: info
 		})
 		// upload_tmp_dir
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>User upload tmp dir</label>' + self.upload_tmp_dir,
-			parent 			: info
+			inner_html		: '<label>User upload tmp dir</label>' + self.upload_tmp_dir,
+			parent			: info
 		})
 		// upload_tmp_perms
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>User upload tmp perms</label>' + self.upload_tmp_perms,
-			parent 			: info
+			inner_html		: '<label>User upload tmp perms</label>' + self.upload_tmp_perms,
+			parent			: info
 		})
 		// session_cache_expire
 		const session_cache_expire = (self.session_cache_expire / 60) > 24

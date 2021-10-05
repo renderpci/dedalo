@@ -233,7 +233,7 @@ section.prototype.build = async function(autoload=false) {
 			})
 			// self.filter.build()
 		}
-		// console.log("section build filter unactive (remember) ");	
+		// console.log("section build filter unactive (remember) ");
 	
 	// load data if is not already received as option
 		if (autoload===true) {

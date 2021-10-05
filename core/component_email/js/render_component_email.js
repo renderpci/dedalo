@@ -93,7 +93,7 @@ render_component_email.prototype.edit = async function(options={render_level : '
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -103,8 +103,8 @@ render_component_email.prototype.edit = async function(options={render_level : '
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// add events
@@ -248,11 +248,11 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	const value 		= self.data.value
-	const mode 			= self.mode
-	const is_inside_tool= self.is_inside_tool
+	const value				= self.data.value
+	const mode				= self.mode
+	const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -267,7 +267,8 @@ const get_content_data_edit = async function(self) {
 		const inputs_value = value//(value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self)
+			const input_element = get_input_element_edit(i, inputs_value[i], self)
+			inputs_container.appendChild(input_element)
 		}
 
 	// content_data
@@ -319,42 +320,41 @@ const get_buttons = (self) => {
 * GET_INPUT_ELEMENT_EDIT
 * @return dom element li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, self) => {
 
-	const mode 				= self.mode
+	const mode				= self.mode
 	const is_inside_tool	= self.is_inside_tool
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type : 'li'
 		})
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type : 'input',
-			type 		 : 'text',
-			class_name 	 : 'input_value',
-			dataset 	 : { key : i },
-			value 		 : current_value,
-			parent 		 : li
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_value',
+			dataset			: { key : i },
+			value			: current_value,
+			parent			: li
 		})
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button remove hidden_button',
+				class_name		: 'button remove hidden_button',
 				dataset			: { key : i },
-				parent 			: li
+				parent			: li
 			})
 
 			// button email
 			const button_email = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button email hidden_button',
+				class_name		: 'button email hidden_button',
 				dataset			: { key : i },
-				parent 			: li
+				parent			: li
 			})
 		}
 

@@ -31,7 +31,7 @@ render_section_group.prototype.edit = async function(options={render_level : 'fu
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data(self)
+		const current_content_data = get_content_data(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -63,10 +63,10 @@ render_section_group.prototype.edit = async function(options={render_level : 'fu
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = function(self) {
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -74,7 +74,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-};//end content_data
+};//end get_content_data
 
 
 
@@ -84,3 +84,5 @@ const content_data = async function(self) {
 * @return DOM node
 */
 render_section_group.prototype.list = render_section_group.prototype.edit
+
+

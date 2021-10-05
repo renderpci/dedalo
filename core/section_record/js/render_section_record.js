@@ -27,15 +27,13 @@ export const render_section_record = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_section_record.prototype.edit = async function(options={render_level:'full'}) {
+render_section_record.prototype.edit = async function(options={}) {
 
 	const self = this
 
-	const render_level = options.render_level
+	const render_level = options.render_level || 'full'
 
-	const ar_instances = self.ar_instances && self.ar_instances.length>0
-		? self.ar_instances
-		: await self.get_ar_instances()
+	const ar_instances = await self.get_ar_instances()
 
 	// content_data
 		const content_data = await get_content_data_edit(self, ar_instances)
@@ -66,6 +64,29 @@ const get_content_data_edit = async function(self, ar_instances) {
 	// add all section_record rendered nodes
 		// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
+		// render all instances in parallel before iterate
+			const ar_promises = []
+			for (let i = 0; i < ar_instances_length; i++) {
+				const current_promise = new Promise(function(resolve){
+					const current_instance = ar_instances[i]
+					// already rendered case
+					if (current_instance.status==='rendered' && typeof current_instance.node[0]!=='undefined') {
+						resolve(true)
+					}else{
+						current_instance.render()
+						.then(function(current_instance){
+							// current_instance.instance_order_key = i
+							resolve(true)
+						}).catch((errorMsg) => {
+							console.error(errorMsg);
+						})
+					}
+				})
+				ar_promises.push(current_promise)
+			}
+			// nodes. Await all instances are parallel rendered
+			await Promise.all(ar_promises) // render work done safely
+
 		for (let i = 0; i < ar_instances_length; i++) {
 
 			if (typeof ar_instances[i]==="undefined") {
@@ -77,7 +98,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 			const current_instance		= ar_instances[i]
 			const current_instance_node	= current_instance.node[0] || await current_instance.render()
 
-			// get the parent node inside the context
+			// parent_grouper. get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper
 
 			// if the item has the parent the section_tipo is direct children of the section_record
@@ -133,6 +154,8 @@ const get_content_data_edit = async function(self, ar_instances) {
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
 
+
+
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
@@ -150,11 +173,14 @@ const get_content_data_edit = async function(self, ar_instances) {
 * @param array ar_instances
 * @return DOM node wrapper
 */
-render_section_record.prototype.list = async function(options={render_level : 'full'}) {
+render_section_record.prototype.list = async function(options={}) {
 
 	const self = this
+
+	const render_level = options.render_level || 'full'
 	
 	// ar_columns_instances
+		// const ar_instances = await self.get_ar_instances()
 		const ar_instances = await self.get_ar_columns_instances()
 
 	const fragment = new DocumentFragment()
@@ -180,8 +206,27 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
-
-			// console.log("ar_instances:",ar_instances);
+		// render all instances in parallel before iterate
+			const ar_promises = []
+			for (let k = 0; k < ar_instances_length; k++) {
+				const current_promise = new Promise(function(resolve){
+					const current_instance = ar_instances[k]
+					// already rendered case
+					if (typeof current_instance.node[0]!=='undefined') {
+						resolve(true)
+					}else{
+						current_instance.render()
+						.then(function(current_instance){
+							resolve(true)
+						}).catch((errorMsg) => {
+							console.error(errorMsg);
+						})
+					}
+				})
+				ar_promises.push(current_promise)
+			}
+			// nodes. Await all instances are parallel rendered
+			await Promise.all(ar_promises)// render work done safely
 
 		for (let i = 0; i < ar_instances_length; i++) {
 
@@ -201,7 +246,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 				// console.log("PORTAL -- current_instance", current_instance);
 
-				const current_instance_node = await current_instance.render()
+				const current_instance_node = current_instance.node[0] //|| await current_instance.render()
 				
 				// add
 					fragment.appendChild(current_instance_node)
@@ -220,12 +265,12 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 			}else{
 
-				const current_instance_node = await current_instance.render()
+				const current_instance_node = current_instance.node[0] //|| await current_instance.render()
 
 				// add
 					fragment.appendChild(current_instance_node)
-			}
 
+			}
 
 			// grid . add columns
 				// if (components_with_relations.indexOf(current_instance.model)!==-1) {
@@ -273,7 +318,9 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 	// events
 		wrapper.addEventListener("click", (e) => {
 			// e.stopPropagation()
-			e.target.classList.add("row_active")
+			if (!e.target.classList.contains("row_active")) {
+				e.target.classList.add("row_active")
+			}
 		})
 
 

@@ -25,15 +25,15 @@ export const render_edit_component_section_id = function(component) {
 * Render node for use in edit
 * @return DOM node
 */
-render_edit_component_section_id.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_section_id.prototype.edit = async function(options) {
 
 	const self = this
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -56,7 +56,7 @@ render_edit_component_section_id.prototype.edit = async function(options={render
 * CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	const value = self.data.value
 	const mode 	= self.mode
@@ -67,8 +67,8 @@ const get_content_data_edit = async function(self) {
 		const div_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_id',
-			text_content 	: value,
-			parent 			: content_data
+			text_content	: value,
+			parent			: content_data
 		})
 
 	return content_data

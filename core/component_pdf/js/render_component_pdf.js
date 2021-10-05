@@ -97,7 +97,7 @@ render_component_pdf.prototype.edit = async function(options) {
 	const self = this
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || ''
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -110,8 +110,8 @@ render_component_pdf.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// add events
@@ -189,27 +189,28 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
-	// sort vars
-		const value 		= self.data.value
-		const mode 			= self.mode
-		const is_inside_tool = self.is_inside_tool
+	// short vars
+		const value				= self.data.value
+		const mode				= self.mode
+		const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// values (inputs)
-		const inputs_value = (value === null) ? [''] : value
-		const value_length = inputs_value.length
+		const inputs_value	= (value && value.length>0) ? value : [{}]
+		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
+			const input_element = get_input_element_edit(i, inputs_value[i], self)
+			inputs_container.appendChild(input_element)
 		}
 
 	// content_data
@@ -226,18 +227,17 @@ const get_content_data_edit = async function(self) {
 * INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element_edit = async (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, self) => {
 
-	const mode 		 		= self.mode
+	const mode				= self.mode
 	const is_inside_tool	= self.is_inside_tool
-	const offset_value		= current_value.offset !== undefined && current_value.offset !== null
+	const offset_value		= current_value.offset!=='undefined' && current_value.offset!==null
 		? current_value.offset
 		: 1
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type : 'li'
 		})
 
 	// url
@@ -270,8 +270,8 @@ const get_input_element_edit = async (i, current_value, inputs_container, self) 
 
 			const iframe = ui.create_dom_element({
 				element_type	: "iframe",
-				class_name 		: 'pdf_viewer_frame',
-				parent 			: li
+				class_name		: 'pdf_viewer_frame',
+				parent			: li
 			})
 			// iframe.setAttribute('allowfullscreen',true)
 
@@ -320,25 +320,25 @@ const get_input_element_edit = async (i, current_value, inputs_container, self) 
 
 	// fields
 		const fields = ui.create_dom_element({
-				element_type 	: 'div',
-				class_name 		: 'fields',
-				parent 		 	: li
+				element_type	: 'div',
+				class_name		: 'fields',
+				parent			: li
 			})
 		// offset label
 			const offset_label = ui.create_dom_element({
-				element_type 	: 'span',
-				class_name 		: 'label',
-				text_node 	 	: 'offset',
-				parent 		 	: fields
+				element_type	: 'span',
+				class_name		: 'label',
+				text_node		: 'offset',
+				parent			: fields
 			})
 		// offset input field
 			const input = ui.create_dom_element({
-				element_type 	: 'input',
-				type 		 	: 'number',
-				class_name 		: '',
-				dataset 	 	: { key : i },
-				value 		 	: offset_value,
-				parent 		 	: fields
+				element_type	: 'input',
+				type			: 'number',
+				class_name		: '',
+				dataset			: { key : i },
+				value			: offset_value,
+				parent			: fields
 			})
 
 	return li
@@ -361,8 +361,8 @@ const get_buttons = (self) => {
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button full_screen',
-			parent 			: fragment
+			class_name		: 'button full_screen',
+			parent			: fragment
 		})
 		button_full_screen.addEventListener("mouseup", (e) =>{
 			self.node[0].classList.toggle('fullscreen')

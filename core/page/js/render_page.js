@@ -9,7 +9,7 @@
 
 
 /**
-* Render_page
+* RENDER_PAGE
 * Manages the component's logic and apperance in client side
 */
 export const render_page = function() {
@@ -24,11 +24,11 @@ export const render_page = function() {
 * Render node for use in section
 * @return DOM node
 */
-render_page.prototype.edit = async function(options={render_level:'full'}) {
+render_page.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	const render_level = options.render_level || 'full'
 
 	// content data
 		const content_data = get_content_data(self)
@@ -82,23 +82,41 @@ const get_content_data = async function(self) {
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
 
-
 	// add all instance rendered nodes
-		const length = self.ar_instances.length;
-		for (let i = 0; i < length; i++) {
+		const ar_instances_length = self.ar_instances.length;
 
-			const current_instance = self.ar_instances[i]
+		// sequential mode
+			// for (let i = 0; i < ar_instances_length; i++) {
 
-			// exclude menu already added
-			if(current_instance.model!=='menu') {
+			// 	const current_instance = self.ar_instances[i]
 
-				const child_item = current_instance.render({
-					render_level : 'full'
-				})
+			// 	// exclude menu already added
+			// 	if(current_instance.model==='menu') continue;
 
-				content_data.appendChild(await child_item)
+			// 	const child_item = current_instance.render({
+			// 		render_level : 'full'
+			// 	})
+
+			// 	content_data.appendChild(await child_item)
+			// }
+
+		// parallel mode
+			const ar_promises = []
+			for (let i = 0; i < ar_instances_length; i++) {
+
+				const current_instance = self.ar_instances[i]
+
+				// exclude menu already added
+				if(current_instance.model==='menu') continue;
+
+				const render_promise = current_instance.render()
+				ar_promises.push(render_promise)
 			}
-		}
+			await Promise.all(ar_promises).then(function(child_items) {
+			  for (let i = 0; i < child_items.length; i++) {
+			  	content_data.appendChild(child_items[i])
+			  }
+			});
 
 	// event page rendered (used by menu..)
 		event_manager.publish('render_page', self)
@@ -120,7 +138,7 @@ const get_content_data = async function(self) {
 */
 const get_menu = async function(self) {
 
-	const menu_instance = self.ar_instances.find( instance => instance.model==='menu')
+	const menu_instance = self.ar_instances.find( instance => instance.model==='menu' )
 	if(menu_instance){
 
 		const menu_item = menu_instance.render({
@@ -131,3 +149,5 @@ const get_menu = async function(self) {
 
 	return null
 };//end get_menu
+
+

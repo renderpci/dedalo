@@ -55,8 +55,11 @@ render_component_info.prototype.list = async function() {
 
 	const self = this
 
+	// widgets load
+		await self.get_widgets()
+
 	// short vars
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -77,7 +80,7 @@ render_component_info.prototype.list = async function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_component_info.prototype.edit = async function(options={render_level:'full'}) {
+render_component_info.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -87,8 +90,11 @@ render_component_info.prototype.edit = async function(options={render_level:'ful
 	// render_level
 		const render_level = options.render_level || 'full'
 
+	// widgets load
+		await self.get_widgets()
+
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -98,8 +104,8 @@ render_component_info.prototype.edit = async function(options={render_level:'ful
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// events
@@ -115,27 +121,24 @@ render_component_info.prototype.edit = async function(options={render_level:'ful
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	// sort vars
-		const mode 			= self.mode
-		const is_inside_tool= self.is_inside_tool
+		const mode				= self.mode
+		const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
-	// widgets
-	 	await self.get_widgets()
-
 	// values (inputs)
-		const widgets 			= self.ar_instances
-		const widgets_length 	= widgets.length
+		const widgets			= self.ar_instances
+		const widgets_length	= widgets.length
 		for (let i = 0; i < widgets_length; i++) {
 			get_input_element_edit(i, widgets[i], inputs_container, self, is_inside_tool)
 		}

@@ -10,13 +10,14 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_FILTER_RECORDS
 * Manage the components logic and appearance in client side
 */
 export const render_component_filter_records = function() {
 
 	return true
 };//end render_component_filter_records
+
 
 
 /**
@@ -85,18 +86,15 @@ render_component_filter_records.prototype.list = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_filter_records.prototype.edit = async function(options={render_level:'full'}) {
+render_component_filter_records.prototype.edit = async function(options) {
 
 	const self = this
 
 	// render_level
-		const render_level 	= options.render_level
-
-	const value		= self.data.value || []
-	const datalist 	= self.data.datalist || []
+		const render_level 	= options.render_level || 'full'
 
 	// content_data
-		const content_data = await render_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -106,8 +104,8 @@ render_component_filter_records.prototype.edit = async function(options={render_
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 		wrapper.classList.add("with_100")
 
@@ -212,49 +210,49 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* RENDER_CONTENT_DATA
-* @return dom object content_data
+* GET_CONTENT_DATA
+* @return DOM node content_data
 */
-const render_content_data = async function(self) {
+const get_content_data = function(self) {
 
-	const value 			= self.data.value
+	const value				= self.data.value
 	const datalist			= self.data.datalist
-	const datalist_length 	= datalist.length
-	const mode 				= self.mode
-	const is_inside_tool 	= self.is_inside_tool
+	const datalist_length	= datalist.length
+	const mode				= self.mode
+	const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 		// header
 			const header_li = ui.create_dom_element({
 				element_type	: 'li',
-				class_name 		: 'header_li',
-				parent 			: inputs_container
+				class_name		: 'header_li',
+				parent			: inputs_container
 			})
 			const header_tipo = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'tipo',
-				text_content 	: get_label['tipo'] || 'Tipo',
-				parent 			: header_li
+				class_name		: 'tipo',
+				text_content	: get_label.tipo || 'Tipo',
+				parent			: header_li
 			})
 			const header_label = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'label',
-				text_content 	: get_label['seccion'] || 'Section',
-				parent 			: header_li
+				class_name		: 'label',
+				text_content	: get_label.seccion || 'Section',
+				parent			: header_li
 			})
 			const header_value = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'value',
-				text_content 	: get_label['valor'] || 'Value',
-				parent 			: header_li
+				class_name		: 'value',
+				text_content	: get_label.valor || 'Value',
+				parent			: header_li
 			})
 
 		// render all items sequentially
@@ -263,7 +261,8 @@ const render_content_data = async function(self) {
 				const datalist_item = datalist[i];
 
 				// input
-					get_input_element(i, datalist_item, inputs_container, self)
+					const input_element = get_input_element(i, datalist_item, self)
+					inputs_container.appendChild(input_element)
 			}
 
 		// realocate rendered dom items
@@ -288,7 +287,7 @@ const render_content_data = async function(self) {
 
 
 	return content_data
-};//end render_content_data
+};//end get_content_data
 
 
 
@@ -320,10 +319,10 @@ const get_buttons = (self) => {
 
 
 /**
-* get_input_element
-* @return dom element li
+* GET_INPUT_ELEMENT
+* @return DOM node li
 */
-const get_input_element = (i, datalist_item, inputs_container, self) => {
+const get_input_element = (i, datalist_item, self) => {
 
 	const datalist_value 	 = datalist_item.value
 	const label 		 	 = datalist_item.label
@@ -337,38 +336,38 @@ const get_input_element = (i, datalist_item, inputs_container, self) => {
 
 	// create li
 		const li = ui.create_dom_element({
-			element_type	: 'li',
-			parent 			: inputs_container
+			element_type	: 'li'
 		})
 
 	// tipo
 		const option_tipo = ui.create_dom_element({
 			element_type	: 'span',
-			inner_html	 	: tipo,
-			parent 			: li
+			inner_html		: tipo,
+			parent			: li
 		})
 
 	// label
 		const option_label = ui.create_dom_element({
 			element_type	: 'span',
-			inner_html	 	: label,
-			parent 			: li
+			inner_html		: label,
+			parent			: li
 		})
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: 'input',
-			type 		 	: 'text',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i, tipo : tipo },
-			value 		 	: input_value_string,
-			placeholder 	: "Comma separated id like 1,2,3",
-			parent 		 	: li
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_value',
+			dataset			: { key : i, tipo : tipo },
+			value			: input_value_string,
+			placeholder		: "Comma separated id like 1,2,3",
+			parent			: li
 		})
 		//input.pattern = "[0-9]"
 		//input.setAttribute("pattern", "[0-9,]{1,1000}")
 
 
-
 	return li
 };//end get_input_element
+
+

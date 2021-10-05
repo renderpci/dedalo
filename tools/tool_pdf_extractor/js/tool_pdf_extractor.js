@@ -13,15 +13,15 @@
 */
 export const tool_pdf_extractor = function () {
 	
-	this.id
-	this.model
-	this.mode
-	this.node
-	this.ar_instances
-	this.status
-	this.events_tokens
-	this.type
-	this.caller
+	this.id				= null
+	this.model			= null
+	this.mode			= null
+	this.node			= null
+	this.ar_instances	= null
+	this.status			= null
+	this.events_tokens	= null
+	this.type			= null
+	this.caller			= null
 
 	return true
 };//end page
@@ -33,9 +33,11 @@ export const tool_pdf_extractor = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_pdf_extractor.prototype.render 		= common.prototype.render
-	tool_pdf_extractor.prototype.destroy 		= common.prototype.destroy
-	tool_pdf_extractor.prototype.edit 			= render_tool_pdf_extractor.prototype.edit
+	tool_pdf_extractor.prototype.render		= common.prototype.render
+	tool_pdf_extractor.prototype.destroy	= common.prototype.destroy
+	tool_pdf_extractor.prototype.edit		= render_tool_pdf_extractor.prototype.edit
+
+
 
 /**
 * INIT
@@ -47,7 +49,7 @@ tool_pdf_extractor.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url = DEDALO_TOOLS_URL + "/tool_pdf_extractor/trigger.tool_pdf_extractor.php"
 
-	// call the generic commom tool init
+	// call the generic common tool init
 		const common_init = tool_common.prototype.init.call(this, options);
 
 	// get the pages offset to set the page tags between pages
@@ -56,9 +58,9 @@ tool_pdf_extractor.prototype.init = async function(options) {
 	// specific init variables
 		self.config = {
 			method		: 'text_engine',
-			page_in 	: false,
-			page_out 	: false,
-			offset 		: offset
+			page_in		: false,
+			page_out	: false,
+			offset		: offset
 		}
 
 	return common_init
@@ -80,6 +82,7 @@ tool_pdf_extractor.prototype.build = async function(autoload=false) {
 };//end build_custom
 
 
+
 /**
 * GET_SYSTEM_INFO
 * Call trigger to obtain useful system info
@@ -95,9 +98,9 @@ tool_pdf_extractor.prototype.get_pdf_data = async function(self) {
 		}
 
 	const caller_component = {
-		component_tipo 	: self.caller.tipo,
-		section_id 		: self.caller.section_id,
-		section_tipo 	: self.caller.section_tipo,
+		component_tipo	: self.caller.tipo,
+		section_id		: self.caller.section_id,
+		section_tipo	: self.caller.section_tipo,
 	}
 	// trigger call
 		const trigger_response = await fetch(
@@ -111,9 +114,9 @@ tool_pdf_extractor.prototype.get_pdf_data = async function(self) {
 				redirect	: 'follow',
 				referrer	: 'no-referrer',
 				body		: JSON.stringify({
-					mode 				: 'get_pdf_data',
-					extractor_config 	: self.config,
-					component 			: caller_component
+					mode				: 'get_pdf_data',
+					extractor_config	: self.config,
+					component			: caller_component
 				})
 			})
 			.then(handle_errors)
@@ -129,6 +132,7 @@ tool_pdf_extractor.prototype.get_pdf_data = async function(self) {
 
 	return trigger_response.result
 };//end get_pdf_data
+
 
 
 /**
@@ -151,7 +155,7 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 	switch (method) {
 		case 'text_engine':
 			// split by the page mark invisible text of return character
-			const pages 		= original_text.split("");
+			const pages 		= original_text.split("")
 			// total pages ar the length of the split -1 because the counter use 0 to the page like cover page or blank pages before the text
 			const total_pages 	= pages.length-1
 			for (let i = 0; i < total_pages; i++) {
@@ -188,3 +192,5 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 
 	 return final_text
 };//end process_pdf_data
+
+
