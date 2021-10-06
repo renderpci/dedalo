@@ -65,7 +65,6 @@ body.mce-content-body .hilite { background-color: #d4de6c}
 	display: block; 
 	background-image: url('../../themes/default/spinner.gif'); 
 	background-repeat: no-repeat;
-
 }
 
 
@@ -231,5 +230,21 @@ h2 {
 	}*/
 
 	
+// [contentEditable=true]:empty:not(:focus):before {
+// 	content: attr(data-fallback_value)
+// }
 
+
+	.placeholder_div {
+		position: absolute;
+		top: 0;
+		left: 0;
+		padding: 10px;
+		color: #7f7f7f;
+		font-style: italic
+	}
+
+	.hide {
+		display: none !important;
+	}
 

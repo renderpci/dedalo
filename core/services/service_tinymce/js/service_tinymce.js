@@ -274,12 +274,57 @@ export const service_tinymce = function() {
 				// show dd-tiny after resize
 				self.dd_tinny.style.opacity = 1
 
+				// placeholder. (!) See mce_editor_default.less 'contentEditable'
+					const tinyMceData = editor.getContent({ format: 'raw' });
+					if(tinyMceData.indexOf('<br data-mce-bogus="1">')>= 0 || tinyMceData==='') {
+
+						const editor_div = editor.iframeElement.contentWindow.document.body
+
+						// remove possible bogus code
+							editor.setContent('', { format: 'raw' });
+							editor_div.innerHTML = ''
+
+						// fallback_value
+							const fallback_value = self.caller.data.fallback_value
+
+						if (fallback_value) {
+
+							// placeholder_div. create a new div an insert before editor div
+								const placeholder_div = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'placeholder_div',
+									inner_html		: fallback_value
+								})
+								editor_div.parentNode.insertBefore(placeholder_div, editor_div);
+
+							// focus event. Hide placeholder_div on focus editor
+								editor_div.addEventListener("focus", function(e){
+										console.log("focus:",e, placeholder_div);
+									placeholder_div.classList.add("hide")
+								})
+
+							// blur event. If editor content is empty, show the placeholder_div again
+								editor_div.addEventListener("blur", function(e){
+									if (editor.getContent({ format: 'raw' })==='') {
+										placeholder_div.classList.remove("hide")
+									}
+								})
+						}
+						// var str = htmlEntities("<i>"+fallback_value+"</i>");
+						// editor.iframeElement.contentWindow.document.styleSheets[0].addRule('body:before','content: "'+str+'";');
+					}
+
 				// debug
 					// console.log("container_height:",container_height, self.dd_tinny);
 					// console.log("toolbar_height:",toolbar_height);
 					// console.log("statusbar_height:",statusbar_height);
 					// console.log("resizeTo h:",h);
 			})
+
+		// render
+			// editor.on('PostRender', function(evt) {
+			// 	// console.log('--------------- After render: ' + editor.id);
+			// })
 
 
 		return true
