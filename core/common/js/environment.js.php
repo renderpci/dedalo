@@ -1,6 +1,6 @@
 <?php
 # CONFIG
-include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
+include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 
 // $page_globals = new stdClass();
 	// 	# version
