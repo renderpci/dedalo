@@ -289,11 +289,14 @@ export const service_tinymce = function() {
 
 						if (fallback_value) {
 
+							// const parsed_value = tr.add_tag_img_on_the_fly(fallback_value)
+							const parsed_value = self.caller.tags_to_html(fallback_value)
+
 							// placeholder_div. create a new div an insert before editor div
 								const placeholder_div = ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'placeholder_div',
-									inner_html		: fallback_value
+									inner_html		: parsed_value
 								})
 								editor_div.parentNode.insertBefore(placeholder_div, editor_div);
 
@@ -310,9 +313,7 @@ export const service_tinymce = function() {
 									}
 								})
 						}
-						// var str = htmlEntities("<i>"+fallback_value+"</i>");
-						// editor.iframeElement.contentWindow.document.styleSheets[0].addRule('body:before','content: "'+str+'";');
-					}
+					}//end if(tinyMceData.indexOf('<br data-mce-bogus="1">')>= 0 || tinyMceData==='')
 
 				// debug
 					// console.log("container_height:",container_height, self.dd_tinny);
