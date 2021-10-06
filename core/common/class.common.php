@@ -2660,9 +2660,34 @@ abstract class common {
 				return $resolved_request_properties_parsed[$resolved_key];
 			}
 
-		$RecordObj_dd	= new RecordObj_dd($tipo);
-		$properties		= $RecordObj_dd->get_properties();
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+		// get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
+		// by default or edit mode get the properties of the term itself.
+			switch ($mode) {
+				case 'list':
+				case 'portal_list':
+					# in the case that section_list is defined
+					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+					if(isset($ar_terms[0])) {
+						# Use found related terms as new list
+						$current_term	= $ar_terms[0];
+						$RecordObj_dd	= new RecordObj_dd($current_term);
+						$properties		= $RecordObj_dd->get_properties();
+					}
+					else{
+						// sometime the portals don't has section_list defined, in these cases get the properties of the current tipo
+						$RecordObj_dd	= new RecordObj_dd($tipo);
+						$properties		= $RecordObj_dd->get_properties();
+					}
+					break;
+
+				default:
+					// edit mode or components without section_list defined (other than portals or sections)
+					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$properties		= $RecordObj_dd->get_properties();
+					break;
+			}
 
 		// pagination defaults. Note that limit defaults are set on element construction based on properties
 			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;			
