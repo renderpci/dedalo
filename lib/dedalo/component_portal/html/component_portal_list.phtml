@@ -81,14 +81,9 @@
 								
 								#
 								# COMPONENTS COLUMNS
-								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
-									#dump($modelo_name, ' modelo_name ++ '.to_string($column_tipo));
-								
+								$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+								$column_value	= isset($current_row->$column_tipo) ? $current_row->$column_tipo : '';
 
-								/**/
-								$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : '';
-									#dump($column_value, ' column_value ++ '.to_string($rows_data->strQuery));
-								#echo $column_value;
 								$modo = $this->propiedades->elements_list_mode->$column_tipo->mode ?? 'list';
 								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
 																				 $column_tipo, // current component tipo
@@ -100,16 +95,16 @@
 																				 $tipo
 																				);
 								
-								# DIV COLUMN	
+								# DIV COLUMN
 								# aditional td css selectors
-								$td_css_selector = 'column_'.$modelo_name.' column_'.$column_tipo;							
+								$td_css_selector = 'column_'.$modelo_name.' column_'.$column_tipo;
 								$table .= "<div class=\"$td_css_selector\">";
 
-								if($modo = 'edit_in_list'){
-									$table .= "<span class=\"label\">";
-										$table .= $column_label;
-									$table .= '</span>';
-								}
+								// add label in edit_in_list mode
+									if($modo==='edit_in_list'){
+										$table .= '<span class="label">'.$column_label.'</span>';
+									}
+
 								if (is_string($value)) {
 									$table .= $value;
 								}else{
@@ -120,7 +115,7 @@
 							}//end foreach ($ar_columns as $column_tipo => $column_label) {
 							$table .= '</div>';	// <!-- /portal_item -->
 					
-					$row_number++;						
+					$row_number++;
 					}//end foreach dato
 
 					$table .= '</div>'; // <!-- /portal_div -->
@@ -130,8 +125,9 @@
 				
 				#$html_content .= "</div>";
 				break;
+	}//end switch(true)
 
-	}
+
 
 	if(SHOW_DEBUG && !empty($rows_data->result)) {
 		#dump($this, ' this 1 ');
@@ -167,8 +163,9 @@
 		#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 			
 		$html_content .= $html_info;
-	}#end if(SHOW_DEBUG)
+	}//end if(SHOW_DEBUG)
 	
 	
 	print $html_content;
+
 
