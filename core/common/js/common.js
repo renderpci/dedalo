@@ -694,7 +694,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 		const ddo_length = full_ddo_map.length
 		for (let i = 0; i < ddo_length; i++) {
 			const current_ddo = full_ddo_map[i]
-			// check if the current ddo has children asociated, it's necesary identify the last ddo in the path chain, the last ddo create the column
+			// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo create the column
 			// all parents has the link and data to get the data of the last ddo.
 			// interview -> people to study -> name
 			// «name» will be the column, «interview» and «people under study» has the locator to get the data.
@@ -719,7 +719,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 /**
 * GET_SUB_DDO_MAP
-* @param datum self instance_caller datum (section, component_portal) with all contex and data of the caller. In the recursion
+* @param datum self instance_caller datum (section, component_portal) with all context and data of the caller. In the recursion
 * @param caller_tipo tipo from section or portal that call to get the sub_ddo_map
 * @param ddo_map the requested tipos
 * @param sub_ddo used for create the path for the component, path is used to get the full path
@@ -787,17 +787,18 @@ const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
 
 			// add current_ddo
 				ar_ddo.push(current_ddo)
+
 			
 			// context
 				const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
 
 			// no context case. When context is calculated as subcontext, is associated to data. Therefore, sometimes show->ddo contains more items than 
 			// the calculated in context (empty portals for example). This is not an error really
-				//if (!current_context) {
-					// console.warn("Skip context not found for current ddo:", current_ddo);
-					// console.warn("datum.context:", datum.context);
-					// continue;
-				//}
+				// if (!current_context) {
+				// 	console.warn("Skip context not found for current ddo:", current_ddo);
+				// 	console.warn("datum.context:", datum.context);
+				// 	continue;
+				// }
 
 			// rqo_config
 				const rqo_config	= (current_context && current_context.request_config)
