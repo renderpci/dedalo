@@ -2444,6 +2444,9 @@
 		Removed temporal alert in tool_structuration
 		03-10-2021
 		Fixed component_geolocation relation bug in compoent_text_area where model was calculated from model tipo instead tipo (old way)
+		06-10-2021
+		Fixed components_from_section list exclude error in tool_export. Now, custom ar_components_exclude can be passed to the method to overwrite default list
+		Fixed issue with ontology relations model tipo on assign by user
 
 
 	[/HISTORY]
@@ -2469,13 +2472,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2k';
+	$DEDALO_VERSION = '5.8.2l';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-10-2021');
+	define('DEDALO_BUILD'	, '06-10-2021');
 
 
 	/*
