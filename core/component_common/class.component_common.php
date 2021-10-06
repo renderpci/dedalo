@@ -2096,9 +2096,9 @@ abstract class component_common extends common {
 				: [null];
 		
 		$dato_fb = [];
-		// fallback if empty
+		// fallback if empty (or is annoying mce-bogus code from tinyMCE editor)
 		foreach ($dato as $key => $value) {
-			if(empty($value)){
+			if(empty($value) || $value==='<br data-mce-bogus="1">'){
 				
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 					if ($lang!==$main_lang) {
