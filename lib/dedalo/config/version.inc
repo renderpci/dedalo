@@ -2447,6 +2447,7 @@
 		06-10-2021
 		Fixed components_from_section list exclude error in tool_export. Now, custom ar_components_exclude can be passed to the method to overwrite default list
 		Fixed issue with ontology relations model tipo on assign by user
+		Fixed error in component_portal on add label in edit_in_list mode
 
 
 	[/HISTORY]
@@ -2472,7 +2473,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2l';
+	$DEDALO_VERSION = '5.8.2n';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
