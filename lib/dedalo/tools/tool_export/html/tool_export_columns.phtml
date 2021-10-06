@@ -42,9 +42,14 @@ $html='';
 																					 DEDALO_DATA_NOLAN,
 																					 $section_tipo);
 								$portal_target_section = $component_portal->get_ar_target_section_tipo()[0];
-									#dump($portal_target_section, ' portal_target_section ++ '.to_string());
-								$components_from_section = search_development2::get_components_from_section([$portal_target_section], [], $ar_tipo_exclude_elements=false);
-									#dump($components_from_section, ' components_from_section ++ '.to_string());
+
+								// components_from_section. Uses same method than search
+									$ar_components_exclude = [
+										'component_password',
+										'component_security_administrator',
+										'section_tab'
+									];
+									$components_from_section = search_development2::get_components_from_section([$portal_target_section], [], $ar_tipo_exclude_elements=false, $ar_components_exclude);
 
 								$list = array_filter($components_from_section->result, function($item) use($exclude_models){
 									return in_array($item, $exclude_models) ? null : $item;
