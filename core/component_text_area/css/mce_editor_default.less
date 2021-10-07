@@ -1,6 +1,6 @@
 
 
-body.mce-content-body {	
+body {	// .mce-content-body
 	/*
 	font-family: 'Open Sans',verdana,sans-serif;//font-style:normal;font-weight:400;font-size:14px;color:#666;
 	background-color:#333333;	
@@ -9,21 +9,34 @@ body.mce-content-body {
 	font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 	//font-size: 12px;
 	//line-height: 15px;
-	font-size: 13px;
+	// font-size: 13px;
 	//line-height: 1.1em;
 	//font-family: "san_francisco";
+
+	transition: box-shadow 0.3s linear;
+	&:focus {
+		outline-offset: 0;
+		outline: 1px solid #3b87fd;
+		box-shadow: 0 0 10px #3b87fd;
 	}
-	body.mce-content-body img {
+
+	img {
 		vertical-align:text-bottom;
 		position:relative;
-		top:0px;
+		top:0;
 		opacity: 0.85;
 		cursor: pointer;
-		}
-		body.mce-content-body img:hover { 
-			opacity: 1;	
+
+		&:hover {
+			opacity: 1;
 			box-shadow: 0 0 8px #dbdbdb;
-		} 
+		}
+	}
+}//end body.mce-content-body
+
+
+
+
 
 /*
 .mceContentBody {
