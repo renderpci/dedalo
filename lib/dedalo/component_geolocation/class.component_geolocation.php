@@ -242,5 +242,59 @@ class component_geolocation extends component_common {
 
 
 
-}
-?>
+	/**
+	* GET_DIFFUSION_VALUE_AS_GEOJSON
+	* Sample
+	* 	[
+	*      {
+	*        "text": "",
+	*        "layer_id": 1,
+	*        "layer_data": [
+	*          {
+	*            "lat": 42.41411,
+	*            "lon": 2.87285,
+	*            "type": "Point"
+	*          }
+	*        ]
+	*      }
+	* 	]
+	* @see ontology publication use in mdcat4091
+	* @see diffusion_sql::build_geolocation_data_geojson
+	* @return JSON string $value
+	*/
+	public function get_diffusion_value_as_geojson() {
+
+		$dato	= $this->get_dato(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
+		$lat	= $dato->lat; // string as "41.56236346" (use dot notation to preserve JSON integrity)
+		$lon	= $dato->lon; // string as "2.01215141" (use dot notation to preserve JSON integrity)
+
+		$ar_value_string = trim('
+			[
+			  {
+				"text": "",
+				"layer_id": 1,
+				"layer_data": [
+			      {
+			        "lat": '.$lat.',
+			        "lon": '.$lon.',
+			        "type": "Point"
+			      }
+			    ]
+			  }
+			]
+		');
+
+		$ar_value = json_decode($ar_value_string);
+
+		// value . Encode as cleaned text to publish
+			$value = json_encode($ar_value);
+
+
+		return $value;
+	}//end get_diffusion_value_as_geojson
+
+
+
+}//end class component_geolocation
+
+
