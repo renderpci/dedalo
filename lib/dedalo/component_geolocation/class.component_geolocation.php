@@ -178,7 +178,7 @@ class component_geolocation extends component_common {
 		]
 	* }
 	*
-	* @return 
+	* @return string $result
 	*/
 	public static function build_geolocation_tag_string($tag_id, $lon, $lat) {
 		/*

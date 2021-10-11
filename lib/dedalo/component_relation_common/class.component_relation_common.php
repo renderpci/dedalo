@@ -1187,6 +1187,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_DIFFUSION_RESOLVE_VALUE
+	* Alias of static diffusion_sql::resolve_value
 	* @return 
 	*/
 	public function get_diffusion_resolve_value($option_obj=null) {
