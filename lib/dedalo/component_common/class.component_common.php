@@ -4738,5 +4738,59 @@ abstract class component_common extends common {
 
 
 
-}//end class
-?>
+	/**
+	* GET_DIFFUSION_RESOLVE_VALUE
+	* Note that component_relation_common implements a DIFFERENT version of current method.
+	* This method is only usable for component_text_area and similar non relation components
+	* @see mdcat4091 for a use example (!)
+	* Added 10-10-2021 (Paco) to enable process build_geolocation_data_geojson on text area publication
+	* @param object $option_obj (from 'propiedades')
+	* @return string $value
+	*/
+	public function get_diffusion_resolve_value($option_obj=null) {
+
+		// example $option_obj
+			// {
+			//		"process_dato": "diffusion_sql::build_geolocation_data_geojson"
+			//		"process_dato_arguments": {
+			//			"target_component_tipo": "numisdata698",
+			//			"component_method": "get_diffusion_value"
+			//		},
+			//		"lang" : "lg-spa"
+			// }
+
+		// process_dato
+			if (isset($option_obj->process_dato)) {
+
+				// method to call
+					$class_name		= explode('::', $option_obj->process_dato)[0];
+					$method_name	= explode('::', $option_obj->process_dato)[01];
+
+				// custom_arguments
+					$dato	= $this->get_dato();
+					$lang	= $option_obj->lang; // $this->lang
+
+					// component. add options component info for fallbacks etc.
+						$option_obj->component = $this;
+
+					$custom_arguments = [
+						'options'	=> $option_obj,
+						'dato'		=> $dato
+					];
+
+				$value = call_user_func_array([$class_name, $method_name], $custom_arguments);
+
+			}else{
+
+				$value = '';
+			}
+
+
+		return $value;
+	}//end get_diffusion_resolve_value
+
+
+
+}//end class component_common
+
+
