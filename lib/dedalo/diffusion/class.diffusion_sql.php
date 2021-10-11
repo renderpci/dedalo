@@ -3793,20 +3793,52 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* BUILD_GEOLOCATION_DATA_GEOJSON
-	* @return string
+	* @param object $options
+	* @param object $dato
+	* @see ontology publication use in mdcat4091
+	* @return string $response
 	*/
 	public static function build_geolocation_data_geojson($options, $dato) {
 
-		$request_options = new stdClass();
-			$request_options->raw_text = $dato;
+		// options
+			$raw_text				= $options->raw_text ?? $dato; // maintain ->raw_text for compatibility only
+			$process_dato_arguments	= $options->process_dato_arguments ?? null;
+			$component				= $options->component ?? null;
 
-		$options = new stdClass();
-			$options->raw_text			= false;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// geolocation_data
+			$ar_elements = component_text_area::build_geolocation_data_geojson($raw_text); // return an array
+			$response 	 = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
 
+		// fallback optional
+			if (empty($ar_elements)
+				&& isset($process_dato_arguments)
+				&& isset($process_dato_arguments->fallback)
+				) {
 
-		$ar_elements = component_text_area::build_geolocation_data_geojson($options->raw_text);
-		$response 	 = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+				$fallback_tipo		= $process_dato_arguments->fallback->tipo;
+				$fallback_method	= $process_dato_arguments->fallback->method;
+				// lang
+				$RecordObj_dd		= new RecordObj_dd($fallback_tipo);
+				$lang				= $RecordObj_dd->get_traducible()==='si' ? $_options->lang : DEDALO_DATA_NOLAN;
+
+				$section_id			= $component->get_section_id();
+				$section_tipo		= $component->get_section_tipo();
+				$model				= RecordObj_dd::get_modelo_name_by_tipo($fallback_tipo,true);
+
+				$fallback_component = component_common::get_instance($model,
+																	 $fallback_tipo,
+																	 $section_id,
+																	 'list',
+																	 $lang,
+																	 $section_tipo);
+				if (method_exists($fallback_component,$fallback_method)) {
+
+					$response = $fallback_component->{$fallback_method}();
+
+				}else{
+					debug_log(__METHOD__." ERROR: Method $fallback_method DO NOT EXISTS IN COMPONENT '$fallback_tipo' ".to_string(), logger::ERROR);
+				}
+			}
 
 		return (string)$response; // json_encoded object
 	}//end build_geolocation_data_geojson
