@@ -2448,6 +2448,10 @@
 		Fixed components_from_section list exclude error in tool_export. Now, custom ar_components_exclude can be passed to the method to overwrite default list
 		Fixed issue with ontology relations model tipo on assign by user
 		Fixed error in component_portal on add label in edit_in_list mode
+		11-10-2021
+		Added common component method 'get_diffusion_resolve_value' for use it in non relation components like text_area
+		Added component_geolocation method 'get_diffusion_value_as_geojson' to allow generate standard GEOJOSN format as output like component_text_area (used for fallback values in publication)
+		Added diffusion_sql::build_geolocation_data_geojson options to allow resolve fallback values
 
 
 	[/HISTORY]
@@ -2473,13 +2477,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2n';
+	$DEDALO_VERSION = '5.8.2o';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-10-2021');
+	define('DEDALO_BUILD'	, '11-10-2021');
 
 
 	/*
