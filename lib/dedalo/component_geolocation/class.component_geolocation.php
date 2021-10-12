@@ -245,44 +245,66 @@ class component_geolocation extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE_AS_GEOJSON
 	* Sample
-	* 	[
-	*      {
-	*        "text": "",
-	*        "layer_id": 1,
-	*        "layer_data": [
+	* [
+	*    {
+	*      "layer_id": 1,
+	*      "text": "...",
+	*      "layer_data": {
+	*        "type": "FeatureCollection",
+	*        "features": [
 	*          {
-	*            "lat": 42.41411,
-	*            "lon": 2.87285,
-	*            "type": "Point"
+	*            "type": "Feature",
+	*            "properties": {},
+	*            "geometry": {
+	*              "type": "Point",
+	*              "coordinates": [
+	*                2.011618, // longitude
+	*                41.562546 // latitude
+	*              ]
+	*            }
 	*          }
 	*        ]
 	*      }
-	* 	]
+	*    }
+	* ]
 	* @see ontology publication use in mdcat4091
 	* @see diffusion_sql::build_geolocation_data_geojson
 	* @return JSON string $value
 	*/
 	public function get_diffusion_value_as_geojson() {
 
-		$dato	= $this->get_dato(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
-		$lat	= $dato->lat; // string as "41.56236346" (use dot notation to preserve JSON integrity)
-		$lon	= $dato->lon; // string as "2.01215141" (use dot notation to preserve JSON integrity)
+		$dato = $this->get_dato(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
 
-		$ar_value_string = trim('
+		if (empty($dato)) {
+			return null;
+		}
+
+		// coordinates. Converts float number to 16 decimals number using '.' separator
+			$lon = number_format($dato->lon, 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)
+			$lat = number_format($dato->lat, 16, '.', ''); // string as "41.562363467527" (use dot notation to preserve JSON integrity)
+
+		// geojson
+			$ar_value_string = trim('
 			[
 			  {
-				"text": "",
-				"layer_id": 1,
-				"layer_data": [
-			      {
-			        "lat": '.$lat.',
-			        "lon": '.$lon.',
-			        "type": "Point"
+			      "layer_id": 1,
+			      "text": "",
+			      "layer_data": {
+			        "type": "FeatureCollection",
+			        "features": [
+			          {
+			            "type": "Feature",
+			            "properties": {},
+			            "geometry": {
+			              "type": "Point",
+			              "coordinates": ['.$lon.','.$lat.']
+			            }
+			          }
+			        ]
 			      }
-			    ]
 			  }
 			]
-		');
+			');
 
 		$ar_value = json_decode($ar_value_string);
 
