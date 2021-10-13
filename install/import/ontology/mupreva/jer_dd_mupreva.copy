@@ -18,7 +18,7 @@ mupreva2356	mupreva2352	dd91	no	si	si	3	mupreva	no	[{"dd9":"mupreva2354"}]	\N	\N
 mupreva102	mupreva2261	dd183	no	si	si	5	mupreva	no	\N		\N
 mupreva2593	mupreva2437	dd8	no	si	si	2	mupreva	no	\N	\N	\N
 mupreva2592	mupreva2579	dd1233	no	si	si	13	mupreva	si	[{"dd57":"mupreva2575"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}	\N
-mupreva2647	mupreva2635	dd1231	no	si	si	30	mupreva	si	[{"dd592":"mupreva2635"}]	{\r\n  "data_to_be_used": "dato"\r\n}	\N
+mupreva2647	mupreva2635	dd1231	no	si	si	23	mupreva	si	[{"dd592":"mupreva2635"}]	{\r\n  "data_to_be_used": "dato"\r\n}	\N
 mupreva2600	mupreva2579	dd1235	no	si	si	6	mupreva	si	[{"dd530":"mupreva2599"}]	{"varchar":500}	\N
 mupreva2594	mupreva2593	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva2608"},{"dd9":"mupreva205"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd749":"mupreva212"}]	{\r\n  "portal_link_open": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n  }\r\n}	\N
 mupreva2349	mupreva239	dd11	no	si	si	15	mupreva	no	[{"dd6":"mupreva2364"},{"dd9":"mupreva2366"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n         "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -46,18 +46,23 @@ mupreva2403	mupreva1439	dd9	no	si	si	12	mupreva	no	\N	\N	\N
 mupreva71	mupreva2261	dd8	no	si	si	1	mupreva	no	\N		\N
 mupreva2395	mupreva474	dd9	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2362	mupreva2358	dd91	no	si	si	3	mupreva	no	[{"dd9":"mupreva2360"}]	\N	\N
+mupreva1408	dd69	dd4	no	si	si	1	mupreva	no	\N		\N
 mupreva2390	mupreva2385	dd247	no	si	si	5	mupreva	no	\N	\N	\N
 mupreva2363	mupreva2358	dd177	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2438	mupreva2433	dd6	no	si	si	5	mupreva	no	\N	\N	\N
 mupreva2391	mupreva2384	dd91	no	si	si	2	mupreva	no	[{"dd11":"mupreva2387"},{"dd43":"mupreva2388"},{"dd11":"mupreva2389"}]	\N	\N
+mupreva2752	mupreva2635	dd581	no	si	si	6	mupreva	no	\N	\N	\N
 mupreva2364	mupreva2351	dd6	no	si	si	6	mupreva	no	[{"dd626":"dd22"}]	\N	\N
 mupreva2365	mupreva2364	dd8	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva222	mupreva221	dd8	no	si	si	1	mupreva	no	\N		\N
+mupreva2618	mupreva2578	\N	no	si	si	1	mupreva	\N	\N	\N	\N
 mupreva2439	mupreva2434	dd8	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva2753	mupreva473	dd581	no	si	si	8	mupreva	no	\N	\N	\N
 mupreva2366	mupreva2365	dd9	no	si	si	1	mupreva	si	\N	\N	\N
+mupreva2754	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2367	mupreva2364	dd247	no	si	si	2	mupreva	no	\N	\N	\N
 mupreva70	mupreva1408	dd6	no	si	si	3	mupreva	no	[{"dd626":"dd82"},{"dd6":"mupreva2261"}]		\N
+mupreva2755	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva1426	mupreva1425	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva473"},{"dd1747":"mupreva1225"},{"dd57":"mupreva731"},{"dd9":"mupreva476"},{"dd635":"mupreva475"},{"dd530":"mupreva491"},{"dd9":"mupreva478"},{"dd592":"mupreva481"}]		\N
 mupreva2603	mupreva2564	dd8	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva1533	mupreva1556	dd635	no	si	si	3	mupreva	no	\N	{\r\n  "date_mode": "range",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -74,9 +79,6 @@ mupreva2214	mupreva2198	dd248	no	si	si	10	mupreva	si	\N		\N
 mupreva946	mupreva849	dd1231	no	si	si	3	mupreva	si	[{"dd9":"mupreva204"}]		\N
 mupreva1021	mupreva851	dd1231	no	si	si	12	mupreva	si	[{"dd635":"mupreva219"}]		\N
 mupreva1217	mupreva614	dd318	no	si	si	4	mupreva	si	\N		\N
-mupreva1408	dd69	dd4	no	si	si	1	mupreva	no	\N		\N
-mupreva2755	mupreva2635	dd581	no	si	si	12	mupreva	no	\N	\N	\N
-mupreva2752	mupreva2635	dd581	no	si	si	26	mupreva	no	\N	\N	\N
 mupreva602	mupreva71	dd592	no	si	si	14	mupreva	no	[{"dd6":"mupreva159"},{"dd57":"mupreva643"},{"dd530":"mupreva644"},{"dd635":"mupreva656"},{"dd9":"mupreva653"},{"dd749":"mupreva660"}]		\N
 mupreva103	mupreva71	dd247	no	si	si	20	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "33%",\r\n        "height": "6em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "3em"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2169	mupreva71	dd43	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -331,6 +333,7 @@ mupreva2134	mupreva1250	dd530	no	si	si	10	mupreva	no	[{"dd6":"mupreva690"},{"dd9
 mupreva2088	mupreva368	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva373"},{"dd530":"mupreva372"},{"dd57":"mupreva370"},{"dd530":"mupreva371"},{"dd10":"mupreva375"},{"dd318":"mupreva374"}]		\N
 mupreva474	mupreva473	dd8	no	si	si	1	mupreva	no	\N		\N
 mupreva480	mupreva473	dd8	no	si	si	3	mupreva	no	\N		\N
+mupreva509	mupreva510	dd10	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva952	mupreva848	dd1231	no	si	si	25	mupreva	si	[{"dd592":"mupreva193"}]		\N
 mupreva957	mupreva849	dd1231	no	si	si	7	mupreva	si	[{"dd592":"mupreva208"}]		\N
 mupreva811	mupreva809	dd1231	no	si	si	2	mupreva	si	[{"dd530":"mupreva629"}]	{\r\n"table":"publicaciones"\r\n}	\N
@@ -342,7 +345,6 @@ mupreva1026	mupreva852	dd1231	no	si	si	2	mupreva	si	[{"dd635":"mupreva203"}]		\N
 mupreva1065	mupreva854	dd1231	no	si	si	11	mupreva	si	[{"dd635":"mupreva694"}]		\N
 mupreva718	mupreva710	dd8	no	si	si	2	mupreva	no	\N		\N
 mupreva1066	mupreva854	dd1231	no	si	si	12	mupreva	si	[{"dd635":"mupreva755"}]		\N
-mupreva509	mupreva510	dd10	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva896	mupreva514	dd91	no	si	si	1	mupreva	si	[{"dd6":"mupreva268"},{"dd749":"mupreva212"}]		\N
 mupreva889	mupreva802	dd1231	no	si	si	16	mupreva	si	[{"dd592":"mupreva606"}]		\N
 mupreva891	mupreva802	dd1231	no	si	si	19	mupreva	si	[{"dd592":"mupreva689"}]		\N
@@ -531,6 +533,7 @@ mupreva1299	mupreva1297	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62
 mupreva283	mupreva278	dd177	no	si	si	4	mupreva	no	\N		\N
 mupreva63	mupreva59	dd904	no	si	si	6	mupreva	no	\N		\N
 mupreva2097	mupreva863	dd1231	no	si	si	26	mupreva	no	[{"dd592":"mupreva1405"}]	{\r\n"table":"publicos"\r\n}	\N
+mupreva1004	mupreva1007	dd592	no	si	si	4	mupreva	no	[{"dd6":"mupreva500"},{"dd57":"mupreva502"},{"dd9":"mupreva505"},{"dd530":"mupreva506"},{"dd10":"mupreva508"},{"dd592":"mupreva514"}]	{}	\N
 mupreva2228	mupreva2224	dd248	no	si	si	3	mupreva	si	\N		\N
 mupreva1	mupreva492	dd6	no	si	si	2	mupreva	no	\N		\N
 mupreva595	mupreva583	dd592	no	si	si	6	mupreva	no	[{"dd6":"mupreva770"},{"dd57":"mupreva774"},{"dd9":"mupreva796"},{"dd10":"mupreva797"},{"dd592":"mupreva790"}]		\N
@@ -570,9 +573,9 @@ mupreva925	mupreva809	dd1231	no	si	si	38	mupreva	si	[{"dd592":"mupreva639"}]	{\r
 mupreva926	mupreva809	dd1231	no	si	si	39	mupreva	si	[{"dd592":"mupreva639"}]		\N
 mupreva927	mupreva809	dd1231	no	si	si	41	mupreva	si	[{"dd592":"mupreva640"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva696	mupreva691	dd9	no	si	si	5	mupreva	si	\N		\N
-mupreva1430	mupreva1410	dd177	no	si	si	5	mupreva	no	\N		\N
+mupreva1430	mupreva1410	dd177	no	si	si	7	mupreva	no	\N		\N
 mupreva450	mupreva440	dd183	no	si	si	5	mupreva	no	\N		\N
-mupreva1429	mupreva1410	dd91	no	si	si	4	mupreva	no	[{"dd57":"mupreva1412"},{"dd9":"mupreva1413"},{"dd530":"mupreva1414"},{"dd635":"mupreva1416"},{"dd635":"mupreva1417"},{"dd318":"mupreva1423"},{"dd592":"mupreva1418"}]		\N
+mupreva1429	mupreva1410	dd91	no	si	si	6	mupreva	no	[{"dd57":"mupreva1412"},{"dd9":"mupreva1413"},{"dd530":"mupreva1414"},{"dd635":"mupreva1416"},{"dd635":"mupreva1417"},{"dd318":"mupreva1423"},{"dd592":"mupreva1418"}]		\N
 mupreva1200	mupreva1199	dd1233	no	si	si	1	mupreva	si	[{"dd57":"mupreva669"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "si",\r\n        "2": "no"\r\n    }\r\n}	\N
 mupreva1201	mupreva1199	dd1231	no	si	si	2	mupreva	si	[{"dd634":"mupreva670"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1202	mupreva1199	dd1231	no	si	si	3	mupreva	si	[{"dd634":"mupreva670"}]		\N
@@ -605,7 +608,7 @@ mupreva56	mupreva43	dd183	no	si	si	5	mupreva	no	\N		\N
 mupreva55	mupreva43	dd177	no	si	si	4	mupreva	no	\N		\N
 mupreva1195	mupreva1181	dd1231	no	si	si	13	mupreva	si	[{"dd592":"mupreva728"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1198	mupreva1181	dd1231	no	si	si	16	mupreva	si	[{"dd592":"mupreva729"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
-mupreva1420	mupreva1411	dd247	no	si	si	12	mupreva	no	\N	{"dato_default":{"1":"2"}}	\N
+mupreva1420	mupreva2809	dd247	no	si	si	1	mupreva	no	\N	{"dato_default":{"1":"2"}}	\N
 mupreva1211	mupreva1199	dd1231	no	si	si	12	mupreva	si	[{"dd592":"mupreva748"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1214	mupreva1199	dd1231	no	si	si	15	mupreva	si	[{"dd592":"mupreva749"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva831	mupreva821	dd1233	no	si	si	1	mupreva	si	[{"dd57":"mupreva234"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "si",\r\n        "2": "no"\r\n    }\r\n}	\N
@@ -640,7 +643,7 @@ mupreva1753	mupreva1752	dd1233	no	si	si	1	mupreva	si	[{"dd530":"mupreva1412"}]	{
 mupreva1884	mupreva861	dd1231	no	si	si	4	mupreva	si	[{"dd530":"mupreva570"}]	{\r\n"table":"digital"\r\n}	\N
 mupreva1754	mupreva1752	dd1231	no	si	si	2	mupreva	si	[{"dd530":"mupreva1413"}]		\N
 mupreva1265	mupreva1261	dd530	no	si	si	6	mupreva	no	[{"dd6":"mupreva417"},{"dd9":"mupreva425"}]	\N	\N
-mupreva1431	mupreva1410	dd183	no	si	si	6	mupreva	no	\N		\N
+mupreva1431	mupreva1410	dd183	no	si	si	8	mupreva	no	\N		\N
 mupreva1445	mupreva1439	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva432"},{"dd9":"mupreva435"}]		\N
 mupreva1447	mupreva1446	dd8	no	si	si	1	mupreva	no	\N		\N
 mupreva983	mupreva850	dd1231	no	si	si	3	mupreva	si	[{"dd592":"mupreva644"}]		\N
@@ -666,7 +669,7 @@ mupreva368	mupreva300	dd6	no	si	si	10	mupreva	no	[{"dd626":"dd22"}]		\N
 mupreva1877	mupreva860	dd1231	no	si	si	44	mupreva	si	[{"dd530":"mupreva746"}]		\N
 mupreva1879	mupreva860	dd1231	no	si	si	46	mupreva	si	[{"dd530":"mupreva1481"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1880	mupreva860	dd1231	no	si	si	47	mupreva	si	[{"dd530":"mupreva1481"}]		\N
-mupreva1434	mupreva1411	dd9	no	si	si	4	mupreva	no	\N		\N
+mupreva1434	mupreva1411	dd9	no	si	si	6	mupreva	no	\N		\N
 mupreva1357	mupreva545	dd318	no	si	si	1	mupreva	si	\N		\N
 mupreva1433	mupreva1411	dd1747	no	si	si	1	mupreva	no	\N		\N
 mupreva1358	mupreva545	dd318	no	si	si	2	mupreva	si	\N		\N
@@ -787,6 +790,7 @@ mupreva170	mupreva260	dd6	no	si	si	2	mupreva	no	\N		\N
 mupreva1850	mupreva860	dd1231	no	si	si	17	mupreva	si	[{"dd530":"mupreva1499"}]	{\r\n"table":"diapositivas"\r\n}	\N
 mupreva1055	mupreva854	dd1233	no	si	si	1	mupreva	si	[{"dd635":"mupreva202"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "si",\r\n        "2": "no"\r\n    }\r\n}	\N
 mupreva1399	mupreva1397	dd9	no	si	si	3	mupreva	si	\N		\N
+mupreva2758	mupreva2635	dd581	no	si	si	6	mupreva	no	\N	\N	\N
 mupreva1245	mupreva901	dd91	no	si	si	1	mupreva	no	[{"dd6":"mupreva20"},{"dd749":"mupreva212"}]		\N
 mupreva1982	mupreva855	dd1231	no	si	si	44	mupreva	si	[{"dd530":"mupreva1526"}]		\N
 mupreva1984	mupreva855	dd1231	no	si	si	46	mupreva	si	[{"dd530":"mupreva1527"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
@@ -853,7 +857,7 @@ mupreva157	mupreva156	dd1129	no	si	si	1	mupreva	no	[{"dd8":"mupreva635"},{"dd592
 mupreva1910	mupreva861	dd1231	no	si	si	30	mupreva	si	[{"dd530":"mupreva580"}]		\N
 mupreva782	mupreva778	dd10	no	si	si	4	mupreva	no	\N		\N
 mupreva981	mupreva850	dd1233	no	si	si	1	mupreva	si	[{"dd592":"mupreva643"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "si",\r\n        "2": "no"\r\n    }\r\n}	\N
-mupreva775	mupreva773	dd592	no	si	si	4	mupreva	no	[{"dd6":"mupreva1"},{"dd57":"mupreva1510"},{"dd9":"mupreva776"},{"dd592":"mupreva14"}]		\N
+mupreva775	mupreva773	dd592	no	si	si	5	mupreva	no	[{"dd6":"mupreva1"},{"dd57":"mupreva1510"},{"dd9":"mupreva776"},{"dd592":"mupreva14"}]		\N
 mupreva802	mupreva801	dd1229	no	si	si	1	mupreva	no	[{"dd6":"mupreva290"}]		\N
 mupreva809	mupreva801	dd1229	no	si	si	3	mupreva	si	[{"dd6":"mupreva153"}]		\N
 mupreva848	mupreva801	dd1229	no	si	si	4	mupreva	si	[{"dd6":"mupreva156"}]		\N
@@ -1185,6 +1189,7 @@ mupreva445	mupreva441	dd318	no	si	si	4	mupreva	si	\N		\N
 mupreva426	mupreva417	dd247	no	si	si	5	mupreva	no	\N		\N
 mupreva436	mupreva432	dd247	no	si	si	2	mupreva	no	\N		\N
 mupreva354	mupreva349	dd91	no	si	si	3	mupreva	no	[{"dd9":"mupreva351"},{"dd10":"mupreva352"}]		\N
+mupreva2069	mupreva2635	dd524	no	si	si	4	mupreva	no	[{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd530":"mupreva220"},{"dd635":"mupreva219"},{"dd195":"dd196"}]		\N
 mupreva2176	mupreva614	dd57	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"dato_default":\n[{"section_id": "2",\n"section_tipo": "dd64"}\n]\n}	\N
 mupreva106	mupreva41	dd6	no	si	si	1	mupreva	si	[{"dd626":"dd82"}]		\N
 mupreva2090	mupreva861	dd1234	no	si	si	60	mupreva	si	[{"dd635":"mupreva590"}]		\N
@@ -1230,6 +1235,7 @@ mupreva79	mupreva78	dd9	no	si	si	1	mupreva	si	\N		\N
 mupreva560	mupreva86	dd8	no	si	si	3	mupreva	no	\N		\N
 mupreva2096	mupreva290	dd8	no	si	si	4	mupreva	si	\N		\N
 mupreva1407	mupreva559	dd592	no	si	si	10	mupreva	no	[{"dd6":"mupreva70"},{"dd57":"mupreva525"},{"dd9":"mupreva73"},{"dd318":"mupreva72"},{"dd592":"mupreva602"}]		\N
+mupreva2760	mupreva2635	dd581	no	si	si	5	mupreva	no	\N	\N	\N
 mupreva2103	mupreva2099	dd1231	no	si	si	3	mupreva	no	[{"dd318":"mupreva1400"}]		\N
 mupreva621	mupreva620	dd8	no	si	si	1	mupreva	no	\N		\N
 mupreva904	mupreva802	dd1231	no	si	si	27	mupreva	si	[{"dd592":"mupreva900"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
@@ -1349,7 +1355,9 @@ mupreva1505	mupreva1504	dd9	no	si	si	1	mupreva	si	\N		\N
 mupreva1915	mupreva861	dd1231	no	si	si	35	mupreva	si	[{"dd530":"mupreva587"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva2031	mupreva2023	dd1231	no	si	si	8	mupreva	si	[{"dd530":"mupreva1339"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva2058	mupreva2055	dd1231	no	si	si	3	mupreva	si	[{"dd592":"mupreva1364"}]		\N
+mupreva302	mupreva290	dd91	no	si	si	5	mupreva	no	[{"dd57":"mupreva293"},{"dd9":"mupreva298"},{"dd530":"mupreva295"},{"dd10":"mupreva299"},{"dd9":"mupreva296"},{"dd10":"mupreva303"}]		\N
 mupreva541	mupreva531	dd247	no	si	si	12	mupreva	no	\N	{"dato_default":{"1":"2"}}	\N
+mupreva2635	dd604	dd440	no	si	si	1	mupreva	no	null		\N
 mupreva517	mupreva516	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva473"},{"dd57":"mupreva731"},{"dd9":"mupreva476"},{"dd10":"mupreva477"},{"dd635":"mupreva475"},{"dd9":"mupreva478"},{"dd592":"mupreva481"}]		\N
 mupreva1228	mupreva799	dd9	no	si	si	3	mupreva	si			\N
 mupreva1767	mupreva1752	dd1231	no	si	si	15	mupreva	si	[{"dd530":"mupreva566"}]	{\r\n"table":"negativos"\r\n}	\N
@@ -1381,9 +1389,9 @@ mupreva2054	mupreva2051	dd1231	no	si	si	3	mupreva	si	[{"dd592":"mupreva1217"}]		
 mupreva1896	mupreva861	dd1231	no	si	si	16	mupreva	si	[{"dd530":"mupreva574"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1891	mupreva861	dd1231	no	si	si	11	mupreva	si	[{"dd530":"mupreva1500"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1509	mupreva1330	dd183	no	si	si	5	mupreva	no	\N		\N
-mupreva302	mupreva290	dd91	no	si	si	5	mupreva	no	[{"dd57":"mupreva293"},{"dd9":"mupreva298"},{"dd530":"mupreva295"},{"dd10":"mupreva299"},{"dd9":"mupreva296"},{"dd10":"mupreva303"}]	\N	\N
 mupreva1765	mupreva1752	dd1231	no	si	si	13	mupreva	si	[{"dd530":"mupreva1418"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1634	mupreva1631	dd1231	no	si	si	2	mupreva	si	[{"dd530":"mupreva1300"}]		\N
+mupreva2761	mupreva2635	dd581	no	si	si	5	mupreva	no	\N	\N	\N
 mupreva1919	mupreva861	dd1231	no	si	si	39	mupreva	si	[{"dd530":"mupreva588"}]		\N
 mupreva2035	mupreva2023	dd1231	no	si	si	12	mupreva	si	[{"dd530":"mupreva1340"}]		\N
 mupreva1897	mupreva861	dd1231	no	si	si	17	mupreva	si	[{"dd530":"mupreva574"}]		\N
@@ -1419,15 +1427,14 @@ mupreva248	mupreva230	dd183	no	si	si	6	mupreva	no	\N		\N
 mupreva1166	mupreva1163	dd1231	no	si	si	3	mupreva	si	[{"dd592":"mupreva696"}]		\N
 mupreva155	mupreva153	dd91	no	si	si	2	mupreva	no	[{"dd57":"mupreva628"},{"dd9":"mupreva178"},{"dd9":"mupreva179"},{"dd530":"mupreva174"},{"dd9":"mupreva191"},{"dd10":"mupreva183"},{"dd749":"mupreva193"},{"dd1018":"mupreva194"}]		\N
 mupreva1640	mupreva1631	dd1231	no	si	si	8	mupreva	si	[{"dd530":"mupreva1264"}]		\N
-mupreva1415	mupreva1411	dd592	no	si	si	6	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"},{"dd11":"mupreva277"},{"dd9":"mupreva241"},{"dd227":"mupreva242"}]		\N
+mupreva1415	mupreva1411	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]		\N
 mupreva1246	mupreva297	dd318	no	si	si	1	mupreva	si			\N
 mupreva1501	mupreva292	dd592	no	si	si	9	mupreva	no	[{"dd6":"mupreva22"},{"dd57":"mupreva202"},{"dd9":"mupreva203"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
 mupreva534	mupreva545	dd318	no	si	si	3	mupreva	si	\N		\N
 mupreva2071	mupreva2603	dd9	no	si	si	4	mupreva	no	null	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2761	mupreva2635	dd581	no	si	si	22	mupreva	no	\N	\N	\N
 mupreva2076	mupreva159	dd1221	no	si	si	4	mupreva	no	\N	{\r\n"tool_name":"tool_import_images",\r\n"context_name":"files",\r\n"section_tipo":"mupreva667",\r\n"MAIN_SECTION_TIPO":"mupreva667",\r\n"MAIN_PORTAL_IDENTIFY_IMAGE":"mupreva748",\r\n"MAIN_PORTAL_ADITIONAL_IMAGES":"mupreva749",\r\n"RESOURCE_SECTION_TIPO":"mupreva159",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva1324",\r\n"RESOURCE_COMPONENT_TIPO_IMAGE":"mupreva660",\r\n"RESOURCE_COMPONENT_TIPO_PDF":"mupreva661",\r\n"RESOURCE_COMPONENT_TIPO_TRANSCRIPTION":"mupreva662",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva663",\r\n"process_script":"/extras/mupreva/tool_import_images/import_imagenes_ephemera_modificada.php",\r\n"quality":"modificada",\r\n"initial_media_path":"/ephemera",\r\n"enable_selector":false,\r\n"verify_file_name":true,\r\n"enable_target_id":false\r\n}	\N
 mupreva1497	mupreva1438	dd1221	no	si	si	8	mupreva	no	\N	{\r\n"tool_name":"tool_import_av",\r\n"context_name":"files",\r\n"section_tipo":"mupreva1438",\r\n"MAIN_SECTION_TIPO":"mupreva1438",\r\n"MAIN_PORTAL_AV":"mupreva1474",\r\n"RESOURCE_SECTION_TIPO":"mupreva1258",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva1336",\r\n"RESOURCE_COMPONENT_TIPO_CODE_OLD":"mupreva1337",\r\n"RESOURCE_COMPONENT_TIPO_AV":"mupreva1283",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva1281",\r\n"process_script":"/extras/mupreva/tool_import_av/import_av.php",\r\n"quality":"404",\r\n"verify_file_name":true,\r\n"enable_target_id":false\r\n}	\N
-mupreva1502	mupreva1411	dd592	no	si	si	11	mupreva	no	[{"dd6":"mupreva22"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
+mupreva1502	mupreva2808	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva22"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
 mupreva954	mupreva848	dd1232	no	si	si	27	mupreva	si	[{"dd592":"mupreva195"}]		\N
 mupreva963	mupreva849	dd1231	no	si	si	13	mupreva	si	[{"dd592":"mupreva220"}]	{\r\n"table":"personas"\r\n}	\N
 mupreva1079	mupreva857	dd1231	no	si	si	10	mupreva	si	[{"dd635":"mupreva217"}]		\N
@@ -1470,14 +1477,14 @@ mupreva581	mupreva579	dd43	no	si	si	3	mupreva	no	\N		\N
 mupreva582	mupreva579	dd9	no	si	si	4	mupreva	si	\N		\N
 mupreva610	mupreva609	dd1129	no	si	si	1	mupreva	si	\N		\N
 mupreva415	mupreva300	dd6	no	si	si	15	mupreva	no	[{"dd626":"dd22"}]		\N
-mupreva796	mupreva773	dd9	no	si	si	6	mupreva	no	\N		\N
+mupreva796	mupreva773	dd9	no	si	si	7	mupreva	no	\N		\N
 mupreva1458	mupreva2383	dd6	no	si	si	1	mupreva	no	[{"dd626":"dd22"}]		\N
 mupreva900	mupreva292	dd592	no	si	si	7	mupreva	no	[{"dd6":"mupreva268"},{"dd57":"mupreva202"},{"dd9":"mupreva203"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
 mupreva565	mupreva564	dd91	no	si	si	1	mupreva	no	[{"dd6":"mupreva159"},{"dd749":"mupreva660"}]		\N
 mupreva516	mupreva500	dd8	no	si	si	4	mupreva	no	\N		\N
 mupreva521	mupreva473	dd177	no	si	si	5	mupreva	no	\N		\N
 mupreva522	mupreva473	dd183	no	si	si	6	mupreva	no	\N		\N
-mupreva566	mupreva1411	dd592	no	si	si	10	mupreva	no	[{"dd6":"mupreva20"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
+mupreva566	mupreva2808	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva20"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
 mupreva568	mupreva494	dd8	no	si	si	2	mupreva	no	\N		\N
 mupreva579	mupreva494	dd8	no	si	si	3	mupreva	no	\N		\N
 mupreva2067	mupreva710	dd58	no	si	si	7	mupreva	no	[{"dd635":"mupreva713"},{"dd9":"mupreva714"}]		\N
@@ -1668,7 +1675,7 @@ mupreva625	mupreva620	dd177	no	si	si	4	mupreva	no	\N		\N
 mupreva1255	mupreva1250	dd530	no	si	si	6	mupreva	no	[{"dd6":"mupreva70"},{"dd9":"mupreva73"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva626	mupreva620	dd183	no	si	si	5	mupreva	no	\N		\N
 mupreva820	mupreva809	dd1231	no	si	si	15	mupreva	si	[{"dd9":"mupreva176"}]		\N
-mupreva1425	mupreva1410	dd8	no	si	si	3	mupreva	no	\N		\N
+mupreva1425	mupreva1410	dd8	no	si	si	4	mupreva	no	\N		\N
 mupreva1275	mupreva1296	dd8	no	si	si	3	mupreva	no	\N		\N
 mupreva1219	mupreva240	dd8	no	si	si	2	mupreva	no	\N		\N
 mupreva1303	mupreva1296	dd8	no	si	si	2	mupreva	no	\N		\N
@@ -1690,8 +1697,8 @@ mupreva2410	mupreva2405	dd91	no	si	si	3	mupreva	no	[{"dd6":"mupreva2405"},{"dd9"
 mupreva1410	mupreva1408	dd6	no	si	si	5	mupreva	no	\N		\N
 mupreva1000	mupreva1408	dd6	no	si	si	6	mupreva	si			\N
 mupreva710	mupreva19	dd6	no	si	no	11	mupreva	no	\N		\N
-mupreva1422	mupreva1421	dd10	no	si	si	1	mupreva	si	\N		\N
-mupreva1423	mupreva1421	dd10	no	si	si	2	mupreva	si	\N		\N
+mupreva1422	mupreva1421	dd10	no	si	si	2	mupreva	si	\N		\N
+mupreva1423	mupreva1421	dd10	no	si	si	3	mupreva	si	\N		\N
 mupreva829	mupreva809	dd1231	no	si	si	26	mupreva	si	[{"dd1018":"mupreva194"}]		\N
 mupreva152	mupreva3	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva120"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd635":"mupreva207"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd749":"mupreva212"}]	{"dragable_connectWith": "mupreva151"}	\N
 mupreva985	mupreva850	dd1231	no	si	si	6	mupreva	si	[{"dd592":"mupreva656"}]		\N
@@ -1722,10 +1729,10 @@ mupreva162	mupreva19	dd6	no	si	si	17	mupreva	no	[{"dd6":"mupreva230"}]		\N
 mupreva414	mupreva408	dd183	no	si	si	5	mupreva	no	\N		\N
 mupreva67	mupreva59	dd530	no	si	si	10	mupreva	no	[{"dd6":"mupreva43"},{"dd9":"mupreva46"},{"dd9":"mupreva50"},{"dd9":"mupreva51"},{"dd9":"mupreva52"}]		\N
 mupreva827	mupreva821	dd1231	no	si	si	9	mupreva	si	[{"dd227":"mupreva242"}]		\N
-mupreva1413	mupreva1411	dd9	no	si	si	3	mupreva	si	\N		\N
+mupreva1413	mupreva1411	dd9	no	si	si	5	mupreva	si	\N		\N
 mupreva1416	mupreva1411	dd635	no	si	si	7	mupreva	no	\N		\N
 mupreva2246	mupreva1408	dd6	no	si	si	7	mupreva	no	[{"dd6":"mupreva2261"}]	\N	\N
-mupreva1424	mupreva1421	dd10	no	si	si	3	mupreva	si	\N		\N
+mupreva1424	mupreva1421	dd10	no	si	si	1	mupreva	si	\N		\N
 mupreva73	mupreva71	dd9	no	si	si	6	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2267	mupreva801	dd1229	no	si	si	52	mupreva	si	[{"dd6":"mupreva2246"}]	\N	\N
 mupreva2280	mupreva2278	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": {\r\n    "section_id": "2",\r\n    "section_tipo": "dd64"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "12%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -1745,7 +1752,6 @@ mupreva2282	mupreva2278	dd635	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".
 mupreva1417	mupreva1411	dd635	no	si	si	8	mupreva	no	\N		\N
 mupreva2265	mupreva859	dd1231	no	si	si	54	mupreva	si	[{"dd318":"mupreva2244"}]	\N	\N
 mupreva2266	mupreva859	dd1231	no	si	si	55	mupreva	si	[{"dd318":"mupreva2245"}]	\N	\N
-mupreva2635	ts11	dd440	no	si	si	2	mupreva	no	null		null
 mupreva2256	mupreva2255	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva2251"},{"dd339":"mupreva643"},{"dd9":"mupreva1324"},{"dd9":"mupreva656"},{"dd9":"mupreva655"},{"dd1018":"mupreva661"},{"dd749":"mupreva660"}]	{"dragable_connectWith": "mupreva2257"}	\N
 mupreva2270	mupreva2267	dd1231	no	si	si	3	mupreva	si	[{"dd11":"mupreva75"}]	\N	\N
 mupreva880	mupreva881	dd1231	no	si	si	4	mupreva	si	[{"dd9":"mupreva444"}]		\N
@@ -1803,7 +1809,7 @@ mupreva2302	mupreva2267	dd1231	no	si	si	14	mupreva	si	[{"dd530":"mupreva1405"}]	
 mupreva2303	mupreva2267	dd1231	no	si	si	15	mupreva	si	[{"dd530":"mupreva1405"}]	{"data_to_be_used": "dato"}	\N
 mupreva2304	mupreva2267	dd1231	no	si	si	16	mupreva	si	[{"dd530":"mupreva1405"}]	\N	\N
 mupreva2305	mupreva801	dd1229	no	si	si	54	mupreva	si	[{"dd6":"mupreva2249"}]	\N	\N
-mupreva1418	mupreva1411	dd592	no	si	si	9	mupreva	no	[{"dd6":"mupreva268"},{"dd57":"mupreva202"},{"dd9":"mupreva203"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
+mupreva1418	mupreva2808	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva268"},{"dd57":"mupreva202"},{"dd9":"mupreva203"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
 mupreva2306	mupreva2305	dd1233	no	si	si	1	mupreva	si	[{"dd339":"mupreva202"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "si",\r\n        "2": "no"\r\n    }\r\n}	\N
 mupreva2307	mupreva2305	dd1231	no	si	si	2	mupreva	si	[{"dd9":"mupreva216"}]	\N	\N
 mupreva2432	mupreva2339	dd9	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -1853,7 +1859,6 @@ mupreva1316	mupreva605	dd592	no	si	si	5	mupreva	no	[{"dd6":"mupreva1296"},{"dd57
 mupreva286	mupreva145	dd318	no	si	si	2	mupreva	si	\N		\N
 mupreva1317	mupreva560	dd592	no	si	si	5	mupreva	no	[{"dd6":"mupreva1296"},{"dd57":"mupreva1299"},{"dd9":"mupreva1300"},{"dd318":"mupreva1301"},{"dd635":"mupreva1302"},{"dd592":"mupreva1304"}]		\N
 mupreva1318	mupreva603	dd592	no	si	si	5	mupreva	no	[{"dd6":"mupreva1296"},{"dd57":"mupreva1299"},{"dd9":"mupreva1300"},{"dd318":"mupreva1301"},{"dd635":"mupreva1302"},{"dd592":"mupreva1304"}]		\N
-mupreva2172	dd222	dd4	no	si	si	3	mupreva	si	\N		\N
 mupreva1264	mupreva1297	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva432"},{"dd9":"mupreva435"}]		\N
 mupreva1311	mupreva1297	dd247	no	si	si	8	mupreva	no	\N	{"dato_default":{"1":"2"}}	\N
 mupreva1273	mupreva1297	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva1266"},{"dd9":"mupreva1268"}]		\N
@@ -1886,6 +1891,7 @@ mupreva83	mupreva77	dd183	no	si	si	5	mupreva	no	\N		\N
 mupreva84	mupreva42	dd177	no	si	si	4	mupreva	no	\N		\N
 mupreva1543	mupreva1555	dd635	no	si	si	2	mupreva	no	\N	{\r\n  "dataframe": [\r\n    {\r\n      "tipo": "dd577",\r\n      "type": "dd558"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva224	mupreva221	dd247	no	si	si	2	mupreva	no	\N		\N
+mupreva2172	dd222	dd4	no	si	si	4	mupreva	si	\N		\N
 mupreva1550	mupreva494	dd8	no	si	si	7	mupreva	no	\N		\N
 mupreva1563	mupreva865	dd1231	no	si	si	7	mupreva	si	[{"dd592":"mupreva1437"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
 mupreva1244	mupreva633	dd91	no	si	si	1	mupreva	si	[{"dd6":"mupreva153"},{"dd749":"mupreva193"}]		\N
@@ -1976,7 +1982,7 @@ mupreva374	mupreva369	dd318	no	si	si	6	mupreva	si	\N		\N
 mupreva2108	mupreva433	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ]\r\n}	\N
 mupreva464	mupreva463	dd339	no	si	si	1	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]		\N
 mupreva298	mupreva292	dd9	no	si	si	3	mupreva	si	\N		\N
-mupreva1539	mupreva1512	dd10	no	si	si	20	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva1539	mupreva1512	dd10	no	si	si	21	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1387	mupreva1386	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]		\N
 mupreva1226	mupreva799	dd339	no	si	si	1	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]		\N
 mupreva1412	mupreva1411	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]		\N
@@ -2040,32 +2046,32 @@ mupreva2606	mupreva2579	dd1231	no	si	si	14	mupreva	no	[{"dd592":"mupreva2607"}]	
 mupreva1330	mupreva2383	dd6	no	si	si	4	mupreva	no	[{"dd626":"dd22"}]		\N
 mupreva633	mupreva2096	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva153"},{"dd57":"mupreva628"},{"dd9":"mupreva171"},{"dd530":"mupreva174"},{"dd9":"mupreva178"},{"dd9":"mupreva179"},{"dd592":"mupreva177"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]		\N
 mupreva1322	mupreva153	dd1221	no	si	si	3	mupreva	no	\N	{\r\n"tool_name":"tool_import_images",\r\n"context_name":"files",\r\n"section_tipo":"mupreva153",\r\n"RESOURCE_SECTION_TIPO":"mupreva153",\r\n"RESOURCE_COMPONENT_TIPO_IMAGE":"mupreva193",\r\n"RESOURCE_COMPONENT_TIPO_PDF":"mupreva194",\r\n"RESOURCE_COMPONENT_TIPO_TRANSCRIPTION":"mupreva195",\r\n"RESOURCE_COMPONENT_TIPO_PAGES":"mupreva190",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva192",\r\n"process_script":"/extras/mupreva/tool_import_images/import_publicaciones.php",\r\n"quality":"original",\r\n"initial_media_path":"/publicaciones",\r\n"enable_target_id":false,\r\n"enable_selector":false,\r\n"verify_file_name":true\r\n}	\N
+mupreva2763	mupreva2635	dd581	no	si	si	6	mupreva	no	\N	\N	\N
 mupreva2393	mupreva297	dd1017	no	si	si	4	mupreva	no	\N	\N	\N
-mupreva33	dd3	dd17	no	si	si	9	mupreva	no	\N		\N
+mupreva2762	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva787	mupreva786	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "source": {\r\n    "divisor": " "\r\n  }\r\n}	\N
+mupreva33	dd3	dd17	no	si	si	3	mupreva	no	\N		\N
 mupreva34	mupreva33	dd1743	no	si	si	1	mupreva	no	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mupreva_ficha_fm"\r\n  }\r\n}	\N
 mupreva2764	mupreva667	dd581	no	si	si	8	mupreva	no	\N	\N	\N
+mupreva2765	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2441	mupreva2439	dd9	no	si	si	2	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2622	mupreva2564	dd8	no	si	si	4	mupreva	no	[{"dd6":"mupreva70"},{"dd9":"mupreva73"}]		\N
-mupreva2762	mupreva2635	dd581	no	si	si	14	mupreva	no	\N	\N	\N
-mupreva2765	mupreva2635	dd581	no	si	si	15	mupreva	no	\N	\N	\N
-mupreva2763	mupreva2635	dd581	no	si	si	24	mupreva	no	\N	\N	\N
-mupreva790	mupreva773	dd592	no	si	si	7	mupreva	no	[{"dd6":"mupreva123"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]	{"dragable_connectWith": "mupreva791"}	\N
-mupreva792	mupreva773	dd247	no	si	si	8	mupreva	no	\N	{"dato_default":{"1":"2"}}	\N
+mupreva790	mupreva773	dd592	no	si	si	8	mupreva	no	[{"dd6":"mupreva123"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]	{"dragable_connectWith": "mupreva791"}	\N
+mupreva792	mupreva773	dd247	no	si	si	9	mupreva	no	\N	{"dato_default":{"1":"2"}}	\N
 mupreva2486	mupreva2438	dd8	no	si	si	2	mupreva	no	\N	\N	\N
 mupreva2198	mupreva2213	dd248	no	si	si	1	mupreva	si	\N		\N
-mupreva777	mupreva773	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva494"},{"dd9":"mupreva499"}]		\N
+mupreva777	mupreva773	dd530	no	si	si	6	mupreva	no	[{"dd6":"mupreva494"},{"dd9":"mupreva499"}]		\N
 mupreva2351	mupreva76	dd4	no	si	si	3	mupreva	no	\N	\N	\N
 mupreva2413	mupreva135	dd524	no	si	si	6	mupreva	no	[{"dd195":"dd196"},{"dd339":"mupreva340"},{"dd9":"mupreva137"},{"dd318":"mupreva138"},{"dd10":"mupreva139"}]	\N	\N
 mupreva620	mupreva2351	dd6	no	si	si	5	mupreva	no	[{"dd626":"dd22"}]		\N
 mupreva2620	mupreva2613	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva530"},{"dd339":"mupreva1355"},{"dd9":"mupreva533"},{"dd530":"mupreva1356"},{"dd592":"mupreva546"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2433	mupreva492	dd4	no	si	si	5	mupreva	no	\N	\N	\N
+mupreva2767	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva756	mupreva2488	dd6	no	si	si	3	mupreva	no	[{"dd626":"dd22"}]		\N
 mupreva2427	mupreva2425	dd97	no	si	si	1	mupreva	no	[{"dd6":"mupreva261"},{"dd43":"mupreva263"},{"dd635":"mupreva2426"}]	\N	\N
 mupreva2621	mupreva2613	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva451"},{"dd339":"mupreva453"},{"dd9":"mupreva455"},{"dd318":"mupreva456"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1521	mupreva1553	dd9	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2394	mupreva778	dd1017	no	si	si	8	mupreva	no	\N	\N	\N
-mupreva2563	mupreva2635	dd524	no	si	si	3	mupreva	no	[{"dd195":"dd196"},{"dd9":"mupreva205"},{"dd10":"mupreva217"}]	\N	\N
 mupreva2373	mupreva765	dd11	no	si	si	10	mupreva	no	[{"dd6":"mupreva2364"},{"dd9":"mupreva2366"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2503	mupreva2438	dd177	no	si	si	5	mupreva	no	\N	\N	\N
 mupreva2654	mupreva2613	dd592	no	si	si	5	mupreva	no	[{"dd6":"mupreva2246"},{"dd339":"mupreva525"},{"dd9":"mupreva73"},{"dd10":"mupreva72"},{"dd592":"mupreva2117"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2081,6 +2087,7 @@ mupreva120	mupreva19	dd6	no	si	si	3	mupreva	no	[{"dd6":"mupreva200"}]	{\r\n  "DE
 mupreva20	mupreva19	dd6	no	si	si	8	mupreva	no	[{"dd6":"mupreva200"}]	{\r\n  "DES_filtered_by": {\r\n    "mupreva206": [\r\n      {\r\n        "section_tipo": "mupreva221",\r\n        "section_id": "1"\r\n      }\r\n    ],\r\n    "mupreva208": [\r\n      {\r\n        "section_tipo": "mupreva261",\r\n        "section_id": "4"\r\n      }\r\n    ]\r\n  },\r\n  "initial_media_path": {\r\n    "mupreva212": "negativos"\r\n  }\r\n}	\N
 mupreva22	mupreva19	dd6	no	si	si	10	mupreva	no	[{"dd6":"mupreva200"}]	{\r\n  "DES_filtered_by": {\r\n    "mupreva206": [\r\n      {\r\n        "section_tipo": "mupreva221",\r\n        "section_id": "1"\r\n      }\r\n    ],\r\n    "mupreva208": [\r\n      {\r\n        "section_tipo": "mupreva261",\r\n        "section_id": "5"\r\n      }\r\n    ]\r\n  },\r\n  "initial_media_path": {\r\n    "mupreva212": "diapositivas"\r\n  }\r\n}	\N
 mupreva123	mupreva19	dd6	no	si	si	12	mupreva	no	[{"dd6":"mupreva200"}]	{\r\n  "DES_filtered_by": {\r\n    "mupreva206": [\r\n      {\r\n        "section_tipo": "mupreva221",\r\n        "section_id": "1"\r\n      }\r\n    ],\r\n    "mupreva208": [\r\n      {\r\n        "section_tipo": "mupreva261",\r\n        "section_id": "6"\r\n      }\r\n    ]\r\n  },\r\n  "initial_media_path": {\r\n    "mupreva212": "restauracion"\r\n  }\r\n}	\N
+mupreva2625	mupreva302	\N	no	si	si	1	mupreva	\N	\N	\N	\N
 mupreva2649	mupreva2564	dd183	no	si	si	11	mupreva	no	\N	\N	\N
 mupreva194	mupreva630	dd1018	no	si	si	6	mupreva	no	[{"dd10":"mupreva195"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2623	mupreva2613	dd592	no	si	si	6	mupreva	no	[{"dd6":"mupreva153"},{"dd339":"mupreva628"},{"dd9":"mupreva178"},{"dd1018":"mupreva194"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2090,7 +2097,6 @@ mupreva2426	mupreva262	dd635	no	si	si	2	mupreva	no	\N	\N	\N
 mupreva2449	mupreva2437	dd91	no	si	si	3	mupreva	si	[{"dd11":"mupreva2445"},{"dd10":"mupreva2446"},{"dd10":"mupreva2447"}]	\N	\N
 mupreva2450	mupreva2437	dd177	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2451	mupreva2437	dd183	no	si	si	5	mupreva	no	\N	\N	\N
-mupreva2625	mupreva2635		no	si	si	2	mupreva	si	\N	\N	\N
 mupreva2445	mupreva2443	dd530	no	si	si	2	mupreva	no	[{"dd6":"mupreva290"},{"dd9":"mupreva298"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "42%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2453	mupreva2452	dd1747	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2768	mupreva1296	dd581	no	si	si	10	mupreva	no	\N	\N	\N
@@ -2100,13 +2106,13 @@ mupreva2446	mupreva2443	dd10	no	si	si	4	mupreva	si	\N	{\r\n  "css": {\r\n    ".w
 mupreva2454	mupreva2452	dd9	no	si	si	2	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2455	mupreva2452	dd635	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2447	mupreva2443	dd10	no	si	si	5	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2458	mupreva2452	dd530	no	si	si	6	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2458	mupreva2452	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2460	mupreva2459	dd10	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2461	mupreva2459	dd10	no	si	si	2	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2462	mupreva2436	dd91	no	si	si	3	mupreva	si	[{"dd9":"mupreva2454"},{"dd635":"mupreva2455"},{"dd530":"mupreva2457"},{"dd530":"mupreva2458"}]	\N	\N
 mupreva2463	mupreva2436	dd177	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2464	mupreva2436	dd183	no	si	si	5	mupreva	no	\N	\N	\N
-mupreva2456	mupreva2452	dd247	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "height": "6em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "3em"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2456	mupreva2812	dd247	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "height": "6em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "3em"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2467	mupreva2465	dd9	no	si	si	2	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2468	mupreva2465	dd635	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2469	mupreva2465	dd247	no	si	si	4	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "height": "6em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "3em"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2178,13 +2184,11 @@ mupreva2533	mupreva2515	dd10	no	si	si	10	mupreva	no	\N	{\r\n  "css": {\r\n    ".
 mupreva2520	mupreva2515	dd635	no	si	si	5	mupreva	no	\N	{\r\n  "dataframe": [\r\n    {\r\n      "tipo": "dd577",\r\n      "type": "dd558"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n                "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2519	mupreva2515	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "35%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2540	mupreva2434	dd183	no	si	si	6	mupreva	no	\N	\N	\N
-mupreva2653	mupreva2635	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva1237"},{"dd9":"mupreva232"},{"dd9":"mupreva233"},{"dd11":"mupreva2347"},{"dd11":"mupreva2348"},{"dd227":"mupreva242"},{"dd227":"mupreva2343"},{"dd11":"mupreva2349"},{"dd904":"mupreva2350"},{"dd57":"mupreva2675"}]	\N	\N
-mupreva2723	mupreva2635	dd524	no	si	si	8	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva2686"}]	\N	\N
 mupreva2548	mupreva2487	dd97	no	si	si	1	mupreva	si	[{"dd6":"mupreva2541"},{"dd530":"mupreva2544"},{"dd530":"mupreva2545"}]	{\r\n  "elements_list_mode": {\r\n    "mupreva2544": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "70%"\r\n    },\r\n    "mupreva2545": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "30%"\r\n    }\r\n  }\r\n}	\N
 mupreva2549	mupreva596	dd524	no	si	si	1	mupreva	no	[{"dd6":"mupreva1"},{"dd1747":"mupreva1224"},{"dd9":"mupreva776"},{"dd530":"mupreva1516"}]	\N	\N
-mupreva2550	mupreva2452	dd11	no	si	si	7	mupreva	no	[{"dd6":"mupreva349"},{"dd9":"mupreva351"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2551	mupreva2452	dd11	no	si	si	8	mupreva	no	[{"dd6":"mupreva341"},{"dd9":"mupreva343"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2552	mupreva2459	dd530	no	si	si	3	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2550	mupreva2452	dd11	no	si	si	4	mupreva	no	[{"dd6":"mupreva349"},{"dd9":"mupreva351"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2551	mupreva2452	dd11	no	si	si	5	mupreva	no	[{"dd6":"mupreva341"},{"dd9":"mupreva343"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2552	mupreva2812	dd530	no	si	si	2	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva260	mupreva19	dd4	no	si	si	1	mupreva	no	\N		\N
 mupreva268	mupreva19	dd6	no	si	si	4	mupreva	si	[{"dd6":"mupreva200"}]	{\r\n  "DES_filtered_by": {\r\n    "mupreva206": [\r\n      {\r\n        "section_tipo": "mupreva221",\r\n        "section_id": "1"\r\n      }\r\n    ],\r\n    "mupreva208": [\r\n      {\r\n        "section_tipo": "mupreva261",\r\n        "section_id": "7"\r\n      }\r\n    ]\r\n  },\r\n  "initial_media_path": {\r\n    "mupreva212": "digital"\r\n  }\r\n}	\N
 mupreva2558	mupreva290	dd177	no	si	si	6	mupreva	si	\N	\N	\N
@@ -2199,7 +2203,6 @@ mupreva2556	mupreva2437	dd58	no	si	si	6	mupreva	no	[{"dd11":"mupreva2445"}]	\N	\
 mupreva2559	mupreva292	dd592	no	si	si	10	mupreva	no	[{"dd6":"mupreva163"},{"dd339":"mupreva202"},{"dd9":"mupreva203"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]	\N	\N
 mupreva2561	mupreva1385	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva2104"},{"dd339":"mupreva1387"},{"dd530":"mupreva1388"},{"dd635":"mupreva1389"},{"dd635":"mupreva524"}]	\N	\N
 mupreva2575	mupreva2603	dd57	no	si	no	5	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%",\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2754	mupreva2635	dd581	no	si	si	11	mupreva	no	\N	\N	\N
 mupreva163	mupreva19	dd6	no	si	si	6	mupreva	no	[{"dd6":"mupreva200"}]	{\r\n  "DES_filtered_by": {\r\n    "mupreva206": [\r\n      {\r\n        "section_tipo": "mupreva221",\r\n        "section_id": "10"\r\n      }\r\n    ],\r\n    "mupreva208": [\r\n      {\r\n        "section_tipo": "mupreva261",\r\n        "section_id": "3"\r\n      }\r\n    ]\r\n  },\r\n  "initial_media_path": {\r\n    "mupreva212": "imagen_almacen"\r\n  }\r\n}	\N
 mupreva2440	mupreva2439	dd1747	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva749	mupreva747	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva159"},{"dd57":"mupreva643"},{"dd9":"mupreva1324"},{"dd80":"mupreva1329"},{"dd530":"mupreva644"},{"dd530":"mupreva652"},{"dd9":"mupreva656"},{"dd9":"mupreva655"},{"dd749":"mupreva660"}]	{\r\n  "dragable_connectWith": "mupreva748",\r\n  "portal_link_open":false\r\n}	\N
@@ -2222,20 +2225,15 @@ mupreva1542	mupreva1555	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva162"},{"dd9"
 mupreva2378	mupreva1555	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva609"},{"dd9":"mupreva238"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva205	mupreva201	dd9	no	si	si	6	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1355	mupreva531	dd339	no	si	si	3	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]		\N
+mupreva2771	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2566	mupreva2565	dd1747	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(44, 145, 206, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2627	mupreva2622	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva667"},{"dd339":"mupreva669"},{"dd9":"mupreva672"},{"dd592":"mupreva748"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2656	mupreva2392	dd97	no	si	si	1	mupreva	no	[{"dd6":"mupreva2384"},{"dd11":"mupreva2387"},{"dd43":"mupreva2388"},{"dd11":"mupreva2389"}]	\N	\N
 mupreva1541	mupreva1555	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva349"},{"dd9":"mupreva351"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "35%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2771	mupreva2635	dd581	no	si	si	17	mupreva	no	\N	\N	\N
-mupreva2069	mupreva2635	dd524	no	si	si	13	mupreva	no	[{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd530":"mupreva220"},{"dd635":"mupreva219"},{"dd195":"dd196"}]		\N
-mupreva2767	mupreva2635	dd581	no	si	si	16	mupreva	no	\N	\N	\N
 mupreva2466	mupreva2465	dd1747	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva690	mupreva19	dd6	no	si	no	9	mupreva	si	\N		\N
-mupreva2743	mupreva2635	dd581	no	si	si	20	mupreva	no	\N	\N	\N
 mupreva2607	mupreva2565	dd592	no	si	si	7	mupreva	no	[{"dd6":"mupreva268"},{"dd339":"mupreva202"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]	\N	\N
 mupreva2567	mupreva2565	dd9	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "55%"\r\n      }\r\n    },\r\n    ".css_input_text": {\r\n      "style": {\r\n        "font-size": "16px"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2760	mupreva2635	dd581	no	si	si	21	mupreva	no	\N	\N	\N
-mupreva2758	mupreva2635	dd581	no	si	si	28	mupreva	no	\N	\N	\N
 mupreva1224	mupreva2	dd1747	no	si	si	1	mupreva	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(219, 137, 35, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2444	mupreva2443	dd1747	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1548	mupreva4	dd9	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2246,13 +2244,13 @@ mupreva2232	mupreva2	dd339	no	si	si	6	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]
 mupreva1545	mupreva1554	dd530	no	si	si	3	mupreva	no	[{"dd6":"mupreva290"},{"dd9":"mupreva298"},{"dd9":"mupreva296"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1549	mupreva4	dd10	no	si	si	2	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1535	mupreva1556	dd9	no	si	si	2	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva76	dd68	dd4	no	si	si	11	mupreva	si	\N		\N
 mupreva2569	mupreva2565	dd318	no	si	si	6	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2117	mupreva71	dd592	no	si	si	15	mupreva	no	[{"dd6":"mupreva159"},{"dd57":"mupreva643"},{"dd530":"mupreva644"},{"dd9":"mupreva656"},{"dd9":"mupreva653"},{"dd749":"mupreva660"}]		\N
 mupreva2630	mupreva452	dd1747	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva632	mupreva71	dd530	no	si	si	16	mupreva	no	[{"dd6":"mupreva153"},{"dd9":"mupreva178"},{"dd592":"mupreva177"}]		\N
 mupreva1395	mupreva71	dd530	no	si	si	17	mupreva	no	[{"dd6":"mupreva451"},{"dd57":"mupreva453"},{"dd9":"mupreva455"}]		\N
 mupreva1236	mupreva236	dd1747	no	si	si	1	mupreva	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(100, 167, 84, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva76	dd68	dd4	no	si	si	7	mupreva	si	\N		\N
 mupreva1405	mupreva71	dd530	no	si	si	19	mupreva	no	[{"dd6":"mupreva1396"},{"dd1747":"mupreva1398"},{"dd9":"mupreva1399"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "33%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1406	mupreva71	dd530	no	si	si	21	mupreva	no	[{"dd6":"mupreva86"},{"dd9":"mupreva88"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva525	mupreva71	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": {\r\n    "section_id": "2",\r\n    "section_tipo": "dd64"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "12%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2281,8 +2279,7 @@ mupreva1327	mupreva201	dd11	no	si	si	13	mupreva	no	[{"dd6":"mupreva432"},{"dd9":
 mupreva2401	mupreva201	dd530	no	si	si	14	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2572	mupreva2564	dd91	no	si	si	6	mupreva	si	[{"dd339":"mupreva2578"},{"dd9":"mupreva2589"},{"dd9":"mupreva2567"},{"dd318":"mupreva2568"},{"dd9":"mupreva2584"},{"dd530":"mupreva2599"},{"dd9":"mupreva2071"}]	\N	\N
 mupreva2589	mupreva2603	dd9	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    },\r\n    ".css_input_text": {\r\n      "style": {\r\n        "font-size": "16px"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2772	mupreva2635	dd581	no	si	si	9	mupreva	no	\N	\N	\N
-mupreva2773	mupreva2635	dd581	no	si	si	10	mupreva	no	\N	\N	\N
+mupreva2772	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva1510	mupreva2	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva13	mupreva14	dd97	no	si	no	2	mupreva	no	[{"dd6":"mupreva21"},{"dd749":"mupreva212"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "100%",\r\n    "element_height": "180px"\r\n  }\r\n}	\N
 mupreva1526	mupreva1512	dd530	no	si	si	8	mupreva	no	[{"dd6":"mupreva451"},{"dd9":"mupreva455"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2295,6 +2292,7 @@ mupreva277	mupreva231	dd11	no	si	si	9	mupreva	no	[{"dd6":"mupreva278"},{"dd9":"m
 mupreva1235	mupreva236	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "9%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2632	mupreva2622	dd592	no	si	si	5	mupreva	no	[{"dd6":"mupreva1438"},{"dd339":"mupreva1441"},{"dd9":"mupreva1456"},{"dd318":"mupreva1457"},{"dd592":"mupreva1474"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2657	mupreva218	dd11	no	si	si	2	mupreva	no	[{"dd6":"rsc312"},{"dd9":"rsc315"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2773	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva612	mupreva151	dd91	no	si	si	1	mupreva	no	[{"dd6":"mupreva120"},{"dd749":"mupreva212"}]		\N
 mupreva203	mupreva201	dd9	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1520	mupreva1553	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva530"},{"dd9":"mupreva533"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical", ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2372,6 +2370,7 @@ mupreva2583	mupreva2579	dd1231	no	si	si	9	mupreva	si	[{"dd318":"mupreva2569"}]	\
 mupreva2641	mupreva2579	dd1231	no	si	si	22	mupreva	si	[{"dd592":"mupreva2623"}]	{"data_to_be_used":"dato"}	\N
 mupreva2667	mupreva33	dd440	no	si	si	6	mupreva	no	[{"dd438":"mupreva2664"}]	\N	\N
 mupreva1530	mupreva1512	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva398"},{"dd9":"mupreva402"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2614	mupreva510	dd9	no	si	si	7	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2372	mupreva765	dd11	no	si	si	9	mupreva	no	[{"dd6":"mupreva2358"},{"dd9":"mupreva2360"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva558	mupreva1512	dd9	no	si	si	15	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2584	mupreva2603	dd9	no	si	si	2	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2381,7 +2380,6 @@ mupreva2673	mupreva1540	dd524	no	si	si	1	mupreva	no	[{"dd6":"mupreva153"},{"dd17
 mupreva1532	mupreva1556	dd530	no	si	si	1	mupreva	no	[{"dd6":"peri1"},{"dd9":"hierarchy25"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2374	mupreva765	dd904	no	si	si	11	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2585	mupreva2579	dd1235	no	si	si	4	mupreva	si	[{"dd9":"mupreva2584"}]	{\r\n  "varchar": 128\r\n}	\N
-mupreva2614	mupreva510	dd9	no	si	si	7	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2643	mupreva2579	dd1231	no	si	si	25	mupreva	si	[{"dd592":"mupreva2627"}]	{"data_to_be_used":"dato"}	\N
 mupreva1538	mupreva1537	dd635	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2587	mupreva2579	dd1231	no	si	si	11	mupreva	si	[{"dd352":"mupreva2571"}]	\N	\N
@@ -2394,8 +2392,8 @@ mupreva2645	mupreva2579	dd1231	no	si	si	27	mupreva	si	[{"dd592":"mupreva2632"}]	
 mupreva2382	mupreva1537	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva503	mupreva501	dd442	no	si	si	6	mupreva	no	[{"dd6":"mupreva380"},{"dd9":"mupreva384"}]	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2,5\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2343	mupreva239	dd227	no	si	si	8	mupreva	no	\N	{\r\n  "multiple_data": true,\r\n  "multiple_data_tipo": "mupreva2617",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2562	hierarchy56	dd4	no	si	si	11	mupreva	si	\N	\N	\N
 mupreva2677	mupreva2487	dd524	no	si	si	2	mupreva	si	[{"dd6":"mupreva2541"},{"dd530":"mupreva2544"}]	\N	\N
-mupreva2562	hierarchy56	dd4	no	si	si	12	mupreva	si	\N	\N	\N
 mupreva2415	mupreva1250	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva1"},{"dd1747":"mupreva1224"},{"dd9":"mupreva776"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2347	mupreva239	dd11	no	si	si	12	mupreva	no	[{"dd6":"mupreva2352"},{"dd9":"mupreva2354"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2348	mupreva239	dd11	no	si	si	13	mupreva	no	[{"dd6":"mupreva2358"},{"dd9":"mupreva2360"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2430,9 +2428,9 @@ mupreva2253	mupreva2249	dd91	no	si	si	2	mupreva	no	[{"dd339":"mupreva202"},{"dd9
 mupreva2678	mupreva305	dd524	no	si	si	7	mupreva	si	[{"dd195":"dd196"},{"dd339":"mupreva307"},{"dd9":"mupreva308"},{"dd318":"mupreva309"},{"dd10":"mupreva310"}]	\N	\N
 mupreva555	mupreva87	dd339	no	si	si	2	mupreva	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": {\r\n    "section_id": "2",\r\n    "section_tipo": "dd64"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2087	mupreva86	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva88"},{"dd530":"mupreva556"}]		\N
-mupreva2611	mupreva2635	dd524	no	si	si	5	mupreva	no	[{"dd195":"dd196"},{"dd9":"rsc23"},{"dd10":"rsc30"},{"dd635":"mupreva219"},{"dd635":"mupreva207"},{"dd530":"mupreva2400"},{"dd530":"mupreva2399"},{"dd11":"mupreva1327"},{"dd11":"mupreva206"},{"dd11":"mupreva2657"},{"dd11":"mupreva208"},{"dd9":"mupreva695"},{"dd10":"mupreva209"},{"dd9":"mupreva216"},{"dd530":"mupreva693"}]	\N	\N
-mupreva2601	mupreva2635		no	si	si	7	mupreva	no	[{"dd195":"dd196"},{"dd1747":"mupreva1384"},{"dd339":"mupreva525"},{"dd11":"mupreva75"},{"dd9":"mupreva73"},{"dd318":"mupreva74"},{"dd530":"mupreva1395"},{"dd530":"mupreva529"},{"dd530":"mupreva1405"},{"dd247":"mupreva103"},{"dd530":"mupreva1406"}]		\N
+mupreva2601	mupreva2635		no	si	si	3	mupreva	no	[{"dd195":"dd196"},{"dd1747":"mupreva1384"},{"dd339":"mupreva525"},{"dd11":"mupreva75"},{"dd9":"mupreva73"},{"dd318":"mupreva74"},{"dd530":"mupreva1395"},{"dd530":"mupreva529"},{"dd530":"mupreva1405"},{"dd247":"mupreva103"},{"dd530":"mupreva1406"}]		\N
 mupreva40	mupreva2579	dd1231	no	si	si	17	mupreva	no	[{"dd592":"mupreva2672"}]	{\r\n  "data_to_be_used": "dato"\r\n}	\N
+mupreva2611	mupreva2635	dd524	no	si	si	3	mupreva	no	[{"dd195":"dd196"},{"dd9":"rsc23"},{"dd10":"rsc30"},{"dd635":"mupreva219"},{"dd635":"mupreva207"},{"dd530":"mupreva2400"},{"dd530":"mupreva2399"},{"dd11":"mupreva1327"},{"dd11":"mupreva206"},{"dd11":"mupreva2657"},{"dd11":"mupreva208"},{"dd9":"mupreva695"},{"dd10":"mupreva209"},{"dd9":"mupreva216"},{"dd530":"mupreva693"}]	\N	\N
 mupreva211	mupreva200	dd8	no	si	si	3	mupreva	no	\N		\N
 mupreva218	mupreva200	dd8	no	si	si	2	mupreva	no	\N		\N
 mupreva681	mupreva240	dd58	no	si	si	7	mupreva	no	[{"dd339":"mupreva1235"},{"dd9":"mupreva238"}]		\N
@@ -2452,7 +2450,7 @@ mupreva1369	mupreva87	dd11	no	si	si	5	mupreva	no	[{"dd6":"mupreva1360"},{"dd9":"
 mupreva1359	mupreva87	dd1747	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(104, 191, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1288	mupreva472	dd91	no	si	si	2	mupreva	no	[{"dd9":"mupreva1336"},{"dd57":"mupreva1263"},{"dd9":"mupreva1274"},{"dd530":"mupreva1273"},{"dd318":"mupreva1276"},{"dd635":"mupreva1280"},{"dd722":"mupreva1283"}]		\N
 mupreva2596	mupreva43	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva46"}]	\N	\N
-mupreva1432	mupreva1410	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva1413"}]		\N
+mupreva1432	mupreva1410	dd58	no	si	si	9	mupreva	no	[{"dd9":"mupreva1413"}]		\N
 mupreva2074	mupreva641	dd58	no	si	si	8	mupreva	no	[{"dd9":"mupreva1324"},{"dd530":"mupreva644"}]		\N
 mupreva1382	mupreva559	dd10	no	si	si	3	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva561	mupreva559	dd10	no	si	si	4	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2546,10 +2544,10 @@ mupreva507	mupreva510	dd9	no	si	si	6	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap
 mupreva508	mupreva510	dd318	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "730px"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1352	mupreva510	dd318	no	si	si	2	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1351	mupreva510	dd10	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva512	mupreva510	dd592	no	si	si	8	mupreva	no	[{"dd6":"mupreva153"},{"dd57":"mupreva628"},{"dd9":"mupreva171"},{"dd9":"mupreva175"},{"dd9":"mupreva178"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2338	mupreva510	dd530	no	si	si	10	mupreva	no	[{"dd6":"mupreva451"},{"dd9":"mupreva455"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2245	mupreva2242	dd10	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva512	mupreva510	dd592	no	si	si	8	mupreva	no	[{"dd6":"mupreva153"},{"dd57":"mupreva628"},{"dd9":"mupreva171"},{"dd9":"mupreva175"},{"dd9":"mupreva178"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva513	mupreva510	dd592	no	si	si	9	mupreva	no	[{"dd6":"mupreva156"},{"dd9":"mupreva171"},{"dd57":"mupreva628"},{"dd1742":"mupreva631"},{"dd530":"mupreva174"},{"dd9":"mupreva178"},{"dd635":"mupreva181"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2245	mupreva2242	dd10	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2244	mupreva2242	dd9	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1428	mupreva1425	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva1296"},{"dd339":"mupreva1299"},{"dd9":"mupreva1300"},{"dd318":"mupreva1301"},{"dd530":"mupreva1273"},{"dd530":"mupreva1264"},{"dd592":"mupreva1304"}]		\N
 mupreva151	mupreva2	dd592	no	si	si	4	mupreva	no	[{"dd6":"mupreva120"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd635":"mupreva207"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd749":"mupreva212"}]	{\r\n  "dragable_connectWith": "mupreva152",\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "20%",\r\n        "float": "right"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "180px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2605,7 +2603,7 @@ mupreva2701	mupreva2277	dd524	no	si	si	4	mupreva	si	[{"dd195":"dd196"},{"dd1747"
 mupreva2707	mupreva620	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva622"}]	\N	\N
 mupreva2713	mupreva1330	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva1505"}]	\N	\N
 mupreva2719	mupreva756	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva758"}]	\N	\N
-mupreva1414	mupreva1411	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ]\r\n}	\N
+mupreva1414	mupreva1411	dd530	no	si	si	3	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ]\r\n}	\N
 mupreva484	mupreva480	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2696	mupreva417	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva425"}]	\N	\N
 mupreva2702	mupreva1360	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd339":"mupreva1362"},{"dd9":"mupreva1363"},{"dd318":"mupreva1364"}]	\N	\N
@@ -2664,7 +2662,7 @@ mupreva2412	mupreva144	dd6	no	si	si	5	mupreva	no	[{"dd195":"dd196"},{"dd9":"mupr
 mupreva1319	mupreva159	dd1221	no	si	no	3	mupreva	no	\N	{\r\n"tool_name":"tool_import_images",\r\n"context_name":"files",\r\n"section_tipo":"mupreva667",\r\n"MAIN_SECTION_TIPO":"mupreva667",\r\n"MAIN_PORTAL_IDENTIFY_IMAGE":"mupreva748",\r\n"MAIN_PORTAL_ADITIONAL_IMAGES":"mupreva749",\r\n"RESOURCE_SECTION_TIPO":"mupreva159",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva1324",\r\n"RESOURCE_COMPONENT_TIPO_IMAGE":"mupreva660",\r\n"RESOURCE_COMPONENT_TIPO_PDF":"mupreva661",\r\n"RESOURCE_COMPONENT_TIPO_TRANSCRIPTION":"mupreva662",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva663",\r\n"process_script":"/extras/mupreva/tool_import_images/import_imagenes_ephemera.php",\r\n"quality":"original",\r\n"initial_media_path":"/ephemera",\r\n"enable_selector":false,\r\n"verify_file_name":true,\r\n"enable_target_id":false\r\n}	\N
 mupreva210	mupreva218	dd247	no	si	si	8	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2470	mupreva2465	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2457	mupreva2452	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2457	mupreva2452	dd530	no	si	si	6	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2609	mupreva2608	dd1129	no	si	si	1	mupreva	no	[{"dd530":"mupreva2135"},{"dd530":"mupreva2134"},{"dd9":"mupreva2275"}]	\N	\N
 mupreva552	mupreva500	dd91	no	si	si	5	mupreva	no	[{"dd57":"mupreva502"},{"dd9":"mupreva505"},{"dd530":"mupreva503"},{"dd530":"mupreva506"},{"dd10":"mupreva508"},{"dd592":"mupreva514"}]		\N
 mupreva2078	mupreva120	dd1221	no	si	si	4	mupreva	no	\N	{\r\n"tool_name":"tool_import_images",\r\n"context_name":"files",\r\n"section_tipo":"mupreva1",\r\n"MAIN_SECTION_TIPO":"mupreva1",\r\n"MAIN_PORTAL_IDENTIFY_IMAGE":"mupreva151",\r\n"MAIN_PORTAL_ADITIONAL_IMAGES":"mupreva152",\r\n"RESOURCE_SECTION_TIPO":"mupreva120",\r\n"RESOURCE_COMPONENT_TIPO_IMAGE":"mupreva212",\r\n"RESOURCE_COMPONENT_TIPO_DIRECTORY":"mupreva214",\r\n"RESOURCE_COMPONENT_TIPO_FILENAME":"mupreva215",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva203",\r\n"RESOURCE_COMPONENT_TIPO_CODE_OLD":"mupreva204",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva210",\r\n"RESOURCE_COMPONENT_TIPO_AUTHOR":"mupreva753",\r\n"RESOURCE_COMPONENT_DATE_CAPTURE":"mupreva207",\r\n"process_script":"/extras/mupreva/tool_import_images/import_images_generic_modificada.php",\r\n"quality":"modificada",\r\n"initial_media_path":"/dibujos_catalogo",\r\n"aditional_path":"numero_to_local_path",\r\n"enable_target_id":false,\r\n"verify_file_name":true\r\n}	\N
@@ -2672,18 +2670,18 @@ mupreva853	mupreva801	dd1229	no	si	si	10	mupreva	si	[{"dd6":"mupreva21"}]	{\r\n 
 mupreva2633	mupreva2622	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva20"},{"dd339":"mupreva732"},{"dd9":"mupreva696"},{"dd592":"mupreva706"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva91	mupreva86	dd177	no	si	si	5	mupreva	no	\N		\N
 mupreva1230	mupreva494	dd58	no	si	si	12	mupreva	no	[{"dd9":"mupreva499"}]		\N
+mupreva2750	mupreva2635	dd581	no	si	si	6	mupreva	no	\N	\N	\N
+mupreva2751	mupreva2635	dd581	no	si	si	6	mupreva	no	\N	\N	\N
 mupreva2724	mupreva500	dd581	no	si	si	9	mupreva	no	\N	\N	\N
 mupreva2725	mupreva530	dd581	no	si	si	8	mupreva	no	\N	\N	\N
 mupreva2190	mupreva2239	dd233	no	si	si	1	mupreva	si	null	{\r\n  "value": "<?xml version=\\"1.0\\" encoding=\\"utf-8\\" ?>"\r\n}	\N
-mupreva2751	mupreva2635	dd581	no	si	si	23	mupreva	no	\N	\N	\N
-mupreva2750	mupreva2635	dd581	no	si	si	25	mupreva	no	\N	\N	\N
 mupreva258	mupreva2579	dd1231	no	si	si	16	mupreva	no	[{"dd592":"mupreva2671"}]	{"data_to_be_used":"dato"}	\N
 mupreva2239	mupreva2241	dd1743	no	si	si	1	mupreva	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_rdf",\r\n    "service": "nomisma"\r\n  }\r\n}	\N
+mupreva2766	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2726	mupreva494	dd581	no	si	si	13	mupreva	no	\N	\N	\N
+mupreva2595	mupreva2635	dd524	no	si	si	3	mupreva	no	[{"dd195":"dd196"},{"dd1747":"mupreva1262"},{"dd339":"mupreva1263"},{"dd530":"mupreva1265"},{"dd9":"mupreva1274"},{"dd530":"mupreva1276"},{"dd10":"mupreva1284"},{"dd530":"mupreva1293"},{"dd530":"mupreva1294"},{"dd530":"mupreva1295"}]	\N	\N
+mupreva2769	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva1381	mupreva87	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{ "source": {\r\n    "divisor": ", "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2595	mupreva2635	dd524	no	si	si	4	mupreva	no	[{"dd195":"dd196"},{"dd1747":"mupreva1262"},{"dd339":"mupreva1263"},{"dd530":"mupreva1265"},{"dd9":"mupreva1274"},{"dd530":"mupreva1276"},{"dd10":"mupreva1284"},{"dd530":"mupreva1293"},{"dd530":"mupreva1294"},{"dd530":"mupreva1295"}]	\N	\N
-mupreva2766	mupreva2635	dd581	no	si	si	18	mupreva	no	\N	\N	\N
-mupreva2769	mupreva2635	dd581	no	si	si	19	mupreva	no	\N	\N	\N
 mupreva220	mupreva201	dd530	no	si	si	16	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{\r\n  "source": {\r\n    "divisor": " "\r\n  },\r\n  "filtered_by": {\r\n    "mupreva235": [\r\n      {\r\n        "section_id": "6",\r\n        "section_tipo": "mupreva164"\r\n      }\r\n    ]\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva693	mupreva211	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"},{"dd11":"mupreva277"}]	{ "source": {\r\n    "divisor": " "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva753	mupreva754	dd530	no	si	si	2	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{ "source": {\r\n    "divisor": " "\r\n  },\r\n  "filtered_by": {\r\n    "mupreva235": [\r\n      {\r\n        "section_tipo": "mupreva164",\r\n        "section_id": "4"\r\n      }\r\n    ]\r\n  }\r\n}	\N
@@ -2693,11 +2691,14 @@ mupreva1180	mupreva691	dd530	no	si	si	9	mupreva	no	[{"dd6":"mupreva162"},{"dd9":
 mupreva1182	mupreva712	dd530	no	si	si	9	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{ "source": {\r\n    "divisor": " "\r\n  },\r\n  "filtered_by": {\r\n    "mupreva235": [\r\n      {\r\n        "section_id": "6",\r\n        "section_tipo": "mupreva164"\r\n      }\r\n    ]\r\n  }\r\n}	\N
 mupreva2218	mupreva2212	dd248	no	si	si	1	mupreva	si	\N		\N
 mupreva2729	mupreva770	dd581	no	si	si	9	mupreva	no	\N	\N	\N
+mupreva2563	mupreva2635	dd524	no	si	si	3	mupreva	no	[{"dd195":"dd196"},{"dd9":"mupreva205"},{"dd10":"mupreva217"}]	\N	\N
+mupreva2723	mupreva2635	dd524	no	si	si	3	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva2686"}]	\N	\N
 mupreva2063	mupreva690	dd58	no	si	si	7	mupreva	no	[{"dd635":"mupreva692"},{"dd9":"mupreva696"}]		\N
 mupreva2731	mupreva2435	dd581	no	si	si	7	mupreva	no	\N	\N	\N
 mupreva2732	mupreva2436	dd581	no	si	si	7	mupreva	no	\N	\N	\N
-mupreva2756	mupreva2635	dd581	no	si	si	27	mupreva	no	\N	\N	\N
+mupreva2756	mupreva2635	dd581	no	si	si	6	mupreva	no	\N	\N	\N
 mupreva2733	mupreva2437	dd581	no	si	si	7	mupreva	no	\N	\N	\N
+mupreva2653	mupreva2635	dd524	no	si	si	3	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva1237"},{"dd9":"mupreva232"},{"dd9":"mupreva233"},{"dd11":"mupreva2347"},{"dd11":"mupreva2348"},{"dd227":"mupreva242"},{"dd227":"mupreva2343"},{"dd11":"mupreva2349"},{"dd904":"mupreva2350"},{"dd57":"mupreva2675"}]	\N	\N
 mupreva2422	mupreva2418	dd44	no	si	si	4	mupreva	no	\N	{\r\n  "formula": [\r\n    {\r\n      "data": {\r\n        "section_tipo": "current",\r\n        "section_id": "current",\r\n        "filter": false,\r\n        "components": [\r\n          {\r\n            "tipo": "mupreva2420",\r\n            "var_name": "mupreva2420"\r\n          },\r\n          {\r\n            "tipo": "mupreva2421",\r\n            "var_name": "mupreva2421"\r\n          }\r\n        ]\r\n      },\r\n      "rules": {\r\n        "-": [\r\n          {\r\n            "var": "mupreva2420"\r\n          },\r\n          {\r\n            "var": "mupreva2421"\r\n          }\r\n        ]\r\n      }\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2423	mupreva2418	dd44	no	si	si	5	mupreva	no	\N	{\r\n  "formula": [\r\n    {\r\n      "data": {\r\n        "section_tipo": "current",\r\n        "section_id": "current",\r\n        "filter": false,\r\n        "components": [\r\n          {\r\n            "tipo": "mupreva2420",\r\n            "var_name": "mupreva2420"\r\n          },\r\n          {\r\n            "tipo": "mupreva2422",\r\n            "var_name": "mupreva2422"\r\n          }\r\n        ],\r\n        "true": {\r\n          "separator_fields": " - ",\r\n          "ar_locators": "[{'section_id':'1','section_tipo':'mupreva221','component_tipo':'mupreva223'},{'section_id':'1','section_tipo':'mupreva221','component_tipo':'mupreva225'}]"\r\n        },\r\n        "false": {\r\n          "ar_locators": "[{'section_id':'2','section_tipo':'mupreva221','component_tipo':'mupreva223'}]"\r\n        }\r\n      },\r\n      "rules": {\r\n        "if": [\r\n          {\r\n            "or": [\r\n              {\r\n                "<": [\r\n                  {\r\n                    "var": "mupreva2420"\r\n                  },\r\n                  51\r\n                ]\r\n              },\r\n              {\r\n                "<": [\r\n                  {\r\n                    "var": "mupreva2422"\r\n                  },\r\n                  51\r\n                ]\r\n              }\r\n            ]\r\n          },\r\n          {\r\n            "var": "true"\r\n          },\r\n          {\r\n            "var": "false"\r\n          }\r\n        ]\r\n      }\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2615	mupreva765	dd44	no	si	si	6	mupreva	no	\N	{\r\n  "formula": [\r\n    {\r\n      "data": {\r\n        "section_tipo": "current",\r\n        "section_id": "search_session",\r\n        "value": "value",\r\n        "filter": false,\r\n        "components": [\r\n          {\r\n            "tipo": "mupreva766",\r\n            "var_name": "mupreva766"\r\n          }\r\n        ],\r\n        "separator_fields": ", "\r\n      },\r\n      "rules": {\r\n        "merge": [\r\n          {\r\n            "var": "mupreva766"\r\n          }\r\n        ]\r\n      }\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2721,9 +2722,10 @@ mupreva44	mupreva43	dd8	no	si	si	1	mupreva	no	\N		\N
 mupreva1312	mupreva1296	dd91	no	si	si	6	mupreva	no	[{"dd57":"mupreva1299"},{"dd9":"mupreva1300"},{"dd318":"mupreva1301"},{"dd635":"mupreva1302"},{"dd592":"mupreva1304"}]		\N
 mupreva16	mupreva1537	dd247	no	si	si	4	mupreva	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%",\r\n        "height": "10em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "7.5em"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva492	dd322	dd4	no	si	si	4	mupreva	no	\N		\N
-mupreva2741	mupreva1410	dd581	no	si	si	8	mupreva	no	\N	\N	\N
+mupreva2741	mupreva1410	dd581	no	si	si	10	mupreva	no	\N	\N	\N
 mupreva2742	mupreva1000	dd581	no	si	si	8	mupreva	no	\N	\N	\N
 mupreva634	mupreva1000	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva1002"}]		\N
+mupreva2743	mupreva2635	dd581	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva1335	mupreva1296	dd1221	no	si	si	5	mupreva	no	\N	{\r\n"tool_name":"tool_import_av",\r\n"context_name":"files",\r\n"section_tipo":"mupreva1296",\r\n"MAIN_SECTION_TIPO":"mupreva1296",\r\n"MAIN_PORTAL_AV":"mupreva1304",\r\n"RESOURCE_SECTION_TIPO":"mupreva472",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva1336",\r\n"RESOURCE_COMPONENT_TIPO_CODE_OLD":"mupreva1337",\r\n"RESOURCE_COMPONENT_TIPO_AV":"mupreva1283",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva1281",\r\n"process_script":"/extras/mupreva/tool_import_av/import_av.php",\r\n"quality":"audio",\r\n"verify_file_name":true,\r\n"enable_target_id":false\r\n}	\N
 mupreva2744	mupreva200	dd581	no	si	si	9	mupreva	no	\N	\N	\N
 mupreva1556	mupreva1	dd8	no	si	si	5	mupreva	no	\N		\N
@@ -2745,8 +2747,8 @@ mupreva430	mupreva290	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva298"},{"dd9":"m
 mupreva2553	mupreva2434	dd58	no	si	si	8	mupreva	no	[{"dd530":"mupreva2442"},{"dd530":"mupreva2509"},{"dd530":"mupreva2513"}]	\N	\N
 mupreva2554	mupreva2435	dd58	no	si	si	6	mupreva	no	[{"dd9":"mupreva2467"},{"dd635":"mupreva2468"}]	\N	\N
 mupreva2557	mupreva2438	dd58	no	si	si	7	mupreva	no	[{"dd635":"mupreva2480"},{"dd635":"mupreva2481"},{"dd530":"mupreva2483"}]	\N	\N
+mupreva6	mupreva2635	dd58	no	si	si	14	mupreva	no	[{"dd9":"mupreva776"}]		\N
 mupreva2628	mupreva530	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva533"}]	\N	\N
-mupreva6	mupreva2635	dd58	no	si	si	29	mupreva	no	[{"dd9":"mupreva776"}]		\N
 mupreva100	mupreva2261	dd91	no	si	si	6	mupreva	no	[{"dd339":"mupreva525"},{"dd43":"mupreva2169"},{"dd9":"mupreva73"},{"dd10":"mupreva72"},{"dd318":"mupreva74"},{"dd11":"mupreva75"},{"dd592":"mupreva528"},{"dd592":"mupreva602"},{"dd592":"mupreva2117"}]		\N
 mupreva2098	mupreva2261	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva73"}]		\N
 mupreva2560	mupreva106	dd58	no	si	si	7	mupreva	no	[{"dd9":"mupreva108"},{"dd9":"mupreva109"}]	\N	\N
@@ -2759,7 +2761,6 @@ mupreva2077	mupreva21	dd1221	no	si	si	4	mupreva	no	\N	{\r\n"tool_name":"tool_imp
 mupreva122	mupreva120	dd91	no	si	si	2	mupreva	no	[{"dd11":"mupreva208"},{"dd9":"mupreva203"},{"dd635":"mupreva207"},{"dd9":"mupreva205"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd749":"mupreva212"}]		\N
 mupreva273	mupreva120	dd1221	no	si	si	3	mupreva	no	\N	{\r\n"tool_name":"tool_import_images",\r\n"context_name":"files",\r\n"section_tipo":"mupreva1",\r\n"MAIN_SECTION_TIPO":"mupreva1",\r\n"MAIN_PORTAL_IDENTIFY_IMAGE":"mupreva151",\r\n"MAIN_PORTAL_ADITIONAL_IMAGES":"mupreva152",\r\n"RESOURCE_SECTION_TIPO":"mupreva120",\r\n"RESOURCE_COMPONENT_TIPO_IMAGE":"mupreva212",\r\n"RESOURCE_COMPONENT_TIPO_DIRECTORY":"mupreva214",\r\n"RESOURCE_COMPONENT_TIPO_FILENAME":"mupreva215",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva203",\r\n"RESOURCE_COMPONENT_TIPO_CODE_OLD":"mupreva204",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva210",\r\n"RESOURCE_COMPONENT_TIPO_AUTHOR":"mupreva753",\r\n"RESOURCE_COMPONENT_DATE_CAPTURE":"mupreva207",\r\n"process_script":"/extras/mupreva/tool_import_images/import_images_generic.php",\r\n"quality":"original",\r\n"initial_media_path":"/dibujos_catalogo",\r\n"aditional_path":"numero_to_local_path",\r\n"enable_target_id":false,\r\n"verify_file_name":true\r\n}	\N
 mupreva272	mupreva268	dd91	no	si	si	2	mupreva	no	[{"dd57":"mupreva202"},{"dd9":"mupreva203"},{"dd11":"mupreva208"},{"dd9":"mupreva205"},{"dd9":"mupreva216"},{"dd635":"mupreva207"},{"dd635":"mupreva219"},{"dd530":"mupreva220"},{"dd10":"mupreva217"},{"dd749":"mupreva212"}]		\N
-mupreva1004	mupreva1007	dd592	no	si	si	4	mupreva	no	[{"dd6":"mupreva500"},{"dd57":"mupreva502"},{"dd9":"mupreva505"},{"dd530":"mupreva506"},{"dd10":"mupreva508"},{"dd592":"mupreva514"}]		\N
 mupreva1085	mupreva268	dd1221	no	si	si	3	mupreva	no		{\r\n"tool_name":"tool_import_images",\r\n"context_name":"files",\r\n"section_tipo":"mupreva473",\r\n"MAIN_SECTION_TIPO":"mupreva473",\r\n"MAIN_PORTAL_IDENTIFY_IMAGE":"mupreva481",\r\n"MAIN_PORTAL_ADITIONAL_IMAGES":"mupreva483",\r\n"RESOURCE_SECTION_TIPO":"mupreva268",\r\n"RESOURCE_COMPONENT_TIPO_IMAGE":"mupreva212",\r\n"RESOURCE_COMPONENT_TIPO_DIRECTORY":"mupreva214",\r\n"RESOURCE_COMPONENT_TIPO_FILENAME":"mupreva215",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva203",\r\n"RESOURCE_COMPONENT_TIPO_CODE_OLD":"mupreva204",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva210",\r\n"RESOURCE_COMPONENT_TIPO_AUTHOR":"mupreva220",\r\n"RESOURCE_COMPONENT_DATE_CAPTURE":"mupreva219",\r\n"RESOURCE_COMPONENT_ACTIVE_WEB":"mupreva202",\r\n"process_script":"/extras/mupreva/tool_import_images/import_images_digital.php",\r\n"quality":"original",\r\n"initial_media_path":"/digital"\r\n}	\N
 mupreva69	mupreva42	dd91	no	si	si	2	mupreva	no	[{"dd11":"mupreva60"},{"dd635":"mupreva61"},{"dd57":"mupreva62"},{"dd9":"mupreva119"},{"dd9":"mupreva63"},{"dd57":"mupreva64"},{"dd9":"mupreva65"},{"dd11":"mupreva66"},{"dd530":"mupreva67"}]		\N
 mupreva68	mupreva42	dd247	no	si	si	3	mupreva	no	\N	{"dato_default":{"2":"2"}}	\N
@@ -2801,4 +2802,35 @@ mupreva2801	mupreva855	dd1231	no	si	si	82	mupreva	si	[{"dd592":"mupreva2785"}]	{
 mupreva2802	mupreva855	dd1231	no	si	si	83	mupreva	si	[{"dd592":"mupreva2785"}]	\N	\N
 mupreva2803	mupreva2579	dd1231	no	si	si	82	mupreva	si	[{"dd592":"mupreva2787"}]	{"data_to_be_used": "dato"}	\N
 mupreva2804	mupreva882	dd1231	no	si	si	82	mupreva	si	[{"dd592":"mupreva2786"}]	{"data_to_be_used": "dato"}	\N
-mupreva2618	mupreva2635		no	si	si	1	mupreva	si	\N	\N	\N
+mupreva2805	mupreva1512	dd592	no	si	si	20	mupreva	no	[{"dd6":"rsc332"},{"dd9":"rsc336"},{"dd530":"rsc368"},{"dd9":"rsc369"}]	{\n"elements_list_mode": {\n    "rsc336": {\n      "mode": "edit_in_list",\n      "column_width": "5%"\n    },\n    "rsc368": {\n      "mode": "edit_in_list",\n      "column_width": "30%"\n    },\n    "rsc369": {\n      "mode": "edit_in_list",\n      "column_width": "30%"\n    }\n  },\n"edit_view": "view_single_line",\n  "css": {\n    ".wrap_component": {\n      "mixin": [\n        ".vertical",\n        ".line_top"\n      ],\n      "style": {\n        "width": "50%",\n        "clear": "left"\n      }\n    },\n    ".css_button_generic > span": {\n      "style": {\n        "display": "none"\n      }\n    },\n    ".section_id_number": {\n      "style": {\n        "display": "none"\n      }\n    }\n  },\n  "portal_link_open": false\n}	\N
+mupreva2806	mupreva2805	dd91	no	si	si	1	mupreva	si	[{"dd9":"rsc336"},{"dd530":"rsc368"},{"dd9":"rsc369"}]	\N	\N
+mupreva2807	mupreva2805	dd97	no	si	si	2	mupreva	no	[{"dd6":"rsc332"},{"dd530":"rsc368"},{"dd9":"rsc336"},{"dd9":"rsc369"}]	\N	\N
+mupreva2808	mupreva1410	dd8	no	si	si	3	mupreva	no	\N		\N
+mupreva2809	mupreva1410	dd8	no	si	si	5	mupreva	no	\N		\N
+mupreva2810	mupreva773	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva2434"},{"dd1747":"mupreva2440"},{"dd530":"mupreva2507"},{"dd530":"mupreva2510"},{"dd530":"mupreva2509"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2811	mupreva2452	dd530	no	si	si	8	mupreva	no	[{"dd6":"mupreva609"},{"dd9":"mupreva238"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2812	mupreva2436	dd8	no	si	si	3	mupreva	no	\N	\N	\N
+mupreva2813	mupreva2812	dd592	no	si	si	1	mupreva	no	[{"dd6":"rsc176"},{"dd9":"rsc23"},{"dd10":"rsc38"},{"dd1018":"rsc37"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2814	mupreva2813	dd524	no	si	si	1	mupreva	no	[{"dd6":"rsc176"},{"dd9":"rsc23"},{"dd10":"rsc38"},{"dd1018":"rsc37"}]	\N	\N
+mupreva2815	mupreva516	dd592	no	si	si	7	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2816	mupreva2815	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2817	mupreva549	dd592	no	si	si	6	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2818	mupreva2817	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2819	mupreva597	dd592	no	si	si	5	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2820	mupreva2819	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2821	mupreva605	dd592	no	si	si	7	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2822	mupreva2821	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2823	mupreva560	dd592	no	si	si	7	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2824	mupreva2823	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2825	mupreva603	dd592	no	si	si	7	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2826	mupreva2825	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2827	mupreva1425	dd592	no	si	si	5	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2828	mupreva2827	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2829	mupreva1008	dd592	no	si	si	2	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2830	mupreva2829	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2831	mupreva1512	dd592	no	si	si	22	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2832	mupreva2831	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2833	mupreva1349	dd592	no	si	si	4	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2834	mupreva2833	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
+mupreva2835	mupreva2515	dd592	no	si	si	11	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "max_records": 10,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "20%",\r\n        "height": "160px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item": {\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic >span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li >.mosaic_item .div_image_portal_list_view_mosaic": {\r\n      "style": {\r\n        "background-size": "cover",\r\n        "height": "160px"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2836	mupreva2835	dd97	no	si	si	1	mupreva	no	[{"dd6":"rsc170"},{"dd592":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "33.33%",\r\n    "element_height": "160px"\r\n  }\r\n}	\N
