@@ -3111,7 +3111,7 @@ class search_development2 {
 	* Used to build search presets
 	* @return object $response
 	*/
-	public static function get_components_from_section($ar_section_tipo, $path=[], $ar_tipo_exclude_elements=false) {
+	public static function get_components_from_section($ar_section_tipo, $path=[], $ar_tipo_exclude_elements=false, $ar_components_exclude=null) {
 		#dump($section_tipo, ' section_tipo ++ '.to_string());
 		$start_time=microtime(1);
 
@@ -3121,24 +3121,28 @@ class search_development2 {
 
 		$ar_result = [];
 
-		$ar_components_exclude = [	'component_password',
-									'component_filter_records',
-									'component_image',
-									'component_av',
-									'component_pdf',
-									'component_security_administrator',
-									//'component_relation_children',
-									//'component_relation_related',
-									//'component_relation_model',
-									//'component_relation_parent',
-									//'component_relation_index',
-									//'component_relation_struct',
-									'component_geolocation',
-									'component_info',
-									'component_state',
-									'section_tab',
-									'component_autocomplete_ts'
-								];
+		if (empty($ar_components_exclude)) {
+			// default list
+			$ar_components_exclude = [
+				'component_password',
+				'component_filter_records',
+				'component_image',
+				'component_av',
+				'component_pdf',
+				'component_security_administrator',
+				//'component_relation_children',
+				//'component_relation_related',
+				//'component_relation_model',
+				//'component_relation_parent',
+				//'component_relation_index',
+				//'component_relation_struct',
+				'component_geolocation',
+				'component_info',
+				'component_state',
+				'section_tab',
+				'component_autocomplete_ts'
+			];
+		}//if (empty($ar_components_exclude))
 
 		# Manage multiple sections
 		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
@@ -3213,7 +3217,6 @@ class search_development2 {
 				// section group children (components)
 					// $ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');				
 					$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');
-									dump($ar_section_group_childrens, ' ar_section_group_childrens ++ '.to_string());
 				
 				// iterate children (components)
 					foreach ($ar_section_group_childrens as $component_tipo) {

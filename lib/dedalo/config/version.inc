@@ -2444,6 +2444,17 @@
 		Removed temporal alert in tool_structuration
 		03-10-2021
 		Fixed component_geolocation relation bug in compoent_text_area where model was calculated from model tipo instead tipo (old way)
+		06-10-2021
+		Fixed components_from_section list exclude error in tool_export. Now, custom ar_components_exclude can be passed to the method to overwrite default list
+		Fixed issue with ontology relations model tipo on assign by user
+		Fixed error in component_portal on add label in edit_in_list mode
+		11-10-2021
+		Added common component method 'get_diffusion_resolve_value' for use it in non relation components like text_area
+		Added component_geolocation method 'get_diffusion_value_as_geojson' to allow generate standard GEOJOSN format as output like component_text_area (used for fallback values in publication)
+		Added diffusion_sql::build_geolocation_data_geojson options to allow resolve fallback values
+		12-10-2021
+		Fixed component_geolocation lat and lon number format issues on 'get_diffusion_value_as_geojson' method
+		Added 'options->propiedades' fallback options to class.diffusion_sql->build_geolocation_data_geojson for compatibility with direct calls in the publication process
 
 
 	[/HISTORY]
@@ -2469,13 +2480,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2k';
+	$DEDALO_VERSION = '5.8.2p';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-10-2021');
+	define('DEDALO_BUILD'	, '12-10-2021');
 
 
 	/*
