@@ -193,10 +193,25 @@ class web_data {
 						return false;
 					}
 
-				preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
-				if (empty($output_array[0])) {
-					return false;
-				}
+				// valid chars check
+					$ar_value = !is_array($value) ? explode(',', $value) : $value;
+					foreach ($value as $c_value) {
+
+						if (strpos($c_value, 'CONCAT')===0) {
+							// added |\"|\[|\] to allow CONCAT sentences (14-10-2021)
+							preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/i', $c_value, $output_array);
+						}else{
+							preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $c_value, $output_array);
+						}
+						if (empty($output_array[0])) {
+							return false;
+						}
+					}
+					// old
+						// preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
+						// if (empty($output_array[0])) {
+						// 	return false;
+						// }
 				break;
 
 			case 'sql_fullselect':
