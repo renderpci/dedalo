@@ -1743,6 +1743,7 @@ class diffusion_sql extends diffusion  {
 	* v. 1.3 [20-11-2018]
 	* v. 1.4 [09-12-2020]
 	* v. 1.5 [03-02-2021] Added filter by gender
+	* v. 1.6 [14-10-2021] Added filters for graves
 	* @return object $save
 	*/
 	public function save_global_search_data($request_options) {
@@ -1816,7 +1817,19 @@ class diffusion_sql extends diffusion  {
 					// added 09-12-2020
 					// 'symbol_state' (already added below in $symbol_state_tipos)
 					// added 03-02-2021
-					'gender'
+					'gender',
+					// added 14-10-2021
+					'graves_category',
+					'archeological_site_type',
+					'conservation',
+					'marked',
+					'dignified',
+					'inside_cemetery',
+					'grave_by_number',
+					'intervention_types',
+					'result',
+					'graves_genders',
+					'ages'
 				];
 
 			$fields_array = [];
