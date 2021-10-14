@@ -336,6 +336,14 @@ class web_data {
 
 					foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
+			// ar_fields verify json encoded array (14-10-2021)
+				if (is_string($sql_options->ar_fields) && strpos($sql_options->ar_fields, '[')===0) {
+					// try to decode json formated array
+					if ($decoded_array = json_decode($sql_options->ar_fields)) {
+						$sql_options->ar_fields = $decoded_array;
+					}
+				}
+
 			// table check
 				if (empty($sql_options->table) && empty($sql_options->sql_fullselect)) {
 					$response->result = false;
