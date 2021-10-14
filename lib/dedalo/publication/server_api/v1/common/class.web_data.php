@@ -1162,7 +1162,20 @@ class web_data {
 					}//end if ($map!==false)
 
 				// process_result. : function name, ar_data, process_result object, sql_options object, $total
+					// received format:
+					// {
+					//		fn 		: 'process_result::add_parents_and_children_recursive',
+					//		columns : [{name : "parents"}]
+					// }
 					if ($process_result!==false && !empty($ar_data)) {
+						if (is_string($process_result)) {
+							$process_result = json_decode($process_result);
+						}
+						$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+
+						// overwrite ar_data (!)
+							$ar_data = $user_func_response->ar_data;
+					}
 						$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
 
 						// overwrite ar_data (!)
