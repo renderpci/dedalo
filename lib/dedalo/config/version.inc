@@ -2455,6 +2455,8 @@
 		12-10-2021
 		Fixed component_geolocation lat and lon number format issues on 'get_diffusion_value_as_geojson' method
 		Added 'options->propiedades' fallback options to class.diffusion_sql->build_geolocation_data_geojson for compatibility with direct calls in the publication process
+		14-10-2021
+		Added graves global filters for mdcat in publication
 
 
 	[/HISTORY]
@@ -2480,7 +2482,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2p';
+	$DEDALO_VERSION = '5.8.2q';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
