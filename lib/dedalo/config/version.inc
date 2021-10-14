@@ -2457,6 +2457,10 @@
 		Added 'options->propiedades' fallback options to class.diffusion_sql->build_geolocation_data_geojson for compatibility with direct calls in the publication process
 		14-10-2021
 		Added graves global filters for mdcat in publication
+		Added web_data option to accept process_result as JSON encoded item
+		Added web_data option to accept ar_fields as JSON encoded array
+		Added web_data->check-safe_value option to allow CONCAT sentences as column name (ar_fields)
+		Added method 'break_down_totals' to class process_result
 
 
 	[/HISTORY]
@@ -2482,7 +2486,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2q';
+	$DEDALO_VERSION = '5.8.2r';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
