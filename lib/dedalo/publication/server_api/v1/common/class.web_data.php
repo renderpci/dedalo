@@ -195,7 +195,7 @@ class web_data {
 
 				// valid chars check
 					$ar_value = !is_array($value) ? explode(',', $value) : $value;
-					foreach ($value as $c_value) {
+					foreach ($ar_value as $c_value) {
 
 						if (strpos($c_value, 'CONCAT')===0) {
 							// added |\"|\[|\] to allow CONCAT sentences (14-10-2021)
@@ -1168,20 +1168,24 @@ class web_data {
 					//		columns : [{name : "parents"}]
 					// }
 					if ($process_result!==false && !empty($ar_data)) {
-						if (is_string($process_result)) {
-							$process_result = json_decode($process_result);
+						$process_result = is_string($process_result) ? json_decode($process_result) : $process_result;
+						if (isset($process_result->fn)) {
+							$ar_call = explode('::', $process_result->fn);
+							if(true===method_exists($ar_call[0],$ar_call[1])) {
+
+								// exec method in class 'process_result' like process_result::break_down_totals
+								$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+
+								// overwrite ar_data (!)
+								$ar_data = $user_func_response->ar_data;
+
+							}else{
+								debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (1). ".to_string(), logger::ERROR);
+							}
+						}else{
+							debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (2). ".to_string(), logger::ERROR);
 						}
-						$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
-
-						// overwrite ar_data (!)
-							$ar_data = $user_func_response->ar_data;
 					}
-						$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
-
-						// overwrite ar_data (!)
-							$ar_data = $user_func_response->ar_data;
-					}
-
 
 				// response Fixed properties
 					$response->result 	= $ar_data;
