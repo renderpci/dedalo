@@ -2461,6 +2461,14 @@
 		Added web_data option to accept ar_fields as JSON encoded array
 		Added web_data->check-safe_value option to allow CONCAT sentences as column name (ar_fields)
 		Added method 'break_down_totals' to class process_result
+		22-10-2021
+		Added component input text get_diffusion_value fallback lang
+		Removed component_geolocation default dato. Now, only will be used to draw the map when no dato is available (null)
+		Fixed swagger ui input width css to allow 100%
+		Fixed minor component_publication CSS issues
+		Added web_data::process_result check to prevent calls to invalid methods
+		Fixed errors on publication break_down_totals method when values are not as expected type
+
 
 
 	[/HISTORY]
@@ -2486,13 +2494,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2r';
+	$DEDALO_VERSION = '5.8.2s';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-10-2021');
+	define('DEDALO_BUILD'	, '22-10-2021');
 
 
 	/*
