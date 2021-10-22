@@ -24,6 +24,7 @@ class component_geolocation extends component_common {
 
 		# Si se pasa un id vacío (desde class.section es lo normal), se verifica si existe en matrix y si no, se crea un registro que se usará en adelante
 		$need_save=false;
+		/*
 		if((!isset($dato->lat) || !isset($dato->lon)) && $this->parent>0) {
 			#####################################################################################################
 			# DEFAULT VALUES
@@ -41,6 +42,7 @@ class component_geolocation extends component_common {
 			$this->set_dato($dato_new);
 			$need_save=true;
 		}
+		*/
 
 		#
 		# CONFIGURACIÓN NECESARIA PARA PODER SALVAR
@@ -278,6 +280,25 @@ class component_geolocation extends component_common {
 		if (empty($dato)) {
 			return null;
 		}
+
+		// default dato test
+			// default dato values
+			// "alt": 16,
+			// "lat": 39.462571,
+			// "lon": -0.376295,
+			// "zoom": 12
+			$dato_lat_str	= isset($dato->lat)
+				? strval($dato->lat)
+				: null;
+			$dato_lon_str	= isset($dato->lon)
+				? strval($dato->lon)
+				: null;
+			$dato_lat_str	= str_replace(',', '.', $dato_lat_str);
+			$dato_lon_str	= str_replace(',', '.', $dato_lon_str);
+			if ($dato_lat_str==='39.462571' && $dato_lon_str==='-0.376295') {
+				return null;
+			}
+
 
 		// coordinates. Converts float number to 16 decimals number using '.' separator
 			$lon = number_format($dato->lon, 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)

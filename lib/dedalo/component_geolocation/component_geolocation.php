@@ -44,7 +44,17 @@
 							break;
 					}
 
-				$dato 			= $this->get_dato();
+				$dato = $this->get_dato();
+					// empty dato case, use default to set initial map position
+					if (empty($dato) || empty($dato->lat) || empty($dato->lon)) {
+						$dato_default = new stdClass();
+							$dato_default->lat	= 39.462571;
+							$dato_default->lon	= -0.376295;	# Calle Denia
+							$dato_default->zoom	= 12;
+							$dato_default->alt	= 16;
+						$dato = $dato_default;
+					}
+
 				$dato_json		= json_encode($dato);				
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info = $this->get_component_info('json');
