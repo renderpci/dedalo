@@ -3906,6 +3906,28 @@ class section extends common {
 					$component->Save(); // forces to create each relation in relation table and time machine and activity records
 				}
 
+			// inherits from father if exists
+				// component_relation_parent find
+				$ar_parent_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
+				if (!empty($ar_parent_tipo)) {
+					// calls to current section as child from another sections
+					$parents_data = component_relation_parent::get_parents($this->get_section_id(), $section_tipo);
+					if (!empty($parents_data)) {
+
+						$current_tipo	= $ar_parent_tipo[0];
+						$current_model	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$component		= component_common::get_instance($current_model,
+																		 $current_tipo,
+																		 $new_section_id,
+																		 'list',
+																		 DEDALO_DATA_NOLAN,
+																		 $section_tipo);
+						$component->set_dato($parents_data);
+						$component->Save(); // forces to create each relation in relation table and time machine and activity records
+					}
+				}
+
+
 			// components
 				foreach ($source_dato->components as $current_tipo => $component_full_dato) {
 					// tipo filter
