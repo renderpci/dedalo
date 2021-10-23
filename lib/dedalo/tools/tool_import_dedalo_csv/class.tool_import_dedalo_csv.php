@@ -524,16 +524,18 @@ class tool_import_dedalo_csv extends tool_common {
 	*/
 	public static function verify_csv_map($csv_map, $section_tipo) {
 
-		$ar_section_info = [
-			'dd200',
-			'dd199',
-			'dd197',
-			'dd201',
-			'dd271',
-			'dd1223',
-			'dd1224',
-			'dd1225'
-		];
+		// ar_section_info
+			// $ar_section_info = [
+			// 	'dd200',
+			// 	'dd199',
+			// 	'dd197',
+			// 	'dd201',
+			// 	'dd271',
+			// 	'dd1223',
+			// 	'dd1224',
+			// 	'dd1225'
+			// ];
+			$ar_section_info = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 		$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false);
 		foreach ($csv_map as $key => $component_tipo) {

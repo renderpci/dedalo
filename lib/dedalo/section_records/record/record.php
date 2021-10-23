@@ -14,16 +14,14 @@
 	if (!isset($context->context_name)) {
 		$context->context_name = false;
 	}
-	if (isset($search_options->layout_map)) {
-		$layout_map = $search_options->layout_map;
-	}
-	$ar_records	 	= $this->section_records_obj->records_data->ar_records;
+	$layout_map		= $search_options->layout_map ?? null;
+	$ar_records		= $this->section_records_obj->records_data->ar_records;
 	$tipo			= $this->section_records_obj->get_tipo();
-	$section_tipo 	= $tipo;
-	$permissions 	= common::get_permissions($section_tipo, $tipo);
+	$section_tipo	= $tipo;
+	$permissions	= common::get_permissions($section_tipo, $tipo);
 	
-	$ar_component_resolved = array();
-	$button_delete_permissions = (int)$this->section_records_obj->button_delete_permissions;
+	$ar_component_resolved		= array();
+	$button_delete_permissions	= (int)$this->section_records_obj->button_delete_permissions;
 
 
 	switch($modo) {
@@ -142,8 +140,7 @@
 					# Consulta el listado de componentes a mostrar en el listado / grupo actual
 						if (empty($layout_map)) {
 							$layout_map = component_layout::get_layout_map_from_section($current_section_obj); # Important: send obj section with REAL tipo to allow resolve structure
-						}		
-										
+						}
 							
 						if ((int)$section->permissions>0) {
 							# WALK : Al ejecutar el walk sobre el layout map podemos excluir del rendeo de html los elementos (section_group, componente, etc.) requeridos (virtual section)
@@ -157,28 +154,23 @@
 							#$records_search = new records_search($this, $modo);
 							#$record_layout_html .= $records_search->get_html();
 
-							// render layout_map
-								$render_mode = 'render_layout_map'; // render_layout_map | walk_layout_map
+							// render layout_map. Force new mode 'render_layout_map'
 								$start_time2=microtime(1);
-								if ($render_mode==='render_layout_map') {
-									// new 
-									$record_layout_html .= component_layout::render_layout_map($current_section_obj, $layout_map, $ar_exclude_elements);
-								}else{
-									// actual
-									$record_layout_html .= component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements);
-								}
-								$total2 = exec_time_unit($start_time2,'ms')." ms";
-								debug_log(__METHOD__." Total time render mode: $render_mode -  $total2 ", logger::DEBUG);															
+								$render_mode = 'render_layout_map'; // render_layout_map | walk_layout_map
+								$record_layout_html = ($render_mode==='render_layout_map')
+									? component_layout::render_layout_map($current_section_obj, $layout_map, $ar_exclude_elements) // new mode
+									: component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements); // old mode
 
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
+								$total2 = exec_time_unit($start_time2,'ms').' ms';
+								debug_log(__METHOD__." Total time render mode: $render_mode -  $total2 ", logger::DEBUG);
 								global$TIMER;$TIMER['component_layout::walk_layout_map'.'_OUT_'.$section->get_tipo().'_'.$section->get_modo().'_'.microtime(1)]=microtime(1);
 							}
 						}//end if ($this->permissions===0) 
 				
 				
 				# LOAD HTML FOR CURRENT ROW
-					$row_html_file	= dirname(__FILE__) . '/html/'. basename(dirname(__FILE__)) .'_'. $modo .'.phtml';
-					include($row_html_file);
+					include dirname(__FILE__) . '/html/'. basename(dirname(__FILE__)) .'_'. $modo .'.phtml';
 
 				break;
 	
