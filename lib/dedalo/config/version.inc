@@ -2468,6 +2468,10 @@
 		Fixed minor component_publication CSS issues
 		Added web_data::process_result check to prevent calls to invalid methods
 		Fixed errors on publication break_down_totals method when values are not as expected type
+		23-10-2021
+		Added button_new options for duplicate record in edit mode
+		Added page_globals property 'section_id'
+		Added SAML sample config file
 
 
 
@@ -2494,13 +2498,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2s';
+	$DEDALO_VERSION = '5.8.2t';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-10-2021');
+	define('DEDALO_BUILD'	, '23-10-2021');
 
 
 	/*
@@ -2521,5 +2525,3 @@
 		$_SESSION['dedalo4']['config']['DEDALO_BUILD'] = DEDALO_BUILD;
 	}
 	*/
-
-
