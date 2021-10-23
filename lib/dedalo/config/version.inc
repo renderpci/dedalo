@@ -2472,6 +2472,7 @@
 		Added button_new options for duplicate record in edit mode
 		Added page_globals property 'section_id'
 		Added SAML sample config file
+		Added inheritance from father if exists to section->duplicate_current_section method
 
 
 
