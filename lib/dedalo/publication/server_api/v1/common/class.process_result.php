@@ -1,15 +1,17 @@
 <?php
+// include_once(DEDALO_LIB_BASE_PATH.'/config/core_functions.php');
+
 /**
 * PROCESS_RESULT
-* Util abstract class to manage data process_result 
-* Only static function are defined here 
+* Util abstract class to manage data process_result
+* Only static function are defined here
 */
 abstract class process_result {
 
 
 
 	/**
-	* add_parents_and_children_recursive
+	* ADD_PARENTS_AND_CHILDREN_RECURSIVE
 	* Resolves the parents and children of the search result and merges them with the result data
 	* @return object $ar_data
 	*/
@@ -20,17 +22,17 @@ abstract class process_result {
 		// $ar_section_id = array_map(function($el){
 		// 	return $el['section_id'];
 		// }, $ar_data);
-		
+
 		// ar_section_id
 			$ar_section_id = [];
 			$ar_parent_sentences = [];
 			foreach ($ar_data as $key => $row) {
-				
+
 				// row
 				foreach ($columns as $column_obj) {
 
 					$column_name = $column_obj->name;
-					
+
 					if (isset($row[$column_name])) {
 						$value = json_decode($row[$column_name]);
 						if (!empty($value)) {
@@ -45,22 +47,22 @@ abstract class process_result {
 					$ar_parent_sentences[] = $column_name . ' LIKE \'%"'. $row['section_id'] .'"%\'';
 				}
 			}//foreach ($ar_data as $key => $row)
-		
-		
+
+
 		// search 2
 			// $children_sentences = array_map(function($item){
 			// 	return 'section_id = ' . (int)$item;
 			// }, $ar_section_id);
 			$children_sentences[] = 'section_id IN (' . implode(',', $ar_section_id). ')';
-			
+
 			$all_sentences = array_merge($children_sentences, $ar_parent_sentences);
 			$sql_filter = implode(' OR ', $all_sentences);
-			
+
 			$sql_options = clone $sql_options;
 				$sql_options->process_result	= false; // avoid recursion
 				$sql_options->sql_filter		= $sql_filter;
 				$sql_options->count 			= false;
-				
+
 			$rows_data = web_data::get_rows_data($sql_options);
 
 		// final merged result (avoiding duplicates)
@@ -77,14 +79,181 @@ abstract class process_result {
 				// 	return $el['section_id'];
 				// }, $new_ar_data);
 				// dump($a, ' a ++ '.to_string("1022"));
-		
+
 		// response
 			$response = new stdClass();
 				$response->ar_data = $new_ar_data;
-		
+
 
 		return $response;
 	}//end add_parents_and_children_recursive
+
+
+
+	/**
+	* BREAK_DOWN_TOTALS
+	* Split and recalculate totals in a list of rows
+	* Used for example to split mdcat interview informants place of birth when more than one informant or place exists
+	* Like this case:
+	* ref_lloc_naixement							ref_lloc_naixement_geojson
+	* ["es1_3117"] | ["es1_3117"] | ["es1_3117"]	[{"layer_id":1,"text":"","layer_data":{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[2.821287,41.979888]}}]}}] | [{"layer_id":1,"text":"","layer_data":{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[2.821287,41.979888]}}]}}] | [{"layer_id":1,"text":"","layer_data":{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[2.821287,41.979888]}}]}}]
+	* ex. {"fn":"process_result::break_down_totals","base_column":"term_id","total_column":"total","split_columns":["geojson"]}
+	* @return object $ar_data
+	*/
+	public static function break_down_totals($ar_data, $options, $sql_options) {
+
+		// options
+			$base_column	= $options->base_column; // name of the source column like 'ref_lloc_naixement'
+			$total_column	= $options->total_column ?? 'total'; // name of the totals column like 'total'
+			$split_columns	= $options->split_columns ?? null; // array of columns to split synchronized with the base column
+			$separator		= $options->separator ?? ' | ';
+
+		// rows
+			// dump($ar_data, ' ar_data ++================================================================ '.to_string());
+
+
+		// fn create_new_rows
+			function create_new_rows($base_value_raw, $ar_split_column_value_raw, $row, $base_column, $total_column, $split_columns, $k=0) {
+					// dump($ar_split_column_value_raw, ' ar_split_column_value_raw ++ '.to_string());
+					// dump($base_value_raw, ' base_value_raw +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+				$new_rows = [];
+				foreach ($base_value_raw as $c_key => $c_value) {
+
+					$c_value = is_array($c_value) ? $c_value : [$c_value];
+					// dump($c_value, ' c_value ============================//////////////////////////// ++ c_key: '.to_string($c_key));
+
+					// multiple case. Make a recursion here
+					if (count($c_value)>1) {
+
+						$ar_split_column_value_raw_partial = [];
+						foreach ($ar_split_column_value_raw as $el_name => $el_value) {
+							// dump($el_value, ' el_value +/////////////////////////////////////////////////////////////////////////////////////////////////////+ '.to_string());
+							$to_set_value = is_array($el_value[$c_key]) ? $el_value[$c_key] : [$el_value[$c_key]];
+							$ar_split_column_value_raw_partial[$el_name] = $to_set_value;
+						}
+
+						$result		= create_new_rows($c_value, $ar_split_column_value_raw_partial, $row, $base_column, $total_column, $split_columns, 0);
+						$new_rows	= array_merge($new_rows, $result);
+
+						continue;
+					}
+
+					// row
+					$new_row = $row;
+					$new_row[$base_column]	= json_encode($c_value, JSON_UNESCAPED_UNICODE);
+					$new_row[$total_column]	= (int)$row[$total_column];
+
+
+					// add split_columns if exists key coincidence
+					foreach ($split_columns as $s_column) {
+						// dump($ar_split_column_value_raw[$s_column], ' $ar_split_column_value_raw[$s_column] +///////////////////////////////////////////////////////////////////////////+ $c_key '.to_string($c_key));
+						if (isset($ar_split_column_value_raw[$s_column][$c_key])) {
+
+							$items		= $ar_split_column_value_raw[$s_column];
+							$n_items	= count($items);
+							// dump($ar_split_column_value_raw[$s_column], ' $ar_split_column_value_raw[$s_column][$c_key] ++////////////////////////// '.to_string("n_items: $n_items - c_key: $c_key"));
+
+							$cr_value = $items[$c_key]; // ?? $items[0];
+							$new_row[$s_column] = is_string($cr_value)
+								? $cr_value
+								: json_encode($cr_value, JSON_UNESCAPED_UNICODE);
+
+							// debug
+								// $new_row['c_key']		= $c_key;
+								// $new_row['k']			= $k;
+								// $new_row['n_items']		= $n_items;
+								// $new_row['items']		= $items;
+						}
+					}
+
+					// add created row
+					$new_rows[] = $new_row;
+				}
+
+				return $new_rows;
+			}//end create_new_rows
+
+
+		// break down multiple values cases in ar_data
+			$break_down_ar_data	= [];
+			$ar_data_length		= count($ar_data);
+			for ($i=0; $i < $ar_data_length; $i++) {
+
+				$row = $ar_data[$i];
+
+				$base_value		= $row[$base_column]; 	// ex. '["es1_3117","es1_1967"] | ["es1_3117"]'
+				$total_value	= $row[$total_column]; 	// ex. 9
+
+				// base_value_raw
+					$base_value_raw = (strpos($base_value, $separator)!==false)
+						? array_map(function($el) {
+							return json_decode($el);
+						  }, explode($separator, $base_value))
+						: json_decode($base_value);
+						// dump($base_value_raw, ' base_value_raw +--------------------------------+ '.count($base_value_raw));
+
+					$n_base_value_raw = count($base_value_raw);
+					if ($n_base_value_raw===1) {
+						// add untouched
+						$break_down_ar_data[] = $row;
+					}else{
+						// split_column_value_raw
+							$ar_split_column_value_raw = [];
+							foreach ($split_columns as $s_column) {
+								$s_base_value = $row[$s_column];
+								// dump($s_base_value, ' s_base_value +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+								$split_column_value_raw = (strpos($s_base_value, $separator)!==false)
+									? array_map(function($el) {
+										// dump($el, ' el ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+										$pr_value = (strpos($el, '[')===0 || strpos($el, '{')===0)
+											? json_decode($el)
+											: $el;
+										// dump($pr_value, ' pr_value ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+										return $pr_value;
+									  }, explode($separator, $s_base_value))
+									: json_decode($s_base_value);
+								// dump($split_column_value_raw, ' split_column_value_raw ++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+								$ar_split_column_value_raw[$s_column] = $split_column_value_raw;
+							}
+							// dump($ar_split_column_value_raw, ' ar_split_column_value_raw --------------------------------------------++ '.to_string());
+
+						// iterate recursively
+							$new_rows = create_new_rows($base_value_raw, $ar_split_column_value_raw, $row, $base_column, $total_column, $split_columns);
+							foreach ($new_rows as $new_row) {
+								$break_down_ar_data[] = $new_row;
+							}
+					}//end if ($n_base_value_raw===1)
+			}//end ar_data for ($i=0; $i < $ar_data_length; $i++)
+			// dump($break_down_ar_data, ' break_down_ar_data +************************************************+ '.to_string());
+
+
+		// break_down_ar_data iterate already split rows
+			$new_ar_data				= [];
+			$break_down_ar_data_length	= count($break_down_ar_data);
+			for ($i=0; $i < $break_down_ar_data_length; $i++) {
+
+				$row			= $break_down_ar_data[$i];
+				$base_value		= $row[$base_column]; 	// ex. '["es1_3117"] | ["es1_3117"]'
+				$total_value	= $row[$total_column]; 	// ex. 9
+
+				$found_key = array_search($base_value, array_column($new_ar_data, $base_column));
+				if ($found_key!==false) {
+					// sum totals
+					$new_ar_data[$found_key][$total_column] = (int)$new_ar_data[$found_key][$total_column] + (int)$total_value;
+				}else{
+					// add untouched
+					$new_ar_data[] = $row;
+				}
+			}//end break_down_ar_data for ($i=0; $i < $length; $i++)
+			// dump($new_ar_data, ' new_ar_data ++////////////////////////////////////////////////////////////// '.to_string());
+
+
+		// response
+			$response = new stdClass();
+				$response->ar_data = $new_ar_data;
+
+		return $response;
+	}//end break_down_totals
 
 
 

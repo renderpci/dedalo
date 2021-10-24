@@ -2457,6 +2457,23 @@
 		Added 'options->propiedades' fallback options to class.diffusion_sql->build_geolocation_data_geojson for compatibility with direct calls in the publication process
 		14-10-2021
 		Added graves global filters for mdcat in publication
+		Added web_data option to accept process_result as JSON encoded item
+		Added web_data option to accept ar_fields as JSON encoded array
+		Added web_data->check-safe_value option to allow CONCAT sentences as column name (ar_fields)
+		Added method 'break_down_totals' to class process_result
+		22-10-2021
+		Added component input text get_diffusion_value fallback lang
+		Removed component_geolocation default dato. Now, only will be used to draw the map when no dato is available (null)
+		Fixed swagger ui input width css to allow 100%
+		Fixed minor component_publication CSS issues
+		Added web_data::process_result check to prevent calls to invalid methods
+		Fixed errors on publication break_down_totals method when values are not as expected type
+		23-10-2021
+		Added button_new options for duplicate record in edit mode
+		Added page_globals property 'section_id'
+		Added SAML sample config file
+		Added inheritance from father if exists to section->duplicate_current_section method
+
 
 
 	[/HISTORY]
@@ -2482,13 +2499,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2q';
+	$DEDALO_VERSION = '5.8.2t';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-10-2021');
+	define('DEDALO_BUILD'	, '23-10-2021');
 
 
 	/*
@@ -2509,5 +2526,3 @@
 		$_SESSION['dedalo4']['config']['DEDALO_BUILD'] = DEDALO_BUILD;
 	}
 	*/
-
-

@@ -3842,4 +3842,121 @@ class section extends common {
 
 
 
+	/**
+	* DUPLICATE_CURRENT_SECTION
+	* Creates a new record cloning all data from current section
+	* @return int section_id
+	*/
+	public function duplicate_current_section() {
+
+		$section_tipo = $this->get_tipo();
+
+		// create a new blank section record with same the section_tipo that current
+			$new_section	= section::get_instance(null, $section_tipo);
+			$new_section_id	= $new_section->Save();
+
+			if (empty($new_section_id) || (int)$new_section_id<1) {
+				return false;
+			}
+
+		// copy data
+			$source_dato	= clone $this->get_dato();
+			$new_dato		= $new_section->get_dato();
+
+			// ar_section_info_tipos. Ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
+				$ar_section_info_tipos = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
+
+			// tipos to skip on copy
+				$skip_tipos = $ar_section_info_tipos;
+
+			// models to skip on copy
+				$skip_models = [
+					// 'component_state',
+					'component_publication',
+					'component_info'
+				];
+
+			// relations
+				$group_locators = []; // group locator to prevent save component for each locator
+				foreach ($source_dato->relations as $locator) {
+					$current_tipo = $locator->from_component_tipo ?? false;
+					if ($current_tipo!==false) {
+						// tipo filter
+						if (in_array($current_tipo, $skip_tipos)) {
+							continue;
+						}
+						// its OK. Add value
+						$group_locators[$current_tipo][] = $locator;
+					}
+				}
+				foreach ($group_locators as $current_tipo => $ar_locators) {
+					// model filter
+					$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					if (in_array($current_model, $skip_models)) {
+						continue;
+					}
+					$lang		= $ar_locators[0]->lang ?? DEDALO_DATA_NOLAN; // could exists locators with lang
+					$component	= component_common::get_instance($current_model,
+																 $current_tipo,
+																 $new_section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);
+					$component->set_dato($ar_locators);
+					$component->Save(); // forces to create each relation in relation table and time machine and activity records
+				}
+
+			// inherits from father if exists
+				// component_relation_parent find
+				$ar_parent_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
+				if (!empty($ar_parent_tipo)) {
+					// calls to current section as child from another sections
+					$parents_data = component_relation_parent::get_parents($this->get_section_id(), $section_tipo);
+					if (!empty($parents_data)) {
+
+						$current_tipo	= $ar_parent_tipo[0];
+						$current_model	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$component		= component_common::get_instance($current_model,
+																		 $current_tipo,
+																		 $new_section_id,
+																		 'list',
+																		 DEDALO_DATA_NOLAN,
+																		 $section_tipo);
+						$component->set_dato($parents_data);
+						$component->Save(); // forces to create each relation in relation table and time machine and activity records
+					}
+				}
+
+
+			// components
+				foreach ($source_dato->components as $current_tipo => $component_full_dato) {
+					// tipo filter
+					if (in_array($current_tipo, $skip_tipos)) {
+						continue;
+					}
+					// model filter
+					$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					if (in_array($current_model, $skip_models)) {
+						continue;
+					}
+					// its OK. Add value
+					foreach ($component_full_dato->dato as $lang => $local_value) {
+
+						$component	= component_common::get_instance($current_model,
+																	 $current_tipo,
+																	 $new_section_id,
+																	 'list',
+																	 $lang,
+																	 $section_tipo);
+						$component->set_dato($local_value); // set dato in current lang
+						$component->Save(); // save each lang to force to create a time machine and activity records
+					}
+				}
+
+
+		return (int)$new_section_id;
+	}//end duplicate_current_section
+
+
+
 }//end section

@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.16",
-    "title" : "Dédalo Publication Server REST API 1.0.16",
+    "version" : "1.0.17",
+    "title" : "Dédalo Publication Server REST API 1.0.17",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -200,7 +200,11 @@
           "format" : "string",
           "default" : "interview"
         }, {
-          "$ref" : "#/parameters/ar_fields"
+          "name" : "ar_fields",
+          "in" : "query",
+          "required" : false,
+          "description" : "Comma separated list of required columns in table.<br>Stringified array is also allowed like [\"id\",\"lang\"]",
+          "type" : "string"
         }, {
           "name" : "section_id",
           "in" : "query",
@@ -269,15 +273,23 @@
         }, {
           "name" : "resolve_portals_custom",
           "in" : "query",
-          "description" : "Resolve requested portals only. Use a json map object like '{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}' where key is column name and value is target table. To resolve deeper, use format '{\"table.column\":\"table\"}'",
+          "description" : "Resolve requested portals only. Use a json map object like<br>{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}<br>where key is column name and value is target table. To resolve deeper, use format '{\"table.column\":\"table\"}'",
           "required" : false,
           "type" : "string",
           "format" : "string"
         }, {
           "name" : "map",
           "in" : "query",
-          "description" : "json representation of array of objects like [{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}]",
+          "description" : "json representation of array of objects like<br>[{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}]",
           "required" : false,
+          "type" : "string",
+          "format" : "string"
+        }, {
+          "name" : "process_result",
+          "in" : "query",
+          "description" : "json object like <br>{\"fn\":\"process_result::add_parents_and_children_recursive\",\"columns\": [{\"name\":\"parents\"}]} <br>Used in numisdata catalog tree to create the records hierarchy in server side <br>{\"fn\":\"process_result::break_down_totals\",\"base_column\":\"term_id\",\"total_column\":\"total\"} <br>Used for example to split interview informants place of birth when more than one informant or place exists",
+          "required" : false,
+          "default" : "",
           "type" : "string",
           "format" : "string"
         } ],

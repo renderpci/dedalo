@@ -193,10 +193,25 @@ class web_data {
 						return false;
 					}
 
-				preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
-				if (empty($output_array[0])) {
-					return false;
-				}
+				// valid chars check
+					$ar_value = !is_array($value) ? explode(',', $value) : $value;
+					foreach ($ar_value as $c_value) {
+
+						if (strpos($c_value, 'CONCAT')===0) {
+							// added |\"|\[|\] to allow CONCAT sentences (14-10-2021)
+							preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/i', $c_value, $output_array);
+						}else{
+							preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $c_value, $output_array);
+						}
+						if (empty($output_array[0])) {
+							return false;
+						}
+					}
+					// old
+						// preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
+						// if (empty($output_array[0])) {
+						// 	return false;
+						// }
 				break;
 
 			case 'sql_fullselect':
@@ -320,6 +335,14 @@ class web_data {
 					$sql_options->caller					= 'default';
 
 					foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
+
+			// ar_fields verify json encoded array (14-10-2021)
+				if (is_string($sql_options->ar_fields) && strpos($sql_options->ar_fields, '[')===0) {
+					// try to decode json formated array
+					if ($decoded_array = json_decode($sql_options->ar_fields)) {
+						$sql_options->ar_fields = $decoded_array;
+					}
+				}
 
 			// table check
 				if (empty($sql_options->table) && empty($sql_options->sql_fullselect)) {
@@ -1139,13 +1162,30 @@ class web_data {
 					}//end if ($map!==false)
 
 				// process_result. : function name, ar_data, process_result object, sql_options object, $total
+					// received format:
+					// {
+					//		fn 		: 'process_result::add_parents_and_children_recursive',
+					//		columns : [{name : "parents"}]
+					// }
 					if ($process_result!==false && !empty($ar_data)) {
-						$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+						$process_result = is_string($process_result) ? json_decode($process_result) : $process_result;
+						if (isset($process_result->fn)) {
+							$ar_call = explode('::', $process_result->fn);
+							if(true===method_exists($ar_call[0],$ar_call[1])) {
 
-						// overwrite ar_data (!)
-							$ar_data = $user_func_response->ar_data;
+								// exec method in class 'process_result' like process_result::break_down_totals
+								$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+
+								// overwrite ar_data (!)
+								$ar_data = $user_func_response->ar_data;
+
+							}else{
+								debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (1). ".to_string(), logger::ERROR);
+							}
+						}else{
+							debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (2). ".to_string(), logger::ERROR);
+						}
 					}
-
 
 				// response Fixed properties
 					$response->result 	= $ar_data;

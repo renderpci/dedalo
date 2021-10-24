@@ -694,12 +694,19 @@ class component_input_text extends component_common {
 		# Default behaviour is get value
 		$diffusion_value = $this->get_valor( $lang );
 
-		// Fallback to nolan dato
-		if (empty($diffusion_value) && $this->traducible==='no') {
-			# try no lang
-			$this->set_lang(DEDALO_DATA_NOLAN);
-			$diffusion_value = $this->get_valor( DEDALO_DATA_NOLAN );
+		if (empty($diffusion_value)) {
+
+			if ($this->traducible==='no') {
+				// Fallback to nolan dato
+				# try no lang
+				$this->set_lang(DEDALO_DATA_NOLAN);
+				$diffusion_value = $this->get_valor( DEDALO_DATA_NOLAN );
+			}else{
+				// fallback any existing lang
+				$diffusion_value = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=false, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+			}
 		}
+
 
 		# strip_tags all values (remove untranslate mark elements)
 		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
