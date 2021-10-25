@@ -58,27 +58,29 @@ render_search.prototype.list = async function() {
 		self.render_search_buttons()
 
 	// panels status (close/open)
-		const ui_status = await self.get_panels_status()
-		if (ui_status) {
-			// search_panel cookie state track
-			// if(self.cookie_track("search_panel")===true) {
-				if(ui_status.value.search_panel && ui_status.value.search_panel.is_open) {
-					// Open search panel
-					toggle_search_panel(self) // toggle to open from defult state close
-				}
-			// fields_panel cookie state track
-				// if(self.cookie_track("fields_panel")===true) {
-				if(ui_status.value.fields_panel && ui_status.value.fields_panel.is_open) {
-					// Open search panel
-					toggle_fields(self) // toggle to open from defult state close
-				}
-			// presets_panel cookie state track
-				// if(self.cookie_track("presets_panel")===true) {
-				if(ui_status.value.presets_panel && ui_status.value.presets_panel.is_open) {
-					// Open search panel
-					toggle_presets(self) // toggle to open from defult state close
-				}
-		}//end if (ui_status)
+		self.get_panels_status()
+		.then(function(ui_status){
+			if (ui_status) {
+				// search_panel cookie state track
+				// if(self.cookie_track("search_panel")===true) {
+					if(ui_status.value.search_panel && ui_status.value.search_panel.is_open) {
+						// Open search panel
+						toggle_search_panel(self) // toggle to open from defult state close
+					}
+				// fields_panel cookie state track
+					// if(self.cookie_track("fields_panel")===true) {
+					if(ui_status.value.fields_panel && ui_status.value.fields_panel.is_open) {
+						// Open search panel
+						toggle_fields(self) // toggle to open from defult state close
+					}
+				// presets_panel cookie state track
+					// if(self.cookie_track("presets_panel")===true) {
+					if(ui_status.value.presets_panel && ui_status.value.presets_panel.is_open) {
+						// Open search panel
+						toggle_presets(self) // toggle to open from defult state close
+					}
+			}//end if (ui_status)
+		})
 
 
 	return filter_wrapper
