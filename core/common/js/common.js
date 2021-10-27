@@ -308,10 +308,14 @@ common.prototype.render = async function (options={}) {
 * (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
 * @return promise
 */
-common.prototype.refresh = async function() {
+common.prototype.refresh = async function(options={}) {
 	const t0 = performance.now()
 
 	const self = this
+
+	// options
+		const build_autoload	= options.build_autoload!==undefined ? options.build_autoload : true
+		const render_level		= options.render_level || 'content'
 
 	// loading css add
 		const nodes_lenght = self.node.length
@@ -335,8 +339,8 @@ common.prototype.refresh = async function() {
 		}
 
 	// build. Update the instance with new data
-		//if (self.status==='destroyed') {			
-		const builded = await self.build(true)			
+		//if (self.status==='destroyed') {
+		const builded = await self.build( build_autoload ) // default value is true
 
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
@@ -353,9 +357,11 @@ common.prototype.refresh = async function() {
 		//const ar_node 		 = self.node
 		//const ar_node_length = ar_node.length
 
-	// render
+	// render. Only render content_data, not whole element wrapper
 		if (self.status==='builded') {
-			await self.render({render_level : 'content'})
+			await self.render({
+				render_level : render_level // Default value is 'content'
+			})
 		}else{
 			console.warn(`[common.refresh] Ignored render '${self.model}' with status:`, self.status);
 			return false
