@@ -198,6 +198,12 @@ class dd_core_api {
 						$dato = $component->get_dato();
 				}
 
+				// pagination. Update offset bassed on save request (portals)
+					$pagination = $json_data->data->pagination ?? null;
+					if (isset($pagination) && isset($pagination->offset)) {
+						$component->pagination->offset = $pagination->offset;
+					}
+
 				// element json
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 	= true;
