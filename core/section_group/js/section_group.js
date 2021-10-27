@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_section_group} from './render_section_group.js'
@@ -81,6 +82,30 @@ section_group.prototype.init = function(options) {
 
 	return true
 };//end init
+
+
+
+/**
+* GET_PANELS_STATUS
+* Get local DDBB record if exists and return result object
+* @return object | undefined
+*/
+section_group.prototype.get_panels_status = async function() {
+
+	const self = this
+
+	// unic id for current section_group
+		const uid = self.model + '_' + self.section_tipo + '_' +  self.tipo
+
+	// local_db_data. get value if exists
+		const current_data_manager	= new data_manager();
+		const panels_status = await current_data_manager.get_local_db_data('section_group', 'context')
+			// console.log("----- section_group panels_status:", uid, panels_status);
+
+		// UNDER CONSTRUCTION .... !!
+
+	return panels_status
+};//end get_panels_status
 
 
 
