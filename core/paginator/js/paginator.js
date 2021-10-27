@@ -247,6 +247,9 @@ paginator.prototype.paginate = async function(offset) {
 			return false
 		}
 
+	// preserve caller wrapper height to prevent blink
+		self.caller.node[0].style.minHeight = self.caller.node[0].offsetHeight + 'px'
+
 	// set the new offset to the current paginator
 		// self.offset = offset
 
