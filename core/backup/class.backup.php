@@ -91,7 +91,8 @@ abstract class backup {
 			// Export the database and output the status to the page
 			$command='';	#'sleep 1 ;';
 			# $command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
-			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
+			$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN .$port_command. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
 
 			if($skip_backup_time_range===true) {
 
@@ -237,7 +238,8 @@ abstract class backup {
 	public static function copy_to_file($table, $path_file, $tld) {
 		$res='';
 
-		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN . $port_command . ' -h '.DEDALO_HOSTNAME_CONN;
 		switch ($table) {
 			case 'jer_dd':
 				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
@@ -282,7 +284,8 @@ abstract class backup {
 
 		$command_history = array();
 
-		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN .' -h '.DEDALO_HOSTNAME_CONN . $port_command;
       	#$command_base = DB_BIN_PATH.'psql -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U '.DEDALO_USERNAME_CONN.' '.DEDALO_DATABASE_CONN;
 		switch ($table) {
 
@@ -373,6 +376,8 @@ abstract class backup {
 		$file_path		 = DEDALO_BACKUP_PATH_STRUCTURE;
 		$mysqlExportPath = $file_path . $db_name . ".backup";
 
+		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+
 		# Export the database and output the status to the page
 		# '-F c' Output compressed custom format (p = plain, c = custom, d = directory, t = tar)
 		# '-b' inclulde blobs
@@ -380,7 +385,7 @@ abstract class backup {
 		# '-t "*_dd"' tables wildcard. dump only tables ended with '_dd'
 		# -T "jer_dd*" -T "matrix_descriptors_dd*"  exclude tables
 		$command  = '';
-		$command .= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" ';
+		$command .= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" ';
 		if ($exclude_tables===true) {
 		$command .= '-T "jer_dd*" -T "matrix_descriptors_dd*" ';	// Exclude tables (AND respective sequences) ( T UPERCASE )
 		}
@@ -667,8 +672,10 @@ abstract class backup {
 			return (object)$response;
 		}
 
+		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+
 		// Import the database and output the status to the page
-		$command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
+		$command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
 		$command .= '--no-password --clean --no-owner "'.$mysqlImportFilename.'"' ;
 
 		# LOW PRIORITY ( nice , at 22:56 , etc)
@@ -1467,7 +1474,9 @@ abstract class backup {
 
  		$tables = is_array($tables) ? $tables : [$tables];
 
-		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+		// $command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -h ".DEDALO_HOSTNAME_CONN . $port_command;
 
 		$command = $command_base . ' -c \'VACUUM ANALYZE ' . implode(', ', $tables) .';\'';
 
@@ -1475,7 +1484,7 @@ abstract class backup {
 			$res = shell_exec($command);
 
 		// debug
-			debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command:' . to_string($command), logger::ERROR);
+			debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command:' . to_string($command), logger::WARNING);
 
 
 		return (string)$res;
@@ -1503,7 +1512,7 @@ abstract class backup {
 					throw new Exception("Error Processing Request. Error on structure_to_json. Invalid tld ".to_string($tld), 1);
 				}
 			
-			$jer_dd_tld_data				= backup::get_jer_dd_tld_data($tld); 	dump($jer_dd_tld_data, ' jer_dd_tld_data ++ '.to_string());
+			$jer_dd_tld_data				= backup::get_jer_dd_tld_data($tld);
 			$matrix_descriptors_tld_data	= backup::get_matrix_descriptors_tld_data($tld);
 
 			foreach ($jer_dd_tld_data as $row) {
