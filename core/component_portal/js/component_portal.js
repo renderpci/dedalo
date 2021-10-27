@@ -224,6 +224,9 @@ component_portal.prototype.build = async function(autoload=false){
 				self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				self.datum.context	= api_response.result.context
 
+			// force re-assign self.total
+				self.total = null
+
 			// rqo regenerate
 				await generate_rqo()
 				// console.log("portal generate_rqo 2 self.rqo:",self.rqo);
@@ -337,13 +340,13 @@ component_portal.prototype.add_value = async function(value) {
 
 	const self = this
 
-	// check if value already exists
-		// const current_value = self.data.value
-		// const exists 		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id===value.section_id)
-		// if (typeof exists!=="undefined") {
-		// 	console.log("[add_value] Value already exists !");
-		// 	return false
-		// }
+	// check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
+		const current_value	= self.data.value
+		const exists		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
+		if (typeof exists!=="undefined") {
+			console.log("[add_value] Value already exists (1) !");
+			return false
+		}
 
 	// changed_data
 		const key			= self.total || 0
@@ -358,11 +361,8 @@ component_portal.prototype.add_value = async function(value) {
 			console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
 		}
 
-	// change_value
-		const api_response = await self.change_value({
-			changed_data : changed_data,
-			refresh		 : false
-		})
+	// total_before
+		const total_before = clone(self.total)
 
 	// mode specifics
 		switch(self.mode) {
@@ -374,14 +374,45 @@ component_portal.prototype.add_value = async function(value) {
 				})
 				break;
 
-			default:				
-				// update pagination offset
+			default:
+				// updates pagination values offset and total
 				self.update_pagination_values('add')
 				break;
 		}
 
+	// change_value (and save)
+		const api_response = await self.change_value({
+			changed_data : changed_data,
+			refresh		 : false // not refresh here (!)
+		})
+
+	// total (after save)
+		const total = api_response.result.data.find(el => el.tipo===self.tipo).pagination.total
+
+	// check if value already existed. (!) Note that here, the whole portal data has been compared in server
+		if (parseInt(total) <= parseInt(total_before)) {
+			self.update_pagination_values('remove') // remove added pagination value
+			console.log("[add_value] Value already exists (2) !");
+			return false
+		}
+
+	// Update data from save API response (note that build_autoload will be passed as false later -when refresh- to avoid call to the API again)
+		// set context and data to current instance
+			await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
+
+		// context. update instance properties from context (type, label, tools, divisor, permissions)
+			self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+			self.datum.context	= api_response.result.context
+
+		// force re-assign self.total and pagination values on build
+			self.total = null
+
+
 	// refresh self component
-		await self.refresh()
+		await self.refresh({
+			build_autoload	: false,
+			render_level	: 'content'
+		})
 
 	// check if the caller has tag_id
 		if(self.active_tag){
@@ -390,7 +421,7 @@ component_portal.prototype.add_value = async function(value) {
 		}
 		
 	return true
-};//end  add_value
+};//end add_value
 
 
 
@@ -419,6 +450,8 @@ component_portal.prototype.update_pagination_values = function(action) {
 					self.total++
 				}
 				break;
+			default:
+				// Nothing to add or remove
 		}
 		// self.total = self.data.pagination.total
 
