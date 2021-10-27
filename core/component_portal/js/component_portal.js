@@ -382,8 +382,8 @@ component_portal.prototype.add_value = async function(value) {
 
 	// change_value (and save)
 		const api_response = await self.change_value({
-			changed_data : changed_data,
-			refresh		 : false // not refresh here (!)
+			changed_data	: changed_data,
+			refresh			: false // not refresh here (!)
 		})
 
 	// total (after save)
@@ -410,7 +410,7 @@ component_portal.prototype.add_value = async function(value) {
 
 	// refresh self component
 		await self.refresh({
-			build_autoload	: false,
+			build_autoload	: (self.mode==='search' ? true : false),
 			render_level	: 'content'
 		})
 
