@@ -16,24 +16,24 @@
 */
 export const section_group = function(){
 	
-	this.id
+	this.id				= null
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-	this.context
-	this.parent
-	this.type
-	this.label
+	this.context		= null
+	this.parent			= null
+	this.type			= null
+	this.label			= null
 
-	this.node
+	this.node			= null
 
-	this.id_variant
+	this.id_variant		= null
 
 	return true
 };//end section_group
@@ -45,38 +45,38 @@ export const section_group = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	section_group.prototype.build		= common.prototype.build
-	section_group.prototype.render		= common.prototype.render
-	section_group.prototype.destroy		= common.prototype.destroy
-	section_group.prototype.list 		= render_section_group.prototype.list
-	section_group.prototype.edit 		= render_section_group.prototype.edit
+	section_group.prototype.build	= common.prototype.build
+	section_group.prototype.render	= common.prototype.render
+	section_group.prototype.destroy	= common.prototype.destroy
+	section_group.prototype.list	= render_section_group.prototype.list
+	section_group.prototype.edit	= render_section_group.prototype.edit
 
 
 
 /**
 * INIT
-* @return
+* @return bool true
 */
 section_group.prototype.init = function(options) {
 
 	const self = this
 
-	self.model 			= options.model
-	self.tipo 			= options.tipo
-	self.section_tipo 	= options.section_tipo
-	self.section_id 	= options.section_id
-	self.mode 			= options.mode
-	self.lang 			= options.lang
+	self.model			= options.model
+	self.tipo			= options.tipo
+	self.section_tipo	= options.section_tipo
+	self.section_id		= options.section_id
+	self.mode			= options.mode
+	self.lang			= options.lang
 
-	self.context 		= options.context || null
-	self.parent 		= options.parent
-	self.type 			= options.type
+	self.context		= options.context || null
+	self.parent			= options.parent
+	self.type			= options.type
 	self.events_tokens	= []
 	self.ar_instances	= []
 
-	self.node  = []
+	self.node			= []
 
-	self.label = self.context.label
+	self.label			= self.context.label
 
 
 	return true
@@ -202,3 +202,5 @@ section_group.prototype.get_context_childrens = function(){
 	return js_promise
 };//end get_context_childrens
 */
+
+

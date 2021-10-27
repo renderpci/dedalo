@@ -109,6 +109,10 @@
 							$pagination->total	= count($dato);
 							$pagination->limit	= $limit;
 							$pagination->offset	= $offset;
+							// $pagination->offset	= $offset>=$pagination->total
+							// 	? floor($pagination->total/$limit) * $limit
+							// 	: $offset;
+
 					$item->pagination = $pagination;
 
 				$data[] = $item;

@@ -2735,7 +2735,10 @@ class section extends common {
 	*/
 	public function add_relation( $locator, $relations_container='relations' ) {
 
-		if(empty($locator)) return false;
+		if(empty($locator)) {
+			debug_log(__METHOD__." Invalid empty locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::ERROR);
+			return false;
+		}
 
 		if (!is_object($locator) || !isset($locator->type)) {
 			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::ERROR);
@@ -2789,7 +2792,7 @@ class section extends common {
 
 			return true;
 		}else{
-			debug_log(__METHOD__." Ignored add locator action: locator ".json_encode($locator)." already exists. Tested properties: ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__.' Ignored add locator action: locator already exists: '.json_encode($locator), logger::ERROR);
 		}
 
 		return false;

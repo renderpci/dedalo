@@ -657,10 +657,13 @@ component_common.prototype.update_datum = async function(new_data) {
 
 /**
 * UPDATE_DATA_VALUE
-* Update component data value with changed_data send by the DOM element
-* update_data_value. Update the data of the instance with the data changed.
-* The format of changed_data is { key	: i,
-* @param object changed_data	  value : input.value }
+* Updates component data value with changed_data sent by the DOM element
+* changed_data format is:
+* {
+* 	key		: i,
+*	value	: input.value
+* }
+* @param object changed_data
 * @return bool true
 */
 component_common.prototype.update_data_value = function(changed_data){
@@ -668,8 +671,9 @@ component_common.prototype.update_data_value = function(changed_data){
 	const self = this
 
 	if(SHOW_DEBUG===true) {
+		// console.log("======= update_data_value changed_data:", clone(changed_data));
 		const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
-		console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
+		// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
 	}
 
 	const data_key 		= changed_data.key
@@ -700,7 +704,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 
 /**
-* CHANGE_VALUE
+* CHANGE_VALUE (AND SAVE)
 * @param object options
 * @return promise
 */

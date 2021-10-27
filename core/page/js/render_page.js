@@ -31,9 +31,9 @@ render_page.prototype.edit = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// content data
-		const content_data = get_content_data(self)
+		const content_data = get_content_data(self) // result is a promise
 		if (render_level==='content') {
-			return content_data
+			return await content_data
 		}
 
 	// wrapper
@@ -106,7 +106,7 @@ const get_content_data = async function(self) {
 
 				const current_instance = self.ar_instances[i]
 
-				// exclude menu already added
+				// exclude menu already added to wrapper_page
 				if(current_instance.model==='menu') continue;
 
 				const render_promise = current_instance.render()
