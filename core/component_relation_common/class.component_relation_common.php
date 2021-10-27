@@ -561,11 +561,22 @@ class component_relation_common extends component_common {
 			$relation_type			= $this->relation_type;
 			$from_component_tipo	= $this->tipo;
 
-			if (empty($this->relation_type)) {
-				dump($this->tipo, ' set dato this empty this->relation_type+ +++++++++++++++++++++++++++++++++++++++ ++ '.to_string($this->default_relation_type));
-			}
+			// debug
+				// if (empty($this->relation_type)) {
+				// 	dump($this->tipo, ' set dato this empty this->relation_type+ +++++++++++++++++++++++++++++++++++++++ ++ '.to_string($this->default_relation_type));
+				// }
+				// dump($dato, ' dato ++ '.to_string());
+				// error_log(json_encode($dato, JSON_PRETTY_PRINT));
+				// die();
 
 			foreach ((array)$dato as $key => $current_locator) {
+
+				// is empty check
+					if (empty($current_locator)) {
+						$msg = ' Error on set locator. The locator is empty and will be ignored ';
+						debug_log( __METHOD__ . $msg, logger::ERROR);
+						continue;
+					}
 
 				// is_object check
 					if (!is_object($current_locator)) {
@@ -605,32 +616,38 @@ class component_relation_common extends component_common {
 						}// end if (!isset($current_locator->lang))
 					}// end if ($translatable==='si')
 
-
 				// normalized locator
 					$nomalized_locator = new locator($current_locator);
 
-				// Add
-					$safe_dato[] = $nomalized_locator;
+				// Add. Check if locator already exists
+					$ar_properties = ($translatable==='si') ? ['section_id','section_tipo','type','lang'] : ['section_id','section_tipo','type'];
+					$found = locator::in_array_locator( $current_locator, $safe_dato, $ar_properties);
+					if ($found===false) {
+						$safe_dato[] = $nomalized_locator;
+					}else{
+						debug_log(__METHOD__.' Ignored set_dato of already existing locator '.to_string($current_locator), logger::ERROR);
+					}
 			}
 		}
 
-		parent::set_dato( (array)$safe_dato );
+		// set again the safe dato to current component dato (this action force to refresh component property 'dato' with the new safe values)
+			parent::set_dato( (array)$safe_dato );
 
 
 		// translatable cases
-		if ($translatable==='si') {
-			$new_dato_full = [];
-			// remove old locators of current lang
-			foreach ((array)$this->dato_full as $locator) {
-				if (!isset($locator->lang) || $locator->lang!==$lang) {
-					$new_dato_full[] = $locator;
+			if ($translatable==='si') {
+				$new_dato_full = [];
+				// remove old locators of current lang
+				foreach ((array)$this->dato_full as $locator) {
+					if (!isset($locator->lang) || $locator->lang!==$lang) {
+						$new_dato_full[] = $locator;
+					}
 				}
+				// merge data and cleaned dato_full
+				$this->dato_full = array_merge($new_dato_full, (array)$safe_dato);
+			}else{
+				$this->dato_full =  (array)$safe_dato;
 			}
-			// merge data and cleaned dato_full
-			$this->dato_full = array_merge($new_dato_full, (array)$safe_dato);
-		}else{
-			$this->dato_full =  (array)$safe_dato;
-		}
 
 
 		return true;
