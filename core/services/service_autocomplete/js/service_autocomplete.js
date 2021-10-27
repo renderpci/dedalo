@@ -865,10 +865,6 @@ export const service_autocomplete = function() {
 
 		const self = this
 
-		// Request term
-			const q		= search_value
-			const rqo	= self.rebuild_search_query_object(q);
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				console.log("[service_autocomplete.autocomplete_search] search_engine:", self.search_engine)
@@ -900,8 +896,7 @@ export const service_autocomplete = function() {
 
 		// search options
 			const options = {
-				rqo	: rqo,
-				q	: q
+				q	: search_value
 			}
 
 		// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
@@ -1005,10 +1000,13 @@ export const service_autocomplete = function() {
 	*/
 	this.dedalo_engine = async function(options) {
 
-		const rqo = await options.rqo
-			  rqo.prevent_lock = true
+		const self = this
+		const rqo = await self.rebuild_search_query_object(options.q);
+		// const rqo = await options.rqo
+			rqo.prevent_lock = true
 
 		if(SHOW_DEBUG===true) {
+			console.log("options", options)
 			console.log("+++ [service_autocomplete.dedalo_engine] rqo:", rqo)
 		}
 
@@ -1035,26 +1033,29 @@ export const service_autocomplete = function() {
 	* ZENON_ENGINE
 	* @return
 	*/
-	this.zenon_engine = function(options) {
+	this.zenon_engine = async function(options) {
 
 		const self = this
 
-		const dd_request	= options.dd_request
+		const dd_request	= self.dd_request
 		const q				= options.q
+		// const rqo	= await options.rqo
 
 		if(SHOW_DEBUG===true) {
-			//console.log("[zenon_engine] dd_request:",dd_request);
-			console.log("[zenon_engine] source:", dd_request);
+			// console.log("[zenon_engine] rqo:",rqo);
+			console.log("[zenon_engine] dd_request:", dd_request);
 		}
-		const request_ddo			= dd_request.find(item => item.typo === 'request_ddo').value
-		const ar_selected_fields	= request_ddo.filter(item => item.model === 'component_external');
-		const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
+
+			console.log("self.instance_caller:",self.instance_caller);
+		// const request_ddo			= dd_request.find(item => item.typo === 'request_ddo').value
+		// const ar_selected_fields		= request_ddo.filter(item => item.model === 'component_external');
+		// const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
 
 		// fields of Zenon "title" for zenon4
-			const fields		= ar_fields
+			const fields		= dd_request.show.ddo_map
 			const fields_length	= fields.length
 		// section_tipo of Zenon zenon1
-			const section_tipo	= ar_selected_fields[0].section_tipo
+			const section_tipo	= fields[0].section_tipo
 
 
 	  	// format data
@@ -1179,6 +1180,8 @@ export const service_autocomplete = function() {
 			for (let i = 0; i < fields_length; i++) {
 				url_arguments += "&field[]=" + fields[i]
 			}
+
+				console.log("url_trigger + url_arguments:",url_trigger + "?" + url_arguments);
 
 		// XMLHttpRequest promise
 			return new Promise(function(resolve, reject) {
