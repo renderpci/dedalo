@@ -721,10 +721,11 @@ component_common.prototype.change_value = async function(options) {
 		}
 	
 	// options
-		const changed_data 	= options.changed_data
-		const action 		= changed_data.action
-		const label 		= options.label
-		const refresh 		= typeof options.refresh!=="undefined" ? options.refresh : false
+		const changed_data		= options.changed_data
+		const action			= changed_data.action
+		const label				= options.label
+		const refresh			= typeof options.refresh!=="undefined" ? options.refresh : false
+		const build_autoload	= typeof options.build_autoload!=="undefined" ? options.build_autoload : false
 
 	// user confirmation prevents remove accidentally
 		if (action==='remove' && label) {
@@ -745,7 +746,9 @@ component_common.prototype.change_value = async function(options) {
 
 		// refresh
 			if (refresh===true) {
-				self.refresh()
+				self.refresh({
+					build_autoload : build_autoload // default value is false
+				})
 			}
 
 		// restore previous status
