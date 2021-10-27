@@ -2182,7 +2182,7 @@ abstract class common {
 				}
 			}
 
-		foreach ($request_config_dedalo as $request_config_item) {
+		foreach ($request_config as $request_config_item) {
 
 			// skip empty ddo_map
 				if(empty($request_config_item->show->ddo_map)) {
@@ -2208,6 +2208,7 @@ abstract class common {
 				$ar_ddo = array_filter($request_config_item->show->ddo_map, function($ddo) use($section_tipo){
 					return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo));
 				});
+
 
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
@@ -2564,7 +2565,7 @@ abstract class common {
 						$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						$sqo_id	= implode('_', [$model,$section_tipo]);
 						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-							// replace default sqo whith the already stored in session (except section_tipo to void loose labels and limit to avoid overwrite list in edit and viceversa)
+							// replace default sqo with the already stored in session (except section_tipo to void loose labels and limit to avoid overwrite list in edit and viceversa)
 							foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
 								if($key==='section_tipo' || $key==='limit') continue;
 								if (!isset($dedalo_request_config->sqo)) {
@@ -2574,10 +2575,14 @@ abstract class common {
 							}
 							// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
 						}
+				}
 
+				$request_config_len = sizeof($request_config);
+				for ($i=0; $i < $request_config_len; $i++) {
+					$current_request = $request_config[$i];
 					// add ddo_map
-						dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $dedalo_request_config->show->ddo_map);
-				}				
+						dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $current_request->show->ddo_map);
+				}
 		// des
 			// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
 			// 	// received request_ddo
@@ -2660,7 +2665,7 @@ abstract class common {
 				return $resolved_request_properties_parsed[$resolved_key];
 			}
 
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
 		// by default or edit mode get the properties of the term itself.
