@@ -308,6 +308,14 @@ class search {
 			$ar_records[] = $row;
 		}
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms'.' ms', logger::DEBUG);
+		if(SHOW_DEBUG===true) {
+			$total_time_ms = exec_time_unit($start_time,'ms');
+			if($total_time_ms>SLOW_QUERY_MS) {
+				error_log(PHP_EOL .'SLOW_QUERY: '.$total_time_ms." ms - LOAD_SLOW_QUERY: $sql_query -----------------------------------------------------------------------------------------------");
+			}
+		}
+
+
 
 
 		#

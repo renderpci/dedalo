@@ -108,7 +108,7 @@
 ################################################################
 # DB : CONEXIÓN CON LA BASE DE DATOS MYSQL
 	include(DEDALO_CONFIG_PATH.'/config_db.php');
-	define('SLOW_QUERY_MS'	, 1200);
+	define('SLOW_QUERY_MS'	, 600);
 
 
 
