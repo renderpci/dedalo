@@ -124,42 +124,36 @@ abstract class label {
 
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		if ($lang==='lg-vlca') {
-			$lang = 'lg-cat';
-		}
-		
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);			
-		}		
-		
-		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='label'); 
+		// lang valencian fallback to catalan to unify
+			if ($lang==='lg-vlca') {
+				$lang = 'lg-cat';
+			}
 
-		$ar_label = array();
-		$cached   = true;
-		$fallback = true;
-		if(SHOW_DEBUG===true) {
-			#$cached=false;
-		}
-		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
+		$ar_term = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='label');
+
+		$ar_label	= array();
+		$cached		= true;
+		$fallback	= true;
+
+		foreach ($ar_term as $current_terminoID) {
 			
 			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
 			$properties		= $RecordObj_dd->get_properties();
-			$vars_obj		= $properties;
 
 			# No data in field 'properties'
-			if(empty($vars_obj) || empty($vars_obj->name)) {
-				trigger_error("Term $current_terminoID with model 'label' dont't have properly configurated 'properties'. Please solve this ASAP");
+			if(empty($properties) || empty($properties->name)) {
+				debug_log(__METHOD__." Ignored Term $current_terminoID with model 'label' dont't have properly configurated 'properties'. Please solve this ASAP ".to_string($properties), logger::ERROR);
 				continue;
 			}			
 
 			# Set value			
-			$ar_label[$vars_obj->name] = RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
+			$ar_label[$properties->name] = RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
 		}		
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
-			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
-			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms');
+			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
+			#error_log("Calculated labels ".count($ar_term));
+			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms', logger::WARNING);
 		}
 
 			
