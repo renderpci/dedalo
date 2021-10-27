@@ -840,7 +840,7 @@ component_common.prototype.get_ar_instances = async function(){
 	// console.log("---- get_ar_instances deep_render value:", clone(value));
 
 	// iterate rows
-		const ar_instances = []
+		const ar_promises = []
 		for (let i = 0; i < value_length; i++) {
 
 			const locator				= value[i];
@@ -882,19 +882,33 @@ component_common.prototype.get_ar_instances = async function(){
 					instance_options.matrix_id = self.matrix_id
 				}
 
-			// section_record instance
-				const current_section_record = await instances.get_instance(instance_options)
-				await current_section_record.build()
+			// // section_record instance
+			// 	const current_section_record = await instances.get_instance(instance_options)
+			// 	await current_section_record.build()
 
-			// add instance
-				ar_instances.push(current_section_record)
+			// // add instance
+			// 	ar_instances.push(current_section_record)
+
+			ar_promises.push(new Promise(function(resolve){
+				instances.get_instance(instance_options)
+				.then(function(current_section_record){
+					current_section_record.build()
+					.then(function(){
+						resolve(current_section_record)
+					})
+				})
+			}))
 
 		}//end for loop
 
-	// set
-		self.ar_instances = ar_instances
+	// ar_instances. When all section_record instances are built, set them
+		await Promise.all(ar_promises).then((ar_instances) => {
+			// set
+			self.ar_instances = ar_instances
+		});
 
-	return ar_instances
+
+	return self.ar_instances
 };//end get_ar_instances
 
 
