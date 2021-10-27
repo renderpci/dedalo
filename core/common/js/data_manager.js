@@ -396,7 +396,7 @@ data_manager.prototype.get_local_db_data = async function(id, table) {
 
 	// get local db
 		const db = await self.get_local_db()
-		console.log(`[data_manager.get_local_db_data] table:${table} ms: `, performance.now()-t0);
+		console.log(`[data_manager.get_local_db_data] table:${table} id:${id} ms: `, performance.now()-t0);
 
 	return new Promise(function(resolve, reject){
 

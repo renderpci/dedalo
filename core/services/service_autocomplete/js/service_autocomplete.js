@@ -776,6 +776,7 @@ export const service_autocomplete = function() {
 				// if(self.instance_caller.mode==='search'){
 					// self.instance_caller.datum.data.push({value: current_locator})
 				// }
+				// instance_caller is refreshed after add value
 				self.instance_caller.add_value(value)
 			});
 
@@ -1033,7 +1034,7 @@ export const service_autocomplete = function() {
 
 	/**
 	* ZENON_ENGINE
-	* @return
+	* @return promise
 	*/
 	this.zenon_engine = function(options) {
 

@@ -215,7 +215,7 @@ component_portal.prototype.build = async function(autoload=false){
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
 					// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
-					dd_console(`[component_portal.build] COMPONENT ${self.model} api_response:`, 'DEBUG', [api_response.debug.exec_time, api_response])
+					dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.exec_time, api_response])
 
 			// set context and data to current instance
 				await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
@@ -227,6 +227,7 @@ component_portal.prototype.build = async function(autoload=false){
 			// rqo regenerate
 				await generate_rqo()
 				// console.log("portal generate_rqo 2 self.rqo:",self.rqo);
+
 		}//end if (autoload===true)
 
 	// update instance properties from context
@@ -241,7 +242,6 @@ component_portal.prototype.build = async function(autoload=false){
 
 			// pagination. update element pagination vars when are used
 				if (self.data.pagination && !self.total) {
-					// console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++ self.data.pagination:",self.data.pagination);
 					self.total			= self.data.pagination.total
 					self.rqo.sqo.offset	= self.data.pagination.offset
 					// set value
@@ -281,7 +281,7 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 				// console.log("//////////\\ PORTAL "+self.tipo+" self.paginator:",self.paginator);
 
-			// autocomplete destroy. change the autocomplete service to false and desactive it.
+			// autocomplete destroy. change the autocomplete service to false and deactivates it
 				if(self.autocomplete && self.autocomplete_active===true){
 					self.autocomplete.destroy()
 					self.autocomplete_active = false

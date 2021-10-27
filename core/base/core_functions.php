@@ -1617,11 +1617,11 @@ function check_basic_system() {
 * ARRAY_FIND
 * Equivalent of javascript find
 */
-function array_find($xs, $f) {
+function array_find($xs, $fn) {
 
 	if (is_array($xs)) {
 		foreach ($xs as $x) {
-			if (call_user_func($f, $x) === true)
+			if (call_user_func($fn, $x) === true)
 			return $x;
 		}
 	}
