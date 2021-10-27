@@ -11,6 +11,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {view_autocomplete} from './view_autocomplete.js'
+	// import {clone, dd_console} from '../../common/js/utils/index.js'
 
 
 
@@ -219,9 +220,6 @@ export const build_content_data = function(self) {
 				for (let i = 0; i < length; i++) {
 
 					const current_section_record = ar_section_record[i]
-					if (!current_section_record) {
-						console.warn("empty current_section_record:",current_section_record)
-					}
 
 					// input_element. Get_input_element, also renders current section record
 					const input_element = get_input_element(current_section_record)
