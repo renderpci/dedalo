@@ -1830,6 +1830,8 @@ li .reset_input select {
   padding: 1em;
   overflow-x: auto;
   overflow-y: hidden;
+  display: table;
+  width: 100%;
 }
 .area > .label {
   font-size: 1.6em;
