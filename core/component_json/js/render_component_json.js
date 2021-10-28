@@ -250,9 +250,8 @@ const get_content_data_edit = function(self) {
 			console.warn("More than one value in component_json is not allowed at now. Ignored next values. N values: ",value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
-			get_input_element(i, inputs_value[i], inputs_container, self)
-			// const li = await get_input_element(i, inputs_value[i], inputs_container, self)
-			// inputs_container.appendChild(li)
+			const li = get_input_element(i, inputs_value[i], self)
+			inputs_container.appendChild(li)
 			break; // only one is used for the time being
 		}
 
@@ -322,169 +321,172 @@ const get_buttons = (self) => {
 * GET_INPUT_ELEMENT
 * @return dom element li
 */
-const get_input_element = async (i, current_value, inputs_container, self) => {
+const get_input_element = (i, current_value, self) => {
 
 	const mode = self.mode
 
 	let validated = true
-	let editor
-
+	// let editor
 
 	// li
 		const li = ui.create_dom_element({
-			element_type	: 'li',
-			parent			: inputs_container
+			element_type : 'li'
 		})
 
-	// button_save
-		const button_save = ui.create_dom_element({
-			element_type : 'button',
-			class_name	 : 'primary save button_save',
-			text_content : "Save",
-			parent 		 : li
-		})
-		button_save.addEventListener("click", function(e) {
-			e.stopPropagation()
+	async function load_editor() {
 
-			const current_value = editor.get()
+		// load editor files (js/css)
+		self.load_editor_files()
+		.then(()=>{
 
-			// check json format and validate
-				if (validated!==true) {
+			// button_save
+				const button_save = ui.create_dom_element({
+					element_type : 'button',
+					class_name	 : 'primary save button_save',
+					text_content : "Save",
+					parent 		 : li
+				})
+				button_save.addEventListener("click", function(e) {
+					e.stopPropagation()
 
-					// manual check valid value
-					let v = false
-					try {
-						v = JSON.parse(JSON.stringify(current_value))
-					}catch(e) {
-						console.warn("Error. JSON value is invalid!",);
-					}
-					
-					if (!v) {
-						// styles as error
-							self.node.map(item => {
-								item.classList.add("error")
-							})
-						alert("Error: component_json. Trying so save non validated json value!");
-						return false
+					const current_value = editor.get()
+
+					// check json format and validate
+						if (validated!==true) {
+
+							// manual check valid value
+							let v = false
+							try {
+								v = JSON.parse(JSON.stringify(current_value))
+							}catch(e) {
+								console.warn("Error. JSON value is invalid!",);
+							}
+
+							if (!v) {
+								// styles as error
+									self.node.map(item => {
+										item.classList.add("error")
+									})
+								alert("Error: component_json. Trying so save non validated json value!");
+								return false
+							}
+						}
+
+					// check data has really changed. If not, stop save
+						const db_value 	= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+						const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
+						if (!changed) {
+							console.log("No changes are detected. Stop save");
+							return false
+						}
+
+					// save sequence
+						const changed_data = Object.freeze({
+							action	: 'update',
+							key		: 0,
+							value	: current_value
+						})
+						self.change_value({
+							changed_data : changed_data,
+							refresh 	 : false
+						})
+						.then((save_response)=>{
+							// event to update the dom elements of the instance
+							event_manager.publish('update_value_'+self.id, changed_data)
+
+							on_change(self, editor)
+
+							editor.frame.classList.remove("isDirty")
+							button_save.classList.remove("warning")
+						})
+				})
+
+			// editor_options
+				const editor_options = {
+					mode	 : 'code',
+					modes	 : ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+					// maxLines : 100, // Infinity,
+					onError	 : function (err) {
+						console.error("err:",err);
+						alert(err.toString());
+					},
+					onValidationError : function() {
+						validated = false
+					},
+					onChange : function(json) {
+						if (editor) {
+							on_change(self, editor)
+						}else{
+							console.error("Error. editor is not available!:");
+						}
+					},
+					onValidate: function() {
+						validated = true
+
+				       //var json = editor.get();
+				       // Update hidden text area value
+				       //editor_text_area.value = editor.getText()
+
+						// const json = editor.get();
+						//      	console.log("json:",json);
+						//      	//console.log("json editor.get():",editor.get());
+						//      	console.log("text editor.getText():",editor.getText());
+
+						// const changed_data = Object.freeze({
+						// 	action	: 'update',
+						// 	key		: 0,
+						// 	value	: editor.get()
+						// })
+						// self.change_value({
+						// 	changed_data : changed_data,
+						// 	refresh 	 : false
+						// })
+						// .then((save_response)=>{
+						// 	// event to update the dom elements of the instance
+						// 	event_manager.publish('update_value_'+self.id, changed_data)
+						// })
+					},
+					onBlur: function() {
+					    // 	console.log('content changed:', this);
+					    // 	alert("content changed");
 					}
 				}
 
-			// check data has really changed. If not, stop save
-				const db_value 	= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
-				const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
-				if (!changed) {
-					console.log("No changes are detected. Stop save");
-					return false
-				}
-
-			// save sequence
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: 0,
-					value	: current_value
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-
-					on_change(self, editor)
-
-					editor.frame.classList.remove("isDirty")
-					button_save.classList.remove("warning")
-				})
+			// create a new instace of the editor when DOM element is ready
+				// event_manager.when_in_dom(li, function(){
+				// 	console.log("container in DOM:",li);
+				// })
+				const editor = new JSONEditor(li, editor_options, current_value)
+				self.editors.push(editor) // append current editor
 		})
 
-	// load editor files (js/css)
-	await self.load_editor_files()
-	// .then(()=>{
-	// setTimeout(()=>{
+		// blur event
+				// const ace_editor = editor.aceEditor
+				// ace_editor.on("blur", function(e){
+				// 	e.stopPropagation()
+				//
+				// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+				// 	const edited_value 	= editor.get()
+				// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
+				// 	if (!changed) {
+				// 		return false
+				// 	}
+				//
+				// 	if (confirm("Save json data changes?")) {
+				// 		button_save.click()
+				// 	}
+				// })
 
+	}//end load_editor
 
-
-		// editor_options
-			const editor_options = {
-				mode	 : 'code',
-				modes	 : ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-				// maxLines : 100, // Infinity,
-				onError	 : function (err) {
-					console.error("err:",err);
-					alert(err.toString());
-				},
-				onValidationError : function() {
-					validated = false
-				},
-				onChange : function(json) {
-					if (editor) {
-						on_change(self, editor)
-					}else{
-						console.error("Error. editor is not available!:");
-					}
-				},
-				onValidate: function() {
-					validated = true
-
-			       //var json = editor.get();
-			       // Update hidden text area value
-			       //editor_text_area.value = editor.getText()
-
-					// const json = editor.get();
-					//      	console.log("json:",json);
-					//      	//console.log("json editor.get():",editor.get());
-					//      	console.log("text editor.getText():",editor.getText());
-
-					// const changed_data = Object.freeze({
-					// 	action	: 'update',
-					// 	key		: 0,
-					// 	value	: editor.get()
-					// })
-					// self.change_value({
-					// 	changed_data : changed_data,
-					// 	refresh 	 : false
-					// })
-					// .then((save_response)=>{
-					// 	// event to update the dom elements of the instance
-					// 	event_manager.publish('update_value_'+self.id, changed_data)
-					// })
-			    },
-			    onBlur: function() {
-				    // 	console.log('content changed:', this);
-				    // 	alert("content changed");
-			    }
-			}
-
-		// create a new instace of the editor when DOM element is ready
-			// event_manager.when_in_dom(li, function(){
-			// 	console.log("container in DOM:",li);
-			// })
-
-			editor = new JSONEditor(li, editor_options, current_value)
-
-			// append current editor
-			self.editors.push(editor)
-	// })
-	// }, 2000)
-
-	// blur event
-			// const ace_editor = editor.aceEditor
-			// ace_editor.on("blur", function(e){
-			// 	e.stopPropagation()
-			//
-			// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
-			// 	const edited_value 	= editor.get()
-			// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
-			// 	if (!changed) {
-			// 		return false
-			// 	}
-			//
-			// 	if (confirm("Save json data changes?")) {
-			// 		button_save.click()
-			// 	}
-			// })
-
+	const observer = new IntersectionObserver(function(entries) {
+		const entry = entries[1] || entries[0]
+		if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+			observer.disconnect();
+			load_editor()
+		}
+	}, { threshold: [0] });
+	observer.observe(li);
 
 	return li
 }; //end get_input_element
