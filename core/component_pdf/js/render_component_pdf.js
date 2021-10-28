@@ -283,7 +283,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			// })
 			// iframe.setAttribute('data', viewer_url)
 
-			// // when the standard html of pdf.js is loaded, is possible get the library and set the pdf
+			// when the standard html of pdf.js is loaded, is possible get the library and set the pdf
 			document.addEventListener("webviewerloaded",  (e) =>{
 
 				// shadow.addEventListener('load', (e) =>{
@@ -314,7 +314,16 @@ const get_input_element_edit = (i, current_value, self) => {
 					});
 			})
 
-			iframe.src = viewer_url
+			// set iframe url on DOM entry
+				const observer = new IntersectionObserver(function(entries) {
+					const entry = entries[1] || entries[0]
+					if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+						observer.disconnect();
+						iframe.src = viewer_url // load URL to iframe
+					}
+				}, { threshold: [0] });
+				observer.observe(iframe);
+			// iframe.src = viewer_url
 		}//end if (pdf_url)
 
 
