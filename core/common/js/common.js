@@ -123,20 +123,55 @@ common.prototype.render = async function (options={}) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// status check to prevent duplicated actions
-		if (self.status==='rendering') {
-			console.error(`[common.render] Ignored render already rendering '${self.model}'. current status:`, self.status, self.model, self.id);
-			return false
-		}
+	// console.trace()
+	// console.log("self:",self, render_level);
 
-	if (self.status!=='builded') {
-		// if render mode is equal than current already rendered node, return node 0
-		if (self.render_level===render_level) {
-			// event_manager.subscribe('builded_'+self.id, self.render.edit(options))
-			console.warn("Render illegal status. Expected 'builded' current:", clone(self.status), render_level, self.model, self.id);
-			return self.node[0]
-		}
-	}
+	// status check to prevent duplicated actions
+		switch(self.status) {
+
+			case 'builded':
+				// all is as expected. Continue executing normally
+				break;
+
+			case 'rendering':
+				// console.error(`[common.render] Ignored render already rendering '${self.model}'. current status:`, clone(self.status), render_level, self.model, self.id);
+				// return false
+
+				// event_manager.subscribe('render_'+self.id, function(result_node){
+				// })
+
+				// return new Promise(function(resolve){
+				// 	setTimeout(async function(){
+				// 		const node = await self.render(options)
+				// 			console.log("node:",node);
+				// 		resolve(node)
+				// 	}, 2000)
+				// })
+
+				// await new Promise(function(resolve){
+				// 	setTimeout(function(){
+				// 			console.log("hey:");
+				// 		resolve(true)
+				// 	}, 3000)
+				// })
+				break;
+
+			case 'rendered':
+				// if render mode is equal than current already rendered node, return node 0
+				if (self.render_level===render_level) {
+					console.warn(`Render unexpected status. Returning already rendered node 0. Expected status is 'builded' current is:`, clone(self.status), render_level, self.model, self.id);
+					return self.node[0]
+				}
+				break;
+
+			default:
+				if (self.render_level===render_level) {
+					// event_manager.subscribe('builded_'+self.id, self.render.edit(options))
+					console.warn(`Render illegal status '${self.status}'. Returning 'false'. Expected 'builded' current is:`, clone(self.status), render_level, self.model, self.id);
+					return false
+				}
+				break;
+		}//end switch status
 
 	// status update
 		self.status = 'rendering'
@@ -163,6 +198,9 @@ common.prototype.render = async function (options={}) {
 		const node = await self[render_mode]({
 			render_level : render_level
 		})
+
+	// status update
+		self.status = 'rendered'
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
@@ -261,6 +299,7 @@ common.prototype.render = async function (options={}) {
 							}
 					}//end for (let i = nodes_length - 1; i >= 0; i--)
 
+					// return the first edited node
 					return self.node[0]
 					break;
 
@@ -268,13 +307,11 @@ common.prototype.render = async function (options={}) {
 					// set
 						self.node.push(node)
 
+					// return the new created node
 					return node
 					break;
 			}
 		})()//end result_node fn
-
-	// status update
-		self.status = 'rendered'
 
 	// event publish
 		event_manager.publish('render_'+self.id, result_node)
