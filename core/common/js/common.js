@@ -687,7 +687,7 @@ common.prototype.load_script = async function(src) {
 * GET_COLUMNS
 * Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc) 
 * and create the columns to be render by the section or portals
-* @return array ar_columns the the speific columns to render into the list, with inverse path format.
+* @return array ar_columns the the specific columns to render into the list, with inverse path format.
 */
 common.prototype.get_columns = async function(){
 
