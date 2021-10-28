@@ -72,9 +72,6 @@
 	include(DEDALO_LIB_BASE_PATH.'/config/version.inc');
 	# Dedalo str tipos
 	include(DEDALO_LIB_BASE_PATH.'/config/dd_tipos.php');
-	################################################################
-	# LOADER (AUTO LOAD CALLED CLASSES)
-	include(DEDALO_LIB_BASE_PATH.'/config/class.loader.php');
 
 
 
@@ -445,6 +442,12 @@
 ################################################################
 # GEO LOCATION
 	define('DEDALO_GEO_PROVIDER',	'VARIOUS');	# OSM, ARCGIS, GOOGLE, VARIOUS, ARCGIS
+
+
+
+################################################################
+	# LOADER (AUTO LOAD CALLED CLASSES)
+	include DEDALO_LIB_BASE_PATH.'/config/class.loader.php';
 
 
 
