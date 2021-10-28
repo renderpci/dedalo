@@ -5,7 +5,6 @@
 # POSTGRESQL (PRIVATE DATA)
 # Default PotsgreSQL connection, for investigation system
 define('DEDALO_DB_TYPE'				, 'postgresql');
-define('DEDALO_DB_USE_GZIP'			, true);					# Default true
 define('DB_BIN_PATH'				, '/usr/local/bin/');		# Ex. /Library/PostgreSQL/9.4/bin/'
 define('PHP_BIN_PATH'				, '/usr/local/bin/php');	# Ex. /usr/bin/php
 define('DEDALO_HOSTNAME_CONN'		, 'localhost');
