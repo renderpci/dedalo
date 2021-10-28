@@ -2476,6 +2476,8 @@
 		28-10-2021
 		Re-orde the sample.config definitions
 		Fixed error on button_new.js create_new_blank_record() method which made it impossible to create new records from list mode
+		Fixed sample config loader include order error
+
 
 
 	[/HISTORY]
@@ -2501,7 +2503,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2u';
+	$DEDALO_VERSION = '5.8.2v';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
