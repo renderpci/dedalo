@@ -2473,7 +2473,8 @@
 		Added page_globals property 'section_id'
 		Added SAML sample config file
 		Added inheritance from father if exists to section->duplicate_current_section method
-
+		28-10-2021
+		Fixed error on button_new.js create_new_blank_record() method which made it impossible to create new records from list mode
 
 
 	[/HISTORY]
@@ -2499,13 +2500,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2t';
+	$DEDALO_VERSION = '5.8.2u';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-10-2021');
+	define('DEDALO_BUILD'	, '28-10-2021');
 
 
 	/*
