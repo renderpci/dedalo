@@ -540,11 +540,13 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 			? self.data.value.filter(el => el.tag_id === tag_id )
 			: []
 
+	// reset status to able re-render
+		self.status = 'builded'
+
 	// re-render always the content
-		self.render({render_level : 'content'})
-
-
-	return true
+		return self.render({
+			render_level : 'content'
+		})
 }// end filter_data_by_tag_id
 
 
@@ -552,7 +554,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 /**
 * RESET_FILTER_DATA
 * reset filtered data to the original and full server data
-* @return bool true
+* @return promise self.render
 */
 component_portal.prototype.reset_filter_data = function(options){
 
@@ -560,11 +562,20 @@ component_portal.prototype.reset_filter_data = function(options){
 
 	// refresh the data with the full data from datum and render portal.
 		self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+
+	// reset status to able re-render
+		self.status = 'builded'
+
+	// reset instances status
+		// self.ar_instances = null
+		// for (let i = 0; i < self.ar_instances.length; i++) {
+		// 	self.ar_instances[i].status = 'builded'
+		// }
 	
 	// re-render content
-		self.render({render_level : 'content'})
-
-	return true
+		return self.render({
+			render_level : 'content'
+		})
 }// end reset_filter_data
 
 
