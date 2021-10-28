@@ -72,6 +72,9 @@
 	include(DEDALO_LIB_BASE_PATH.'/config/version.inc');
 	# Dedalo str tipos
 	include(DEDALO_LIB_BASE_PATH.'/config/dd_tipos.php');
+	################################################################
+	# LOADER (AUTO LOAD CALLED CLASSES)
+	include(DEDALO_LIB_BASE_PATH.'/config/class.loader.php');
 
 
 
@@ -261,6 +264,8 @@
 	# DEDALO_FILTER_SECTION_TIPO_DEFAULT. Target filter section (actually dd153)
 	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT',DEDALO_SECTION_PROJECTS_TIPO); // dd153 Projects section (dd tipos)
 
+	# DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
+	define('DEDALO_SECTION_ID_TEMP', 'tmp');
 
 
 ################################################################
@@ -444,30 +449,12 @@
 
 
 ################################################################
-# LOADER (AUTO LOAD CALLED CLASSES)
-	include(DEDALO_LIB_BASE_PATH.'/config/class.loader.php');
-
-
-
-################################################################
 # MEDIA ENTITY
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
 	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...
 	define('DEDALO_ENTITY_MENU_SKIP_TIPOS', serialize( array()));
 
-
-
-################################################################
-# DEDALO_TEST_INSTALL
-# If true, check current admin user credentials on login page
-	define('DEDALO_TEST_INSTALL', true);
-
-
-
-################################################################
-# DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
-	define('DEDALO_SECTION_ID_TEMP', 'tmp');
 
 
 
@@ -496,30 +483,6 @@
 	define('DEDALO_NODEJS_PM2',		'/usr/local/bin/pm2');
 
 
-
-################################################################
-# STRUCTURE CSS
-	# Aditional css precessed from structure or created in aditional external files
-	define('DEDALO_STRUCTURE_CSS',	true);
-	define('DEDALO_ADITIONAL_CSS',	false);
-
-
-
-################################################################
-# DIFFUSION DOMAIN
-	define('DEDALO_DIFFUSION_DOMAIN',			'default');
-	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
-	define('DEDALO_PUBLICATION_ALERT',			false);
-	define('DEDALO_PUBLICATION_CLEAN_URL',		false);
-
-
-################################################################
-# DIFFUSION_CUSTOM
-# Otional custom class to maniputate diffusion options
-	define('DIFFUSION_CUSTOM', false);
-
-
-
 ################################################################
 # DEDALO_PROTECT_MEDIA
 	define('DEDALO_PROTECT_MEDIA_FILES', false);
@@ -537,6 +500,49 @@
 # ENCRYPTION_MODE. If not is defined, will be calculated from current Dédalo data version
 	define('ENCRYPTION_MODE', 'openssl');
 
+
+
+################################################################
+# STRUCTURE CSS
+	# Aditional css precessed from structure or created in aditional external files
+	define('DEDALO_STRUCTURE_CSS',	true);
+	define('DEDALO_ADITIONAL_CSS',	false);
+
+
+
+################################################################
+# DIFFUSION DOMAIN
+	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	define('DEDALO_PUBLICATION_ALERT',			false);
+	define('DEDALO_PUBLICATION_CLEAN_URL',		false);
+
+
+
+################################################################
+# DIFFUSION_CUSTOM
+# Otional custom class to maniputate diffusion options
+	define('DIFFUSION_CUSTOM', false);
+
+
+
+################################################################
+# API
+	# Auth code for acces to rest api server
+	# 'API_WEB_USER_CODE_MULTIPLE' is only for Dédalo use to allow several API_WEB_USER_CODE in same panel
+	# In API server config, only one is accepted: 'API_WEB_USER_CODE'
+	define('API_WEB_USER_CODE_MULTIPLE' , [
+		[
+			'db_name'	=> 'web_xxx',  // like web_my_entity
+			'code'		=> 'xxxxxxxx'  // like asd38kjlkadsg2f68doWeqhijQks
+		]
+	]);
+
+
+################################################################
+# DEDALO_TEST_INSTALL
+# If true, check current admin user credentials on login page
+	define('DEDALO_TEST_INSTALL', true);
 
 
 ################################################################
@@ -562,20 +568,6 @@
 		define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo5_code.zip');
 		// target dir where git command send the compresed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
 		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
-
-
-
-################################################################
-# API
-	# Auth code for acces to rest api server
-	# 'API_WEB_USER_CODE_MULTIPLE' is only for Dédalo use to allow several API_WEB_USER_CODE in same panel
-	# In API server config, only one is accepted: 'API_WEB_USER_CODE'
-	define('API_WEB_USER_CODE_MULTIPLE' , [
-		[
-			'db_name'	=> 'web_xxx',  // like web_my_entity
-			'code'		=> 'xxxxxxxx'  // like asd38kjlkadsg2f68doWeqhijQks
-		]
-	]);
 
 
 
