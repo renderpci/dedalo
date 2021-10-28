@@ -877,27 +877,53 @@ component_common.prototype.get_ar_instances = async function(){
 				if (self.id_variant) {
 					instance_options.id_variant = self.id_variant
 				}
+				if (locator.tag_id) {
+					if (instance_options.id_variant) {
+						instance_options.id_variant += ('_l' + locator.tag_id)
+					}else{
+						instance_options.id_variant = ('_l' + locator.tag_id)
+					}
+				}
 
+				// des way
+					// if (locator.tag_id) {
+					// 	// modify self.id_variant adding tag_id
+					// 	self.id_variant = self.id_variant
+					// 		? self.id_variant + ('_l' + locator.tag_id)
+					// 		: ('l' + locator.tag_id)
+
+					// 	// if (instance_options.id_variant) {
+					// 	// 	instance_options.id_variant += ('_l' + locator.tag_id)
+					// 	// }else{
+					// 	// 	instance_options.id_variant = ('_l' + locator.tag_id)
+					// 	// }
+					// }
+					// if (self.id_variant) {
+					// 	instance_options.id_variant = self.id_variant
+					// }
+
+			// matrix id (time machine mode)
 				if (self.matrix_id) {
 					instance_options.matrix_id = self.matrix_id
 				}
 
-			// // section_record instance
-			// 	const current_section_record = await instances.get_instance(instance_options)
-			// 	await current_section_record.build()
+			// await
+				// // section_record instance
+				// 	const current_section_record = await instances.get_instance(instance_options)
+				// 	await current_section_record.build()
+				// // add instance
+				// 	ar_instances.push(current_section_record)
 
-			// // add instance
-			// 	ar_instances.push(current_section_record)
-
-			ar_promises.push(new Promise(function(resolve){
-				instances.get_instance(instance_options)
-				.then(function(current_section_record){
-					current_section_record.build()
-					.then(function(){
-						resolve(current_section_record)
+			// promise
+				ar_promises.push(new Promise(function(resolve){
+					instances.get_instance(instance_options)
+					.then(function(current_section_record){
+						current_section_record.build()
+						.then(function(){
+							resolve(current_section_record)
+						})
 					})
-				})
-			}))
+				}))
 
 		}//end for loop
 
