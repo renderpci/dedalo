@@ -2897,6 +2897,21 @@ abstract class common {
 										? 'list'
 										: $mode);
 
+							//fields_map; used by components external to map to different API format, defined in the component, when this property is present and true, get the component fields_map
+								if(isset($current_ddo_map->fields_map) && $current_ddo_map->fields_map===true){
+									$RecordObj_dd = new RecordObj_dd($current_ddo_map->tipo);
+									$properties = $RecordObj_dd->get_properties();
+									$current_ddo_map->properties = $properties;
+									$current_ddo_map->fields_map = isset($properties->fields_map)
+										? $properties->fields_map
+										: [];
+									$current_ddo_map->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+									$current_ddo_map->model			= $RecordObj_dd->get_modelo_name();
+									$current_ddo_map->parent		= $current_ddo_map->section_tipo;
+									$current_ddo_map->permissions	= common::get_permissions($current_ddo_map->section_tipo, $current_ddo_map->tipo);
+								}
+
+
 							$final_ddo_map[] = $current_ddo_map;
 						}//end foreach ($ar_ddo_map as $current_ddo_map)
 
