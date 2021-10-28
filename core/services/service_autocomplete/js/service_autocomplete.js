@@ -8,8 +8,6 @@
 	import {ui} from '../../../common/js/ui.js'
 	import * as instances from '../../../common/js/instances.js'
 
-
-
 /**
 * SERVICE_AUTOCOMPLETE
 * Used as service by component_portal, (old component_autocomplete, component_autocomplete_hi)
@@ -24,7 +22,7 @@ export const service_autocomplete = function() {
 	* VARS
 	*/
 		// sections_without_filter_fields . exclude this section to build dom filter fields
-		this.sections_without_filter_fields = ['zenon1']
+		// this.sections_without_filter_fields = ['zenon1']
 
 
 
@@ -35,6 +33,8 @@ export const service_autocomplete = function() {
 	this.init = function(options) {
 
 		const self = this
+
+
 
 		self.instance_caller		= options.caller
 		self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
@@ -690,6 +690,8 @@ export const service_autocomplete = function() {
 
 		const self = this
 
+			console.log("api_response-------------------:",api_response);
+
 		// datalist container node
 			const datalist = self.datalist
 
@@ -707,8 +709,8 @@ export const service_autocomplete = function() {
 		// const ar_search_sections = self.ar_search_section_tipo
 
 		// get dd objects from the context that will be used to build the lists in correct order
-		const rqo_search =  self.rqo_search
-
+		const rqo_search =  await self.rqo_search
+console.log("rqo_search---------------------:",rqo_search);
 		// get the divisor between columns
 		const divisor = (rqo_search.show.divisor)
 			? rqo_search.show.divisor
@@ -1042,14 +1044,26 @@ export const service_autocomplete = function() {
 		const q				= options.q
 		// const rqo	= await options.rqo
 
+		// rqo
+		const generate_rqo = async function(){
+			// rqo_config. get the rqo_config from context
+			// rqo build
+			// const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
+			const add_show	= true
+			const zenon_rqo = await self.instance_caller.build_rqo_show(dd_request, 'get_data', add_show)
+			self.rqo_search = self.instance_caller.build_rqo_search(zenon_rqo, 'search')
+		}
+		generate_rqo()
+
+
 		if(SHOW_DEBUG===true) {
 			// console.log("[zenon_engine] rqo:",rqo);
 			console.log("[zenon_engine] dd_request:", dd_request);
 		}
 
-			console.log("self.instance_caller:",self.instance_caller);
+			console.log("self.instance_caller-----------------:",self.instance_caller);
 		// const request_ddo			= dd_request.find(item => item.typo === 'request_ddo').value
-		// const ar_selected_fields		= request_ddo.filter(item => item.model === 'component_external');
+		// const ar_selected_fields		= self.instance_caller.datum.context.filter(el => el.model === 'component_external')
 		// const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
 
 		// fields of Zenon "title" for zenon4
@@ -1073,10 +1087,10 @@ export const service_autocomplete = function() {
 				const separator = " - "
 				for (let i = 0; i < records_length; i++) {
 					const record 	= records[i]
-					const ar_value 	= []
 					for (let j = 0; j < fields_length; j++) {
 
-						const field = fields[j]
+						const field = fields[j].fields_map[0].remote
+						const ar_value 	= []
 						const authors_ar_value	= []
 
 						switch(field) {
@@ -1110,37 +1124,41 @@ export const service_autocomplete = function() {
 								}
 								break;
 						}
+
+						// value
+							// const divisor = self.instance_caller.divisor || ' | '
+							const value = ar_value.join("")
+
+
+						// record_data
+							const record_data = {
+								section_tipo		: section_tipo,
+								section_id			: record['id'],
+								type				: 'dd687',
+								// from_component_tipo	: ar_selected_fields[0].tipo,
+								tipo				: fields[j].tipo,
+								value				: value
+							}
+
+						// insert fomatted item
+							components_data.push(record_data)
 					}//end iterate fields
 
-					// value
-						const divisor = self.instance_caller.divisor || ' | '
-						const value = ar_value.join(divisor)
-
 					//locator
-					const locator = {
-						section_tipo	: section_tipo,
-						section_id		: record['id']
-					}
-					// record_data
-						const record_data = {
-							section_tipo		: section_tipo,
-							section_id			: record['id'],
-							type				: 'dd687',
-							// from_component_tipo	: ar_selected_fields[0].tipo,
-							tipo				: ar_selected_fields[0].tipo,
-							value				: value
+						const locator = {
+							section_tipo	: section_tipo,
+							section_id		: record['id']
 						}
 
-
-					// insert fomatted item
-						section_data.push(locator)
-						components_data.push(record_data)
+					// insert formated loctor
+					section_data.push(locator)
 				}//end iterate recoords
 				// create the section and your data
 				const section ={
 					section_tipo	: section_tipo,
-					tipo			: section_tipo,
-					value			: section_data
+					tipo			: self.instance_caller.tipo,
+					value			: section_data,
+					typo			: 'sections'
 				}
 
 				// mix the section and component_data
@@ -1149,7 +1167,7 @@ export const service_autocomplete = function() {
 				const response = {
 					msg		: "Ok. Request done",
 					result 	: {
-						context	: ar_selected_fields,
+						context	: fields,
 						data	: data_formatted
 					}
 				}
@@ -1179,10 +1197,10 @@ export const service_autocomplete = function() {
 			let url_arguments =  pairs.join("&")
 			// const fields   = ["id","authors","title","urls","publicationDates"]
 			for (let i = 0; i < fields_length; i++) {
-				url_arguments += "&field[]=" + fields[i]
+				const field_map_remote = fields[i].fields_map[0].remote
+				url_arguments += "&field[]=" + field_map_remote
 			}
 
-				console.log("url_trigger + url_arguments:",url_trigger + "?" + url_arguments);
 
 		// XMLHttpRequest promise
 			return new Promise(function(resolve, reject) {
