@@ -127,9 +127,9 @@ export const add_events = function(self, wrapper) {
 			// e.stopPropagation()
 
 			// ignore click on paginator
-				//if (e.target.closest('.paginator')) {
-				//	return false
-				//}
+				// if (e.target.closest('.paginator')) {
+				// 	return false
+				// }
 
 			// remove row
 				if (e.target.matches('.button.remove')) {
@@ -226,6 +226,10 @@ export const build_content_data = function(self) {
 					inputs_container.appendChild(input_element)
 				}
 			})
+
+			// reset wrapper minHeight on each render (added from paginator to prevent page blink)
+				// const wrapper = inputs_container.parentNode.parentNode
+				// wrapper.style.minHeight = null
 		}
 		fragment.appendChild(inputs_container)
 
