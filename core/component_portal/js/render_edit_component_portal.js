@@ -211,38 +211,68 @@ export const build_content_data = function(self) {
 
 	// build values (add all nodes from the rendered_section_record)
 		const build_values = function() {
+		// const build_values = async function() {
 
-			// const ar_section_record	= await self.get_ar_instances()
-			self.get_ar_instances()
-			.then(function(ar_section_record){
-
-				const length = ar_section_record.length
-				for (let i = 0; i < length; i++) {
+			// await version
+				/*
+				self.ar_instances = []
+				const ar_section_record			= await self.get_ar_instances()
+				const ar_section_record_length	= ar_section_record.length
+				for (let i = 0; i < ar_section_record_length; i++) {
 
 					const current_section_record = ar_section_record[i]
 
+					// console.log("section record with status:",current_section_record.status);
+					if (current_section_record.status!=='builded') {
+						console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
+						// console.trace()
+						continue
+					}
+
 					// input_element. Get_input_element, also renders current section record
-					const input_element = get_input_element(current_section_record)
+					const input_element = await get_input_element(current_section_record)
 					inputs_container.appendChild(input_element)
 				}
-			})
+				*/
+
+			// promise version
+				self.get_ar_instances()
+				.then(function(ar_section_record){
+
+					const ar_section_record_length = ar_section_record.length
+					for (let i = 0; i < ar_section_record_length; i++) {
+
+						const current_section_record = ar_section_record[i]
+
+						// console.log("section record with status:",current_section_record.status);
+						if (current_section_record.status!=='builded') {
+							console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
+							// console.trace()
+							continue
+						}
+
+						// input_element. Get_input_element, also renders current section record
+						const input_element = get_input_element(current_section_record)
+						inputs_container.appendChild(input_element)
+					}
+				})
 
 			// reset wrapper minHeight on each render (added from paginator to prevent page blink)
 				// const wrapper = inputs_container.parentNode.parentNode
 				// wrapper.style.minHeight = null
-		}
+		}//end build_values
 		fragment.appendChild(inputs_container)
 
 	// set node only when it is in DOM (to save browser resources)
-		const observer = new IntersectionObserver(function(entries) {
-			const entry = entries[1] || entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-				observer.disconnect();
-				build_values()
-			}
-		}, { threshold: [0] });
-		observer.observe(inputs_container);
-		// build_values()
+		// const observer = new IntersectionObserver(function(entries) {
+		// 	const entry = entries[1] || entries[0]
+		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+		// 		observer.disconnect();
+		// 		build_values()
+		// 	}
+		// }, { threshold: [0] });
+		// observer.observe(inputs_container);
+		build_values()
 
 
 	// build references
@@ -293,10 +323,45 @@ const get_input_element = function(current_section_record){
 				})
 		})
 
-	return li
-};//end  get_input_element
 
- 
+	return li
+};//end get_input_element
+
+
+
+/**
+* GET_INPUT_ELEMENT_AWAIT
+* @return dom element li
+*//*
+const get_input_element_await = async function(current_section_record){
+
+	 // key. when portal is in search mode, is undefined, fallback to zero
+	const key = current_section_record.paginated_key || 0
+
+	// li
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			dataset			: { key : key }
+		})
+
+	// input field
+		const section_record_node = await current_section_record.render()
+		// section_record_node append
+			li.appendChild(section_record_node)
+		// button remove
+			const button_remove = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button remove',
+				dataset			: { key : key },
+				parent			: li
+			})
+
+
+	return li
+};//end get_input_element_await
+*/
+
+
 
 /**
 * GET_BUTTONS
