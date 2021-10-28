@@ -275,20 +275,11 @@ const get_input_element_edit = (i, current_value, self) => {
 			})
 			// iframe.setAttribute('allowfullscreen',true)
 
-			// const iframe = ui.create_dom_element({
-			//    	element_type	: "object",
-			// 	type 			: 'text/html',
-			//    	class_name 		: 'pdf_viewer_frame',
-			//    	parent 			: li
-			// })
-			// iframe.setAttribute('data', viewer_url)
-
-			// when the standard html of pdf.js is loaded, is possible get the library and set the pdf
-			document.addEventListener("webviewerloaded",  (e) =>{
-
-				// shadow.addEventListener('load', (e) =>{
-					// DEDALO_APPLICATION_LANG
-					const locale = 'es-ES'
+			// webviewerloaded. when the standard html of pdf.js is loaded, it is possible to get the library and set the pdf
+				iframe.addEventListener("webviewerloaded",  fn_webviewerloaded)
+				function fn_webviewerloaded() {
+					// shadow.addEventListener('load', (e) =>{
+					const locale_code = page_globals.locale || 'es-ES'
 					// Libraries are loaded via <script> tag, create shortcut to access PDF.js exports.
 					// the pdf_js is not necesary load here, we will use only the viewer
 					// self.pdf_js 						= iframe.contentWindow['pdfjs-dist/build/pdf'];
@@ -297,22 +288,22 @@ const get_input_element_edit = (i, current_value, self) => {
 
 					// remove the first page / default page of the library
 					PDFViewerApplicationOptions.set('defaultUrl', '');
-					PDFViewerApplicationOptions.set('locale', 'es-ES');
+					PDFViewerApplicationOptions.set('locale', locale_code);
 						// console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions);
 
 					// load the pdf in the viewer
 					self.pdf_viewer.open(pdf_url).then(function (pdfDocument) {
-						// PDFViewerApplicationOptions.document.webL10n.setLanguage('es-ES')
-						// PDFViewerApplicationOptions.set('locale', 'es-ES');
-						// PDFViewerApplicationOptions.locale = 'es-ES'
+						// PDFViewerApplicationOptions.document.webL10n.setLanguage(locale_code)
+						// PDFViewerApplicationOptions.set('locale', locale_code);
+						// PDFViewerApplicationOptions.locale = locale_code
 						if(SHOW_DEBUG===true) {
 							// console.log("slef.pdf_viewer.PdfViewer", self.pdf_viewer);
 							// console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions.get('locale'));
 						}
-						PDFViewerApplicationOptions.set('locale', 'es-ES');
+						PDFViewerApplicationOptions.set('locale', locale_code);
 						// console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
 					});
-			})
+				}//end fn_webviewerloaded
 
 			// set iframe url on DOM entry
 				const observer = new IntersectionObserver(function(entries) {
