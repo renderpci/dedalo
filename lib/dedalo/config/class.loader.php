@@ -60,7 +60,7 @@ class class_loader {
 				break;
 
 			case (strpos($className, 'default')!==false):
-				if(SHOW_DEBUG===true) {
+				if(defined('SHOW_DEBUG') && SHOW_DEBUG===true) {
 					$bt = debug_backtrace();
 					echo "<pre>";
 					print_r($bt);
@@ -103,8 +103,8 @@ class class_loader {
 			return ($php_version_supported);
 		}
 		
-		$current_php_version		= phpversion();
-		$minimun_php_version		= '5.4.3';
+		$current_php_version	= phpversion();
+		$minimun_php_version	= '5.4.3';
 		
 		
 		$ar_current_php_version = explode('.',$current_php_version);
@@ -134,10 +134,10 @@ $autoloader	= new class_loader();
 $navigator	= new navigator();
 
 
-if (!defined('DEDALO_STRUCTURE_LANG')) {
-	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
-	#error_log("--> WARNING: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP");
-	debug_log(__METHOD__."Loader: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP ()".to_string(), logger::DEBUG);
-}
+// if (!defined('DEDALO_STRUCTURE_LANG')) {
+// 	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
+// 	error_log("--> WARNING: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP");
+// 	// debug_log(__METHOD__."Loader: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP ()".to_string(), logger::DEBUG);
+// }
 
 

@@ -166,7 +166,7 @@ function wrap_html($string, $htmlspecialchars=true) {
 * DEBUG_LOG
 */
 function debug_log($info, $level=logger::DEBUG) {
-	if(!SHOW_DEBUG) return false;
+	if(SHOW_DEBUG!==true) return false;
 	/* level ref
 	const DEBUG 	= 100;
 	const INFO 		= 75;
