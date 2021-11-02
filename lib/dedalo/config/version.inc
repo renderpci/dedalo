@@ -2477,6 +2477,9 @@
 		Re-orde the sample.config definitions
 		Fixed error on button_new.js create_new_blank_record() method which made it impossible to create new records from list mode
 		Fixed sample config loader include order error
+		02-11-2021
+		Fixed class subtitles lines generation issues. Unified non break spaces, added previous line to fragments with non zero start time (prevent empty subtitles at beginning of some fragments)
+		Clean subtitles API server code
 
 
 
@@ -2503,13 +2506,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2v';
+	$DEDALO_VERSION = '5.8.2w';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '28-10-2021');
+	define('DEDALO_BUILD'	, '02-11-2021');
 
 
 	/*
