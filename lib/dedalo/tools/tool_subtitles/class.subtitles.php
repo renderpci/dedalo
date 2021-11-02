@@ -193,33 +193,64 @@ abstract class subtitles {
 	*/
 	public static function build_fragment($ar_lines, $tc_in_secs, $tc_out_secs) {
 
-		$fragment_ar_lines = [];
+		// format tc's as int
+			$tc_in_secs = (int)$tc_in_secs;
+			$tc_out_secs= (int)$tc_out_secs ;
 
-		$tc_in_secs = (int)$tc_in_secs;
-		$tc_out_secs= (int)$tc_out_secs ;
+		// fragment_ar_lines
+			$fragment_ar_lines = [];
+			foreach ($ar_lines as $key => $line) {
 
-		foreach ($ar_lines as $key => $line) {
+				$tc = (int)OptimizeTC::TC2seg($line['tcin']);
 
-			$tc = (int)OptimizeTC::TC2seg($line['tcin']);
+				// Skip lines before tc_in_secs
+					if ( $tc < ($tc_in_secs) ) {
+						continue; # Skip
+					}
 
-			// Skip lines before tc_in_secs
-				if ( $tc < $tc_in_secs ) {
-					continue; # Skip
-				}
+				// Offset
+					$current_time 	= $tc - $tc_in_secs; // Use tc_in_secs as offset
+					// if ($current_time<0) { $current_time = 0.5; }
 
-			// Offset
-				$current_time 	= $tc - $tc_in_secs; // Use tc_in_secs as offset
-				$current_tc 	= OptimizeTC::seg2tc($current_time);
-				$line['tcin']	= $current_tc;
+				// tc_in
+					$current_tc				= OptimizeTC::seg2tc($current_time);
+					$line['tcin']			= $current_tc;
+					// aux info
+					$line['tcin_secs']		= $current_time;
+					$line['tcin_abs_secs']	= $tc;
+					$line['key']			= $key;
 
-			// Add valid line
-				$fragment_ar_lines[] = $line;
+				// Add valid line
+					$fragment_ar_lines[] = $line;
 
-			// Skip lines after tc_out_secs
-				if ( !empty($tc_out_secs) && $tc > $tc_out_secs ) {
-					break;
-				}
-		}
+				// Skip lines after tc_out_secs
+					if ( !empty($tc_out_secs) && $tc > $tc_out_secs ) {
+						break;
+					}
+			}//end foreach ($ar_lines as $key => $line)
+
+		// prepend previous line when begin is higer tan 1 secs
+			$first_fragment_tcin_secs	= $fragment_ar_lines[0]['tcin_secs'] ?? 0;
+			$previous_line				= $ar_lines[$fragment_ar_lines[0]['key']-1] ?? null;
+			if ($first_fragment_tcin_secs>1 && $previous_line && !empty($previous_line['text'])) {
+
+				// tcin_abs_secs
+					$tcin_abs_secs = (int)OptimizeTC::TC2seg( $previous_line['tcin'] );
+
+				// overwrite tcin
+					$current_time = 0.5;
+					$previous_line['tcin'] = OptimizeTC::seg2tc($current_time);
+
+				// aux info
+					$previous_line['tcin_secs']		= $current_time;
+					$previous_line['tcin_abs_secs']	= $tcin_abs_secs;
+					$previous_line['key']			= $fragment_ar_lines[0]['key']-1;
+
+				// prepend line
+					array_unshift($fragment_ar_lines, $previous_line);
+			}
+			// dump($fragment_ar_lines, ' fragment_ar_lines ++ '.to_string());
+
 
 		return $fragment_ar_lines;
 	}//end build_fragment
@@ -235,85 +266,69 @@ abstract class subtitles {
 	*/
 	public static function get_ar_lines($text) {
 
-		# Explode text by tc pattern
-			// Allow old codes like [TC_00:00:03_TC]
-			$tcPattern 	= "/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\]|\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}_TC\])/";
+		// Explode text by tc pattern. Allow old codes like [TC_00:00:03_TC]
+			$tcPattern		= "/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\]|\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}_TC\])/";
+			$ar_fragments	= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
+			#preg_match_all("/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/", $text, $ar_fragments, PREG_SET_ORDER);
 
-		$ar_fragments	= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
-		#preg_match_all("/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/", $text, $ar_fragments, PREG_SET_ORDER);
-			#dump($ar_fragments,'$ar_fragments - '); die();
+		// create the fragment items
+			$ar_fragment_item = array();
+			if (is_array($ar_fragments)) foreach ($ar_fragments as $key => $value) {
 
-		$ar_fragments_formated = array();
-		if (is_array($ar_fragments)) foreach ($ar_fragments as $key => $value) {
+				// check if is tc or text. returns int 0 forn non match and int 1 for match
+					$match = preg_match($tcPattern, $value);
+					if ($match===1) {
+						// ignore timecodes like '[TC_01:04:17.000_TC]'
+						continue;
+					}
 
-			# echo "<br>$key - $value";
-			if(!preg_match($tcPattern, $value)) {
-				# Es un texto
-				$text = $value;
-				#if (empty($text) || strlen($text)<1 ) continue; # Skip
+				// text. Current string is a text
+					$text = $value;
+					#if (empty($text) || strlen($text)<1 ) continue; # Skip
 
-				#$tcin 	= $ar_fragments[$key-1];
-				if (isset($ar_fragments[$key-1])) {
-					$tcin = $ar_fragments[$key-1];
-				}else{
-					$tcin = null;
-				}
+				// tcin
+					$tcin = isset($ar_fragments[$key-1])
+						? $ar_fragments[$key-1]
+						: null;
 
-				#$tcout 	= $ar_fragments[$key+1];
-				if (isset($ar_fragments[$key+1])) {
-					$tcout = $ar_fragments[$key+1];
-				}else{
-					$tcout = null;
-				}
+				// tcout
+					$tcout = isset($ar_fragments[$key+1])
+						? $ar_fragments[$key+1]
+						: null;
 
-					#
-					# TCOUT : Corregimos el tcout si es inferior al anterior
-					/*
-						$tcin_value  = substr($tcin, 4,8);
-						$tcout_value = substr($tcout, 4,8);
+				// DES . TCOUT : Corregimos el tcout si es inferior al anterior
+					// $tcin_value  = substr($tcin, 4,8);
+					// $tcout_value = substr($tcout, 4,8);
+					// if ( OptimizeTC::TC2seg($tcout_value) < OptimizeTC::TC2seg($tcin_value) ) {
+					// 	# Seconds +3
+					// 	$next_tcout_secs = OptimizeTC::TC2seg($tcin_value) + 3;
+					// 	# Format as tc like '00:01:03'
+					// 	$next_tcout_formated = OptimizeTC::seg2tc($next_tcout_secs);
+					// 	# Re-built tc out
+					// 	$tcout = '[TC_'. $next_tcout_formated .'_TC]';
+					// }
 
-						if ( OptimizeTC::TC2seg($tcout_value) < OptimizeTC::TC2seg($tcin_value) ) {
+				// fragment
+					$current_fragment = [
+						'tcin'	=> $tcin,
+						'tcout'	=> $tcout,
+						'text'	=> $text
+					];
+					// dump($current_fragment, ' current_fragment ++ '.to_string());
 
-							# Seconds +3
-							$next_tcout_secs 			= OptimizeTC::TC2seg($tcin_value) + 3;
-
-							# Format as tc like '00:01:03'
-							$next_tcout_formated 	= OptimizeTC::seg2tc($next_tcout_secs);
-
-							# Re-built tc out
-							$tcout = '[TC_'. $next_tcout_formated .'_TC]';
-
-								#echo " Changed tcout: $tcout from tcin $tcin <br>";
-						}
-						*/
-
-				$ar_fragments_formated[] = array('tcin'	 => $tcin,
-												 'tcout' => $tcout,
-												 'text'  => $text,
-												);
-			}//end if(!preg_match($tcPattern, $value))
-		}
-		#dump($ar_fragments_formated,'$ar_fragments_formated'); die();
-
-		$ar_final = array();
-		foreach ($ar_fragments_formated as $ar_value) {
-
-			$tcin	= $ar_value['tcin'];
-			$tcout	= $ar_value['tcout'];
-			$text	= $ar_value['text'];
-
-			$ar_final[] = subtitles::fragment_split($text, $tcin, $tcout);
-		}
-		#dump($ar_final,'ar_final en get_ar_lines'); die();
-
-		# Plain formated
-		$ar_final_formated = array();
-		foreach ($ar_final as $key => $ar_value) {
-			foreach ($ar_value as $key2 => $value) {
-				$ar_final_formated[] = $value;
+				// store current fragment
+					$ar_fragment_item[] = $current_fragment;
 			}
-		}
-		#dump($ar_final_formated,'$ar_final_formated');
+			// dump($ar_fragment_item,'$ar_fragment_item'); #die();
+
+		// split long fragments using limit chars per line (fragment_split)
+			$ar_final_formated = array();
+			foreach ($ar_fragment_item as $item) {
+				$ar_split_fragment = subtitles::fragment_split($item['text'], $item['tcin'], $item['tcout']);
+				foreach ($ar_split_fragment as $current_split_fragment) {
+					$ar_final_formated[] = $current_split_fragment;
+				}
+			}
 
 		return (array)$ar_final_formated;
 	}//end get_ar_lines
@@ -368,8 +383,8 @@ abstract class subtitles {
 			// Primera línea
 				$current_line = mb_substr( $text, $refPos, $maxCharLine );
 
-			// remove start and end spaces
-				$current_line = trim($current_line);
+			// DES. remove start and end spaces
+				// $current_line = trim($current_line);
 
 			// line_length. search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
 				$line_length = subtitles::text_lenght($current_line);
@@ -572,7 +587,11 @@ abstract class subtitles {
 		$string = str_replace('</strong>', '</b>', $string);
 		$string = str_replace('<em>', '<i>', $string);
 		$string = str_replace('</em>', '</i>', $string);
-		$string = str_replace(['&nbsp;'], [' '], $string);
+
+		// unify spaces
+		// Note that "\xc2\xa0" must be set with double quotes, not single.
+		// @see https://stackoverflow.com/questions/40724543/how-to-replace-decoded-non-breakable-space-nbsp
+		$string = str_replace(['&nbsp;',"\xc2\xa0",' '], [' '], $string);
 
 		$options = new stdClass();
 			$options->deleteTC = false;
