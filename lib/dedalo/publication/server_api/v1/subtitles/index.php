@@ -10,7 +10,7 @@
 	$start_time=microtime(1);
 	
 
-	// headers (configure it to allow CORS acces, etc.)
+	// headers (configure it to allow CORS access, etc.)
 		$headers_file = dirname(dirname(__FILE__)) . '/config_api/server_config_headers.php';
 		include $headers_file;
 		header('Content-Type: text/vtt');
@@ -22,12 +22,12 @@
 		include_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php');
 		
 	// vars
-		// av_section_id . Section id of aufiovisual record tape
+		// av_section_id . Section id of audiovisual record tape
 			$av_section_id = isset($_GET['section_id']) ? (int)$_GET['section_id'] : false;
 			if (empty($av_section_id)) {
 				exit("Error on build_subtitles. section_id is mandatory");
 			}
-		// Lang is autoset by server_config_api
+		// Lang is auto set by server_config_api
 			$lang 		 = isset($_GET['lang']) ? $_GET['lang'] : WEB_CURRENT_LANG_CODE;
 			preg_match('/^lg-[a-z]{3}$/', $lang, $lang_array);
 			if (empty($lang_array)) {
@@ -41,49 +41,47 @@
 	
 	// Get reel av data
 		$options = new stdClass();
-			$options->db_name 		= $db_name;
-			$options->table 		= (string)TABLE_AUDIOVISUAL;
-			$options->ar_fields 	= array(FIELD_VIDEO, FIELD_TRANSCRIPTION, 'duration');
-			$options->sql_filter 	= 'section_id = '.(int)$av_section_id;
-			$options->lang 			= $lang;
-			$options->order 		= null;
-			$options->limit 		= 1;
+			$options->db_name		= $db_name;
+			$options->table			= (string)TABLE_AUDIOVISUAL;
+			$options->ar_fields		= array(FIELD_VIDEO, FIELD_TRANSCRIPTION, 'duration');
+			$options->sql_filter	= 'section_id = '.(int)$av_section_id;
+			$options->lang			= $lang;
+			$options->order			= null;
+			$options->limit			= 1;
 			
 		$rows_data = (object)web_data::get_rows_data( $options );
-			#dump($rows_data, ' rows_data ++ '.to_string());
 		if (empty($rows_data->result)) {
 			exit("Error on build_subtitles. Record not found: ".$av_section_id);
 		}
-		$result = reset($rows_data->result);		
+		$result = reset($rows_data->result);
 
 		// duration (from db table column 'duration')
 			$duration = $result['duration'];
 			// check format (old data is in minutes)
 			preg_match('/^\d+$/', $duration, $output_array);
-			if (!empty($output_array)) {
-				$duration_secs = (int)$duration * 60;
-				#$duration = OptimizeTC::seg2tc($secs);
-			}else{
-				$duration_secs = (int)OptimizeTC::TC2seg($duration);
-			}
+			$duration_secs = (!empty($output_array))
+				? (int)$duration * 60
+				: (int)OptimizeTC::TC2seg($duration);
+			$total_ms = (int)($duration_secs * 1000);
 				
+		// raw text transcription (rsc36)
+			$sourceText_unrestricted = $result[FIELD_TRANSCRIPTION];
 
-		$sourceText_unrestricted = $result[FIELD_TRANSCRIPTION];
-		$sourceText 			 = web_data::remove_restricted_text( $sourceText_unrestricted, $av_section_id );
-		$total_ms 				 = (int)($duration_secs * 1000);
+		// remove_restricted_text
+			$sourceText	= web_data::remove_restricted_text( $sourceText_unrestricted, $av_section_id );
 			
 		
 	// build_subtitles_text
 		$options = new stdClass();
-			$options->sourceText 					= $sourceText;
-			$options->sourceText_unrestricted 		= $sourceText_unrestricted;
-			$options->total_ms 						= $total_ms;
-			$options->maxCharLine 					= 144;		# max number of char for subtitle line. Default 144			
-			$options->type 							= 'srt';	# File type: srt or xml
-			$options->show_debug    				= false;	# Default false
-			$options->advice_text_subtitles_title  	= null;  	# Text like "Automatic translation"
-			$options->tc_in_secs  					= $tc_in_secs;
-			$options->tc_out_secs  					= $tc_out_secs;
+			$options->sourceText					= $sourceText;
+			$options->sourceText_unrestricted		= $sourceText_unrestricted;
+			$options->total_ms						= $total_ms;
+			$options->maxCharLine					= 144;		# Max chars number for subtitle line. Default 144
+			$options->type							= 'srt';	# File type: SRT or XML
+			$options->show_debug					= false;	# Default is false
+			$options->advice_text_subtitles_title	= null;  	# Text like "Automatic translation"
+			$options->tc_in_secs					= $tc_in_secs;
+			$options->tc_out_secs					= $tc_out_secs;
 
 		$subtitles_text = subtitles::build_subtitles_text( $options );
 
@@ -94,7 +92,7 @@
 		}	
 		
 
-	// Show text		
+	// Show text
 		echo $subtitles_text;
 
 
