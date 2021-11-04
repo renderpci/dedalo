@@ -1366,7 +1366,9 @@ class tool_administration extends tool_common {
 		// tables
 			if ($tables!=='*') {
 				$ar_tables = [];
-				$tables = explode(',', $tables);
+				$tables = is_array($tables)
+					? $tables
+					: explode(',', $tables);
 				foreach ($tables as $key => $table) {
 					$ar_tables[] = trim($table);
 				}
@@ -1376,7 +1378,7 @@ class tool_administration extends tool_common {
 			}
 
 		// relations. truncate table and reset sequences
-			if ($tables==='*') {
+			if ($tables==='*' || $truncate===true) {
 				# truncate current table data
 				$strQuery 	= "TRUNCATE \"relations\";";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
@@ -1429,19 +1431,25 @@ class tool_administration extends tool_common {
 							$component_dato = [];
 							foreach ($datos->relations as $key => $current_locator) {
 								if (isset($current_locator->from_component_tipo)) {
+									// prevent propagate section yes/no
+									if ($current_locator->section_tipo==='dd64') {
+										continue;
+									}
 									$component_dato[$current_locator->from_component_tipo][] = $current_locator;
 								}else{
 									debug_log(__METHOD__." Error on get from_component_tipo of locator $table - id:$id (ignored) ".to_string($current_locator), logger::ERROR);
 								}
 							}
 
-							foreach ($component_dato as $from_component_tipo => $ar_locators) {
-								$propagate_options = new stdClass();
-									$propagate_options->ar_locators			= $ar_locators;
-									$propagate_options->section_id			= $section_id;
-									$propagate_options->section_tipo		= $section_tipo;
-									$propagate_options->from_component_tipo	= $from_component_tipo;
-								$propagate_response = search_development2::propagate_component_dato_to_relations_table( $propagate_options );
+							if (!empty($component_dato)) {
+								foreach ($component_dato as $from_component_tipo => $ar_locators) {
+									$propagate_options = new stdClass();
+										$propagate_options->ar_locators			= $ar_locators;
+										$propagate_options->section_id			= $section_id;
+										$propagate_options->section_tipo		= $section_tipo;
+										$propagate_options->from_component_tipo	= $from_component_tipo;
+									$propagate_response = search_development2::propagate_component_dato_to_relations_table( $propagate_options );
+								}
 							}
 
 						}else{
