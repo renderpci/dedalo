@@ -331,6 +331,13 @@ class dd_object {
 		$this->config_type = $value;
 	}
 
+	/**
+	* SET_COLUMN
+	*/
+	public function set_columns_map($value) {
+
+		$this->columns_map = $value;
+	}
 
 	/**
 	* SET_COLUMN
