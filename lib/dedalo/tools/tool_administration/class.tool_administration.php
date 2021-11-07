@@ -1496,7 +1496,7 @@ class tool_administration extends tool_common {
 
 	/**
 	* EXPORT_HIERARCHY
-	* For MASTER toponomy export
+	* For MASTER toponymy export
 	* @return
 	*/
 	public static function export_hierarchy($section_tipo) {
@@ -2213,6 +2213,7 @@ class tool_administration extends tool_common {
 	}//end iterate_rows
 
 
+
 	/**
 	* REMOVE_LANG_TO_FILENAMES
 	* @return 
@@ -2267,8 +2268,7 @@ class tool_administration extends tool_common {
 			}
 		}
 
-		return true;		
-		
+		return true;
 	}//end remove_lang_to_filenames
 
 }//end class
