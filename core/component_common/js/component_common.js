@@ -869,7 +869,7 @@ component_common.prototype.get_ar_instances = async function(){
 				datum			: self.datum,
 				paginated_key	: locator.paginated_key, // used by autocomplete / portal
 				caller			: self,
-				columns			: self.columns,
+				columns_map		: self.columns_map,
 				column_id		: self.column_id
 			}
 

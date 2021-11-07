@@ -227,7 +227,7 @@ export const build_content_data = function(self) {
 				}
 			})
 
-			// reset wrapper minHeight on each render (added from paginator to prevent page blink)
+			// reset wrapper minHeight on each render (added from pagination to prevent page blink)
 				// const wrapper = inputs_container.parentNode.parentNode
 				// wrapper.style.minHeight = null
 		}

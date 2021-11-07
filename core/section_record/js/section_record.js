@@ -89,12 +89,12 @@ section_record.prototype.init = async function(options) {
 	self.mode				= options.mode
 	self.lang				= options.lang
 	self.node				= []
-	self.columns			= options.columns
+	self.columns_map		= options.columns_map
 
 	self.datum				= options.datum
 	self.context			= options.context
 	// self.data			= options.data
-	self.paginated_key	= options.paginated_key
+	self.paginated_key		= options.paginated_key
 
 	self.events_tokens		= []
 	self.ar_instances		= []
@@ -151,7 +151,7 @@ const add_instance = async (self, current_context, section_id, current_data, col
 		data			: current_data,
 		datum			: self.datum,
 		request_config	: current_context.request_config,
-		columns			: current_context.columns
+		columns_map		: current_context.columns_map
 	}
 
 	// id_variant . Propagate a custom instance id to children
@@ -279,131 +279,227 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
 		const matrix_id			= self.matrix_id // time machine 'tm' mode only
-		const caller_column_id	= self.column_id
-		const ar_columns		= await self.columns || []
+		// const caller_column_id	= self.column_id
+		const columns_map		= await self.columns_map || []
 
-		// console.log("section_tipo:",section_tipo);
-		// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
-		// console.log("_________________________________________________ ar_columns:",JSON.parse(JSON.stringify(ar_columns)));
 
-	// valid_columns
-		// Get the columns that can be used with the current locator
-		// check the section_tipo of the last column and match with the current locator section_tipo
-		// the columns has reverse order, the last columns match with the component locator, (and the first columns is the most deep coponent in the path)
-		const get_valid_columns = function(section_tipo, ar_columns){
-
-			const ar_column = []
-
-			const ar_columns_length = ar_columns.length
-			for (let i = 0; i < ar_columns_length; i++) {
-
-				const current_column	= ar_columns[i];
-				const last_column		= current_column[current_column.length - 1];
-				// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the loctator
-				if(last_column && Array.isArray(last_column.section_tipo)){
-					const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
-					if(ddo_check) {
-						ar_column.push(current_column)
-					}
-				}else if(last_column && last_column.section_tipo===section_tipo){
-					ar_column.push(current_column)
-				}
-			}
-			return ar_column
-		}
-		const valid_columns = get_valid_columns(section_tipo, ar_columns)
+	// request config
+	// get the request_config with all ddo, it will be use to create the instances
+		const request_config		= self.caller.context.request_config
+		const request_config_length	= request_config.length
 
 	// instances
+	// get the columns of the component and match it with the ddo
 		const ar_promises		= []
-		const ar_columns_length	= valid_columns.length
-		for (let i = 0; i < ar_columns_length; i++) {
-			
-			// ddo
-				const current_ddo_path	= valid_columns[i]
-				const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
-				if (!current_ddo) {
-					console.warn("ignored empty current_ddo: [i, tipo, section_tipo, section_id, matrix_id]", i, tipo, section_tipo, section_id, matrix_id);
-					continue;
-				}
+		const columns_map_length	= columns_map.length
+		for (let i = 0; i < columns_map_length; i++) {
 
-			// new_path
-				const new_path = [...current_ddo_path]
-				new_path.pop()
+			// columns
+				const current_colum	= columns_map[i]
+				const ar_column_ddo = []
+			// request_config could be multiple (Dédalo, Zenon, etc)
+				for (let j = 0; j < request_config_length; j++) {
+					const request_config_item = request_config[j]
 
-			// the component has direct data into the section
-			// if(current_context.parent===tipo){
-				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+					// get the direct components of the caller (component or section)
+					const ar_first_level_ddo = request_config_item.show.ddo_map.filter(item => item.parent === self.tipo)
+					const ar_first_level_ddo_len = ar_first_level_ddo.length
 
-				const current_context	= Array.isArray(current_ddo.section_tipo)
-					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
-					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+					// with every child, match it with the column and assign to it.
+					for (let k = 0; k < ar_first_level_ddo_len; k++) {
+						const current_ddo = ar_first_level_ddo[k]
 
-				// check is valid context
-					if (!current_context) {
-						console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
-						console.warn("self.datum.context:", self.datum.context);
-						continue;
+						// if the ddo has column_id (normally all component has it, see in common.js get_columns() method)
+						if(current_ddo.column_id && current_ddo.column_id===current_colum.id){
+							// check if the column of the component is already loaded, if exists don't load it.
+							const exists = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
+							if(exists) continue
+							// add to the ddo to the column
+							ar_column_ddo.push(current_ddo)
+
+							// get the component data to assign to it and create the instance
+							const current_data		= self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+
+							// check if the section_tipo of the component
+							const current_context	= Array.isArray(current_ddo.section_tipo)
+								? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+								: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+
+							// check is valid context
+							if (!current_context) {
+								console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
+								console.warn("self.datum.context:", self.datum.context);
+								continue;
+							}
+
+							// new_context. clone the current_context to prevent changes in it.
+							const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
+
+							new_context.columns_map = (current_colum.columns_map)
+								? current_colum.columns_map
+								: false
+
+							const current_instance = await add_instance(self, new_context, section_id, current_data, current_colum.id)
+							self.ar_instances.push(current_instance)
+
+						}
 					}
-
-				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
-
-			// context section tipo
-				// if the component has multiple section_tipo like hierarchy25, get the current section_tipo and inject to the context
-				// multiple sections [on1, ts1, es1,...] has the same component and server only send 1 version of it.
-				// it's necessary to create different instances for the same component, to maintain the coherence with the data.
-				if(current_context.section_tipo!==section_tipo){
-					current_context.section_tipo = section_tipo
 				}
-
-			// new_context. clone the current_context to prevent changes in it.
-				const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
-
-				const column_id = caller_column_id
-					? caller_column_id
-					: i+1
-
-				// get builded instance
-					// sequential mode
-						// const current_instance = await add_instance(self, new_context, section_id, current_data, column_id)
-						// self.ar_instances.push(current_instance)
-
-					// parallel mode
-						const current_promise = new Promise(function(resolve){
-							add_instance(self, new_context, section_id, current_data, column_id)
-							.then(function(current_instance){
-								// current_instance.instance_order_key = i
-								resolve(current_instance)
-							}).catch((errorMsg) => {
-								console.error(errorMsg);
-							})
-						})
-						ar_promises.push(current_promise)
-
-			// }else{
-			// 	// the component don't has direct data into the section, it has a locator that will use for located the data of the column
-			// 	const current_data		= self.get_component_relation_data(current_context, section_id)
-
-			// 	// sometimes the section_tipo can be different (es1, fr1, ...)
-			// 	//the context get the first component, but the instance can be with the section_tipo data
-			// 	current_context.section_tipo = current_data.section_tipo
-			// 	const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
-			// 	//add
-			// 	ar_instances.push(current_instance)
-			// }
-
-		}//end for loop
-
-		// instances. Await all instances are parallel builded and fix
-			await Promise.all(ar_promises).then(function(ar_instances){
-				// sort by instance_order_key asc to guarantee original order
-				// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
-				// fix
-				self.ar_instances = ar_instances
-			})
-
-
+		}
 	return self.ar_instances
+
 };//end get_ar_columns_instances
+
+
+// /**
+// * GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE. TIME MACHINE TOO)
+// * @return array ar_instances
+// */
+// section_record.prototype.get_ar_columns_instances_DES = async function(){
+
+// 	const self = this
+
+// 	// already calculated case
+// 		if (self.ar_instances && self.ar_instances.length>0) {
+// 			// console.warn("Returning already calculated instances:",self.ar_instances, self.id)
+// 			return self.ar_instances
+// 		}
+
+// 	// short vars
+// 		const mode				= self.mode
+// 		const tipo				= self.tipo
+// 		const section_tipo		= self.section_tipo
+// 		const section_id		= self.section_id
+// 		const matrix_id			= self.matrix_id // time machine 'tm' mode only
+// 		const caller_column_id	= self.column_id
+// 		const ar_columns		= await self.columns || []
+
+// 		// console.log("section_tipo:",section_tipo);
+// 		// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
+// 		// console.log("_________________________________________________ ar_columns:",JSON.parse(JSON.stringify(ar_columns)));
+
+// 	// // valid_columns
+// 	// 	// Get the columns that can be used with the current locator
+// 	// 	// check the section_tipo of the last column and match with the current locator section_tipo
+// 	// 	// the columns has reverse order, the last columns match with the component locator, (and the first columns is the most deep component in the path)
+// 	// 	const get_valid_columns = function(section_tipo, ar_columns){
+
+// 	// 		const ar_column = []
+
+// 	// 		const ar_columns_length = ar_columns.length
+// 	// 		for (let i = 0; i < ar_columns_length; i++) {
+
+// 	// 			const current_column	= ar_columns[i];
+// 	// 			const last_column		= current_column[current_column.length - 1];
+// 	// 			// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the locator
+// 	// 			if(last_column && Array.isArray(last_column.section_tipo)){
+// 	// 				const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
+// 	// 				if(ddo_check) {
+// 	// 					ar_column.push(current_column)
+// 	// 				}
+// 	// 			}else if(last_column && last_column.section_tipo===section_tipo){
+// 	// 				ar_column.push(current_column)
+// 	// 			}
+// 	// 		}
+// 	// 		return ar_column
+// 	// 	}
+// 	// 	const valid_columns = get_valid_columns(section_tipo, ar_columns)
+
+// 	// request config
+// 	// get the request_config with all ddo
+// 		const request_config		= self.caller.context.request_config
+// 		const request_config_length	= request_config.length
+
+
+// 	// instances
+// 		const ar_promises		= []
+// 		const ar_columns_length	= ar_columns.length
+// 		for (let i = 0; i < ar_columns_length; i++) {
+// 				const current_ddo_path	= ar_columns[i]
+// 				const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
+// 				if (!current_ddo) {
+// 					console.warn("ignored empty current_ddo: [i, tipo, section_tipo, section_id, matrix_id]", i, tipo, section_tipo, section_id, matrix_id);
+// 					continue;
+// 				}
+
+// 			// new_path
+// 				const new_path = [...current_ddo_path]
+// 				new_path.pop()
+
+// 			// the component has direct data into the section
+// 			// if(current_context.parent===tipo){
+// 				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+
+// 				const current_context	= Array.isArray(current_ddo.section_tipo)
+// 					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+// 					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+
+// 				// check is valid context
+// 					if (!current_context) {
+// 						console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
+// 						console.warn("self.datum.context:", self.datum.context);
+// 						continue;
+// 					}
+
+// 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
+
+// 			// context section tipo
+// 				// if the component has multiple section_tipo like hierarchy25, get the current section_tipo and inject to the context
+// 				// multiple sections [on1, ts1, es1,...] has the same component and server only send 1 version of it.
+// 				// it's necessary to create different instances for the same component, to maintain the coherence with the data.
+// 				if(current_context.section_tipo!==section_tipo){
+// 					current_context.section_tipo = section_tipo
+// 				}
+
+// 			// new_context. clone the current_context to prevent changes in it.
+// 				const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
+
+// 				const column_id = caller_column_id
+// 					? caller_column_id
+// 					: i+1
+
+// 				// get built instance
+// 					// sequential mode
+// 						// const current_instance = await add_instance(self, new_context, section_id, current_data, column_id)
+// 						// self.ar_instances.push(current_instance)
+
+// 					// parallel mode
+// 						const current_promise = new Promise(function(resolve){
+// 							add_instance(self, new_context, section_id, current_data, column_id)
+// 							.then(function(current_instance){
+// 								// current_instance.instance_order_key = i
+// 								resolve(current_instance)
+// 							}).catch((errorMsg) => {
+// 								console.error(errorMsg);
+// 							})
+// 						})
+// 						ar_promises.push(current_promise)
+
+// 			// }else{
+// 			// 	// the component don't has direct data into the section, it has a locator that will use for located the data of the column
+// 			// 	const current_data		= self.get_component_relation_data(current_context, section_id)
+
+// 			// 	// sometimes the section_tipo can be different (es1, fr1, ...)
+// 			// 	//the context get the first component, but the instance can be with the section_tipo data
+// 			// 	current_context.section_tipo = current_data.section_tipo
+// 			// 	const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
+// 			// 	//add
+// 			// 	ar_instances.push(current_instance)
+// 			// }
+
+// 		}//end for loop
+
+// 		// instances. Await all instances are parallel builded and fix
+// 			await Promise.all(ar_promises).then(function(ar_instances){
+// 				// sort by instance_order_key asc to guarantee original order
+// 				// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
+// 				// fix
+// 				self.ar_instances = ar_instances
+// 			})
+
+
+// 	return self.ar_instances
+// };//end get_ar_columns_instances
 
 
 

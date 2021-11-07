@@ -92,8 +92,8 @@ render_list_section.prototype.list = async function(options) {
 	// list_header_node
 		if (self.ar_instances.length>0) {
 
-			const columns			= await self.columns
-			const list_header_node	= get_list_header(columns)
+			const columns_map		= await self.columns_map
+			const list_header_node	= get_list_header(columns_map)
 
 			Object.assign(
 				list_body.style,
@@ -330,33 +330,54 @@ const get_buttons = function(self) {
 * GET_LIST_HEADER
 * @return object component_data
 */
-const get_list_header = function(columns){
+const get_list_header = function(columns_map){
 
 	const ar_nodes			= []
-	const columns_length	= columns.length
-	for (let i = 0; i < columns_length; i++) {
+	const columns_map_length	= columns_map.length
+	for (let i = 0; i < columns_map_length; i++) {
 
-		const component = columns[i][0]
+		const column = columns_map[i]
 
-		if (!component) {
-			console.warn("ignored empty component: [key, columns]", i, columns);
+		if (!column) {
+			console.warn("ignored empty component: [key, columns_map]", i, columns_map);
 			continue;
 		}
 
 		const label = []
 
 		const current_label = SHOW_DEBUG
-			? component.label + " [" + component.tipo + "]"
-			: component.label
+			? column.label //+ " [" + component.tipo + "]"
+			: column.label
 		label.push(current_label)
 
 		// node header_item
-			const id			=  component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+			const id			=  column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
 			const header_item	= ui.create_dom_element({
 				element_type	: "div",
 				id				: id,
 				inner_html		: label.join('')
 			})
+
+		if(column.columns_map){
+			const current_column_map = column.columns_map
+			const columns_map_length = current_column_map.length
+			for (var j = 0; j < columns_map_length; j++) {
+				const current_column  = current_column_map[j]
+
+				// node header_item
+				const id			=  current_column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+				const sub_header_item	= ui.create_dom_element({
+					element_type	: "div",
+					id				: id,
+					inner_html		: current_column.label,
+					parent 			: header_item
+				})
+			}
+
+		}
+
+
+
 
 		ar_nodes.push(header_item)
 	}//end for (let i = 0; i < columns_length; i++)

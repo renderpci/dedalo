@@ -202,7 +202,7 @@ render_section_record.prototype.list = async function(options={}) {
 		let n_colums					= 0
 		// let n_relation_columns		= 0
 		const ar_grid_columns			= [] // remember add id column
-		const components_with_relations	= get_components_with_subcolumns()
+		// const components_with_relations	= get_components_with_subcolumns()
 
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
@@ -228,6 +228,8 @@ render_section_record.prototype.list = async function(options={}) {
 			// nodes. Await all instances are parallel rendered
 			await Promise.all(ar_promises)// render work done safely
 
+
+		const ar_column_nodes = []
 		for (let i = 0; i < ar_instances_length; i++) {
 
 			const current_instance = ar_instances[i]
@@ -242,35 +244,54 @@ render_section_record.prototype.list = async function(options={}) {
 				// 	self.modification_date = current_instance.data.value
 				// }
 
-			if (current_instance.model==='component_portal' && self.mode==='list') {
+			// if (current_instance.model==='component_portal' && self.mode==='list') {
 
-				// console.log("PORTAL -- current_instance", current_instance);
+			// 	// console.log("PORTAL -- current_instance", current_instance);
+			// 		console.log("column_id:------",current_instance.column_id);
+					// console.log("columns_map:----",self.columns_map);
+			// 	const current_instance_node = current_instance.node[0] //|| await current_instance.render()
+				
+			// 	// add
+			// 		fragment.appendChild(current_instance_node)
+				
+			// 	// if (current_instance_section_record_node) {
+			// 	// 	fragment.appendChild(current_instance_section_record_node.childNodes)
+			// 	// }
+			// 	// console.log("///// current_instance_section_record_node", current_instance_section_record_node.childNodes);
+
+			// 	// if (current_instance_section_record_node && current_instance_section_record_node.childNodes) {
+			// 	// 	for (let j = 0; j < current_instance_section_record_node.childNodes.length; j++) {
+			// 	// 		console.log("///// current_instance_section_record_node[j]", current_instance_section_record_node.childNodes[j]);
+			// 	// 		fragment.appendChild( current_instance_section_record_node.childNodes[j] )
+			// 	// 	}
+			// 	// }
+
+			// }else{
 
 				const current_instance_node = current_instance.node[0] //|| await current_instance.render()
-				
+
+
+
+				if (current_instance.column_id) {
+
+					const found_column_node = ar_column_nodes.find(el => el.id===current_instance.column_id)
+					if (found_column_node) {
+						found_column_node.appendChild(current_instance_node)
+					}else{
+						const column_node = build_column_node(current_instance.column_id)
+						ar_column_nodes.push(column_node)
+						fragment.appendChild(column_node)
+
+						column_node.appendChild(current_instance_node)
+					}
+
+				}else{
+					console.error("current_instance column_id not found:",current_instance);
+				}
+
 				// add
-					fragment.appendChild(current_instance_node)
-				
-				// if (current_instance_section_record_node) {
-				// 	fragment.appendChild(current_instance_section_record_node.childNodes)
-				// }
-				// console.log("///// current_instance_section_record_node", current_instance_section_record_node.childNodes);
-
-				// if (current_instance_section_record_node && current_instance_section_record_node.childNodes) {
-				// 	for (let j = 0; j < current_instance_section_record_node.childNodes.length; j++) {
-				// 		console.log("///// current_instance_section_record_node[j]", current_instance_section_record_node.childNodes[j]);
-				// 		fragment.appendChild( current_instance_section_record_node.childNodes[j] )
-				// 	}
-				// }
-
-			}else{
-
-				const current_instance_node = current_instance.node[0] //|| await current_instance.render()
-
-				// add
-					fragment.appendChild(current_instance_node)
-
-			}
+					// fragment.appendChild(current_instance_node)
+			// }
 
 			// grid . add columns
 				// if (components_with_relations.indexOf(current_instance.model)!==-1) {
@@ -287,6 +308,8 @@ render_section_record.prototype.list = async function(options={}) {
 
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
+
+
 	// grid css calculation assign
 		// const ar_grid_columns_fr	= ar_grid_columns.map(n => n + "fr");
 		// const id_column_width		= self.caller.id_column_width // from section init
@@ -297,7 +320,6 @@ render_section_record.prototype.list = async function(options={}) {
 		// 		"grid-template-columns": id_column_width + " repeat("+(ar_grid_columns.length)+", 1fr)",
 		// 	}
 		// )
-
 
 	// component_info
 		const component_info = self.get_component_info()
@@ -344,7 +366,7 @@ const build_id_column = function(self) {
 	// id_column
 		const id_column = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'id_column'
+			class_name		: 'column id_column'
 		})
 
 	// edit_line
@@ -596,6 +618,21 @@ const build_id_column = function(self) {
 };//end build_id_column
 
 
+/**
+* BUILD_COLUMN_NODE
+* @param  object column from the columns_map
+* @return DOM element column
+*/
+const build_column_node = function(column_id){
+
+	const column_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'column column_' + column_id
+	})
+	column_node.id = column_id
+
+	return column_node
+}// end build_column_node
 
 /**
 * RECURSIVE_RELATION_COLUMNS
@@ -628,31 +665,31 @@ const build_id_column = function(self) {
 
 
 
-/**
-* GET_COMPONENTS_WITH_SUBCOLUMNS
-* Return an array of component models with relations (equivalent to method class.component_relation_common.php)
-*/
-const get_components_with_subcolumns = () => {
+// /**
+// * GET_COMPONENTS_WITH_SUBCOLUMNS
+// * Return an array of component models with relations (equivalent to method class.component_relation_common.php)
+// */
+// const get_components_with_subcolumns = () => {
 
-	return [
-			// 'component_autocomplete',
-			//'component_autocomplete_hi',
-			//'component_check_box',
-			//'component_filter',
-			//'component_filter_master',
-			'component_portal',
-			//'component_publication',
-			//'component_radio_button',
-			//'component_relation_children',
-			//'component_relation_index',
-			//'component_relation_model',
-			//'component_relation_parent',
-			//'component_relation_related',
-			//'component_relation_struct',
-			//'component_select',
-			//'component_select_lang'
-	]
-};//end get_components_with_subcolumns
+// 	return [
+// 			// 'component_autocomplete',
+// 			//'component_autocomplete_hi',
+// 			//'component_check_box',
+// 			//'component_filter',
+// 			//'component_filter_master',
+// 			'component_portal',
+// 			//'component_publication',
+// 			//'component_radio_button',
+// 			//'component_relation_children',
+// 			//'component_relation_index',
+// 			//'component_relation_model',
+// 			//'component_relation_parent',
+// 			//'component_relation_related',
+// 			//'component_relation_struct',
+// 			//'component_select',
+// 			//'component_select_lang'
+// 	]
+// };//end get_components_with_subcolumns
 
 
 
