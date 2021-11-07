@@ -626,13 +626,13 @@ class component_pdf extends component_media_common {
 	public function process_uploaded_file($file_data) {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// vars
-			$original_file_name = $file_data->original_file_name; 	// like "my doc is beaty.psdf"
-			$full_file_name 	= $file_data->full_file_name;		// like "test175_test65_1.pdf"
-			$full_file_path 	= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
+			$original_file_name	= $file_data->original_file_name; 	// like "my doc is beaty.psdf"
+			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.pdf"
+			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
 
 
 		// thumb : Create pdf_thumb
@@ -644,9 +644,9 @@ class component_pdf extends component_media_common {
 				#dump($ar_related_component_text_area_tipo, ' ar_related_component_text_area_tipo ++ '.$this->get_tipo().to_string());
 			if (!empty($ar_related_component_text_area_tipo)) {
 
-				$related_component_text_area_tipo 	= reset($ar_related_component_text_area_tipo);
-				$related_component_text_area_model 	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-				$target_pdf_path 				  	= $this->get_pdf_path();
+				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
+				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
+				$target_pdf_path					= $this->get_pdf_path();
 
 				try {
 					$options = new stdClass();
@@ -669,7 +669,7 @@ class component_pdf extends component_media_common {
 					}
 
 				} catch (Exception $e) {
-				    debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
+					debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
 				}
 
 			}//end if (!empty($related_component_text_area_tipo)) {
@@ -683,36 +683,38 @@ class component_pdf extends component_media_common {
 					$properties = $this->get_properties();
 					if (isset($properties->target_filename)) {
 
-						$current_section_id  		= $this->get_section_id();
-						$target_section_tipo 		= $this->get_section_tipo();
-						$model_name_target_filename = RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
-						$component_target_filename 	= component_common::get_instance(
-																			$model_name_target_filename,
-																			$properties->target_filename,
-																			$current_section_id,
-																			'edit',
-																			DEDALO_DATA_NOLAN,
-																			$target_section_tipo
-																			);
+						$current_section_id			= $this->get_section_id();
+						$target_section_tipo		= $this->get_section_tipo();
+						$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+						$component_target_filename	= component_common::get_instance($model_name_target_filename,
+																					 $properties->target_filename,
+																					 $current_section_id,
+																					 'edit',
+																					 DEDALO_DATA_NOLAN,
+																					 $target_section_tipo);
 						$component_target_filename->set_dato( $original_file_name );
 						$component_target_filename->Save();
 					}
 
 
-				// add data with the file uploaded, only for original and retouched images, other quality images don't has relevant info.
+				// add data with the file uploaded
+					$file_name		= 'original_file_name';
+					$upload_date	= 'original_upload_date';
+					$dato			= $this->get_dato();
 
-						$file_name		= 'original_file_name';
-						$upload_date 	= 'original_upload_date';
-						$dato  = $this->get_dato();
-						$value = empty($dato) ? new stdClass() : reset($dato);
-							$value->$file_name 		= $original_file_name;
-							$value->$upload_date	= component_date::get_date_now();
-						$this->set_dato([$value]);
-						$this->Save();
+					$value = empty($dato)
+						? new stdClass()
+						: (is_array($dato) ? reset($dato) : (object)$dato);
+
+					$value->{$file_name}	= $original_file_name;
+					$value->{$upload_date}	= component_date::get_date_now();
+
+					$this->set_dato([$value]);
+					$this->Save();
 
 				// all is ok
-					$response->result 	= true;
-					$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+					$response->result	= true;
+					$response->msg		= 'Ok. Request done ['.__METHOD__.'] ';
 
 			} catch (Exception $e) {
 				$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";

@@ -620,7 +620,9 @@ class component_relation_common extends component_common {
 					$nomalized_locator = new locator($current_locator);
 
 				// Add. Check if locator already exists
-					$ar_properties = ($translatable==='si') ? ['section_id','section_tipo','type','lang'] : ['section_id','section_tipo','type'];
+					$ar_properties = ($translatable==='si')
+						? ['section_id','section_tipo','type','tag_id','lang']
+						: ['section_id','section_tipo','type','tag_id'];
 					$found = locator::in_array_locator( $current_locator, $safe_dato, $ar_properties);
 					if ($found===false) {
 						$safe_dato[] = $nomalized_locator;
