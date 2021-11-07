@@ -2480,6 +2480,10 @@
 		02-11-2021
 		Fixed class subtitles lines generation issues. Unified non break spaces, added previous line to fragments with non zero start time (prevent empty subtitles at beginning of some fragments)
 		Clean subtitles API server code
+		03-11-2021
+		Added counter method 'create_counter' to allow re-create a deleted counter from higher section_id of the current section
+		07-11-2021
+		Fixed error on component_filter when default dato was not set properly. Now both, default dato from properties, and user default project, will be added to filter data when a new section is created
 
 
 
@@ -2506,13 +2510,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2w';
+	$DEDALO_VERSION = '5.8.2y';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '02-11-2021');
+	define('DEDALO_BUILD'	, '07-11-2021');
 
 
 	/*
