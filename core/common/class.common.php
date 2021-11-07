@@ -1508,6 +1508,11 @@ abstract class common {
 				? ($this->build_request_config() ?? [])
 				:  null;
 
+		// columns_map (moved to client JS)
+			$columns_map = !empty($request_config)
+				? ($this->get_columns_map() ?? [])
+				: null;
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'				=> $label, // *
@@ -1524,7 +1529,8 @@ abstract class common {
 				'permissions'		=> $permissions,
 				'tools'				=> $tools,
 				'buttons'			=> $buttons,
-				'request_config'	=> $request_config
+				'request_config'	=> $request_config,
+				'columns_map'		=> $columns_map
 			]);
 
 		// optional properties		
@@ -1847,7 +1853,7 @@ abstract class common {
 									$new_rqo_config = unserialize(serialize($request_config_item));
 									$new_rqo_config->show->ddo_map = $children;
 								
-									$related_element->request_config = [$new_rqo_config];
+									$related_element->request_config[] = $new_rqo_config;
 								}
 							break;				
 
@@ -2215,7 +2221,7 @@ abstract class common {
 
 					// prevent resolve non children from path ddo
 						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
-							// dump($dd_object, ' dd_object SKIP dd_object ++ '.to_string($this->tipo));
+							dump($dd_object, ' dd_object SKIP dd_object ++'.to_string($this->tipo));
 							continue;
 						}
 
@@ -2290,7 +2296,7 @@ abstract class common {
 										$new_rqo_config = unserialize(serialize($request_config_item));
 										$new_rqo_config->show->ddo_map = $children;
 									
-										$related_element->request_config = [$new_rqo_config];
+										$related_element->request_config[] = $new_rqo_config;
 									}
 
 								// Inject this tipo as related component from_component_tipo
@@ -2907,7 +2913,7 @@ abstract class common {
 										: [];
 									$current_ddo_map->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 									$current_ddo_map->model			= $RecordObj_dd->get_modelo_name();
-									$current_ddo_map->parent		= $current_ddo_map->section_tipo;
+									// $current_ddo_map->parent		= $current_ddo_map->section_tipo;
 									$current_ddo_map->permissions	= common::get_permissions($current_ddo_map->section_tipo, $current_ddo_map->tipo);
 								}
 
@@ -4069,6 +4075,121 @@ abstract class common {
 		return $ar_button_ddo;
 	}//end get_buttons_context
 
+
+	/**
+	* GET_COLUMNS_MAP
+	* @return
+	*/
+	public function get_columns_map() {
+
+		$mode = $this->get_modo();
+		$tipo = $this->get_tipo();
+
+		// get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
+		// by default or edit mode get the properties of the term itself.
+			switch ($mode) {
+				case 'list':
+				case 'portal_list':
+					# in the case that section_list is defined
+					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+					if(isset($ar_terms[0])) {
+						# Use found related terms as new list
+						$current_term	= $ar_terms[0];
+						$RecordObj_dd	= new RecordObj_dd($current_term);
+						$properties		= $RecordObj_dd->get_properties();
+					}
+					else{
+						// sometime the portals don't has section_list defined, in these cases get the properties of the current tipo
+						$RecordObj_dd	= new RecordObj_dd($tipo);
+						$properties		= $RecordObj_dd->get_properties();
+					}
+					break;
+
+				default:
+					// edit mode or components without section_list defined (other than portals or sections)
+					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$properties		= $RecordObj_dd->get_properties();
+					break;
+			}
+
+
+
+		$columns_map = $properties->source->columns_map ?? false;
+
+		return $columns_map;
+	}//end get_columns_map
+
+
+	// /**
+	// * BUILD_COLUMNS_MAP
+	// * @return array
+	// */
+	// public function build_columns_map() {
+
+	// 	$columns_map = [];
+	// 	foreach ($this->request_config as $request_config_item) {
+
+	// 		// skip empty ddo_map
+	// 			if(empty($request_config_item->show->ddo_map)) {
+	// 				debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::WARNING);
+	// 				continue;
+	// 			}
+
+	// 		foreach($request_config_item->show->ddo_map as $dd_object) {
+
+	// 			// ignore non direct children
+	// 				if ($dd_object->parent!==$this->get_tipo()) {
+	// 					continue;
+	// 				}
+
+	// 			if (isset($dd_object->column_id) && isset($this->properties->source->columns_map)){
+
+	// 				$column_exists = array_find($columns_map, function($el) use($dd_object){
+	// 					return $el->id===$dd_object->column_id;
+	// 				});
+	// 				if ($column_exists!==null) {
+	// 					continue;
+	// 				}
+
+	// 				$found = array_find($this->properties->source->columns_map, function($el) use($dd_object){
+	// 					return $el->id===$dd_object->column_id;
+	// 				});
+
+	// 				if ($found!==null) {
+	// 					$column = $found;
+	// 				}else{
+	// 					$column = new stdClass();
+	// 						$column->label	= $dd_object->tipo;
+	// 						$column->id		= $dd_object->tipo;
+	// 				}
+	// 			}else{
+	// 				$column = new stdClass();
+	// 					$column->label	= $dd_object->tipo;
+	// 					$column->id		= $dd_object->tipo;
+	// 			}
+
+	// 			$columns_map[] = $column;
+	// 		}
+	// 	}
+
+	// 	if (!function_exists('parse_columns')) {
+	// 		function parse_columns($columns_map){
+
+	// 			foreach ($columns_map as $column_item) {
+	// 				$column_item->label = RecordObj_dd::get_termino_by_tipo($column_item->label, DEDALO_APPLICATION_LANG, true, true);
+
+	// 				if(isset($column_item->columns_map)){
+	// 					parse_columns($column_item->columns_map);
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	parse_columns($columns_map);
+	// 	dump($columns_map, ' columns_map +---------------------------------------+ '.to_string($this->tipo));
+
+
+	// 	return $columns_map;
+	// }//end build_columns_map
 
 
 }//end class common
