@@ -2271,4 +2271,26 @@ class tool_administration extends tool_common {
 		return true;
 	}//end remove_lang_to_filenames
 
+
+
+	/**
+	* BUILD_INSTALL_VERSION
+	* Creates a clean install database
+	* @return object $response
+	*/
+	public static function build_install_version() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		include_once dirname(__FILE__) . '/install/class.install.php';
+
+		$response = install::build_install_version();
+
+		return $response;
+	}//end build_install_version
+
+
+
 }//end class
