@@ -39,38 +39,22 @@ class component_filter extends component_relation_common {
 	* Component constructor
 	*/
 	function __construct( $tipo=false, $parent=null, $modo='list', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-				
+
 		# Build component normally
 		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
 
-		$this->parent = $this->get_parent();	
+		$this->parent = $this->get_parent();
 
-		#if(SHOW_DEBUG===true) {
-		#	if ($this->RecordObj_dd->get_traducible()==='si') {
-		#		throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
-		#	}
-		#}
-		#debug_log(__METHOD__." get_called_class ".get_called_class(), logger::DEBUG);
 
-		# DEDALO_DEFAULT_PROJECT
-		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto definido en config 
-		if ($modo==='edit' && get_called_class()==='component_filter') { // Remember that component_filter_master extends this class
-			$dato = $this->get_dato();				
-			if(empty($dato)) {
-				#
-				# FILTER always save default project
-				# Get current user projects
-				$user_id 				= navigator::get_user_id();
-				$default_dato_for_user 	= $this->get_default_dato_for_user($user_id);
-				#debug_log(__METHOD__." default_dato_for_user ".to_string($default_dato_for_user), logger::DEBUG);
-				
-				$this->set_dato($default_dato_for_user);
-				$this->Save();
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Saved component filter (tipo:$tipo, parent:$parent, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".json_encode($default_dato_for_user));
+		// dedalo_default_project. (!) Note that component common 'set_dato_default' is overwritten here for this component
+			if ($modo==='edit' && get_called_class()==='component_filter') { // Remember that component_filter_master extends this class
+				$dato = $this->get_dato();
+				if(empty($dato)) {
+					// (!) filter always save default project for current user to prevent to loose the access to new created records
+					$user_id = navigator::get_user_id();
+					$this->set_default_dato_for_user($user_id);
 				}
 			}
-		}
 
 		return true;
 	}//end __construct
@@ -125,43 +109,106 @@ class component_filter extends component_relation_common {
 
 
 
+	/**
+	* SET_DATO_DEFAULT
+	* Overwrite component common method
+	* @return bool true
+	*/
+	public function set_dato_default() {
+
+		// nothing to do here. Action is delegated to method set_default_dato_for_user
+
+		return true;
+	}//end set_dato_default
+
+
 
 	/**
-	* GET_DEFAULT_DATO_FOR_USER
+	* SET_DEFAULT_DATO_FOR_USER
 	* @return array $default_dato 
 	*/
-	public function get_default_dato_for_user($user_id) {
+	protected function set_default_dato_for_user($user_id) {
 
 		$is_global_admin = component_security_administrator::is_global_admin($user_id);
-		if ($is_global_admin===true) {
-			$user_projects 	= null;
-		}else{
-			$user_projects 	= filter::get_user_projects($user_id);
-		}
+		$user_projects = ($is_global_admin===true)
+			? null // no filter is needed for global_admin
+			: filter::get_user_projects($user_id);
 
-		if (!empty($user_projects)) {
-			# First user project			
-			foreach ($user_projects as $user_projects_locator) {
+		$default_dato = [];
+
+		// user projects
+			if (!empty($user_projects)) {
+				# First user project
+				$user_projects_first_locator = reset($user_projects);
+
 				$filter_locator = new locator();
-					$filter_locator->set_section_tipo($user_projects_locator->section_tipo);
-					$filter_locator->set_section_id($user_projects_locator->section_id);
+					$filter_locator->set_section_tipo($user_projects_first_locator->section_tipo);
+					$filter_locator->set_section_id($user_projects_first_locator->section_id);
 					$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 					$filter_locator->set_from_component_tipo($this->tipo);
-				break;
+
+				$default_dato[] = $filter_locator;
+
+			}else{
+				# Default project defined in config
+				$filter_locator = new locator();
+					$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+					$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+					$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+					$filter_locator->set_from_component_tipo($this->tipo);
+
+				$default_dato[] = $filter_locator;
 			}
-			$default_dato = [$filter_locator];
+
+		// optional properties dato_default. It is appended to already set dato if defined
+			$propiedades = $this->get_propiedades();
+			if (isset($propiedades->dato_default)) {
+
+				// legacy format of default dato:
+				// { "41": "2" }
+				$section_id = null;
+				foreach($propiedades->dato_default as $key => $value) {
+				    $section_id = $key;
+				    break;
+				}
+
+				$filter_locator = new locator();
+					$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+					$filter_locator->set_section_id($section_id);
+					$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+					$filter_locator->set_from_component_tipo($this->tipo);
+
+				$default_dato[] = $filter_locator;
+
+				// info log
+					if(SHOW_DEBUG===true) {
+						$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'propiedades': ".json_encode($propiedades->dato_default);
+						debug_log(__METHOD__.$msg, logger::DEBUG);
+					}
+			}
+
+		if (empty($default_dato)) {
+			$msg = 'Error. Default dato for component filter is not defined!';
+			trigger_error($msg);
+			debug_log(__METHOD__.' '.$msg, logger::ERROR);
 		}else{
-			# Default project defined in config
-			$filter_locator = new locator();
-				$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
-				$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
-				$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-				$filter_locator->set_from_component_tipo($this->tipo);
-			$default_dato = [$filter_locator];
+
+			// set
+				$this->set_dato($default_dato);
+
+			// save (if it is not a temporary section)
+				if ( strpos($this->parent, DEDALO_SECTION_ID_TEMP)===false ) {
+					$this->id = $this->Save();
+					debug_log(__METHOD__." Added and saved default dato for this component ".to_string($default_dato), logger::DEBUG);
+				}
+
+			// matrix data : reload matrix data again
+				$this->load_component_dato();
 		}
 
+
 		return $default_dato;
-	}//end get_default_dato_for_user
+	}//end set_default_dato_for_user
 
 
 

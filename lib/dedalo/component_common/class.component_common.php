@@ -345,7 +345,7 @@ abstract class component_common extends common {
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool true
 	*/
-	private function set_dato_default() {
+	protected function set_dato_default() {
 
 		# propiedades is object or null
 		$propiedades = $this->get_propiedades();
@@ -368,7 +368,7 @@ abstract class component_common extends common {
 				$this->set_dato($dato_default);
 
 				if ( strpos($this->parent, DEDALO_SECTION_ID_TEMP)===false ) {
-					$this->id 	= $this->Save();
+					$this->id = $this->Save();
 				}
 
 				# INFO LOG
