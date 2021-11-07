@@ -652,25 +652,148 @@ common.prototype.load_script = async function(src) {
 * and create the columns to be render by the section or portals
 * @return array ar_columns the the specific columns to render into the list, with inverse path format.
 */
-common.prototype.get_columns = async function(){
+// common.prototype.get_columns_DES = async function(){
+
+// 	const self = this
+
+// 	const full_ddo_map = []
+
+// 	// // get ddo_map from the rqo_config.show, self can be a section or component_portal, and both has rqo_config
+// 	const ddo_map = self.rqo_config.show.ddo_map
+// 	console.log("self:",self.context);
+// 	// get the sub elements with the ddo_map, the method is recursive,
+// 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
+// 	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
+
+// 	full_ddo_map.push(...sub_ddo_map)
+
+// 	const ar_columns = get_ar_inverted_paths(full_ddo_map)
+
+// 	return ar_columns
+// }//end get_columns
+
+
+/**
+* GET_COLUMNS
+* Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc)
+* and create the columns to be render by the section or portals
+* @return array columns_map the the specific columns to render into the list.
+*/
+common.prototype.get_columns_map = function(){
 
 	const self = this
 
+	// get the request_config with all ddo to use in the columns
+	const request_config		= self.context.request_config
+	const request_config_length	= request_config.length
+
+	// get the columns_maps defined in the properties and assigned in context in the server or by the client.
+	// the columns_maps become as structure to complete with the request_config
+	// by default the columns are for every component that has direct link to the component(portal) or section
+	// if the portal has more component in deep, it can define as columns in the properties,
+	// but by default, the portal will be only one column (with all components joined in the cell).
+	const source_columns_map = (self.context.columns_map)
+		? self.context.columns_map
+		: false
+
+	const columns_map = []
+	// storage of all ddo_map in flat array, without hierarchy, to find the components easily.
 	const full_ddo_map = []
+	full_ddo_map.push(self.context)
 
-	// // get ddo_map from the rqo_config.show, self can be a section or component_portal, and both has rqo_config
-	const ddo_map = self.rqo_config.show.ddo_map
+	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create the final grid.
+	for (let i = 0; i < request_config_length; i++) {
+		const request_config_item = request_config[i]
+		// get the direct components of the caller (component or section)
+		const ar_first_level_ddo = request_config_item.show.ddo_map.filter(item => item.parent === self.tipo)
+		const ar_first_level_ddo_len = ar_first_level_ddo.length
+		// store the current component in the full ddo map
+		full_ddo_map.push(...request_config_item.show.ddo_map)
 
-	// get the sub elements with the ddo_map, the method is recursive,
-	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
+		for (let j = 0; j < ar_first_level_ddo_len; j++) {
+			const dd_object = ar_first_level_ddo[j]
+			// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
+			if (dd_object.column_id && source_columns_map){
+				const column_exists = columns_map.find(el => el.id === dd_object.column_id)
+				// if the column has stored by previous ddo, don't touch the array, it's necessary maintain the order of the columns_map
+				if(column_exists) continue
 
-	full_ddo_map.push(...sub_ddo_map)
+				const found		= source_columns_map.find(el => el.id===dd_object.column_id)
+				// check if the ddo has defined the column_id in the columns_map, if not add new column with the ddo information.
+				const column	= (found)
+					? found
+					: {	id		: dd_object.tipo,
+						label	: dd_object.tipo}
 
-	const ar_columns = get_ar_inverted_paths(full_ddo_map)
+				dd_object.column_id = column.id
+				columns_map.push(column)
 
-	return ar_columns
-}//end get_columns
+			}else{
+				// if the ddo don't has column_id and the column_map is not defined in properties,
+				// create a new column with the ddo information or join all components in one column
+				switch(self.model){
+					// component_portal will join the components that doesn't has columns defined.
+					case 'component_portal':
+						// find if the general column was created, if not create new one with the tipo of the component_portal to include all components.
+						const found	= columns_map.find(el => el.id===self.tipo)
+
+						// if the column exist add general column to ddo information, else create the general column and add the id to the component.
+						if(found){
+							dd_object.column_id = found.id
+
+						}else{
+							//create the general column with the tipo of the component_portal
+							const column = {
+									id		: self.tipo,
+									label	: self.tipo
+								}
+
+							columns_map.push(column)
+							// set the column_id of the component with the column id
+							dd_object.column_id = column.id
+						}
+					break;
+
+					// by default every component will create the own column if the column is not defined, this behavior is used by sections.
+					default:
+						columns_map.push(
+							{
+								id		: dd_object.tipo,
+								label	: dd_object.tipo
+							}
+						)
+						dd_object.column_id = dd_object.tipo
+					break;
+				}// end switch
+			}// end if (dd_object.column_id && source_columns_map)
+		}// end for (let j = 0; j < ar_first_level_ddo_len; j++)
+	}// end for (let i = 0; i < request_config_length; i++)
+
+	// resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
+	// here will be using the full_ddo_map to find the specific ddo
+	function parse_columns(columns_map){
+
+		const columns_map_len = columns_map.length
+
+		for (let i = columns_map_len - 1; i >= 0; i--) {
+			const column_item = columns_map[i]
+			// all columns has a label  property that point to the ddo tipo to use, finding the ddo it is possible obtain the label to use in the column.
+			const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label)
+			// check if the ddo has label, if not empty label will set.
+			column_item.label = (ddo_object && ddo_object.label)
+				? ddo_object.label
+				: column_item.label
+
+			// if the columns has sub-columns, begin again.
+			if(column_item.columns_map)
+				parse_columns(column_item.columns_map)
+		}
+	}
+
+	parse_columns(columns_map)
+
+	return columns_map
+}//end get_columns_map
 
 
 
@@ -723,112 +846,112 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 
 
-/**
-* GET_SUB_DDO_MAP
-* @param datum self instance_caller datum (section, component_portal) with all context and data of the caller. In the recursion
-* @param caller_tipo tipo from section or portal that call to get the sub_ddo_map
-* @param ddo_map the requested tipos
-* @param sub_ddo used for create the path for the component, path is used to get the full path
-* @return array ar_ddo with all ddo in all portals and sections config_rqo that has dependency of the caller.
-*/
-const get_sub_ddo_map = function(datum, caller_tipo, ddo_map, sub_ddo){
+// /**
+// * GET_SUB_DDO_MAP
+// * @param datum self instance_caller datum (section, component_portal) with all context and data of the caller. In the recursion
+// * @param caller_tipo tipo from section or portal that call to get the sub_ddo_map
+// * @param ddo_map the requested tipos
+// * @param sub_ddo used for create the path for the component, path is used to get the full path
+// * @return array ar_ddo with all ddo in all portals and sections config_rqo that has dependency of the caller.
+// */
+// const get_sub_ddo_map_DES = function(datum, caller_tipo, ddo_map, sub_ddo){
 	
-	const ar_ddo = []
+// 	const ar_ddo = []
 
-	// get the valid ddo_map, only the last ddo in the path will be rendered.
-		// function get_last_children(ddo_map, current_ddo) {
-		// 	const ar_children = []
-		// 	const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
+// 	// get the valid ddo_map, only the last ddo in the path will be rendered.
+// 		// function get_last_children(ddo_map, current_ddo) {
+// 		// 	const ar_children = []
+// 		// 	const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
 			
-		// 	if(children.length === 0){
-		// 		current_ddo.caller_tipo = caller_tipo
-		// 		ar_children.push(current_ddo)
-		// 	}else{
-		// 		for (let i = 0; i < children.length; i++) {
-		// 			const valid_child = get_last_children(ddo_map, children[i])[0]
-		// 			ar_children.push(valid_child)
-		// 		}
-		// 	}
+// 		// 	if(children.length === 0){
+// 		// 		current_ddo.caller_tipo = caller_tipo
+// 		// 		ar_children.push(current_ddo)
+// 		// 	}else{
+// 		// 		for (let i = 0; i < children.length; i++) {
+// 		// 			const valid_child = get_last_children(ddo_map, children[i])[0]
+// 		// 			ar_children.push(valid_child)
+// 		// 		}
+// 		// 	}
 			
-		// 	return ar_children;
-		// }	
+// 		// 	return ar_children;
+// 		// }
 
-	// every ddo will be checked if it is a component_portal or if is the last component in the chain
-	// set the valid_ddo array with only the valid ddo that will be used.
-		// const ar_valid_ddo = []
-		// const ddo_length = ddo_map.length
-		// for (let i = 0; i < ddo_length; i++) {
-		// 	const current_ddo = ddo_map[i]
-		// 	if(current_ddo.parent !== caller_tipo) continue;
-		// 	const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
-		// 	for (let j = 0; j < current_ar_valid_ddo.length; j++) {
-		// 		ar_valid_ddo.push(current_ar_valid_ddo[j])
-		// 	}
-		// }
+// 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
+// 	// set the valid_ddo array with only the valid ddo that will be used.
+// 		// const ar_valid_ddo = []
+// 		// const ddo_length = ddo_map.length
+// 		// for (let i = 0; i < ddo_length; i++) {
+// 		// 	const current_ddo = ddo_map[i]
+// 		// 	if(current_ddo.parent !== caller_tipo) continue;
+// 		// 	const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
+// 		// 	for (let j = 0; j < current_ar_valid_ddo.length; j++) {
+// 		// 		ar_valid_ddo.push(current_ar_valid_ddo[j])
+// 		// 	}
+// 		// }
 
-	// get all children of the current ddo recursively
-	// when the section or portal doesn't has data the context will not created
-	// in those cases get the sub_ddo with the current ddo_map
-		function get_children(ddo_map, parent_ddo) {
-			const ar_children = []
+// 	// get all children of the current ddo recursively
+// 	// when the section or portal doesn't has data the context will not created
+// 	// in those cases get the sub_ddo with the current ddo_map
+// 		function get_children(ddo_map, parent_ddo) {
+// 			const ar_children = []
 
-			const children = ddo_map.filter(item => item.parent === parent_ddo.tipo)
+// 			const children = ddo_map.filter(item => item.parent === parent_ddo.tipo)
 
-			for (let i = 0; i < children.length; i++) {
-				ar_children.push(children[i])
+// 			for (let i = 0; i < children.length; i++) {
+// 				ar_children.push(children[i])
 
-				const valid_child = get_children(ddo_map, children[i])
-				ar_children.push(...valid_child)
-			}
-			return ar_children;
-		}
+// 				const valid_child = get_children(ddo_map, children[i])
+// 				ar_children.push(...valid_child)
+// 			}
+// 			return ar_children;
+// 		}
 
 
-		for (let i = 0; i < ddo_map.length; i++) {
+// 		for (let i = 0; i < ddo_map.length; i++) {
 			
-			const current_ddo = ddo_map[i]
+// 			const current_ddo = ddo_map[i]
 			
-			// skip ddo with parent different from current caller
-				if(current_ddo.parent !== caller_tipo) continue;
+// 			// skip ddo with parent different from current caller
+// 				if(current_ddo.parent !== caller_tipo) continue;
 
-			// add current_ddo
-				ar_ddo.push(current_ddo)
+// 			// add current_ddo
+// 				ar_ddo.push(current_ddo)
 
 			
-			// context
-				const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
+// 			// context
+// 				const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
 
-			// no context case. When context is calculated as subcontext, is associated to data. Therefore, sometimes show->ddo contains more items than 
-			// the calculated in context (empty portals for example). This is not an error really
-				// if (!current_context) {
-				// 	console.warn("Skip context not found for current ddo:", current_ddo);
-				// 	console.warn("datum.context:", datum.context);
-				// 	continue;
-				// }
+// 			// no context case. When context is calculated as subcontext, is associated to data. Therefore, sometimes show->ddo contains more items than
+// 			// the calculated in context (empty portals for example). This is not an error really
+// 				// if (!current_context) {
+// 				// 	console.warn("Skip context not found for current ddo:", current_ddo);
+// 				// 	console.warn("datum.context:", datum.context);
+// 				// 	continue;
+// 				// }
 
-			// rqo_config
-				const rqo_config	= (current_context && current_context.request_config)
-					? current_context.request_config.find(el => el.api_engine==='dedalo')
-					: null
-
-
+// 			// rqo_config
+// 				const rqo_config	= (current_context && current_context.request_config)
+// 					? current_context.request_config.find(el => el.api_engine==='dedalo')
+// 					: null
 
 
-			// add sub_ddo_map
-				if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
-					const current_ddo_map	= rqo_config.show.ddo_map
-					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
-					ar_ddo.push(...sub_ddo_map)
-				}else{
-					const current_ddo_map	= get_children( ddo_map, current_ddo)
-					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
-					ar_ddo.push(...sub_ddo_map)
-				}
-		}//end for (let i = 0; i < ddo_map.length; i++) 
 
 
-	return ar_ddo
-}//end build_request_show
+// 			// add sub_ddo_map
+// 				if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
+// 					const current_ddo_map	= rqo_config.show.ddo_map
+// 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+// 					ar_ddo.push(...sub_ddo_map)
+// 				}else{
+// 					const current_ddo_map	= get_children( ddo_map, current_ddo)
+// 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+// 					ar_ddo.push(...sub_ddo_map)
+// 				}
+// 		}//end for (let i = 0; i < ddo_map.length; i++)
+
+
+// 	return ar_ddo
+// }//end build_request_show
 
 
 
@@ -1402,7 +1525,7 @@ const build_request_show_OLD = function(self, request_config, action){
 * BUILD_REQUEST_SEARCH
 * @return array dd_request
 */
-const build_request_search = function(self, request_config, action){
+const build_request_search_OLD = function(self, request_config, action){
 
 	const dd_request	= []
 	const ar_sections	= []
@@ -1578,7 +1701,7 @@ const build_request_search = function(self, request_config, action){
 * BUILD_REQUEST_SELECT
 * @return array dd_request
 */
-const build_request_select = function(self, request_config, action){
+const build_request_select_OLD = function(self, request_config, action){
 
 	const dd_request = []
 
