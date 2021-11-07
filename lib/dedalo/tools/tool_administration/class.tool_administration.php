@@ -1353,9 +1353,9 @@ class tool_administration extends tool_common {
 
 	/**
 	* GENERATE_RELATIONS_TABLE_DATA
-	* @return
+	* @return object $response
 	*/
-	public static function generate_relations_table_data( $tables='*' ) {
+	public static function generate_relations_table_data( $tables='*', $truncate=false ) {
 		
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1431,8 +1431,11 @@ class tool_administration extends tool_common {
 							$component_dato = [];
 							foreach ($datos->relations as $key => $current_locator) {
 								if (isset($current_locator->from_component_tipo)) {
-									// prevent propagate section yes/no
-									if ($current_locator->section_tipo==='dd64') {
+									// prevent to propagate some sections
+									if (   $current_locator->section_tipo==='dd64' // yes/no
+										|| $current_locator->section_tipo==='dd153' // projects
+										|| $current_locator->section_tipo==='dd128' // users
+									) {
 										continue;
 									}
 									$component_dato[$current_locator->from_component_tipo][] = $current_locator;
