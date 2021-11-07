@@ -5,7 +5,11 @@
  * When the user visits this URL, the browser will be redirected to the SLO
  * IdP with an SLO request.
  */
-session_start();
+
+# SESSION
+	// if (session_status() !== PHP_SESSION_ACTIVE) {
+	// 	session_start();
+	// }
 
 // Require files
 	require_once( dirname(__FILE__) . '/saml_config.php' );
@@ -13,24 +17,30 @@ session_start();
 	require_once( TOOLKIT_PATH . '_toolkit_loader.php' );
 
 // v3.0
-	$samlSettings = new OneLogin\Saml2\Settings($saml_settings);
-	$idpData 	  = $samlSettings->getIdPData();
-	if (isset($idpData['singleLogoutService']) && isset($idpData['singleLogoutService']['url'])) {
-	    $sloUrl = $idpData['singleLogoutService']['url'];
-	} else {
-	    throw new Exception("The IdP does not support Single Log Out");
-	}
-	if (isset($_SESSION['IdPSessionIndex']) && !empty($_SESSION['IdPSessionIndex'])) {
-	    $logoutRequest = new OneLogin\Saml2\LogoutRequest($samlSettings, null, $_SESSION['IdPSessionIndex']);
-	} else {
-	    $logoutRequest = new OneLogin\Saml2\LogoutRequest($samlSettings);
-	}
-	$samlRequest = $logoutRequest->getRequest();
-	$parameters = array('SAMLRequest' => $samlRequest);
-	$url = OneLogin\Saml2\Utils::redirect($sloUrl, $parameters, true);
-	header('Pragma: no-cache');
-	header('Cache-Control: no-cache, must-revalidate');
-	header("Location: $url");
+	$samlSettings	= new OneLogin\Saml2\Settings($saml_settings);
+	$idpData		= $samlSettings->getIdPData();
+
+	// sloUrl
+		if (isset($idpData['singleLogoutService']) && isset($idpData['singleLogoutService']['url'])) {
+			$sloUrl = $idpData['singleLogoutService']['url'];
+		} else {
+			throw new Exception("The IdP does not support Single Log Out");
+		}
+	// logoutRequest
+		$logoutRequest = (isset($_SESSION['IdPSessionIndex']) && !empty($_SESSION['IdPSessionIndex']))
+			? new OneLogin\Saml2\LogoutRequest($samlSettings, null, $_SESSION['IdPSessionIndex'])
+			: new OneLogin\Saml2\LogoutRequest($samlSettings);
+
+	// samlRequest
+		$samlRequest	= $logoutRequest->getRequest();
+		$parameters		= array('SAMLRequest' => $samlRequest);
+		$url			= OneLogin\Saml2\Utils::redirect($sloUrl, $parameters, true);
+
+	// header
+		header('Pragma: no-cache');
+		header('Cache-Control: no-cache, must-revalidate');
+		header("Location: $url");
+
 	exit();
 
 // v2.14
@@ -55,4 +65,3 @@ session_start();
 	header("Location: $url");
 	exit();
 	*/
-
