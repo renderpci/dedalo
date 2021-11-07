@@ -2484,7 +2484,9 @@
 		Added counter method 'create_counter' to allow re-create a deleted counter from higher section_id of the current section
 		07-11-2021
 		Fixed error on component_filter when default dato was not set properly. Now both, default dato from properties, and user default project, will be added to filter data when a new section is created
-
+		Updated SALM files. Now Dédalo config file is required to run ACS
+		Added on working method build_install_version to class tool_administration
+		Added skip filter for sections dd64, dd153 and dd128 in tool_administration class method 'generate_relations_table_data'
 
 
 	[/HISTORY]
@@ -2510,7 +2512,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2y';
+	$DEDALO_VERSION = '5.8.2yb';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
