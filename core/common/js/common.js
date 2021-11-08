@@ -826,7 +826,7 @@ common.prototype.get_columns_map = function(){
 				parse_columns(column_item.columns_map)
 		}
 	}
-
+		// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
 	parse_columns(columns_map)
 
 	return columns_map
