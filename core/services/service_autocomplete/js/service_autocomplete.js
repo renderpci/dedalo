@@ -690,8 +690,6 @@ export const service_autocomplete = function() {
 
 		const self = this
 
-			console.log("api_response-------------------:",api_response);
-
 		// datalist container node
 			const datalist = self.datalist
 
@@ -710,7 +708,7 @@ export const service_autocomplete = function() {
 
 		// get dd objects from the context that will be used to build the lists in correct order
 		const rqo_search =  await self.rqo_search
-console.log("rqo_search---------------------:",rqo_search);
+
 		// get the divisor between columns
 		const divisor = (rqo_search.show.divisor)
 			? rqo_search.show.divisor
@@ -1061,7 +1059,7 @@ console.log("rqo_search---------------------:",rqo_search);
 			console.log("[zenon_engine] dd_request:", dd_request);
 		}
 
-			console.log("self.instance_caller-----------------:",self.instance_caller);
+			// console.log("self.instance_caller-----------------:",self.instance_caller);
 		// const request_ddo			= dd_request.find(item => item.typo === 'request_ddo').value
 		// const ar_selected_fields		= self.instance_caller.datum.context.filter(el => el.model === 'component_external')
 		// const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
