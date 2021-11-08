@@ -59,6 +59,19 @@ render_edit_component_portal.prototype.edit = async function(options) {
 						return content_data
 					}
 
+				// header
+					// if (self.ar_instances.length>0) {
+						const columns_map		= await self.columns_map
+						const list_header_node	= ui.get_list_header(columns_map)
+
+						Object.assign(
+							list_header_node.style,
+							{
+								"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
+							}
+						)
+					// }
+
 				// buttons
 					const buttons = get_buttons(self)
 
@@ -68,7 +81,8 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				// wrapper. ui build_edit returns component wrapper
 					const _wrapper = ui.component.build_wrapper_edit(self, {
 						content_data	: content_data,
-						buttons			: buttons
+						buttons			: buttons,
+						header			: list_header_node
 						// top			: top
 					})
 					_wrapper.classList.add("portal")
@@ -209,6 +223,8 @@ export const build_content_data = function(self) {
 			class_name		: 'inputs_container'
 		})
 
+
+
 	// build values (add all nodes from the rendered_section_record)
 		const build_values = function() {
 		// const build_values = async function() {
@@ -238,6 +254,7 @@ export const build_content_data = function(self) {
 			// promise version
 				self.get_ar_instances()
 				.then(function(ar_section_record){
+
 
 					const ar_section_record_length = ar_section_record.length
 					for (let i = 0; i < ar_section_record_length; i++) {
