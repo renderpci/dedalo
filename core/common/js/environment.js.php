@@ -80,7 +80,7 @@ include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 			# parent
 			#$obj->_parent						= isset($parent) ? (int)$parent : '';
 			# tipos
-			#$obj->tipo 						= $tipo;
+			#$obj->tipo							= $tipo;
 			#$obj->section_tipo					= defined('SECTION_TIPO') ? SECTION_TIPO : null;
 			#$obj->section_name					= defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
 			# top
