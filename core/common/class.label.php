@@ -129,7 +129,7 @@ abstract class label {
 				$lang = 'lg-cat';
 			}
 
-		$ar_term = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='label');
+		$ar_term = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
 
 		$ar_label	= array();
 		$cached		= true;
@@ -176,7 +176,7 @@ abstract class label {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);			
 		}		
 		
-		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='label'); 
+		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
 			#dump($ar_terminoID_by_modelo_name,'$ar_terminoID_by_modelo_name',"label: label ");
 		
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
