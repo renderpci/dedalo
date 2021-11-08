@@ -120,7 +120,7 @@ class dd_grid_cell_object {
 	//    	cell_type   		: string - type of the element to represent in the cell
 	//    	action				: object - used but buttons to define the action will done by the user
 	//			method 			: string - name of the method will be used by the element
-	//			options 		: object - params to configure the method
+	//			options 		: object - parameters to configure the method
 	// 			event 			: string - name of the user event
 	//		value		 		: array of strings || array of objects - every object define one column of data and action - [{"type": "button","action": "hello","data": []}] - every item inside the array will be a row of the column of his position inside the array
 	// 		fallback_value 		: array of strings - when a component doesn't has value in the current lang, use the fallback_value with one value in other languages

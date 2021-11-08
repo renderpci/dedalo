@@ -80,7 +80,7 @@ export const section = function() {
 	section.prototype.tm				= render_list_section.prototype.list
 	section.prototype.list_header		= render_list_section.prototype.list_header
 
-	section.prototype.get_columns		= common.prototype.get_columns
+	section.prototype.get_columns_map	= common.prototype.get_columns_map
 
 
 
@@ -102,7 +102,6 @@ section.prototype.init = async function(options) {
 
 	// DOM
 	self.node				= []
-	self.columns			= []
 
 	self.section_lang		= options.section_lang
 	self.parent				= options.parent
@@ -124,10 +123,10 @@ section.prototype.init = async function(options) {
 
 	self.permissions		= options.permissions || null
 
-	// columns
-	self.columns = options.columns
+	// columns_map
+	self.columns_map 		= options.columns_map || []
 
-	self.config = options.config || null
+	self.config 			= options.config || null
 	
 	// events subscription
 		// new_section_
@@ -406,8 +405,8 @@ section.prototype.build = async function(autoload=false) {
 			// }
 		}
 
-	// columns. Get the columns to use into the list
-		self.columns = self.get_columns()
+	// columns_map. Get the columns_map to use into the list
+		self.columns_map = self.get_columns_map()
 
 
 	// debug
@@ -497,7 +496,7 @@ section.prototype.get_ar_instances = async function(){
 				datum			: self.datum,
 				caller			: self,
 				offset			: offset,
-				columns			: self.columns,
+				columns_map		: self.columns_map,
 				column_id		: self.column_id
 			}
 

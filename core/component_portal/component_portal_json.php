@@ -119,6 +119,8 @@
 
 				$subdatum = $this->get_subdatum($tipo, $value);
 
+					// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
+
 				$ar_subcontext = $subdatum->context;
 				foreach ($ar_subcontext as $current_context) {
 					$context[] = $current_context;

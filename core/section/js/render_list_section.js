@@ -92,15 +92,12 @@ render_list_section.prototype.list = async function(options) {
 	// list_header_node
 		if (self.ar_instances.length>0) {
 
-			const columns			= await self.columns
-			const list_header_node	= get_list_header(columns)
+			const columns_map		= await self.columns_map
+			const list_header_node	= ui.get_list_header(columns_map)
 
 			Object.assign(
 				list_body.style,
 				{
-					//display: 'grid',
-					//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-					// "grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)"
 					"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
 				}
 			)
@@ -323,86 +320,6 @@ const get_buttons = function(self) {
 
 	// 	return wrapper
 // };//end list_tm
-
-
-
-/**
-* GET_LIST_HEADER
-* @return object component_data
-*/
-const get_list_header = function(columns){
-
-	const ar_nodes			= []
-	const columns_length	= columns.length
-	for (let i = 0; i < columns_length; i++) {
-
-		const component = columns[i][0]
-
-		if (!component) {
-			console.warn("ignored empty component: [key, columns]", i, columns);
-			continue;
-		}
-
-		const label = []
-
-		const current_label = SHOW_DEBUG
-			? component.label + " [" + component.tipo + "]"
-			: component.label
-		label.push(current_label)
-
-		// node header_item
-			const id			=  component.tipo + "_" + component.section_tipo +  "_"+ component.parent
-			const header_item	= ui.create_dom_element({
-				element_type	: "div",
-				id				: id,
-				inner_html		: label.join('')
-			})
-
-		ar_nodes.push(header_item)
-	}//end for (let i = 0; i < columns_length; i++)
-
-	// header_wrapper
-		const header_wrapper = ui.create_dom_element({
-			element_type	: "div",
-			class_name		: "header_wrapper_list"
-		})
-
-		const searchParams = new URLSearchParams(window.location.href);
-		const initiator = searchParams.has("initiator")
-			? searchParams.get("initiator")
-			: false
-
-		if (initiator!==false) {
-			header_wrapper.classList.add('with_initiator')
-		}else if (SHOW_DEBUG===true) {
-			header_wrapper.classList.add('with_debug_info_bar')
-		}
-
-	// id column
-		const id_column = ui.create_dom_element({
-			element_type	: "div",
-			text_content	: "ID",
-			parent			: header_wrapper
-		})
-
-	// columns append
-		const ar_nodes_length = ar_nodes.length
-		for (let i = 0; i < ar_nodes_length; i++) {
-			header_wrapper.appendChild(ar_nodes[i])
-		}
-
-	// css calculation
-		// Object.assign(
-		// 	header_wrapper.style,
-		// 	{
-		// 		//display: 'grid',
-		// 		//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-		// 		"grid-template-columns": self.id_column_width + " repeat("+(ar_nodes_length)+", 1fr)",
-		// 	}
-		// )
-
-	return header_wrapper
-};//end get_list_header
 
 
 
