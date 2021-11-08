@@ -180,6 +180,11 @@ export const ui = {
 					})
 				}
 
+			// header
+				if (items.header) {
+					fragment.appendChild(items.header)
+				}
+
 			// content_data
 				if (items.content_data) {
 					// const content_data = items.content_data
@@ -1879,7 +1884,109 @@ export const ui = {
 
 
 		return footer
-	}//end create_dialog
+	},//end create_dialog
+
+
+
+	/**
+	* GET_LIST_HEADER
+	* @return object component_data
+	*/
+	get_list_header : (columns_map) =>{
+
+		const ar_nodes			= []
+		const columns_map_length	= columns_map.length
+		for (let i = 0; i < columns_map_length; i++) {
+
+			const column = columns_map[i]
+
+			if (!column) {
+				console.warn("ignored empty component: [key, columns_map]", i, columns_map);
+				continue;
+			}
+
+			const label = []
+
+			const current_label = SHOW_DEBUG
+				? column.label //+ " [" + component.tipo + "]"
+				: column.label
+			label.push(current_label)
+
+			// node header_item
+				const id			=  column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+				const header_item	= ui.create_dom_element({
+					element_type	: "div",
+					id				: id,
+					inner_html		: label.join('')
+				})
+
+			if(column.columns_map){
+				const current_column_map = column.columns_map
+				const columns_map_length = current_column_map.length
+				for (var j = 0; j < columns_map_length; j++) {
+					const current_column  = current_column_map[j]
+
+					// node header_item
+					const id			=  current_column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+					const sub_header_item	= ui.create_dom_element({
+						element_type	: "div",
+						id				: id,
+						inner_html		: current_column.label,
+						parent 			: header_item
+					})
+				}
+
+			}
+
+
+
+
+			ar_nodes.push(header_item)
+		}//end for (let i = 0; i < columns_length; i++)
+
+		// header_wrapper
+			const header_wrapper = ui.create_dom_element({
+				element_type	: "div",
+				class_name		: "header_wrapper_list"
+			})
+
+			const searchParams = new URLSearchParams(window.location.href);
+			const initiator = searchParams.has("initiator")
+				? searchParams.get("initiator")
+				: false
+
+			if (initiator!==false) {
+				header_wrapper.classList.add('with_initiator')
+			}else if (SHOW_DEBUG===true) {
+				header_wrapper.classList.add('with_debug_info_bar')
+			}
+
+		// id column
+			const id_column = ui.create_dom_element({
+				element_type	: "div",
+				text_content	: "ID",
+				parent			: header_wrapper
+			})
+
+		// columns append
+			const ar_nodes_length = ar_nodes.length
+			for (let i = 0; i < ar_nodes_length; i++) {
+				header_wrapper.appendChild(ar_nodes[i])
+			}
+
+		// css calculation
+			// Object.assign(
+			// 	header_wrapper.style,
+			// 	{
+			// 		//display: 'grid',
+			// 		//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
+			// 		"grid-template-columns": self.id_column_width + " repeat("+(ar_nodes_length)+", 1fr)",
+			// 	}
+			// )
+
+		return header_wrapper
+	}//end get_list_header
+
 
 
 
