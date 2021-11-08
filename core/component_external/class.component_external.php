@@ -240,4 +240,3 @@ class component_external extends component_common {
 
 
 }//end class component_external
-?>

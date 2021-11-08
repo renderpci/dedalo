@@ -1508,6 +1508,11 @@ abstract class common {
 				? ($this->build_request_config() ?? [])
 				:  null;
 
+		// columns_map (moved to client JS)
+			$columns_map = !empty($request_config)
+				? ($this->get_columns_map() ?? [])
+				: null;
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'				=> $label, // *
@@ -1524,7 +1529,8 @@ abstract class common {
 				'permissions'		=> $permissions,
 				'tools'				=> $tools,
 				'buttons'			=> $buttons,
-				'request_config'	=> $request_config
+				'request_config'	=> $request_config,
+				'columns_map'		=> $columns_map
 			]);
 
 		// optional properties		
@@ -1759,14 +1765,14 @@ abstract class common {
 			});
 		
 		// children_resursive function
-			if (!function_exists('get_children_resursive')) {
-				function get_children_resursive($ar_ddo, $dd_object) {
+			if (!function_exists('get_children_recursive')) {
+				function get_children_recursive($ar_ddo, $dd_object) {
 					$ar_children = [];
 
 					foreach ($ar_ddo as $ddo) {
 						if($ddo->parent===$dd_object->tipo) {
 							$ar_children[] = $ddo;
-							$result = get_children_resursive($ar_ddo, $ddo);
+							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
 								$ar_children = array_merge($ar_children, $result);
 							}
@@ -1840,14 +1846,14 @@ abstract class common {
 																				 $current_lang,
 																				 $current_section_tipo);
 							// virtual request_config
-								$children = get_children_resursive($request_config_item->show->ddo_map, $dd_object);
+								$children = get_children_recursive($request_config_item->show->ddo_map, $dd_object);
 								// dump($children, ' children +++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($dd_object->tipo));	
 									// dump($request_config_item->show->ddo_map, ' $request_config_item->show->ddo_map ++ '.to_string($current_tipo));								
 								if (!empty($children)) {
 									$new_rqo_config = unserialize(serialize($request_config_item));
 									$new_rqo_config->show->ddo_map = $children;
 								
-									$related_element->request_config = [$new_rqo_config];
+									$related_element->request_config[] = $new_rqo_config;
 								}
 							break;				
 
@@ -2164,14 +2170,14 @@ abstract class common {
 			});
 		
 		// children_resursive function
-			if (!function_exists('get_children_resursive')) {
-				function get_children_resursive($ar_ddo, $dd_object) {
+			if (!function_exists('get_children_recursive')) {
+				function get_children_recursive($ar_ddo, $dd_object) {
 					$ar_children = [];
 
 					foreach ($ar_ddo as $ddo) {
 						if($ddo->parent===$dd_object->tipo) {
 							$ar_children[] = $ddo;
-							$result = get_children_resursive($ar_ddo, $ddo);
+							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
 								$ar_children = array_merge($ar_children, $result);
 							}
@@ -2182,194 +2188,208 @@ abstract class common {
 				}
 			}
 
-		foreach ($request_config as $request_config_item) {
+		// get the full ddo in every request_config
+			$full_ddo_map = [];
+			foreach ($request_config as $request_config_item) {
 
-			// skip empty ddo_map
+				// skip empty ddo_map
 				if(empty($request_config_item->show->ddo_map)) {
 					debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
 					continue;
 				}
+				$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
+			}//end foreach ($request_config_dedalo as $request_config_item)
 
-			foreach($ar_locators as $current_locator) {
+			$full_ddo_map= array_unique($full_ddo_map, SORT_REGULAR);
 
-				// check locator format
-					if (!is_object($current_locator)) {
-						if(SHOW_DEBUG===true) {
-							dump($current_locator, ' current_locator ++ '.to_string());
-							dump($ar_locators, ' ar_locators ++ '.to_string());
-							throw new Exception("Error Processing Request. current_locator is not an object", 1);
-						}
+
+		// get the context and data for every locator
+		foreach($ar_locators as $current_locator) {
+
+			// check locator format
+				if (!is_object($current_locator)) {
+					if(SHOW_DEBUG===true) {
+						dump($current_locator, ' current_locator ++ '.to_string());
+						dump($ar_locators, ' ar_locators ++ '.to_string());
+						throw new Exception("Error Processing Request. current_locator is not an object", 1);
+					}
+					continue;
+				}
+
+			$section_id		= $current_locator->section_id;
+			$section_tipo	= $current_locator->section_tipo;
+
+			$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
+				return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo));
+			});
+
+
+			// ar_ddo iterate
+			foreach($ar_ddo as $dd_object) {
+
+				// prevent resolve non children from path ddo
+					if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
+						dump($dd_object, ' dd_object SKIP dd_object ++'.to_string($this->tipo));
 						continue;
 					}
 
-				$section_id		= $current_locator->section_id;
-				$section_tipo	= $current_locator->section_tipo;
+				// skip security_areas
+					if($dd_object->tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
+						continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+					}
 
-				$ar_ddo = array_filter($request_config_item->show->ddo_map, function($ddo) use($section_tipo){
-					return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo));
-				});
+				// short vars
+					$current_tipo			= $dd_object->tipo;
+					$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
+					$mode					= $dd_object->mode ?? $this->get_modo();
+					$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					$label					= $dd_object->label ?? '';
 
+				// current_section_tipo
+					// $current_section_tipo = is_array($ar_current_section_tipo)
+					// 	? reset($ar_current_section_tipo)
+					// 	: $ar_current_section_tipo;
 
-				// ar_ddo iterate
-				foreach($ar_ddo as $dd_object) {
+				// ar_subcontext_calculated
+					$cid = $current_tipo . '_' . $current_section_tipo;
+					// if (in_array($cid, $ar_subcontext_calculated)) {
+					// 	debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
+					// 	// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
+					// }
 
-					// prevent resolve non children from path ddo
-						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
-							// dump($dd_object, ' dd_object SKIP dd_object ++ '.to_string($this->tipo));
-							continue;
-						}
+				// common temporal excluded/mapped models *******
+					$match_key = array_search($model, common::$ar_temp_map_models);
+					if (false!==$match_key) {
+						debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+						$model = $match_key;
+					}else if (in_array($model, common::$ar_temp_exclude_models)) {
+						debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
+						continue;
+					}
 
-					// skip security_areas
-						if($dd_object->tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
-							continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
-						}
-				
-					// short vars
-						$current_tipo			= $dd_object->tipo;
-						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
-						$mode					= $dd_object->mode ?? $this->get_modo();
-						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$label					= $dd_object->label ?? '';
+				// related_element switch
+					switch (true) {
 
-					// current_section_tipo
-						// $current_section_tipo = is_array($ar_current_section_tipo)
-						// 	? reset($ar_current_section_tipo)
-						// 	: $ar_current_section_tipo;
+						// section case ( ! ESTE CASO SE DA ????? - 22-07-2021)
+						case ($model==='section'):
 
-					// ar_subcontext_calculated
-						$cid = $current_tipo . '_' . $current_section_tipo;
-						// if (in_array($cid, $ar_subcontext_calculated)) {
-						// 	debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
-						// 	// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
-						// }
+							// section
+								$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
 
-					// common temporal excluded/mapped models *******
-						$match_key = array_search($model, common::$ar_temp_map_models);
-						if (false!==$match_key) {
-							debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
-							$model = $match_key;
-						}else if (in_array($model, common::$ar_temp_exclude_models)) {
-							debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
-							continue;
-						}
+							// datos column already resolved case, inject data in current section
+								$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
+								if (!is_null($datos)) {
+									$section->set_dato($datos);
+									$section->set_bl_loaded_matrix_data(true);
+								}
 
-					// related_element switch
-						switch (true) {
+							// get component json (inlcude context and data)
+								// $element_json = $section->get_json();
+								$related_element = $section;
 
-							// section case ( ! ESTE CASO SE DA ????? - 22-07-2021)
-							case ($model==='section'):
-								
-								// section
-									$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
-									
-								// datos column already resolved case, inject data in current section
-									$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
-									if (!is_null($datos)) {
-										$section->set_dato($datos);
-										$section->set_bl_loaded_matrix_data(true);
-									}
+							break;
 
-								// get component json (inlcude context and data)
-									// $element_json = $section->get_json();
-									$related_element = $section;
-								
-								break;
-
-							// component case
-							case (strpos($model, 'component_')===0):
-								$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
-								$related_element	= component_common::get_instance($model,
-																					 $current_tipo,
-																					 $section_id,
-																					 $mode,
-																					 $current_lang,
-																					 $current_section_tipo);
-								// virtual request_config
-									$children = get_children_resursive($request_config_item->show->ddo_map, $dd_object);
+						// component case
+						case (strpos($model, 'component_')===0):
+							$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
+							$related_element	= component_common::get_instance($model,
+																				 $current_tipo,
+																				 $section_id,
+																				 $mode,
+																				 $current_lang,
+																				 $current_section_tipo);
+							// virtual request_config
+								$new_request_config = [];
+								foreach ($request_config as $request_config_item) {
+									$children = get_children_recursive($request_config_item->show->ddo_map, $dd_object);
 									if (!empty($children)) {
 										$new_rqo_config = unserialize(serialize($request_config_item));
 										$new_rqo_config->show->ddo_map = $children;
-									
-										$related_element->request_config = [$new_rqo_config];
+
+										$new_request_config[] = $new_rqo_config;
 									}
-
-								// Inject this tipo as related component from_component_tipo
-									$source_model = get_called_class();
-									if (strpos($source_model, 'component_')===0){
-										$related_element->from_component_tipo	= $this->tipo;
-										$related_element->from_section_tipo		= $this->section_tipo;
-									}
-								break;
-
-							// grouper case
-							case (in_array($model, common::$groupers)):
-								$related_element = new $model($current_tipo, $current_section_tipo, $mode);
-								break;
-
-							// others case
-							default:
-								debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
-								break;
-						}//end switch (true)
-
-					// add
-						if (isset($related_element)) {
-
-							// Inject var from_parent as from_parent
-								if (isset($from_parent)) {
-									$related_element->from_parent = $from_parent;
 								}
 
-							// parent_grouper
-								if (isset($parent_grouper)) {
-									$related_element->parent_grouper = $parent_grouper;
+								if (!empty($new_request_config)) {
+									$related_element->request_config = $new_request_config;
 								}
 
-							// get the JSON context of the related component
-								$item_options = new stdClass();
-									$item_options->get_context	= true;
-									$item_options->get_data		= true;
-									// $item_options->context_type = 'simple';
-								$element_json = $related_element->get_json($item_options);
-
-
-							// ar_subcontext								
-								$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
-									// dump($ar_subcontext, ' ar_subcontext +---///////--------------+ '.to_string());
-
-							// row_section_id
-							// add parent_section_id with the main locator section_id that define the row, to perserve row coherence between all columns
-							// (some columns can has other portals or subdata and it's necesary preserve the root locator section_id)
-							// add parent_tipo with the caller tipo, it define the global context (portal or section) that are creating the rows.
-								$ar_final_subdata = [];
-								foreach ($element_json->data as $value_obj) {
-
-									$value_obj->row_section_id	= $section_id;
-									$value_obj->parent_tipo		= $this->tipo;
-
-									$ar_final_subdata[] = $value_obj;
+							// Inject this tipo as related component from_component_tipo
+								$source_model = get_called_class();
+								if (strpos($source_model, 'component_')===0){
+									$related_element->from_component_tipo	= $this->tipo;
+									$related_element->from_section_tipo		= $this->section_tipo;
 								}
+							break;
 
-							// dd_info, additional information to the component, like parents
-								$value_with_parents = $dd_object->value_with_parents ?? false;
-								if ($value_with_parents===true) {
-									$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
-									$ar_final_subdata[] = $dd_info;
-								}
+						// grouper case
+						case (in_array($model, common::$groupers)):
+							$related_element = new $model($current_tipo, $current_section_tipo, $mode);
+							break;
 
-							// data add
-								$ar_subdata = array_merge($ar_subdata, $ar_final_subdata);
-							// data add
-								#$ar_subdata[] = $element_json->data;
-						}//end if (isset($related_element))
+						// others case
+						default:
+							debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
+							break;
+					}//end switch (true)
+
+				// add
+					if (isset($related_element)) {
+
+						// Inject var from_parent as from_parent
+							if (isset($from_parent)) {
+								$related_element->from_parent = $from_parent;
+							}
+
+						// parent_grouper
+							if (isset($parent_grouper)) {
+								$related_element->parent_grouper = $parent_grouper;
+							}
+
+						// get the JSON context of the related component
+							$item_options = new stdClass();
+								$item_options->get_context	= true;
+								$item_options->get_data		= true;
+								// $item_options->context_type = 'simple';
+							$element_json = $related_element->get_json($item_options);
 
 
-					// add calculated subcontext
-						$ar_subcontext_calculated[] = $cid;						
+						// ar_subcontext
+							$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
+								// dump($ar_subcontext, ' ar_subcontext +---///////--------------+ '.to_string());
 
-				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
-			}// end foreach($ar_locators as $current_locator)
-		}//end foreach ($request_config_dedalo as $request_config_item)
+						// row_section_id
+						// add parent_section_id with the main locator section_id that define the row, to preserve row coherence between all columns
+						// (some columns can has other portals or subdata and it's necessary preserve the root locator section_id)
+						// add parent_tipo with the caller tipo, it define the global context (portal or section) that are creating the rows.
+							$ar_final_subdata = [];
+							foreach ($element_json->data as $value_obj) {
+
+								$value_obj->row_section_id	= $section_id;
+								$value_obj->parent_tipo		= $this->tipo;
+
+								$ar_final_subdata[] = $value_obj;
+							}
+
+						// dd_info, additional information to the component, like parents
+							$value_with_parents = $dd_object->value_with_parents ?? false;
+							if ($value_with_parents===true) {
+								$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
+								$ar_final_subdata[] = $dd_info;
+							}
+
+						// data add
+							$ar_subdata = array_merge($ar_subdata, $ar_final_subdata);
+						// data add
+							#$ar_subdata[] = $element_json->data;
+					}//end if (isset($related_element))
+
+
+				// add calculated subcontext
+					$ar_subcontext_calculated[] = $cid;
+
+			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
+		}// end foreach($ar_locators as $current_locator)
 
 		$subdatum = new stdClass();
 			$subdatum->context	= $ar_subcontext;
@@ -2907,7 +2927,7 @@ abstract class common {
 										: [];
 									$current_ddo_map->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 									$current_ddo_map->model			= $RecordObj_dd->get_modelo_name();
-									$current_ddo_map->parent		= $current_ddo_map->section_tipo;
+									// $current_ddo_map->parent		= $current_ddo_map->section_tipo;
 									$current_ddo_map->permissions	= common::get_permissions($current_ddo_map->section_tipo, $current_ddo_map->tipo);
 								}
 
@@ -4069,6 +4089,121 @@ abstract class common {
 		return $ar_button_ddo;
 	}//end get_buttons_context
 
+
+	/**
+	* GET_COLUMNS_MAP
+	* @return
+	*/
+	public function get_columns_map() {
+
+		$mode = $this->get_modo();
+		$tipo = $this->get_tipo();
+
+		// get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
+		// by default or edit mode get the properties of the term itself.
+			switch ($mode) {
+				case 'list':
+				case 'portal_list':
+					# in the case that section_list is defined
+					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+					if(isset($ar_terms[0])) {
+						# Use found related terms as new list
+						$current_term	= $ar_terms[0];
+						$RecordObj_dd	= new RecordObj_dd($current_term);
+						$properties		= $RecordObj_dd->get_properties();
+					}
+					else{
+						// sometime the portals don't has section_list defined, in these cases get the properties of the current tipo
+						$RecordObj_dd	= new RecordObj_dd($tipo);
+						$properties		= $RecordObj_dd->get_properties();
+					}
+					break;
+
+				default:
+					// edit mode or components without section_list defined (other than portals or sections)
+					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$properties		= $RecordObj_dd->get_properties();
+					break;
+			}
+
+
+
+		$columns_map = $properties->source->columns_map ?? false;
+
+		return $columns_map;
+	}//end get_columns_map
+
+
+	// /**
+	// * BUILD_COLUMNS_MAP
+	// * @return array
+	// */
+	// public function build_columns_map() {
+
+	// 	$columns_map = [];
+	// 	foreach ($this->request_config as $request_config_item) {
+
+	// 		// skip empty ddo_map
+	// 			if(empty($request_config_item->show->ddo_map)) {
+	// 				debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::WARNING);
+	// 				continue;
+	// 			}
+
+	// 		foreach($request_config_item->show->ddo_map as $dd_object) {
+
+	// 			// ignore non direct children
+	// 				if ($dd_object->parent!==$this->get_tipo()) {
+	// 					continue;
+	// 				}
+
+	// 			if (isset($dd_object->column_id) && isset($this->properties->source->columns_map)){
+
+	// 				$column_exists = array_find($columns_map, function($el) use($dd_object){
+	// 					return $el->id===$dd_object->column_id;
+	// 				});
+	// 				if ($column_exists!==null) {
+	// 					continue;
+	// 				}
+
+	// 				$found = array_find($this->properties->source->columns_map, function($el) use($dd_object){
+	// 					return $el->id===$dd_object->column_id;
+	// 				});
+
+	// 				if ($found!==null) {
+	// 					$column = $found;
+	// 				}else{
+	// 					$column = new stdClass();
+	// 						$column->label	= $dd_object->tipo;
+	// 						$column->id		= $dd_object->tipo;
+	// 				}
+	// 			}else{
+	// 				$column = new stdClass();
+	// 					$column->label	= $dd_object->tipo;
+	// 					$column->id		= $dd_object->tipo;
+	// 			}
+
+	// 			$columns_map[] = $column;
+	// 		}
+	// 	}
+
+	// 	if (!function_exists('parse_columns')) {
+	// 		function parse_columns($columns_map){
+
+	// 			foreach ($columns_map as $column_item) {
+	// 				$column_item->label = RecordObj_dd::get_termino_by_tipo($column_item->label, DEDALO_APPLICATION_LANG, true, true);
+
+	// 				if(isset($column_item->columns_map)){
+	// 					parse_columns($column_item->columns_map);
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	parse_columns($columns_map);
+	// 	dump($columns_map, ' columns_map +---------------------------------------+ '.to_string($this->tipo));
+
+
+	// 	return $columns_map;
+	// }//end build_columns_map
 
 
 }//end class common

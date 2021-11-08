@@ -79,7 +79,7 @@ export const component_portal = function(){
 	component_portal.prototype.update_datum			= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
-	component_portal.prototype.get_columns			= common.prototype.get_columns
+	component_portal.prototype.get_columns_map		= common.prototype.get_columns_map
 	component_portal.prototype.build_rqo_show		= common.prototype.build_rqo_show
 	component_portal.prototype.build_rqo_search		= common.prototype.build_rqo_search
 	component_portal.prototype.build_rqo_choose		= common.prototype.build_rqo_choose
@@ -116,7 +116,7 @@ component_portal.prototype.init = async function(options) {
 		self.autocomplete_active	= false
 
 	// columns
-		self.columns = options.columns
+		self.columns_map	= options.columns_map
 
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
@@ -309,9 +309,10 @@ component_portal.prototype.build = async function(autoload=false){
 		// self.target_section = self.rqo.sqo.section_tipo
 
 	// columns
-		if(self.mode!=='list'){
-			self.columns = self.get_columns()
-		}
+		// if(self.mode!=='list'){
+			self.columns_map = self.get_columns_map()
+
+		// }
 
 	// debug
 		if(SHOW_DEBUG===true) {
