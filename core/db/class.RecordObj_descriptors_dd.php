@@ -118,7 +118,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	* If current dato is untranslated, method decorator 'unTranslated' is apply
 	* @return $dato String
 	*/
-	function ∑($raw=false) {
+	function get_dato($raw=false) {
 
 		if ($raw) {
 			return $this->dato;
