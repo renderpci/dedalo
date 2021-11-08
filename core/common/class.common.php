@@ -2169,7 +2169,7 @@ abstract class common {
 				return $el->api_engine==='dedalo';
 			});
 		
-		// children_resursive function
+		// children_resursive function, used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
 			if (!function_exists('get_children_recursive')) {
 				function get_children_recursive($ar_ddo, $dd_object) {
 					$ar_children = [];
@@ -2188,7 +2188,7 @@ abstract class common {
 				}
 			}
 
-		// get the full ddo in every request_config
+		// get the full ddo in every request_config, request_config
 			$full_ddo_map = [];
 			foreach ($request_config as $request_config_item) {
 
@@ -2197,9 +2197,11 @@ abstract class common {
 					debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
 					continue;
 				}
+				// merge all ddos of all request_config
 				$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
 			}//end foreach ($request_config_dedalo as $request_config_item)
 
+			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map= array_unique($full_ddo_map, SORT_REGULAR);
 
 
@@ -2219,15 +2221,15 @@ abstract class common {
 			$section_id		= $current_locator->section_id;
 			$section_tipo	= $current_locator->section_tipo;
 
+			// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
 			$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
 				return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo));
 			});
 
-
 			// ar_ddo iterate
 			foreach($ar_ddo as $dd_object) {
 
-				// prevent resolve non children from path ddo
+				// prevent resolve non children from path ddo, remove the non direct child, it will be calculated by his parent (in recursive loop)
 					if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
 						dump($dd_object, ' dd_object SKIP dd_object ++'.to_string($this->tipo));
 						continue;
@@ -2245,10 +2247,6 @@ abstract class common {
 					$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					$label					= $dd_object->label ?? '';
 
-				// current_section_tipo
-					// $current_section_tipo = is_array($ar_current_section_tipo)
-					// 	? reset($ar_current_section_tipo)
-					// 	: $ar_current_section_tipo;
 
 				// ar_subcontext_calculated
 					$cid = $current_tipo . '_' . $current_section_tipo;
@@ -2270,9 +2268,8 @@ abstract class common {
 				// related_element switch
 					switch (true) {
 
-						// section case ( ! ESTE CASO SE DA ????? - 22-07-2021)
+						// section case (will be used in areas calculations with multiple sections)
 						case ($model==='section'):
-
 							// section
 								$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
 
@@ -2291,6 +2288,7 @@ abstract class common {
 
 						// component case
 						case (strpos($model, 'component_')===0):
+							// create the component child and inject his configuration (or use the default if the parent don't has specific request_config for it)
 							$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 							$related_element	= component_common::get_instance($model,
 																				 $current_tipo,
@@ -2298,7 +2296,10 @@ abstract class common {
 																				 $mode,
 																				 $current_lang,
 																				 $current_section_tipo);
-							// virtual request_config
+							// virtual request_config, create new request config to be injected to the current_ddo.
+							// the current component has the configuration to all children components,
+							// and it's necessary calculate the new request_config that will be use in the next loop
+							// the main component has all config, his children has specific config (only his part)
 								$new_request_config = [];
 								foreach ($request_config as $request_config_item) {
 									$children = get_children_recursive($request_config_item->show->ddo_map, $dd_object);
