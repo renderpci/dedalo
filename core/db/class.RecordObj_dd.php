@@ -467,53 +467,67 @@ class RecordObj_dd extends RecordDataBoundObject {
 		return $lang;
 	}
 
+
+
 	# GET AR TERMINO ID BY MODELO NAME (STATIC)
 	public static function get_ar_terminoID_by_modelo_name($modelo_name, $prefijo='dd') {
 
-		if(SHOW_DEBUG===true) {
-			$start_time = start_time();
-		}
-
 		# STATIC CACHE
-		static $ar_terminoID_by_modelo_name;
-		$cache_uid = $modelo_name.'-'.$prefijo;
-		if(isset($ar_terminoID_by_modelo_name[$cache_uid])) return $ar_terminoID_by_modelo_name[$cache_uid];
+			static $ar_terminoID_by_modelo_name;
+			$cache_uid = $modelo_name.'-'.$prefijo;
+			if(isset($ar_terminoID_by_modelo_name[$cache_uid])) {
+				return $ar_terminoID_by_modelo_name[$cache_uid];
+			}
 
+		$ar_result = [];
 
 		# 1 Despejamos el terminoID del modelo (ejemplo : 'area_root') que es el parent en matrix_descriptors
-		$arguments=array();
-		$arguments['strPrimaryKeyName']	= 'parent';
-		$arguments['dato']				= (string)$modelo_name;
-		$arguments['tipo']				= 'termino';
-		$matrix_table					= RecordObj_descriptors_dd::$descriptors_matrix_table;	# 'matrix_descriptors_'.$prefijo;#
-		$RecordObj_descriptors_dd		= new RecordObj_descriptors_dd($matrix_table, NULL, $prefijo);	#dump($arguments,"$modelo_name -$matrix_table");
-		$ar_result						= $RecordObj_descriptors_dd->search($arguments);		#dump($ar_result,'modelo_terminoID',"terminoID_by_modelo_name de: $modelo_name");
+			$arguments=array();
+				$arguments['strPrimaryKeyName']	= 'parent';
+				$arguments['dato']				= (string)$modelo_name;
+				$arguments['tipo']				= 'termino';
+				$arguments['lang']				= DEDALO_STRUCTURE_LANG;
+			$matrix_table					= RecordObj_descriptors_dd::$descriptors_matrix_table;			# 'matrix_descriptors_'.$prefijo;#
+			// $RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, NULL, $prefijo);	# dump($arguments,"$modelo_name -$matrix_table");
+			$RecordObj_descriptors_dd		= new RecordObj_descriptors_dd($matrix_table);
+			$ar_result_descriptors			= $RecordObj_descriptors_dd->search($arguments);				# dump($ar_result_descriptors,'modelo_terminoID',"terminoID_by_modelo_name de: $modelo_name");
 
 		/**
 		* ARREGLO 2-2-2013
 		*/
 		# Recorremos los resultados para verificar que son modelo
 		# Así obtenemos exclusivamente los téminos que SI son modelo
-		if (!empty($ar_result)) {
+		if (!empty($ar_result_descriptors)) {
 
-			$ar_modelo_terminoID = array();
-			foreach ($ar_result as $terminoID) {
+			// filter only models (expected one)
+				$ar_modelo_terminoID = array();
+				foreach ($ar_result_descriptors as $terminoID) {
 
-				$RecordObj_dd	= new RecordObj_dd($terminoID);
-				$esmodelo		= $RecordObj_dd->get_esmodelo($arguments);
-				# Excluimos a los propios modelos del array
-				if ($esmodelo==='si') {
-					# Verfificado
-					$ar_modelo_terminoID[] = $terminoID;
+					$RecordObj_dd	= new RecordObj_dd($terminoID);
+					$esmodelo		= $RecordObj_dd->get_esmodelo($arguments);
+					# Excluimos a los propios modelos del array
+					if ($esmodelo==='si') {
+						# Verfificado
+						$ar_modelo_terminoID[] = $terminoID;
+					}
 				}
-			}
-			foreach ($ar_modelo_terminoID as $modelo_terminoID) {
+				if (count($ar_modelo_terminoID)>1) {
+					throw new Exception("Error Processing Request. Bad configuration. More than one moel found: " .count($ar_modelo_terminoID), 1);
+				}
 
-				$arguments=array();
-				$arguments['strPrimaryKeyName']	= 'terminoID';
-				$arguments['modelo']			= $modelo_terminoID;
-				$RecordObj_dd					= new RecordObj_dd(NULL,$prefijo);
-				$ar_result						= $RecordObj_dd->search($arguments);
+			if (!empty($ar_modelo_terminoID)) {
+
+				// get structure terms with current tipo as model
+					$model_tipo = $ar_modelo_terminoID[0];
+
+					$arguments = [
+						'strPrimaryKeyName'	=> 'terminoID', // return column 'terminoID'
+						'modelo'			=> $model_tipo  // search equal in column 'modelo'
+					];
+
+					// $RecordObj_dd	= new RecordObj_dd(NULL,$prefijo);
+					$RecordObj_dd		= new RecordObj_dd($model_tipo, null);
+					$ar_result			= $RecordObj_dd->search($arguments);
 			}
 		}
 
