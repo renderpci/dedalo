@@ -116,6 +116,7 @@ include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 			# float_window_features
 			#$obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 			$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/0.jpg';
+			$obj->locale						= DEDALO_LOCALE;
 			// debug only
 			if(SHOW_DEBUG===true) {
 				$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
