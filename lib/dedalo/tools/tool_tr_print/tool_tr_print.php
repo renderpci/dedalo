@@ -39,10 +39,10 @@
 				# JS includes
 					#js::$ar_url[] = BOOTSTRAP_JS_URL;
 
-				if(SHOW_DEBUG===true) {
+				// if(SHOW_DEBUG===true) {
 					# tr data (header)
 					$tr_data = $this->get_tr_data();
-				}				
+				// }	
 				
 				# source_text				
 				$source_text = $this->get_source_text();				
