@@ -163,7 +163,7 @@
 
 	
 	# Header
-	if(SHOW_DEBUG===true) {	
+	// if(SHOW_DEBUG===true) {
 		$html   .= "<div class=\"tr_header\">";
 		$html   .= "  <ul class=\"tr_info\">";
 		$html   .= "   <li><label>Reel ID</label> <span>".$tr_data->ID."</span></li>";
@@ -189,7 +189,7 @@
 		$posterframe_url = $tr_data->posterframe;
 		$html   .= "  <div class=\"posterframe\" style=\"background-image:url('$posterframe_url')\"><img src=\"$posterframe_url\"/></div>";
 		$html   .= "</div>";//end tr_header
-	}
+	// }
 
 	
 	if ($ar_tc_text===false) {
@@ -348,5 +348,4 @@
 
 	
 
-	print $html;		
-?>
+	print $html;
