@@ -63,7 +63,9 @@
   min-width: 96px;
 }
 span.informants {
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: bold;
+  font-variant-caps: small-caps;
 }
 .tr_header .posterframe {
   float: right;
