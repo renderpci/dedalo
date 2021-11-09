@@ -54,16 +54,22 @@
 			--------------------------------------------- */
 			@header_height : 139px;
 			.tr_header {
-				display: block;
+				display: flex;
+				justify-content: space-between;
 				width: 100%;
 				min-height: @header_height;
-				background-color: #e2e2e2;
+				// background-color: #e2e2e2;
 				float: left;
 				position: relative;	
 				}
 				.tr_header .tr_info {
-					float: left;
-					padding: 10px;
+					padding-left: 10px;
+					padding-bottom: 20px;
+					display: grid;
+					flex-wrap: wrap;
+					justify-content: flex-start;
+					flex-direction: row;
+					width: 75%;
 					}
 					.tr_header .tr_info li {
 
@@ -74,9 +80,14 @@
 							text-transform: capitalize;
 						}
 						.tr_header .tr_info li label.label_informants {
-							min-width: 74px;
-							padding-left: 4px;
+							min-width: 96px;
+							// padding-left: 4px;
+
 						}
+						span.informants{
+								font-size: 16px;
+								// font-variant-caps: small-caps;
+							}
 						.tr_header .tr_info li span {
 							
 						}
@@ -86,7 +97,8 @@
 					float: right;
 					height: 100%;
 					min-height: @header_height;
-					width: 220px;
+					width: 25%;
+					max-width: 220px;
 					background-color: #C9C9C9;
 					background-repeat: no-repeat;
 					background-size: cover;
@@ -110,6 +122,9 @@
 					vertical-align: top;
 					padding: 5px;
 					border-bottom: 1px solid rgb(226, 226, 226); 
+					div{
+						overflow: auto !important;
+					}
 				}				
 				
 				.column_tc, .column_fragment {

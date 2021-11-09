@@ -164,26 +164,35 @@
 	
 	# Header
 	// if(SHOW_DEBUG===true) {
+		// dump($tr_data, ' tr_data +------------------+ '.to_string());
 		$html   .= "<div class=\"tr_header\">";
 		$html   .= "  <ul class=\"tr_info\">";
-		$html   .= "   <li><label>Reel ID</label> <span>".$tr_data->ID."</span></li>";
-		$html   .= "   <li><label>".label::get_label('original').' '.label::get_label('idioma')."</label> <span>".$tr_data->source_lang."</span></li>";
-		$html   .= "   <li><label>".label::get_label('fecha')."</label> <span>".$tr_data->date."</span></li>";
-		$html   .= "   <li><label>".label::get_label('municipio')."</label> <span>".$tr_data->municipality."</span></li>";
+
+		// $html   .= "   <li><label>".label::get_label('municipio')."</label> <span>".$tr_data->municipality."</span></li>";
 		
 		$html   .= "   <li>";
 					# Interviews
 					foreach ($tr_data->interview as $key => $current_interview) {
-						$html   .= "<label>".label::get_label('entrevista')." ID ".$current_interview->ID."</label>";
-						$html .= "<label class=\"label_informants\">".label::get_label('informantes')."</label>";
-						$last = end($current_interview->informants);
-						foreach ((array)$current_interview->informants as $informant) {
-							$html .= "<span>".$informant."</span>";
-							if($informant!==$last) $html .= ", ";
-						}
-						$html .= "<br>";
+						$html	.= "<li><label>".label::get_label('entrevista')." ID "."</label> <span>".$current_interview->ID."</span>";
+						$html	.= "<label></label><label>".label::get_label('code')."</label><span>".$current_interview->code."</span></li>";
+						$html	.= "<li><label>".label::get_label('title')."</label><span>".$current_interview->title."</span></li>";
+						$html	.= "<li><label class=\"label_informants\">".label::get_label('informantes')."</label>";
+
+						$all_informants = implode(" | ", (array)$current_interview->informants);
+						$html .= "<span class=\"informants\">".$all_informants."</span></li>";
+						// $last = end($current_interview->informants);
+						// foreach ((array)$current_interview->informants as $informant) {
+						// 	$html .= "<span>".$informant."</span>";
+						// 	if($informant!==$last) $html .= ", ";
+						// }
+						// $html .= "<br>";
+						$html   .= "   <li><label>".label::get_label('municipio')."</label> <span>".$current_interview->municipally."</span></li>";
 					}
 		$html   .= "   </li>";
+
+		$html   .= "   <li><label>".label::get_label('audiovisual')."</label> <span>".$tr_data->ID."</span>";
+		$html   .= "   <label></label><label>".label::get_label('original').' '.label::get_label('idioma')."</label> <span>".$tr_data->source_lang."</span>";
+		$html   .= "   <label></label><label>".label::get_label('fecha')."</label> <span>".$tr_data->date."</span></li>";
 
 		$html   .= "  </ul>";//end tr_info
 		$posterframe_url = $tr_data->posterframe;

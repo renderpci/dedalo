@@ -427,11 +427,46 @@ class tool_tr_print extends tool_common {
 																  $current_section_tipo);
 					$dato = $component->get_dato();
 					$informants = $this->get_informants_data( $dato );
+				# Title
+					$title_tipo = 'oh16';
+					$modelo_name_title 	= RecordObj_dd::get_modelo_name_by_tipo($title_tipo, true); // component_input_text
+					$component_title 	= component_common::get_instance($modelo_name_title,
+																  $title_tipo,
+																  $current_section_id,
+																  'list',
+																  DEDALO_DATA_LANG,
+																  $current_section_tipo);
+					$title = $component_title->get_valor();
+				# Code
+					$code_tipo = 'oh14';
+					$modelo_name_code 	= RecordObj_dd::get_modelo_name_by_tipo($code_tipo, true); // component_input_text
+					$component_title 	= component_common::get_instance($modelo_name_code,
+																  $code_tipo,
+																  $current_section_id,
+																  'list',
+																  DEDALO_DATA_NOLAN,
+																  $current_section_tipo);
+					$code = $component_title->get_valor();
+
+				# Municipally
+					$code_municipally = 'oh19';
+					$modelo_name_municipally	= RecordObj_dd::get_modelo_name_by_tipo($code_municipally, true); // component_autocomplete
+					$component_municipally		= component_common::get_instance($modelo_name_municipally,
+																  $code_municipally,
+																  $current_section_id,
+																  'list',
+																  DEDALO_DATA_NOLAN,
+																  $current_section_tipo);
+					$municipally = $component_municipally->get_valor();
+					$ar_municipally = explode(', ', $municipally );
 
 				# interview
 				$interview = new stdClass();
-					$interview->ID 		   = $current_section_id;
-					$interview->informants = $informants;
+					$interview->ID			= $current_section_id;
+					$interview->informants	= $informants;
+					$interview->title		= $title;
+					$interview->code		= $code;
+					$interview->municipally	= $ar_municipally[0] ?? '';
 
 				$ar_interviews[] = $interview;
 			}
@@ -485,4 +520,3 @@ class tool_tr_print extends tool_common {
 
 
 }//end tool_tr_print
-?>
