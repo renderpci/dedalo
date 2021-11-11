@@ -67,6 +67,7 @@ class hierarchy {
 					 || !isset($locator->section_id) || $locator->section_id!=NUMERICAL_MATRIX_VALUE_YES) {
 					 	$response->result 	= false;
 						$response->msg 		= label::get_label('error_generate_hierarchy'); //'Current hierarchy is not active.';
+						debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 						return $response;
 					}
 

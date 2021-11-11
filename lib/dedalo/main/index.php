@@ -26,6 +26,14 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	exit();
 }
 */
+	// DB check
+		// try {
+		// 	$conn = DBi::_getConnection();
+		// }catch (Exception $e) {
+		// 	header("Location: ".DEDALO_LIB_BASE_URL.'/install/');
+		// 	exit();
+		// }
+
 
 	// check db config
 	tool_administration::check_db_ready();
@@ -73,7 +81,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 		$tipo_to_msg 						= 'empty';
 		if (strlen($tipo)>0) $tipo_to_msg 	= 'not valid';
 		$msg = "Error Processing Request: Main Page tipo:'$tipo' is $tipo_to_msg! Main Page redirected to secure MAIN_FALLBACK_SECTION: ".MAIN_FALLBACK_SECTION." ".RecordObj_dd::get_termino_by_tipo(MAIN_FALLBACK_SECTION);
-		debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 		
 		if (verify_dedalo_prefix_tipos(MAIN_FALLBACK_SECTION)) {
 			header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
