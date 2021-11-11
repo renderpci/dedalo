@@ -2487,6 +2487,25 @@
 		Updated SALM files. Now Dédalo config file is required to run ACS
 		Added on working method build_install_version to class tool_administration
 		Added skip filter for sections dd64, dd153 and dd128 in tool_administration class method 'generate_relations_table_data'
+		11-11-2021
+		Added on working method build_install_version to class tool_administration
+		Updated SALM files. Now Dédalo config file is required to run ACS
+		Fixed REINDEX TABLE bug on optimize_tables (class backup)
+		Fixed Raspa bug in RecordObj_descriptors_dd method 'get_dato'
+		Added Locale to environment page_globals
+		Fixed bug in RecordObj_dd::get_ar_terminoID_by_modelo_name where model was not calculated correctly
+		Remove the debugger limitation to show header in the tool_tr_print
+		Add some field to the header in tool_tr_print
+		Remove the debugger limitation in tool_tr_transcript
+		Change the css of the informat in tool_tr_print
+		Changed error management of DDBB connection from die() to throw new Exception()
+		Added RecordObject_dd::save_term_and_descriptor current lang descriptors record too when is distinct from default structure lang (issues on auto create structure elements from hierarchies)
+		Add class backup method to optimize tables. Used after import structure to prevent issues with PostgreSQL index
+		Added console errors color for ERROR level messages (core_functions)
+		Updated file sample.config4.php . Now, download ontology and code configuration defaults are filled with render master server for easy update
+		Fixed issue in component_input_text when tld in lowercase was not accepted as value in hierarchy config section
+		Added Dédalo installation tools and interface for easier setup
+		Consolidated installation files. Unused files were removed and some new files needed to install were added
 
 
 	[/HISTORY]
@@ -2512,13 +2531,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2yb';
+	$DEDALO_VERSION = '5.8.2z';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-11-2021');
+	define('DEDALO_BUILD'	, '11-11-2021');
 
 
 	/*
