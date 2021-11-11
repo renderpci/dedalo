@@ -67,6 +67,7 @@ abstract class install {
 		$target_file_path			= DEDALO_ROOT . '/install/db/'.$db_install_name.'.pgsql';
 		$target_file_path_compress	= $target_file_path.'.gz';
 		$hierarchy_files_dir_path	= DEDALO_ROOT . '/install/import/hierarchy';
+		$config_auto_file_path		= DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
 
 		return (object)[
 			'db_install_name'			=> $db_install_name,
@@ -77,7 +78,8 @@ abstract class install {
 			'target_file_path'			=> $target_file_path,
 			'target_file_path_compress'	=> $target_file_path_compress,
 			'hierarchy_files_dir_path'	=> $hierarchy_files_dir_path,
-			'install_checked_default'	=> $install_checked_default
+			'install_checked_default'	=> $install_checked_default,
+			'config_auto_file_path'		=> $config_auto_file_path
 		];
 	}//end get_config
 
@@ -2018,7 +2020,7 @@ abstract class install {
 			});
 			if ($found_result_false===null) {
 
-				$file = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
+				$file = $config->config_auto_file_path;
 
 				// remove last php tag if exists
 					$content = file_get_contents($file);
@@ -2026,7 +2028,7 @@ abstract class install {
 				// add vars
 					if (strpos($content, 'DEDALO_INSTALL_STATUS')===false) {
 						// line
-						$line = PHP_EOL . ' define(\'DEDALO_INSTALL_STATUS\', \'installed\'); ';
+						$line = PHP_EOL . 'define(\'DEDALO_INSTALL_STATUS\', \'installed\');';
 						// Write the contents to the file,
 						// using the FILE_APPEND flag to append the content to the end of the file
 						// and the LOCK_EX flag to prevent anyone else writing to the file at the same time

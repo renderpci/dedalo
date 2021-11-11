@@ -3,7 +3,7 @@
 	$html = '';
 
 	// 0 dedalo_install_status. If already installed, stop here
-		if ($dedalo_install_status==='installed') {
+		if (DEDALO_INSTALL_STATUS==='installed') {
 			$html .= '<section>';
 			$html .= '<h2 class="">Install status</h2>';
 			$html .= '<div class="description"></div>';
@@ -112,7 +112,7 @@
 	// 4 Install / activate hierarchies list
 		$html .= '<section>';
 		$html .= '<h3 class="">4. Install/activate selected hierarchies</h3>';
-		if ($dedalo_install_status!=='installed') {
+		if (DEDALO_INSTALL_STATUS!=='installed') {
 
 			$html .= '<div class="description">It will be displayed in the thesaurus. Keep in mind that large countries can consume a lot of resources. Don\'t load unnecessary countries. You can always load more countries later.</div>';
 			$html .= '<div class="description">Source files dir: '.$hierarchy_files_path.'</div>';

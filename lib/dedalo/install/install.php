@@ -29,10 +29,38 @@
 		$dedalo_install_status = defined('DEDALO_INSTALL_STATUS')
 			? DEDALO_INSTALL_STATUS
 			: null;
+		// prevents legacy systems from being exposed to unwanted installation
+			if ($dedalo_install_status===null) {
+
+				// only in dedalo builds before '11-11-2021' (d-m-Y)
+					$date_timestamp1	= strtotime(DEDALO_BUILD);
+					$date_timestamp2	= strtotime('11-11-2021');
+
+				if ($date_timestamp1 < $date_timestamp2) {
+
+					$file		= $config->config_auto_file_path;
+					$content	= file_get_contents($file);
+					// set as 'installed' by default for security
+					if (strpos($content, 'DEDALO_INSTALL_STATUS')===false) {
+						// line
+						$line = PHP_EOL . 'define(\'DEDALO_INSTALL_STATUS\', \'installed\');';
+						// Write the contents to the file,
+						// using the FILE_APPEND flag to append the content to the end of the file
+						// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
+						file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+						debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS as 'installed' ".to_string(), logger::ERROR);
+					}
+					// overwrite status
+					$dedalo_install_status = 'installed';
+				}
+
+				// set temporal constant value (until next file load 'config_auto.php')
+				define('DEDALO_INSTALL_STATUS', $dedalo_install_status);
+			}
 		// to prevent malicious attacks stop execution some seconds when alredy installed
-		if ($dedalo_install_status==='installed') {
-			sleep(5);
-		}
+			if (DEDALO_INSTALL_STATUS==='installed') {
+				sleep(4);
+			}
 
 	// db is already imported check 'matrix_users' table
 		$db_tables		= backup::get_tables(); // returns array empty if not is imported
