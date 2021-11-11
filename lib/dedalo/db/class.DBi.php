@@ -38,8 +38,10 @@ abstract class DBi {
 		}
 		
 		// Connecting, selecting database
-		$pg_conn = pg_connect($str_connect) 
-			or die('Could not connect to database (52): ' .pg_last_error());
+		// $pg_conn = pg_connect($str_connect)
+		// 	or die('Could not connect to database (52): ' .pg_last_error());
+		$pg_conn = pg_connect($str_connect) or throw new Exception("Error. Could not connect to database (52)", 1);
+
 			
 		return $pg_conn;
 	}//end _getConnection
@@ -56,7 +58,7 @@ abstract class DBi {
 		$password=DEDALO_PASSWORD_CONN,
 		$database=DEDALO_DATABASE_CONN,
 		$port=DEDALO_DB_PORT_CONN,
-		$socket=DEDALO_SOCKET_CONN) {		
+		$socket=DEDALO_SOCKET_CONN) {
 		
 		# basic str_connect with mandatory vars
 		$str_connect = "dbname=$database user=$user password=$password";
@@ -72,8 +74,9 @@ abstract class DBi {
 		}
 		
 		// Connecting, selecting database
-		$pg_conn = pg_connect($str_connect) 
-			or die('Could not connect to database (52-2): ' .pg_last_error());
+		// $pg_conn = pg_connect($str_connect)
+		// 	or die('Could not connect to database (52-2): ' .pg_last_error());
+		$pg_conn = pg_connect($str_connect) or throw new Exception("Error. Could not connect to database (52-2)", 1);
 			
 		return $pg_conn;
 	}//end _getNewConnection
