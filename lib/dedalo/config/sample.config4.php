@@ -33,7 +33,7 @@
 	# Dedalo information
 	define('DEDALO_SALT_STRING',	'dedalo_cuatro');
 
-	# TIME ZONE : Zona horaria (for backups archive names)
+	# TIME ZONE : Time zone for backups archive names
 	define('DEDALO_TIMEZONE',		'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
 	# SET LOCALE (Spanish for example)
 	// setlocale(LC_ALL,'en_EN');
@@ -44,9 +44,13 @@
 
 ################################################################
 # DEDALO 4 ENTITY
-	define('DEDALO_ENTITY',			'my_entity_name'); # Like 'dedalo4'
-	# DEDALO_ENTITY_LABEL . (Showed title of html pages)
-	define('DEDALO_ENTITY_LABEL',	DEDALO_ENTITY);
+	# Entity ASCII lowercase code. Use 16 chars MAX like 'mupreva' without spaces.
+	# (!) Note that this entity code will be used to create session and folder names. Must be be system safe!
+	# (!) DO NOT USE NON ASCII CODES LIKE: "Museu de la plaça de l'espart/teixits". Use instead something like: "mupespart"
+	# We recommend not using the camelcase notation, but underscores between words and without spaces
+	define('DEDALO_ENTITY',			'entity_codename');
+	# DEDALO_ENTITY_LABEL . (Showed title of html pages. Yes you are free here!)
+	define('DEDALO_ENTITY_LABEL',	'My entity label');
 	# DEDALO_ENTITY_ID . (From Dédalo private list)
 	define('DEDALO_ENTITY_ID',		0);
 	# DEVELOPMENT_SERVER
@@ -114,33 +118,25 @@
 # BACKUP : Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false
 	define('DEDALO_BACKUP_ON_LOGIN',	true);
-	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+	# DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
 	define('DEDALO_BACKUP_TIME_RANGE',	8);
 
 
 
 ################################################################
 # IS_DEVELOPER : Logged user is developer value
-	$show_developer = false;
-	if (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true) {
-		$show_developer = true;
-	}
+	$show_developer = (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true)
+		? true
+		: false;
 	define('SHOW_DEVELOPER', $show_developer);
 
 
 
 ################################################################
 # DEBUG : Application debug config
-	$show_debug = false;
-	if(
-		# SUPERUSER IS LOGGED
-		(
-			isset($_SESSION['dedalo4']['auth']['user_id'])
-			&&	 ($_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
-		)
-	) {
-		$show_debug = true;
-	}
+	$show_debug = (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
+		? true
+		: false;
 	define('SHOW_DEBUG', $show_debug);
 
 
@@ -179,8 +175,8 @@
 		logger::$obj['activity'] = logger::get_instance('activity');
 
 	# ERROR LOG FILE
-	# Log aplication errors in file
-		# Logs dir (Maintain this directory unaccessible for security)
+	# Log application errors in file
+		# Logs dir (Maintain this directory inaccessible for security)
 		define('DEDALO_LOGS_DIR',	dirname(dirname(DEDALO_ROOT)) . '/logs');	# !! In production mode log MUST BE out of site
 		# Set file. In production mode log MUST BE out of site
 		logger::register('error',	'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');
@@ -195,7 +191,7 @@
 ################################################################
 # LANG
 	# DEDALO STRUCTURE LANG (default 'lg-spa')
-	define('DEDALO_STRUCTURE_LANG', 'lg-spa'); // (!) ONLY 'lg-spa', Do not change this value !
+	define('DEDALO_STRUCTURE_LANG', 'lg-spa'); // (!) ONLY USE 'lg-spa', Do not change this value !
 
 	# APPLICATION LANG : Dedalo application lang
 	define('DEDALO_APPLICATION_LANGS', serialize([
@@ -205,11 +201,11 @@
 		'lg-eng'	=> 'English',
 		'lg-fra'	=> 'French'
 	]));
-	define('DEDALO_APPLICATION_LANGS_DEFAULT',	'lg-spa');
+	define('DEDALO_APPLICATION_LANGS_DEFAULT',	'lg-eng');
 	define('DEDALO_APPLICATION_LANG',			fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 
 	# DATA LANG : Dedalo data lang
-	define('DEDALO_DATA_LANG_DEFAULT',			'lg-spa');
+	define('DEDALO_DATA_LANG_DEFAULT',			'lg-eng');
 	define('DEDALO_DATA_LANG',					fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
 	define('DEDALO_DATA_LANG_SELECTOR',			false);
 
@@ -221,13 +217,14 @@
 		'lg-spa',
 		'lg-cat',
 		'lg-eng',
+		'lg-fra'
 	]));
 	# DEDALO_DIFFUSION_LANGS
-	# Default value is the same as proyect langs. Change for custom diffusion langs
+	# Default value is the same as project langs. Change for custom diffusion langs
 	define('DEDALO_DIFFUSION_LANGS',			DEDALO_PROJECTS_DEFAULT_LANGS);
 
 	# TRANSLATOR
-	define('DEDALO_TRANSLATOR_URL',				'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
+	define('DEDALO_TRANSLATOR_URL',				'https://babel.render.es/babel_engine/');	# Apertium, Google translator, etc..
 
 
 
@@ -241,8 +238,7 @@
 		'rsc',
 		'hierarchy',
 		'lg',
-		'oh',
-		'ich'
+		'oh'
 	]));
 
 	# Fallback section
@@ -259,7 +255,7 @@
 	# DEDALO_DEFAULT_PROJECT. Default section_id of target filter section
 	define('DEDALO_DEFAULT_PROJECT',			1);
 	# DEDALO_FILTER_SECTION_TIPO_DEFAULT. Target filter section (actually dd153)
-	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT',DEDALO_SECTION_PROJECTS_TIPO); // dd153 Projects section (dd tipos)
+	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO); // dd153 Projects section (dd tipos)
 
 	# DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
 	define('DEDALO_SECTION_ID_TEMP', 'tmp');
@@ -309,14 +305,14 @@
 		# EXTENSION normally mp4, mov
 		define('DEDALO_AV_EXTENSION',				'mp4');
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_AV_EXTENSIONS_SUPPORTED',	serialize(['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg']));
+		define('DEDALO_AV_EXTENSIONS_SUPPORTED',	serialize(['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']));
 		# MIME normally video/mp4, quicktime/mov
 		define('DEDALO_AV_MIME_TYPE',				'video/mp4');
 		# TYPE normally h264/AAC
 		define('DEDALO_AV_TYPE',					'h264/AAC');
 		# QUALITY DEDALO_AV_QUALITY_ORIGINAL normally 'original'
 		define('DEDALO_AV_QUALITY_ORIGINAL',		'original');
-		# QUALITY DEFAULT normally '404' (estándar dedalo 72x404)
+		# QUALITY DEFAULT normally '404' (standard dedalo 72x404)
 		define('DEDALO_AV_QUALITY_DEFAULT',			'404');
 		# QUALITY FOLDERS ARRAY normally '404','audio' (Sort DESC quality)
 		define('DEDALO_AV_AR_QUALITY',				serialize([DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']));
@@ -328,7 +324,7 @@
 		define('DEDALO_AV_FFMPEG_SETTINGS',			DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
 		# FAST START PATH
 		define('DEDALO_AV_FASTSTART_PATH',			'/usr/bin/qt-faststart'); # Like /usr/bin/qt-faststart
-		# DEDALO_AV_FFPROBE_PATH PATH usualmente /usr/bin/ffprobe
+		# DEDALO_AV_FFPROBE_PATH PATH usually /usr/bin/ffprobe
 		define('DEDALO_AV_FFPROBE_PATH',			'/usr/bin/ffprobe'); # Like /usr/bin/ffprobe
 		# AV STREAMER
 		define('DEDALO_AV_STREAMER',				NULL);
@@ -395,8 +391,8 @@
 		define('DEDALO_PDF_EXTENSION',				'pdf');
 		# DEDALO_PDF_EXTENSIONS_SUPPORTED
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED',	serialize(['pdf']));
-		# QUALITY DEFAULT normally 'standar'
-		define('DEDALO_PDF_QUALITY_DEFAULT',		'standar');
+		# QUALITY DEFAULT normally 'standard'
+		define('DEDALO_PDF_QUALITY_DEFAULT',		'standard');
 		# QUALITY FOLDERS ARRAY
 		define('DEDALO_PDF_AR_QUALITY',				serialize([DEDALO_PDF_QUALITY_DEFAULT]));
 		# MIME normally application/pdf
@@ -507,7 +503,7 @@
 
 ################################################################
 # STRUCTURE CSS
-	# Aditional css precessed from structure or created in aditional external files
+	# Additional css processed from structure or created in additional external files
 	define('DEDALO_STRUCTURE_CSS',	true);
 	define('DEDALO_ADITIONAL_CSS',	false);
 
@@ -524,14 +520,14 @@
 
 ################################################################
 # DIFFUSION_CUSTOM
-# Otional custom class to maniputate diffusion options
+# Optional custom class to maniputate diffusion options
 	define('DIFFUSION_CUSTOM', false);
 
 
 
 ################################################################
 # API
-	# Auth code for acces to rest api server
+	# Auth code for access to rest API server
 	# 'API_WEB_USER_CODE_MULTIPLE' is only for Dédalo use to allow several API_WEB_USER_CODE in same panel
 	# In API server config, only one is accepted: 'API_WEB_USER_CODE'
 	define('API_WEB_USER_CODE_MULTIPLE' , [
@@ -551,11 +547,11 @@
 ################################################################
 # REMOTE_STRUCTURE_SERVER_CODE
 	define('STRUCTURE_FROM_SERVER',			true); 	# bool
-	define('STRUCTURE_SERVER_CODE',			''); 	 # string like aZdUs7asdasdhRsw4!sp
-	define('STRUCTURE_SERVER_URL',			''); 	 # string like https	://master.render.es/dedalo/lib/dedalo/extras/str_manager/
+	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w'); 	 # string like aZdUs7asdasdhRsw4!sp
+	define('STRUCTURE_SERVER_URL',			'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/'); 	 # string like https	://master.render.es/dedalo/lib/dedalo/extras/str_manager/
 	define('STRUCTURE_DOWNLOAD_DIR',		DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
 	define('STRUCTURE_DOWNLOAD_JSON_FILE',	STRUCTURE_DOWNLOAD_DIR);
-	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128'); // IP and port like 'XXX.XXX.XXX.XXX:3128'
+	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128'); // Optional IP and port like 'XXX.XXX.XXX.XXX:3128'
 
 
 
@@ -564,18 +560,18 @@
 	// server side (master)
 		// server git files (master) like /home/dedalo/master_dedalo.git
 		// define('DEDALO_CODE_SERVER_GIT_DIR',	'/home/dedalo/master_dedalo.git');
-		// target dir where git command send the compresed file like 'dedalo5_code.zip'
+		// target dir where git command send the compressed file like 'dedalo5_code.zip'
 		// define('DEDALO_CODE_FILES_DIR',			DEDALO_ROOT . '/code');
 	// client side
-		// target dir where git command send the compresed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
 		define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo5_code.zip');
-		// target dir where git command send the compresed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
 		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
 
 
 
 ################################################################
-# MAINTENACE : maintenance mode active / unactive
+# MAINTENACE : maintenance mode active / inactive
 	$maintenance_mode = false;
 	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
 	if (DEDALO_MAINTENANCE_MODE) {
