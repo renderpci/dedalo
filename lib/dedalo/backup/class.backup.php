@@ -806,6 +806,10 @@ abstract class backup {
 
 		if ($response->result===false) {
 			$response->msg = 'Error. Request failed '.__METHOD__ ." <br> ".$response->msg;
+		}else{
+
+			// optimize main tables
+			backup::optimize_tables(['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list']);
 		}
 
 
@@ -1735,6 +1739,44 @@ abstract class backup {
 
 		return $response;
 	}//end import_structure_json_data
+
+
+
+	/**
+	* OPTIMIZE_TABLES
+	* Exec VACUUM ANALYZE command on every received table
+	* @param array $tables
+	* @return string $res
+	*/
+	public static function optimize_tables($tables) {
+
+ 		$tables = is_array($tables) ? $tables : [$tables];
+
+		// $command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -h ".DEDALO_HOSTNAME_CONN . $port_command;
+
+		// re-index
+			$index_commands = [];
+			foreach ($tables as $current_table) {
+				$index_commands[] = 'REINDEX TABLE "'.$current_table.'"';
+			}
+			$command = $command_base . ' -c \''.implode('; ', $index_commands).';\'';
+			// exec command
+				$res = shell_exec($command);
+			// debug
+				debug_log(__METHOD__." result: ".json_encode($res) .PHP_EOL. ' -> COMMAND: ' . to_string($command) .PHP_EOL, logger::WARNING);
+
+		// VACUUM
+			$command = $command_base . ' -c \'VACUUM ' . implode(', ', $tables) .';\'';
+			// exec command
+				$res = shell_exec($command);
+			// debug
+				debug_log(__METHOD__." result: ".json_encode($res) .PHP_EOL. ' -> COMMAND: ' . to_string($command) .PHP_EOL, logger::WARNING);
+
+
+		return (string)$res;
+	}//end optimize_tables
 
 
 
