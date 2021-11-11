@@ -2509,6 +2509,7 @@
 		Fixed database _getConnection throw error on PHP versions < 8.0
 		Added Dédalo dd_init_test check in the install process to warn users about possible wrong settings
 		Fixed install bug on old already installed systems
+		Add additional check for system_is_already_installed to prevent issues in previous systems
 
 
 	[/HISTORY]
@@ -2534,7 +2535,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2zc';
+	$DEDALO_VERSION = '5.8.2zd';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
