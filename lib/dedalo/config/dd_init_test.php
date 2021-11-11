@@ -400,7 +400,7 @@
 
 // entity code name test
 	function isValidName($str) {
-		$safe_name = preg_replace( '/[^a-z_]+/', '***', $str);
+		$safe_name = preg_replace( '/[^a-z0-9_]+/', '***', $str);
 		if ($safe_name!==$str) {
 			return false;
 		}

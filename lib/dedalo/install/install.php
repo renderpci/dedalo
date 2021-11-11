@@ -34,8 +34,9 @@
 
 				// check system_is_already_installed (get users in database)
 				$already_installed = install::system_is_already_installed();
-				if ($already_installed->result===false) {
+				if ($already_installed->result===true) {
 
+					// update config_auto_file
 					$file		= $config->config_auto_file_path;
 					$content	= file_get_contents($file);
 					// set as 'installed' by default for security
@@ -52,7 +53,7 @@
 					$dedalo_install_status = 'installed';
 				}
 
-				// set temporal constant value (until next file load 'config_auto.php')
+				// set temporal constant value (until next load of 'config_auto.php')
 				define('DEDALO_INSTALL_STATUS', $dedalo_install_status);
 			}
 		// to prevent malicious attacks stop execution some seconds when alredy installed
