@@ -233,14 +233,24 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);		
 
 			#
-			# DESCRIPTORS : finally we create one record in descriptors with this main info	
-			$lang = 'lg-spa';//DEDALO_DATA_LANG;			
+			# DESCRIPTORS : finally we create one record in descriptors with this main info	in the structure default lang (lg-spa)
+			$lang = 'lg-spa'; // default and mandatory structure lang
 			$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, $lang);
 			$RecordObj_descriptors_dd->set_tipo('termino');
 			$RecordObj_descriptors_dd->set_parent($terminoID);
 			$RecordObj_descriptors_dd->set_lang($lang);
 			$RecordObj_descriptors_dd->set_dato($descriptor_dato);
 			$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
+
+			// set descriptor in current lang too
+			if ($lang!==DEDALO_DATA_LANG) {
+				$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, DEDALO_DATA_LANG);
+				$RecordObj_descriptors_dd->set_tipo('termino');
+				$RecordObj_descriptors_dd->set_parent($terminoID);
+				$RecordObj_descriptors_dd->set_lang(DEDALO_DATA_LANG);
+				$RecordObj_descriptors_dd->set_dato($descriptor_dato);
+				$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
+			}
 		}		
 
 		return $terminoID;
