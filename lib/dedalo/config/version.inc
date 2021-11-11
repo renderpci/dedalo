@@ -2506,6 +2506,9 @@
 		Fixed issue in component_input_text when tld in lowercase was not accepted as value in hierarchy config section
 		Added Dédalo installation tools and interface for easier setup
 		Consolidated installation files. Unused files were removed and some new files needed to install were added
+		Fixed database _getConnection throw error on PHP versions < 8.0
+		Added Dédalo dd_init_test check in the install process to warn users about possible wrong settings
+
 
 
 	[/HISTORY]
@@ -2531,7 +2534,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2z';
+	$DEDALO_VERSION = '5.8.2zb';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
