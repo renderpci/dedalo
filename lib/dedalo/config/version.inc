@@ -2508,7 +2508,7 @@
 		Consolidated installation files. Unused files were removed and some new files needed to install were added
 		Fixed database _getConnection throw error on PHP versions < 8.0
 		Added Dédalo dd_init_test check in the install process to warn users about possible wrong settings
-
+		Fixed install bug on old already installed systems
 
 
 	[/HISTORY]
@@ -2534,7 +2534,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2zb';
+	$DEDALO_VERSION = '5.8.2zc';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
