@@ -1,0 +1,140 @@
+<?php
+
+	$html = '';
+
+	// 0 dedalo_install_status. If already installed, stop here
+		if ($dedalo_install_status==='installed') {
+			$html .= '<section>';
+			$html .= '<h2 class="">Install status</h2>';
+			$html .= '<div class="description"></div>';
+			$html .= '<h2 class="ok">This system is already installed</h2>';
+			$html .= '<section>';
+			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" ENTER TO DEDALO " onclick="window.location.href=\'../main\';" />';
+			$html .= '</section>';
+			$html .= '</section>';
+			echo $html;
+			return;
+		}
+
+	// 1 Install Dédalo DB
+		$html .= '<section>';
+		$html .= '<h3 class="">1. Install Dédalo DDBB</h3>';
+		if ($db_is_imported===false) {
+			$html .= '<div class="description">Install DDBB source file: '.$install_db_file.'</div>';
+			if (!file_exists($install_db_file)) {
+				$html .= '<h2 class="error">Database file not found! Please verify that the installation file exists in: '.$install_db_file.'</h2>';
+				$html .= '</section>';
+				echo $html;
+				return;
+			}
+			$html .= '<div class="description">DB Config:</div>';
+			$html .= '<ul class="hierarchies_list">';
+			foreach ($db_config as $key => $value) {
+				$html .= '<li>'.$key.' : '.$value.'</li>';
+			}
+			$html .= '</ul>';
+			try {
+				$conn = DBi::_getConnection();
+			}catch (Exception $e) {
+				$html .= '<h2 class="error">Database connection error!</h2>';
+				$html .= '</section>';
+				echo $html;
+				return;
+			}
+			$html .= '</section>';
+
+			// button ok
+			$html .= '<section>';
+			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" INSTALL DATABASE FROM FILE " onclick="install.install_db_from_default_file(this)" />';
+			$html .= '</section>';
+
+			echo $html;
+			return;
+
+		}else{
+
+			$html .= '<div class="ok">Database <strong>'.DEDALO_DATABASE_CONN.'</strong> is ready</div>';
+		}
+		$html .= '</section>';
+
+
+	// 2 login
+		$html .= '<section>';
+		$html .= '<h3 class="">2. Set root password / login</h3>';
+		if (login::is_logged()!==true) {
+			// $html .= '<h2 class="error">Current user must be logged before continue! <br>Please, open the login window using the button bellow.<br>After login, reload current page</h2>';
+			$html .= '<div class="error">Current user must be logged before continue.</div>';
+			$html .= '<iframe id="iframe_login" src="../main">';
+			$html .= '</iframe>';
+			$html .= '<section>';
+			// $html .= '<input type="button" id="button_open_login" class="btn btn-primary" value=" OPEN LOGIN WINDOW " onclick="open_login_window(this)" />';
+			// $html .= '<input type="button" id="button_reload" class="btn btn-primary hide" value=" RELOAD " onclick="location.reload()" />';
+			$html .= '
+				<script>
+					// function open_login_window(button) {
+					// 	window.open(\'../main\', \'LgWin\', \'location=yes,height=700,width=520,scrollbars=yes,status=yes\');
+					// 	document.getElementById("button_open_login").classList.add("hide")
+					// 	document.getElementById("button_reload").classList.remove("hide")
+					// }
+					window.document.addEventListener(\'login_success\', handleEvent, false)
+					function handleEvent(e) {
+						// login response
+						if(e.detail.result===true) {
+							// document.getElementById("iframe_login").remove()
+							location.reload()
+						}
+					}
+				</script>
+			';
+			$html .= '</section>';
+			$html .= '</section>';
+			echo $html;
+			return;
+		}else{
+			$html .= '<div class="ok">User is logged as '.navigator::get_user_id().'</div>';
+		}
+		$html .= '</section>';
+
+
+	// 3 Install / activate hierarchies list
+		$html .= '<section>';
+		$html .= '<h3 class="">3. Install/activate selected hierarchies</h3>';
+		if ($dedalo_install_status!=='installed') {
+
+			$html .= '<div class="description">It will be displayed in the thesaurus. Keep in mind that large countries can consume a lot of resources. Don\'t load unnecessary countries. You can always load more countries later.</div>';
+			$html .= '<div class="description">Source files dir: '.$hierarchy_files_path.'</div>';
+			$html .= '<ul id="hierarchies_list" class="hierarchies_list">';
+			foreach ($hierarchies->result as $key => $item) {
+				// skip model
+				if ($item->type==='model') {
+					continue;
+				}
+				$checked = in_array($item->tld, $install_checked_default)
+					? 'checked="checked"'
+					: '';
+				$html .= '<li><label><input type="checkbox" name="hierarchies" value="'.$item->tld.'" '.$checked.'/>'.$item->label.'</label></li>';
+			}
+			$html .= '</ul>';
+
+			// button ok
+			$html .= '<section>';
+			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" INSTALL HIERARCHIES " onclick="install.install_hierarchies(this)" />';
+			$html .= '</section>';
+
+			$html .= '
+				<script>
+					install.init({
+						hierarchies_list : document.getElementById(\'hierarchies_list\')
+					})
+				</script>
+			';
+		}else{
+
+			$html .= '<div class="ok">Dédalo hierarchies are ready</div>';
+		}
+		$html .= '</section>';
+
+
+echo $html;
+
+

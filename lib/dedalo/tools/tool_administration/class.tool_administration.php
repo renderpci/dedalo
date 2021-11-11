@@ -2284,7 +2284,7 @@ class tool_administration extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-		include_once dirname(__FILE__) . '/install/class.install.php';
+		include_once DEDALO_LIB_BASE_PATH . '/install/class.install.php';
 
 		$response = install::build_install_version();
 

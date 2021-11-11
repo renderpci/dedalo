@@ -133,7 +133,11 @@ abstract class RecordDataBoundObject {
 					if (strpos($last_error, 'column "properties" does not exist')!==false) {
 						$_sql = 'ALTER TABLE "jer_dd" ADD IF NOT EXISTS "properties" jsonb NULL;';
 						$_result = pg_query(DBi::_getConnection(), $_sql);
-					}	
+					}elseif (strpos($last_error, '"jer_dd" does not exist')!==false) {
+						// system is not instaled
+						die("Your system does not seem to be installed correctly (table 'jer_dd' is missing).<br>
+							<a href=\"../install\">Go to the installation window</a>");
+					}
 
 				$msg = "Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".$last_error.' ';
 				trigger_error($msg);

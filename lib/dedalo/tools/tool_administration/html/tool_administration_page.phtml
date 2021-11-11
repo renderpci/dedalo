@@ -554,6 +554,15 @@
 
 
 			#
+			# BUILD_INSTALL_VERSION
+				$html   .= '<div class=\¡"panel_option form-inline">';
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Build install version\" data-mode=\"build_install_version\" onclick=\"tool_administration.build_install_version(this,event)\" />";
+				$html   .= " <span>Clone the current database '".DEDALO_DATABASE_CONN."' to 'dedalo4_install' and export it to file '/install/db/dedalo4_install.pgsql.zip'</span>";
+				$html   .= " <div id=\"build_install_version_response\"></div>";
+				$html   .= '</div>';
+
+			#
 			# UPDATE DEDALO CODE
 				$html   .= "<div class=\"panel_option form-inline\">";
 				$html   .= "<span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";				

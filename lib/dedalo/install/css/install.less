@@ -1,0 +1,66 @@
+// install
+
+
+// container
+	.install_wrapper {
+
+		&:before {
+			content: " ";
+			background-image: url(../../themes/default/dedalo_icon_big.png);
+			background-repeat: no-repeat;
+			background-position: 0 top;
+			background-size: 527px 1024px;
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			min-height: 1024px;
+			z-index: -1;
+			opacity: 0.5;
+			-moz-transform: scaleX(-1);
+			-o-transform: scaleX(-1);
+			-webkit-transform: scaleX(-1);
+			transform: scaleX(-1);
+		}
+	}
+
+
+// section
+	section {
+		padding: 1.25em;
+		padding-bottom: 0;
+
+		>* {
+			margin-left: 0 !important;
+		}
+
+		iframe {
+			width: 100vw;
+			height: 100vh;
+			clear: both;
+			display: block;
+		}
+	}
+
+
+// error
+	.error, .ok {
+		padding: 0.5em;
+		line-height: 1.2em;
+	}
+
+
+// hierarchies_list
+	.hierarchies_list {
+		padding: 1em;
+		display: grid;
+		grid-template-columns: repeat(5, 1fr);
+
+		>li {
+			label {
+
+			}
+			input {
+				margin-right: 0.5em;
+			}
+		}
+	}

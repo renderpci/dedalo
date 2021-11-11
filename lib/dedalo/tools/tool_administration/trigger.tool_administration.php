@@ -1060,3 +1060,37 @@ function update_dedalo_code($json_data) {
 }//end update_dedalo_code
 
 
+
+/**
+* BUILD_INSTALL_VERSION
+* @return object $response
+*/
+function build_install_version($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+
+	try {
+
+		$response = tool_administration::build_install_version();
+
+	} catch (Exception $e) {
+
+		$response->msg = $e->getMessage();
+	}
+
+
+	# Debug
+	if(SHOW_DEVELOPER===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end build_install_version
+
+
