@@ -2033,6 +2033,14 @@ abstract class install {
 						file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
 
 						debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ".to_string(), logger::ERROR);
+					}elseif (strpos($content, 'DEDALO_INSTALL_STATUS')!==false && strpos($content, '\'DEDALO_INSTALL_STATUS\', \'installed\'')===false) {
+						// replace line to updated value
+						$content = preg_replace('/define\(\'DEDALO_INSTALL_STATUS\',.+\);/', 'define(\'DEDALO_INSTALL_STATUS\', \'installed\');', $content);
+						// Write the contents to the file,
+						// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
+						file_put_contents($file, $content, LOCK_EX);
+
+						debug_log(__METHOD__." Changed config_auto content with constant: DEDALO_INSTALL_STATUS = 'installed' ".to_string(), logger::ERROR);
 					}
 			}else{
 				debug_log(__METHOD__." Some responses fail: ".json_encode($ar_responses), logger::ERROR);

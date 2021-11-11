@@ -398,8 +398,23 @@
 	}
 
 
+// entity code name test
+	function isValidName($str) {
+		$safe_name = preg_replace( '/[^a-z_]+/', '***', $str);
+		if ($safe_name!==$str) {
+			return false;
+		}
+		return true;
+	}
+	$entity_code = DEDALO_ENTITY;
+	if( !isValidName($entity_code) ) {
+		$init_response->msg .= trim("Error Processing Request: DEDALO_ENTITY config value its not a safe name ($entity_code). Please, use here a-z values without spaces or comas like 'numisdata' ");
+		return $init_response;
+	}
+
+
 #// LANGS JS (moved to login.php !)
-#	# Generate js files with all labels (in not extist current lang file)
+#	# Generate js files with all labels (in not exist current lang file)
 #	$folder_path = DEDALO_LIB_BASE_PATH.'/common/js/lang';
 #	if( !is_dir($folder_path) ) {
 #		if(!mkdir($folder_path, 0777,true)) {
@@ -422,7 +437,7 @@
 
 
 #// STRUCTURE CSS (moved to login.php !)
-#	# Generate css structure file (in not extist)
+#	# Generate css structure file (in not exist)
 #	$file_path = DEDALO_LIB_BASE_PATH.'/common/css/structure.css';
 #	if (!file_exists($file_path)) {
 #

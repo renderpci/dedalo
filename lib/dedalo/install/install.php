@@ -38,6 +38,11 @@
 		$db_tables		= backup::get_tables(); // returns array empty if not is imported
 		$db_is_imported	= (bool)in_array('matrix_users', $db_tables);
 
+	// init test
+		require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
+		if ($init_response->result===false) {
+			debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
+		}
 
 	// html
 		echo '<div class="install_wrapper">';

@@ -53,14 +53,27 @@
 
 		}else{
 
-			$html .= '<div class="ok">Database <strong>'.DEDALO_DATABASE_CONN.'</strong> is ready</div>';
+			$html .= '<div class="ok">Database <b>'.DEDALO_DATABASE_CONN.'</b> is ready</div>';
 		}
 		$html .= '</section>';
 
 
-	// 2 login
+	// 2 Init test
 		$html .= '<section>';
-		$html .= '<h3 class="">2. Set root password / login</h3>';
+		$html .= '<h3 class="">2. Init test</h3>';
+		if ($init_response->result===false) {
+			$html .= '<h2 class="error">Initialization test failed!</h2>';
+			$errors = json_encode($init_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+			$html .= '<pre>'. str_replace('\n', ' ', $errors).'</pre>';
+		}else{
+			$html .= '<div class="ok">Initialization test passed for entity: <b>'.DEDALO_ENTITY.'</b></div>';
+		}
+		$html .= '</section>';
+
+
+	// 3 login
+		$html .= '<section>';
+		$html .= '<h3 class="">3. Set root password / login</h3>';
 		if (login::is_logged()!==true) {
 			// $html .= '<h2 class="error">Current user must be logged before continue! <br>Please, open the login window using the button bellow.<br>After login, reload current page</h2>';
 			$html .= '<div class="error">Current user must be logged before continue.</div>';
@@ -96,9 +109,9 @@
 		$html .= '</section>';
 
 
-	// 3 Install / activate hierarchies list
+	// 4 Install / activate hierarchies list
 		$html .= '<section>';
-		$html .= '<h3 class="">3. Install/activate selected hierarchies</h3>';
+		$html .= '<h3 class="">4. Install/activate selected hierarchies</h3>';
 		if ($dedalo_install_status!=='installed') {
 
 			$html .= '<div class="description">It will be displayed in the thesaurus. Keep in mind that large countries can consume a lot of resources. Don\'t load unnecessary countries. You can always load more countries later.</div>';
