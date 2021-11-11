@@ -2067,4 +2067,38 @@ abstract class install {
 
 
 
+	/**
+	* SYSTEM_IS_ALREADY_INSTALLED
+	* We can assume that systems with only a root user are NOT properly installed yet
+	* @return object $response
+	*/
+	public static function system_is_already_installed() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+
+		$sql = '
+			SELECT COUNT(*) as total FROM "matrix_users";
+		';
+		$result = pg_query(DBi::_getConnection(), $sql);
+		$rows	= pg_fetch_assoc($result);
+		$total	= (int)reset($rows) ?? 0;
+
+		if ($total>1) {
+			$response->result	= true;
+			$response->msg		= 'OK. System is already installed';
+			return $response;
+		}else{
+			$response->result	= false;
+			$response->msg		= 'OK. System is NOT installed yet';
+		}
+
+
+		return $response;
+	}//end system_is_already_installed
+
+
+
 }//end class

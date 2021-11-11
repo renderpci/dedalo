@@ -32,11 +32,9 @@
 		// prevents legacy systems from being exposed to unwanted installation
 			if ($dedalo_install_status===null) {
 
-				// only in dedalo builds before '11-11-2021' (d-m-Y)
-					$date_timestamp1	= strtotime(DEDALO_BUILD);
-					$date_timestamp2	= strtotime('11-11-2021');
-
-				if ($date_timestamp1 < $date_timestamp2) {
+				// check system_is_already_installed (get users in database)
+				$already_installed = install::system_is_already_installed();
+				if ($already_installed->result===false) {
 
 					$file		= $config->config_auto_file_path;
 					$content	= file_get_contents($file);
@@ -59,7 +57,7 @@
 			}
 		// to prevent malicious attacks stop execution some seconds when alredy installed
 			if (DEDALO_INSTALL_STATUS==='installed') {
-				sleep(4);
+				sleep(5);
 			}
 
 	// db is already imported check 'matrix_users' table
