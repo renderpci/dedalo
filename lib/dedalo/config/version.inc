@@ -2516,7 +2516,7 @@
 		Fixed error with RecordDataBounceObject search when no results found
 		Improved dd_init_test for better warnings notification
 		Fixed install issues with checks in some contexts
-
+		Updated gitignore file rules. Restored structure.css and common/js/lang needed for install
 
 
 	[/HISTORY]
@@ -2542,7 +2542,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2zf';
+	$DEDALO_VERSION = '5.8.2zg';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
