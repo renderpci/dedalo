@@ -2510,6 +2510,13 @@
 		Added Dédalo dd_init_test check in the install process to warn users about possible wrong settings
 		Fixed install bug on old already installed systems
 		Add additional check for system_is_already_installed to prevent issues in previous systems
+		12-11-2021
+		Fix install minor errors
+		Removed .gitignore rules about structure.css and js langs
+		Fixed error with RecordDataBounceObject search when no results found
+		Improved dd_init_test for better warnings notification
+		Fixed install issues with checks in some contexts
+
 
 
 	[/HISTORY]
@@ -2535,13 +2542,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2ze';
+	$DEDALO_VERSION = '5.8.2zf';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-11-2021');
+	define('DEDALO_BUILD'	, '12-11-2021');
 
 
 	/*
