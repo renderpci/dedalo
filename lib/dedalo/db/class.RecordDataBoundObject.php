@@ -627,11 +627,11 @@ abstract class RecordDataBoundObject {
 				}else{
 					trigger_error("Error on DB query");
 				}							
+			}else{
+				while ($rows = pg_fetch_assoc($result)) {
+					$ar_records[] = $rows[$strPrimaryKeyName];
+				}
 			}
-
-			while ($rows = pg_fetch_assoc($result)) {
-				$ar_records[] = $rows[$strPrimaryKeyName];
-			}		
 
 			# CACHE
 			# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
