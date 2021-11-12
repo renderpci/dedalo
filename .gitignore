@@ -101,8 +101,8 @@ lib/dedalo/tools/tool_layout_print/print_pdf/*
 
 # Automatic created files
 cookie_auth.php
-lib/dedalo/common/css/structure.css
-lib/dedalo/common/js/lang/*
+# lib/dedalo/common/css/structure.css
+# lib/dedalo/common/js/lang/*
 *.log
 
 # Ignore default text files
