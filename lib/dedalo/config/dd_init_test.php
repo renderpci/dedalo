@@ -1,26 +1,29 @@
 <?php
-# SYSTEM TEST
-# Verifica la integridad del sistema (habitualmente en la secuencia de arranque o login)
-# Comprueba la existencia de elementos / directorios / permisos necesarios para ejecutar Dédalo
+/**
+* SYSTEM TEST
+* Verify the integrity of the system (usually in the boot or login sequence)
+* Checks the existence of elements / directories / permissions necessary to execute Dédalo
+*/
+
 
 
 // RESPONSE
 	$init_response = new stdClass();
-		$init_response->result 	= false;
-		$init_response->msg 	= 'Error on init test '.PHP_EOL;
-
+		$init_response->result		= false;
+		$init_response->msg			= 'Error on init test '.PHP_EOL;
+		$init_response->warnings	= [];
 
 // PHP VERSION
 	if (version_compare(PHP_VERSION, '5.4.15', '<')) {
 
-		$init_response->msg .= trim(" Error. This php version ".PHP_VERSION." is not supported by Dédalo");
+		$init_response->msg .= trim(" Error. This PHP version ".PHP_VERSION." is not supported by Dédalo");
 		return $init_response;
 	}
 
 
 // MBSTRING
 	if (!function_exists('mb_internal_encoding')) {
-		$init_response->msg .= trim(" Error. mb_internal_encoding is required by Dédalo. Please install php mbstring to continue");
+		$init_response->msg .= trim(" Error. mb_internal_encoding is required by Dédalo. Please install PHP mbstring to continue");
 		return $init_response;
 	}
 
@@ -33,7 +36,9 @@
 			$init_response->msg .= trim(" Error on read or create backups directory. Permission denied");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "backups: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}
 
 
@@ -45,7 +50,9 @@
 			$init_response->msg .= trim(" Error on read or create backups_structure directory. Permission denied");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "backups: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}
 
 
@@ -57,7 +64,9 @@
 			$init_response->msg .= trim(" Error on read or create backup temp directory. Permission denied");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "backups: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}
 
 
@@ -69,7 +78,9 @@
 			$init_response->msg .= trim(" Error on read or create backup users directory. Permission denied");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "backups: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}
 
 
@@ -82,13 +93,15 @@
 				$init_response->msg .= trim(" Error on read or create backup ".STRUCTURE_DOWNLOAD_DIR." directory. Permission denied");
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			$msg = "backups: created dir: $folder_path";
+			$init_response->warnings[] = $msg;
+			debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 		}
 	}
 
 
 // DEDALO_PREFIX_TIPOS
-	# Maintain consitency on defined DEDALO_PREFIX_TIPOS and extras folder dirs
+	# Maintain consistency on defined DEDALO_PREFIX_TIPOS and extras folder dirs
 	$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
 	foreach ($DEDALO_PREFIX_TIPOS as $current_tipo) {
 		$folder_path = DEDALO_EXTRAS_PATH . '/' . $current_tipo;
@@ -97,7 +110,9 @@
 				$init_response->msg .= trim(" Error on read or create extras directory ($current_tipo). Permission denied");
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			$msg = "extras: created dir: $folder_path";
+			$init_response->warnings[] = $msg;
+			debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 		}
 	}
 
@@ -107,24 +122,30 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			debug_log(__METHOD__." ERROR ON CREATE DIR: $folder_path  ".to_string(), logger::ERROR);
 			$init_response->msg .= trim(" Error on read or create media directory. Permission denied");
+			debug_log(__METHOD__." $init_response->msg . ".$folder_path , logger::ERROR);
+			trigger_error($init_response->msg);
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "media: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}
 
 
-// MEDIA QUALITY FOLDERS (Important for ffmpeg conversions)
+// MEDIA QUALITY FOLDERS (Important for FFMPEG conversions)
 	$ar_folder = (array)unserialize(DEDALO_AV_AR_QUALITY);
 	foreach ($ar_folder as $quality) {
 		$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER.'/'.$quality;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0775,true)) {
 				$init_response->msg .= trim(" Error on read or create media quality [$quality] directory. Permission denied");
+				trigger_error($init_response->msg);
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			$msg = "media quality folders: created dir: $folder_path";
+			$init_response->warnings[] = $msg;
+			debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 		}
 	}
 
@@ -151,7 +172,9 @@
 				$init_response->msg .= trim(" Error on read or create image $quality deleted directory. Permission denied ");
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			$msg = "media image: created dir: $folder_path";
+			$init_response->warnings[] = $msg;
+			debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 		}
 	}
 
@@ -162,10 +185,12 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media pdf default directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create media PDF default directory. Permission denied ");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "media pdf: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}}
 
 
@@ -175,10 +200,12 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_THUMB_DEFAULT;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media pdf default directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create media PDF default directory. Permission denied ");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "media pdf thumbs: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}}
 
 
@@ -191,7 +218,9 @@
 			$init_response->msg .= trim(" Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied ");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "media html files: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}}
 
 
@@ -204,7 +233,9 @@
 			$init_response->msg .= trim(" Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied ");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "media web images files: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}}
 
 
@@ -217,7 +248,9 @@
 			$init_response->msg .= trim(" Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied ");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "media export folder: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}}
 
 
@@ -231,12 +264,14 @@
 				$init_response->msg .= trim(" Error on read or create image $quality directory. Permission denied ");
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			$msg = "media av folder: created dir: $folder_path";
+			$init_response->warnings[] = $msg;
+			debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 		}
 	}
 
 
-// MEDIA AVG
+// MEDIA SVG
 	# Target folder exists test
 	$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER ;
 	if( !is_dir($folder_path) ) {
@@ -244,7 +279,9 @@
 			$init_response->msg .= trim(" Error on read or create avg directory. Permission denied ");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "media svg folder: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}
 
 
@@ -269,7 +306,9 @@
 			$init_response->msg .= trim(" Error on read or create logs directory. Permission denied");
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		$msg = "logs folder: created dir: $folder_path";
+		$init_response->warnings[] = $msg;
+		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 	}
 
 
@@ -280,7 +319,7 @@
 		$path = DB_BIN_PATH . 'psql';
 		$psql = trim(shell_exec('command -v '. $path));
 		if (empty($psql)) {
-			$init_response->msg .= trim('psql not found at: '.$path . PHP_EOL . ' Review your postgres intallation or your db config file');
+			$init_response->msg .= trim('psql not found at: '.$path . PHP_EOL . ' Review your POSTGRES installation or your db config file');
 			return $init_response;
 		}
 	}
@@ -290,8 +329,10 @@
 	$php_user_home 	= getenv("HOME"); //$_SERVER['HOME'];
 	$path 			= $php_user_home . '/.pgpass';
 	if (!file_exists($path )) {
-		$init_response->msg .= trim('File .pgpass not found at: '.$path . PHP_EOL . ' Check your .pgpass file into php user home dir');
+		$init_response->msg .= trim('File .pgpass not found at: '.$path . PHP_EOL . ' Check your .pgpass file into PHP user home dir');
 		debug_log(__METHOD__. $init_response->msg, logger::ERROR);
+		trigger_error($init_response->msg);
+		$init_response->warnings[] = $init_response->msg;
 		#return $init_response;
 	}else{
 		$file_permissions = substr(sprintf('%o', fileperms($path)), -4);
@@ -300,9 +341,14 @@
 				if(false===chmod($path, 0600)){
 					$init_response->msg .= trim('File .pgpass permissions is : '.$file_permissions . PHP_EOL . ' Unable to automatic set. Check manually your .pgpass file permissions and set to: 0600');
 					debug_log(__METHOD__. $init_response->msg, logger::ERROR);
+					trigger_error($init_response->msg);
+					$init_response->warnings[] = $init_response->msg;
 					#return $init_response;
 				}else{
-					debug_log(__METHOD__." Changed permissions of file .pgpass to 0600 ".to_string(), logger::ERROR);
+					$init_response->msg .= " Changed permissions of file .pgpass to 0600 ";
+					debug_log(__METHOD__." $init_response->msg ".to_string(), logger::ERROR);
+					trigger_error($init_response->msg);
+					$init_response->warnings[] = $init_response->msg;
 				}
 		}
 	}
@@ -421,7 +467,7 @@
 #			$init_response->msg .= trim(" Error on read or create js/lang directory. Permission denied");
 #			return $init_response;
 #		}
-#		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+#		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::WARNING);
 #	}
 #	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
 #	foreach ($ar_langs as $lang => $label) {
@@ -431,7 +477,7 @@
 #				#dump($ar_label, ' ar_label');
 #
 #			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
-#			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+#			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::WARNING);
 #		}
 #	}
 
@@ -442,7 +488,7 @@
 #	if (!file_exists($file_path)) {
 #
 #		$response = (object)css::build_structure_css();
-#		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::DEBUG);
+#		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::WARNING);
 #	}
 #
 #
@@ -461,5 +507,5 @@
 
 // ALL IS OK
 	$init_response->result 	= true;
-	$init_response->msg 	= 'Ok. init test done';
+	$init_response->msg 	= 'OK. init test done';
 
