@@ -16,6 +16,33 @@
 			return;
 		}
 
+	// 0 Init test
+		// init test
+			require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
+			if ($init_response->result===false) {
+				trigger_error(__METHOD__." Init test error: ".$init_response->msg);
+			}
+		$html .= '<section>';
+		$html .= '<h3 class="">Init test</h3>';
+		if ($init_response->result===false) {
+			$html .= '<h2 class="error">Initialization test failed!</h2>';
+			$errors = json_encode($init_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+			$html .= '<pre>'. str_replace('\n', ' ', $errors).'</pre>';
+		}else{
+			if (empty($init_response->warnings)) {
+				$html .= '<div class="ok">Initialization test passed for entity: <b>'.DEDALO_ENTITY.'</b></div>';
+			}else{
+				$html .= '<div class="">Initialization test passed with some errors for entity: <b>'.DEDALO_ENTITY.'</b></div>';
+				$html .= '<ul class="warning_list warning">';
+				foreach ($init_response->warnings as $key => $msg) {
+					$html .= '<li class="description">'. $msg.'</li>';
+				}
+				$html .= '</ul>';
+			}
+		}
+
+		$html .= '</section>';
+
 	// 1 Install Dédalo DB
 		$html .= '<section>';
 		$html .= '<h3 class="">1. Install Dédalo DDBB</h3>';
@@ -43,7 +70,7 @@
 			}
 			$html .= '</section>';
 
-			// button ok
+			// button INSTALL DATABASE FROM FILE
 			$html .= '<section>';
 			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" INSTALL DATABASE FROM FILE " onclick="install.install_db_from_default_file(this)" />';
 			$html .= '</section>';
@@ -58,37 +85,16 @@
 		$html .= '</section>';
 
 
-	// 2 Init test
+	// 2 login
 		$html .= '<section>';
-		$html .= '<h3 class="">2. Init test</h3>';
-		if ($init_response->result===false) {
-			$html .= '<h2 class="error">Initialization test failed!</h2>';
-			$errors = json_encode($init_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
-			$html .= '<pre>'. str_replace('\n', ' ', $errors).'</pre>';
-		}else{
-			$html .= '<div class="ok">Initialization test passed for entity: <b>'.DEDALO_ENTITY.'</b></div>';
-		}
-		$html .= '</section>';
-
-
-	// 3 login
-		$html .= '<section>';
-		$html .= '<h3 class="">3. Set root password / login</h3>';
+		$html .= '<h3 class="">2. Set root password / login</h3>';
 		if (login::is_logged()!==true) {
-			// $html .= '<h2 class="error">Current user must be logged before continue! <br>Please, open the login window using the button bellow.<br>After login, reload current page</h2>';
 			$html .= '<div class="error">Current user must be logged before continue.</div>';
 			$html .= '<iframe id="iframe_login" src="../main">';
 			$html .= '</iframe>';
 			$html .= '<section>';
-			// $html .= '<input type="button" id="button_open_login" class="btn btn-primary" value=" OPEN LOGIN WINDOW " onclick="open_login_window(this)" />';
-			// $html .= '<input type="button" id="button_reload" class="btn btn-primary hide" value=" RELOAD " onclick="location.reload()" />';
 			$html .= '
 				<script>
-					// function open_login_window(button) {
-					// 	window.open(\'../main\', \'LgWin\', \'location=yes,height=700,width=520,scrollbars=yes,status=yes\');
-					// 	document.getElementById("button_open_login").classList.add("hide")
-					// 	document.getElementById("button_reload").classList.remove("hide")
-					// }
 					window.document.addEventListener(\'login_success\', handleEvent, false)
 					function handleEvent(e) {
 						// login response
@@ -104,14 +110,14 @@
 			echo $html;
 			return;
 		}else{
-			$html .= '<div class="ok">User is logged as '.navigator::get_user_id().'</div>';
+			$html .= '<div class="ok">User is logged as <b>'.navigator::get_user_id().'</b></div>';
 		}
 		$html .= '</section>';
 
 
-	// 4 Install / activate hierarchies list
+	// 3 Install / activate hierarchies list
 		$html .= '<section>';
-		$html .= '<h3 class="">4. Install/activate selected hierarchies</h3>';
+		$html .= '<h3 class="">3. Install/activate selected hierarchies</h3>';
 		if (DEDALO_INSTALL_STATUS!=='installed') {
 
 			$html .= '<div class="description">It will be displayed in the thesaurus. Keep in mind that large countries can consume a lot of resources. Don\'t load unnecessary countries. You can always load more countries later.</div>';
@@ -129,7 +135,7 @@
 			}
 			$html .= '</ul>';
 
-			// button ok
+			// button INSTALL HIERARCHIES
 			$html .= '<section>';
 			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" INSTALL HIERARCHIES " onclick="install.install_hierarchies(this)" />';
 			$html .= '</section>';

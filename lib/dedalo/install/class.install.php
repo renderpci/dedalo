@@ -266,11 +266,16 @@ abstract class install {
 			}
 
 		// terminal command psql copy data from file 'dedalo4_install.pgsql'
-			$command = DB_BIN_PATH.'psql  -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors --file "'.$uncompressed_file.'"';
+			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors --file "'.$uncompressed_file.'"';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
 				debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+				if (empty($command_res)) {
+					$response->msg = 'Error. Database import failed! Verify your .pgpass file';
+					trigger_error($response->msg);
+					return $response;
+				}
 			}
 
 		// delete uncompressed_file ('dedalo4_install.pgsql')
@@ -2079,12 +2084,22 @@ abstract class install {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 
-		$sql = '
-			SELECT COUNT(*) as total FROM "matrix_users";
-		';
-		$result = pg_query(DBi::_getConnection(), $sql);
-		$rows	= pg_fetch_assoc($result);
-		$total	= (int)reset($rows) ?? 0;
+		try {
+
+			$sql = '
+				SELECT COUNT(*) as total FROM "matrix_users";
+			';
+			$result = pg_query(DBi::_getConnection(), $sql);
+			if ($result===false) {
+				$response->msg = 'OK. System is NOT installed yet (table matrix_users is not ready)';
+				return $response;
+			}
+			$rows	= pg_fetch_assoc($result);
+			$total	= (int)reset($rows) ?? 0;
+
+		} catch (Exception $e) {
+			$total = 0;
+		}
 
 		if ($total>1) {
 			$response->result	= true;
@@ -2098,6 +2113,47 @@ abstract class install {
 
 		return $response;
 	}//end system_is_already_installed
+
+
+
+	/**
+	* CHECK_PGPASS
+	* @return object $response
+	*/
+		// public static function check_pgpass() {
+
+		// 	$response = new stdClass();
+		// 		$response->result 	= false;
+		// 		$response->msg 		= 'Error. Request failed';
+
+		// 	// short vars
+		// 		$config = self::get_config();
+
+		// 	try {
+
+		// 		// psql -h host -U someuser somedb
+		// 		$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "VACUUM dedalo_install_test" '; // DEDALO_DATABASE_CONN
+		// 		debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+		// 		$command_res = shell_exec($command);
+		// 		error_log( PHP_EOL.'command: '.$command.PHP_EOL);
+		// 		error_log( PHP_EOL.'command_res: '.$command_res.PHP_EOL);
+		// 		debug_log(__METHOD__." Exec response (shell_exec): ".json_encode($command_res), logger::DEBUG);
+		// 		if (empty($command_res)) {
+		// 			$response->msg = 'Error. Database connection failed across pgpass file! Verify your .pgpass config';
+		// 			trigger_error($response->msg);
+		// 			return $response;
+		// 		}
+
+		// 	} catch (Exception $e) {
+
+		// 		trigger_error('Error on exec psql command. '. $e->getMessage());
+		// 	}
+
+		// 	$response->result	= true;
+		// 	$response->msg		= 'OK. .pgpass id ready';
+
+		// 	return $response;
+		// }//end check_pgpass
 
 
 
