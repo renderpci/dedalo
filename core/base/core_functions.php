@@ -220,8 +220,8 @@ function debug_log($info, $level=logger::DEBUG) {
 				'bg_magenta'	=> "\033[45m%s\033[0m",
 				'bg_cyan'			=> "\033[46m%s\033[0m",
 				'bg_white'		=> "\033[47m%s\033[0m"
-    );
-    $msg = sprintf($colorFormats['bg_yellow'], $msg);
+		);
+		$msg = sprintf($colorFormats['bg_yellow'], $msg);
 	}
 	error_log($msg);
 

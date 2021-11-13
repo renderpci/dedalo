@@ -1478,13 +1478,23 @@ abstract class backup {
 		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
 		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -h ".DEDALO_HOSTNAME_CONN . $port_command;
 
-		$command = $command_base . ' -c \'VACUUM ANALYZE ' . implode(', ', $tables) .';\'';
+		// re-index
+			$index_commands = [];
+			foreach ($tables as $current_table) {
+				$index_commands[] = 'REINDEX TABLE "'.$current_table.'"';
+			}
+			$command = $command_base . ' -c \''.implode('; ', $index_commands).';\'';
+			// exec command
+				$res = shell_exec($command);
+			// debug
+				debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command: ' . to_string($command), logger::WARNING);
 
-		// exewc command
-			$res = shell_exec($command);
-
-		// debug
-			debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command:' . to_string($command), logger::WARNING);
+		// VACUUM
+			$command = $command_base . ' -c \'VACUUM ' . implode(', ', $tables) .';\'';
+			// exec command
+				$res = shell_exec($command);
+			// debug
+				debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command: ' . to_string($command), logger::WARNING);
 
 
 		return (string)$res;
