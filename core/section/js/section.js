@@ -316,6 +316,16 @@ section.prototype.build = async function(autoload=false) {
 										// debug.classList.add("hide")
 
 										debug.appendChild(info_node)
+
+										// scroll debug to top of page
+											const bodyRect	= document.body.getBoundingClientRect()
+											const elemRect	= debug.getBoundingClientRect()
+											const offset	= elemRect.top - bodyRect.top
+											window.scrollTo({
+											  top: offset,
+											  left: 0,
+											  behavior: 'smooth'
+											});
 									})
 								})
 
