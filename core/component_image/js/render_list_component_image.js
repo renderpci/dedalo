@@ -23,7 +23,7 @@ export const render_list_component_image = function(component) {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_image.prototype.list = function(options) {
 
@@ -49,10 +49,22 @@ render_list_component_image.prototype.list = function(options) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
-			src				: url,
+			class_name		: 'loading',
 			parent			: wrapper
 		})
+		// image.loading = 'lazy'
+		// image.setAttribute('crossOrigin', 'Anonymous');
 		ui.component.add_image_fallback(image)
+
+	// image background color
+		image.addEventListener("load", set_bg_color, false)
+		function set_bg_color() {
+			this.removeEventListener("load", set_bg_color, false)
+			ui.set_background_image(this, this)
+		}
+
+	// set src
+		image.src = url
 
 	//const image_div = ui.create_dom_element({
 	//	element_type	: "div",

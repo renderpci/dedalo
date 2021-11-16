@@ -1986,7 +1986,54 @@ export const ui = {
 			// )
 
 		return header_wrapper
-	}//end get_list_header
+	},//end get_list_header
+
+
+
+	/**
+	* SET_BACKGROUND_IMAGE
+	*/
+	set_background_image : (image, target_node) =>{
+
+		const canvas	= document.createElement('canvas');
+		canvas.width	= image.width;
+		canvas.height	= image.height;
+
+		try {
+			canvas.getContext('2d').drawImage(image, 0, 0, image.width, image.height);
+			const rgb = canvas.getContext('2d').getImageData(0, 0, 1, 1).data;
+
+			// round rgb values
+				function correction(value) {
+					return value
+					const factor = 1.016
+
+					const result = (value>127)
+						? Math.floor(value * factor)
+						: Math.floor(value / factor)
+
+					return result
+				}
+
+				const r = correction(rgb[0])
+				const g = correction(rgb[1])
+				const b = correction(rgb[2])
+
+			// build backgroundColor style string
+			const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
+
+			// set background color style (both container and image)
+			target_node.style.backgroundColor = bg_color_rgb
+
+		}catch(error){
+			console.warn("ui.set_background_image . Unable to get image canvas: ", image);
+		}
+
+		canvas.remove()
+		image.classList.remove("loading")
+
+		return image
+	}//end set_background_image
 
 
 

@@ -19,10 +19,11 @@ export const render_list_component_av = function() {
 };//end  render_list_component_av
 
 
+
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_av.prototype.list = async function() {
 
@@ -38,16 +39,28 @@ render_list_component_av.prototype.list = async function() {
 		})
 
 	// url
-		const posterframe_url 	= data.posterframe_url
+		const posterframe_url 	= data.posterframe_url || DEDALO_CORE_URL + "/themes/default/0.jpg"
 		const url 				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
-			src 			: url,
-			parent 			: wrapper
+			class_name		: 'loading',
+			parent			: wrapper
 		})
+		// image.loading = 'lazy'
+		// image.setAttribute('crossOrigin', 'Anonymous');
 		ui.component.add_image_fallback(image)
+
+	// image background color
+		image.addEventListener("load", set_bg_color, false)
+		function set_bg_color() {
+			this.removeEventListener("load", set_bg_color, false)
+			ui.set_background_image(this, this)
+		}
+
+	// set src
+		image.src = url
 
 
 	return wrapper
