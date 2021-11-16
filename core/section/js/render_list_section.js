@@ -93,7 +93,7 @@ render_list_section.prototype.list = async function(options) {
 		if (self.ar_instances.length>0) {
 
 			const columns_map		= await self.columns_map
-			const list_header_node	= ui.get_list_header(columns_map)
+			const list_header_node	= ui.get_list_header(columns_map, self)
 
 			Object.assign(
 				list_body.style,
@@ -164,7 +164,7 @@ const get_content_data = async function(ar_section_record, self) {
 
 	// content_data
 		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type) // ,"nowrap","full_width"
+			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
 			  content_data.appendChild(fragment)
 
 
