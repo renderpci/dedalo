@@ -573,9 +573,14 @@ abstract class install {
 			$exec				= true;
 
 		// clean matrix and accessory tables
-			$items = array_map(function($el){
-				// return 'DELETE FROM "'.$el.'"; SELECT setval(\'public.'.$el.'_id_seq\', 0, true); ALTER SEQUENCE '.$el.'_id_seq START WITH 1 ;';
-				return 'DELETE FROM "'.$el.'"; ALTER SEQUENCE IF EXISTS '.$el.'_id_seq RESTART WITH 1 ;';
+			$items = array_map(function($table){
+
+				$sql = 'DELETE FROM "'.$table.'"; ALTER SEQUENCE IF EXISTS '.$table.'_id_seq RESTART WITH 1 ;';
+				if ($table==='matrix_activity') {
+					// add special sequence matrix_activity_section_id_seq
+					$sql .= 'ALTER SEQUENCE IF EXISTS matrix_activity_section_id_seq RESTART WITH 1 ;';
+				}
+				return $sql;
 			}, $to_clean_tables);
 			$sql = implode(PHP_EOL, $items);
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
