@@ -16,23 +16,23 @@
 			return;
 		}
 
-	// 0 Init test
+	// 0 Configuration test
 		// init test
 			require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
 			if ($init_response->result===false) {
-				trigger_error(__METHOD__." Init test error: ".$init_response->msg);
+				trigger_error(__METHOD__." Configuration test error: ".$init_response->msg);
 			}
 		$html .= '<section>';
-		$html .= '<h3 class="">Init test</h3>';
+		$html .= '<h3 class="">Configuration test</h3>';
 		if ($init_response->result===false) {
-			$html .= '<h2 class="error">Initialization test failed!</h2>';
+			$html .= '<h2 class="warning">Configuration test contains warnings!</h2>';
 			$errors = json_encode($init_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
 			$html .= '<pre>'. str_replace('\n', ' ', $errors).'</pre>';
 		}else{
 			if (empty($init_response->warnings)) {
-				$html .= '<div class="ok">Initialization test passed for entity: <b>'.DEDALO_ENTITY.'</b></div>';
+				$html .= '<div class="ok">Configuration test passed for entity: <b>'.DEDALO_ENTITY.'</b></div>';
 			}else{
-				$html .= '<div class="">Initialization test passed with some errors for entity: <b>'.DEDALO_ENTITY.'</b></div>';
+				$html .= '<div class="">Configuration test passed with some errors for entity: <b>'.DEDALO_ENTITY.'</b></div>';
 				$html .= '<ul class="warning_list warning">';
 				foreach ($init_response->warnings as $key => $msg) {
 					$html .= '<li class="description">'. $msg.'</li>';
@@ -89,7 +89,7 @@
 		$html .= '<section>';
 		$html .= '<h3 class="">2. Set root password / login</h3>';
 		if (login::is_logged()!==true) {
-			$html .= '<div class="error">Current user must be logged before continue.</div>';
+			$html .= '<div class="warning">Current user must be logged before continue.</div>';
 			$html .= '<iframe id="iframe_login" src="../main">';
 			$html .= '</iframe>';
 			$html .= '<section>';
