@@ -181,8 +181,13 @@ export const ui = {
 				}
 
 			// header
-				if (items.header) {
-					fragment.appendChild(items.header)
+				// if (items.header) {
+				// 	fragment.appendChild(items.header)
+				// }
+
+			// list_body
+				if (items.list_body) {
+					fragment.appendChild(items.list_body)
 				}
 
 			// content_data
@@ -1892,9 +1897,9 @@ export const ui = {
 	* GET_LIST_HEADER
 	* @return object component_data
 	*/
-	get_list_header : (columns_map) =>{
+	get_list_header : (columns_map, self) =>{
 
-		const ar_nodes			= []
+		const ar_nodes				= []
 		const columns_map_length	= columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
@@ -1921,25 +1926,20 @@ export const ui = {
 				})
 
 			if(column.columns_map){
-				const current_column_map = column.columns_map
-				const columns_map_length = current_column_map.length
-				for (var j = 0; j < columns_map_length; j++) {
+				const current_column_map	= column.columns_map
+				const columns_map_length	= current_column_map.length
+				for (let j = 0; j < columns_map_length; j++) {
 					const current_column  = current_column_map[j]
-
 					// node header_item
-					const id			=  current_column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+					const id				=  current_column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
 					const sub_header_item	= ui.create_dom_element({
 						element_type	: "div",
 						id				: id,
 						inner_html		: current_column.label,
-						parent 			: header_item
+						parent			: header_item
 					})
 				}
-
 			}
-
-
-
 
 			ar_nodes.push(header_item)
 		}//end for (let i = 0; i < columns_length; i++)
@@ -1947,7 +1947,7 @@ export const ui = {
 		// header_wrapper
 			const header_wrapper = ui.create_dom_element({
 				element_type	: "div",
-				class_name		: "header_wrapper_list"
+				class_name		: "header_wrapper_list " + self.model
 			})
 
 			const searchParams = new URLSearchParams(window.location.href);
@@ -1965,6 +1965,7 @@ export const ui = {
 			const id_column = ui.create_dom_element({
 				element_type	: "div",
 				text_content	: "ID",
+				class_name		: "id",
 				parent			: header_wrapper
 			})
 

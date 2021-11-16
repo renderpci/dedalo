@@ -39,8 +39,8 @@ render_edit_component_portal.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// view
-		self.view = null // 'view_autocomplete'
-		const view = self.view || null
+		const view	= self.view || null
+
 
 	const wrapper = (async ()=>{
 
@@ -53,36 +53,53 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				// reset service state portal_active
 					// self.portal_active = false
 
+				const ar_section_record	= await self.get_ar_instances()
+
 				// content_data
-					const content_data = build_content_data(self)
+					const content_data = await get_content_data(self, ar_section_record)
 					if (render_level==='content') {
+						// show header_wrapper_list if is hidden
+							if (ar_section_record.length>0) {
+								self.node.map(el => {
+									el.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
+								})
+							}
 						return content_data
 					}
 
 				// header
-					// if (self.ar_instances.length>0) {
-						const columns_map		= await self.columns_map
-						const list_header_node	= ui.get_list_header(columns_map)
+					const columns_map		= await self.columns_map
+					const list_header_node	= build_header(columns_map, ar_section_record, self)
 
-						Object.assign(
-							list_header_node.style,
-							{
-								"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
-							}
-						)
-					// }
+				// list_body
+					const list_body = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'list_body'
+					})
+					// id (auto), repeat x columns, delete (25px)
+					const grid_template_columns_value = (self.permissions>1)
+						? "auto repeat("+(list_header_node.children.length-2)+", 1fr) auto"
+						: "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
+					Object.assign(
+						list_body.style,
+						{
+							"grid-template-columns": grid_template_columns_value
+						}
+					)
+					list_body.appendChild(list_header_node)
+					list_body.appendChild(content_data)
 
 				// buttons
 					const buttons = get_buttons(self)
 
 				// top
-					const top = get_top(self)
+					// const top = get_top(self)
 
 				// wrapper. ui build_edit returns component wrapper
 					const _wrapper = ui.component.build_wrapper_edit(self, {
-						content_data	: content_data,
+						// content_data	: content_data,
 						buttons			: buttons,
-						header			: list_header_node
+						list_body		: list_body
 						// top			: top
 					})
 					_wrapper.classList.add("portal")
@@ -91,7 +108,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 					add_events(self, _wrapper)
 
 				return _wrapper;
-		}
+		}//end switch(view)
 	})()
 
 
@@ -149,6 +166,16 @@ export const add_events = function(self, wrapper) {
 				if (e.target.matches('.button.remove')) {
 					e.preventDefault()
 
+					// label
+						const children = e.target.parentNode.parentNode.children
+						const ar_label = []
+						for (let i = 0; i < children.length; i++) {
+							if(children[i].textContent.length>0) {
+								ar_label.push(children[i].textContent)
+							}
+						}
+						const label = ar_label.join(', ')
+
 					const changed_data = Object.freeze({
 						action	: 'remove',
 						key		: JSON.parse(e.target.dataset.key),
@@ -157,7 +184,7 @@ export const add_events = function(self, wrapper) {
 
 					const changed = self.change_value({
 						changed_data	: changed_data,
-						label			: e.target.previousElementSibling.textContent,
+						label			: label,
 						refresh			: false
 					})
 					changed.then(async (api_response)=>{
@@ -213,99 +240,200 @@ export const add_events = function(self, wrapper) {
 * Used too in search mode
 * @return DOM node content_data
 */
-export const build_content_data = function(self) {
+	// export const build_content_data = async function(self) {
+
+	// 	const fragment = new DocumentFragment()
+
+	// 	// inputs container
+	// 		// const inputs_container = ui.create_dom_element({
+	// 		// 	element_type	: 'ul',
+	// 		// 	class_name		: 'inputs_container'
+	// 		// })
+	// 		const inputs_container = new DocumentFragment()
+
+	// 	// build values (add all nodes from the rendered_section_record)
+	// 		// const build_values = function() {
+	// 		const build_values = async function() {
+
+	// 			// await version
+	// 				self.ar_instances = []
+	// 				const ar_section_record			= await self.get_ar_instances()
+	// 				const ar_section_record_length	= ar_section_record.length
+	// 				for (let i = 0; i < ar_section_record_length; i++) {
+
+	// 					const current_section_record = ar_section_record[i]
+
+	// 					// console.log("section record with status:",current_section_record.status);
+	// 					if (current_section_record.status!=='builded') {
+	// 						console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
+	// 						// console.trace()
+	// 						continue
+	// 					}
+
+	// 					// input_element. Get_input_element, also renders current section record
+	// 						// const input_element = await get_input_element(current_section_record)
+	// 						// inputs_container.appendChild(input_element)
+	// 						const input_element = await current_section_record.render()
+	// 							console.log("************************* input_element:",input_element);
+	// 						inputs_container.appendChild(input_element)
+	// 				}
+
+	// 			// promise version
+	// 				// self.get_ar_instances()
+	// 				// .then(function(ar_section_record){
+
+	// 				// 	const ar_section_record_length = ar_section_record.length
+	// 				// 	for (let i = 0; i < ar_section_record_length; i++) {
+
+	// 				// 		const current_section_record = ar_section_record[i]
+
+	// 				// 		// console.log("section record with status:",current_section_record.status);
+	// 				// 		if (current_section_record.status!=='builded') {
+	// 				// 			console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
+	// 				// 			// console.trace()
+	// 				// 			continue
+	// 				// 		}
+
+	// 				// 		// input_element. Get_input_element, also renders current section record
+	// 				// 			// const input_element = get_input_element(current_section_record)
+	// 				// 			// inputs_container.appendChild(input_element)
+	// 				// 			current_section_record.render()
+	// 				// 			.then(function(input_element){
+	// 				// 				inputs_container.appendChild(input_element)
+	// 				// 			})
+	// 				// 	}
+	// 				// })
+
+	// 			// reset wrapper minHeight on each render (added from pagination to prevent page blink)
+	// 				// const wrapper = inputs_container.parentNode.parentNode
+	// 				// wrapper.style.minHeight = null
+	// 		}//end build_values
+	// 		fragment.appendChild(inputs_container)
+
+	// 	// set node only when it is in DOM (to save browser resources)
+	// 		// const observer = new IntersectionObserver(function(entries) {
+	// 		// 	const entry = entries[1] || entries[0]
+	// 		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+	// 		// 		observer.disconnect();
+	// 		// 		build_values()
+	// 		// 	}
+	// 		// }, { threshold: [0] });
+	// 		// observer.observe(inputs_container);
+	// 		await build_values()
+
+
+	// 	// build references
+	// 		if(self.data.references && self.data.references.length > 0){
+	// 			const references_node = render_references(self.data.references)
+	// 			fragment.appendChild(references_node)
+	// 		}
+
+	// 	// content_data
+	// 		const content_data = ui.component.build_content_data(self)
+	// 			  // content_data.classList.add("nowrap")
+	// 			  content_data.appendChild(fragment)
+
+
+	// 	return content_data
+	// };//end build_content_data
+
+
+
+/**
+* GET_CONTENT_DATA
+* Render all received section records and place it into a new div 'content_data'
+* @return DOM node content_data
+*/
+const get_content_data = async function(self, ar_section_record) {
 
 	const fragment = new DocumentFragment()
 
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container'
-		})
+	// add all section_record rendered nodes
+		const ar_section_record_length	= ar_section_record.length
+		if (ar_section_record_length===0) {
 
+			// no records found case
+			// const row_item = no_records_node()
+			// fragment.appendChild(row_item)
+		}else{
 
+			const ar_promises = []
+			for (let i = 0; i < ar_section_record_length; i++) {
+				const render_promise = ar_section_record[i].render()
+				ar_promises.push(render_promise)
+			}
+			await Promise.all(ar_promises).then(function(values) {
+			  for (let i = 0; i < ar_section_record_length; i++) {
 
-	// build values (add all nodes from the rendered_section_record)
-		const build_values = function() {
-		// const build_values = async function() {
+				const section_record = values[i]
 
-			// await version
-				/*
-				self.ar_instances = []
-				const ar_section_record			= await self.get_ar_instances()
-				const ar_section_record_length	= ar_section_record.length
-				for (let i = 0; i < ar_section_record_length; i++) {
-
-					const current_section_record = ar_section_record[i]
-
-					// console.log("section record with status:",current_section_record.status);
-					if (current_section_record.status!=='builded') {
-						console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
-						// console.trace()
-						continue
+				// button_remove
+			  		if (self.permissions>1) {
+						const column = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'column remove_column'
+						})
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button remove',
+							dataset			: { key : i },
+							parent			: column
+						})
+						section_record.appendChild(column)
 					}
 
-					// input_element. Get_input_element, also renders current section record
-					const input_element = await get_input_element(current_section_record)
-					inputs_container.appendChild(input_element)
-				}
-				*/
-
-			// promise version
-				self.get_ar_instances()
-				.then(function(ar_section_record){
-
-
-					const ar_section_record_length = ar_section_record.length
-					for (let i = 0; i < ar_section_record_length; i++) {
-
-						const current_section_record = ar_section_record[i]
-
-						// console.log("section record with status:",current_section_record.status);
-						if (current_section_record.status!=='builded') {
-							console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
-							// console.trace()
-							continue
-						}
-
-						// input_element. Get_input_element, also renders current section record
-						const input_element = get_input_element(current_section_record)
-						inputs_container.appendChild(input_element)
-					}
-				})
-
-			// reset wrapper minHeight on each render (added from pagination to prevent page blink)
-				// const wrapper = inputs_container.parentNode.parentNode
-				// wrapper.style.minHeight = null
-		}//end build_values
-		fragment.appendChild(inputs_container)
-
-	// set node only when it is in DOM (to save browser resources)
-		// const observer = new IntersectionObserver(function(entries) {
-		// 	const entry = entries[1] || entries[0]
-		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-		// 		observer.disconnect();
-		// 		build_values()
-		// 	}
-		// }, { threshold: [0] });
-		// observer.observe(inputs_container);
-		build_values()
-
-
-	// build references
-		if(self.data.references && self.data.references.length > 0){
-			const references_node = render_references(self.data.references)
-			fragment.appendChild(references_node)
-		}
+				fragment.appendChild(section_record)
+			  }
+			});
+		}//end if (ar_section_record_length===0)
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  // content_data.classList.add("nowrap")
+		const content_data = document.createElement("div")
+			  content_data.classList.add("content_data", self.mode, self.type)
 			  content_data.appendChild(fragment)
 
 
 	return content_data
-};//end build_content_data
+};//end get_content_data
+
+
+
+/**
+* BUILD_HEADER
+* Render portal list_header_node node ready to place it into 'list_body' node
+* Note that component_info column will be added if self.add_component_info is true. That if defined
+* when the component is built
+* Also, note that the list_header_node is hidden if the portal records are empty for clean look
+* @return DOM node content_data
+*/
+const build_header = function(columns_map, ar_section_record, self) {
+
+	// column component_info check
+		if (self.add_component_info===true) {
+			columns_map.push({
+				id		: 'ddinfo',
+				label	: 'Info'
+			})
+		}
+
+	// button_remove
+		if (self.permissions>1) {
+			columns_map.push({
+				id		: 'remove',
+				label	: '' // get_label.delete || 'Delete'
+			})
+		}
+
+	// build using common ui builder
+		const list_header_node = ui.get_list_header(columns_map, self)
+
+	// hide list_header_node if no records found
+		if (ar_section_record.length<1) {
+			list_header_node.classList.add("hide")
+		}
+
+	return list_header_node;
+};//end build_header
 
 
 
@@ -313,76 +441,75 @@ export const build_content_data = function(self) {
 * GET_INPUT_ELEMENT
 * @return dom element li
 */
-const get_input_element = function(current_section_record){
+	// const get_input_element = function(current_section_record){
 
-	 // key. when portal is in search mode, is undefined, fallback to zero
-	const key = current_section_record.paginated_key || 0
+	// 	 // key. when portal is in search mode, is undefined, fallback to zero
+	// 	const key = current_section_record.paginated_key || 0
 
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			dataset			: { key : key }
-		})
+	// 	// li
+	// 		const li = ui.create_dom_element({
+	// 			element_type	: 'li',
+	// 			dataset			: { key : key }
+	// 		})
 
-	// input field
-		current_section_record.render()
-		.then(function(section_record_node){
+	// 	// input field
+	// 		current_section_record.render()
+	// 		.then(function(section_record_node){
 
-			// section_record_node append
-				li.appendChild(section_record_node)
+	// 			// section_record_node append
+	// 				li.appendChild(section_record_node)
 
-			// button remove
-				const button_remove = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button remove',
-					dataset			: { key : key },
-					parent			: li
-				})
-		})
+	// 			// button remove
+	// 				const button_remove = ui.create_dom_element({
+	// 					element_type	: 'span',
+	// 					class_name		: 'button remove',
+	// 					dataset			: { key : key },
+	// 					parent			: li
+	// 				})
+	// 		})
 
 
-	return li
-};//end get_input_element
+	// 	return li
+	// };//end get_input_element
 
 
 
 /**
 * GET_INPUT_ELEMENT_AWAIT
 * @return dom element li
-*//*
-const get_input_element_await = async function(current_section_record){
-
-	 // key. when portal is in search mode, is undefined, fallback to zero
-	const key = current_section_record.paginated_key || 0
-
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			dataset			: { key : key }
-		})
-
-	// input field
-		const section_record_node = await current_section_record.render()
-		// section_record_node append
-			li.appendChild(section_record_node)
-		// button remove
-			const button_remove = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button remove',
-				dataset			: { key : key },
-				parent			: li
-			})
-
-
-	return li
-};//end get_input_element_await
 */
+	// const get_input_element_await = async function(current_section_record){
+
+	// 	 // key. when portal is in search mode, is undefined, fallback to zero
+	// 	const key = current_section_record.paginated_key || 0
+
+	// 	// li
+	// 		const li = ui.create_dom_element({
+	// 			element_type	: 'li',
+	// 			dataset			: { key : key }
+	// 		})
+
+	// 	// input field
+	// 		const section_record_node = await current_section_record.render()
+	// 		// section_record_node append
+	// 			li.appendChild(section_record_node)
+	// 		// button remove
+	// 			const button_remove = ui.create_dom_element({
+	// 				element_type	: 'span',
+	// 				class_name		: 'button remove',
+	// 				dataset			: { key : key },
+	// 				parent			: li
+	// 			})
+
+
+	// 	return li
+	// };//end get_input_element_await
 
 
 
 /**
 * GET_BUTTONS
-* @param object instance
+* @param object self instance
 * @return DOM node buttons_container
 */
 const get_buttons = (self) => {
@@ -390,10 +517,9 @@ const get_buttons = (self) => {
 	const is_inside_tool		= self.is_inside_tool
 	const mode					= self.mode
 	const show					= self.rqo.show
-	// const target_section		= self.context.request_config.find(el => el.api_engine==='dedalo').sqo.section_tipo
 	const target_section		= self.target_section
 	const target_section_lenght	= target_section.length
-		  // sort section by label asc
+		  // sort section by label ascendant
 		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
 	const fragment = new DocumentFragment()
@@ -426,7 +552,6 @@ const get_buttons = (self) => {
 				}else{
 					console.error("Error on api_response on try to create new row:", api_response);
 				}
-
 		})
 
 	// button_link
@@ -544,7 +669,7 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
+			  buttons_container.appendChild(fragment)
 
 
 	return buttons_container

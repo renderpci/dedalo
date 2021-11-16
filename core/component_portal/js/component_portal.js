@@ -116,7 +116,8 @@ component_portal.prototype.init = async function(options) {
 		self.autocomplete_active	= false
 
 	// columns
-		self.columns_map	= options.columns_map
+		self.columns_map		= options.columns_map
+		self.add_component_info	= false
 
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
@@ -311,8 +312,14 @@ component_portal.prototype.build = async function(autoload=false){
 	// columns
 		// if(self.mode!=='list'){
 			self.columns_map = self.get_columns_map()
-
 		// }
+
+	// component_info add
+		try {
+			self.add_component_info = self.context.request_config.find(el => el.api_engine==="dedalo").show.ddo_map[0].value_with_parents || false
+		}catch(error){
+			console.warn("error:",error);
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {

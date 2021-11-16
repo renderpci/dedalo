@@ -24,6 +24,7 @@ export const common = function(){
 
 /**
 * INITING
+* @param object options
 * Generic agnostic init function created to maintain
 * unity of calls.
 * (!) For components, remember to use always common.init()
@@ -224,13 +225,17 @@ common.prototype.render = async function (options={}) {
 
 						// 	wrapper.replaceChild(new_content_data_node, old_content_data_node)
 						// }
+
+					const bool_select_list_body = (self.model==='section' && (self.mode==='list' || self.mode==='tm'))
+						|| (self.model==='component_portal');
+
 					const nodes_length = self.node.length
 					for (let i = nodes_length - 1; i >= 0; i--) {
 
 						const wrapper = self.node[i]
 
 						// old content_data node
-							const old_content_data_node = self.model==='section' && (self.mode==='list' || self.mode==='tm')
+							const old_content_data_node = bool_select_list_body
 								? wrapper.querySelector(":scope >.list_body >.content_data")
 								: wrapper.querySelector(":scope >.content_data")
 
@@ -283,7 +288,7 @@ common.prototype.render = async function (options={}) {
 							// 	}
 							// }
 
-							const base_container = ( self.model==='section' && (self.mode==='list' || self.mode==='tm') )
+							const base_container = bool_select_list_body
 								? wrapper.querySelector(":scope >.list_body")
 								: wrapper
 
@@ -343,6 +348,7 @@ common.prototype.render = async function (options={}) {
 * REFRESH
 * Destroy current instance dependencies and build and render again
 * (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
+* @param object options
 * @return promise
 */
 common.prototype.refresh = async function(options={}) {
@@ -689,25 +695,26 @@ common.prototype.load_script = async function(src) {
 * and create the columns to be render by the section or portals
 * @return array ar_columns the the specific columns to render into the list, with inverse path format.
 */
-// common.prototype.get_columns_DES = async function(){
+	// common.prototype.get_columns_DES = async function(){
 
-// 	const self = this
+	// 	const self = this
 
-// 	const full_ddo_map = []
+	// 	const full_ddo_map = []
 
-// 	// // get ddo_map from the rqo_config.show, self can be a section or component_portal, and both has rqo_config
-// 	const ddo_map = self.rqo_config.show.ddo_map
-// 	console.log("self:",self.context);
-// 	// get the sub elements with the ddo_map, the method is recursive,
-// 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-// 	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
+	// 	// // get ddo_map from the rqo_config.show, self can be a section or component_portal, and both has rqo_config
+	// 	const ddo_map = self.rqo_config.show.ddo_map
+	// 	console.log("self:",self.context);
+	// 	// get the sub elements with the ddo_map, the method is recursive,
+	// 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
+	// 	const sub_ddo_map = get_sub_ddo_map(self.datum, self.tipo, ddo_map, [])
 
-// 	full_ddo_map.push(...sub_ddo_map)
+	// 	full_ddo_map.push(...sub_ddo_map)
 
-// 	const ar_columns = get_ar_inverted_paths(full_ddo_map)
+	// 	const ar_columns = get_ar_inverted_paths(full_ddo_map)
 
-// 	return ar_columns
-// }//end get_columns
+	// 	return ar_columns
+	// }//end get_columns
+
 
 
 /**
@@ -891,104 +898,104 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 // * @param sub_ddo used for create the path for the component, path is used to get the full path
 // * @return array ar_ddo with all ddo in all portals and sections config_rqo that has dependency of the caller.
 // */
-// const get_sub_ddo_map_DES = function(datum, caller_tipo, ddo_map, sub_ddo){
-	
-// 	const ar_ddo = []
+	// const get_sub_ddo_map_DES = function(datum, caller_tipo, ddo_map, sub_ddo){
 
-// 	// get the valid ddo_map, only the last ddo in the path will be rendered.
-// 		// function get_last_children(ddo_map, current_ddo) {
-// 		// 	const ar_children = []
-// 		// 	const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
-			
-// 		// 	if(children.length === 0){
-// 		// 		current_ddo.caller_tipo = caller_tipo
-// 		// 		ar_children.push(current_ddo)
-// 		// 	}else{
-// 		// 		for (let i = 0; i < children.length; i++) {
-// 		// 			const valid_child = get_last_children(ddo_map, children[i])[0]
-// 		// 			ar_children.push(valid_child)
-// 		// 		}
-// 		// 	}
-			
-// 		// 	return ar_children;
-// 		// }
+	// 	const ar_ddo = []
 
-// 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
-// 	// set the valid_ddo array with only the valid ddo that will be used.
-// 		// const ar_valid_ddo = []
-// 		// const ddo_length = ddo_map.length
-// 		// for (let i = 0; i < ddo_length; i++) {
-// 		// 	const current_ddo = ddo_map[i]
-// 		// 	if(current_ddo.parent !== caller_tipo) continue;
-// 		// 	const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
-// 		// 	for (let j = 0; j < current_ar_valid_ddo.length; j++) {
-// 		// 		ar_valid_ddo.push(current_ar_valid_ddo[j])
-// 		// 	}
-// 		// }
+	// 	// get the valid ddo_map, only the last ddo in the path will be rendered.
+	// 		// function get_last_children(ddo_map, current_ddo) {
+	// 		// 	const ar_children = []
+	// 		// 	const children = ddo_map.filter(item => item.parent === current_ddo.tipo)
 
-// 	// get all children of the current ddo recursively
-// 	// when the section or portal doesn't has data the context will not created
-// 	// in those cases get the sub_ddo with the current ddo_map
-// 		function get_children(ddo_map, parent_ddo) {
-// 			const ar_children = []
+	// 		// 	if(children.length === 0){
+	// 		// 		current_ddo.caller_tipo = caller_tipo
+	// 		// 		ar_children.push(current_ddo)
+	// 		// 	}else{
+	// 		// 		for (let i = 0; i < children.length; i++) {
+	// 		// 			const valid_child = get_last_children(ddo_map, children[i])[0]
+	// 		// 			ar_children.push(valid_child)
+	// 		// 		}
+	// 		// 	}
 
-// 			const children = ddo_map.filter(item => item.parent === parent_ddo.tipo)
+	// 		// 	return ar_children;
+	// 		// }
 
-// 			for (let i = 0; i < children.length; i++) {
-// 				ar_children.push(children[i])
+	// 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
+	// 	// set the valid_ddo array with only the valid ddo that will be used.
+	// 		// const ar_valid_ddo = []
+	// 		// const ddo_length = ddo_map.length
+	// 		// for (let i = 0; i < ddo_length; i++) {
+	// 		// 	const current_ddo = ddo_map[i]
+	// 		// 	if(current_ddo.parent !== caller_tipo) continue;
+	// 		// 	const current_ar_valid_ddo = get_last_children(ddo_map, current_ddo)
+	// 		// 	for (let j = 0; j < current_ar_valid_ddo.length; j++) {
+	// 		// 		ar_valid_ddo.push(current_ar_valid_ddo[j])
+	// 		// 	}
+	// 		// }
 
-// 				const valid_child = get_children(ddo_map, children[i])
-// 				ar_children.push(...valid_child)
-// 			}
-// 			return ar_children;
-// 		}
+	// 	// get all children of the current ddo recursively
+	// 	// when the section or portal doesn't has data the context will not created
+	// 	// in those cases get the sub_ddo with the current ddo_map
+	// 		function get_children(ddo_map, parent_ddo) {
+	// 			const ar_children = []
 
+	// 			const children = ddo_map.filter(item => item.parent === parent_ddo.tipo)
 
-// 		for (let i = 0; i < ddo_map.length; i++) {
-			
-// 			const current_ddo = ddo_map[i]
-			
-// 			// skip ddo with parent different from current caller
-// 				if(current_ddo.parent !== caller_tipo) continue;
+	// 			for (let i = 0; i < children.length; i++) {
+	// 				ar_children.push(children[i])
 
-// 			// add current_ddo
-// 				ar_ddo.push(current_ddo)
-
-			
-// 			// context
-// 				const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
-
-// 			// no context case. When context is calculated as subcontext, is associated to data. Therefore, sometimes show->ddo contains more items than
-// 			// the calculated in context (empty portals for example). This is not an error really
-// 				// if (!current_context) {
-// 				// 	console.warn("Skip context not found for current ddo:", current_ddo);
-// 				// 	console.warn("datum.context:", datum.context);
-// 				// 	continue;
-// 				// }
-
-// 			// rqo_config
-// 				const rqo_config	= (current_context && current_context.request_config)
-// 					? current_context.request_config.find(el => el.api_engine==='dedalo')
-// 					: null
+	// 				const valid_child = get_children(ddo_map, children[i])
+	// 				ar_children.push(...valid_child)
+	// 			}
+	// 			return ar_children;
+	// 		}
 
 
+	// 		for (let i = 0; i < ddo_map.length; i++) {
+
+	// 			const current_ddo = ddo_map[i]
+
+	// 			// skip ddo with parent different from current caller
+	// 				if(current_ddo.parent !== caller_tipo) continue;
+
+	// 			// add current_ddo
+	// 				ar_ddo.push(current_ddo)
 
 
-// 			// add sub_ddo_map
-// 				if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
-// 					const current_ddo_map	= rqo_config.show.ddo_map
-// 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
-// 					ar_ddo.push(...sub_ddo_map)
-// 				}else{
-// 					const current_ddo_map	= get_children( ddo_map, current_ddo)
-// 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
-// 					ar_ddo.push(...sub_ddo_map)
-// 				}
-// 		}//end for (let i = 0; i < ddo_map.length; i++)
+	// 			// context
+	// 				const current_context = datum.context.find(item => item.tipo===current_ddo.tipo) //&& item.section_tipo===current_ddo.section_tipo
+
+	// 			// no context case. When context is calculated as subcontext, is associated to data. Therefore, sometimes show->ddo contains more items than
+	// 			// the calculated in context (empty portals for example). This is not an error really
+	// 				// if (!current_context) {
+	// 				// 	console.warn("Skip context not found for current ddo:", current_ddo);
+	// 				// 	console.warn("datum.context:", datum.context);
+	// 				// 	continue;
+	// 				// }
+
+	// 			// rqo_config
+	// 				const rqo_config	= (current_context && current_context.request_config)
+	// 					? current_context.request_config.find(el => el.api_engine==='dedalo')
+	// 					: null
 
 
-// 	return ar_ddo
-// }//end build_request_show
+
+
+	// 			// add sub_ddo_map
+	// 				if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
+	// 					const current_ddo_map	= rqo_config.show.ddo_map
+	// 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+	// 					ar_ddo.push(...sub_ddo_map)
+	// 				}else{
+	// 					const current_ddo_map	= get_children( ddo_map, current_ddo)
+	// 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
+	// 					ar_ddo.push(...sub_ddo_map)
+	// 				}
+	// 		}//end for (let i = 0; i < ddo_map.length; i++)
+
+
+	// 	return ar_ddo
+	// }//end build_request_show
 
 
 
@@ -998,7 +1005,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 * @param self instance_caller
 * @return object tool
 */
-// common.prototype.load_tool = async function(self, tool_object){
+	// common.prototype.load_tool = async function(self, tool_object){
 
 	// 	const tool_instance = await get_instance({
 	// 		model 			: tool_object.name,
@@ -1023,7 +1030,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 	// 	tool_instance.render()
 
 	// 	return tool_instance
-// }//end load_tool
+	// }//end load_tool
 
 
 
@@ -1853,59 +1860,123 @@ const build_request_select_OLD = function(self, request_config, action){
 
 /**
 * LOAD_DATA_DEBUG
+* Render main page data using a JSON viewer
+* @param object section instance self
+* @param promise load_data_promise
+* 	API resquest response from current section/area
+* @param object rqo_show_original
+* 	Request query object sent to the API by current section/area
 * @return DOM node document fragment
 */
 export const load_data_debug = async function(self, load_data_promise, rqo_show_original) {
 
-	if(SHOW_DEBUG===false) {
-		return false
-	}
+	// only works if debug mode is active
+		if(SHOW_DEBUG===false) {
+			return false
+		}
 
-	if (self.type!=="section" && self.type!=="area") {
-		return false
-	}
+	// check caller instance is section or are
+		if (self.type!=="section" && self.type!=="area") {
+			return false
+		}
 
 	const response		= await load_data_promise
 	const dd_request	= self.dd_request
 
-	// console.log("----> load_data_debug request dd_request_show_original "+self.model +" "+self.tipo+ ":", dd_request_show_original);
-	// console.log(">>>>>>>>>>>>>> response:",response);
-	// console.trace()
+	// load_data_promise response check
+		if (response.result===false) {
+			console.error("API EXCEPTION:",response.msg);
+			return false
+		}
 
-	// load_data_promise
-	if (response.result===false) {
-		console.error("API EXCEPTION:",response.msg);
-		return false
-	}
 	// console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.exec_time)
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
 	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
+
+	// json view
+		// load dependences js/css
+		const load_promises = []
+		// css file load
+			const lib_css_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.css'
+			load_promises.push( common.prototype.load_style(lib_css_file) )
+		// js module import
+			// const load_promise = import('../../../lib/json-view/jsonview.bundle.js') // used minified version for now
+			const lib_js_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.js'
+			load_promises.push( common.prototype.load_script(lib_js_file) )
+
+		await Promise.all(load_promises)
+
+		function open_main_children(tree) {
+			// open all nodes
+				JsonView.expandChildren(tree);
+
+			return
+			// open only first levels
+				JsonView.traverseTree(tree, function(node) {
+					if (node.depth<3) {
+						JsonView.showNodeChildren(node)
+						node.isExpanded = true;
+						// node.el.classList.remove('hide');
+						const icon = node.el.querySelector('.fas');
+						if (icon) {
+							icon.classList.replace('fa-caret-right', 'fa-caret-down');
+						}
+					}
+				});
+		}
+		function render_tree(data, target_node) {
+			const tree = JsonView.createTree(data);
+			JsonView.render(tree, target_node);
+			open_main_children(tree);
+		}
+
 
 	// fragment
 		const fragment = new DocumentFragment();
 
 		// request to API
-			// const sqo = dd_request_show_original.find(el => el.typo==='sqo') || null
-			const sqo			= rqo_show_original.sqo
-			const request_pre	= ui.create_dom_element({
+			// const sqo	= dd_request_show_original.find(el => el.typo==='sqo') || null
+			// const sqo	= rqo_show_original.sqo
+			// const request_pre	= ui.create_dom_element({
+			// 	element_type	: 'pre',
+			// 	text_content	: "dd_request sent to API: \n\n" + JSON.stringify(rqo_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
+			// 	parent			: fragment
+			// })
+
+		// rqo_show_original
+			const rqo_show_original_pre	= ui.create_dom_element({
 				element_type	: 'pre',
-				text_content	: "dd_request sent to API: \n\n" + JSON.stringify(rqo_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
+				text_content	: "rqo_show_original: \n",
 				parent			: fragment
 			})
+			render_tree(rqo_show_original, rqo_show_original_pre)
+
+		// dd_request
+			if (dd_request) {
+				const dd_request_pre	= ui.create_dom_element({
+					element_type	: 'pre',
+					text_content	: "dd_request: \n",
+					parent			: fragment
+				})
+				render_tree(dd_request, dd_request_pre)
+			}
 
 		// context
 			const context_pre = ui.create_dom_element({
 				element_type	: 'pre',
-				text_content	: "context: " + JSON.stringify(response.result.context, null, "  "),
+				text_content	: "context: \n", // + JSON.stringify(response.result.context, null, "  "),
 				parent			: fragment
 			})
+			render_tree(response.result.context, context_pre)
+
 
 		// data
 			const data_pre = ui.create_dom_element({
 				element_type	: 'pre',
-				text_content	: "data: " + JSON.stringify(response.result.data, null, "  "),
+				text_content	: "data: \n", // + JSON.stringify(response.result.data, null, "  "),
 				parent			: fragment
 			})
+			render_tree(response.result.data, data_pre)
 
 	// time
 		// const time_info = "" +
