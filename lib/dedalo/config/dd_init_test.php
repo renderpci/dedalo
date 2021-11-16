@@ -33,7 +33,7 @@
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/backups';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
-			$init_response->msg .= trim(" Error on read or create backups directory. Permission denied");
+			$init_response->msg .= trim(" Error on read or create backups directory. Permission denied. Please review your backup dir permissions");
 			return $init_response;
 		}
 		$msg = "backups: created dir: $folder_path";
@@ -47,7 +47,7 @@
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/backups_structure';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
-			$init_response->msg .= trim(" Error on read or create backups_structure directory. Permission denied");
+			$init_response->msg .= trim(" Error on read or create backups_structure directory. Permission denied. Please review your backup dir permissions");
 			return $init_response;
 		}
 		$msg = "backups: created dir: $folder_path";
@@ -61,7 +61,7 @@
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/temp';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
-			$init_response->msg .= trim(" Error on read or create backup temp directory. Permission denied");
+			$init_response->msg .= trim(" Error on read or create backup temp directory. Permission denied. Please review your backup dir permissions");
 			return $init_response;
 		}
 		$msg = "backups: created dir: $folder_path";
@@ -75,7 +75,7 @@
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/users';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
-			$init_response->msg .= trim(" Error on read or create backup users directory. Permission denied");
+			$init_response->msg .= trim(" Error on read or create backup users directory. Permission denied. Please review your backup dir permissions");
 			return $init_response;
 		}
 		$msg = "backups: created dir: $folder_path";
@@ -90,7 +90,7 @@
 		$folder_path = STRUCTURE_DOWNLOAD_DIR;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0700,true)) {
-				$init_response->msg .= trim(" Error on read or create backup ".STRUCTURE_DOWNLOAD_DIR." directory. Permission denied");
+				$init_response->msg .= trim(" Error on read or create backup ".STRUCTURE_DOWNLOAD_DIR." directory. Permission denied. Please review your structure download dir dir permissions. Config value: ".STRUCTURE_DOWNLOAD_DIR);
 				return $init_response;
 			}
 			$msg = "backups: created dir: $folder_path";
@@ -107,7 +107,7 @@
 		$folder_path = DEDALO_EXTRAS_PATH . '/' . $current_tipo;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0700,true)) {
-				$init_response->msg .= trim(" Error on read or create extras directory ($current_tipo). Permission denied");
+				$init_response->msg .= trim(" Error on read or create extras directory ($current_tipo). Permission denied. Please review your DEDALO_EXTRAS_PATH dir permissions. Config value: ".DEDALO_EXTRAS_PATH);
 				return $init_response;
 			}
 			$msg = "extras: created dir: $folder_path";
@@ -122,7 +122,7 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media directory. Permission denied");
+			$init_response->msg .= trim(" Error on read or create media directory. Permission denied. Please review your DEDALO_MEDIA_BASE_PATH dir permissions. Config value: ".DEDALO_MEDIA_BASE_PATH);
 			debug_log(__METHOD__." $init_response->msg . ".$folder_path , logger::ERROR);
 			trigger_error($init_response->msg);
 			return $init_response;
@@ -139,7 +139,7 @@
 		$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER.'/'.$quality;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0775,true)) {
-				$init_response->msg .= trim(" Error on read or create media quality [$quality] directory. Permission denied");
+				$init_response->msg .= trim(" Error on read or create media quality [$quality] directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 				trigger_error($init_response->msg);
 				return $init_response;
 			}
@@ -169,7 +169,7 @@
 		$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . '/'.$quality;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0775,true)) {
-				$init_response->msg .= trim(" Error on read or create image $quality deleted directory. Permission denied ");
+				$init_response->msg .= trim(" Error on read or create image $quality deleted directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 				return $init_response;
 			}
 			$msg = "media image: created dir: $folder_path";
@@ -185,7 +185,7 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media PDF default directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create media PDF default directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 			return $init_response;
 		}
 		$msg = "media pdf: created dir: $folder_path";
@@ -200,7 +200,7 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_THUMB_DEFAULT;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media PDF default directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create media PDF default directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 			return $init_response;
 		}
 		$msg = "media pdf thumbs: created dir: $folder_path";
@@ -215,7 +215,7 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_HTML_FILES_FOLDER;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 			return $init_response;
 		}
 		$msg = "media html files: created dir: $folder_path";
@@ -230,7 +230,7 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 			return $init_response;
 		}
 		$msg = "media web images files: created dir: $folder_path";
@@ -245,7 +245,7 @@
 	$folder_path = DEDALO_TOOL_EXPORT_FOLDER_PATH;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 			return $init_response;
 		}
 		$msg = "media export folder: created dir: $folder_path";
@@ -261,7 +261,7 @@
 		$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/'.$quality;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0775,true)) {
-				$init_response->msg .= trim(" Error on read or create image $quality directory. Permission denied ");
+				$init_response->msg .= trim(" Error on read or create image $quality directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 				return $init_response;
 			}
 			$msg = "media av folder: created dir: $folder_path";
@@ -276,7 +276,7 @@
 	$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER ;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
-			$init_response->msg .= trim(" Error on read or create avg directory. Permission denied ");
+			$init_response->msg .= trim(" Error on read or create avg directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 			return $init_response;
 		}
 		$msg = "media svg folder: created dir: $folder_path";
@@ -303,7 +303,7 @@
 	$folder_path = DEDALO_LOGS_DIR;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0777,true)) {
-			$init_response->msg .= trim(" Error on read or create logs directory. Permission denied");
+			$init_response->msg .= trim(" Error on read or create logs directory. Permission denied. Please review your folder_path dir permissions of ".$folder_path);
 			return $init_response;
 		}
 		$msg = "logs folder: created dir: $folder_path";
@@ -360,7 +360,7 @@
 	#if ($rcode!==0) $init_response->msg .= trim("Error on system test. ImageMagick lib not found");
 	$image_magick = trim(shell_exec('command -v '.MAGICK_PATH.'convert'));
 	if (empty($image_magick)) {
-		$init_response->msg .= trim("Error on system test. ImageMagick lib not found");
+		$init_response->msg .= trim("Error on system test. ImageMagick lib not found in ".MAGICK_PATH. '. Please review your config file MAGICK_PATH value');
 		return $init_response;
 	}
 
@@ -368,7 +368,7 @@
 // FFMPEG
 	$ffmpeg = trim(shell_exec('command -v '.DEDALO_AV_FFMPEG_PATH));
 	if (empty($ffmpeg)) {
-		$init_response->msg .= trim("Error on system test. ffmpeg lib not found");
+		$init_response->msg .= trim("Error on system test. ffmpeg lib not found in ".DEDALO_AV_FFMPEG_PATH. '. Please review your config file DEDALO_AV_FFMPEG_PATH value');
 		return $init_response;
 	}
 
@@ -376,7 +376,7 @@
 // QT-FASTSTART
 	$qt_faststart = trim(shell_exec('command -v '.DEDALO_AV_FASTSTART_PATH));
 	if (empty($qt_faststart)) {
-		$init_response->msg .= trim("Error on system test. qt-faststart lib not found");
+		$init_response->msg .= trim("Error on system test. qt-faststart lib not found in ".DEDALO_AV_FASTSTART_PATH. '. Please review your config file DEDALO_AV_FASTSTART_PATH value');
 		return $init_response;
 	}
 
@@ -384,7 +384,7 @@
 // FFPROBE
 	$ffprobe = trim(shell_exec('command -v '.DEDALO_AV_FFPROBE_PATH));
 	if (empty($ffprobe)) {
-		$init_response->msg .= trim("Error on system test. ffprobe lib not found");
+		$init_response->msg .= trim("Error on system test. ffprobe lib not found in ".DEDALO_AV_FFPROBE_PATH. '. Please review your config file DEDALO_AV_FFPROBE_PATH value');
 		return $init_response;
 	}
 
@@ -393,7 +393,7 @@
 	if (defined('DEDALO_NOTIFICATIONS') && DEDALO_NOTIFICATIONS===true) {
 		$node = trim(shell_exec('command -v '.DEDALO_NODEJS));
 		if (empty($node)) {
-			$init_response->msg .= trim("Error on system test. node lib not found");
+			$init_response->msg .= trim("Error on system test. node lib not found in ".DEDALO_AV_FFPROBE_PATH. '. Please review your config file DEDALO_AV_FFPROBE_PATH value');
 			return $init_response;
 		}
 		/*
