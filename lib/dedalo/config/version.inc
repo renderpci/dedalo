@@ -2517,6 +2517,11 @@
 		Improved dd_init_test for better warnings notification
 		Fixed install issues with checks in some contexts
 		Updated gitignore file rules. Restored structure.css and common/js/lang needed for install
+		16-11-2021
+		Updated db install file dedalo4_install.pgsql.gz with table matrix_activity counter properly reset
+		Updated dd_init_test with more clear messages and notifications
+		Fixed error on install::clean-tables method when matrix_activity_section_id_seq was not reset correctly
+		Improved install warnings
 
 
 	[/HISTORY]
@@ -2542,13 +2547,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2zg';
+	$DEDALO_VERSION = '5.8.2zh';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-11-2021');
+	define('DEDALO_BUILD'	, '16-11-2021');
 
 
 	/*
