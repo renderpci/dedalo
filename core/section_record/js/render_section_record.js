@@ -12,19 +12,20 @@
 
 
 /**
-* Render_component
+* RENDER_SECTION_RECORD
 * Manage the components logic and appearance in client side
 */
 export const render_section_record = function() {
 
 	return true
-};//end render_section_record
+}//end render_section_record
 
 
 
 /**
 * EDIT
-* Render node for use in edit
+* Render the node to use in edit mode
+* @param object options
 * @return DOM node
 */
 render_section_record.prototype.edit = async function(options={}) {
@@ -49,7 +50,7 @@ render_section_record.prototype.edit = async function(options={}) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -154,16 +155,14 @@ const get_content_data_edit = async function(self, ar_instances) {
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
 
-
-
 	// content_data
 		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+			  content_data.classList.add("content_data", self.mode, self.type)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -234,10 +233,11 @@ render_section_record.prototype.list = async function(options={}) {
 
 			const current_instance = ar_instances[i]
 
-			if (typeof current_instance==="undefined") {
-				console.error("Undefined current_instance:", current_instance, i, ar_instances);
-				continue;
-			}
+			// check instance
+				if (typeof current_instance==="undefined") {
+					console.error("Undefined current_instance:", current_instance, i, ar_instances);
+					continue;
+				}
 
 			// modification date . generic component
 				// if (current_instance.tipo==='dd201') {
@@ -268,22 +268,21 @@ render_section_record.prototype.list = async function(options={}) {
 
 			// }else{
 
-				const current_instance_node = current_instance.node[0] //|| await current_instance.render()
-
-
-
 				if (current_instance.column_id) {
 
-					const found_column_node = ar_column_nodes.find(el => el.id===current_instance.column_id)
-					if (found_column_node) {
-						found_column_node.appendChild(current_instance_node)
-					}else{
-						const column_node = build_column_node(current_instance.column_id)
-						ar_column_nodes.push(column_node)
-						fragment.appendChild(column_node)
+					// column. If column already exists, place the component node into the column.
+					// Else, creates a new column and place it into the fragment
+					const column_node = ar_column_nodes.find(el => el.id===current_instance.column_id)
+						|| (()=>{
+							const new_column_node = build_column_node(current_instance, self, ar_instances)
+							ar_column_nodes.push(new_column_node)
+							fragment.appendChild(new_column_node)
 
-						column_node.appendChild(current_instance_node)
-					}
+							return new_column_node
+						})()
+
+					const current_instance_node	= current_instance.node[0] //|| await current_instance.render()
+					column_node.appendChild(current_instance_node)
 
 				}else{
 					console.error("current_instance column_id not found:",current_instance);
@@ -309,7 +308,6 @@ render_section_record.prototype.list = async function(options={}) {
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
 
-
 	// grid css calculation assign
 		// const ar_grid_columns_fr	= ar_grid_columns.map(n => n + "fr");
 		// const id_column_width		= self.caller.id_column_width // from section init
@@ -327,12 +325,15 @@ render_section_record.prototype.list = async function(options={}) {
 			const info_value = component_info.value.join('')
 			const info = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'info',
+				class_name		: 'column column_info',
 				inner_html		: info_value
 			})
 			//wrapper.appendChild(info)
 			fragment.appendChild(info)
+
+			ar_grid_columns.push(1)
 		}
+
 
 	// wrapper filling
 		wrapper.appendChild(fragment)
@@ -347,7 +348,7 @@ render_section_record.prototype.list = async function(options={}) {
 
 
 	return wrapper
-};//end render_section_record.prototype.list
+}//end render_section_record.prototype.list
 
 
 
@@ -615,7 +616,8 @@ const build_id_column = function(self) {
 
 
 	return id_column
-};//end build_id_column
+}//end build_id_column
+
 
 
 /**
@@ -623,16 +625,57 @@ const build_id_column = function(self) {
 * @param  object column from the columns_map
 * @return DOM element column
 */
-const build_column_node = function(column_id){
+const build_column_node = function(column_instance, self, ar_instances){
+
+	// console.log("build_column_node self:",self);
+	// const component = JSON.parse( JSON.stringify(column_instance)
+
+	const column_id	= column_instance.column_id
+	const model		= self.caller.model
 
 	const column_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'column column_' + column_id
+		class_name		: 'column column_' + column_id + ' ' + model
 	})
 	column_node.id = column_id
 
+	if (model==='component_portal') {
+
+		const children_length = ar_instances.length // column_node.children.length
+		if (children_length>1) {
+
+			const grid_template_columns_ar_value = []
+			for (let i = 0; i < children_length; i++) {
+
+				// WORKING HERE !
+					// const child_instance = ar_instances[i]
+					// const css = child_instance.context.css
+					// const width = css['.wrap_component'] && css['.wrap_component'].style && css['.wrap_component'].style.width
+					// 	? css['.wrap_component'].style.width
+					// 	: '1fr'
+
+				const width = '1fr'
+
+				grid_template_columns_ar_value.push(width)
+			}
+
+			Object.assign(
+				column_node.style,
+				{
+					"grid-template-columns": grid_template_columns_ar_value.join(' '),
+					// "display": "grid"
+				}
+			)
+		}
+	}
+
+	// console.log("component.model:",component.model, component.tipo, column_node);
+
 	return column_node
 }// end build_column_node
+
+
+
 
 /**
 * RECURSIVE_RELATION_COLUMNS
@@ -661,35 +704,35 @@ const build_column_node = function(column_id){
 	// 	}
 
 	// 	return n_relation_columns
-	// };//end recursive_relation_columns
+	// }//end recursive_relation_columns
 
 
 
-// /**
-// * GET_COMPONENTS_WITH_SUBCOLUMNS
-// * Return an array of component models with relations (equivalent to method class.component_relation_common.php)
-// */
-// const get_components_with_subcolumns = () => {
+/**
+* GET_COMPONENTS_WITH_SUBCOLUMNS
+* Return an array of component models with relations (equivalent to method class.component_relation_common.php)
+*/
+	// const get_components_with_subcolumns = () => {
 
-// 	return [
-// 			// 'component_autocomplete',
-// 			//'component_autocomplete_hi',
-// 			//'component_check_box',
-// 			//'component_filter',
-// 			//'component_filter_master',
-// 			'component_portal',
-// 			//'component_publication',
-// 			//'component_radio_button',
-// 			//'component_relation_children',
-// 			//'component_relation_index',
-// 			//'component_relation_model',
-// 			//'component_relation_parent',
-// 			//'component_relation_related',
-// 			//'component_relation_struct',
-// 			//'component_select',
-// 			//'component_select_lang'
-// 	]
-// };//end get_components_with_subcolumns
+	// 	return [
+	// 			// 'component_autocomplete',
+	// 			//'component_autocomplete_hi',
+	// 			//'component_check_box',
+	// 			//'component_filter',
+	// 			//'component_filter_master',
+	// 			'component_portal',
+	// 			//'component_publication',
+	// 			//'component_radio_button',
+	// 			//'component_relation_children',
+	// 			//'component_relation_index',
+	// 			//'component_relation_model',
+	// 			//'component_relation_parent',
+	// 			//'component_relation_related',
+	// 			//'component_relation_struct',
+	// 			//'component_select',
+	// 			//'component_select_lang'
+	// 	]
+	// }//end get_components_with_subcolumns
 
 
 
@@ -705,6 +748,6 @@ const delete_record = (button, self) => {
 
 
 	return false
-};//end delete_record
+}//end delete_record
 
 
