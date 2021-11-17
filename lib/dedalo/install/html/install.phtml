@@ -5,9 +5,9 @@
 	// 0 dedalo_install_status. If already installed, stop here
 		if (DEDALO_INSTALL_STATUS==='installed') {
 			$html .= '<section>';
-			$html .= '<h2 class="">Install status</h2>';
+			$html .= '<h3 class="">Install status</h3>';
 			$html .= '<div class="description"></div>';
-			$html .= '<h2 class="ok">This system is already installed</h2>';
+			$html .= '<h3 class="ok">This system is already installed</h3>';
 			$html .= '<section>';
 			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" ENTER TO DEDALO " onclick="window.location.href=\'../main\';" />';
 			$html .= '</section>';
@@ -15,6 +15,13 @@
 			echo $html;
 			return;
 		}
+
+	// Instalation help
+		$html .= '<section class="instalation_help">';
+		$html .= '<h3 class="">Instalation help</h3>';
+		$html .= '<div class="description"><img src="https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg" height="16px"/> Instalation info: <a href="https://dedalo.dev/v5" target="_blank">https://dedalo.dev/v5</a></div>';
+		$html .= '<div class="description"><img src="https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg" height="16px"/> Configuration info: <a href="https://dedalo.dev/v5_config" target="_blank">https://dedalo.dev/v5_config</a></div>';
+		$html .= '</section>';
 
 	// 0 Configuration test
 		// init test
@@ -40,7 +47,6 @@
 				$html .= '</ul>';
 			}
 		}
-
 		$html .= '</section>';
 
 	// 1 Install Dédalo DB
@@ -55,7 +61,7 @@
 				return;
 			}
 			$html .= '<div class="description">DB Config:</div>';
-			$html .= '<ul class="hierarchies_list">';
+			$html .= '<ul class="ul_list">';
 			foreach ($db_config as $key => $value) {
 				$html .= '<li>'.$key.' : '.$value.'</li>';
 			}
@@ -75,6 +81,11 @@
 			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" INSTALL DATABASE FROM FILE " onclick="install.install_db_from_default_file(this)" />';
 			$html .= '</section>';
 
+			// logout user
+				if (login::is_logged()===true) {
+					unset($_SESSION['dedalo4']);
+				}
+
 			echo $html;
 			return;
 
@@ -89,7 +100,7 @@
 		$html .= '<section>';
 		$html .= '<h3 class="">2. Set root password / login</h3>';
 		if (login::is_logged()!==true) {
-			$html .= '<div class="warning">Current user must be logged before continue.</div>';
+			$html .= '<div class="warning">You must be logged before continue.</div>';
 			$html .= '<iframe id="iframe_login" src="../main">';
 			$html .= '</iframe>';
 			$html .= '<section>';
@@ -122,7 +133,7 @@
 
 			$html .= '<div class="description">It will be displayed in the thesaurus. Keep in mind that large countries can consume a lot of resources. Don\'t load unnecessary countries. You can always load more countries later.</div>';
 			$html .= '<div class="description">Source files dir: '.$hierarchy_files_path.'</div>';
-			$html .= '<ul id="hierarchies_list" class="hierarchies_list">';
+			$html .= '<ul id="hierarchies_list" class="ul_list">';
 			foreach ($hierarchies->result as $key => $item) {
 				// skip model
 				if ($item->type==='model') {

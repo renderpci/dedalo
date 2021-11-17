@@ -2088,19 +2088,31 @@ abstract class install {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
+		$total = 0;
 
 		try {
 
-			$sql = '
-				SELECT COUNT(*) as total FROM "matrix_users";
-			';
-			$result = pg_query(DBi::_getConnection(), $sql);
-			if ($result===false) {
-				$response->msg = 'OK. System is NOT installed yet (table matrix_users is not ready)';
-				return $response;
-			}
-			$rows	= pg_fetch_assoc($result);
-			$total	= (int)reset($rows) ?? 0;
+			// table exists check
+				$sql = '
+					SELECT EXISTS (SELECT table_name FROM information_schema.tables WHERE table_name = \'matrix_users\');
+				';
+				$result	= pg_query(DBi::_getConnection(), $sql);
+				$row	= pg_fetch_object($result);
+				$exists	= ($row->exists==='t');
+
+				if ($exists===false) {
+					$response->result	= false;
+					$response->msg		= 'System is NOT installed yet';
+					return $response;
+				}
+
+			// number of usesrs in table
+				$sql = '
+					SELECT COUNT(*) as total FROM "matrix_users";
+				';
+				$result	= pg_query(DBi::_getConnection(), $sql);
+				$row	= pg_fetch_object($result);
+				$total	= (int)$row->total ?? 0;
 
 		} catch (Exception $e) {
 			$total = 0;
@@ -2108,11 +2120,11 @@ abstract class install {
 
 		if ($total>1) {
 			$response->result	= true;
-			$response->msg		= 'OK. System is already installed';
+			$response->msg		= 'System is already installed';
 			return $response;
 		}else{
 			$response->result	= false;
-			$response->msg		= 'OK. System is NOT installed yet';
+			$response->msg		= 'System is NOT installed yet';
 		}
 
 

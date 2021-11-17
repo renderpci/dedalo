@@ -10,7 +10,7 @@
 // RESPONSE
 	$init_response = new stdClass();
 		$init_response->result		= false;
-		$init_response->msg			= 'Error on init test '.PHP_EOL;
+		$init_response->msg			= 'Issue on init test. '.PHP_EOL;
 		$init_response->warnings	= [];
 
 // PHP VERSION
@@ -454,7 +454,11 @@
 	}
 	$entity_code = DEDALO_ENTITY;
 	if( !isValidName($entity_code) ) {
-		$init_response->msg .= trim("Error Processing Request: DEDALO_ENTITY config value its not a safe name ($entity_code). Please, use here a-z values without spaces or comas like 'numisdata' ");
+		$init_response->msg .= "Error Processing Request: DEDALO_ENTITY config value its not a safe name ($entity_code). Please, use allowed chars: a-z 0-9 _ without spaces or comas like 'numiscode' ";
+		return $init_response;
+	}
+	if (DEDALO_ENTITY==='entity_codename') {
+		$init_response->msg .= "Config var 'DEDALO_ENTITY' its not changed from default value (".DEDALO_ENTITY."). Please, set a new custom entity code using allowed chars: a-z 0-9 _ without spaces or comas (for instance: 'numiscode')";
 		return $init_response;
 	}
 

@@ -3,6 +3,7 @@
 
 // container
 	.install_wrapper {
+		padding-bottom: 4em;
 
 		&:before {
 			content: " ";
@@ -33,11 +34,21 @@
 			margin-left: 0 !important;
 		}
 
+		>.description {
+			margin-left: 1em !important;
+		}
+
 		iframe {
 			width: 100vw;
 			height: 100vh;
 			clear: both;
 			display: block;
+		}
+
+		&.instalation_help {
+			// float: right;
+			// margin-right: 3em;
+			// padding: 2em;
 		}
 	}
 
@@ -46,11 +57,19 @@
 	.error, .ok {
 		padding: 0.5em;
 		line-height: 1.2em;
+		background-color: transparent;
+	}
+	.error {
+		color: red;
+	}
+	.ok {
+		color: green;
 	}
 
 
-// hierarchies_list
-	.hierarchies_list {
+
+// ul_list
+	.ul_list {
 		padding: 1em;
 		display: grid;
 		grid-template-columns: repeat(5, 1fr);
