@@ -2522,6 +2522,8 @@
 		Updated dd_init_test with more clear messages and notifications
 		Fixed error on install::clean-tables method when matrix_activity_section_id_seq was not reset correctly
 		Improved install warnings
+		17-11-2021
+		Fixed minor issues in install script
 
 
 	[/HISTORY]
@@ -2547,13 +2549,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2zh';
+	$DEDALO_VERSION = '5.8.2zi';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '16-11-2021');
+	define('DEDALO_BUILD'	, '17-11-2021');
 
 
 	/*
