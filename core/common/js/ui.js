@@ -1381,7 +1381,7 @@ export const ui = {
 
 	/**
 	* PLACE_ELEMENT
-	* Place dom element inside target intance nodes
+	* Place DOM element inside target instance nodes
 	* Used in section_record to send component_filter to inspector
 	* @return bool | string tool name
 	*/
