@@ -41,6 +41,8 @@ render_list_section.prototype.list = async function(options) {
 			return content_data
 		}
 
+	// columns_map
+	const columns_map = await self.columns_map
 
 	const fragment = new DocumentFragment()
 
@@ -88,19 +90,20 @@ render_list_section.prototype.list = async function(options) {
 			class_name		: 'list_body',
 			parent			: fragment
 		})
+		// flat columns create a sequence of grid widths taking care of sub-column space
+		// like 1fr 1fr 1fr 3fr 1fr
+		const items				= ui.flat_column_items(columns_map)
+		const template_columns	= `auto ${items.join(' ')}`
+		Object.assign(
+			list_body.style,
+			{
+				"grid-template-columns": template_columns
+			}
+		)
 
-	// list_header_node
-		if (self.ar_instances.length>0) {
-
-			const columns_map		= await self.columns_map
-			const list_header_node	= ui.get_list_header(columns_map, self)
-
-			Object.assign(
-				list_body.style,
-				{
-					"grid-template-columns": "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
-				}
-			)
+	// list_header_node. Create and append if ar_instances is not empty
+		if (ar_section_record.length>0) {
+			const list_header_node = ui.render_list_header(columns_map, self)
 			list_body.appendChild(list_header_node)
 		}
 

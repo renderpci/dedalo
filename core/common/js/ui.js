@@ -1894,10 +1894,15 @@ export const ui = {
 
 
 	/**
-	* GET_LIST_HEADER
-	* @return object component_data
+	* RENDER_LIST_HEADER
+	* Creates the header nodes needed for portal and section in the same unified way
+	* @param array columns_map
+	* 	Parsed columns_map array as [{id: 'oh87', label: 'Information'}]
+	* @param object self
+	* 	Instance of section/component_portal
+	* @return DOM node header_wrapper
 	*/
-	get_list_header : (columns_map, self) =>{
+	render_list_header : (columns_map, self, add_column_id=true) =>{
 
 		const ar_nodes				= []
 		const columns_map_length	= columns_map.length
@@ -1910,36 +1915,47 @@ export const ui = {
 				continue;
 			}
 
-			const label = []
-
-			const current_label = SHOW_DEBUG
-				? column.label //+ " [" + component.tipo + "]"
-				: column.label
-			label.push(current_label)
+			// label
+				const label = []
+				const current_label = SHOW_DEBUG
+					? column.label //+ " [" + component.tipo + "]"
+					: column.label
+				label.push(current_label)
 
 			// node header_item
-				const id			=  column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+				const id			= column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
 				const header_item	= ui.create_dom_element({
 					element_type	: "div",
 					id				: id,
-					inner_html		: label.join('')
+					inner_html		: label.join(' ')
 				})
 
-			if(column.columns_map){
-				const current_column_map	= column.columns_map
-				const columns_map_length	= current_column_map.length
-				for (let j = 0; j < columns_map_length; j++) {
-					const current_column  = current_column_map[j]
-					// node header_item
-					const id				=  current_column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
-					const sub_header_item	= ui.create_dom_element({
+			// sub header items
+				if(column.columns_map){
+
+					header_item.classList.add("with_sub_header")
+					header_item.innerHTML = '<span>' + label.join(' ') + '</span>'
+
+					const sub_header	= ui.create_dom_element({
 						element_type	: "div",
-						id				: id,
-						inner_html		: current_column.label,
+						class_name		: 'sub_header',
 						parent			: header_item
 					})
+
+					const current_column_map	= column.columns_map
+					const columns_map_length	= current_column_map.length
+					for (let j = 0; j < columns_map_length; j++) {
+						const current_column  = current_column_map[j]
+						// node header_item
+						const id				=  current_column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+						const sub_header_item	= ui.create_dom_element({
+							element_type	: "div",
+							id				: id,
+							inner_html		: current_column.label,
+							parent			: sub_header
+						})
+					}
 				}
-			}
 
 			ar_nodes.push(header_item)
 		}//end for (let i = 0; i < columns_length; i++)
@@ -1962,14 +1978,16 @@ export const ui = {
 			}
 
 		// id column
-			const id_column = ui.create_dom_element({
-				element_type	: "div",
-				text_content	: "ID",
-				class_name		: "id",
-				parent			: header_wrapper
-			})
+			if (add_column_id) {
+				const id_column = ui.create_dom_element({
+					element_type	: "div",
+					text_content	: "ID",
+					class_name		: "id",
+					parent			: header_wrapper
+				})
+			}
 
-		// columns append
+		// regular columns append
 			const ar_nodes_length = ar_nodes.length
 			for (let i = 0; i < ar_nodes_length; i++) {
 				header_wrapper.appendChild(ar_nodes[i])
@@ -1986,7 +2004,29 @@ export const ui = {
 			// )
 
 		return header_wrapper
-	},//end get_list_header
+	},//end render_list_header
+
+
+
+	/**
+	* FLAT_COLUMN_ITEMS
+	* Call to dd_core_api to obtain the list of components associated to current options section_tipo
+	* @param array list
+	*	Array of column items
+	* @return array ar_elements
+	*/
+	flat_column_items : (list) => {
+		let ar_elements = []
+		const list_length = list.length
+		for (let i = 0; i < list_length; i++) {
+			const item = list[i]
+			const unit = (item.columns_map && item.columns_map.length>0)
+				? ui.flat_column_items(item.columns_map).length
+				: 1
+			ar_elements.push(unit+'fr')
+		}
+		return ar_elements
+	},//end flat_column_items
 
 
 

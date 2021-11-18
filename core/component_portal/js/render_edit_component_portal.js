@@ -76,10 +76,11 @@ render_edit_component_portal.prototype.edit = async function(options) {
 						element_type	: 'div',
 						class_name		: 'list_body'
 					})
+					const n_columns = list_header_node.children.length
 					// id (auto), repeat x columns, delete (25px)
 					const grid_template_columns_value = (self.permissions>1)
-						? "auto repeat("+(list_header_node.children.length-2)+", 1fr) auto"
-						: "auto repeat("+(list_header_node.children.length-1)+", 1fr)"
+						? "auto repeat("+(n_columns-2)+", 1fr) auto"
+						: "auto repeat("+(n_columns-1)+", 1fr)"
 					Object.assign(
 						list_body.style,
 						{
@@ -425,7 +426,7 @@ const build_header = function(columns_map, ar_section_record, self) {
 		}
 
 	// build using common ui builder
-		const list_header_node = ui.get_list_header(columns_map, self)
+		const list_header_node = ui.render_list_header(columns_map, self)
 
 	// hide list_header_node if no records found
 		if (ar_section_record.length<1) {
