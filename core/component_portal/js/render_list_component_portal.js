@@ -142,7 +142,7 @@ render_list_component_portal.prototype.list = async function(options) {
 					}
 
 				// columns_map
-				const columns_map = await self.columns_map
+					const columns_map = await self.columns_map
 
 				const fragment = new DocumentFragment()
 

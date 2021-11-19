@@ -67,28 +67,39 @@ render_edit_component_portal.prototype.edit = async function(options) {
 						return content_data
 					}
 
+				// columns_map
+					const columns_map = await self.columns_map
+
 				// header
-					const columns_map		= await self.columns_map
-					const list_header_node	= build_header(columns_map, ar_section_record, self)
+					const list_header_node = build_header(columns_map, ar_section_record, self)
 
 				// list_body
 					const list_body = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'list_body'
 					})
-					const n_columns = list_header_node.children.length
-					// id (auto), repeat x columns, delete (25px)
-					const grid_template_columns_value = (self.permissions>1)
-						? "auto repeat("+(n_columns-2)+", 1fr) auto"
-						: "auto repeat("+(n_columns-1)+", 1fr)"
+
+					// const n_columns = list_header_node.children.length
+					// // id (auto), repeat x columns, delete (25px)
+					// const template_columns = (self.permissions>1)
+					// 	? "auto repeat("+(n_columns-2)+", 1fr) auto"
+					// 	: "auto repeat("+(n_columns-1)+", 1fr)"
+
+					const items = ui.flat_column_items(columns_map);
+					if (self.permissions>1) {
+						items[items.length-1] = 'auto'; // delete button column set as grid auto
+					}
+					const template_columns = `auto ${items.join(' ')}`
+
 					Object.assign(
 						list_body.style,
 						{
-							"grid-template-columns": grid_template_columns_value
+							"grid-template-columns": template_columns
 						}
 					)
 					list_body.appendChild(list_header_node)
 					list_body.appendChild(content_data)
+
 
 				// buttons
 					const buttons = get_buttons(self)
@@ -347,51 +358,69 @@ export const add_events = function(self, wrapper) {
 */
 const get_content_data = async function(self, ar_section_record) {
 
-	const fragment = new DocumentFragment()
 
-	// add all section_record rendered nodes
-		const ar_section_record_length	= ar_section_record.length
-		if (ar_section_record_length===0) {
+	// build_values
+		const fragment = new DocumentFragment()
 
-			// no records found case
-			// const row_item = no_records_node()
-			// fragment.appendChild(row_item)
-		}else{
+		// add all section_record rendered nodes
+			const ar_section_record_length	= ar_section_record.length
+			if (ar_section_record_length===0) {
 
-			const ar_promises = []
-			for (let i = 0; i < ar_section_record_length; i++) {
-				const render_promise = ar_section_record[i].render()
-				ar_promises.push(render_promise)
+				// no records found case
+				// const row_item = no_records_node()
+				// fragment.appendChild(row_item)
+			}else{
+
+				const ar_promises = []
+				for (let i = 0; i < ar_section_record_length; i++) {
+					const render_promise = ar_section_record[i].render()
+					ar_promises.push(render_promise)
+				}
+				await Promise.all(ar_promises).then(function(values) {
+				  for (let i = 0; i < ar_section_record_length; i++) {
+
+					const section_record = values[i]
+
+					// button_remove
+				  		if (self.permissions>1) {
+							const column = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'column remove_column'
+							})
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button remove',
+								dataset			: { key : i },
+								parent			: column
+							})
+							section_record.appendChild(column)
+						}
+
+					fragment.appendChild(section_record)
+				  }
+				});
+			}//end if (ar_section_record_length===0)
+
+		// build references
+			if(self.data.references && self.data.references.length > 0){
+				const references_node = render_references(self.data.references)
+				fragment.appendChild(references_node)
 			}
-			await Promise.all(ar_promises).then(function(values) {
-			  for (let i = 0; i < ar_section_record_length; i++) {
-
-				const section_record = values[i]
-
-				// button_remove
-			  		if (self.permissions>1) {
-						const column = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'column remove_column'
-						})
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button remove',
-							dataset			: { key : i },
-							parent			: column
-						})
-						section_record.appendChild(column)
-					}
-
-				fragment.appendChild(section_record)
-			  }
-			});
-		}//end if (ar_section_record_length===0)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type)
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
+
+	// set node only when it is in DOM (to save browser resources)
+		// const observer = new IntersectionObserver(async function(entries) {
+		// 	const entry = entries[1] || entries[0]
+		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+		// 		observer.disconnect();
+		// 		const fragment = await build_values()
+		// 		content_data.appendChild(fragment)
+		// 	}
+		// }, { threshold: [0] });
+		// observer.observe(content_data);
 
 
 	return content_data
