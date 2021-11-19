@@ -2015,15 +2015,20 @@ export const ui = {
 	*	Array of column items
 	* @return array ar_elements
 	*/
-	flat_column_items : (list) => {
+	flat_column_items : (list, level_max=3, type='fr', level=1) => {
+
+		if (level>level_max) {
+			return []
+		}
+
 		let ar_elements = []
 		const list_length = list.length
 		for (let i = 0; i < list_length; i++) {
 			const item = list[i]
 			const unit = (item.columns_map && item.columns_map.length>0)
-				? ui.flat_column_items(item.columns_map).length
+				? ui.flat_column_items(item.columns_map, level_max, type, level++).length || 1
 				: 1
-			ar_elements.push(unit+'fr')
+			ar_elements.push(unit+type) // like '1fr'
 		}
 		return ar_elements
 	},//end flat_column_items
