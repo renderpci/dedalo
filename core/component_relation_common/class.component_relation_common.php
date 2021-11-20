@@ -406,6 +406,7 @@ class component_relation_common extends component_common {
 
 				$grid_column = new dd_grid_cell_object();
 						$grid_column->set_type('column');
+						$grid_column->set_column_id($this->section_tipo.'_'.$this->tipo.'_'.$ddo->section_tipo.'_'.$ddo->tipo);
 						$grid_column->set_value([$current_column]);
 					$ar_columns[] = $grid_column;
 			}
@@ -413,6 +414,7 @@ class component_relation_common extends component_common {
 			//create the row of the portal
 			$grid_row = new dd_grid_cell_object();
 				$grid_row->set_type('row');
+				$grid_row->set_row_id($locator->section_id);
 				$grid_row->set_value($ar_columns);
 
 			// store the current column with all values
