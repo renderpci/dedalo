@@ -629,6 +629,7 @@ const build_column_node = function(column_instance, self, ar_instances){
 
 	// console.log("build_column_node self:",self);
 	// const component = JSON.parse( JSON.stringify(column_instance)
+	// console.log("column_instance:",column_instance);
 
 	const column_id	= column_instance.column_id
 	const model		= self.caller.model
@@ -658,6 +659,7 @@ const build_column_node = function(column_instance, self, ar_instances){
 
 				grid_template_columns_ar_value.push(width)
 			}
+			// console.log("grid_template_columns_ar_value:",grid_template_columns_ar_value, children_length);
 
 			Object.assign(
 				column_node.style,
