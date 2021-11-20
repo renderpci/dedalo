@@ -66,6 +66,15 @@ $json	= file_get_contents('php://input');
 $data	= json_decode($json);
 
 
+
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+// common::trigger_manager();
+// function editTS2($json_data) {
+// 	dump($json_data, ' json_data ++ '.to_string());
+// }
+
+
+
 /**
 * LISTADOHIJOS : listados (al abrir la flecha,etc..)
 */
@@ -214,172 +223,288 @@ if($accion==='insertTS') {
 /**
 * EDIT V4 beta3
 */
-if($accion==='editTS') {
+// if($accion==='editTS') {
+if(!empty($data) && $data->accion==='editTS') {
 	
 	// check is post request
-		if(!$_POST) {
-			$msg = "Error. Only post reques are allowed to editTS";
-			trigger_error($msg);
-			exit();
-		}
+		// if(!$_POST) {
+		// 	$msg = "Error. Only post reques are allowed to editTS";
+		// 	trigger_error($msg);
+		// 	exit();
+		// }
 
-	$terminoID = trim( safe_xss($_REQUEST['terminoID']) );
+	// Write session to unlock session file
+	session_write_close();
 
-	// check valid prefix
-		$prefix = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+	// all ouput will be in json format
+	header('Content-Type: application/json');
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed';
+
+	$form_data = $data->form_data;
+
+	// terminoID. check valid prefix
+		$terminoID	= trim( safe_xss($form_data->terminoID) );
+		$prefix		= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
 		if ($prefix===false) {
 			$msg = "Error. Invalid prefix to editTS ".$terminoID;
 			trigger_error($msg);
+			$response->msg = $msg;
+			echo json_encode($response, JSON_UNESCAPED_UNICODE);
 			exit();
 		}
+		$form_data->prefix = $prefix; // add to use later in js
 
 	// required fields
-		$parentInicial	= safe_xss($_POST['parentInicial']);
-		$parentPost		= safe_xss($_POST['parent']);
-		$esdescriptor	= safe_xss($_POST['esdescriptor']);
-		$propiedades	= safe_xss($_POST['propiedades']);
-		$properties		= safe_xss($_POST['properties']);
+		$parentInicial	= safe_xss($form_data->parentInicial);
+		$parentPost		= safe_xss($form_data->parent);
+		$esdescriptor	= safe_xss($form_data->esdescriptor);
+		$propiedades	= safe_xss($form_data->propiedades);
+		$properties		= safe_xss($form_data->properties);
 		$nHijos			= intval($nHijos);
 
 		if(!$parentInicial || !isset($nHijos) || !$esdescriptor || !$terminoID) {
 			die("TS edit Error: \n few arguments !");
 		}
-	
-	# Imposibilita cambiar a NO descriptor un descriptor con hijos
-		if($esdescriptor==='no' && $nHijos>0 ) die(" $no_se_puede_cambiar_a_ND_title ");	
-		
-	# si el término es ND, forzamos usableIndex = 'no' ...
-		if($esdescriptor==='no') {		
-			#$usableIndex 	= 'no';
-			$esmodelo		= 'no';
-		}else{
-			#$usableIndex 	= safe_xss($_POST['usableIndex']);
-			$esmodelo 		= safe_xss($_POST['esmodelo']);
-		}		
-	
 
-	$RecordObj_dd_edit = new RecordObj_dd_edit($terminoID);
-		$RecordObj_dd_edit->get_ID(); # Force load
-		$RecordObj_dd_edit->set_parent($parentPost);
-		$RecordObj_dd_edit->set_esmodelo($esmodelo);
-	
+	// Imposibilita cambiar a NO descriptor un descriptor con hijos
+		if($esdescriptor==='no' && $nHijos>0 ) {
+			$response->msg = $no_se_puede_cambiar_a_ND_title;
+			echo json_encode($response, JSON_UNESCAPED_UNICODE);
+			exit();
+		}
+
+	// si el término es ND, forzamos usableIndex = 'no' ...
+		$esmodelo = ($esdescriptor==='no')
+			? 'no'
+			: safe_xss($form_data->esmodelo);
+
+	// RecordObj_dd
+		$RecordObj_dd_edit = new RecordObj_dd_edit($terminoID);
+			$RecordObj_dd_edit->get_ID(); # Force load
+			$RecordObj_dd_edit->set_parent($parentPost);
+			$RecordObj_dd_edit->set_esmodelo($esmodelo);
+
 	// set values
-		if(isset($_POST['visible']))		$RecordObj_dd_edit->set_visible( safe_xss($_POST['visible']) );
-		if(isset($_POST['esdescriptor']))	$RecordObj_dd_edit->set_esdescriptor( safe_xss($_POST['esdescriptor']) );
-		if(isset($_POST['modelo']))			$RecordObj_dd_edit->set_modelo( safe_xss($_POST['modelo']) );	
-		if(isset($_POST['traducible']))		$RecordObj_dd_edit->set_traducible( safe_xss($_POST['traducible']) );
+		if(isset($form_data->visible))		$RecordObj_dd_edit->set_visible( safe_xss($form_data->visible) );
+		if(isset($form_data->esdescriptor))	$RecordObj_dd_edit->set_esdescriptor( safe_xss($form_data->esdescriptor) );
+		if(isset($form_data->modelo))		$RecordObj_dd_edit->set_modelo( safe_xss($form_data->modelo) );
+		if(isset($form_data->traducible))	$RecordObj_dd_edit->set_traducible( safe_xss($form_data->traducible) );
 
-		if(isset($_POST['propiedades'])) {
-			$propiedades = (empty($_POST['propiedades']) || $_POST['propiedades']==='{}')
+		if(isset($form_data->propiedades)) {
+			$propiedades = (empty($form_data->propiedades) || $form_data->propiedades==='{}')
 				? null
-				: safe_xss($_POST['propiedades']);
+				: safe_xss($form_data->propiedades);
 			$RecordObj_dd_edit->set_propiedades($propiedades);
 		}
 
-		if(isset($_POST['properties'])) {
-			$properties = (empty($_POST['properties']) || $_POST['properties']==='{}')
+		if(isset($form_data->properties)) {
+			$properties = (empty($form_data->properties) || $form_data->properties==='{}')
 				? null
-				: safe_xss($_POST['properties']);
+				: safe_xss($form_data->properties);
 			$RecordObj_dd_edit->set_properties($properties);
 		}
-	
+
 	// check assigned parent is valid and really exists
 		$RecordObj_dd_edit_parent	= new RecordObj_dd_edit($parentPost);
-		$parent_terminoID			= $RecordObj_dd_edit_parent->get_ID();		
+		$parent_terminoID			= $RecordObj_dd_edit_parent->get_ID();
 		if( strlen($parent_terminoID)>=2 || $parentPost==='dd0' ) {
-			
-			# El parent SI existe: Ejecutamos el UPDATE	
+
+			# El parent SI existe: Ejecutamos el UPDATE
 			$current_id = $RecordObj_dd_edit->Save();
-			
+
 		}else{
 
 			# El parent NO existe: Stop
-			die("TS Edit Error: \n Parent: $parentPost  does not exist! \n Use a valid parent.");	
+			$response->msg = "TS Edit Error: \n Parent: '$parentPost' does not exist! \n Use a valid parent.";
+			echo json_encode($response, JSON_UNESCAPED_UNICODE);
+			exit();
 		}
 
-	// css structure . For easy css edit, save 
-		if (isset($_POST[MAIN_PROPERTIES_COLUMN]) && strpos($_POST[MAIN_PROPERTIES_COLUMN], '"css"')!==false) {
-			debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($_POST[MAIN_PROPERTIES_COLUMN]) ), logger::DEBUG);
+	// css structure . For easy css edit, save
+		if (isset($form_data->{MAIN_PROPERTIES_COLUMN}) && strpos($form_data->{MAIN_PROPERTIES_COLUMN}, '"css"')!==false) {
+			debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($form_data->{MAIN_PROPERTIES_COLUMN}) ), logger::DEBUG);
 			$result = css::build_structure_css();
 		}
 
 	// publication schema (only for model diffusion_element)
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
 		if ($modelo_name==='diffusion_element') {
-			if (defined('MYSQL_DEDALO_HOSTNAME_CONN') && defined('MYSQL_DEDALO_USERNAME_CONN') && defined('MYSQL_DEDALO_PASSWORD_CONN')) {			
-				// Update schema data always		
+			if (defined('MYSQL_DEDALO_HOSTNAME_CONN') && defined('MYSQL_DEDALO_USERNAME_CONN') && defined('MYSQL_DEDALO_PASSWORD_CONN')) {
+				// Update schema data always
 				$publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
 				debug_log("trigger_dd.editTS -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
 			}
-		}	
-	
-	# Al acabar la secuencia de actualización, recargamos el listado (opener) y cerramos esta ventana flotante		
-	# Si llegamos desde el listado plano
-	if($from==='flat') {
-
-		$html .= "
-			<script type=\"text/javascript\">
-				window.opener.location.reload(); 
-				window.close();	
-			</script>";
-		echo $codHeader . $html ;
-		exit();
-		
-	# Caso general (desde listado jerárquico)	
-	}else{
-				
-		if($esdescriptor=='no') {
-			
-			$html .= "
-			<script type=\"text/javascript\">					
-				window.opener.openDivTrack('$parentPost',1,'$parentPost');
-				// window.close(); 
-			</script>";
-		
-		# Si ha cambiado el parent		
-		}else if($parentPost!==$parentInicial) {
-			
-			$html .= "
-			<script type=\"text/javascript\">
-				// metemos en la cookie que abra el nuevo parent y luego recargaremos.
-				// Actualiza la nueva ubicación
-				window.opener.openDivTrack('$parentPost',1,'$terminoID');
-				// Actualiza la antigua ubicación 
-				window.opener.openDivTrack('$parentInicial',1,'$terminoID');
-				// Cierra la ventana de edición
-				// window.close(); 
-			</script>";
-											
-		}else{
-			
-			if ($parentPost===$prefix.'0') {
-				# Reload all page
-				$html .= "
-				<script type=\"text/javascript\">
-					//alert('parentPost:$parentPost - terminoID:$terminoID')
-					window.opener.location.reload();
-					// window.close();
-					history.back()
-				</script>";
-			}else{
-				# Reload only de parent div
-				$html .= "
-				<script type=\"text/javascript\">
-					//alert('parentPost:$parentPost - terminoID:$terminoID')					
-					window.opener.openDivTrack('$parentPost',1,'$terminoID');
-					// window.close();
-					history.back()	
-				</script>";
-			}			
 		}
-		
-		echo $codHeader . $html;
 
-		# Write session to unlock session file
-		session_write_close();
-		
-		exit();
-	}
+	// all is OK
+		$response->result		= true;
+		$response->msg			= 'OK. Request done successufully';
+		$response->form_data	= $form_data;
+
+	echo json_encode($response, JSON_UNESCAPED_UNICODE);
+	exit();
+
+	// OLD WAY
+		// $terminoID = trim( safe_xss($_REQUEST['terminoID']) );
+
+		// // check valid prefix
+		// 	$prefix = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+		// 	if ($prefix===false) {
+		// 		$msg = "Error. Invalid prefix to editTS ".$terminoID;
+		// 		trigger_error($msg);
+		// 		exit();
+		// 	}
+
+		// // required fields
+		// 	$parentInicial	= safe_xss($_POST['parentInicial']);
+		// 	$parentPost		= safe_xss($_POST['parent']);
+		// 	$esdescriptor	= safe_xss($_POST['esdescriptor']);
+		// 	$propiedades	= safe_xss($_POST['propiedades']);
+		// 	$properties		= safe_xss($_POST['properties']);
+		// 	$nHijos			= intval($nHijos);
+
+		// 	if(!$parentInicial || !isset($nHijos) || !$esdescriptor || !$terminoID) {
+		// 		die("TS edit Error: \n few arguments !");
+		// 	}
+
+		// # Imposibilita cambiar a NO descriptor un descriptor con hijos
+		// 	if($esdescriptor==='no' && $nHijos>0 ) die(" $no_se_puede_cambiar_a_ND_title ");
+
+		// # si el término es ND, forzamos usableIndex = 'no' ...
+		// 	if($esdescriptor==='no') {
+		// 		#$usableIndex 	= 'no';
+		// 		$esmodelo		= 'no';
+		// 	}else{
+		// 		#$usableIndex 	= safe_xss($_POST['usableIndex']);
+		// 		$esmodelo 		= safe_xss($_POST['esmodelo']);
+		// 	}
+
+
+		// $RecordObj_dd_edit = new RecordObj_dd_edit($terminoID);
+		// 	$RecordObj_dd_edit->get_ID(); # Force load
+		// 	$RecordObj_dd_edit->set_parent($parentPost);
+		// 	$RecordObj_dd_edit->set_esmodelo($esmodelo);
+
+		// // set values
+		// 	if(isset($_POST['visible']))		$RecordObj_dd_edit->set_visible( safe_xss($_POST['visible']) );
+		// 	if(isset($_POST['esdescriptor']))	$RecordObj_dd_edit->set_esdescriptor( safe_xss($_POST['esdescriptor']) );
+		// 	if(isset($_POST['modelo']))			$RecordObj_dd_edit->set_modelo( safe_xss($_POST['modelo']) );
+		// 	if(isset($_POST['traducible']))		$RecordObj_dd_edit->set_traducible( safe_xss($_POST['traducible']) );
+
+		// 	if(isset($_POST['propiedades'])) {
+		// 		$propiedades = (empty($_POST['propiedades']) || $_POST['propiedades']==='{}')
+		// 			? null
+		// 			: safe_xss($_POST['propiedades']);
+		// 		$RecordObj_dd_edit->set_propiedades($propiedades);
+		// 	}
+
+		// 	if(isset($_POST['properties'])) {
+		// 		$properties = (empty($_POST['properties']) || $_POST['properties']==='{}')
+		// 			? null
+		// 			: safe_xss($_POST['properties']);
+		// 		$RecordObj_dd_edit->set_properties($properties);
+		// 	}
+
+		// // check assigned parent is valid and really exists
+		// 	$RecordObj_dd_edit_parent	= new RecordObj_dd_edit($parentPost);
+		// 	$parent_terminoID			= $RecordObj_dd_edit_parent->get_ID();
+		// 	if( strlen($parent_terminoID)>=2 || $parentPost==='dd0' ) {
+
+		// 		# El parent SI existe: Ejecutamos el UPDATE
+		// 		$current_id = $RecordObj_dd_edit->Save();
+
+		// 	}else{
+
+		// 		# El parent NO existe: Stop
+		// 		die("TS Edit Error: \n Parent: $parentPost  does not exist! \n Use a valid parent.");
+		// 	}
+
+		// // css structure . For easy css edit, save
+		// 	if (isset($_POST[MAIN_PROPERTIES_COLUMN]) && strpos($_POST[MAIN_PROPERTIES_COLUMN], '"css"')!==false) {
+		// 		debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($_POST[MAIN_PROPERTIES_COLUMN]) ), logger::DEBUG);
+		// 		$result = css::build_structure_css();
+		// 	}
+
+		// // publication schema (only for model diffusion_element)
+		// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
+		// 	if ($modelo_name==='diffusion_element') {
+		// 		if (defined('MYSQL_DEDALO_HOSTNAME_CONN') && defined('MYSQL_DEDALO_USERNAME_CONN') && defined('MYSQL_DEDALO_PASSWORD_CONN')) {
+		// 			// Update schema data always
+		// 			$publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
+		// 			debug_log("trigger_dd.editTS -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
+		// 		}
+		// 	}
+
+		// # Al acabar la secuencia de actualización, recargamos el listado (opener) y cerramos esta ventana flotante
+		// # Si llegamos desde el listado plano
+		// if($from==='flat') {
+
+		// 	$html .= "
+		// 		<script type=\"text/javascript\">
+		// 			window.opener.location.reload();
+		// 			window.close();
+		// 		</script>";
+		// 	echo $codHeader . $html ;
+		// 	exit();
+
+		// # Caso general (desde listado jerárquico)
+		// }else{
+
+		// 	if($esdescriptor=='no') {
+
+		// 		$html .= "
+		// 		<script type=\"text/javascript\">
+		// 			window.opener.openDivTrack('$parentPost',1,'$parentPost');
+		// 			// window.close();
+		// 		</script>";
+
+		// 	# Si ha cambiado el parent
+		// 	}else if($parentPost!==$parentInicial) {
+
+		// 		$html .= "
+		// 		<script type=\"text/javascript\">
+		// 			// metemos en la cookie que abra el nuevo parent y luego recargaremos.
+		// 			// Actualiza la nueva ubicación
+		// 			window.opener.openDivTrack('$parentPost',1,'$terminoID');
+		// 			// Actualiza la antigua ubicación
+		// 			window.opener.openDivTrack('$parentInicial',1,'$terminoID');
+		// 			// Cierra la ventana de edición
+		// 			// window.close();
+		// 		</script>";
+
+		// 	}else{
+
+		// 		if ($parentPost===$prefix.'0') {
+		// 			# Reload all page
+		// 			$html .= "
+		// 			<script type=\"text/javascript\">
+		// 				//alert('parentPost:$parentPost - terminoID:$terminoID')
+		// 				window.opener.location.reload();
+		// 				// window.close();
+		// 				history.back()
+		// 			</script>";
+		// 		}else{
+		// 			# Reload only de parent div
+		// 			$html .= "
+		// 			<script type=\"text/javascript\">
+		// 				//alert('parentPost:$parentPost - terminoID:$terminoID')
+		// 				window.opener.openDivTrack('$parentPost',1,'$terminoID');
+		// 				// window.close();
+		// 				history.back()
+		// 			</script>";
+		// 		}
+		// 	}
+
+		// 	echo $codHeader . $html;
+
+		// 	# Write session to unlock session file
+		// 	session_write_close();
+
+		// 	exit();
+		// }
 }//end editTS
 
 

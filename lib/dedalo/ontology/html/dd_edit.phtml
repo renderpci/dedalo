@@ -36,6 +36,9 @@
 
 	var window_docu
 </script>
+<script type="module">
+	// import {data_manager} from './js/data_manager.js'
+</script>
 <?php
 // js
 	print js::build_tag('jquery/dist/jquery.min.js', 'defer');
@@ -43,13 +46,14 @@
 	print js::build_tag('inc/javascript.js', 'defer');
 	print js::build_tag('js/dd_common.js', null);
 	print js::build_tag('js/dd_edit.js', 'defer');
+	print js::build_tag('js/app_utils.js', 'defer');
 // Aditional css / js	
 	print js::build_tag('jsoneditor/dist/jsoneditor.min.js', 'defer');
 ?>
 </head>
 <body>
 <div id="wrapGeneral">
-	<form name="form1" id="form1" method="post" onSubmit="return validar(this)">
+	<form name="form1" id="form1" method="post" onSubmit="editTS(this); return false">
 		<table class="table_edit">
 
 

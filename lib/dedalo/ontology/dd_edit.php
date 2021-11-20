@@ -41,11 +41,11 @@ $terminoID = trim($terminoID);
 
 
 // ACTUALIZAR LA FICHA  #############################################
-	if( !empty($_POST["accion"]) ) {	
-		$html		= '';
-		$accion		= 'editTS';
-		$edicion	= require_once( dirname(__FILE__). '/trigger.dd.php' );
-	}
+	// if( !empty($_POST["accion"]) ) {
+	// 	$html		= '';
+	// 	$accion		= 'editTS';
+	// 	$edicion	= require_once( dirname(__FILE__). '/trigger.dd.php' );
+	// }
 
 
 # Data from current jer (structure)
