@@ -206,10 +206,25 @@ class dd_grid_cell_object {
 	}
 
 	/**
+	* SET_ROW_ID
+	*/
+	public function set_row_id(int $value) {
+		$this->row_id = $value;
+	}
+
+
+	/**
 	* SET_COLUMN_COUNT
 	*/
 	public function set_column_count(int $value) {
 		$this->column_count = $value;
+	}
+
+	/**
+	* SET_COLUMN_ID
+	*/
+	public function set_column_id($value) {
+		$this->column_id = $value;
 	}
 
 	/**
