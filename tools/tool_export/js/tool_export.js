@@ -115,8 +115,6 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-		console.log("tool_export build - self:",self);
-
 	// status update
 		self.status = 'building'
 
@@ -187,11 +185,13 @@ tool_export.prototype.get_export_grid = async function(options) {
 			source	: source
 		}
 
+
 	// call to the API, fetch data and get response
 		const current_data_manager	= new data_manager()
 		const dd_grid_data_request	= await current_data_manager.request({body : rqo})
 		const dd_grid_data			= dd_grid_data_request.result
 
+			console.log("dd_grid_data-----:",dd_grid_data);
 
 		/* TEST
 			console.log("get_export_grid dd_grid_data_request:",dd_grid_data);
