@@ -127,6 +127,10 @@ const get_content_data_edit = async function(self) {
 					for (let i = 0; i < response.value[target_section_tipo].length; i++) {
 						const ddo = response.value[target_section_tipo][i]
 						self.build_export_component(export_components_container, ddo.path, ddo)
+						.then(()=>{
+							// Update the ddo_export
+							self.ar_ddo_to_export.push(ddo)
+						})
 					}
 					if(SHOW_DEBUG===true) {
 						console.log(`Added saved local db ${target_section_tipo} ddo items:`, response.value[target_section_tipo]);
@@ -329,6 +333,7 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 
 	const self = this
 
+
 	const last_item		= path[path.length-1]
 	const first_item	= path[0]
 
@@ -370,6 +375,36 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			const delete_ddo_index = self.ar_ddo_to_export.findIndex( el => el.id === ddo.id )
 			self.ar_ddo_to_export.splice(delete_ddo_index, 1)
 			// console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
+			const current_data_manager	= new data_manager()
+			const id					= 'tool_export_config'
+			current_data_manager.get_local_db_data(id, 'data')
+			.then(function(response){
+				// target_section_tipo. Used to create a object property key different for each section
+				const target_section_tipo	= self.target_section_tipo[0]
+				// tool_export_config. Current section tool_export_config (fallback to basic object)
+				const tool_export_config	= response && response.value
+					? response.value
+					: false
+
+				const section_config = tool_export_config && tool_export_config[target_section_tipo]
+					? tool_export_config[target_section_tipo]
+					: false
+				// check if already exists current target section_tipo config ddo
+				const compnent_ddo_index = section_config
+					? section_config.map(el => el.id).indexOf(ddo.id)//find(el => el.id===ddo.id)
+					: undefined
+				// if exists current ddo (as expected because it has a close button and need to be in the loca database), remove it from local database using current target section_tipo as key
+				if (compnent_ddo_index) {
+					// remove it
+						tool_export_config[target_section_tipo].splice(compnent_ddo_index, 1)
+					// save the result to the local database
+					const cache_data = {
+						id		: 'tool_export_config',
+						value	: tool_export_config
+					}
+					current_data_manager.set_local_db_data(cache_data, 'data')
+				}
+			})
 		})
 
 	// label component source if exists

@@ -81,7 +81,6 @@ class tool_export { // extends tool_common
 			$tool_export	= new tool_export($section_tipo, $model, $export_format, $ar_ddo_to_export, $sqo);
 			$export_grid	= $tool_export->build_export_grid();
 
-
 			$response->msg		= 'Ok. Request done';
 			$response->result	= $export_grid;
 
@@ -262,7 +261,7 @@ class tool_export { // extends tool_common
 																	 $locator->section_id,
 																	 'edit',
 																	 $current_lang,
-																	 $locator->section_tipo);
+																	 $locator->section_tipo, false);
 				$current_component->set_locator($locator);
 
 			// check if the component has ddo children in the path,
