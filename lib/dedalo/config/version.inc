@@ -2526,6 +2526,8 @@
 		Fixed minor issues in install script
 		20-11-2021
 		Updated ontology edit term form action. Now, JSON request js is used instead old POST form action
+		21-11-2021
+		Re-factorized ontology code
 
 
 	[/HISTORY]
@@ -2551,13 +2553,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.2zj';
+	$DEDALO_VERSION = '5.8.2zk';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-11-2021');
+	define('DEDALO_BUILD'	, '21-11-2021');
 
 
 	/*
