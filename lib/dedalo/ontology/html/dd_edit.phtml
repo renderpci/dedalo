@@ -53,7 +53,7 @@
 </head>
 <body>
 <div id="wrapGeneral">
-	<form name="form1" id="form1" method="post" onSubmit="editTS(this); return false">
+	<form name="form1" id="form1" method="post" onSubmit="edit_ts(this, event);">
 		<table class="table_edit">
 
 
@@ -215,7 +215,7 @@
 								<textarea id="propiedades" name="propiedades" class="propiedades_textarea hide"><?php echo $propiedades ?></textarea>
 								<div id="editor_json" class="editor_json_container"></div>
 								<script>
-								let propiedades_editor
+								// let propiedades_editor
 								window.addEventListener('DOMContentLoaded', (event) => {
 
 									const propiedades_dato		= <?php echo json_encode($propiedades) ?>;
@@ -257,7 +257,7 @@
 								<textarea id="properties" name="properties" class="properties_textarea hide"><?php echo $properties_text ?></textarea>
 								<div id="properties_editor_json" class="editor_json_container"></div>
 								<script>
-								let properties_editor
+								// let properties_editor
 								window.addEventListener('DOMContentLoaded', (event) => {
 									
 									const properties_dato		= <?php echo json_encode($properties) ?>;
@@ -293,7 +293,7 @@
 							<tr>
 							 <td align="right" nowrap  ><?php echo $dependiente_de_title ?> </td>
 							 <td align="center" nowrap ><?php echo $parentInicial = $parent ; ?></td>
-							 <td align="left" nowrap  >
+							 <td align="left" nowrap >
 								<?php echo $cambiar_a_title ?>
 								<input name="parent" type="text" id="parent" style="width:90px; text-align:center" value="<?php echo $parent ?>" onFocus="myfocus(this)" onBlur="myblur(this)">
 								<span class="anotacionTexto">(<?php echo $al_cambiar_el_padre_title ?>)</span>
@@ -314,12 +314,13 @@
 							<!-- Campos obligatorios -->
 							<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
 							<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
-
+							<?php /*
 							<input type="hidden" name="MM_insert" value="form1">
 							<input type="hidden" name="accion" value="editTS">
-
-							<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="submit(this)">
+							*/ ?>
+							<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon">
 							<script type="text/javascript">
+							/*
 							// Send JSON text to input and force update
 							document.getElementById('submit_button').onclick = function () {							
 								$('#propiedades')
@@ -329,10 +330,9 @@
 										.val(properties_editor.getText())
 										.trigger('change');
 							}
+							*/
 							</script>
-
 							<input name="cancelar" type="button" value=" <?php echo $cerrar_title ?> "  onClick="javascript:window.close();">
-
 							<input name="export" type="button" value=" Export " onClick="export_ontology('<?php echo $terminoID ?>');">
 						</div><!-- /form_buttons -->
 					</td>

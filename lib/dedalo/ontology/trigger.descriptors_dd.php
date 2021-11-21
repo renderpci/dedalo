@@ -1,31 +1,99 @@
 <?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
 // ontology custon config file
 require_once( dirname(__FILE__) .'/config/config_ontology.php' );
-
-# Old lang vars
+// Old lang vars
 require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 
 
-if(login::is_logged()!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
-	header("Location: $url");
+// login check
+	$is_logged			= login::is_logged();
+	$is_global_admin	= security::is_global_admin(CURRENT_LOGGED_USED_ID);
+	if($is_logged!==true || $is_global_admin!==true) {
+		$url =  DEDALO_ROOT_WEB ."/main/";
+		header("Location: $url");
+		exit();
+	}
+
+
+// other files to include
+	// require_once(DEDALO_ROOT .'/inc/funciones.php');
+	// require_once(DEDALO_ROOT .'/lang_translate/class.LangTranslate.php');
+	// require_once(DEDALO_CORE_PATH . '/common/class.navigator.php');
+	// require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
+
+
+
+// set vars
+	$vars = [
+		'mode',
+		'id',
+		'terminoID',
+		'terminoID_lang',
+		'termino',
+		'parent',
+		'lang',
+		'tipo',
+		'dato'
+	];
+	foreach($vars as $name)	$$name = common::setVar($name);
+
+
+
+# TRANSLATIONS TR AJAX TRIGGER
+if($mode==='loadDescriptorsGrid') {
+
+	if(!$id || empty($terminoID)) exit(" Error: Need more vars id:$id, terminoID:$terminoID (ts_descriptors_grid) ");
+
+	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
+	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);				#dump($id);die();
+	$ar_transtations_of_current = $RecordObj_descriptors_dd->get_ar_translations_of_current();	#dump($ar_transtations_of_current,'ar_transtations_of_current '.$id); #die();
+
+	if(empty($ar_transtations_of_current)) die();
+
+
+
+	if(count($ar_transtations_of_current)<1) {
+		# Nothing to do
+		die();
+
+	}else{
+
+		# Iterate all traductions
+		foreach($ar_transtations_of_current as $id => $current_lang) {
+
+			# TERMINO : Data from current descriptor
+			$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
+			$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);
+			$termino 				= $RecordObj_descriptors_dd->get_dato();		#dump($termino,'termino');
+			$parent_desc			= $RecordObj_descriptors_dd->get_parent();
+			$lang 					= $RecordObj_descriptors_dd->get_lang();
+			$mainLang 				= $RecordObj_descriptors_dd->get_mainLang();	#dump($id,"mainLang");
+			$langFull 				= lang::get_name_from_code( $lang );
+
+
+			# DEF : Data from def
+			$matrix_table			= RecordObj_descriptors_dd::$descriptors_matrix_table;
+			$RecordObj				= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
+			$def 					= $RecordObj->get_dato();
+			$def_id 				= $RecordObj->get_ID();		#dump($RecordObj);
+
+			require( dirname(__FILE__) . '/html/dd_descriptors_grid.phtml' );
+		 }
+	}
+
+	# Write session to unlock session file
+	session_write_close();
+
 	exit();
 }
 
 
-#require_once(DEDALO_ROOT .'/inc/funciones.php');
-#require_once(DEDALO_ROOT .'/lang_translate/class.LangTranslate.php');
-#require_once(DEDALO_CORE_PATH . '/common/class.navigator.php');
-#require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
 
-
-# set vars
-$vars = ['id','mode','terminoID_lang','terminoID','termino','parent','lang', 'tipo', 'dato'];
-foreach($vars as $name)	$$name = common::setVar($name);
-
-
-
+# REMOVEDESCRIPTOR
 if($mode==='removeDescriptor') {
 
 	if(!$id || !$terminoID) die("Need more data! id:$id - terminoID:$terminoID ");
@@ -51,10 +119,11 @@ if($mode==='removeDescriptor') {
 	$RecordObj->MarkForDeletion();
 
 	exit($html);
-}
+}//end removeDescriptor
 
 
 
+# NEWDESCRIPTOR
 if($mode=='newDescriptor') {
 
 	if(!$terminoID_lang || !$terminoID) die(" Error. Need more data! terminoID_lang:$terminoID_lang ,terminoID:$terminoID ");
@@ -83,50 +152,50 @@ if($mode=='newDescriptor') {
 
 	$html = $id;
 	exit($html);
-}
+}//end newDescriptor
 
 
 
-# SAVE DESCRIPTOR
-if($mode=='saveDescriptor') {
+# SAVE DESCRIPTOR - (!) moved to trigger.dd
+	// if($mode=='saveDescriptor') {
 
-	// session_write_close();
+	// 	// session_write_close();
 
-	if(empty($terminoID)) die(" Error. Need more data! terminoID:$terminoID ");
+	// 	if(empty($terminoID)) die(" Error. Need more data! terminoID:$terminoID ");
 
-	// decode stringified dato
-		$dato = json_decode($dato);
+	// 	// decode stringified dato
+	// 		$dato = json_decode($dato);
 
-	if ($tipo==='obs') {
-		
-		// (!) disabled. Now save descriptors data is indirect:
-		// First data is saved in regular section ontology, and then data is propagated to descriptors_dd from section->post_save_processes
-			$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-			$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo);
-			$RecordObj->set_dato($dato);
-			$RecordObj->Save();
+	// 	if ($tipo==='obs') {
 
-		$response = null;
-	
-	}else{
+	// 		// (!) disabled. Now save descriptors data is indirect:
+	// 		// First data is saved in regular section ontology, and then data is propagated to descriptors_dd from section->post_save_processes
+	// 			$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+	// 			$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo);
+	// 			$RecordObj->set_dato($dato);
+	// 			$RecordObj->Save();
 
-		// sync Dédalo ontology records
-			$result = ontology::edit_term((object)[
-				'term_id'	=> $parent,
-				'dato'		=> $dato,
-				'dato_tipo'	=> $tipo,
-				'lang'		=> $lang
-			]);
+	// 		$response = null;
 
-		$response = ($result===false)
-			? 'Error on save descriptor ' . json_encode($result)
-			: null;
-	}
-	
+	// 	}else{
 
-	echo $response; 
-	exit();
-}//end saveDescriptor
+	// 		// sync Dédalo ontology records
+	// 			$result = ontology::edit_term((object)[
+	// 				'term_id'	=> $parent,
+	// 				'dato'		=> $dato,
+	// 				'dato_tipo'	=> $tipo,
+	// 				'lang'		=> $lang
+	// 			]);
+
+	// 		$response = ($result===false)
+	// 			? 'Error on save descriptor ' . json_encode($result)
+	// 			: null;
+	// 	}
+
+
+	// 	echo $response;
+	// 	exit();
+	// }//end saveDescriptor
 
 
 
@@ -147,6 +216,7 @@ if($mode==='export_ontology') {
 
 
 
+# CODIGOKEYUP
 if($mode=='codigoKeyUp') {
 
 	if(!$termino || !$terminoID) die("Need more data! terminoID:$terminoID , termino:$termino ");
@@ -157,12 +227,14 @@ if($mode=='codigoKeyUp') {
 	$n = Descriptors::descriptorExists($termino,'termino');
 	exit("$n");
 	*/
-}
+}//end codigoKeyUp
 
 
 
+# NETWORKTEST
 if($mode=='networkTest') {
+
 	exit(' networkTest ok! ');
-}
+}//end networkTest
 
 
