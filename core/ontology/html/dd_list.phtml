@@ -12,22 +12,18 @@
 print css::build_tag('css/dd_page.css', null, false);
 print css::build_tag('css/dd_list.css', null, false);
 ?>
-
-<script type="text/javascript">	
+<script type="text/javascript">
 	const DEDALO_LIB_BASE_URL = <?php echo json_encode(DEDALO_LIB_BASE_URL) ?>;
-
 	// VARS de mensajes de aviso multi-idioma
-	const el_descriptor_tiene_hijos_title				= '<?php echo msgJS($el_descriptor_tiene_hijos_title) ?>' ;
-	const el_descriptor_tiene_indexaciones_title		= '<?php echo msgJS($el_descriptor_tiene_indexaciones_title) ?>' ;
+	const el_descriptor_tiene_hijos_title							= '<?php echo msgJS($el_descriptor_tiene_hijos_title) ?>' ;
+	const el_descriptor_tiene_indexaciones_title			= '<?php echo msgJS($el_descriptor_tiene_indexaciones_title) ?>' ;
 	const seguro_que_quiere_borrar_este_termino_title	= '<?php echo msgJS($seguro_que_quiere_borrar_este_termino_title) ?>' ;
-	const hijos_title									= '<?php echo msgJS($hijos_title) ?>' ;
-
+	const hijos_title																	= '<?php echo msgJS($hijos_title) ?>' ;
 	// Establecemos una cookie de modo para toda la página
 	const modo		= '<?php echo $modo ?>';
 	const accion	= '<?php echo $accion ?>';
 	const ts_lang	= '<?php echo !empty($ts_lang) ? $ts_lang : DEDALO_STRUCTURE_LANG ?>';
 	const type		= '<?php echo $type ?>';
-
 	/*
 	* VAR terminoIDresalte es un string viene del get  cuando se hace una búsqueda.
 	* Se le pasa al loop "openTrackedDivs" para que pase en cada ciclo el listado de
@@ -38,15 +34,15 @@ print css::build_tag('css/dd_list.css', null, false);
 <?php
 # JS
 print js::build_tag('jquery/dist/jquery.min.js');
-print js::build_tag('jquery/dist/jquery-ui.min.js');
-print js::build_tag('inc/javascript.js');
+print js::build_tag('jquery/dist/jquery-ui.min.js', 'defer');
 print js::build_tag('inc/cookies.js');
-print js::build_tag('inc/common.js');
-print js::build_tag('js/dd_common.js');
-print js::build_tag('js/dd_list.js');
+print js::build_tag('inc/common.js', 'defer');
+print js::build_tag('inc/javascript.js', 'defer');
+print js::build_tag('js/dd_common.js', 'defer');
+print js::build_tag('js/dd_list.js', 'defer');
+print js::build_tag('js/app_utils.js', 'defer');
 ?>
 </head>
-
 <body onLoad="set_localStorage('tsopen','1',7);" onBeforeUnload="set_localStorage('tsopen','0',7);" onUnload="set_localStorage('tsopen','0',7);" >
 <div id="log_messages" class="hide"></div>
 <div id="wrapGeneral">
@@ -66,10 +62,10 @@ print js::build_tag('js/dd_list.js');
 			<div class="spacer"></div>
 			<ul class="select_mode">
 				<li>
-					<a href="dd_list.php?modo=tesauro_edit">Terms</a>
+					<a target="_blank" href="dd_list.php?modo=tesauro_edit">Terms</a>
 				</li>
 				<li>
-					<a href="dd_list.php?modo=modelo_edit">Models</a>
+					<a target="_blank" href="dd_list.php?modo=modelo_edit">Models</a>
 				</li>
 			</ul>
 		</div>

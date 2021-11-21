@@ -13,87 +13,83 @@ var dd = new function() {
 	this.descriptors_trigger = 'trigger.descriptors_dd.php'
 
 	//this.cookieOpenDivs_dd_name = "cookieOpenDivs_dd_" + page_globals.modo
-	
 
 	// DOCUMENT READY
 	$(function() {
 	  
-	   // OPEN COOKIE TRACKED DIVS
-		if( cookieOpenDivsArray !== -1 && typeof terminoIDresalte !== 'undefined' ) {
-			dd.openTrackedDivs(terminoIDresalte)
-		}	
+		// OPEN COOKIE TRACKED DIVS
+			if( cookieOpenDivsArray !== -1 && typeof terminoIDresalte !== 'undefined' ) {
+				dd.openTrackedDivs(terminoIDresalte)
+			}
 		
 		// KEYBOARD FUNCIONS
-		$("body").keydown(function(e){
-			//console.log(e.ctrlKey, e.keyCode);	
-		     
-			// CONTROL + M (ctrlKey+77) SHOW/HIDE INSPECTOR
-			if (e.ctrlKey===true && e.keyCode===77) { // m=77	 
-				// do something
-				dd.toggleModelo()
-			}
+			$("body").keydown(function(e){
+				//console.log(e.ctrlKey, e.keyCode);	
+			     
+				// CONTROL + M (ctrlKey+77) SHOW/HIDE INSPECTOR
+				if (e.ctrlKey===true && e.keyCode===77) { // m=77	 
+					// do something
+					dd.toggleModelo()
+				}
 
-			if (e.ctrlKey===true && e.keyCode===80) { // m=80 (P) 
-				// Toggle properties
-				dd.toggle_properties()
-			}
+				if (e.ctrlKey===true && e.keyCode===80) { // m=80 (P) 
+					// Toggle properties
+					dd.toggle_properties()
+				}
 
-			if (e.ctrlKey===true && e.keyCode===84) { // t=84	 
-				// do something
-				$( ".tesauro_button_show_tr" ).each(function( index ) {
-				  //console.log( index + ": " + $( this ).text() );
-				  const tipo = $(this).data('tipo')
-				  multiToogle(tipo,'block','none')
-				})     
-			}
-		});
-
-
-		// SORT TR ORDER
-		const button_show_tr_obj = $('.tesauro_button_show_tr');
-		$(document.body).on('click', button_show_tr_obj.selector, function(e){
-			
-			 $( ".tesauro_tr_sortable" ).sortable({
-				update: function( event, ui ) {
-					
-					// Recorremos los elementos li que contienen los valores
-					const ar_childrens 	= $(this).contents().filter('li')			//if(SHOW_DEBUG===true) console.log( ar_childrens );				
-					const len			= ar_childrens.length
-					const ar_values		= []
-
-					if(ar_childrens && len >0) for(let i=0; i<len ; i++) {
-						
-						// (SELECT BY NAME[value=i] IS IMPORTANT)
-						let current_obj = ar_childrens[i]
-						let modelo		= $(current_obj).data('modelo')
-						let tipo		= $(current_obj).data('tipo')
-
-						let value		= {}
-						value[modelo]	= tipo
-
-						if( value ) ar_values.push( value )
-					}					
-					
-					const current_termino_id = $(this).data('termino_id')
-					const dato 				 = ar_values;
-					dd.update_tr_order(current_termino_id, dato, $(this))
-
-				}//update
+				if (e.ctrlKey===true && e.keyCode===84) { // t=84	 
+					// do something
+					$( ".tesauro_button_show_tr" ).each(function( index ) {
+					  //console.log( index + ": " + $( this ).text() );
+					  const tipo = $(this).data('tipo')
+					  multiToogle(tipo,'block','none')
+					})
+				}
 			});
-			return false
-		});
-		
 
+		// SORT TR DRAG ACTIVATION
+			const button_show_tr_obj = $('.tesauro_button_show_tr');
+			$(document.body).on('click', button_show_tr_obj.selector, function(e){
+				
+				 $( ".tesauro_tr_sortable" ).sortable({
+					update: function( event, ui ) {
+						
+						// Recorremos los elementos li que contienen los valores
+						const ar_childrens 	= $(this).contents().filter('li')			//if(SHOW_DEBUG===true) console.log( ar_childrens );				
+						const len			= ar_childrens.length
+						const ar_values		= []
+
+						if(ar_childrens && len>0) for(let i=0; i<len ; i++) {
+							
+							// (SELECT BY NAME[value=i] IS IMPORTANT)
+							const current_obj	= ar_childrens[i]
+							const modelo		= $(current_obj).data('modelo')
+							const tipo			= $(current_obj).data('tipo')
+
+							const value		= {}
+							value[modelo]	= tipo
+
+							if( value ) ar_values.push( value )
+						}
+						
+						const current_termino_id	= $(this).data('termino_id')
+						const dato					= ar_values;
+						dd.update_tr_order(current_termino_id, dato, $(this))
+
+					}//update
+				});
+				return false
+			});
 	});//end dom ready
 
 	
 
 	/**
-	* validate_form
+	* VALIDATE_FORM
 	*/
 	this.validate_form = function() {
 		return true
-	}
+	}//end validate_form
 	
 	
 	/*
@@ -108,10 +104,9 @@ var dd = new function() {
 
 		const spinner = create_dom_element({
 			element_type	: 'div',
-			class_name		: 'loading_spinner',			
+			class_name		: 'loading_spinner',
 			parent			: container.parentNode
 		})
-
 
 		// Remove duplicates
 		openDivs = uniq_fast(openDivs)
@@ -123,15 +118,20 @@ var dd = new function() {
 		
 		// Loop
 			if (openDivs_length && openDivs_length>0) {
+
 				for(let x=0; x < openDivs_length ; x++) {
 					if( typeof openDivs[x]!=='undefined' && openDivs[x].length>0 ) {
 
 						const terminoID		= openDivs[x]
 						const div_destino	= 'div_' + terminoID
 						const slide			= 'block'
-						
-						const current_promise = await dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)				
-					}				
+
+						if ( typeof openDivs[x+1]!=="undefined" && document.getElementById('div_' +openDivs[x+1]) ) {
+							dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
+						}else{
+							await dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
+						}						
+					}
 				}//end if(le!=-1) for(var x=0; x < le ; x++)
 			}
 
@@ -173,7 +173,7 @@ var dd = new function() {
 	*/
 	this.visibleModelo = 0 ;
 	this.toggleModelo = function() {
-		if(this.visibleModelo==0){
+		if(this.visibleModelo===0){
 			$('.btnModelo').show()
 			this.visibleModelo = 1
 		}else{
@@ -189,7 +189,7 @@ var dd = new function() {
 	*/
 	this.visible_properties = 0 ;
 	this.toggle_properties = function() {
-		if(this.visible_properties==0){
+		if(this.visible_properties===0){
 			$('.div_properties').show()
 			this.visible_properties = 1
 		}else{
@@ -197,7 +197,7 @@ var dd = new function() {
 			this.visible_properties = 0
 		}
 	};
-	
+
 
 
 	/**
@@ -207,64 +207,97 @@ var dd = new function() {
 		
 		//if(ts_lang!='') return(alert(" Edit inline only in main lang... \n Use the button edit to modify translations.")) 
 			
-		var termino_span_obj		= $(button_obj),
-			terminoID 				= termino_span_obj.attr('alt'),
-			termino					= termino_span_obj.text() // extract only text
-		
-		var isTranslationPreview 	= function() {
-			// verifica si el texto que se muestra es un preview para un término no traducido (con estilo <span class='unTranslated'>)
-			var string 	= termino_span_obj.html()
-			var reg 	= /^<span/
-			var reg2 	= /^<mark/
-			if(reg.test(string) || reg2.test(string)) {			
-				return true
-			}else{
-				return false
-			}
-		}
-		
-		const input_field_html	= '<input class="input_field_inline" type="text" name="input_field_'+terminoID+'" id="input_field_'+terminoID+'" value="'+termino+'" title="To validate changes press enter" >'
-		const close_img_html	= '<img   class="close_img_inline"   src="../themes/default/x-icon-orange.png" id="close_img_'+terminoID+'" >'
+		const $termino_span_obj	= $(button_obj)
+		const terminoID			= $termino_span_obj.attr('alt')		
+
+		// input 
+			const input_field = create_dom_element({
+				element_type	: 'input',
+				type			: 'text',
+				class_name		: 'input_field_inline',
+				name			: "input_field_"+terminoID,
+				value			: $termino_span_obj.html(),
+				title			: "To validate changes press enter"
+			})
+			const $input_field_obj = $(input_field)
 		
 		// hide termino and add input field
-		termino_span_obj.hide().after( input_field_html + close_img_html )
+			$termino_span_obj
+				.hide()
+				.after($input_field_obj)				
 		
-		const input_field_obj		= $('#input_field_'+terminoID)
-		const close_img_obj		= $('#close_img_'+terminoID)
-		
-		$(input_field_obj, close_img_obj).hide().fadeIn(150).focus()
-		
-		$(close_img_obj).click(function() { // Close button
-			save_sequence(false)
-		});
-		$(input_field_obj).keypress(function(event) {
-			if ( event.which === 13 ) { // Enter ky is pressed				
-				save_sequence()
-			}
-		});		
-		$(input_field_obj).blur(function() {						  
-			  save_sequence(false)
-		});		
+		// show created input
+			$input_field_obj
+				.hide()
+				.fadeIn(150)
+				.focus()
+
+		// events : keypress / blur
+			$input_field_obj
+				.keypress(function(event) {
+					if ( event.which===13 ) { // Enter ky is pressed
+						save_sequence(true)
+					}
+				})
+				// .blur(function() {
+				// 	save_sequence(false)
+				// });
+
+		function isTranslationPreview(string) {
+			// verifica si el texto que se muestra es un preview para un término no traducido (con estilo <span class='unTranslated'>)
+			const reg		= /^<span/
+			const reg2		= /^<mark/
+			const result	= (reg.test(string) || reg2.test(string))
+			
+			return result
+		}//end isTranslationPreview
 		
 		function save_sequence(save) {
+
+			let result = false
 			
-			// set and save content alert . If save id false, only remove input field
+			const current_value	= $termino_span_obj.html()
+			const new_value		= $input_field_obj.val()
+			
+			// save_descriptor. set and save content alert . If save id false, only remove input field
 			// si el termino del input es igual al original no lo guardamos a menos que sea un preview de traducción	
-			if(save!==false && (termino!=input_field_obj.val() || isTranslationPreview()===true) ) {			  
-				
-				dd.saveDescriptorFromList(input_field_obj, terminoID, input_field_obj.val() )
-				
-				termino_span_obj.html( input_field_obj.val() )
-			}
+				if(save===true && (termino!==new_value || isTranslationPreview(current_value)===true)) {
+
+					// dd.saveDescriptorFromList(input_field, terminoID, new_value)
+
+					// fake node to unify save functions
+						const input_node = create_dom_element({
+							element_type	: 'input',
+							type			: 'text',
+							value			: new_value,
+							dataset			: {
+								parent	: terminoID,
+								lang	: ts_lang, // defined as const in ts_list.phtml,
+								tipo	: 'termino',
+								dato	: new_value
+							}
+						})
+						input_node.classList.add('spinner')
+
+						save_descriptor(input_node)
+						.then(function(response){
+							input_node.classList.remove('spinner')
+
+							$termino_span_obj.html( new_value )
+						})
+
+					result = true
+				}//end if(save===true && (termino!==new_value || isTranslationPreview(current_value)===true))
 			
 			// remove element
-			input_field_obj.remove()
-			close_img_obj.remove()
-			termino_span_obj.show(150)
-		}
+				$input_field_obj.remove()
+				$termino_span_obj.show(150)
+
+			return result
+		}//end save_sequence
 
 		return true		
-	};//end edit_inline
+	}//end edit_inline
 
 
 
@@ -291,10 +324,9 @@ var dd = new function() {
 		}
 
 		return true
-	};//end mostrarinfo
+	}//end mostrarinfo
 
 
-	
 	
 	/**
 	* LOAD_TREE
@@ -306,126 +338,94 @@ var dd = new function() {
 	this.last_parent=null;
 	this.load_tree = function(terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent) {
 
+		const self = this
+
 		//return alert('load_tree: \n\n terminoID:'+terminoID + ' \n div_destino:'+div_destino + "\n terminoIDresalte:"+terminoIDresalte+"\n modo:"+ modo+"\n accion:"+ accion+"\n target:"+ target)
-		const div 	= document.getElementById(div_destino)
+		const target_node = document.getElementById(div_destino)
 		const time 	= 110
 
-		//console.log(div)
-	
-		if( !div ) {
+		return new Promise(function(resolve){
+			
+			if(!target_node) {
 
-			if( typeof terminoID==='undefined' || terminoID.length===0 ) return false
-			//
-			// Fijamos como cerrado el div actual.
-			// Si NO existe el div, paso la orden de eliminarlo del listado de divs abiertos
-			//
-			actualizarPostAjax(terminoID,0)	//setTimeout("alert('No existe elemento "+terminoID+" ')",1000);
-
-			return new Promise(function(resolve){
-				resolve(false)
-			})
-
-		}else{
-			
-			const index = loadedDivs.indexOf(terminoID) // Find the index in array 'loadedDivs'
-			
-			//
-			// asincronico : Por defecto, las cargas ajax serán sincrónicas, es decir, cuando acabe una empieza la siguiente.
-			// En caso de abrir manualmente las flechas (target=manual), la haremos asincrónica para que la percepción del usuario sea mas fluida
-			//			
-			const my_async = (target==='manual') ? true : false
-				//console.log("load_tree parent: "+parent);
-			
-			//
-			// Si NO está en el array de loadedDivs, es que NO está cargado y por tanto ejecutamos el ajax
-			//
-			if(index === -1) {
-				//alert(' load_tree 	\n terminoID:'+terminoID +' \n div_destino:'+div_destino + "\n terminoIDresalte:"+terminoIDresalte+"\n modo:"+ modo+"\n index:"+ index  )
-			
-				const divJQobj 	= $('#'+div_destino); // objeto div reconocible por jquery
-				const accion	= 'listadoHijos';
-				const mydata	= { 
-						accion				: accion,
-						modo				: modo,
-						terminoID			: terminoID,
-						terminoIDresalte 	: terminoIDresalte,
-						ts_lang 			: ts_lang,
-						type 				: type
-					 };
+				if( typeof terminoID==='undefined' || terminoID.length===0 ) {			
+					resolve(false)
+					return
+				}
+				//
+				// Fijamos como cerrado el div actual.
+				// Si NO existe el div, paso la orden de eliminarlo del listado de divs abiertos
+				//
+				actualizarPostAjax(terminoID,0)	//setTimeout("alert('No existe elemento "+terminoID+" ')",1000);
 				
-				//if(modo==="buildTree") {
-					//$(divJQobj)
-					// .html('<div id="spinnerDiv"> Building Thesaurus  <br> <img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle" /><br> Please wait</div>')
-				//}else{
-					//$(divJQobj)
-					 //.html('<div style="margin-left:55px"><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle" /></div>')
-					 //.css({'display':'block'})
-				//}
+				resolve(false)
+				return
+			}//end if(!target_node)
 
-				// AJAX CALL
-				//jQuery.ajaxQueue({
-				//$.ajaxq ("MyQueue", {
-				return $.ajax({
-					url		: this.trigger_url,
-					data	: mydata,
-					type	: 'GET',
-					// async	: my_async,
-					success : function( data_response ) {
-						if(accion==="buildTree") {
-							//$(divJQobj).hide();
-							$(divJQobj)
-								.css({'background-color':'#CCC'})
-								.fadeIn(time)
-							//$(divJQobj).fadeIn(time);
-						}else{
-							//$(divJQobj).hide();
-							$(divJQobj).html(data_response)
 
-							if(slide==='block'){
-								$(divJQobj).css({'display':'block'}) // se usa sólo al cargar la página
-							}else{
-								$(divJQobj).slideDown(time, function(){ })
+			const index = loadedDivs.indexOf(terminoID) // Find the index in array 'loadedDivs'	
+
+			// already loaded
+				if(index!==-1) {
+					resolve(false)
+					return
+				}					
+			
+			// not loaded. Si NO está en el array de loadedDivs, es que NO está cargado y por tanto ejecutamos el ajax						
+				const data = {
+					mode				: 'listadoHijos',
+					modo				: modo,
+					terminoID			: terminoID,
+					terminoIDresalte	: terminoIDresalte,
+					ts_lang				: ts_lang,
+					type				: type
+				}
+
+				// fetch(self.trigger_url,{
+				// 	method: 'POST', // *GET, POST, PUT, DELETE, etc.
+				// 	cache: 'force-cache', // *default, no-cache, reload, force-cache, only-if-cached
+				// 	headers: {
+				// 		'Content-Type': 'application/json'
+				// 	},
+				// 	body: JSON.stringify(data) // body data type must match "Content-Type" header
+				// })
+				// .then(response => {
+				// 	return response.json()
+				// })
+				data_manager.request({
+					url		: self.trigger_url,
+					body	: data,
+					cache	: 'force-cache'
+				})
+				.then(response => {
+					// console.log('response.msg', response.msg)
+					
+					const html = response.result
+
+					// append html
+							// $(divJQobj).html(result)
+							// Clean target_node
+							while (target_node.firstChild) {
+								target_node.removeChild(target_node.firstChild);
 							}
+							target_node.insertAdjacentHTML('afterbegin', html)
 
-							// Fijamos como abierto el div actual
-							actualizarPostAjax(terminoID,1)
-						}//if modo=="list"
-						//return 1;
-					}
-				})
-				.fail( function(jqXHR, textStatus) {
-					alert("Load tree error "+textStatus)
-				})
-				// DONE					
-					// .done(function(data_response) {
-						
-					// 	if(accion==="buildTree") {
-					// 		//$(divJQobj).hide();
-					// 		$(divJQobj)
-					// 			.css({'background-color':'#CCC'})
-					// 			.fadeIn(time)
-					// 		//$(divJQobj).fadeIn(time);
-					// 	}else{
-					// 		//$(divJQobj).hide();
-					// 		$(divJQobj).html(data_response);
-					// 		// Fijamos como abierto el div actual
-					// 		actualizarPostAjax(terminoID,1);
+						// display
+							target_node.style.display = 'block'
 
-					// 		if(slide==='block'){
-					// 			$(divJQobj).css({'display':'block'}); // se usa sólo al cargar la página
-					// 		}else{
-					// 			$(divJQobj).slideDown(time, function(){ });
-					// 		}
-					// 	}//if modo=="list"
-					// 	//return 1;
-						
-					// })
-					// .always(function() {
-					// });
-			
-			}//if(index==-1)
-			
-		}//if(div==null)
+						// des
+							// if(slide==='block'){
+							// 	$(divJQobj).css({'display':'block'}) // se usa sólo al cargar la página								
+							// }else{
+							// 	$(divJQobj).slideDown(time, function(){ })
+							// }
+
+					// Fijamos como abierto el div actual
+						actualizarPostAjax(terminoID,1)
+
+					resolve(terminoID)
+				});
+		})
 	}//end load_tree
 
 
@@ -436,7 +436,8 @@ var dd = new function() {
 	this.actualizarList = function(parent, current_terminoID) {
 		
 		// Reset all resalted termns
-		$('.resalte').first().removeClass('resalte')	
+		// $('.resalte').first().removeClass('resalte')
+		$('.resalte').first().removeClass('resalte')
 
 		// Set parent and term as not loaded in cookie 'loadedDivTrack' (accion=0)		
 		const accion	= 0
@@ -465,7 +466,7 @@ var dd = new function() {
 		const current_promise = dd.load_tree(parent, div_destino, modo, slide, terminoIDresalte, target, null, parent)	// (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
 	
 		return current_promise
-	};//end actualizarList
+	}//end actualizarList
 
 
 
@@ -511,7 +512,7 @@ var dd = new function() {
 		}
 
 		return true
-	};//end ToggleTS
+	}//end ToggleTS
 
 
 
@@ -534,7 +535,7 @@ var dd = new function() {
 		//linkTS(terminoID)
 		
 		return false
-	};//end add_index_common
+	}//end add_index_common
 
 
 
@@ -550,12 +551,12 @@ var dd = new function() {
 
 		// Editando desde tesauro edit términos relacionados
 		}else{
-			var terminoID = $(obj).data('termino_id')
+			const terminoID = $(obj).data('termino_id')
 			//return alert('Editando desde tesauro edit térmionos relacionados '+terminoID)
 			window.opener.linkTS(terminoID)
 		}
 		return false;
-	};//end add_index_common
+	}//end add_index_common
 
 
 
@@ -599,7 +600,7 @@ var dd = new function() {
 		})
 		// FAIL ERROR	 
 		.fail(function(jqXHR, textStatus) {
-			var msg = "[update_tr_order] Request failed: " + textStatus
+			const msg = "[update_tr_order] Request failed: " + textStatus
 			alert( msg )
 		})
 		// ALWAYS
@@ -612,7 +613,7 @@ var dd = new function() {
 	/**
 	* OPENTSEDIT : Abre la ventana de edición del termino (ts_edit.php)
 	*/
-	var editwindow;	
+	let editwindow;	
 	this.openTSedit = function(terminoID) {
 
 		const host = window.location.hostname
@@ -726,7 +727,7 @@ var dd = new function() {
 		})
 
 		return current_promise
-	};//fin function delete_term
+	}//fin function delete_term
 
 
 
@@ -744,20 +745,19 @@ var dd = new function() {
 			return alert("Element "+ divContTerminoID + " unavalible! "+$(divObj).length)		
 		}			
 			
-		const mydata = {
-				'accion'	: 'insertTS',
-				'modo'		: modo,
-				'parent'	: termino_id,
-				'top_tipo'	: page_globals.top_tipo
-				};//return console.log(modo) 
+		const data = {
+			accion		: 'insertTS',
+			modo		: modo,
+			parent		: termino_id,
+			top_tipo	: page_globals.top_tipo
+		}
 		
 		const current_promise = $.ajax({
 			url		: this.trigger_url,
-			data	: mydata,
-			type	: 'POST',
+			data	: data,
+			type	: 'POST'
 			//async	: false,	// Important async = false
 		})
-		// DONE
 		.done(function(data_response) {
 
 			const error_response = /error/i.test(data_response)
@@ -776,101 +776,15 @@ var dd = new function() {
 				dd.actualizarList(parent2)
 			}
 		})
-		// FAIL ERROR
 		.fail(function(jqXHR, textStatus) {
 			console.log(jqXHR)
 			alert(textStatus)
 		})
-		// ALWAYS
 		.always(function() {
 		})
 			
 		return current_promise
-	};//end insertTS
-
-
-
-	/**
-	* SAVEDESCRIPTORFROMLIST
-	*/
-	this.saveDescriptorFromList = function(obj, terminoID, termino) {
-		
-		if(typeof terminoID==='undefined' || terminoID.length <2) {
-			alert("Error on saveDescriptorFromlist. Need a valid terminoID")
-			return false
-		}
-
-		$(obj).addClass('spinner')
-
-		const descriptors_trigger	= 'trigger.descriptors_dd.php';		
-		const dato					= termino
-		const lang					= ts_lang // defined as const in ts_list.phtml
-
-		const data	= {
-			mode		: 'saveDescriptor',
-			parent		: terminoID,
-			lang		: lang,
-			tipo		: 'termino',
-			dato		: dato,
-			terminoID	: terminoID,
-			top_tipo	: page_globals.top_tipo
-		}
-		
-		const current_promise = $.ajax({
-			url		: descriptors_trigger,
-			data	: data,
-			type	: "POST"
-		})
-		.done(function(data_response) {			
-			if(data_response) alert(data_response);
-		})
-		.fail( function(jqXHR, textStatus) {
-			alert("saveDescriptorFromList error : "+textStatus)
-		})
-		.always(function() {
-			$(obj).removeClass('spinner')
-		});
-
-		// OLD CODE
-			// const current_div = $(obj)
-
-			// current_div.addClass('spinner')
-			
-			// const trigger_url = this.trigger_url
-			// const mydata = {
-			// 	accion		: 'saveDescriptorFromList',
-			// 	terminoID	: terminoID,
-			// 	termino		: termino,
-			// 	ts_lang		: ts_lang,
-			// 	top_tipo	: page_globals.top_tipo || null
-			// }
-
-			// if(SHOW_DEBUG===true) {
-			// 	console.log("saveDescriptorFromList trigger_url, mydata",trigger_url, mydata)
-			// }
-
-			// $.ajax({
-			// 	url	 : trigger_url,
-			// 	data : mydata,
-			// 	type : "POST",
-			// })
-			// // DONE
-			// .done(function(data_response) {
-			// 	if(SHOW_DEBUG===true) {
-			// 		console.log("saveDescriptorFromList data_response:",data_response)
-			// 	}
-			// })
-			// // FAIL ERROR
-			// .fail(function(jqXHR, textStatus) {
-
-			// })
-			// // ALWAYS
-			// .always(function() {
-			// 	current_div.removeClass('spinner')
-			// })
-		
-		return current_promise
-	}//end saveDescriptorFromList
+	}//end insertTS
 
 
 
@@ -879,6 +793,7 @@ var dd = new function() {
 	* Abrir Pop-up de formulario cambio orden 
 	*/
 	this.cambiar_n_orden = function(nordenV, terminoID, padre, termino) {
+
 		const myurl = "dd_norden.php?nordenV="+nordenV+"&padre="+padre+"&terminoID="+terminoID+"&termino="+termino
 		window.open(myurl,'','status=yes,scrollbars=yes,resizable=yes,width=450,height=200')
 
@@ -887,7 +802,7 @@ var dd = new function() {
 
 
 
-};//end component_dd class
+}//end component_dd class
 
 
 
@@ -900,14 +815,14 @@ var dd = new function() {
 //
 // DIVS CARGADOS
 //
-var loadedDivs = []
+const loadedDivs = []
 remove_localStorage('cookieLoadedDivs_dd') // Reset cookie loaded divs
 
 
 //
 // DIVS ABIERTOS
 //
-var openDivs = []
+let openDivs = []
 if( get_localStorage('cookieOpenDivs_dd')===null || get_localStorage('cookieOpenDivs_dd')===-1 ) {
 	//set_localStorage('cookieOpenDivs_dd','',7); 
 	remove_localStorage('cookieOpenDivs_dd')// Reset cookie loaded divs
@@ -917,10 +832,10 @@ if( get_localStorage('cookieOpenDivs_dd')===null || get_localStorage('cookieOpen
 	
 
 // COOKIEOPENDIVSSTRING : leemos el valor del cookie que está como string
-var cookieOpenDivsString = get_localStorage('cookieOpenDivs_dd')
+const cookieOpenDivsString = get_localStorage('cookieOpenDivs_dd')
 
 // COOKIEOPENDIVSARRAY : lo convertimos en array
-var cookieOpenDivsArray		= []
+let cookieOpenDivsArray = []
 if( cookieOpenDivsString!=='undefined'&& cookieOpenDivsString!==null) {
 	// String to array
 	cookieOpenDivsArray = cookieOpenDivsString.split(',')
@@ -961,7 +876,7 @@ function multiToogle(divName, activa, desactiva) {
 			// })
 	  }
 	}
-}
+}//end multiToogle
 
 
 /**
@@ -988,7 +903,7 @@ function loadedDivTrack(terminoID,accion) {
 	set_localStorage('cookieLoadedDivs_dd',loadedDivs,7) // actualizamos la cookie "cookieLoadedDivs"
 		//alert(" funcion: loadedDivTrack \n array loadedDivs: "+loadedDivs + "\ncookie cookieLoadedDivs: " + get_localStorage('cookieLoadedDivs_dd') + "\naccion: " + accion )
 	return true
-}
+}//end loadedDivTrack
 
 
 
@@ -997,7 +912,7 @@ function loadedDivTrack(terminoID,accion) {
 * Lleva un registro mediante cookies de los terminos desplegados
 * Al hacer búsquedas se resetea
 */
-var resalte
+let resalte
 function openDivTrack(terminoID, accion, resaltar) {
 	
 	//alert("funcion: openDivTrack \n array openDivs: "+openDivs + "\ncookie: " + get_localStorage('cookieOpenDivs_dd') + "\naccion: " + accion + "\n resaltar: " + resaltar)
@@ -1018,7 +933,7 @@ function openDivTrack(terminoID, accion, resaltar) {
 	
 	// Actualizamos la cookie
 	//remove_localStorage('cookieOpenDivs_dd');
-	set_localStorage('cookieOpenDivs_dd',openDivs,7); // actualizamos la cookie "cookieOpenDivs"
+	set_localStorage('cookieOpenDivs_dd', openDivs, 7); // actualizamos la cookie "cookieOpenDivs"
 	
 	if(accion===1 && r!==null) {		
 		resalte = r
@@ -1027,7 +942,7 @@ function openDivTrack(terminoID, accion, resaltar) {
 			const current_terminoID = resaltar
 
 			dd.actualizarList(parent, current_terminoID)
-		},25);	//alert(r) 		
+		}, 300);	//alert(r)
 	}
 
 	return true ;	
@@ -1045,7 +960,7 @@ function actualizarPostAjax(terminoID, cargadoObjeto) {
 
 		loadedDivTrack(terminoID,1) // almacena terminoID como cargado en el array "loadedDivs"
 		
-		var index = openDivs.indexOf(terminoID) // Find the index
+		const index = openDivs.indexOf(terminoID) // Find the index
 		if(index===-1){
 			openDivTrack(terminoID,1) // almacena terminoID como abierto en el array "openDivs"
 		}
@@ -1104,53 +1019,9 @@ function flechasTSestado(terminoID, estado) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-function actualizaDivPadre(terminoID){
-
-	alert("actualizaDivPadre ¿no usada?")
-	
-	var div = $('#divTsIcons'+ terminoID) ; //alert('actualizaDivPadre: ' +terminoID + ' #divCont'+ terminoID );
-	var myURL	= "../ts/trigger.Tesauro.php";
-	var accion	= 'reload';
-	var mydata	= { 'accion': accion, 'terminoID': terminoID, 'top_tipo':page_globals.top_tipo };
-	
-	// actualización ajax (necesita jquery 1.4)
-	$.ajax({
-	  url		: myURL,
-	  data		: mydata,
-	  type		: "POST",
-	  success	: function(data) {
-					div.hide();				
-					div.html(data);
-					div.slideDown(300);
-				}	  
-	});
-}
-*/
-
-
-
 /*******************************
 * OTRAS FUNCIONES GENERALES
 *******************************/
-
-
-
 
 function urldecode (str) {
 	// Decodes URL-encoded string  
@@ -1178,8 +1049,7 @@ function urldecode (str) {
 	return decodeURIComponent(str.replace(/\+/g, '%20'));
 }
 
-function resetView()
-{
+function resetView() {
 	try {
 		remove_localStorage('cookieOpenDivs_dd'); 
 		//document.location"ts_list.php?modo=list";
@@ -1187,6 +1057,7 @@ function resetView()
 		if(SHOW_DEBUG===true) alert(err)	
 	}	
 }
+
 // RESET_WINDOW_AND_RELOAD : Elimina las cookies y recarga la página
 function reset_window_and_reload() {
 	resetView();
@@ -1198,8 +1069,7 @@ function reset_window_and_reload() {
 /*
 * Añadir termino en ind_nou.php
 */
-function anadirTesauro(terminoID5)
-{
+function anadirTesauro(terminoID5) {
 	window.opener.linkTS(terminoID5);
 	alert("ts_llistat:"+terminoID5)
 }
@@ -1221,30 +1091,25 @@ function posicionarVentana() {
 	this.window.resizeTo(720,850);
 }
 
-
-
-
 function newLang(val) {
-	// nothing to do. Only capture standar call	
-	const currentURL = window.location.href; 		//alert(currentURL)
 	
-	//myregexp = /&ts_lang=/;	
+	const currentURL = remove_url_variable('ts_lang', window.location.href)
+
+	const final_url = currentURL.indexOf('?')===-1
+		? currentURL + '?&ts_lang='+val
+		: currentURL + '&ts_lang='+val;		
+		
 	
-	//var ar = currentURL.split("&ts_lang=");
-	//window.location.href = ar[0] + '&ts_lang='+val ;
-	
-	window.location.href = currentURL + '&ts_lang='+val ;
+	window.location.href = final_url;
 }
-
-
 
 function uniq_fast(a) {
     const seen = {};
     const out = [];
     const len = a.length;
-    var j = 0;
+    let j = 0;
     for(let i = 0; i < len; i++) {
-         var item = a[i];
+         const item = a[i];
          if(seen[item] !== 1) {
                seen[item] = 1;
                out[j++] = item;
@@ -1252,7 +1117,5 @@ function uniq_fast(a) {
     }
     return out;
 }
-
-
 
 
