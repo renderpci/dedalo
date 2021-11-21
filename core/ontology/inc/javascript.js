@@ -226,12 +226,14 @@ function simpleToogleTBODY(divName, obj, callback) {
 	$(obj).children().toggleClass('flecha_close_tboby');
 	$(obj).children().toggleClass('flecha_open_tboby');
 	
-	$('#'+divName).toggle(150);
+	$('#'+divName).toggle(50);
 	/*
 	if (typeof callback == 'function') {
 		callback();
 	};
 	*/
+	redimensionarVentana();
+
 	return true;
 }
  

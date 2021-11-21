@@ -257,7 +257,7 @@ var common = new function() {
 						//html_page.loading_content( wrap_div_tool, 0 );
 					}
 
-				});
+				}, false);
 
 		// error
 		source.addEventListener('error', function(e) {
@@ -272,7 +272,7 @@ var common = new function() {
 			//alert("EventSource failed. "+ e );
 			response_div.innerHtml = "<div class='error'>Sorry. Error on proccess data</div>";
 
-		});
+		}, false);
 	}//end dd_EventSource
 	*//*
 	this.dd_EventSource({
@@ -610,7 +610,7 @@ var common = new function() {
 				var function_name = click_event;	//'ts_object.test_name2'
 				element.addEventListener("click", function(e){
 					call_custom_function(function_name,this)
-				});
+				}, false);
 				}*/
 		}//end if(custom_function_events){
 		
@@ -683,7 +683,7 @@ var common = new function() {
 			function_arguments[1] = event
 
 			call_custom_function(function_name, function_arguments)
-		});
+		}, false);
 	};//end create_custom_events
 
 
