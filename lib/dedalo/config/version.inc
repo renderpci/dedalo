@@ -2399,10 +2399,9 @@
 		Now, component_portal can be configurated to use a specific related component in search tasks: 'propiedades->order_component_tipo'
 		Update the pdf filename removing lang
 		Added updates v582 SQL_update	
-
 	
 	
-	queue builds
+	Valencia 21-11-2021 5.8.3
 		03-06-2021
 		Added component_html_text references manager feature (like component_text_area)
 		Fixed issue with component_text_area when on Save command did not correctly update text area content
@@ -2530,6 +2529,17 @@
 		Re-factorized ontology code
 
 
+	queue builds
+		22-11-2021
+		Added IS EXACTLY EQUAL == operator to component_input_text to allow saerchches with @> operator (case Ontologies term_id dd1475)
+		Added component_json read only mode controled by properties
+		Updated dd_tipos with new json_item tipo (ONTOLOGY_SECTION_TIPOS)
+		Fixed window.opener refresh issue on dd_edit.js
+		Added Ontology functionality (update_json_ontology_items) to save every change in structure data to the new created JSON Ontology Item field
+		Added new queue sql commands to append to the next update data config
+
+
+
 	[/HISTORY]
 
 
@@ -2553,13 +2563,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3';
+	$DEDALO_VERSION = '5.8.3a';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '21-11-2021');
+	define('DEDALO_BUILD'	, '22-11-2021');
 
 
 	/*
