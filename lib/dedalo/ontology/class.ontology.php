@@ -762,7 +762,7 @@ class ontology {
 					'term_id'	=> $term_id
 				]);
 				// (!) Note that add_term also add self calculated JSON item
-				$response->msg = 'OK. Created a new ontology term record including JSON item $term_id successfully';
+				$response->msg = 'OK. Created a new ontology term record including JSON item '.$term_id.' successfully';
 
 			}else{
 
@@ -787,9 +787,9 @@ class ontology {
 				if ($is_equal_object===false) {
 					$component->set_dato($json_item);
 					$component->Save();
-					$response->msg = 'OK. JSON item $term_id saved successfully';
+					$response->msg = 'OK. JSON item '.$term_id.' saved successfully';
 				}else{
-					$response->msg = 'OK. JSON item $term_id save IGNORED. The new data is equal than already existing data';
+					$response->msg = 'OK. JSON item '.$term_id.' save IGNORED. The new data is equal than already existing data';
 				}
 			}
 
