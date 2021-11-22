@@ -193,7 +193,8 @@ define('ONTOLOGY_SECTION_TIPOS', [
 	'term_id'		=> 'dd1475',
 	'term'			=> 'dd1477',
 	'definition'	=> 'dd1478',
-	'observations'	=> 'dd1476'
+	'observations'	=> 'dd1476',
+	'json_item'		=> 'dd1556'
 ]);
 
 
