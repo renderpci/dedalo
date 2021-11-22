@@ -460,9 +460,8 @@ class component_input_text extends component_common {
 		#	$q = $query_object->q_operator . $q;
 		#}
 
-		$component = end($query_object->path);
-		$component_tipo = $component->component_tipo;
-
+		$component		= end($query_object->path);
+		$component_tipo	= $component->component_tipo;
 
 		switch (true) {
 			# EMPTY VALUE (in current lang data)
@@ -584,6 +583,18 @@ class component_input_text extends component_common {
 				$query_object->operator = '!~';
 				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
+				break;
+			# IS EXACTLY EQUAL ==
+			case (strpos($q, '==')===0 || $q_operator==='=='):
+				$operator = '==';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '@>';
+				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
+				$query_object->unaccent = false;
+				$query_object->type = 'object';
+				if (isset($query_object->lang) && $query_object->lang!=='all') {
+					$query_object->component_path[] = $query_object->lang;
+				}
 				break;
 			# IS SIMILAR
 			case (strpos($q, '=')===0 || $q_operator==='='):
