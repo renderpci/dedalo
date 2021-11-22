@@ -32,9 +32,10 @@
 	switch($modo) {
 		
 		case 'edit' :
-				$id_wrapper 	= 'wrapper_'.$identificador_unico;
-				$input_name 	= "{$tipo}_{$parent}";
-				$component_info = $this->get_component_info('json');
+				$id_wrapper		= 'wrapper_'.$identificador_unico;
+				$input_name		= "{$tipo}_{$parent}";
+				$component_info	= $this->get_component_info('json');
+				$propiedades	= $this->get_propiedades('json');
 				#return "WORK IN PROGRESS..";
 
 				# Aditional css / js

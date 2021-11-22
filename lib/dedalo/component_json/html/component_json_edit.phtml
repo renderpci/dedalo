@@ -42,10 +42,16 @@
 
 				$editor_id = $identificador_unico.'_'.$key;
 
+				$read_only = (isset($propiedades->read_only) && $propiedades->read_only===true);
+
 				##
 				# Text area
 				$html_content .= "<textarea class=\"css_input_text_json\" ";
-				$html_content .= "onchange=\"component_json.Save(this)\" ";
+				if ($read_only===true) {
+					$html_content .= " readonly ";
+				}else{
+					$html_content .= "onchange=\"component_json.Save(this)\" ";
+				}
 				$html_content .= "id=\"{$editor_id}\"  ";
 				$html_content .= "name=\"{$input_name}\" ";
 				$html_content .= "title=\"$html_title\" ";
@@ -59,9 +65,13 @@
 				
 				
 				#
-				# JSON EDITOR (EXPERIMENTAL)
-				$html_content .= "<div id=\"{$editor_id}_save_document\" class=\"saveDocument\">Save</div>";
-				$html_content .= "<div id=\"{$editor_id}_container\" class=\"editor_json\"></div>";
+				# JSON EDITOR
+				// button save
+					if ($read_only!==true) {
+						$html_content .= "<div id=\"{$editor_id}_save_document\" class=\"saveDocument\">Save</div>";
+					}
+				// editor container
+					$html_content .= "<div id=\"{$editor_id}_container\" class=\"editor_json\"></div>";
 				/*
 				$html_content .= "<script>
 				  $('#$editor_id').hide()
@@ -95,6 +105,7 @@
 					$init_options->component_name 	= $component_name;
 					$init_options->wrapper_id 		= $id_wrapper;
 					$init_options->editor_id 		= $editor_id;
+					$init_options->read_only 		= $read_only;
 				$html_content .= 'component_common.init('.json_encode($init_options).');';
 				$html_content .= '</script>';
 				break;						
