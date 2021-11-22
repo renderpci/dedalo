@@ -7,6 +7,15 @@ $updates = new stdClass();
 
 
 // to use in next update:
+	// CREATE INDEX IF NOT EXISTS matrix_dd_dd1475_gin ON public.matrix_dd USING gin ((datos #> '{components,dd1475,dato,lg-nolan}'::text[]) jsonb_path_ops);
+	// REINDEX TABLE public.matrix_dd;
+	// VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
+	// CREATE INDEX IF NOT EXISTS main_dd_tld ON public.main_dd USING btree (tld COLLATE pg_catalog."default" ASC NULLS LAST);
+	// CREATE INDEX IF NOT EXISTS matrix_counter_dd_tipo ON public.matrix_counter_dd USING btree (tipo ASC NULLS LAST);
+
+
+
+
 
 $v=582; #####################################################################################
 $updates->$v = new stdClass();
