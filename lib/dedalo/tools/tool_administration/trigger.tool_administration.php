@@ -1094,3 +1094,37 @@ function build_install_version($json_data) {
 }//end build_install_version
 
 
+
+/**
+* UPDATE_JSON_ONTOLOGY_ITEMS
+* @return object $response
+*/
+function update_json_ontology_items($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+
+	try {
+
+		$response = ontology::update_json_ontology_items();
+
+	} catch (Exception $e) {
+
+		$response->msg = $e->getMessage();
+	}
+
+
+	# Debug
+	if(SHOW_DEVELOPER===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end update_json_ontology_items
+
+

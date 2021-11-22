@@ -546,7 +546,7 @@
 
 			#
 			# NAVIGATE RECORDS
-				$html   .= '<div class=\¡"panel_option form-inline">';
+				$html   .= '<div class="panel_option form-inline">';
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
 				$url 	 = DEDALO_LIB_BASE_URL."/tools/tool_administration/html/navigate_records.php?section_tipo=";
 				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">Navigate records</a>";				
@@ -555,12 +555,23 @@
 
 			#
 			# BUILD_INSTALL_VERSION
-				$html   .= '<div class=\¡"panel_option form-inline">';
+				$html   .= '<div class="panel_option form-inline">';
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
-				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Build install version\" data-mode=\"build_install_version\" onclick=\"tool_administration.build_install_version(this,event)\" />";
+				$html   .= " <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Build install version\" data-mode=\"build_install_version\" onclick=\"tool_administration.build_install_version(this,event)\" />";
 				$html   .= " <span>Clone the current database '".DEDALO_DATABASE_CONN."' to 'dedalo4_install' and export it to file '/install/db/dedalo4_install.pgsql.zip'</span>";
-				$html   .= " <div id=\"build_install_version_response\"></div>";
+				$html   .= "<div id=\"build_install_version_response\"></div>";
 				$html   .= '</div>';
+
+
+			#
+			# UPDATE JSON ONTOLOGY ITEMS
+				$html   .= '<div class="panel_option form-inline">';
+				$html   .= "<span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
+				$html   .= "<input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Update JSON Ontology items\" data-mode=\"update_json_ontology_items\" onclick=\"tool_administration.update_json_ontology_items(this,event)\" /> ";
+				$html   .= "<span>Propagate (save/update) current Ontology data to the section 'Ontology' (dd1500) at 'JSON Ontology Item' field. Only changes will be saved</span>";
+				$html   .= '<div id="update_json_ontology_items_response"></div>';
+				$html   .= '</div>';
+
 
 			#
 			# UPDATE DEDALO CODE

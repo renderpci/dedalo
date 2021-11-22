@@ -46,6 +46,33 @@
 	}#end switch
 
 
+	/*
+	if (isset($_REQUEST['create_all_json_items'])) {
+		// get all terms
+		$sql_query = '
+			create or replace function naturalsort(text)
+			    returns bytea language sql immutable strict as $f$
+			    select string_agg(convert_to(coalesce(r[2], length(length(r[1])::text) || length(r[1])::text || r[1]), \'SQL_ASCII\'),\'\x00\')
+			    from regexp_matches($1, \'0*([0-9]+)|([^0-9]+)\', \'g\') r;
+			$f$;
+			SELECT "terminoID" FROM "jer_dd" WHERE tld!=\'test\' ORDER BY naturalsort("terminoID") ASC;
+		';
+		$result		= pg_query(DBi::_getConnection(), $sql_query);
+		while ($row = pg_fetch_assoc($result)) {
+
+			$terminoID = $row['terminoID'];
+
+			// JSON Ontology Item save
+				$term_id	= $terminoID;
+				$json_item	= ontology::tipo_to_json_item($term_id);
+				$save_item	= ontology::save_json_ontology_item($term_id, $json_item);
+
+			debug_log(__METHOD__." ---> Added/updated term: ".to_string($terminoID), logger::WARNING);
+		}
+	}
+	*/
+
+
 
 	# INCLUDE FILE HTML
 	try {
