@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.17",
-    "title" : "Dédalo Publication Server REST API 1.0.17",
+    "version" : "1.0.18",
+    "title" : "Dédalo Publication Server REST API 1.0.18",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -367,7 +367,7 @@
     "/thesaurus_root_list" : {
       "post" : {
         "summary" : "Get first level of terms from thesaurus",
-        "description" : "Return an array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.",
+        "description" : "Return an array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.\n This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.\n For example, for thesaurus 'Themes' with tld 'ts' must be exists a root term 'Themes' with section_id 1. This will be publish as term_id 'ts1_1' to be discoberable by the API.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
