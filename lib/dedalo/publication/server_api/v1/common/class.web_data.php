@@ -1312,7 +1312,9 @@ class web_data {
 				}
 
 			// sql
-				$sql = 'WHERE ' . implode(' AND ', $ar_parts);
+				$sql = empty($ar_parts)
+					? ''
+					: 'WHERE ' . implode(' AND ', $ar_parts);
 
 
 			return $sql;
