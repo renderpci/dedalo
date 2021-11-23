@@ -2537,7 +2537,14 @@
 		Fixed window.opener refresh issue on dd_edit.js
 		Added Ontology functionality (update_json_ontology_items) to save every change in structure data to the new created JSON Ontology Item field
 		Added new queue sql commands to append to the next update data config
-
+		23-11-2021
+		Fixed class.ontology minor msg vars errors
+		Added Publication API docu viewer optional param 'lang' to easy sync Dédalo data lang and Publication API lang
+		Added 'component_svg' as excluded search component to prevent user select this component as searchable
+		Fixed web_data error when no sql filter is passed (build_sql_where). Now a empty string is return
+		Removed web_data class locator dependency in method get_indexation_terms
+		Added to tool_administration the publication code
+		Updated Publication API docu swagger ui json file from v1.0.17 to v1.0.18. Improved description about /thesaurus_root_list use
 
 
 	[/HISTORY]
@@ -2563,13 +2570,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3a';
+	$DEDALO_VERSION = '5.8.3b';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-11-2021');
+	define('DEDALO_BUILD'	, '23-11-2021');
 
 
 	/*
