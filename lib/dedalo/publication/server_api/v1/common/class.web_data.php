@@ -2176,10 +2176,15 @@ class web_data {
 			*/
 
 		# Unified version
-		$locator = new locator();
-			$locator->set_tag_id($tag_id);
-			$locator->set_section_id($av_section_id);
-			$locator->set_section_tipo(AUDIOVISUAL_SECTION_TIPO);
+		// $locator = new locator();
+		// 	$locator->set_tag_id($tag_id);
+		// 	$locator->set_section_id($av_section_id);
+		// 	$locator->set_section_tipo(AUDIOVISUAL_SECTION_TIPO);
+		$locator = (object)[
+			'tag_id'		=> $tag_id,
+			'section_id'	=> $av_section_id,
+			'section_tipo'	=> AUDIOVISUAL_SECTION_TIPO
+		];
 
 		$rows_data = web_data::get_indexation_terms_multiple( array($locator), $lang );
 
