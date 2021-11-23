@@ -104,6 +104,9 @@ window.onload = function() {
   if (!getQueryVariable("code")) {
     url = updateQueryStringParameter(url, 'code', 'XXXX')
   }
+  if (!getQueryVariable("lang")) {
+    url = updateQueryStringParameter(url, 'lang', 'lg-spa')
+  }
   
   // Build a system
   const ui = SwaggerUIBundle({

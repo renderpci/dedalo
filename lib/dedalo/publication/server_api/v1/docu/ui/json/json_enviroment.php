@@ -10,9 +10,9 @@
 			$json_content->parameters->code->default = $_REQUEST['code'];
 		}
 
-	# code
+	# db_name
 		if (isset($_REQUEST['db_name'])) {
-			# Set current code as default db_name config
+			# Set current db_name as default db_name config
 			$json_content->parameters->db_name->default = $_REQUEST['db_name'];
 		}
 
@@ -20,6 +20,12 @@
 		# Set current host as object config host
 		if (isset($_REQUEST['host'])) {
 			$json_content->host = $_REQUEST['host'];
+		}
+
+	# lang
+		# Set current lang as object config lang
+		if (isset($_REQUEST['lang'])) {
+			$json_content->parameters->lang->default = $_REQUEST['lang'];
 		}
 	
 	# basePath
@@ -37,9 +43,9 @@
 			}
 			return false;
 		};
-		$protocol  = true===$check_https() ? 'https' : 'http';
-		$protocol2 = ($protocol==='http') ? 'https' : 'http';
-		$json_content->schemes = [$protocol, $protocol2];	
+		$protocol	= true===$check_https() ? 'https' : 'http';
+		$protocol2	= ($protocol==='http') ? 'https' : 'http';
+		$json_content->schemes = [$protocol, $protocol2];
 
 	# Defaults examples
 		# records table
