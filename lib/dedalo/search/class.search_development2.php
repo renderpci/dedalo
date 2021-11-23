@@ -3129,6 +3129,7 @@ class search_development2 {
 				'component_image',
 				'component_av',
 				'component_pdf',
+				'component_svg',
 				'component_security_administrator',
 				//'component_relation_children',
 				//'component_relation_related',
