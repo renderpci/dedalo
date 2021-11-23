@@ -24,7 +24,7 @@
     "name" : "Records",
     "description" : "Generic data get functions"
   }, {
-    "name" : "Thesaurus",
+    "name" : "Legacy Thesaurus",
     "description" : "Specific hierarchy and thesaurus functions"
   }, {
     "name" : "Free",
@@ -309,6 +309,7 @@
     },
     "/reel_terms" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Get reel indexed terms",
         "description" : "Resolve all terms used in the indexation of the given reel transcription (audiovisual record).",
         "parameters" : [ {
@@ -324,7 +325,6 @@
           "type" : "string",
           "required" : true
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -337,6 +337,7 @@
     },
     "/fragment_from_index_locator" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Build fragment of text and video from a index locator",
         "description" : "Calculate all fragments indexed with this locator.",
         "parameters" : [ {
@@ -353,7 +354,6 @@
           "type" : "string",
           "default" : "{\"section_tipo\":\"rsc167\",\"section_id\":\"1\",\"tag_id\":\"1\"}"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -366,6 +366,7 @@
     },
     "/thesaurus_root_list" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Get first level of terms from thesaurus",
         "description" : "Return an array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.\n This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.\n For example, for thesaurus 'Themes' with tld 'ts' must be exists a root term 'Themes' with section_id 1. This will be publish as term_id 'ts1_1' to be discoberable by the API.",
         "parameters" : [ {
@@ -396,7 +397,6 @@
           "type" : "string",
           "format" : "string"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -422,6 +422,7 @@
     },
     "/thesaurus_random_term" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "A random thesaurus term name",
         "description" : "Return a random term from thesaurus tables",
         "parameters" : [ {
@@ -445,7 +446,6 @@
           "type" : "string",
           "format" : "string"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -471,6 +471,7 @@
     },
     "/thesaurus_search" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Search into thesaurus term",
         "description" : "Execute a search against thesaurus tables",
         "parameters" : [ {
@@ -522,7 +523,6 @@
           "type" : "string",
           "format" : "string"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -548,6 +548,7 @@
     },
     "/thesaurus_autocomplete" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Predictive autocomplete search",
         "description" : "Search string in database (begins with $q) and get array of max 25 records",
         "parameters" : [ {
@@ -584,7 +585,6 @@
           "type" : "integer",
           "format" : "int"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -610,6 +610,7 @@
     },
     "/thesaurus_term" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Get thesaurus term objects (one or various)",
         "description" : "Resolve one or more ts_term from ar_term_id",
         "parameters" : [ {
@@ -632,7 +633,6 @@
           "type" : "string",
           "default" : false
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "OK"
@@ -642,6 +642,7 @@
     },
     "/thesaurus_indexation_node" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Indexation object with all required info",
         "description" : "Builds a indexation_node data object",
         "parameters" : [ {
@@ -671,7 +672,6 @@
           "type" : "string",
           "required" : false
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "OK"
@@ -681,6 +681,7 @@
     },
     "/thesaurus_video_view_data" : {
       "post" : {
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Video player data",
         "description" : "Deprecated (!). Gets data needed to build video fragment",
         "parameters" : [ {
@@ -710,7 +711,6 @@
           "type" : "integer",
           "required" : false
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "OK"
@@ -720,7 +720,7 @@
     },
     "/thesaurus_children" : {
       "post" : {
-        "tags" : [ "Thesaurus" ],
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Search all children of current term",
         "description" : "Exec a records query in current term table to find records with data parent equal to current term_id",
         "parameters" : [ {
@@ -765,7 +765,7 @@
     },
     "/thesaurus_parents" : {
       "post" : {
-        "tags" : [ "Thesaurus" ],
+        "tags" : [ "Legacy Thesaurus" ],
         "summary" : "Search all parents of current term",
         "description" : "Exec a records query in current term table to find records with data children equal to current term_id",
         "parameters" : [ {
