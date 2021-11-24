@@ -2545,6 +2545,15 @@
 		Removed web_data class locator dependency in method get_indexation_terms
 		Added to tool_administration the publication code
 		Updated Publication API docu swagger ui json file from v1.0.17 to v1.0.18. Improved description about /thesaurus_root_list use
+		24-11-2021
+		Updated Publication API docu ui swagger file with tag 'Legacy Thesaurus'
+		Fixed button publish input levels issue on Safari
+		Added try catch to JSON.parse(wrapper.dataset.dato) on recursive_groups function to prevent bad data blocks the search
+		Added 'norder' and 'propiedades' to diffusion_sql on resolve_jer_dd_data
+		Added component_json search mode
+		Updated swagger JSON file definitions
+		Clean component_input_text html code
+		Updated main structure.css and js lang files
 
 
 	[/HISTORY]
@@ -2570,13 +2579,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3b';
+	$DEDALO_VERSION = '5.8.3c';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-11-2021');
+	define('DEDALO_BUILD'	, '24-11-2021');
 
 
 	/*
