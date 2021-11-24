@@ -3632,9 +3632,10 @@ class diffusion_sql extends diffusion  {
 				? reset($dato)
 				: null;
 
+		// check valid term_id
 			if (empty($term_id)) {
-			 	return null;
-			} 
+				return null;
+			}
 
 		switch ($column) {
 			case 'esmodelo': // typology
@@ -3642,9 +3643,7 @@ class diffusion_sql extends diffusion  {
 				$RecordObj_dd	= new RecordObj_dd($term_id);
 				$db_value		= $RecordObj_dd->get_esmodelo();
 
-				$value = $db_value==='si'
-					? 'object'
-					: 'instance';
+				$value = (bool)($db_value==='si');
 
 				return $value;
 				break;
@@ -3656,7 +3655,7 @@ class diffusion_sql extends diffusion  {
 				
 				$value = ($resolve_label===true && !empty($tipo))
 					? RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, $from_cache=true, $fallback=false)
-					: (!empty($tipo) ? $tipo : null);				
+					: (!empty($tipo) ? $tipo : null);
 
 				return $value;
 				break;
@@ -3709,7 +3708,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 				return $value;
-				break;		
+				break;
 
 			case 'traducible': // translatable
 
@@ -3723,6 +3722,18 @@ class diffusion_sql extends diffusion  {
 				return $value;
 				break;
 
+			case 'norden': // norder
+
+				$RecordObj_dd	= new RecordObj_dd($term_id);
+				$db_value		= $RecordObj_dd->get_norden();
+
+				$value = intval($db_value)>0
+					? intval($db_value)
+					: 0;
+
+				return $value;
+				break;
+
 			case 'propiedades': // properties
 
 				$RecordObj_dd	= new RecordObj_dd($term_id);
@@ -3731,7 +3742,17 @@ class diffusion_sql extends diffusion  {
 				$value = !empty($db_value) ? $db_value : null;
 
 				return $value;
-				break;	
+				break;
+
+			case 'properties': // properties
+
+				$RecordObj_dd	= new RecordObj_dd($term_id);
+				$db_value		= $RecordObj_dd->get_properties();
+
+				$value = !empty($db_value) ? $db_value : null;
+
+				return $value;
+				break;
 
 			default:
 				$value = null;
