@@ -187,8 +187,9 @@
     },
     "/records" : {
       "post" : {
-        "description" : "Search records with current params in requested table.",
+        "tags" : [ "Records" ],
         "summary" : "Get records from DDBB",
+        "description" : "Search records with current params in requested table. This is similar to a basic sql query but note that not all commands are supported or allowed for security reasons.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -293,7 +294,6 @@
           "type" : "string",
           "format" : "string"
         } ],
-        "tags" : [ "Records" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
