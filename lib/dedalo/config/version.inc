@@ -2558,6 +2558,8 @@
 		Fixed issue when ontology term edit not save empty object '{}' as expected empty value
 		Updated login set password and install redirection from default to tool_administration
 		Unlocked Ontology obs field to allow manual remove old values
+		Removed component_filter unused methods
+		Fixed component_filter stats error when project values was not calculated correctly
 
 
 	[/HISTORY]
@@ -2583,7 +2585,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3e';
+	$DEDALO_VERSION = '5.8.3f';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
