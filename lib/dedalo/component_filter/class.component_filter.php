@@ -639,7 +639,7 @@ class component_filter extends component_relation_common {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 		}
 		return $search_query;
-	}
+	}//end get_search_query
 
 
 
@@ -660,23 +660,24 @@ class component_filter extends component_relation_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
-		$component  	= component_common::get_instance(get_called_class(),
-														 $tipo,
-														 $parent,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+		$component = component_common::get_instance(get_called_class(),
+													$tipo,
+													$parent,
+													'list',
+													DEDALO_DATA_NOLAN,
+													$section_tipo);
 
-		if (!empty($value)) {
-			if($ar_val = json_decode($value)){
-				$component->set_dato($ar_val);
+		// inject already resolved dato
+			if (!empty($value)) {
+				if($ar_val = json_decode($value)){
+					$component->set_dato($ar_val);
+				}
 			}
-		}
 		
 		$valor = $component->get_valor();
 		
-		return $valor;		
-	}#end render_list_value
+		return $valor;
+	}//end render_list_value
 
 
 
@@ -732,7 +733,7 @@ class component_filter extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=DEDALO_DATA_LANG ) {
-				
+
 		$dato = $this->get_dato();
 	
 		$ar_label = [];
@@ -744,11 +745,9 @@ class component_filter extends component_relation_common {
 			}			
 		}
 		
-		if (empty($ar_label)) {
-			$diffusion_value = null;
-		}else{
-			$diffusion_value = implode(' | ', $ar_label);
-		}		
+		$diffusion_value = !empty($ar_label)
+			? implode(' | ', $ar_label)
+			: null;
 
 		return $diffusion_value;
 	}//end get_diffusion_value
@@ -760,16 +759,14 @@ class component_filter extends component_relation_common {
 	* @return array $ar_clean
 	*/
 	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='dato') {
-	
+
 		// Search
-			if (isset($propiedades->stats_look_at)) {
-				$related_tipo = reset($propiedades->stats_look_at);
-			}else{
-				$related_tipo = false; //$current_column_tipo;
-			}
-			$path 		= search_development2::get_query_path($tipo, $section_tipo, true, false);
-			$end_path 	= end($path);
-			$end_path->selector = $selector;
+			$path				= search_development2::get_query_path($tipo, $section_tipo, true, false);
+			$end_path			= end($path);
+			$end_path->selector	= $selector;
+			$related_tipo		= isset($propiedades->stats_look_at)
+				? reset($propiedades->stats_look_at)
+				: ($end_path->component_tipo ?? false);
 			
 			$search_query_object = '{
 			  "section_tipo": "'.$section_tipo.'",
@@ -782,53 +779,30 @@ class component_filter extends component_relation_common {
 				}
 			  ]
 			}';
-			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
-			$search_query_object = json_decode($search_query_object);
-			$search_development2 = new search_development2($search_query_object);
-			$result 			 = $search_development2->search();
-			#dump($result, ' result ** ++ '.to_string());
+			$search_query_object	= json_decode($search_query_object);
+			$search_development2	= new search_development2($search_query_object);
+			$result					= $search_development2->search();
 
 		// Parse results for stats
 			$ar_clean = [];
-			foreach ($result->ar_records as $key => $item) {
+			foreach ($result->ar_records as $row) {
 
-				$ar_locators = end($item);
-				$ar_locators = json_decode($ar_locators);
-	
-				foreach ((array)$ar_locators as $locator) {					
+				$project_name = isset($row->{$related_tipo})
+					? json_decode($row->{$related_tipo})
+					: [''];
 
-					if (isset($propiedades->stats_look_at)) {
-						$c_tipo 		= reset($propiedades->stats_look_at);
-						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
-						$component 		= component_common::get_instance( $modelo_name,
-																		  $c_tipo,
-																		  $locator->section_id,
-																		  'list',
-																		  $lang,
-																		  $locator->section_tipo);
-						$label = $component->get_valor($lang);
-					}else{
-						$label = ts_object::get_term_by_locator( $locator, $lang, true );
-					}
+				$label	= strip_tags(reset($project_name));
+				$uid	= $label;
 
-					
-					
-					$label 	= strip_tags(trim($label));
-
-					#$uid 	= $locator->section_tipo.'_'.$locator->section_id;
-					$uid 	= $label;
-
+				// creates/update the counter object
 					if(!isset($ar_clean[$uid])){
 						$ar_clean[$uid] = new stdClass();
-						$ar_clean[$uid]->count = 0;
-						$ar_clean[$uid]->tipo  = $tipo;
+							$ar_clean[$uid]->count = 0;
+							$ar_clean[$uid]->tipo  = $tipo;
 					}
-
 					$ar_clean[$uid]->count++;
 					$ar_clean[$uid]->value = $label;
-				}
-			}
-			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
+			}//end foreach ($result->ar_records as $row)
 
 		
 		return $ar_clean;
@@ -836,6 +810,6 @@ class component_filter extends component_relation_common {
 
 
 
-	
-}
-?>
+}//end component_filter
+
+
