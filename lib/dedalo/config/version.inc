@@ -2556,6 +2556,8 @@
 		Updated main structure.css and js lang files
 		26-11-2021
 		Fixed issue when ontology term edit not save empty object '{}' as expected empty value
+		Updated login set password and install redirection from default to tool_administration
+		Unlocked Ontology obs field to allow manual remove old values
 
 
 	[/HISTORY]
@@ -2581,7 +2583,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3d';
+	$DEDALO_VERSION = '5.8.3e';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
