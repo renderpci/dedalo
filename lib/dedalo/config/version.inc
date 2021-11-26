@@ -2554,6 +2554,8 @@
 		Updated swagger JSON file definitions
 		Clean component_input_text html code
 		Updated main structure.css and js lang files
+		26-11-2021
+		Fixed issue when ontology term edit not save empty object '{}' as expected empty value
 
 
 	[/HISTORY]
@@ -2579,13 +2581,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3c';
+	$DEDALO_VERSION = '5.8.3d';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-11-2021');
+	define('DEDALO_BUILD'	, '26-11-2021');
 
 
 	/*
