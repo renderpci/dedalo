@@ -53,16 +53,24 @@ render_table_dd_grid.prototype.table = function() {
 
 /**
 * GET_TABLE_NODES
+* @param data; array of objects; full data sent by the server with all information.
+* @return DOM node with the table
 */
 const get_table_nodes = function(data){
-
+	// the root node
 	const fragment = new DocumentFragment()
-	console.log("data:",data);
-	// first row
-	// const data_value = data[0].value
+
+	// First row;
+	// get the columns form the first row of the data, it content the columns map with all columns calculated in the server for all data,
+	// sometimes the columns are section_id columns, that is, some columns comes from rows inside portals, all rows below the main portal will be converted to section_id columns
+	// some portals could have a information that other rows of the same portal doesn't has, ex: one interview, with two informants, every informant has different amount of professions,
+	// every profession of every informant will create his own columns as: profession ; profession|1 ; etc
+	// the first row has all columns, direct columns and calculated columns (from section_ids rows)
+	// ar_columns_obj will be the map of the columns, used for create the header of the table and for extract the data and fill the empty values.
 	const ar_columns_obj = data[0].value.map(item => item.ar_columns_obj)
 
 	// build the header
+	// get every column to create the header of the table, get the node and add to the root node
 	const ar_columns_obj_len = ar_columns_obj.length
 	for (let i = 0; i < ar_columns_obj_len; i++) {
 		const column = ar_columns_obj[i]
@@ -71,14 +79,14 @@ const get_table_nodes = function(data){
 	}
 
 	// build the rows, row 0 are the columns that is not used here
+	// get every row with data, the first row is the header, and it begins at 1 row to calculate the cells
+	// the top row doesn't create node, because it will be created by the get_portal_rows() to be compatible between flat row or portal rows
 	const data_len = data.length
 	for (let i = 1; i < data_len; i++) {
-		// the columns
+		// the current row
 		const row_data = data[i]
 		const nodes = get_portal_rows(row_data, ar_columns_obj)
 		fragment.appendChild(nodes)
-
-		const cell_nodes = []
 	}
 
 	const rows_nodes = get_portal_rows(data, ar_columns_obj)
@@ -86,41 +94,63 @@ const get_table_nodes = function(data){
 	return fragment
 }//end get_table_nodes
 
+
+/**
+* GET_PORTAL_ROWS
+* @param row; array of objects; all information of the row, the main row
+* @param ar_columns_object; array of object; the column map with all columns to be matched with the data
+* @return DOM node with the tr of the table
+* This method calculate the rows when the main row has sub rows that comes from portals
+* sometime the row don't has portal information, but the calculation will be the same, because the server use a row_count to identify the amount rows that will be necessary to build
+* if the row don't has portals the row_count will be 1, if has portals have multiple locators, the row_count will be the total locators of the first level, sub-levels of information are calculated as section_id columns
+*/
 const get_portal_rows = function(row, ar_columns_obj){
 
 	const fragment = new DocumentFragment()
 
-	// build the rows, row 0 are the columns that is not used here
+	// get the total rows will be created
+	// the top row has the total rows that is collected for every component, in a portal has two locators and other portal has 5 locators the amount of rows will be 5
 	const data_len = row.row_count
 
 	for (let row_key = 0; row_key < data_len; row_key++) {
 
-		// the columns
+		// get the columns data
 		const column_data = row.value
+		// create the node
 		const row_node = get_row_container()
 		fragment.appendChild(row_node)
-
+		// process the data column to get the cells
 		const nodes = get_columns(column_data, ar_columns_obj, row_key)
 		row_node.appendChild(nodes)
-
 	}
-return fragment
-}
+	return fragment
+}// end get_portal_rows
 
+
+/**
+* GET_COLUMNS
+* @param column_data; array of objects; full data with the columns to be processed, in the recursion it could be a part of this data to be processed
+* @param ar_columns_object; array of object; the column map with all columns to be matched with the data
+* @param parent_row_key; int; the current position of the row to be used to match with the portal data
+* @return DOM node with the td of the table
+* the columns has the information of the components
+* is the component is a final component it will create a node
+* if the component is a relation component, portals, it could has other rows or portal columns with "sub-columns" of the final components
+* in the case of column has rows, extract the row with parent_row_key and star again
+* in the case of the column of a portal, extract his value and star again
+*/
 const get_columns = function(column_data, ar_columns_obj, parent_row_key){
 
-	const fragment = new DocumentFragment()
+	const fragment		= new DocumentFragment()
+	// first we loop all map columns, independently of the data
 	const column_len	= ar_columns_obj.length
-
-	// const ar_lasts_columns = []
-
 	for (let i = 0; i < column_len; i++) {
-
+		// specify the current column to be filled
 		const column = ar_columns_obj[i]
-
+		// find the data of the column, if it's not present, create a empty column
 		const column_value = column_data.find(item => item.ar_columns_obj.find(el => el.id === column.id))
-		 ? column_data.find(item => item.ar_columns_obj.find(el => el.id === column.id))
-		 : {
+			? column_data.find(item => item.ar_columns_obj.find(el => el.id === column.id))
+			: {
 				ar_columns_obj: [column],
 				type		: 'column',
 				cell_type	: 'text',
@@ -128,7 +158,7 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key){
 				class_list	:'empty_value'
 
 			}
-		// if the column is the last column with data, identify by cell_type, render the node
+		// if the column is the last column with data, identify by cell_type property, render the node
 		if(column_value && column_value.type === 'column' && column_value.cell_type){
 
 			const column_nodes = get_table_columns(column_value)
@@ -136,10 +166,12 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key){
 			for (let j = 0; j < node_len; j++) {
 				fragment.appendChild(column_nodes[j])
 			}
-		// else if the column could has rows (the portal rows) or could be colum_portal that has the column with the information (when the column is created by the section_id in the portal)
+		// else if the column is a portal column, it could has rows (the portal rows) or could be colum_portal, that has the column with the information.
+		// in the second case, the column of the portal, this column content the other components columns and if the sub component is a relation component it is created by the section_id in the portal
 		}else if(column_value && column_value.type === 'column'){
 			const sub_portal_values	= column_value.value
 			// if the column has rows:
+			// this case is the main portal in the section to export, sub-portals don't create rows
 			if(sub_portal_values[0].type === 'row'){
 				const current_ar_columns_obj = [column]
 				// some times sub_values could be empty, because the rows_columns created by section_id could be empty between different rows, it depends of the data
@@ -168,13 +200,15 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key){
 	}
 
 	return fragment
-}
+}// end get_columns
 
 
 
 
 /**
 * GET_TABLE_COLUMNS
+* @param current_data; object; the full column data
+* use the column_data to create the right node
 */
 const get_table_columns = function(current_data){
 
