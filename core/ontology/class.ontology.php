@@ -2,6 +2,7 @@
 require_once( dirname(__FILE__) . '/class.RecordObj_dd_edit.php');
 
 
+
 // definitions
 	// define('ONTOLOGY_SECTION_TIPOS', [
 	// 	'section_tipo'	=> 'dd1500',
@@ -70,19 +71,19 @@ class ontology {
 	* @return object $item
 	*/
 	public static function tipo_to_json_item($tipo, $request_options=[
-			'tipo' 			=> true,
-			'tld'			=> true,
-			'is_model'		=> true,
-			'model'			=> true,
-			'model_tipo'	=> true,
-			'parent'		=> true,
-			'order'			=> true,
-			'translatable'	=> true,
-			'properties'	=> true,
-			'relations'		=> true,
-			'descriptors'	=> true,
-			'label'			=> false
-			]) {
+		'tipo' 			=> true,
+		'tld'			=> true,
+		'is_model'		=> true,
+		'model'			=> true,
+		'model_tipo'	=> true,
+		'parent'		=> true,
+		'order'			=> true,
+		'translatable'	=> true,
+		'properties'	=> true,
+		'relations'		=> true,
+		'descriptors'	=> true,
+		'label'			=> false
+		]) {
 
 		$options = new stdClass();
 			$options->tipo			= false;
@@ -295,7 +296,6 @@ class ontology {
 
 		return $ontology;
 	}//end renumerate_term_id
-
 
 
 
@@ -683,7 +683,7 @@ class ontology {
 				"skip_projects_filter": true,
 				"select": []
 			}');
-
+		
 		$dedalo_version = explode(".", DEDALO_VERSION);
 		if ( (int)$dedalo_version[0]>5 ) {
 			// v6

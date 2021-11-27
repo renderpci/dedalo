@@ -16,27 +16,131 @@ $(function() {
 const descriptors_trigger = 'trigger.descriptors_dd.php';
 
 
+// JSON editors. Filled in page html
+	var propiedades_editor	= null
+	var properties_editor	= null
+
+
 
 /**
-* VALIDAR
+* EDIT_ts
+* Save form data using trigger.dd.php
 */
-function validar(formObj) {
+function edit_ts(formObj, e) {
+	e.preventDefault();
 
-	var termino_id_val = $("#termino_"+id).val();	//alert(termino_id_val )
+	// descriptors check main value
+		const input_term_descriptors = document.getElementById('termino_' + id)
+		if (input_term_descriptors.value.length < 1) {
+			alert(debe_introducir_el_tesauro_title);
+			$("#termino_"+id).focus();
+			return false
+		}
 
-	if (termino_id_val.length < 1) {
-     	alert(debe_introducir_el_tesauro_title);
-	 	$("#termino_"+id).focus();
-     	return (false);
-  	}
-	if (formObj.parent.value.length < 1) {
-     	alert(debe_introducir_title + " "+ padre_title + "\n ex. es1" );
-	 	formObj.parent.focus();
-     	return (false);
-  	}
+	// parent input check value
+		if (formObj.parent.value.length < 1) {
+			alert(debe_introducir_title + " "+ padre_title + "\n ex. es1" );
+			formObj.parent.focus();
+			return false
+		}
 
-  return true;
-}//end validar
+	// JSON editors check valid values (null is a valid value)
+		const json_editors = ['propiedades','properties']
+		for (let i = 0; i < json_editors.length; i++) {
+			const editor_name	= json_editors[i] +'_editor'
+			const editor		= window[editor_name]
+			if (!editor) {
+				console.error("JSON editor not found:", editor_name);
+				alert("Error. JSON editor not found")
+				return false;
+			}
+			try {
+				editor.validate()
+				editor.get()
+			}catch(error){
+				formObj.parentNode.classList.add("bg_error")
+				console.warn("error:",error);
+				setTimeout(function(){
+					alert("The JSON editor value is invalid and will not be saved. Name: "+editor_name+" \n"+error);
+					formObj.parentNode.classList.remove("bg_error")
+				}, 150)
+				return false;
+			}
+		}
+
+	// form_data
+		const formData		= new FormData(formObj);
+		const form_data		= {}
+		for (const pair of formData.entries()) {
+			if (json_editors.includes(pair[0])) {
+				// JSON editors. get value as JSON, not as text
+				try {
+					const editor = window[pair[0] +'_editor']
+					form_data[pair[0]] = editor.get()
+				}catch(error){
+					form_data[pair[0]] = null // will be changed by
+					console.warn("error:",error);
+					alert("The JSON editor value is invalid and will not be saved. Name: " + pair[0] +"_editor \n" + error);
+					return false;
+				}
+			}else{
+				form_data[pair[0]] = pair[1]
+			}
+		}
+
+	formObj.classList.add("loading")
+
+	// request to trigger using JSON format
+		data_manager.request({
+			url		: 'trigger.dd.php',
+			body	: {
+				mode		: 'edit_ts',
+				form_data	: form_data
+			}
+		})
+		.then(function(response){
+			console.log('---- edit_ts response ',response)
+
+			formObj.classList.remove("loading")
+
+			if (response.result!==true) {
+				// error case
+				console.warn("response:",response);
+				alert(response.msg || 'Undefined error');
+			}else{
+				// OK
+				if (window.opener) {
+					const form_data = response.form_data
+					if (form_data.esdescriptor==='no') {
+						window.opener.openDivTrack(form_data.parent, 1, form_data.parent);
+					}else if(form_data.parent!==form_data.parentInicial) {
+						// metemos en la cookie que abra el nuevo parent y luego recargaremos.
+						// Actualiza la antigua ubicación
+						window.opener.openDivTrack(form_data.parentInicial, 1, form_data.terminoID);
+						// Actualiza la nueva ubicación
+						window.opener.openDivTrack(form_data.parent, 1, form_data.terminoID);
+						// location.reload();
+					}else if (form_data.parent===form_data.prefix+'0'){
+						window.opener.location.reload();
+						// window.close();
+						// history.back()
+					}else{
+						// Reload only de parent div
+						window.opener.openDivTrack(form_data.parent, 1, form_data.terminoID);
+						// window.close();
+						// history.back()
+					}
+				}
+			}
+		})
+		.catch((error) => {
+			formObj.classList.remove("loading")
+			console.error('Error:', error);
+		});
+
+
+	return false;
+}//end edit_ts
 
 
 
@@ -44,40 +148,35 @@ function validar(formObj) {
 * VERIFICARDESCRIPTOR
 */
 function verificarDescriptor(valor) {
+
 	// Comprobamos si tiene hijos
-	if( (nHijos >= 1) && valor == 'no')
-	{
+	if( (nHijos >= 1) && valor == 'no')	{
 		form1.esdescriptor.value= 'si' ;
 		form1.esdescriptor.focus();
 		alert(un_termino_con_hijos_title);
 	}
 	// Comprobamos si está relacionado con otros descriptores
-	if( (hasRelation == 'si') && valor == 'no')
-	{
+	if( (hasRelation == 'si') && valor == 'no')	{
 		form1.esdescriptor.value= 'si' ;
 		form1.esdescriptor.focus();
 		alert(un_termino_con_descriptores_title);
 	}
 	// Verificamos que no depende del nivel 0
-	if( (parent=='ts0' || parent=='tp0') && valor == 'no')
-	{
+	if( (parent=='ts0' || parent=='tp0') && valor == 'no') {
 		form1.esdescriptor.value= 'si' ;
 		form1.esdescriptor.focus();
 		alert(un_no_descriptor_ha_de_depender_title);
 	}
 
 	// actualizamos la visualización
-	const valSelectEsdescriptor = $('#esdescriptor').val()
-	if( valSelectEsdescriptor === 'si' )	{
-
-		$(trsND).css('display','table-row');
-		redimensionarVentana()
-
-	}else{
-
-		$(trsND).css('display','none');
-		redimensionarVentana()
-	}
+		const valSelectEsdescriptor = $('#esdescriptor').val()
+		if( valSelectEsdescriptor === 'si')	{
+			$(trsND).css('display','table-row');
+			redimensionarVentana()
+		}else{
+			$(trsND).css('display','none');
+			redimensionarVentana()
+		}
 
 	return true
 }//end verificarDescriptor
@@ -89,6 +188,7 @@ function verificarDescriptor(valor) {
 * Si es NO descriptor, ocultamos las opciones de Términos relacionados
 */
 function opcionesND() {
+
 	if(esdescriptor!='si')	{
 		$(trsND).css('display','none');
 		redimensionarVentana()
@@ -102,16 +202,16 @@ function opcionesND() {
 */
 function ToogleTBODYts(divget) {
 
-  div = document.getElementById(divget);
-  if(div!=null && div.length>0) {
+	div = document.getElementById(divget);
+	if(div!=null && div.length>0) {
 
 	if(div.style.display == "none") {
 		div.style.display = "table-row-group";
 	}else{
-	   div.style.display = "none";
+		 div.style.display = "none";
 	}
-  }
-  redimensionarVentana();
+	}
+	redimensionarVentana();
 }//end ToogleTBODYts
 
 
@@ -168,7 +268,7 @@ function cargarTSrel(terminoID) {
 function linkTS(terminoID_to_link) {
 
 	const myurl				= 'dd_edit_rel.php'
-	const div				= $('#div_rel')
+	const div_rel			= document.getElementById("div_rel")
 	const accion			= 'linkTS'
 	const terminoIDactual	= terminoID
 	const mydata			= {
@@ -178,7 +278,7 @@ function linkTS(terminoID_to_link) {
 		top_tipo			: page_globals.top_tipo
 	}
 
-	$(div).html('<div><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle"/></div>');
+	div_rel.innerHTML = '<div><img src="../themes/default/spinner.gif" alt="Wait" align="absmiddle"/></div>'
 
 	$.ajax({
 		url		: myurl,
@@ -187,7 +287,6 @@ function linkTS(terminoID_to_link) {
 		cache	: false,
 		async	: false
 	})
-	// DONE
 	.done(function(data_response) {
 		cargarTSrel(terminoID)
 		//redimensionarVentana()
@@ -212,14 +311,14 @@ function unlinkTS(terminoID_to_unlink, termino) {
 	termino			= my_urldecode(termino);
 
 	// mensaje de confirmación
-  	const r = confirm( seguro_que_quiere_desvincular_title + '\n\n ' + descriptor_title + ': ' + termino + '\n\n' )
-  	if (r==true) {
+		const r = confirm( seguro_que_quiere_desvincular_title + '\n\n ' + descriptor_title + ': ' + termino + '\n\n' )
+		if (r==true) {
 
 		const mydata = {
 			accion				: accion,
 			terminoID			: terminoID,
 			terminoID_to_unlink	: terminoID_to_unlink,
-			top_tipo			:page_globals.top_tipo
+			top_tipo			: page_globals.top_tipo
 		}
 		$.ajax({
 			url			: myurl,
@@ -295,32 +394,45 @@ function codigoKeyUp(obj) {
 function loadDescriptorsGrid( id_focus ) {
 
 	// get page global 'terminoID'
-	var current_terminoID = terminoID;
+	const current_terminoID = terminoID;
 
-	if(typeof id == 'undefined') return alert("global var id is not available : "+id)
+	if(typeof id==='undefined') {
+		alert("global var id is not available : "+id)
+		return false
+	}
 
-	var myurl 		= "dd_descriptors_grid.php" ;
-	var div			= $('#tbodyDescriptorsGrid');
-	var mode 		= 'loadDescriptorsGrid';
-	var mydata		= { 'mode': mode, 'id': id, 'terminoID':current_terminoID, 'top_tipo':page_globals.top_tipo };// var id is set in page
-		//return console.log('id:'+id)
+	// DescriptorsGrid
+		const tbodyDescriptorsGrid = document.getElementById('tbodyDescriptorsGrid')
+		tbodyDescriptorsGrid.classList.add('spinner');
 
-	div.addClass('spinner');
-
+	const data	= {
+		'mode'		: 'loadDescriptorsGrid',
+		'id'		: id, // is set in page
+		'terminoID'	: current_terminoID,
+		'top_tipo'	: page_globals.top_tipo
+	}
 	// AJAX CALL
-	$.ajax({
-		url		: myurl,
-		data	: mydata,
+	const js_promise = $.ajax({
+		url		: "trigger.descriptors_dd.php",
+		data	: data,
 		type	: "GET"
 	})
-	// DONE
-	.done(function(data_response) {
+	.done(function(response) {
 
-		$(div).html(data_response)
+		const html = response
+
+		// Clean target_node
+			while (tbodyDescriptorsGrid.firstChild) {
+				tbodyDescriptorsGrid.removeChild(tbodyDescriptorsGrid.firstChild);
+			}
+			tbodyDescriptorsGrid.insertAdjacentHTML('afterbegin', html)
 
 		if(SHOW_DEBUG===true) {
-			if(typeof id_focus!=='undefined') console.log("->Exec loadDescriptorsGrid id_focus: "+id_focus)
+			if(typeof id_focus!=='undefined') {
+				console.log("->Exec loadDescriptorsGrid id_focus: "+id_focus)
+			}
 		}
+
 		// RELATIONS : Trigger load relations
 		//cargarTSrel(terminoID);
 
@@ -330,15 +442,22 @@ function loadDescriptorsGrid( id_focus ) {
 		//alert("loadDescriptorsGrid error : "+textStatus)
 	})
 	.always(function() {
-		div.removeClass('spinner');
-		if(typeof id_focus!=='undefined') $('#termino_'+ id_focus).focus();
+		tbodyDescriptorsGrid.classList.remove('spinner')
+		if(typeof id_focus!=='undefined') {
+			const el = document.getElementById('termino_'+ id_focus)
+			if (el) {
+				el.focus()
+			}
+		}
 	});
+
+	return js_promise
 }//end loadDescriptorsGrid
 
 
 
 /**
-* removeDescriptor
+* REMOVEDESCRIPTOR
 */
 function removeDescriptor(id, terminoID) {
 
@@ -346,7 +465,7 @@ function removeDescriptor(id, terminoID) {
 	//return alert("delete "+id);
 
 	var r=confirm( esta_seguro_de_eliminar_registro_1_title )
-  	if (r==true) {
+		if (r==true) {
 
 		var myurl 		= descriptors_trigger ;
 		var div			= $('#tbodyDescriptorsGrid');
@@ -375,81 +494,6 @@ function removeDescriptor(id, terminoID) {
 
 
 /**
-* SAVEDESCRIPTOR
-*/
-function saveDescriptor(obj) {
-
-	const parent	= obj.dataset.parent
-	const lang		= obj.dataset.lang
-	const tipo		= obj.dataset.tipo
-	const dato		= obj.value
-
-	// check vars
-		switch(true) {
-
-			case typeof parent === "undefined" :
-				return alert(" parent data is not defined! \n Data is not saved! ")
-				break;
-
-			case typeof lang === "undefined" 	:
-				return alert(" lang data is not defined! \n Data is not saved! ")
-				break;
-
-			case typeof tipo === "undefined" 	:
-				return alert(" tipo data is not defined! \n Data is not saved! ")
-				break;
-		}
-
-	// terminoID is a page global. Verify
-		if (typeof terminoID === 'undefined') {
-			return alert("Sorry: global terminoID is not defined \n Data is not saved!")
-		}
-
-	// form lock
-		const form = document.getElementById("form1")
-		form.classList.add("loading")
-
-	// request
-		return new Promise(function(resolve, reject){
-
-			const data	= {
-				mode		: 'saveDescriptor',
-				parent		: parent,
-				lang		: lang,
-				tipo		: tipo,
-				dato		: dato,
-				terminoID	: terminoID,
-				top_tipo	: page_globals.top_tipo
-			}
-			$.ajax({
-				url		: descriptors_trigger,
-				data	: data,
-				type	: "POST"
-			})
-			.done(function(data_response) {
-				
-				if(data_response) alert(data_response);
-
-				// update window_docu if is opened
-					if (window_docu) {
-						window_docu.location.reload()
-					}
-
-				resolve(data_response)
-			})
-			.fail( function(jqXHR, textStatus) {
-				alert("saveDescriptor error : " + textStatus)
-				reject(textStatus)
-			})
-			.always(function() {
-				form.classList.remove("loading")				
-			});
-	})
-}//end saveDescriptor
-
-
-
-/**
 * TS_EDIT_NEW_LANG
 */
 function ts_edit_new_lang(terminoID_lang) {
@@ -464,7 +508,7 @@ function ts_edit_new_lang(terminoID_lang) {
 	const myurl		= descriptors_trigger
 	const div		= $('#tbodyDescriptorsGrid')
 	const mode		= 'newDescriptor'
-	const mydata	= { 
+	const mydata	= {
 		mode			: mode,
 		terminoID		: terminoID,
 		terminoID_lang	: terminoID_lang,
@@ -513,16 +557,16 @@ function redimensionarVentana() {
 		setTimeout( function() {
 
 			 var w = $(window),
-			 	 d = $(document),
-			 	 b = $('body');
+				 d = $(document),
+				 b = $('body');
 
 			var h1 = parseInt( b.height() - w.height() );
 			var h2 = parseInt( (d.height() - w.height()) );
 	//console.log(h1);
 	//console.log(h2);
-   			window.resizeBy(0, h2);
+				window.resizeBy(0, h2);
 
-	   	 }, 100);
+			 }, 100);
 	//});
 }//end redimensionarVentana
 
@@ -557,7 +601,7 @@ const add_new_lang = function(select_obj) {
 							terminoID		: terminoID,
 							terminoID_lang 	: terminoID_lang,
 							top_tipo		: page_globals.top_tipo || null
-						  }; //console.log("mydata", url, mydata); // return;
+							}; //console.log("mydata", url, mydata); // return;
 
 	// Spinner ON
 	target_div.classList.add('spinner')
@@ -648,12 +692,12 @@ const build_download_data_link = function(options) {
 	const file_name 	= options.file_name || 'download_file'
 
 	// Label
-	const label = file_name	
+	const label = file_name
 	// Mime
 	const mime_type = 'application/json'
 	// Blob data
 	const data = new Blob([JSON.stringify(obj_to_save, null, 2)], {
-	    type: mime_type,
+			type: mime_type,
 		name: 'file.json'
 	})		
 	

@@ -57,7 +57,7 @@ class dd_elements {
 			$html .= $this->renderTextTermino($terminoID,$termino,$parent,$resalte);
 
 			if($traducible==='no')
-			$html .= ' <em>(no traducible)</em>';
+			$html .= ' <em>(no trad.)</em>';
 
 
 			# BUTTON DESPLEGAR TERMINOS RELACIONADOS BtnTR
@@ -174,7 +174,7 @@ class dd_elements {
 
 		$obj = '';
 
-		$obj .= ' <div class="icon_edit " title="'.$editar_title.'" ';
+		$obj .= '<div class="icon_edit " title="'.$editar_title.'" ';
 		$obj .= "onclick=\"dd.openTSedit('$terminoID');\" ";
 		$obj .= '></div>';
 
@@ -227,15 +227,15 @@ class dd_elements {
 
 		# RESALTE
 		if($resalte===1)	{
-			$html .= " <div id=\"textoTermino_{$terminoID}\" class=\"textoTermino resalte\">";
+			$html .= ' <div id="textoTermino_'.$terminoID.'" class="textoTermino resalte">';
 		}else{
-			$html .= " <div id=\"textoTermino_{$terminoID}\" class=\"textoTermino\">";
+			$html .= ' <div id="textoTermino_'.$terminoID.'" class="textoTermino">';
 		}
 
-		if($this->ts_lang) {
-			$html .= " <span class=\"notas\">";
-			$html .= "[$this->ts_lang] ";
-			$html .= "</span>";
+		if(isset($this->ts_lang)) {
+			$html .= ' <span class="notas">';
+			$html .= '['.$this->ts_lang.'] ';
+			$html .= '</span>';
 		}
 
 		// if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!='dedalo_master_v5' ) {
@@ -251,7 +251,7 @@ class dd_elements {
 		* Pendiente: Búsqueda de NO descriptores y remarcado de los mismos en el resultado (como en la párte pública)
 		*/
 		#if($this->noDescripor && $terminoID===$this->terminoIDactual) $obj .= " <span id=\"notaND\">(per $this->noDescripor)</span> ";
-		$html .= " <span class=\"terminoIDinList\" alt=\"$terminoID\"> [$terminoID]</span>";
+		$html .= ' <span class="terminoIDinList" alt="'.$terminoID.'"> ['.$terminoID.']</span>';
 
 		$html .= '</div>';
 
@@ -268,7 +268,7 @@ class dd_elements {
 
 		$obj 		= '';
 		$divDestino = 'tr'.$terminoID;
-		$obj 		.= "<div class=\"tesauro_button_show_tr\" data-tipo=\"$divDestino\" title=\"$mostrar_temas_relacionados_title\" ";
+		$obj 		.= '<div class="tesauro_button_show_tr" data-tipo="'.$divDestino.'" title="'.$mostrar_temas_relacionados_title.'" ';
 		$obj 		.= "onclick=\"multiToogle('$divDestino','block','none');\" ";
 		$obj 		.= '></div>';
 
@@ -335,7 +335,7 @@ class dd_elements {
 			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $propiedades_title\" ";
 			#$obj_html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
 			#$obj_html .= "></div>";
-			$obj_html 	 .= " <div class=\"cuadroU btn_propiedades $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+			$obj_html 	 .= ' <div class="cuadroU btn_propiedades '.$add_class.'" title="'.$mostrar_title.' '.$propiedades_title.'" onclick="multiToogle(\''.$divDestino.'\',\'block\',\'none\')"> P </div>';
 		}
 		return $obj_html ;
 	}
@@ -369,8 +369,7 @@ class dd_elements {
 	/**
 	* RENDERBTNU : crea el botón Mostrar U usado por (Si este termino tiene indexaciones, se mostrará este botón)
 	*/
-	protected static function renderBtnU($terminoID, $termino, $nIndexaciones)
-	{
+	protected static function renderBtnU($terminoID, $termino, $nIndexaciones) {
 		$html 	 = '';
 		$termino = urlencode($termino);
 		$html 	 .= " <div class=\"cuadroU\" onclick=\"dd.show_indexations('$terminoID','$termino');\">U:$nIndexaciones</div>";
@@ -387,11 +386,11 @@ class dd_elements {
 		global $modelo_title ;
 
 		$obj = '';
-		$obj .= " <div class=\"mostrar-modelo\" title=\"$mostrar_title $modelo_title\" ";
-		$obj .= "onclick=\"$('#m_$terminoID').toggle()\"";
+		$obj .= ' <div class="mostrar-modelo" title="'.$mostrar_title.' '.$modelo_title.'" ';
+		$obj .= 'onclick="$(\'#m_'.$terminoID.'\').toggle()"';
 		$obj .= '></div>';
 
-		$obj .= " <span id=\"m_$terminoID\" class=\"btnModelo\">";
+		$obj .= ' <span id="m_'.$terminoID.'" class="btnModelo">';
 
 		$obj .= $modelo_name ;
 		#$obj .= Tesauro::modelo2text($modelo) ;
@@ -409,7 +408,7 @@ class dd_elements {
 		$obj = '';
 		if($children >0)
 		{
-			$obj .= "<div onclick=\"dd.ToggleTS('$terminoID','abrir',null,'$parent');\" class=\"divflechaC\" >";
+			$obj .= '<div onclick="dd.ToggleTS(\''.$terminoID.'\',\'abrir\',null,\''.$parent.'\')" class="divflechaC">';
 			if($desplegado===1)
 			{
 				$displayFlechaDer 	= 'none';
@@ -418,8 +417,8 @@ class dd_elements {
 				$displayFlechaDer	= 'block';
 				$displayFlechaDown	= 'none';
 			}
-			$obj .= "<img id=\"fopen$terminoID\" src=\"images/flecha_der.gif\" style=\"display:$displayFlechaDer\" title=\"$mostrar_hijos_title $terminoID\" />";
-			$obj .= "<img id=\"fclose$terminoID\" src=\"images/flecha_down.gif\" style=\"display:$displayFlechaDown\" title=\"$ocultar_hijos_title\" />";
+			$obj .= '<img id="fopen'.$terminoID.'" src="images/flecha_der.gif" style="display:'.$displayFlechaDer.'" title="'.$mostrar_hijos_title.' '.$terminoID.'"/>';
+			$obj .= '<img id="fclose'.$terminoID.'" src="images/flecha_down.gif" style="display:'.$displayFlechaDown.'" title="'.$ocultar_hijos_title.'"/>';
 			$obj .= '</div>';
 		}else{
 			$obj .= '<div class="divflechaC"></div>';
@@ -498,10 +497,9 @@ class dd_elements {
 	* crea el div de los términos relacionados.
 	* Previamente se habrá verificado que los hay.
 	*/
-	protected static function renderDivTR($terminoID)	{
+	protected static function renderDivTR($terminoID) {
 
-		$obj  = '';
-		$obj .= "<div id=\"tr$terminoID\" class=\"divLineasInfo none tr_div\" >";
+		$obj = '<div id="tr'.$terminoID.'" class="divLineasInfo none tr_div">';
 
 		$obj .= self::get_html_listadoTR($terminoID);
 
@@ -551,14 +549,14 @@ class dd_elements {
 		}
 
 		$obj_html  = '';
-		$obj_html .= "<div id=\"propiedades_{$terminoID}\" class=\"divLineasInfo div_propiedades none $add_class\" >";
+		$obj_html .= '<div id="propiedades_'.$terminoID.'" class="divLineasInfo div_propiedades none '.$add_class.'">';
 		#$obj_html .= "[ P ] ";
 		#if (empty($propiedades)) {
 		#	$obj_html .= ' propiedades n/d ' ;
 		#}else{
 			#$p = json_encode($propiedades);
 			#$propiedades = json_encode($propiedades, JSON_PRETTY_PRINT);
-			$obj_html .= "<pre>$propiedades</pre>";
+			$obj_html .= '<pre>'.$propiedades.'</pre>';
 		#}
 		$obj_html .= '</div>';
 
@@ -579,7 +577,7 @@ class dd_elements {
 
 		$properties_text = json_encode($properties, JSON_PRETTY_PRINT);
 	
-		$obj_html = "<div id=\"properties_{$terminoID}\" class=\"divLineasInfo div_properties none $add_class\" >";
+		$obj_html = '<div id="properties_'.$terminoID.'" class="divLineasInfo div_properties none $add_class">';
 		
 		// properties
 		$obj_html .= '<pre>'.$properties_text.'</pre>';
@@ -614,7 +612,7 @@ class dd_elements {
 
 			$html .= ' [ND] ';
 			#$html .= "<a href=\"javascript:dd.openTSedit('$tsNDID','$parent')\"  title=\"$editar_title\" >";
-			$html .= " <em class=\"terminoIDinList\">$terminoND</em> ";
+			$html .= '<em class="terminoIDinList">'.$terminoND.'</em>';
 			#$html .= "</a>";
 			$html .= "<span class=\"terminoIDinList\"> [$terminoID] </span><br>";
 			$html .= "<div id=\"divCont$terminoID\" class=\"inline\"></div>";
