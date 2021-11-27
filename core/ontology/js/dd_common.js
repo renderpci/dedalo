@@ -157,7 +157,7 @@ function create_dom_element(element_options){
 			var function_name = click_event;	//'ts_object.test_name2'
 			element.addEventListener("click", function(e){
 				call_custom_function(function_name,this)
-			});
+			}, false);
 			}*/
 	}//end if(custom_function_events){
 	
@@ -209,3 +209,91 @@ function create_dom_element(element_options){
 
 
 
+/**
+* SAVE_DESCRIPTOR
+* Used by list save term inline too
+*/
+function save_descriptor(input_node) {
+
+	// input values
+		const parent	= input_node.dataset.parent
+		const lang		= input_node.dataset.lang
+		const tipo		= input_node.dataset.tipo
+		const dato		= input_node.value
+
+	// check mandatory vars
+		switch(true) {
+			case typeof parent==="undefined" :
+				alert(" parent data is not defined! \n Data is not saved! ")
+				return Promise.resolve(false);
+				break;
+
+			case typeof lang==="undefined" 	:
+				alert(" lang data is not defined! \n Data is not saved! ")
+				return Promise.resolve(false);
+				break;
+
+			case typeof tipo==="undefined" 	:
+				alert(" tipo data is not defined! \n Data is not saved! ")
+				return Promise.resolve(false);
+				break;
+		}
+
+	// terminoID is a page global. Verify
+		if (typeof terminoID==='undefined') {
+			alert("Sorry: global terminoID is not defined \n Data is not saved!")
+			return Promise.resolve(false);
+		}
+
+	// form lock
+		const form = document.getElementById("form1")
+		if (form) {
+			form.classList.add("loading")
+		}
+
+	return new Promise(function(resolve){
+
+		// request to trigger using JSON format
+		data_manager.request({
+			url		: 'trigger.dd.php',
+			body	: {
+				mode		: 'save_descriptor',
+				parent		: parent,
+				lang		: lang,
+				tipo		: tipo,
+				dato		: dato,
+				terminoID	: terminoID,
+				top_tipo	: page_globals.top_tipo
+			}
+		})
+		.then(function(response){
+			console.log('---- dd_common save_descriptor response ',response)
+
+			// form unlock
+				if (form) {
+					form.classList.remove("loading")
+				}
+
+			if (response.result!==true) {
+				// ERROR case
+					console.warn("response:",response)
+					alert(response.msg || 'Undefined error')
+			}else{
+				// SUCCESS case
+				// refresh tree from parent if openere
+					if (window.opener) {
+						const parent_term = form.parent.value
+						// Reload only de parent div
+						window.opener.openDivTrack(parent_term, 1, terminoID)
+					}
+
+				// update window_docu if is opened
+					if (typeof window_docu!=='undefined') {
+						window_docu.location.reload()
+					}
+			}
+
+			resolve(response)
+		})
+	})
+}//end save_descriptor
