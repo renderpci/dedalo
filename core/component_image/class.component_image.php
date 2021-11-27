@@ -187,22 +187,35 @@ class component_image extends component_media_common {
 	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$class_list 		= $ddo->class_list ?? null;
+			$class_list 	= $ddo->class_list ?? null;
+
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 
 		$value = new dd_grid_cell_object();
 
 		$dato = $this->get_dato();
+		if(isset($dato)){
+			$image_quality = ($this->modo==='edit')
+				? DEDALO_IMAGE_QUALITY_DEFAULT
+				: DEDALO_IMAGE_THUMB_DEFAULT;
 
-		$image_quality = ($this->modo==='edit')
-			? DEDALO_IMAGE_QUALITY_DEFAULT
-			: DEDALO_IMAGE_THUMB_DEFAULT;
+			$current_url = $this->get_image_url($image_quality, $test_file=false, $absolute=false, $default_add=false); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 
-		$current_url = $this->get_image_url($image_quality, $test_file=false, $absolute=false, $default_add=false); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+		}else{
+			$current_url = '';
+		}
+
 
 		$label = $this->get_label();
 
 		$value->set_type('column');
 		$value->set_label($label);
+		$value->set_ar_columns_obj([$column_obj]);
 		$value->set_cell_type('img');
 		if(isset($class_list)){
 			$value->set_class_list($class_list);

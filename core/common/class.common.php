@@ -3429,6 +3429,7 @@ abstract class common {
 	}//end get_buttons_context
 
 
+
 	/**
 	* GET_COLUMNS_MAP
 	* Columns_map define the order and how the section or component will build the columns in list, the columns maps was defined in the properties.
@@ -3469,6 +3470,65 @@ abstract class common {
 
 		return $columns_map;
 	}//end get_columns_map
+
+
+	/**
+	* GET_AR_INVERTED_PATHS
+	* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc)
+	* get the path in inverse format, the last in the chain will be the first object [0]
+	* @return array ar_inverted_paths the the speific paths, with inverse path format.
+	*/
+	public function get_ar_inverted_paths($full_ddo_map){
+
+		// get the parents for the column, creating the inverse path
+		// (from the last component to the main parent, the column will be with the data of the first item of the column)
+			if (!function_exists('get_parents')) {
+				function get_parents($ar_ddo, $dd_object) {
+				 	$ar_parents = [];
+					$parent = array_find($ar_ddo, function($item) use($dd_object){
+
+						return $item->tipo===$dd_object->parent;
+					});
+
+					if (!empty($parent)) {
+						$ar_parents[]	= $parent;
+						$new_parents	= get_parents($ar_ddo, $parent);
+						$ar_parents[]	= array_merge($ar_parents, $new_parents);
+					}
+					return $ar_parents;
+				}
+			}
+
+		// every ddo will be checked if it is a component_portal or if is the last component in the chain
+		// set the valid_ddo array with only the valid ddo that will be used.
+			$ar_inverted_paths = [];
+			$ddo_length = count($full_ddo_map);
+			for ($i=0; $i < $ddo_length; $i++) {
+
+				$current_ddo = $full_ddo_map[$i];
+				// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo create the column
+				// all parents has the link and data to get the data of the last ddo.
+				// interview -> people to study -> name
+				// «name» will be the column, «interview» and «people under study» has the locator to get the data.
+				$current_ar_valid_ddo = array_find($full_ddo_map, function($item) use($current_ddo){
+					return $item->parent === $current_ddo->tipo;
+				});
+				if(!empty($current_ar_valid_ddo)) continue;
+				$column = [];
+
+				// get the path with inverse order
+				// people to study -> interview
+				$parents = get_parents($full_ddo_map, $current_ddo);
+
+				// join all with the inverse format
+				// name -> people to study -> interview
+				$column[]	= $current_ddo;
+				$column		= array_merge($column, $parents);
+				$ar_inverted_paths[]= $column;
+			}
+
+		return $ar_inverted_paths;
+	}// end get_ar_inverted_paths
 
 
 }//end class common

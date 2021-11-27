@@ -42,6 +42,13 @@ class component_section_id extends component_common {
 	*/
 	public function get_value($lang=DEDALO_DATA_NOLAN, $ddo=null) {
 
+		if(isset($this->column_obj)){
+			$column_obj = $this->column_obj;
+		}else{
+			$column_obj = new stdClass();
+				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+		}
+
 		$value = new dd_grid_cell_object();
 
 		$data	= $this->get_dato();
@@ -49,6 +56,8 @@ class component_section_id extends component_common {
 
 		$value->set_type('column');
 		$value->set_label($label);
+
+		$value->set_ar_columns_obj([$column_obj]);
 		$value->set_cell_type('section_id');
 		$value->set_row_count(1);
 		$value->set_value($data);
