@@ -82,7 +82,7 @@ class descriptors extends widget_common {
 																	   $locator->section_tipo);
 
 
-					$component_dato	= $component->get_dato();
+					$component_dato		= $component->get_dato();
 					$component_value	= $component->get_value();
 
 					// output, use the ipo output for create the items to send to compoment_info and client side

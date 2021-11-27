@@ -172,9 +172,9 @@ class dd_grid_cell_object {
 	/**
 	* SET_id
 	*/
-	public function set_id(string $value) {
-		$this->id = $value;
-	}
+	// public function set_id(string $value) {
+	// 	$this->id = $value;
+	// }
 
 
 	/**
@@ -206,25 +206,18 @@ class dd_grid_cell_object {
 	}
 
 	/**
-	* SET_ROW_ID
-	*/
-	public function set_row_id(int $value) {
-		$this->row_id = $value;
-	}
-
-
-	/**
 	* SET_COLUMN_COUNT
 	*/
 	public function set_column_count(int $value) {
 		$this->column_count = $value;
 	}
 
+
 	/**
-	* SET_COLUMN_ID
+	* SET_AR_COLUMNS_OBJ
 	*/
-	public function set_column_id($value) {
-		$this->column_id = $value;
+	public function set_ar_columns_obj($value) {
+		$this->ar_columns_obj = $value;
 	}
 
 	/**

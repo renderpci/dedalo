@@ -239,6 +239,7 @@ class component_relation_common extends component_common {
 	*/
 	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
 
+
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
@@ -266,11 +267,14 @@ class component_relation_common extends component_common {
 		// get the ddo_map to be used to create the components related to the portal
 		$ddo_map = $dedalo_request_config->show->ddo_map;
 
-		$ar_cells = [];
+		// $inverted_columns = $this->get_ar_inverted_paths($ddo_map);
+		// dump($inverted_columns, ' inverted_columns +------------////////------------------------+ '.to_string());
 
+		$ar_cells		= [];
+		$ar_columns_obj	= [];
 		$sub_row_count		= 0;
 		$sub_column_count	= null;
-		$column_labels		= [];
+		$column_obj			= $this->column_obj ?? new stdClass();
 
 		// children_resursive function, get all ddo chain that depends of this component
 			if (!function_exists('get_children_resursive')) {
@@ -292,81 +296,48 @@ class component_relation_common extends component_common {
 
 
 		// // get last column
-		// 	if (!function_exists('get_last_column_resursive')) {
-		// 		function get_last_column_resursive($ar_column) {
-		// 			$ar_last_children = [];
-		// 			foreach ($ar_column as $column) {
-		// 				if(isset($column->cell_type)) {
-		// 					$ar_last_children[] = $column;
-		// 				}else{
-		// 					$result				=  get_last_column_resursive($column->value);
-		// 					$ar_last_children	= array_merge($ar_last_children, $result);
-		// 				}
-		// 			}
-		// 			return $ar_last_children;
-		// 		}
-		// 	}
-
-		// get the column name of the current portal, use the ddo_map to get the columns,
-		// don't use the locator (inside foreach) because we need stable columns, independent of the data
-			$len = sizeof($ddo_map);
-			for ($i=0; $i < $len; $i++) {
-				$current_ddo	= $ddo_map[$i];
-				// only the direct components can create the column (sub components are the path of the column, but we only need one)
-				if($current_ddo->parent !== $this->tipo) continue;
-				// get the ddo model of the component to check if the component is a relation (it's not used the relation components to build the column only the inputs)
-				$component_model			= RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo,true);
-				$components_with_relations	= component_relation_common::get_components_with_relations();
-				// if the column has children don't stored (the ddo will be a portal or select, etc), else, the current ddo is input and it can create the column
-				if (in_array($component_model, $components_with_relations)) {
-					$RecordObj_dd		= new RecordObj_dd($current_ddo->tipo);
-					$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-					$section_tipo 		= is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
-
-					$current_component 	= component_common::get_instance($component_model,
-																	 $current_ddo->tipo,
-																	 null,
-																	 $this->modo,
-																	 $current_lang,
-																	 $section_tipo);
-					// get the ddo path for inject to the next component level resolution.
-						$sub_ddo_map = get_children_resursive($ddo_map, $current_ddo);
-					// if the component has sub_ddo, create the request_config to be injected to component
-					// the request_config will be used instead the default request_config.
-						if (!empty($sub_ddo_map)) {
-
-							$show = new stdClass();
-								$show->ddo_map = $sub_ddo_map;
-
-							$request_config = new stdClass();
-								$request_config->api_engine = 'dedalo';
-								// $rqo->set_sqo($sqo);
-								$request_config->show = $show;
-
-							$current_component->request_config = [$request_config];
-						}
-
-					// get the value and fallback_value of the component and stored to be joined
-						$current_column	= $current_component->get_value($lang, $current_ddo);
-						$column_labels	= array_merge($column_labels, $current_column->column_labels);
-
-				}else{
-					$column_labels[]	= $current_ddo->label.'_'.$current_ddo->tipo;//
-				}// end if
-			}// end for
+			// 	if (!function_exists('get_last_column_resursive')) {
+			// 		function get_last_column_resursive($ar_column) {
+			// 			$ar_last_children = [];
+			// 			foreach ($ar_column as $column) {
+			// 				if(isset($column->cell_type)) {
+			// 					$ar_last_children[] = $column;
+			// 				}else{
+			// 					$result				=  get_last_column_resursive($column->value);
+			// 					$ar_last_children	= array_merge($ar_last_children, $result);
+			// 				}
+			// 			}
+			// 			return $ar_last_children;
+			// 		}
+			// 	}
 
 		// get only the direct_children of the current component, if the child component is a portal it will resolve his children
 			$ddo_direct_children = array_filter($ddo_map, function($el){
 				return $el->parent === $this->tipo;
 			});
 
-		foreach($data as $key => $locator){
+		$components_with_relations	= component_relation_common::get_components_with_relations();
 
+		if(empty($data)){
+			$pseudo_locator = new stdClass();
+				$pseudo_locator->type			= 'dd151';
+				$pseudo_locator->section_tipo	= null;
+				$pseudo_locator->section_id		= null;
+			$data[] = $pseudo_locator;
+		}
+		foreach($data as $current_key => $locator){
+			$locator_column_obj	= [];
 			$ar_columns = [];
 			foreach ($ddo_direct_children as $ddo) {
-				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
-				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				// the the ddo has a multiple section_tipo (such as toponomy component_autocomplete), reset the section_tipo
+				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
+				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo ;
+				$section_tipo			= $locator->section_tipo;
+				// set the path that will be used to create the column_obj id
+				$current_path			= $section_tipo.'_'.$ddo->tipo;
+				$RecordObj_dd			= new RecordObj_dd($ddo->tipo);
+				$current_lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
 				// dump($component_model,'$component_model');
 				$current_component 	= component_common::get_instance($component_model,
 																	 $ddo->tipo,
@@ -374,7 +345,7 @@ class component_relation_common extends component_common {
 																	 $this->modo,
 																	 $current_lang,
 																	 $locator->section_tipo);
-
+				// set the locator to the new component, it will used in the next loop
 				$current_component->set_locator($this->locator);
 
 				// get the ddo path for inject to the next component level resolution.
@@ -389,36 +360,86 @@ class component_relation_common extends component_common {
 
 					$request_config = new stdClass();
 						$request_config->api_engine = 'dedalo';
-						// $rqo->set_sqo($sqo);
 						$request_config->show = $show;
 
 					$current_component->request_config = [$request_config];
 				}
 
+				// if the component it's a relation component, set the sub_columns_division to true, it will be test in the next loop
+				if (in_array($component_model, $components_with_relations)) {
+					$current_component->sub_columns_divison = true;
+				}
+				//if the component it's a relation component check if the component has sub_columns_division (it could have been set by the previous loop)
+				// if true, add the locator position to the column_path
+				if(isset($this->sub_columns_divison) && $this->sub_columns_divison===true && $current_key>0){
+					$current_path	= $current_path.'|'.$current_key;
+				}
+				// create the new column obj id getting the previous id and add the new path
+				// it will set to the column_obj for the next loop
+				$current_column_obj = new stdClass();
+					$current_column_obj->id		= $column_obj->id.'_'.$current_path;
+					$current_column_obj->group	= $column_obj->id.'_'.$locator->section_tipo;
+				$current_component->column_obj = $current_column_obj;
+
 				// get the value and fallback_value of the component and stored to be joined
 				$current_column		= $current_component->get_value($lang, $ddo);
-
 				$sub_row_count		= $current_column->row_count ?? 0;
-
 				// if (in_array($component_model, $components_with_relations)) {
 				// 	$current_column = get_last_column_resursive([$current_column]);
 				// }
+				// get the value and fallback_value of the component and stored to be joined
+				$locator_column_obj	= array_merge($locator_column_obj, $current_column->ar_columns_obj);
 
-				$grid_column = new dd_grid_cell_object();
-						$grid_column->set_type('column');
-						$grid_column->set_column_id($this->section_tipo.'_'.$this->tipo.'_'.$ddo->section_tipo.'_'.$ddo->tipo);
-						$grid_column->set_value([$current_column]);
-					$ar_columns[] = $grid_column;
+				// store the columns into the full columns array
+				$ar_columns[] = $current_column;
+			}// end foreach ($ddo_direct_children as $ddo)
+
+			// in the case that the portals has sub-data, this sub-data will separated only in columns, not in rows
+			if(isset($this->sub_columns_divison) && $this->sub_columns_divison || $this->section_id === null){
+				$ar_cells = array_merge($ar_cells, $ar_columns);
+			}else{
+				//create the row of the portal for the main locator only
+				$grid_row = new dd_grid_cell_object();
+					$grid_row->set_type('row');
+					$grid_row->set_value($ar_columns);
+				// store the current column with all values
+					$ar_cells[] = $grid_row;
 			}
 
-			//create the row of the portal
-			$grid_row = new dd_grid_cell_object();
-				$grid_row->set_type('row');
-				$grid_row->set_row_id($locator->section_id);
-				$grid_row->set_value($ar_columns);
-
-			// store the current column with all values
-			$ar_cells[] = $grid_row;
+			// get the columns position to re-order the ar_columns_obj
+			// it will join the columns see if the column is a column created by the locator
+			// when the component is portal inside portal, like 'photograph' inside 'identifying image' inside 'interview'.
+			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
+			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
+			foreach ($locator_column_obj as $column_pos => $current_column_obj) {
+				// check if the current column exists in the full column array
+				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
+					return ($el->id===$current_column_obj->id);
+				});
+				// if not exist we need add it, the columns are joined from the deep of the portals to the parents
+				if($id_obj===null){
+					// check if the current column_id is a locator column, else add the column_object at the end
+					$current_column_path = explode('|', $current_column_obj->id);
+					if(isset($this->sub_columns_divison) && $this->sub_columns_divison===true && $current_key>0 || sizeof($current_column_path)>1){
+						// get the last position of the column group
+						$position = false;
+						foreach ($ar_columns_obj as $column_key => $column_value) {
+							if($column_value->group === $current_column_obj->group){
+								$position = $column_key;
+							}
+						}
+						// if the position is set, insert the columns after the last column_object found
+						// if not add the current column_object at the end
+						if($position){
+							array_splice($ar_columns_obj, $position+1, 0, [$current_column_obj]);
+						}else{
+							$ar_columns_obj[] = $current_column_obj;
+						}
+					}else{
+						$ar_columns_obj[] = $current_column_obj;
+					}
+				}
+			}//end foreach ($locator_column_obj as $column_pos => $current_column_obj)
 		}
 
 		// get the total of locators of the data, it will be use to render the rows separated.
@@ -428,7 +449,7 @@ class component_relation_common extends component_common {
 				$row_count = 1;
 			}
 		// get the total of columns
-			$column_count	= sizeof($column_labels);
+			$column_count	= sizeof($ar_columns_obj);
 
 		// set the separator text that will be used to render the column
 		// separator will be the "glue" to join data in the client and can be set by caller or could be defined in preferences of the component.
@@ -450,7 +471,7 @@ class component_relation_common extends component_common {
 		$value->set_row_count($row_count);
 		$value->set_column_count($column_count);
 		$value->set_label($label);
-		$value->set_column_labels($column_labels);
+		$value->set_ar_columns_obj($ar_columns_obj);
 		if(isset($class_list)){
 			$value->set_class_list($class_list);
 		}
