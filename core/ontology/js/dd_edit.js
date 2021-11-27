@@ -109,28 +109,33 @@ function edit_ts(formObj, e) {
 				alert(response.msg || 'Undefined error');
 			}else{
 				// OK
-				if (window.opener) {
-					const form_data = response.form_data
-					if (form_data.esdescriptor==='no') {
-						window.opener.openDivTrack(form_data.parent, 1, form_data.parent);
-					}else if(form_data.parent!==form_data.parentInicial) {
-						// metemos en la cookie que abra el nuevo parent y luego recargaremos.
-						// Actualiza la antigua ubicación
-						window.opener.openDivTrack(form_data.parentInicial, 1, form_data.terminoID);
-						// Actualiza la nueva ubicación
-						window.opener.openDivTrack(form_data.parent, 1, form_data.terminoID);
-						// location.reload();
-					}else if (form_data.parent===form_data.prefix+'0'){
-						window.opener.location.reload();
-						// window.close();
-						// history.back()
-					}else{
-						// Reload only de parent div
-						window.opener.openDivTrack(form_data.parent, 1, form_data.terminoID);
-						// window.close();
-						// history.back()
+				// window.opener actions
+					if (window.opener) {
+						const form_data = response.form_data
+						if (form_data.esdescriptor==='no') {
+							window.opener.openDivTrack(form_data.parent, 1, form_data.parent);
+						}else if(form_data.parent!==form_data.parentInicial) {
+							// metemos en la cookie que abra el nuevo parent y luego recargaremos.
+							// Actualiza la antigua ubicación
+							window.opener.openDivTrack(form_data.parentInicial, 1, form_data.terminoID);
+							// Actualiza la nueva ubicación
+							window.opener.openDivTrack(form_data.parent, 1, form_data.terminoID);
+							// location.reload();
+						}else if (form_data.parent===form_data.prefix+'0'){
+							window.opener.location.reload();
+							// window.close();
+							// history.back()
+						}else{
+							// Reload only de parent div
+							window.opener.openDivTrack(form_data.parent, 1, form_data.terminoID);
+							// window.close();
+							// history.back()
+						}
 					}
-				}
+				// update window_docu if is opened
+					if (typeof window_docu!=='undefined') {
+						window_docu.location.reload()
+					}
 			}
 		})
 		.catch((error) => {

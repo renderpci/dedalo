@@ -197,6 +197,11 @@ if(!empty($data) && $data->mode==='edit_ts') {
 			exit();
 		}
 
+	// JSON Ontology Item save
+		$term_id	= $terminoID;
+		$json_item	= ontology::tipo_to_json_item($term_id);
+		$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+
 	// css structure . For easy css edit, save
 		if ( isset($form_data->{MAIN_PROPERTIES_COLUMN}) &&
 			 is_object($form_data->{MAIN_PROPERTIES_COLUMN}) &&
@@ -216,6 +221,7 @@ if(!empty($data) && $data->mode==='edit_ts') {
 				debug_log("trigger_dd.edit_ts -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
 			}
 		}
+
 
 	// all is OK
 		$response->result		= true;
