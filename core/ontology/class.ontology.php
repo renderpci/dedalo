@@ -29,7 +29,7 @@ class ontology {
 	* EXPORT
 	* @return object $data
 	*/
-	public static function export($tipo) {
+	public static function export(string $tipo) {
 
 		$data = ontology::parse($tipo);
 
@@ -40,10 +40,10 @@ class ontology {
 
 	/**
 	* PARSE
-	* Get and convert ontology term and childrens to file in JSON format
+	* Get and convert ontology term and children to JSON format
 	* @return
 	*/
-	public static function parse($tipo) {
+	public static function parse(string $tipo) {
 
 		$ar_data = [];
 
@@ -51,13 +51,11 @@ class ontology {
 			$item = ontology::tipo_to_json_item($tipo);
 			$ar_data[] = $item;
 
-		// childrens
-			$childrens = RecordObj_dd::get_ar_recursive_childrens($tipo);
-			foreach ($childrens as $children_tipo) {
+		// children
+			$children = RecordObj_dd::get_ar_recursive_childrens($tipo);
+			foreach ($children as $children_tipo) {
 				$ar_data[] = ontology::tipo_to_json_item($children_tipo);
 			}
-
-		#dump($ar_data, '$ar_data ++ '.to_string());
 
 		return $ar_data;
 	}//end parse
@@ -70,7 +68,7 @@ class ontology {
 	* @param string $tipo
 	* @return object $item
 	*/
-	public static function tipo_to_json_item($tipo, $request_options=[
+	public static function tipo_to_json_item(string $tipo, $request_options=[
 		'tipo' 			=> true,
 		'tld'			=> true,
 		'is_model'		=> true,
@@ -79,6 +77,7 @@ class ontology {
 		'parent'		=> true,
 		'order'			=> true,
 		'translatable'	=> true,
+		'propiedades'	=> true,
 		'properties'	=> true,
 		'relations'		=> true,
 		'descriptors'	=> true,
@@ -94,6 +93,7 @@ class ontology {
 			$options->parent		= false;
 			$options->order			= false;
 			$options->translatable	= false;
+			$options->propiedades	= false;
 			$options->properties	= false;
 			$options->relations		= false;
 			$options->descriptors	= false;
@@ -128,6 +128,10 @@ class ontology {
 			}
 			if ($options->translatable===true) {
 				$item->translatable = $RecordObj_dd->get_traducible()==='si';
+			}
+			if ($options->propiedades===true) {
+				$propiedades = $RecordObj_dd->get_propiedades();
+				$item->propiedades = json_decode($propiedades); // stored as string in DDBB
 			}
 			if ($options->properties===true) {
 				$item->properties = $RecordObj_dd->get_properties();
@@ -164,7 +168,7 @@ class ontology {
 					$item->descriptors = $ar_descriptors;
 			}
 
-			// get terminio by tipo with fallback
+			// get termino by tipo with fallback
 			if ($options->label===true) {
 				$item->label = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 			}
@@ -176,8 +180,8 @@ class ontology {
 
 	/**
 	* IMPORT
-	* Create one NEW term for each onomastic item in data.
-	* (!) Note that is important clean old terms before because current funtion don't
+	* Creates a NEW term for each onomastic item in data.
+	* (!) Note that it is important to clean old terms before, because current function don't
 	* update terms, only insert new terms (!)
 	* @return bool true
 	*/
@@ -186,7 +190,7 @@ class ontology {
 		foreach ($data as $key => $item) {
 
 			if (empty($item) || !isset($item->tld)) {
-				debug_log(__METHOD__." Skippep empty item on import ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Ignored empty item on import ".to_string(), logger::ERROR);
 				continue;
 			}
 
@@ -236,37 +240,29 @@ class ontology {
 
 	/**
 	* CLEAN_STRUCTURE_DATA
+	* @param string $tld
 	* @return bool true
 	*/
-	public static function clean_structure_data($tld) {
+	public static function clean_structure_data(string $tld) {
 
-		// structure
-			$ar_term_id	= [];
-			$sql_query = 'SELECT "terminoID" FROM "jer_dd" WHERE "tld" = \''.$tld.'\' ';
-			$result = pg_query(DBi::_getConnection(), $sql_query);
-			while ($rows = pg_fetch_assoc($result)) {
-				$ar_term_id[] = $rows['terminoID'];
-			}
+		// jer_dd. delete terms (jer_dd)
+			$sql_query = '
+				DELETE FROM "jer_dd" WHERE "tld" = \''.$tld.'\';
+			';
+			$result_delete_jer 	= pg_query(DBi::_getConnection(), $sql_query);
 
-			if(!empty($ar_term_id)){
+		// matrix_descriptors_dd. delete descriptors (matrix_descriptors_dd)
+			$sql_query = '
+				DELETE FROM "matrix_descriptors_dd" WHERE "parent" ~ \'^'.$tld.'[0-9]+\';
+			';
+			$result_delete_descriptors 	= pg_query(DBi::_getConnection(), $sql_query);
 
-				// delete terms (jer_dd)
-					$sql_query 			= 'DELETE FROM "jer_dd" WHERE "tld" = \''.$tld.'\' ';
-					$result_delete_jer 	= pg_query(DBi::_getConnection(), $sql_query);
+		// reset the TLD counter
+			$sql_query = '
+				DELETE FROM "main_dd" WHERE "tld" = \''.$tld.'\';
+			';
+			$result_reset_counter = pg_query(DBi::_getConnection(), $sql_query);
 
-				// delete descriptors (matrix_descriptors_dd)
-					$ar_filter = array_map(function($term_id){
-						return 'parent=\''.$term_id.'\'';
-					}, $ar_term_id);
-					$filter = implode(' OR ', $ar_filter);
-
-					$delete_sql_descriptors 	= 'DELETE FROM "matrix_descriptors_dd" WHERE ' .$filter;
-					$result_delete_descriptors 	= pg_query(DBi::_getConnection(), $delete_sql_descriptors);
-
-				// reset the tool counter
-					$sql_reset_counter 	  = 'DELETE FROM "main_dd" WHERE "tld" = \''.$tld.'\' ';
-					$result_reset_counter = pg_query(DBi::_getConnection(), $sql_reset_counter);
-			}
 
 		return true;
 	}//end clean_structure_data
@@ -301,12 +297,12 @@ class ontology {
 
 	/**
 	* GET_CHILDREN_RECURSIVE . TS TREE FULL FROM PARENT
-	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group
+	* You get the types of the sections / areas and hierarchically break down their section_group
 	* @param string $terminoID
 	* @return array $ar_tesauro
-	*	array recursive of tesauro structure children
+	*	array recursive of thesaurus structure children
 	*/
-	public static function get_children_recursive($tipo) {
+	public static function get_children_recursive(string $tipo) {
 
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
@@ -472,6 +468,10 @@ class ontology {
 				$component->Save();
 			})($id);
 
+		// JSON Ontology Item
+			$json_item	= ontology::tipo_to_json_item($term_id);
+			$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+
 		// component parent
 			// (function($value) use($section_tipo, $section_id, $lang) {
 				
@@ -582,17 +582,18 @@ class ontology {
 		// options			
 			$term_id	= $options->term_id;
 			$dato		= $options->dato;
-			$dato_tipo	= $options->dato_tipo;
+			$dato_tipo	= $options->dato_tipo; // termino | def | obs
 			$lang		= $options->lang;
 
-		if (empty($term_id)) {
-			debug_log(__METHOD__." Error on edit_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
-			return false;
-		}
+		// check term_id
+			if (empty($term_id)) {
+				debug_log(__METHOD__." Error on edit_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
+				return false;
+			}
 
 		$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
 
-		// section_id. locate the ontolpgy record by term_id
+		// section_id. locate the ontology record by term_id
 			$section_id = ontology::get_section_id_by_term_id($term_id);
 			if (empty($section_id)) {
 				$section_id = ontology::add_term((object)[
@@ -630,8 +631,28 @@ class ontology {
 						$component->Save();
 					})($dato);
 
+					// save ontology object too
+						$json_item = ontology::tipo_to_json_item($term_id);
+						(function($value) use($section_tipo, $section_id) {
+
+							$component_tipo = ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
+							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
+							$component 		= component_common::get_instance($modelo_name,
+																			 $component_tipo,
+																			 $section_id,
+																			 'edit',
+																			 DEDALO_DATA_NOLAN,
+																			 $section_tipo);
+							$component->set_dato($value);
+							$component->Save();
+						})($json_item);
+
 					return true;
-				}				
+				}else{
+					trigger_error('edit_term : Invalid component_tipo '.$component_tipo);
+				}
+			}else{
+				trigger_error('edit_term : Invalid section_id '.$section_id);
 			}
 		
 		return false;
@@ -645,7 +666,7 @@ class ontology {
 	* @return int | null 
 	* @param string $term_id
 	*/
-	public static function get_section_id_by_term_id($term_id) {
+	public static function get_section_id_by_term_id(string $term_id) {
 		
 		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 		$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
@@ -656,9 +677,10 @@ class ontology {
 				"$and": [
 					{
 						"q": "'.$term_id.'",
-						"q_operator": "=",
+						"q_operator": "==",
 						"q_split": false,
 						"unaccent": false,
+						"lang": "lg-nolan",
 						"path": [
 							{
 								"section_tipo": "'.$section_tipo.'",
@@ -670,7 +692,7 @@ class ontology {
 					}
 				]
 			}';
-		// sqo (search query object)			
+		// sqo (search query object)
 			$sqo = json_decode('{
 				"parsed": false,
 				"section_tipo": "'.$section_tipo.'",
@@ -711,7 +733,121 @@ class ontology {
 
 
 
+	/**
+	* SAVE_JSON_ONTOLOGY_ITEM
+	* Saves json_item in matrix_dd section 'Ontology' (dd1500).
+	* Search for existing term_id in the section and, creates/updates the record with
+	* received json_item data checking if it is different from previous data
+	* @param string $term_id
+	* 	Like 'rsc368'
+	* @param mixed $json_item (object | null)
+	* 	object created using method: ontology::tipo_to_json_item($term_id)
+	* @return object $response
+	*/
+	public static function save_json_ontology_item(string $term_id, $json_item=null) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+
+		$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
+
+		// section_id. locate the ontology record by term_id
+			$section_id = ontology::get_section_id_by_term_id($term_id);
+			if (empty($section_id)) {
+
+				// create a new record
+				$section_id = ontology::add_term((object)[
+					'term_id'	=> $term_id
+				]);
+				// (!) Note that add_term also add self calculated JSON item
+				$response->msg = 'OK. Created a new ontology term record including JSON item '.$term_id.' successfully';
+
+			}else{
+
+				if ($json_item===null) {
+					$json_item = ontology::tipo_to_json_item($term_id);
+				}
+
+				// updated existing record
+				$component_tipo = ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
+				$component 		= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$current_dato = $component->get_dato();
+
+				// Compare. Use always the comparison operator (==) to compare objects property by property
+					$is_equal_object = ($current_dato==$json_item);
+
+				if ($is_equal_object===false) {
+					$component->set_dato($json_item);
+					$component->Save();
+					$response->msg = 'OK. JSON item '.$term_id.' saved successfully';
+				}else{
+					$response->msg = 'OK. JSON item '.$term_id.' save IGNORED. The new data is equal than already existing data';
+				}
+			}
+
+
+		$response->result = true;
+
+		debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+
+		return $response;
+	}//end save_json_ontology_item
+
+
+
+	/**
+	* UPDATE_JSON_ONTOLOGY_ITEMS
+	* Called from trigger tool administration to propagate values from Ontology (structure).
+	* Propagate (save/update) current Ontology data to the section 'Ontology' (dd1500) at 'JSON Ontology Item' field. Only changes will be saved
+	* @return object $response
+	*/
+	public static function update_json_ontology_items() {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// get all terms
+		$sql_query = '
+			create or replace function naturalsort(text)
+			    returns bytea language sql immutable strict as $f$
+			    select string_agg(convert_to(coalesce(r[2], length(length(r[1])::text) || length(r[1])::text || r[1]), \'SQL_ASCII\'),\'\x00\')
+			    from regexp_matches($1, \'0*([0-9]+)|([^0-9]+)\', \'g\') r;
+			$f$;
+			SELECT "terminoID" FROM "jer_dd" WHERE tld!=\'test\' ORDER BY naturalsort("terminoID") ASC;
+		';
+		$result		= pg_query(DBi::_getConnection(), $sql_query);
+		while ($row = pg_fetch_assoc($result)) {
+
+			$terminoID = $row['terminoID'];
+
+			// JSON Ontology Item save
+				$term_id	= $terminoID;
+				$json_item	= ontology::tipo_to_json_item($term_id);
+				$save_item	= ontology::save_json_ontology_item($term_id, null);
+
+			debug_log(__METHOD__." ---> Added/updated term: ".to_string($terminoID).PHP_EOL.$save_item->msg, logger::WARNING);
+		}
+
+		$response->result 	= true;
+		$response->msg 		= 'OK. Request done successfully';
+
+
+		return $response;
+	}//end update_json_ontology_items
+
+
+
 }//end ontology
+
 
 
 
