@@ -250,6 +250,12 @@ class component_date extends component_common {
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list 		= $ddo->class_list ?? null;
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 
 		$value = new dd_grid_cell_object();
 
@@ -380,6 +386,7 @@ class component_date extends component_common {
 		$value->set_type('column');
 		$value->set_label($label);
 		$value->set_cell_type('text');
+		$value->set_ar_columns_obj([$column_obj]);
 		if(isset($class_list)){
 			$value->set_class_list($class_list);
 		}
