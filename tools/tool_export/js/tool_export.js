@@ -191,7 +191,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const dd_grid_data_request	= await current_data_manager.request({body : rqo})
 		const dd_grid_data			= dd_grid_data_request.result
 
-			console.log("dd_grid_data-----:",dd_grid_data);
+			// console.log("dd_grid_data-----:",dd_grid_data);
 
 		/* TEST
 			console.log("get_export_grid dd_grid_data_request:",dd_grid_data);
