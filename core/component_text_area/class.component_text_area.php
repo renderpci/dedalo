@@ -231,7 +231,12 @@ class component_text_area extends component_common {
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list 		= $ddo->class_list ?? null;
 
-
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 		$value = new dd_grid_cell_object();
 
 		$data = $this->get_dato();
@@ -266,6 +271,7 @@ class component_text_area extends component_common {
 
 		$value->set_type('column');
 		$value->set_label($label);
+		$value->set_ar_columns_obj([$column_obj]);
 		if(isset($cell_type)){
 			$value->set_cell_type($cell_type);
 		}
