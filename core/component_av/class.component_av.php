@@ -118,6 +118,13 @@ class component_av extends component_media_common {
 
 		$value = new dd_grid_cell_object();
 
+		if(isset($this->column_obj)){
+			$column_obj = $this->column_obj;
+		}else{
+			$column_obj = new stdClass();
+				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+		}
+
 		$dato = $this->get_dato();
 		if (!is_array($dato)) {
 			$dato = [$dato];
@@ -135,6 +142,7 @@ class component_av extends component_media_common {
 
 		$value->set_type('column');
 		$value->set_label($label);
+		$value->set_ar_columns_obj([$column_obj]);
 		$value->set_cell_type('av');
 		$value->set_value([$item]);
 
