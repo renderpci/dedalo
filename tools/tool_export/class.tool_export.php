@@ -102,38 +102,19 @@ class tool_export { // extends tool_common
 		$section_grid_values	= [];
 
 		$ar_head_columns = [];
-		// $column_count = sizeof($ar_ddo_map) ?? 0;
-		// foreach ($ar_ddo_map as $current_ddo) {
-
-		// 	// create the grid cell of the section
-		// 		$section_grid = new dd_grid_cell_object();
-		// 			$section_grid->set_type('column');
-		// 			$section_grid->set_label($current_ddo->label);
-		// 			$section_grid->set_render_label(true);
-		// 			$section_grid->set_class_list('caption section');
-		// 			// $section_grid->set_cell_type('text');
-
-		// 			$ar_head_columns[] = $section_grid;
-		// }
-		// dd_grid_cell_object. Create the row of the section
-
 
 		// store the rows count for every portal inside the section
 			$ar_section_rows_count		= [];
 		// store the head rows to sum up with the total rows
 			$rows_max_count = [];
-		// store the column names
-			$ar_column_labels = [];
 		// rows values
-			$ar_row_values = [];
+			$ar_row_values 	= [];
+		// full unique columns for create the head
+			$ar_columns_obj	= [];
 
-		foreach ($records as $key => $current_locator) {
+		foreach ($records as $current_locator) {
 
 			$ar_row_value = $this->get_value($ar_ddo_map, $current_locator);
-
-			if($key === 0){
-				$ar_column_labels = $ar_row_value->ar_column_labels;
-			}
 
 			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
 			$row_count = max($ar_row_value->ar_row_count);
@@ -147,26 +128,78 @@ class tool_export { // extends tool_common
 				$row_grid->set_type('row');
 				$row_grid->set_row_count($row_count);
 				$row_grid->set_column_count($columns_count);
-				$row_grid->set_column_labels($ar_row_value->ar_column_labels);
+				$row_grid->set_ar_columns_obj($ar_row_value->ar_columns_obj);
 				// $row_grid->set_class_list($row_class_list);
 				// $row_grid->set_render_label($row_render_label);
 				$row_grid->set_value($ar_row_value->ar_cells);
 
 			$ar_row_values[] = $row_grid;
+
+			// get the columns position to re-order the ar_columns_obj
+			// it will join the columns see if the column is a column created by the locator
+			// when the component is portal inside portal, like 'photograph' inside 'identifying image' inside 'interview'.
+			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
+			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
+			foreach ($ar_row_value->ar_columns_obj as $column_pos => $current_column_obj) {
+				// check if the current column exists in the full column array
+				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
+					return ($el->id===$current_column_obj->id);
+				});
+				// if not exist we need add it, the columns are joined from the deep of the portals to the parents
+				if($id_obj===null){
+					// check if the current column_id is a locator column, else add the column_object at the end
+					$current_column_path = explode('|', $current_column_obj->id);
+					if(sizeof($current_column_path)>1){
+						// get the last position of the column group
+						$position = false;
+						foreach ($ar_columns_obj as $column_key => $column_value) {
+							if(isset($column_value->group) &&  $column_value->group === $current_column_obj->group){
+								$position = $column_key;
+							}
+						}
+						// if the position is set, insert the columns after the last column_object found
+						// if not add the current column_object at the end
+						if($position){
+							array_splice($ar_columns_obj, $position+1, 0, [$current_column_obj]);
+						}else{
+							$ar_columns_obj[] = $current_column_obj;
+						}
+					}else{
+						$ar_columns_obj[] = $current_column_obj;
+					}
+				}
+			}//end foreach ($locator_column_obj as $column_pos => $current_column_obj)
 		}
 		// sum the total rows for this locator
 		$ar_section_rows_count[] = array_sum($rows_max_count);
 		// take the maximum number of columns (the columns can has 1, 2, 55 columns and we need the highest value, 55)
-		$ar_section_columns_count = sizeof($ar_column_labels);
+		$ar_section_columns_count = sizeof($ar_columns_obj) ?? 0;
 
 		for ($i=0; $i < $ar_section_columns_count; $i++) {
+
+			$column_obj			= $ar_columns_obj[$i];
+			$column_path		= explode('|', $column_obj->id);
+			$column_tipos		= explode('_', $column_path[0]);
+			$column_labels		= [];
+			$column_tipos_len	= sizeof($column_tipos)-1;
+			foreach ($column_tipos as $column_key => $column_tipo) {
+				$column_label = RecordObj_dd::get_termino_by_tipo($column_tipo,DEDALO_APPLICATION_LANG,true);
+				if(sizeof($column_path)>1 && ($column_key === $column_tipos_len)){
+					$column_labels[] = $column_label.'|'.$column_path[1];
+				}else{
+					$column_labels[] = $column_label;
+				}
+			}
+			$column_obj->ar_labels = $column_labels;
+
 			// create the grid cell of the section
 				$section_grid = new dd_grid_cell_object();
 					$section_grid->set_type('column');
-					$section_grid->set_label($ar_column_labels[$i]);
+					// $section_grid->set_label($ar_ddo_map[$i]->label);
+					$section_grid->set_ar_columns_obj($column_obj);
 					$section_grid->set_render_label(true);
 					$section_grid->set_class_list('caption section');
-					// $section_grid->set_cell_type('text');
+					$section_grid->set_cell_type('text');
 
 			$ar_head_columns[] = $section_grid;
 		}
@@ -234,9 +267,9 @@ class tool_export { // extends tool_common
 	*/
 	public function get_value($ar_ddo, $locator) {
 
-		$ar_cells			= [];
-		$ar_row_count		= [];
-		$ar_column_labels	= [];
+		$ar_cells		= [];
+		$ar_row_count	= [];
+		$ar_columns_obj	= [];
 
 		foreach ($ar_ddo as $current_ddo) {
 
@@ -262,8 +295,12 @@ class tool_export { // extends tool_common
 																	 'edit',
 																	 $current_lang,
 																	 $locator->section_tipo, false);
+				// set the locator to the new component it will be used to know; who create me.
 				$current_component->set_locator($locator);
-
+				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
+				$column_obj = new stdClass();
+					$column_obj->id = $ddo->section_tipo.'_'.$ddo->component_tipo;
+				$current_component->column_obj = $column_obj;
 			// check if the component has ddo children in the path,
 			// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
 				$sub_ddo_map		= [];
@@ -298,6 +335,7 @@ class tool_export { // extends tool_common
 
 						// $ar_dato = [$locator];
 						$current_component->set_dato($component_dato);
+
 				}
 
 			// get component_value add
@@ -305,14 +343,12 @@ class tool_export { // extends tool_common
 					? $current_component->get_raw_value()
 					: $current_component->get_value($current_lang, $ddo);
 
-			// get component label
-				$sub_component_labels	= $component_value->column_labels ?? [];
-				$len					= sizeof($sub_component_labels);
-				if($len===0){
-					$ar_column_labels[]	= $current_component->get_label();
-				}
-				for ($i=0; $i < $len; $i++) {
-					$ar_column_labels[] = $sub_component_labels[$i];
+			// get columns objects that the component had stored
+				$sub_ar_columns_obj	= $component_value->ar_columns_obj ?? [];
+				$len_items			= sizeof($sub_ar_columns_obj);
+
+				for ($i=0; $i < $len_items; $i++) {
+					$ar_columns_obj[] = $sub_ar_columns_obj[$i];
 				}
 
 			$ar_row_count[]		= $component_value->row_count ?? 1;
@@ -324,8 +360,8 @@ class tool_export { // extends tool_common
 		// value final
 			$value = new stdClass();
 				$value->ar_row_count		= $ar_row_count;
-				$value->ar_column_count		= sizeof($ar_column_labels);
-				$value->ar_column_labels	= $ar_column_labels;
+				$value->ar_column_count		= sizeof($ar_columns_obj);
+				$value->ar_columns_obj		= $ar_columns_obj;
 				$value->ar_cells			= $ar_cells;
 
 
