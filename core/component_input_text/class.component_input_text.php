@@ -389,6 +389,18 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent	= false;
 				break;
+			# IS EXACTLY EQUAL ==
+			case (strpos($q, '==')===0 || $q_operator==='=='):
+				$operator = '==';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '@>';
+				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
+				$query_object->unaccent = false;
+				$query_object->type = 'object';
+				if (isset($query_object->lang) && $query_object->lang!=='all') {
+					$query_object->component_path[] = $query_object->lang;
+				}
+				break;
 			# IS SIMILAR
 			case (strpos($q, '=')===0 || $q_operator==='='):
 				$operator = '=';
