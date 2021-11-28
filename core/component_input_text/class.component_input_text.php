@@ -285,7 +285,7 @@ class component_input_text extends component_common {
 		# Always set fixed values
 		$query_object->type = 'string';
 
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
@@ -330,34 +330,30 @@ class component_input_text extends component_common {
 					$new_query_json->$logical_operator[] = $clone;
 
 				// langs check all
-					/*
-					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
-						// Empty data is blank array []
-						$clone = clone($query_object);
-							$clone->operator = '=';
-							$clone->q_parsed = '\'[]\'';
-							$clone->lang 	 = $current_lang;
+					// $ar_query_object = [];
+					// $ar_all_langs 	 = common::get_ar_all_langs();
+					// $ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					// foreach ($ar_all_langs as $current_lang) {
+					// 	// Empty data is blank array []
+					// 	$clone = clone($query_object);
+					// 		$clone->operator = '=';
+					// 		$clone->q_parsed = '\'[]\'';
+					// 		$clone->lang 	 = $current_lang;
 
-						$ar_query_object[] = $clone;
+					// 	$ar_query_object[] = $clone;
 
-						// legacy data (set as null instead [])
-						$clone = clone($query_object);
-							$clone->operator = 'IS NULL';
-							$clone->lang 	 = $current_lang;
+					// 	// legacy data (set as null instead [])
+					// 	$clone = clone($query_object);
+					// 		$clone->operator = 'IS NULL';
+					// 		$clone->lang 	 = $current_lang;
 
-						$ar_query_object[] = $clone;
-					}
-
-					$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
-					*/
+					// 	$ar_query_object[] = $clone;
+					// }
+					// $new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
 
 				# override
 				$query_object = $new_query_json;
 				break;
-
 			# NOT EMPTY (in any project lang data)
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
@@ -467,7 +463,6 @@ class component_input_text extends component_common {
 				$query_object->unaccent	= true;
 				break;
 		}//end switch (true) {
-		#dump($query_object, ' query_object ++ '.to_string());
 
 
 		return $query_object;

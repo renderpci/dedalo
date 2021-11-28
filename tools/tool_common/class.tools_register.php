@@ -604,6 +604,7 @@ class tools_register {
 
 		$config_search	= search::get_instance($sqo_config_tool_active);
 		$config_result	= $config_search->search();
+		$ar_records		= $config_result->ar_records ?? [];
 		$name_tipo		= 'dd1326';
 		$config_tipo	= 'dd999';
 		$ar_config		= array_map(function($record) use($name_tipo, $config_tipo){
@@ -639,7 +640,8 @@ class tools_register {
 			];
 
 			return $value;
-		}, $config_result->ar_records);
+		}, $ar_records);
+
 
 		return $ar_config;
 	}//end get_all_config_tool

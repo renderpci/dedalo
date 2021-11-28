@@ -61,7 +61,7 @@
 					? (function(){
 						$dato_fallback	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 						$value			= common::truncate_html(700, $dato_fallback[0], true); // $maxLength, $html, $isUtf8=true
-						if (strlen($value)<strlen($dato_fallback[0])) {
+						if (!empty($value) && strlen($value)<strlen($dato_fallback[0])) {
 							$value .= ' ...';
 						}
 						return $value;
