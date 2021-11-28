@@ -36,7 +36,7 @@ class logger_backend_file extends logger_backend  {
 		$this->h_log_file = @fopen($log_file_path, 'a+');
 
 		if ( !is_resource($this->h_log_file) ) {
-			if(SHOW_DEBUG===true)
+			// if(SHOW_DEBUG===true)
 			trigger_error("The especified log file $log_file_path could not be opened or created for writing. Check file permissions.");
 		}
 

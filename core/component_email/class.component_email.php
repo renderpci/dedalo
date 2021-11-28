@@ -108,7 +108,7 @@ class component_email extends component_common {
 		# Always set fixed values
 		$query_object->type = 'string';
 		
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 

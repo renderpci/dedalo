@@ -252,8 +252,8 @@ class search {
 		$parsed_time = round(microtime(1)-$start_time,3);
 
 		$result	= JSON_RecordObj_matrix::search_free($sql_query);
-		if (!is_resource($result)) {
-			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $sql_query");
+		if ($result===false) {
+			trigger_error("Error Processing Request : Sorry cannot execute search_free non resource query: ".PHP_EOL."<hr> $sql_query");
 			return null;
 		}
 
@@ -307,60 +307,60 @@ class search {
 
 			$ar_records[] = $row;
 		}
-		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms'.' ms', logger::DEBUG);
-		if(SHOW_DEBUG===true) {
-			$total_time_ms = exec_time_unit($start_time,'ms');
-			if($total_time_ms>SLOW_QUERY_MS) {
-				error_log(PHP_EOL .'SLOW_QUERY: '.$total_time_ms." ms - LOAD_SLOW_QUERY: $sql_query -----------------------------------------------------------------------------------------------");
+
+		// debug
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+				// debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms'.' ms', logger::DEBUG);
+				$total_time_ms = exec_time_unit($start_time,'ms');
+				if($total_time_ms>SLOW_QUERY_MS) {
+					error_log(PHP_EOL .'SLOW_QUERY: '.$total_time_ms." ms - LOAD_SLOW_QUERY: $sql_query -----------------------------------------------------------------------------------------------");
+				}
 			}
-		}
 
-
-
-
-		#
-		# FULL_COUNT
+		// full_count
 			if ($this->search_query_object->full_count===true) {
 				# Exec a count query
 				# Converts json search_query_object to sql query string
-				$full_count_sql_query = $this->parse_search_query_object( $full_count=true );
-				$full_count_result	  = JSON_RecordObj_matrix::search_free($full_count_sql_query);
-				$row_count 	 		  = pg_fetch_assoc($full_count_result);
-				$full_count 		  = (int)$row_count['full_count'];
+				$full_count_sql_query	= $this->parse_search_query_object( $full_count=true );
+				$full_count_result		= JSON_RecordObj_matrix::search_free($full_count_sql_query);
+				$row_count				= pg_fetch_assoc($full_count_result);
+				$full_count				= (int)$row_count['full_count'];
 				# Fix full_count value
 				$this->search_query_object->full_count = $full_count;
 			}
 
-		#
-		# RECORDS_DATA BUILD TO OUTPUT
+		// records_data build to output
 			$records_data = new stdClass();
-				$records_data->ar_records 	= $ar_records;
-				if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
-					$records_data->generated_time['parsed_time'] = $parsed_time;
-					# Info about required time to exec the search
-					$records_data->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
-					# Query to database string
-					$records_data->strQuery = $sql_query;
-					if (isset($full_count_sql_query)) {
-						$records_data->strQuery .= PHP_EOL . $full_count_sql_query;
-					}
-					#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
-					#dump($records_data, '$records_data', array());
-					$this->search_query_object->generated_time 	= $records_data->generated_time['get_records_data'];
+				$records_data->ar_records = $ar_records;
 
-					$ar_sections = (array)$this->search_query_object->section_tipo;
-					$ar_sections = array_map(function($section_tipo){
-						return $section_tipo . ' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
-					}, $ar_sections);
-
-					// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
-					// debug_log(__METHOD__." SQL QUERY EXEC TIME (".implode(',', $ar_sections)."): ".round(microtime(1)-$start_time,3).' '. str_repeat('-', 50) .PHP_EOL. to_string($sql_query), logger::DEBUG);
+		// debug
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+				$records_data->generated_time['parsed_time'] = $parsed_time;
+				# Info about required time to exec the search
+				$records_data->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+				# Query to database string
+				$records_data->strQuery = $sql_query;
+				if (isset($full_count_sql_query)) {
+					$records_data->strQuery .= PHP_EOL . $full_count_sql_query;
 				}
+				#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+				#dump($records_data, '$records_data', array());
+				$this->search_query_object->generated_time 	= $records_data->generated_time['get_records_data'];
+
+				$ar_sections = (array)$this->search_query_object->section_tipo;
+				$ar_sections = array_map(function($section_tipo){
+					return $section_tipo . ' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+				}, $ar_sections);
+
+				// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
+				// debug_log(__METHOD__." SQL QUERY EXEC TIME (".implode(',', $ar_sections)."): ".round(microtime(1)-$start_time,3).' '. str_repeat('-', 50) .PHP_EOL. to_string($sql_query), logger::DEBUG);
+
+				// debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+				// debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
+				// error_log("sql_query: \n" . to_string($sql_query));
+			}
 
 
-		#debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
-		#debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
-		//error_log("sql_query: \n" . to_string($sql_query));
 		return $records_data;
 	}//end search
 
@@ -542,12 +542,17 @@ class search {
 			if (!property_exists($search_object, 'path')) {
 
 				// Case object is a group
-				$op2 		= key($search_object);
-				$ar_value2 	= $search_object->$op2;
+				// $op2		= key($search_object); // deprecated PHP>=8.1
+				$op2		= array_key_first(get_object_vars($search_object));
+				$ar_value2	= $search_object->$op2;
 
 				$ar_elements = self::conform_search_query_object($op2, $ar_value2);
-				#debug_log(__METHOD__." ar_elements $op - ".to_string($ar_elements), logger::DEBUG);
-				if (!empty(reset($ar_elements))) {
+				// debug_log(__METHOD__." ar_elements $op - ".to_string($ar_elements), logger::DEBUG);
+				// dump($ar_elements, ' ar_elements ++ '.to_string()); die();
+
+				// if (!empty(reset($ar_elements))) { // deprecated PHP>=8.1
+				if (!empty($ar_elements)) {
+
 					$new_ar_query_object->$op[] = $ar_elements;
 				}
 
@@ -1530,7 +1535,10 @@ class search {
 		$filter_query  = '';
 
 		if (!empty($this->search_query_object->filter)) {
-			$operator = key($this->search_query_object->filter);
+
+			// $operator	= key($this->search_query_object->filter); // deprecated in PHP>=8.1
+			$operator		= array_key_first(get_object_vars($this->search_query_object->filter));
+
 			$ar_value = $this->search_query_object->filter->{$operator};
 			if(!empty($ar_value)) {
 				$filter_query .= ' AND (';
@@ -1684,7 +1692,9 @@ class search {
 			#if (self::is_search_operator($search_object)===true) {
 			if (!property_exists($search_object,'path')) {
 				# Case operator
-				$op2 		= key($search_object);
+				// $op2	= key($search_object); deprecated PHP>=8.1
+				$op2	= array_key_first(get_object_vars($search_object));
+
 				$ar_value2 	= $search_object->$op2;
 
 				$operator2 = strtoupper( substr($op2, 1) );
@@ -1942,7 +1952,7 @@ class search {
 				// Escape parenthesis inside regex
 				$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
 				$sql_where .= $q_parsed_clean;
-				#$sql_where .= pg_escape_string(stripslashes($search_object->q_parsed));
+				#$sql_where .= pg_escape_string(DBi::_getConnection(), stripslashes($search_object->q_parsed));
 
 				if($search_object_unaccent===true) {
 					$sql_where .= ')';
@@ -2041,7 +2051,9 @@ class search {
 			$group_query = [];
 			foreach ($group_elements as $search_unit) {
 
-				if (strpos(key($search_unit),'$')!==false) {
+				// if (strpos(key($search_unit),'$')!==false) { // deprecated PHP>=8.1
+				$current_key = array_key_first(get_object_vars($search_unit));
+				if (strpos($current_key,'$')!==false) {
 
 					// Recursion
 					$sql_query = self::resolve_array_elements($search_unit, $component_tipo);
@@ -2340,7 +2352,7 @@ class search {
 		}
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 			return null;
 		}
@@ -2764,7 +2776,7 @@ class search {
 		$strQuery .= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
 		$strQuery .= 'LIMIT 1;';
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 			return null;
 		}
@@ -2979,7 +2991,7 @@ class search {
 		}
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 			return null;
 		}

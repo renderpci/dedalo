@@ -222,7 +222,7 @@ class logger_backend_activity extends logger_backend {
 							$request_uri= safe_xss($_SERVER['REQUEST_URI']);
 							# Remove possible attack chars like: ', %27, ;
 							$request_uri= str_replace(array('\'','%27',';'), '', $request_uri);
-							$request_uri= pg_escape_string($request_uri);
+							$request_uri= pg_escape_string(DBi::_getConnection(), $request_uri);
 							$url 		= urldecode( DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $request_uri );
 						}
 						$dato_array['url'] = tools::build_link($url, array('url'=>$url,'css'=>'list_link'));

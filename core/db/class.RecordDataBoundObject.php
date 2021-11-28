@@ -262,7 +262,7 @@ abstract class RecordDataBoundObject {
 						$strQuery_set .= "\"$key\" = $current_val, ";
 					}else{
 						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data
-						$strQuery_set .= "\"$key\" = " . pg_escape_literal($current_val) . ", ";
+						$strQuery_set .= "\"$key\" = " . pg_escape_literal(DBi::_getConnection(), $current_val) . ", ";
 						#$strQuery_set .= "\"$key\" = '".$current_val."', ";	# Escape the text data
 							#dump($strQuery_set, ' strQuery_set ++ '.to_string());
 					}
@@ -326,7 +326,7 @@ abstract class RecordDataBoundObject {
 							$strValueList	.= "$actualVal, ";
 						}else{
 							#$actualVal 	     = DBi::_getConnection()->real_escape_string($actualVal);
-							$strValueList	.= "'".pg_escape_string($actualVal)."', "; # Escape the text data
+							$strValueList	.= "'".pg_escape_string(DBi::_getConnection(), $actualVal)."', "; # Escape the text data
 						}
 					}
 				}

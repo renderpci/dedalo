@@ -498,7 +498,7 @@ abstract class JSON_RecordDataBoundObject {
 									dump($value, ' value ++ '.to_string());
 								}
 							}
-							$value = pg_escape_string($value);
+							$value = pg_escape_string(DBi::_getConnection(), $value);
 							$strQuery 	.= "AND $key = '$value' ";
 						}
 						break;
@@ -609,7 +609,7 @@ abstract class JSON_RecordDataBoundObject {
 		switch ($modo) {
 			case 'gin':
 				# ref: datos @>'{"components":{"rsc24":{"dato":{"lg-nolan":"114"}}}}'
-				$value = pg_escape_string(stripslashes($value));
+				$value = pg_escape_string(DBi::_getConnection(), stripslashes($value));
 				#$value = pg_escape_literal(stripslashes($value));
 				return "$datos @>'{\"components\":{\"$tipo\":{\"dato\":{\"$lang\":\"$value\"}}}}'::jsonb ";
 				break;

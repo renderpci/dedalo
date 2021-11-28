@@ -187,7 +187,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	public function get_properties() {
 		
-		return json_decode(parent::get_properties());
+		$properties = parent::get_properties();
+		if (is_null($properties)) {
+			return null;
+		}
+
+		return json_decode($properties);
 	}//end get_propiedades
 
 
