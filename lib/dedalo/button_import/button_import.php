@@ -3,23 +3,22 @@
 
 	# CONTROLLER
 
-	$tipo 					= $this->get_tipo();
-	#$section_tipo			= $this->get_context_tipo();
-	$section_tipo 			= $this->get_section_tipo();
-	$id						= NULL;
-	$modo					= $this->get_modo();
-	$label 					= $this->get_label();
-	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo, $tipo);	
-	$html_title				= "Info about $tipo";
-	$propiedades 			= $this->get_propiedades();
+	$tipo			= $this->get_tipo();
+	$section_tipo	= $this->get_section_tipo();
+	$id				= NULL;
+	$modo			= $this->get_modo();
+	$label			= $this->get_label();
+	$debugger		= $this->get_debugger();
+	$permissions	= common::get_permissions($section_tipo, $tipo);
+	$html_title		= "Info about $tipo";
+	$propiedades	= $this->get_propiedades();
 	if(SHOW_DEBUG) {
 		if (!isset($propiedades->section_tipo)) {
 			dump($propiedades , ' DEBUG ALERT (mandatory section_tipo is not defined in \'propiedades\') propiedades - button_tipo: '.$tipo );
 		}
 	}
-	$tool_name 	  			= $propiedades->tool_name;
-	$context_name 			= isset($propiedades->context_name) ? $propiedades->context_name : null;	
+	$tool_name				= $propiedades->tool_name;
+	$context_name			= isset($propiedades->context_name) ? $propiedades->context_name : null;
 	$target_section_tipo	= isset($propiedades->target_section_tipo) ? $propiedades->target_section_tipo : $propiedades->section_tipo;
 
 
@@ -41,13 +40,10 @@
 	}		
 
 	switch($modo) {
-						
 		case 'list'	:
-				
-				break;
-
+			break;
 		default: 
-				return null;
+			return null;
 	}
 		
 	
@@ -55,4 +51,3 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-?>
