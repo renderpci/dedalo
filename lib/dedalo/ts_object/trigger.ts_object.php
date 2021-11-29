@@ -3,8 +3,8 @@
 	ini_set('output_buffering', 'off');
 
 $start_time=microtime(1);
-include( dirname(dirname(__FILE__)).'/config/config4.php');
-include(DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php');
+include dirname(dirname(__FILE__)).'/config/config4.php';
+include DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php';
 
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 $options = new stdClass();
@@ -35,7 +35,7 @@ function get_childrens_data($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-	$vars = array('section_tipo','section_id','node_type','tipo');
+		$vars = array('section_tipo','section_id','node_type','tipo');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -59,22 +59,17 @@ function get_childrens_data($json_data) {
 	}else{
 
 		// Calculate childrens from parent
-		$modelo_name='component_relation_children';
-		$modo 		='list_thesaurus';
-		$lang		=DEDALO_DATA_NOLAN;
-		$component_relation_children = component_common::get_instance($modelo_name,
-																	  $tipo,
-																	  $section_id,
-																	  $modo,
-																	  $lang,
-																	  $section_tipo);
-		$dato 	   = $component_relation_children->get_dato();
-		$childrens = $dato;
-
-		# sort_elements
-		#if(SHOW_DEBUG===true) $start_time = start_time();
-		#$childrens = ts_object::sort_elements($childrens, 'asc');
-		#if(SHOW_DEBUG===true) debug_log(__METHOD__." Titme to sort childrens ".count($childrens)." - ".exec_time($start_time,""), logger::DEBUG);
+		$modelo_name					= 'component_relation_children';
+		$modo							= 'list_thesaurus';
+		$lang							= DEDALO_DATA_NOLAN;
+		$component_relation_children	= component_common::get_instance($modelo_name,
+																		 $tipo,
+																		 $section_id,
+																		 $modo,
+																		 $lang,
+																		 $section_tipo);
+		$dato		= $component_relation_children->get_dato();
+		$childrens	= $dato;
 	}
 
 
@@ -88,12 +83,11 @@ function get_childrens_data($json_data) {
 		$childrens_data = array();
 		foreach ((array)$childrens as $locator) {
 			
-			$section_id 		= $locator->section_id;
-			$section_tipo 		= $locator->section_tipo;				
+			$section_id		= $locator->section_id;
+			$section_tipo	= $locator->section_tipo;
 
-			$ts_object  		= new ts_object( $section_id, $section_tipo, $options );
-			$childrens_object 	= $ts_object->get_childrens_data();
-			#debug_log(__METHOD__." childrens_object ".to_string($childrens_object), logger::DEBUG);
+			$ts_object			= new ts_object( $section_id, $section_tipo, $options );
+			$childrens_object	= $ts_object->get_childrens_data();
 
 			# Add only descriptors
 			#if ($childrens_object->is_descriptor===true) {
@@ -109,19 +103,18 @@ function get_childrens_data($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Caught exception: '.$e->getMessage();		
 	}
-
 	
 
 	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
 
-		$response->debug = $debug;
-	}
+			$response->debug = $debug;
+		}
 
 	return (object)$response;
 }//end get_ar_childrens_data_real

@@ -1,16 +1,17 @@
 <?php
 
 	# CONTROLLER
-	
 
-	$widget_name 				= $this->widget_name;
-	$component_tipo 			= $this->component_info->get_tipo();
-	$modo 						= $this->component_info->get_modo();
-	$parent 					= $this->component_info->get_parent();
-	$section_tipo 				= $this->component_info->get_section_tipo();
-	$data_source 				= $this->data_source;
-	$component_portal_tipo 		= key($data_source);
-	$component_text_area_tipo 	= reset($data_source);
+	$widget_name					= $this->widget_name;
+	$component_tipo					= $this->component_info->get_tipo();
+	$modo							= $this->component_info->get_modo();
+	$parent							= $this->component_info->get_parent();
+	$section_tipo					= $this->component_info->get_section_tipo();
+	$data_source					= $this->data_source;
+	// $component_portal_tipo		= key($data_source); // deprecated PHP>=8.1
+	$component_portal_tipo			= array_key_first(get_object_vars($data_source));
+	// $component_text_area_tipo	= reset($data_source); // deprecated PHP>=8.1
+	$component_text_area_tipo		= $data_source->{$component_portal_tipo} ?? null;
 	
 	// overwrite modo if widget_mode exists (export case)
 		if (!empty($widget_mode)) {
@@ -37,7 +38,7 @@
 			$js_url = $widget_base_url ."/js/".$widget_name.".js";
 			if ( !in_array($js_url, js::$ar_url) ) {
 				js::$ar_url[] = $js_url;
-			}							
+			}
 			break;
 
 		case 'edit':

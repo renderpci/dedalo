@@ -473,8 +473,8 @@ class component_relation_related extends component_relation_common {
 				$ar_componets_related[] = $component_tipo;
 			}
 		}
-		$propiedades = json_decode($RecordObj_dd->get_propiedades());
-		$divisor = (isset($propiedades->source->divisor)) ?  $propiedades->source->divisor : ' | ';
+		$propiedades	= $RecordObj_dd->get_propiedades(true);
+		$divisor		= (isset($propiedades->source->divisor)) ?  $propiedades->source->divisor : ' | ';
 		
 		# References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
@@ -561,8 +561,8 @@ class component_relation_related extends component_relation_common {
 				$ar_componets_related[] = $component_tipo;
 			}
 		}
-		$propiedades = json_decode($RecordObj_dd->get_propiedades());
-		$divisor = (isset($propiedades->source->divisor)) ?  $propiedades->source->divisor : ' | ';
+		$propiedades	= $RecordObj_dd->get_propiedades(true);
+		$divisor		= (isset($propiedades->source->divisor)) ?  $propiedades->source->divisor : ' | ';
 
 
 		$locator = new locator();

@@ -33,13 +33,13 @@ class Thumb {
       switch($this->type){
          case IMAGETYPE_JPEG:  
             $this->image = imagecreatefromjpeg($this->source);
-         break;          
+            break;
          case IMAGETYPE_GIF:  
             $this->image = imagecreatefromgif($this->source);  
-         break;          
+            break;
          case IMAGETYPE_PNG:  
             $this->image = imagecreatefrompng($this->source);  
-         break;          
+            break;
       }
 	  
 	  return $this->image ;   
@@ -75,10 +75,10 @@ class Thumb {
       switch($this->type){
          case IMAGETYPE_JPEG:  
       	  $img = imagejpeg($this->image);
-           break;          
+           break;
          case IMAGETYPE_GIF:  
             $img = imagegif($this->image);
-            break;          
+            break;
          case IMAGETYPE_PNG:  
             $img = imagepng($this->image);
             break; 
@@ -91,29 +91,29 @@ class Thumb {
    function resize($value, $prop) {
         
       //---Determinar la propiedad a redimensionar y la propiedad opuesta  
-      $prop_value	   = ($prop === 'width') ? $this->width : $this->height;  
-      $prop_versus	= ($prop === 'width') ? $this->height : $this->width;
+      $prop_value  = ($prop === 'width') ? $this->width : $this->height;
+      $prop_versus = ($prop === 'width') ? $this->height : $this->width;
 	  
       if(!$prop_value) return false;
 	  
       //---Determinar el valor opuesto a la propiedad a redimensionar  
-      $pcent = $value / $prop_value;        
-      $value_versus = $prop_versus * $pcent;  
+      $pcent              = $value / $prop_value;
+      $value_versus_float = $prop_versus * $pcent;
+      $value_versus       = intval($value_versus_float);
+
+      $value = intval($value);
         
       //---Crear la imagen dependiendo de la propiedad a variar  
       $image = ($prop === 'width') ? imagecreatetruecolor($value, $value_versus) : imagecreatetruecolor($value_versus, $value);  
         
       //---Hacer una copia de la imagen dependiendo de la propiedad a variar  
-      switch($prop){  
-           
+      switch($prop){
          case 'width':  
             imagecopyresampled($image, $this->image, 0, 0, 0, 0, $value, $value_versus, $this->width, $this->height);  
-         break;  
-           
+            break;
          case 'height':  
             imagecopyresampled($image, $this->image, 0, 0, 0, 0, $value_versus, $value, $this->width, $this->height);  
-         break;  
-           
+            break;
       }  
         
       //---Actualizar la imagen y sus dimensiones  
@@ -134,11 +134,11 @@ class Thumb {
 		#if($this->width	>= $this->height)
       if($this->width >= $this->height && $maxWidth <= $maxHeight)
 		{
-			$bigger		= 'width';
-			$toValue 	= $maxWidth ;
+         $bigger  = 'width';
+         $toValue = $maxWidth ;
 		}else{
-			$bigger 	= 'height';
-			$toValue 	= $maxHeight ;
+         $bigger  = 'height';
+         $toValue = $maxHeight ;
 		}
 		
 		$this->resize($value=$toValue, $prop=$bigger);
@@ -170,14 +170,13 @@ class Thumb {
       $new_h = ($cwidth / $this->width) * $this->height; 
        
       //---Si la altura es menor recalcular por la altura 
-      if($new_h < $cheight){ 
-          
+      if($new_h < $cheight){
          $new_h = $cheight; 
-         $new_w = ($cheight / $this->height) * $this->width; 
-       
+         $new_w = ($cheight / $this->height) * $this->width;
       } 
        
-      $this->resize($new_w, 'width'); 
+      $this->resize($new_w, 'width');
+
         
       //---Crear la imagen tomando la porción del centro de la imagen redimensionada con las dimensiones deseadas  
       $image = imagecreatetruecolor($cwidth, $cheight);  
@@ -185,24 +184,24 @@ class Thumb {
       switch($pos){  
            
          case 'center':  
-            imagecopyresampled($image, $this->image, 0, 0, abs(($this->width - $cwidth) / 2), abs(($this->height - $cheight) / 2), $cwidth, $cheight, $cwidth, $cheight);  
-         break;  
+            imagecopyresampled($image, $this->image, 0, 0, intval(($this->width - $cwidth) / 2), intval(($this->height - $cheight) / 2), $cwidth, $cheight, $cwidth, $cheight);
+            break;
            
          case 'left':  
-            imagecopyresampled($image, $this->image, 0, 0, 0, abs(($this->height - $cheight) / 2), $cwidth, $cheight, $cwidth, $cheight);  
-         break;  
+            imagecopyresampled($image, $this->image, 0, 0, 0, intval(($this->height - $cheight) / 2), $cwidth, $cheight, $cwidth, $cheight);
+            break;
            
          case 'right':  
-            imagecopyresampled($image, $this->image, 0, 0, $this->width - $cwidth, abs(($this->height - $cheight) / 2), $cwidth, $cheight, $cwidth, $cheight);  
-         break;  
+            imagecopyresampled($image, $this->image, 0, 0, $this->width - $cwidth, intval(($this->height - $cheight) / 2), $cwidth, $cheight, $cwidth, $cheight);
+            break;
            
          case 'top':  
-            imagecopyresampled($image, $this->image, 0, 0, abs(($this->width - $cwidth) / 2), 0+0, $cwidth, $cheight, $cwidth, $cheight);  
-         break;  
+            imagecopyresampled($image, $this->image, 0, 0, intval(($this->width - $cwidth) / 2), 0+0, $cwidth, $cheight, $cwidth, $cheight);
+            break;
            
          case 'bottom':  
-            imagecopyresampled($image, $this->image, 0, 0, abs(($this->width - $cwidth) / 2), $this->height - $cheight, $cwidth, $cheight, $cwidth, $cheight);  
-         break;        
+            imagecopyresampled($image, $this->image, 0, 0, intval(($this->width - $cwidth) / 2), $this->height - $cheight, $cwidth, $cheight, $cwidth, $cheight);
+            break;
       }  
 	  
 		#imagedestroy($image);
@@ -213,12 +212,10 @@ class Thumb {
    
    
    
-	function __destruct()
-	{
+	function __destruct() {
 		if($this->image) imagedestroy($this->image);   
 	}
    
    
-     
-}  
-?>
+
+}//end Thumb

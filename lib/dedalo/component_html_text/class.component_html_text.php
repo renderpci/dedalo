@@ -33,13 +33,15 @@ class component_html_text extends component_common {
 	public function Save( $update_all_langs_tags_state=true ) {
 		
 		# Dato current assigned
-		$dato_current 	= $this->dato;
+		$dato_current = $this->dato;
 
 		# Clean dato 
-		$dato_clean 	= $this->clean_text($dato_current);
+		$dato_clean = !is_null($dato_current)
+			? $this->clean_text($dato_current)
+			: null;
 
 		# Set dato again (cleaned)
-		$this->dato 	= $dato_clean;
+		$this->dato = $dato_clean;
 
 			#dump($this->dato,'$this->dato');
 
@@ -83,7 +85,9 @@ class component_html_text extends component_common {
 			
 			default:
 				$dato	= parent::get_dato();
-				$dato	= $this->clean_text($dato);
+				if(!empty($dato)) {
+					$dato = $this->clean_text($dato);
+				}
 				break;
 		}		
 
@@ -110,7 +114,7 @@ class component_html_text extends component_common {
 	* CLEAN_TEXT
 	* Anclaje para futuros preprocesados del texto. De momento sólo haremos un trim
 	*/
-	public function clean_text($string){
+	public function clean_text(string $string){
 
 		# Desactivo porque elimina el '<mar>'
 		#$string = filter_var($string, FILTER_UNSAFE_RAW );	# FILTER_SANITIZE_STRING
@@ -131,7 +135,7 @@ class component_html_text extends component_common {
 		$query_object->type = 'string';
 
 		$q = $query_object->q;
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
         switch (true) {
         	# IS NULL
@@ -285,7 +289,7 @@ class component_html_text extends component_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
-		return strip_tags($value);
+		return !empty($value) ? strip_tags($value) : $value;
 	}//end render_list_value
 
 

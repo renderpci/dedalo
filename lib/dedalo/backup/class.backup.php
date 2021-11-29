@@ -1608,7 +1608,9 @@ abstract class backup {
 		while ($row = pg_fetch_object($result)) {
 			
 			// decode jsonb properties
-			$row->properties = json_decode($row->properties);
+			if (!is_null($row->properties)) {
+				$row->properties = json_decode($row->properties);
+			}
 
 			$tld_data[] = $row;
 		}
@@ -1719,7 +1721,7 @@ abstract class backup {
 						}
 					// insert
 						$fields = '"parent", "dato", "tipo", "lang"';
-						// $values = '\''.$terminoID.'\', \''. pg_escape_string($descriptor_item->value).'\', \''.$descriptor_item->type.'\', \''.$descriptor_item->lang.'\'';
+						// $values = '\''.$terminoID.'\', \''. pg_escape_string(DBi::_getConnection(), $descriptor_item->value).'\', \''.$descriptor_item->type.'\', \''.$descriptor_item->lang.'\'';
 						// $strQuery .= PHP_EOL . 'INSERT INTO "matrix_descriptors_dd" ('.$fields.') VALUES '. PHP_EOL. '('.$values.');'.PHP_EOL;
 						$strQuery = 'INSERT INTO "matrix_descriptors_dd" ('.$fields.') VALUES ($1, $2, $3, $4)';
 						if (!$result = pg_query_params($conn, $strQuery, array($parent, $dato, $tipo, $lang)) ) {

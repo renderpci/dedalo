@@ -239,7 +239,7 @@ class tool_administration extends tool_common {
 			if($proced===true){
 
 				$datos = (string)json_handler::encode($datos);
-				$datos = pg_escape_string($datos);
+				$datos = pg_escape_string(DBi::_getConnection(), $datos);
 
 				// Save section dato
 				$strQuery = "UPDATE \"$matrix_table\" SET datos = '$datos' WHERE id = $id";

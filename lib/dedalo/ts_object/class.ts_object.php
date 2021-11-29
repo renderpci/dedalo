@@ -114,8 +114,8 @@ class ts_object extends Accessors {
 			$section_list_thesaurus_tipo = $ar_children[0];
 
 			# relation map
-			$RecordObj_dd    = new RecordObj_dd($section_list_thesaurus_tipo);
-			$ar_propiedades  = json_decode($RecordObj_dd->get_propiedades());
+			$RecordObj_dd	= new RecordObj_dd($section_list_thesaurus_tipo);
+			$ar_propiedades	= $RecordObj_dd->get_propiedades(true);
 				#dump($ar_propiedades, ' ar_propiedades ++ '.to_string($section_list_thesaurus_tipo));
 			/*
 			# Get related terms
@@ -750,62 +750,54 @@ class ts_object extends Accessors {
 
 	/**
 	* GET_PERMISSIONS_ELEMENT
+	* @param string $element_name
+	* 	Like 'button_new'
 	* @return int $permissions
 	*/
 	public function get_permissions_element( $element_name ) {
 	
 		switch ($element_name) {
+
 			case 'button_new':
-				
 				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-					
 					// root thesaurus case
 					// $tipo = DEDALO_HIERARCHY_BUTTON_NEW_TIPO;					
 					// $permissions = common::get_permissions($this->section_tipo, $tipo);
 					$permissions = 2;
-
 				}elseif ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
-					$tipo = DEDALO_THESAURUS_BUTTON_NEW_TIPO;
-					$permissions = common::get_permissions($this->section_tipo,$tipo);
+					$tipo			= DEDALO_THESAURUS_BUTTON_NEW_TIPO;
+					$permissions	= common::get_permissions($this->section_tipo,$tipo);
 				}else{
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
-					# dump($ar_children, ' ar_children ++ '.to_string());
-					if (isset($ar_children[0])) {
-						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
-					}else{
-						$permissions = 0;
-					}
+					$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+					$permissions	= isset($ar_children[0])
+						? common::get_permissions($this->section_tipo, $ar_children[0])
+						: 0;
 				}
 				break;
+
 			case 'button_delete':
 				# hierarchy1 case
 				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 					$permissions = 0; // Always is 0
 				}elseif ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
-					$tipo = DEDALO_THESAURUS_BUTTON_DELETE_TIPO;
-					$permissions = common::get_permissions($this->section_tipo,$tipo);
+					$tipo			= DEDALO_THESAURUS_BUTTON_DELETE_TIPO;
+					$permissions	= common::get_permissions($this->section_tipo,$tipo);
 				}else{
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
-					# dump($ar_children, ' ar_children ++ '.to_string());
-					if (isset($ar_children[0])) {
-						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
-					}else{
-						$permissions = 0;
-					}				
-				}
-				break;			
-			default:
-				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-				# dump($ar_children, ' ar_children ++ '.to_string());
-				if (isset($ar_children[0])) {
-					$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
-				}else{
-					$permissions = 0;
-					debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned as permissions ".to_string(), logger::DEBUG);
+					$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+					$permissions	= isset($ar_children[0])
+						? common::get_permissions($this->section_tipo, $ar_children[0])
+						: 0;
 				}
 				break;
-		}
-		#dump($permissions, ' permissions ++ '.to_string($element_name.' - '.$this->section_tipo));
+
+			default:
+				$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+				$permissions	= isset($ar_children[0])
+					? common::get_permissions($this->section_tipo, $ar_children[0])
+					: 0;
+				break;
+		}//end switch ($element_name)
+
 
 		return (int)$permissions;
 	}//end get_permissions_element
@@ -813,4 +805,3 @@ class ts_object extends Accessors {
 
 	
 }//end ts_object
-?>

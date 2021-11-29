@@ -196,9 +196,8 @@ abstract class common {
 			}
 
 			# PROPIEDADES : Always JSON decoded
-			#dump($this->RecordObj_dd->get_propiedades()," ");
-			$propiedades = $this->RecordObj_dd->get_propiedades();
-			$this->propiedades = !empty($propiedades) ? json_handler::decode($propiedades) : false;
+			$propiedades = $this->RecordObj_dd->get_propiedades(true);
+			$this->propiedades = !empty($propiedades) ? $propiedades : false;
 
 			# MATRIX_TABLE
 			#if(!isset($this->matrix_table))
@@ -373,11 +372,10 @@ abstract class common {
 			if ($modelo_name!=='matrix_table') {
 				continue;
 			}
-			if( $propiedades = json_decode($RecordObj_dd->get_propiedades()) ) {
-				if (property_exists($propiedades,'inverse_relations') && $propiedades->inverse_relations===true) {
-					$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-				}
-			}			
+			$propiedades = $RecordObj_dd->get_propiedades(true);
+			if (is_object($propiedades) && property_exists($propiedades,'inverse_relations') && $propiedades->inverse_relations===true) {
+				$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			}
 		}
 		
 		if (empty($ar_tables)) {
@@ -389,7 +387,6 @@ abstract class common {
 				"matrix_hierarchy"
 			];
 		}
-		#debug_log(__METHOD__." ar_tables ".json_encode($ar_tables), logger::DEBUG);
 		
 		
 		return $ar_tables;
@@ -896,9 +893,7 @@ abstract class common {
 		if(isset($this->propiedades)) return $this->propiedades;
 
 		# Read string from database str
-		$propiedades = $this->RecordObj_dd->get_propiedades();
-
-		$propiedades_obj = json_handler::decode($propiedades);
+		$propiedades_obj = $this->RecordObj_dd->get_propiedades(true);
 
 		return $propiedades_obj;
 	}//end get_propiedades
@@ -910,11 +905,10 @@ abstract class common {
 	* @return bool
 	*/
 	public function set_propiedades($value) {
-		if (is_string($value)) {
-			$propiedades = json_decode($value);
-		}else{
-			$propiedades = $value;
-		}
+
+		$propiedades = (is_string($value))
+			? json_decode($value)
+			: $value;
 
 		# Fix propiedades obj
 		$this->propiedades = (object)$propiedades;
@@ -1100,12 +1094,11 @@ abstract class common {
 				#dump($strQuery,"strQuery ".print_r($strQuery,true));die();	
 			}			
 			$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		
 			$ar_id=array();
 			while ($rows = pg_fetch_assoc($result)) {
 
 				# AR_REFERENCES
-				$id 			= $rows['id'];
+				$id				= $rows['id'];
 				$section_tipo	= $rows['section_tipo'];
 				
 				$ar_references[$id] = $section_tipo;
@@ -1277,7 +1270,7 @@ abstract class common {
 	public static function get_cookie_properties() {
 		
 		# Cookie properties
-		$domain 	= $_SERVER['SERVER_NAME'];
+		$domain 	= $_SERVER['SERVER_NAME'] ?? '';
 		$secure 	= stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'true' : 'false';
 		$httponly 	= 'true'; # Not accessible for javascript, only for http/s requests
 
@@ -1456,13 +1449,19 @@ abstract class common {
 	/**
 	* TRUNCATE_HTML
 	* Thanks to Søren Løvborg (printTruncated)
+	* @return string $full_text
 	*/
-	public static function truncate_html($maxLength, $html, $isUtf8=true) {
-		$printedLength = 0;
-		$position = 0;
-		$tags = array();
+	public static function truncate_html(int $maxLength, $html, $isUtf8=true) {
 
 		$full_text = '';
+
+		if (empty($html)) {
+			return '';
+		}
+
+		$printedLength	= 0;
+		$position		= 0;
+		$tags			= array();
 
 		// For UTF-8, we need to count multibyte sequences as one character.
 		$re = $isUtf8

@@ -497,8 +497,8 @@ class tool_import_bibtex extends tool_common {
 				# DEFAULT
 				# Propiedades : if default dato is set in 'propiedades', save component here
 				# Example: {"filtered_by":{"rsc235":[{"section_tipo":"rsc229","section_id":"2"}]}}
-				$RecordObj_dd = new RecordObj_dd($section_tipo);
-				$propiedades_current_setion = json_decode($RecordObj_dd->get_propiedades());
+				$RecordObj_dd				= new RecordObj_dd($section_tipo);
+				$propiedades_current_setion	= $RecordObj_dd->get_propiedades(true);
 				if (isset($propiedades_current_setion->filtered_by)) {
 					
 					$component_tipo	 		= key($propiedades_current_setion->filtered_by);

@@ -116,7 +116,7 @@ class widget {
 	public static function get_widget_str_object( $component_tipo, $name ) {
 		
 		$RecordObj_dd = new RecordObj_dd($component_tipo);
-		$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+		$propiedades  = $RecordObj_dd->get_propiedades(true);
 		foreach ((array)$propiedades->widgets as $value_obj) {
 			if ($value_obj->widget_name===$name) {
 				return $value_obj;

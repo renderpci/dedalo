@@ -69,7 +69,7 @@ class tool_import_av extends tool_common {
 
 		$button_import_obj = new button_import($button_tipo, null, $this->section_tipo);
 
-		$propiedades = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
+		$propiedades = $button_import_obj->RecordObj_dd->get_propiedades(true);
 
 		# Fix propiedades
 		$this->button_import_propiedades = $propiedades;

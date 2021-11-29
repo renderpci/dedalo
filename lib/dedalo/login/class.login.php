@@ -742,7 +742,7 @@ class login extends common {
 		}
 
 		// add cookie dedalo_logged (used to check some features in same domain web)
-			setcookie("dedalo_logged", true, time() + (86400 * 1), '/');
+			setcookie("dedalo_logged", 'true', time() + (86400 * 1), '/');
 
 		# LOG : Prepare and save login action
 		$browser = $_SERVER["HTTP_USER_AGENT"];
@@ -1085,11 +1085,11 @@ class login extends common {
 
 				if (isset($cookie_auth->$ktoday->cookie_name)) {
 					#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
-					setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+					setcookie($cookie_auth->$ktoday->cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 				}
 				if (isset($cookie_auth->$kyesterday->cookie_name)) {
 					#setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
-					setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+					setcookie($cookie_auth->$kyesterday->cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 				}
 			}
 
@@ -1098,10 +1098,10 @@ class login extends common {
 		$cookie_name = session_name();
 		unset($_SESSION['dedalo4']);
 		#setcookie($cookie_name, null, -1, '/');
-		setcookie($cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+		setcookie($cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 
 		// remove cookie dedalo_logged
-			setcookie("dedalo_logged", false, 1, '/');
+			setcookie("dedalo_logged", 'false', 1, '/');
 
 		#unset($_SESSION);
 		debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);

@@ -93,8 +93,8 @@
 						# BUTTON IMPORT (SECTION LIST) info
 						if (!empty($button_tipo)) {
 							
-							$RecordObj_dd 		= new RecordObj_dd($button_tipo);
-							$button_propiedades = json_decode($RecordObj_dd->get_propiedades());
+							$RecordObj_dd		= new RecordObj_dd($button_tipo);
+							$button_propiedades	= $RecordObj_dd->get_propiedades(true);
 
 							# file_processor
 							$file_processor = isset($button_propiedades->custom_params->file_processor) ? $button_propiedades->custom_params->file_processor : null;

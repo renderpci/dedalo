@@ -241,6 +241,10 @@ abstract class TR {
 	*/
 	public static function addTagImgOnTheFly($text, $request_options=null) {
 
+		if (empty($text)) {
+			return $text;
+		}
+
 		#$hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
 
 		# Temporal (for catch old calls only)
@@ -320,17 +324,17 @@ abstract class TR {
 		$pattern 	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
 		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
 		/*$text		= preg_replace_callback(
-            $pattern,
-            function($matches) {
-            	#dump($matches, ' matches ++ '.to_string());
-            	$_1 = $matches[1];
-            	$_2 = $matches[2];
-            	$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
-            	$a = "<img id=\"$id\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$_1\" data-state=\"n\" data-label=\"$_2\" data-data=\"$_2\">";
+			$pattern,
+			function($matches) {
+				#dump($matches, ' matches ++ '.to_string());
+				$_1 = $matches[1];
+				$_2 = $matches[2];
+				$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
+				$a = "<img id=\"$id\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$_1\" data-state=\"n\" data-label=\"$_2\" data-data=\"$_2\">";
 				#dump($a, ' a ++ '.to_string());
-            	return $a;
-            },
-            $text);*/
+				return $a;
+			},
+			$text);*/
 
 		# SVG
 		$pattern 	= TR::get_mark_pattern('svg');
@@ -339,35 +343,35 @@ abstract class TR {
 			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 			#$text		= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
 			$text = preg_replace_callback(
-		        $pattern,
-		        function ($matches) {
+				$pattern,
+				function ($matches) {
 
-		        	$new_text = null;
+					$new_text = null;
 
-		        	$_2 = $matches[2];
-		        	$_3 = $matches[3];
-		        	$_4 = $matches[4];
-		        	$_5 = $matches[5];
-		        	$_6 = $matches[6];
-		        	$_7 = $matches[7];
+					$_2 = $matches[2];
+					$_3 = $matches[3];
+					$_4 = $matches[4];
+					$_5 = $matches[5];
+					$_6 = $matches[6];
+					$_7 = $matches[7];
 
-		        	# data is a locator encoded as text
-		        	# Restore double quotes from saved safe locator string
-		        	$locator_text = str_replace('\'','"',$_7);
-		        	if($locator = json_decode($locator_text) ) {
+					# data is a locator encoded as text
+					# Restore double quotes from saved safe locator string
+					$locator_text = str_replace('\'','"',$_7);
+					if($locator = json_decode($locator_text) ) {
 
-		        		$url  = component_svg::get_url_from_locator($locator);
+						$url  = component_svg::get_url_from_locator($locator);
 
-		        		# Replace double quotes for safe management in text editor
-			        	$data = str_replace('"','\'',$_7);
+						# Replace double quotes for safe management in text editor
+						$data = str_replace('"','\'',$_7);
 
-			            $new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
+						$new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
 
-		        	}
-		        	return $new_text;
-		        },
-		        $text
-		    );
+					}
+					return $new_text;
+				},
+				$text
+			);
 		}
 
 		# DRAW
@@ -412,6 +416,10 @@ abstract class TR {
 	*/
 	public static function addBabelTagsOnTheFly($text) {
 
+		if (empty($text)) {
+			return $text;
+		}
+
 		$ar_tags = array('indexIn',
 						 'indexOut',
 						 'structIn',
@@ -446,6 +454,10 @@ abstract class TR {
 	* clean text to translate
 	*/
 	public static function deleteMarks($string, $request_options=null) {
+
+		if (empty($string)) {
+			return $string;
+		}
 
 		# Temporal (for catch old calls only)
 		if (is_bool($request_options)) {
@@ -573,7 +585,6 @@ abstract class TR {
 				throw new Exception("Error Processing Request. Unimplemented build_tag of type: ".to_string($type), 1);
 				break;
 		}
-		#dump($tag, ' tag ++ '.to_string());
 
 		return $tag;
 	}//end build_tag
@@ -585,13 +596,17 @@ abstract class TR {
 	*/
 	public static function match_pattern_index_from_tag( $tag, $type='index' ) {
 
+		if (empty($tag)) {
+			return false;
+		}
+
 		$pattern = TR::get_mark_pattern($mark=$type, $standalone=false);
 
 		if(preg_match_all("/$pattern/", $tag, $matches, PREG_PATTERN_ORDER)) {
-
-			#dump($matches,'$matches',"tag: $tag");
 			return $matches;
 		}
+
+		return false;
 	}//end match_pattern_index_from_tag
 
 
@@ -690,6 +705,10 @@ abstract class TR {
 	# ELIMINATE PARAGRPHAS (p) AND CONVERT TO <br />
 	public static function convertParagraph2br($string) {
 
+		if (empty($string)) {
+			return $string;
+		}
+
 		# develop control
 		$today 		= date("d-m-Y H:m:s");
 		$converted 	= strpos($string,'V3 CONVERTED');	#V3 CONVERTED (04-10-2011 13:10:27) !!!!!!!!!!!!!!
@@ -737,7 +756,7 @@ abstract class TR {
 		#$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexIn|$patternIndexOut)\<\/h5\>\<p\> {0,2}\<strong\>/", "XXXXXXXXXX", $string); #</strong><h5>$1</h5><strong>
 
 		# </strong> </p> <h5> [indexOut] </h5> <p>	-->	</strong> <h5> [indexOut] </h5> <br>
- 		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexOut)\<\/h5\>\<p\> {0,2}/", "</strong><h5>$1</h5><br />", $string);
+		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexOut)\<\/h5\>\<p\> {0,2}/", "</strong><h5>$1</h5><br />", $string);
 
 		# </strong> </p> <h5> [indexOut] </h5> <p> --> </strong> <br> <h5> [indexOut] </h5>
 		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexIn)\<\/h5\>\<p\> {0,2}/", "</strong><br /><h5>$1</h5>", $string);
@@ -810,6 +829,10 @@ abstract class TR {
 	# Temporalmente habilitamos la función de formateo de TC's para Gerard
 	#
 	public static function limpiezaPOSTtr($string) {
+
+		if (empty($string)) {
+			return $string;
+		}
 
 		# strip slashes (need for text received from tinyMCE)
 		$string	= trim(stripslashes($string));
@@ -1066,9 +1089,12 @@ abstract class TR {
 		return $html ;
 	}
 
+
+
 	public static function plainText($string, $removeTags=true) {
 
 	}
+
 
 
 	# clean text for list
@@ -1086,7 +1112,8 @@ abstract class TR {
 
 		# cortamos elegantemente el fragmento
 		return self::truncate_text($string, $limit, $break=" ", $pad="...");
-	}
+	}//end limpiezaFragmentoEnListados
+
 
 
 	/**
@@ -1095,16 +1122,20 @@ abstract class TR {
 	*/
 	public static function truncate_text( $string, $limit, $break=" ", $pad="...") {
 
-	  # return with no change if string is shorter than $limit
-	  if(strlen($string) <= $limit) return $string;
+		if (empty($string)) {
+			return $string;
+		}
 
-	  $string = substr($string, 0, $limit);
-	  if( false !== ($breakpoint = strrpos($string, $break)) ) {
-		$string = substr($string, 0, $breakpoint);
-	  }
+		# return with no change if string is shorter than $limit
+		if(strlen($string) <= $limit) return $string;
 
-	  return $string . $pad;
-	}
+		$string = substr($string, 0, $limit);
+		if( false !== ($breakpoint = strrpos($string, $break)) ) {
+			$string = substr($string, 0, $breakpoint);
+		}
+
+		return $string . $pad;
+	}//end truncate_text
 
 
 
@@ -1115,6 +1146,14 @@ abstract class TR {
 	public static function get_chars_info( $raw_text ) {
 
 		$chars_info = new stdClass();
+
+		if (empty($raw_text)) {
+
+			$chars_info->total_chars = 0;
+			$chars_info->total_chars_no_spaces = 0;
+
+			return $chars_info;
+		}
 
 		#
 		# CLEAN TEXT
@@ -1179,5 +1218,5 @@ abstract class TR {
 	}//end get_tags_of_type_in_text
 
 
-}
-?>
+
+}//end class TR

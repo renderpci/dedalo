@@ -291,14 +291,12 @@ class search extends common {
 						
 						$sql_filtro .= "\n-- filter_by_section_tipo -- \n";	
 						
-						$RecordObj_dd = new RecordObj_dd($sql_options->section_tipo);
-						$propiedades  = $RecordObj_dd->get_propiedades();		
-						$propiedades  = (object)json_decode($propiedades);		
-						if ( property_exists($propiedades, 'section_tipo') && $propiedades->section_tipo==='real' ) {
-							$current_section_tipo = section::get_section_tipo_static($sql_options->section_tipo); #dump($propiedades, " propiedades ".to_string());
-						}else{
-							$current_section_tipo = $sql_options->section_tipo;
-						}
+						$RecordObj_dd			= new RecordObj_dd($sql_options->section_tipo);
+						$propiedades			= $RecordObj_dd->get_propiedades(true);
+						$current_section_tipo	= (is_object($propiedades) && property_exists($propiedades, 'section_tipo') && $propiedades->section_tipo==='real')
+							? section::get_section_tipo_static($sql_options->section_tipo)
+							: $sql_options->section_tipo;
+
 						$sql_filtro .= " AND (a.$section_tipo_column_name = '$current_section_tipo') "; # Column mode
 					}
 
@@ -418,8 +416,8 @@ class search extends common {
 					
 					}else{
 
-						$RecordObj_dd = new RecordObj_dd($sql_options->section_tipo);
-						$propiedades  = json_decode($RecordObj_dd->get_propiedades());				
+						$RecordObj_dd	= new RecordObj_dd($sql_options->section_tipo);
+						$propiedades	= $RecordObj_dd->get_propiedades(true);
 						if (!is_null($propiedades) && isset($propiedades->filtered_by) && !empty($propiedades->filtered_by) ) {
 							#dump($propiedades->filtered_by, ' propiedades');
 							$propiedades_filtro='';
@@ -889,7 +887,7 @@ class search extends common {
 			#
 			#
 				$result	= JSON_RecordObj_matrix::search_free($strQuery);									
-				if (!is_resource($result)) {					
+				if ($result===false) {
 					trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 					return null;
 				}

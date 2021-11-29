@@ -429,7 +429,7 @@ class tool_import_zotero extends tool_common {
 				# Propiedades : if default dato is set in 'propiedades', save component here
 				# Example: {"filtered_by":{"rsc235":[{"section_tipo":"rsc229","section_id":"2"}]}}
 				$RecordObj_dd = new RecordObj_dd($section_tipo);
-				$propiedades_current_setion = json_decode($RecordObj_dd->get_propiedades());
+				$propiedades_current_setion = $RecordObj_dd->get_propiedades(true);
 				if (isset($propiedades_current_setion->filtered_by)) {
 					
 					$component_tipo	 		= key($propiedades_current_setion->filtered_by);
@@ -753,7 +753,7 @@ class tool_import_zotero extends tool_common {
 		$section_tipo   = ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;	 # rsc205
 		$tipo 			= ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO; # rsc137
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);			
-		$code 			= pg_escape_string($zotero_id);
+		$code 			= pg_escape_string(DBi::_getConnection(), $zotero_id);
 
 		// JSON seach_query_object to search
 		$seach_query_object = '
@@ -817,7 +817,7 @@ class tool_import_zotero extends tool_common {
 		$section_tipo   = ZOTERO_SECTION_TIPO_SERIES_COLECCIONES;		# rsc212 	# Lista de valores Series / Colecciones
 		$tipo 			= ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES;		# rsc214 	# Series / Colecciones (component_input_text)
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);		
-		$serie_name 	= pg_escape_string($zotero_container_title);
+		$serie_name 	= pg_escape_string(DBi::_getConnection(), $zotero_container_title);
 
 		// JSON seach_query_object to search
 		$seach_query_object = '

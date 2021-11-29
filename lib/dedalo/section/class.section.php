@@ -165,7 +165,7 @@ class section extends common {
 
 		// active_section_section_id : Set global var
 			if($modo==='edit'
-			 	&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
+			 	&& (isset($this->section_id) && ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
 				&& !isset(section::$active_section_id) ) {
 
 					// fix active_section_id
@@ -3032,15 +3032,10 @@ class section extends common {
 		$section_map = null;
 		if( isset($ar_children[0]) ) {
 
-			$tipo 			= $ar_children[0];
-			$RecordObj_dd 	= new RecordObj_dd($tipo);
-			$propiedades 	= $RecordObj_dd->get_propiedades();
-
-			if ($section_map  = json_decode($propiedades)) {
-				$section_map  = (object)$section_map;
-			}else{
-				$section_map  = null;
-			}
+			$tipo			= $ar_children[0];
+			$RecordObj_dd	= new RecordObj_dd($tipo);
+			$propiedades	= $RecordObj_dd->get_propiedades(true);
+			$section_map	= $propiedades;
 		}
 		# Store in cache for speed
 		$section_map_cache[$section_tipo] = $section_map;
@@ -3314,7 +3309,7 @@ class section extends common {
 		$query_object->format = 'column';
 
 		$q = $query_object->q;
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		$operator = '=';
 		$q_clean  = str_replace('\"', '', $q);

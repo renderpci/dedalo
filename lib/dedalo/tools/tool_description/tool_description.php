@@ -46,9 +46,8 @@
 			});
 			
 			# Propiedaes
-			$RecordObj_dd 	= new RecordObj_dd($tool_tipo);
-			$propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-				#dump($propiedades, ' propiedades ++ '.to_string());				
+			$RecordObj_dd	= new RecordObj_dd($tool_tipo);
+			$propiedades	= $RecordObj_dd->get_propiedades(true);
 
 			# TOOL CSS / JS MAIN FILES			
 			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";

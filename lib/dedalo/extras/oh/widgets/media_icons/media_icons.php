@@ -2,19 +2,20 @@
 
 	# CONTROLLER
 	
-	
-		$widget_name 			= $this->widget_name;
-		$modo 					= $this->component_info->get_modo();
-		$parent 				= $this->component_info->get_parent();		
-		$section_tipo 			= $this->component_info->get_section_tipo();
-		$data_source 			= $this->data_source;
-		$component_portal_tipo 	= key($data_source);
-		$media_component_tipo 	= reset($data_source);		
+		$widget_name				= $this->widget_name;
+		$modo						= $this->component_info->get_modo();
+		$parent						= $this->component_info->get_parent();
+		$section_tipo				= $this->component_info->get_section_tipo();
+		$data_source				= $this->data_source;
+		// $component_portal_tipo	= key($data_source); // deprecated PHP>=8.1
+		$component_portal_tipo		= array_key_first(get_object_vars($data_source));
+		// $media_component_tipo	= reset($data_source); // deprecated PHP>=8.1
+		$media_component_tipo		= $data_source->{$component_portal_tipo} ?? null;
 
 		// overwrite modo if widget_mode exists (export case)
 			if (!empty($widget_mode)) {
-			 	$modo  = $widget_mode;
-			 } 
+			 	$modo = $widget_mode;
+			 }
 
 		$filename = $modo;
 
@@ -49,7 +50,7 @@
 																  'list',
 																  DEDALO_DATA_NOLAN,
 																  $section_tipo);
-					$ar_locators = $component->get_dato();						
+					$ar_locators = $component->get_dato();
 				}
 				#dump($ar_locators, ' ar_locators ++ '.to_string());
 

@@ -200,8 +200,8 @@ class menu extends common {
 
 		if ($modelo_name==='section_tool') {
 
-			$RecordObj_dd = new RecordObj_dd($tipo);
-			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+			$RecordObj_dd	= new RecordObj_dd($tipo);
+			$propiedades	= $RecordObj_dd->get_propiedades(true);
 			if ($propiedades && isset($propiedades->context)) {
 				$url = "{$path}?t={$tipo}&top_tipo={$propiedades->context->top_tipo}";
 			}

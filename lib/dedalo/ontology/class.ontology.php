@@ -130,8 +130,8 @@ class ontology {
 				$item->translatable = $RecordObj_dd->get_traducible()==='si';
 			}
 			if ($options->propiedades===true) {
-				$propiedades = $RecordObj_dd->get_propiedades();
-				$item->propiedades = json_decode($propiedades); // stored as string in DDBB
+				$propiedades = $RecordObj_dd->get_propiedades(true);
+				$item->propiedades = $propiedades; // stored as string in DDBB
 			}
 			if ($options->properties===true) {
 				$item->properties = $RecordObj_dd->get_properties();

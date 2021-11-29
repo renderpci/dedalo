@@ -1517,23 +1517,19 @@ class hierarchy {
 
 
 		# If element exists (section_map) we get element 'propiedades' json value as array
-		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
 		if (isset($ar_children[0])) {
 
 			$section_map_tipo = $ar_children[0];
 
 			# relation map
-			$RecordObj_dd    = new RecordObj_dd($section_map_tipo);
-			$ar_propiedades  = json_decode($RecordObj_dd->get_propiedades());
-				#dump($ar_elements, ' ar_elements ++ '.to_string());
+			$RecordObj_dd	= new RecordObj_dd($section_map_tipo);
+			$ar_propiedades	= $RecordObj_dd->get_propiedades(true);
 
 			$ar_elements = (array)$ar_propiedades;
-			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
 		}
 
 		# Set static var for reuse
 		$section_map_elemets[$section_tipo] = $ar_elements;
-		#debug_log(__METHOD__." ar_elements $section_tipo - ".to_string($ar_elements), logger::DEBUG);
 
 		return (array)$ar_elements;
 	}//end get_section_map_elemets

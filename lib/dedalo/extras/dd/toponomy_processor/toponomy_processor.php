@@ -185,7 +185,7 @@ function process_topo() {
 						mix.section_tipo=\'es1\' 
 						--OR mix.section_tipo=\'fr1\'
 						) AND (
-						f_unaccent(mix.datos#>>\'{components,hierarchy25,dato}\') ~* f_unaccent(\'.*\[".*'.pg_escape_string($dato).'.*\')
+						f_unaccent(mix.datos#>>\'{components,hierarchy25,dato}\') ~* f_unaccent(\'.*\[".*'.pg_escape_string(DBi::_getConnection(), $dato).'.*\')
 						)
 						ORDER BY mix.section_id ASC
 						LIMIT 10

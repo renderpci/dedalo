@@ -850,8 +850,8 @@ class component_portal extends component_relation_common {
 							# Use related terms as new list
 							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
 							# Fix / set current edit_view propiedades to portal propiedades
-							$RecordObj_dd 			= new RecordObj_dd($current_term);
-							$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
+							$RecordObj_dd			= new RecordObj_dd($current_term);
+							$edit_view_propiedades	= $RecordObj_dd->get_propiedades(true);
 							# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());
 							if ( isset($edit_view_propiedades->edit_view_options) ) {
 								$this->edit_view_options = $edit_view_propiedades->edit_view_options;

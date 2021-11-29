@@ -1969,16 +1969,16 @@ class component_relation_common extends component_common {
 
 				#$uid = $locator->section_tipo.'_'.$locator->section_id;
 
-				$value = end($item);
+				$item_array	= get_object_vars($item);
+				$value		= end($item_array) ?? '';
 
 				// locators case (like component_select)
 				if (strpos($value, '[{')===0 && !isset($propiedades->valor_arguments)) {
 					$ar_locators = json_decode($value);
 					foreach ((array)$ar_locators as $locator) {
 
-						$label = ts_object::get_term_by_locator( $locator, $lang, true );
+						$label = ts_object::get_term_by_locator( $locator, $lang, true ) ?? '';
 						$label = strip_tags(trim($label));
-
 
 						$uid = $locator->section_tipo.'_'.$locator->section_id;
 
@@ -1994,10 +1994,12 @@ class component_relation_common extends component_common {
 				// resolved string case (like component_portal)
 				}else{
 
-					$label = strip_tags(trim($value));
-					if ($label==='[]') {
-						$label = 'not defined';
-					}
+					$label = !empty($value)
+						? strip_tags(trim($value))
+						: '';
+						if ($label==='[]') {
+							$label = 'not defined';
+						}
 
 					// Override label with custom component parse
 					if (isset($propiedades->stats_look_at) && isset($propiedades->valor_arguments)) {

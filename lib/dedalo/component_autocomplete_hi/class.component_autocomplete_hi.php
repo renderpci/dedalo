@@ -511,8 +511,9 @@ class component_autocomplete_hi extends component_relation_common {
 			case 'hierarchy':
 				foreach ((array)$ar_value as $hs_section_tipo) {
 
-					$current_key 	= $hs_section_tipo;
-					$current_label 	= strip_tags(RecordObj_dd::get_termino_by_tipo($hs_section_tipo, DEDALO_DATA_LANG, true, true));
+					$current_key	= $hs_section_tipo;
+					$current_label	= RecordObj_dd::get_termino_by_tipo($hs_section_tipo, DEDALO_DATA_LANG, true, true) ?? '';
+					$current_label	= strip_tags($current_label);
 					if (empty($current_label)) {
 						$current_label = $hs_section_tipo .' (!)';
 					}

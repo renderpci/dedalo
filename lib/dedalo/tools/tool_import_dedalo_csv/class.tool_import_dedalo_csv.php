@@ -234,8 +234,8 @@ class tool_import_dedalo_csv extends tool_common {
 																  $section_tipo,
 																  false);
 
-				$propiedades 		= json_decode($RecordObj_dd->get_propiedades());
-				$with_lang_versions = isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;
+				$propiedades		= $RecordObj_dd->get_propiedades(true);
+				$with_lang_versions	= isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;
 
 				# Configure component
 					# DIFFUSION_INFO

@@ -43,7 +43,7 @@ class component_input_text extends component_common {
 
 			if ($dato_first_character==='[' && $dato_last_character===']') {
 				# dato is json encoded
-				$dato = json_handler::decode($dato_trim);
+				$dato = json_decode($dato_trim);
 			}else{
 				# dato is string plain value
 				$dato = array($dato);
@@ -186,7 +186,7 @@ class component_input_text extends component_common {
 
 		# Add value of current lang to nolan data
 			$RecordObj_dd = new RecordObj_dd($tipo);
-			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+			$propiedades  = $RecordObj_dd->get_propiedades(true);
 			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
 
 				$component 			= component_common::get_instance(__CLASS__,
@@ -451,7 +451,7 @@ class component_input_text extends component_common {
 		# Always set fixed values
 		$query_object->type = 'string';
 
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 

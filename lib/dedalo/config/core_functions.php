@@ -941,6 +941,10 @@ function ip_in_range($ip, $range) {
 
 function br2nl($string) {
 
+	if (empty($string)) {
+		return '';
+	}
+
 	return str_replace( array('<br>','<br />'), "\n", $string );
 }
 
@@ -1214,18 +1218,18 @@ function safe_sql_query($sql_query) {
  */
 $sessiondb = null;
 function session_start_manager($request_options) {
-global $sessiondb;
+	global $sessiondb;
 	#if (session_status()===PHP_SESSION_ACTIVE) return false;
 
 	$options = new stdClass();
-		$options->save_handler 			= 'files';
-		$options->timeout_seconds 		= 1400;
-		$options->probability 			= 100;
-		$options->cookie_path 			= '/';
-		$options->cookie_domain 		= null;
-		$options->save_path 			= false; # /tmp/php
+		$options->save_handler				= 'files';
+		$options->timeout_seconds			= 1400;
+		$options->probability					= 100;
+		$options->cookie_path					= '/';
+		$options->cookie_domain				= '';
+		$options->save_path						= false; # /tmp/php
 		$options->aditional_save_path	= false; # /session_custom_sec
-		$options->session_name			= false;
+		$options->session_name				= false;
 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 	switch ($options->save_handler) {
@@ -1239,10 +1243,10 @@ global $sessiondb;
 			break;
 
 		case 'files':
-			$timeout 	 	= $options->timeout_seconds;
-			$probability 	= $options->probability;
-			$cookie_path 	= $options->cookie_path;
-			$cookie_domain 	= $options->cookie_domain;
+			$timeout				= $options->timeout_seconds;
+			$probability		= $options->probability;
+			$cookie_path		= $options->cookie_path;
+			$cookie_domain	= $options->cookie_domain;
 
 			// Set lifetime of cache (this no affect to session duration)
 			session_cache_expire( intval($timeout*60) ); 	#in minutes (*60)	Default php usually : 180
@@ -1417,6 +1421,11 @@ function format_size_units($bytes) {
 
 
 function encodeURIComponent($str) {
+
+		if (empty($str)) {
+			return '';
+		}
+
     $revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
 
     return strtr(rawurlencode($str), $revert);

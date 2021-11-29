@@ -2375,7 +2375,7 @@ class component_text_area extends component_common {
 		$query_object->type = 'string';
 
 		$q = $query_object->q;
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		switch (true) {
 			# IS NULL

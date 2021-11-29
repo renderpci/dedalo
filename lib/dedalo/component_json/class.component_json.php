@@ -115,7 +115,7 @@ class component_json extends component_common {
 		$query_object->type = 'string';
 		$query_object->unaccent = false;
 
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 

@@ -301,9 +301,8 @@ abstract class diffusion  {
 				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
 				foreach ($ar_childrens as $current_children) {
 
-				 	$RecordObj_dd = new RecordObj_dd($current_children);
-					$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );
-						#dump($propiedades, ' propiedades '.$current_children);
+					$RecordObj_dd	= new RecordObj_dd($current_children);
+					$propiedades	= $RecordObj_dd->get_propiedades(true);
 
 					if ($propiedades && property_exists($propiedades->diffusion, 'class_name') && $propiedades->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
@@ -450,7 +449,7 @@ abstract class diffusion  {
 			foreach ($ar_diffusion_element_tipo as $element_tipo) {
 
 				$RecordObj_dd = new RecordObj_dd($element_tipo);
-					$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+					$propiedades  = $RecordObj_dd->get_propiedades(true);
 					$diffusion_class_name = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : null;
 					$name = RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
 

@@ -128,10 +128,14 @@ class component_email extends component_common {
 	*/
 	public static function clean_email($email) {
 
+		if (empty($email)) {
+			return '';
+		}
+
 		$email = trim($email);
 
 		if (!empty($email)) {
-			$email = preg_replace('=((<CR>|<LF>|0x0A/%0A|0x0D/%0D|\\n|\\r|\'|\")\S).*=i', null, $email);
+			$email = preg_replace('=((<CR>|<LF>|0x0A/%0A|0x0D/%0D|\\n|\\r|\'|\")\S).*=i', '', $email);
 		}
 
 		return $email;
@@ -156,7 +160,7 @@ class component_email extends component_common {
 		# Always set fixed values
 		$query_object->type = 'string';
 
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 

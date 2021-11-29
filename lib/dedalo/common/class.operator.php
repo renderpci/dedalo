@@ -164,10 +164,9 @@
 		}
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
 			
-			$RecordObj_dd 	= new RecordObj_dd($current_terminoID);			
-			$propiedades 	= $RecordObj_dd->get_propiedades();
-
-			$vars_obj 		= json_decode($propiedades);
+			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
+			$propiedades	= $RecordObj_dd->get_propiedades(true);
+			$vars_obj		= $propiedades;
 
 			# No data in field 'propiedades'
 			if(empty($vars_obj) || empty($vars_obj->SQL_operator)) {

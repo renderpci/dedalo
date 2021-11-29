@@ -150,7 +150,9 @@
 			# TC DURATION
 			switch ($media_component_modelo_name) {
 				case 'component_av':					
-					$html .= "<div class=\"duration_tc\">". str_replace('.000', '', $tc) ."</div>";
+					$html .= '<div class="duration_tc">';
+					$html .= isset($tc) ? (str_replace('.000', '', $tc)) : '';
+					$html .= '</div>';
 					break;
 				
 				default:

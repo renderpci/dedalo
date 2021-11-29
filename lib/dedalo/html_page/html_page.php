@@ -238,13 +238,11 @@
 
 	#
 	# PAGE TITLE
-		if (strpos($modo, 'tool_')===0){
-			$page_title = label::get_label($modo);
-		}else{
-			$page_title = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
-		}
-		
-		$page_title = strip_tags($page_title);
+		$page_title = (strpos($modo, 'tool_')===0)
+			? label::get_label($modo)
+			: RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
+
+		$page_title = $page_title ? strip_tags($page_title) : '';
 		
 		if (!empty($id)) {
 			$page_title .= " $id";

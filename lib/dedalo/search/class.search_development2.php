@@ -211,7 +211,7 @@ class search_development2 {
 		$parsed_time = round(microtime(1)-$start_time,3);
 
 		$result	= JSON_RecordObj_matrix::search_free($sql_query);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $sql_query");
 			return null;
 		}
@@ -573,12 +573,16 @@ class search_development2 {
 			if (!property_exists($search_object, 'path')) {
 
 				// Case object is a group
-				$op2 		= key($search_object);
-				$ar_value2 	= $search_object->$op2;
+				// $op2		= key($search_object); // deprecated PHP>=8.1
+				$op2		= array_key_first(get_object_vars($search_object));
+				$ar_value2	= $search_object->$op2;
 
 				$ar_elements = self::conform_search_query_object($op2, $ar_value2);
 				#debug_log(__METHOD__." ar_elements $op - ".to_string($ar_elements), logger::DEBUG);
-				if (!empty(reset($ar_elements))) {
+
+				// if (!empty(reset($ar_elements))) {  // deprecated PHP>=8.1
+				$ar_elements_array = get_object_vars($ar_elements);
+				if (!empty(reset($ar_elements_array))) {
 					$new_ar_query_object->$op[] = $ar_elements;
 				}
 
@@ -1887,7 +1891,9 @@ class search_development2 {
 
 		if (!empty($this->search_query_object->filter)) {
 
-			$operator = key($this->search_query_object->filter);
+			// $operator	= key($this->search_query_object->filter); // deprecated PHP>=8.1
+			$operator		= array_key_first(get_object_vars($this->search_query_object->filter));
+
 			$ar_value = $this->search_query_object->filter->{$operator};
 			if(!empty($ar_value)) {
 
@@ -1967,7 +1973,8 @@ class search_development2 {
 		foreach ($ar_value as $key => $search_object) {
 
 			// operator ? check
-			$op2 = key($search_object);
+				// $op2	= key($search_object); // deprecated PHP>=8.1
+				$op2	= array_key_first(get_object_vars($search_object));
 
 			if ($op2==='$or_link') {
 
@@ -1983,7 +1990,9 @@ class search_development2 {
 			#if (!property_exists($search_object,'path')) {
 			if ($op2==='$or' || $op2==='$and') {
 				# Case operator
-				$real_op 	= key($search_object);
+				// $real_op	= key($search_object); // deprecated PHP>=8.1
+				$real_op	= array_key_first(get_object_vars($search_object));
+
 				$ar_value2 	= $search_object->{$real_op};
 
 				$sql_operator2 = strtoupper( substr($op2, 1) );
@@ -2033,7 +2042,9 @@ class search_development2 {
 
 		if (!empty($this->having_query_object)) {
 
-			$operator 	= key($this->having_query_object);
+			// $operator	= key($this->having_query_object); // deprecated PHP>=8.1
+			$operator		= array_key_first(get_object_vars($this->having_query_object));
+
 			$ar_value 	= $this->having_query_object->{$operator};
 			// exec to add all search_objects to '$this->having_search_objects' and count later
 			$this->filter_parser_having($operator, $ar_value);
@@ -2066,7 +2077,9 @@ class search_development2 {
 		foreach ($ar_value as $key => $search_object) {
 
 			// operator ? check
-			$op2 = key($search_object);
+				// $op2 = key($search_object); // deprecated PHP>=8.1
+				$op2	= array_key_first(get_object_vars($search_object));
+
 
 			if ($op2==='$or_link') {
 
@@ -2410,7 +2423,7 @@ class search_development2 {
 				// Escape parenthesis inside regex
 				$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
 				$sql_where .= $q_parsed_clean;
-				#$sql_where .= pg_escape_string(stripslashes($search_object->q_parsed));
+				#$sql_where .= pg_escape_string(DBi::_getConnection(), stripslashes($search_object->q_parsed));
 
 				if($search_object_unaccent===true) {
 					$sql_where .= ')';
@@ -2516,7 +2529,9 @@ class search_development2 {
 			$group_query = [];
 			foreach ($group_elements as $search_unit) {
 
-				if (strpos(key($search_unit),'$')!==false) {
+				// if (strpos(key($search_unit),'$')!==false) { // deprecated PHP>=8.1
+				$current_key = array_key_first(get_object_vars($search_unit));
+				if (strpos($current_key,'$')!==false) {
 
 					// Recursion
 					$sql_query = self::resolve_array_elements($search_unit, $component_tipo);
@@ -2841,7 +2856,7 @@ class search_development2 {
 		}
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 			return null;
 		}
@@ -2920,7 +2935,7 @@ class search_development2 {
 			}
 
 		$result	= JSON_RecordObj_matrix::search_free($sql_query);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $sql_query");
 			return null;
 		}
@@ -3467,7 +3482,7 @@ class search_development2 {
 		// Find existing preset
 		$strQuery = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.' WHERE (section_tipo = \''.$section_tipo.'\') '.PHP_EOL.'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL.'LIMIT 1;';
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 			return null;
 		}
@@ -3668,7 +3683,7 @@ class search_development2 {
 		';
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		if (!is_resource($result)) {
+		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 			return null;
 		}

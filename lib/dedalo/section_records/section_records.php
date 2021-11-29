@@ -69,9 +69,9 @@
 				$section_list_tipo 	= null;
 				$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'section_list');
 				if (!empty($ar_section_list[0])) {
-					$section_list_tipo = $ar_section_list[0];
-					$RecordObj_dd = new RecordObj_dd($section_list_tipo);
-					$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+					$section_list_tipo	= $ar_section_list[0];
+					$RecordObj_dd		= new RecordObj_dd($section_list_tipo);
+					$propiedades		= $RecordObj_dd->get_propiedades(true);
 				}
 				$this->section_list_tipo = $section_list_tipo;
 				$this->propiedades 		 = $propiedades;

@@ -137,7 +137,7 @@
 
 
 				$RecordObj_dd = new RecordObj_dd($tipo);
-				$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+				$propiedades  = $RecordObj_dd->get_propiedades(true);
 				if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
 					
 					$component 			= component_common::get_instance($component_name,

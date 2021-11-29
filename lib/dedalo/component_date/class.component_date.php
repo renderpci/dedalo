@@ -876,7 +876,7 @@ class component_date extends component_common {
 
 		$component_tipo = end($query_object->path)->component_tipo;
         $RecordObj   	= new RecordObj_dd($component_tipo);
-        $propiedades 	= json_decode($RecordObj->get_propiedades());
+        $propiedades 	= $RecordObj->get_propiedades(true);
         $date_mode 	 	= isset($propiedades->date_mode) ? $propiedades->date_mode : 'date';
         	#dump($query_object, ' date_mode ++ '.to_string($date_mode));
 
@@ -1216,32 +1216,24 @@ class component_date extends component_common {
 		$tipo_de_dato_order = 'dato';
 
 		$RecordObj_dd 	= new RecordObj_dd($search_tipo);
-		$propiedades 	= $RecordObj_dd->get_propiedades();
+		$propiedades 	= $RecordObj_dd->get_propiedades(true);
 
-		$propiedades = json_decode($propiedades);
-
-		//dump($propiedades	, ' propiedades ++ '.to_string());
-
-		if (isset($propiedades->date_mode)) {
-					$date_mode = $propiedades->date_mode; // Default from structure if is defined
-				}else{
-					$date_mode = 'date'; // Default
-		}
-
+		$date_mode = $propiedades->date_mode ?? 'date';
 		switch ($date_mode) {
 			case 'range':
 				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'start'->'time' ".$order_direction;
-			break;
+				break;
 
 			case 'period':
 				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'period'->'time' ".$order_direction;
-			break;
+				break;
 
 			case 'date':
+			default:
 				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'start'->'time' ".$order_direction;
 				//PREVIOUS TO 4.9.1
 				//$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'time' ".$order_direction;
-			default:
+				break;
 		}
 
 

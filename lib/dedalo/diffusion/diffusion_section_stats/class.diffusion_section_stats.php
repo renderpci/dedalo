@@ -2057,8 +2057,7 @@ class diffusion_section_stats extends diffusion {
 		// 					# PORTAL : CASO PORTALES (El tipo es referido por 'portal_list' y definido en propiedades del puntero)
 		// 					if ($related_component_modelo=='component_portal') {
 		// 						$RecordObj_dd 	= new RecordObj_dd($stats_tipo);
-		// 						$propiedades 	= $RecordObj_dd->get_propiedades();
-		// 						$propiedades 	= json_decode($propiedades);
+		// 						$propiedades 	= $RecordObj_dd->get_propiedades(true);
 
 		// 						$related_component_tipo = $propiedades->portal_list[0];
 		// 							#dump($related_component_tipo,'$related_component_tipo');
@@ -2068,8 +2067,7 @@ class diffusion_section_stats extends diffusion {
 		// 					#dump($current_modelo,'current_modelo '." $key - ". print_r($stats_tipo,true ) );
 
 		// 				$RecordObj_dd 	= new RecordObj_dd($stats_tipo);
-		// 				$propiedades 	= $RecordObj_dd->get_propiedades();
-		// 				$propiedades 	= json_decode($propiedades);
+		// 				$propiedades 	= $RecordObj_dd->get_propiedades(true);
 		// 					#dump($propiedades,'propiedades');
 
 		// 				$ar_map_related[$related_component_tipo] = array( 'modelo' => $current_modelo, 'propiedades' => $propiedades );

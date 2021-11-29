@@ -350,12 +350,16 @@ class tool_diffusion {
 			$response->msg 		= __METHOD__. ' Error. Request failed';
 
 
-		$RecordObj_dd = new RecordObj_dd($diffusion_element_tipo);
-		$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );		
-		$schema_obj   = isset($propiedades->publication_schema) ? $propiedades->publication_schema : false;
-		if (!$schema_obj) {
-			return $response;
-		}
+		$RecordObj_dd	= new RecordObj_dd($diffusion_element_tipo);
+		$propiedades	= $RecordObj_dd->get_propiedades(true);
+		$schema_obj		= (is_object($propiedades) && isset($propiedades->publication_schema))
+			? $propiedades->publication_schema
+			: false;
+
+		// no propiedades                                                                                                                                                                                         configurated case
+			if (!$schema_obj) {
+				return $response;
+			}
 
 		$class_name   = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;		
 

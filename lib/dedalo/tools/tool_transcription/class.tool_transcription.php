@@ -112,7 +112,7 @@ class tool_transcription extends tool_common {
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
 			return $response;			
 		}else{
-			$transcription_engine = trim(shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE));
+			$transcription_engine = shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE);
 			if (empty($transcription_engine)) {
 				$response->result = 'error';
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: daemon engine not found";

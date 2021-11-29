@@ -3913,14 +3913,14 @@ abstract class component_common extends common {
 		$start_time=microtime(1);
 
 		$options = new stdClass();
-			$options->q 	 			= null;
+			$options->q					= null;
 			$options->q_operator		= null;
 			$options->q_split			= null;
-			$options->limit  			= 10;
-			$options->offset 			= 0;
-			$options->lang 				= 'all';
-			$options->logical_operator 	= '$or';
-			$options->id 				= 'temp';
+			$options->limit				= 10;
+			$options->offset			= 0;
+			$options->lang				= 'all';
+			$options->logical_operator	= '$or';
+			$options->id				= 'temp';
 			$options->section_tipo		= null;
 			$options->add_filter		= true;
 			$options->tipo				= null;
@@ -3936,8 +3936,8 @@ abstract class component_common extends common {
 		$filter_group = null;
 		$select_group = array();
 
-		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
-		$component_tipo_properties 	= $RecordObj_dd_component_tipo->get_propiedades(true);
+		$RecordObj_dd				= new RecordObj_dd($tipo);
+		$component_tipo_properties	= $RecordObj_dd->get_propiedades(true);
 
 		// source. get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
 			if(isset($component_tipo_properties->source->search)){
@@ -4370,7 +4370,7 @@ abstract class component_common extends common {
 		// Exec search
 			$search_development2 = new search_development2($search_query_object);
 			$rows_data 		 	 = $search_development2->search();
-			$ar_records 		 = $rows_data->ar_records;
+			$ar_records 		 = $rows_data->ar_records ?? [];
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -4696,7 +4696,9 @@ abstract class component_common extends common {
 			$ar_clean = [];
 	        foreach ($result->ar_records as $key => $item) {
 
-	        	$value = end($item);
+				// $value	= end($item); //deprecated PHP>=8.1
+				$item_array	= get_object_vars($item);
+				$value		= end($item_array) ?? '';
 
 	        	// Override label with custom component parse
 	        		if (isset($propiedades->valor_arguments)) {
@@ -4716,9 +4718,7 @@ abstract class component_common extends common {
 
 				$ar_clean[$uid]->count++;
 				$ar_clean[$uid]->value = $label;
-
 			}
-			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
 
 
 		return $ar_clean;

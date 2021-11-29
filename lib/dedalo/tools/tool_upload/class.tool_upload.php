@@ -314,7 +314,7 @@ class tool_upload extends tool_common {
 
 				#
 				# POSTPROCESSING_FILE : Procesos a activar tras la carga del archivo
-				$postprocessing_result = $this->postprocessing_file($component_name, $SID, $quality, $response);
+				$postprocessing_result = $this->postprocessing_file($component_name, $SID, $quality, $response) ?? '';
 				# POSTPROCESSING_FILE NOTIFICATIONS
 				if ( strpos( strtolower($postprocessing_result), 'error')!==false || strpos( strtolower($postprocessing_result), 'exception')!==false ) {
 					$html .= "<div class=\"warning\">";

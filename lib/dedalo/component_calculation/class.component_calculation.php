@@ -1216,7 +1216,7 @@ class component_calculation extends component_common {
 		$query_object->type = 'string';
 
 		$q = $query_object->q;
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 	
 

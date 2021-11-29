@@ -65,7 +65,7 @@ class diffusion_sql extends diffusion  {
 			foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
 
 				$RecordObj_dd = new RecordObj_dd($current_table_tipo);
-				$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );
+				$propiedades  = $RecordObj_dd->get_propiedades(true);
 					#dump($propiedades, ' propiedades ++ '.to_string());
 				if (isset($propiedades->ar_tables)) {
 					$options = new stdClass();
@@ -113,8 +113,8 @@ class diffusion_sql extends diffusion  {
 
 		# Table propiedades SCHEMA optional
 		# $RecordObj_dd 	  = new RecordObj_dd($table_tipo);
-		# $str_propiedades  = $RecordObj_dd->get_propiedades();
-		# if($propiedades = json_decode($str_propiedades)) {
+		# $str_propiedades  = $RecordObj_dd->get_propiedades(true);
+		# if($propiedades) {
 		# 	if (isset($propiedades->schema)) {
 		# 		self::save_table_schema(  $database_name, $table_name, $propiedades->schema );
 		# 	}
@@ -185,8 +185,8 @@ class diffusion_sql extends diffusion  {
 				default:
 					#
 					# FIELD
-					$RecordObj_dd 	= new RecordObj_dd($curent_children_tipo);
-					$propiedades 	= json_decode($RecordObj_dd->get_propiedades());
+					$RecordObj_dd	= new RecordObj_dd($curent_children_tipo);
+					$propiedades	= $RecordObj_dd->get_propiedades(true);
 						#dump($propiedades, ' propiedades');
 
 					switch (true) {
@@ -2552,8 +2552,8 @@ class diffusion_sql extends diffusion  {
 			#}
 
 			# Propiedades
-			$table_obj 			= new RecordObj_dd($current_table_tipo);
-			$table_propiedades 	= json_decode($table_obj->get_propiedades());
+			$RecordObj_dd		= new RecordObj_dd($current_table_tipo);
+			$table_propiedades	= $RecordObj_dd->get_propiedades(true);
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
 			switch ($modelo_name) {
@@ -2608,16 +2608,16 @@ class diffusion_sql extends diffusion  {
 
 						if (empty($table_propiedades)) {
 							# Try with real table when alias is empty
-							$table_obj 			= new RecordObj_dd($real_table);
-							$table_propiedades 	= json_decode($table_obj->get_propiedades());
+							$RecordObj_dd		= new RecordObj_dd($real_table);
+							$table_propiedades	= $RecordObj_dd->get_propiedades(true);
 						}
 						$data = new stdClass();
-							$data->table 		= $real_table;
-							$data->name  		= $name;
-							$data->database_name= $database_name;
-							$data->database_tipo= $database_tipo;
-							$data->propiedades  = $table_propiedades;
-							$data->from_alias 	= $current_table_tipo;
+							$data->table			= $real_table;
+							$data->name				= $name;
+							$data->database_name	= $database_name;
+							$data->database_tipo	= $database_tipo;
+							$data->propiedades		= $table_propiedades;
+							$data->from_alias		= $current_table_tipo;
 
 						$diffusion_element_tables_map->$section_tipo = $data;
 					}else{
@@ -2631,7 +2631,7 @@ class diffusion_sql extends diffusion  {
 					$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
 
 					$RecordObj_dd = new RecordObj_dd($current_table_tipo);
-					$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+					$propiedades  = $RecordObj_dd->get_propiedades(true);
 					$thesaurus_ar_prefix = isset($propiedades->diffusion->thesaurus_ar_prefix) ? $propiedades->diffusion->thesaurus_ar_prefix : array();
 
 					$section_tipo = 'thesaurus';

@@ -64,7 +64,7 @@ class tool_import_kml extends tool_common {
 
 		$RecordObj_dd = new RecordObj_dd($this->button_import_tipo);
 		# Fix tool propiedades from button propiedades
-		$this->button_import_propiedades = json_decode($RecordObj_dd->get_propiedades());
+		$this->button_import_propiedades = $RecordObj_dd->get_propiedades(true);
 
 		# Set tool vars
 		#$this->kml_vars = $kml_vars;

@@ -2,22 +2,22 @@
 	
 	# CONTROLLER
 
-	$tipo 					= $this->get_tipo();
-	$parent 				= $this->get_parent();
+	$tipo					= $this->get_tipo();
+	$parent					= $this->get_parent();
 	$modo					= $this->get_modo();
 	$lang					= $this->get_lang();
-	$section_tipo 			= $this->get_section_tipo();
+	$section_tipo			= $this->get_section_tipo();
 	$propiedades			= $this->get_propiedades();	
-	$dato 					= $this->get_dato();
+	$dato					= $this->get_dato();
 	$valor					= $this->get_valor();
-	$dato_reference_lang 	= null;
-	$traducible 			= $this->get_traducible();
-	$label 					= $this->get_label();
+	$dato_reference_lang	= null;
+	$traducible				= $this->get_traducible();
+	$label					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= trim( $this->get_def() ); // "Info about $tipo";
+	$html_title				= $this->get_def(); // "Info about $tipo";
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();

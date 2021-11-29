@@ -95,7 +95,7 @@ class component_ip extends component_common {
 		$query_object->component_path[] = 'lg-nolan';
 
 		$q = $query_object->q;
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
         switch (true) {
         	# IS NULL

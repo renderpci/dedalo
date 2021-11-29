@@ -63,7 +63,7 @@ class tool_posterframe extends tool_common {
 		foreach ($ar_portals_tipo as $portal_tipo) {
 			
 			$RecordObj_dd = new RecordObj_dd($portal_tipo);
-			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+			$propiedades  = $RecordObj_dd->get_propiedades(true);
 			if ($propiedades && isset($propiedades->identifying_image)) {
 				return array('section_id' 		=> $section_id,
 							 'section_tipo' 	=> $section_tipo,

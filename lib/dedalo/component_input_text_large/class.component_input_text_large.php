@@ -64,7 +64,7 @@ class component_input_text_large extends component_common {
     	# Always set fixed values
 		$query_object->type = 'string';
 		
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		
         switch (true) {

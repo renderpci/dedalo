@@ -234,8 +234,8 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 						case ($modelo_name==='section_tool') :
 
 								# Confiure section from section_tool data
-								$RecordObj_dd = new RecordObj_dd($tipo);
-								$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+								$RecordObj_dd	= new RecordObj_dd($tipo);
+								$propiedades	= $RecordObj_dd->get_propiedades(true);
 									#dump($propiedades->context->target_section_tipo, ' propiedades ++ '.to_string());
 
 								$section_tipo = $propiedades->context->target_section_tipo;

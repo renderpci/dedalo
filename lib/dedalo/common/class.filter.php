@@ -88,20 +88,19 @@ abstract class filter {
 
 		# projects_name_tipo
 		# Get ts_map for locate name component (for future )
-		$RecordObj_dd = new RecordObj_dd($section_map);
-		$propiedades  = $RecordObj_dd->get_propiedades();
-		if (!$propiedades_obj = json_decode($propiedades)) {
+		$RecordObj_dd	= new RecordObj_dd($section_map);
+		$propiedades	= $RecordObj_dd->get_propiedades(true);
+		if (empty($propiedades)) {
 			dump($propiedades, ' propiedades ++ '.to_string($section_map));
 			throw new Exception("Error Processing Request. Propiedades for section_map: $section_map is empty !", 1);				
 		}
-		$projects_name_tipo = $propiedades_obj->thesaurus->term;
-			#dump($projects_name_tipo, ' projects_name_tipo ++ '.to_string());
+		$projects_name_tipo = $propiedades->thesaurus->term;
 
 		$filter = '';
 	
 		# User loged now
-		$user_id 		 = navigator::get_user_id();
-		$is_global_admin = component_security_administrator::is_global_admin($user_id);
+		$user_id			= navigator::get_user_id();
+		$is_global_admin	= component_security_administrator::is_global_admin($user_id);
 		if ($is_global_admin===false) {
 			# filter_master
 			$component_filter_master = component_common::get_instance('component_filter_master',
