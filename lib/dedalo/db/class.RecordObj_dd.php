@@ -196,7 +196,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param bool $json_decode
 	* @return object / string parent::$propiedades
 	*/
-	public function get_properties($json_decode=false) {
+	public function get_properties($json_decode=true) {
 
 		$properties = parent::get_properties();
 		if(is_null($properties)) {
