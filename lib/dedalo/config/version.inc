@@ -2560,6 +2560,8 @@
 		Unlocked Ontology obs field to allow manual remove old values
 		Removed component_filter unused methods
 		Fixed component_filter stats error when project values was not calculated correctly
+		29-11-2021
+		Fixed PHP 8.1 deprecated and more strict code issues
 
 
 	[/HISTORY]
@@ -2585,13 +2587,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3f';
+	$DEDALO_VERSION = '5.8.3g';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '26-11-2021');
+	define('DEDALO_BUILD'	, '29-11-2021');
 
 
 	/*
