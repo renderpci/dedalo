@@ -68,12 +68,10 @@ $terminoID = trim($terminoID);
 
 
 # Consultamos si está relacionado
-	$verificarTR = count(RecordObj_dd::get_ar_terminos_relacionados($terminoID)); #$ts->verificarTR($terminoID);	
-	if($verificarTR >0){
-		$hasRelation = 'si';
-	}else{
-		$hasRelation = 'no';
-	}
+	$verificarTR	= count(RecordObj_dd::get_ar_terminos_relacionados($terminoID));
+	$hasRelation	= ($verificarTR >0)
+		? 'si'
+		: 'no';
 
 # Hijos del término actual
 	$hijosArray		= $RecordObj_dd->get_ar_childrens_of_this();
@@ -83,7 +81,7 @@ $terminoID = trim($terminoID);
 
 
 # Array de padres
-$ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();			#dump($ar_parents_of_this); die();
+$ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();
 
 
 	# DESCRIPTORS (matrix_tesauro) Data from current descriptor

@@ -2562,6 +2562,7 @@
 		Fixed component_filter stats error when project values was not calculated correctly
 		29-11-2021
 		Fixed PHP 8.1 deprecated and more strict code issues
+		Fixed error in Ontology RecordObj_dd->get_properties. Now default param 'json_decode' is restored to true
 
 
 	[/HISTORY]
