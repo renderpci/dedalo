@@ -157,7 +157,7 @@ class free_node {
 			$delete_options->delete_note   		= true;
 			$delete_options->delete_struct 		= true;
 			$delete_options->delete_reference 	= true;
-		$raw_text_sure = TR::deleteMarks($raw_text_sure, $delete_options); // Force delete  tags
+		// $raw_text_sure = TR::deleteMarks($raw_text_sure, $delete_options); // Force delete  tags
 		$raw_text_sure = html_entity_decode($raw_text_sure);
 
 		$reel_fragments = array();
