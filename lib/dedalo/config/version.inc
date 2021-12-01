@@ -2568,6 +2568,10 @@
 		Fixed error in publication class free_node::get_free_fragments where marks were erased before indexation tags calculation
 		Added missing property 'fragment_terms' on publication method get_fragment_from_index_locator
 		Updated Publication API swagger JSON file to 1.0.19
+		Add SAML error log info to easy follow user login errors
+		Removed component_common split_query option for component_json search
+		Added component_json escaped slashes to allow search text inside JSON data
+
 
 
 	[/HISTORY]
@@ -2593,7 +2597,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3i';
+	$DEDALO_VERSION = '5.8.3j';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
