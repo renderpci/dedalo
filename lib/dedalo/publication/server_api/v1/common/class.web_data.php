@@ -199,9 +199,15 @@ class web_data {
 
 						if (strpos($c_value, 'CONCAT')===0) {
 							// added |\"|\[|\] to allow CONCAT sentences (14-10-2021)
-							preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/i', $c_value, $output_array);
+							# preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/i', $c_value, $output_array);
+							// added '/u' to allow all unicode chars (ñ for example)
+							// changed '[a-zA-Z0-9|_' to the equivalent '\w'
+							preg_match('/^[\w|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/iu', $c_value, $output_array);
 						}else{
-							preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $c_value, $output_array);
+							# preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $c_value, $output_array);
+							// added '/u' to allow all unicode chars (ñ for example)
+							// changed '[a-zA-Z0-9|_' to the equivalent '\w'
+							preg_match('/^[\w|,|\+| |`|\'|\(|\)|\*]+$/iu', $c_value, $output_array);
 						}
 						if (empty($output_array[0])) {
 							return false;
