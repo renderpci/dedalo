@@ -2565,6 +2565,9 @@
 		Fixed error in Ontology RecordObj_dd->get_properties. Now default param 'json_decode' is restored to true
 		01-12-2021
 		Fixed error in web_data ar_fields check that do not it did not contemplate unicode characters like 'ñ'
+		Fixed error in publication class free_node::get_free_fragments where marks were erased before indexation tags calculation
+		Added missing property 'fragment_terms' on publication method get_fragment_from_index_locator
+		Updated Publication API swagger JSON file to 1.0.19
 
 
 	[/HISTORY]
@@ -2590,7 +2593,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3h';
+	$DEDALO_VERSION = '5.8.3i';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
