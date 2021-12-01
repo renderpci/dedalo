@@ -104,7 +104,7 @@ class component_json extends component_common {
 	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+		// debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		$q = $query_object->q;
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
@@ -116,6 +116,7 @@ class component_json extends component_common {
 		$query_object->unaccent = false;
 
 		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+		$q = str_replace('"', '\\\"', $q);
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
