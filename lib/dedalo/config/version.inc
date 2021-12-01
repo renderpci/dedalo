@@ -2563,6 +2563,8 @@
 		29-11-2021
 		Fixed PHP 8.1 deprecated and more strict code issues
 		Fixed error in Ontology RecordObj_dd->get_properties. Now default param 'json_decode' is restored to true
+		01-12-2021
+		Fixed error in web_data ar_fields check that do not it did not contemplate unicode characters like 'ñ'
 
 
 	[/HISTORY]
@@ -2588,13 +2590,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3g';
+	$DEDALO_VERSION = '5.8.3h';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-11-2021');
+	define('DEDALO_BUILD'	, '01-12-2021');
 
 
 	/*
