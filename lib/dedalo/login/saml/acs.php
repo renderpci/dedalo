@@ -116,6 +116,9 @@ $start_time=microtime(1);
 
 									$html_content .= '</div>';
 
+									// write error to log
+									error_log("SAML ERROR. login::Login_SAML response->result is false. response->msg: $response->msg");
+
 									echo html_page::get_html($html_content, true);
 							}
 							exit();
@@ -123,16 +126,32 @@ $start_time=microtime(1);
 
 			}else{
 				// Response is received, but validation process failed
-				echo ' Invalid SAML Response (1) ';
+				$msg = ' Invalid SAML Response (1) ';
+				echo $msg;
+				// write error to log
+				error_log('SAML ERROR. Response is received, but validation process failed. '.PHP_EOL.$msg);
 			}
 		}else{
 			// Any pot SAMLResponse var is received
-			echo ' No SAML Response found in POST. ';
+			$msg = ' No SAML Response found in POST. ';
+			echo $msg;
+			// write error to log
+			error_log('SAML ERROR. Any pot SAMLResponse var is received '.PHP_EOL.$msg);
 		}
 	}catch (Exception $e) {
-		// Error in saml response manager
-		echo ' Invalid SAML Response (2): ' . $e->getMessage();
+		// Error in SAML response manager
+		$msg = ' Invalid SAML Response (2): ' . $e->getMessage();
+		echo $msg;
+		// write error to log
+		error_log('SAML ERROR. Error in SAML response manager. EXCEPTION. '.PHP_EOL.$msg);
 	}
+
+
+
+	// write useful data on errors
+	debug_log(__METHOD__." SAMLResponse POST: ".to_string($_POST['SAMLResponse']), logger::ERROR);
+
+
 
 // login v2.14 
 	/*
