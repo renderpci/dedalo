@@ -616,7 +616,6 @@ class web_data {
 					
 				$response->debug->total_time = round(microtime(1)-$start_time,3);				
 
-
 			return $response;
 		}//end get_rows_data
 
@@ -2056,8 +2055,9 @@ class web_data {
 	public static function get_fragment_from_index_locator( $request_options ) {
 
 		$options = new stdClass();
-			$options->index_locator  = null;
-			$options->lang 			 = WEB_CURRENT_LANG_CODE;
+			$options->index_locator		= null;
+			$options->lang				= WEB_CURRENT_LANG_CODE;
+			$options->fragment_terms	= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// check vars
@@ -2116,16 +2116,17 @@ class web_data {
 		# FRAGMENT DATA
 		# Create fragment and tesaurus associated
 		$f_options = new stdClass();
-			$f_options->tag_id 		 	= $tag_id;
-			$f_options->av_section_id  	= $av_section_id;
-			$f_options->lang 		  	= $options->lang;
-			$f_options->component_tipo 	= AV_TIPO;
-			$f_options->section_tipo 	= $locator->section_tipo;
-			$f_options->raw_text 		= $raw_text;
+			$f_options->tag_id					= $tag_id;
+			$f_options->av_section_id			= $av_section_id;
+			$f_options->lang					= $options->lang;
+			$f_options->component_tipo			= AV_TIPO;
+			$f_options->section_tipo			= $locator->section_tipo;
+			$f_options->raw_text				= $raw_text;
+			$f_options->fragment_terms_inside	= $options->fragment_terms;
 
 			$fragments_obj = web_data::build_fragment( $f_options );
 			#if(SHOW_DEBUG===true) {
-				#dump($fragments_obj, ' fragments_obj ++ '.to_string( $av_section_id )); die();
+				// dump($fragments_obj, ' fragments_obj ++ '.to_string( $av_section_id )); die();
 			#}
 
 		# REMOVE_RESTRICTED_TEXT in fragment
