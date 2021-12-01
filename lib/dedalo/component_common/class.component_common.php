@@ -4219,38 +4219,50 @@ abstract class component_common extends common {
 		# STRING CASE
 		}else{
 
-			$operator_between = '$and'; // only when is string
 
-			# \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
-			$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
-			preg_match_all($pattern, $search_value, $matches);
+			$model = end($query_object->path)->modelo;
+			if ($model==='component_json') {
+				// component json case
 
-			# split into searchable units
-			$total_count = count($matches[0]);
-			if ($total_count===1) {
-
-				$current_search_value = reset($matches[0]);
-
-				$query_object->q = self::remove_first_and_last_quotes($current_search_value);
-				$ar_query_object = $query_object;
+				// $query_object->q	= str_replace('"', '\"', $search_value);
+				$ar_query_object	= $query_object;
 
 			}else{
+				// all others
 
-				$group = new stdClass();
-					$name = $operator_between;
-					$group->$name = [];
+				$operator_between = '$and'; // only when is string
 
-				foreach ($matches[0] as $key => $current_search_value) {
+				# \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
+				$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
+				preg_match_all($pattern, $search_value, $matches);
 
-					$query_object_clon 		= clone($query_object);
-					$query_object_clon->q 	= self::remove_first_and_last_quotes($current_search_value);
-					$group->$name[] 		= $query_object_clon;
+				# split into searchable units
+				$total_count = count($matches[0]);
+				if ($total_count===1) {
 
-				}//end foreach ($matches[0] as $key => $value)
+					$current_search_value = reset($matches[0]);
 
-				$ar_query_object = $group;
+					$query_object->q = self::remove_first_and_last_quotes($current_search_value);
+					$ar_query_object = $query_object;
 
-			}//end if ($total_count===1) {
+				}else{
+
+					$group = new stdClass();
+						$name = $operator_between;
+						$group->$name = [];
+
+					foreach ($matches[0] as $key => $current_search_value) {
+
+						$query_object_clon 		= clone($query_object);
+						$query_object_clon->q 	= self::remove_first_and_last_quotes($current_search_value);
+						$group->$name[] 		= $query_object_clon;
+
+					}//end foreach ($matches[0] as $key => $value)
+
+					$ar_query_object = $group;
+
+				}//end if ($total_count===1) {
+			}//end if ($model==='component_json')
 		}
 
 		return $ar_query_object;
