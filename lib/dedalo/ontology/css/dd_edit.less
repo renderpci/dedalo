@@ -29,6 +29,14 @@ input, textarea {
 	padding: 5px;
 }
 
+.hidden {
+	visibility: hidden;
+}
+
+.div_rel {
+	margin: 0;
+	padding: 0;
+}
 
 .input_term {
 	width: 100%;
@@ -63,20 +71,35 @@ input, textarea {
 }
 
 #wrapGeneral {
-	overflow: visible;
+	// overflow: visible;
 	top:0;
 	left: 0;
+	margin: 0;
+	padding: 0;
 	height: 100hv;
-	min-width: 720px;
-	min-height: 520px;
-	text-align: center;
-	margin-bottom: 20px;
+	// min-width: 720px;
+	// min-height: 520px;
+	// text-align: center;
+	// margin-bottom: 20px;
 	font-size: initial;
 	}
 	#wrapGeneral table.table_edit {
-		width:697px;
+		width: 697px;
+		overflow-x: hidden;
 		/*min-height: 600px;*/
 		/*display: table;*/
+
+		// background-image:url("../../images/table_ramp.jpg");
+		// background-position:0px 21px;
+		// background-repeat:repeat-x;
+		background-color:#c1c3c5;
+		border-collapse:collapse;
+		// margin:10px;
+
+		min-height: 99vh;
+		display: block;
+		border: 1px solid #afafaf;
+		border-radius: 4px;
 	}
 	#wrapGeneral table.table_edit .td_header {
 		height: 1em;
@@ -155,7 +178,14 @@ input, textarea {
 		}
 
 .form_buttons {
-	height: 46px;
+	// height: 46px;
+	display: flex;
+	justify-content: center;
+	>* {
+		margin-left: 0.5em;
+		margin-right: 0.5em;
+		line-height: 1em;
+	}
 }
 
 .dropBox { cursor:pointer }
@@ -254,5 +284,8 @@ input, textarea {
 
 
 
-
+.tr_separator {
+	display: block;
+	height: 1.5em;
+}
 

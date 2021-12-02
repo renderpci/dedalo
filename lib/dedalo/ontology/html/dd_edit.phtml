@@ -36,9 +36,6 @@
 
 	var window_docu
 </script>
-<script type="module">
-	// import {data_manager} from './js/data_manager.js'
-</script>
 <?php
 // js
 	print js::build_tag('jquery/dist/jquery.min.js', 'defer');
@@ -52,7 +49,7 @@
 ?>
 </head>
 <body>
-<div id="wrapGeneral">
+<div id="wrapGeneral" class="hidden">
 	<form name="form1" id="form1" method="post" onSubmit="edit_ts(this, event);">
 		<table class="table_edit">
 
@@ -182,7 +179,8 @@
 
 
 			<!-- observaciones -->
-				<?php 
+				<?php
+					// generated in dd_descriptord_grid_obs.phtml
 					echo $descriptors_tr_obs_html;
 				?>
 
@@ -195,9 +193,9 @@
 								<?php echo $relaciones_title ?>
 							</div>
 							<div class="right_div">
-								<div id="div_rel" style=" margin:0px; padding:0px"><!-- Ajax lista de relaciones --></div>
+								<div id="div_rel"><!-- Ajax lista de relaciones --></div>
 							</div>
-						</div><!-- /div_wraper -->
+						</div>
 					</td>
 				</tr>		
 
@@ -269,21 +267,26 @@
 										}
 									}
 									// create properties_editor
-										const properties_container = document.getElementById('properties_editor_json');
-										// const properties_editor		= new JSONEditor(properties_container, properties_options, <?php #echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
-										properties_editor = new JSONEditor(properties_container, properties_options);
+										const properties_container	= document.getElementById('properties_editor_json');
+										properties_editor			= new JSONEditor(properties_container, properties_options)
+
 										// set json
 										if (properties_dato) {
 											properties_editor.set( properties_dato )
 										}
+
+										setTimeout(function(){
+											document.getElementById('wrapGeneral').classList.remove('hidden')
+										}, 150)
 								})
 								</script>
 							</div>
 						</td>
 					</tr>
+					<tr class=""><td><div class="tr_separator"></div></td></tr>
 				</tbody>
-			<?php /*	*/ ?>
-			
+
+
 
 			<!-- hierarchie info -->
 				<tr class="row_border_bottom">
@@ -310,29 +313,10 @@
 					<td style="padding:10px; text-align:center">
 						<div class="form_buttons">
 							<input type="hidden" name="terminoID" value="<?php echo $terminoID # el terminoID devuelto por por la búsqueda.(idem que el get) ?>">
-
 							<!-- Campos obligatorios -->
 							<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
 							<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
-							<?php /*
-							<input type="hidden" name="MM_insert" value="form1">
-							<input type="hidden" name="accion" value="editTS">
-							*/ ?>
 							<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon">
-							<script type="text/javascript">
-							/*
-							// Send JSON text to input and force update
-							document.getElementById('submit_button').onclick = function () {							
-								$('#propiedades')
-										.val(propiedades_editor.getText())
-										.trigger('change');
-								$('#properties')
-										.val(properties_editor.getText())
-										.trigger('change');
-							}
-							*/
-							</script>
-							<input name="cancelar" type="button" value=" <?php echo $cerrar_title ?> "  onClick="javascript:window.close();">
 							<input name="export" type="button" value=" Export " onClick="export_ontology('<?php echo $terminoID ?>');">
 						</div><!-- /form_buttons -->
 					</td>

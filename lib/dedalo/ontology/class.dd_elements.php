@@ -175,7 +175,7 @@ class dd_elements {
 		$obj = '';
 
 		$obj .= '<div class="icon_edit " title="'.$editar_title.'" ';
-		$obj .= "onmousedown=\"dd.openTSedit('$terminoID');\" ";
+		$obj .= "onclick=\"dd.openTSedit('$terminoID');\" ";
 		$obj .= '></div>';
 
 		return $obj ;
