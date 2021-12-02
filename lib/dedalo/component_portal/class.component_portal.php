@@ -520,23 +520,18 @@ class component_portal extends component_relation_common {
 		# 2 SECTION . Creamos un nuevo registro vacío en la sección a que apunta el portal
 		# Section record . create new empty section in target section tipo
 		# TRUE : Se le pasa 'true' al comando "Save" para decirle que SI es un portal
-			if (empty($options->section_target_tipo)) {
-				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-				$section_target_tipo 	= reset($ar_target_section_tipo);
-			}else{
-				$section_target_tipo 	= $options->section_target_tipo;
-			}
+			$section_target_tipo = (empty($options->section_target_tipo))
+				? $this->get_ar_target_section_tipo()[0]
+				: $options->section_target_tipo;
 			$section_new = section::get_instance(null, $section_target_tipo);
 
 			$save_options = new stdClass();
-				$save_options->is_portal 	= true; // Important set true !
-				$save_options->portal_tipo 	= $this->tipo;
-				$save_options->top_tipo 	= $options->top_tipo;
-				$save_options->top_id 		= $options->top_id;
+				$save_options->is_portal	= true; // Important set true !
+				$save_options->portal_tipo	= $this->tipo;
+				$save_options->top_tipo		= $options->top_tipo;
+				$save_options->top_id		= $options->top_id;
 
 			$new_section_id = $section_new->Save( $save_options );
-
-
 			if($new_section_id<1) {
 				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
 				trigger_error($msg);
@@ -556,13 +551,12 @@ class component_portal extends component_relation_common {
 				$response->msg .= $msg;
 				return $response;
 			}else{
-				$component_filter 	= component_common::get_instance('component_filter',
-																	 $ar_tipo_component_filter[0],
-																	 $new_section_id,
-																	 'list', // Important 'list' to avoid auto save default value !!
-																	 DEDALO_DATA_NOLAN,
-																	 $section_target_tipo
-																	);
+				$component_filter = component_common::get_instance('component_filter',
+																	$ar_tipo_component_filter[0],
+																	$new_section_id,
+																	'list', // Important 'list' to avoid auto save default value !!
+																	DEDALO_DATA_NOLAN,
+																	$section_target_tipo);
 				$component_filter->set_dato($component_filter_dato);
 				$component_filter->Save();
 			}
@@ -588,13 +582,14 @@ class component_portal extends component_relation_common {
 
 
 		# Save current component updated data
-		$this->Save();
+			$saved = $this->Save();
 
 
-		$response->result 		= true;
-		$response->section_id 	= $new_section_id;
-		$response->added_locator= $locator;
-		$response->msg 			= 'Ok. Request done '.__METHOD__;
+		// response ok
+			$response->result			= true;
+			$response->section_id		= $new_section_id;
+			$response->added_locator	= $locator;
+			$response->msg				= 'Ok. Request done '.__METHOD__;
 
 		return $response;
 	}//end add_new_element
@@ -678,7 +673,7 @@ class component_portal extends component_relation_common {
 			$ar_children_objects_by_modelo_name_in_section = (array)$section->get_ar_children_objects_by_modelo_name_in_section($search_model,true);
 
 			if (empty($ar_children_objects_by_modelo_name_in_section[0])) {
-				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
+				throw new Exception("Error Processing Request: 'component_filter' not found in the Ontology (structure) 1", 1);
 			}else {
 				$component_filter		= $ar_children_objects_by_modelo_name_in_section[0];
 				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
