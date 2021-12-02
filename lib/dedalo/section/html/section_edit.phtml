@@ -17,7 +17,7 @@
 	print "data-section_id=\"{$section_id}\" ";
 	print "data-label=\"{$label}\" ";
 	#print "data-section_info='{$section_info}' ";
-	print ">";
+	print '>';
 
 
 		# CONTENT
@@ -29,23 +29,22 @@
 					
 				case ($permissions===0) :	
 					
-					$html_content .= "<span class=\"css_span_dato\">";
+					$html_content .= '<span class="css_span_dato">';
 					$html_content .= label::get_label('contenido_no_autorizado');
 						#dump(security::$ar_permissions_table," security::ar_permissions_table");
 					$html_content .= " (Section $tipo - $modo)";
-					$html_content .= "</span>";
+					$html_content .= '</span>';
 					break;
 								
 				case ($permissions>=1) :
 
 					if($this->caller_id>0 && $modo!=='edit') {
-						$html_content .= "<div class=\"div_clear_edit_in_relation\"></div>";
+						$html_content .= '<div class="div_clear_edit_in_relation"></div>';
 					}
 
 					#
 					# SEARCH_FORM_HTML
 						#$html_content .= $search_form_html;
-					
 					
 					#
 					# SECTION_RECORDS_HTML
@@ -75,32 +74,36 @@
 
 		#######################
 		# SIDEBAR (INSPECTOR)
-		$show_inspector=true;	// <---- / temporal : borrar tras acabar el apartado
-		if ($show_inspector) {
-			print "<div id=\"sidebar\">";
-			print isset($inspector_html) ? $inspector_html : '';
-			print "</div><!-- /sidebar -->";
-		}
+		print '<div id="sidebar">';
+		print $inspector_html ?? '';
+		print '</div><!-- /sidebar -->';
 		#######################
 
 		
 		#######################
 		# CONTENT PRINT HTML
-		print "<div class=\"records main_section_{$modo}\">";
-			print "<div class=\"css_section_content\" id=\"section_{$identificador_unico}\">";
+		print '<div class="records main_section_'.$modo.'">';
+			print '<div class="css_section_content" id="section_'.$identificador_unico.'">';
 			print $html_content;
-			print "</div><!-- /css_section_content -->";
-		print '</div><!-- /records -->';#end records;
+			print '</div><!-- /css_section_content -->';
+		print '</div><!-- /records -->';
 		#######################
 
 
-	print '</div>'; //wrap
+	print '</div>';//end wrap_section
 
 
-	if(SHOW_DEBUG===true) {
-		print '<!-- /wrap_section [section_id:$section_id tipo:$tipo] -->'; //wrap
-		print '<!-- / SECTION EDIT [section_id:$section_id tipo:$tipo] -->';
-	}
+	// debug
+		if(SHOW_DEBUG===true) {
+			print '<!-- /wrap_section [section_id:$section_id tipo:$tipo] -->'; //wrap
+			print '<!-- / SECTION EDIT [section_id:$section_id tipo:$tipo] -->';
+		}
 	
 
-?>
+	// hide inspector on request get inspector=0
+		$get_inspector = $_GET['inspector'] ?? null;
+		if($get_inspector==='0') {
+			echo '<script>window.ready(function(){ inspector.toggle_sidebar(); })</script>';
+		}
+
+

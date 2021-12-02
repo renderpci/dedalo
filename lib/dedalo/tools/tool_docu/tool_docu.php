@@ -39,7 +39,7 @@
 				$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
 
 			// redirect current iframe
-				header('Location: ' . DEDALO_LIB_BASE_URL . '/main/?t=' . $section_tipo . '&id=' .$section_id .'&m=edit&menu=0');
+				header('Location: ' . DEDALO_LIB_BASE_URL . '/main/?t=' . $section_tipo . '&id=' .$section_id .'&m=edit&menu=0&inspector=0');
 			
 			exit();
 
