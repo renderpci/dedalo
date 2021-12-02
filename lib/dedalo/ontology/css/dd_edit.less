@@ -29,6 +29,10 @@ input, textarea {
 	padding: 5px;
 }
 
+.hide {
+	display: none !important;
+}
+
 .hidden {
 	visibility: hidden;
 }
@@ -76,7 +80,7 @@ input, textarea {
 	left: 0;
 	margin: 0;
 	padding: 0;
-	height: 100hv;
+	height: 100vh;
 	// min-width: 720px;
 	// min-height: 520px;
 	// text-align: center;
@@ -84,7 +88,8 @@ input, textarea {
 	font-size: initial;
 	}
 	#wrapGeneral table.table_edit {
-		width: 697px;
+		// width: 697px;
+		width: 100%;
 		overflow-x: hidden;
 		/*min-height: 600px;*/
 		/*display: table;*/
@@ -100,9 +105,20 @@ input, textarea {
 		display: block;
 		border: 1px solid #afafaf;
 		border-radius: 4px;
+
+
+		>tbody {
+			display: grid;
+			width: 98.2vw;
+			>tr {
+				display: grid;
+				width: 98.2vw;
+			}
+		}//end first >tbody
+
 	}
 	#wrapGeneral table.table_edit .td_header {
-		height: 1em;
+		height: 1.7em;
 	}
 
 #form1 {
@@ -158,7 +174,23 @@ input, textarea {
 
 #terminosTable { width:100%;border-collapse:collapse; }
 #terminosTable th { text-align:left; background-color:#505050; color:#CCCCCC; padding:3px; text-transform:capitalize }
-#terminosTable td {padding:3px; }
+#terminosTable td {
+	padding:3px;
+
+	&.td_term1 {
+		width: 67px;
+	}
+	&.td_term2 {
+
+	}
+	&.td_term3 {
+
+	}
+	&.td_term4 {
+		width: 42px;
+	}
+
+}
 
 .inputFocus { background-color:#FFFF99 !important }
 
@@ -217,7 +249,9 @@ input, textarea {
 	padding:6px;
 }
 
-.div_wraper{ width:650px;}
+.div_wraper{
+	// width:650px;
+}
 .div_wraper .left_div {	
 	float: left;  
 	width: 62px;  
@@ -225,9 +259,9 @@ input, textarea {
 }
 .div_wraper .right_div {
 	float: left;
-	width: 578px;
 	text-align: left;
-	margin-left: 5px
+	margin-left: 5px;
+	width: calc(100% - 93px);
 }
 
 
@@ -288,4 +322,11 @@ input, textarea {
 	display: block;
 	height: 1.5em;
 }
+
+
+
+
+
+
+
 
