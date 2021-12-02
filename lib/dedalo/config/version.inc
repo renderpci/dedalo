@@ -2573,6 +2573,10 @@
 		Added component_json escaped slashes to allow search text inside JSON data
 		02-12-2021
 		Fixed minor ontology css and js issues
+		Fixed Ontology css issues
+		Added tool_docu options to hide the section inspector
+		Minor Ontology css and trigger fixes
+		Fixed descriptors error on delete lang term
 
 
 	[/HISTORY]
@@ -2598,7 +2602,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3k';
+	$DEDALO_VERSION = '5.8.3l';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
