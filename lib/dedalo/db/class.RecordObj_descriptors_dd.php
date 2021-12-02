@@ -39,8 +39,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			if ($fallback!==false) {
 				#trigger_error("Fallback is true for $parent ");
 			}
-		}	
-				
+		}
 		
 		$this->unTranslated	= false;
 		$this->matrix_table = self::$descriptors_matrix_table;
@@ -107,11 +106,14 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 			
 			# Forzamos el cálculo del ID si es viable
-			if( $id<1 && (!empty($parent) && !empty($lang)) )
-			parent::calculate_ID();
-		}		
+			if( $id<1 && (!empty($parent) && !empty($lang)) ) {
+				parent::calculate_ID();
+			}
+		}//end if ($id>0)
 		
-	}
+
+		return true;
+	}//end __construct
 
 
 	/**

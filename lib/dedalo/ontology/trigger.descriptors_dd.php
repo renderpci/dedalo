@@ -53,6 +53,7 @@ if($mode==='loadDescriptorsGrid') {
 	session_write_close();
 
 	if(!$id || empty($terminoID)) {
+		debug_log(__METHOD__." Error: Need more vars id:$id, terminoID:$terminoID (ts_descriptors_grid) ".to_string(), logger::ERROR);
 		exit(" Error: Need more vars id:$id, terminoID:$terminoID (ts_descriptors_grid) ");
 	}
 
@@ -61,29 +62,31 @@ if($mode==='loadDescriptorsGrid') {
 	$ar_transtations_of_current	= $RecordObj_descriptors_dd->get_ar_translations_of_current();
 
 	if(empty($ar_transtations_of_current) || count($ar_transtations_of_current)<1) {
-		exit(); # Nothing to do
+		debug_log(__METHOD__." Error. Zero transtations of descriptor. ".to_string($id), logger::ERROR);
+		exit('Error. Zero transtations of descriptor: '.$id); # Nothing to do
 	}
 
-	# Iterate all traductions
-	foreach($ar_transtations_of_current as $current_id => $current_lang) {
+	# Iterate all transtations
+	foreach($ar_transtations_of_current as $id => $current_lang) {
 
 		# TERMINO : Data from current descriptor
-		$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $current_id);
-		$termino					= $RecordObj_descriptors_dd->get_dato();
-		$parent_desc				= $RecordObj_descriptors_dd->get_parent();
-		$lang						= $RecordObj_descriptors_dd->get_lang();
-		$mainLang					= $RecordObj_descriptors_dd->get_mainLang();
-		$langFull					= lang::get_name_from_code( $lang );
-
+			$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);
+			$termino					= $RecordObj_descriptors_dd->get_dato();
+			$parent_desc				= $RecordObj_descriptors_dd->get_parent();
+			$lang						= $RecordObj_descriptors_dd->get_lang();
+			$mainLang					= $RecordObj_descriptors_dd->get_mainLang();
+			$langFull					= lang::get_name_from_code( $lang );
 
 		# DEF : Data from def
-		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
-		$def			= $RecordObj->get_dato();
-		$def_id			= $RecordObj->get_ID();
+			$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+			$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
+			$def			= $RecordObj->get_dato();
+			$def_id			= $RecordObj->get_ID();
 
-		include dirname(__FILE__) . '/html/dd_descriptors_grid.phtml';
-	 }
+		// read file
+		// include the html file here, on each loop iteration (!)
+			include dirname(__FILE__) . '/html/dd_descriptors_grid.phtml';
+	}
 
 
 	exit();
@@ -94,27 +97,41 @@ if($mode==='loadDescriptorsGrid') {
 # REMOVEDESCRIPTOR
 if($mode==='removeDescriptor') {
 
-	if(!$id || !$terminoID) die("Need more data! id:$id - terminoID:$terminoID ");
+	// options
+		if(empty($id)) {
+			die('Error. id is mandatory');
+		}
+		if(empty($terminoID)) {
+			die('Error. terminoID is mandatory');
+		}
 
 	$html = '';
 
-	$matrix_table 	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, $id);
-	$parent			= $RecordObj->get_parent();
-	$termino		= $RecordObj->get_dato();
-	$lang			= $RecordObj->get_lang();
+	try {
 
-	$RecordObj->MarkForDeletion();
+		// RecordObj_descriptors_dd: $matrix_table='matrix_descriptors_dd', $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false
+		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, $id);
+		$parent			= $RecordObj->get_parent();
+		$termino		= $RecordObj->get_dato();
+		$lang			= $RecordObj->get_lang();
+		$RecordObj->MarkForDeletion();
 
-	# Borramos sus datos accesorios (def)
-	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='def');
-	$RecordObj->MarkForDeletion();
+		# Borramos sus datos accesorios (def)
+		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='def');
+		$RecordObj->MarkForDeletion();
 
-	# Borramos sus datos accesorios (obs)
-	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='obs');
-	$RecordObj->MarkForDeletion();
+		# Borramos sus datos accesorios (obs)
+		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='obs');
+		$RecordObj->MarkForDeletion();
+
+		$html = 'OK';
+
+	}catch(Exception $e){
+		$html = 'Error. '.$e->getMessage();
+	}
 
 	exit($html);
 }//end removeDescriptor
