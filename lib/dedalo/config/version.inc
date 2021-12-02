@@ -2571,7 +2571,8 @@
 		Add SAML error log info to easy follow user login errors
 		Removed component_common split_query option for component_json search
 		Added component_json escaped slashes to allow search text inside JSON data
-
+		02-12-2021
+		Fixed minor ontology css and js issues
 
 
 	[/HISTORY]
@@ -2597,13 +2598,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3j';
+	$DEDALO_VERSION = '5.8.3k';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-12-2021');
+	define('DEDALO_BUILD'	, '02-12-2021');
 
 
 	/*
