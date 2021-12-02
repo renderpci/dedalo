@@ -53,8 +53,11 @@
 	// Verify current URL tipo exists as DEDALO_ROOT_TIPO children before login. If not, redirect to MAIN_FALLBACK_SECTION tipo
 		$RecordObj_dd 	= new RecordObj_dd(TOP_TIPO);
 		$ar_parents 	= $RecordObj_dd->get_ar_parents_of_this();
-		if (!in_array(DEDALO_ROOT_TIPO, $ar_parents)) {		
-			header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
+		if (!in_array(DEDALO_ROOT_TIPO, $ar_parents)) {
+			$safe_tipo = true===valid_tipo(MAIN_FALLBACK_SECTION)
+				? MAIN_FALLBACK_SECTION
+				: DEDALO_AREA_ROOT_TIPO;
+			header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".$safe_tipo);
 			exit();
 		}
 

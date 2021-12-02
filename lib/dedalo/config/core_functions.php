@@ -739,6 +739,33 @@ function verify_dedalo_prefix_tipos($tipo=null) {
 
 
 /**
+* VALID_TIPO
+* @return bool()
+*/
+function valid_tipo($tipo) {
+
+	if (empty($tipo) || !is_string($tipo) || strlen($tipo)<3) {
+		return false;
+	}
+
+	try {
+
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$model				= $RecordObj_dd->get_modelo();
+		if (!empty($model)) {
+			return true;
+		}
+
+	}catch(Exception $e) {
+		trigger_error( 'Caught exception: '.  $e->getMessage() );
+	}
+
+	return false;
+}//end valid_tipo
+
+
+
+/**
 * BUILD_SORTER
 * @param string key
 * @return order

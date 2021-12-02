@@ -83,11 +83,10 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 		$msg = "Error Processing Request: Main Page tipo:'$tipo' is $tipo_to_msg! Main Page redirected to secure MAIN_FALLBACK_SECTION: ".MAIN_FALLBACK_SECTION." ".RecordObj_dd::get_termino_by_tipo(MAIN_FALLBACK_SECTION);
 		debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 		
-		if (verify_dedalo_prefix_tipos(MAIN_FALLBACK_SECTION)) {
-			header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
-		}else{
-			header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".DEDALO_AREA_ROOT_TIPO); # Avoid loop on misconfig
-		}	
+		$safe_tipo = true===valid_tipo(MAIN_FALLBACK_SECTION)
+				? MAIN_FALLBACK_SECTION
+				: DEDALO_AREA_ROOT_TIPO;
+		header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".$safe_tipo);
 		exit();
 	}
 
@@ -258,12 +257,11 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 								#throw new Exception("Error Processing Request: modelo name '".safe_xss($modelo_name)."' not valid (1)", 1);									
 								$msg = "Error Processing Request: modelo name: '".$modelo_name."' is not valid for main page tipo ";
 								debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-								
-								if (verify_dedalo_prefix_tipos(MAIN_FALLBACK_SECTION)) {
-									header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
-								}else{
-									header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".DEDALO_AREA_ROOT_TIPO); # Avoid loop on misconfig
-								}	
+
+								$safe_tipo = true===valid_tipo(MAIN_FALLBACK_SECTION)
+									? MAIN_FALLBACK_SECTION
+									: DEDALO_AREA_ROOT_TIPO;
+								header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".$safe_tipo); # Avoid loop on misconfig
 								exit();									
 								break;						
 					}
