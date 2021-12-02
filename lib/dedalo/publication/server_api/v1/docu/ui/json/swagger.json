@@ -689,7 +689,7 @@
     },
     "/thesaurus_video_view_data" : {
       "post" : {
-        "tags" : [ "Thesaurus" ],
+        "tags" : [ "Thesaurus Legacy" ],
         "summary" : "Video player data",
         "description" : "Deprecated (!). Gets data needed to build video fragment",
         "parameters" : [ {

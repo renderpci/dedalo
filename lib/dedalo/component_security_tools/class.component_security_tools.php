@@ -148,7 +148,7 @@ class component_security_tools extends component_common {
 	protected static function get_ar_user_tools_by_user( $user_id ) {
 
 		# Verify user value
-		if( abs($user_id) < 1 ) return array();
+		if( $user_id===null || abs($user_id) < 1 ) return array();
 
 		static $ar_user_tools;		
 		if(isset($ar_user_tools)) return($ar_user_tools);		
