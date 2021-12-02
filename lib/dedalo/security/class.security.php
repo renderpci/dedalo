@@ -131,11 +131,6 @@ class security {
 			}
 			die("Error: Sorry, you don't have permissions to enter here [$tipo]");
 
-
-				# Redirect to home
-				#header("HTTP/1.1 301 Moved Permanently");
-				#header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
-				#exit();
 			/*
 			try {
 				# Recalculate permissions

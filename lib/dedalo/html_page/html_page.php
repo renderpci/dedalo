@@ -24,20 +24,15 @@
 			}else{
 				// Calculate var from GET enviroment
 					$$name = common::setVar($name);
-			}			
+			}
 		}
 		if($t) $tipo = $t;
 		if($m) $modo = $m;
 
-
 	
 	// Modos autointerpretados
 		if($modo===false) {
-			if(empty($id)) {
-				$modo = 'list';
-			}else{
-				$modo = 'edit';
-			}
+			$modo = !empty($id) ? 'edit' : 'list';
 		}
 
 	

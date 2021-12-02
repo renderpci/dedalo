@@ -18,14 +18,6 @@ header('X-Frame-Options: SAMEORIGIN');
 # Avoid mim change content type
 #header('X-Content-Type-Options: nosniff');
 
-# FORCE REDIRECT TO DEDALO/MAIN 
-/*
-if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
-	header("HTTP/1.1 301 Moved Permanently");
-	header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
-	exit();
-}
-*/
 	// DB check
 		// try {
 		// 	$conn = DBi::_getConnection();
