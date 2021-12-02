@@ -106,13 +106,14 @@ input, textarea {
 		border: 1px solid #afafaf;
 		border-radius: 4px;
 
+		@width_body: calc(100vw - 18px);
 
 		>tbody {
 			display: grid;
-			width: 98.2vw;
+			width: @width_body;
 			>tr {
 				display: grid;
-				width: 98.2vw;
+				width: @width_body;
 			}
 		}//end first >tbody
 
