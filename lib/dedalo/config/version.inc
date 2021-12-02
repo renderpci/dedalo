@@ -2577,6 +2577,8 @@
 		Added tool_docu options to hide the section inspector
 		Minor Ontology css and trigger fixes
 		Fixed descriptors error on delete lang term
+		Added function 'valid_tipo' for verify some tipos like config MAIN_FALLBACK_SECTION that can cause infinite loops in the installation process or in config errors
+
 
 
 	[/HISTORY]
@@ -2602,7 +2604,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3l';
+	$DEDALO_VERSION = '5.8.3n';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
