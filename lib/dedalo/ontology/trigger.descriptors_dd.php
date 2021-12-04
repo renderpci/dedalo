@@ -2,7 +2,7 @@
 // Turn off output buffering
 	ini_set('output_buffering', 'off');
 
-// ontology custon config file
+// ontology custom config file
 require_once( dirname(__FILE__) .'/config/config_ontology.php' );
 // Old lang vars
 require_once( dirname(__FILE__) . '/lang/lang_code.php' );
@@ -45,49 +45,54 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 /**
 * LOADDESCRIPTORSGRID
-* Translations tr ajax trigger
+* Translations tr AJAX trigger
 */
 if($mode==='loadDescriptorsGrid') {
 
 	# Write session to unlock session file
 	session_write_close();
 
-	if(!$id || empty($terminoID)) {
-		debug_log(__METHOD__." Error: Need more vars id:$id, terminoID:$terminoID (ts_descriptors_grid) ".to_string(), logger::ERROR);
-		exit(" Error: Need more vars id:$id, terminoID:$terminoID (ts_descriptors_grid) ");
-	}
+	// options
+		if(empty($id)) {
+			debug_log(__METHOD__." Error: id is mandatory (loadDescriptorsGrid) ".to_string(), logger::ERROR);
+			die('Error. id is mandatory');
+		}
+		if(empty($terminoID)) {
+			debug_log(__METHOD__." Error: terminoID is mandatory (loadDescriptorsGrid) ".to_string(), logger::ERROR);
+			die('Error. terminoID is mandatory');
+		}
+
 
 	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
 	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);
 	$ar_transtations_of_current	= $RecordObj_descriptors_dd->get_ar_translations_of_current();
 
-	if(empty($ar_transtations_of_current) || count($ar_transtations_of_current)<1) {
-		debug_log(__METHOD__." Error. Zero transtations of descriptor. ".to_string($id), logger::ERROR);
-		exit('Error. Zero transtations of descriptor: '.$id); # Nothing to do
+	if(!empty($ar_transtations_of_current) && count($ar_transtations_of_current)>0) {
+
+		# Iterate all translations
+		foreach($ar_transtations_of_current as $id => $current_lang) {
+
+			// Note that on each iteration, $id and $current_lang vars are overwritten to be used
+			// in the HTML file 'dd_descriptors_grid.phtml'
+
+			// TERMINO : Data from current descriptor
+				$RecordObj_descriptors_dd_term	= new RecordObj_descriptors_dd($matrix_table, $id);
+				$termino						= $RecordObj_descriptors_dd_term->get_dato();
+				$parent_desc					= $RecordObj_descriptors_dd_term->get_parent();
+				$lang							= $RecordObj_descriptors_dd_term->get_lang();
+				$mainLang						= $RecordObj_descriptors_dd_term->get_mainLang();
+				$langFull						= lang::get_name_from_code( $lang );
+
+			// DEF : Data from current def
+				$RecordObj_descriptors_dd_def	= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
+				$def							= $RecordObj_descriptors_dd_def->get_dato();
+				$def_id							= $RecordObj_descriptors_dd_def->get_ID();
+
+			// read file
+			// include the HTML file here, on each loop iteration (!)
+				include dirname(__FILE__) . '/html/dd_descriptors_grid.phtml';
+		}
 	}
-
-	# Iterate all transtations
-	foreach($ar_transtations_of_current as $id => $current_lang) {
-
-		# TERMINO : Data from current descriptor
-			$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);
-			$termino					= $RecordObj_descriptors_dd->get_dato();
-			$parent_desc				= $RecordObj_descriptors_dd->get_parent();
-			$lang						= $RecordObj_descriptors_dd->get_lang();
-			$mainLang					= $RecordObj_descriptors_dd->get_mainLang();
-			$langFull					= lang::get_name_from_code( $lang );
-
-		# DEF : Data from def
-			$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-			$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
-			$def			= $RecordObj->get_dato();
-			$def_id			= $RecordObj->get_ID();
-
-		// read file
-		// include the html file here, on each loop iteration (!)
-			include dirname(__FILE__) . '/html/dd_descriptors_grid.phtml';
-	}
-
 
 	exit();
 }//end if($mode==='loadDescriptorsGrid')
