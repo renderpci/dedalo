@@ -2578,6 +2578,12 @@
 		Minor Ontology css and trigger fixes
 		Fixed descriptors error on delete lang term
 		Added function 'valid_tipo' for verify some tipos like config MAIN_FALLBACK_SECTION that can cause infinite loops in the installation process or in config errors
+		06-12-2021
+		Updated structure css and js lang files
+		Clean class JSON_RecordDataBoundObject code. Removed unnecessary exceptions and clarify data flows
+		Clean class backup code. Unified terminal execution calls
+		Fixed minor var checks on JSON and string values
+
 
 
 
@@ -2604,13 +2610,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3n';
+	$DEDALO_VERSION = '5.8.3o';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '02-12-2021');
+	define('DEDALO_BUILD'	, '06-12-2021');
 
 
 	/*
