@@ -10,10 +10,11 @@ abstract class backup {
 
 	# Columns to save (used by copy command, etc.)
 	# Not use id columns NEVER here
-	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties';
-	public static $descriptors_dd_columns = 'parent, dato, tipo, lang';
+	public static $jer_dd_columns			= '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties';
+	public static $descriptors_dd_columns	= 'parent, dato, tipo, lang';
+	public static $checked_download_str_dir	= false;
 
-	public static $checked_download_str_dir = false;
+
 
 	/**
 	* INIT_BACKUP_SECUENCE
@@ -37,15 +38,12 @@ abstract class backup {
 
 		try {
 			# NAME : File name formated as date . (One hour resolution)
-			# $user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';
 			$ar_dd_data_version = tool_administration::get_current_version_in_db();
-			if($skip_backup_time_range===true) {
-				$db_name	= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version);
-			}else{
-				$db_name	= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
-			}
+			$db_name = ($skip_backup_time_range===true)
+				? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
+				: date("Y-m-d_H")   .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
 
-			$file_path		= DEDALO_LIB_BASE_PATH.'/backup/backups';
+			$file_path = DEDALO_LIB_BASE_PATH.'/backup/backups';
 
 			# Backups folder exists verify
 			if( !is_dir($file_path) ) {
@@ -137,19 +135,14 @@ abstract class backup {
 					if(file_exists($prgfile)) {
 						chmod($prgfile, 0755);
 					}else{
-						throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);
+						throw new Exception("Error Processing backup. Script file not exists or is not accessible. Please check folder '../backup/temp' permissions", 1);
 					}
 				}
-
 				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
 
 
 				# RUN DELAYED COMMAND
-				$res = exec_::exec_sh_file($prgfile);
-
-				#debug_log(__METHOD__." return:  ".to_string($res), logger::DEBUG);
-				#return $res;
-
+				exec_::exec_sh_file($prgfile);
 			}//end if($skip_backup_time_range===true)
 
 
@@ -185,36 +178,36 @@ abstract class backup {
 			return $response;
 		}
 
-		# BK Filesize
-		$file_bk_size = "0 MB";
-		if(file_exists($mysqlExportPath)) {
-			$file_bk_size = format_size_units( filesize($mysqlExportPath) );
-		}
+		// BK Filesize
+			$file_bk_size = (file_exists($mysqlExportPath))
+				? format_size_units( filesize($mysqlExportPath) )
+				: '0 MB';
 
-		$response->result 	= true;
-		$response->msg 		= "Ok. backup done. ".$db_name." ($file_bk_size)";
+
+		$response->result	= true;
+		$response->msg		= "Ok. backup done. ".$db_name." ($file_bk_size)";
 
 
 		return (object)$response;
-	}#end init_backup_secuence
+	}//end init_backup_secuence
 
 
 
 	/**
 	* GET_TABLES
-	* Get all tables (unfiltered) from current database
+	* Get all tables name (unfiltered) from current database
 	* @return array $tableList
 	*/
 	public static function get_tables() {
 
-		$strQuery 	= "
-		SELECT *
-		FROM information_schema.tables
-		WHERE table_type = 'BASE TABLE'
-		 AND table_schema = 'public'
-		ORDER BY table_type, table_name
+		$strQuery = "
+			SELECT *
+			FROM information_schema.tables
+			WHERE table_type = 'BASE TABLE'
+			 AND table_schema = 'public'
+			ORDER BY table_type, table_name
 		";
-		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+		$result	= JSON_RecordDataBoundObject::search_free($strQuery);
 
 		if(!$result) {
 			$msg = "Failed Search. Data is not found. Please contact with your admin (1)" ;
@@ -321,13 +314,11 @@ abstract class backup {
 				#$strQuery  = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$tld}%'; "; #pg_query(DBi::_getConnection(), $strQuery);
 				$command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
 				$res .= shell_exec($command);
-				#$res .= exec( $command );
 				$command_history[] = $command;
 
 				# COPY . Load data from file
 				$command = $command_base . " -c \"\copy jer_dd(".addslashes(backup::$jer_dd_columns).") from {$path_file}\" ";
 				$res .= shell_exec($command);
-				#$res .= exec( $command );
 				$command_history[] = $command;
 				break;
 
@@ -336,13 +327,11 @@ abstract class backup {
 				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
 				$command = $command_base . " -c \"DELETE FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
 				$res .= shell_exec($command);
-				#$res .= exec( $command );
 				$command_history[] = $command;
 
 				# COPY . Load data from file
 				$command = $command_base . " -c \"\copy matrix_descriptors_dd(".addslashes(backup::$descriptors_dd_columns).") from {$path_file}\" ";
 				$res .= shell_exec($command);
-				#$res .= exec( $command );
 				$command_history[] = $command;
 				break;
 
@@ -351,13 +340,11 @@ abstract class backup {
 				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
 				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
 				$res .= shell_exec($command);
-				#$res .= exec( $command );
 				$command_history[] = $command;
 
 				# COPY . Load data from file
 				$command = $command_base . " -c \"\copy matrix_dd from {$path_file}\" ";
 				$res .= shell_exec($command);
-				#$res .= exec( $command );
 				$command_history[] = $command;
 				break;
 		}
@@ -429,8 +416,12 @@ abstract class backup {
 		#$command = "nice ".$command ;
 		#debug_log(__METHOD__." command  ".to_string($command), logger::DEBUG);
 
-		exec($command.' 2>&1', $output, $worked_result);
-			#debug_log(__METHOD__." command ".to_string($output)." - ".to_string($worked_result), logger::DEBUG);
+		// exec command in terminal
+			// exec($command.' 2>&1', $output, $worked_result);
+			$output			= null;
+			$worked_result	= null;
+			exec($command, $output, $worked_result);
+			debug_log(__METHOD__." Execute import_structure command with output: ".to_string($output)." and worked_result: ".to_string($worked_result), logger::WARNING);
 
 		$res_html='';
 		switch($worked_result){
@@ -507,7 +498,7 @@ abstract class backup {
 
 
 		return (object)$response;
-	}#end export_structure
+	}//end export_structure
 
 
 
@@ -624,7 +615,7 @@ abstract class backup {
 
 			$ar_msg[] = $msg;
 			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b> - matrix_descriptors_dd: <b>".trim($res2)."</b>)";
-		}#end while
+		}//end while
 
 
 		#
@@ -658,7 +649,7 @@ abstract class backup {
 
 
 		return (object)$response;
-	}#end save_dedalo_str_tables_data
+	}//end save_dedalo_str_tables_data
 
 
 
@@ -736,8 +727,13 @@ abstract class backup {
 		# LOW PRIORITY ( nice , at 22:56 , etc)
 		#$command = "nice ".$command ;
 
-		#exec($command,$output,$worked);
-		exec($command.' 2>&1', $output, $worked_result);
+		// exec command in terminal
+			// exec($command.' 2>&1', $output, $worked_result);
+			$output			= null;
+			$worked_result	= null;
+			exec($command, $output, $worked_result);
+			debug_log(__METHOD__." Execute import_structure command with output: ".to_string($output)." and worked_result: ".to_string($worked_result), logger::WARNING);
+
 		$res_html='';
 		switch($worked_result){
 
@@ -814,7 +810,7 @@ abstract class backup {
 
 
 		return (object)$response;
-	}#end import_structure
+	}//end import_structure
 
 
 
@@ -914,7 +910,7 @@ abstract class backup {
 
 				// let GC do the memory job
 				time_nanosleep(0, 100000); // 50 ms
-			}#end foreach ($ar_core_tlds as $current_tld)
+			}//end foreach ($ar_core_tlds as $current_tld)
 
 		#
 		# LIST OF VALUES PRIVATE
@@ -1042,7 +1038,7 @@ abstract class backup {
 
 				// let GC do the memory job
 				time_nanosleep(0, 100000); // 50 ms
-			}#end foreach
+			}//end foreach
 
 		#
 		# SEQUENCES UPDATE
@@ -1078,7 +1074,7 @@ abstract class backup {
 		$response->msg 		.= wrap_pre( implode("<hr>", $ar_msg) );
 
 		return (object)$response;
-	}#end save_dedalo_str_tables_data
+	}//end save_dedalo_str_tables_data
 
 
 
@@ -1174,7 +1170,7 @@ abstract class backup {
 		}
 
 		return (object)$response;
-	}#end db_system_config_verify
+	}//end db_system_config_verify
 
 
 

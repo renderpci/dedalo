@@ -805,8 +805,9 @@ class tool_export extends tool_common {
 		$delimiter  = tool_export::$delimiter;
 		$quotes 	= tool_export::$quotes;
 
-
-		#$valor_export = strip_tags($valor_export);
+		if (empty($valor_export)) {
+			$valor_export = '';
+		}
 
 		// replace hard spaces
 			$valor_export = str_replace(['&nbsp;',"\xc2\xa0"], ' ', $valor_export);

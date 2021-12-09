@@ -1233,11 +1233,7 @@ abstract class common {
 		# CALL FUNCTION
 		if ( function_exists($json_data->mode) ) {
 			$response = (object)call_user_func($json_data->mode, $json_data);
-			$json_params = null;
-			if(SHOW_DEBUG===true) {
-				$json_params = JSON_PRETTY_PRINT;
-			}
-			echo json_encode($response, $json_params);
+			echo json_encode($response, JSON_PRETTY_PRINT);
 		}else{
 			$response = new stdClass();
 				$response->result 	= false;

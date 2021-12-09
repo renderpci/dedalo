@@ -37,7 +37,9 @@ class component_json extends component_common {
 		$dato = parent::get_dato();
 
 		// De-Compress dato
-		$dato = json_decode($dato);
+		$dato = !is_null($dato)
+			? json_decode($dato)
+			: null;
 
 		if(!empty($dato) && !is_object($dato) && !is_array($dato)) {			
 			trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));			

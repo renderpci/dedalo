@@ -4,14 +4,17 @@ $myDateTimeZone = 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
 
 
+
 // text default
 	$text = false;
 
 
+
 // text string . Get last directory in $PATH
-	if (strpos($_SERVER["REQUEST_URI"],'[/index')!==false) {
-		$text = substr(strrchr($_SERVER["REQUEST_URI"], ".php/"), 5);
-	}else if( !$text = pathinfo($_SERVER["REQUEST_URI"])['basename'] ){
+	$uri = urldecode($_SERVER["REQUEST_URI"]);
+	if (strpos($uri,'[/index')!==false) {
+		$text = substr(strrchr($uri, ".php/"), 5);
+	}else if( !$text = pathinfo($uri)['basename'] ){
 		die("text var is manadatory!");
 	}
 

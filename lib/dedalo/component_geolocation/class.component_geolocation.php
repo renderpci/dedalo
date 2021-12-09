@@ -74,16 +74,17 @@ class component_geolocation extends component_common {
 	# SET_DATO
 	public function set_dato($dato) {
 
-		# json encoded dato
-		if (is_string($dato)) {
-			$dato = json_decode($dato);
-		}
+		// json encoded dato
+			if (is_string($dato)) {
+				$dato = json_decode($dato);
+			}
 
-		if (!isset($dato->zoom)) {
-			$dato->zoom = "12";
-		}
+		// default zomm
+			if (is_object($dato) && !isset($dato->zoom)) {
+				$dato->zoom = "12";
+			}
 
-		parent::set_dato( (object)$dato );
+		parent::set_dato( $dato );
 	}
 
 

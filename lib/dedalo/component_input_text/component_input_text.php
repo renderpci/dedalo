@@ -79,7 +79,12 @@
 				$context 			= $this->get_context();
 				$context_name 		= isset($context->context_name) ? $context->context_name : 'default';
 
-				$with_lang_versions = isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;			
+				$with_lang_versions = isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;
+
+				// value lang fallback for placeholder
+					$place_holder_value = empty($dato[0])
+						? component_common::extract_component_value_fallback($this, DEDALO_DATA_LANG, false, DEDALO_DATA_LANG_DEFAULT)
+						: false;
 				
 				/*
 				if ($tipo==="rsc23") {
