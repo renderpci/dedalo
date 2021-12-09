@@ -2585,7 +2585,8 @@
 		Fixed minor var checks on JSON and string values
 		09-12-2021
 		Added global search custom columns (MDCAT)
-
+		Fixed inc/btn.php tag [/index detection issue from server REQUEST_URI when url is encoded (chars like [] are not detected)
+		Fixed error on get Ontology model correctly (var 'visible' was overwritten by another script)
 
 
 
@@ -2612,7 +2613,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3p';
+	$DEDALO_VERSION = '5.8.3q';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
