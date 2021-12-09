@@ -8,23 +8,29 @@ $ar_all_modelos = $RecordObj_dd->get_ar_all_modelos();
 
 
 # ordenamos alfabéticamente los modelos
-$ar_all_modelos_ordered = array();
-foreach($ar_all_modelos as $modeloID) {
+$ar_all_modelos_ordered = (function() use($ar_all_modelos){
 
-	if($modeloID==='dd2') { 
-		# filtramos el registro autointroducido al crear la tabla ( dd2 ) 
-		continue;
+	$sorted_models = [];
+
+	foreach($ar_all_modelos as $modeloID) {
+
+		if($modeloID==='dd2') {
+			# filtramos el registro autointroducido al crear la tabla ( dd2 )
+			continue;
+		}
+
+		$model_current_RecordObj_dd	= new RecordObj_dd($modeloID);
+		$current_visible			= $model_current_RecordObj_dd->get_visible();
+		if ($current_visible!=='si') {
+			continue;
+		}
+		// add
+		$sorted_models[$modeloID] = RecordObj_dd::get_termino_by_tipo($modeloID);
 	}
-	
-	$current_RecordObj_dd	= new RecordObj_dd($modeloID);
-	$visible				= $current_RecordObj_dd->get_visible();
-	if ($visible!=='si') {
-		continue;
-	}
-	// add
-	$ar_all_modelos_ordered[$modeloID] = RecordObj_dd::get_termino_by_tipo($modeloID);	
-}
-asort($ar_all_modelos_ordered);
+	asort($sorted_models);
+
+	return $sorted_models;
+})();
 ?>
 <select name="modelo" id="modelo" class="model_selector">
 	<option value="" <?php if (!(strcmp("", $modeloGet))) {echo "selected=\"selected\"";} ?> > </option>

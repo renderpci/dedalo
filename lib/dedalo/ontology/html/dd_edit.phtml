@@ -104,7 +104,7 @@
 
 							<!-- VISIBLE -->
 							<td align="center" nowrap="nowrap" valign="top">
-								<?php echo "Visible";#ucfirst($visible_title) ?><br>
+								<?php echo "Visible"; echo " [$visible]";?><br>
 								<select name="visible" id="visible">
 									<option value="si" <?php if (!(strcmp('si', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
 									<option value="no" <?php if (!(strcmp('no', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
