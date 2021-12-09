@@ -1,0 +1,64 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	#$semantic_wrapper_id = $from_component_tipo.'_'.$section_tipo.'_'.$section_id;
+	#$dato 		 = isset($ds->$from_component_tipo) ? $ds->$from_component_tipo : null;
+
+	
+	$ds_html  = '';
+
+	$ds_html .= "<div id=\"$semantic_wrapper_id\" class=\"semantic_wrapper\">";
+
+	// if (isset($label)) {
+	// 	$ds_html .= "<span class=\"label\">$label</span>";
+	// }
+
+	$ds_html .= "<div class=\"icon_bs link new_component_semantic_node\" onclick=\"component_semantic_node.open_ts_window(this)\" ";
+	$ds_html .= "data-portal_locator_section_tipo=\"{$section_tipo}\" ";
+	$ds_html .= "data-portal_locator_section_id=\"{$section_id}\" ";
+	$ds_html .= "data-from_component_tipo=\"{$tipo}\" ";
+	$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
+	$ds_html .= "data-component_name=\"component_semantic_node\" ";
+	$ds_html .= "data-hierarchy_types='{$hierarchy_types_string}' ";
+	$ds_html .= "data-hierarchy_sections=\"\" ";
+	$ds_html .= "></div>";
+
+
+	if (!empty($dato)) {
+
+		$ds_html .= "<ul class=\"ul_component_semantic_node\">";
+
+		foreach ((array)$dato as $locator_ds) {
+			#dump($locator_ds, ' locator_ds ++ '.to_string());
+
+			$term = ts_object::get_term_by_locator( $locator_ds, $lang=DEDALO_DATA_LANG, $from_cache=true );
+			$locator_ds_json = json_encode($locator_ds);
+
+			$ds_html .= "<li>";
+
+			$ds_html .= "<div class=\"icon_bs link delete_component_semantic_node\" onclick=\"component_semantic_node.remove_index(this,event)\" ";
+			$ds_html .= "data-portal_locator_section_tipo=\"{$section_tipo}\" ";
+			$ds_html .= "data-portal_locator_section_id=\"{$section_id}\" ";
+			$ds_html .= "data-from_component_tipo=\"{$tipo}\" ";
+			$ds_html .= "data-locator_ds='{$locator_ds_json}' ";
+			$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
+			$ds_html .= "></div>";
+
+			$ds_html .= "<span>";
+			$ds_html .= $term;
+			if(SHOW_DEBUG) {
+				$ds_html .= ' [' . $locator_ds->section_tipo.'_'.$locator_ds->section_id . ']';
+			}
+			$ds_html .= "</span>";
+
+			$ds_html .= "</li>";
+		}
+
+		$ds_html .= "</ul>";
+	}
+
+	$ds_html .= "</div>"; //end semantic_wrapper
+
+
+	echo $ds_html;

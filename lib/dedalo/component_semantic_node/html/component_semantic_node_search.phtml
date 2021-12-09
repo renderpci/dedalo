@@ -1,0 +1,105 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	// print '<div class="wrap_component css_wrap_'.$component_name.' wrap_component_'.$modo.' wrap_component_'.$tipo. ' tooltip_active" ';
+
+
+	// print "id=\"wrap_{$tipo}\" ";
+	// print "data-tipo=\"{$tipo}\" ";
+	// print "data-component_name=\"{$component_name}\" ";
+	// print "data-modo=\"{$modo}\" ";
+	// print "data-dato='".json_encode($dato)."' ";
+	// // print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	// print ">";
+
+	// q operator
+		// if ($modo==='search') {
+		// 	$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
+		// 	$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+		// 	$html_content .=' />';
+		// }
+
+		$locator_ds = new stdClass();
+			$locator_ds->ds = $dato;
+
+		$dato_search = json_encode($locator_ds);
+
+	
+	$ds_html  = '';
+
+	// wrapper
+		$ds_html .= '<div id="'.$semantic_wrapper_id.'" class="wrap_component css_wrap_'.$component_name.' wrap_component_'.$modo.' wrap_component_'.$tipo. ' tooltip_active\" ';
+		$ds_html .= "data-tipo=\"{$tipo}\" ";
+		$ds_html .= "data-section_tipo=\"{$section_tipo}\" ";
+		$ds_html .= "data-parent=\"{$section_id}\" ";
+		$ds_html .= "data-component_name=\"{$component_name}\" ";
+		$ds_html .= "data-modo=\"{$modo}\" ";
+		$ds_html .= "data-dato='".$dato_search."' ";
+		// $ds_html .= 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+		$ds_html .= '>';
+
+	// label
+		$ds_html .= "<span class=\"label\">$label</span>";
+
+
+	// button tree selector
+		$ds_html .= "<div class=\"icon_bs link new_component_semantic_node_search\" onclick=\"component_semantic_node.open_ts_window(this)\" ";
+		$ds_html .= "data-portal_locator_section_tipo=\"{$section_tipo}\" ";
+		$ds_html .= "data-portal_locator_section_id=\"{$section_id}\" ";
+		$ds_html .= "data-from_component_tipo=\"{$tipo}\" ";
+		$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
+		$ds_html .= "data-component_name=\"component_semantic_node\" ";
+		$ds_html .= "data-hierarchy_types='{$hierarchy_types_string}' ";
+		$ds_html .= "data-hierarchy_sections=\"\" ";
+		$ds_html .= "></div>";
+
+
+	// list
+		$ds_html .= "<ul class=\"ul_component_semantic_node\">";
+		if (!empty($dato)) {
+			foreach ((array)$dato as $locator) {
+
+				$term = ts_object::get_term_by_locator( $locator, $lang=DEDALO_DATA_LANG, $from_cache=true );
+
+				$locator_ds = new stdClass();
+					$locator_ds->ds = [$locator];
+
+				$locator_ds_json = json_encode($locator_ds);
+
+				$ds_html .= '<li>';
+
+				// button delete
+					$ds_html .= "<div class=\"icon_bs link delete_component_semantic_node\" onclick=\"component_semantic_node.remove_search_index(this,event)\" ";
+					$ds_html .= "data-from_component_tipo=\"{$tipo}\" ";
+					$ds_html .= "data-locator_ds='{$locator_ds_json}' ";
+					$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
+					$ds_html .= '></div> ';
+
+				// label
+					$ds_html .= '<span>';
+					$ds_html .= $term;
+					if(SHOW_DEBUG) {
+						$ds_html .= ' [' . $locator->section_tipo.'_'.$locator->section_id . ']';
+					}
+					$ds_html .= '</span>';
+
+
+				// input hidden
+					$ds_html .= '<input type="text" value=\''.$dato_search .'\' data-role="dato_hidden" class="hide">';
+
+
+				$ds_html .= '</li>';
+			}
+		}
+		$ds_html .= '</ul>';
+
+
+
+	$ds_html .= "</div>";//end semantic_wrapper
+
+
+	echo $ds_html;
+
+
+
