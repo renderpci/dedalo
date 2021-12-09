@@ -2583,6 +2583,8 @@
 		Clean class JSON_RecordDataBoundObject code. Removed unnecessary exceptions and clarify data flows
 		Clean class backup code. Unified terminal execution calls
 		Fixed minor var checks on JSON and string values
+		09-12-2021
+		Added global search custom columns (MDCAT)
 
 
 
@@ -2610,13 +2612,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3o';
+	$DEDALO_VERSION = '5.8.3p';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-12-2021');
+	define('DEDALO_BUILD'	, '09-12-2021');
 
 
 	/*
