@@ -1028,9 +1028,9 @@ class web_data {
 					if ($caller!=='portal_resolve') {
 						debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::DEBUG);
 					}
-					if(SHOW_DEBUG===true) {
-						error_log("strQuery:".PHP_EOL.$strQuery);
-					}
+					// if(SHOW_DEBUG===true) {
+					// 	error_log("strQuery:".PHP_EOL.$strQuery);
+					// }
 
 				// prepare PDO
 					try {
@@ -4581,6 +4581,48 @@ class web_data {
 				if (!empty($json_data->filters->gender)) {
 					$ar_filter[] = 'gender = '. (int)$json_data->filters->gender;
 				}
+
+				// Added 09-12-2021
+					foreach ([
+						'graves_category'			=> 'int',
+						'archeological_site_type'	=> 'int',
+						'conservation'				=> 'int',
+						'marked'					=> 'int',
+						'dignified'					=> 'int',
+						'inside_cemetery'			=> 'int',
+						'grave_by_number'			=> 'int',
+						'intervention_types'		=> 'text_array', // like ["1"]
+						'result'					=> 'text_array', // like ["1"]
+						'graves_genders'			=> 'text_array', // like ["1","2"]
+						'ages'						=> 'text_array'  // like ["1","2"]
+					] as $_cname => $_ctype) {
+
+						// skip empty columns
+							if (empty($json_data->filters->{$_cname})) {
+								continue;
+							}
+
+						switch ($_ctype) {
+							case 'int':
+								$ar_filter[] = '`'.$_cname.'` = '. (int)$json_data->filters->{$_cname};
+								break;
+
+							case 'text_array':
+							default:
+								// text_array like ["1","2"]
+								$ar_values = $json_data->filters->{$_cname};
+								$ar_term = [];
+								foreach ((array)$ar_values as $element_value) {
+									$ar_term[] = "`{$_cname}` LIKE '%\"".escape_string($element_value)."\"%'";
+								}
+								if (!empty($ar_term)) {
+									$current_filter_item = '('.implode(' AND ', $ar_term).')';
+									$ar_filter[] = $current_filter_item;
+								}
+								break;
+						}
+					}//end foreach
+
 
 				// sql_filter add final string if not empty
 					if (!empty($ar_filter)) {
