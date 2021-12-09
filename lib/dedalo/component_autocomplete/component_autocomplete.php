@@ -88,11 +88,11 @@
 
 			// Semantic nodes
 				$semantic_nodes = $this->get_semantic_nodes();
-				if ( !empty($this->semantic_nodes) ) {
-					# JS/CSS ADD
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
-				}
+				// if ( !empty($this->semantic_nodes) ) {
+				// 	# JS/CSS ADD
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_semantic_node/js/component_semantic_node.js";
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_semantic_node/css/component_semantic_node.css";
+				// }
 
 			// time machine. get the change in_time_machine
 				$var_requested_m 	= common::get_request_var('m');

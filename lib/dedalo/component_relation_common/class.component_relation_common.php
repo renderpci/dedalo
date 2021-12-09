@@ -1073,10 +1073,9 @@ class component_relation_common extends component_common {
 			$q = json_encode($q);
 		}
 
-		$q = str_replace(array('[',']'), '', $q);
+		// $q = str_replace(array('[',']'), '', $q);
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-
 
 		switch (true) {
 			# IS DIFFERENT

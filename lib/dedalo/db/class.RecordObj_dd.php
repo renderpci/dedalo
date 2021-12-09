@@ -393,7 +393,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* Alias of $this->get_termino_by_tipo($modelo_tipo)
 	*/
 	public function get_modelo_name() {
-		return $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
+		$model = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
+
+		// compatibility with ontology previous model name.
+		if($model === 'semantic_node'){
+			$model = 'component_semantic_node';
+		}
+
+		return $model;
 	}
 
 	# GET MODELO NAME BY TIPO (STATIC)

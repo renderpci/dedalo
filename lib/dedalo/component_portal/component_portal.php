@@ -65,10 +65,10 @@
 
 		case 'edit':
 
-				#
-				# SEMANTIC NODES JS/CSS ADD
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
+				// #
+				// # SEMANTIC NODES JS/CSS ADD
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_semantic_node/js/component_semantic_node.js";
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_semantic_node/css/component_semantic_node.css";
 				
 
 				$dato 			= $this->get_dato();
