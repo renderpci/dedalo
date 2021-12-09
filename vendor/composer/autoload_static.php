@@ -25,6 +25,10 @@ class ComposerStaticInitf20ee85e863585bbf23a73c4501f9f6e
         array (
             'GeoIp2\\' => 7,
         ),
+        'E' => 
+        array (
+            'EasyRdf\\' => 8,
+        ),
         'C' => 
         array (
             'Composer\\CaBundle\\' => 18,
@@ -56,6 +60,10 @@ class ComposerStaticInitf20ee85e863585bbf23a73c4501f9f6e
         array (
             0 => __DIR__ . '/..' . '/geoip2/geoip2/src',
         ),
+        'EasyRdf\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/easyrdf/easyrdf/lib',
+        ),
         'Composer\\CaBundle\\' => 
         array (
             0 => __DIR__ . '/..' . '/composer/ca-bundle/src',
@@ -63,6 +71,7 @@ class ComposerStaticInitf20ee85e863585bbf23a73c4501f9f6e
     );
 
     public static $classMap = array (
+        'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'lessc' => __DIR__ . '/..' . '/leafo/lessphp/lessc.inc.php',
         'lessc_formatter_classic' => __DIR__ . '/..' . '/leafo/lessphp/lessc.inc.php',
         'lessc_formatter_compressed' => __DIR__ . '/..' . '/leafo/lessphp/lessc.inc.php',

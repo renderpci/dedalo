@@ -290,6 +290,12 @@ class component_portal extends component_relation_common {
 		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
 			$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
 
+			$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_semantic_node', 'children', true);
+
+			if(!empty($ds_component)){
+				$ar_terminos_relacionados[] = $ds_component;
+			}
+
 		// FIELDS
 			$fields=array();
 			foreach ($ar_terminos_relacionados as $key => $ar_value) {
@@ -329,6 +335,9 @@ class component_portal extends component_relation_common {
 																 'list',
 																 $lang,
 																 $section_tipo);
+				if($modelo_name==='component_semantic_node'){
+					$component->set_dato($value);
+				}
 				$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
 
 				$item = new stdClass();
@@ -2006,19 +2015,20 @@ class component_portal extends component_relation_common {
 						}else if ( strpos($column_tipo, 'ds_')===0 ) {
 
 							# Convert column name from 'ds_myname' to 'myname'
-							$ds_key = substr($column_tipo, 3);
+							$ds_tipo = substr($column_tipo, 3);
 
-							# Mandatory vars to create semantic_node column
-							$semantic_wrapper_id = $ds_key.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
-							$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
-								#dump($current_locator, ' current_locator ++ '.to_string());
-								#dump($ds_element, ' ds_element ++ '.to_string());
+							// component_semantic_node
+								$component_semantic_node = component_common::get_instance('component_semantic_node',
+																						  $ds_tipo,
+																						  $current_locator->section_id,
+																						  'edit',
+																						  DEDALO_DATA_NOLAN,
+																						  $current_locator->section_tipo);
+								$component_semantic_node->set_dato($current_locator);
 
 							$ds_value = '';
 							$ds_value .= "<div class=\"td_ds\">";
-							ob_start();
-							include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
-							$ds_value .= ob_get_clean();
+							$ds_value .= $component_semantic_node->get_html();
 							$ds_value .= "</div>";
 
 							$json_d->rows_data_values[$key][$column_tipo] = $ds_value;

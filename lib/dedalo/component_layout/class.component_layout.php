@@ -994,9 +994,8 @@ class component_layout extends component_common {
 				return $ar_plain;
 			};
 			$layout_map_plain = make_plain($layout_map, $ar_exclude_elements);
-				#dump($layout_map_plain, ' layout_map_plain ++ '.to_string());
+				// dump($layout_map_plain, ' layout_map_plain ++ '.to_string());
 			$ar_layout_map_items = self::resolve_layout_map_plain($layout_map_plain, $ar_exclude_elements);
-				#dump($ar_layout_map_items, ' ar_items ++ '.to_string());
 
 		// solve functions
 			// solve item manager
@@ -1157,6 +1156,7 @@ class component_layout extends component_common {
 		static $layout_solved = [];
 
 		$ar_include_modelo_name = ['section_group','section_group_div','section_tab','tab']; // Unused?: 'section_group_relation','section_group_portal'
+		$ar_exclude_modelo_name = ['component_semantic_node'];
 
 		$ar_items = [];
 		foreach ($ar_tipos as $current_tipo) {
@@ -1176,7 +1176,7 @@ class component_layout extends component_common {
 			#$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 			// skip non valid models
-				if (strpos($model, 'component_')!==0 && strpos($model, 'button_')!==0 && !in_array($model, $ar_include_modelo_name) ) {
+				if ( (strpos($model, 'component_')!==0 && strpos($model, 'button_')!==0 && !in_array($model, $ar_include_modelo_name)) || in_array($model, $ar_exclude_modelo_name) ) {
 					continue;
 				}
 

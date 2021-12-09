@@ -190,11 +190,10 @@
 								$html_content .= "<div class=\"autocomplete_semantic_nodes\">";
 								foreach ((array)$this->semantic_nodes as $semantic_node_tipo) {
 
-									$semantic_node_title = RecordObj_dd::get_termino_by_tipo($semantic_node_tipo);
-
-									$ds_key 			 = $semantic_node_tipo;
-									$semantic_wrapper_id = $ds_key.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
-									$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
+									$semantic_node_title	= RecordObj_dd::get_termino_by_tipo($semantic_node_tipo);
+									$ds_from_component_tipo	= $semantic_node_tipo;
+									$semantic_wrapper_id	= $current_locator->from_component_tipo.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
+									$ds_element				= isset($current_locator->ds) ? $current_locator->ds : null;
 
 									ob_start();
 									include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');

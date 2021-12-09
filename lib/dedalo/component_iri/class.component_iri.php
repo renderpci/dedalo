@@ -401,6 +401,7 @@ class component_iri extends component_common {
 			$q = $q->iri;
 		}
 
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
     	# Always set fixed values
 		$query_object->type = 'string';
@@ -511,6 +512,34 @@ class component_iri extends component_common {
 	    			$query_object->unaccent = true;
 					break;
 				*/
+
+			# IS EXACTLY EQUAL ==
+			case (strpos($q, '==')===0 || $q_operator==='=='):
+				$operator = '==';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '@>';
+				$query_object->q_parsed	= '\'[{"iri":"'.$q_clean.'"}]\'';
+				$query_object->unaccent = false;
+				$query_object->type = 'object';
+				if (isset($query_object->lang) && $query_object->lang!=='all') {
+					$query_object->component_path[] = $query_object->lang;
+				}
+				if (isset($query_object->lang) && $query_object->lang==='all') {
+					$logical_operator = '$or';
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
+						// Empty data is blank array []
+						$clone = clone($query_object);
+							$clone->component_path[] = $current_lang;
+
+						$ar_query_object[] = $clone;
+					}
+					$query_object = new stdClass();
+					$query_object->$logical_operator = $ar_query_object;
+				}
+				break;
 			# CONTAIN
 			default:
 				$operator = '~*';

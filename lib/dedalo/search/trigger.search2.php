@@ -97,7 +97,6 @@ function load_components($json_data) {
 		return $response;
 	}
 
-	
 	$html = '';
 	foreach ((array)$components as $key => $component_info) {
 		
@@ -109,12 +108,16 @@ function load_components($json_data) {
 		$component_tipo = $component_info->component_tipo;
 
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_info->component_tipo,true);
+
+
 		$component 		= component_common::get_instance($modelo_name,
-														 $component_info->component_tipo,
-														 $component_info->section_id,
-														 $component_info->modo,
-														 DEDALO_DATA_LANG,
-														 $component_info->section_tipo);
+													 $component_info->component_tipo,
+													 $component_info->section_id,
+													 $component_info->modo,
+													 DEDALO_DATA_LANG,
+													 $component_info->section_tipo);
+
+
 		#if ($component_info->modo==="search") {
 		#	$component->search_input_name = $component_info->component_tipo.'_'.$component_info->section_id;
 		#}

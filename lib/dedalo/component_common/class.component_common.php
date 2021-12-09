@@ -3290,7 +3290,7 @@ abstract class component_common extends common {
 		$childrens = $this->RecordObj_dd->get_ar_childrens_of_this();
 		foreach ($childrens as $current_tipo) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			if ($modelo_name==='semantic_node') {
+			if ($modelo_name==='component_semantic_node') {
 				$this->semantic_nodes[] = $current_tipo;
 			}
 		}
@@ -3306,11 +3306,10 @@ abstract class component_common extends common {
 	* @param string $termino_id
 	* @param string $locator_section_tipo
 	* @param string $locator_section_id
-	* @param string $ds_key
 	*	Dédalo semantics key
 	* @return object $response
 	*/
-	public function add_index_semantic($new_ds_locator, $locator_section_tipo, $locator_section_id, $ds_key) {
+	public function add_index_semantic($new_ds_locator, $locator_section_tipo, $locator_section_id) {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -3326,15 +3325,15 @@ abstract class component_common extends common {
 				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
 
 				# ds container add if not exits in current locator
+				// if(!isset($current_locator->ds)) {
+				// 	$current_locator->ds = new stdClass();
+				// }
 				if(!isset($current_locator->ds)) {
-					$current_locator->ds = new stdClass();
-				}
-				if(!isset($current_locator->ds->$ds_key)) {
-					$current_locator->ds->$ds_key = array();
+					$current_locator->ds = array();
 				}
 
 				# add ds locator to current portal locator removing duplicates
-				$current_locator->ds->$ds_key = component_common::add_object_to_dato((object)$new_ds_locator, (array)$current_locator->ds->$ds_key);
+				$current_locator->ds = component_common::add_object_to_dato((object)$new_ds_locator, (array)$current_locator->ds);
 
 				$this->set_dato($dato);
 				$this->Save();
@@ -3359,7 +3358,7 @@ abstract class component_common extends common {
 	* @param string $locator_section_id
 	* @return object $response
 	*/
-	public function remove_index_semantic($new_ds_locator, $locator_section_tipo, $locator_section_id, $ds_key) {
+	public function remove_index_semantic($new_ds_locator, $locator_section_tipo, $locator_section_id) {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -3371,7 +3370,7 @@ abstract class component_common extends common {
 			if ($current_locator->section_tipo===$locator_section_tipo && $current_locator->section_id==$locator_section_id) {
 
 				# ds container add if not exits in current locator
-				if(!isset($current_locator->ds->$ds_key)) {
+				if(!isset($current_locator->ds)) {
 					$response->msg = 'Sorry, current index not exists. Nothing is removed';
 					return $respose;
 				}
@@ -3381,7 +3380,7 @@ abstract class component_common extends common {
 
 				# add ds locator to current portal locator removing duplicates
 				#$current_locator->ds->$ds_key = component_common::remove_object_in_dato((object)$new_ds_locator, (array)$current_locator->ds->$ds_key);
-				$current_locator->ds->$ds_key = component_common::remove_locator_in_dato((object)$new_ds_locator, (array)$current_locator->ds->$ds_key);
+				$current_locator->ds = component_common::remove_locator_in_dato((object)$new_ds_locator, (array)$current_locator->ds);
 
 				$this->set_dato($dato);
 				$this->Save();
@@ -4188,6 +4187,7 @@ abstract class component_common extends common {
 	public static function split_query($query_object) {
 
 		$search_value = $query_object->q;
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
 		# For unification, all non string are json encoded
 		# This allow accept mixed values (encoded and no encoded)
@@ -4221,7 +4221,7 @@ abstract class component_common extends common {
 
 
 			$model = end($query_object->path)->modelo;
-			if ($model==='component_json') {
+			if ($model==='component_json' || $q_operator === '==' || strpos($query_object->q, '==')==0 ) {
 				// component json case
 
 				// $query_object->q	= str_replace('"', '\"', $search_value);
@@ -4264,6 +4264,8 @@ abstract class component_common extends common {
 				}//end if ($total_count===1) {
 			}//end if ($model==='component_json')
 		}
+
+
 
 		return $ar_query_object;
 	}//end split_query

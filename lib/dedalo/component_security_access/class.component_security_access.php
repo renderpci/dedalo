@@ -243,7 +243,7 @@ class component_security_access extends component_common {
 		}
 		
 
-		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
 		foreach((array)$ar_ts_childrens as $children_terminoID) {			
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);			
 			foreach($ar_exclude_modelo as $exclude_modelo) {					

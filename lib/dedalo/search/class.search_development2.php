@@ -2421,7 +2421,11 @@ class search_development2 {
 
 				# q
 				// Escape parenthesis inside regex
-				$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
+				if($search_object_type==='string') {
+					$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
+				}else{
+					$q_parsed_clean = $search_object->q_parsed;
+				}
 				$sql_where .= $q_parsed_clean;
 				#$sql_where .= pg_escape_string(DBi::_getConnection(), stripslashes($search_object->q_parsed));
 
@@ -3264,6 +3268,14 @@ class search_development2 {
 								$element->target_section			= false; // Default (changes when component_portal/component_autocomplete)
 								$element->ar_tipo_exclude_elements	= false; // default (changes when component_portal/component_autocomplete and ar_terminos_relacionados_to_exclude)
 
+						// add the component_semantic_node label linked to the portal, the label doesn't have the portal and it could be confused.
+						if ($modelo_name==='component_semantic_node') {
+							$RecordObj_dd = new RecordObj_dd($component_tipo);
+							$ds_parent = $RecordObj_dd ->get_parent();
+							$element->component_label .= ' '.RecordObj_dd::get_termino_by_tipo($ds_parent, DEDALO_DATA_LANG , true, true);
+
+						}
+
 						// // Exclude components
 						// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						// 	if(true===in_array($modelo_name, $ar_components_exclude)) continue; // Skip excluded components
@@ -3313,6 +3325,7 @@ class search_development2 {
 
 						// Add element
 						$ar_result[] = $element;
+
 
 						// store as added to avoid duplicates
 						$ar_added_components[] = $component_tipo;
