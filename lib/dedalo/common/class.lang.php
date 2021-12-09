@@ -494,7 +494,7 @@ class lang {
 			case 'lg-spa' 	: $code = 'es';	break;
 			case 'lg-eng' 	: $code = 'en';	break;
 			case 'lg-cat' 	: $code = 'ca';	break;
-			case 'lg-vlca' 	: $code = 'va';break;
+			case 'lg-vlca' 	: $code = 'va'; break;
 			case 'lg-fra' 	: $code = 'fr';	break;
 			case 'lg-eus' 	: $code = 'eu';	break;
 			case 'lg-por' 	: $code = 'pt';	break;
