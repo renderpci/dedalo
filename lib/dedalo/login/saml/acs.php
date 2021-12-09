@@ -138,6 +138,10 @@ $start_time=microtime(1);
 			// write error to log
 			error_log('SAML ERROR. Any pot SAMLResponse var is received '.PHP_EOL.$msg);
 		}
+
+		// write useful data to catch errors
+		debug_log(__METHOD__." SAMLResponse POST: ".to_string($_POST['SAMLResponse']), logger::ERROR);
+
 	}catch (Exception $e) {
 		// Error in SAML response manager
 		$msg = ' Invalid SAML Response (2): ' . $e->getMessage();
@@ -145,11 +149,6 @@ $start_time=microtime(1);
 		// write error to log
 		error_log('SAML ERROR. Error in SAML response manager. EXCEPTION. '.PHP_EOL.$msg);
 	}
-
-
-
-	// write useful data on errors
-	debug_log(__METHOD__." SAMLResponse POST: ".to_string($_POST['SAMLResponse']), logger::ERROR);
 
 
 
