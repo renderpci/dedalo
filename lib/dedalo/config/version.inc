@@ -2589,7 +2589,7 @@
 		Fixed error on get Ontology model correctly (var 'visible' was overwritten by another script)
 		10-12-2021
 		Fix component_semantic_node issues in both search and edit mode
-
+		Added component_semantic_node compatibility options (update_portal_dato)
 
 
 	[/HISTORY]
@@ -2615,7 +2615,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3r';
+	$DEDALO_VERSION = '5.8.3s';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
