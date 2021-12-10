@@ -455,7 +455,6 @@ class tool_export extends tool_common {
 	* @return array $row_deep_resolved
 	*/
 	public function deep_resolve_row($record, $lang=DEDALO_DATA_LANG) {
-		#dump($record, ' record ++ '.to_string());
 
 		$quotes = tool_export::$quotes;
 
@@ -467,6 +466,9 @@ class tool_export extends tool_common {
 			$section_id		= $record->section_id;
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key, true);
+			if ($modelo_name==='component_semantic_node') {
+				continue;
+			}
 
 			// skip id, section_tipo, section_id columns
 			if ($key==='id' || $key==='section_tipo' || $key==='section_id' || $key==='datos' || (strpos($component_tipo, '_order')!==false)) continue;

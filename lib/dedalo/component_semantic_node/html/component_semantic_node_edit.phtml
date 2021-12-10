@@ -2,63 +2,62 @@
 
 	# VISUALIZADOR HTML	
 
-	#$semantic_wrapper_id = $from_component_tipo.'_'.$section_tipo.'_'.$section_id;
-	#$dato 		 = isset($ds->$from_component_tipo) ? $ds->$from_component_tipo : null;
+	$html  = '';
 
-	
-	$ds_html  = '';
+	// wrapper in
+		$html .= '<div id="'.$component_wrapper_id.'" class="wrap_component semantic_wrapper" ';
+		$html .= "data-tipo=\"{$tipo}\" ";
+		$html .= "data-section_tipo=\"{$section_tipo}\" ";
+		$html .= "data-parent=\"{$section_id}\" ";
+		$html .= "data-component_name=\"{$component_name}\" ";
+		$html .= "data-component_info=\"{$component_info}\" ";
+		$html .= "data-modo=\"{$modo}\" ";
+		$html .= 'data-dato=\''.json_encode($dato).'\' ';
+		// $html .= "data-portal_locator_section_tipo=\"{$row_locator->section_tipo}\" ";
+		// $html .= "data-portal_locator_section_id=\"{$row_locator->section_id}\" ";
+		$html .= 'data-row_locator=\''.json_encode($row_locator).'\' ';
+		$html .= '>';
 
-	$ds_html .= "<div id=\"$semantic_wrapper_id\" class=\"semantic_wrapper\">";
+	// button tree selector
+		$html .= "<div class=\"icon_bs link new_component_semantic_node\" ";
+		$html .= "onclick=\"component_semantic_node.open_ts_window(this)\" ";
+		$html .= "data-component_name=\"{$component_name}\" "; // manadatory (!)
+		$html .= "data-hierarchy_types='{$hierarchy_types_string}' ";
+		// $html .= "data-hierarchy_sections=\"\" ";
+		$html .= "></div>";
 
-	// if (isset($label)) {
-	// 	$ds_html .= "<span class=\"label\">$label</span>";
-	// }
+	// data list
+		if (!empty($dato)) {
 
-	$ds_html .= "<div class=\"icon_bs link new_component_semantic_node\" onclick=\"component_semantic_node.open_ts_window(this)\" ";
-	$ds_html .= "data-portal_locator_section_tipo=\"{$section_tipo}\" ";
-	$ds_html .= "data-portal_locator_section_id=\"{$section_id}\" ";
-	$ds_html .= "data-from_component_tipo=\"{$tipo}\" ";
-	$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
-	$ds_html .= "data-component_name=\"component_semantic_node\" ";
-	$ds_html .= "data-hierarchy_types='{$hierarchy_types_string}' ";
-	$ds_html .= "data-hierarchy_sections=\"\" ";
-	$ds_html .= "></div>";
+			$html .= '<ul class="ul_component_semantic_node">';
+			foreach ((array)$dato as $current_locator_ds) {
 
+				$current_term				= ts_object::get_term_by_locator($current_locator_ds, DEDALO_DATA_LANG, true);
+				$current_locator_ds_json	= json_encode($current_locator_ds);
 
-	if (!empty($dato)) {
+				$html .= '<li>';
 
-		$ds_html .= "<ul class=\"ul_component_semantic_node\">";
+				// button delete
+					$html .= "<div class=\"icon_bs link delete_component_semantic_node\" ";
+					$html .= "onclick=\"component_semantic_node.remove_index(this,event)\" ";
+					$html .= "data-locator_ds='{$current_locator_ds_json}' ";
+					$html .= "data-component_wrapper_id=\"{$component_wrapper_id}\" ";
+					$html .= "></div>";
 
-		foreach ((array)$dato as $locator_ds) {
-			#dump($locator_ds, ' locator_ds ++ '.to_string());
+				// term
+					$html .= '<span>';
+					$html .= $current_term;
+					if(SHOW_DEBUG) {
+						$html .= ' [' . $current_locator_ds->section_tipo.'_'.$current_locator_ds->section_id . ']';
+					}
+					$html .= '</span>';
 
-			$term = ts_object::get_term_by_locator( $locator_ds, $lang=DEDALO_DATA_LANG, $from_cache=true );
-			$locator_ds_json = json_encode($locator_ds);
-
-			$ds_html .= "<li>";
-
-			$ds_html .= "<div class=\"icon_bs link delete_component_semantic_node\" onclick=\"component_semantic_node.remove_index(this,event)\" ";
-			$ds_html .= "data-portal_locator_section_tipo=\"{$section_tipo}\" ";
-			$ds_html .= "data-portal_locator_section_id=\"{$section_id}\" ";
-			$ds_html .= "data-from_component_tipo=\"{$tipo}\" ";
-			$ds_html .= "data-locator_ds='{$locator_ds_json}' ";
-			$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
-			$ds_html .= "></div>";
-
-			$ds_html .= "<span>";
-			$ds_html .= $term;
-			if(SHOW_DEBUG) {
-				$ds_html .= ' [' . $locator_ds->section_tipo.'_'.$locator_ds->section_id . ']';
+				$html .= '</li>';
 			}
-			$ds_html .= "</span>";
+			$html .= '</ul>';
+		}//end if (!empty($dato))
 
-			$ds_html .= "</li>";
-		}
+	// end wrapper
+		$html .= '</div>';//end semantic_wrapper
 
-		$ds_html .= "</ul>";
-	}
-
-	$ds_html .= "</div>"; //end semantic_wrapper
-
-
-	echo $ds_html;
+	echo $html;

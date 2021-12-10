@@ -3339,10 +3339,9 @@ abstract class component_common extends common {
 				$this->Save();
 
 				$response->result 	= true;
-				$response->msg 		= "Added index semantic locator ds";
+				$response->msg 		= "OK. Added index semantic locator successfully";
 				break;
 			}
-
 		}//end foreach ((array)$dato as $current_locator) {
 
 		return (object)$response;
@@ -3353,43 +3352,43 @@ abstract class component_common extends common {
 	/**
 	* REMOVE_INDEX_SEMANTIC
 	* Used by components using locators like component_portal and component_autocomplete
-	* @param string $termino_id
+	* @param object $locator_ds
 	* @param string $locator_section_tipo
 	* @param string $locator_section_id
 	* @return object $response
 	*/
-	public function remove_index_semantic($new_ds_locator, $locator_section_tipo, $locator_section_id) {
+	public function remove_index_semantic($locator_ds, $locator_section_tipo, $locator_section_id) {
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 		= '';
+			$response->msg 		= 'Error. Nothing is removed';
 
 		$dato = $this->get_dato();
 		foreach ((array)$dato as $current_locator) {
 
-			if ($current_locator->section_tipo===$locator_section_tipo && $current_locator->section_id==$locator_section_id) {
+			if ($current_locator->section_tipo==$locator_section_tipo && $current_locator->section_id==$locator_section_id) {
 
 				# ds container add if not exits in current locator
 				if(!isset($current_locator->ds)) {
-					$response->msg = 'Sorry, current index not exists. Nothing is removed';
+					$response->msg = 'Sorry, current index do not exists. Nothing is removed';
 					return $respose;
 				}
 
 				# new ds locator is built from termino_id temporarily
-				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
+				#$locator_ds = component_autocomplete_ts::convert_dato_to_locator($termino_id);
 
 				# add ds locator to current portal locator removing duplicates
-				#$current_locator->ds->$ds_key = component_common::remove_object_in_dato((object)$new_ds_locator, (array)$current_locator->ds->$ds_key);
-				$current_locator->ds = component_common::remove_locator_in_dato((object)$new_ds_locator, (array)$current_locator->ds);
+				#$current_locator->ds->$ds_key = component_common::remove_object_in_dato((object)$locator_ds, (array)$current_locator->ds->$ds_key);
+				$current_locator->ds = component_common::remove_locator_in_dato((object)$locator_ds, (array)$current_locator->ds);
 
 				$this->set_dato($dato);
 				$this->Save();
 
 				$response->result 	= true;
-				$response->msg 		= "Removed index semantic locator";
+				$response->msg 		= "OK. Removed index semantic locator successfully";
+				return (object)$response;
 				break;
 			}
-
 		}//endforeach ((array)$dato as $current_locator) {
 
 		return (object)$response;

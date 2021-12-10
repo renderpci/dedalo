@@ -2020,10 +2020,10 @@ class component_portal extends component_relation_common {
 							// component_semantic_node
 								$component_semantic_node = component_common::get_instance('component_semantic_node',
 																						  $ds_tipo,
-																						  $current_locator->section_id,
+																						  $parent,
 																						  'edit',
 																						  DEDALO_DATA_NOLAN,
-																						  $current_locator->section_tipo);
+																						  $section_tipo);
 								$component_semantic_node->set_dato($current_locator);
 
 							$ds_value = '';
