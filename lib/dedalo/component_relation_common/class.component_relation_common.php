@@ -1073,7 +1073,12 @@ class component_relation_common extends component_common {
 			$q = json_encode($q);
 		}
 
-		// $q = str_replace(array('[',']'), '', $q);
+		// remove initial and final array square brackets if exists
+			// $q = str_replace(array('[',']'), '', $q);
+			if (strpos($q, '[')===0) {
+				$re		= '/^(\[)(.*)(\])$/m';
+				$q		= preg_replace($re, '$2', $q);
+			}
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
