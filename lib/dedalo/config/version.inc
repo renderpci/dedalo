@@ -2592,6 +2592,7 @@
 		Added component_semantic_node compatibility options (update_portal_dato)
 		Fixed issue with duplicate square brackets in resolve_query_object_sql. Now, first and last are removed before process
 		Fixed search issue of component_semantic_node when empty value has searched as null value
+		Fixed search value display error on component_json
 
 
 	[/HISTORY]
@@ -2617,7 +2618,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3t';
+	$DEDALO_VERSION = '5.8.3u';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
