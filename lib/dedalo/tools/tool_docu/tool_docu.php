@@ -39,12 +39,8 @@
 				$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
 
 			// redirect current iframe
-				// $show_inspector = (SHOW_DEBUG===true || SHOW_DEVELOPER===true) ? '' : '&inspector=0';
-				// header('Location: ' . DEDALO_LIB_BASE_URL . '/main/?t=' . $section_tipo . '&id=' .$section_id .'&m=edit&menu=0' . $show_inspector);
-
-
-				$url = 'https://dedalo.dev/ontology/' . $component_tipo;
-				header('Location: ' . $url);
+				$show_inspector = (SHOW_DEBUG===true || SHOW_DEVELOPER===true) ? '' : '&inspector=0';
+				header('Location: ' . DEDALO_LIB_BASE_URL . '/main/?t=' . $section_tipo . '&id=' .$section_id .'&m=edit&menu=0' . $show_inspector);
 			
 			exit();
 
