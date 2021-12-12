@@ -1174,10 +1174,16 @@ class component_layout extends component_common {
 			$RecordObj_dd = new RecordObj_dd($current_tipo);
 			$model 		  = $RecordObj_dd->get_modelo_name();
 			#$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			if (empty($model)) {
+				debug_log(__METHOD__." Invalid model found for tipo ".to_string($current_tipo), logger::ERROR);
+			}
 
 			// skip non valid models
-				if ( (strpos($model, 'component_')!==0 && strpos($model, 'button_')!==0 && !in_array($model, $ar_include_modelo_name)) || in_array($model, $ar_exclude_modelo_name) ) {
-					continue;
+				if (empty($model) ||
+					 (strpos($model, 'component_')!==0 && strpos($model, 'button_')!==0 && !in_array($model, $ar_include_modelo_name)) ||
+					  in_array($model, $ar_exclude_modelo_name) )
+					{
+						continue;
 				}
 
 			$parent 	= $RecordObj_dd->get_parent();

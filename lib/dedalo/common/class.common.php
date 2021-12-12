@@ -281,16 +281,18 @@ abstract class common {
 
 			# SECTION CASE
 			switch (true) {
+
 				case ($tipo===DEDALO_SECTION_PROJECTS_TIPO):
 					$matrix_table = 'matrix_projects';
 					#error_log("Error. Table for section projects tipo is not defined. Unsing default table: '$matrix_table'");
 					break;
+
 				case ($tipo===DEDALO_SECTION_USERS_TIPO):
 					$matrix_table = 'matrix_users';
 					#error_log("Error. Table for section users tipo is not defined. Unsing default table: '$matrix_table'");
 					break;			
-				default:
 
+				default:
 					$table_is_resolved = false;
 
 					# SECTION : If section have TR of model name 'matrix_table' takes its matrix_table value
@@ -314,13 +316,15 @@ abstract class common {
 							$table_is_resolved = true;
 						}
 					}
+					break;
 			}//end switch
 			
 		}else{
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
 			}
-			throw new Exception("Error Processing Request. Not use component tipo ($tipo) to calculate matrix_table. Use always section_tipo", 1);
+			error_log('modelo_name: '.json_encode($modelo_name));
+			throw new Exception("Error Processing Request. Don not use component tipo:'$tipo', model:'$modelo_name' to calculate matrix_table. Use always section_tipo", 1);
 			
 			/*
 			# COMPONENT CASE
