@@ -2624,7 +2624,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-12-2021T16:34:00');
+	define('DEDALO_BUILD'	, '12-12-2021T20:07:00');
 
 
 	/*

@@ -257,4 +257,36 @@ abstract class process_result {
 
 
 
+	/**
+	* SUM_TOTALS
+	* @return obsject $response
+	*/
+	public static function sum_totals($ar_data, $options, $sql_options) {
+
+		// options
+			$base_column	= $options->base_column; // name of the source column like 'ref_lloc_naixement'
+			$total_column	= $options->total_column ?? 'total'; // name of the totals column like 'total'
+			$split_columns	= $options->split_columns ?? null; // array of columns to split synchronized with the base column
+			$separator		= $options->separator ?? ' | ';
+
+		// break down multiple values cases in ar_data
+			$break_down_ar_data	= [];
+			$ar_data_length		= count($ar_data);
+			for ($i=0; $i < $ar_data_length; $i++) {
+
+				$row = $ar_data[$i];
+
+
+			}//end for ($i=0; $i < $ar_data_length; $i++)
+
+
+		// response
+			$response = new stdClass();
+				$response->ar_data = $new_ar_data;
+
+		return $response;
+	}//end sum_totals
+
+
+
 }//end class process_result
