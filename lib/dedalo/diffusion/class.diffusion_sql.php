@@ -1203,10 +1203,8 @@ class diffusion_sql extends diffusion  {
 					case (is_object($propiedades) && property_exists($propiedades, 'data_to_be_used') && $propiedades->data_to_be_used==='ds'):
 						foreach ((array)$dato as $current_locator) {
 							if (isset($current_locator->ds)) {
-								foreach ($current_locator->ds as $key => $ar_locator_ds) {
-									foreach ($ar_locator_ds  as $locator_ds) {
-										$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
-									}
+								foreach ($current_locator->ds as $key => $locator_ds) {
+									$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
 								}
 							}
 						}
