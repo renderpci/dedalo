@@ -817,16 +817,9 @@
         }, {
           "name" : "q",
           "in" : "query",
-          "description" : "String to search",
+          "description" : "String to search. This field is Full-text search (normally transcription column 'rsc36')",
           "type" : "string",
-          "required" : true,
-          "default" : "house"
-        }, {
-          "name" : "search_mode",
-          "in" : "query",
-          "description" : "SQL type of search. Default is 'full_text_search'",
-          "type" : "string",
-          "required" : false
+          "required" : true
         }, {
           "name" : "rows_per_page",
           "in" : "query",
