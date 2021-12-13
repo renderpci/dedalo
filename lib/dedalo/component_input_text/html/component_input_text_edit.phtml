@@ -76,12 +76,9 @@
 				#}
 
 				# Read only mode (set in propiedades)
-					$read_only = (
-						(isset($propiedades->read_only) && ($propiedades->read_only===true || $propiedades->read_only==='read_only')) ||
-						(isset($role) && $role==='source_lang')
-						)
+					$read_only = (isset($propiedades->read_only) && ($propiedades->read_only===true || $propiedades->read_only==='read_only'))
 						? 'readonly="readonly" '
-						: '';					
+						: '';
 
 				# Button add
 				if (isset($propiedades->multi_value) && $propiedades->multi_value==true) {

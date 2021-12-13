@@ -2618,13 +2618,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.3u';
+	$DEDALO_VERSION = '5.8.3';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-12-2021');
+	define('DEDALO_BUILD'	, '13-12-2021T17:07:00');
 
 
 	/*

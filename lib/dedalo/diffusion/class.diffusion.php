@@ -833,14 +833,20 @@ abstract class diffusion  {
 
 				# Merge all
 				$ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
+
+				// skip fields (working here!)
+					// $table_alias_properties	= $RecordObj_dd_alias->get_propiedades(true);
+					// $skip_fields			= (isset($table_alias_properties->skip_fields))
+					// 	? $table_alias_properties->skip_fields
+					// 	: false;
 			}
 
 		$ar_table_fields = [];
 		foreach ($ar_table_children as $tipo) {
 
 			$item = new stdClass();
-				$item->tipo 	= $tipo;
-				$item->label 	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true);
+				$item->tipo		= $tipo;
+				$item->label	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true);
 
 			$ar_table_fields[] = $item;
 		}
