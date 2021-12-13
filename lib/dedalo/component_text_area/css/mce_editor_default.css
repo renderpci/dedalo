@@ -104,6 +104,19 @@ body.mce-content-body.viewing_glyphs img.svg {
   height: 48px;
   top: 0;
 }
+body.mce-content-body.viewing_glyphs_small {
+  font-size: 32px !important;
+  line-height: 1.1em;
+}
+body.mce-content-body.viewing_glyphs_small img {
+  height: 12px;
+  opacity: 1 !important;
+  top: -12px;
+}
+body.mce-content-body.viewing_glyphs_small img.svg {
+  height: 32px;
+  top: 0;
+}
 /* SECTION_STRUCT
 -------------------------------------------------- */
 .section_struct {
