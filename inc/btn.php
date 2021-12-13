@@ -1,4 +1,7 @@
 <?php
+// Turn off output buffering
+	ini_set('output_buffering', 'off');
+
 # set some time Important!
 $myDateTimeZone = 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
@@ -437,6 +440,7 @@ if($text!==false) {
 
 # Output to browser
 	header('Content-Type: image/png;');
+	header('Connection: close');
 	imagepng($im);
 
 # On finish, destroy
