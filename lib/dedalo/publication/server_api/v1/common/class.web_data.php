@@ -3875,6 +3875,12 @@ class web_data {
 			#$options->q = addslashes( rawurldecode($options->q) );
 			$options->q = web_data::get_db_connection()->real_escape_string($options->q);
 
+			// is_literal active case. Remove possible quotes added and force add new ones
+				if ($options->is_literal===true) {
+					$clean_q = trim($options->q, '\"');
+					$options->q = '"'.$clean_q.'"';
+				}
+
 			# Offset
 			if ($options->page_number>1) {
 				$options->offset = ($options->page_number-1) * $options->rows_per_page;
