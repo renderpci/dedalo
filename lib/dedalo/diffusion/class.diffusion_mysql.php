@@ -134,6 +134,7 @@ class diffusion_mysql extends diffusion_sql  {
 			$sql_query .= "\nCREATE TABLE `$database_name`.`$table_name` (";
 			// generate fields
 			$sql_query .= self::generate_fields($ar_fields);
+			$sql_query .= ",\n";
 			// generate keys
 			$sql_query .= self::generate_keys($ar_fields, $table_type);
 			switch ($engine) {
@@ -145,7 +146,6 @@ class diffusion_mysql extends diffusion_sql  {
 					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 			}
-
 
 			#
 			# EXEC SINGLE QUERY TO DATABASE
@@ -164,22 +164,47 @@ class diffusion_mysql extends diffusion_sql  {
 	* 	ALTER TABLE `audiovisual` ADD `pepe` text COLLATE 'utf8_unicode_ci' NULL;
 	* @return bool true
 	*/
-	public static function add_column($field_name, $field_type, $table_name, $database_name) {
+	public static function add_column($field_name, $tipo, $table_name, $database_name) {
 
-		$sql_query  = '';
+		$typology = $field_name==='section_id' ||  $field_name==='lang'
+			? $field_name
+			: 'default';
 
-		// $sql_query = 'ALTER TABLE `'.$table_name.'` ADD `'.$field_name.'` text COLLATE 'utf8_unicode_ci' NULL;'
+		$field_ar_data = diffusion_sql::create_field((object)[
+			'typology'	=> $typology,
+			'tipo'		=> $tipo
+		]);
 
+		$field_name		= $field_ar_data['field_name'];
+		$field_type		= $field_ar_data['field_type'];
+		$field_options	= $field_ar_data['field_options'];
+		$field_coment	= $field_ar_data['field_coment'];
 
-		$field_insert_sql = diffusion_mysql::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment, $pref);
+		// build_field_insert_sql($field_name, $field_type, $field_options=null , $field_coment='', $pref='field_')
+		$column_sql = self::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment);
+		// sample result: "`subtitles` text COLLATE utf8_unicode_ci COMMENT 'Id - rsc175'"
 
-		$sql_query .= $field_insert_sql;
+		// index_sql
+			$pref = 'field_';
+			switch (true) {
+				case ($field_type===$pref.'text'):
+				case ($field_type===$pref.'mediumtext'):
+				case ($field_type===$pref.'longtext'):
+					$index_sql = "ADD FULLTEXT(`$field_name`)";
+					break;
+				default:
+					$index_sql = "ADD INDEX `$field_name` (`$field_name`)";
+					break;
+			}
 
+		// SQL add column
+		$sql_query = 'ALTER TABLE `'.$table_name.'` ADD '.$column_sql .', '.$index_sql .';';
 
 		// exec single query to database
 		$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
 
-		debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
+		debug_log(__METHOD__." Created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::WARNING);
+
 
 		return true;
 	}//end add_column
@@ -208,7 +233,7 @@ class diffusion_mysql extends diffusion_sql  {
 	*/
 	public static function insert_data($ar_table, $database_name) {
 
-		// Empty firlds check
+		// Empty fields check
 			if (empty($ar_table['ar_fields'])) {
 				if(SHOW_DEBUG===true) {
 					dump($ar_table, ' ar_table  don\'t have fields database_name:'.$database_name);
@@ -243,10 +268,9 @@ class diffusion_mysql extends diffusion_sql  {
 								# FIELDS : Normal fields
 								foreach ($ar_row as $field) {
 
-									$field_name 	= $field['field_name'];
-									$field_value 	= $field['field_value'];
-
-									$field_value 	= diffusion_mysql::conform_field_value($field_value, $database_name);
+									$field_name		= $field['field_name'];
+									$field_value	= $field['field_value'];
+									$field_value	= diffusion_mysql::conform_field_value($field_value, $database_name);
 
 									$current_line .= $field_value.',';
 								}//end foreach ($ar_row as $field)
@@ -377,12 +401,7 @@ class diffusion_mysql extends diffusion_sql  {
 	*/
 	private static function generate_fields($ar_fields) {
 
-		$sql_query 	= '';
-		$pref 		= 'field_';
-
-		# KEY
-		$sql_query .= "\n`id` int(12) NOT NULL AUTO_INCREMENT,";
-
+		$ar_sentences = [];
 		foreach ($ar_fields as $key => $field_ar_data) {
 
 			$field_name		= $field_ar_data['field_name'];
@@ -391,10 +410,11 @@ class diffusion_mysql extends diffusion_sql  {
 			$field_options	= $field_ar_data['field_options'];
 
 			// create each field sentence
-			$field_insert_sql = diffusion_mysql::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment, $pref);
-
-			$sql_query .=$field_insert_sql;
+			$field_insert_sql	= diffusion_mysql::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment);
+			$ar_sentences[]		= $field_insert_sql;
 		}//end foreach ($ar_fields as $key => $ar_data)
+
+		$sql_query = "\n`id` int(12) NOT NULL AUTO_INCREMENT, \n" . implode(",\n", $ar_sentences);
 
 
 		return $sql_query;
@@ -404,7 +424,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* BUILD_FIELD_INSERT_SQL
-	* Creates a sql sentence of field (column) based on type
+	* Creates a SQL sentence of field (column) based on type
 	* @return string $sql_query
 	*/
 	public static function build_field_insert_sql($field_name, $field_type, $field_options=null , $field_coment='', $pref='field_') {
@@ -413,52 +433,52 @@ class diffusion_mysql extends diffusion_sql  {
 
 		switch (true) {
 			case ($field_type===$pref.'int'):
-				$sql_query = " `$field_name` int($field_options) COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` int($field_options) COMMENT '$field_coment'";
 				if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
 				break;
 
 			case ($field_type===$pref.'int_unsigned'):
-				$sql_query = " `$field_name` int($field_options) unsigned COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` int($field_options) unsigned COMMENT '$field_coment'";
 				if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
 				break;
 
 			case ($field_type===$pref.'text'):
-				$sql_query = " `$field_name` text COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` text COLLATE utf8_unicode_ci COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'mediumtext'):
-				$sql_query = " `$field_name` mediumtext COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` mediumtext COLLATE utf8_unicode_ci COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'enum'):
-				$sql_query = " `$field_name` enum($field_options) COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` enum($field_options) COLLATE utf8_unicode_ci COMMENT '$field_coment'";
 				if(empty($field_options)) throw new Exception("Error Processing Request. Field enum $field_name don't have 'propiedades'  ", 1);
 				break;
 
 			case ($field_type===$pref.'varchar'):
-				$sql_query = " `$field_name` varchar($field_options) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` varchar($field_options) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT '$field_coment'";
 				if(empty($field_options)) throw new Exception("Error Processing Request. Field varchar $field_name don't have 'propiedades'  ", 1);
 				break;
 
 			case ($field_type===$pref.'date'):
-				$sql_query = " `$field_name` date DEFAULT NULL COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` date DEFAULT NULL COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'datetime'):
-				$sql_query = " `$field_name` datetime DEFAULT NULL COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` datetime DEFAULT NULL COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'decimal'):
-				$sql_query = " `$field_name` decimal(10,0) DEFAULT NULL COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` decimal(10,0) DEFAULT NULL COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'boolean'):
 				# bool and boolean are alias of tinyint. 0 value is false and 1 is true
-				$sql_query = " `$field_name` tinyint(4) DEFAULT NULL COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` tinyint(4) DEFAULT NULL COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'year'):
-				$sql_query = " `$field_name` year(4) DEFAULT NULL COMMENT '$field_coment',\n";
+				$sql_query = "`$field_name` year(4) DEFAULT NULL COMMENT '$field_coment'";
 				break;
 
 			case ($field_type==='box elements'):
@@ -507,7 +527,7 @@ class diffusion_mysql extends diffusion_sql  {
 			$section_tipo			= $options->section_tipo;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 
-		// check manadatory vars
+		// check mandatory vars
 			if (empty($database_name) || empty($table_name)) {
 				throw new Exception("Error Processing Request. Database / table_name name not found (database_name:$database_name / table_name:$table_name)", 1);
 			}
@@ -516,6 +536,8 @@ class diffusion_mysql extends diffusion_sql  {
 			static $ar_verified_tables;
 			if ( !in_array($table_name, (array)$ar_verified_tables) ) {
 				if(!self::table_exits($database_name, $table_name)) {
+
+					// table do not exists case. Create a new one
 
 					# Call to diffusion to optain fields for generate the table
 					#if ($typology==='thesaurus') {
@@ -561,12 +583,36 @@ class diffusion_mysql extends diffusion_sql  {
 													  'table_type'		=> 'tm'
 													  ), false);
 						}
+				}else{
+
+					// table already exists case. Check columns
+
+					// table fields. Array with available table fields right now
+						$real_table_fields = self::get_real_table_fields($database_name, $table_name);
+
+					// records to save. extract columns to save values
+						$first_record		= reset($ar_section_id);
+						$first_lang_values	= reset($first_record);
+						$ar_fields_data		= array_map(function($el){
+							return (object)[
+								'field_name'	=> $el['field_name'],
+								'tipo'			=> $el['tipo']
+							];
+						}, $first_lang_values);
+
+					// check if all target columns exists. If not, create it
+						foreach ($ar_fields_data as $element) {
+							if (!in_array($element->field_name, $real_table_fields)) {
+								// do not exists this column. Create it
+								// add_column($field_name, $field_type, $table_name, $database_name)
+								self::add_column($element->field_name, $element->tipo, $table_name, $database_name);
+							}
+						}
 				}
 				$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
 			}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
 
-
-		// Array with available table fields (prevent to write non existing fields on save)
+		// real_table_fields again. Array with available table fields (prevent to write non existing fields on save)
 			$real_table_fields = self::get_real_table_fields($database_name, $table_name);
 
 		// iterate rows
@@ -657,15 +703,15 @@ class diffusion_mysql extends diffusion_sql  {
 	*/
 	public static function get_real_table_fields($database_name, $table_name) {
 
-		static $real_table_fields_data;
-		if (isset($real_table_fields_data[$table_name])) {
-			return $real_table_fields_data[$table_name];
-		}
+		// static $real_table_fields_data;
+		// if ($cache===true && isset($real_table_fields_data[$table_name])) {
+		// 	return $real_table_fields_data[$table_name];
+		// }
 
 		$real_table_fields = [];
 
-		$strQuery = "DESCRIBE $table_name ;";
-		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+		$strQuery	= "DESCRIBE $table_name ;";
+		$result		= self::exec_mysql_query( $strQuery, $table_name, $database_name );
 		if (!$result) {
 			return $real_table_fields;
 		}
@@ -675,8 +721,8 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 		$result->free();
 
-		# Cache
-		$real_table_fields_data[$table_name] = $real_table_fields;
+		# Cache
+		// $real_table_fields_data[$table_name] = $real_table_fields;
 
 
 		return $real_table_fields;
