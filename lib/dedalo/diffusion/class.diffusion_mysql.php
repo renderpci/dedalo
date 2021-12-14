@@ -159,6 +159,34 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
+	* ADD_COLUMN
+	* Sample:
+	* 	ALTER TABLE `audiovisual` ADD `pepe` text COLLATE 'utf8_unicode_ci' NULL;
+	* @return bool true
+	*/
+	public static function add_column($field_name, $field_type, $table_name, $database_name) {
+
+		$sql_query  = '';
+
+		// $sql_query = 'ALTER TABLE `'.$table_name.'` ADD `'.$field_name.'` text COLLATE 'utf8_unicode_ci' NULL;'
+
+
+		$field_insert_sql = diffusion_mysql::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment, $pref);
+
+		$sql_query .= $field_insert_sql;
+
+
+		// exec single query to database
+		$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
+
+		debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
+
+		return true;
+	}//end add_column
+
+
+
+	/**
 	* INSERT_DATA
 	* Compose sql query and exec to insert data
 	* @param array $ar_table
@@ -176,82 +204,69 @@ class diffusion_mysql extends diffusion_sql  {
 	*                                        )
 	*										..
 	* )
+	* @return bool true
 	*/
 	public static function insert_data($ar_table, $database_name) {
 
-		# Empty verify
-		if (empty($ar_table['ar_fields'])) {
-			if(SHOW_DEBUG===true) {
-				dump($ar_table, ' ar_table  don\'t have fields database_name:'.$database_name);
-				throw new Exception("Error Processing Request. Table ".$ar_table['table_name']." don't have fields !", 1);
+		// Empty firlds check
+			if (empty($ar_table['ar_fields'])) {
+				if(SHOW_DEBUG===true) {
+					dump($ar_table, ' ar_table  don\'t have fields database_name:'.$database_name);
+					throw new Exception("Error Processing Request. Table ".$ar_table['table_name']." don't have fields !", 1);
+				}
+				return null;
 			}
-			return null;
-		}
 
-		$table_name	= (string)$ar_table['table_name'];
-		$ar_fields	= (array)$ar_table['ar_fields'];
-		$n_ar_fields= count($ar_fields);
+		// short vars
+			$table_name		= (string)$ar_table['table_name'];
+			$ar_fields		= (array)$ar_table['ar_fields'];
+			$n_ar_fields	= count($ar_fields);
 
-		$max_insert_chunk 	= 500;
-		$ar_chunk 			= array_chunk($ar_fields, $max_insert_chunk, true);
-		$n_ar_chunk 		= count($ar_chunk);
-		foreach ($ar_chunk as $chunk_key => $current_ar_fields) {
-			# split big array in chunks to avoid memory problems
+		// split in chunks and iterate rows. (split big array in chunks to avoid memory problems)
+			$max_insert_chunk 	= 500;
+			$ar_chunk 			= array_chunk($ar_fields, $max_insert_chunk, true);
+			$n_ar_chunk 		= count($ar_chunk);
+			foreach ($ar_chunk as $chunk_key => $current_ar_fields) {
 
-			# SQL_QUERY_LINE : Reset var for every iteration
-			$sql_query_line='';
+				// row fields values
+					$ar_values_line = [];
+					foreach ($current_ar_fields as $ar_group_rows) { # Registros agrupados por section_id / idioma
+						// langs iterate
+						foreach ($ar_group_rows as $lang => $ar_row) {
 
-			# INSERT :
-			$sql_query_line .= "\nINSERT INTO `$database_name`.`$table_name` VALUES ";
+							# Open values group
+							$current_line = '(';
 
-			# ROW FIELDS VALUES
-			foreach ($current_ar_fields as $ar_group_rows) { # Registros agrupados por section_id / idioma
-				#dump($ar_group_rows,'$ar_group_rows');
-				foreach ($ar_group_rows as $lang => $ar_row) {
+								# FIELD ID : Autoincrement null
+								$current_line .= "NULL,";
 
-					# Open values group
-					$sql_query_line .= "\n(";
+								# FIELDS : Normal fields
+								foreach ($ar_row as $field) {
 
-						# FIELD ID : Autoincrement null
-						$sql_query_line .= "NULL,";
+									$field_name 	= $field['field_name'];
+									$field_value 	= $field['field_value'];
 
-						# FIELDS : Normal fields
-						foreach ($ar_row as $field) {
+									$field_value 	= diffusion_mysql::conform_field_value($field_value, $database_name);
 
-							$field_name 	= $field['field_name'];
-							$field_value 	= $field['field_value'];
+									$current_line .= $field_value.',';
+								}//end foreach ($ar_row as $field)
+								$current_line = substr($current_line, 0,-1); // Remove last ','
 
-							$field_value 	= diffusion_mysql::conform_field_value($field_value, $database_name);
+							# Close values group
+							$current_line .= ')';
 
-							$sql_query_line .= $field_value.',';
+							$ar_values_line[] = $current_line;
+						}//end foreach ($ar_group_rows as $lang => $ar_row)
+					}//end foreach ($ar_table as $key => $ar_values)
 
-						}//end foreach ($ar_row as $field)
+				// insert sql:
+					$sql_query_line .= "\nINSERT INTO `$database_name`.`$table_name` VALUES " . implode("\n", $ar_values_line);
 
-						# Remove last ','
-						$sql_query_line = substr($sql_query_line, 0,-1);
+				// exec single query to database
+					$result = self::exec_mysql_query( $sql_query_line, $table_name, $database_name );
 
-					# Close values group
-					$sql_query_line .= "),";
-
-				}//end foreach ($ar_group_rows as $lang => $ar_row)
-
-
-			}//end foreach ($ar_table as $key => $ar_values)
-
-			# Remove last ','
-			$sql_query_line = substr($sql_query_line, 0,-1);
-
-			#if(SHOW_DEBUG===true) {
-			#	debug_log(__METHOD__." sql_query_line ".to_string($sql_query_line), logger::ERROR);;
-			#}
-
-			#
-			# EXEC SINGLE QUERY TO DATABASE
-			$result = self::exec_mysql_query( $sql_query_line, $table_name, $database_name );
-
-			debug_log(__METHOD__." Exec chunk query $chunk_key of $n_ar_chunk (max. $max_insert_chunk of total $n_ar_fields) to $table_name ".to_string($result), logger::DEBUG);
-
-		}//end foreach ($ar_chunk as $key => $current_ar_fields) {
+				debug_log(__METHOD__." Exec chunk query $chunk_key of $n_ar_chunk (max. $max_insert_chunk of total $n_ar_fields) to $table_name ".to_string($result), logger::DEBUG);
+			}//end foreach ($ar_chunk as $key => $current_ar_fields) {
 
 		# Revisar que la tabla de destino es ut-8 para evitar esto
 		#$sql_query = utf8_decode($sql_query);

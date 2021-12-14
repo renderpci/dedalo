@@ -1673,7 +1673,7 @@ class diffusion_sql extends diffusion  {
 
 					// debug. show levels resolution calls
 						if(SHOW_DEBUG===true) {							
-							dump($group_by_section_tipo, " REFERENCES group_by_section_tipo ++ recursion_level: $recursion_level - options->section_tipo: $options->section_tipo");
+							debug_log(__METHOD__." REFERENCES group_by_section_tipo ++ recursion_level: $recursion_level - options->section_tipo: $options->section_tipo ".to_string($group_by_section_tipo), logger::DEBUG);
 						}
 						
 					// iterate previous created groups by section tipo
