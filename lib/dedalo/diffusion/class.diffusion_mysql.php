@@ -132,7 +132,9 @@ class diffusion_mysql extends diffusion_sql  {
 		# CREATE
 			$sql_query  = (string)'';
 			$sql_query .= "\nCREATE TABLE `$database_name`.`$table_name` (";
+			// generate fields
 			$sql_query .= self::generate_fields($ar_fields);
+			// generate keys
 			$sql_query .= self::generate_keys($ar_fields, $table_type);
 			switch ($engine) {
 				case 'InnoDB':
@@ -359,82 +361,26 @@ class diffusion_mysql extends diffusion_sql  {
 	* @see diffusion_mysql::create_table
 	*/
 	private static function generate_fields($ar_fields) {
-		#dump($ar_fields, ' ar_fields ++ '.to_string()); #die();
+
 		$sql_query 	= '';
 		$pref 		= 'field_';
 
 		# KEY
 		$sql_query .= "\n`id` int(12) NOT NULL AUTO_INCREMENT,";
 
-		foreach ($ar_fields as $key => $ar_data) {
+		foreach ($ar_fields as $key => $field_ar_data) {
 
-			#dump($ar_data, ' ar_data ++ '.to_string('??'));
+			$field_name		= $field_ar_data['field_name'];
+			$field_type		= $field_ar_data['field_type'];
+			$field_coment	= $field_ar_data['field_coment'];
+			$field_options	= $field_ar_data['field_options'];
 
-			$field_name 	= $ar_data['field_name'];
-			$field_type 	= $ar_data['field_type'];
-			$field_coment 	= $ar_data['field_coment'];
-			$field_options 	= $ar_data['field_options'];
+			// create each field sentence
+			$field_insert_sql = diffusion_mysql::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment, $pref);
 
-			switch (true) {
-				case ($field_type===$pref.'int'):
-					$sql_query .= " `$field_name` int($field_options) COMMENT '$field_coment',\n";
-					if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
-					break;
-
-				case ($field_type===$pref.'int_unsigned'):
-					$sql_query .= " `$field_name` int($field_options) unsigned COMMENT '$field_coment',\n";
-					if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
-					break;
-
-				case ($field_type===$pref.'text'):
-					$sql_query .= " `$field_name` text COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
-					break;
-
-				case ($field_type===$pref.'mediumtext'):
-					$sql_query .= " `$field_name` mediumtext COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
-					break;
-
-				case ($field_type===$pref.'enum'):
-					$sql_query .= " `$field_name` enum($field_options) COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
-					if(empty($field_options)) throw new Exception("Error Processing Request. Field enum $field_name don't have 'propiedades'  ", 1);
-					break;
-
-				case ($field_type===$pref.'varchar'):
-					$sql_query .= " `$field_name` varchar($field_options) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT '$field_coment',\n";
-					if(empty($field_options)) throw new Exception("Error Processing Request. Field varchar $field_name don't have 'propiedades'  ", 1);
-					break;
-
-				case ($field_type===$pref.'date'):
-					$sql_query .= " `$field_name` date DEFAULT NULL COMMENT '$field_coment',\n";
-					break;
-
-				case ($field_type===$pref.'datetime'):
-					$sql_query .= " `$field_name` datetime DEFAULT NULL COMMENT '$field_coment',\n";
-					break;
-
-				case ($field_type===$pref.'decimal'):
-					$sql_query .= " `$field_name` decimal(10,0) DEFAULT NULL COMMENT '$field_coment',\n";
-					break;
-
-				case ($field_type===$pref.'boolean'):
-					# bool and boolean are alias of tinyint. 0 value is false and 1 is true
-					$sql_query .= " `$field_name` tinyint(4) DEFAULT NULL COMMENT '$field_coment',\n";
-					break;
-
-				case ($field_type===$pref.'year'):
-					$sql_query .= " `$field_name` year(4) DEFAULT NULL COMMENT '$field_coment',\n";
-					break;
-
-				case ($field_type==='box elements'):
-					// Ignore box
-					break;
-				default:
-					throw new Exception("Error Processing Request. Field type not defined: '$field_type' (field_name:'$field_name', field_coment:'$field_coment', field_options:'$field_options')", 1);
-					break;
-			}
-
+			$sql_query .=$field_insert_sql;
 		}//end foreach ($ar_fields as $key => $ar_data)
-		#dump($sql_query, ' sql_query');
+
 
 		return $sql_query;
 	}//end generate_fields
@@ -442,175 +388,247 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
+	* BUILD_FIELD_INSERT_SQL
+	* Creates a sql sentence of field (column) based on type
+	* @return string $sql_query
+	*/
+	public static function build_field_insert_sql($field_name, $field_type, $field_options=null , $field_coment='', $pref='field_') {
+
+		$sql_query = '';
+
+		switch (true) {
+			case ($field_type===$pref.'int'):
+				$sql_query = " `$field_name` int($field_options) COMMENT '$field_coment',\n";
+				if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
+				break;
+
+			case ($field_type===$pref.'int_unsigned'):
+				$sql_query = " `$field_name` int($field_options) unsigned COMMENT '$field_coment',\n";
+				if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
+				break;
+
+			case ($field_type===$pref.'text'):
+				$sql_query = " `$field_name` text COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
+				break;
+
+			case ($field_type===$pref.'mediumtext'):
+				$sql_query = " `$field_name` mediumtext COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
+				break;
+
+			case ($field_type===$pref.'enum'):
+				$sql_query = " `$field_name` enum($field_options) COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
+				if(empty($field_options)) throw new Exception("Error Processing Request. Field enum $field_name don't have 'propiedades'  ", 1);
+				break;
+
+			case ($field_type===$pref.'varchar'):
+				$sql_query = " `$field_name` varchar($field_options) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT '$field_coment',\n";
+				if(empty($field_options)) throw new Exception("Error Processing Request. Field varchar $field_name don't have 'propiedades'  ", 1);
+				break;
+
+			case ($field_type===$pref.'date'):
+				$sql_query = " `$field_name` date DEFAULT NULL COMMENT '$field_coment',\n";
+				break;
+
+			case ($field_type===$pref.'datetime'):
+				$sql_query = " `$field_name` datetime DEFAULT NULL COMMENT '$field_coment',\n";
+				break;
+
+			case ($field_type===$pref.'decimal'):
+				$sql_query = " `$field_name` decimal(10,0) DEFAULT NULL COMMENT '$field_coment',\n";
+				break;
+
+			case ($field_type===$pref.'boolean'):
+				# bool and boolean are alias of tinyint. 0 value is false and 1 is true
+				$sql_query = " `$field_name` tinyint(4) DEFAULT NULL COMMENT '$field_coment',\n";
+				break;
+
+			case ($field_type===$pref.'year'):
+				$sql_query = " `$field_name` year(4) DEFAULT NULL COMMENT '$field_coment',\n";
+				break;
+
+			case ($field_type==='box elements'):
+				// Ignore box
+				break;
+			default:
+				throw new Exception("Error Processing Request. Field type not defined: '$field_type' (field_name:'$field_name', field_coment:'$field_coment', field_options:'$field_options')", 1);
+				break;
+		}
+
+
+		return $sql_query;
+	}//end build_field_insert_sql
+
+
+
+	/**
 	* SAVE_RECORD
 	* Insert / Update one MySQL row (one for lang)
-	* @return
+	* @return object $response
 	*/
 	public static function save_record( $request_options ) {
+		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		$response = new stdClass();
 			$response->result = false;
 			$response->msg 	  = array();
 
-		$options = new stdClass();
-			$options->record_data				= null;
-			$options->typology					= null;
-			$options->delete_previous			= true;
-			$options->section_tipo				= null;
-			$options->diffusion_element_tipo	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$options = new stdClass();
+				$options->record_data				= null;
+				$options->typology					= null;
+				$options->delete_previous			= true;
+				$options->section_tipo				= null;
+				$options->diffusion_element_tipo	= null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
+		// short vars
+			$database_name			= $options->record_data['database_name'];
+			$table_name				= $options->record_data['table_name'];
+			$ar_section_id			= $options->record_data['ar_fields'];
+			$diffusion_section		= $options->record_data['diffusion_section'];
+			$engine					= isset($options->record_data['engine']) ? $options->record_data['engine'] : null;
+			$typology				= $options->typology;
+			$delete_previous 		= $options->delete_previous;
+			$section_tipo			= $options->section_tipo;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
-
-		$database_name		= $options->record_data['database_name'];
-		$table_name			= $options->record_data['table_name'];
-		$ar_section_id		= $options->record_data['ar_fields'];
-		$diffusion_section	= $options->record_data['diffusion_section'];
-		$engine				= isset($options->record_data['engine']) ? $options->record_data['engine'] : null;
-		$typology			= $options->typology;
-			#dump( array_keys($ar_section_id), " section_id ".to_string($table_name )); #die();
-			#dump($options->record_data, ' record_data ++ '.to_string($database_name)); die();
-			#dump($database_name, ' $database_name ++ '.to_string()); die();
-
-		if (empty($database_name) || empty($table_name)) {
-			throw new Exception("Error Processing Request. Database / table_name name not found (database_name:$database_name / table_name:$table_name)", 1);
-		}		
-
-		#
-		# CREATE TABLE IF NOT EXITS
-		static $ar_verified_tables;
-		if ( !in_array($table_name, (array)$ar_verified_tables) ) {
-			if(!self::table_exits($database_name, $table_name)) {
-
-				# Call to diffusion to optain fields for generate the table
-				#if ($typology==='thesaurus') {
-				#	$ts_options = new stdClass();
-				#		$ts_options->table_name = $table_name;
-				#	$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
-				#}else{
-
-					$section_tipo = $options->section_tipo;
-
-					$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
-						#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
-
-					$table_map			= $diffusion_element_tables_map->{$section_tipo} ?? null;
-					#$table_name		= $table_map->name;
-					#$table_tipo		= $table_map->table;
-					#$table_propiedades	= $table_map->propiedades;
-					#$database_name		= $table_map->database_name;
-					#$database_tipo		= $table_map->database_tipo;
-					$table_from_alias	= $table_map->from_alias ?? null;
-
-					$table_columns_options = new stdClass();
-						$table_columns_options->table_tipo			= $diffusion_section;
-						$table_columns_options->table_name			= $table_name;
-						$table_columns_options->database_name		= $database_name;
-						$table_columns_options->table_from_alias	= $table_from_alias;
-
-					$create_table_ar_fields = self::build_table_columns( $table_columns_options ); // $diffusion_section, $database_name
-				#}
-
-				#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();
-				self::create_table( array('database_name'	=> $database_name,
-										  'table_name'		=> $table_name,
-										  'engine'			=> $engine,
-										  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-										  'table_type'		=> 'default',
-										  ), true);
-
-				if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
-					#create the BBDD clone version for store all publications versions (time marks with unix time stamp)
-					self::create_table( array('database_name'	=> $database_name,
-											  'table_name'		=> 'tm_'.$table_name,
-											  'engine'			=> $engine,
-											  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-											  'table_type'		=> 'tm',
-											  ), false);
-				}// end if DEDALO_DIFFUSION_TM
-			}
-			$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
-		}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
-
-		# Array with available table fields (for avoid write non existing fields on save)
-		$real_table_fields = self::get_real_table_fields($database_name, $table_name);
-
-		foreach ((array)$ar_section_id as $section_id => $ar_fields) {
-			# Iterate one or more records
-			#$ar_fields 	= $options->record_data['ar_fields'][$section_id];
-			// dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));
-
-			# if it don't work with versions, delete current record in all langs if exists
-			if ($options->delete_previous===true) {
-				$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
-				$response->msg[] = $delete_result->msg;
+		// check manadatory vars
+			if (empty($database_name) || empty($table_name)) {
+				throw new Exception("Error Processing Request. Database / table_name name not found (database_name:$database_name / table_name:$table_name)", 1);
 			}
 
+		// create table if not exits
+			static $ar_verified_tables;
+			if ( !in_array($table_name, (array)$ar_verified_tables) ) {
+				if(!self::table_exits($database_name, $table_name)) {
 
-			# Create records . Iterate langs
-			foreach ($ar_fields as $lang => $fields) {
-				$ar_field_name	= array();
-				$ar_field_value	= array();
-				foreach ($fields as $key => $field) {
-					
-					$field_name		= $field['field_name'];
-					$field_value	= $field['field_value'];
+					# Call to diffusion to optain fields for generate the table
+					#if ($typology==='thesaurus') {
+					#	$ts_options = new stdClass();
+					#		$ts_options->table_name = $table_name;
+					#	$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
+					#}else{
 
-					if (!in_array($field_name, $real_table_fields)) {
-						debug_log(__METHOD__." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]", logger::WARNING);
-						continue; # Skip
-					}
+						$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 
-					$field_value = diffusion_mysql::conform_field_value($field_value, $database_name);
-					
+						$table_map			= $diffusion_element_tables_map->{$section_tipo} ?? null;
+						#$table_name		= $table_map->name;
+						#$table_tipo		= $table_map->table;
+						#$table_propiedades	= $table_map->propiedades;
+						#$database_name		= $table_map->database_name;
+						#$database_tipo		= $table_map->database_tipo;
+						$table_from_alias	= $table_map->from_alias ?? null;
 
-					#$ar_field_name[]	= '`'.$field_name.'`';
-					$ar_field_name[]	= strpos($field_name, '`')===0 ? $field_name : '`'.$field_name.'`'; // 2018-03-16 !!
-					$ar_field_value[]	= $field_value;
+						$table_columns_options = new stdClass();
+							$table_columns_options->table_tipo			= $diffusion_section;
+							$table_columns_options->table_name			= $table_name;
+							$table_columns_options->database_name		= $database_name;
+							$table_columns_options->table_from_alias	= $table_from_alias;
+
+						$create_table_ar_fields = self::build_table_columns( $table_columns_options ); // $diffusion_section, $database_name
+					#}
+
+					// table create
+						self::create_table( 	array('database_name'	=> $database_name,
+													  'table_name'		=> $table_name,
+													  'engine'			=> $engine,
+													  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+													  'table_type'		=> 'default'
+													  ), true);
+
+					// table dedalo_diffusion_tm create
+						if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
+							#create the BBDD clone version for store all publications versions (time marks with unix time stamp)
+							self::create_table( array('database_name'	=> $database_name,
+													  'table_name'		=> 'tm_'.$table_name,
+													  'engine'			=> $engine,
+													  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+													  'table_type'		=> 'tm'
+													  ), false);
+						}
 				}
+				$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
+			}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
 
-				# Insert mysql record
-				# if the difusion_versions is active we store all changes
-				if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
 
-					$strQuery_tm = "INSERT INTO `$database_name`.`tm_{$table_name}` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
+		// Array with available table fields (prevent to write non existing fields on save)
+			$real_table_fields = self::get_real_table_fields($database_name, $table_name);
 
-					$result = self::exec_mysql_query( $strQuery_tm, 'tm_'.$table_name, $database_name );
-					if (!$result) {
-						#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
-						$response->result = false;
-						$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
-						return (object)$response;
+		// iterate rows
+			foreach ((array)$ar_section_id as $section_id => $ar_fields) {
+				# Iterate one or more records
+				#$ar_fields = $options->record_data['ar_fields'][$section_id];
+
+				// delete_previous. if it don't work with versions, delete current record in all langs if exists
+					if ($delete_previous===true) {
+						$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $section_tipo, false);
+						$response->msg[] = $delete_result->msg;
 					}
-				}
 
-				$strQuery = "INSERT INTO `$database_name`.`$table_name` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
+				// Create records . Iterate langs
+				foreach ($ar_fields as $lang => $fields) {
 
-				$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
-					if (!$result) {
-						#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
-						$response->result = false;
-						$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
-						return (object)$response;
+					$ar_field_name	= array();
+					$ar_field_value	= array();
+
+					foreach ($fields as $key => $field) {
+
+						$field_name		= $field['field_name'];
+						$field_value	= $field['field_value'];
+
+						if (!in_array($field_name, $real_table_fields)) {
+							debug_log(__METHOD__." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]", logger::WARNING);
+							continue; # Skip
+						}
+
+						$field_value = diffusion_mysql::conform_field_value($field_value, $database_name);
+
+						#$ar_field_name[]	= '`'.$field_name.'`';
+						$ar_field_name[]	= strpos($field_name, '`')===0 ? $field_name : '`'.$field_name.'`'; // 2018-03-16 !!
+						$ar_field_value[]	= $field_value;
 					}
-					#dump($strQuery, " strQuery ".to_string());
-					$response->msg[] = "Inserted record section_id:$section_id, table:$table_name, lang:$lang";
-			}//end foreach ($ar_fields as $lang => $fields) iterate langs
 
-			#debug_log(__METHOD__." ++ strQuery ".to_string($strQuery), logger::DEBUG);
+					// dedalo_diffusion_tm. Insert mysql record. if the difusion_versions is active we store all changes
+						if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
 
-		}//end foreach ($ar_section_id as $section_id)
-		#dump($result, ' result ++ '.to_string());
+							$strQuery_tm = "INSERT INTO `$database_name`.`tm_{$table_name}` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
+
+							$result = self::exec_mysql_query( $strQuery_tm, 'tm_'.$table_name, $database_name );
+							if (!$result) {
+								#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
+								$response->result = false;
+								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
+								return (object)$response;
+							}
+						}
+
+					// sql query
+						$strQuery = "INSERT INTO `$database_name`.`$table_name` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
+
+					// exec query
+						$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+						if (!$result) {
+							#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
+							$response->result = false;
+							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
+							return (object)$response;
+						}
+
+						$response->msg[] = "Inserted record section_id:$section_id, table:$table_name, lang:$lang";
+				}//end foreach ($ar_fields as $lang => $fields) iterate langs
+			}//end foreach ($ar_section_id as $section_id)
 
 
-		if(SHOW_DEBUG===true) {
-			$response->debug = exec_time($start_time);
-		}
+		// response ok
+			$response->result = true;
+			$response->new_id = self::$insert_id;
+			$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
 
-		$response->result = true;
-		$response->new_id = self::$insert_id;
-		$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
+		// response debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = exec_time($start_time);
+			}
+
 
 		return (object)$response;
 	}//end save_record
