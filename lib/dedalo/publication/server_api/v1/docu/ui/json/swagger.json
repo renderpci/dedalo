@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.19",
-    "title" : "Dédalo Publication Server REST API 1.0.19",
+    "version" : "1.0.20",
+    "title" : "Dédalo Publication Server REST API 1.0.20",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -821,6 +821,13 @@
           "type" : "string",
           "required" : true
         }, {
+          "name" : "is_literal",
+          "in" : "query",
+          "description" : "Allow search literals like \"my house\" ",
+          "type" : "boolean",
+          "required" : false,
+          "default" : false
+        }, {
           "name" : "rows_per_page",
           "in" : "query",
           "description" : "Number of records returned by page. Default is 10",
@@ -851,8 +858,8 @@
         }, {
           "name" : "match_select",
           "in" : "query",
-          "description" : "Selects specific match inside results. Default = false . Optional",
-          "type" : "boolean",
+          "description" : "Selects a specific match inside results. For example, to get only the first appearance of a word. Optional",
+          "type" : "integer",
           "required" : false
         }, {
           "name" : "count",

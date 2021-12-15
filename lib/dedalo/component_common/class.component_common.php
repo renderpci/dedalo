@@ -3234,7 +3234,9 @@ abstract class component_common extends common {
 		$diffusion_value = $this->get_valor( $lang );
 
 		# strip_tags all values (remove untranslate mark elements)
-		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
+		if (!empty($diffusion_value)) {
+			$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
+		}
 
 
 		return (string)$diffusion_value;

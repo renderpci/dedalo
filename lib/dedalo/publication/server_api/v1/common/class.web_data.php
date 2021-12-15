@@ -164,7 +164,7 @@ class web_data {
 	* CHECK_SAFE_VALUE
 	* @return bool
 	*/
-	public static function check_safe_value($name, $value) {
+	public static function check_safe_value($name, $value, $is_literal=false) {
 		
 		switch ($name) {
 			
@@ -197,9 +197,9 @@ class web_data {
 					$ar_value = !is_array($value) ? explode(',', $value) : $value;
 					foreach ($ar_value as $c_value) {
 
-						if(strpos($c_value, 'MATCH')===0) {
+						if($is_literal===true) {
 							// free search case
-							preg_match('/^MATCH \(rsc36\) AGAINST [\w|,|\+| |`|\'|\(|\)|\*|\\\|"]+ AS relevance ?$/iu', $c_value, $output_array);
+							preg_match('/^[\w|,|\+| |`|\'|\(|\)|\*|\\\|"]+$/iu', $c_value, $output_array);
 
 						}else if (strpos($c_value, 'CONCAT')===0) {
 							// added |\"|\[|\] to allow CONCAT sentences (14-10-2021)
@@ -331,6 +331,7 @@ class web_data {
 					$sql_options->sql_fullselect			= false; // default false
 					$sql_options->section_id				= false;
 					$sql_options->sql_filter				= ''; 	// publicacion = 'si'
+					$sql_options->is_literal				= false; // default is false
 					$sql_options->lang						= null;	// WEB_CURRENT_LANG_CODE;
 					$sql_options->order						= '`id` ASC';
 					$sql_options->group						= false;
@@ -374,7 +375,7 @@ class web_data {
 
 			// ar_fields check
 				if (!empty($sql_options->ar_fields)) {
-					if (!self::check_safe_value('ar_fields', $sql_options->ar_fields)) {
+					if (!self::check_safe_value('ar_fields', $sql_options->ar_fields, $sql_options->is_literal)) {
 						$response->result = false;
 						$response->msg    = "Error on sql request. Ilegal ar_fields (1)";
 						if(SHOW_DEBUG===true) {
@@ -3866,12 +3867,19 @@ class web_data {
 				$options->fragment_terms 	= false;
 				$options->filter 			= false;
 				$options->lang 				= WEB_CURRENT_LANG_CODE;
+				$options->is_literal 		= false;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
 			# Search string is expected rawurlencoded — URL-encode according to RFC 3986
 			#$options->q = addslashes( rawurldecode($options->q) );
 			$options->q = web_data::get_db_connection()->real_escape_string($options->q);
+
+			// is_literal active case. Remove possible quotes added and force add new ones
+				if ($options->is_literal===true) {
+					$clean_q = trim($options->q, '\"');
+					$options->q = '"'.$clean_q.'"';
+				}
 
 			# Offset
 			if ($options->page_number>1) {
@@ -3896,11 +3904,13 @@ class web_data {
 						if ($options->filter!==false) {
 							$search_options->sql_filter .= " AND (" .$options->filter .")";
 						}
-						$search_options->lang 		= $options->lang;
-						$search_options->order 		= "relevance DESC";
-						$search_options->limit 		= $options->rows_per_page;
-						$search_options->offset 	= $options->offset;
-						$search_options->count 		= $options->count;
+						$search_options->lang		= $options->lang;
+						$search_options->order		= "relevance DESC";
+						$search_options->limit		= $options->rows_per_page;
+						$search_options->offset		= $options->offset;
+						$search_options->count		= $options->count;
+						$search_options->is_literal	= $options->is_literal; // if literal is true, ar_fields allow spaces and double quotes (needed for 'MATCH (rsc36) AGAINST..')
+
 
 					$rows_data	= (object)web_data::get_rows_data( $search_options );
 						#dump($rows_data->result, ' $rows_data ++ '.to_string());
