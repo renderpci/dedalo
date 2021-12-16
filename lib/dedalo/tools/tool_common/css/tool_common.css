@@ -298,6 +298,14 @@ ul.header_tool_tabs {
 .tool_docu_icon {
   background-position: -24px -168px;
 }
+.tool_import_rdf_icon {
+  background-image: url("../../../themes/default/rdf_icon.svg");
+  width: 14px;
+  height: 14px;
+  background-position: 0px 0px;
+  background-size: unset;
+  opacity: 0.4;
+}
 .icon_share {
   background-position: -336px -96px;
 }
