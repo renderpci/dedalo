@@ -130,8 +130,8 @@ class ontology {
 				$item->translatable = $RecordObj_dd->get_traducible()==='si';
 			}
 			if ($options->propiedades===true) {
-				$propiedades = $RecordObj_dd->get_propiedades();
-				$item->propiedades = json_decode($propiedades); // stored as string in DDBB
+				$propiedades = $RecordObj_dd->get_propiedades(true);
+				$item->propiedades = $propiedades; // stored as string in DDBB
 			}
 			if ($options->properties===true) {
 				$item->properties = $RecordObj_dd->get_properties();
@@ -142,27 +142,30 @@ class ontology {
 				if (!empty($current_relations)) {
 
 					$relations = array_map(function($element){
-						$element = is_array($element) ? (object)$element : $element;
+						$element		= is_array($element) ? (object)$element : $element;
+						$element_array	= get_object_vars($element);
 						$current_obj = new stdClass();
-							$current_obj->tipo = property_exists($element, 'tipo') ? $element->tipo : reset($element);
-		    			return $current_obj;
-		    		}, $current_relations);
+							$current_obj->tipo = property_exists($element, 'tipo')
+								? $element->tipo
+								: reset($element_array);
+						return $current_obj;
+					}, $current_relations);
 				}
 				$item->relations = $relations ?? null;
 			}
 			if ($options->descriptors===true) {
 					// descriptors
-					$strQuery = "SELECT dato, tipo, lang FROM \"matrix_descriptors_dd\" WHERE parent = '$tipo'";
-					$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-					$ar_descriptors = [];
+					$strQuery		= "SELECT dato, tipo, lang FROM \"matrix_descriptors_dd\" WHERE parent = '$tipo'";
+					$result			= JSON_RecordObj_matrix::search_free($strQuery);
+					$ar_descriptors	= [];
 					while ($row = pg_fetch_assoc($result)) {
 
 						$type = $row['tipo']==='termino' ? 'term' : $row['tipo'];
 
 						$ar_descriptors[] = (object)[
-							'value' => $row['dato'],
-							'lang' 	=> $row['lang'],
-							'type' 	=> $type
+							'value'	=> $row['dato'],
+							'lang'	=> $row['lang'],
+							'type'	=> $type
 						];
 					}
 					$item->descriptors = $ar_descriptors;
@@ -195,8 +198,8 @@ class ontology {
 			}
 
 			// term. jer_dd
-				$esmodelo 	= $item->is_model ?? 'no';
-				$traducible = $item->translatable===true ? 'si' : 'no';
+				$esmodelo	= $item->is_model ?? 'no';
+				$traducible	= $item->translatable===true ? 'si' : 'no';
 
 				$RecordObj_dd_edit = new RecordObj_dd_edit(null, $item->tld);
 
@@ -339,7 +342,7 @@ class ontology {
 		}
 
 
-		$ar_exclude_modelo 		= array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+		$ar_exclude_modelo 		= array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
 		$ar_exclude_components 	= defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
 		foreach((array)$ar_ts_childrens as $element_tipo) {
 

@@ -201,9 +201,7 @@ function simpleToogle(div) {
 /*
 * simpleToogleStyle 
 */
-function simpleToogleStyle(div, estilo) 
-{
-  //alert(div + ":" +estilo)
+function simpleToogleStyle(div, estilo) {
   try{
   	div = document.getElementById(div); 
   }catch(e){};
@@ -217,26 +215,49 @@ function simpleToogleStyle(div, estilo)
 		div.style.display = "none";
 	}
   }//if(div!=null)
-  
 }
 
-  // table-row-group toogle 
+
+
+// table-row-group toogle
 function simpleToogleTBODY(divName, obj, callback) {
 		
-	$(obj).children().toggleClass('flecha_close_tboby');
-	$(obj).children().toggleClass('flecha_open_tboby');
+	// $(obj).children().toggleClass('flecha_close_tboby');
+	// $(obj).children().toggleClass('flecha_open_tboby');
+
+	const arrow_node = obj.children[0]
+	if (arrow_node) {
+
+		if (arrow_node.classList.contains("flecha_close_tboby")) {
+			arrow_node.classList.remove("flecha_close_tboby")
+			arrow_node.classList.add("flecha_open_tboby")
+		}else{
+			arrow_node.classList.add("flecha_close_tboby")
+			arrow_node.classList.remove("flecha_open_tboby")
+		}
+		// arrow_node.classList.toggle("flecha_open_tboby")
+	}
 	
-	$('#'+divName).toggle(50);
+	// $('#'+divName).toggle(50);
+	const target = document.getElementById( divName )
+	if (target) {
+		target.classList.toggle("hide")
+	}else{
+		console.warn("Error on get target:", divName);
+	}
+
 	/*
 	if (typeof callback == 'function') {
 		callback();
 	};
 	*/
-	redimensionarVentana();
+	// redimensionarVentana();
 
 	return true;
 }
  
+
+
 function MM_openBrWindow(theURL,winName,features) { //v2.0
   window.open(theURL,winName,features);
 }
