@@ -181,10 +181,11 @@ class dd extends dd_elements {
 
 			$dato = $ar_records[0];
 
-			# Dato es un array en formato JSON. No obstante demomento RecordObj_descriptors_dd no convierte automáticamente
+			# Dato es un array en formato JSON. No obstante, de momento RecordObj_descriptors_dd no convierte automáticamente
 			# desde JSON. Lo haremos aquí de forma específica
-			$dato = json_handler::decode($dato);
-				#dump($dato,'dato');
+			$dato = !is_null($dato)
+				? json_decode($dato)
+				: null;
 
 			$ar_indexations = $dato;
 		}
@@ -300,8 +301,8 @@ class dd extends dd_elements {
 
 				$RecordObj_dd	= new RecordObj_dd($terminoID);
 
-				$termino 		= RecordObj_dd::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
-				$def 			= RecordObj_dd::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
+				$termino		= RecordObj_dd::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
+				$def			= RecordObj_dd::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
 				$obs			= RecordObj_dd::get_obs_by_tipo($terminoID,$this->ts_lang);
 
 				$parent			= $RecordObj_dd->get_parent();
@@ -313,22 +314,26 @@ class dd extends dd_elements {
 				$properties		= $RecordObj_dd->get_properties();
 				$RecordObj_dd2	= new RecordObj_dd($terminoID);
 				#$hijosND		= count($RecordObj_dd2->get_ar_childrens_of_this('no'));
-				$hijosND 		= 0;#$this->HNoDescriptores($terminoID);
+				$hijosND		= 0;#$this->HNoDescriptores($terminoID);
 				$hijosD			= $RecordObj_dd->get_n_hijos_descriptores();
 				$children		= $RecordObj_dd->get_n_hijos();
 				$ncaptaciones	= 0;#$RecordObj_dd->get_n_captaciones();
 				$nIndexaciones	= 0;#count(self::get_ar_indexations($terminoID));
 
+				// orden virtual
+					$nordenV ++;
 
-				# orden virtual
-				$nordenV ++ ;
-
-				# Resalte
-				$resalte = false ;
-				$terminoIDresalteArray = explode(',',$terminoIDresalte) ;
-				if(is_array($terminoIDresalteArray)) foreach($terminoIDresalteArray as $terminoIDlistActual ) {
-					if($terminoIDlistActual===$terminoID) $resalte = 1 ;
-				}
+				// resalte
+					$resalte = false;
+					if (!empty($terminoIDresalte)) {
+						$terminoIDresalteArray = explode(',',$terminoIDresalte);
+						foreach($terminoIDresalteArray as $terminoIDlistActual) {
+							if($terminoIDlistActual===$terminoID) {
+								$resalte = 1;
+								break;
+							}
+						}
+					}
 
 				# margen izquierdo
 				if($parent === 'dd0'){
@@ -340,34 +345,29 @@ class dd extends dd_elements {
 				}
 
 				#$html .= "\n\n\n<!-- DIV LINEA TESAURO ICONOS Y TÉRMINO $terminoID ---------------------------------------------------------------- -->";
-				$html .= "<div id=\"divCont$terminoID\" class=\"divCont\" style=\"padding-left:$marginLeft" . "px;$display\">";
+				$html .= "<div id=\"divCont{$terminoID}\" class=\"divCont\" style=\"padding-left:{$marginLeft}" . "px;{$display}\">";
 
 					# generamos la linea con los iconos, etc..
 					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$properties,$traducible,$norden);
 
 					# recursive
-					if( $children >0 ) {
+					if( $children > 0 ) {
 
 						$terminoIDActual = $terminoID ;
 						# contenedor ajax para carga los hijos
 						#$html .= "\n<!-- CONTENEDOR AJAX TESAURO -->";
-						$html .= "<div id=\"div_$terminoID\" style=\"display:none;clear:left;\">";
+						$html .= "<div id=\"div_{$terminoID}\" style=\"display:none;clear:left;\">";
 
 						$modo = false ;
 						if($modo==="buildTreeFull") {
 							#$this->buildTree($terminoID, $nivel+1, $terminoIDActual, $terminoIDresalte);
 							$this->buildTree($terminoID, $terminoIDActual, $terminoIDresalte, $modo);
 						}
-
-						#$html .= "</div><!-- // div_$terminoID --> ";
 						$html .= '</div>';
 					}
-
-				#$html .= "</div><!-- //divCont$terminoID  -->\n";
 				$html .= '</div>';
 
-
-		} #while ($row_RS = mysql_fetch_assoc($RS)); mysql_free_result($RS);
+		}#while ($row_RS = mysql_fetch_assoc($RS)); mysql_free_result($RS);
 
 
 		return $html ;
@@ -401,7 +401,7 @@ class dd extends dd_elements {
 			$add_class 	= '';
 		}
 
-		$html .= "<div class=\"tsHeader  $add_class\">";
+		$html .= "<div class=\"tsHeader {$add_class}\">";
 
 	        $html .= "<div class=\"tsHeaderLeft\">";
 	        $html .= ucfirst($this->jer_tipoText) ; 	#return("jer_tipoText: ". $this->jer_tipoText );
@@ -416,7 +416,7 @@ class dd extends dd_elements {
 				$html .= " [ $seleccione_el_descriptor ] ";
 			} else {
 				# caso general
-				$html .= dd_elements::renderBtnMas($parent0,null,null);	# renderBtnMas($terminoID, $hijosD, $parent)
+				$html .= dd_elements::renderBtnMas($parent0, null, null);	# renderBtnMas($terminoID, $hijosD, $parent)
 				$html .= "<div id=\"divCont{$parent0}\"></div>";
 			}
 			$html .= "</div>";
@@ -495,9 +495,11 @@ class dd extends dd_elements {
 			#dump($arguments," arguments"); dump($ar_result	,'$ar_result - ' .$terminoID);
 			#error_log( "searchTSform: ". to_string($arguments) );
 		*/
+
 				#
 				# DIRECT SQL SEARCH
 				$strQuery='';
+
 				if(!empty($terminoID)) {
 					$strQuery .= " AND matrix_descriptors_dd.parent = '$terminoID'";
 				}
@@ -520,20 +522,19 @@ class dd extends dd_elements {
 					$strQuery .= " AND jer_dd.modelo = '$modelo'";
 				}
 
-				$strQuery = '-- '.__METHOD__ ."
-				SELECT matrix_descriptors_dd.parent
-				FROM matrix_descriptors_dd
-				LEFT JOIN jer_dd ON matrix_descriptors_dd.parent = jer_dd.\"terminoID\"
-				WHERE
-				matrix_descriptors_dd.id IS NOT NULL
-				$strQuery
-				ORDER BY matrix_descriptors_dd.id ASC
-				LIMIT 300
-				";
+				$strQuery = '-- '.__METHOD__ .'
+					SELECT matrix_descriptors_dd.parent
+					FROM matrix_descriptors_dd
+					LEFT JOIN jer_dd ON matrix_descriptors_dd.parent = jer_dd."terminoID"
+					WHERE
+					matrix_descriptors_dd.id IS NOT NULL
+					'.$strQuery.'
+					ORDER BY matrix_descriptors_dd.id ASC
+					LIMIT 300
+				';
 				#dump($strQuery,'strQuery');#die();
 				$result = pg_query(DBi::_getConnection(), $strQuery);	# or die("Cannot (1) execute query: $strQuery <br>\n". pg_last_error());
-
-				if (!$result) {
+				if ($result===false) {
 					trigger_error("Error on DB query");
 					if(SHOW_DEBUG===true) {
 						throw new Exception("Error Processing Request . ".pg_last_error(), 1);
@@ -544,9 +545,7 @@ class dd extends dd_elements {
 					$ar_result[] = $rows['parent'];
 				}
 
-
 		$ar_result = array_unique($ar_result);
-			#dump($ar_result, ' ar_result'); die();
 
 		$result=array();
 		if(count($ar_result)===0) {
@@ -556,7 +555,7 @@ class dd extends dd_elements {
 		}else{
 
 			$i		= 0;
-			$matriz = false;
+			$matriz = [];
 
 			foreach($ar_result as $terminoID) {
 
@@ -582,15 +581,14 @@ class dd extends dd_elements {
 					if($esmodelo==$emodelo_valido && $esdescriptor=='si') {
 					*/
 						# Con objeto de posicionar antes los de nivel mas cercano a 0 , creamos un nivel virtual en función de los hijos que tenga cada uno
-						$nivel 					= $this->nivelVirtual($terminoID);
+						$nivel = $this->nivelVirtual($terminoID);
 
-						$matriz['terminoID'][$i]= $terminoID ;		#echo " $terminoID <br>";
-						$matriz['nivel'][$i] 	= $nivel ;
+						$matriz['terminoID'][$i]	= $terminoID;
+						$matriz['nivel'][$i]		= $nivel ;
 						$i++;
 					/*}*/
 				}
 			}
-
 
 			/*
 			echo "<pre>";
@@ -632,7 +630,6 @@ class dd extends dd_elements {
 		#if(SHOW_DEBUG===true) error_log( exec_time($start_time, __METHOD__, $result) );
 
 		return (array)$result ; #(este resultado será: terminoIDlist)
-
 	}# fin searchTSform
 
 

@@ -175,9 +175,15 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		if(isset($form_data->traducible))	$RecordObj_dd_edit->set_traducible( safe_xss($form_data->traducible) );
 
 		if(isset($form_data->propiedades) || $form_data->propiedades===null) {
-			$RecordObj_dd_edit->set_propiedades($form_data->propiedades);
+			if (json_encode($propiedades)==='{}') {
+				$propiedades = null;
+			}
+			$RecordObj_dd_edit->set_propiedades($propiedades);
 		}
 		if(isset($form_data->properties) || $form_data->properties===null) {
+			if (json_encode($properties)==='{}') {
+				$properties = null;
+			}
 			$RecordObj_dd_edit->set_properties($properties);
 		}
 

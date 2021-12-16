@@ -29,6 +29,18 @@ input, textarea {
 	padding: 5px;
 }
 
+.hide {
+	display: none !important;
+}
+
+.hidden {
+	visibility: hidden;
+}
+
+.div_rel {
+	margin: 0;
+	padding: 0;
+}
 
 .input_term {
 	width: 100%;
@@ -63,23 +75,51 @@ input, textarea {
 }
 
 #wrapGeneral {
-	overflow: visible;
+	// overflow: visible;
 	top:0;
 	left: 0;
-	height: 100hv;
-	min-width: 720px;
-	min-height: 520px;
-	text-align: center;
-	margin-bottom: 20px;
+	margin: 0;
+	padding: 0;
+	height: 100vh;
+	// min-width: 720px;
+	// min-height: 520px;
+	// text-align: center;
+	// margin-bottom: 20px;
 	font-size: initial;
 	}
 	#wrapGeneral table.table_edit {
-		width:697px;
+		// width: 697px;
+		width: 100%;
+		overflow-x: hidden;
 		/*min-height: 600px;*/
 		/*display: table;*/
+
+		// background-image:url("../../images/table_ramp.jpg");
+		// background-position:0px 21px;
+		// background-repeat:repeat-x;
+		background-color:#c1c3c5;
+		border-collapse:collapse;
+		// margin:10px;
+
+		min-height: 99vh;
+		display: block;
+		border: 1px solid #afafaf;
+		border-radius: 4px;
+
+		@width_body: calc(100vw - 18px);
+
+		>tbody {
+			display: grid;
+			width: @width_body;
+			>tr {
+				display: grid;
+				width: @width_body;
+			}
+		}//end first >tbody
+
 	}
 	#wrapGeneral table.table_edit .td_header {
-		height: 1em;
+		height: 1.7em;
 	}
 
 #form1 {
@@ -135,7 +175,23 @@ input, textarea {
 
 #terminosTable { width:100%;border-collapse:collapse; }
 #terminosTable th { text-align:left; background-color:#505050; color:#CCCCCC; padding:3px; text-transform:capitalize }
-#terminosTable td {padding:3px; }
+#terminosTable td {
+	padding:3px;
+
+	&.td_term1 {
+		width: 67px;
+	}
+	&.td_term2 {
+
+	}
+	&.td_term3 {
+
+	}
+	&.td_term4 {
+		width: 42px;
+	}
+
+}
 
 .inputFocus { background-color:#FFFF99 !important }
 
@@ -155,7 +211,14 @@ input, textarea {
 		}
 
 .form_buttons {
-	height: 46px;
+	// height: 46px;
+	display: flex;
+	justify-content: center;
+	>* {
+		margin-left: 0.5em;
+		margin-right: 0.5em;
+		line-height: 1em;
+	}
 }
 
 .dropBox { cursor:pointer }
@@ -187,7 +250,9 @@ input, textarea {
 	padding:6px;
 }
 
-.div_wraper{ width:650px;}
+.div_wraper{
+	// width:650px;
+}
 .div_wraper .left_div {	
 	float: left;  
 	width: 62px;  
@@ -195,9 +260,9 @@ input, textarea {
 }
 .div_wraper .right_div {
 	float: left;
-	width: 578px;
 	text-align: left;
-	margin-left: 5px
+	margin-left: 5px;
+	width: calc(100% - 93px);
 }
 
 
@@ -250,6 +315,16 @@ input, textarea {
 		background-color: @properties_bg_color;
 	}
 }
+
+
+
+
+.tr_separator {
+	display: block;
+	height: 1.5em;
+}
+
+
 
 
 

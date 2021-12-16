@@ -2,7 +2,7 @@
 // Turn off output buffering
 	ini_set('output_buffering', 'off');
 
-// ontology custon config file
+// ontology custom config file
 require_once( dirname(__FILE__) .'/config/config_ontology.php' );
 // Old lang vars
 require_once( dirname(__FILE__) . '/lang/lang_code.php' );
@@ -43,80 +43,100 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 
 
-# TRANSLATIONS TR AJAX TRIGGER
+/**
+* LOADDESCRIPTORSGRID
+* Translations tr AJAX trigger
+*/
 if($mode==='loadDescriptorsGrid') {
-
-	if(!$id || empty($terminoID)) exit(" Error: Need more vars id:$id, terminoID:$terminoID (ts_descriptors_grid) ");
-
-	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);				#dump($id);die();
-	$ar_transtations_of_current = $RecordObj_descriptors_dd->get_ar_translations_of_current();	#dump($ar_transtations_of_current,'ar_transtations_of_current '.$id); #die();
-
-	if(empty($ar_transtations_of_current)) die();
-
-
-
-	if(count($ar_transtations_of_current)<1) {
-		# Nothing to do
-		die();
-
-	}else{
-
-		# Iterate all traductions
-		foreach($ar_transtations_of_current as $id => $current_lang) {
-
-			# TERMINO : Data from current descriptor
-			$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
-			$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);
-			$termino 				= $RecordObj_descriptors_dd->get_dato();		#dump($termino,'termino');
-			$parent_desc			= $RecordObj_descriptors_dd->get_parent();
-			$lang 					= $RecordObj_descriptors_dd->get_lang();
-			$mainLang 				= $RecordObj_descriptors_dd->get_mainLang();	#dump($id,"mainLang");
-			$langFull 				= lang::get_name_from_code( $lang );
-
-
-			# DEF : Data from def
-			$matrix_table			= RecordObj_descriptors_dd::$descriptors_matrix_table;
-			$RecordObj				= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
-			$def 					= $RecordObj->get_dato();
-			$def_id 				= $RecordObj->get_ID();		#dump($RecordObj);
-
-			require( dirname(__FILE__) . '/html/dd_descriptors_grid.phtml' );
-		 }
-	}
 
 	# Write session to unlock session file
 	session_write_close();
 
+	// options
+		if(empty($id)) {
+			debug_log(__METHOD__." Error: id is mandatory (loadDescriptorsGrid) ".to_string(), logger::ERROR);
+			die('Error. id is mandatory');
+		}
+		if(empty($terminoID)) {
+			debug_log(__METHOD__." Error: terminoID is mandatory (loadDescriptorsGrid) ".to_string(), logger::ERROR);
+			die('Error. terminoID is mandatory');
+		}
+
+
+	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
+	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);
+	$ar_transtations_of_current	= $RecordObj_descriptors_dd->get_ar_translations_of_current();
+
+	if(!empty($ar_transtations_of_current) && count($ar_transtations_of_current)>0) {
+
+		# Iterate all translations
+		foreach($ar_transtations_of_current as $id => $current_lang) {
+
+			// Note that on each iteration, $id and $current_lang vars are overwritten to be used
+			// in the HTML file 'dd_descriptors_grid.phtml'
+
+			// TERMINO : Data from current descriptor
+				$RecordObj_descriptors_dd_term	= new RecordObj_descriptors_dd($matrix_table, $id);
+				$termino						= $RecordObj_descriptors_dd_term->get_dato();
+				$parent_desc					= $RecordObj_descriptors_dd_term->get_parent();
+				$lang							= $RecordObj_descriptors_dd_term->get_lang();
+				$mainLang						= $RecordObj_descriptors_dd_term->get_mainLang();
+				$langFull						= lang::get_name_from_code( $lang );
+
+			// DEF : Data from current def
+				$RecordObj_descriptors_dd_def	= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
+				$def							= $RecordObj_descriptors_dd_def->get_dato();
+				$def_id							= $RecordObj_descriptors_dd_def->get_ID();
+
+			// read file
+			// include the HTML file here, on each loop iteration (!)
+				include dirname(__FILE__) . '/html/dd_descriptors_grid.phtml';
+		}
+	}
+
 	exit();
-}
+}//end if($mode==='loadDescriptorsGrid')
 
 
 
 # REMOVEDESCRIPTOR
 if($mode==='removeDescriptor') {
 
-	if(!$id || !$terminoID) die("Need more data! id:$id - terminoID:$terminoID ");
+	// options
+		if(empty($id)) {
+			die('Error. id is mandatory');
+		}
+		if(empty($terminoID)) {
+			die('Error. terminoID is mandatory');
+		}
 
 	$html = '';
 
-	$matrix_table 	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, $id);
-	$parent			= $RecordObj->get_parent();
-	$termino		= $RecordObj->get_dato();
-	$lang			= $RecordObj->get_lang();
+	try {
 
-	$RecordObj->MarkForDeletion();
+		// RecordObj_descriptors_dd: $matrix_table='matrix_descriptors_dd', $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false
+		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, $id);
+		$parent			= $RecordObj->get_parent();
+		$termino		= $RecordObj->get_dato();
+		$lang			= $RecordObj->get_lang();
+		$RecordObj->MarkForDeletion();
 
-	# Borramos sus datos accesorios (def)
-	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='def');
-	$RecordObj->MarkForDeletion();
+		# Borramos sus datos accesorios (def)
+		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='def');
+		$RecordObj->MarkForDeletion();
 
-	# Borramos sus datos accesorios (obs)
-	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='obs');
-	$RecordObj->MarkForDeletion();
+		# Borramos sus datos accesorios (obs)
+		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='obs');
+		$RecordObj->MarkForDeletion();
+
+		$html = 'OK';
+
+	}catch(Exception $e){
+		$html = 'Error. '.$e->getMessage();
+	}
 
 	exit($html);
 }//end removeDescriptor

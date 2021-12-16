@@ -49,21 +49,32 @@ function isArray(obj) {
 * DD_ABRIRTSLIST
 * Abrir listado de tesauro para hacer relaciones
 */
-var relwindow = null;
+let relations_window = null;
 function dd_abrirTSlist(modo,type) {
 
 	// Already open
-	if (relwindow) {
-		relwindow.focus()
-		return false;
+	if (relations_window) {
+		if (relations_window.closed===false) {
+			relations_window.focus()
+			return false;
+		}
 	}
 
-	const theUrl = 'dd_list.php?menu=0&modo=' + modo +'&type=' + type ;
-	relwindow = window.open(theUrl ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=920,height=1280');//resizable
-	if (relwindow) relwindow.moveTo(-10,1);
-	if (window.focus) { relwindow.focus() }
+	const theUrl		= 'dd_list.php?menu=0&modo=' + modo +'&type=' + type ;
+	const screenW		= screen.width
+	const screenH		= screen.height
+	const content_width	= 920;
+	const left			= 0
 
-	return false
+	relations_window = window.open(theUrl ,'relations_window',`popup=yes,width=${content_width},left=${left},height=${screenH}`)
+	if (relations_window) {
+		relations_window.focus()
+	}else{
+		alert("Error focus window (openTSedit). \n\nPlease disable 'Block Pop-Up Windows' option in your browser ")
+	}
+
+
+	return relations_window
 }//end dd_abrirTSlist
 
 
