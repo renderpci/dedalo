@@ -240,7 +240,7 @@ class search {
 	/**
 	* SEARCH
 	* Exec a SQL query search against the database
-	* @return array $result_table
+	* @return object $records_data
 	*/
 	public function search() {
 		$start_time=microtime(1);
@@ -550,9 +550,9 @@ class search {
 				// debug_log(__METHOD__." ar_elements $op - ".to_string($ar_elements), logger::DEBUG);
 				// dump($ar_elements, ' ar_elements ++ '.to_string()); die();
 
-				// if (!empty(reset($ar_elements))) { // deprecated PHP>=8.1
-				if (!empty($ar_elements)) {
-
+				// if (!empty(reset($ar_elements))) {  // deprecated PHP>=8.1
+				$ar_elements_array = get_object_vars($ar_elements);
+				if (!empty(reset($ar_elements_array))) {
 					$new_ar_query_object->$op[] = $ar_elements;
 				}
 

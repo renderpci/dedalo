@@ -94,7 +94,8 @@ class menu extends common {
 
 					// tool_context
 						$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
-							? key($properties->tool_config)
+							// ? key($properties->tool_config) // deprecated PHP>=8.1
+							? array_key_first(get_object_vars($properties->tool_config))
 							: false;
 						if ($tool_name) {
 							$ar_tool_object	= common::get_client_registered_tools([$tool_name]);
