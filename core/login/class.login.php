@@ -886,7 +886,7 @@ class login extends common {
 				'value'		=> $data->{$ktoday}->cookie_value,
 				'expires'	=> (time() + (86400 * 1)),
 				'path'		=> '/',
-				'domain'	=> $cookie_properties->domain,
+				'domain'	=> $cookie_properties->domain ?? '',
 				'secure'	=> $cookie_properties->secure,
 				'httponly'	=> $cookie_properties->httponly
 			];
@@ -1068,11 +1068,11 @@ class login extends common {
 
 				if (isset($cookie_auth->$ktoday->cookie_name)) {
 					#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
-					setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+					setcookie($cookie_auth->$ktoday->cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 				}
 				if (isset($cookie_auth->$kyesterday->cookie_name)) {
 					#setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
-					setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+					setcookie($cookie_auth->$kyesterday->cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 				}
 			}
 
@@ -1081,7 +1081,7 @@ class login extends common {
 		$cookie_name = session_name();
 		unset($_SESSION['dedalo']);
 		#setcookie($cookie_name, null, -1, '/');
-		setcookie($cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+		setcookie($cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 		#unset($_SESSION);
 		debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
 
