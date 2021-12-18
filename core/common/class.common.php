@@ -1279,7 +1279,7 @@ abstract class common {
 		return $json;
 	}//end get_json
 
-	
+
 	/**
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
@@ -1374,7 +1374,7 @@ abstract class common {
 							return $carry;
 						});
 					}else{
-					 	$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo){
+						$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo){
 							if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
 								return $item;
 							}
@@ -1461,7 +1461,7 @@ abstract class common {
 				'columns_map'		=> $columns_map
 			]);
 
-		// optional properties		
+		// optional properties
 			// Filter_by_list
 				if (isset($properties->source->filter_by_list)) {
 					// Calculate ar elements to show in filter. Resolve self section items
@@ -1521,7 +1521,7 @@ abstract class common {
 			// 	'mode'			=> $full_ddo->mode,
 			// 	'translatable'	=> $full_ddo->translatable,
 			// 	'permissions'	=> $full_ddo->permissions,
-				
+
 			// ]);
 
 
@@ -1562,7 +1562,7 @@ abstract class common {
 			$request_config_dedalo = array_filter($request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
-		
+
 		// children_resursive function, used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
 			if (!function_exists('get_children_recursive')) {
 				function get_children_recursive($ar_ddo, $dd_object) {
@@ -1577,7 +1577,7 @@ abstract class common {
 							}
 						}
 					}
-					
+
 					return $ar_children;
 				}
 			}
@@ -1794,7 +1794,7 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				error_log("------------------------- get_subdatum ---------------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms");
 			}
-			
+
 		return $subdatum;
 	}//end get_subdatum
 
@@ -1840,7 +1840,7 @@ abstract class common {
 			// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
 			// 	$ar_subdata[] = $dd_info;
 			// }
-		
+
 
 		// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
 
@@ -1869,19 +1869,19 @@ abstract class common {
 			$idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 			// dump($idd, ' idd ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->modo));
 		}
-		
-		$requested_source = dd_core_api::$rqo->source ?? false;		
+
+		$requested_source = dd_core_api::$rqo->source ?? false;
 		if($requested_source) { // && $requested_source->tipo===$this->tipo
-			
+
 			// set the request_config with the API rqo sent by client
-				
+
 			// requested_show. get the rqo sent to the API
 			$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
 				? unserialize(serialize(dd_core_api::$rqo->show))
 				: false;
 
 			if (!empty($requested_show)) {
-					
+
 				// consolidate ddo items properties
 					foreach ($requested_show->ddo_map as $key => $current_ddo) {
 						//get the direct ddo linked by the source
@@ -1923,7 +1923,7 @@ abstract class common {
 					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $request_config->show->ddo_map);
 					// dump($this->request_config, ' this->request_config +--------------------------------+ '.to_string($this->tipo));
 					// dump(dd_core_api::$ddo_map, 'dd_core_api::$ddo_map ++ '.to_string());
-				
+
 				return $this->request_config; // we have finished ! Note we stop here (!)
 			}//end if (!empty($requested_show))
 		}//end if(!empty($requested_show))
@@ -1940,7 +1940,7 @@ abstract class common {
 			$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
 				// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:navigator::get_user_id(), mode:$mode ".to_string());
 			if (!empty($user_preset)) {
-				
+
 				$request_config = $user_preset;
 
 				// $request_config = array_filter($user_preset, function($item){
@@ -1959,11 +1959,11 @@ abstract class common {
 					$options->section_tipo	= $section_tipo;
 					$options->mode			= $mode;
 					$options->section_id	= $section_id;
-				
+
 				$request_config = common::get_ar_request_config($options);
 					// dump($request_config, ' request_config [2] ++ '.to_string($this->tipo));
 			}
-		
+
 
 		// request_config value
 			// $request_config = array_merge([$source], $request_config);
@@ -2110,20 +2110,20 @@ abstract class common {
 			}
 
 		// pagination defaults. Note that limit defaults are set on element construction based on properties
-			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;			
+			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;
 			$limit = (function() use($model, $tipo, $section_tipo, $mode){
 				switch (true) {
 					case $model==='section':
 						$section = section::get_instance(null, $tipo, $mode, true);
 						return $section->pagination->limit;
-						break;					
+						break;
 					case strpos($model, 'component_')===0:
 						$recordObjdd = new RecordObj_dd($tipo);
 						$translatable = $recordObjdd->get_traducible()=== 'si';
 
 						$current_lang = $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$component = component_common::get_instance($model, $tipo, null, $mode, $current_lang, $section_tipo);
-						
+
 						return $component->pagination->limit;
 						break;
 					default:
@@ -2280,26 +2280,26 @@ abstract class common {
 					$ar_ddo_map = isset($parsed_item->show->ddo_map)
 						? $parsed_item->show->ddo_map
 						: $ar_ddo_calcutaled;
-					
+
 					// ddo_map
 						$final_ddo_map = [];
 						foreach ($ar_ddo_map as $current_ddo_map) {
-							
+
 							// check without tipo case
 								if (!isset($current_ddo_map->tipo)) {
 									debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
-									dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));								
+									dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
 									continue;
 								}
 
 							// label. Add to all ddo_map items
 								$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
-							
+
 							// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
 								$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
 									? $ar_section_tipo
 									: $current_ddo_map->section_tipo;
-							
+
 							// parent. Set the default "self" value to the current tipo (the parent)
 								$current_ddo_map->parent = $current_ddo_map->parent==='self'
 									? $tipo
@@ -2375,7 +2375,7 @@ abstract class common {
 
 				// choose
 					if (isset($item_request_config->choose)) {
-						
+
 						$choose_ddo_map = $item_request_config->choose->ddo_map;
 						foreach ($choose_ddo_map as $current_ddo_map) {
 
@@ -2575,7 +2575,7 @@ abstract class common {
 				$ar_request_query_objects[] = $request_config_item;
 
 			// set var (TEMPORAL TO GIVE ACCESS FROM GET_SUB_DATA)
-				dd_core_api::$context_dd_objects = $ddo_map; 
+				dd_core_api::$context_dd_objects = $ddo_map;
 
 		}//end if(isset($properties->source->request_config) || $model==='component_autocomplete_hi')
 
@@ -2720,7 +2720,7 @@ abstract class common {
 							"modelo": "component_section_id",
 							"name": "Searching"
 						}
-	                ]');
+					]');
 
 				$op = '$and';
 				$filter_group = new stdClass();
@@ -2878,7 +2878,7 @@ abstract class common {
 				if (!empty($order_custom)) {
 					$sqo->set_order_custom($order_custom);
 				}
-		
+
 
 		return (object)$query_object;
 	}//end build_search_query_object
@@ -2905,7 +2905,7 @@ abstract class common {
 				$options->external		= false;
 				$options->section_tipo	= $section_tipo;
 				$options->mode			= $mode;
-				$options->section_id	= $section_id;				
+				$options->section_id	= $section_id;
 			$ar_request_query_objects = common::get_ar_request_config($options);
 
 
@@ -2913,7 +2913,7 @@ abstract class common {
 
 
 		return $request_config;
-	}//end get_request_query_object	
+	}//end get_request_query_object
 
 
 	/**
@@ -3287,27 +3287,27 @@ abstract class common {
 				"section_tipo": "dd1324",
 				"limit": 0,
 				"filter": {
-				    "$and": [
-				        {
-				            "q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
-				            "q_operator": null,
-				            "path": [
-				                {
+					"$and": [
+						{
+							"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
+							"q_operator": null,
+							"path": [
+								{
 									"section_tipo": "dd1324",
 									"component_tipo": "dd1354",
 									"modelo": "component_radio_button",
 									"name": "Active"
-				                }
-				            ]
-				        }
-				    ]
+								}
+							]
+						}
+					]
 				},
 				"full_count": false
 			}');
 
 		$search = search::get_instance($sqo_tool_active);
 		$result = $search->search();
-		// get the simple_tool_object		
+		// get the simple_tool_object
 		foreach ($result->ar_records as $record) {
 
 			$section 		= section::get_instance($record->section_id, $record->section_tipo);
@@ -3489,7 +3489,7 @@ abstract class common {
 		// (from the last component to the main parent, the column will be with the data of the first item of the column)
 			if (!function_exists('get_parents')) {
 				function get_parents($ar_ddo, $dd_object) {
-				 	$ar_parents = [];
+					$ar_parents = [];
 					$parent = array_find($ar_ddo, function($item) use($dd_object){
 
 						return $item->tipo===$dd_object->parent;
