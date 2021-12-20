@@ -209,6 +209,10 @@ class indexation_grid {
 																	 $current_lang,
 																	 $current_section_tipo);
 				$current_component->set_locator($locator);
+				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
+				$column_obj = new stdClass();
+					$column_obj->id = $ddo->section_tipo.'_'.$ddo->tipo;
+				$current_component->column_obj = $column_obj;
 
 			// check if the component has ddo children,
 			// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
