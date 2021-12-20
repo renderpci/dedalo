@@ -10,14 +10,12 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_INPUT_TEXT
-* Manages the component's logic and appearance in client side
+* RENDER_MINI_COMPONENT_semantic_node * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_input_text = function() {
+export const render_mini_component_semantic_node = function() {
 
 	return true
-};//end render_mini_component_input_text
-
+};//end render_mini_component_semantic_node
 
 
 /**
@@ -25,7 +23,7 @@ export const render_mini_component_input_text = function() {
 * Render node to be used in current mode
 * @return DOM node wrapper
 */
-render_mini_component_input_text.prototype.mini = async function() {
+render_mini_component_semantic_node.prototype.mini = async function() {
 
 	const self = this
 
