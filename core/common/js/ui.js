@@ -931,13 +931,14 @@ export const ui = {
 
 		build_wrapper_edit : (instance, items={})=>{
 
-			const id	= instance.id || 'id is not set'
-			const model	= instance.model 	// like component_input_text
-			const type	= instance.type 	// like 'component'
-			const tipo	= instance.tipo 	// like 'rsc26'
-			const mode	= instance.mode 	// like 'edit'
-			const label	= instance.label
-			const name	= instance.constructor.name
+			const id			= instance.id || 'id is not set'
+			const model			= instance.model 	// like component_input_text
+			const type			= instance.type 	// like 'component'
+			const tipo			= instance.tipo 	// like 'rsc26'
+			const mode			= instance.mode 	// like 'edit'
+			const label			= instance.context.label
+			const description	= instance.context.description
+			const name			= instance.constructor.name
 
 			const fragment = new DocumentFragment()
 
@@ -949,7 +950,7 @@ export const ui = {
 				})
 
 			// label
-				if (instance.label!==null) {
+				if (label!==null) {
 					// default
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
@@ -960,12 +961,12 @@ export const ui = {
 				}
 
 			// description
-				if (instance.description!==null) {
+				if (description!==null) {
 					// default
 					const component_description = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'description',
-						inner_html		: instance.description,
+						inner_html		: description,
 						parent			: tool_header
 					})
 				}

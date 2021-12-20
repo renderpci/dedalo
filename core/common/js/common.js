@@ -775,9 +775,25 @@ common.prototype.get_columns_map = function(){
 			}else{
 				// if the ddo don't has column_id and the column_map is not defined in properties,
 				// create a new column with the ddo information or join all components in one column
+
+				// semantic node is a exception, it will create a column for itself,
+				// it works with different sqo than his parent portal and it's necessary always his own space to change the sqo active.
+					if(dd_object.model==='component_semantic_node'){
+
+						columns_map.push(
+							{
+								id		: dd_object.tipo,
+								label	: dd_object.tipo
+							}
+						)
+						dd_object.column_id = dd_object.tipo
+						continue
+					}
+
 				switch(self.model){
 					// component_portal will join the components that doesn't has columns defined.
 					case 'component_portal':
+
 						// find if the general column was created, if not create new one with the tipo of the component_portal to include all components.
 						const found	= columns_map.find(el => el.id===self.tipo)
 
@@ -1284,12 +1300,15 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 				const ar_paths = get_ar_inverted_paths(search_ddo_map)
 				// change the order of the paths to correct order for sqo and set all ddo to 'list' mode
 				const paths_length = ar_paths.length
-				for (let i = 0; i < paths_length; i++) {
+				paths: for (let i = 0; i < paths_length; i++) {
 					const current_path = ar_paths[i]
 					const current_path_length = current_path.length
 					// reverse path and set the list
 					const new_path = []
-					for (let j = current_path_length - 1; j >= 0; j--) {
+					ddo: for (let j = current_path_length - 1; j >= 0; j--) {
+						// Semantic node is outside the portal sqo (it has his own sqo) and need to be excluded, only when the caller it's a semantic node include it
+						if(current_path[j].model==='component_semantic_node' && (current_path[j].model !== self.model)){continue paths}
+						// create a copy of the current ddo, it ensure that the original path is not touched
 						const current_ddo = JSON.parse(JSON.stringify(current_path[j]))
 						current_ddo.mode = 'list' // enable lang fallback value
 						if(Array.isArray(current_ddo.section_tipo)){
