@@ -696,17 +696,25 @@ abstract class component_common extends common {
 	*/
 	public function get_raw_value() {
 
+		if(isset($this->column_obj)){
+			$column_obj = $this->column_obj;
+		}else{
+			$column_obj = new stdClass();
+				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+		}
+
 		$raw_value = new dd_grid_cell_object();
 
 		$data	= $this->get_dato_full();
 		// get the total of locators of the data, it will be use to render the rows separated.
-			$row_count = 0;//sizeof($data);
+			$row_count = 1;//sizeof($data);
 
 		$label	= $this->get_label();
 
 		$raw_value->set_type('column');
 		$raw_value->set_label($label);
 		$raw_value->set_cell_type('json');
+		$raw_value->set_ar_columns_obj([$column_obj]);
 		$raw_value->set_row_count($row_count);
 		$raw_value->set_value($data);
 

@@ -121,13 +121,13 @@ class dd_object {
 	/**
 	* SET_SECTION_TIPO
 	*/
-	public function set_section_tipo(string $value) {
+	public function set_section_tipo($value) {
 		if (!isset($this->model)) {
 			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
-		if(strpos($this->model, 'area')!==0 && !RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
-		}
+		// if(strpos($this->model, 'area')!==0 && !RecordObj_dd::get_prefix_from_tipo($value)) {
+		// 	throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
+		// }
 		$this->section_tipo = $value;
 	}
 
