@@ -169,7 +169,7 @@ const get_content_data_edit = async function(self) {
 					parent			: total_records_label
 				})
 		// export format
-			const export_format = ui.create_dom_element({
+			const data_format = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'records_info',
 				text_content 	: get_label.formato,
@@ -179,7 +179,7 @@ const get_content_data_edit = async function(self) {
 				const select_data_format_export = ui.create_dom_element({
 					element_type	: 'select',
 					class_name		: 'select_data_format_export',
-					parent			: export_format
+					parent			: data_format
 				})
 					const select_option_standard= ui.create_dom_element({
 						element_type	: 'option',
@@ -219,13 +219,16 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_config
 			})
 			button_export.addEventListener('click', async function(e){
+
 				// clean target_div
 					while (export_data.hasChildNodes()) {
 						export_data.removeChild(export_data.lastChild);
 					}
 				// export_grid API call
+				self.data_format = select_data_format_export.value
+
 				const export_grid_options = {
-					export_format		: select_data_format_export.value,
+					data_format			: self.data_format,
 					ar_ddo_to_export	: self.ar_ddo_to_export,
 				}
 				self.get_export_grid(export_grid_options)
@@ -252,8 +255,9 @@ const get_content_data_edit = async function(self) {
 			button_export_csv.addEventListener('click',async function(event) {
 
 				const options = {
-					export_format		: select_data_format_export.value,
+					data_format			: select_data_format_export.value,
 					ar_ddo_to_export	: self.ar_ddo_to_export,
+					export_data			: export_data,
 				}
 				const dd_grid_expot_csv = await self.get_export_csv(options)
 
@@ -274,6 +278,21 @@ const get_content_data_edit = async function(self) {
 				text_content	: (get_label.descargar || 'Export') + ' Excel',
 				parent			: export_buttons_options
 			})
+			button_export_excel.addEventListener('click', function (event) {
+
+				// Download it
+					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.xls';
+					const link		= document.createElement('a');
+					link.style.display = 'none';
+					link.setAttribute('target', '_blank');
+					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data.innerHTML);
+					link.setAttribute('download', filename);
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+
+			})
+
 			const button_export_html = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
