@@ -8,7 +8,8 @@ class tools_register {
 
 
 
-	static $section_tools_tipo = 'dd1324';
+	static $section_tools_tipo				= 'dd1324';
+	static $simple_tool_obj_component_tipo	= 'dd1353';
 
 
 
