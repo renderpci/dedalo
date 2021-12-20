@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_SEARCH_COMPONENT_INPUT_TEXT
+* RENDER_SEARCH_COMPONENT_semantic_node
 * Manages the component's logic and appearance in client side
 */
-export const render_search_component_input_text = function() {
+export const render_search_component_semantic_node = function() {
 
 	return true
-};//end render_search_component_input_text
+};//end render_search_component_semantic_node
 
 
 
@@ -25,7 +25,7 @@ export const render_search_component_input_text = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_search_component_input_text.prototype.search = async function() {
+render_search_component_semantic_node.prototype.search = async function() {
 
 	const self = this
 
