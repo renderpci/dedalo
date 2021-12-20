@@ -120,11 +120,11 @@ class media_icons extends widget_common {
 								}
 								// build the tool_context
 									if ($tool_name) {
-										$ar_tool_object	= common::get_client_registered_tools([$tool_name]);
+										$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
 										if (empty($ar_tool_object)) {
 											debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in media_icons widget ", logger::ERROR);
 										}else{
-											$tool_context	= common::create_tool_context($ar_tool_object[0], $tool_config);
+											$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
 										}
 									}
 
