@@ -387,11 +387,12 @@ class dd_core_api {
 		// vars from json_data
 			$source			= $json_data->source;
 
-			$tipo			= $source->tipo;
+			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo;
 			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
+			$section_id 	= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
 
 		// build element
 			switch (true) {
@@ -411,7 +412,7 @@ class dd_core_api {
 
 					break;
 
-				case strpos($model, 'component')!==false:
+				case strpos($model, 'component_')!==false:
 					$RecordObj_dd	= new RecordObj_dd($tipo);
 					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
@@ -423,6 +424,11 @@ class dd_core_api {
 															  $section_tipo);
 					break;
 
+				case strpos($model, 'tool_')!==false:
+
+					$element = new tool_common($section_id, $section_tipo);
+
+					break;
 				default:
 					#throw new Exception("Error Processing Request", 1);
 					$response->msg = 'Error. model not found: '.$model;
