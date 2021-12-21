@@ -104,7 +104,14 @@ class tool_import_rdf extends tool_common {
 			$base_uri = substr($rdf_uri, 0, strlen($rdf_uri)-4);
 
 			$rdf_graph = new \EasyRdf\Graph($rdf_uri);
-			$rdf_graph->load();
+
+			try {
+				$rdf_graph->load();
+			} catch (Exception $e) {
+
+				debug_log(__METHOD__." Ignored broken link in rdf ".to_string($rdf_uri), logger::DEBUG);
+				continue;
+			}
 
 			// $resources = $rdf_graph->resources();
 			// $rdf_types = $rdf_graph->toRdfPhp();
@@ -422,7 +429,7 @@ class tool_import_rdf extends tool_common {
 						}else{
 
 							$resource_procesed_data = false;
-							if(isset($propiedades->process)){
+							if(isset($propiedades->process->source)){
 									$source = $propiedades->process->source;
 									$source_data = '';
 									if($source === '$base_uri'){
@@ -440,7 +447,14 @@ class tool_import_rdf extends tool_common {
 								$current_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'section', 'termino_relacionado', false);
 								$parent_dd_tipo			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
 								$resource_uri 	= $resource->getUri();
-								$resource->load('rdfxml');
+								try {
+									$resource->load('rdfxml');
+								} catch (Exception $e) {
+
+									debug_log(__METHOD__." Ignored broken link in rdf ".to_string($resource_uri), logger::DEBUG);
+									continue;
+								}
+
 
 							// check if the current resource has a record inside Dédalo.
 								$RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
@@ -664,6 +678,19 @@ class tool_import_rdf extends tool_common {
 
 				$value 		= $new_values;
 				$old_data 	= [];
+			}
+
+			$relation_models = component_relation_common::get_components_with_relations();
+			if(in_array($modelo_name, $relation_models) && !empty($old_data)){
+
+				$object_exists = locator::in_array_locator($value, $old_data, ['section_id','section_tipo']);
+
+				if ($object_exists===false) {
+					$new_data	= $old_data;
+					$new_data[]	= $value;
+					$value		= $new_data;
+					$old_data = null;
+				}
 			}
 
 
