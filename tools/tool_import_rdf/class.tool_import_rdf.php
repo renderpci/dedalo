@@ -1,6 +1,6 @@
 <?php
 
-require_once( dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/vendor/autoload.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/lib/vendor/autoload.php');
 
 /*
 * CLASS tool_import_rdf
@@ -46,8 +46,8 @@ class tool_import_rdf extends tool_common {
 	public function get_ontology_tipo($component_tipo) {
 
 		$RecordObj_dd = new RecordObj_dd($component_tipo);
-		$propiedades = $RecordObj_dd->get_propiedades(true);
-		$ontology_tipo = $propiedades->ar_tools_name->tool_import_rdf->external_ontology;
+		$properties = $RecordObj_dd->get_properties(true);
+		$ontology_tipo = $properties->ar_tools_name->tool_import_rdf->external_ontology;
 
 		return $ontology_tipo;
 	}//end get_ontology_tipo
@@ -83,19 +83,35 @@ class tool_import_rdf extends tool_common {
 	* GET_RDF_DATA
 	* @return
 	*/
-	public static function get_rdf_data($ontology_tipo, $ar_data, $locator) {
+	public static function get_rdf_data($request_options) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// options
+			$options = new stdClass();
+				$options->ontology_tipo	= null;
+				$options->ar_values		= null;
+				$options->locator		= null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// variables
+				$ontology_tipo	= $options->ontology_tipo;
+				$ar_values		= $options->ar_values;
+				$locator		= $options->locator;
 
 		$RecordObj_dd = new RecordObj_dd($ontology_tipo);
-		$propiedades = $RecordObj_dd->get_propiedades(true);
+		$properties = $RecordObj_dd->get_properties(true);
 
-		$name_space = $propiedades->xmlns;
+		$name_space = $properties->xmlns;
 
 		foreach($name_space as $key => $value){
 			\EasyRdf\RdfNamespace::set($key, $value);
 		}
 
 		$rdf_data = [];
-		foreach($ar_data as $uri){
+		foreach($ar_values as $uri){
 
 			$rdf_uri = (substr($uri, -4)!=='.rdf')
 				? $uri.'.rdf'
@@ -130,8 +146,10 @@ class tool_import_rdf extends tool_common {
 			$rdf_data[] = $ar_dd_obj;
 		}
 
+		$response->result 	= $rdf_data;
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 			// dump($rdf_data, ' rdf_data +-------------------------------+ '.to_string());
-		return $rdf_data;
+		return $response;
 
 		// $me = $nmo->primaryTopic();
 		// if($nmo->type()==='nmo:TypeSeriesItem'){
@@ -190,9 +208,9 @@ class tool_import_rdf extends tool_common {
 
 
 			$RecordObj_dd = new RecordObj_dd($ObjectProperty_tipo);
-				$propiedades = $RecordObj_dd->get_propiedades(true);
-				if(isset($propiedades->match)){
-						dump($propiedades, ' propiedades ++ '.to_string());
+				$properties = $RecordObj_dd->get_properties(true);
+				if(isset($properties->match)){
+						dump($properties, ' properties ++ '.to_string());
 				}
 
 			if($children_dd_tipo){
@@ -202,32 +220,32 @@ class tool_import_rdf extends tool_common {
 				$ar_resources = array_merge($ar_resources, tool_import_rdf::get_resource_to_dd_object($children_dd_tipo, $rdf_graph, $resource_uri, [$section_tipo], $parent, $locator));
 			}else{
 				$procesed_data = false;
-				if(isset($propiedades->process->source)){
-						$source = $propiedades->process->source;
+				if(isset($properties->process->source)){
+						$source = $properties->process->source;
 						$source_data = '';
 						if($source === '$base_uri'){
 							$source_data = $base_uri;
 						}
-						$procesed_data = tool_import_rdf::process_data_map($source_data, $propiedades->process->data_map);
+						$procesed_data = tool_import_rdf::process_data_map($source_data, $properties->process->data_map);
 				}
-				if(isset($propiedades->process->split)){
-						$source = $propiedades->process->split->source;
+				if(isset($properties->process->split)){
+						$source = $properties->process->split->source;
 						$source_data = '';
 						if($source === '$base_uri'){
 							$source_data = $base_uri;
 						}
-						$split_by = $propiedades->process->split->split_by;
+						$split_by = $properties->process->split->split_by;
 						$ar_parts = explode($split_by , $source_data);
 
-						$get_element = $propiedades->process->split->get;
+						$get_element = $properties->process->split->get;
 						if($get_element==='end'){
 							$element_got = end($ar_parts);
 						}
-						$object_property_name = $propiedades->process->split->property_name;
+						$object_property_name = $properties->process->split->property_name;
 						$procesed_data = $element_got;
 				}
-				if(isset($propiedades->process->date)){
-						$source = $propiedades->process->date;
+				if(isset($properties->process->date)){
+						$source = $properties->process->date;
 						$start = $source->start;
 						$end = $source->end;
 						$date_start_literal	= $rdf_graph->getLiteral($base_uri, $start);
@@ -277,8 +295,8 @@ class tool_import_rdf extends tool_common {
 
 						$procesed_data= [$date];
 				}
-				if(isset($propiedades->process->geo_tag)){
-					$source	= $propiedades->process->geo_tag;
+				if(isset($properties->process->geo_tag)){
+					$source	= $properties->process->geo_tag;
 					$lat	= $source->lat;
 					$long	= $source->long;
 
@@ -312,8 +330,8 @@ class tool_import_rdf extends tool_common {
 
 					$procesed_data = '[geo-n-1--data:'.$geojson_parse.':data]';
 				}
-				if(isset($propiedades->process->geo_map)){
-					$source	= $propiedades->process->geo_map;
+				if(isset($properties->process->geo_map)){
+					$source	= $properties->process->geo_map;
 					$lat	= $source->lat;
 					$long	= $source->long;
 
@@ -365,7 +383,7 @@ class tool_import_rdf extends tool_common {
 							: $rdf_graph->getLiteral($base_uri, $object_property_name, $lang_alpha2);
 						if(!isset($literal)) continue;
 
-						$procesed_data = isset($propiedades->process)
+						$procesed_data = isset($properties->process)
 							? $procesed_data
 							: $literal->getValue();
 
@@ -377,12 +395,12 @@ class tool_import_rdf extends tool_common {
 
 								// check if the current literal has a record inside Dédalo.
 									$RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-									$class_propiedades = $RecordObj_dd->get_propiedades(true);
+									$class_properties = $RecordObj_dd->get_properties(true);
 
-									if(isset($class_propiedades->match)){
+									if(isset($class_properties->match)){
 										$literal_section_tipo_to_check = reset($ar_literal_section_tipo);
-										// dump($literal_section_tipo_to_check.' '.$class_propiedades->match.' '.$resource_procesed_data, ' literal_section_tipo_to_check ++ '.to_string());
-										$procesed_data = tool_import_rdf::get_resource_macth($literal_section_tipo_to_check, $class_propiedades->match, $procesed_data);
+										// dump($literal_section_tipo_to_check.' '.$class_properties->match.' '.$resource_procesed_data, ' literal_section_tipo_to_check ++ '.to_string());
+										$procesed_data = tool_import_rdf::get_resource_macth($literal_section_tipo_to_check, $class_properties->match, $procesed_data);
 									}
 							}
 
@@ -429,13 +447,13 @@ class tool_import_rdf extends tool_common {
 						}else{
 
 							$resource_procesed_data = false;
-							if(isset($propiedades->process->source)){
-									$source = $propiedades->process->source;
+							if(isset($properties->process->source)){
+									$source = $properties->process->source;
 									$source_data = '';
 									if($source === '$base_uri'){
 										$source_data = $base_uri;
 									}
-									$resource_procesed_data = tool_import_rdf::process_data_map($source_data, $propiedades->process->data_map);
+									$resource_procesed_data = tool_import_rdf::process_data_map($source_data, $properties->process->data_map);
 							}
 							$resource_procesed_data = ($resource_procesed_data)
 								? $resource_procesed_data
@@ -458,12 +476,12 @@ class tool_import_rdf extends tool_common {
 
 							// check if the current resource has a record inside Dédalo.
 								$RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-								$class_propiedades = $RecordObj_dd->get_propiedades(true);
+								$class_properties = $RecordObj_dd->get_properties(true);
 
-								if(isset($class_propiedades->match)){
+								if(isset($class_properties->match)){
 									$section_tipo_to_check = reset($current_section_tipo);
-									// dump($section_tipo_to_check.' '.$class_propiedades->match.' '.$resource_procesed_data, ' section_tipo_to_check ++ '.to_string());
-									$resource_procesed_data = tool_import_rdf::get_resource_macth($section_tipo_to_check, $class_propiedades->match, $resource_procesed_data);
+									// dump($section_tipo_to_check.' '.$class_properties->match.' '.$resource_procesed_data, ' section_tipo_to_check ++ '.to_string());
+									$resource_procesed_data = tool_import_rdf::get_resource_macth($section_tipo_to_check, $class_properties->match, $resource_procesed_data);
 								}
 
 							// create the component_portal of the resource link
@@ -565,10 +583,10 @@ class tool_import_rdf extends tool_common {
 		}');
 
 
-		$search_development2	= new search_development2($sqo);
-		$search_result			= $search_development2->search();
-		$ar_records				= $search_result->ar_records;
-		$count					= count($ar_records);
+		$search			= search::get_instance($sqo);
+		$search_result	= $search->search();
+		$ar_records		= $search_result->ar_records;
+		$count			= count($ar_records);
 
 
 		if($count>1) {

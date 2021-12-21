@@ -128,3 +128,67 @@ tool_import_rdf.prototype.load_component = async function(lang) {
 
 
 
+
+
+/**
+* GET_RDF_DATA
+* Call the API to get process the source component iri and transform to Dédalo model
+* the correspondence is in external ontology.
+*
+* @para string translator (name like 'babel' must to be defined in tool config)
+* @param string source_lang (like 'lg-eng')
+* @param string target_lang (like 'lg-spa')
+* @param DOM element buttons_container (where will be place the message response)
+*
+* @return promise response
+*/
+tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_values, buttons_container) {
+
+	const self = this
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'get_rdf_data')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			ontology_tipo	: ontology_tipo,
+			ar_values		: ar_values,
+			locator	: {
+				section_tipo	: self.caller.section_tipo,
+				section_id		: self.caller.section_id,
+			}
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				dd_console("-> get_rdf_data API response:",'DEBUG',response);
+
+				// user messages
+					const msg_type = (response.result===false) ? 'error' : 'ok'
+					//if (trigger_response.result===false) {
+						ui.show_message(buttons_container, response.msg, msg_type)
+					//}
+
+
+				// reload target lang
+					// const target_component = self.ar_instances.find(el => el.tipo===self.main_component.tipo && el.lang===target_lang)
+					// target_component.refresh()
+					// dd_console('target_component', 'DEBUG', target_component)
+
+				resolve(response)
+			})
+		})
+};//end get_rdf_data
+
+
+
