@@ -1,4 +1,5 @@
 <?php
+require_once DEDALO_LIB_BASE_PATH.'/ontology/class.RecordObj_dd_edit.php';
 /**
 * HIERARCHY
 *
@@ -371,6 +372,9 @@ class hierarchy {
 							$response->msg 		.= $create_term->msg;
 						}
 
+					// set main_dd counter. Creates a counter in main_dd with $current_value +1 (9)
+						$counter_value = RecordObj_dd_edit::update_counter($tld2, $current_value=8);
+
 			// virtual section-list-thesaurus . modelo . model terms
 				// $options = new stdClass();
 				// 	$options->terminoID 	= $tld2.'4';
@@ -422,6 +426,9 @@ class hierarchy {
 								$response->result 	 = $create_term->result;
 								$response->msg 		.= $create_term->msg;
 							}
+
+					// set main_dd counter. Creates a counter in main_dd with $current_value +1 (3)
+						$counter_value = RecordObj_dd_edit::update_counter($tld2, $current_value=2);
 				}
 		}//end if ($real_section_tipo===DEDALO_THESAURUS_SECTION_TIPO)
 
@@ -436,6 +443,7 @@ class hierarchy {
 			$create_records_options->ar_sections 	= array($default_section_tipo_term, $default_section_tipo_model);
 		hierarchy::create_root_terms( $create_records_options );
 		*/
+
 
 
 		#
