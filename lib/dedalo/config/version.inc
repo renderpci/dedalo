@@ -2593,6 +2593,20 @@
 		Fixed issue with duplicate square brackets in resolve_query_object_sql. Now, first and last are removed before process
 		Fixed search issue of component_semantic_node when empty value has searched as null value
 		Fixed search value display error on component_json
+		13-12-2021
+		Add view_gilph_small
+		Change the viewing_glyphs_small
+		Updated Publication API JSON swagger definitions version to 1.0.20
+		Added 'is_literal' option in the publication web_data field safe control
+		Fixed issue in web_data free search in literal mode. Remove possible quotes added and force add new ones
+		14-12-2021
+		Clean diffusion mysql code
+		Refactorized diffusion_mysql add_column method
+		Added publication class.diffusion mysql check for column exists. If not exists, a new column will be created automatically
+		21-12-2021
+		Added method 'resolve_indexation_fragments' to class 'process_result'. Updated Publication API swagger updated file
+		Fixed error in web_data::get_fragment_from_index_locator where indexation_terms were not correctly passed to the next call
+
 
 
 	[/HISTORY]
@@ -2624,7 +2638,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-12-2021T17:50:00');
+	define('DEDALO_BUILD'	, '21-12-2021T10:41:00');
 
 
 	/*
