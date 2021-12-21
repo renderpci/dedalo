@@ -2129,7 +2129,8 @@ class web_data {
 			$f_options->component_tipo			= AV_TIPO;
 			$f_options->section_tipo			= $locator->section_tipo;
 			$f_options->raw_text				= $raw_text;
-			$f_options->fragment_terms_inside	= $options->fragment_terms;
+			$f_options->fragment_terms_inside	= $options->fragment_terms; // bool
+			$f_options->indexation_terms 		= $options->fragment_terms; // bool
 
 			$fragments_obj = web_data::build_fragment( $f_options );
 			#if(SHOW_DEBUG===true) {
