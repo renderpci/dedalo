@@ -2606,7 +2606,7 @@
 		21-12-2021
 		Added method 'resolve_indexation_fragments' to class 'process_result'. Updated Publication API swagger updated file
 		Fixed error in web_data::get_fragment_from_index_locator where indexation_terms were not correctly passed to the next call
-
+		Fixed error where main_dd counter is not updated when creating a new hierarchy
 
 
 	[/HISTORY]
@@ -2638,7 +2638,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '21-12-2021T10:41:00');
+	define('DEDALO_BUILD'	, '21-12-2021T20:38:00');
 
 
 	/*
