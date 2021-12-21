@@ -275,12 +275,12 @@ class component_input_text extends component_common {
 	public static function resolve_query_object_sql($query_object) {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
-		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		// $q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
-		#$q = $query_object->q;
-		#if (isset($query_object->type) && $query_object->type==='jsonb') {
-		#	$q = json_decode($q);
-		#}
+		$q = $query_object->q;
+		if (isset($query_object->type) && $query_object->type==='jsonb') {
+			$q = json_decode($q);
+		}
 
 		# Always set fixed values
 		$query_object->type = 'string';
@@ -404,6 +404,21 @@ class component_input_text extends component_common {
 				$query_object->type = 'object';
 				if (isset($query_object->lang) && $query_object->lang!=='all') {
 					$query_object->component_path[] = $query_object->lang;
+				}
+				if (isset($query_object->lang) && $query_object->lang==='all') {
+					$logical_operator = '$or';
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
+						// Empty data is blank array []
+						$clone = clone($query_object);
+							$clone->component_path[] = $current_lang;
+
+						$ar_query_object[] = $clone;
+					}
+					$query_object = new stdClass();
+					$query_object->$logical_operator = $ar_query_object;
 				}
 				break;
 			# IS SIMILAR
