@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.20",
-    "title" : "Dédalo Publication Server REST API 1.0.20",
+    "version" : "1.0.21",
+    "title" : "Dédalo Publication Server REST API 1.0.21",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -290,7 +290,7 @@
         }, {
           "name" : "process_result",
           "in" : "query",
-          "description" : "json object like <br>{\"fn\":\"process_result::add_parents_and_children_recursive\",\"columns\": [{\"name\":\"parents\"}]} <br>Used in numisdata catalog tree to create the records hierarchy in server side <br>{\"fn\":\"process_result::break_down_totals\",\"base_column\":\"term_id\",\"total_column\":\"total\"} <br>Used for example to split interview informants place of birth when more than one informant or place exists",
+          "description" : "json object like <br>{\"fn\":\"process_result::add_parents_and_children_recursive\",\"columns\": [{\"name\":\"parents\"}]} <br>Used in numisdata catalog tree to create the records hierarchy in server side <br>{\"fn\":\"process_result::break_down_totals\",\"base_column\":\"term_id\",\"total_column\":\"total\"} <br>Used for example to split interview informants place of birth when more than one informant or place exists <br>{\"fn\":\"process_result::resolve_indexation_fragments\",\"column\":\"indexation\",\"fragment_terms\":false} <br>Used for example to autoresolve indexation column values of \"exhibitions\" table in qdp ",
           "required" : false,
           "default" : "",
           "type" : "string",

@@ -259,7 +259,7 @@ abstract class process_result {
 
 	/**
 	* SUM_TOTALS
-	* @return obsject $response
+	* @return object $response
 	*/
 	public static function sum_totals($ar_data, $options, $sql_options) {
 
@@ -275,8 +275,6 @@ abstract class process_result {
 			for ($i=0; $i < $ar_data_length; $i++) {
 
 				$row = $ar_data[$i];
-
-
 			}//end for ($i=0; $i < $ar_data_length; $i++)
 
 
@@ -286,6 +284,61 @@ abstract class process_result {
 
 		return $response;
 	}//end sum_totals
+
+
+
+	/**
+	* RESOLVE_INDEXATION_FRAGMENTS
+	* 	Resolve each indexation tag locator (normally in the column 'indexation') using 'get_fragment_from_index_locator' method
+	* 	Used in table 'exhibitions', column 'indexation' from qdp
+	* @return object $response
+	* 	array ar_data (parsed rows)
+	*/
+	public function resolve_indexation_fragments($ar_data, $options, $sql_options) {
+
+		// options
+			$column			= $options->column;
+			$fragment_terms	= $options->fragment_terms ?? false;
+
+		// lang
+			$lang = $sql_options->lang ?? WEB_CURRENT_LANG_CODE;
+
+		// rows
+			$new_ar_data = [];
+			foreach ($ar_data as $key => $row) {
+
+				// locators are json encoded as string
+				$locators = !empty($row[$column])
+					? json_decode($row[$column])
+					: null;
+
+				if (!empty($locators)) {
+					$fragments = array_map(function($index_locator) use($lang, $fragment_terms){
+
+						$response = web_data::get_fragment_from_index_locator((object)[
+							'index_locator'		=> $index_locator,
+							'lang'				=> $lang,
+							'fragment_terms'	=> $fragment_terms
+						]);
+
+						return $response->result;
+					}, $locators);
+
+					// overwrite column value
+					$row[$column] = $fragments;
+				}
+
+				$new_ar_data[] = $row;
+			}
+
+
+		// response
+			$response = new stdClass();
+				$response->ar_data = $new_ar_data;
+
+
+		return $response;
+	}//end resolve_indexation_fragments
 
 
 
