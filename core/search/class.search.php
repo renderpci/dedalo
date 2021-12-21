@@ -1950,7 +1950,11 @@ class search {
 
 				# q
 				// Escape parenthesis inside regex
-				$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
+				if($search_object_type==='string') {
+					$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
+				}else{
+					$q_parsed_clean = $search_object->q_parsed;
+				}
 				$sql_where .= $q_parsed_clean;
 				#$sql_where .= pg_escape_string(DBi::_getConnection(), stripslashes($search_object->q_parsed));
 
