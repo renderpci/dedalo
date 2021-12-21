@@ -72,19 +72,20 @@ const get_content_data_edit = async function(self) {
 	// source component
 		const source_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'source_component_container disabled_component',
+			class_name 		: 'source_component_container',
 			parent 			: components_container
 		})
 
-	console.log("self:",self);
 		// source default value check
 			// if (source_select_lang.value) {
 			// 	add_component(self, source_component_container, source_select_lang.value)
 			// }
-			self.main_component.render()
-			.then(function(node){
-				source_component_container.appendChild(node)
-			})
+
+			const iri_node = render_component_dato(self)
+
+			source_component_container.appendChild(iri_node)
+
+
 
 	// target component
 		const target_component_container = ui.create_dom_element({
@@ -100,7 +101,67 @@ const get_content_data_edit = async function(self) {
 			parent 			: components_container
 		})
 
+		const btn_validate = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'btn btn-success btn_validate',
+					inner_html		: 'ok',
+					parent			: buttons_container
+			})
 
+
+		const view_rdf_data_wrapper = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'view_rdf_data_wrapper',
+				parent			: fragment
+			})
+
+
+		btn_validate.addEventListener('click',()=>{
+				const component_data_value = source_component_container.querySelectorAll('.component_data:checked')
+
+				const spinner = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'spinner',
+					parent			: view_rdf_data_wrapper
+			})
+
+				const len = component_data_value.length
+				const ar_values = []
+				for (let i = 0; i < len; i++) {
+					ar_values.push(component_data_value[i].value)
+				}
+
+				if (ar_values.length){
+
+					const ontology_tipo = self.main_component.context.properties.ar_tools_name.tool_import_rdf.external_ontology
+						? self.main_component.context.properties.ar_tools_name.tool_import_rdf.external_ontology
+						: null
+
+
+					const result = self.get_rdf_data(ontology_tipo, ar_values).then(function(response){
+							if(SHOW_DEBUG===true) {
+								console.log("response:",response);
+							}
+							spinner.remove()
+
+							const len = ar_values.length
+							for (let i = 0; i < len; i++) {
+								const current_data = ar_values[i]
+
+								view_rdf_data_wrapper.innerHTML = response.rdf_data[i].ar_rdf_html
+
+								// const node = self.render_dd_data(response.rdf_data[i].dd_obj, 'root')
+
+								view_dd_data_wrapper.appendChild(node)
+							}
+
+							// update list
+								// self.load_section(section_tipo)
+						})
+
+				}
+
+			})
 
 
 	// content_data
@@ -148,7 +209,44 @@ export const add_component = async (self, component_container, value) => {
 
 
 
+/**
+* RENDER_COMPONENT_DATO
+* @return
+*/
+const render_component_dato = function(self) {
 
+	const component_data	= self.main_component.data.value
+	const len				= component_data.length
+
+	const radio_button_div = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'component_data_div'
+	})
+
+	for (let i = 0; i < len; i++) {
+
+		const current_component = component_data[i]
+
+		const radio_label = ui.create_dom_element({
+						element_type	: 'label',
+						class_name		: 'component_data_label',
+						inner_html		: current_component.iri,
+						parent 			: radio_button_div
+		})
+
+		const radio_input = ui.create_dom_element({
+						element_type	: 'input',
+						type 			: 'radio',
+						class_name		: 'component_data',
+						name			: 'radio_selector',
+						value 			: current_component.iri,
+		})
+
+		radio_label.prepend(radio_input)
+	}
+
+	return radio_button_div
+};//end render_component_dato
 
 
 
