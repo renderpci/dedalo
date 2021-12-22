@@ -122,6 +122,9 @@ tool_export.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
+	// call generic commom tool build
+		const common_build = await tool_common.prototype.build.call(this, true);
+
 	// load self style
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
 		common.prototype.load_style(tool_css_url)
