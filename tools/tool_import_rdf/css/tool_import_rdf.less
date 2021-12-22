@@ -2,49 +2,49 @@
 
 
 
-// section label
-.section_label {
-	display: flex;
-    justify-content: center;
-	padding: 1em;
-	font-size: 2em;
-	padding-top: 0;
-	font-weight: bold;
-}
+// // section label
+// .section_label {
+// 	display: flex;
+// 	justify-content: center;
+// 	padding: 1em;
+// 	font-size: 2em;
+// 	padding-top: 0;
+// 	font-weight: bold;
+// }
 
-.wrap_tool_import_rdf_page{
-	min-height: 100vh;
-}
+// .wrap_tool_import_rdf_page{
+// 	min-height: 100vh;
+// }
 
 // wrap_tool_qr_page
-.select_data_wrapper {
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.components_container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 
 }//end .wrap_tool_qr_page
 
-.btn_validate{
+.button_apply{
 	width: 8em;
 	margin-top: 2em;
-}
-.select_data_wrapper{
 	font-size: 16px;
-
-	.component_dato_div{
-			display: flex;
-			flex-direction: column;
-
-			.component_dato{
-			margin-right: 0.3em;
-		}
-
+}
+.source_component_container{
+	font-size: 16px;
+	display: flex;
+	flex-direction: column;
+	.component_data{
+		margin-right: 0.3em;
 	}
+
+
 }
 
 .view_rdf_data_wrapper{
 	margin: 4em;
+	// display: flex;
+ //    align-items: center;
+ //    flex-direction: column;
 }
 
 
@@ -55,8 +55,8 @@
 	.spinner {
 		@border_size: 7px;
 		display: block;
-		position: absolute;
-		top: 50%;
+		position: relative;
+		// top: 50%;
 		left: 50%;
 		height: 90px;
 		width: 90px;
