@@ -1,79 +1,69 @@
 
 
 
-// header
-	.tool_header.tool_indexation {
-		background-color: #1f7551;
 
-		// background-image: url("../img/icon.svg");
-		// background-size: contain;
+// wrapper_tool
+.wrapper_tool.tool_indexation {
+	background-color: #2bab75;
+	padding-right: 1em;
+	display: flex;
+	// width: 100%;
+	// height: calc(100vh - 20%);
 
-		>.label {
+	>.content_data {
+		background-color: #f9eae0;
+		width: 100%;
+		height: 90vh;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+			grid-template-rows: 80% 20%;
 
+		>.thesaurus_container {
+			background-color: #91dda4;
+			min-height: 700px;
+			grid-row-start: 1;
+				grid-row-end: 3;
 		}
-		>.description {
 
-		}
-	}
+		>.right_container {
 
-
-
-// wrapper
-	.wrapper_tool.tool_indexation {
-		background-color: #2bab75;
-		padding-right: 1em;
-		display: flex;
-		// width: 100%;
-		// height: calc(100vh - 20%);
-
-		>.content_data {
-			background-color: #f9eae0;
-			width: 100%;
-			height: 90vh;
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-   			grid-template-rows: 80% 20%;
-
-			>.thesaurus_container {
-				background-color: #91dda4;
-				min-height: 700px;
-				grid-row-start: 1;
-   				grid-row-end: 3;
+			>.component_container {
+				background-color: #d8de48;
 			}
 
-			>.right_container {
+			>.info_container {
+				background-color: #c4c4f9;
 
-				>.component_container {
-					background-color: #d8de48;
-				}
+				.common_line {
+					display: flex;
+					padding: 0.5em;
+					background-color: aliceblue;
+					align-items: baseline;
 
-				>.info_container {
-					background-color: #c4c4f9;
-
-					.common_line {
-						display: flex;
-						padding: 0.5em;
-						background-color: aliceblue;
-						align-items: baseline;
-
-						>* {
-							padding-right: 1em;
-						}
+					>* {
+						padding-right: 1em;
 					}
 				}
-
 			}
-
-
-
 		}
-
-	}
-
-	
+	}//end content_data
 
 
+}//end wrapper_tool
 
+
+
+
+// header
+.tool_header.tool_indexation {
+	background-color: #1f7551;
+}
+
+
+
+
+
+/*
 // select style
 	.select_style {
 		width: fit-content;
@@ -133,3 +123,4 @@
 			font-size: 0.80em;
 		}
 	}
+*/
