@@ -172,9 +172,12 @@ class component_select extends component_relation_common {
 	public function get_diffusion_value( $lang=null ) {
 	
 		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = strip_tags($diffusion_value);
 
-		return (string)$diffusion_value;
+		if (!empty($diffusion_value)) {
+			$diffusion_value = strip_tags($diffusion_value);
+		}
+
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 
