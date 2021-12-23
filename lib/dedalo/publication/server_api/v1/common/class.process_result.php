@@ -290,7 +290,6 @@ abstract class process_result {
 	/**
 	* RESOLVE_INDEXATION_FRAGMENTS
 	* 	Resolve each indexation tag locator (normally in the column 'indexation') using 'get_fragment_from_index_locator' method
-	* 	Used in table 'exhibitions', column 'indexation' from qdp
 	* @return object $response
 	* 	array ar_data (parsed rows)
 	*/
@@ -307,7 +306,7 @@ abstract class process_result {
 			$new_ar_data = [];
 			foreach ($ar_data as $key => $row) {
 
-				// locators are json encoded as string
+				// locators are JSON encoded as string
 				$locators = !empty($row[$column])
 					? json_decode($row[$column])
 					: null;
@@ -315,11 +314,13 @@ abstract class process_result {
 				if (!empty($locators)) {
 					$fragments = array_map(function($index_locator) use($lang, $fragment_terms){
 
-						$response = web_data::get_fragment_from_index_locator((object)[
+						$current_options = (object)[
 							'index_locator'		=> $index_locator,
 							'lang'				=> $lang,
 							'fragment_terms'	=> $fragment_terms
-						]);
+						];
+
+						$response = web_data::get_fragment_from_index_locator($current_options);
 
 						return $response->result;
 					}, $locators);
