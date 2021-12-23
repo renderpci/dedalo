@@ -158,7 +158,6 @@ tool_common.prototype.build = async function(autoload=false) {
 	// load data if is not already received as option
 		if (autoload===true) {
 
-
 			// mandatory vars check
 				if (!self.section_tipo || self.section_tipo.lenght<2) {
 					console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
@@ -189,9 +188,6 @@ tool_common.prototype.build = async function(autoload=false) {
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.request({body:rqo})
 				self.context				= api_response.result
-
-			// config set
-
 
 			// debug
 				if(SHOW_DEBUG===true) {
