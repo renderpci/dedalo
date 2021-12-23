@@ -2610,6 +2610,8 @@
 		23-12-2021
 		Clean Publication class DBi code
 		Clean code web_data::get_fragment_from_index_locator method. Unified response as object
+		Fixed diffusion_mysql error where automatic columns 'section_id', 'section_tipo,', 'lang' generating errors whe columns are added to a existing tables
+
 
 
 
@@ -2642,7 +2644,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-12-2021T17:24:00');
+	define('DEDALO_BUILD'	, '23-12-2021T17:45:00');
 
 
 	/*
