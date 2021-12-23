@@ -596,13 +596,17 @@ class diffusion_mysql extends diffusion_sql  {
 						$ar_fields_data		= array_map(function($el){
 							return (object)[
 								'field_name'	=> $el['field_name'],
-								'tipo'			=> $el['tipo']
+								'tipo'			=> ($el['tipo'] ?? null) // automatic olumns 'section_id', 'section_tipo,', 'lang'
 							];
 						}, $first_lang_values);
 
 					// check if all target columns exists. If not, create it
 						foreach ($ar_fields_data as $element) {
 							if (!in_array($element->field_name, $real_table_fields)) {
+								if (empty($element->tipo)) {
+									debug_log(__METHOD__." Ignored automatic column creation ".to_string($element->field_name), logger::WARNING);
+									continue;
+								}
 								// do not exists this column. Create it
 								// add_column($field_name, $field_type, $table_name, $database_name)
 								self::add_column($element->field_name, $element->tipo, $table_name, $database_name);
