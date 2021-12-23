@@ -2747,6 +2747,20 @@ class web_data {
 						$search_options->offset 	= $options->offset;
 						$search_options->count 		= $options->count;
 
+
+					// before call get_rows_data, check safe filter sql here
+						// sql_filter check
+						if (!empty($sql_options->sql_filter)) {
+							if (!self::check_safe_value('sql_filter', $sql_options->sql_filter)) {
+								$response->result	= false;
+								$response->msg		= "Error on sql request. Ilegal sql_filter option (1-1)";
+								if(SHOW_DEBUG===true) {
+									$response->msg   .= " : $sql_options->sql_filter";
+								}
+								return $response;
+							}
+						}
+
 					$rows_data	= (object)web_data::get_rows_data( $search_options );
 						#dump($rows_data->result, ' $rows_data ++ '.to_string());
 						#dump($search_options, ' $search_options ++ '.to_string()); die();
