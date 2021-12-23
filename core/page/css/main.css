@@ -2965,7 +2965,7 @@ li .section_record.list .id_column {
 }
 .wrapper_component.active {
   outline: 1px solid #f78a1c;
-  background-color: #faf9f9 !important;
+  background-color: rgba(250, 249, 249, 0.4) !important;
   overflow: initial !important;
   z-index: 1;
 }
@@ -3702,7 +3702,7 @@ dd-modal .footer > * {
   border-radius: 0.5em;
 }
 .red.content_data {
-  background-color: #F37656 !important;
+  background-color: #ffbcaa !important;
 }
 .full.wrapper_component {
   background-color: #35F9E1 !important;
