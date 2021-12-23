@@ -1698,6 +1698,16 @@ export const ui = {
 					break;
 			}
 
+		// navigation
+			const state	= {
+				event_in_history : false
+			}
+			const title	= 'modal'
+			const url	= null // 'Modal url'
+				console.log("history:",history, this);
+			history.pushState(state, title, url)
+
+
 
 		return modal_container
 	},//end attach_to_modal
