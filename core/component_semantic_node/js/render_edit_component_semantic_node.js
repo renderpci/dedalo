@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_EDIT_COMPONENT_INPUT_TEXT
+* RENDER_EDIT_COMPONENT_semantic_node
 * Manages the component's logic and apperance in client side
 */
-export const render_edit_component_input_text = function() {
+export const render_edit_component_semantic_node = function() {
 
 	return true
-};//end render_edit_component_input_text
+};//end render_edit_component_semantic_node
 
 
 
@@ -25,7 +25,7 @@ export const render_edit_component_input_text = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_input_text.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_semantic_node.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
@@ -197,36 +197,6 @@ const add_events = function(self, wrapper) {
 				}
 			}
 		})//end keyup
-
-	// dblclick event
-		//wrapper.addEventListener("dblclick", function(e){
-		//	e.stopPropagation()
-		//	e.preventDefault()
-		//
-		//	if (self.mode==='edit_in_list') {
-		//		// change mode (from 'edit_in_list' to 'list')
-		//		self.change_mode('list', false)
-		//	}
-		//})
-
-	// // focus event [focusin]
-		// 	wrapper.addEventListener("focusin", e => {
-		// 		// selected_node. fix selected node
-		// 		//self.selected_node = wrapper
-
-		// 		if (e.target.matches('input[type="text"]')) {
-		// 			// set the button_remove associated to the input selected to visible
-		// 		 	const button_remove = e.target.parentNode.querySelector('.remove')
-		// 		 	button_remove.classList.remove("display_none")
-		// 		 	//event_manager.publish('active_component', self)
-		// 		}
-		// 	})
-
-	// // blur event [focusout]
-		// 	wrapper.addEventListener("focusout", e => {
-		// 		const button_remove = e.target.parentNode.querySelector('.remove')
-		// 		 	button_remove.classList.add("display_none")
-		// 	})
 
 
 	return true

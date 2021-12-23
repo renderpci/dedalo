@@ -1,0 +1,33 @@
+<?php
+
+	$tool_title = label::get_label('tool_import_rdf');
+	
+
+	# HTML VIEW
+	$html = '';	
+
+	$html	.= '<!-- TOOL PAGE [tipo:'.$section_tipo.'] -->';
+
+	$html	.= '<div class="tool_title text_shadow_inset no-print">'.$tool_title.'</div>';
+
+	$html	.= '<div class="section_label no-print">'.$section_label.'</div>';
+
+	$html	.= '<div id="wrap_tool_import_rdf" class="wrap_tool wrap_tool_import_rdf_page">';
+
+	// $html .= '</div><!-- /content_data -->';
+	$html .= '</div><!-- /wrap_tool -->'; //wrap_tool
+
+
+	print $html;
+?>
+<script type="text/javascript">
+
+	tool_import_rdf.init({
+		section_tipo 	: <?php echo json_encode($section_tipo) ?>,
+		section_id 		: <?php echo json_encode($section_id) ?>,
+		component_tipo 	: <?php echo json_encode($component_tipo) ?>,
+		component_dato	: <?php echo json_encode($component_dato) ?>,
+		container		: document.getElementById('wrap_tool_import_rdf'),
+		ontology_tipo	: <?php echo json_encode($ontology_tipo) ?>,
+	})
+</script>

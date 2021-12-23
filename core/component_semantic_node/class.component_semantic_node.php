@@ -11,7 +11,9 @@ class component_semantic_node extends component_relation_common {
 	/**
 	* VARS
 	*/
-		protected $relation_type = DEDALO_RELATION_TYPE_LINK;
+		// protected $relation_type = DEDALO_RELATION_TYPE_LINK;
+		protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
+		protected $default_relation_type_rel	= null;
 		public $row_locator;
 
 

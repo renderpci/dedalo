@@ -1,0 +1,73 @@
+/* TOOL_QR */
+.section_label {
+  display: flex;
+  justify-content: center;
+  padding: 1em;
+  font-size: 2em;
+  padding-top: 0;
+  font-weight: bold;
+}
+.wrap_tool_import_rdf_page {
+  min-height: 100vh;
+}
+.select_data_wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.btn_validate {
+  width: 8em;
+  margin-top: 2em;
+}
+.select_data_wrapper {
+  font-size: 16px;
+}
+.select_data_wrapper .component_dato_div {
+  display: flex;
+  flex-direction: column;
+}
+.select_data_wrapper .component_dato_div .component_dato {
+  margin-right: 0.3em;
+}
+.view_rdf_data_wrapper {
+  margin: 4em;
+}
+.spinner {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 90px;
+  width: 90px;
+  margin: -45px 0 0 -45px;
+  border: 7px transparent solid;
+  border-top: 7px #e1e1e1 solid;
+  border-right: 7px #e1e1e1 solid;
+  border-bottom: 7px #e1e1e1 solid;
+  border-radius: 50%;
+  -webkit-animation: spin3 1.25s infinite linear;
+  animation: spin3 1.25s infinite linear;
+}
+@-webkit-keyframes spin3 {
+  from {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
+}
+@keyframes spin3 {
+  from {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
+}
+@page {
+}
+/*# sourceMappingURL=tool_import_rdf.css.map */

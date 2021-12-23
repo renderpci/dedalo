@@ -696,17 +696,25 @@ abstract class component_common extends common {
 	*/
 	public function get_raw_value() {
 
+		if(isset($this->column_obj)){
+			$column_obj = $this->column_obj;
+		}else{
+			$column_obj = new stdClass();
+				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+		}
+
 		$raw_value = new dd_grid_cell_object();
 
 		$data	= $this->get_dato_full();
 		// get the total of locators of the data, it will be use to render the rows separated.
-			$row_count = 0;//sizeof($data);
+			$row_count = 1;//sizeof($data);
 
 		$label	= $this->get_label();
 
 		$raw_value->set_type('column');
 		$raw_value->set_label($label);
 		$raw_value->set_cell_type('json');
+		$raw_value->set_ar_columns_obj([$column_obj]);
 		$raw_value->set_row_count($row_count);
 		$raw_value->set_value($data);
 
@@ -2618,7 +2626,7 @@ abstract class component_common extends common {
 	public static function split_query($query_object) {
 
 		$search_value = $query_object->q;
-
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 		# For unification, all non string are json encoded
 		# This allow accept mixed values (encoded and no encoded)
 		if (!is_string($search_value)) {
@@ -2649,38 +2657,50 @@ abstract class component_common extends common {
 		# STRING CASE
 		}else{
 
-			$operator_between = '$and'; // only when is string
 
-			# \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
-			$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
-			preg_match_all($pattern, $search_value, $matches);
+			$model = end($query_object->path)->modelo;
+			if ($model==='component_json' || $q_operator === '==' || strpos($query_object->q, '==')==0 ) {
+				// component json case
 
-			# split into searchable units
-			$total_count = count($matches[0]);
-			if ($total_count===1) {
-
-				$current_search_value = reset($matches[0]);
-
-				$query_object->q = self::remove_first_and_last_quotes($current_search_value);
-				$ar_query_object = $query_object;
+				// $query_object->q	= str_replace('"', '\"', $search_value);
+				$ar_query_object	= $query_object;
 
 			}else{
+				// all others
 
-				$group = new stdClass();
-					$name = $operator_between;
-					$group->$name = [];
+				$operator_between = '$and'; // only when is string
 
-				foreach ($matches[0] as $key => $current_search_value) {
+				# \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
+				$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
+				preg_match_all($pattern, $search_value, $matches);
 
-					$query_object_clon 		= clone($query_object);
-					$query_object_clon->q 	= self::remove_first_and_last_quotes($current_search_value);
-					$group->$name[] 		= $query_object_clon;
+				# split into searchable units
+				$total_count = count($matches[0]);
+				if ($total_count===1) {
 
-				}//end foreach ($matches[0] as $key => $value)
+					$current_search_value = reset($matches[0]);
 
-				$ar_query_object = $group;
+					$query_object->q = self::remove_first_and_last_quotes($current_search_value);
+					$ar_query_object = $query_object;
 
-			}//end if ($total_count===1) {
+				}else{
+
+					$group = new stdClass();
+						$name = $operator_between;
+						$group->$name = [];
+
+					foreach ($matches[0] as $key => $current_search_value) {
+
+						$query_object_clon 		= clone($query_object);
+						$query_object_clon->q 	= self::remove_first_and_last_quotes($current_search_value);
+						$group->$name[] 		= $query_object_clon;
+
+					}//end foreach ($matches[0] as $key => $value)
+
+					$ar_query_object = $group;
+
+				}//end if ($total_count===1) {
+			}//end if ($model==='component_json')
 		}
 
 
