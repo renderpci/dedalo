@@ -23,6 +23,7 @@ export const dd_grid = function(){
 		this.section_tipo
 		this.section_id
 		this.mode
+		this.data_format
 		this.lang
 
 		this.rqo
@@ -52,6 +53,7 @@ export const dd_grid = function(){
 	//render
 	dd_grid.prototype.list			= render_list_dd_grid.prototype.list
 	dd_grid.prototype.table			= render_table_dd_grid.prototype.table
+	dd_grid.prototype.csv			= render_csv_dd_grid.prototype.table
 
 
 /**

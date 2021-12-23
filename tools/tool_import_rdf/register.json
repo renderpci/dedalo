@@ -1,0 +1,196 @@
+{
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1333"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1331"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "inf": "Fecha de creación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 16,
+                            "hour": 16,
+                            "time": 64987375925,
+                            "year": 2021,
+                            "month": 12,
+                            "minute": 52,
+                            "second": 5
+                        }
+                    }
+                ]
+            }
+        },
+        "dd201": {
+            "inf": "Fecha de modificación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 16,
+                            "hour": 17,
+                            "time": 64987377755,
+                            "year": 2021,
+                            "month": 12,
+                            "minute": 22,
+                            "second": 35
+                        }
+                    }
+                ]
+            }
+        },
+        "dd612": {
+            "inf": "Descripción [component_text_area]",
+            "dato": {
+                "lg-eng": [
+                    "Import RDF schemas defined by external ontologies, like Nomisma, Dublin Core, etc&nbsp;"
+                ]
+            }
+        },
+        "dd799": {
+            "inf": "Etiqueta [component_input_text]",
+            "dato": {
+                "lg-ara": [
+                    "استيراد RDF"
+                ],
+                "lg-cat": [
+                    "Importar RDF"
+                ],
+                "lg-deu": [
+                    "RDF importieren"
+                ],
+                "lg-ell": [
+                    "Εισαγωγή RDF"
+                ],
+                "lg-eng": [
+                    "Import RDF"
+                ],
+                "lg-eus": [
+                    "Inportatu RDF"
+                ],
+                "lg-fra": [
+                    "Importer RDF"
+                ],
+                "lg-ita": [
+                    "Importa RDF"
+                ],
+                "lg-por": [
+                    "Importar RDF"
+                ],
+                "lg-spa": [
+                    "Importar RDF"
+                ],
+                "lg-vlca": [
+                    "Importar RDF"
+                ]
+            }
+        },
+        "dd1326": {
+            "inf": "Nombre de la herramienta [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "tool_import_rdf"
+                ]
+            }
+        },
+        "dd1327": {
+            "inf": "Versión [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "1.0.0"
+                ]
+            }
+        },
+        "dd1328": {
+            "inf": "Versión Dédalo mínima [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            }
+        },
+        "dd1335": {
+            "inf": "Propiedades [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "component_config": [
+                            {
+                                "tipo": "numisdata310",
+                                "external_ontology": "numisdata1129"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "dd1350": {
+            "inf": "Afecta a tipos: [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    [
+                        "numisdata310"
+                    ]
+                ]
+            }
+        },
+        "dd1362": {
+            "inf": "Dev info [component_text_area]",
+            "dato": {
+                "lg-nolan": [
+                    "The RDF schema is defined inside the Ontology below the External Ontologies term (dd1270), every schema need to be referenced by the specific tld, ex: for Nomisma ontology is used numisdata tld.<br><br>This tool use the component_iri data to get the enter point into the RDF graph.<br><br>The comunication and transform data are done by the relations of the RDF schema and the components associated."
+                ]
+            }
+        }
+    },
+    "section_id": 7,
+    "created_date": "2021-12-16 16:52:05",
+    "section_tipo": "dd1340",
+    "modified_date": "2021-12-16 17:22:35",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd73",
+    "modified_by_userID": -1
+}

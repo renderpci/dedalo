@@ -47,11 +47,11 @@ tool_common.prototype.init = async function(options) {
 		self.section_id		= options.section_id
 		self.lang			= options.lang
 		self.mode			= options.mode || 'edit'
-		self.label			= options.label
-		self.tool_labels	= options.tool_labels
-		self.description	= options.description
+		// self.label			= options.label
+		// self.tool_labels	= options.tool_labels
+		// self.description	= options.description
 		self.tool_config	= options.tool_config
-		self.config			= options.config
+		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
 		self.caller			= options.caller // optional, only for refresh on tool exit
 
 	// set vars
@@ -59,22 +59,8 @@ tool_common.prototype.init = async function(options) {
 		self.type				= 'tool'
 		self.ar_instances		= []
 		self.events_tokens		= []
-		// self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common
 		self.get_tool_label			= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
-	// set vars
-		// self.model				= options.model
-		// self.tool_section_tipo	= options.tool_object.section_tipo
-		// self.tool_section_id		= options.tool_object.section_id
-		// self.mode				= options.mode
-		// self.lang				= options.lang
-		// self.caller				= options.caller
-		// self.node				= []
-		// self.type				= 'tool'
-		// self.ar_instances		= []
-		// self.events_tokens		= []
-		// self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common
-		// self.get_label			= get_tool_label
 
 	// set status
 		self.status = 'initied'
@@ -169,61 +155,49 @@ tool_common.prototype.build = async function(autoload=false) {
 				self.ar_instances = ar_instances
 			})
 
-	// component_json simple_tool_object
-		// const simple_tool_object_tipo = 'dd1353'
-
 	// load data if is not already received as option
-		// if (autoload===true) {
+		if (autoload===true) {
 
-		// 	// mandatory vars check
-		// 		if (!self.tool_section_tipo || self.tool_section_tipo.lenght<2) {
-		// 			console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_tipo:", self.tool_section_tipo);
-		// 			return false
-		// 		}
-		// 		if (!self.tool_section_id || self.tool_section_id.lenght<2) {
-		// 			console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_id:", self.tool_section_id);
-		// 			return false
-		// 		}
 
-		// 	// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
-		// 		const rqo = {
-		// 			action	: 'read',
-		// 			// tool source for component JSON that stores full tool config
-		// 			source : {
-		// 				action			: 'get_data',
-		// 				model			: 'component_json',
-		// 				tipo			: 'dd1353',
-		// 				section_tipo	: self.tool_section_tipo,
-		// 				section_id		: self.tool_section_id,
-		// 				mode			: 'edit',
-		// 				lang			: 'lg-nolan'
-		// 			},
-		// 			prevent_lock : true
-		// 		}
+			// mandatory vars check
+				if (!self.section_tipo || self.section_tipo.lenght<2) {
+					console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
+					return false
+				}
+				if (!self.section_id || self.section_id.lenght<2) {
+					console.warn("[tool_common.build] Error. Undefined mandatory self.section_id:", self.section_id);
+					return false
+				}
 
-		// 	// load data. Load section data from db of the current tool.
-		// 	// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
-		// 	// The tool info was generated when it was imported / registered by admin
-		// 		const current_data_manager	= new data_manager()
-		// 		const api_response			= await current_data_manager.request({body:rqo})
-		// 		const data					= api_response.result.data
+			// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
+				const rqo = {
+					action	: 'get_element_context',
+					// tool source for component JSON that stores full tool config
+					source : {
+						model			: self.model,
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						mode			: self.mode,
+						lang			: self.lang
+					},
+					prevent_lock : true
+				}
 
-		// 	// config set
-		// 		// simple_tool_object
-		// 			const simple_tool_object	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
-		// 			self.simple_tool_object		= simple_tool_object[0];
-		// 		// label
-		// 			const label					= self.simple_tool_object.label.find(item => item.lang===self.lang);
-		// 			self.label					= typeof label!=='undefined' ? label.value : self.model
-		// 		// description
-		// 			const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
-		// 			self.description			= typeof description!=='undefined' ? description.value : null
+			// load data. Load section data from db of the current tool.
+			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
+			// The tool info was generated when it was imported / registered by admin
+				const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.request({body:rqo})
+				self.context				= api_response.result
 
-		// 	// debug
-		// 		if(SHOW_DEBUG===true) {
-		// 			console.log("[tool_common.build] api_response:", api_response);
-		// 		}
-		// }
+			// config set
+
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					console.log("[tool_common.build] api_response:", api_response);
+				}
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -236,6 +210,7 @@ tool_common.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'builded'
 
+	console.log("self:",self);
 
 	return true
 };//end build

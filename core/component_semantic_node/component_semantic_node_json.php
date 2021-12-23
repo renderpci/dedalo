@@ -1,103 +1,75 @@
 <?php
 // JSON data component controller
-if(SHOW_DEBUG===true) $start_time = start_time();
-// error_log('input text json .......................................................');
 
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$modo			= $this->get_modo();
-	$properties		= $this->get_properties();
-
-
-
-// context
-	$context = [];
-
-	if($options->get_context===true && $permissions>0){
-		$add_rqo = isset($properties->unique) ? true : false;
-		switch ($options->context_type) {
-
-			case 'simple':
-				// Component structure context_simple (tipo, relations, properties, etc.)
-				$this->context	= $this->get_structure_context_simple($permissions, $add_rqo);
-				$context[]		= $this->context;
-				break;
-
-			default:
-				// Component structure context (tipo, relations, properties, etc.)
-				$this->context	= $this->get_structure_context($permissions, $add_rqo);
-				$context[]		= $this->context;
-
-				// add buttons
-				$context = array_merge($context, $this->get_structure_buttons($permissions));
-				break;
-		}
-	}//end if($options->get_context===true)
-
+	$section_tipo 	= $this->section_tipo;
+	$lang 			= $this->lang;
+	$tipo 			= $this->get_tipo();
+	$properties 	= $this->get_properties() ?? new stdClass();
 
 
 // data
-	$data = [];
+	$context	= [];
+	$data		= [];
 
-	if($options->get_data===true && $permissions>0){
+	if($permissions>0){
 
-		// Value
-		switch ($modo) {
+		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
+		$context[]		= $this->context;
 
-			case 'list':
-				$value			= $this->get_dato();
-				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-				break;
+		$dato 			= $this->get_dato() ?? [];
+		$row_locator 	= $this->row_locator;
 
-			case 'search':
-				$value	= [];
-				$fallback_value	= false;
-				break;
 
-			case 'edit':
-			default:
-				$value			= $this->get_dato();
-				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-				break;
-		}
-
-		// activity exceptions
-			if ($this->get_section_tipo()===DEDALO_ACTIVITY_SECTION_TIPO) {
-				// activity 'Where' case
-					if ($this->tipo==='dd546') {
-						$first_value = reset($value);
-						$term = RecordObj_dd::get_termino_by_tipo($first_value, DEDALO_DATA_LANG, true, true);
-						$term = strip_tags($term);
-						$value = [$term . ' ['. $first_value."]"];
-					}
-				// activity 'Data' case
-					if ($this->tipo==='dd551') {
-						$value = [json_encode($value, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT)];
-					}elseif (!is_array($value)) {
-						$value = [$value];
-					}
-			}
+		$value		= $this->get_dato_paginated();
+		$section_id	= $this->get_parent();
+		$limit		= $this->pagination->limit;
+		$offset		= $this->pagination->offset;
 
 		// data item
-			$item  = $this->get_data_item($value);
-				$item->parent_tipo				= $this->get_tipo();
-				$item->parent_section_id		= $this->get_section_id();
-				$item->fallback_value			= $fallback_value;
-				// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
+			$item = $this->get_data_item($value);
+				$item->parent_tipo			= $tipo;
+				$item->parent_section_id	= $section_id;
+				$item->row_locator			= $row_locator;
+				// fix pagination vars
+					$pagination = new stdClass();
+						$pagination->total	= count($dato);
+						$pagination->limit	= $limit;
+						$pagination->offset	= $offset;
+				$item->pagination = $pagination;
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+			$data[] = $item;
 
-				$item->debug = $debug;
+		// subcontext data from layout_map items
+		$subdatum = $this->get_subdatum($tipo, $value);
+
+		$ar_subcontext	= $subdatum->context;
+		foreach ($ar_subcontext as $current_context) {
+			$context[] = $current_context;
+		}
+
+		$ar_subdata		= $subdatum->data;
+
+		// subdata add
+			if ($modo==='list') {
+				foreach ($ar_subdata as $current_data) {
+
+					$current_data->parent_tipo			= $tipo;
+					$current_data->parent_section_id	= $section_id;
+
+					$data[] = $current_data;
+				}
+			}else{
+				foreach ($ar_subdata as $current_data) {
+					$data[] =$current_data;
+				}
 			}
 
 
-		$data[] = $item;
-
-	}//end if($options->get_data===true && $permissions>0)
+	}//end if $options->get_data===true && $permissions>0
 
 
 

@@ -673,7 +673,7 @@ abstract class common {
 	*	Get standard path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
-	public function get_html() {
+	public function get_html_DES() {
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
@@ -1423,13 +1423,12 @@ abstract class common {
 					? $properties->tool_config->{$tool_object->name}
 					: null;
 				$current_tool_section_tipo = $this->section_tipo ?? $this->tipo;
-				$tool_context	= common::create_tool_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
+				$tool_context	= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
 				$tools[]		= $tool_context;
 			}//end foreach ($tools_list as $item)
 
 		// buttons
 			$buttons = $this->get_buttons_context();
-
 
 		// request_config
 			$request_config = $add_request_config===true
@@ -1617,7 +1616,7 @@ abstract class common {
 
 			// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
 			$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
-				return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo));
+				return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) || $ddo->model === 'component_semantic_node';
 			});
 
 			// ar_ddo iterate
@@ -1714,6 +1713,11 @@ abstract class common {
 								if (strpos($source_model, 'component_')===0){
 									$related_element->from_component_tipo	= $this->tipo;
 									$related_element->from_section_tipo		= $this->section_tipo;
+								}
+
+							// inject data for component_semantic_node
+								if($model === 'component_semantic_node'){
+									$related_element->set_dato($current_locator);
 								}
 							break;
 
@@ -1961,7 +1965,6 @@ abstract class common {
 					$options->section_id	= $section_id;
 
 				$request_config = common::get_ar_request_config($options);
-					// dump($request_config, ' request_config [2] ++ '.to_string($this->tipo));
 			}
 
 
@@ -2171,7 +2174,6 @@ abstract class common {
 				//        ]');
 				//        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);
 				// }//end if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi')
-
 			foreach ($properties->source->request_config as $item_request_config) {
 
 				// if($external===false && $item_request_config->sqo->type==='external') continue; // ignore external
@@ -2420,6 +2422,11 @@ abstract class common {
 					}else{
 						// components
 						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+						// semantic node
+						$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'component_semantic_node', 'children', true);
+						if(!empty($ds_component)){
+							$ar_related = array_merge($ds_component, $ar_related );
+						}
 					}
 					break;
 				case 'related_list':
@@ -2486,6 +2493,8 @@ abstract class common {
 							continue;
 						}else if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO){
 							continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+						}else if($model==='section' && $current_model==='component_semantic_node'){
+							continue; // remove the semantic node in the section ddo_map, but maintain when is called by the portal
 						}
 
 						$ar_related_clean[] = $current_tipo;
@@ -2522,8 +2531,26 @@ abstract class common {
 
 
 				$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
+					$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					// the semantic node has his own section_tipo to be assigned
+					if($model ==='component_semantic_node'){
+						$RecordObj_dd	= new RecordObj_dd($current_tipo);
+						$properties		= $RecordObj_dd->get_properties();
+						if(isset($properties->source->request_config)){
+							foreach ($properties->source->request_config as $item_request_config) {
+								// sqo. Add search query object property
+								$parsed_item_sqo = $item_request_config->sqo ?? new stdClass();
+								// section_tipo. get the ar_sections as ddo
+								$target_section_tipo = isset($parsed_item_sqo->section_tipo)
+									? component_relation_common::get_request_config_section_tipo($parsed_item_sqo->section_tipo)
+									: [$target_section_tipo];
+							}
+						}
+					}
+
 					$ddo = new dd_object();
 						$ddo->set_tipo($current_tipo);
+						$ddo->set_model($model);
 						$ddo->set_section_tipo($target_section_tipo);
 						$ddo->set_parent($tipo);
 						$ddo->set_mode($current_mode);
@@ -2531,6 +2558,7 @@ abstract class common {
 
 					return $ddo;
 				}, $ar_related_clean);
+					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string());
 					// dump($ddo_map, ' ddo_map ++ '.to_string()); die();
 
 			// show
@@ -3151,7 +3179,7 @@ abstract class common {
 				return $_SESSION['dedalo']['config']['tools'][$cache_key];
 			}
 
-		$registered_tools	= common::get_client_registered_tools();
+		$registered_tools	= tool_common::get_client_registered_tools();
 		$model				= get_class($this);
 		$tipo				= $this->tipo;
 		$is_component		= strpos($model, 'component_')===0;
@@ -3200,159 +3228,6 @@ abstract class common {
 	}//end get_tools
 
 
-
-	/**
-	* CREATE_TOOL_CONTEXT
-	* Parse a tool context from a simple_tool_object
-	* @param object $tool_object (simple_tool_object from tool record JSON component dd1353)
-	* @param object $tool_config (from properties)
-	* @return object $tool_context
-	*/
-	public static function create_tool_context($tool_object, $tool_config=null, $tipo=null, $section_tipo=null) {
-
-		// label. (JSON list) Try match current lang else use the first lang value
-			$tool_label = array_find($tool_object->label, function($el){
-				return $el->lang===DEDALO_DATA_LANG;
-			})->value ?? reset($tool_object->label)->value;
-
-		// description. (text_area) Try match current lang else use the first lang value
-			$description = array_find((array)$tool_object->description, function($el){
-				return $el->lang===DEDALO_DATA_LANG;
-			})->value[0] ?? reset($tool_object->description)->value[0];
-
-		// context
-			$tool_context = new stdClass();
-				$tool_context->section_id			= $tool_object->section_id;
-				$tool_context->section_tipo			= $tool_object->section_tipo;
-				$tool_context->model				= $tool_object->name;
-				$tool_context->name					= $tool_object->name;
-				$tool_context->mode					= 'edit';
-				$tool_context->label				= $tool_label;
-				$tool_context->tool_labels			= $tool_object->labels;
-				$tool_context->description			= $description;
-				$tool_context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
-				$tool_context->show_in_inspector	= $tool_object->show_in_inspector;
-				$tool_context->show_in_component	= $tool_object->show_in_component;
-				$tool_context->config				= $tool_object->config;
-
-		// tool_config add
-			if (!empty($tool_config)) {
-
-				// parse and resolve ddo_map self
-					if (isset($tool_config->ddo_map)) {
-						$tool_config->ddo_map = array_map(function($el) use($tipo, $section_tipo){
-							if ($el->tipo==='self') {
-								$el->tipo = $tipo;
-							}
-							if ($el->section_tipo==='self') {
-								$el->section_tipo = $section_tipo;
-							}
-							if (!isset($el->model)) {
-								$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
-							}
-
-							$el->label = RecordObj_dd::get_termino_by_tipo($el->tipo, DEDALO_APPLICATION_LANG, true, true);
-
-							return $el;
-						}, $tool_config->ddo_map);
-					}
-
-				// set parsed tool_config
-					$tool_context->tool_config = $tool_config;
-			}//end if (!empty($tool_config))
-			// dump($tool_context, ' tool_context ++ '.to_string());
-
-		return $tool_context;
-	}//end create_tool_context
-
-
-
-	/**
-	* GET_REGISTERED_TOOLS
-	* @return array $registered_tools
-	*/
-	public static function get_client_registered_tools($ar_tools=null) {
-
-		$registered_tools = [];
-
-		// if(isset($_SESSION['dedalo']['registered_tools'])) {
-		// 	return $_SESSION['dedalo']['registered_tools'];
-		// } this
-
-		// get all tools config sections
-			$ar_config = tools_register::get_all_config_tool_client();
-
-		// get all active and registered tools
-		$sqo_tool_active = json_decode('{
-				"section_tipo": "dd1324",
-				"limit": 0,
-				"filter": {
-					"$and": [
-						{
-							"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "dd1324",
-									"component_tipo": "dd1354",
-									"modelo": "component_radio_button",
-									"name": "Active"
-								}
-							]
-						}
-					]
-				},
-				"full_count": false
-			}');
-
-		$search = search::get_instance($sqo_tool_active);
-		$result = $search->search();
-		// get the simple_tool_object
-		foreach ($result->ar_records as $record) {
-
-			$section 		= section::get_instance($record->section_id, $record->section_tipo);
-			$section_dato 	= $record->datos;
-			$section->set_dato($section_dato);
-			$section->set_bl_loaded_matrix_data(true);
-
-			$component_tipo	= 'dd1353';
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance($model,
-															 $component_tipo,
-															 $record->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $record->section_tipo);
-			$dato = $component->get_dato();
-			$current_value = reset($dato);
-
-			if(isset($ar_tools) && !in_array($current_value->name, $ar_tools)){
-				continue;
-			}
-
-			// append config
-			$current_config = array_filter($ar_config, function($item) use($current_value){
-				if($item->name === $current_value->name) {
-					return $item;
-				}
-			});
-			$current_value->config = !empty($current_config[0])
-				? $current_config[0]->config
-				: null;
-
-			$registered_tools[] = $current_value;
-		}//end foreach ($result->ar_records as $record)
-
-
-		// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
-		// write_session_value('registered_tools', $registered_tools);
-
-
-		return $registered_tools;
-	}//end get_client_registered_tools
-
-
-
 	/**
 	* GET_BUTTONS_CONTEXT
 	* @return array $ar_button_ddo
@@ -3398,7 +3273,7 @@ abstract class common {
 					if($model === 'button_import'){
 
 						// tools_list
-						$tools_list	= common::get_client_registered_tools();
+						$tools_list	= tool_common::get_client_registered_tools();
 
 						$tools = [];
 						foreach ($tools_list as $tool_object) {
@@ -3410,7 +3285,7 @@ abstract class common {
 							if(!isset($tool_config)) continue;
 
 							$current_section_tipo	= $this->section_tipo ?? $this->tipo;
-							$tool_context			= common::create_tool_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
+							$tool_context			= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
 
 							$tools[] = $tool_context;
 						}//end foreach ($tools_list as $item)
