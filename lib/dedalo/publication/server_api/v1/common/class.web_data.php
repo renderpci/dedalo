@@ -2054,105 +2054,102 @@ class web_data {
 
 	/**
 	* GET_FRAGMENT_FROM_INDEX_LOCATOR
-	* Calculate all fragaments indexed with this locator
+	* 	Calculate all fragments indexed with this locator
 	* @param object | string $index_locator
-	*	$index_locator can be a php object or a json string representation of the object
+	*	$index_locator can be a PHP object or a JSON string representation of the object
 	* @return object $response
 	*/
 	public static function get_fragment_from_index_locator( $request_options ) {
 
-		$options = new stdClass();
-			$options->index_locator		= null;
-			$options->lang				= WEB_CURRENT_LANG_CODE;
-			$options->fragment_terms	= false;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed (get_fragment_from_index_locator)';
+
+		// options
+			$options = new stdClass();
+				$options->index_locator		= null;
+				$options->lang				= WEB_CURRENT_LANG_CODE;
+				$options->fragment_terms	= false;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// check vars
 			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-				die("Error. Ilegal lang: ".$options->lang);
+				trigger_error("Error. Ilegal lang: ".$options->lang);
+				$response->msg = 'Error. Invalid lang: '.$options->lang.')';
+				return $response;
 			}
 
-		$response = new stdClass();
-			$response->result 	= false;
-			#$response->msg 		= 'Error. Request failed (get_fragment_from_index_locator)';
-
-		#$index_locator = '{"type":"dd96","tag_id":"1","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}';
-		# Locator like:
-		# {"type":"dd96","tag_id":"1","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
-
-		$index_locator = $options->index_locator;
-
-		if (is_array($index_locator)) {
-			$index_locator = reset($index_locator);
-		}
-		if (is_object($index_locator)) {
-			$locator = $index_locator;
-		}else{
-			$locator = json_decode($index_locator);
-			if (is_array($locator)) {
-				$locator = reset($locator);
+		// locator
+			// Sample:
+			// {"type":"dd96","tag_id":"1","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
+			$index_locator = $options->index_locator;
+			if (is_array($index_locator)) {
+				$index_locator = reset($index_locator);
 			}
-		}
+			if (is_object($index_locator)) {
+				$locator = $index_locator;
+			}else{
+				$locator = json_decode($index_locator);
+				if (is_array($locator)) {
+					$locator = reset($locator);
+				}
+			}
 
-		$av_section_id 	= $locator->section_id;
-		$tag_id 		= $locator->tag_id;
+		// short vars
+			$av_section_id	= $locator->section_id;
+			$tag_id			= $locator->tag_id;
 
-		#
-		# AUDIOVISUAL DATA
-		# Raw text
-		$s_options = new stdClass();
-			$s_options->table 	 			= TABLE_AUDIOVISUAL;
-			$s_options->ar_fields 			= array(FIELD_VIDEO, FIELD_TRANSCRIPTION);
-			$s_options->lang  	 			= $options->lang;
-			$s_options->sql_filter 			= '`section_id` = '.(int)$av_section_id;
-			$s_options->apply_postprocess 	= false; // Avoid clean text on false
+		// audiovisual data. Raw text
+			$s_options = new stdClass();
+				$s_options->table				= TABLE_AUDIOVISUAL;
+				$s_options->ar_fields			= array(FIELD_VIDEO, FIELD_TRANSCRIPTION);
+				$s_options->lang				= $options->lang;
+				$s_options->sql_filter			= '`section_id` = '.(int)$av_section_id;
+				$s_options->apply_postprocess	= false; // Avoid clean text on false
 
-		$rows_data	= (object)web_data::get_rows_data( $s_options );
-		if(SHOW_DEBUG===true) {
-			#dump($rows_data, ' rows_data ++ '.to_string($locator));;
-		}
+			$rows_data = (object)web_data::get_rows_data( $s_options );
+			if (empty($rows_data->result)) {
+				// return null;
+				$response->result	= null;
+				$response->msg		= 'Error. Empty audiovisual records. Not found section_id: '.$av_section_id.')';
+				return $response;
+			}
 
-		if (empty($rows_data->result)) {
-			return null;
-		}
+		// fragment data. Create fragment and tesaurus associated
+			$raw_text  = reset($rows_data->result)[FIELD_TRANSCRIPTION];
+			$video_url = reset($rows_data->result)[FIELD_VIDEO];
 
-		$raw_text  = reset($rows_data->result)[FIELD_TRANSCRIPTION];
-		$video_url = reset($rows_data->result)[FIELD_VIDEO];
-
-		#
-		# FRAGMENT DATA
-		# Create fragment and tesaurus associated
-		$f_options = new stdClass();
-			$f_options->tag_id					= $tag_id;
-			$f_options->av_section_id			= $av_section_id;
-			$f_options->lang					= $options->lang;
-			$f_options->component_tipo			= AV_TIPO;
-			$f_options->section_tipo			= $locator->section_tipo;
-			$f_options->raw_text				= $raw_text;
-			$f_options->fragment_terms_inside	= $options->fragment_terms; // bool
-			$f_options->indexation_terms 		= $options->fragment_terms; // bool
+			$f_options = new stdClass();
+				$f_options->tag_id					= $tag_id;
+				$f_options->av_section_id			= $av_section_id;
+				$f_options->lang					= $options->lang;
+				$f_options->component_tipo			= AV_TIPO;
+				$f_options->section_tipo			= $locator->section_tipo;
+				$f_options->raw_text				= $raw_text;
+				$f_options->fragment_terms_inside	= $options->fragment_terms; // bool
+				$f_options->indexation_terms		= $options->fragment_terms; // bool
 
 			$fragments_obj = web_data::build_fragment( $f_options );
-			#if(SHOW_DEBUG===true) {
-				// dump($fragments_obj, ' fragments_obj ++ '.to_string( $av_section_id )); die();
-			#}
 
-		# REMOVE_RESTRICTED_TEXT in fragment
-		if (isset($fragments_obj->fragm)) {
-			// Remove restricted_text from raw text
-			$clean_fragm 		  = web_data::remove_restricted_text( $fragments_obj->fragm, $av_section_id );
-			// Finally remove all tags (deleteMarks is the last proccess before send the text)
-			$clean_fragm 		  = TR::deleteMarks($clean_fragm);
-			$fragments_obj->fragm = $clean_fragm;
-		}
+
+		// remove_restricted_text in fragment
+			if (isset($fragments_obj->fragm)) {
+				// Remove restricted_text from raw text
+				$clean_fragm = web_data::remove_restricted_text( $fragments_obj->fragm, $av_section_id );
+				// Finally remove all tags (deleteMarks is the last proccess before send the text)
+				$clean_fragm = TR::deleteMarks($clean_fragm);
+				$fragments_obj->fragm = $clean_fragm;
+			}
 
 		// add self $index_locator to fragments_obj
 			$fragments_obj->index_locator = $index_locator;
 
-		$response->result = $fragments_obj;
-		#$response->msg    = 'Request done successfully';
+		// response ok
+			$response->result = $fragments_obj;
+			$response->msg    = 'Request done successfully';
 
-		return (object)$response;
+
+		return $response;
 	}//end get_fragment_from_index_locator
 
 
