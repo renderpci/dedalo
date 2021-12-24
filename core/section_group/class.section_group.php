@@ -48,17 +48,28 @@ class section_group extends common {
 
 
 
-
-
-	# BUILD_DUMMY_SECTION_GROUP
+	/**
+	* BUILD_DUMMY_SECTION_GROUP
+	*/
 	public static function build_dummy_section_group($title, $body) {
 
 		$tab_id 	= 'tab_' . base64_encode($title);		#dump($identificador_unico,'identificador_unico');
 	
 		include( DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . 'dummy' . '.phtml' );
-	}
+	}//end build_dummy_section_group
 
 
 
-}
-?>
+	/**
+	* GET_TOOLS
+	* 	Catch get_tools call to prevent load tools sections
+	* @return array $tools
+	*/
+	public function get_tools() {
+
+		return [];
+	}//end get_tools
+
+
+
+}//end class

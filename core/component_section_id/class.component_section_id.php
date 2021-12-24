@@ -70,6 +70,18 @@ class component_section_id extends component_common {
 
 
 	/**
+	* GET_TOOLS
+	* 	Catch get_tools call to prevent load tools sections
+	* @return array $tools
+	*/
+	public function get_tools() {
+
+		return [];
+	}//end get_tools
+
+
+
+	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object

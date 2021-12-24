@@ -21,22 +21,34 @@ class section_tab extends common {
 	
 	protected $ar_tab_html;
 
-	
+
+
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo, $section_tipo, $modo, $ar_tab_html=null, $id_section=NULL) {
 
-		$this->tipo = $tipo;
-		$this->section_tipo = $section_tipo;
+		$this->tipo			= $tipo;
+		$this->section_tipo	= $section_tipo;
+		$this->modo			= $modo;
+		$this->lang			= DEDALO_DATA_LANG;
+		$this->ar_tab_html	= $ar_tab_html;
+		$this->id			= $id_section;
 
-		$this->modo = $modo;
-		$this->lang = DEDALO_DATA_LANG;
+		$this->load_structure_data();
+	}//end __construct
 
-		$this->ar_tab_html = $ar_tab_html;
 
-		$this->id = $id_section;
-		
-		$this->load_structure_data();	
-	}
+
+	/**
+	* GET_TOOLS
+	* 	Catch get_tools call to prevent load tools sections
+	* @return array $tools
+	*/
+	public function get_tools() {
+		return [];
+	}//end get_tools
 	
+
 	
-}
-?>
+}//end class
