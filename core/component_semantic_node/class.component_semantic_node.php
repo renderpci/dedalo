@@ -143,7 +143,19 @@ class component_semantic_node extends component_relation_common {
 		$valor_export = implode(', ', $ar_values);
 
 		return $valor_export;
-	}//end get_valor_export(
+	}//end get_valor_export
+
+
+
+	/**
+	* GET_TOOLS
+	* 	Catch get_tools call to prevent load tools sections
+	* @return array $tools
+	*/
+	public function get_tools() {
+
+		return [];
+	}//end get_tools
 
 
 
