@@ -1,6 +1,8 @@
 <?php
 // PAGE CONTROLLER
 
+
+
 // page mode and tipo
 	$default_section_tipo = 'test38';
 	if (isset($_GET['locator'])) {

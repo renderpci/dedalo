@@ -1700,13 +1700,13 @@ export const ui = {
 			}
 
 		// navigation
-			const state	= {
-				event_in_history : false
-			}
-			const title	= 'modal'
-			const url	= null // 'Modal url'
-				console.log("history:",history, this);
-			history.pushState(state, title, url)
+			// const state	= {
+			// 	event_in_history : false
+			// }
+			// const title	= 'modal'
+			// const url	= null // 'Modal url'
+			// 	console.log("history:",history, this);
+			// history.pushState(state, title, url)
 
 
 
