@@ -129,20 +129,17 @@ tool_import_rdf.prototype.load_component = async function(lang) {
 
 
 
-
 /**
 * GET_RDF_DATA
-* Call the API to get process the source component iri and transform to Dédalo model
+* Call the API to get process the source component_iri and transform to Dédalo model
 * the correspondence is in external ontology.
 *
-* @para string translator (name like 'babel' must to be defined in tool config)
-* @param string source_lang (like 'lg-eng')
-* @param string target_lang (like 'lg-spa')
-* @param DOM element buttons_container (where will be place the message response)
+* @param tipo ontology_tipo (the tipo of the external ontology to be used )
+* @param data ar_values (like '["http://numismatics.org/ocre/id/ric.1(2).aug.1A"]', selected by the user)
 *
 * @return promise response
 */
-tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_values, buttons_container) {
+tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_values) {
 
 	const self = this
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
@@ -175,15 +172,6 @@ tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_value
 
 				// user messages
 					const msg_type = (response.result===false) ? 'error' : 'ok'
-					//if (trigger_response.result===false) {
-						ui.show_message(buttons_container, response.msg, msg_type)
-					//}
-
-
-				// reload target lang
-					// const target_component = self.ar_instances.find(el => el.tipo===self.main_component.tipo && el.lang===target_lang)
-					// target_component.refresh()
-					// dd_console('target_component', 'DEBUG', target_component)
 
 				resolve(response)
 			})
