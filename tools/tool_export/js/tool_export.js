@@ -20,8 +20,9 @@
 	} from './tool_export_drag.js'
 
 
+
 /**
-* tool_export
+* TOOL_EXPORT
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_export = function () {
@@ -37,11 +38,10 @@ export const tool_export = function () {
 	this.source_lang		= null
 	this.caller				= null // section or component
 	this.components_list	= {}
-	this.data_format 		= null
-
+	this.data_format		= null
 
 	return true
-};//end page
+};//end tool_export
 
 
 
@@ -119,6 +119,7 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+<<<<<<< HEAD
 	// status update
 		self.status = 'building'
 
@@ -128,15 +129,15 @@ tool_export.prototype.build = async function(autoload=false) {
 	// load self style
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
 		common.prototype.load_style(tool_css_url)
+=======
+	// call generic commom tool build
+		const common_build = await tool_common.prototype.build.call(this, true);
+>>>>>>> dedalo/v6_developer
 
 	// // get_section_elements_context
 	// 	const section_elements = await self.get_section_elements_context({
 	// 		section_tipo : self.caller.section_tipo
 	// 	})
-
-
-	// status update
-		self.status = 'builded'
 
 
 	return true
