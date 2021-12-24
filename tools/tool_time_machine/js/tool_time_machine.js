@@ -38,7 +38,7 @@ export const tool_time_machine = function () {
 	this.modal_container	= null
 
 	return true
-};//end page
+};//end tool_time_machine
 
 
 

@@ -936,8 +936,8 @@ export const ui = {
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
 			const mode			= instance.mode 	// like 'edit'
-			const label			= instance.context.label
-			const description	= instance.context.description
+			const label			= instance.context.label || ''
+			const description	= instance.context.description || ''
 			const name			= instance.constructor.name
 
 			const fragment = new DocumentFragment()
@@ -1698,6 +1698,16 @@ export const ui = {
 					modal_container._showModal();
 					break;
 			}
+
+		// navigation
+			const state	= {
+				event_in_history : false
+			}
+			const title	= 'modal'
+			const url	= null // 'Modal url'
+				console.log("history:",history, this);
+			history.pushState(state, title, url)
+
 
 
 		return modal_container
