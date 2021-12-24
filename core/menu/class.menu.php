@@ -126,10 +126,12 @@ class menu extends common {
 	*/
 	public function get_info_data() {
 
+		$jit_enabled = opcache_get_status()['jit']['enabled'] ?? false;
+
 		$info_data = new stdClass();
 			$info_data->entity				= DEDALO_ENTITY;
 			$info_data->php_user			= get_current_user();
-			$info_data->php_version			= phpversion();
+			$info_data->php_version			= phpversion() .'-'. json_encode($jit_enabled);
 			$info_data->php_session_handler	= ini_get('session.save_handler');
 			$info_data->pg_db				= pg_version(DBi::_getConnection())['server'];
 			$info_data->pg_db_name			= DEDALO_DATABASE_CONN;
