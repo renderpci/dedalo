@@ -94,8 +94,7 @@ class component_relation_common extends component_common {
 				}else{
 					if ($lang!==DEDALO_DATA_NOLAN) {
 						debug_log(__METHOD__." Changed component wrong lang [NON TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_NOLAN, logger::ERROR);
-						// $bt = debug_backtrace()[1];
-						// dump($bt, ' bt ++ '.to_string());
+						$bt = debug_backtrace()[1]; dump($bt, ' bt ++ '.to_string());
 						$lang = DEDALO_DATA_NOLAN;
 					}
 				}
