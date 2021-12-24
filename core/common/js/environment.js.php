@@ -121,7 +121,7 @@ include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 			if(SHOW_DEBUG===true) {
 				$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
 				$obj->pg_version		= pg_version(DBi::_getConnection())['server'];
-				$obj->php_version		= PHP_VERSION;
+				$obj->php_version		= PHP_VERSION .' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 				$obj->php_memory		= to_string(ini_get('memory_limit'));
 			}
 
