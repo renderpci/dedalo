@@ -1280,6 +1280,7 @@ abstract class common {
 	}//end get_json
 
 
+
 	/**
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
@@ -1299,6 +1300,7 @@ abstract class common {
 
 		// cache structure_context using ddo_key
 			if (isset(self::$structure_context_cache[$ddo_key])) {
+				error_log("------------------------- get_structure_context CACHED ------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
 				return self::$structure_context_cache[$ddo_key];
 			}
 
@@ -1408,16 +1410,14 @@ abstract class common {
 					$parent = $this->RecordObj_dd->get_parent();
 				}
 
-
 		// parent_grouper (structure parent)
 			$parent_grouper = !empty($this->parent_grouper)
 				? $this->parent_grouper
 				: $this->RecordObj_dd->get_parent();
 
-
 		// tools
-			$tools_list	= $this->get_tools();
 			$tools		= [];
+			$tools_list	= $this->get_tools();
 			foreach ($tools_list as $tool_object) {
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
@@ -1492,7 +1492,7 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
-				error_log("------------------------- get_structure_context ------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms");
+				error_log("------------------------- get_structure_context ------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
 			}
 
 
@@ -1528,6 +1528,7 @@ abstract class common {
 	}//end get_structure_context_simple
 
 
+
 	/**
 	* GET_SUBDATUM
 	* Used by sections and portal that has relations with other components and it need get the information of the other components
@@ -1551,6 +1552,7 @@ abstract class common {
 		// request_config. On empty return empty context and data object
 			$request_config = $this->context->request_config ?? null;
 			if(empty($request_config)) {
+				// no request config case. Return empty here
 				return (object)[
 					'context'	=> [],
 					'data'		=> []
@@ -1616,7 +1618,9 @@ abstract class common {
 
 			// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
 			$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
-				return $ddo->section_tipo===$section_tipo || (is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) || $ddo->model === 'component_semantic_node';
+				return 	$ddo->section_tipo===$section_tipo ||
+						(is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) ||
+						(isset($ddo->model) && $ddo->model==='component_semantic_node');
 			});
 
 			// ar_ddo iterate
@@ -1624,7 +1628,7 @@ abstract class common {
 
 				// prevent resolve non children from path ddo, remove the non direct child, it will be calculated by his parent (in recursive loop)
 					if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
-						dump($dd_object, ' dd_object SKIP dd_object ++'.to_string($this->tipo));
+						// dump($dd_object, ' dd_object SKIP dd_object ++'.to_string($this->tipo));
 						continue;
 					}
 
@@ -1639,7 +1643,6 @@ abstract class common {
 					$mode					= $dd_object->mode ?? $this->get_modo();
 					$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					$label					= $dd_object->label ?? '';
-
 
 				// ar_subcontext_calculated
 					$cid = $current_tipo . '_' . $current_section_tipo;
@@ -1673,7 +1676,7 @@ abstract class common {
 									$section->set_bl_loaded_matrix_data(true);
 								}
 
-							// get component json (inlcude context and data)
+							// get component JSON (include context and data)
 								// $element_json = $section->get_json();
 								$related_element = $section;
 
@@ -1697,6 +1700,7 @@ abstract class common {
 								foreach ($request_config as $request_config_item) {
 									$children = get_children_recursive($request_config_item->show->ddo_map, $dd_object);
 									if (!empty($children)) {
+
 										$new_rqo_config = unserialize(serialize($request_config_item));
 										$new_rqo_config->show->ddo_map = $children;
 
@@ -1716,7 +1720,7 @@ abstract class common {
 								}
 
 							// inject data for component_semantic_node
-								if($model === 'component_semantic_node'){
+								if($model==='component_semantic_node'){
 									$related_element->set_dato($current_locator);
 								}
 							break;
@@ -1749,9 +1753,7 @@ abstract class common {
 							$item_options = new stdClass();
 								$item_options->get_context	= true;
 								$item_options->get_data		= true;
-								// $item_options->context_type = 'simple';
 							$element_json = $related_element->get_json($item_options);
-
 
 						// ar_subcontext
 							$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
@@ -1796,7 +1798,7 @@ abstract class common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				error_log("------------------------- get_subdatum ---------------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms");
+				error_log("------------------------- get_subdatum ----------------------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms - ". get_class($this));
 			}
 
 		return $subdatum;
@@ -2502,7 +2504,7 @@ abstract class common {
 				}
 				if (empty($ar_related_clean) && $model!=='component_relation_index') {
 					// $ar_related_clean = [$tipo]; Loop de la muerte (!)
-					debug_log(__METHOD__." Empty related items. Review your structure config to fix this error. $model - tipo: ".to_string($tipo), logger::ERROR);
+					debug_log(__METHOD__." Empty related items. Review your structure config to fix this error. model:$model - tipo:$tipo - ar_related_clean:".to_string($ar_related_clean), logger::ERROR);
 				}
 
 			// target_section_tipo
@@ -2559,7 +2561,7 @@ abstract class common {
 					return $ddo;
 				}, $ar_related_clean);
 					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string());
-					// dump($ddo_map, ' ddo_map ++ '.to_string()); die();
+
 
 			// show
 				$show = new stdClass();
@@ -3228,6 +3230,7 @@ abstract class common {
 	}//end get_tools
 
 
+
 	/**
 	* GET_BUTTONS_CONTEXT
 	* @return array $ar_button_ddo
@@ -3350,6 +3353,7 @@ abstract class common {
 
 		return $columns_map;
 	}//end get_columns_map
+
 
 
 	/**

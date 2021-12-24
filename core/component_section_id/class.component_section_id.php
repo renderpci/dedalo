@@ -32,6 +32,8 @@ class component_section_id extends component_common {
 		return $this->get_dato();
 	}//end get_dato_full
 
+
+
 	/**
 	* GET_RAW_VALUE
 	* Get the raw value of the components. By default will be get_dato().
