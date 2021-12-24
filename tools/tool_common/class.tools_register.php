@@ -651,9 +651,14 @@ class tools_register {
 
 	/**
 	* GET_ALL_CONFIG_TOOL_CLIENT
-	* @return
+	* @return array $ar_client_config
 	*/
 	public static function get_all_config_tool_client() {
+
+		static $cache_ar_client_config;
+		if (isset($cache_ar_client_config)) {
+			return $cache_ar_client_config;
+		}
 
 		// get all tools config sections
 		$ar_config = tools_register::get_all_config_tool();
@@ -673,6 +678,8 @@ class tools_register {
 
 			return $new_item;
 		}, $ar_config);
+
+		$cache_ar_client_config = $ar_client_config;
 
 
 		return $ar_client_config;

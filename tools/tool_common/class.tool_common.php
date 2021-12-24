@@ -190,69 +190,77 @@ class tool_common {
 		// 	return $_SESSION['dedalo']['registered_tools'];
 		// } this
 
+		// client_registered_tools_records
+			static $client_registered_tools_records;
+			if(!isset($client_registered_tools_records)) {
+
+				// get all active and registered tools
+					$sqo_tool_active = json_decode('{
+						"section_tipo": "dd1324",
+						"limit": 0,
+						"filter": {
+							"$and": [
+								{
+									"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
+									"q_operator": null,
+									"path": [
+										{
+											"section_tipo": "dd1324",
+											"component_tipo": "dd1354",
+											"modelo": "component_radio_button",
+											"name": "Active"
+										}
+									]
+								}
+							]
+						},
+						"full_count": false
+					}');
+					$search	= search::get_instance($sqo_tool_active);
+					$result	= $search->search();
+
+					// fix cache
+					$client_registered_tools_records = $result->ar_records;
+			}
+
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
-		// get all active and registered tools
-		$sqo_tool_active = json_decode('{
-				"section_tipo": "dd1324",
-				"limit": 0,
-				"filter": {
-					"$and": [
-						{
-							"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "dd1324",
-									"component_tipo": "dd1354",
-									"modelo": "component_radio_button",
-									"name": "Active"
-								}
-							]
-						}
-					]
-				},
-				"full_count": false
-			}');
-
-		$search = search::get_instance($sqo_tool_active);
-		$result = $search->search();
 		// get the simple_tool_object
-		foreach ($result->ar_records as $record) {
+			foreach ($client_registered_tools_records as $record) {
 
-			$section 		= section::get_instance($record->section_id, $record->section_tipo);
-			$section_dato 	= $record->datos;
-			$section->set_dato($section_dato);
-			$section->set_bl_loaded_matrix_data(true);
+				$section 		= section::get_instance($record->section_id, $record->section_tipo);
+				$section_dato 	= $record->datos;
+				$section->set_dato($section_dato);
+				$section->set_bl_loaded_matrix_data(true);
 
-			$component_tipo	= 'dd1353';
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance($model,
-															 $component_tipo,
-															 $record->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $record->section_tipo);
-			$dato = $component->get_dato();
-			$current_value = reset($dato);
+				$component_tipo	= 'dd1353';
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component		= component_common::get_instance($model,
+																 $component_tipo,
+																 $record->section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $record->section_tipo);
+				$dato = $component->get_dato();
+				$current_value = reset($dato);
 
-			if(isset($ar_tools) && !in_array($current_value->name, $ar_tools)){
-				continue;
-			}
-
-			// append config
-			$current_config = array_filter($ar_config, function($item) use($current_value){
-				if($item->name === $current_value->name) {
-					return $item;
+				if(isset($ar_tools) && !in_array($current_value->name, $ar_tools)){
+					continue;
 				}
-			});
-			$current_value->config = !empty($current_config[0])
-				? $current_config[0]->config
-				: null;
 
-			$registered_tools[] = $current_value;
-		}//end foreach ($result->ar_records as $record)
+				// append config
+				$current_config = array_filter($ar_config, function($item) use($current_value){
+					if($item->name === $current_value->name) {
+						return $item;
+					}
+				});
+				$current_value->config = !empty($current_config[0])
+					? $current_config[0]->config
+					: null;
+
+				$registered_tools[] = $current_value;
+			}//end foreach ($client_registered_tools_records as $record)
 
 
 		// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
