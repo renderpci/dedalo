@@ -119,20 +119,8 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-<<<<<<< HEAD
-	// status update
-		self.status = 'building'
-
 	// call generic commom tool build
 		const common_build = await tool_common.prototype.build.call(this, true);
-
-	// load self style
-		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
-		common.prototype.load_style(tool_css_url)
-=======
-	// call generic commom tool build
-		const common_build = await tool_common.prototype.build.call(this, true);
->>>>>>> dedalo/v6_developer
 
 	// // get_section_elements_context
 	// 	const section_elements = await self.get_section_elements_context({
