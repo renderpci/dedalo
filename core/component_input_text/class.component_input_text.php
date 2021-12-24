@@ -275,9 +275,10 @@ class component_input_text extends component_common {
 	public static function resolve_query_object_sql($query_object) {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
-		// $q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
-		$q = $query_object->q;
+		// $q = $query_object->q;
+		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
 			$q = json_decode($q);
 		}
