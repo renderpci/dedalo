@@ -2021,7 +2021,7 @@ export const ui = {
 
 	/**
 	* FLAT_COLUMN_ITEMS
-	* Call to dd_core_api to obtain the list of components associated to current options section_tipo
+	* create the css grid columns to build list items
 	* @param array list
 	*	Array of column items
 	* @return array ar_elements
