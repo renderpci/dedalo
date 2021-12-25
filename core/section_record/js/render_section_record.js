@@ -180,7 +180,8 @@ render_section_record.prototype.list = async function(options={}) {
 	
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
-		const ar_instances = await self.get_ar_columns_instances()
+		const ar_columns_instances = await self.get_ar_columns_instances()
+		const columns_map = await self.columns_map
 
 	const fragment = new DocumentFragment()
 
@@ -197,127 +198,77 @@ render_section_record.prototype.list = async function(options={}) {
 			fragment.appendChild(id_column)
 		}
 
-	// regular columns
-		let n_colums					= 0
-		// let n_relation_columns		= 0
-		const ar_grid_columns			= [] // remember add id column
-		// const components_with_relations	= get_components_with_subcolumns()
+	// render the columns
+		const columns_map_length = columns_map.length
+		for (let i = 0; i < columns_map_length; i++) {
+			const current_colum = columns_map[i]
+			// get the specific instances for the current column
+			const ar_instances = ar_columns_instances.filter(el => el.column_id === current_colum.id)
 
-	// loop the instances for select the parent node
-		const ar_instances_length = ar_instances.length
-		// render all instances in parallel before iterate
-			const ar_promises = []
-			for (let k = 0; k < ar_instances_length; k++) {
-				const current_promise = new Promise(function(resolve){
-					const current_instance = ar_instances[k]
-					// already rendered case
-					if (typeof current_instance.node[0]!=='undefined') {
-						resolve(true)
-					}else{
-						current_instance.render()
-						.then(function(current_instance){
+			// loop the instances for select the parent node
+				const ar_instances_length = ar_instances.length
+
+			// render all instances in parallel before create the columns nodes (to get the internal nodes)
+				const ar_promises = []
+				for (let k = 0; k < ar_instances_length; k++) {
+					const current_promise = new Promise(function(resolve){
+						const current_instance = ar_instances[k]
+						// already rendered case
+						if (typeof current_instance.node[0]!=='undefined') {
 							resolve(true)
-						}).catch((errorMsg) => {
-							console.error(errorMsg);
-						})
-					}
-				})
-				ar_promises.push(current_promise)
-			}
-			// nodes. Await all instances are parallel rendered
-			await Promise.all(ar_promises)// render work done safely
-
-
-		const ar_column_nodes = []
-		for (let i = 0; i < ar_instances_length; i++) {
-
-			const current_instance = ar_instances[i]
-
-			// check instance
-				if (typeof current_instance==="undefined") {
-					console.error("Undefined current_instance:", current_instance, i, ar_instances);
-					continue;
+						}else{
+							current_instance.render()
+							.then(function(current_instance){
+								resolve(true)
+							}).catch((errorMsg) => {
+								console.error(errorMsg);
+							})
+						}
+					})
+					ar_promises.push(current_promise)
 				}
+				// nodes. Await all instances are parallel rendered
+				await Promise.all(ar_promises)// render work done safely
 
-			// modification date . generic component
-				// if (current_instance.tipo==='dd201') {
-				// 	self.modification_date = current_instance.data.value
-				// }
+			// create the column nodes and assign the instances nodes to it.
+				const ar_column_nodes = []
+				for (let j = 0; j < ar_instances_length; j++) {
 
-			// if (current_instance.model==='component_portal' && self.mode==='list') {
+					const current_instance = ar_instances[j]
 
-			// 	// console.log("PORTAL -- current_instance", current_instance);
-			// 		console.log("column_id:------",current_instance.column_id);
-					// console.log("columns_map:----",self.columns_map);
-			// 	const current_instance_node = current_instance.node[0] //|| await current_instance.render()
-				
-			// 	// add
-			// 		fragment.appendChild(current_instance_node)
-				
-			// 	// if (current_instance_section_record_node) {
-			// 	// 	fragment.appendChild(current_instance_section_record_node.childNodes)
-			// 	// }
-			// 	// console.log("///// current_instance_section_record_node", current_instance_section_record_node.childNodes);
+					// check instance
+						if (typeof current_instance==="undefined") {
+							console.error("Undefined current_instance:", current_instance, j, ar_instances);
+							continue;
+						}
+						// check if the current_instance has column_id if not a error was done by the common creating the columns.
+						if (current_instance.column_id) {
 
-			// 	// if (current_instance_section_record_node && current_instance_section_record_node.childNodes) {
-			// 	// 	for (let j = 0; j < current_instance_section_record_node.childNodes.length; j++) {
-			// 	// 		console.log("///// current_instance_section_record_node[j]", current_instance_section_record_node.childNodes[j]);
-			// 	// 		fragment.appendChild( current_instance_section_record_node.childNodes[j] )
-			// 	// 	}
-			// 	// }
+							const ar_sub_columns_map = current_instance.columns_map || ar_instances
 
-			// }else{
+							// column. If column already exists, place the component node into the column.
+							// Else, creates a new column and place it into the fragment
+							const found_node	= ar_column_nodes.find(el => el.id === current_instance.column_id)
+							const column_node	= found_node
+								? found_node
+								: (()=>{
+									const new_column_node = build_column_node(current_instance, self, ar_sub_columns_map)
+									ar_column_nodes.push(new_column_node)
+									fragment.appendChild(new_column_node)
 
-				if (current_instance.column_id) {
+									return new_column_node
+								  })()
 
-					// column. If column already exists, place the component node into the column.
-					// Else, creates a new column and place it into the fragment
-					const column_node = ar_column_nodes.find(el => el.id===current_instance.column_id)
-						|| (()=>{
-							const new_column_node = build_column_node(current_instance, self, ar_instances)
-							ar_column_nodes.push(new_column_node)
-							fragment.appendChild(new_column_node)
+							const current_instance_node	= current_instance.node[0]
+							column_node.appendChild(current_instance_node)
 
-							return new_column_node
-						})()
+						}else{
+							console.error("current_instance column_id not found:",current_instance);
+						}
+				}//end for (let i = 0; i < ar_instances_length; i++)
 
-					const current_instance_node	= current_instance.node[0] //|| await current_instance.render()
-					column_node.appendChild(current_instance_node)
+		}
 
-				}else{
-					console.error("current_instance column_id not found:",current_instance);
-				}
-
-				// add
-					// fragment.appendChild(current_instance_node)
-			// }
-
-			// grid . add columns
-				// if (components_with_relations.indexOf(current_instance.model)!==-1) {
-
-					// grid . calculate recursively all children columns to set the total grid fr in current section_record
-					// n_colums = recursive_relation_columns(current_instance, self.datum)
-
-				// }else{
-
-					// grid
-					n_colums = 1
-				// }
-				ar_grid_columns.push(n_colums)
-
-		}//end for (let i = 0; i < ar_instances_length; i++)
-
-
-	// grid css calculation assign
-		// const ar_grid_columns_fr	= ar_grid_columns.map(n => n + "fr");
-		// const id_column_width		= self.caller.id_column_width // from section init
-		// Object.assign(
-		// 	wrapper.style,
-		// 	{
-		// 		// "grid-template-columns": id_column_width + " " + ar_grid_columns_fr.join(" ")
-		// 		"grid-template-columns": id_column_width + " repeat("+(ar_grid_columns.length)+", 1fr)",
-		// 	}
-		// )
 
 	// component_info
 		const component_info = self.get_component_info()
@@ -330,8 +281,6 @@ render_section_record.prototype.list = async function(options={}) {
 			})
 			//wrapper.appendChild(info)
 			fragment.appendChild(info)
-
-			ar_grid_columns.push(1)
 		}
 
 
@@ -631,6 +580,7 @@ const build_column_node = function(column_instance, self, ar_instances){
 	// const component = JSON.parse( JSON.stringify(column_instance)
 	// console.log("column_instance:",column_instance);
 
+
 	const column_id	= column_instance.column_id
 	const model		= self.caller.model
 
@@ -647,16 +597,8 @@ const build_column_node = function(column_instance, self, ar_instances){
 
 			const grid_template_columns_ar_value = []
 			for (let i = 0; i < children_length; i++) {
-
-				// WORKING HERE !
-					// const child_instance = ar_instances[i]
-					// const css = child_instance.context.css
-					// const width = css['.wrap_component'] && css['.wrap_component'].style && css['.wrap_component'].style.width
-					// 	? css['.wrap_component'].style.width
-					// 	: '1fr'
-
 				const width = '1fr'
-
+				// get the grid column spaces
 				grid_template_columns_ar_value.push(width)
 			}
 			// console.log("grid_template_columns_ar_value:",grid_template_columns_ar_value, children_length);
