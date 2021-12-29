@@ -1421,16 +1421,22 @@ class web_data {
 		*/
 		public static function get_publication_schema( $table=null ) {
 
-			# Config file constant
-			#	$data = json_decode(PUBLICATION_SCHEMA);
-
 			$data = false;
 
-			$strQuery = 'SELECT data FROM publication_schema WHERE id = 1';
-			$result   = web_data::get_db_connection()->query($strQuery);
+			$all_tables = self::get_all_tables();
+			if (!in_array('publication_schema', $all_tables)) {
+				return 'table with publication_schema is not set';
+			}
 
-			if($result) while ( $rows = $result->fetch_assoc() ) {
-				$data = json_decode($rows['data']);
+			$strQuery = 'SELECT data FROM publication_schema WHERE id = 1';
+
+			$dbh	= web_data::get_PDO_connection();
+			$stmt	= $dbh->prepare($strQuery);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			$result = $stmt->execute();
+
+			if($result) while ($row = $stmt->fetch()) {
+				$data = json_decode($row['data']);
 				break;
 			}
 
@@ -1700,18 +1706,17 @@ class web_data {
 
 			$strQuery = "SHOW TABLES";
 
-			$conn=web_data::get_db_connection();
-
-			# EXEC QUERY
-			$result = $conn->query($strQuery);
+			$dbh	= web_data::get_PDO_connection();
+			$stmt	= $dbh->prepare($strQuery);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			$result = $stmt->execute();
 
 			$ar_tables = array();
-			while ( $rows = $result->fetch_assoc() ) {
-				#dump($rows, ' rows ++ '.to_string());
-				$ar_tables[] = reset($rows);
+			while ($row = $stmt->fetch()) {
+				$ar_tables[] = reset($row);
 			}
 
-			return (array)$ar_tables;
+			return $ar_tables;
 		}//end get_all_tables
 
 
@@ -1728,24 +1733,21 @@ class web_data {
 
 			$strQuery = "SHOW COLUMNS FROM $table";
 
-			# EXEC QUERY
-			$conn=web_data::get_db_connection();
-
-			$result = $conn->query($strQuery);
+			$dbh	= web_data::get_PDO_connection();
+			$stmt	= $dbh->prepare($strQuery);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			$result = $stmt->execute();
 
 			$ar_columns = array();
-			while ( $row = $result->fetch_assoc() ) {
-				#dump($row, ' row ++ '.to_string());
+			while ($row = $stmt->fetch()) {
 
 				if ($row['Field']==='id') {
 					continue;	// Skip id field always
 				}
 
-				if ($full) {
-					$ar_columns[] = $row;
-				}else{
-					$ar_columns[] = $row['Field'];
-				}
+				$ar_columns[] = ($full)
+					? $row
+					: $row['Field'];
 			}
 
 			return (array)$ar_columns;
@@ -2145,7 +2147,9 @@ class web_data {
 			}
 
 		// add self $index_locator to fragments_obj
-			$fragments_obj->index_locator = $index_locator;
+			if (!empty($fragments_obj)) {
+				$fragments_obj->index_locator = $index_locator;
+			}
 
 		// response ok
 			$response->result = $fragments_obj;
