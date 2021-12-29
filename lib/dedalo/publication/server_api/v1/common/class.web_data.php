@@ -114,11 +114,40 @@ class web_data {
 		$port		= !empty($port) ? $port : MYSQL_DEDALO_DB_PORT_CONN;
 		$socket		= !empty($socket) ? $socket : MYSQL_DEDALO_SOCKET_CONN;
 
-		// error_log('GET_PDO_CONNECTION $database: '.$database);
+		// dsn
+			$ar_dsn = [];
+			// dbname
+			if (isset($database)) {
+				$ar_dsn[] = 'dbname='.$database;
+			}
+			// host
+			if (isset($host)) {
+				$ar_dsn[] = 'host='.$host;
+			}
+			// port
+			if (isset($port)) {
+				$ar_dsn[] = 'port='.$port;
+			}
+			// unix_socket
+			if (isset($socket)) {
+				$ar_dsn[] = 'unix_socket='.$socket;
+			}
+			// utf8 charset
+			$ar_dsn[] = 'charset=utf8';
 
-		$dbh = new PDO('mysql:host='.$host.';dbname='.$database.';charset=utf8', $user, $password);
-		$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-		$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			$dsn = 'mysql:' . implode(';', $ar_dsn);
+
+		// connect
+			try {
+
+				// $dbh = new PDO('mysql:host='.$host.';port='.$port.';dbname='.$database.';charset=utf8', $user, $password);
+				$dbh = new PDO($dsn, $user, $password);
+				$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+				$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+			}catch(PDOException $pe){
+				trigger_error($pe->getMessage());
+			}
 
 
 		return $dbh;
