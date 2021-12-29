@@ -365,7 +365,7 @@ class web_data {
 					$sql_options->order						= '`id` ASC';
 					$sql_options->group						= false;
 					$sql_options->limit						= 0;
-					$sql_options->offset					= false;					
+					$sql_options->offset					= false;
 					$sql_options->count						= false;
 					$sql_options->resolve_portal			= false; // bool
 					$sql_options->resolve_portals_custom	= false; // array | bool
@@ -1434,34 +1434,8 @@ class web_data {
 				break;
 			}
 
-
 			return $data;
 		}//end get_publication_schema
-
-
-
-		/**
-		* GET_FULL_PUBLICATION_SCHEMA
-		* @return object|false $data
-		*/
-		private static function get_full_publication_schema() {
-			$data = false;
-
-			$strQuery = "SELECT name, data FROM publication_schema ";
-			$result   = web_data::get_db_connection()->query($strQuery);
-
-			$ar_tables=array();
-			if ($result) {
-				while ( $rows = $result->fetch_assoc() ) {
-					$name = $rows['name'];
-					$data = json_decode($rows['data']);
-					$ar_tables[$name] = $data;
-				}
-			}
-			#dump($ar_tables, ' ar_tables ++ '.to_string());
-
-			return $ar_tables;
-		}//end get_full_publication_schema
 
 
 

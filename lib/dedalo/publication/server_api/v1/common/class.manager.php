@@ -65,7 +65,6 @@ class manager {
 			case 'publication_schema':
 				#
 				# Execute data retrieving
-				# $dedalo_data = (array)web_data::get_full_publication_schema( );
 				$dedalo_data = (array)web_data::get_publication_schema( );
 				break;
 

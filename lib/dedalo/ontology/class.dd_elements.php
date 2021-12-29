@@ -1,10 +1,11 @@
 <?php
 /**
 * DD_ELEMENTS
-* Render thesaurus elements html
+* Render thesaurus HTML elements
 *
 */
 class dd_elements {
+
 
 
 	/**********************************************************************
@@ -16,7 +17,23 @@ class dd_elements {
 	/**
 	* MAKETSLINE. CREA LINEA DE TESAURO CON ICONOS Y TÉRMINO
 	*/
-	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$properties,$traducible,$norden) {
+	protected function makeTSline(	$terminoID,
+									$termino,
+									$parent,
+									$children,
+									$def,
+									$obs,
+									$hijosD,
+									$hijosND,
+									$nIndexaciones,
+									$ncaptaciones,
+									$nordenV,
+									$resalte,
+									$modelo,
+									$propiedades,
+									$properties,
+									$traducible,
+									$norden) {
 
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
@@ -95,10 +112,10 @@ class dd_elements {
 
 			# Render Divs desplegables
 			if(count($ar_terminos_relacionados)>0)	$html .= $this->renderDivTR($terminoID); #die('6');
-			if(!empty($def)) 						$html .= $this->renderDivDescripcion($terminoID,$def);
-			if(!empty($obs)) 						$html .= $this->renderDivObservaciones($terminoID,$obs);
-			if(!empty($propiedades)) 				$html .= $this->renderDiv_propiedades($terminoID,$propiedades);
-			if(!empty($properties)) 				$html .= $this->renderDiv_properties($terminoID,$properties);
+			if(!empty($def))						$html .= $this->renderDivDescripcion($terminoID,$def);
+			if(!empty($obs))						$html .= $this->renderDivObservaciones($terminoID,$obs);
+			if(!empty($propiedades))				$html .= $this->renderDiv_propiedades($terminoID,$propiedades);
+			if(!empty($properties))					$html .= $this->renderDiv_properties($terminoID,$properties);
 			#$html .= $this->renderDivND($terminoID,$hijosND);
 			#$html .= $this->renderDivCintas($terminoID);
 
@@ -121,6 +138,7 @@ class dd_elements {
 	}//end renderBtnMas
 
 
+
 	/**
 	* RENDERBTNBORRAR. Crea el botón de borrado. Necesita el número de hijos y de indexaciones
 	*/
@@ -134,6 +152,7 @@ class dd_elements {
 
 		return $obj ;
 	}//end renderBtnBorrar
+
 
 
 	/**
@@ -166,6 +185,7 @@ class dd_elements {
 	}//end renderBtnNorden
 
 
+
 	/**
 	* RENDERBTNEDITTERMINO. crea el botón de editar
 	*/
@@ -179,7 +199,7 @@ class dd_elements {
 		$obj .= '></div>';
 
 		return $obj ;
-	}
+	}//end renderBtnEditTermino
 
 
 	/**
@@ -195,7 +215,7 @@ class dd_elements {
 		$obj .= '></div>';
 
 		return $obj ;
-	}
+	}//end renderBtnAddIndexacion
 
 
 
@@ -565,7 +585,7 @@ class dd_elements {
 					// $ob is null because the json cannot be decoded
 					$add_class = 'json_bad_alert';
 				}
-				$propiedades = json_encode($ob, JSON_PRETTY_PRINT);
+				$propiedades = json_encode($ob, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 			}
 
 		$obj_html  = '';
@@ -597,7 +617,7 @@ class dd_elements {
 		// 	$add_class = 'json_bad_alert';
 		// }
 
-		$properties_text = json_encode($properties, JSON_PRETTY_PRINT);
+		$properties_text = json_encode($properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	
 		$obj_html = '<div id="properties_'.$terminoID.'" class="divLineasInfo div_properties none $add_class">';
 		
