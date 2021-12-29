@@ -2611,7 +2611,9 @@
 		Clean Publication class DBi code
 		Clean code web_data::get_fragment_from_index_locator method. Unified response as object
 		Fixed diffusion_mysql error where automatic columns 'section_id', 'section_tipo,', 'lang' generating errors whe columns are added to a existing tables
-
+		29-12-2021
+		Fixed publication web_data get_PDO_connection error where port was not send into the dsn string
+		Re-factorized web_data functions get_publication_schema, get_table_fields, get_all_tables to use DDO connection
 
 
 
@@ -2644,7 +2646,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-12-2021T17:45:00');
+	define('DEDALO_BUILD'	, '29-12-2021T17:65:00');
 
 
 	/*
