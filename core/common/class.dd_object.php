@@ -340,12 +340,20 @@ class dd_object {
 	}
 
 	/**
-	* SET_COLUMN
+	* SET_VIEW
 	*/
-	// public function set_column($value) {
+	public function set_view($value) {
 
-	// 	$this->column = $value;
-	// }
+		$this->view = $value;
+	}
+
+	/**
+	* SET_FIXED_MODE
+	*/
+	public function set_fixed_mode($value) {
+
+		$this->fixed_mode = $value;
+	}
 
 
 
