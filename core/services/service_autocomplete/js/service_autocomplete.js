@@ -637,7 +637,7 @@ export const service_autocomplete = function() {
 		// operator selector
 		// get the operator to use into the filter free
 		const operator	= self.dd_request.search && self.dd_request.search.sqo_config && self.dd_request.search.sqo_config.operator
-			? rqo_config.search.sqo_config.operator 
+			? self.instance_caller.rqo_config.search.sqo_config.operator
 			: '$and'
 		
 			const operator_selector = ui.create_dom_element({
