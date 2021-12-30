@@ -289,6 +289,7 @@ export const ui = {
 		*/
 		build_content_data : (instance, options={}) => {
 
+			const button_close 	= options.button_close
 			const type			= instance.type
 			const component_css	= instance.context.css || {}
 			const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
@@ -301,7 +302,7 @@ export const ui = {
 				content_data.classList.add(...ar_css)
 
 			// button close
-				if(instance.mode==='edit_in_list' && !instance.is_inside_tool){
+				if(button_close !== null && instance.mode==='edit_in_list' && !instance.is_inside_tool){
 					const button_close = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button close',
@@ -1913,7 +1914,7 @@ export const ui = {
 	* 	Instance of section/component_portal
 	* @return DOM node header_wrapper
 	*/
-	render_list_header : (columns_map, self, add_column_id=true) =>{
+	render_list_header : (columns_map, self, add_column_id=false) =>{
 
 		const ar_nodes				= []
 		const columns_map_length	= columns_map.length
@@ -1988,16 +1989,6 @@ export const ui = {
 				header_wrapper.classList.add('with_debug_info_bar')
 			}
 
-		// id column
-			if (add_column_id) {
-				const id_column = ui.create_dom_element({
-					element_type	: "div",
-					text_content	: "ID",
-					class_name		: "id",
-					parent			: header_wrapper
-				})
-			}
-
 		// regular columns append
 			const ar_nodes_length = ar_nodes.length
 			for (let i = 0; i < ar_nodes_length; i++) {
@@ -2035,11 +2026,19 @@ export const ui = {
 		let ar_elements = []
 		const list_length = list.length
 		for (let i = 0; i < list_length; i++) {
+
 			const item = list[i]
-			const unit = (item.columns_map && item.columns_map.length>0)
-				? ui.flat_column_items(item.columns_map, level_max, type, level++).length || 1
-				: 1
-			ar_elements.push(unit+type) // like '1fr'
+
+			if (item.width) {
+				// defined width cases
+				ar_elements.push(item.width)
+			}else{
+				// non defined width cases, uses default grid measure like '1fr'
+				const unit = (item.columns_map && item.columns_map.length>0)
+					? ui.flat_column_items(item.columns_map, level_max, type, level++).length || 1
+					: 1
+				ar_elements.push(unit+type) // like '1fr'
+			}
 		}
 		return ar_elements
 	},//end flat_column_items
