@@ -6,5 +6,3 @@
 class section_tool extends section {
 
 }
-
-?>

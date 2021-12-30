@@ -222,7 +222,6 @@ class tool_common {
 					// fix cache
 					$client_registered_tools_records = $result->ar_records;
 			}
-
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
@@ -244,7 +243,6 @@ class tool_common {
 																 $record->section_tipo);
 				$dato = $component->get_dato();
 				$current_value = reset($dato);
-
 				if(isset($ar_tools) && !in_array($current_value->name, $ar_tools)){
 					continue;
 				}
