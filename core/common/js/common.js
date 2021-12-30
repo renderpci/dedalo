@@ -790,9 +790,9 @@ common.prototype.get_columns_map = function(){
 						continue
 					}
 
-				switch(self.model){
+				switch(self.context.view){
 					// component_portal will join the components that doesn't has columns defined.
-					case 'component_portal':
+					case 'line':
 
 						// find if the general column was created, if not create new one with the tipo of the component_portal to include all components.
 						const found	= columns_map.find(el => el.id===self.tipo)
