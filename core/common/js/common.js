@@ -227,7 +227,7 @@ common.prototype.render = async function (options={}) {
 						// }
 
 					const bool_select_list_body = (self.model==='section' && (self.mode==='list' || self.mode==='tm'))
-						|| (self.model==='component_portal');
+						|| (self.model==='component_portal' && self.view==='table');
 
 					const nodes_length = self.node.length
 					for (let i = nodes_length - 1; i >= 0; i--) {

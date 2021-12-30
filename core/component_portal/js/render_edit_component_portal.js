@@ -31,7 +31,7 @@ export const render_edit_component_portal = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node wrapper
+* @return DOM node wrapper | null
 */
 render_edit_component_portal.prototype.edit = async function(options) {
 
@@ -40,63 +40,83 @@ render_edit_component_portal.prototype.edit = async function(options) {
 	// view
 		const view	= self.context.view || 'table'
 
-console.log("view----------------------:",view);
-		switch(view) {
+	switch(view) {
 
-			case 'line':
-				return render_edit_view_line.render(self, options)
+		case 'line':
+			return render_edit_view_line.render(self, options)
 
-			case 'tree':
-				return render_edit_view_tree.render(self, options)
+		case 'tree':
+			return render_edit_view_tree.render(self, options)
 
-			case 'mosaic':
-
-			case 'table':
-			default:
-				return render_edit_view_table.render(self, options)
-		}
-};//end edit
+		case 'mosaic':
 
 
-export const render_column_component_info = function(options){
+		case 'table':
+		default:
+			return render_edit_view_table.render(self, options)
+	}
+
+	return null
+}//end edit
+
+
+
+/**
+* RENDER_COLUMN_COMPONENT_INFO
+* Render node for use in edit
+* @param object options
+* @return DOM DocumentFragment
+*/
+export const render_column_component_info = function(options) {
 
 	// options
 		const self 			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
-	console.log("self:",self);
-	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
-									&& item.section_id===section_id
-									&& item.section_tipo===section_tipo)
-	if (component_info){
-		const info_value = component_info.value.join('')
-		const column_info = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'column column_info',
-			inner_html		: info_value
-		})
 
-		return column_info
-	}
-}// end render_column_component_info()
+	const fragment = new DocumentFragment()
+
+	// component_info
+		const component_info = self.datum.data.find( item => item.tipo==='ddinfo' &&
+															 item.section_id===section_id &&
+															 item.section_tipo===section_tipo)
+		if (component_info) {
+
+			const info_value = component_info.value.join('')
+
+			ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: info_value,
+				parent			: fragment
+			})
+		}
+
+	return fragment
+}//end render_column_component_info()
 
 
-export const render_column_remove = function(options){
+
+/**
+* RENDER_COLUMN_REMOVE
+* Render node for use in edit
+* @param object options
+* @return DOM DocumentFragment
+*/
+export const render_column_remove = function(options) {
 
 	// options
 		const self		= options.caller
 		const row_key	= options.row_key
 
-	const remove_column = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'column remove_column',
-	})
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'button remove',
-		dataset			: { key : row_key },
-		parent			: remove_column
-	})
+	const fragment = new DocumentFragment()
 
-	return remove_column
+	// remove icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button remove',
+			dataset			: { key : row_key },
+			parent			: fragment
+		})
+
+	return fragment
 }// end render_column_remove()

@@ -25,7 +25,7 @@ export const render_edit_view_tree = function() {
 
 
 /**
-* render_edit_view_tree
+* RENDER_EDIT_VIEW_TREE
 * Manages the component's logic and appearance in client side
 */
 render_edit_view_tree.render = async function(self, options) {
@@ -34,20 +34,15 @@ render_edit_view_tree.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-	const columns_map = rebuild_columns_map(self)
-	self.columns_map = columns_map
+		const columns_map = rebuild_columns_map(self)
+		self.columns_map = columns_map
 
-	const ar_section_record	= await self.get_ar_instances({mode:'list'})
+	// ar_section_record
+		const ar_section_record	= await self.get_ar_instances({mode:'list'})
 
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)
 		if (render_level==='content') {
-			// show header_wrapper_list if is hidden
-				if (ar_section_record.length>0) {
-					self.node.map(el => {
-						el.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
-					})
-				}
 			return content_data
 		}
 
@@ -64,8 +59,9 @@ render_edit_view_tree.render = async function(self, options) {
 
 	// events
 		add_events(self, wrapper)
-	return wrapper;
 
+
+	return wrapper
 };//end edit
 
 
@@ -211,11 +207,11 @@ const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
 
-	const base_columns_map = await self.columns_map
+	// base_columns_map
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
 
-	columns_map.push(...base_columns_map)
-
-	// button_remove
+	// button_remove column
 		if (self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
@@ -226,8 +222,7 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	return columns_map
-};
-
+}//end rebuild_columns_map
 
 
 
@@ -248,35 +243,35 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// // button_add
-	// 	const button_add = ui.create_dom_element({
-	// 		element_type	: 'span',
-	// 		class_name		: 'button add',
-	// 		parent			: fragment
-	// 	})
-	// 	button_add.addEventListener("click", async function(e){
+	// button_add
+		// 	const button_add = ui.create_dom_element({
+		// 		element_type	: 'span',
+		// 		class_name		: 'button add',
+		// 		parent			: fragment
+		// 	})
+		// 	button_add.addEventListener("click", async function(e){
 
-	// 		//TO ADD SECTION SELECTOR
-	// 			const section_tipo = target_section_lenght >1
-	// 				? false
-	// 				: target_section[0].tipo
+		// 		//TO ADD SECTION SELECTOR
+		// 			const section_tipo = target_section_lenght >1
+		// 				? false
+		// 				: target_section[0].tipo
 
 
-	// 			// data_manager. create new record
-	// 			const api_response = await data_manager.prototype.request({
-	// 				body : {
-	// 					action				: 'add_new_element',
-	// 					source				: create_source(self),
-	// 					target_section_tipo	: section_tipo
-	// 				}
-	// 			})
-	// 			// add value to current data
-	// 			if (api_response.result) {
-	// 				self.refresh()
-	// 			}else{
-	// 				console.error("Error on api_response on try to create new row:", api_response);
-	// 			}
-	// 	})
+		// 			// data_manager. create new record
+		// 			const api_response = await data_manager.prototype.request({
+		// 				body : {
+		// 					action				: 'add_new_element',
+		// 					source				: create_source(self),
+		// 					target_section_tipo	: section_tipo
+		// 				}
+		// 			})
+		// 			// add value to current data
+		// 			if (api_response.result) {
+		// 				self.refresh()
+		// 			}else{
+		// 				console.error("Error on api_response on try to create new row:", api_response);
+		// 			}
+		// 	})
 
 	// button_link
 		const button_link = ui.create_dom_element({
@@ -284,7 +279,7 @@ const get_buttons = (self) => {
 			class_name		: 'button link',
 			parent			: fragment
 		})
-		button_link.addEventListener("click", async function(e){
+		button_link.addEventListener("click", async function(){
 			// const section_tipo	= select_section.value
 			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
 			const section_tipo	= target_section[0].tipo
@@ -424,7 +419,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -450,16 +445,17 @@ const render_references = function(ar_references) {
 			parent			: ul
 		})
 
-	const ref_length = ar_references.length
-	for (let i = 0; i < ref_length; i++) {
+	// li ar_references
+		const ref_length = ar_references.length
+		for (let i = 0; i < ref_length; i++) {
 
-		const reference = ar_references[i]
+			const reference = ar_references[i]
 
-		// li
-			const li = ui.create_dom_element({
-				element_type	: 'li',
-				parent			: ul
-			})
+			// li
+				const li = ui.create_dom_element({
+					element_type	: 'li',
+					parent			: ul
+				})
 			// button_link
 				const button_link = ui.create_dom_element({
 					element_type	: 'span',
@@ -472,15 +468,15 @@ const render_references = function(ar_references) {
 					// window.open(url,'ref_edit')
 				})
 			// label
-				const button_edit = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'label',
 					inner_html		: reference.label,
 					parent			: li
 				})
-	}
+		}
 
 	return fragment
-};//end render_references
+}//end render_references
 
 

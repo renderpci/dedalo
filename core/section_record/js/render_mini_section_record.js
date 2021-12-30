@@ -76,7 +76,6 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 						}else{
 							current_instance.render()
 							.then(function(current_instance_node){
-									console.log("current_instance_node:",current_instance_node);
 								resolve(true)
 							}).catch((errorMsg) => {
 								console.error(errorMsg);
