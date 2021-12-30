@@ -25,13 +25,13 @@ abstract class component_common extends common {
 
 		# STRUCTURE DATA
 		public $RecordObj_dd;				# obj ts
-		protected $modelo;
+		protected $model;
 		protected $norden;
 		protected $label;					# component label in current lang like 'Transcription'
 
 		protected $required;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
 		protected $debugger;				# info for admin
-		protected $ejemplo;					# ex. 'MO36001-GA'
+
 		protected $ar_tools_name = array('tool_time_machine','tool_lang','tool_replace_component_data','tool_add_component_data');
 		protected $ar_tools_obj;
 		protected $ar_authorized_tool_name;
@@ -296,9 +296,9 @@ abstract class component_common extends common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				// # Verify 'component_name' and 'tipo' are correct
-				// $modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				// if (!empty($component_name) && $component_name!==$modelo_name) {
-				// 	$msg = "Error Processing Request. Inconsistency detected and fixed with get_instance 'tipo' ($tipo). Expected model is ($modelo_name) and received model is ($component_name)";
+				// $model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				// if (!empty($component_name) && $component_name!==$model_name) {
+				// 	$msg = "Error Processing Request. Inconsistency detected and fixed with get_instance 'tipo' ($tipo). Expected model is ($model_name) and received model is ($component_name)";
 				// 	#throw new Exception($msg, 1);
 				// 	debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 				// }
@@ -1276,8 +1276,8 @@ abstract class component_common extends common {
 		}
 
 		if(SHOW_DEBUG===true) {
-			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
-			#return "COMMON[$modelo_name]: ".to_string($valor);
+			#$model_name = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
+			#return "COMMON[$model_name]: ".to_string($valor);
 		}
 
 		return to_string($valor);
@@ -1387,8 +1387,8 @@ abstract class component_common extends common {
 				$section_id 		= $resolve_section_id($source->section_id);
 				$section_tipo 		= $resolve_section_tipo($source->section_tipo);
 
-				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$component 			= component_common::get_instance($modelo_name,
+				$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 			= component_common::get_instance($model_name,
 																	 $component_tipo,
 																	 $section_id,
 																	 'list',
@@ -1470,7 +1470,7 @@ abstract class component_common extends common {
 				break;
 
 			default:
-				# get_ar_related_by_model: $modelo_name, $tipo, $strict=true
+				# get_ar_related_by_model: $model_name, $tipo, $strict=true
   				# $target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
 				$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
 				$target_section_tipo	= reset($ar_target_section_tipo);
@@ -1507,7 +1507,7 @@ abstract class component_common extends common {
 				return $ar_list_of_values_data[$uid];
 			}
 
-		// ar_componets_related. get_ar_related_by_model: $modelo_name, $tipo, $strict=true
+		// ar_componets_related. get_ar_related_by_model: $model_name, $tipo, $strict=true
 			$ar_componets_related = common::get_ar_related_by_model('component_', $this->tipo, false);
 
 		// Build query select
@@ -1561,13 +1561,13 @@ abstract class component_common extends common {
 				$ar_label = [];
 				foreach ($ar_componets_related as $related_tipo) {
 
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
-					// if ($modelo_name==='component_autocomplete_hi') {
-					if (in_array($modelo_name, component_relation_common::get_components_with_relations())) {
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
+					// if ($model_name==='component_autocomplete_hi') {
+					if (in_array($model_name, component_relation_common::get_components_with_relations())) {
 						# resolve
 						// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
 						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ', true, true);
-					}elseif ($modelo_name==='component_section_id') {
+					}elseif ($model_name==='component_section_id') {
 						$current_label = $current_row->{$related_tipo};
 					}else{
 						# use query select value
@@ -1954,9 +1954,9 @@ abstract class component_common extends common {
 
 
 		$response			= new stdClass();
-		$modelo_name		= get_called_class();
+		$model_name		= get_called_class();
 		$response->result	=0;
-		$response->msg		= "This component $modelo_name don't have update_dato_version, please check the class of the component <br />";
+		$response->msg		= "This component $model_name don't have update_dato_version, please check the class of the component <br />";
 
 		return $response;
 	}//end update_dato_version
@@ -2845,8 +2845,8 @@ abstract class component_common extends common {
 	        	// Override label with custom component parse
 	        		if (isset($properties->valor_arguments)) {
 	        			$c_component_tipo = isset($properties->stats_look_at) ? reset($properties->stats_look_at) : $tipo;
-						$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
-						$value 		 	  = $modelo_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
+						$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
+						$value 		 	  = $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
 					}
 
 	        	$label = strip_tags(trim($value));

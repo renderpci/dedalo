@@ -820,7 +820,7 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 * Used by portals to get all rows for render
 * @return array of objects (section_record instances)
 */
-component_common.prototype.get_ar_instances = async function(){
+component_common.prototype.get_ar_instances = async function(options={}){
 
 	const self = this
 
@@ -831,8 +831,10 @@ component_common.prototype.get_ar_instances = async function(){
 	// 		}
 	// 	}
 
+	// options
+		const mode = options.mode || self.mode || 'list'
+
 	// const records_mode	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
-	const records_mode		= null
 	const lang				= self.section_lang
 	const value				= self.data.value || []
 	const value_length		= value.length
@@ -862,11 +864,12 @@ component_common.prototype.get_ar_instances = async function(){
 				tipo			: self.tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
-				mode			: records_mode,
+				mode			: mode,
 				lang			: lang,
 				context			: current_context,
 				// data			: current_data,
 				datum			: self.datum,
+				row_key 		: i,
 				paginated_key	: locator.paginated_key, // used by autocomplete / portal
 				caller			: self,
 				columns_map		: self.columns_map,
