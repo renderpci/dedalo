@@ -26,23 +26,26 @@ class tools_register {
 		$info_file_processed = [];
 
 		// tipos
-			$tipo_name 		= 'dd1326';
-			$tipo_ontology 	= 'dd1334';
-			$tipo_version 	= 'dd1327';
+			$tipo_name		= 'dd1326';
+			$tipo_ontology	= 'dd1334';
+			$tipo_version	= 'dd1327';
 
 		// get the all tools folders
 			$ar_tools = (array)glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
 
 
 		// Ontologies. Get the all tools ontologies
-			$counter = 0;
-			$ar_ontologies 		 = [];
-			$info_objects_parsed = [];
+			$counter				= 0;
+			$ar_ontologies			= [];
+			$info_objects_parsed	= [];
 			foreach ($ar_tools as $current_dir_tool) {
 
+				// basse_name
+					$basename = pathinfo($current_dir_tool)['basename'];
+
 				// ignore folders with name different from pattern 'tool_*'
-					if (1!==preg_match('/\/tool_.*[^common]$/', $current_dir_tool, $output_array)) {
-						debug_log(__METHOD__." Ignored dir  ".to_string($current_dir_tool), logger::WARNING);
+					if ($basename==='tool_common' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1 ) {
+						debug_log(__METHOD__." Ignored dir  ".to_string($basename), logger::ERROR);
 						continue;
 					}
 
@@ -84,12 +87,12 @@ class tools_register {
 					$info_objects_parsed[] = $new_info_object;
 
 				// info_file_processed
-					$name   = reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'});
-					$version = reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'});
+					$name		= reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'});
+					$version	= reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'});
 					$info_file_processed[] = (object)[
-						'dir'   	=> str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
-						'name' 		=> $name,
-						'version' 	=> $version
+						'dir'		=> str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+						'name'		=> $name,
+						'version'	=> $version
 					];
 
 			}//end foreach ($ar_tools)
