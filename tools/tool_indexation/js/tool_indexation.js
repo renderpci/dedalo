@@ -201,7 +201,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 		const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==="area_thesaurus")
 		self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
 		// set instance in thesaurus mode 'relation'
-		self.area_thesaurus.thesaurus_mode = "relation"
+		self.area_thesaurus.context.thesaurus_mode = "relation"
 
 	// related_sections_list. load_related_sections_list. Get the relation list.
 	// This is used to build a select element to allow
