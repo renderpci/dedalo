@@ -25,8 +25,12 @@ export const render_edit_view_line = function() {
 
 
 /**
-* render_edit_view_line
+* RENDER_EDIT_VIEW_LINE
 * Manages the component's logic and appearance in client side
+* @param component_portal instance self
+* @param object options
+* @return promise
+* 	DOM node wrapper
 */
 render_edit_view_line.render = async function(self, options) {
 
@@ -34,20 +38,15 @@ render_edit_view_line.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-	const columns_map = rebuild_columns_map(self)
-	self.columns_map = columns_map
+		const columns_map = rebuild_columns_map(self)
+		self.columns_map = columns_map
 
-	const ar_section_record	= await self.get_ar_instances({mode:'list'})
+	// ar_section_record
+		const ar_section_record	= await self.get_ar_instances({mode:'list'})
 
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)
 		if (render_level==='content') {
-			// show header_wrapper_list if is hidden
-				if (ar_section_record.length>0) {
-					self.node.map(el => {
-						el.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
-					})
-				}
 			return content_data
 		}
 
@@ -63,14 +62,17 @@ render_edit_view_line.render = async function(self, options) {
 
 	// events
 		add_events(self, wrapper)
-	return wrapper;
 
-};//end edit
+
+	return wrapper
+}//end edit
 
 
 
 /**
 * ADD_EVENTS
+* @param component_portal instance self
+* @param DOM node wrapper
 * @return bool
 */
 export const add_events = function(self, wrapper) {
@@ -153,7 +155,7 @@ export const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -202,7 +204,7 @@ const get_content_data = async function(self, ar_section_record) {
 			  content_data.appendChild(fragment)
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -248,10 +250,15 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	return columns_map
-};
+}//end rebuild_columns_map
 
 
 
+/**
+* RENDER_COLUMN_ID
+* @param object options
+* @return DOM DocumentFragment
+*/
 render_edit_view_line.render_column_id = function(options){
 
 	// options
@@ -259,17 +266,15 @@ render_edit_view_line.render_column_id = function(options){
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
-	// section_id column
-		const id_column = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'column'
-		})
+	const fragment = new DocumentFragment()
+
+	// edit_button
 		const edit_button = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button edit',
-			parent			: id_column
+			parent			: fragment
 		})
-		edit_button.addEventListener("click", function(e){
+		edit_button.addEventListener("click", function(){
 			const user_navigation_rqo = {
 				caller_id	: self.id,
 				source		: {
@@ -293,9 +298,8 @@ render_edit_view_line.render_column_id = function(options){
 			event_manager.publish('user_navigation', user_navigation_rqo)
 		})
 
-	return id_column
-}// end render_column_id()
-
+	return fragment
+}//end render_column_id
 
 
 
@@ -465,12 +469,13 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
 /**
 * RENDER_REFERENCES
+* @param array ar_references
 * @return DOM node fragment
 */
 const render_references = function(ar_references) {
@@ -491,16 +496,17 @@ const render_references = function(ar_references) {
 			parent			: ul
 		})
 
-	const ref_length = ar_references.length
-	for (let i = 0; i < ref_length; i++) {
+	// li references list
+		const ref_length = ar_references.length
+		for (let i = 0; i < ref_length; i++) {
 
-		const reference = ar_references[i]
+			const reference = ar_references[i]
 
-		// li
-			const li = ui.create_dom_element({
-				element_type	: 'li',
-				parent			: ul
-			})
+			// li
+				const li = ui.create_dom_element({
+					element_type	: 'li',
+					parent			: ul
+				})
 			// button_link
 				const button_link = ui.create_dom_element({
 					element_type	: 'span',
@@ -510,18 +516,18 @@ const render_references = function(ar_references) {
 				button_link.addEventListener("click", function(e){
 					e.stopPropagation()
 					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
-					// window.open(url,'ref_edit')
 				})
 			// label
-				const button_edit = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'label',
 					inner_html		: reference.label,
 					parent			: li
 				})
-	}
+		}//end for (let i = 0; i < ref_length; i++)
+
 
 	return fragment
-};//end render_references
+}//end render_references
 
 

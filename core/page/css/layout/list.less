@@ -124,11 +124,11 @@
 		// margin: 1px;
 
 		&.column_info {
-			padding: 0.5em;
+			// padding: 0.5em;
 		}
 
 		&.remove_column {
-			padding-top: 0.25em;
+			// padding-top: 0.25em;
 		}
 
 		&.component_portal {
@@ -148,8 +148,14 @@
 	}
 	// only portals of first level inside section_record
 	.content_data >.section_record >.column.component_portal {
-		display: grid;
+		// display: grid;
 		// background-color: #e2cbf6;
+	}
+	// view_line case
+	.wrapper_component.view_line > .content_data >.section_record >.column {
+		outline: none;
+		box-shadow: none;
+		padding: 0.25rem;
 	}
 
 
