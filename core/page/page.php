@@ -154,7 +154,7 @@
 							$current_context->hierarchy_terms = $_GET['hierarchy_terms'];
 						}
 						$context[] = $current_context;
-							dump($current_context, ' current_context ++ '.to_string($mode));
+							// dump($current_context, ' current_context ++ '.to_string($mode));
 					break;
 
 				case (strpos($model, 'area')===0):
