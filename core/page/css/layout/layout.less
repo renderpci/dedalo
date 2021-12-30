@@ -810,7 +810,7 @@
 				//outline: 1px solid #EAEAEA;
 				word-wrap: break-word;
 				word-break: break-all;
-				overflow: hidden;
+				// overflow: hidden;
 				// outline: 1px solid rgba(216,216,216,.43);
 				// border-bottom: 1px solid @color_grey_medium;
 				box-shadow: 0 -1px 0 @color_grey_light; // simulate outline
@@ -1217,6 +1217,20 @@
 
 				>.content_data {
 					flex-wrap: wrap !important;
+
+					.view_line& {
+						// background-color: #f0c2fe !important;
+						display: grid;
+
+						.section_record.list {
+							display: flex;
+							.column {
+								display: flex;
+								flex: 0 1 auto;
+								align-items: center;
+							}
+						}
+					}
 
 					ul {
 						// background-color: #55f550;
