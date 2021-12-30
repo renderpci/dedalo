@@ -4,9 +4,9 @@
 
 
 // imports
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {get_instance, delete_instance} from '../../common/js/instances.js'
+	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'
 
 
@@ -1196,7 +1196,7 @@ export const ui = {
 			const class_name				= options.class_name
 			const style						= options.style
 			const data_set					= (typeof options.dataset!=="undefined") ? options.dataset : options.data_set
-			const custom_function_events	= options.custom_function_events
+			// const custom_function_events	= options.custom_function_events
 			const title_label				= options.title_label || options.title
 			const text_node					= options.text_node
 			const text_content				= options.text_content
@@ -1448,7 +1448,7 @@ export const ui = {
 	/**
 	* TOGGLE_INSPECTOR
 	*/
-	toggle_inspector : (e) => {
+	toggle_inspector : () => {
 
 		const inspector_wrapper = document.querySelector(".inspector")
 		if (inspector_wrapper) {
@@ -1709,8 +1709,6 @@ export const ui = {
 			// 	console.log("history:",history, this);
 			// history.pushState(state, title, url)
 
-
-
 		return modal_container
 	},//end attach_to_modal
 
@@ -1758,7 +1756,7 @@ export const ui = {
 			const range = document.createRange();
 			range.setStart(contenteditable, 0);
 			range.setEnd(contenteditable, 3);
-			const sel = window.getSelection();
+			// const sel = window.getSelection();
 
 		// const regext = (text, full_word) => {
 		// 	const regext_text = text.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&').replace(/\s/g, '[^\\S\\r\\n]');
@@ -1783,7 +1781,6 @@ export const ui = {
 					}
 
 					var innerText = getText(node);
-
 
 					if (typeof innerText[0] === 'string') {
 						// Bridge nested text-node data so that they're
@@ -1838,10 +1835,10 @@ export const ui = {
 		const body_class	= options.body_class 	|| 'light'
 		const footer_class	= options.footer_class 	|| 'light'
 		const user_options	= options.user_options 	|| [{
-								id			: 1,
-								label		: get_label.ok,
-								class_name	: 'light'
-							}]
+									id			: 1,
+									label		: get_label.ok,
+									class_name	: 'light'
+								}]
 
 		// header
 			const header = ui.create_dom_element({
@@ -1914,7 +1911,7 @@ export const ui = {
 	* 	Instance of section/component_portal
 	* @return DOM node header_wrapper
 	*/
-	render_list_header : (columns_map, self, add_column_id=false) =>{
+	render_list_header : (columns_map, self) =>{
 
 		const ar_nodes				= []
 		const columns_map_length	= columns_map.length
@@ -2092,60 +2089,59 @@ export const ui = {
 
 
 
+	/**
+	* EXEC_SCRIPTS_INSIDE
+	* @return js promise
+	*/
+		// exec_scripts_inside( element ) {
+		// 	console.log("context:",context);
 
-	// /**
-	// * EXEC_SCRIPTS_INSIDE
-	// * @return js promise
-	// */
-	// exec_scripts_inside( element ) {
-	// 	console.log("context:",context);
+		// 	const scripts 		 = Array.prototype.slice.call(element.getElementsByTagName("script"))
+		// 	const scripts_length = scripts.length
+		// 	if (scripts_length<1) return false
 
-	// 	const scripts 		 = Array.prototype.slice.call(element.getElementsByTagName("script"))
-	// 	const scripts_length = scripts.length
-	// 	if (scripts_length<1) return false
+		// 	const js_promise = new Promise((resolve, reject) => {
 
-	// 	const js_promise = new Promise((resolve, reject) => {
+		// 		const start = new Date().getTime()
 
-	// 		const start = new Date().getTime()
+		// 		for (let i = 0; i < scripts_length; i++) {
 
-	// 		for (let i = 0; i < scripts_length; i++) {
+		// 			if(SHOW_DEBUG===true) {
+		// 				var partial_in = new Date().getTime()
+		// 			}
 
-	// 			if(SHOW_DEBUG===true) {
-	// 				var partial_in = new Date().getTime()
-	// 			}
+		// 			if (scripts[i].src!=="") {
+		// 				const tag 	  = document.createElement("script")
+		// 					  tag.src = scripts[i].src
+		// 				document.getElementsByTagName("head")[0].appendChild(tag)
 
-	// 			if (scripts[i].src!=="") {
-	// 				const tag 	  = document.createElement("script")
-	// 					  tag.src = scripts[i].src
-	// 				document.getElementsByTagName("head")[0].appendChild(tag)
+		// 			}else{
+		// 				//eval(scripts[i].innerHTML);
+		// 				console.log(scripts[i].innerHTML); //continue;
 
-	// 			}else{
-	// 				//eval(scripts[i].innerHTML);
-	// 				console.log(scripts[i].innerHTML); //continue;
+		// 				// Encapsulate code in a function and execute as well
+		// 				const my_func = new Function(scripts[i].innerHTML)
+		// 					//console.log("my_func:",my_func); continue;
+		// 					my_func() // Exec
+		// 			}
 
-	// 				// Encapsulate code in a function and execute as well
-	// 				const my_func = new Function(scripts[i].innerHTML)
-	// 					//console.log("my_func:",my_func); continue;
-	// 					my_func() // Exec
-	// 			}
+		// 			if(SHOW_DEBUG===true) {
+		// 				const end  	= new Date().getTime()
+		// 				const time 	= end - start
+		// 				const partial = end - partial_in
+		// 				//console.log("->insertAndExecute: [done] "+" - script time: " +time+' ms' + ' (partial:'+ partial +')')
+		// 			}
+		// 		}
 
-	// 			if(SHOW_DEBUG===true) {
-	// 				const end  	= new Date().getTime()
-	// 				const time 	= end - start
-	// 				const partial = end - partial_in
-	// 				//console.log("->insertAndExecute: [done] "+" - script time: " +time+' ms' + ' (partial:'+ partial +')')
-	// 			}
-	// 		}
-
-	// 	});//end js_promise
-
-
-	// 	return js_promise;
-	// };//end  exec_scripts_inside
+		// 	});//end js_promise
 
 
+		// 	return js_promise;
+		// };//end  exec_scripts_inside
 
-};//end   ui
+
+
+};//end ui
 
 
 

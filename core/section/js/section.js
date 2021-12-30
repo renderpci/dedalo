@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER,  DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -188,7 +188,7 @@ section.prototype.init = async function(options) {
 *	bool true
 */
 section.prototype.build = async function(autoload=false) {
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -307,7 +307,7 @@ section.prototype.build = async function(autoload=false) {
 									inner_html		: get_label.debug || "Debug",
 									parent			: debug
 								})
-								button_debug.addEventListener("click", function(e){
+								button_debug.addEventListener("click", function(){
 									this.remove()
 
 									// collect debug data

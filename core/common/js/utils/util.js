@@ -95,7 +95,7 @@ export async function observe_changes(element, config, once) {
 
 	// config are the options for the observer (which mutations to observe)
 
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve) => {
 		// Callback function to execute when mutations are observed
 		const callback = function(mutationsList, observer) {
 				// Use traditional 'for loops' for IE 11
@@ -130,16 +130,21 @@ export async function observe_changes(element, config, once) {
 
 
 /**
- *  OBJECT_TO_URL_VARS
- */
+* OBJECT_TO_URL_VARS
+* @param object vars_obj
+* @return string url_vars
+*/
 export function object_to_url_vars( vars_obj ) {
 
 	const pairs = []
 	for (const key in vars_obj) {
 		const current_value = vars_obj[key]
-
 		pairs.push( key+'='+current_value )
 	}
 
-	return pairs.join("&")
-}// object_to_url_vars
+	const url_vars = pairs.join("&")
+
+	return url_vars
+}//end object_to_url_vars
+
+
