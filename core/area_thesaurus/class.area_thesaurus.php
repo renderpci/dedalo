@@ -336,7 +336,6 @@ class area_thesaurus extends area_common {
 	}//end get_hierarchy_name
 
 
-
 	/**
 	* GET_OPTIONS_FOR_SEARCH_HIERARCHIES
 	* @return object $options
@@ -654,5 +653,7 @@ class area_thesaurus extends area_common {
 
 		return $ar_mix;
 	}//end walk_hierarchy_data
+
+
 
 }//end area_thesaurus

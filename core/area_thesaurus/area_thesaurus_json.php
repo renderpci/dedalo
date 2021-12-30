@@ -38,7 +38,7 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		// hierarchy_sections - get the hierarchy configurationb nodes to build the root terms
+		// hierarchy_sections - get the hierarchy configuration nodes to build the root terms
 			$terms_are_model = isset($this->build_options->terms_are_model) ? $this->build_options->terms_are_model : false;
 			$hierarchy_sections = $this->get_hierarchy_sections(null,null,$terms_are_model); // $this->get_data_items();
 

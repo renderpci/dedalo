@@ -73,7 +73,7 @@
 
 					// tool_context
 						$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
-							? key($properties->tool_config)
+							? array_key_first(get_object_vars($properties->tool_config))
 							: false;
 						if ($tool_name) {
 							$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
@@ -133,13 +133,38 @@
 						$context[] = $current_context;
 					break;
 
+				case ($model==='area_thesaurus'):
+
+					$area = area::get_instance($model, $tipo, MODE);
+					$area->set_lang(DEDALO_DATA_LANG);
+
+					// add to page context
+						$current_context =$area->get_structure_context(1, true);
+
+						if (isset($_GET['thesaurus_mode'])) {
+							$current_context->thesaurus_mode = $_GET['thesaurus_mode'];
+						}
+						if (isset($_GET['hierarchy_types'])) {
+							$current_context->hierarchy_types = $_GET['hierarchy_types'];
+						}
+						if (isset($_GET['hierarchy_sections'])) {
+							$current_context->hierarchy_sections = $_GET['hierarchy_sections'];
+						}
+						if (isset($_GET['hierarchy_terms'])) {
+							$current_context->hierarchy_terms = $_GET['hierarchy_terms'];
+						}
+						$context[] = $current_context;
+							dump($current_context, ' current_context ++ '.to_string($mode));
+					break;
+
 				case (strpos($model, 'area')===0):
 
 					$area = area::get_instance($model, $tipo, MODE);
 					$area->set_lang(DEDALO_DATA_LANG);
 					
 					// add to page context
-						$context[] = $area->get_structure_context(1, true);
+						$current_context =$area->get_structure_context(1, true);
+						$context[] = $current_context;
 					break;
 
 				default:

@@ -79,10 +79,7 @@ area_thesaurus.prototype.init = async function(options) {
 		const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
 		common.prototype.load_style(css_url2)
 
-	// thesaurus mode
-		self.thesaurus_mode = options.thesaurus_mode || 'default' // 'relation'
-
-	// call the generic commom tool init
+	// call the generic common tool init
 		const common_init = area_common.prototype.init.call(this, options);
 
 	return common_init
@@ -189,6 +186,9 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	// section tipo
 		self.section_tipo = self.context.section_tipo || null
+
+	// thesaurus_mode
+		self.thesaurus_mode = self.context.thesaurus_mode || 'default'
 
 	// filter
 		if (!self.filter) {

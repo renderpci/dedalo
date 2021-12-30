@@ -52,7 +52,7 @@ class area_common extends common  {
 		$this->define_modo($modo);
 
 
-		# common load tesauro data of current obj
+		# common load thesaurus data of current obj
 		parent::load_structure_data();
 
 		return true;
