@@ -7,7 +7,7 @@
 
 
 /**
-* COMPONENT_RELATION_PARENT
+* COMPONENT_SEMANTIC_NODE
 */
 export const component_semantic_node = component_portal
 

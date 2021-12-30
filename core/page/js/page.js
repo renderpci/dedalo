@@ -326,7 +326,6 @@ const instantiate_page_element = function(self, ddo) {
 				instance_options.config		= config
 			}
 
-
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
 
