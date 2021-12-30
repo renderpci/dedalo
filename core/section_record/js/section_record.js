@@ -7,7 +7,9 @@
 	//import {event_manager} from '../../common/js/event_manager.js'
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
-	import {render_section_record} from '../../section_record/js/render_section_record.js'
+	import {render_list_section_record} from '../../section_record/js/render_list_section_record.js'
+	import {render_edit_section_record} from '../../section_record/js/render_edit_section_record.js'
+	import {render_mini_section_record} from '../../section_record/js/render_mini_section_record.js'
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	//import {context_parser} from '../../common/js/context_parser.js'
@@ -34,7 +36,7 @@ export const section_record = function() {
 	this.data			= null
 
 	this.paginated_key	= null
-
+	this.row_key 		= null
 	// control
 	//this.builded		= false
 
@@ -65,10 +67,11 @@ export const section_record = function() {
 	section_record.prototype.build		= common.prototype.build
 	section_record.prototype.destroy	= common.prototype.destroy
 	section_record.prototype.render		= common.prototype.render
-	section_record.prototype.list		= render_section_record.prototype.list
-	section_record.prototype.tm			= render_section_record.prototype.list
-	section_record.prototype.search		= render_section_record.prototype.list
-	section_record.prototype.edit		= render_section_record.prototype.edit
+	section_record.prototype.list		= render_list_section_record.prototype.list
+	section_record.prototype.tm			= render_list_section_record.prototype.list
+	section_record.prototype.search		= render_list_section_record.prototype.list
+	section_record.prototype.edit		= render_edit_section_record.prototype.edit
+	section_record.prototype.mini		= render_mini_section_record.prototype.mini
 
 
 
@@ -95,6 +98,7 @@ section_record.prototype.init = async function(options) {
 	self.context			= options.context
 	// self.data			= options.data
 	self.paginated_key		= options.paginated_key
+	self.row_key			= options.row_key
 
 	self.events_tokens		= []
 	self.ar_instances		= []
@@ -123,6 +127,11 @@ section_record.prototype.init = async function(options) {
 		self.status = 'initied'
 
 
+		if(self.caller.tipo==='numisdata30') {
+				console.log("///////////////////////////// self:",self);
+		}
+
+
 	return self
 };//end init
 
@@ -136,12 +145,15 @@ section_record.prototype.init = async function(options) {
 */
 const add_instance = async (self, current_context, section_id, current_data, column_id) => {
 	// const t0 = performance.now()
+
 	const instance_options = {
 		model			: current_context.model,
 		tipo			: current_context.tipo,
 		section_tipo	: current_context.section_tipo,
 		section_id		: section_id,
-		mode			: current_context.mode,
+		mode			: (current_context.fixed_mode)
+			? current_context.mode
+			: self.mode,
 		lang			: current_context.lang,
 		section_lang	: self.lang,
 		parent			: current_context.parent,
@@ -310,7 +322,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 						const current_ddo = ar_first_level_ddo[k]
 
-						// if the ddo has column_id (normally all component has it, see in common.js get_columns() method)
+						// if the ddo has column_id (normally all component has it, you can see it in common.js get_columns() method)
 						if(current_ddo.column_id && current_ddo.column_id===current_colum.id){
 
 							// check if the column of the component is already loaded, if exists don't load it.
@@ -334,23 +346,30 @@ section_record.prototype.get_ar_columns_instances = async function(){
 										continue;
 									}
 
-							// new_context. clone the current_context to prevent changes in it.
+							// new_context. clone the current_context to prevent changes in the original.
 								const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
 								new_context.columns_map = (current_colum.columns_map)
 									? current_colum.columns_map
 									: false
+								// set the fixed_mode when is set by preferences, properties or tools, to maintain the mode defined
+								// if not the ddo will get the mode of the section_record
+								if(current_ddo.fixed_mode){
+									new_context.fixed_mode = current_ddo.fixed_mode
+								}
+
 
 							// instance create and set
 								const current_instance = await add_instance(self, new_context, section_id, current_data, current_colum.id)
 								self.ar_instances.push(current_instance)
-						}
-					}
-				}
-		}
+						}// end if(current_ddo.column_id..
+					}// end for (let k = 0; k < ar_first_level_ddo_len; k++)
+				}//end for (let j = 0; j < request_config_length; j++)
+		}// end for (let i = 0; i < columns_map_length; i++)
 
 
 	return self.ar_instances
 };//end get_ar_columns_instances
+
 
 
 // /**
