@@ -504,6 +504,7 @@ section.prototype.get_ar_instances = async function(){
 				context			: current_context,
 				// data			: current_data,
 				datum			: self.datum,
+				row_key 		: i,
 				caller			: self,
 				offset			: offset,
 				columns_map		: self.columns_map,
