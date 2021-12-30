@@ -228,7 +228,7 @@ class component_relation_common extends component_common {
 	}//end load_component_dato
 
 
-/**
+	/**
 	* GET_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
@@ -266,14 +266,17 @@ class component_relation_common extends component_common {
 		// get the ddo_map to be used to create the components related to the portal
 		$ddo_map = $dedalo_request_config->show->ddo_map;
 
-		// $inverted_columns = $this->get_ar_inverted_paths($ddo_map);
-		// dump($inverted_columns, ' inverted_columns +------------////////------------------------+ '.to_string());
-
 		$ar_cells		= [];
 		$ar_columns_obj	= [];
 		$sub_row_count		= 0;
 		$sub_column_count	= null;
-		$column_obj			= $this->column_obj ?? new stdClass();
+		// the column_object could be injected for the caller or build new one
+		if(isset($this->column_obj)){
+			$column_obj = $this->column_obj;
+		}else{
+			$column_obj = new stdClass();
+				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+		}
 
 		// children_resursive function, get all ddo chain that depends of this component
 			if (!function_exists('get_children_resursive')) {
