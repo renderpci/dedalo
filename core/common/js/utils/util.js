@@ -128,3 +128,18 @@ export async function observe_changes(element, config, once) {
 }//end observe_changes
 
 
+
+/**
+ *  OBJECT_TO_URL_VARS
+ */
+export function object_to_url_vars( vars_obj ) {
+
+	const pairs = []
+	for (const key in vars_obj) {
+		const current_value = vars_obj[key]
+
+		pairs.push( key+'='+current_value )
+	}
+
+	return pairs.join("&")
+}// object_to_url_vars
