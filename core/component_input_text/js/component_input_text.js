@@ -5,7 +5,7 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {common,create_source} from '../../common/js/common.js'
+	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_input_text} from '../../component_input_text/js/render_edit_component_input_text.js'
 	import {render_list_component_input_text} from '../../component_input_text/js/render_list_component_input_text.js'
@@ -38,7 +38,7 @@ export const component_input_text = function(){
 
 
 	return true
-};//end component_input_text
+}//end component_input_text
 
 
 
@@ -82,7 +82,7 @@ component_input_text.prototype.active = function() {
 	//console.log("Yujuu! This is my component custom active test triggered after ui.active. id:", this.id )
 
 	return true
-};//end active
+}//end active
 
 
 
@@ -100,7 +100,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 	if (new_value.length<1) return false
 
-	const unique_config = self.context.properties.unique
+	// const unique_config = self.context.properties.unique
 
 	// search item rebuild filter q param and others
 		const sqo = self.dd_request.search.find(item => item.typo==='sqo')
@@ -133,12 +133,9 @@ component_input_text.prototype.is_unique = async function(new_value){
 				}
 				filter.push(new_item_filter)
 			}
-
 			//console.log("filter_item:",filter_item);
 			//console.log("new_item_filter:",new_item_filter);
 			// console.log("sqo:",sqo);
-
-
 
 	// load data
 		const current_data_manager	= new data_manager()
@@ -156,7 +153,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 		}
 
 	return record
-};//end is_unique
+}//end is_unique
 
 
 
@@ -189,6 +186,6 @@ component_input_text.prototype.get_fallback_value = (value, fallback_value)=>{
 	}
 
 	return fallback
-};//end get_fallback_value
+}//end get_fallback_value
 
 

@@ -16,7 +16,7 @@
 export const render_edit_component_input_text = function() {
 
 	return true
-};//end render_edit_component_input_text
+}//end render_edit_component_input_text
 
 
 
@@ -55,7 +55,7 @@ render_edit_component_input_text.prototype.edit = async function(options={render
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -230,7 +230,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -240,9 +240,8 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = function(self) {
 
-	// sort vars
+	// short vars
 		const value				= self.data.value
-		const mode				= self.mode
 		const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
@@ -267,7 +266,7 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -325,7 +324,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -339,7 +338,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
 	const element_type			= (multi_line===true) ? 'textarea' :'input'
 	const is_inside_tool		= self.is_inside_tool
-	const with_lang_versions	= self.context.properties.with_lang_versions || false
+	// const with_lang_versions	= self.context.properties.with_lang_versions || false
 
 
 	// li
@@ -371,6 +370,6 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 
 	return li
-};//end input_element
+}//end input_element
 
 

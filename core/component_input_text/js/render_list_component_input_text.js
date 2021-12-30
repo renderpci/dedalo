@@ -16,7 +16,7 @@
 export const render_list_component_input_text = function() {
 
 	return true
-};//end render_list_component_input_text
+}//end render_list_component_input_text
 
 
 
@@ -44,6 +44,6 @@ render_list_component_input_text.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

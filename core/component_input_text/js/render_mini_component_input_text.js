@@ -16,7 +16,7 @@
 export const render_mini_component_input_text = function() {
 
 	return true
-};//end render_mini_component_input_text
+}//end render_mini_component_input_text
 
 
 
@@ -43,6 +43,6 @@ render_mini_component_input_text.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 
