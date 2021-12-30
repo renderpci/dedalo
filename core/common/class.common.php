@@ -209,6 +209,18 @@ abstract class common {
 
 
 	/**
+	* GET_MODEL
+	* @return string $model
+	* 	Is the self class name like 'component_autocomplete'
+	*/
+	public function get_model() {
+
+		return get_called_class();
+	}//end get_model
+
+
+
+	/**
 	* SET_PERMISSIONS
 	*/
 	public function set_permissions( $number ) {
@@ -1480,6 +1492,11 @@ abstract class common {
 					$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
 				}
 
+			// view, used only by portals
+				if($model==='component_portal' || strpos($model, 'component_relation_')===0 || $model==='component_semantic_node'){
+					$dd_object->view = $this->get_view();
+				}
+
 
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
@@ -2309,6 +2326,12 @@ abstract class common {
 									? $tipo
 									: $current_ddo_map->parent;
 
+							// when the mode is set in properties or is set by tool or user templates
+							// set the fixed_mode to true, to maintenance the mode across changes in render process
+								if(isset($current_ddo_map->mode)){
+									$current_ddo_map->fixed_mode = true;
+								}
+
 							// mode
 								$current_ddo_map->mode = isset($current_ddo_map->mode)
 									? $current_ddo_map->mode
@@ -2548,6 +2571,10 @@ abstract class common {
 									: [$target_section_tipo];
 							}
 						}
+						if(isset($properties->mode)){
+							$current_mode = $properties->mode;
+							$current_fixed_mode = true;
+						}
 					}
 
 					$ddo = new dd_object();
@@ -2557,6 +2584,10 @@ abstract class common {
 						$ddo->set_parent($tipo);
 						$ddo->set_mode($current_mode);
 						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
+					// used by component_semantic_node for force the render mode
+					if(isset($current_fixed_mode)){
+						$ddo->set_fixed_mode($current_fixed_mode);
+					}
 
 					return $ddo;
 				}, $ar_related_clean);
@@ -3360,7 +3391,7 @@ abstract class common {
 	* GET_AR_INVERTED_PATHS
 	* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc)
 	* get the path in inverse format, the last in the chain will be the first object [0]
-	* @return array ar_inverted_paths the the speific paths, with inverse path format.
+	* @return array ar_inverted_paths the the specific paths, with inverse path format.
 	*/
 	public function get_ar_inverted_paths($full_ddo_map){
 
@@ -3413,6 +3444,40 @@ abstract class common {
 
 		return $ar_inverted_paths;
 	}// end get_ar_inverted_paths
+
+
+
+	/**
+	* GET_VIEW
+	* @return string $view
+	*/
+	public function get_view() {
+
+		// properties defined case
+			$properties = $this->get_properties();
+			if(isset($properties->view)){
+				return $properties->view;
+			}
+
+		// non relation components cases as 'component_input_text'
+			$ar_related = component_relation_common::get_components_with_relations();
+			if(!in_array($this->get_model(), $ar_related)){
+				return 'default';
+			}
+
+		// relation components like 'component_portal'
+			$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+			switch ($real_model) {
+				case 'component_portal':
+					$view = 'table';
+					break;
+				default:
+					$view = 'line';
+					break;
+			}
+
+		return $view;
+	}//end get_view
 
 
 }//end class common
