@@ -20,6 +20,7 @@ export const component_common = function(){
 };//end component_common
 
 
+
 // component_common.prototype.build_rqo_show = common.prototype.build_rqo_show
 
 
@@ -30,7 +31,7 @@ export const component_common = function(){
 * @return bool true
 */
 component_common.prototype.init = async function(options) {
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -156,7 +157,7 @@ component_common.prototype.init = async function(options) {
 * @return bool
 */
 component_common.prototype.build = async function(autoload=false){
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -304,7 +305,6 @@ component_common.prototype.build_OLD = async function(autoload=false){
 
 
 
-
 /**
 * INIT_EVENTS_SUBSCRIPTION
 * Set component structure properties defined events (used in component info mainly)
@@ -423,7 +423,7 @@ component_common.prototype.save = async function(changed_data) {
 				// debug
 					if(SHOW_DEBUG===true) {
 						if (api_response.result) {
-							const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
+							// const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
 							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
 							console.log(`[component_common.save] action:'${changed_data.action}' lang:'${self.context.lang}', key:'${changed_data.key}'`);
 							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
@@ -672,7 +672,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 	if(SHOW_DEBUG===true) {
 		// console.log("======= update_data_value changed_data:", clone(changed_data));
-		const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
+		// const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
 		// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
 	}
 
@@ -737,6 +737,9 @@ component_common.prototype.change_value = async function(options) {
 
 	// update the data in the instance previous to save (returns bool)
 		const update_data = self.update_data_value(changed_data)
+		if (!update_data) {
+			return false
+		}
 
 	// save. save and rebuild the component
 		const api_response = await self.save(changed_data)

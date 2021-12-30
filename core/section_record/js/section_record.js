@@ -5,13 +5,13 @@
 
 // imports
 	//import {event_manager} from '../../common/js/event_manager.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {render_list_section_record} from '../../section_record/js/render_list_section_record.js'
 	import {render_edit_section_record} from '../../section_record/js/render_edit_section_record.js'
 	import {render_mini_section_record} from '../../section_record/js/render_mini_section_record.js'
 	import * as instances from '../../common/js/instances.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	//import {context_parser} from '../../common/js/context_parser.js'
 
 
@@ -302,7 +302,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 	// instances
 	// get the columns of the component and match it with the ddo
-		const ar_promises		= []
+		// const ar_promises		= []
 		const columns_map_length	= columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 

@@ -144,7 +144,7 @@ component_portal.prototype.init = async function(options) {
 * @return bool
 */
 component_portal.prototype.build = async function(autoload=false){
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 

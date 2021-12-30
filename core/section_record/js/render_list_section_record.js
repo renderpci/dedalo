@@ -478,7 +478,7 @@ const render_column_node = function(component_instance, self, ar_instances){
 	// console.log("component.model:",component.model, component.tipo, column_node);
 
 	return column_node
-}// end render_column_node
+}//end render_column_node
 
 
 
@@ -498,6 +498,7 @@ const render_column_node_callback = function(column_obj, self){
 	})
 	// column_node.id = column_id
 
-
 	return column_node
 }// end render_column_node_callback
+
+

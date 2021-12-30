@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, JsonView */
 /*eslint no-undef: "error"*/
 
 
@@ -8,7 +8,7 @@
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
+	import {delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -46,7 +46,7 @@ common.prototype.init = async function(options) {
 		self.lang			= options.lang // current component lang like 'lg-nolan'
 
 	// RQO - optional, used to define specific rqo for the instance, used in dd_grid (every dd_grind is loaded with specific rqo)
-		self.rqo 			= options.rqo
+		self.rqo			= options.rqo
 
 	// DOM
 		self.node			= [] // array of component nodes places in light DOM
@@ -94,7 +94,7 @@ common.prototype.build = async function () {
 * SET_CONTEXT_VARS
 * type, label, tools, divisor, permissions
 */
-export const set_context_vars = function(self, context) {
+export const set_context_vars = function(self) {
 
 	if (self.context) {
 		self.type			= self.context.type // typology of current instance, usually 'component'
@@ -350,9 +350,10 @@ common.prototype.render = async function (options={}) {
 * (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
 * @param object options
 * @return promise
+* 	resolve bool true
 */
 common.prototype.refresh = async function(options={}) {
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -439,7 +440,7 @@ common.prototype.refresh = async function(options={}) {
 
 
 
-/*
+/**
 * DESTROY
 * Delete all instances dependents of the section and all events that was created by the instances.
 * but it not delete the own section instance.
@@ -721,24 +722,25 @@ common.prototype.load_script = async function(src) {
 * GET_COLUMNS
 * Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc)
 * and create the columns to be render by the section or portals
-* @return array columns_map the the specific columns to render into the list.
+* @return array columns_map
+* 	The the specific columns to render into the list.
 */
 common.prototype.get_columns_map = function(){
 
 	const self = this
 
-	// get the request_config with all ddo to use in the columns
-	const request_config		= self.context.request_config
-	const request_config_length	= request_config.length
+	// request_config. get the request_config with all ddo to use in the columns
+		const request_config		= self.context.request_config
+		const request_config_length	= request_config.length
 
-	// get the columns_maps defined in the properties and assigned in context in the server or by the client.
-	// the columns_maps become as structure to complete with the request_config
-	// by default the columns are for every component that has direct link to the component(portal) or section
-	// if the portal has more component in deep, it can define as columns in the properties,
-	// but by default, the portal will be only one column (with all components joined in the cell).
-	const source_columns_map = (self.context.columns_map)
-		? self.context.columns_map
-		: false
+	// source_columns_map. Get the columns_maps defined in the properties and assigned in context in the server or by the client.
+		// the columns_maps become as structure to complete with the request_config
+		// by default the columns are for every component that has direct link to the component(portal) or section
+		// if the portal has more component in deep, it can define as columns in the properties,
+		// but by default, the portal will be only one column (with all components joined in the cell).
+		const source_columns_map = (self.context.columns_map)
+			? self.context.columns_map
+			: false
 
 	const columns_map = []
 	// storage of all ddo_map in flat array, without hierarchy, to find the components easily.
@@ -812,7 +814,7 @@ common.prototype.get_columns_map = function(){
 							// set the column_id of the component with the column id
 							dd_object.column_id = column.id
 						}
-					break;
+						break;
 
 					// by default every component will create the own column if the column is not defined, this behavior is used by sections.
 					default:
@@ -823,11 +825,11 @@ common.prototype.get_columns_map = function(){
 							}
 						)
 						dd_object.column_id = dd_object.tipo
-					break;
-				}// end switch
-			}// end if (dd_object.column_id && source_columns_map)
-		}// end for (let j = 0; j < ar_first_level_ddo_len; j++)
-	}// end for (let i = 0; i < request_config_length; i++)
+						break;
+				}//end switch
+			}//end if (dd_object.column_id && source_columns_map)
+		}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
+	}//end for (let i = 0; i < request_config_length; i++)
 
 	// resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
 	// here will be using the full_ddo_map to find the specific ddo
@@ -849,8 +851,10 @@ common.prototype.get_columns_map = function(){
 				parse_columns(column_item.columns_map)
 		}
 	}
-		// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
+
+	// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
 	parse_columns(columns_map)
+
 
 	return columns_map
 }//end get_columns_map
@@ -1053,25 +1057,25 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 /**
 * BUILD_RQO
 */
-common.prototype.build_rqo_DES = async function(dd_request_type, request_config, action){
+	// common.prototype.build_rqo_DES = async function(dd_request_type, request_config, action){
 
-	const self = this
+	// 	const self = this
 
-	// create a new one
+	// 	// create a new one
 
-	switch (dd_request_type) {
+	// 	switch (dd_request_type) {
 
-		case 'show':	
-			return rqo
+	// 		case 'show':
+	// 			return rqo
 
-		case 'search':
-			return build_request_search(self, request_config, action)
+	// 		case 'search':
+	// 			return build_request_search(self, request_config, action)
 
-		case 'select':
-			return build_request_select(self, request_config, action)
-			break;
-	}
-}//end build_rqo
+	// 		case 'select':
+	// 			return build_request_select(self, request_config, action)
+	// 			break;
+	// 	}
+	// }//end build_rqo
 
 
 
@@ -1260,7 +1264,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		const offset = rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.offset
 			? rqo_config.choose.sqo_config.offset
 			: (sqo_config.offset)
-				? qo_config.offset
+				? sqo_config.offset
 				: 0
 
 	// sqo. new sqo_search
@@ -1292,7 +1296,6 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 						model			: self.model,
 						mode			: 'list'
 					}]
-
 
 			if (search_ddo_map) {
 				// get the sub elements with the ddo_map, the method is recursive,
@@ -1373,10 +1376,10 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			action		: 'read',
 			source		: source,
 			show		: {
-				ddo_map				: ddo_map,
+				ddo_map					: ddo_map,
 				// value_with_parents	: value_with_parents,
-				divisor				: divisor,
-				columns 			: columns
+				divisor					: divisor,
+				columns					: columns
 			},
 			sqo			: sqo,
 			sqo_options	: sqo_options
@@ -1392,195 +1395,195 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 * BUILD_REQUEST_SHOW
 * @return array dd_request
 */
-const build_request_show_OLD = function(self, request_config, action){
+	// const build_request_show_OLD = function(self, request_config, action){
 
-	const dd_request = []
+	// 	const dd_request = []
 
-	// source . auto create
-		const source = create_source(self, action);
-		dd_request.push(source)
+	// 	// source . auto create
+	// 		const source = create_source(self, action);
+	// 		dd_request.push(source)
 
-	// empty request_config cases
-		if(!request_config) {
-			return dd_request;
-		}
+	// 	// empty request_config cases
+	// 		if(!request_config) {
+	// 			return dd_request;
+	// 		}
 
-	// // direct request ddo if exists
-		// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
-		// 	if (ar_requested_ddo.length>0) {
-		// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
-		// 			dd_request.push(ar_requested_ddo[i])
-		// 		}
-		// 	}
+	// 	// // direct request ddo if exists
+	// 		// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
+	// 		// 	if (ar_requested_ddo.length>0) {
+	// 		// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
+	// 		// 			dd_request.push(ar_requested_ddo[i])
+	// 		// 		}
+	// 		// 	}
 
-	// sqo. add request sqo if exists
-		const request_sqo = request_config.find(item => item.typo==='sqo')
-		if (request_sqo) {
-			dd_request.push(request_sqo)
-		}
+	// 	// sqo. add request sqo if exists
+	// 		const request_sqo = request_config.find(item => item.typo==='sqo')
+	// 		if (request_sqo) {
+	// 			dd_request.push(request_sqo)
+	// 		}
 
-	// rqo. If don't has rqo, return the source only
-		const rqo = request_config.filter(item => item.typo==='rqo')
-		if(rqo.length < 1){
-			return dd_request;
-		}
+	// 	// rqo. If don't has rqo, return the source only
+	// 		const rqo = request_config.filter(item => item.typo==='rqo')
+	// 		if(rqo.length < 1){
+	// 			return dd_request;
+	// 		}
 
-	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
-		// const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
-		// const all_request_ddo		= request_ddo_object.value
-		const all_request_ddo = self.datum
-			? (self.datum.context ? self.datum.context : [])
-			: []
+	// 	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
+	// 		// const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
+	// 		// const all_request_ddo		= request_ddo_object.value
+	// 		const all_request_ddo = self.datum
+	// 			? (self.datum.context ? self.datum.context : [])
+	// 			: []
 
-		const rqo_length				= rqo.length
-		const all_request_ddo_length	= all_request_ddo.length
-		const ar_sections				= []
-		const request_ddo				= []
+	// 		const rqo_length				= rqo.length
+	// 		const all_request_ddo_length	= all_request_ddo.length
+	// 		const ar_sections				= []
+	// 		const request_ddo				= []
 
-		if(self.model==='section'){
+	// 		if(self.model==='section'){
 
-			// rqo loop
-				for (let i = 0; i < rqo_length; i++) {
+	// 			// rqo loop
+	// 				for (let i = 0; i < rqo_length; i++) {
 
-					const current_rqo	= rqo[i]
-					const sections		= current_rqo.section_tipo
-					const show			= current_rqo.show
+	// 					const current_rqo	= rqo[i]
+	// 					const sections		= current_rqo.section_tipo
+	// 					const show			= current_rqo.show
 
-					// get sections
-						ar_sections.push(...sections)
+	// 					// get sections
+	// 						ar_sections.push(...sections)
 
-					// value_with_parents
-						if(show.value_with_parents){
-							dd_request.push({
-								typo	: 'value_with_parents',
-								value	: show.value_with_parents
-							})
-						}
+	// 					// value_with_parents
+	// 						if(show.value_with_parents){
+	// 							dd_request.push({
+	// 								typo	: 'value_with_parents',
+	// 								value	: show.value_with_parents
+	// 							})
+	// 						}
 
-					// divisor
-						if(show.divisor){
-							dd_request.push({
-								typo	: 'divisor',
-								value	: show.divisor
-							})
-						}
-				}
+	// 					// divisor
+	// 						if(show.divisor){
+	// 							dd_request.push({
+	// 								typo	: 'divisor',
+	// 								value	: show.divisor
+	// 							})
+	// 						}
+	// 				}
 
-			// all_request_ddo loop
-				for (let i = 0; i < all_request_ddo_length; i++) {
+	// 			// all_request_ddo loop
+	// 				for (let i = 0; i < all_request_ddo_length; i++) {
 
-					const ddo = all_request_ddo[i]
-					// if(ddo.tipo === self.tipo && ddo.section_tipo === self.section_tipo && self.model==='section') continue
-					ddo.config_type = 'show'
-					request_ddo.push( ddo )
-				}
+	// 					const ddo = all_request_ddo[i]
+	// 					// if(ddo.tipo === self.tipo && ddo.section_tipo === self.section_tipo && self.model==='section') continue
+	// 					ddo.config_type = 'show'
+	// 					request_ddo.push( ddo )
+	// 				}
 
-		}else{
+	// 		}else{
 
-			//set the context of the component in the request_ddo
-			request_ddo.push(self.context)
-			for (let i = 0; i < rqo_length; i++) {
+	// 			//set the context of the component in the request_ddo
+	// 			request_ddo.push(self.context)
+	// 			for (let i = 0; i < rqo_length; i++) {
 
-				const current_rqo		= rqo[i]
-				const operator			= current_rqo.show.sqo_config.operator || '$and'
-				const sections			= current_rqo.section_tipo
+	// 				const current_rqo		= rqo[i]
+	// 				const operator			= current_rqo.show.sqo_config.operator || '$and'
+	// 				const sections			= current_rqo.section_tipo
 
-				const sections_length	= sections.length
-				// show
-				const show				= current_rqo.show
-				const ddo_map			= show.ddo_map
-				const ddo_map_length	= ddo_map.length
-				//get sections
-				for (let j = 0; j < sections_length; j++) {
-					ar_sections.push(sections[j])
-					// get the fpath array
-					for (let k = 0; k < ddo_map_length; k++) {
+	// 				const sections_length	= sections.length
+	// 				// show
+	// 				const show				= current_rqo.show
+	// 				const ddo_map			= show.ddo_map
+	// 				const ddo_map_length	= ddo_map.length
+	// 				//get sections
+	// 				for (let j = 0; j < sections_length; j++) {
+	// 					ar_sections.push(sections[j])
+	// 					// get the fpath array
+	// 					for (let k = 0; k < ddo_map_length; k++) {
 
-						const f_path = typeof ddo_map[k].tipo!=='undefined'
-							? ['self', ddo_map[k].tipo]
-							: typeof ddo_map[k].f_path!=='undefined'
-								? ddo_map[k].f_path
-								: ['self', ddo_map[k]]
-						const f_path_length = f_path.length
+	// 						const f_path = typeof ddo_map[k].tipo!=='undefined'
+	// 							? ['self', ddo_map[k].tipo]
+	// 							: typeof ddo_map[k].f_path!=='undefined'
+	// 								? ddo_map[k].f_path
+	// 								: ['self', ddo_map[k]]
+	// 						const f_path_length = f_path.length
 
-						// get the current item of the fpath
-						for (let l = 0; l < f_path_length; l++) {
-							const item = f_path[l]==='self'
-								? sections[j]
-								: f_path[l]
-							const exist = request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
+	// 						// get the current item of the fpath
+	// 						for (let l = 0; l < f_path_length; l++) {
+	// 							const item = f_path[l]==='self'
+	// 								? sections[j]
+	// 								: f_path[l]
+	// 							const exist = request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
 
-							if(!exist){
-								const ddo = all_request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
+	// 							if(!exist){
+	// 								const ddo = all_request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
 
-								if(ddo){
-									ddo.config_type = 'show'
-									request_ddo.push(ddo)
-								}
-							}
-						}
-					}
-				}
+	// 								if(ddo){
+	// 									ddo.config_type = 'show'
+	// 									request_ddo.push(ddo)
+	// 								}
+	// 							}
+	// 						}
+	// 					}
+	// 				}
 
-				//value_with_parents
-				if(show.value_with_parents){
-					dd_request.push({
-						typo : 'value_with_parents',
-						value : show.value_with_parents
-					})
-				}
+	// 				//value_with_parents
+	// 				if(show.value_with_parents){
+	// 					dd_request.push({
+	// 						typo : 'value_with_parents',
+	// 						value : show.value_with_parents
+	// 					})
+	// 				}
 
-				//divisor
-				if(show.divisor){
-					dd_request.push({
-						typo : 'divisor',
-						value : show.divisor
-					})
-				}
-			}
-		}//end 	if(self.model==='section')
+	// 				//divisor
+	// 				if(show.divisor){
+	// 					dd_request.push({
+	// 						typo : 'divisor',
+	// 						value : show.divisor
+	// 					})
+	// 				}
+	// 			}
+	// 		}//end 	if(self.model==='section')
 
-		// set the selected ddos into new request_ddo for do the call with the selection
-		dd_request.push({
-			typo : 'request_ddo',
-			value : request_ddo
-		})
+	// 		// set the selected ddos into new request_ddo for do the call with the selection
+	// 		dd_request.push({
+	// 			typo : 'request_ddo',
+	// 			value : request_ddo
+	// 		})
 
-	// first rqo show
-		const first_rqo_show = rqo[0].show
+	// 	// first rqo show
+	// 		const first_rqo_show = rqo[0].show
 
-	// get the limit and offset
-		const limit	= (first_rqo_show.sqo_config.limit)
-			? first_rqo_show.sqo_config.limit
-			: 10
-		const offset = (first_rqo_show.sqo_config.offset)
-			? first_rqo_show.sqo_config.offset
-			: 0
+	// 	// get the limit and offset
+	// 		const limit	= (first_rqo_show.sqo_config.limit)
+	// 			? first_rqo_show.sqo_config.limit
+	// 			: 10
+	// 		const offset = (first_rqo_show.sqo_config.offset)
+	// 			? first_rqo_show.sqo_config.offset
+	// 			: 0
 
-	// sqo
-		const sqo = {
-			typo				: 'sqo',
-			section_tipo		: ar_sections,
-			filter				: null,
-			limit				: limit,
-			offset				: offset,
-			select				: [],
-			full_count			: false,
-			filter_by_locators	: null
-		}
-		dd_request.push(sqo)
+	// 	// sqo
+	// 		const sqo = {
+	// 			typo				: 'sqo',
+	// 			section_tipo		: ar_sections,
+	// 			filter				: null,
+	// 			limit				: limit,
+	// 			offset				: offset,
+	// 			select				: [],
+	// 			full_count			: false,
+	// 			filter_by_locators	: null
+	// 		}
+	// 		dd_request.push(sqo)
 
-		//add the full rqo to the dd_request
-		dd_request.push(rqo[0])
+	// 		//add the full rqo to the dd_request
+	// 		dd_request.push(rqo[0])
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("// dd_request [build_request_show]", dd_request);
-		}
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			// console.log("// dd_request [build_request_show]", dd_request);
+	// 		}
 
 
-	return dd_request
-}//end build_request_show
+	// 	return dd_request
+	// }//end build_request_show
 
 
 
@@ -1588,175 +1591,175 @@ const build_request_show_OLD = function(self, request_config, action){
 * BUILD_REQUEST_SEARCH
 * @return array dd_request
 */
-const build_request_search_OLD = function(self, request_config, action){
+	// const build_request_search_OLD = function(self, request_config, action){
 
-	const dd_request	= []
-	const ar_sections	= []
+	// 	const dd_request	= []
+	// 	const ar_sections	= []
 
-	const rqo = request_config.filter(item => item.typo==='rqo')
+	// 	const rqo = request_config.filter(item => item.typo==='rqo')
 
-	// get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
-	// const all_request_ddo	= self.datum.context.find(item => item.typo==='request_ddo').value
-	const all_request_ddo	= self.datum.context
+	// 	// get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
+	// 	// const all_request_ddo	= self.datum.context.find(item => item.typo==='request_ddo').value
+	// 	const all_request_ddo	= self.datum.context
 
-	const rqo_length	= rqo.length
-	// const operator	= self.context.properties.source.operator || '$and'
-	const request_ddo 		= []
+	// 	const rqo_length	= rqo.length
+	// 	// const operator	= self.context.properties.source.operator || '$and'
+	// 	const request_ddo 		= []
 
-	for (let i = 0; i < rqo_length; i++) {
+	// 	for (let i = 0; i < rqo_length; i++) {
 
-		const current_rqo		= rqo[i]
-		const operator			= current_rqo.search.sqo_config.operator || '$and'
-		const sections			= current_rqo.section_tipo
-		const sections_length	= sections.length
-		const sqo_search		= []
+	// 		const current_rqo		= rqo[i]
+	// 		const operator			= current_rqo.search.sqo_config.operator || '$and'
+	// 		const sections			= current_rqo.section_tipo
+	// 		const sections_length	= sections.length
+	// 		const sqo_search		= []
 
-		// source . auto create
-			const source = create_source(self, action)
-			sqo_search.push(source)
-
-
-		const fixed_filter	= current_rqo.fixed_filter
-		const filter_free	= {}
-			  filter_free[operator] = []
-
-		// type add
-		sqo_search.push({
-			typo	: 'search_engine',
-			value	: current_rqo.search_engine
-		})
-
-		// search
-		const search			= current_rqo.search
-		const ddo_map			= search.ddo_map
-		const ddo_map_length	= ddo_map.length
-
-		//get sections
-		for (let j = 0; j < sections_length; j++) {
-			const section_ddo = all_request_ddo.find(ddo => ddo.tipo===sections[j]  && ddo.section_tipo===sections[j])
-			request_ddo.push(section_ddo)
-
-			// get the fpath array
-			for (let k = 0; k < ddo_map_length; k++) {
-
-				const f_path		= typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
-				const f_path_length	= f_path.length
-				const ar_paths		= []
-
-				// get the current item of the fpath
-				for (let l = 0; l < f_path_length; l++) {
-					if(l % 2 !== 0){
-
-						const item = f_path[l]
-						const section_tipo = (f_path[l-1]==='self')
-							? sections[j]
-							: f_path[l-1]
-
-						const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===section_tipo )
-						if (ddo) {
-							ddo.mode = 'list' // enable lang fallback value
-							request_ddo.push(ddo)
-							const path = {
-								section_tipo	: section_tipo,
-								component_tipo	: item,
-								modelo			: ddo.model
-							}
-							ar_paths.push(path)
-						}
-					}
-				}
-
-				filter_free[operator].push({
-					q		: '',
-					path	: ar_paths
-				})
-			}
-		}
-		// fixed_filter
-		if (fixed_filter) {
-			sqo_search.push({
-				typo : 'fixed_filter',
-				value : fixed_filter
-			})
-		}
-
-		// filter_free
-		if (filter_free) {
-			sqo_search.push({
-				typo 		: 'filter_free',
-				value 		: filter_free,
-				operator 	: operator
-			})
-		}
-
-		// filter_by_list if exists
-		const filter_by_list = current_rqo.filter_by_list
-		if (filter_by_list) {
-			sqo_search.push({
-				typo : 'filter_by_list',
-				value : filter_by_list
-			})
-		}
-
-		// limit and offset
-			// check if limit and offset exist in select
-			const limit	= current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.limit
-				? current_rqo.select.sqo_config.limit
-				: (search.sqo_config.limit)
-					? search.sqo_config.limit
-					: current_rqo.show.sqo_config.limit
-			const offset = current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.offset
-				? current_rqo.select.sqo_config.offset
-				: search.sqo_config.offset
-
-		// sqo_search
-		sqo_search.push({
-			typo			: 'sqo',
-			section_tipo	: sections,
-			filter			: {[operator]:[]},
-			offset			: offset || 0,
-			limit			: limit || 10,
-			select			: [],
-			full_count		: false
-		})
-
-		// if(current_rqo.select){
-		// 	const select = self.build_rqo('select', request_config, 'get_data')
-		// 	const ddo_select = select.filter(item => item.typo === 'ddo')
-		// 	sqo_search.push(...ddo_select)
-		// 	console.log("ddo_select", sqo_search);
-		// }
-
-		//value_with_parents
-		if(search.value_with_parents){
-			sqo_search.push({
-				typo : 'value_with_parents',
-				value : search.value_with_parents
-			})
-		}
-
-		//divisor
-		if(search.divisor){
-			sqo_search.push({
-				typo : 'divisor',
-				value : search.divisor
-			})
-		}
-
-		// set the selected ddos into new request_ddo for do the call with the selection
-		sqo_search.push({
-			typo : 'request_ddo',
-			value : request_ddo
-		})
+	// 		// source . auto create
+	// 			const source = create_source(self, action)
+	// 			sqo_search.push(source)
 
 
-		// add group
-		dd_request.push(sqo_search)
-	}//end for (let i = 0; i < length; i++)
+	// 		const fixed_filter	= current_rqo.fixed_filter
+	// 		const filter_free	= {}
+	// 			  filter_free[operator] = []
+
+	// 		// type add
+	// 		sqo_search.push({
+	// 			typo	: 'search_engine',
+	// 			value	: current_rqo.search_engine
+	// 		})
+
+	// 		// search
+	// 		const search			= current_rqo.search
+	// 		const ddo_map			= search.ddo_map
+	// 		const ddo_map_length	= ddo_map.length
+
+	// 		//get sections
+	// 		for (let j = 0; j < sections_length; j++) {
+	// 			const section_ddo = all_request_ddo.find(ddo => ddo.tipo===sections[j]  && ddo.section_tipo===sections[j])
+	// 			request_ddo.push(section_ddo)
+
+	// 			// get the fpath array
+	// 			for (let k = 0; k < ddo_map_length; k++) {
+
+	// 				const f_path		= typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
+	// 				const f_path_length	= f_path.length
+	// 				const ar_paths		= []
+
+	// 				// get the current item of the fpath
+	// 				for (let l = 0; l < f_path_length; l++) {
+	// 					if(l % 2 !== 0){
+
+	// 						const item = f_path[l]
+	// 						const section_tipo = (f_path[l-1]==='self')
+	// 							? sections[j]
+	// 							: f_path[l-1]
+
+	// 						const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===section_tipo )
+	// 						if (ddo) {
+	// 							ddo.mode = 'list' // enable lang fallback value
+	// 							request_ddo.push(ddo)
+	// 							const path = {
+	// 								section_tipo	: section_tipo,
+	// 								component_tipo	: item,
+	// 								modelo			: ddo.model
+	// 							}
+	// 							ar_paths.push(path)
+	// 						}
+	// 					}
+	// 				}
+
+	// 				filter_free[operator].push({
+	// 					q		: '',
+	// 					path	: ar_paths
+	// 				})
+	// 			}
+	// 		}
+	// 		// fixed_filter
+	// 		if (fixed_filter) {
+	// 			sqo_search.push({
+	// 				typo : 'fixed_filter',
+	// 				value : fixed_filter
+	// 			})
+	// 		}
+
+	// 		// filter_free
+	// 		if (filter_free) {
+	// 			sqo_search.push({
+	// 				typo 		: 'filter_free',
+	// 				value 		: filter_free,
+	// 				operator 	: operator
+	// 			})
+	// 		}
+
+	// 		// filter_by_list if exists
+	// 		const filter_by_list = current_rqo.filter_by_list
+	// 		if (filter_by_list) {
+	// 			sqo_search.push({
+	// 				typo : 'filter_by_list',
+	// 				value : filter_by_list
+	// 			})
+	// 		}
+
+	// 		// limit and offset
+	// 			// check if limit and offset exist in select
+	// 			const limit	= current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.limit
+	// 				? current_rqo.select.sqo_config.limit
+	// 				: (search.sqo_config.limit)
+	// 					? search.sqo_config.limit
+	// 					: current_rqo.show.sqo_config.limit
+	// 			const offset = current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.offset
+	// 				? current_rqo.select.sqo_config.offset
+	// 				: search.sqo_config.offset
+
+	// 		// sqo_search
+	// 		sqo_search.push({
+	// 			typo			: 'sqo',
+	// 			section_tipo	: sections,
+	// 			filter			: {[operator]:[]},
+	// 			offset			: offset || 0,
+	// 			limit			: limit || 10,
+	// 			select			: [],
+	// 			full_count		: false
+	// 		})
+
+	// 		// if(current_rqo.select){
+	// 		// 	const select = self.build_rqo('select', request_config, 'get_data')
+	// 		// 	const ddo_select = select.filter(item => item.typo === 'ddo')
+	// 		// 	sqo_search.push(...ddo_select)
+	// 		// 	console.log("ddo_select", sqo_search);
+	// 		// }
+
+	// 		//value_with_parents
+	// 		if(search.value_with_parents){
+	// 			sqo_search.push({
+	// 				typo : 'value_with_parents',
+	// 				value : search.value_with_parents
+	// 			})
+	// 		}
+
+	// 		//divisor
+	// 		if(search.divisor){
+	// 			sqo_search.push({
+	// 				typo : 'divisor',
+	// 				value : search.divisor
+	// 			})
+	// 		}
+
+	// 		// set the selected ddos into new request_ddo for do the call with the selection
+	// 		sqo_search.push({
+	// 			typo : 'request_ddo',
+	// 			value : request_ddo
+	// 		})
 
 
-	return dd_request
-}//end build_request_search
+	// 		// add group
+	// 		dd_request.push(sqo_search)
+	// 	}//end for (let i = 0; i < length; i++)
+
+
+	// 	return dd_request
+	// }//end build_request_search
 
 
 
@@ -1764,116 +1767,116 @@ const build_request_search_OLD = function(self, request_config, action){
 * BUILD_REQUEST_SELECT
 * @return array dd_request
 */
-const build_request_select_OLD = function(self, request_config, action){
+	// const build_request_select_OLD = function(self, request_config, action){
 
-	const dd_request = []
+	// 	const dd_request = []
 
-	// source . auto create
-		const source = create_source(self, action);
-		dd_request.push(source)
+	// 	// source . auto create
+	// 		const source = create_source(self, action);
+	// 		dd_request.push(source)
 
-	// empty request_config cases
-		if(!request_config) {
-			return dd_request;
-		}
-
-	// // direct request ddo if exists
-	// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
-	// 	if (ar_requested_ddo.length>0) {
-	// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
-	// 			dd_request.push(ar_requested_ddo[i])
+	// 	// empty request_config cases
+	// 		if(!request_config) {
+	// 			return dd_request;
 	// 		}
-	// 	}
 
-	// direct request sqo if exists
-		const request_sqo = request_config.find(item => item.typo==='sqo')
-		if (request_sqo) {
-			dd_request.push(request_sqo)
-		}
+	// 	// // direct request ddo if exists
+	// 	// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
+	// 	// 	if (ar_requested_ddo.length>0) {
+	// 	// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
+	// 	// 			dd_request.push(ar_requested_ddo[i])
+	// 	// 		}
+	// 	// 	}
 
-	// rqo. If don't has rqo, return the source only
-		const rqo = request_config.filter(item => item.typo==='rqo')
-		if(rqo.length < 1){
-			return dd_request;
-		}
+	// 	// direct request sqo if exists
+	// 		const request_sqo = request_config.find(item => item.typo==='sqo')
+	// 		if (request_sqo) {
+	// 			dd_request.push(request_sqo)
+	// 		}
 
-	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
-		// const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
-		// const all_request_ddo			= request_ddo_object.value
-		const all_request_ddo		= self.datum.context
+	// 	// rqo. If don't has rqo, return the source only
+	// 		const rqo = request_config.filter(item => item.typo==='rqo')
+	// 		if(rqo.length < 1){
+	// 			return dd_request;
+	// 		}
 
-		const request_ddo 			= []
-		// const instance_ddo 			= self.context
-		// 		instance_ddo.config_type = 'show'
-		// request_ddo.push(instance_ddo)
+	// 	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
+	// 		// const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
+	// 		// const all_request_ddo			= request_ddo_object.value
+	// 		const all_request_ddo		= self.datum.context
 
-		const rqo_length	= rqo.length
-		const ar_sections	= []
-		for (let i = 0; i < rqo_length; i++) {
+	// 		const request_ddo 			= []
+	// 		// const instance_ddo 			= self.context
+	// 		// 		instance_ddo.config_type = 'show'
+	// 		// request_ddo.push(instance_ddo)
 
-			const current_rqo		= rqo[i]
-			const sections			= current_rqo.section_tipo
+	// 		const rqo_length	= rqo.length
+	// 		const ar_sections	= []
+	// 		for (let i = 0; i < rqo_length; i++) {
 
-			const sections_length	= sections.length
-			// select
-			const select			= current_rqo.select
-			const ddo_map			= select.ddo_map
+	// 			const current_rqo		= rqo[i]
+	// 			const sections			= current_rqo.section_tipo
 
-			const ddo_map_length	= ddo_map.length
-			//get sections
-			for (let j = 0; j < sections_length; j++) {
-				ar_sections.push(sections[j])
-				// get the fpath array
-				for (let k = 0; k < ddo_map_length; k++) {
+	// 			const sections_length	= sections.length
+	// 			// select
+	// 			const select			= current_rqo.select
+	// 			const ddo_map			= select.ddo_map
 
-					const f_path = typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
-					const f_path_length = f_path.length
+	// 			const ddo_map_length	= ddo_map.length
+	// 			//get sections
+	// 			for (let j = 0; j < sections_length; j++) {
+	// 				ar_sections.push(sections[j])
+	// 				// get the fpath array
+	// 				for (let k = 0; k < ddo_map_length; k++) {
 
-					// get the current item of the fpath
-					for (let l = 0; l < f_path_length; l++) {
-						const item = f_path[l]==='self'
-							? sections[j]
-							: f_path[l]
-						const exist = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+	// 					const f_path = typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
+	// 					const f_path_length = f_path.length
 
-						if(!exist){
-							const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+	// 					// get the current item of the fpath
+	// 					for (let l = 0; l < f_path_length; l++) {
+	// 						const item = f_path[l]==='self'
+	// 							? sections[j]
+	// 							: f_path[l]
+	// 						const exist = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
-							if(ddo){
-								ddo.config_type = 'show'
-								const select_ddo = JSON.parse(JSON.stringify(ddo))
-								select_ddo.parent = sections[j]
-								request_ddo.push(select_ddo)
-							}
-						}
-					}
-				}
-			}
-			//value_with_parents
-			if(select.value_with_parents){
-				dd_request.push({
-					typo : 'value_with_parents',
-					value : select.value_with_parents
-				})
-			}
+	// 						if(!exist){
+	// 							const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
-			//divisor
-			if(select.divisor){
-				dd_request.push({
-					typo : 'divisor',
-					value : select.divisor
-				})
-			}
-		}
+	// 							if(ddo){
+	// 								ddo.config_type = 'show'
+	// 								const select_ddo = JSON.parse(JSON.stringify(ddo))
+	// 								select_ddo.parent = sections[j]
+	// 								request_ddo.push(select_ddo)
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 			//value_with_parents
+	// 			if(select.value_with_parents){
+	// 				dd_request.push({
+	// 					typo : 'value_with_parents',
+	// 					value : select.value_with_parents
+	// 				})
+	// 			}
 
-		// set the selected ddos into new request_ddo for do the call with the selection
-		dd_request.push({
-			typo : 'request_ddo',
-			value : request_ddo
-		})
+	// 			//divisor
+	// 			if(select.divisor){
+	// 				dd_request.push({
+	// 					typo : 'divisor',
+	// 					value : select.divisor
+	// 				})
+	// 			}
+	// 		}
 
-	return dd_request
-}//end build_request_show
+	// 		// set the selected ddos into new request_ddo for do the call with the selection
+	// 		dd_request.push({
+	// 			typo : 'request_ddo',
+	// 			value : request_ddo
+	// 		})
+
+	// 	return dd_request
+	// }//end build_request_show
 
 
 
@@ -2170,6 +2173,5 @@ common.prototype.calculate_component_path = function(component_context, path) {
 
 	return calculate_component_path
 }//end calculate_component_path
-
 
 
