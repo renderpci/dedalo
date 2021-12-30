@@ -16,7 +16,7 @@
 */
 export const render_list_section = function() {
 
-	this.id_column_width = '7.5em'
+	// this.id_column_width = '7.5em'
 
 	return true
 };//end render_list_section
@@ -33,6 +33,11 @@ render_list_section.prototype.list = async function(options) {
 	const self = this
 
 	const render_level		= options.render_level || 'full'
+
+	// columns_map
+		const columns_map = await rebuild_columns_map(self)
+		self.columns_map = columns_map
+
 	const ar_section_record = await self.get_ar_instances()
 
 	// content_data
@@ -40,9 +45,6 @@ render_list_section.prototype.list = async function(options) {
 		if (render_level==='content') {
 			return content_data
 		}
-
-	// columns_map
-	const columns_map = await self.columns_map
 
 	const fragment = new DocumentFragment()
 
@@ -93,7 +95,8 @@ render_list_section.prototype.list = async function(options) {
 		// flat columns create a sequence of grid widths taking care of sub-column space
 		// like 1fr 1fr 1fr 3fr 1fr
 		const items				= ui.flat_column_items(columns_map)
-		const template_columns	= `auto ${items.join(' ')}`
+		const template_columns	= items.join(' ')
+
 		Object.assign(
 			list_body.style,
 			{
@@ -146,12 +149,6 @@ const get_content_data = async function(ar_section_record, self) {
 
 		}else{
 			// rows
-			// sequential mode
-				// for (let i = 0; i < ar_section_record_length; i++) {
-				// 	const row_item = await ar_section_record[i].render()
-				// 	fragment.appendChild(row_item)
-				// }
-
 			// parallel mode
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
@@ -160,7 +157,8 @@ const get_content_data = async function(ar_section_record, self) {
 				}
 				await Promise.all(ar_promises).then(function(values) {
 				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	fragment.appendChild(values[i])
+				  	const section_record = values[i]
+					fragment.appendChild(section_record)
 				  }
 				});
 		}
@@ -173,6 +171,145 @@ const get_content_data = async function(ar_section_record, self) {
 
 	return content_data
 };//end get_content_data
+
+
+
+/**
+* REBUILD_COLUMNS_MAP
+* Adding control columns to the columns_map that will processed by section_recods
+* @return obj columns_map
+*/
+const rebuild_columns_map = async function(self) {
+
+	const columns_map = []
+
+	// column section_id check
+		columns_map.push({
+			id			: 'section_id',
+			label		: 'Id',
+			width 		: 'auto',
+			callback	: render_list_section.render_column_id
+		})
+
+	// // button_remove
+	// 	if (self.permissions>1) {
+	// 		columns_map.push({
+	// 			id			: 'remove',
+	// 			label		: '', // get_label.delete || 'Delete',
+	// 			width 		: 'auto',
+	// 			callback	: render_column_remove
+	// 		})
+	// 	}
+	const base_columns_map = await self.columns_map
+
+	columns_map.push(...base_columns_map)
+
+	return columns_map
+};
+
+render_list_section.render_column_id = function(options){
+
+	// options
+		const self 			= options.caller
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+		const offset 		= options.offset
+
+	const fragment = new DocumentFragment()
+
+	// section_id column
+		const id_column = ui.create_dom_element({
+			element_type	: 'div',
+			text_content	: section_id,
+			class_name		: 'column id_column'
+		})
+		fragment.appendChild(id_column)
+		switch(true){
+
+			case (self.config && self.config.source_model==='section_tool'):
+
+				// button edit (pen)
+					if (self.permissions>0) {
+
+						const edit_button = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: '',
+							inner_html 		: " "+self.config.tool_context.label,
+							parent			: id_column
+						})
+						edit_button.addEventListener("click", function(e){
+							e.stopPropagation();
+
+							// tool_context (clone always to prevent modify original object)
+								const tool_context = JSON.parse( JSON.stringify(self.config.tool_context) )
+
+							// parse ddo_map section_id
+								tool_context.tool_config.ddo_map.map(el => {
+									if (el.section_id==='self') {
+										el.section_id = section_id
+									}
+								})
+
+							// lang set
+								tool_context.lang = self.lang
+
+							event_manager.publish('load_tool', {
+								tool_context	: tool_context,
+								caller			: self
+							})
+						})
+					}
+			break;
+
+			default:
+
+				const edit_button = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button edit',
+					parent			: id_column
+				})
+				edit_button.addEventListener("click", function(e){
+					const user_navigation_rqo = {
+						caller_id	: self.id,
+						source		: {
+							action			: 'search',
+							model			: 'section',
+							tipo			: section_tipo,
+							section_tipo	: section_tipo,
+							mode			: 'edit',
+							lang			: self.lang
+						},
+						sqo : {
+							section_tipo	: [{tipo : section_tipo}],
+							limit			: 1,
+							offset			: offset,
+							filter			: self.rqo.sqo.filter || null
+						}
+					}
+					event_manager.publish('user_navigation', user_navigation_rqo)
+				})
+
+				// remove button
+				if (self.permissions>1) {
+					const delete_button = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'delete_line',
+					})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button remove',
+						parent			: delete_button
+					})
+					delete_button.addEventListener("click", function(e){
+						delete_record(this, options)
+					})
+
+					fragment.appendChild(delete_button)
+				}
+		}
+
+	return fragment
+}// end render_column_id()
 
 
 
@@ -342,3 +479,17 @@ const no_records_node = () => {
 };//end no_records_node
 
 
+
+/**
+* DELETE_RECORD
+* Navigate to selected record in edit mode
+*/
+const delete_record = (button, self) => {
+
+	confirm(`delete_record:
+		section_tipo: ${self.section_tipo}
+		section_id: ${self.section_id}`)
+
+
+	return false
+}//end delete_record
