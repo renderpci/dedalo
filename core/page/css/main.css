@@ -3002,11 +3002,6 @@ li .section_record.list .id_column {
   transition: background-color 0.3s ease;
   background-color: red !important;
 }
-.section_record .wrapper_component.list,
-.wrapper_tool .wrapper_component.list,
-.search_group .wrapper_component.list {
-  outline: none;
-}
 .section_record .wrapper_component.list.component_image,
 .wrapper_tool .wrapper_component.list.component_image,
 .search_group .wrapper_component.list.component_image,
@@ -3461,7 +3456,7 @@ dd-modal .footer > * {
 .wrapper_component > .content_data ul > li {
   display: flex;
   flex: 1 1 50%;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   line-height: 1em;
   align-items: center;
   max-height: inherit;
