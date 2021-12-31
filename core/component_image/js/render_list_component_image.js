@@ -13,7 +13,7 @@
 * RENDER_LIST_COMPONENT_IMAGE
 * Manage the components logic and appearance in client side
 */
-export const render_list_component_image = function(component) {
+export const render_list_component_image = function() {
 
 	return true
 };//end render_list_component_image
@@ -37,6 +37,7 @@ render_list_component_image.prototype.list = function(options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
+		wrapper.classList.add('media')
 
 	// url
 		// const value		= data.value
@@ -65,15 +66,6 @@ render_list_component_image.prototype.list = function(options) {
 
 	// set src
 		image.src = url
-
-	//const image_div = ui.create_dom_element({
-	//	element_type	: "div",
-	//	//class_name		: node_class_name,
-	//	style 			: {
-	//		"background-image" : "url("+url+")"
-	//	},
-	//	parent 			: wrapper
-	//})
 
 
 	return wrapper

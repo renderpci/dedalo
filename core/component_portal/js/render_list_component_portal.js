@@ -4,14 +4,14 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {view_autocomplete} from './view_autocomplete.js'
 	// import {flat_column_items} from '../../common/js/common.js'
-	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
+	// import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
 
 
 
@@ -23,6 +23,7 @@ export const render_list_component_portal = function() {
 
 	return true
 };//end render_list_component_portal
+
 
 
 /**

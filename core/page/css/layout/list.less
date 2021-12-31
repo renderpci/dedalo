@@ -135,11 +135,20 @@
 
 		}
 
+		>*:not(.media):not(.portal) {
+			margin: 0.25rem;
+		}
+
+		>.section_id {
+			padding-left: 0.33rem;
+		}
+
 		// components inside column
 		.wrapper_component {
 			flex: 1 1 auto;
 			// outline: 1px solid #000000 !important;
 			display: block; // ?????
+			padding: 0;
 		}
 
 		.component_image {
@@ -155,7 +164,8 @@
 	.wrapper_component.view_line > .content_data >.section_record >.column {
 		outline: none;
 		box-shadow: none;
-		padding: 0.25rem;
+		// padding: 0.25rem;
+		height: 1.2rem;
 	}
 
 
