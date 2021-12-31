@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_URL, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -37,6 +37,7 @@ render_list_component_av.prototype.list = async function() {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
+		wrapper.classList.add('media')
 
 	// url
 		const posterframe_url 	= data.posterframe_url || DEDALO_CORE_URL + "/themes/default/0.jpg"

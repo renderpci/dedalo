@@ -3005,7 +3005,6 @@ li .section_record.list .id_column {
 .section_record .wrapper_component.list,
 .wrapper_tool .wrapper_component.list,
 .search_group .wrapper_component.list {
-  padding: 0.5em;
   outline: none;
 }
 .section_record .wrapper_component.list.component_image,
@@ -4435,14 +4434,21 @@ section {
   outline: 1px solid #f1f1f1;
   height: inherit;
 }
+.column > *:not(.media):not(.portal) {
+  margin: 0.25rem;
+}
+.column > .section_id {
+  padding-left: 0.33rem;
+}
 .column .wrapper_component {
   flex: 1 1 auto;
   display: block;
+  padding: 0;
 }
 .wrapper_component.view_line > .content_data > .section_record > .column {
   outline: none;
   box-shadow: none;
-  padding: 0.25rem;
+  height: 1.2rem;
 }
 .id_column {
   overflow: visible;

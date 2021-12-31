@@ -191,22 +191,31 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_list_section.render_column_id
 		})
 
-	// // button_remove
-	// 	if (self.permissions>1) {
-	// 		columns_map.push({
-	// 			id			: 'remove',
-	// 			label		: '', // get_label.delete || 'Delete',
-	// 			width 		: 'auto',
-	// 			callback	: render_column_remove
-	// 		})
-	// 	}
-	const base_columns_map = await self.columns_map
+	// button_remove
+		// 	if (self.permissions>1) {
+		// 		columns_map.push({
+		// 			id			: 'remove',
+		// 			label		: '', // get_label.delete || 'Delete',
+		// 			width 		: 'auto',
+		// 			callback	: render_column_remove
+		// 		})
+		// 	}
 
-	columns_map.push(...base_columns_map)
+	// columns base
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
+
 
 	return columns_map
-};
+}//end rebuild_columns_map
 
+
+
+/**
+* RENDER_COLUMN_ID
+* @param object options
+* @return DOM DocumentFragment
+*/
 render_list_section.render_column_id = function(options){
 
 	// options
@@ -217,25 +226,26 @@ render_list_section.render_column_id = function(options){
 
 	const fragment = new DocumentFragment()
 
-	// section_id column
-		const id_column = ui.create_dom_element({
-			element_type	: 'div',
+	// section_id
+		const section_id_node = ui.create_dom_element({
+			element_type	: 'span',
 			text_content	: section_id,
-			class_name		: 'column id_column'
+			class_name		: 'section_id',
+			parent			: fragment
 		})
-		fragment.appendChild(id_column)
+
+	// buttons
 		switch(true){
 
 			case (self.config && self.config.source_model==='section_tool'):
 
-				// button edit (pen)
+				// edit button (pen)
 					if (self.permissions>0) {
-
 						const edit_button = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: '',
-							inner_html 		: " "+self.config.tool_context.label,
-							parent			: id_column
+							inner_html 		: ' ' + self.config.tool_context.label,
+							parent			: fragment
 						})
 						edit_button.addEventListener("click", function(e){
 							e.stopPropagation();
@@ -259,53 +269,49 @@ render_list_section.render_column_id = function(options){
 							})
 						})
 					}
-			break;
+				break;
 
 			default:
 
-				const edit_button = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button edit',
-					parent			: id_column
-				})
-				edit_button.addEventListener("click", function(e){
-					const user_navigation_rqo = {
-						caller_id	: self.id,
-						source		: {
-							action			: 'search',
-							model			: 'section',
-							tipo			: section_tipo,
-							section_tipo	: section_tipo,
-							mode			: 'edit',
-							lang			: self.lang
-						},
-						sqo : {
-							section_tipo	: [{tipo : section_tipo}],
-							limit			: 1,
-							offset			: offset,
-							filter			: self.rqo.sqo.filter || null
+				// edit button (pen)
+					const edit_button = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button edit',
+						parent			: fragment
+					})
+					edit_button.addEventListener("click", function(){
+						const user_navigation_rqo = {
+							caller_id	: self.id,
+							source		: {
+								action			: 'search',
+								model			: 'section',
+								tipo			: section_tipo,
+								section_tipo	: section_tipo,
+								mode			: 'edit',
+								lang			: self.lang
+							},
+							sqo : {
+								section_tipo	: [{tipo : section_tipo}],
+								limit			: 1,
+								offset			: offset,
+								filter			: self.rqo.sqo.filter || null
+							}
 						}
-					}
-					event_manager.publish('user_navigation', user_navigation_rqo)
-				})
+						event_manager.publish('user_navigation', user_navigation_rqo)
+					})
 
 				// remove button
-				if (self.permissions>1) {
-					const delete_button = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'delete_line',
-					})
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button remove',
-						parent			: delete_button
-					})
-					delete_button.addEventListener("click", function(e){
-						delete_record(this, options)
-					})
-
-					fragment.appendChild(delete_button)
-				}
+					if (self.permissions>1) {
+						const delete_button = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button remove',
+							parent			: fragment
+						})
+						delete_button.addEventListener("click", function(){
+							delete_record(this, options)
+						})
+					}
+				break;
 		}
 
 	return fragment
@@ -476,7 +482,7 @@ const no_records_node = () => {
 	})
 
 	return node
-};//end no_records_node
+}//end no_records_node
 
 
 
@@ -493,3 +499,5 @@ const delete_record = (button, self) => {
 
 	return false
 }//end delete_record
+
+
