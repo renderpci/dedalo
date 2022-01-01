@@ -5,8 +5,8 @@
 
 // imports
 	import {widget_common} from '../../widget_common/widget_common.js'
-	import {render_state} from '../js/render_state.js'
-
+	import {render_edit_state} from '../js/render_edit_state.js'
+	import {render_list_state} from '../js/render_list_state.js'
 
 
 export const state = function(){
@@ -39,8 +39,8 @@ export const state = function(){
 	// lifecycle
 	// state.prototype.init 	 	= component_common.prototype.init
 	// render
-	state.prototype.edit 			= render_state.prototype.edit
-	state.prototype.list 			= render_state.prototype.list
+	state.prototype.edit 			= render_edit_state.prototype.edit
+	state.prototype.list 			= render_list_state.prototype.list
 
 
 
@@ -51,9 +51,11 @@ state.prototype.init = async function(options) {
 
 	const self = this
 
-	// call the generic commom init
-		const common_init = widget_common.prototype.init.call(this, options);
+		console.log("self:----------------",self);
 
+	// call the generic commom init
+		const common_init	= widget_common.prototype.init.call(this, options);
+		const common_build	= widget_common.prototype.build.call(this, options);
 
 	// // load dependences js/css
 	// 	const load_promises = []
