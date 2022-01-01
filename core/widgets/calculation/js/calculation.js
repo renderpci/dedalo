@@ -35,7 +35,8 @@ export const calculation = function(){
 */
 // prototypes assign
 	// lifecycle
-	calculation.prototype.init 	 	= widget_common.prototype.init
+	calculation.prototype.init		= widget_common.prototype.init
+	calculation.prototype.build		= widget_common.prototype.build
 	// render
 	calculation.prototype.edit 		= render_calculation.prototype.edit
 	calculation.prototype.list 		= render_calculation.prototype.list
