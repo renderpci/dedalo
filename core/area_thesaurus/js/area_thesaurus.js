@@ -1,5 +1,9 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
 // imports
-	import {common,load_data_debug} from '../../common/js/common.js'
+	import {common} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {search} from '../../search/js/search.js'
@@ -231,3 +235,5 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 	return sections_selector_data
 };//end get_sections_selector_data
+
+

@@ -110,77 +110,78 @@ component_json.prototype.set_value = async function(value) {
 };//end set_value
 
 
-// /**
-// * INIT
-// * @return
-// */
-// component_json.prototype.init = function(options) {
+/**
+* INIT
+*/
+	// component_json.prototype.init = function(options) {
 
-// 	const self = this
+	// 	const self = this
 
-// 	self.mode 			= options.mode
-// 	self.lang 			= options.lang
-// 	self.section_lang 	= options.section_lang
-// 	self.model 			= options.model
-// 	self.tipo 			= options.tipo
-// 	self.section_tipo 	= options.section_tipo
-// 	self.section_id 	= options.section_id
-// 	self.parent 		= options.parent
-// 	self.id 			= options.id
+	// 	self.mode 			= options.mode
+	// 	self.lang 			= options.lang
+	// 	self.section_lang 	= options.section_lang
+	// 	self.model 			= options.model
+	// 	self.tipo 			= options.tipo
+	// 	self.section_tipo 	= options.section_tipo
+	// 	self.section_id 	= options.section_id
+	// 	self.parent 		= options.parent
+	// 	self.id 			= options.id
 
-// 	// Options vars
-// 	self.context = options.context || null
-// 	self.data 	 = options.data || []
+	// 	// Options vars
+	// 	self.context = options.context || null
+	// 	self.data 	 = options.data || []
 
-// 	//console.log("component_json: init:",self);
+	// 	//console.log("component_json: init:",self);
 
-// 	//event_manager.subscribe('stateChange', () => self.render())
-// };//end init
-
+	// 	//event_manager.subscribe('stateChange', () => self.render())
+	// };//end init
 
 
 
-// /**
-// * LOAD_CONTEXT
-// * @return
-// */
-// component_json.prototype.load_context = function() {
 
-// 	const self = this
+/**
+* LOAD_CONTEXT
+* @return
+*/
+	// component_json.prototype.load_context = function() {
 
-// 	if (self.context) {
+	// 	const self = this
 
-// 		return new Promise(function(resolve) {
-// 		  resolve(self.context)
-// 		});
-// 	}
+	// 	if (self.context) {
 
-// 	const options = {
-// 		model 			: 'section_record',
-// 		tipo 			: self.section_tipo,
-// 		section_tipo 	: self.section_tipo,
-// 		section_id		: self.section_id,
-// 		mode			: self.mode,
-// 		lang			: self.section_lang
-// 	}
+	// 		return new Promise(function(resolve) {
+	// 		  resolve(self.context)
+	// 		});
+	// 	}
 
-// 	const tipo = self.tipo
+	// 	const options = {
+	// 		model 			: 'section_record',
+	// 		tipo 			: self.section_tipo,
+	// 		section_tipo 	: self.section_tipo,
+	// 		section_id		: self.section_id,
+	// 		mode			: self.mode,
+	// 		lang			: self.section_lang
+	// 	}
 
-// 	// section instance
-// 		const js_promise = instances.get_instance(options).then(function(current_section_record){
+	// 	const tipo = self.tipo
 
-// 			const context = current_section_record.get_component_context(tipo);
+	// 	// section instance
+	// 		const js_promise = instances.get_instance(options).then(function(current_section_record){
 
-// 			//event_manager.publish('stateChange')
+	// 			const context = current_section_record.get_component_context(tipo);
 
-// 			// set
-// 				self.context = context
-// 		})
+	// 			//event_manager.publish('stateChange')
 
-// 	//event_manager.subscribe('stateChange', () => self.render())
+	// 			// set
+	// 				self.context = context
+	// 		})
 
-// 	return js_promise
-// };//end load_context
+	// 	//event_manager.subscribe('stateChange', () => self.render())
+
+	// 	return js_promise
+	// };//end load_context
+
+
 
 // /**
 // * LOAD_DATA

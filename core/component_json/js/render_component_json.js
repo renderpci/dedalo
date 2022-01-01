@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, JSONEditor */
 /*eslint no-undef: "error"*/
 
 
@@ -13,7 +13,7 @@
 * Render_component
 * Manage the components logic and appearance in client side
 */
-export const render_component_json = function(options) {
+export const render_component_json = function() {
 
 	return true
 }; //end render_component_json
@@ -230,9 +230,8 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = function(self) {
 
-	const value 		= self.data.value
-	const mode 			= self.mode
-	const is_inside_tool= self.is_inside_tool
+	const value				= self.data.value
+	// const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -274,7 +273,6 @@ const get_content_data_edit = function(self) {
 const get_buttons = (self) => {
 
 	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
 
 	const fragment = new DocumentFragment()
 
@@ -284,7 +282,7 @@ const get_buttons = (self) => {
 			class_name	 : 'button full_screen',
 			parent 		 : fragment
 		})
-		button_fullscreen.addEventListener("click", function(e) {
+		button_fullscreen.addEventListener("click", function() {
 			// li.classList.toggle("fullscreen")
 			self.wrapper.classList.toggle("fullscreen")
 		})
@@ -296,7 +294,7 @@ const get_buttons = (self) => {
 			title 		 : "Download data",
 			parent 		 : fragment
 		})
-		button_download.addEventListener("click", function(e) {
+		button_download.addEventListener("click", function() {
 			const export_obj  = self.data.value[0]
 			const export_name = self.id
 			download_object_as_json(export_obj, export_name)
@@ -322,8 +320,6 @@ const get_buttons = (self) => {
 * @return dom element li
 */
 const get_input_element = (i, current_value, self) => {
-
-	const mode = self.mode
 
 	let validated = true
 	// let editor
@@ -505,27 +501,29 @@ const on_change = function(self, editor) {
 	button_save.classList.add("warning")
 	editor_wrapper.classList.add("isDirty")
 
+
 	try {
 		const edited_value 	= editor.get()
-	}catch(e){
-		// console.log("e:",e);
-		editor_wrapper.classList.add("isDirty")
 
-	}
+		if (typeof edited_value!=="undefined") {
 
-	if (typeof edited_value!=="undefined") {
-
-		const changed = JSON.stringify(db_value)!==JSON.stringify(edited_value)
-		if (changed) {
-			editor_wrapper.classList.add("isDirty")
-			button_save.classList.add("warning")
-		}else{
-			if (editor_wrapper.classList.contains("isDirty")) {
-				editor_wrapper.classList.remove("isDirty")
-				button_save.classList.remove("warning")
+			const changed = JSON.stringify(db_value)!==JSON.stringify(edited_value)
+			if (changed) {
+				editor_wrapper.classList.add("isDirty")
+				button_save.classList.add("warning")
+			}else{
+				if (editor_wrapper.classList.contains("isDirty")) {
+					editor_wrapper.classList.remove("isDirty")
+					button_save.classList.remove("warning")
+				}
 			}
 		}
+
+	}catch(error){
+		// console.log("error:",error);
+		editor_wrapper.classList.add("isDirty")
 	}
+
 
 	return true
 }; //end on_change

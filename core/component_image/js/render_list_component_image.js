@@ -29,8 +29,7 @@ render_list_component_image.prototype.list = function(options) {
 
 	const self = this
 
-	// Options vars
-		const context 	= self.context
+	// short vars
 		const datalist 	= self.data.datalist || []
 
 	// wrapper

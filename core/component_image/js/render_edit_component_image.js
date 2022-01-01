@@ -13,7 +13,7 @@
 * RENDER_EDIT_COMPONENT_IMAGE
 * Manage the components logic and appearance in client side
 */
-export const render_edit_component_image = function(component) {
+export const render_edit_component_image = function() {
 
 	return true
 };//end render_edit_component_image
@@ -64,7 +64,7 @@ render_edit_component_image.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	const is_inside_tool = ui.inside_tool(self)
+	// const is_inside_tool = ui.inside_tool(self)
 
 	const fragment = new DocumentFragment()
 
@@ -87,7 +87,6 @@ const get_content_data_edit = function(self) {
 			class_name		: '',
 			parent			: ul
 		})
-
 
 	// image. Only to get background color (!)
 		const image = ui.create_dom_element({
@@ -183,7 +182,7 @@ const get_buttons = (self) => {
 			title 			: 'Toggle vector editor',
 			parent 			: fragment
 		})
-		vector_editor.addEventListener("mouseup", (e) => {
+		vector_editor.addEventListener("mouseup", () => {
 			vector_editor_tools.classList.toggle('hide')
 			if(!vector_editor_tools.classList.contains('hide')){
 				self.load_vector_editor({load:'full'})
@@ -216,9 +215,8 @@ const get_buttons = (self) => {
 */
 const get_quality_selector = (self) => {
 
-	// Options vars
-		const context 	= self.context
-		const data 		= self.data
+	// short vars
+		const data = self.data
 
 		const fragment = new DocumentFragment()
 

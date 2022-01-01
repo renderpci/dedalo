@@ -217,7 +217,7 @@ component_date.prototype.format_date = function (date_value) {
 
 	const self = this
 
-	let current_input_date = date_value // Raw string from input field
+	const current_input_date = date_value // Raw string from input field
 
 	// Note: Added operators in regex for allow search (9-2-2018)
 	const regex_full 		= /^(>=|<=|>|<)?(0?[0-9]|[12][0-9]|3[01])[-\/.](0?[0-9]|1[012])[-\/.](-?[0-9]+)$/
@@ -225,10 +225,10 @@ component_date.prototype.format_date = function (date_value) {
 	const regex_year 		= /^(>=|<=|>|<)?(-?[0-9]+)$/
 
 	// dd_date object
-	let dd_date = {}
+	const dd_date = {}
 		if(regex_full.test(current_input_date)) {
 
-			var res = regex_full.exec(current_input_date)
+			const res = regex_full.exec(current_input_date)
 
 			dd_date.op 		= res[1] || null
 			dd_date.day 	= parseInt(res[2])
@@ -237,7 +237,7 @@ component_date.prototype.format_date = function (date_value) {
 
 		}else if(regex_year_month.test(current_input_date)){
 
-			var res = regex_year_month.exec(current_input_date)
+			const res = regex_year_month.exec(current_input_date)
 
 			dd_date.op 		= res[1] || null
 			dd_date.month 	= parseInt(res[2])
@@ -245,7 +245,7 @@ component_date.prototype.format_date = function (date_value) {
 
 		}else if(regex_year.test(current_input_date)){
 
-			var res = regex_year.exec(current_input_date)
+			const res = regex_year.exec(current_input_date)
 
 			dd_date.op 		= res[1] || null
 			dd_date.year 	= parseInt(res[2])
@@ -255,7 +255,7 @@ component_date.prototype.format_date = function (date_value) {
 			return false
 		}
 		// Add calculated absolute "time" to dd_date object
-		let time = self.convert_date_to_seconds(dd_date, "date")
+			const time = self.convert_date_to_seconds(dd_date, "date")
 			if (time!==false) {
 				dd_date.time = time
 			}
@@ -281,13 +281,10 @@ component_date.prototype.format_date = function (date_value) {
 		}
 
 	const result = {
-		res_formatted : res_formatted,	// Viewed value (input text)
-		dd_date 	  : dd_date			// Object
+		res_formatted	: res_formatted,	// Viewed value (input text)
+		dd_date			: dd_date			// Object
 	}
 
-	if(SHOW_DEBUG===true) {
-		//console.log("format_date result",result, dd_date);
-	}
 
 	return result
 };//end format_date
@@ -404,25 +401,25 @@ component_date.prototype.get_dato_period = function(parentNode) {
 
 	const self = this
 
-	let dato =  {}
-
 	const period_year	= parentNode.querySelector('input[data-role=period_year]')
 	const period_month	= parentNode.querySelector('input[data-role=period_month]')
 	const period_day	= parentNode.querySelector('input[data-role=period_day]')
 
-	let dd_date = {}
-	if(parseInt(period_year.value)>0) 	dd_date.year  = parseInt(period_year.value)
-	if(parseInt(period_month.value)>0) 	dd_date.month = parseInt(period_month.value)
-	if(parseInt(period_day.value)>0) 	dd_date.day   = parseInt(period_day.value)
+	// dd_date
+		const dd_date = {}
+		if(parseInt(period_year.value)>0) 	dd_date.year  = parseInt(period_year.value)
+		if(parseInt(period_month.value)>0) 	dd_date.month = parseInt(period_month.value)
+		if(parseInt(period_day.value)>0) 	dd_date.day   = parseInt(period_day.value)
 
-	// Add calculated absolute "time" to dd_date object
-	dd_date.time = self.convert_date_to_seconds(dd_date, 'period')
+		// Add calculated absolute "time" to dd_date object
+		dd_date.time = self.convert_date_to_seconds(dd_date, 'period')
 
 	// Final dato
-	dato = (dd_date.year || dd_date.month || dd_date.day) ? { "period" : dd_date } : ''
+		const dato = (dd_date.year || dd_date.month || dd_date.day)
+			? { period : dd_date }
+			: ''
 
 	return dato
-
 };//end get_dato_period
 
 
