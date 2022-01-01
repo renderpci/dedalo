@@ -37,25 +37,11 @@ export const descriptors = function(){
 */
 // prototypes assign
 	// lifecycle
-	// descriptors.prototype.init 	 	= component_common.prototype.init
+	descriptors.prototype.init	= widget_common.prototype.init
+	descriptors.prototype.build	= widget_common.prototype.build
 	// render
-	descriptors.prototype.edit 			= render_descriptors.prototype.edit
-	descriptors.prototype.list 			= render_descriptors.prototype.list
-
-
-
-/**
-* INIT
-*/
-descriptors.prototype.init = async function(options) {
-
-	const self = this
-
-	// call the generic commom init
-		const common_init = widget_common.prototype.init.call(this, options);
-
-}//end init
-
+	descriptors.prototype.edit	= render_descriptors.prototype.edit
+	descriptors.prototype.list	= render_descriptors.prototype.list
 
 
 /**
