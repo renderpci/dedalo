@@ -37,24 +37,25 @@ export const media_icons = function(){
 */
 // prototypes assign
 	// lifecycle
-	// media_icons.prototype.init 	 	= component_common.prototype.init
+	media_icons.prototype.init 	 		= widget_common.prototype.init
+	media_icons.prototype.build 	 	= widget_common.prototype.build
 	// render
 	media_icons.prototype.edit 			= render_media_icons.prototype.edit
 	media_icons.prototype.list 			= render_media_icons.prototype.list
 
 
 
-/**
-* INIT
-*/
-media_icons.prototype.init = async function(options) {
+// /**
+// * INIT
+// */
+// media_icons.prototype.init = async function(options) {
 
-	const self = this
+// 	const self = this
 
-	// call the generic commom init
-		const common_init = widget_common.prototype.init.call(this, options);
+// 	// call the generic commom init
+// 		const common_init = widget_common.prototype.init.call(this, options);
 
-}//end init
+// }//end init
 
 
 
