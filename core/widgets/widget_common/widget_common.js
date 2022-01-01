@@ -37,6 +37,8 @@ widget_common.prototype.init = async function(options) {
 		self.value			= options.value
 		self.datalist		= options.datalist
 		self.ipo			= options.ipo
+		self.name			= options.name
+		self.properties		= options.properties
 
 	// status update
 		self.status = 'initiated'
@@ -61,7 +63,7 @@ widget_common.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// load self style
-		const tool_css_url = DEDALO_CORE_URL + '/widgets/' + self.model + "/css/" + self.model + ".css"
+		const tool_css_url = DEDALO_CORE_URL + '/widgets/' + self.name + "/css/" + self.name + ".css"
 		common.prototype.load_style(tool_css_url) // returns promise
 
 	// autoload

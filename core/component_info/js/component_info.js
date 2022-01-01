@@ -150,7 +150,9 @@ component_info.prototype.get_widgets = async function(){
 							mode			: self.mode,
 							value			: widget_value,
 							datalist		: widget_datalist,
-							ipo				: current_widget.ipo
+							ipo				: current_widget.ipo,
+							name 			: current_widget.widget_name,
+							properties 		: current_widget,
 						})
 						.then(function(){
 							resolve(new_widget)
