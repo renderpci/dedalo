@@ -191,7 +191,7 @@ const get_input_element_edit = async (i, current_widget, inputs_container, self)
 
 	const widget_name 	= current_widget.widget
 	const widget_value 	= current_widget.value
-
+	await current_widget.build()
 	const widget_node = await current_widget.render()
 
 	// li
