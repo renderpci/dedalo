@@ -127,11 +127,6 @@ section_record.prototype.init = async function(options) {
 		self.status = 'initied'
 
 
-		if(self.caller.tipo==='numisdata30') {
-				console.log("///////////////////////////// self:",self);
-		}
-
-
 	return self
 };//end init
 

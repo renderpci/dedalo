@@ -152,13 +152,13 @@ const get_content_data = async function(ar_section_record, self) {
 			// parallel mode
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise = ar_section_record[i].render()
-					ar_promises.push(render_promise)
+					const render_promise_node = ar_section_record[i].render()
+					ar_promises.push(render_promise_node)
 				}
 				await Promise.all(ar_promises).then(function(values) {
 				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record = values[i]
-					fragment.appendChild(section_record)
+				  	const section_record_node = values[i]
+					fragment.appendChild(section_record_node)
 				  }
 				});
 		}
