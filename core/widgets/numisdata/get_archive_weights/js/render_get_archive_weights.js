@@ -99,20 +99,20 @@ const get_value_element = (i, data, values_container, self) => {
 
 	//weights
 		const archive_weights = ui.create_dom_element({
-			type 		: 'div',
+			element_type: 'div',
 			parent 		: li
 		})
 
 		// general
 		const sum_weights = ui.create_dom_element({
-			type 		: 'div',
+			element_type: 'div',
 			class 		: 'sum_weights',
 			parent 		: archive_weights
 		})
 			//media_weight
 				// label
 					const media_weight_label = ui.create_dom_element({
-						type 		: 'span',
+						element_type: 'span',
 						class_name	: 'label',
 						inner_html 	: get_label.weight,
 						parent 		: sum_weights
@@ -120,7 +120,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 					const media_weight_value = ui.create_dom_element({
-						type 		: 'span',
+						element_type: 'span',
 						class_name	: 'value',
 						inner_html 	: data.find(item => item.id === 'media_weight').value,
 						parent 		: sum_weights
@@ -128,14 +128,14 @@ const get_value_element = (i, data, values_container, self) => {
 
 		// detail
 		const get_archive_weights = ui.create_dom_element({
-			type 		: 'span',
+			element_type: 'span',
 			class 		: 'get_archive_weights',
 			parent 		: archive_weights
 		})
 			//max_weight
 				// label
 				const max_weight_label = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'label_range',
 					inner_html 	: 'max: ',
 					parent 		: get_archive_weights
@@ -143,7 +143,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 				const max_weight_value = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.id === 'max_weight').value,
 					parent 		: get_archive_weights
@@ -152,7 +152,7 @@ const get_value_element = (i, data, values_container, self) => {
 			// min_weight
 				// label
 				const min_weight_label = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'label_range',
 					inner_html 	: ' | min: ',
 					parent 		: get_archive_weights
@@ -160,7 +160,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 				const min_weight_value = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.id === 'min_weight').value,
 					parent 		: get_archive_weights
@@ -169,7 +169,7 @@ const get_value_element = (i, data, values_container, self) => {
 			// total_elements_weights
 				// label
 				const total_weight_label = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'label',
 					inner_html 	: ' | n: ',
 					parent 		: get_archive_weights
@@ -177,7 +177,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 				const total_weight_value = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.id === 'total_elements_weights').value,
 					parent 		: get_archive_weights
@@ -187,20 +187,20 @@ const get_value_element = (i, data, values_container, self) => {
 	//Diameter
 		// general
 		const archive_diameter = ui.create_dom_element({
-			type 		: 'div',
+			element_type: 'div',
 			class 		: 'get_archive_diameter',
 			parent 		: li
 		})
 
 		const sum_diameter = ui.create_dom_element({
-			type 		: 'div',
+			element_type: 'div',
 			class 		: 'sum_diameter',
 			parent 		: archive_diameter
 		})
 		// media_diameter
 			// label
 				const media_diameter_label = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'label',
 					inner_html 	: get_label.diameter,
 					parent 		: sum_diameter
@@ -208,21 +208,21 @@ const get_value_element = (i, data, values_container, self) => {
 
 			// value
 				const media_diameter_value = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.id === 'media_diameter').value,
 					parent 		: sum_diameter
 				})
 		// detail
 		const get_archive_diameter = ui.create_dom_element({
-			type 		: 'span',
+			element_type: 'span',
 			class 		: 'get_archive_diameter',
 			parent 		: archive_diameter
 		})
 			// max_diameter
 				// label
 				const max_diameter_label = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'label_range',
 					inner_html 	: 'max: ',
 					parent 		: get_archive_diameter
@@ -230,7 +230,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 				const max_diameter_value = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.id === 'max_diameter').value,
 					parent 		: get_archive_diameter
@@ -239,7 +239,7 @@ const get_value_element = (i, data, values_container, self) => {
 			// min_diameter
 				// label
 				const min_diameter_label = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'label_range',
 					inner_html 	: ' | min: ',
 					parent 		: get_archive_diameter
@@ -247,7 +247,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 				const min_diameter_value = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.id === 'min_diameter').value,
 					parent 		: get_archive_diameter
@@ -257,7 +257,7 @@ const get_value_element = (i, data, values_container, self) => {
 			//total_elements_diameter
 				// label
 				const total_diameter_label = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'label',
 					inner_html 	: ' | n: ',
 					parent 		: get_archive_diameter
@@ -265,7 +265,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 				const total_diameter_value = ui.create_dom_element({
-					type 		: 'span',
+					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.id === 'total_elements_diameter').value,
 					parent 		: get_archive_diameter
