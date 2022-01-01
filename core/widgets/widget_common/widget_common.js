@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -7,7 +7,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
-	// import {create_source} from '../../common/js/common.js'
+	import {common} from '../../common/js/common.js'
 	// import {ui} from '../../common/js/ui.js'
 
 
@@ -44,3 +44,36 @@ widget_common.prototype.init = async function(options) {
 
 	return true
 }//end init
+
+
+
+/**
+* BUILD
+* Generic widget build function. Load css files
+* @param bool autoload
+* @return promise bool
+*/
+widget_common.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// status update
+		self.status = 'building'
+
+	// load self style
+		const tool_css_url = DEDALO_CORE_URL + '/widgets/' + self.model + "/css/" + self.model + ".css"
+		common.prototype.load_style(tool_css_url) // returns promise
+
+	// autoload
+		if (autoload===true) {
+			// nothing to do now
+		}
+
+	// status update
+		self.status = 'builded'
+
+
+	return true
+};//end build
+
+
