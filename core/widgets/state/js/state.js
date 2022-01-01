@@ -37,39 +37,11 @@ export const state = function(){
 */
 // prototypes assign
 	// lifecycle
-	// state.prototype.init 	 	= component_common.prototype.init
+	state.prototype.init	= widget_common.prototype.init
+	state.prototype.build	= widget_common.prototype.build
 	// render
-	state.prototype.edit 			= render_edit_state.prototype.edit
-	state.prototype.list 			= render_list_state.prototype.list
-
-
-
-/**
-* INIT
-*/
-state.prototype.init = async function(options) {
-
-	const self = this
-
-		console.log("self:----------------",self);
-
-	// call the generic commom init
-		const common_init	= widget_common.prototype.init.call(this, options);
-		const common_build	= widget_common.prototype.build.call(this, options);
-
-	// // load dependences js/css
-	// 	const load_promises = []
-	//
-	// 	// css file load
-	// 		const lib_css_file = '../css/state.css'
-	// 		load_promises.push( widget_common.prototype.load_style(lib_css_file) )
-	//
-	// const js_promise = Promise.all(load_promises)
-	//
-	//
-	// return js_promise
-}//end init
-
+	state.prototype.edit	= render_edit_state.prototype.edit
+	state.prototype.list	= render_list_state.prototype.list
 
 
 /**
