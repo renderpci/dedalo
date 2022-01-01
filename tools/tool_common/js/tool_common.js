@@ -1,12 +1,12 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
@@ -54,12 +54,12 @@ tool_common.prototype.init = async function(options) {
 		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
 		self.caller			= options.caller // optional, only for refresh on tool exit
 
-	// set vars
+		// set vars
 		self.node				= []
 		self.type				= 'tool'
 		self.ar_instances		= []
 		self.events_tokens		= []
-		self.get_tool_label			= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
+		self.get_tool_label		= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 
 	// set status
@@ -79,7 +79,7 @@ tool_common.prototype.init = async function(options) {
 * @return promise bool
 */
 tool_common.prototype.build = async function(autoload=false) {
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -91,7 +91,7 @@ tool_common.prototype.build = async function(autoload=false) {
 		common.prototype.load_style(tool_css_url)
 
 	// data manager
-		const current_data_manager = new data_manager()
+		// const current_data_manager = new data_manager()
 
 	// ddo_map load all elements inside ddo_map
 		const ar_promises = []
@@ -202,11 +202,9 @@ tool_common.prototype.build = async function(autoload=false) {
 			// dd_console(`tool common build. self.ar_instances`, 'DEBUG', self.ar_instances)
 		}
 
-
 	// status update
 		self.status = 'builded'
 
-	console.log("self:",self);
 
 	return true
 };//end build

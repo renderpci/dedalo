@@ -5,10 +5,10 @@
 
 // import
 	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {common, create_source, get_ar_inverted_paths} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 
@@ -64,7 +64,7 @@ tool_time_machine.prototype.init = async function(options) {
 	// fix dedalo_projects_langs
 		self.langs = page_globals.dedalo_projects_default_langs
 
-	// events subscribe. User click over list record eye icon
+	// events subscribe. User click over list record eye icon (preview)
 		self.events_tokens.push(
 			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
 		)
