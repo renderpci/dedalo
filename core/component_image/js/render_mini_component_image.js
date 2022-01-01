@@ -13,7 +13,7 @@
 * render_mini_component_image
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_image = function(component) {
+export const render_mini_component_image = function() {
 
 	return true
 };//end render_mini_component_image
@@ -29,9 +29,8 @@ render_mini_component_image.prototype.mini = function(options) {
 
 	const self = this
 
-	// Options vars
-		const context	= self.context
-		const datalist	= self.data.datalist || []
+	// short vars
+		const datalist = self.data.datalist || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
@@ -44,7 +43,7 @@ render_mini_component_image.prototype.mini = function(options) {
 			: url_object.url
 
 	// image
-		const image = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: "img",
 			src				: url,
 			parent			: wrapper

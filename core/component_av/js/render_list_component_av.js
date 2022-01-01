@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -29,9 +29,8 @@ render_list_component_av.prototype.list = async function() {
 
 	const self = this
 
-	// Options vars
-		const context 	= self.context
-		const data 		= self.data
+	// short vars
+		const data = self.data
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -40,8 +39,8 @@ render_list_component_av.prototype.list = async function() {
 		wrapper.classList.add('media')
 
 	// url
-		const posterframe_url 	= data.posterframe_url || DEDALO_CORE_URL + "/themes/default/0.jpg"
-		const url 				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+		const posterframe_url	= data.posterframe_url || DEDALO_CORE_URL + "/themes/default/0.jpg"
+		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
 		const image = ui.create_dom_element({

@@ -81,7 +81,7 @@ export const render_components_list = function(options) {
 				if (path.length===0) {
 					section_bar.classList.add('close_hide')
 				}
-				section_bar.addEventListener("click", function(e){
+				section_bar.addEventListener("click", function(){
 					if (target_div.classList.contains("target_list_container")) {
 						target_div.innerHTML = ""
 					}
@@ -152,7 +152,7 @@ export const render_components_list = function(options) {
 
 						// Event on click load "children" section inside target_list_container recursively
 						const target_section = element.target_section_tipo[0] // Select first only
-						component.addEventListener("click", async function(e){
+						component.addEventListener("click", async function(){
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
 									section_tipo : target_section

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, paper, iro */
 /*eslint no-undef: "error"*/
 
 
@@ -25,7 +25,11 @@ export const vector_editor = function(){
 
 
 
-// CANVAS : INIT
+/**
+* INIT_CANVAS
+* @param instance self
+* @return promise
+*/
 vector_editor.prototype.init_canvas = async function(self) {
 
 	// init with the dom svg object
@@ -695,8 +699,8 @@ vector_editor.prototype.init_tools = function(self){
 vector_editor.prototype.render_tools_buttons = function(self){
 
 	// Tool buttons. Show
-		const view 		= self.current_paper.view
-		const buttons_container = self.vector_editor_tools
+		// const view			= self.current_paper.view
+		const buttons_container	= self.vector_editor_tools
 		buttons_container.classList.remove("hide")
 
 	// vector editor tools
@@ -705,8 +709,8 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// layer selector
 				const layer_selector_button = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button open_layer_selector',
-					parent 			: buttons_container,
+					class_name		: 'button open_layer_selector',
+					parent			: buttons_container,
 				})
 
 				const layer_selector_container = ui.create_dom_element({
@@ -714,7 +718,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					parent 			: buttons_container,
 				})
 
-				layer_selector_button.addEventListener("mouseup", (e) =>{
+				layer_selector_button.addEventListener("mouseup", () =>{
 					// clean
 						while (layer_selector_container.firstChild) {
 							layer_selector_container.removeChild(layer_selector_container.firstChild)
@@ -1110,8 +1114,8 @@ vector_editor.prototype.create_raster_layer = function(self){
 	// fixed height for the image
 	// get the image height with fixed 1200px and set the view_width
 	// this fixed height is used for change the quality o the image and don't move the bounds of the image.
-		const ratio 		= self.img_view_height / self.img_height
-		const view_width	= ratio * self.img_width
+		const ratio			= self.img_view_height / self.img_height
+		// const view_width	= ratio * self.img_width
 
 	// scale raster layer
 	// get the ratio for the scale the project layer to fit to canvas view heigth
@@ -1135,7 +1139,10 @@ vector_editor.prototype.create_raster_layer = function(self){
 
 
 
-vector_editor.prototype.activate_layer = function(self, layer, load=full) {
+/**
+* ACTIVATE_LAYER
+*/
+vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 
 	// curent paper
 		const project 			= self.current_paper.project
@@ -1167,11 +1174,14 @@ vector_editor.prototype.activate_layer = function(self, layer, load=full) {
 		project.view.draw();
 		// deselect all paths
 		project.deselectAll();
-}
+
+	return true
+}//end activate_layer
+
 
 
 /**
-*  LAYER_SELECTOR
+* LAYER_SELECTOR
 * @return
 */
 vector_editor.prototype.render_layer_selector = function(self){
@@ -1371,7 +1381,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 			// show the alter with the option to select the action to do
 			layer_delete.addEventListener("click", function(e){
 
-				const dialog = ui.create_dialog({
+				ui.create_dialog({
 					element_id 		: self.id,
 					title			: 'Borrar...',
 					msg				: '¿seguro que desea borrar?',
@@ -1443,11 +1453,11 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				class_name 		: 'layer_color',
 				parent 			: layer_li,
 			})
-			layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
+			layer_color.style.backgroundColor = typeof layer.layer_color!=='undefined'
 				? layer.layer_color
 				: 'black'
 			// if the user do a doble click into the color icon will be assigned the current color in the color picker
-			layer_color.addEventListener("dblclick", (e) =>{
+			layer_color.addEventListener("dblclick", () =>{
 				layer_color.style.backgroundColor = this.active_fill_color.toCSS()
 				layer.layer_color = this.active_fill_color.toCSS()
 			})

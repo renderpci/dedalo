@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -19,6 +19,7 @@ export const render_mini_component_av = function() {
 };//end  render_mini_component_av
 
 
+
 /**
 * MINI
 * Render node to be used by service autocomplete or any datalist
@@ -28,9 +29,8 @@ render_mini_component_av.prototype.mini = async function() {
 
 	const self = this
 
-	// Options vars
-		const context	= self.context
-		const data		= self.data
+	// short vars
+		const data = self.data
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
@@ -40,7 +40,7 @@ render_mini_component_av.prototype.mini = async function() {
 		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
-		const image = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: "img",
 			src				: url,
 			parent			: wrapper
