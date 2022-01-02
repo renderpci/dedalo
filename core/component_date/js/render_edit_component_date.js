@@ -34,7 +34,7 @@ render_edit_component_date.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// date_mode . Defined in ontology properties
-		const date_mode = self.context.properties.date_mode || 'date'
+		const date_mode = self.get_date_mode()
 
 	// load editor files (calendar)
 		await self.load_editor()
@@ -70,7 +70,7 @@ render_edit_component_date.prototype.edit = async function(options) {
 */
 const add_events = function(self, wrapper) {
 
-	const date_mode = self.context.properties.date_mode || 'date'
+	const date_mode = self.get_date_mode()
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
@@ -350,7 +350,7 @@ const get_buttons = (self) => {
 export const get_input_element_edit = (i, current_value, self) => {
 
 	const mode		= self.mode
-	const date_mode	= self.context.properties.date_mode
+	const date_mode	= self.get_date_mode()
 
 	// li
 		const li = ui.create_dom_element({
@@ -380,7 +380,7 @@ export const get_input_element_edit = (i, current_value, self) => {
 
 	// button remove
 		if(mode==='edit' || 'edit_in_list'){
-			const button_remove = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
 				dataset			: { key : i },
@@ -399,7 +399,7 @@ export const get_input_element_edit = (i, current_value, self) => {
 */
 const input_element_range = (i, current_value, inputs_container, self) => {
 
-	const date_mode = self.context.properties.date_mode
+	const date_mode = self.get_date_mode()
 
 	const input_value_start	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode)	: ''
 	const input_value_end	= (current_value && current_value.end) ? self.get_dd_timestamp(current_value.end, date_mode) 		: ''
@@ -407,11 +407,11 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 		input_element_flatpicker(i, 'range_start', input_value_start, inputs_container, self)
 
 		// create div
-		const div = ui.create_dom_element({
-			element_type	: 'div',
-			text_content	: ' <> ',
-			parent			: inputs_container
-		})
+			ui.create_dom_element({
+				element_type	: 'div',
+				text_content	: ' <> ',
+				parent			: inputs_container
+			})
 
 		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container, self)
 
@@ -494,7 +494,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 */
 const input_element_time = (i, current_value, inputs_container, self) => {
 
-	const date_mode = self.context.properties.date_mode
+	const date_mode = self.get_date_mode()
 
 	const input_value = (current_value) ? self.get_dd_timestamp(current_value, date_mode) : ''
 
@@ -518,7 +518,7 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 */
 export const input_element_default = (i, current_value, inputs_container, self) => {
 
-	const date_mode		= self.context.properties.date_mode
+	const date_mode		= self.get_date_mode()
 	const input_value	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode) : ''
 
 	input_element_flatpicker(i, 'default', input_value, inputs_container, self)
