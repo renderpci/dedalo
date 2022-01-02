@@ -148,3 +148,31 @@ export function object_to_url_vars( vars_obj ) {
 }//end object_to_url_vars
 
 
+
+/**
+* OPEN_WINDOW_WITH_POST
+* @return bool false
+*/
+export function open_window_with_post(url, data) {
+
+	const form = document.createElement("form");
+	form.target			= "_blank";
+	form.method			= "POST";
+	form.action			= url;
+	form.style.display	= "none";
+
+	for (const key in data) {
+
+		const input	= document.createElement("input");
+		input.type	= "hidden";
+		input.name	= key;
+		input.value	= data[key];
+		form.appendChild(input);
+	}
+
+	document.body.appendChild(form);
+	form.submit();
+	document.body.removeChild(form);
+
+	return false;
+};//end
