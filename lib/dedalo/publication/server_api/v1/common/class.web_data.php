@@ -2264,12 +2264,13 @@ class web_data {
 	/**
 	* BUILD_FRAGMENT
 	* Get fragment text from tag. Used in search_thematic
-	* @param object options
-	* @return object $result
+	* @param object request_options
+	* @return object $result | null
 	*	$result->fragment string. Clean text without tags
 	*	$result->tcin_secs int. Seconds for video cut in
 	*	$result->tcin_secs int. Seconds for video cut out
 	*	$result->video_url string. Full video path with tc in and out vars
+	* 	$result->posterframe_url string. Full posterframe path
 	*/
 	public static function build_fragment( $request_options ) {
 
@@ -2277,44 +2278,51 @@ class web_data {
 
 		// options
 			$options = new stdClass();
-				$options->tag_id   		 		= null;
-				$options->lang   		 		= WEB_CURRENT_LANG_CODE;
-				$options->raw_text 		 		= null;
-				$options->av_section_id  		= null;
-				$options->component_tipo 	 	= null;
-				$options->section_tipo 	 	 	= null;
-				$options->video_url 	 	 	= null; # Like 'http://mydomain.org/dedalo/media/av/404/'
-				$options->margin_seconds_in  	= null;
-				$options->margin_seconds_out 	= null;
-				$options->margin_chars_in 		= 5;	# default 100
+				$options->tag_id				= null;
+				$options->lang					= WEB_CURRENT_LANG_CODE;
+				$options->raw_text				= null;
+				$options->av_section_id			= null;
+				$options->component_tipo		= null;
+				$options->section_tipo			= null;
+				$options->video_url				= null; # Like 'http://mydomain.org/dedalo/media/av/404/'
+				$options->margin_seconds_in		= null;
+				$options->margin_seconds_out	= null;
+				$options->margin_chars_in		= 5;	# default 100
 				$options->margin_chars_out		= 100;	# default 100
-				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment
-				$options->indexation_terms 		= false; # If true, calculate all terms used in this indexation
+				$options->fragment_terms_inside	= false; # If true, calculate terms indexed inide this fragment
+				$options->indexation_terms		= false; # If true, calculate all terms used in this indexation
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// check vars
 			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-				die("Error. Ilegal lang: ".$options->lang);
+				// die("Error. Ilegal lang: ".$options->lang);
+				trigger_error("Error. Ilegal lang: ".$options->lang);
+				return null;
 			}
 			if(!empty($options->av_section_id) && !self::check_safe_value('section_id', $options->av_section_id)) {
-				die("Error. Ilegal av_section_id: ".$options->av_section_id);
+				// die("Error. Ilegal av_section_id: ".$options->av_section_id);
+				trigger_error("Error. Ilegal av_section_id: ".$options->av_section_id);
+				return null;
 			}
-
 
 		$result = new stdClass();
 
 		// video filename
 			if (is_null($options->video_url)) {
-				$base_url 	= WEB_VIDEO_BASE_URL;
-				$file_name  = AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id.'.mp4';// Like : rsc35_rsc167_1
-				$av_path 	= $base_url .'/'. $file_name;
+				$base_url	= WEB_VIDEO_BASE_URL;
+				$file_name	= AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id.'.mp4';// Like : rsc35_rsc167_1
+				$av_path	= $base_url .'/'. $file_name;
 			}else{
-				$av_path  	= $options->video_url;
+				$av_path	= $options->video_url;
 			}
 
+		// posterframe_url (from server config WEB_VIDEO_BASE_URL like: '/dedalo/media/av/404')
+			$base_url			= pathinfo(WEB_VIDEO_BASE_URL)['dirname'];
+			$posterframe_url	= $base_url .'/posterframe/'. AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id.'.jpg';
+
 		// tags
-			$tag_in  = TR::get_mark_pattern('indexIn',  $standalone=false, $options->tag_id, $data=false);
-			$tag_out = TR::get_mark_pattern('indexOut', $standalone=false, $options->tag_id, $data=false);
+			$tag_in		= TR::get_mark_pattern('indexIn',  $standalone=false, $options->tag_id, $data=false);
+			$tag_out	= TR::get_mark_pattern('indexOut', $standalone=false, $options->tag_id, $data=false);
 
 		// Build in/out regex pattern to search
 			$regexp = $tag_in ."(.*)". $tag_out;
@@ -2323,20 +2331,20 @@ class web_data {
 			# Dato raw from matrix db
 			$raw_text = $options->raw_text;
 
-			$delete_options =new stdClass();
-				$delete_options->deleteTC 			= false;
-				$delete_options->deleteIndex 		= false;
-				$delete_options->deleteSvg 			= false;
-				$delete_options->deleteGeo 			= false;
-				$delete_options->delete_page 		= false;
-				$delete_options->delete_person 		= true;
-				$delete_options->delete_note   		= false;
-				$delete_options->delete_struct 		= false;
-				$delete_options->delete_reference 	= false;
-			#$raw_text = TR::deleteMarks($raw_text, $delete_options); // Force delete  tags
+			// delete_options
+				$delete_options =new stdClass();
+					$delete_options->deleteTC			= false;
+					$delete_options->deleteIndex		= false;
+					$delete_options->deleteSvg			= false;
+					$delete_options->deleteGeo			= false;
+					$delete_options->delete_page		= false;
+					$delete_options->delete_person		= true;
+					$delete_options->delete_note		= false;
+					$delete_options->delete_struct		= false;
+					$delete_options->delete_reference	= false;
+				#$raw_text = TR::deleteMarks($raw_text, $delete_options); // Force delete  tags
 
 			$raw_text = html_entity_decode($raw_text);
-				#dump(null, ' dato ++ '.trim($raw_text));
 
 			// PREG_MATCH_ALL
 				$preg_match_all_result = preg_match_all("/$regexp/", $raw_text, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER );
@@ -2347,9 +2355,9 @@ class web_data {
 				#}
 			if( !empty($preg_match_all_result) ) {
 
-				$fragment_inside_key = 3;
-				$tag_in_pos_key 	 = 1;
-				$tag_out_pos_key 	 = 4;
+				$fragment_inside_key	= 3;
+				$tag_in_pos_key			= 1;
+				$tag_out_pos_key		= 4;
 
 				foreach($matches as $match) {
 
@@ -2396,15 +2404,16 @@ class web_data {
 						// Subtitles url
 							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs, $options->lang);
 
-						$result->fragm 			= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
-						#$result->fragm_raw 	= $fragment_text_raw;
-						$result->video_url		= $video_url;
-						$result->subtitles_url	= $subtitles_url;
-						#$result->terms 		= array();	// For unify object response only
-						#$result->tcin 			= $tcin;
-						#$result->tcout 		= $tcout;
-						$result->tcin_secs 		= $tcin_secs;
-						$result->tcout_secs 	= $tcout_secs;
+						$result->fragm				= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
+						#$result->fragm_raw			= $fragment_text_raw;
+						$result->video_url			= $video_url;
+						$result->posterframe_url	= $posterframe_url;
+						$result->subtitles_url		= $subtitles_url;
+						#$result->terms				= array();	// For unify object response only
+						#$result->tcin				= $tcin;
+						#$result->tcout				= $tcout;
+						$result->tcin_secs			= $tcin_secs;
+						$result->tcout_secs			= $tcout_secs;
 
 							#dump($result->fragm, '$result->fragm ++ '.to_string($video_url));
 						# FRAGMENT_TERMS INSIDE . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta indexacion
@@ -2420,7 +2429,7 @@ class web_data {
 						}
 
 						return (object)$result;
-					}
+					}//end if (isset($match[$fragment_inside_key][0])) {
 				}//end foreach($matches as $match) {
 			}
 
