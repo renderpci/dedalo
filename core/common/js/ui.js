@@ -779,18 +779,18 @@ export const ui = {
 				}
 
 			// filter
-				if (instance.filter) {
-					const filter = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'filter',
-						parent			: fragment
-					})
-					instance.filter.build().then(()=>{
-						instance.filter.render().then(filter_wrapper =>{
-							filter.appendChild(filter_wrapper)
-						})
-					})
-				}
+				// if (instance.filter) {
+				// 	const filter = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'filter',
+				// 		parent			: fragment
+				// 	})
+				// 	instance.filter.build().then(()=>{
+				// 		instance.filter.render().then(filter_wrapper =>{
+				// 			filter.appendChild(filter_wrapper)
+				// 		})
+				// 	})
+				// }
 
 			// paginator
 				if (items.paginator_div) {
@@ -877,33 +877,32 @@ export const ui = {
 				}
 
 			// buttons
-				if (items.buttons) {
-					const buttons = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'buttons',
-						parent			: fragment
-					})
-					const items_buttons_length = items.buttons.length
-					for (let i = 0; i < items_buttons_length; i++) {
-						buttons.appendChild(items.buttons[i])
-					}
-				}
+				// if (items.buttons) {
+				// 	const buttons = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'buttons',
+				// 		parent			: fragment
+				// 	})
+				// 	const items_buttons_length = items.buttons.length
+				// 	for (let i = 0; i < items_buttons_length; i++) {
+				// 		buttons.appendChild(items.buttons[i])
+				// 	}
+				// }
 
 			// filter
-				if (instance.filter) {
-					const filter = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'filter',
-						parent			: fragment
-					})
-					instance.filter.render().then(filter_wrapper =>{
-						filter.appendChild(filter_wrapper)
-					})
-				}
+				// if (instance.filter) {
+				// 	const filter = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'filter',
+				// 		parent			: fragment
+				// 	})
+				// 	instance.filter.render().then(filter_wrapper =>{
+				// 		filter.appendChild(filter_wrapper)
+				// 	})
+				// }
 
 			// content_data
 				if (items.content_data) {
-
 					const content_data = items.content_data
 					content_data.classList.add("content_data", type)
 					fragment.appendChild(content_data)

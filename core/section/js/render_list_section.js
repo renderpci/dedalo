@@ -32,7 +32,7 @@ render_list_section.prototype.list = async function(options) {
 
 	const self = this
 
-	const render_level		= options.render_level || 'full'
+	const render_level = options.render_level || 'full'
 
 	// columns_map
 		const columns_map = await rebuild_columns_map(self)
