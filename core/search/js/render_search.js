@@ -129,7 +129,7 @@ render_search.prototype.render_base = function() {
 	// button save_preset . Hidden by default
 		const button_save_preset = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'button_save_preset hide99',
+			class_name		: 'button_save_preset hide',
 			text_content	: get_label.salvar +' '+ get_label.cambios,
 			parent			: search_global_container
 		})

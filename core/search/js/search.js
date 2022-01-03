@@ -998,9 +998,9 @@ this.get_search_json_object = function() {
 	* UPDATE_SECTION
 	* @return promise
 	*/
-	const update_section = async function(section, filter_obj, self) {
+	const update_section = async function(section_instance, filter_obj, self) {
 
-		const section_node = section.node[0]
+		const section_node = section_instance.node[0]
 
 		// loading css add
 			section_node.classList.add("loading")
@@ -1009,26 +1009,26 @@ this.get_search_json_object = function() {
 			const limit = self.limit && self.limit>0 ? self.limit : 10
 
 		// pagination
-			section.total			= null
-			section.rqo.sqo.limit	= limit
-			section.rqo.sqo.offset	= 0
-			section.rqo.sqo.filter	= filter_obj
+			section_instance.total			= null
+			section_instance.rqo.sqo.limit	= limit
+			section_instance.rqo.sqo.offset	= 0
+			section_instance.rqo.sqo.filter	= filter_obj
 
-		// paginator_node
-			const paginator_node = section.paginator.node[0] || null
+		// paginator_node (could exist or not --area_thesaurus case--)
+			const paginator_node = section_instance?.paginator?.node?.[0] || null
 			if (paginator_node) {
 				paginator_node.classList.add('hide')
 			}
 
 		// section
-			const js_promise = section.refresh()
+			const js_promise = section_instance.refresh()
 
 			js_promise.then(()=>{
 				// loading css remove
 					section_node.classList.remove("loading")
 				// refresh section paginator
 					if (paginator_node) {
-						section.paginator.refresh()
+						section_instance.paginator.refresh()
 						.then(function(){
 							paginator_node.classList.remove('hide')
 						})
