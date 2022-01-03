@@ -34,33 +34,81 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	const render_level = options.render_level || 'full'
 
-	// ts_object
+	// ts_object. Is a global page var
 		// set mode. Note that ts_object is NOT an instance
-		ts_object.thesaurus_mode = self.thesaurus_mode
+		ts_object.thesaurus_mode = self.context.thesaurus_mode
+		// set the initiator
+		if(self.initiator){
+			ts_object.initiator = self.initiator
+		}
+
 		// parse data
 		const data = self.data.find(item => item.tipo==='dd100')
-		if (data.ts_search) {
-			const node_content_data = self.node[0].querySelector('.content_data .area')
-			ts_object.parse_search_result(data.ts_search.result, null, false)
-			return node_content_data
+
+	// content_data
+		if (render_level==='content') {
+
+			if (data.ts_search) {
+
+				// event_manager.when_in_dom(current_content_data, function(){
+				// 	ts_object.parse_search_result(data.ts_search.result, null, false)
+				// })
+
+				// const observer = new IntersectionObserver(function(entries) {
+				// 	const entry = entries[1] || entries[0]
+				// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+				// 		observer.disconnect();
+				// 		ts_object.parse_search_result(data.ts_search.result, null, false)
+				// 	}
+				// }, { threshold: [0] });
+				// observer.observe(current_content_data);
+
+				// event_manager.subscribe('render_'+self.id, exec_search)
+				// function exec_search() {
+				// 	ts_object.parse_search_result(data.ts_search.result, null, false)
+				// }
+
+				ts_object.parse_search_result(data.ts_search.result, null, false)
+				// prevent to recreate content_data again
+				const current_content_data = self.node[0].querySelector('.content_data.area')
+				return current_content_data
+
+			}else{
+
+				const current_content_data = get_content_data(self)
+				return current_content_data
+			}
+		}//end if (render_level==='content')
+
+	const fragment = new DocumentFragment()
+
+	// buttons
+		const buttons_node = get_buttons(self);
+		if(buttons_node){
+			fragment.appendChild(buttons_node)
+		}
+
+	// search filter node
+		if (self.filter) {
+			const filter_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'filter',
+				parent			: fragment
+			})
+			self.filter.build().then(()=>{
+				self.filter.render().then(filter_wrapper =>{
+					filter_container.appendChild(filter_wrapper)
+				})
+			})
 		}
 
 	// content_data
 		const current_content_data = get_content_data(self)
-		if (render_level==='content') {
-			return current_content_data
-		}
-
-	const fragment = new DocumentFragment()
-
-
-	// buttons
-		//const current_buttons = buttons(self);
+		fragment.appendChild(current_content_data)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
-			content_data : current_content_data
-			//buttons 	 : current_buttons
+			// content_data : current_content_data
 		})
 		wrapper.appendChild(fragment)
 
@@ -80,6 +128,14 @@ render_area_thesaurus.prototype.list = async function(options) {
 			self.build_options.terms_are_model = self.build_options.terms_are_model ? false : true
 			self.refresh()
 		})
+
+	// ts_search case
+		if (data.ts_search) {
+			event_manager.subscribe('render_'+self.filter.id, exec_search)
+			function exec_search() {
+				ts_object.parse_search_result(data.ts_search.result, null, false)
+			}
+		}
 
 
 	return wrapper
@@ -413,15 +469,80 @@ const print_response = (container, api_response) => {
 
 
 /**
-* BUTTONS
-* @return DOM node buttons
+* GET_BUTTONS
+* @return DOM node fragment
 */
-const buttons = function(self) {
+const get_buttons = function(self) {
 
-	const buttons = []
+	const ar_buttons = self.context.buttons
 
+	if(!ar_buttons) return null;
 
-	return buttons
-};//end  buttons
+	const fragment = new DocumentFragment()
+
+	// buttons node
+		const buttons_wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons',
+			parent			: fragment
+		})
+
+		// filter button (search) . Show and hide all search elements
+			const filter_button	= ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning search',
+				inner_html		: get_label.buscar || 'Search',
+				parent			: buttons_wrapper
+			})
+			filter_button.addEventListener("click", function() {
+				event_manager.publish('toggle_search_panel', this)
+			})
+			// ui.create_dom_element({
+			// 	element_type	: 'span',
+			// 	class_name		: 'button white search',
+			// 	parent			: filter_button
+			// })
+			// filter_button.insertAdjacentHTML('beforeend', get_label.buscar)
+
+		const ar_buttons_length = ar_buttons.length;
+		for (let i = 0; i < ar_buttons_length; i++) {
+
+			const current_button = ar_buttons[i]
+
+			if(current_button.model==='button_delete') continue
+
+			// button node
+				const class_name	= 'warning ' + current_button.model
+				const button_node	= ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: class_name,
+					text_content	: current_button.label,
+					parent			: buttons_wrapper
+				})
+				button_node.addEventListener('click', (e) => {
+					e.stopPropagation()
+
+					switch(current_button.model){
+						case 'button_new':
+							event_manager.publish('new_section_' + self.id)
+							break;
+						case 'button_import':
+							event_manager.publish('load_tool', {
+								tool_context	: current_button.tools[0],
+								caller			: self
+							})
+							break;
+						default:
+							event_manager.publish('click_' + current_button.model)
+							break;
+					}
+				})
+		}//end for (let i = 0; i < ar_buttons_length; i++)
+
+	// tools
+		ui.add_tools(self, buttons_wrapper)
+
+	return fragment
+};//end get_buttons
 
 
