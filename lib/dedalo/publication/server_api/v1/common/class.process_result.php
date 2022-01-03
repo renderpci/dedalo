@@ -271,16 +271,64 @@ abstract class process_result {
 
 		// break down multiple values cases in ar_data
 			$break_down_ar_data	= [];
-			$ar_data_length		= count($ar_data);
+
+			$ar_data_length = count($ar_data);
 			for ($i=0; $i < $ar_data_length; $i++) {
 
 				$row = $ar_data[$i];
+
+				// ar_term_id
+					$ar_term_id = isset($row['term_id'])
+						? json_decode($row['term_id'])
+						: null;
+						if (empty($ar_term_id)) continue; // empty case
+
+				// ar_term
+					$ar_term = isset($row['term'])
+						? explode(' | ', $row['term'])
+						: [];
+
+				// ar_geojson
+					$ar_geojson = isset($row['geojson'])
+						? json_decode($row['geojson'])
+						: [];
+
+				foreach ($ar_term_id as $key => $term_id) {
+
+					if (!isset($break_down_ar_data[$term_id])) {
+
+						// new item
+						$break_down_ar_data[$term_id] = new stdClass();
+						$break_down_ar_data[$term_id]->term_id		= $term_id;
+						$break_down_ar_data[$term_id]->term			= $ar_term[$key] ?? '';
+						$break_down_ar_data[$term_id]->geojson		= $ar_geojson[$key] ?? null;
+						$break_down_ar_data[$term_id]->total		= 1;
+						$break_down_ar_data[$term_id]->section_id	= [$row['section_id']];
+
+					}else{
+
+						// update item
+						$break_down_ar_data[$term_id]->section_id[] = $row['section_id'];
+						$break_down_ar_data[$term_id]->total++;
+					}
+				}
 			}//end for ($i=0; $i < $ar_data_length; $i++)
 
+		// remove keys
+			$new_ar_data = array_values($break_down_ar_data);
+
+		// json encode again
+			$new_ar_data_final = array_map(function($el){
+				if ($el->geojson!==null) {
+					$el->geojson = json_encode($el->geojson);
+				}
+				$el->section_id = json_encode($el->section_id);
+				return $el;
+			}, $new_ar_data);
 
 		// response
 			$response = new stdClass();
-				$response->ar_data = $new_ar_data;
+				$response->ar_data = $new_ar_data_final;
 
 		return $response;
 	}//end sum_totals
