@@ -13,6 +13,7 @@
 	import {render_mini_component_date} from '../../component_date/js/render_mini_component_date.js'
 
 
+
 export const component_date = function(){
 
 	this.id				= null
@@ -66,7 +67,7 @@ export const component_date = function(){
 	component_date.prototype.list				= render_list_component_date.prototype.list
 	component_date.prototype.edit				= render_edit_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_edit_component_date.prototype.edit
-	component_date.prototype.tm					= render_edit_component_date.prototype.edit
+	component_date.prototype.tm					= render_edit_component_date.prototype.list
 	component_date.prototype.search				= render_search_component_date.prototype.search
 	component_date.prototype.change_mode		= component_common.prototype.change_mode
 
@@ -129,7 +130,7 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
  	let options 	= ''
  	let dateString  = ''
 
-	if (date_mode === 'time') {
+	if (date_mode==='time') {
 
 		options = {hour: '2-digit', minute: '2-digit', second: '2-digit'}
 		options.ms = '2-digit'
@@ -170,7 +171,9 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 	//							 $date_format);
 
 	if (dateString==='') {
-		dateString = (date_mode === 'time') ? datetime.toLocaleTimeString(locale, options) : datetime.toLocaleDateString(locale, options)
+		dateString = (date_mode==='time')
+			? datetime.toLocaleTimeString(locale, options)
+			: datetime.toLocaleDateString(locale, options)
 		//dateFormat(datetime, 'dd-MM-yyyy')
 		//datetime.format("dd/MM/yyyy HH:mm:ss sss")
 	}
@@ -729,6 +732,7 @@ component_date.prototype.set_default_date = function(dateStr) {
 component_date.prototype.get_placeholder_value = function() {
 
 	const self = this
+
 	/*
 	if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
 		# American format month/day/year
@@ -738,17 +742,34 @@ component_date.prototype.get_placeholder_value = function() {
 		$format = 'DD-MM-YYYY';
 	}
 	*/
-	const date_mode = self.context.properties.date_mode
-	let placeholder_value = ''
 
-	if (date_mode === 'time') {
-		placeholder_value = placeholder_value.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
-	}else{
-		placeholder_value = placeholder_value.concat('DD',self.separator,'MM',self.separator,'YYYY')
-	}
+	const date_mode = self.get_date_mode()
+
+	// placeholder_value
+		const placeholder_value = (date_mode==='time')
+			? ''.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
+			: ''.concat('DD',self.separator,'MM',self.separator,'YYYY')
+
 
 	return placeholder_value
 };//end get_placeholder_value
+
+
+
+/**
+* GET_DATE_MODE
+* @return string date_mode
+*/
+component_date.prototype.get_date_mode = function() {
+
+	const self = this
+
+	const date_mode = self.context.properties && self.context.properties.date_mode
+		? self.context.properties.date_mode
+		: 'date'
+
+	return date_mode
+}//end get_date_mode
 
 
 

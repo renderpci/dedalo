@@ -58,6 +58,6 @@ export const component_section_id = function(){
 	component_section_id.prototype.list					= render_list_component_section_id.prototype.list
 	component_section_id.prototype.edit					= render_edit_component_section_id.prototype.edit
 	component_section_id.prototype.edit_in_list			= render_edit_component_section_id.prototype.edit
-	component_section_id.prototype.tm					= render_edit_component_section_id.prototype.edit
+	component_section_id.prototype.tm					= render_edit_component_section_id.prototype.list
 	component_section_id.prototype.search				= render_search_component_section_id.prototype.search
 	component_section_id.prototype.change_mode			= component_common.prototype.change_mode
