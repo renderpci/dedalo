@@ -112,7 +112,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			data	: [],
 			context	: []
 		}
-		self.data = self.data || {}
+		self.data = self.data || []
 
 	const current_data_manager = new data_manager()
 
@@ -150,9 +150,18 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	// load data if not yet received as an option
 		if (autoload===true) {
-
 			// get context and data
 				// const api_response = await current_data_manager.read(self.dd_request.show)
+
+				if(self.context.hierarchy_sections){
+					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
+				}
+				if(self.context.hierarchy_terms){
+					self.rqo.source.hierarchy_terms = self.context.hierarchy_terms
+				}
+				if(self.context.thesaurus_mode){
+					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
+				}
 				const api_response = await current_data_manager.request({body:self.rqo})
 					console.log("AREA_THESAURUS api_response:", self.id, api_response);
 
@@ -191,9 +200,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 	// section tipo
 		self.section_tipo = self.context.section_tipo || null
 
-	// thesaurus_mode
-		self.thesaurus_mode = self.context.thesaurus_mode || 'default'
-
 	// filter
 		if (!self.filter) {
 			self.filter = new search()
@@ -203,7 +209,18 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			})
 			// self.filter.build()
 		}
-		// console.log("Remember. Filter unactive");
+		// console.log("Remember. Filter inactive");
+
+	// initiator . URL defined var or Caller of parent section
+	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
+		const searchParams = new URLSearchParams(window.location.href);
+		const initiator = searchParams.has("initiator")
+			? searchParams.get("initiator")
+			: self.caller
+				? self.caller.id
+				: false
+		// fix initiator
+			self.initiator = JSON.parse(initiator)
 
 
 	// debug
@@ -231,7 +248,6 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 	const self = this
 
 	const sections_selector_data = self.data.find(item => item.tipo===self.tipo).value
-
 
 	return sections_selector_data
 };//end get_sections_selector_data

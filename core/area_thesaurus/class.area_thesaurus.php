@@ -411,7 +411,6 @@ class area_thesaurus extends area_common {
 	* @return object $response
 	*/
 	public function search_thesaurus($search_query_object) {
-		dump($search_query_object, ' search_query_object ++ '.to_string());
 		$start_time=microtime(1);
 
 		$response = new stdClass();
@@ -419,54 +418,49 @@ class area_thesaurus extends area_common {
 			$response->msg 		= '';
 
 		# Search records
-			$search 		= search::get_instance($search_query_object);
-			$search_result  = $search->search();
-			$ar_records 	= $search_result->ar_records;
-				#dump($ar_records, ' ar_records ++ '.to_string()); die();
+			$search			= search::get_instance($search_query_object);
+			$search_result	= $search->search();
+			$ar_records		= $search_result->ar_records;
 
 		# ar_path_mix . Calculate full path of each result
-		$ar_path_mix = array();
-		foreach ($ar_records as $key => $row) {
+			$ar_path_mix = array();
+			foreach ($ar_records as $key => $row) {
 
-			$section_tipo = $row->section_tipo;
-			$section_id   = $row->section_id;
+				$section_tipo	= $row->section_tipo;
+				$section_id		= $row->section_id;
 
-			$ar_parents = component_relation_parent::get_parents_recursive($section_id, $section_tipo, false);
-				#dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo")); die();
+				$ar_parents = component_relation_parent::get_parents_recursive($section_id, $section_tipo, false);
+					#dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo")); die();
 
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
+				$locator = new locator();
+					$locator->set_section_tipo($section_tipo);
+					$locator->set_section_id($section_id);
 
-			$ar_path   = array_reverse($ar_parents);
-			$ar_path[] = $locator; // add self at end
+				$ar_path   = array_reverse($ar_parents);
+				$ar_path[] = $locator; // add self at end
 
-			$ar_path_mix[] = $ar_path;
-		}
-		# Root parents
-		if(SHOW_DEBUG===true) {
-			#dump($ar_path_mix, ' ar_path_mix ++ '.to_string()); die();
-		}
+				$ar_path_mix[] = $ar_path;
+			}
 
 		# AR_DATA_COMBINED
-		$ar_data_combined = $this->combine_ar_data($ar_path_mix);
-			#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
+			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
+				#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
 
 		$result = self::walk_hierarchy_data($ar_data_combined);
 			#dump($result, ' result ++ '.json_encode($result));
 
-		if(SHOW_DEBUG===true) {
-			$response->debug[] = exec_time($start_time," result");
-		}
-
 		$total_records = count($ar_records);
 
-		$response->msg 	  	= "Records found: $total_records";
-		$response->result 	= $result;
-		$response->total  	= $total_records;
-		if(SHOW_DEBUG===true) {
-			$response->strQuery = $search_result->strQuery;
-		}
+		// response
+			$response->msg 	  	= "Records found: $total_records";
+			$response->result 	= $result;
+			$response->total  	= $total_records;
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$response->strQuery = $search_result->strQuery;
+				$response->debug[] = exec_time($start_time," result");
+			}
 
 
 		return (object)$response;
@@ -653,6 +647,80 @@ class area_thesaurus extends area_common {
 
 		return $ar_mix;
 	}//end walk_hierarchy_data
+
+
+
+	/**
+	* get_hierarchy_terms_sqo
+	* @return object $sqo
+	* 	Full Search query object
+	*/
+	public function get_hierarchy_terms_sqo($hierarchy_terms) {
+
+		#
+		# FILTER_CUSTOM. hierarchy_terms
+		$filter_custom = null;
+
+
+		// Reset $ar_section_tipos to use only filter sections
+			$ar_section_tipos = [];
+
+			$filter_custom = new stdClass();
+
+			$filter_custom->{OP_OR} = [];
+
+			$path = new stdClass();
+				$path->component_tipo 	= 'hierarchy22';
+				$path->modelo 			= 'component_section_id';
+				$path->name 			= 'Id';
+
+			$path_section = new stdClass();
+				$path_section->modelo 	= 'section';
+				$path_section->name 	= 'Section tipo column';
+
+		// hierarchy_terms
+			foreach ($hierarchy_terms as $current_term) {
+				foreach ($current_term->value as $item) {
+
+					$current_section_tipo 	= $item->section_tipo;
+					$current_section_id 	= $item->section_id;
+
+					# Update path section tipo
+					$path->section_tipo 	= $current_section_tipo;
+
+					# Add to ar_section_tipos
+					$ar_section_tipos[] = $current_section_tipo;
+
+					$filter_item = new stdClass();
+						$filter_item->q 			= $current_section_id;
+						$filter_item->path 			= [$path];
+
+					$filter_item_section = new stdClass();
+						$filter_item_section->q 	= $current_section_tipo;
+						$filter_item_section->path 	= [$path_section];
+
+					$group = new stdClass();
+						$group->{OP_AND} = [$filter_item, $filter_item_section];
+
+					$filter_custom->{OP_OR}[] = $group;
+
+				}
+			}
+			#dump($filter_custom, ' filter_custom ++ '.to_string()); die();
+
+			# SEARCH_QUERY_OBJECT . Add search_query_object to options
+			$search_query_object = new search_query_object();
+				$search_query_object->id  	   		= 'thesaurus';
+				$search_query_object->section_tipo  = $ar_section_tipos;
+				$search_query_object->limit   		= 100;
+				#$search_query_object->order   		= $options->order;
+				#$search_query_object->offset  		= $options->offset;
+				#$search_query_object->full_count  	= true;
+				$search_query_object->filter  		= isset($filter_custom) ? $filter_custom : null;
+				$search_query_object->select  		= [];
+
+		return $search_query_object;
+	}//end get_hierarchy_terms_sqo
 
 
 

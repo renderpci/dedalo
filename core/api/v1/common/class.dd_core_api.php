@@ -1023,13 +1023,26 @@ class dd_core_api {
 					
 					case 'search': // Used by section and service autocomplete
 
-						// sections
-							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+						if ($model==='section'){
 
-						// store sqo section
-							if ($model==='section' && ($mode==='edit' || $mode==='list')) {
-								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
-							}
+							// sections
+								$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+
+							// store sqo section
+								if ($model==='section' && ($mode==='edit' || $mode==='list')) {
+									$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+								}
+
+						}else if ($model==='area_thesaurus'){
+							// IN PROCESS TO IMPLEMENT
+							// // area_thesaurus
+							// 	$element = area::get_instance($model, $tipo, $mode);
+
+							// // search_action
+							// 	$obj = new stdClass();
+							// 		$obj->sqo	 = $sqo;
+							// 	$element->set_search_action($obj);
+						}
 						break;
 
 					case 'related_search': // Used to get the related sections that call to the source section
@@ -1078,11 +1091,23 @@ class dd_core_api {
 							// areas
 								$element = area::get_instance($model, $tipo, $mode);
 
+							// thesaurus_mode
+								if (isset($ddo_source->thesaurus_mode)) {
+									$element->thesaurus_mode = $ddo_source->thesaurus_mode;
+								}
+
 							// search_action
 								$search_action = $ddo_source->search_action ?? 'show_all';
+
 								$obj = new stdClass();
 									$obj->action = $search_action;
 									$obj->sqo	 = $sqo;
+									if (isset($ddo_source->hierarchy_sections)) {
+										$obj->hierarchy_sections = $ddo_source->hierarchy_sections;
+									}
+									if (isset($ddo_source->hierarchy_terms)) {
+										$obj->hierarchy_terms = $ddo_source->hierarchy_terms;
+									}
 								$element->set_search_action($obj);
 
 						}else{
