@@ -1,10 +1,10 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -88,8 +88,7 @@ const content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-
-	const tm_date = new Date();
+	// const tm_date = new Date();
 
 	// current_component_container
 		const current_component_container = ui.create_dom_element({
@@ -125,18 +124,20 @@ const content_data_edit = async function(self) {
 						self.refresh()
 					}
 				}
-				const selector_label = ui.create_dom_element({
+				// label
+				ui.create_dom_element({
 					element_type	: 'label',
 					text_content 	: get_label.idioma,
 					parent 			: tool_bar
 				})
+				// selector
 				const lang_selector = ui.build_select_lang({
 					langs  		: self.langs,
 					selected 	: self.lang,
 					class_name	: '',
-					action 		: on_change_select
+					action 		: on_change_select,
+					parent 			: tool_bar
 				})
-
 				// lang_selector.addEventListener('change', async (e) => {
 				// 	e.stopPropagation()
 
@@ -147,8 +148,8 @@ const content_data_edit = async function(self) {
 				// 		self.refresh()
 				// 	}
 				// })
-				tool_bar.appendChild(lang_selector)
 			}
+
 		// button apply
 			self.button_apply = ui.create_dom_element({
 				element_type	: 'button',
@@ -171,7 +172,7 @@ const content_data_edit = async function(self) {
 		// fragment.appendChild(section_node)
 		const section		= await self.section
 		const section_node	= await section.render()
-		fragment.appendChild(section_node)		
+		fragment.appendChild(section_node)
 
 
 	// buttons container
@@ -207,29 +208,28 @@ export const add_component = async (self, component_container, lang_value, label
 			return false
 		}
 
-	// console.log("self.main_component:", self.main_component);
-
-
-	const component = matrix_id===null
-		? self.main_component // self.caller
-		: await self.load_component(lang_value, mode, matrix_id)
+	// component load
+		const component = matrix_id===null
+			? self.main_component // self.caller
+			: await self.load_component(lang_value, mode, matrix_id)
 
 	// render node
-	const node = await component.render({
-		render_mode : 'edit'
-	})
+		const node = await component.render({
+			render_mode : 'edit'
+		})
 
-	while (component_container.firstChild) {
-		component_container.removeChild(component_container.firstChild)
-	}
-	component_container.appendChild(node)
+	// clean previous and append rendered node
+		while (component_container.firstChild) {
+			component_container.removeChild(component_container.firstChild)
+		}
+		component_container.appendChild(node)
 
 	// label
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'time_label',
-			text_content 	: label,
-			parent 			: component_container
+			class_name		: 'time_label',
+			text_content	: label,
+			parent			: component_container
 		})
 
 

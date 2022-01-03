@@ -76,14 +76,18 @@ render_list_section_record.prototype.list = async function(options={}) {
 			// render all instances in parallel before create the columns nodes (to get the internal nodes)
 				const ar_promises = []
 				for (let k = 0; k < ar_instances_length; k++) {
-					const current_promise = new Promise(function(resolve){
+					const current_promise = new Promise(function(resolve, reject){
 						const current_instance = ar_instances[k]
 						// already rendered case
 						if (typeof current_instance.node[0]!=='undefined') {
 							resolve(true)
 						}else{
 							current_instance.render()
-							.then(function(current_instance){
+							.then(function(current_instance_node){
+								if (!current_instance_node) {
+									reject(current_instance_node)
+									return
+								}
 								resolve(true)
 							}).catch((errorMsg) => {
 								console.error(errorMsg);
