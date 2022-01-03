@@ -132,6 +132,23 @@ component_portal.prototype.init = async function(options) {
 					}
 			}//end fn_initiator_link
 
+			// link_term. Observe thesaurus tree link index button click
+			self.events_tokens.push(
+				event_manager.subscribe('link_term_' + self.id, fn_link_term)
+			)
+			async function fn_link_term(locator) {
+					console.log("locator:************////////////*********************",locator);
+				// // add locator selected
+				// 	const result = await self.add_value(locator)
+				// 	if (result===false) {
+				// 		alert("Value already exists!");
+				// 		return
+				// 	}
+				// // modal close
+				// 	if (self.modal) {
+				// 		self.modal.close()
+				// 	}
+			}//end fn_initiator_link
 
 	return common_init
 };//end  init
