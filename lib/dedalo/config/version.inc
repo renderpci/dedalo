@@ -2614,6 +2614,9 @@
 		29-12-2021
 		Fixed publication web_data get_PDO_connection error where port was not send into the dsn string
 		Re-factorized web_data functions get_publication_schema, get_table_fields, get_all_tables to use DDO connection
+		03-01-2022
+		Updated process_result::sum_totals function
+		Added posterframe to web_data::build_fragment method
 
 
 
@@ -2646,7 +2649,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-12-2021T17:65:00');
+	define('DEDALO_BUILD'	, '03-01-2022T16:11:00');
 
 
 	/*
