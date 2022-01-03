@@ -19,6 +19,7 @@ export const ts_object = new function() {
 
 		this.events_tokens 		= [];
 
+
 	/**
 	* INIT
 	* Fix important vars for current object
@@ -401,7 +402,23 @@ export const ts_object = new function() {
 								label			: current_label_term ? current_label_term.value : ''
 							}
 							link_related.addEventListener("click",(e)=>{
-								self.link_term(link_related, e)
+
+								e.preventDefault()
+								e.stopPropagation()
+								// self.link_term(link_related, e)
+								// source window. Could be different than current (like iframe)
+								const source_window = window.opener || window.parent
+								if (source_window===null) {
+									console.log("[link_term] Error on find window.opener / parent")
+									return false
+								}
+
+							// publish event link_term
+								source_window.event_manager.publish('link_term_'+ self.initiator, {
+									section_tipo	: ar_children_data[i].section_tipo,
+									section_id		: ar_children_data[i].section_id,
+									label			: current_label_term ? current_label_term.value : ''
+								})
 							})
 							// related icon
 							const related_icon 	= ui.create_dom_element({
