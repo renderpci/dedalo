@@ -760,7 +760,7 @@ component_date.prototype.get_placeholder_value = function() {
 * GET_DATE_MODE
 * @return string date_mode
 */
-component_date.get_date_mode = function() {
+component_date.prototype.get_date_mode = function() {
 
 	const self = this
 

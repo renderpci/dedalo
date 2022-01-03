@@ -50,8 +50,8 @@ render_edit_component_date.prototype.edit = async function(options) {
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 		wrapper.classList.add(date_mode)
@@ -77,7 +77,7 @@ const add_events = function(self, wrapper) {
 			event_manager.subscribe('update_value_'+self.id, fn_update_value)
 		)
 		function fn_update_value (changed_data) {
-
+			console.log("changed_data:",changed_data);
 		}
 
 	// add element, subscription to the events
@@ -106,11 +106,17 @@ const add_events = function(self, wrapper) {
 						const dato_range = self.get_dato_range(e.target, e.target.dataset.role)
 
 						if (e.target.dataset.role==='range_start') {
-							(dato_range.start === false) ? value = false : value = dato_range
+							// (dato_range.start === false) ? value = false : value = dato_range
+							value = (dato_range.start === false)
+								? false
+								: dato_range
 						}
 
 						if (e.target.dataset.role==='range_end') {
-							(dato_range.end === false) ? value = false : value = dato_range
+							// (dato_range.end === false) ? value = false : value = dato_range
+							value = (dato_range.end === false)
+								? false
+								: dato_range
 						}
 						break;
 
