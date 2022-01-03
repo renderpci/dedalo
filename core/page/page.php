@@ -145,16 +145,16 @@
 							$current_context->thesaurus_mode = $_GET['thesaurus_mode'];
 						}
 						if (isset($_GET['hierarchy_types'])) {
-							$current_context->hierarchy_types = $_GET['hierarchy_types'];
+							$current_context->hierarchy_types = json_decode($_GET['hierarchy_types']);
 						}
 						if (isset($_GET['hierarchy_sections'])) {
-							$current_context->hierarchy_sections = $_GET['hierarchy_sections'];
+							$current_context->hierarchy_sections = json_decode($_GET['hierarchy_sections']);
 						}
 						if (isset($_GET['hierarchy_terms'])) {
-							$current_context->hierarchy_terms = $_GET['hierarchy_terms'];
+							$current_context->hierarchy_terms = json_decode($_GET['hierarchy_terms']);
 						}
 						$context[] = $current_context;
-							// dump($current_context, ' current_context ++ '.to_string($mode));
+
 					break;
 
 				case (strpos($model, 'area')===0):
