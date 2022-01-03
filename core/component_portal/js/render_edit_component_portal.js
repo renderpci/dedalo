@@ -13,6 +13,7 @@
 	import {render_edit_view_table} from './render_edit_view_table.js'
 	import {render_edit_view_line} from './render_edit_view_line.js'
 	import {render_edit_view_tree} from './render_edit_view_tree.js'
+	import {render_edit_view_mosaic} from './render_edit_view_mosaic.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 
 
@@ -49,7 +50,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 			return render_edit_view_tree.render(self, options)
 
 		case 'mosaic':
-
+			return render_edit_view_mosaic.render(self, options)
 
 		case 'table':
 		default:

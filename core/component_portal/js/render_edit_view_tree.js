@@ -351,7 +351,15 @@ const get_buttons = (self) => {
 		// add listener to the select
 		button_tree_selector.addEventListener('mouseup',function(e){
 
-			const hierarchy_sections = self.rqo.sqo.section_tipo || undefined
+			const caller_id = self.id || null
+			const hierarchy_sections = self.rqo.sqo.section_tipo || null
+			const hierarchy_terms = self.context.properties.source
+				&& self.context.properties.source.request_config
+				&& self.context.properties.source.request_config[0]
+				&& self.context.properties.source.request_config[0].sqo
+				&& self.context.properties.source.request_config[0].sqo.fixed_filter
+					? self.context.properties.source.request_config[0].sqo.fixed_filter.filter(el => el.source === 'hierarchy_terms')
+					: null
 
 			// // short vars
 			// 	const component_name		= button_obj.dataset.component_name
@@ -384,18 +392,26 @@ const get_buttons = (self) => {
 
 			// hierarchy_sections
 				if (hierarchy_sections) {
-					url_vars.hierarchy_sections = hierarchy_sections
+					url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
 				}
 
-			// // Optional hierarchy_terms. Add to url if present
-			// 	if (hierarchy_terms) {
-			// 		url_vars.hierarchy_terms = hierarchy_terms
-			// 	}
+			// Optional hierarchy_terms. Add to url if present
+				if (hierarchy_terms) {
+					url_vars.hierarchy_terms = JSON.stringify(hierarchy_terms)
+				}
 
 			// // parent_area_is_model
 			// 	if (typeof parent_area_is_model!=='undefined' && JSON.parse(parent_area_is_model)===true) {
 			// 		url_vars.model = 1;
 			// 	}
+
+			// if(self.rqo_config){
+			// 	url_vars.sqo = JSON.stringify(self.rqo_config.sqo)
+			// }
+
+			if(caller_id){
+				url_vars.initiator = JSON.stringify(caller_id)
+			}
 
 			const url = '../page/?' + object_to_url_vars(url_vars)
 
