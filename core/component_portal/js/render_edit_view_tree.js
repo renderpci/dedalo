@@ -74,72 +74,73 @@ export const add_events = function(self, wrapper) {
 
 	// click delegated
 		wrapper.addEventListener("click", function(e){
-			// e.stopPropagation()
 
-			// remove row
-				if (e.target.matches('.button.remove')) {
-					e.preventDefault()
+		// remove row
+			if(e.target.matches('.button.remove')) {
+				e.preventDefault()
 
-					// label
-						const children = e.target.parentNode.parentNode.children
-						const ar_label = []
-						for (let i = 0; i < children.length; i++) {
-							if(children[i].textContent.length>0) {
-								ar_label.push(children[i].textContent)
-							}
+				// label
+					const children = e.target.parentNode.parentNode.children
+					const ar_label = []
+					for (let i = 0; i < children.length; i++) {
+						if(children[i].textContent.length>0) {
+							ar_label.push(children[i].textContent)
 						}
-						const label = ar_label.join(', ')
+					}
+					const label = ar_label.join(', ')
 
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: null
-					})
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: JSON.parse(e.target.dataset.key),
+					value	: null
+				})
 
-					const changed = self.change_value({
-						changed_data	: changed_data,
-						label			: label,
-						refresh			: false
-					})
-					changed.then(async (api_response)=>{
+				const changed = self.change_value({
+					changed_data	: changed_data,
+					label			: label,
+					refresh			: false,
+					build_autoload	: false
+				})
+				changed.then(async (api_response)=>{
 
-						// update pagination offset
-							self.update_pagination_values('remove')
+					// update pagination offset
+						self.update_pagination_values('remove')
 
-						// refresh
-							await self.refresh()
+					// refresh
+						await self.refresh({
+							build_autoload : false
+						})
 
-						// check if the caller has active a tag_id
-							if(self.active_tag){
-								// filter component data by tag_id and re-render content
-								self.filter_data_by_tag_id(self.active_tag)
-							}
+					// check if the caller has active a tag_id
+						if(self.active_tag){
+							// filter component data by tag_id and re-render content
+							self.filter_data_by_tag_id(self.active_tag)
+						}
 
-						// event to update the dom elements of the instance
-							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-					})
+					// event to update the DOM elements of the instance
+						event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+				})
 
-					return true
-				}
+				return true
+			}//end if(e.target.matches('.button.remove'))
 
+		// activate service autocomplete. Enable the service_autocomplete when the user do click
+			// if(self.autocomplete_active===false){
 
-			// activate service autocomplete. Enable the service_autocomplete when the user do click
-				if(self.autocomplete_active===false){
+			// 	// set rqo
+			// 		self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
+			// 		// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
 
-					// set rqo
-						self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-						// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
+			// 	self.autocomplete = new service_autocomplete()
+			// 	self.autocomplete.init({
+			// 		caller	: self,
+			// 		wrapper : wrapper
+			// 	})
+			// 	self.autocomplete_active = true
+			// 	self.autocomplete.search_input.focus()
 
-					self.autocomplete = new service_autocomplete()
-					self.autocomplete.init({
-						caller	: self,
-						wrapper : wrapper
-					})
-					self.autocomplete_active = true
-					self.autocomplete.search_input.focus()
-
-					return true
-				}
+			// 	return true
+			// }
 
 		})//end click event
 
@@ -415,13 +416,15 @@ const get_buttons = (self) => {
 
 			const url = '../page/?' + object_to_url_vars(url_vars)
 
-			var relwindow
-			if (relwindow && !relwindow.closed) {
-				relwindow.focus()
-			}else{
-				relwindow = window.open(url,'relwindow','status=yes,scrollbars=yes,resizable=yes,left=0,top=0,width=900,height=650');//resizable
-				relwindow.focus()
+			// open window
+			if (!window.rel_window || window.rel_window.closed) {
+				window.rel_window = window.open(
+					url,
+					'rel_window',
+					'status=yes,scrollbars=yes,resizable=yes,left=0,top=0,width=900,height=650'
+				)
 			}
+			window.rel_window.focus()
 		})
 
 	// buttons tools

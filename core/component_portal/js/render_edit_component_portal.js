@@ -121,3 +121,5 @@ export const render_column_remove = function(options) {
 
 	return fragment
 }// end render_column_remove()
+
+

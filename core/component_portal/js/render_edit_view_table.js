@@ -57,8 +57,6 @@ render_edit_view_table.render = async function(self, options) {
 			return content_data
 		}
 
-
-
 	// header
 		const list_header_node = build_header(columns_map, ar_section_record, self)
 
@@ -86,7 +84,6 @@ render_edit_view_table.render = async function(self, options) {
 		list_body.appendChild(list_header_node)
 		list_body.appendChild(content_data)
 
-
 	// buttons
 		const buttons = get_buttons(self)
 
@@ -104,8 +101,9 @@ render_edit_view_table.render = async function(self, options) {
 
 	// events
 		add_events(self, wrapper)
-	return wrapper;
 
+
+	return wrapper;
 }//end edit
 
 
@@ -180,13 +178,15 @@ export const add_events = function(self, wrapper) {
 						label			: label,
 						refresh			: false
 					})
-					changed.then(async (api_response)=>{
+					changed.then(async ()=>{
 
 						// update pagination offset
 							self.update_pagination_values('remove')
 
 						// refresh
-							await self.refresh()
+							await self.refresh({
+								build_autoload : false
+							})
 
 						// check if the caller has active a tag_id
 							if(self.active_tag){
@@ -194,7 +194,7 @@ export const add_events = function(self, wrapper) {
 								self.filter_data_by_tag_id(self.active_tag)
 							}
 
-						// event to update the dom elements of the instance
+						// event to update the DOM elements of the instance
 							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
 					})
 
