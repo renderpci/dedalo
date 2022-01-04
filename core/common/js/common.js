@@ -227,7 +227,7 @@ common.prototype.render = async function (options={}) {
 						// }
 
 					const bool_select_list_body = (self.model==='section' && (self.mode==='list' || self.mode==='tm'))
-						|| (self.model==='component_portal' && self.view==='table');
+						|| (self.model==='component_portal' && self.context.view==='table' && self.mode!=='search');
 
 					const nodes_length = self.node.length
 					for (let i = nodes_length - 1; i >= 0; i--) {
@@ -291,6 +291,10 @@ common.prototype.render = async function (options={}) {
 							const base_container = bool_select_list_body
 								? wrapper.querySelector(":scope >.list_body")
 								: wrapper
+
+								console.log("______________ base_container:",base_container);
+								console.log("______________ wrapper:",wrapper);
+								console.log("______________ bool_select_list_body:",bool_select_list_body);
 
 							if (!base_container.contains( old_content_data_node )) {
 								console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
@@ -371,7 +375,7 @@ common.prototype.refresh = async function(options={}) {
 		if (self.status==='rendered') {
 			const destroyed = await self.destroy(false, true)
 		}else{
-			console.warn("/// destroyed fail with status:", self.model, self.status);
+			console.warn("/// destroyed fail (expected status 'rendered') with actual status:", self.model, self.status);
 			return false
 		}
 
@@ -385,7 +389,6 @@ common.prototype.refresh = async function(options={}) {
 	// build. Update the instance with new data
 		//if (self.status==='destroyed') {
 		const builded = await self.build( build_autoload ) // default value is true
-
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false
@@ -398,33 +401,25 @@ common.prototype.refresh = async function(options={}) {
 		}
 
 	// copy original ar_node
-		//const ar_node 		 = self.node
-		//const ar_node_length = ar_node.length
+		// const ar_node		= self.node
+		// const ar_node_length	= ar_node.length
 
-	// render. Only render content_data, not whole element wrapper
+	// render. Only render content_data, not the whole element wrapper
+		let result
 		if (self.status==='builded') {
 			await self.render({
 				render_level : render_level // Default value is 'content'
 			})
+			result = true
 		}else{
-			console.warn(`[common.refresh] Ignored render '${self.model}' with status:`, self.status);
-			return false
+			console.warn(`[common.refresh] Ignored render '${self.model}' (expected status 'builded') with status:`, self.status);
+			result = false
 		}
 
 	// loading css remove
 		for (let i = nodes_lenght - 1; i >= 0; i--) {
 			self.node[i].classList.remove('loading')
 		}
-
-	// des
-		//node.classList.add("loading")
-		//const isPromise = (val) => {
-		//  return (
-		//  	(val !== undefined && val !== null) &&
-		//    typeof val.then==='function' &&
-		//    typeof val.catch==='function'
-		//  )
-		//}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -435,7 +430,7 @@ common.prototype.refresh = async function(options={}) {
 		}
 
 
-	return true
+	return result
 }//end refresh
 
 
@@ -459,35 +454,29 @@ common.prototype.destroy = async function (delete_self=true, delete_dependencies
 
 				const ar_instances_length = self.ar_instances.length
 
-				if(SHOW_DEBUG===true) {
-					if (ar_instances_length<1) {
-						// console.warn("[common.destroy.delete_dependencies] Ignored empty ar_instances as dependencies ", self);
+				// debug
+					if(SHOW_DEBUG===true) {
+						if (ar_instances_length<1) {
+							// console.warn("[common.destroy.delete_dependencies] Ignored empty ar_instances as dependencies ", self);
+						}
 					}
-				}
 
 				// remove instances from self ar_instances
-					//const ar_to_destroy = []
 					for (let i = ar_instances_length - 1; i >= 0; i--) {
 
-						if(self.ar_instances[i].destroyable===false){
-							const destroyed_elements = self.ar_instances.splice(i, 1);
-							continue;
-						}
-						// console.log("self.ar_instances:", clone(self.ar_instances[i]));
 						// remove from array of instances of current element
-						const destroyed_elements = self.ar_instances.splice(i, 1)
+							const destroyed_elements = self.ar_instances.splice(i, 1)
 
-						// send instance to general destroy
-						if (typeof destroyed_elements[0].destroy!=="undefined") {
-							destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
-						}
+						// prevent destroy non destroyable instances (menu, etc.)
+							if(destroyed_elements[0] && destroyed_elements[0].destroyable===false){
+								continue;
+							}
+
+						// destroy instance
+							if (typeof destroyed_elements[0].destroy!=='undefined') {
+								destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+							}
 					}
-
-				// destroy all removed instances
-					// const ar_to_destroy_length = ar_to_destroy.length
-					// for (let k = ar_to_destroy_length - 1; k >= 0; k--) {
-					// 	ar_to_destroy[k].destroy(true, true, false)
-					// }
 
 				const result = (self.ar_instances.length===0) ? true : false
 
