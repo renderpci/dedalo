@@ -500,7 +500,7 @@ export const ui = {
 						element_type	: 'div',
 						class_name		: 'tooltip hidden_tooltip',
 						inner_html		: instance.context.search_options_title || '',
-						parent			: fragment
+						parent			: items.content_data // fragment
 					})
 				}
 

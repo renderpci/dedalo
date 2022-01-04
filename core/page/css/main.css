@@ -3525,7 +3525,7 @@ dd-modal .footer > * {
   transition: all 0.5s ease;
   position: absolute;
   top: calc(100% + 1em);
-  left: 1em;
+  right: 1em;
   z-index: 1;
   background-color: rgba(0, 0, 0, 0.9);
   color: #fff;
@@ -5372,6 +5372,7 @@ div.tool_inspector_div .icon_bs {
   border: none;
   border-bottom-left-radius: 5px;
   border-bottom-right-radius: 5px;
+  z-index: 1;
 }
 .wrapper_component:not(.active) .autocomplete_searh_container {
   display: none;
