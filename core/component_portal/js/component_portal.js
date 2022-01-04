@@ -137,17 +137,12 @@ component_portal.prototype.init = async function(options) {
 				event_manager.subscribe('link_term_' + self.id, fn_link_term)
 			)
 			async function fn_link_term(locator) {
-					console.log("locator:************////////////*********************",locator);
-				// // add locator selected
-				// 	const result = await self.add_value(locator)
-				// 	if (result===false) {
-				// 		alert("Value already exists!");
-				// 		return
-				// 	}
-				// // modal close
-				// 	if (self.modal) {
-				// 		self.modal.close()
-				// 	}
+				// add locator selected
+				const result = await self.add_value(locator)
+				if (result===false) {
+					alert("Value already exists! "+ JSON.stringify(locator));
+					return
+				}
 			}//end fn_initiator_link
 
 	return common_init
@@ -250,7 +245,7 @@ component_portal.prototype.build = async function(autoload=false){
 		init_events_subscription(self)
 
 	// mode cases
-		if (self.mode==="edit") {
+		if (self.mode==="edit" || self.mode==="edit_in_list") {
 			// pagination vars only in edit mode
 
 			// pagination. update element pagination vars when are used
@@ -302,6 +297,7 @@ component_portal.prototype.build = async function(autoload=false){
 				}
 		
 		}else if(self.mode==="search"){
+
 			// active / prepare the autocomplete in search mode
 
 			// (!) Used ?
@@ -359,6 +355,8 @@ component_portal.prototype.add_value = async function(value) {
 
 	// check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
 		const current_value	= self.data.value
+			console.log("////// add_value - value:", value);
+			console.log("////// add_value - current_value:", current_value);
 		const exists		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
 		if (typeof exists!=="undefined") {
 			console.log("[add_value] Value already exists (1) !");
@@ -384,7 +382,7 @@ component_portal.prototype.add_value = async function(value) {
 	// mode specifics
 		switch(self.mode) {
 			case 'search' :
-				// publish change. Event to update the dom elements of the instance
+				// publish change. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 				self.node.map(function(item_node) {
 					item_node.classList.remove("active")
@@ -427,16 +425,20 @@ component_portal.prototype.add_value = async function(value) {
 
 	// refresh self component
 		await self.refresh({
-			build_autoload	: (self.mode==='search' ? true : false),
+			build_autoload	: false, //(self.mode==='search' ? true : false),
 			render_level	: 'content'
 		})
 
-	// check if the caller has tag_id
+	// filter data. check if the caller has tag_id
 		if(self.active_tag){
 			// filter component data by tag_id and re-render content
 			self.filter_data_by_tag_id(self.active_tag)
 		}
-		
+
+
+	// console.log("////////////////////// self.data:",self.data);
+	// console.log("////////////////////// self.datum:",self.datum);
+
 	return true
 };//end add_value
 
@@ -497,7 +499,6 @@ component_portal.prototype.update_pagination_values = function(action) {
 		}
 		self.data.pagination.offset	= last_offset
 		self.data.pagination.total	= self.total// sync pagination info
-
 	// paginator object update
 		self.paginator.offset	= self.rqo.sqo.offset
 		self.paginator.total	= self.total
