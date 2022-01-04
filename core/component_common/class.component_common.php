@@ -2937,14 +2937,14 @@ abstract class component_common extends common {
 				}
 
 				$this->set_dato($dato);
-				//set the obdservable data used to send other components that observe you, if insert it will need the final dato, with new references
+				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;
 				break;
 
 			case 'remove':
-				//set the obdservable data used to send other components that observe you, if remove it will need the old dato, with old references
+				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;

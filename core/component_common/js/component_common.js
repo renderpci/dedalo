@@ -724,12 +724,13 @@ component_common.prototype.change_value = async function(options) {
 		const changed_data		= options.changed_data
 		const action			= changed_data.action
 		const label				= options.label
-		const refresh			= typeof options.refresh!=="undefined" ? options.refresh : false
-		const build_autoload	= typeof options.build_autoload!=="undefined" ? options.build_autoload : false
+		const refresh			= typeof options.refresh!=='undefined' ? options.refresh : false
+		const build_autoload	= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
 
 	// user confirmation prevents remove accidentally
 		if (action==='remove' && label) {
-			if (!confirm(`Sure to remove value: ${label} ?`)) return false
+			const value = self.data.value[changed_data.key]
+			if (!confirm(`Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data)}\n\nvalue:\n${JSON.stringify(value)}`)) return false
 		}
 
 	const prev_status = self.status
@@ -761,6 +762,9 @@ component_common.prototype.change_value = async function(options) {
 			if(self.change_value_pool.length > 0) {
 				(self.change_value_pool.shift())();
 			}
+
+	// console.log("/////////////////////////// *** api_response:",api_response);
+	// console.log("/////////////////////////// *** self.data.value:",self.data.value);
 
 	return api_response
 };//end change_value
