@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -166,7 +166,7 @@ export const render_components_list = function(options) {
 									section_elements	: current_section_elements
 								})
 							// Reset active in current wrap
-								const ar_active_now	= list_container.querySelectorAll("li.active")
+								const ar_active_now	= await list_container.querySelectorAll("li.active")
 								const len			= ar_active_now.length
 								for (let i = len - 1; i >= 0; i--) {
 									ar_active_now[i].classList.remove('active');
