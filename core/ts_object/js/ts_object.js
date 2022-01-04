@@ -403,22 +403,23 @@ export const ts_object = new function() {
 							}
 							link_related.addEventListener("click",(e)=>{
 
-								e.preventDefault()
-								e.stopPropagation()
-								// self.link_term(link_related, e)
-								// source window. Could be different than current (like iframe)
-								const source_window = window.opener || window.parent
-								if (source_window===null) {
-									console.log("[link_term] Error on find window.opener / parent")
-									return false
-								}
 
-							// publish event link_term
-								source_window.event_manager.publish('link_term_'+ self.initiator, {
-									section_tipo	: ar_children_data[i].section_tipo,
-									section_id		: ar_children_data[i].section_id,
-									label			: current_label_term ? current_label_term.value : ''
-								})
+								// self.link_term(link_related)
+									// e.preventDefault()
+									// e.stopPropagation()
+								// source window. Could be different than current (like iframe)
+									const source_window = window.opener || window.parent
+									if (source_window===null) {
+										console.log("[link_term] Error on find window.opener / parent")
+										return false
+									}
+
+								// publish event link_term
+									source_window.event_manager.publish('link_term_'+ self.initiator, {
+										section_tipo	: ar_children_data[i].section_tipo,
+										section_id		: ar_children_data[i].section_id,
+										label			: current_label_term ? current_label_term.value : ''
+									})
 							})
 							// related icon
 							const related_icon 	= ui.create_dom_element({
@@ -1997,6 +1998,7 @@ export const ts_object = new function() {
 	*/
 	this.link_term = function(button_obj) {
 
+	console.log("aqui:");
 		// source window. Could be different than current (like iframe)
 			const source_window = window.opener || window.parent
 			if (source_window===null) {
@@ -2005,7 +2007,7 @@ export const ts_object = new function() {
 			}
 
 		// publish event link_term
-			source_window.event_manager.publish('link_term', button_obj.data)
+			source_window.event_manager.publish('link_term_'+ self.initiator, button_obj.data)
 
 
 		return true
