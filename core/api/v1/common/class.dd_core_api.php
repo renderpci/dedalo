@@ -178,7 +178,13 @@ class dd_core_api {
 																$mode,
 																$component_lang,
 																$section_tipo);
-				// get the component permisions
+
+					if(isset($data->row_locator) && $model==='component_semantic_node'){
+						$component->set_row_locator($data->row_locator);
+						$component->set_parent_section_tipo($data->parent_section_tipo);
+						$component->set_parent_section_id($data->parent_section_id);
+					}
+				// get the component permissions
 					$permissions = $component->get_component_permissions();
 				// check if the user can update the component
 					if($permissions < 2) return $response;
@@ -198,7 +204,7 @@ class dd_core_api {
 						$dato = $component->get_dato();
 				}
 
-				// pagination. Update offset bassed on save request (portals)
+				// pagination. Update offset basses on save request (portals)
 					$pagination = $json_data->data->pagination ?? null;
 					if (isset($pagination) && isset($pagination->offset)) {
 						$component->pagination->offset = $pagination->offset;
@@ -1023,7 +1029,7 @@ class dd_core_api {
 					
 					case 'search': // Used by section and service autocomplete
 
-						if ($model==='section'){
+						// if ($model==='section'){
 
 							// sections
 								$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
@@ -1033,7 +1039,7 @@ class dd_core_api {
 									$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 								}
 
-						}else if ($model==='area_thesaurus'){
+						// }else if ($model==='area_thesaurus'){
 							// IN PROCESS TO IMPLEMENT
 							// // area_thesaurus
 							// 	$element = area::get_instance($model, $tipo, $mode);
@@ -1042,7 +1048,7 @@ class dd_core_api {
 							// 	$obj = new stdClass();
 							// 		$obj->sqo	 = $sqo;
 							// 	$element->set_search_action($obj);
-						}
+						// }
 						break;
 
 					case 'related_search': // Used to get the related sections that call to the source section
