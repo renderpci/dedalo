@@ -1013,11 +1013,11 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 				})
 
 			// Thesaurus mode case
-			if (self.mode==="thesaurus") {
-				const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
-					//wrapper_sections_selector.style.display = "block"
-					wrapper_sections_selector.classList.remove("hide")
-			}
+			// if (self.mode==="thesaurus") {
+			// 	const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
+			// 		//wrapper_sections_selector.style.display = "block"
+			// 		wrapper_sections_selector.classList.remove("hide")
+			// }
 
 			self.search_panel_is_open = true
 
@@ -1033,11 +1033,11 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 				})
 
 			// Thesaurus mode case
-			if (self.mode==="thesaurus") {
-				const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
-					//wrapper_sections_selector.style.display = "none"
-					wrapper_sections_selector.classList.add("hide")
-			}
+			// if (self.mode==="thesaurus") {
+			// 	const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
+			// 		//wrapper_sections_selector.style.display = "none"
+			// 		wrapper_sections_selector.classList.add("hide")
+			// }
 
 			self.search_panel_is_open = false
 		}
@@ -1053,7 +1053,6 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	*/
 	export const toggle_fields = (self) => {
 
-		const section_tipo 				= self.section_tipo
 		const search_container_selector = self.search_container_selector
 
 		// cookie to track state
@@ -1079,7 +1078,6 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 					action	: "close"
 				})
 		}
-
 
 		return true
 	};//end toggle_fields
