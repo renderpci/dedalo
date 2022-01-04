@@ -14,7 +14,7 @@
 
 /**
 * RENDER_SEARCH
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_search = function() {
 
@@ -65,19 +65,19 @@ render_search.prototype.list = async function() {
 				// if(self.cookie_track("search_panel")===true) {
 					if(ui_status.value.search_panel && ui_status.value.search_panel.is_open) {
 						// Open search panel
-						toggle_search_panel(self) // toggle to open from defult state close
+						toggle_search_panel(self) // toggle to open from default state close
 					}
 				// fields_panel cookie state track
 					// if(self.cookie_track("fields_panel")===true) {
 					if(ui_status.value.fields_panel && ui_status.value.fields_panel.is_open) {
 						// Open search panel
-						toggle_fields(self) // toggle to open from defult state close
+						toggle_fields(self) // toggle to open from default state close
 					}
 				// presets_panel cookie state track
 					// if(self.cookie_track("presets_panel")===true) {
 					if(ui_status.value.presets_panel && ui_status.value.presets_panel.is_open) {
 						// Open search panel
-						toggle_presets(self) // toggle to open from defult state close
+						toggle_presets(self) // toggle to open from default state close
 					}
 			}//end if (ui_status)
 		})
@@ -119,6 +119,7 @@ render_search.prototype.render_base = function() {
 		})
 		// set
 		self.search_global_container = search_global_container
+		console.log("/////////////////// ++++++++++++++++++++++++ self.search_global_container:",self.search_global_container);
 
 	// thesaurus add on
 		if (self.caller.model==='area_thesaurus') {
