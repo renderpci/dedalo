@@ -971,8 +971,8 @@ export const service_autocomplete = function() {
 						// "$and" : [filter_free]
 					}
 					if (fixed_filter) {
-						for (let i = 0; i < fixed_filter.value.length; i++) {
-							self.sqo.filter.$and.push(fixed_filter.value[i])
+						for (let i = 0; i < fixed_filter.length; i++) {
+							self.sqo.filter.$and.push(fixed_filter[i])
 						}
 					}
 					if(filter_by_list){
