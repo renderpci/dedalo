@@ -1738,7 +1738,9 @@ abstract class common {
 
 							// inject data for component_semantic_node
 								if($model==='component_semantic_node'){
-									$related_element->set_dato($current_locator);
+									$related_element->set_row_locator($current_locator);
+									$related_element->set_parent_section_tipo($this->section_tipo);
+									$related_element->set_parent_section_id($this->section_id);
 								}
 							break;
 
