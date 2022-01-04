@@ -30,7 +30,7 @@ class component_semantic_node extends component_relation_common {
 		parent::set_dato( $dato );
 
 		// update row_locator
-		if(isset($this->row_locator->ds)){
+		if(isset($this->row_locator)){
 			$this->row_locator->ds = $this->dato;
 		}
 
@@ -193,6 +193,75 @@ class component_semantic_node extends component_relation_common {
 
 		return [];
 	}//end get_tools
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql($query_object) {
+		# Always set fixed values
+		$query_object->type 	= 'jsonb';
+		$query_object->unaccent = false;
+
+		# component path
+		$query_object->component_path = ['relations'];
+
+		$ds_q = new stdClass();
+			$ds_q->ds = $query_object->q;
+		$q = $ds_q;
+
+
+		# For unification, all non string are json encoded
+		# This allow accept mixed values (encoded and no encoded)
+		if (!is_string($q)) {
+			$q = json_encode($q);
+		}
+
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
+
+
+		switch (true) {
+			# IS DIFFERENT
+			case ($q_operator==='!=' && !empty($q)):
+				$operator = '@>';
+				$q_clean  = '\'['.$q.']\'::jsonb=FALSE';
+				$query_object->operator = $operator;
+				$query_object->q_parsed = $q_clean;
+				break;
+			# IS NULL
+			case ($q_operator==='!*'):
+				$operator = '@>';
+				$q_obj = new stdClass();
+					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
+				$ar_q 	  = array($q_obj);
+				$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= $q_clean;
+				break;
+			# IS NOT NULL
+			case ($q_operator==='*'):
+				$operator = '@>';
+				$q_obj = new stdClass();
+					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
+				$ar_q 	  = array($q_obj);
+				$q_clean  = '\''.json_encode($ar_q).'\'';
+				$query_object->operator = $operator;
+				$query_object->q_parsed = $q_clean;
+				break;
+			# CONTAIN
+			default:
+				$operator = '@>';
+				$q_clean  = '\'['.$q.']\'';
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= $q_clean;
+				break;
+		}//end switch (true) {
+
+
+		return $query_object;
+	}//end resolve_query_object_sql
 
 
 

@@ -1009,30 +1009,3 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 
 	return true
 };//end change_mode
-
-
-
-/**
-* TEST_SAVE
-*/
-component_common.prototype.test_save = async function(component) {
-
-	if (component.model==='component_input_text') {
-
-		for (let i = 1; i <= 1; i++) {
-
-			const time = i * 1000
-			const ar_value = [i,"234"]
-
-			setTimeout( async function() {
-
-				component.set_value(ar_value)
-				await component.render()
-				component.save(component)
-
-			},time)
-		}
-	}
-};//end test_save
-
-

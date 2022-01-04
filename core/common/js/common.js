@@ -292,10 +292,6 @@ common.prototype.render = async function (options={}) {
 								? wrapper.querySelector(":scope >.list_body")
 								: wrapper
 
-								console.log("______________ base_container:",base_container);
-								console.log("______________ wrapper:",wrapper);
-								console.log("______________ bool_select_list_body:",bool_select_list_body);
-
 							if (!base_container.contains( old_content_data_node )) {
 								console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
 								console.warn("------------- base_container:", base_container);

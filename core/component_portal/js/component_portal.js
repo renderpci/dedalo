@@ -355,13 +355,14 @@ component_portal.prototype.add_value = async function(value) {
 
 	// check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
 		const current_value	= self.data.value
-			console.log("////// add_value - value:", value);
-			console.log("////// add_value - current_value:", current_value);
 		const exists		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
 		if (typeof exists!=="undefined") {
 			console.log("[add_value] Value already exists (1) !");
 			return false
 		}
+
+	// add himself into the new locator as from_component_tipo
+		value.from_component_tipo = self.tipo
 
 	// changed_data
 		const key			= self.total || 0
@@ -379,22 +380,6 @@ component_portal.prototype.add_value = async function(value) {
 	// total_before
 		const total_before = clone(self.total)
 
-	// mode specifics
-		switch(self.mode) {
-			case 'search' :
-				// publish change. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-				self.node.map(function(item_node) {
-					item_node.classList.remove("active")
-				})
-				break;
-
-			default:
-				// updates pagination values offset and total
-				self.update_pagination_values('add')
-				break;
-		}
-
 	// change_value (and save)
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
@@ -406,10 +391,18 @@ component_portal.prototype.add_value = async function(value) {
 
 	// check if value already existed. (!) Note that here, the whole portal data has been compared in server
 		if (parseInt(total) <= parseInt(total_before)) {
-			self.update_pagination_values('remove') // remove added pagination value
+			// self.update_pagination_values('remove') // remove added pagination value
 			console.log("[add_value] Value already exists (2) !");
 			return false
 		}
+
+	// updates pagination values offset and total
+		if (self.mode!=='search') {
+			self.update_pagination_values('add')
+		}
+
+	// updates pagination values offset and total
+		// self.update_pagination_values('add')
 
 	// Update data from save API response (note that build_autoload will be passed as false later -when refresh- to avoid call to the API again)
 		// set context and data to current instance
@@ -421,7 +414,6 @@ component_portal.prototype.add_value = async function(value) {
 
 		// force re-assign self.total and pagination values on build
 			self.total = null
-
 
 	// refresh self component
 		await self.refresh({
@@ -435,6 +427,19 @@ component_portal.prototype.add_value = async function(value) {
 			self.filter_data_by_tag_id(self.active_tag)
 		}
 
+	// mode specifics
+		switch(self.mode) {
+			case 'search' :
+				// publish change. Event to update the DOM elements of the instance
+				event_manager.publish('change_search_element', self)
+				self.node.map(function(item_node) {
+					item_node.classList.remove("active")
+				})
+				break;
+			default:
+
+				break;
+		}
 
 	// console.log("////////////////////// self.data:",self.data);
 	// console.log("////////////////////// self.datum:",self.datum);
@@ -631,4 +636,28 @@ component_portal.prototype.reset_filter_data = function(options){
 	// 	return offset_last
 	// };//end  get_last_offset
 
+
+
+/**
+* GET_SEARCH_VALUE
+*/
+component_portal.prototype.get_search_value =  function() {
+
+	const self = this
+
+	const current_value = self.data.value
+
+	const value_len = current_value.length
+
+	const new_value = [];
+	for (let i = 0; i < value_len; i++) {
+		new_value.push({
+			section_tipo			: current_value[i].section_tipo,
+			section_id				: current_value[i].section_id,
+			from_component_tipo		: current_value[i].from_component_tipo
+		})
+	}
+
+	return new_value
+};//end get_search_value
 
