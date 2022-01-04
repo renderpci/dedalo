@@ -145,9 +145,9 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_search = function(self) {
 
-	const value		= self.data.value
+	// const value	= self.data.value
 	const mode		= self.mode
-	const datalist	= self.data.datalist
+	const datalist	= self.data.datalist || []
 
 	const fragment = new DocumentFragment()
 

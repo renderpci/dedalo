@@ -1922,7 +1922,7 @@ abstract class common {
 							$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 						}
 						if(!isset($current_ddo->mode)) {
-							$current_ddo->mode = $this->mode;
+							$current_ddo->mode = $this->modo;
 						}
 					}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 

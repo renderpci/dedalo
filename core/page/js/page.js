@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -9,10 +9,10 @@
 	import '../../services/service_tinymce/js/dd-tiny.js'
 	// others
 	import {clone, dd_console} from '../../common/js/utils/index.js'
-	import {menu} from '../../menu/js/menu.js'
+	// import {menu} from '../../menu/js/menu.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {common} from '../../common/js/common.js'
 	import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel

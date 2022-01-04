@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -40,7 +40,7 @@ render_search_component_publication.prototype.search = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
-			content_data	: content_data
+			content_data : content_data
 		})
 
 	// add events
@@ -191,9 +191,9 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data = function(self) {
 
-	const value		= self.data.value
+	// const value		= self.data.value
 	const mode		= self.mode
-	const datalist	= self.data.datalist
+	const datalist	= self.data.datalist || []
 
 	const fragment = new DocumentFragment()
 
