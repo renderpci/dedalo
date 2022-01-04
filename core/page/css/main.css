@@ -4496,11 +4496,11 @@ section {
 .wrapper_inspector > .inspector_content_data > * {
   border-bottom: 1px solid #eeeeee;
 }
-.wrapper_inspector > .inspector_content_data > .paginator_container .content_data {
+.wrapper_inspector > .inspector_content_data > .paginator .content_data {
   padding-top: 0.75em;
   padding-bottom: 0.75rem;
 }
-.wrapper_inspector > .inspector_content_data > .paginator_container .content_data.paginator {
+.wrapper_inspector > .inspector_content_data > .paginator .content_data.paginator {
   flex-wrap: wrap;
 }
 .wrapper_inspector > .inspector_content_data .wrapper_component {

@@ -38,7 +38,8 @@ render_list_section.prototype.list = async function(options) {
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
-	const ar_section_record = await self.get_ar_instances()
+	// section_record
+		const ar_section_record = await self.get_ar_instances()
 
 	// content_data
 		const content_data = await get_content_data(ar_section_record, self)
@@ -50,30 +51,27 @@ render_list_section.prototype.list = async function(options) {
 
 	// buttons
 		if (self.mode!=='tm') {
-
 			const buttons_node = get_buttons(self);
-
 			if(buttons_node){
 				fragment.appendChild(buttons_node)
 			}
+		}
 
-			// search filter node
-				if (self.filter) {
-					const filter_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'filter',
-						parent			: fragment
-					})
-					self.filter.build().then(()=>{
-						self.filter.render().then(filter_wrapper =>{
-							filter_container.appendChild(filter_wrapper)
-						})
-					})
+	// search filter node
+		if (self.filter && self.mode!=='tm') {
+			const filter_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'filter',
+				parent			: fragment
+			})
+			self.filter.build().then(()=>{
+				self.filter.render().then(filter_wrapper =>{
+					filter_container.appendChild(filter_wrapper)
+				})
+			})
+		}
 
-				}
-		}//end if (self.mode!=='tm')
-
-	// paginator node
+	// paginator container node
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'paginator',
@@ -96,7 +94,6 @@ render_list_section.prototype.list = async function(options) {
 		// like 1fr 1fr 1fr 3fr 1fr
 		const items				= ui.flat_column_items(columns_map)
 		const template_columns	= items.join(' ')
-
 		Object.assign(
 			list_body.style,
 			{

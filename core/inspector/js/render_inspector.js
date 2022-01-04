@@ -1,17 +1,17 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // import
 	import {ui} from '../../common/js/ui.js'
-	import {data_manager, download_url} from '../../common/js/data_manager.js'
+	import {download_url} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 
 
 
 /**
-* RENDER_inspector
+* RENDER_INSPECTOR
 * Manages the component's logic and apperance in client side
 */
 export const render_inspector = function() {
@@ -100,9 +100,11 @@ const get_content_data = function(self) {
 	// paginator container
 		const paginator_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'paginator_container',
+			class_name		: 'paginator',
 			parent 			: content_data
 		})
+		// fix pointer to node placeholder
+		self.paginator_container = paginator_container
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({

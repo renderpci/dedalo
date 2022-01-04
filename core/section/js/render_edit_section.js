@@ -5,8 +5,8 @@
 
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {clone, dd_console} from '../../common/js/utils/index.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -27,11 +27,11 @@ export const render_edit_section = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_edit_section.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_section.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	const render_level = options.render_level || 'full'
 
 	// ar_section_record. section_record instances (initied and builded)
 		const ar_section_record = self.ar_instances && self.ar_instances.length>0
@@ -44,38 +44,70 @@ render_edit_section.prototype.edit = async function(options={render_level:'full'
 			return content_data
 		}
 
+	const fragment = new DocumentFragment()
+
+	// css
+		const element_css = self.context.css || {}
+
 	// buttons
 		// const current_buttons = get_buttons(self);
 
-	// paginator container node (will be placed/moved into inspector)
-		const paginator_div = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'paginator'
-		})
-		self.paginator.build().then(()=>{
-			self.paginator.render().then(paginator_wrapper =>{
-				paginator_div.appendChild(paginator_wrapper)
-			})
-		})
-
-	// inspector container node
+	// inspector
 		const inspector_div = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'inspector'
+			class_name		: 'inspector',
+			parent			: fragment
 		})
 		self.inspector.build().then(()=>{
 			self.inspector.render().then(inspector_wrapper =>{
-				inspector_div.appendChild(inspector_wrapper)
+
+				// inspector_wrapper append
+					inspector_div.appendChild(inspector_wrapper)
+
+				// paginatior inside
+					self.paginator.build().then(()=>{
+						self.paginator.render().then(paginator_wrapper =>{
+							self.inspector.paginator_container.appendChild(paginator_wrapper)
+						})
+					})
 			})
 		})
 
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper =	ui.section.build_wrapper_edit(self, {
-			content_data	: content_data,
-			paginator_div	: paginator_div,
-			inspector_div	: inspector_div
-			// buttons		: current_buttons
+	// search filter
+		if (self.filter) {
+			const filter_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'filter',
+				parent			: fragment
+			})
+			self.filter.build().then(()=>{
+				self.filter.render().then(filter_wrapper =>{
+					filter_container.appendChild(filter_wrapper)
+				})
+			})
+		}
+
+	// content_data
+		// css
+			const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
+			const content_data_css = ["content_data", self.type, ...content_data_structure_css]
+			content_data.classList.add(...content_data_css)
+		// add to fragment
+			fragment.appendChild(content_data)
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'section',
+			id				: self.id,
+			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 		})
+		// css
+			const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+			const wrapper_css = ['wrapper_'+self.type, self.model, self.tipo, self.mode, ...wrapper_structure_css]
+			wrapper.classList.add(...wrapper_css)
+		// append fragment
+		wrapper.appendChild(fragment)
+
 
 	// CSS INJECT
 		// function create_new_CSS_style_sheet() {
