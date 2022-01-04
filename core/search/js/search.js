@@ -137,9 +137,9 @@ search.prototype.init = async function(options) {
 		self.events_tokens.push(
 			event_manager.subscribe('change_search_element', fn_change_search_element)
 		)
-		function fn_change_search_element(instance) {
-			self.parse_dom_to_json_filter({mode:self.mode})
-			// Set as changed
+		async function fn_change_search_element(instance) {
+			await self.parse_dom_to_json_filter({mode:self.mode})
+			// Set as changed, it will fire the event to save the temp search section (temp preset)
 			self.update_state({state:'changed'})
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
@@ -716,9 +716,16 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				const component_wrapper		= element.querySelector('.wrapper_component')
 				const component_instance	= self.ar_instances.find(instance => instance.id===component_wrapper.id)
 
+				// get the search value
+				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
+				// else get the value as search value.
+				const search_value = typeof component_instance.get_search_value === 'function'
+					? component_instance.get_search_value()
+					: component_instance.data.value
+
 				// overwrite
 				if (typeof component_instance!=="undefined") {
-					q			= component_instance.data.value
+					q			= search_value
 					q_operator	= component_instance.data.q_operator
 				}
 			}
@@ -925,7 +932,7 @@ this.get_search_json_object = function() {
 		const self = this
 
 		// Recalculate filter_obj from DOM in default mode (include components with empty values)
-		const filter_obj = self.parse_dom_to_json_filter({}).filter
+		const filter_obj = await self.parse_dom_to_json_filter({}).filter
 
 		// save editing preset
 			const current_data_manager 	= new data_manager()

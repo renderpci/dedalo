@@ -75,7 +75,6 @@ export const add_events = function(self, wrapper) {
 						const input = e.target
 					// value
 						const value = (input.value.length>0) ? input.value : null
-							console.log("value:***********************************",value);
 					// q_operator. Fix the data in the instance previous to save
 						self.data.q_operator = value
 					// publish search. Event to update the dom elements of the instance
@@ -172,7 +171,7 @@ export const build_content_data = function(self) {
 	// build values (add all nodes from the rendered_section_record)
 		const build_values = function() {
 
-			self.get_ar_instances()
+			self.get_ar_instances({mode:'mini'})
 			.then(function(ar_section_record){
 
 				const length = ar_section_record.length

@@ -119,7 +119,6 @@ render_search.prototype.render_base = function() {
 		})
 		// set
 		self.search_global_container = search_global_container
-		console.log("/////////////////// ++++++++++++++++++++++++ self.search_global_container:",self.search_global_container);
 
 	// thesaurus add on
 		if (self.caller.model==='area_thesaurus') {
