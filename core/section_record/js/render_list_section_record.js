@@ -85,7 +85,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 							current_instance.render()
 							.then(function(current_instance_node){
 								if (!current_instance_node) {
-									reject(current_instance_node)
+									reject(false)
 									return
 								}
 								resolve(true)
