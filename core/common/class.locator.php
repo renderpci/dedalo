@@ -13,8 +13,8 @@
 *		$locator->tag_id				= (string)$tag_id;
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
 *		$locator->state					= (object)$state;
-*		$locator->semantic				= (object)$semantic;
-*		$locator->from_key				= (int)$from_key; //dataframe index array number of the data taht reference
+*		$locator->ds					= (array)$ds;
+*		$locator->from_key				= (int)$from_key; //dataframe index array number of the data that reference
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -34,7 +34,7 @@ class locator extends stdClass {
 		private $tag_id;
 		private $tag_component_tipo;
 		private $state;
-		private $semantic;
+		private $ds;
 		private $from_key;
 	*/
 
@@ -198,14 +198,14 @@ class locator extends stdClass {
 	}
 	/**
 	* SET_SEMANTIC
-	*//*
+	*/
 	public function set_ds($value) {
 		if(!is_array($value)) {
-			throw new Exception("Error Processing Request. Invalid dedalo semantic:". to_string($value), 1);
+			throw new Exception("Error Processing Request. Invalid dedalo semantic ds:". to_string($value), 1);
 		}
-		$this->semantic = (array)$value;
+		$this->ds = (array)$value;
 	}
-	*//**
+	/**
 	* SET_FROM_KEY
 	* @return 
 	*/
@@ -539,7 +539,7 @@ class locator extends stdClass {
 
 	/**
 	* DESTRUCT
-	* On destruct object, test if minimun data is set or not
+	* On destruct object, test if minimum data is set or not
 	*/
 	function __destruct() {
 
