@@ -4,7 +4,7 @@
 
 
 // import
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {render_inspector} from './render_inspector.js'
 

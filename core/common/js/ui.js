@@ -725,114 +725,115 @@ export const ui = {
 	section : {
 
 
+
 		/**
 		* BUILD_WRAPPER_EDIT
 		*/
-		build_wrapper_edit : (instance, items={}) => {
-			if(SHOW_DEBUG===true) {
-				//console.log("[ui.build_wrapper_edit] instance:",instance)
-			}
+			// build_wrapper_edit : (instance, items={}) => {
+			// 	if(SHOW_DEBUG===true) {
+			// 		//console.log("[ui.build_wrapper_edit] instance:",instance)
+			// 	}
 
-			const id 			= instance.id || 'id is not set'
-			const model 		= instance.model 	// like component_input-text
-			const type 			= instance.type 	// like 'component'
-			const tipo 			= instance.tipo 	// like 'rsc26'
-			const mode 			= instance.mode 	// like 'edit'
-			const label 		= mode === 'edit_in_list' ? null : instance.label // instance.context.label
-			const main_context 	= instance.context
-			const element_css 	= main_context.css || {}
+			// 	const id 			= instance.id || 'id is not set'
+			// 	const model 		= instance.model 	// like component_input-text
+			// 	const type 			= instance.type 	// like 'component'
+			// 	const tipo 			= instance.tipo 	// like 'rsc26'
+			// 	const mode 			= instance.mode 	// like 'edit'
+			// 	const label 		= mode === 'edit_in_list' ? null : instance.label // instance.context.label
+			// 	const main_context 	= instance.context
+			// 	const element_css 	= main_context.css || {}
 
- 			const fragment = new DocumentFragment()
+	 	// 		const fragment = new DocumentFragment()
 
-			// label
-				if (label===null || items.label===null) {
-					// no label add
-				}else if(items.label) {
-					// add custom label
-					fragment.appendChild(items.label)
-				}else{
-					// default
-					// const component_label = ui.create_dom_element({
-					// 	element_type	: 'div',
-					// 	class_name		: 'label',
-					// 	inner_html		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
-					// 	parent			: fragment
-					// })
-				}
+			// 	// label
+			// 		if (label===null || items.label===null) {
+			// 			// no label add
+			// 		}else if(items.label) {
+			// 			// add custom label
+			// 			fragment.appendChild(items.label)
+			// 		}else{
+			// 			// default
+			// 			// const component_label = ui.create_dom_element({
+			// 			// 	element_type	: 'div',
+			// 			// 	class_name		: 'label',
+			// 			// 	inner_html		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
+			// 			// 	parent			: fragment
+			// 			// })
+			// 		}
 
-			// inspector
-				if (items.inspector_div) {
-					fragment.appendChild(items.inspector_div)
-				}
+			// 	// inspector
+			// 		if (items.inspector_div) {
+			// 			fragment.appendChild(items.inspector_div)
+			// 		}
 
-			// buttons
-				if (items.buttons) {
-					const buttons = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'buttons',
-						parent			: fragment
-					})
-					const items_buttons_length = items.buttons.length
-					for (let i = 0; i < items_buttons_length; i++) {
-						buttons.appendChild(items.buttons[i])
-					}
-				}
+			// 	// buttons
+			// 		if (items.buttons) {
+			// 			const buttons = ui.create_dom_element({
+			// 				element_type	: 'div',
+			// 				class_name		: 'buttons',
+			// 				parent			: fragment
+			// 			})
+			// 			const items_buttons_length = items.buttons.length
+			// 			for (let i = 0; i < items_buttons_length; i++) {
+			// 				buttons.appendChild(items.buttons[i])
+			// 			}
+			// 		}
 
-			// filter
-				// if (instance.filter) {
-				// 	const filter = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'filter',
-				// 		parent			: fragment
-				// 	})
-				// 	instance.filter.build().then(()=>{
-				// 		instance.filter.render().then(filter_wrapper =>{
-				// 			filter.appendChild(filter_wrapper)
-				// 		})
-				// 	})
-				// }
+			// 	// filter
+			// 		// if (instance.filter) {
+			// 		// 	const filter = ui.create_dom_element({
+			// 		// 		element_type	: 'div',
+			// 		// 		class_name		: 'filter',
+			// 		// 		parent			: fragment
+			// 		// 	})
+			// 		// 	instance.filter.build().then(()=>{
+			// 		// 		instance.filter.render().then(filter_wrapper =>{
+			// 		// 			filter.appendChild(filter_wrapper)
+			// 		// 		})
+			// 		// 	})
+			// 		// }
 
-			// paginator
-				if (items.paginator_div) {
-					// place paginator in inspector
-					ui.place_element({
-						source_node			: items.paginator_div,
-						source_instance		: instance,
-						target_instance		: instance.inspector,
-						container_selector	: ".paginator_container",
-						target_selector		: ".wrapper_paginator"
-					})
-				}
+			// 	// paginator
+			// 		if (items.paginator_div) {
+			// 			// place paginator in inspector
+			// 			ui.place_element({
+			// 				source_node			: items.paginator_div,
+			// 				source_instance		: instance,
+			// 				target_instance		: instance.inspector,
+			// 				container_selector	: ".paginator_container",
+			// 				target_selector		: ".wrapper_paginator"
+			// 			})
+			// 		}
 
-			// content_data
-				if (items.content_data) {
-					const content_data = items.content_data
-					// css
-						const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
-						const ar_css = ["content_data", type, ...content_data_structure_css]
-						content_data.classList.add(...ar_css)
-					// add to fragment
-						fragment.appendChild(content_data)
-				}
-
-
-			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
- 				})
- 				// css
-	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
-					wrapper.classList.add(...ar_css)
-
- 				// append fragment
- 					wrapper.appendChild(fragment)
+			// 	// content_data
+			// 		if (items.content_data) {
+			// 			const content_data = items.content_data
+			// 			// css
+			// 				const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
+			// 				const ar_css = ["content_data", type, ...content_data_structure_css]
+			// 				content_data.classList.add(...ar_css)
+			// 			// add to fragment
+			// 				fragment.appendChild(content_data)
+			// 		}
 
 
+			// 	// wrapper
+			// 		const wrapper = ui.create_dom_element({
+			// 			element_type	: 'div',
+			// 			class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+	 	// 			})
+	 	// 			// css
+		 // 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+			// 			const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
+			// 			wrapper.classList.add(...ar_css)
 
-			return wrapper
-		}//end  build_wrapper_edit
+	 	// 			// append fragment
+	 	// 				wrapper.appendChild(fragment)
+
+
+
+			// 	return wrapper
+			// }//end  build_wrapper_edit
 
 
 
