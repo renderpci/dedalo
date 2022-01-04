@@ -14,12 +14,33 @@ class component_semantic_node extends component_relation_common {
 		// protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 		protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
 		protected $default_relation_type_rel	= null;
+		public $parent_section_tipo;
+		public $parent_section_id;
 		public $row_locator;
 
 
 
 	/**
 	* SET_DATO
+	* @return
+	*/
+	public function set_dato($dato) {
+
+		// fix dato (clean and checked values)
+		parent::set_dato( $dato );
+
+		// update row_locator
+		if(isset($this->row_locator->ds)){
+			$this->row_locator->ds = $this->dato;
+		}
+
+		return true;
+	}//end set_dato
+
+
+
+	/**
+	* SET_ROW_LOCATOR
 	* Set raw dato overwrite existing dato.
 	* Note that the current component does not have its own 'dato', rather the data is inside the portal locator
 	* Anyway, we need the portal full row locator to work here.
@@ -33,8 +54,7 @@ class component_semantic_node extends component_relation_common {
 	* 		]
 	* 	}
 	*/
-	public function set_dato($row_locator) {
-
+	public function set_row_locator($row_locator) {
 		// fix whole full locator
 		$this->row_locator = $row_locator;
 
@@ -82,7 +102,20 @@ class component_semantic_node extends component_relation_common {
 
 		// set as db loaded
 		$this->bl_loaded_matrix_data = true;
-	}//end set_dato
+	}//end set_row_locator
+
+
+
+	/**
+	* SAVE
+	* @return
+	*/
+	public function Save() {
+
+		$result = $this->update_portal_dato($this->row_locator);
+
+		return $result===true ? $this->section_id : false;
+	}//end save
 
 
 
@@ -92,17 +125,20 @@ class component_semantic_node extends component_relation_common {
 	*/
 	public function update_portal_dato($new_row_locator) {
 
-		$portal_tipo = $new_row_locator->from_component_tipo;
+		$portal_tipo			= $new_row_locator->from_component_tipo;
+		$portal_section_tipo	= $this->get_parent_section_tipo();
+		$portal_section_id		= $this->get_parent_section_id();
 
 		// portal update
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo,true);
 			$component = component_common::get_instance( $modelo_name,
 														 $portal_tipo,
-														 $this->parent,
+														 $portal_section_id,
 														 'list',
 														 DEDALO_DATA_NOLAN,
-														 $this->section_tipo);
+														 $portal_section_tipo);
 			$current_dato = $component->get_dato();
+
 			foreach ($current_dato as $key => $current_locator) {
 				if ($current_locator->section_id==$new_row_locator->section_id &&
 					$current_locator->section_tipo==$new_row_locator->section_tipo
@@ -112,7 +148,8 @@ class component_semantic_node extends component_relation_common {
 
 					$new_dato = array_values($current_dato);
 					$component->set_dato($new_dato);
-					$component->Save();
+
+					$res = $component->Save();
 					debug_log(__METHOD__." Updated portal value with updated new_row_locator ".to_string($current_dato), logger::WARNING);
 
 					return true;
