@@ -2618,7 +2618,8 @@
 		Updated process_result::sum_totals function
 		Added posterframe to web_data::build_fragment method
 		Updated jquery-ui to 1.13.0
-
+		05-01-2022
+		Fixed unique_server_check issue when the value is equal in more than one lang
 
 
 	[/HISTORY]
@@ -2650,7 +2651,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-01-2022T16:48:00');
+	define('DEDALO_BUILD'	, '05-01-2022T18:25:23');
 
 
 	/*
