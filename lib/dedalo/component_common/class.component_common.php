@@ -4611,18 +4611,19 @@ abstract class component_common extends common {
 	* UNIQUE_SERVER_CHECK
 	* @return bool
 	*/
-	public function unique_server_check($dato){
+	public function unique_server_check($dato, $lang){
 
 		$options = new stdClass();
-			$options->q 	 			= '='.$dato;
+			$options->q					= '='.$dato;
 			$options->q_operator		= '';
-			$options->q_split 			= false;
+			$options->q_split			= false;
 			$options->section_tipo		= $this->get_section_tipo();
-			$options->component_name 	= $this->get_component_name();
+			$options->component_name	= $this->get_component_name();
 			$options->tipo				= $this->get_tipo();
-			$options->name 				= $this->get_label();
-			$options->limit  			= 1;
-			$options->logical_operator 	= '$or';
+			$options->name				= $this->get_label();
+			$options->limit				= 1;
+			$options->logical_operator	= '$or';
+			$options->lang				= $lang;
 
 		$search_query_object = self::build_search_query_object($options);
 

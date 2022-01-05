@@ -98,7 +98,7 @@ function Save($json_data) {
 		$properties = $component_obj->get_propiedades();
 		if(isset($properties->unique->server_check) && $properties->unique->server_check===true){
 			$check_dato = (is_array($dato_clean)) ?	reset($dato_clean) : $dato_clean;
-			$unique_server_check = $component_obj->unique_server_check($check_dato);
+			$unique_server_check = $component_obj->unique_server_check($check_dato, $lang);
 			if($unique_server_check === false){
 				// Trigger Error: Nothing is saved.
 				$response->msg = label::get_label("value_already_exists");
@@ -113,7 +113,7 @@ function Save($json_data) {
 			$component_obj->caller_dataset = $caller_dataset;
 
 			# force to save component
-			$old_dato 	= 'impossible data' . microtime(true);
+			$old_dato	= 'impossible data' . microtime(true);
 
 		}else{
 
