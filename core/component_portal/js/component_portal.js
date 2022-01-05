@@ -123,7 +123,7 @@ component_portal.prototype.init = async function(options) {
 				// add locator selected
 					const result = await self.add_value(locator)
 					if (result===false) {
-						alert("Value already exists!");
+						alert(`Value already exists! ${JSON.stringify(locator)}`);
 						return
 					}
 				// modal close

@@ -685,8 +685,8 @@ const render_references = function(ar_references) {
 const get_buttons = (self) => {
 	
 	const is_inside_tool		= self.is_inside_tool
-	const mode					= self.mode
-	const show					= self.rqo.show
+	// const mode				= self.mode
+	// const show				= self.rqo.show
 	const target_section		= self.target_section
 	const target_section_lenght	= target_section.length
 		  // sort section by label ascendant
@@ -694,13 +694,14 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
+
 	// button_add
 		const button_add = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button add',
 			parent			: fragment
 		})
-		button_add.addEventListener("click", async function(e){
+		button_add.addEventListener("click", async function(){
 
 			//TO ADD SECTION SELECTOR
 				const section_tipo = target_section_lenght >1
@@ -819,7 +820,7 @@ const get_buttons = (self) => {
 					class_name		: 'button sync',
 					parent			: fragment
 				})
-				button_update_data_external.addEventListener("click", async function(e){
+				button_update_data_external.addEventListener("click", async function(){
 					const source = self.rqo_config.show.find(item => item.typo === 'source')
 					source.build_options = {
 						get_dato_external : true
@@ -839,7 +840,16 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			  buttons_container.appendChild(fragment)
+			  // buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
 
 
 	return buttons_container
