@@ -4,11 +4,11 @@
 
 
 // imports
-	import {event_manager} from '../../../common/js/event_manager.js'
+	// import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
 	// import {observe_changes} from '../../../common/js/utils.js'
-	import {clone, observe_changes} from '../../../common/js/utils/index.js'
-	import {common} from '../../../common/js/common.js'
+	// import {clone, observe_changes} from '../../../common/js/utils/index.js'
+	// import {common} from '../../../common/js/common.js'
 
 
 
@@ -474,5 +474,6 @@ export const service_tinymce = function() {
 
 
 
+};//end service_tinymce
 
-};//end class
+

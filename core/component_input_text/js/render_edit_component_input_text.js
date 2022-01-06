@@ -257,7 +257,8 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= value//(value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
+			const input_element_node = get_input_element_edit(i, inputs_value[i], self, is_inside_tool)
+			inputs_container.appendChild(input_element_node)
 		}
 
 	// content_data
@@ -332,7 +333,7 @@ const get_buttons = (self) => {
 * INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, self) => {
 
 	const mode					= self.mode
 	const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
@@ -340,11 +341,9 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	const is_inside_tool		= self.is_inside_tool
 	// const with_lang_versions	= self.context.properties.with_lang_versions || false
 
-
 	// li
 		const li = ui.create_dom_element({
-			element_type	: 'li',
-			parent			: inputs_container
+			element_type : 'li'
 		})
 
 	// input field

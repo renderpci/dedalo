@@ -4,10 +4,10 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
-	import {component_common} from '../../component_common/js/component_common.js'
+	// import {component_common} from '../../component_common/js/component_common.js'
 	import {render_section_group} from './render_section_group.js'
 
 
@@ -95,7 +95,7 @@ section_group.prototype.get_panels_status = async function() {
 	const self = this
 
 	// unic id for current section_group
-		const uid = self.model + '_' + self.section_tipo + '_' +  self.tipo
+		// const uid = self.model + '_' + self.section_tipo + '_' +  self.tipo
 
 	// local_db_data. get value if exists
 		const current_data_manager	= new data_manager();

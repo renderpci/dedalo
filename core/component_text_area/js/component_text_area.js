@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone,dd_console} from '../../common/js/utils/index.js'
+	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {tr} from '../../common/js/tr.js'

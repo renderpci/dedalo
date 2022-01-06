@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, L */
 /*eslint no-undef: "error"*/
 
 
@@ -6,8 +6,10 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_geolocation} from '../../component_geolocation/js/render_component_geolocation.js'
-
+	import {render_edit_component_geolocation} from '../../component_geolocation/js/render_edit_component_geolocation.js'
+	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
+	import {render_mini_component_geolocation} from '../../component_geolocation/js/render_mini_component_geolocation.js'
+	import {render_search_component_geolocation} from '../../component_geolocation/js/render_search_component_geolocation.js'
 
 
 export const component_geolocation = function(){
@@ -58,12 +60,12 @@ export const component_geolocation = function(){
 	component_geolocation.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_geolocation.prototype.mini				= render_component_geolocation.prototype.mini
-	component_geolocation.prototype.list				= render_component_geolocation.prototype.list
-	component_geolocation.prototype.edit				= render_component_geolocation.prototype.edit
-	component_geolocation.prototype.edit_in_list		= render_component_geolocation.prototype.edit
-	component_geolocation.prototype.tm					= render_component_geolocation.prototype.edit
-	component_geolocation.prototype.search				= render_component_geolocation.prototype.search
+	component_geolocation.prototype.mini				= render_mini_component_geolocation.prototype.mini
+	component_geolocation.prototype.list				= render_list_component_geolocation.prototype.list
+	component_geolocation.prototype.tm					= render_list_component_geolocation.prototype.list
+	component_geolocation.prototype.edit				= render_edit_component_geolocation.prototype.edit
+	component_geolocation.prototype.edit_in_list		= render_edit_component_geolocation.prototype.edit
+	component_geolocation.prototype.search				= render_search_component_geolocation.prototype.search
 	component_geolocation.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -345,8 +347,8 @@ component_geolocation.prototype.update_input_values = function(data, map_contain
 
 	const self = this
 
-	const key = map_container.dataset.key
-	const li 	= map_container.parentNode
+	const key	= map_container.dataset.key
+	const li	= map_container.parentNode
 
 	// inputs
 		const input_lat		= li.querySelector("input[data-name='lat']")
@@ -363,10 +365,10 @@ component_geolocation.prototype.update_input_values = function(data, map_contain
 		data.alt = JSON.parse(input_alt.value)
 
 	//set the current value
-		self.current_value[key].lat 	= data.lat
-		self.current_value[key].lon 	= data.lon
-		self.current_value[key].zoom 	= data.zoom
-		self.current_value[key].alt 	= data.alt
+		self.current_value[key].lat		= data.lat
+		self.current_value[key].lon		= data.lon
+		self.current_value[key].zoom	= data.zoom
+		self.current_value[key].alt		= data.alt
 
 	return true
 };//end update_input_values

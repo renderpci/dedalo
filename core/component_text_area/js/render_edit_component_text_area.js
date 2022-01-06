@@ -7,8 +7,8 @@
 	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {tr} from '../../common/js/tr.js'
-	import {clone,dd_console} from '../../common/js/utils/index.js'
+	// import {tr} from '../../common/js/tr.js'
+	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
 
@@ -28,17 +28,17 @@ export const render_edit_component_text_area = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_text_area.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_text_area.prototype.edit = async function(options) {
 
 	const self = this
+
+	// render_level
+		const render_level = options.render_level || 'full'
 
 	// fix non value scenarios
 		self.data.value = (self.data && self.data.value.length>0)
 			? self.data.value
 			: [null]
-
-	// render_level
-		const render_level = options.render_level
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -69,6 +69,7 @@ render_edit_component_text_area.prototype.edit = async function(options={render_
 
 /**
 * ADD_EVENTS
+* @return bool
 */
 const add_events = function(self, wrapper) {
 
@@ -199,7 +200,7 @@ const add_events = function(self, wrapper) {
 
 			//const current_buttons_editor = document.querySelector(".buttons_editor")
 			//if (current_buttons_editor) current_buttons_editor.remove()
-		})
+		})//end wrapper.addEventListener("click"
 
 
 	return true
@@ -1057,82 +1058,87 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 
 /**
 * GET_CONTENTEDITABLE_BUTTONS
-*//*
-const get_contenteditable_buttons = () => {
-
-	const fragment = new DocumentFragment()
-
-	// bold
-		const button_bold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button bold',
-			text_content 	: "Bold",
-			parent 			: fragment
-		})
-		button_bold.addEventListener("click", (e)=>{
-			e.stopPropagation()
-			do_command('bold', null)
-		})
-	// italic
-		const button_italic = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button italic',
-			text_content 	: "Italic",
-			parent 			: fragment
-		})
-		button_italic.addEventListener("click", (e)=>{
-			e.stopPropagation()
-			do_command('italic', null)
-		})
-	// underline
-		const button_underline = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button underline',
-			text_content 	: "Underline",
-			parent 			: fragment
-		})
-		button_underline.addEventListener("click", (e)=>{
-			e.stopPropagation()
-			do_command('underline', null)
-		})
-	// find and replace
-		const button_replace = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button replace',
-			text_content 	: "Replace",
-			parent 			: fragment
-		})
-		button_replace.addEventListener("click", (e)=>{
-			e.stopPropagation()
-			//replace_selected_text('nuevooooo')
-			do_command('insertText', 'nuevoooooXXX')
-		})
-
-	// contenteditable_buttons
-		const contenteditable_buttons = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'contenteditable_buttons'
-		})
-		contenteditable_buttons.addEventListener("click", (e)=>{
-			e.preventDefault()
-		})
-		contenteditable_buttons.appendChild(fragment)
-
-
-	return contenteditable_buttons
-};//end get_contenteditable_buttons
 */
+	// const get_contenteditable_buttons = () => {
+
+	// 	const fragment = new DocumentFragment()
+
+	// 	// bold
+	// 		const button_bold = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name 		: 'button bold',
+	// 			text_content 	: "Bold",
+	// 			parent 			: fragment
+	// 		})
+	// 		button_bold.addEventListener("click", (e)=>{
+	// 			e.stopPropagation()
+	// 			do_command('bold', null)
+	// 		})
+	// 	// italic
+	// 		const button_italic = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name 		: 'button italic',
+	// 			text_content 	: "Italic",
+	// 			parent 			: fragment
+	// 		})
+	// 		button_italic.addEventListener("click", (e)=>{
+	// 			e.stopPropagation()
+	// 			do_command('italic', null)
+	// 		})
+	// 	// underline
+	// 		const button_underline = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name 		: 'button underline',
+	// 			text_content 	: "Underline",
+	// 			parent 			: fragment
+	// 		})
+	// 		button_underline.addEventListener("click", (e)=>{
+	// 			e.stopPropagation()
+	// 			do_command('underline', null)
+	// 		})
+	// 	// find and replace
+	// 		const button_replace = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name 		: 'button replace',
+	// 			text_content 	: "Replace",
+	// 			parent 			: fragment
+	// 		})
+	// 		button_replace.addEventListener("click", (e)=>{
+	// 			e.stopPropagation()
+	// 			//replace_selected_text('nuevooooo')
+	// 			do_command('insertText', 'nuevoooooXXX')
+	// 		})
+
+	// 	// contenteditable_buttons
+	// 		const contenteditable_buttons = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name 		: 'contenteditable_buttons'
+	// 		})
+	// 		contenteditable_buttons.addEventListener("click", (e)=>{
+	// 			e.preventDefault()
+	// 		})
+	// 		contenteditable_buttons.appendChild(fragment)
+
+
+	// 	return contenteditable_buttons
+	// };//end get_contenteditable_buttons
 
 
 
 /**
 * DO_COMMAND
-*//*
-const do_command = (command, val) => {
-	document.execCommand(command, false, (val || ""));
-}*/
+*/
+	// const do_command = (command, val) => {
+	// 	document.execCommand(command, false, (val || ""));
+	// }
 
 
-// function replace_selected_text(replacementText) {
-//    document.execCommand( 'insertText', false, replacementText );
-// }
+
+/**
+* REPLACE_SELECTED_TEXT
+*/
+	// function replace_selected_text(replacementText) {
+	// 	document.execCommand( 'insertText', false, replacementText );
+	// }
+
+

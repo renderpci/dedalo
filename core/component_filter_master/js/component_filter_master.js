@@ -57,10 +57,11 @@ export const component_filter_master = function(){
 	// render (from component_filter_master)
 	component_filter_master.prototype.mini				= component_filter.prototype.mini
 	component_filter_master.prototype.list				= component_filter.prototype.list
+	component_filter_master.prototype.tm				= component_filter.prototype.list
 	component_filter_master.prototype.edit				= component_filter.prototype.edit
 	component_filter_master.prototype.edit_in_list		= component_filter.prototype.edit
 	component_filter_master.prototype.search			= component_filter.prototype.search
 	component_filter_master.prototype.change_mode		= component_filter.prototype.change_mode
 
-	// others (from component_filter_master)
+	// others (from component_filter)
 	component_filter_master.prototype.get_changed_key	= component_filter.prototype.get_changed_key

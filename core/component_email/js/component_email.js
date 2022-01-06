@@ -6,7 +6,9 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_email} from '../../component_email/js/render_component_email.js'
+	import {render_edit_component_email} from '../../component_email/js/render_edit_component_email.js'
+	import {render_list_component_email} from '../../component_email/js/render_list_component_email.js'
+	import {render_mini_component_email} from '../../component_email/js/render_mini_component_email.js'
 	import {render_search_component_email} from '../../component_email/js/render_search_component_email.js'
 
 
@@ -55,11 +57,11 @@ export const component_email = function(){
 	component_email.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_email.prototype.mini				= render_component_email.prototype.mini
-	component_email.prototype.list				= render_component_email.prototype.list
-	component_email.prototype.edit				= render_component_email.prototype.edit
-	component_email.prototype.edit_in_list		= render_component_email.prototype.edit
-	component_email.prototype.tm				= render_component_email.prototype.edit
+	component_email.prototype.mini				= render_mini_component_email.prototype.mini
+	component_email.prototype.list				= render_list_component_email.prototype.list
+	component_email.prototype.tm				= render_edit_component_email.prototype.edit
+	component_email.prototype.edit				= render_edit_component_email.prototype.edit
+	component_email.prototype.edit_in_list		= render_edit_component_email.prototype.edit
 	component_email.prototype.search			= render_search_component_email.prototype.search
 	component_email.prototype.change_mode		= component_common.prototype.change_mode
 

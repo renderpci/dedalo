@@ -10,7 +10,7 @@
 
 
 /**
-* render_mini_component_image
+* RENDER_MINI_COMPONENT_IMAGE
 * Manage the components logic and appearance in client side
 */
 export const render_mini_component_image = function() {
@@ -25,7 +25,7 @@ export const render_mini_component_image = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_image.prototype.mini = function(options) {
+render_mini_component_image.prototype.mini = function() {
 
 	const self = this
 

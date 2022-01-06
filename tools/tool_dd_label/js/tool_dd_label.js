@@ -1,6 +1,11 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
-	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	// import {data_manager} from '../../../core/common/js/data_manager.js'
+	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_dd_label} from './render_tool_dd_label.js'

@@ -6,7 +6,9 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_filter} from '../../component_filter/js/render_component_filter.js'
+	import {render_edit_component_filter} from '../../component_filter/js/render_edit_component_filter.js'
+	import {render_list_component_filter} from '../../component_filter/js/render_list_component_filter.js'
+	import {render_mini_component_filter} from '../../component_filter/js/render_mini_component_filter.js'
 	import {render_search_component_filter} from '../../component_filter/js/render_search_component_filter.js'
 
 
@@ -56,10 +58,11 @@ export const component_filter = function(){
 	component_filter.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_filter.prototype.mini					= render_component_filter.prototype.mini
-	component_filter.prototype.list					= render_component_filter.prototype.list
-	component_filter.prototype.edit					= render_component_filter.prototype.edit
-	component_filter.prototype.edit_in_list			= render_component_filter.prototype.edit
+	component_filter.prototype.mini					= render_mini_component_filter.prototype.mini
+	component_filter.prototype.list					= render_list_component_filter.prototype.list
+	component_filter.prototype.tm					= render_list_component_filter.prototype.list
+	component_filter.prototype.edit					= render_edit_component_filter.prototype.edit
+	component_filter.prototype.edit_in_list			= render_edit_component_filter.prototype.edit
 	component_filter.prototype.search				= render_search_component_filter.prototype.search
 	component_filter.prototype.change_mode			= component_common.prototype.change_mode
 

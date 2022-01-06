@@ -255,7 +255,7 @@ tool_time_machine.prototype.load_section = async function() {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			// console.log("[tool_time_machine.load_section] section:", section);
+			console.log("[tool_time_machine.load_section] section:", section);
 		}
 
 	// add to self instances list

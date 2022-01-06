@@ -40,14 +40,14 @@ export const menu = function(){
 */
 // prototypes assign
 	// lifecycle
-	menu.prototype.render	= common.prototype.render
-	menu.prototype.destroy	= common.prototype.destroy
-	menu.prototype.refresh	= common.prototype.refresh
+	menu.prototype.render			= common.prototype.render
+	menu.prototype.destroy			= common.prototype.destroy
+	menu.prototype.refresh			= common.prototype.refresh
 	// menu.prototype.create_source	= common.prototype.create_source
 
 	// render
-	menu.prototype.list	= render_menu.prototype.list
-	menu.prototype.edit	= render_menu.prototype.edit
+	menu.prototype.list				= render_menu.prototype.list
+	menu.prototype.edit				= render_menu.prototype.edit
 
 
 

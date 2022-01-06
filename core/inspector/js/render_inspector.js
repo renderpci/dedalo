@@ -57,7 +57,7 @@ render_inspector.prototype.edit = async function(options) {
 		wrapper.appendChild(content_data)
 
 	// events
-		// add_events(wrapper, self)
+		add_events(wrapper, self)
 
 
 	return wrapper
@@ -72,12 +72,12 @@ render_inspector.prototype.edit = async function(options) {
 const add_events = (wrapper, self) => {
 
 	// mousedown
-		wrapper.addEventListener("mousedown", function(e){
-			e.stopPropagation()
-			//e.preventDefault()
-			// prevent buble event to container element
-			return false
-		})
+		// wrapper.addEventListener("mousedown", function(e){
+		// 	e.stopPropagation()
+		// 	//e.preventDefault()
+		// 	// prevent buble event to container element
+		// 	return false
+		// })
 
 
 	return true

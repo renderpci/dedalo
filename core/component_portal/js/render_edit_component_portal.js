@@ -4,12 +4,12 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {create_source} from '../../common/js/common.js'
+	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
+	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {render_edit_view_table} from './render_edit_view_table.js'
 	import {render_edit_view_line} from './render_edit_view_line.js'
 	import {render_edit_view_tree} from './render_edit_view_tree.js'
@@ -20,18 +20,19 @@
 
 /**
 * RENDER_EDIT_COMPONENT_PORTAL
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_edit_component_portal = function() {
 
 	return true
-};//end render_edit_component_portal
+}//end render_edit_component_portal
 
 
 
 /**
 * EDIT
-* Render node for use in edit
+* Chose the view render module to generate DOM nodes
+* @param object options
 * @return DOM node wrapper | null
 */
 render_edit_component_portal.prototype.edit = async function(options) {
@@ -99,7 +100,8 @@ export const render_column_component_info = function(options) {
 
 /**
 * RENDER_COLUMN_REMOVE
-* Render node for use in edit
+* Render column_remov node
+* Shared across views
 * @param object options
 * @return DOM DocumentFragment
 */
@@ -121,5 +123,331 @@ export const render_column_remove = function(options) {
 
 	return fragment
 }// end render_column_remove()
+
+
+
+/**
+* GET_BUTTONS
+* Render buttons DOM node
+* @param object self instance
+* @return DOM node buttons_container
+*/
+export const get_buttons = (self) => {
+
+	const is_inside_tool		= self.is_inside_tool
+	// const mode				= self.mode
+	// const show				= self.rqo.show
+	const target_section		= self.target_section
+	const target_section_lenght	= target_section.length
+		  // sort section by label ascendant
+		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+
+	const fragment = new DocumentFragment()
+
+	// button_add
+		const button_add = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button add',
+			parent			: fragment
+		})
+		button_add.addEventListener("click", async function(){
+
+			//TO ADD SECTION SELECTOR
+				const section_tipo = target_section_lenght >1
+					? false
+					: target_section[0].tipo
+
+
+				// data_manager. create new record
+				const api_response = await data_manager.prototype.request({
+					body : {
+						action				: 'add_new_element',
+						source				: create_source(self),
+						target_section_tipo	: section_tipo
+					}
+				})
+				// add value to current data
+				if (api_response.result) {
+					self.refresh()
+				}else{
+					console.error("Error on api_response on try to create new row:", api_response);
+				}
+		})
+
+	// button_link
+		const button_link = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button link',
+			parent			: fragment
+		})
+		button_link.addEventListener("click", async function(e){
+			e.stopPropagation()
+
+			// const section_tipo	= select_section.value
+			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
+			const section_tipo	= target_section[0].tipo;
+			// const section_label	= target_section[0].label;
+
+			// iframe
+				( () => {
+
+					const iframe_url = (tipo) => {
+						return '../page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
+					}
+
+					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
+					const iframe = ui.create_dom_element({
+						element_type	: 'iframe',
+						class_name		: 'fixed',
+						src				: iframe_url(section_tipo),
+						parent			: iframe_container
+					})
+
+					// select_section
+						const select_section = ui.create_dom_element({
+							element_type	: 'select',
+							class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
+						})
+						select_section.addEventListener("change", function(){
+							iframe.src = iframe_url(this.value)
+						})
+						// options for select_section
+							for (let i = 0; i < target_section_lenght; i++) {
+								const item = target_section[i]
+								ui.create_dom_element({
+									element_type	: 'option',
+									value			: item.tipo,
+									inner_html		: item.label + " [" + item.tipo + "]",
+									parent			: select_section
+								})
+							}
+
+					// header label
+						const header = ui.create_dom_element({
+							element_type	: 'span',
+							text_content	: get_label.seccion,
+							class_name		: 'label'
+						})
+
+					// header custom
+						const header_custom = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'header_custom'
+						})
+						header_custom.appendChild(header)
+						header_custom.appendChild(select_section)
+
+					// fix modal to allow close later, on set value
+					self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
+
+				})()
+				return
+		})
+
+	// button tree terms selector
+		if( self.rqo_config.show.interface &&
+			self.rqo_config.show.interface.button_tree &&
+			self.rqo_config.show.interface.button_tree=== true){
+			const button_tree_selector = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button gear',
+				parent			: fragment
+			})
+			// add listener to the select
+			button_tree_selector.addEventListener('mouseup',function(){
+
+			})
+		}
+
+
+		if( self.rqo_config.show.interface &&
+			self.rqo_config.show.interface.button_external &&
+			self.rqo_config.show.interface.button_external === true){
+
+			// button_update data external
+				const button_update_data_external = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button sync',
+					parent			: fragment
+				})
+				button_update_data_external.addEventListener("click", async function(){
+					const source = self.rqo_config.show.find(item => item.typo === 'source')
+					source.build_options = {
+						get_dato_external : true
+					}
+					const builded = await self.build(true)
+					// render
+					if (builded) {
+						self.render({render_level : 'content'})
+					}
+				})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+			  // buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
+
+
+
+/**
+* ADD_EVENTS
+* Shared across views
+* @return bool
+*/
+export const add_events = function(self, wrapper) {
+
+	// add element, subscription to the events
+	// show the add_value in the instance
+		//self.events_tokens.push(
+		//	event_manager.subscribe('add_element_'+self.id, add_element)
+		//)
+		//async function add_element(key) {
+		//	self.refresh()
+		//	// change the portal service to false and desactive it.
+		//
+		//	//if(self.portal_active===true){
+		//	//	self.portal.destroy()
+		//	//	self.portal_active = false
+		//	//	self.portal 		 = null
+		//	//}
+		//
+		//	//self.refresh();
+		//
+		//	// inset the new section_record into the ar_section_record and build the node of the new locator
+		//	//ar_section_record.push(current_section_record)
+		//	//const inputs_container 	= wrapper.querySelector('.inputs_container')
+		//	//get_input_element(current_section_record, inputs_container)
+		//}
+
+	// subscribe to 'update_dom': if the dom was changed by other dom elements the value will be changed
+		//self.events_tokens.push(
+		//	event_manager.subscribe('update_dom_'+self.id, (value) => {
+		//		// change the value of the current dom element
+		//	})
+		//)
+
+	// click delegated
+		wrapper.addEventListener("click", function(e){
+			// e.stopPropagation()
+
+			// ignore click on paginator
+				// if (e.target.closest('.paginator')) {
+				// 	return false
+				// }
+
+			// remove row
+				if (e.target.matches('.button.remove')) {
+					e.preventDefault()
+
+					// label
+						const children = e.target.parentNode.parentNode.children
+						const ar_label = []
+						for (let i = 0; i < children.length; i++) {
+							if(children[i].textContent.length>0) {
+								ar_label.push(children[i].textContent)
+							}
+						}
+						const label = ar_label.join(', ')
+
+					const changed_data = Object.freeze({
+						action	: 'remove',
+						key		: JSON.parse(e.target.dataset.key),
+						value	: null
+					})
+
+					const changed = self.change_value({
+						changed_data	: changed_data,
+						label			: label,
+						refresh			: false
+					})
+					changed.then(async ()=>{
+
+						// update pagination offset
+							self.update_pagination_values('remove')
+
+						// refresh
+							await self.refresh({
+								build_autoload : false
+							})
+
+						// check if the caller has active a tag_id
+							if(self.active_tag){
+								// filter component data by tag_id and re-render content
+								self.filter_data_by_tag_id(self.active_tag)
+							}
+
+						// event to update the DOM elements of the instance
+							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+					})
+
+					return true
+				}//end if (e.target.matches('.button.remove')) {
+
+			// activate service autocomplete. Enable the service_autocomplete when the user do click
+				if(self.autocomplete_active!==undefined && self.autocomplete_active===false){
+
+					// set rqo
+						self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
+						// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
+
+					self.autocomplete = new service_autocomplete()
+					self.autocomplete.init({
+						caller	: self,
+						wrapper : wrapper
+					})
+					self.autocomplete_active = true
+					self.autocomplete.search_input.focus()
+
+					return true
+				}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
+		})//end click event
+
+
+	return true
+}//end add_events
+
+
+
+/**
+* BUILD_HEADER
+* Render portal list_header_node node ready to place it into 'list_body' node
+* Note that component_info column will be added if self.add_component_info is true. That if defined
+* when the component is built
+* Also, note that the list_header_node is hidden if the portal records are empty for clean look
+* Shared across views
+* @param object columns_map
+* @param array ar_section_record
+* @param instance self
+* @return DOM node content_data
+*/
+export const build_header = function(columns_map, ar_section_record, self) {
+
+	// build using common ui builder
+		const list_header_node = ui.render_list_header(columns_map, self)
+
+	// hide list_header_node if no records found
+		if (ar_section_record.length<1) {
+			list_header_node.classList.add("hide")
+		}
+
+	return list_header_node;
+}//end build_header
 
 

@@ -23,6 +23,9 @@ class DDModal extends HTMLElement {
 				background-color: rgba(0,0,0,0.4);
 				font-size: inherit;
 			}
+			.modal_show {
+				display: table;
+			}
 
 			/* Modal Content */
 			.modal-content {
@@ -87,12 +90,20 @@ class DDModal extends HTMLElement {
 				z-index: 9999;
 			}
 			.modal_big > .modal-content {
+				/*
 				width: 99.79%;
 				min-height: 99.8%;
+				*/
+				width: calc(100vw - 16px);
+				min-height: 100vh;
 			}
 			.modal_big .modal-body {
+				/*
 				height: 100%;
 				min-height: 90vh;
+				*/
+				width: calc(100vw - 32px);
+				min-height: 100vh;
 			}
 		</style>
 		<div class="modal">
@@ -127,14 +138,16 @@ class DDModal extends HTMLElement {
 	}
 	_showModal() {
 		this._modalVisible = true;
-		this._modal.style.display = 'block';
+		// this._modal.style.display = 'block';
+		this._modal.classList.add('modal_show')
 		if (this._modal.classList.contains("modal_big")) {
 			this._modal.classList.remove("modal_big")
 		}
 	}
 	_showModalBig() {
 		this._modalVisible = true;
-		this._modal.style.display = 'block';
+		// this._modal.style.display = 'block';
+		this._modal.classList.add('modal_show')
 		this._modal.classList.add("modal_big")
 
 		// iframe. Fix iframe fixed position calculating padding based on header height

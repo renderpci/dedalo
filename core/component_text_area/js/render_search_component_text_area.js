@@ -119,7 +119,7 @@ const get_content_data = function(self) {
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i], self)
+			const input_element = get_input_element(i, inputs_value[i])
 			fragment.appendChild(input_element)
 		}
 
@@ -135,9 +135,9 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM element li
+* @return DOM element input
 */
-const get_input_element = (i, current_value, self) => {
+const get_input_element = (i, current_value) => {
 
 	// input field
 		const input = ui.create_dom_element({
@@ -147,7 +147,6 @@ const get_input_element = (i, current_value, self) => {
 			dataset			: { key : i },
 			value			: current_value
 		})
-
 
 	return input
 };//end get_input_element

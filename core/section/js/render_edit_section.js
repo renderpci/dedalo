@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEVELOPER, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
 

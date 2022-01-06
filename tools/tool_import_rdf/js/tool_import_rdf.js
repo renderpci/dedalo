@@ -6,16 +6,17 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {ui} from '../../../core/common/js/ui.js'
+	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_rdf} from './render_tool_import_rdf.js'
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 
 
+
 /**
-* tool_import_rdf
+* TOOL_IMPORT_RDF
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_import_rdf = function () {
@@ -177,6 +178,5 @@ tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_value
 			})
 		})
 };//end get_rdf_data
-
 
 

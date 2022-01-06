@@ -5,7 +5,7 @@
 
 // imports
 	import {render_components_list} from '../../../core/common/js/render_common.js'
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'

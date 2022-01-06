@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -8,11 +8,11 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {ui} from '../../../core/common/js/ui.js'
+	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_files} from './render_tool_import_files.js'
 	import {upload_manager_init} from './upload_manager.js'
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 
 
 
@@ -100,7 +100,7 @@ tool_import_files.prototype.build = async function(autoload=false) {
 		common.prototype.load_style(tool_css_url)
 
 	// data manager
-		const current_data_manager = new data_manager()
+		// const current_data_manager = new data_manager()
 
 	// ddo_map load all elements inside ddo_map
 		const ar_promises = []

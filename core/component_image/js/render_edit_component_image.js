@@ -70,9 +70,9 @@ const get_content_data_edit = function(self) {
 
 	// url
 		const datalist		= self.data.datalist
-		const quality		= "1.5MB" //"original" //
+		const quality		= '1.5MB' //'original' //
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
+		const url			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==='undefined') ? DEDALO_CORE_URL + '/themes/default/0.jpg' : url_object.url
 
 	// ul
 		const ul = ui.create_dom_element({
@@ -90,22 +90,22 @@ const get_content_data_edit = function(self) {
 
 	// image. Only to get background color (!)
 		const image = ui.create_dom_element({
-			element_type	: "img",
+			element_type	: 'img',
 			src 			: url
 		})
 	// image background color
-		image.addEventListener("load", set_bg_color, false)
+		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
-			this.removeEventListener("load", set_bg_color, false)
+			this.removeEventListener('load', set_bg_color, false)
 			ui.set_background_image(this, li)
 		}
 
 
 	// object <object type="image/svg+xml" data="image.svg"></object>
 		const object = ui.create_dom_element({
-			element_type	: "object",
-			class_name 		: 'image',
-			parent 			: li
+			element_type	: 'object',
+			class_name		: 'image',
+			parent			: li
 		})
 		object.type = "image/svg+xml"
 		if (self.data.base_svg_url) {
@@ -123,13 +123,13 @@ const get_content_data_edit = function(self) {
 			// svg document inside the object tag
 			const svg_doc 	= object.contentDocument;
 			// Get one of the svg items by ID;
-			const image 	= svg_doc.querySelector("image")
+			const image 	= svg_doc.querySelector('image')
 			// set the new source to the image node into the svg
 			self.img_src 	= image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
 
 			// add spinner when new image is loading
-			li.classList.add("preload")
-			image.addEventListener("load", function(){
+			li.classList.add('preload')
+			image.addEventListener('load', function(){
 				li.classList.remove("preload")
 			})
 		}
@@ -152,8 +152,7 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	const is_inside_tool = self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -164,7 +163,7 @@ const get_buttons = (self) => {
 			title			: 'Fullscreen',
 			parent 			: fragment
 		})
-		button_full_screen.addEventListener("mouseup", (e) =>{
+		button_full_screen.addEventListener("mouseup", () =>{
 			self.node[0].classList.toggle('fullscreen')
 			const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)
@@ -211,7 +210,7 @@ const get_buttons = (self) => {
 
 /**
 * GET_QUALITY_SELECTOR
-* @return
+* @return DOM node select
 */
 const get_quality_selector = (self) => {
 

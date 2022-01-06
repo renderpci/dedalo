@@ -6,7 +6,9 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_check_box} from '../../component_check_box/js/render_component_check_box.js'
+	import {render_edit_component_check_box} from '../../component_check_box/js/render_edit_component_check_box.js'
+	import {render_list_component_check_box} from '../../component_check_box/js/render_list_component_check_box.js'
+	import {render_mini_component_check_box} from '../../component_check_box/js/render_mini_component_check_box.js'
 	import {render_search_component_check_box} from '../../component_check_box/js/render_search_component_check_box.js'
 
 
@@ -53,11 +55,11 @@ export const component_check_box = function(){
 	component_check_box.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_check_box.prototype.mini				= render_component_check_box.prototype.mini
-	component_check_box.prototype.list				= render_component_check_box.prototype.list
-	component_check_box.prototype.edit				= render_component_check_box.prototype.edit
-	component_check_box.prototype.edit_in_list		= render_component_check_box.prototype.edit
-	component_check_box.prototype.tm				= render_component_check_box.prototype.edit
+	component_check_box.prototype.mini				= render_mini_component_check_box.prototype.mini
+	component_check_box.prototype.list				= render_list_component_check_box.prototype.list
+	component_check_box.prototype.tm				= render_list_component_check_box.prototype.list
+	component_check_box.prototype.edit				= render_edit_component_check_box.prototype.edit
+	component_check_box.prototype.edit_in_list		= render_edit_component_check_box.prototype.edit
 	component_check_box.prototype.search			= render_search_component_check_box.prototype.search
 	component_check_box.prototype.change_mode		= component_common.prototype.change_mode
 
@@ -65,6 +67,8 @@ export const component_check_box = function(){
 
 /**
 * GET_CHANGED_KEY
+* @param string action
+* @param object value
 */
 component_check_box.prototype.get_changed_key = function(action, value) {
 

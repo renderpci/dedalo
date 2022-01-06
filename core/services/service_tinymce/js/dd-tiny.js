@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, tinymce */
+/*eslint no-undef: "error"*/
+
+
+
 class DDTiny extends HTMLElement {
 	constructor() {
 		super();
