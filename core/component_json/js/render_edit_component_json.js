@@ -10,7 +10,7 @@
 
 
 /**
-* render_edit_component_json
+* RENDER_EDIT_COMPONENT_JSON
 * Manage the components logic and appearance in client side
 */
 export const render_edit_component_json = function() {
