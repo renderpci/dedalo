@@ -9,7 +9,7 @@
 	import {
 		get_value_fragment
 	}
-	from '../../component_info/js/render_list_component_svg.js'
+	from '../../component_svg/js/render_list_component_svg.js'
 
 
 
