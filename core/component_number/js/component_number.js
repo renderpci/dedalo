@@ -6,7 +6,9 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_number} from '../../component_number/js/render_component_number.js'
+	import {render_edit_component_number} from '../../component_number/js/render_edit_component_number.js'
+	import {render_list_component_number} from '../../component_number/js/render_list_component_number.js'
+	import {render_mini_component_number} from '../../component_number/js/render_mini_component_number.js'
 	import {render_search_component_number} from '../../component_number/js/render_search_component_number.js'
 
 
@@ -54,11 +56,11 @@ export const component_number = function(){
 	component_number.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_number.prototype.mini					= render_component_number.prototype.mini
-	component_number.prototype.list					= render_component_number.prototype.list
-	component_number.prototype.edit					= render_component_number.prototype.edit
-	component_number.prototype.edit_in_list			= render_component_number.prototype.edit
-	component_number.prototype.tm					= render_component_number.prototype.edit
+	component_number.prototype.mini					= render_mini_component_number.prototype.mini
+	component_number.prototype.list					= render_list_component_number.prototype.list
+	component_number.prototype.tm					= render_list_component_number.prototype.list
+	component_number.prototype.edit					= render_edit_component_number.prototype.edit
+	component_number.prototype.edit_in_list			= render_edit_component_number.prototype.edit
 	component_number.prototype.search				= render_search_component_number.prototype.search
 	component_number.prototype.change_mode			= component_common.prototype.change_mode
 
@@ -78,27 +80,3 @@ component_number.prototype.fix_number_format = function( number ) {
 };//end fix_number_format
 
 
-
-/**
-* UPDATE_DATA_VALUE_FROM_DOM
-* Update component data value with dom node actual value
-* @return bool true
-*//*
-component_email.prototype.update_data_value_from_dom = function() {
-
-	const self = this
-	const node = self.node
-
-	// inputs
-		const ar_inputs = node.querySelectorAll('input')
-		const ar_value  = []
-		for (let i = 0; i < ar_inputs.length; i++) {
-			ar_value.push(ar_inputs[i].value)
-		}
-
-	// set value in data instance
-		self.data.value = ar_value
-
-	return true
-};//end update_data_value_from_dom
-*/

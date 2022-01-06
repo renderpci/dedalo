@@ -334,7 +334,7 @@ const get_debug_info_bar = (self) => {
 
 /**
 * LEVEL HIERARCHY
-* @return dom element ul
+* @return bool
 */
 const level_hierarchy = (options) => {
 
@@ -545,6 +545,7 @@ const item_hierarchy = (options) => {
 /**
 * CLOSE_ALL_DROP_MENU
 * Select all nodes in the menu instance and set the css to remove the visualization
+* @return bool
 */
 const close_all_drop_menu = function(self) {
 
@@ -556,8 +557,8 @@ const close_all_drop_menu = function(self) {
 		const len = self.ul_nodes.length
 		for (let i = len - 1; i >= 0; i--) {
 			const ul = self.ul_nodes[i]
-			ul.classList.add("menu_ul_hidden");
-			ul.classList.remove("menu_ul_displayed");
+				  ul.classList.add("menu_ul_hidden");
+				  ul.classList.remove("menu_ul_displayed");
 		}
 	}
 	// close all li nodes stored in the menu instance
@@ -566,8 +567,8 @@ const close_all_drop_menu = function(self) {
 		const len = self.li_nodes.length
 		for (let i = len - 1; i >= 0; i--) {
 			const li = self.li_nodes[i]
-			li.classList.add("menu_li_inactive");
-			li.classList.remove("menu_li_active");
+				  li.classList.add("menu_li_inactive");
+				  li.classList.remove("menu_li_active");
 		}
 	}
 
@@ -579,14 +580,16 @@ const close_all_drop_menu = function(self) {
 /**
 * CLOSE_ALL_CHILDREN
 * Get all nodes childen of the tipo set to them the css to remove the visualization
+* @param string tipo
+* @return bool
 */
 const close_all_children = function(tipo){
 
 	if(tipo){
 		//get the children nodes of the sended tipo and add/remove the css
 		const close_ul = document.getElementById(tipo)
-			close_ul.classList.remove("menu_ul_displayed");
-			close_ul.classList.add("menu_ul_hidden");
+			  close_ul.classList.remove("menu_ul_displayed");
+			  close_ul.classList.add("menu_ul_hidden");
 
 		// get the child nodes of the current ul
 		const ar_children_nodes	= close_ul.childNodes
@@ -606,6 +609,8 @@ const close_all_children = function(tipo){
 
 /**
 * CHANGE_LANG
+* @return promise
+* 	API request response
 */
 const change_lang = async function(event) {
 
@@ -627,3 +632,5 @@ const change_lang = async function(event) {
 
 	return api_response
 };//end change_lang
+
+

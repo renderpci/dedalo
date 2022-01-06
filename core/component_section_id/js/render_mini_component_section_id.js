@@ -12,7 +12,7 @@
 * RENDER_MINI_COMPONENT_SECTION_ID
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_section_id = function(component) {
+export const render_mini_component_section_id = function() {
 
 	return true
 };//end render_mini_component_section_id
@@ -31,16 +31,15 @@ render_mini_component_section_id.prototype.mini = function() {
 	// short vars
 		const data = self.data
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-
 	// Value as string
 		const value_string = data.value
 
-	// Set value
-		wrapper.textContent = value_string
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self, {
+			value_string : value_string
+		})
 
-	return node
+	return wrapper
 };//end mini
 
 

@@ -25,7 +25,7 @@ export const render_list_component_image = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_image.prototype.list = function(options) {
+render_list_component_image.prototype.list = function() {
 
 	const self = this
 

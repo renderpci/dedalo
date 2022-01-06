@@ -3,15 +3,14 @@
 
 
 // import
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
+	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	// import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import * as instances from '../../../core/common/js/instances.js'
-	import {ui} from '../../../core/common/js/ui.js'
+	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_export} from './render_tool_export.js'
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {
 		on_dragstart,
 		on_dragover,
@@ -230,7 +229,7 @@ tool_export.prototype.get_export_csv = async function (options) {
 		rqo				: rqo
 	})
 
-
+	return dd_grid
 }// end get_export_csv
 
 

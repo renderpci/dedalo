@@ -5,7 +5,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 
 
 
@@ -13,7 +13,7 @@
 * RENDER_EDIT_COMPONENT_SECTION_ID
 * Manage the components logic and appearance in client side
 */
-export const render_edit_component_section_id = function(component) {
+export const render_edit_component_section_id = function() {
 
 	return true
 };//end render_edit_component_section_id
@@ -59,7 +59,6 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 const get_content_data_edit = function(self) {
 
 	const value = self.data.value
-	const mode 	= self.mode
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)

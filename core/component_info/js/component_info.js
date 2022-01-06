@@ -7,8 +7,11 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_info} from '../../component_info/js/render_component_info.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {render_edit_component_info} from '../../component_info/js/render_edit_component_info.js'
+	import {render_list_component_info} from '../../component_info/js/render_list_component_info.js'
+	import {render_mini_component_info} from '../../component_info/js/render_mini_component_info.js'
+
 
 
 
@@ -57,12 +60,12 @@ export const component_info = function(){
 	// component_info.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_info.prototype.mini					= render_component_info.prototype.mini
-	component_info.prototype.list					= render_component_info.prototype.list
-	component_info.prototype.edit					= render_component_info.prototype.edit
+	component_info.prototype.mini					= render_mini_component_info.prototype.mini
+	component_info.prototype.list					= render_list_component_info.prototype.list
+	component_info.prototype.tm						= render_list_component_info.prototype.list
+	component_info.prototype.edit					= render_edit_component_info.prototype.edit
 	// component_info.prototype.edit_in_list		= render_component_info.prototype.edit
-	// component_info.prototype.tm					= render_component_info.prototype.edit
-	component_info.prototype.search					= render_component_info.prototype.search
+	component_info.prototype.search					= render_edit_component_info.prototype.edit
 	// component_info.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -151,8 +154,8 @@ component_info.prototype.get_widgets = async function(){
 							value			: widget_value,
 							datalist		: widget_datalist,
 							ipo				: current_widget.ipo,
-							name 			: current_widget.widget_name,
-							properties 		: current_widget,
+							name			: current_widget.widget_name,
+							properties		: current_widget
 						})
 						.then(function(){
 							resolve(new_widget)
@@ -188,21 +191,21 @@ component_info.prototype.update_data = async function(){
 		const widgets_properties_length	= widgets_properties.length
 		for (let i = 0; i < widgets_properties_length; i++) {
 
-			const current_widget	= widgets_properties[i]
+			const current_widget = widgets_properties[i]
 
-			const widget_name		= current_widget.widget_name
-			const widget_id			= self.id + '_'+ widget_name
+			const widget_name	= current_widget.widget_name
+			const widget_id		= self.id + '_'+ widget_name
 
-			const loaded_widget = self.ar_instances.find(item => item.id === widget_id)
-			const widget_value 	= value.filter(item => item.widget === widget_name && item.key === i)
+			const loaded_widget	= self.ar_instances.find(item => item.id === widget_id)
+			const widget_value	= value.filter(item => item.widget === widget_name && item.key === i)
 
 			if(loaded_widget){
-				loaded_widget.value  = widget_value
-				event_manager.publish('update_widget_value_'+i+'_'+widget_id, widget_value)
+				loaded_widget.value = widget_value
+				event_manager.publish(`update_widget_value_${i}_${widget_id}`, widget_value)
 			}
 		}
 
 	return true
-};
+};//end update_data
 
 

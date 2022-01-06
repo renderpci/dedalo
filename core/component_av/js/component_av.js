@@ -67,6 +67,7 @@ export const component_av = function(){
 	// render
 	component_av.prototype.mini					= render_mini_component_av.prototype.mini
 	component_av.prototype.list					= render_list_component_av.prototype.list
+	component_av.prototype.tm					= render_list_component_av.prototype.list
 	component_av.prototype.edit					= render_edit_component_av.prototype.edit
 	component_av.prototype.edit_in_list			= render_edit_component_av.prototype.edit
 	component_av.prototype.search				= render_edit_component_av.prototype.search

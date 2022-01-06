@@ -63,11 +63,11 @@ export const component_input_text = function(){
 
 	// render
 	component_input_text.prototype.list					= render_list_component_input_text.prototype.list
+	component_input_text.prototype.tm					= render_list_component_input_text.prototype.list
 	component_input_text.prototype.search				= render_search_component_input_text.prototype.search
 	component_input_text.prototype.mini					= render_mini_component_input_text.prototype.mini
 	component_input_text.prototype.edit					= render_edit_component_input_text.prototype.edit
 	component_input_text.prototype.edit_in_list			= render_edit_component_input_text.prototype.edit
-	component_input_text.prototype.tm					= render_edit_component_input_text.prototype.edit
 
 	component_input_text.prototype.change_mode			= component_common.prototype.change_mode
 

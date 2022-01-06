@@ -12,7 +12,7 @@
 * RENDER_MINI_COMPONENT_SELECT
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_select = function(component) {
+export const render_mini_component_select = function() {
 
 	return true
 };//end render_mini_component_select

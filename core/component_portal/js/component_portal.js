@@ -6,9 +6,9 @@
 // imports
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	// import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {common, set_context_vars, create_source} from '../../common/js/common.js'
+	import {common, set_context_vars} from '../../common/js/common.js'
 	import {component_common, init_events_subscription} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	// import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
@@ -441,9 +441,6 @@ component_portal.prototype.add_value = async function(value) {
 				break;
 		}
 
-	// console.log("////////////////////// self.data:",self.data);
-	// console.log("////////////////////// self.datum:",self.datum);
-
 	return true
 };//end add_value
 
@@ -579,7 +576,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 * reset filtered data to the original and full server data
 * @return promise self.render
 */
-component_portal.prototype.reset_filter_data = function(options){
+component_portal.prototype.reset_filter_data = function(){
 
 	const self = this
 
@@ -600,6 +597,31 @@ component_portal.prototype.reset_filter_data = function(options){
 			render_level : 'content'
 		})
 }// end reset_filter_data
+
+
+
+/**
+* GET_SEARCH_VALUE
+* @return array new_value
+*/
+component_portal.prototype.get_search_value = function() {
+
+	const self = this
+
+	const current_value = self.data.value
+
+	const new_value = [];
+	const value_len = current_value.length
+	for (let i = 0; i < value_len; i++) {
+		new_value.push({
+			section_tipo		: current_value[i].section_tipo,
+			section_id			: current_value[i].section_id,
+			from_component_tipo	: current_value[i].from_component_tipo
+		})
+	}
+
+	return new_value
+};//end get_search_value
 
 
 
@@ -636,28 +658,4 @@ component_portal.prototype.reset_filter_data = function(options){
 	// 	return offset_last
 	// };//end  get_last_offset
 
-
-
-/**
-* GET_SEARCH_VALUE
-*/
-component_portal.prototype.get_search_value =  function() {
-
-	const self = this
-
-	const current_value = self.data.value
-
-	const value_len = current_value.length
-
-	const new_value = [];
-	for (let i = 0; i < value_len; i++) {
-		new_value.push({
-			section_tipo			: current_value[i].section_tipo,
-			section_id				: current_value[i].section_id,
-			from_component_tipo		: current_value[i].from_component_tipo
-		})
-	}
-
-	return new_value
-};//end get_search_value
 

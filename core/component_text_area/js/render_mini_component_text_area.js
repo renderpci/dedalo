@@ -4,10 +4,10 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	import {tr} from '../../common/js/tr.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
+	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
@@ -32,24 +32,20 @@ render_mini_component_text_area.prototype.mini = async function() {
 
 	const self = this
 
-	// Options vars
-		const context	= self.context
-		const data		= self.data
-		const value		= data.value || []
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
+	// short vars
+		const data	= self.data
+		const value	= data.value || []
 
 	// Value as string
 		const value_string = tr.add_tag_img_on_the_fly( value.join(self.divisor) )
 
-	// Set value
-		// wrapper.innerHTML = value_string
-		wrapper.insertAdjacentHTML('afterbegin', value_string);
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self, {
+			value_string : value_string
+		})
 
 
 	return wrapper
 };//end mini
-
 
 

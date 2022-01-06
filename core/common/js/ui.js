@@ -343,11 +343,11 @@ export const ui = {
 				//console.log("[ui.build_wrapper_list] instance:",instance)
 			}
 
-			const id			= instance.id || 'id is not set'
+			// const id			= instance.id || 'id is not set'
+			// const mode		= instance.mode 	// like 'edit'
 			const model			= instance.model 	// like component_input-text
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
-			const mode			= instance.mode 	// like 'edit'
 			const edit_in_list	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
 
 			// options
@@ -357,7 +357,7 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+					class_name		: `wrapper_${type} ${model} ${tipo} list` //  + mode
  				})
 
  			// span value. Add span if value_string is received

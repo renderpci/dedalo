@@ -7,7 +7,9 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_json} from '../../component_json/js/render_component_json.js'
+	import {render_edit_component_json} from '../../component_json/js/render_edit_component_json.js'
+	import {render_list_component_json} from '../../component_json/js/render_list_component_json.js'
+	import {render_mini_component_json} from '../../component_json/js/render_mini_component_json.js'
 	import {render_search_component_json} from '../../component_json/js/render_search_component_json.js'
 
 
@@ -59,11 +61,11 @@ export const component_json = function(){
 	component_json.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_json.prototype.mini				= render_component_json.prototype.mini
-	component_json.prototype.list				= render_component_json.prototype.list
-	component_json.prototype.edit				= render_component_json.prototype.edit
-	component_json.prototype.edit_in_list		= render_component_json.prototype.edit
-	component_json.prototype.tm					= render_component_json.prototype.edit
+	component_json.prototype.mini				= render_mini_component_json.prototype.mini
+	component_json.prototype.list				= render_list_component_json.prototype.list
+	component_json.prototype.tm					= render_list_component_json.prototype.list
+	component_json.prototype.edit				= render_edit_component_json.prototype.edit
+	component_json.prototype.edit_in_list		= render_edit_component_json.prototype.edit
 	component_json.prototype.search				= render_search_component_json.prototype.search
 	component_json.prototype.change_mode		= component_common.prototype.change_mode
 
@@ -102,46 +104,18 @@ component_json.prototype.load_editor_files = function() {
 * @return promise
 */
 component_json.prototype.set_value = async function(value) {
+
 	const self = this
 
-	self.editors[0].set(value)
+	await self.editors[0].set(value)
 
-
+	return true
 };//end set_value
-
-
-/**
-* INIT
-*/
-	// component_json.prototype.init = function(options) {
-
-	// 	const self = this
-
-	// 	self.mode 			= options.mode
-	// 	self.lang 			= options.lang
-	// 	self.section_lang 	= options.section_lang
-	// 	self.model 			= options.model
-	// 	self.tipo 			= options.tipo
-	// 	self.section_tipo 	= options.section_tipo
-	// 	self.section_id 	= options.section_id
-	// 	self.parent 		= options.parent
-	// 	self.id 			= options.id
-
-	// 	// Options vars
-	// 	self.context = options.context || null
-	// 	self.data 	 = options.data || []
-
-	// 	//console.log("component_json: init:",self);
-
-	// 	//event_manager.subscribe('stateChange', () => self.render())
-	// };//end init
-
 
 
 
 /**
 * LOAD_CONTEXT
-* @return
 */
 	// component_json.prototype.load_context = function() {
 
@@ -183,71 +157,74 @@ component_json.prototype.set_value = async function(value) {
 
 
 
-// /**
-// * LOAD_DATA
-// * @return
-// */
-// component_json.prototype.load_data = function(){
+/**
+* LOAD_DATA
+*/
+	// component_json.prototype.load_data = function(){
 
-// 	const self = this
+	// 	const self = this
 
-// 	const options = {
-// 		model 			: 'section_record',
-// 		tipo 			: self.section_tipo,
-// 		section_tipo 	: self.section_tipo,
-// 		section_id		: self.section_id,
-// 		mode			: self.mode,
-// 		lang			: self.section_lang
-// 	}
+	// 	const options = {
+	// 		model 			: 'section_record',
+	// 		tipo 			: self.section_tipo,
+	// 		section_tipo 	: self.section_tipo,
+	// 		section_id		: self.section_id,
+	// 		mode			: self.mode,
+	// 		lang			: self.section_lang
+	// 	}
 
-// 	const tipo = self.tipo
+	// 	const tipo = self.tipo
 
-// 	// section instance
-// 		const js_promise = instances.get_instance(options).then(function(current_section){
+	// 	// section instance
+	// 		const js_promise = instances.get_instance(options).then(function(current_section){
 
-// 			self.data =	current_section.get_component_data(tipo);
+	// 			self.data =	current_section.get_component_data(tipo);
 
-// 			return self.data
-// 		})
+	// 			return self.data
+	// 		})
 
-// 	return js_promise
-// };//end load_data
+	// 	return js_promise
+	// };//end load_data
 
-// /**
-// * RENDER
-// * @return promise
-// */
-// component_json.prototype.render = function(){
 
-// 	const self = this
 
-// 	const context = self.context
-// 	return self.load_data().then(function(){
+/**
+* RENDER
+* @return promise
+*/
+	// component_json.prototype.render = function(){
 
-// 		return new Promise(function(resolve){
+	// 	const self = this
 
-// 			// render
-// 				const current_render = new render_component_json(self)
+	// 	const context = self.context
+	// 	return self.load_data().then(function(){
 
-// 				let node = ""
-// 				const mode = self.mode
-// 				switch (mode){
-// 					case 'list':
-// 						node = current_render.list()
-// 					break
+	// 		return new Promise(function(resolve){
 
-// 					case 'edit':
-// 					default :
-// 						node = current_render.edit()
-// 				}
+	// 			// render
+	// 				const current_render = new render_component_json(self)
 
-// 			// set node
-// 				self.node = node
+	// 				let node = ""
+	// 				const mode = self.mode
+	// 				switch (mode){
+	// 					case 'list':
+	// 						node = current_render.list()
+	// 					break
 
-// 			// return self
-// 				//setTimeout(function(){
-// 					resolve(self)
-// 				//},1000)
-// 		})
-// 	})
-// };//end render
+	// 					case 'edit':
+	// 					default :
+	// 						node = current_render.edit()
+	// 				}
+
+	// 			// set node
+	// 				self.node = node
+
+	// 			// return self
+	// 				//setTimeout(function(){
+	// 					resolve(self)
+	// 				//},1000)
+	// 		})
+	// 	})
+	// };//end render
+
+

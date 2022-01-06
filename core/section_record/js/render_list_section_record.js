@@ -53,11 +53,13 @@ render_list_section_record.prototype.list = async function(options={}) {
 
 					const column_node	= render_column_node_callback(current_column, self)
 					const content_node	= current_column.callback({
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
-						row_key 		: self.row_key,
-						offset 			: self.offset,
-						caller			: self.caller
+						section_tipo		: self.section_tipo,
+						section_id			: self.section_id,
+						row_key				: self.row_key,
+						offset				: self.offset,
+						caller				: self.caller,
+						matrix_id			: self.matrix_id, // tm var
+						modification_date	: self.modification_date || null // tm var
 					})
 					if (content_node) {
 						column_node.appendChild(content_node)
@@ -177,266 +179,266 @@ render_list_section_record.prototype.list = async function(options={}) {
 * @param section_record instance self
 * @return DOM element id_column
 */
-	// const build_id_column = function(self) {
+const build_id_column_DES = function(self) {
 
-	// 	const permissions = self.caller.permissions
+	const permissions = self.caller.permissions
 
-	// 	// offset
-	// 		const offset = self.offset
+	// offset
+		const offset = self.offset
 
-	// 	// id_column
-	// 		const id_column = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name		: 'column id_column'
-	// 		})
+	// id_column
+		const id_column = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'column id_column'
+		})
 
-	// 	// edit_line
-	// 		const edit_line = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name		: 'edit_line',
-	// 			parent			: id_column
-	// 		})
+	// edit_line
+		const edit_line = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'edit_line',
+			parent			: id_column
+		})
 
-	// 		// section id
-	// 			const section_id_info = ui.create_dom_element({
-	// 				element_type	: 'span',
-	// 				class_name		: 'section_id',
-	// 				text_content	: self.section_id,
-	// 				parent			: edit_line
-	// 			})
+		// section id
+			const section_id_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'section_id',
+				text_content	: self.section_id,
+				parent			: edit_line
+			})
 
-	// 		// initiator. Caller section defined
-	// 			const initiator = self.caller.initiator || false
-	// 				// console.log("initiator:",initiator);
-	// 				// console.log("self.caller:",self.caller);
+		// initiator. Caller section defined
+			const initiator = self.caller.initiator || false
+				// console.log("initiator:",initiator);
+				// console.log("self.caller:",self.caller);
 
-	// 		// button
-	// 		switch(true) {
+		// button
+		switch(true) {
 
-	// 			case (initiator && initiator.indexOf('component_')!==-1):
-	// 			// case (self.caller.type==='component'):
-	// 				// component portal caller (link)
-	// 					const link_button = ui.create_dom_element({
-	// 						element_type	: 'span',
-	// 						class_name		: 'button link',
-	// 						parent			: edit_line
-	// 					})
-	// 					link_button.addEventListener("click", function(e){
-	// 						// top window event
-	// 						top.event_manager.publish('initiator_link_' + initiator, {
-	// 							section_tipo	: self.section_tipo,
-	// 							section_id		: self.section_id
-	// 						})
-	// 					})
-	// 				// button edit (pen)
-	// 					if (permissions>0) {
-	// 						const edit_button = ui.create_dom_element({
-	// 							element_type	: 'span',
-	// 							class_name		: 'button edit',
-	// 							parent			: edit_line
-	// 						})
-	// 						edit_button.addEventListener("click", async function(e){
-	// 							// navigate link
-	// 								const user_navigation_options = {
-	// 									tipo		: self.section_tipo,
-	// 									section_id	: self.section_id,
-	// 									model		: self.caller.model,
-	// 									mode		: 'edit'
-	// 								}
-	// 								if(SHOW_DEBUG===true) {
-	// 									console.log("// section_record build_id_column user_navigation_options initiator component:",user_navigation_options);
-	// 								}
-	// 								event_manager.publish('user_navigation', user_navigation_options)
+			case (initiator && initiator.indexOf('component_')!==-1):
+				// case (self.caller.type==='component'):
+				// component portal caller (link)
+					const link_button = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button link',
+						parent			: edit_line
+					})
+					link_button.addEventListener("click", function(){
+						// top window event
+						top.event_manager.publish('initiator_link_' + initiator, {
+							section_tipo	: self.section_tipo,
+							section_id		: self.section_id
+						})
+					})
+				// button edit (pen)
+					if (permissions>0) {
+						const edit_button = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button edit',
+							parent			: edit_line
+						})
+						edit_button.addEventListener("click", async function(e){
+							// navigate link
+								const user_navigation_options = {
+									tipo		: self.section_tipo,
+									section_id	: self.section_id,
+									model		: self.caller.model,
+									mode		: 'edit'
+								}
+								if(SHOW_DEBUG===true) {
+									console.log("// section_record build_id_column user_navigation_options initiator component:",user_navigation_options);
+								}
+								event_manager.publish('user_navigation', user_navigation_options)
 
-	// 							// detail_section
-	// 								// ( async () => {
-	// 								// 	const options = {
-	// 								// 		model 			: 'section',
-	// 								// 		type 			: 'section',
-	// 								// 		tipo  			: self.section_tipo,
-	// 								// 		section_tipo  	: self.section_tipo,
-	// 								// 		section_id 		: self.section_id,
-	// 								// 		mode 			: 'edit',
-	// 								// 		lang 			: page_globals.dedalo_data_lang
-	// 								// 	}
-	// 								// 	const current_data_manager	= new data_manager()
-	// 								// 	const page_element_call 	= await current_data_manager.get_page_element(options)
-	// 								// 	const page_element 			= page_element_call.result
+							// detail_section
+								// ( async () => {
+								// 	const options = {
+								// 		model 			: 'section',
+								// 		type 			: 'section',
+								// 		tipo  			: self.section_tipo,
+								// 		section_tipo  	: self.section_tipo,
+								// 		section_id 		: self.section_id,
+								// 		mode 			: 'edit',
+								// 		lang 			: page_globals.dedalo_data_lang
+								// 	}
+								// 	const current_data_manager	= new data_manager()
+								// 	const page_element_call 	= await current_data_manager.get_page_element(options)
+								// 	const page_element 			= page_element_call.result
 
-	// 								// 	// detail_section instance. Create target section page element and instance
-	// 								// 		const detail_section = await get_instance(page_element)
+								// 	// detail_section instance. Create target section page element and instance
+								// 		const detail_section = await get_instance(page_element)
 
-	// 								// 		// set self as detail_section caller (!)
-	// 								// 			detail_section.caller = initiator
+								// 		// set self as detail_section caller (!)
+								// 			detail_section.caller = initiator
 
-	// 								// 		// load data and render wrapper
-	// 								// 			await detail_section.build(true)
-	// 								// 			const detail_section_wrapper = await detail_section.render()
+								// 		// load data and render wrapper
+								// 			await detail_section.build(true)
+								// 			const detail_section_wrapper = await detail_section.render()
 
-	// 								// 	// modal container (header, body, footer, size)
-	// 								// 		const header = ui.create_dom_element({
-	// 								// 			element_type	: 'div',
-	// 								// 			text_content 	: detail_section.label
-	// 								// 		})
-	// 								// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
-	// 								// 		modal.on_close = () => {
-	// 								// 			detail_section.destroy(true, true, true)
-	// 								// 		}
-	// 								// })()
+								// 	// modal container (header, body, footer, size)
+								// 		const header = ui.create_dom_element({
+								// 			element_type	: 'div',
+								// 			text_content 	: detail_section.label
+								// 		})
+								// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
+								// 		modal.on_close = () => {
+								// 			detail_section.destroy(true, true, true)
+								// 		}
+								// })()
 
-	// 							// iframe
-	// 								// ( async () => {
-	// 								// 	const iframe = ui.create_dom_element({
-	// 								// 		element_type	: 'iframe',
-	// 								// 		src 			: '../page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
-	// 								// 	})
-	// 								// 	// modal container (header, body, footer, size)
-	// 								// 		const header = ui.create_dom_element({
-	// 								// 			element_type	: 'div',
-	// 								// 			text_content 	: detail_section.label
-	// 								// 		})
-	// 								// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
-	// 								// 		modal.on_close = () => {
-	// 								// 			detail_section.destroy(true, true, true)
-	// 								// 	}
-	// 								// })()
-	// 						})
-	// 					}
-	// 				break
+							// iframe
+								// ( async () => {
+								// 	const iframe = ui.create_dom_element({
+								// 		element_type	: 'iframe',
+								// 		src 			: '../page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
+								// 	})
+								// 	// modal container (header, body, footer, size)
+								// 		const header = ui.create_dom_element({
+								// 			element_type	: 'div',
+								// 			text_content 	: detail_section.label
+								// 		})
+								// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
+								// 		modal.on_close = () => {
+								// 			detail_section.destroy(true, true, true)
+								// 	}
+								// })()
+						})
+					}
+				break
 
-	// 			case (initiator && initiator.indexOf('tool_time_machine')!==-1):
-	// 				// button time machine preview (eye)
-	// 					const edit_button_tm = ui.create_dom_element({
-	// 						element_type	: 'span',
-	// 						class_name		: 'button eye',
-	// 						parent			: edit_line
-	// 					})
-	// 					edit_button_tm.addEventListener("click", function(e){
-	// 						// publish event
-	// 						event_manager.publish('tm_edit_record', {
-	// 							tipo		: self.section_tipo,
-	// 							section_id	: self.section_id,
-	// 							matrix_id	: self.matrix_id,
-	// 							date		: self.modification_date || null,
-	// 							mode		: 'tm'
-	// 						})
-	// 					})
-	// 				break
+			case (initiator && initiator.indexOf('tool_time_machine')!==-1):
+				// button time machine preview (eye)
+					const edit_button_tm = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button eye',
+						parent			: edit_line
+					})
+					edit_button_tm.addEventListener("click", function(e){
+						// publish event
+						event_manager.publish('tm_edit_record', {
+							tipo		: self.section_tipo,
+							section_id	: self.section_id,
+							matrix_id	: self.matrix_id,
+							date		: self.modification_date || null,
+							mode		: 'tm'
+						})
+					})
+				break
 
-	// 			case (self.caller.config && self.caller.config.source_model==='section_tool'):
+			case (self.caller.config && self.caller.config.source_model==='section_tool'):
 
-	// 				// button edit (pen)
-	// 					if (permissions>0) {
-	// 						const edit_button = ui.create_dom_element({
-	// 							element_type	: 'div',
-	// 							class_name		: '',
-	// 							inner_html 		: " "+self.caller.config.tool_context.label,
-	// 							parent			: edit_line
-	// 						})
-	// 						edit_button.addEventListener("click", function(e){
-	// 							e.stopPropagation();
+				// button edit (pen)
+					if (permissions>0) {
+						const edit_button = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: '',
+							inner_html 		: " "+self.caller.config.tool_context.label,
+							parent			: edit_line
+						})
+						edit_button.addEventListener("click", function(e){
+							e.stopPropagation();
 
-	// 							// tool_context (clone always to prevent modify original object)
-	// 								const tool_context = JSON.parse( JSON.stringify(self.caller.config.tool_context) )
+							// tool_context (clone always to prevent modify original object)
+								const tool_context = JSON.parse( JSON.stringify(self.caller.config.tool_context) )
 
-	// 							// parse ddo_map section_id
-	// 								tool_context.tool_config.ddo_map.map(el => {
-	// 									if (el.section_id==='self') {
-	// 										el.section_id = self.section_id
-	// 									}
-	// 								})
+							// parse ddo_map section_id
+								tool_context.tool_config.ddo_map.map(el => {
+									if (el.section_id==='self') {
+										el.section_id = self.section_id
+									}
+								})
 
-	// 							// lang set
-	// 								tool_context.lang = self.lang
+							// lang set
+								tool_context.lang = self.lang
 
-	// 							event_manager.publish('load_tool', {
-	// 								tool_context	: tool_context,
-	// 								caller			: self.caller
-	// 							})
-	// 						})
-	// 					}
-	// 				break;
+							event_manager.publish('load_tool', {
+								tool_context	: tool_context,
+								caller			: self.caller
+							})
+						})
+					}
+				break;
 
-	// 			default:
-	// 				// button edit (pen)
-	// 					if (permissions>0) {
-	// 						const edit_button = ui.create_dom_element({
-	// 							element_type	: 'span',
-	// 							class_name		: 'button edit',
-	// 							parent			: edit_line
-	// 						})
-	// 						edit_button.addEventListener("click", function(e){
-	// 							// edit_record(this, self)
+			default:
+				// button edit (pen)
+					if (permissions>0) {
+						const edit_button = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button edit',
+							parent			: edit_line
+						})
+						edit_button.addEventListener("click", function(e){
+							// edit_record(this, self)
 
-	// 							// rqo
-	// 							let user_navigation_rqo
-	// 							if (self.caller.type==='component') {
-	// 								user_navigation_rqo = {
-	// 									caller_id	: self.caller.id,
-	// 									source		: {
-	// 										action			: 'search',
-	// 										model			: 'section',
-	// 										tipo			: self.section_tipo,
-	// 										section_tipo	: self.section_tipo,
-	// 										mode			: 'edit',
-	// 										lang			: self.caller.lang
-	// 									},
-	// 									sqo : {
-	// 										section_tipo		: [{tipo : self.section_tipo}],
-	// 										filter				: null,
-	// 										limit				: 1,
-	// 										offset				: offset,
-	// 										filter_by_locators	: [{
-	// 											section_tipo : self.section_tipo,
-	// 											section_id : self.section_id,
-	// 										}]
-	// 									}
-	// 								}
-	// 							}else{
-	// 								user_navigation_rqo = {
-	// 									caller_id	: self.caller.id,
-	// 									source		: {
-	// 										action			: 'search',
-	// 										model			: self.caller.model,
-	// 										tipo			: self.section_tipo,
-	// 										section_tipo	: self.section_tipo,
-	// 										mode			: 'edit',
-	// 										lang			: self.caller.lang
-	// 									},
-	// 									sqo : {
-	// 										section_tipo	: [{tipo : self.section_tipo}],
-	// 										limit			: 1,
-	// 										offset			: offset,
-	// 										filter			: self.caller.rqo.sqo.filter || null
-	// 									}
-	// 								}
-	// 							}
-	// 							event_manager.publish('user_navigation', user_navigation_rqo)
-	// 						})
-	// 					}
-	// 				// delete_line
-	// 					if (permissions>1 && (initiator && initiator.indexOf('component_')!==-1)) {
-	// 						const delete_line = ui.create_dom_element({
-	// 							element_type	: 'div',
-	// 							class_name		: 'delete_line',
-	// 							parent			: id_column
-	// 						})
-	// 						const delete_button = ui.create_dom_element({
-	// 							element_type	: 'span',
-	// 							class_name		: 'button remove',
-	// 							parent			: delete_line
-	// 						})
-	// 						delete_button.addEventListener("click", function(e){
+							// rqo
+							let user_navigation_rqo
+							if (self.caller.type==='component') {
+								user_navigation_rqo = {
+									caller_id	: self.caller.id,
+									source		: {
+										action			: 'search',
+										model			: 'section',
+										tipo			: self.section_tipo,
+										section_tipo	: self.section_tipo,
+										mode			: 'edit',
+										lang			: self.caller.lang
+									},
+									sqo : {
+										section_tipo		: [{tipo : self.section_tipo}],
+										filter				: null,
+										limit				: 1,
+										offset				: offset,
+										filter_by_locators	: [{
+											section_tipo : self.section_tipo,
+											section_id : self.section_id,
+										}]
+									}
+								}
+							}else{
+								user_navigation_rqo = {
+									caller_id	: self.caller.id,
+									source		: {
+										action			: 'search',
+										model			: self.caller.model,
+										tipo			: self.section_tipo,
+										section_tipo	: self.section_tipo,
+										mode			: 'edit',
+										lang			: self.caller.lang
+									},
+									sqo : {
+										section_tipo	: [{tipo : self.section_tipo}],
+										limit			: 1,
+										offset			: offset,
+										filter			: self.caller.rqo.sqo.filter || null
+									}
+								}
+							}
+							event_manager.publish('user_navigation', user_navigation_rqo)
+						})
+					}
+				// delete_line
+					if (permissions>1 && (initiator && initiator.indexOf('component_')!==-1)) {
+						const delete_line = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'delete_line',
+							parent			: id_column
+						})
+						const delete_button = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button remove',
+							parent			: delete_line
+						})
+						delete_button.addEventListener("click", function(e){
 
-	// 							delete_record(this, self)
-	// 						})
-	// 					}
-	// 				break
-	// 		}
+							delete_record(this, self)
+						})
+					}
+				break
+		}
 
 
-	// 	return id_column
-	// }//end build_id_column
+	return id_column
+}//end build_id_column
 
 
 

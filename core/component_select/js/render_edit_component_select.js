@@ -10,10 +10,10 @@
 
 
 /**
-* render_edit_component_select
+* RENDER_EDIT_COMPONENT_SELECT
 * Manages the component's logic and apperance in client side
 */
-export const render_edit_component_select = function(component) {
+export const render_edit_component_select = function() {
 
 	return true
 };//end render_edit_component_select
@@ -25,14 +25,14 @@ export const render_edit_component_select = function(component) {
 * Render node for use in edit
 * @return DOM node
 */
-render_edit_component_select.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_select.prototype.edit = async function(options) {
 
 	const self = this
 
+	const render_level = options.render_level || 'full'
+
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
-	const render_level 	= options.render_level
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -156,7 +156,7 @@ const add_events = (self, wrapper) => {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return
+* @return DOM node content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -170,7 +170,8 @@ const get_content_data_edit = function(self) {
 		})
 
 	// build select able options
-		input_element(inputs_container, self)
+		const li = get_input_element(self)
+		inputs_container.appendChild(li)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -248,11 +249,10 @@ const get_buttons = (self) => {
 
 
 /**
-* INPUT_ELEMENT
-* @return dom element li
+* GET_INPUT_ELEMENT
+* @return DOM element li
 */
-//const input_element = (i, current_value, inputs_container, self) => {
-const input_element = (inputs_container, self) => {
+const get_input_element = (self) => {
 
 	const value		= self.data.value || []
 	const datalist	= self.data.datalist
@@ -261,8 +261,7 @@ const input_element = (inputs_container, self) => {
 
 	// create li
 		const li = ui.create_dom_element({
-			element_type	: 'li',
-			parent			: inputs_container
+			element_type : 'li'
 		})
 
 	// select
@@ -307,6 +306,6 @@ const input_element = (inputs_container, self) => {
 		}
 
 	return li
-};//end input_element
+};//end get_input_element
 
 

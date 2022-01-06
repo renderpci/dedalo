@@ -5,8 +5,8 @@
 
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	// import {data_manager} from '../../../core/common/js/data_manager.js'
+	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_lang_multi} from './render_tool_lang_multi.js'
@@ -43,9 +43,9 @@ export const tool_lang_multi = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_lang_multi.prototype.render 	= common.prototype.render
-	tool_lang_multi.prototype.destroy 	= common.prototype.destroy
-	tool_lang_multi.prototype.edit 		= render_tool_lang_multi.prototype.edit
+	tool_lang_multi.prototype.render	= common.prototype.render
+	tool_lang_multi.prototype.destroy	= common.prototype.destroy
+	tool_lang_multi.prototype.edit		= render_tool_lang_multi.prototype.edit
 
 
 

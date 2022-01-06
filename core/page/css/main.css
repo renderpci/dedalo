@@ -2978,14 +2978,14 @@ li .section_record.list .id_column {
 					transform: translate(-50%);
 					*/
 }
-.wrapper_component.edit_in_list > * {
+.wrapper_component.edit_in_list > .content_data {
   padding: 0 !important;
 }
 .wrapper_component.active {
+  z-index: 1;
   outline: 1px solid #f78a1c;
   background-color: rgba(250, 249, 249, 0.4) !important;
   overflow: initial;
-  z-index: 1;
 }
 @media screen and (max-width: 960px) {
   .wrapper_component.active {
@@ -3437,7 +3437,7 @@ dd-modal .header_custom {
   width: 100%;
 }
 dd-modal .iframe_container > iframe {
-  height: calc(100vh - 68px);
+  height: 100vh;
   width: 100%;
   top: 0;
   left: 0;
@@ -4328,7 +4328,6 @@ section {
 }
 .list_body {
   display: grid;
-  height: 100%;
 }
 .list_body > .header_wrapper_list {
   display: contents;

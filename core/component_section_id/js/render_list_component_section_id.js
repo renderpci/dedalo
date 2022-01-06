@@ -12,7 +12,7 @@
 * RENDER_LIST_COMPONENT_SECTION_ID
 * Manage the components logic and appearance in client side
 */
-export const render_list_component_section_id = function(component) {
+export const render_list_component_section_id = function() {
 
 	return true
 };//end render_list_component_section_id
@@ -33,13 +33,7 @@ render_list_component_section_id.prototype.list = function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
-
-		const span_value = ui.create_dom_element({
-			element_type	: 'span',
-			text_content	: value_string,
-			parent			: wrapper
+			value_string : value_string
 		})
 
 	return wrapper

@@ -1574,14 +1574,21 @@
 		}//end &.list
 
 		&.edit_in_list {
-			>*  {
+			>.content_data  {
 				padding: 0 !important;
 			}
 		}//end &.edit_in_list
 
+		// resizable
+			// resize: both;
+			// overflow: auto;
+			// flex: unset;
+			// flex-grow: 1;
+			// flex-basis: auto;
+
 		&.active {
 			// box-shadow: 3px 5px 8px 1px #c6c6c6;
-
+			z-index: 1;
 			outline: 1px solid @color_orange_dedalo;
 
 			//transition: background-color 0.3s ease;
@@ -1592,15 +1599,16 @@
 			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 			overflow: initial; // !important
 
-			// resizeable
+			// resizable
 				// resize: both;
-				// overflow: visible;
+				// overflow: auto;
+				// 	flex: unset;
+				// 	flex-grow: 1;
+				// 	flex-basis: auto;
 
 			@media screen and (max-width: @width_break_point_1) {
 				flex: 0 0 calc(100% - 2em) !important;
 			}
-
-			z-index: 1;
 
 			>.buttons_container {
 				display: block !important;
@@ -2037,7 +2045,8 @@
 		.iframe_container {
 			// background-color: #96FD53;
 			>iframe {
-				height: calc(100vh - 68px);
+				// height: calc(100vh - 68px);
+				height: 100vh;
 				width: 100%;
 				top: 0;
 				left: 0;

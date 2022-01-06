@@ -32,10 +32,6 @@ render_edit_component_publication.prototype.edit = async function(options={rende
 	// options
 		const render_level = options.render_level
 
-	// short vars
-		const value		= self.data.value
-		const datalist	= self.data.datalist || []
-
 	// content_data
 		const content_data = get_content_data(self)
 		if (render_level==='content') {
@@ -135,9 +131,8 @@ const add_events = function(self, wrapper) {
 const get_content_data = function(self) {
 
 	// Options vars
-	const mode 			= self.mode
-	const value 		= self.data.value || []
-	const is_inside_tool= self.is_inside_tool
+	const value				= self.data.value || []
+	// const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -152,7 +147,7 @@ const get_content_data = function(self) {
 		const inputs_value = (value.length<1) ? [""] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i], self)
+			const input_element = get_input_element(i, inputs_value[i])
 			fragment.appendChild(input_element)
 		}
 
@@ -174,8 +169,7 @@ const get_content_data = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool = self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -196,23 +190,14 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element div_switcher
+* @return DOM element div_switcher
 */
-const get_input_element = (i, current_value, self) => {
-
-	// const input_id = self.id + "_" + new Date().getUTCMilliseconds()
-
-	// li
-		// const li = ui.create_dom_element({
-		// 	element_type : 'li',
-		// 	parent 		 : inputs_container
-		// })
+const get_input_element = (i, current_value) => {
 
 	// div_switcher
 		const div_switcher = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'switcher_publication text_unselectable',
-			// parent		: li
+			class_name		: 'switcher_publication text_unselectable'
 		})
 
 	// input checkbox
@@ -231,12 +216,12 @@ const get_input_element = (i, current_value, self) => {
 		}
 
 	// switch_label
-		const switch_label = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'i',
 			// class_name	: 'checkbox-label',
 			parent			: div_switcher
 		})
-		// switch_label.setAttribute("for",input_id)
+
 
 	return div_switcher
 };//end get_input_element

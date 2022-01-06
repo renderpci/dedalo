@@ -5,18 +5,24 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {create_source} from '../../common/js/common.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
+	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
+	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
-	import {render_column_component_info, render_column_remove} from './render_edit_component_portal.js'
+	import {
+		render_column_component_info,
+		render_column_remove,
+		get_buttons,
+		add_events,
+		build_header
+	} from './render_edit_component_portal.js'
 
 
 
 /**
-* render_edit_view_mosaic
+* RENDER_EDIT_VIEW_MOSAIC
 * Manage the components logic and appearance in client side
 */
 export const render_edit_view_mosaic = function() {
@@ -26,9 +32,8 @@ export const render_edit_view_mosaic = function() {
 
 
 
-
 /**
-* render_edit_view_mosaic
+* RENDER_EDIT_VIEW_MOSAIC
 * Manages the component's logic and appearance in client side
 */
 render_edit_view_mosaic.render = async function(self, options) {
@@ -74,7 +79,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 
 		const items				= ui.flat_column_items(columns_map);
 		const template_columns	= items.join(' ')
-
 		Object.assign(
 			list_body.style,
 			{
@@ -83,7 +87,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 		)
 		list_body.appendChild(list_header_node)
 		list_body.appendChild(content_data)
-
 
 	// buttons
 		const buttons = get_buttons(self)
@@ -98,235 +101,14 @@ render_edit_view_mosaic.render = async function(self, options) {
 			list_body		: list_body
 			// top			: top
 		})
-		wrapper.classList.add('portal', 'view_table')
+		wrapper.classList.add('portal', 'view_'+self.context.view)
 
 	// events
 		add_events(self, wrapper)
-	return wrapper;
 
+
+	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-* @return bool
-*/
-export const add_events = function(self, wrapper) {
-
-	// add element, subscription to the events
-	// show the add_value in the instance
-		//self.events_tokens.push(
-		//	event_manager.subscribe('add_element_'+self.id, add_element)
-		//)
-		//async function add_element(key) {
-		//	self.refresh()
-		//	// change the portal service to false and desactive it.
-		//
-		//	//if(self.portal_active===true){
-		//	//	self.portal.destroy()
-		//	//	self.portal_active = false
-		//	//	self.portal 		 = null
-		//	//}
-		//
-		//	//self.refresh();
-		//
-		//	// inset the new section_record into the ar_section_record and build the node of the new locator
-		//	//ar_section_record.push(current_section_record)
-		//	//const inputs_container 	= wrapper.querySelector('.inputs_container')
-		//	//get_input_element(current_section_record, inputs_container)
-		//}
-
-	// subscribe to 'update_dom': if the dom was changed by other dom elements the value will be changed
-		//self.events_tokens.push(
-		//	event_manager.subscribe('update_dom_'+self.id, (value) => {
-		//		// change the value of the current dom element
-		//	})
-		//)
-
-	// click delegated
-		wrapper.addEventListener("click", function(e){
-			// e.stopPropagation()
-
-			// ignore click on paginator
-				// if (e.target.closest('.paginator')) {
-				// 	return false
-				// }
-
-			// remove row
-				if (e.target.matches('.button.remove')) {
-					e.preventDefault()
-
-					// label
-						const children = e.target.parentNode.parentNode.children
-						const ar_label = []
-						for (let i = 0; i < children.length; i++) {
-							if(children[i].textContent.length>0) {
-								ar_label.push(children[i].textContent)
-							}
-						}
-						const label = ar_label.join(', ')
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: null
-					})
-
-					const changed = self.change_value({
-						changed_data	: changed_data,
-						label			: label,
-						refresh			: false
-					})
-					changed.then(async (api_response)=>{
-
-						// update pagination offset
-							self.update_pagination_values('remove')
-
-						// refresh
-							await self.refresh()
-
-						// check if the caller has active a tag_id
-							if(self.active_tag){
-								// filter component data by tag_id and re-render content
-								self.filter_data_by_tag_id(self.active_tag)
-							}
-
-						// event to update the dom elements of the instance
-							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-					})
-
-					return true
-				}
-
-
-			// activate service autocomplete. Enable the service_autocomplete when the user do click
-				if(self.autocomplete_active===false){
-
-					// set rqo
-						self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-						// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
-
-					self.autocomplete = new service_autocomplete()
-					self.autocomplete.init({
-						caller	: self,
-						wrapper : wrapper
-					})
-					self.autocomplete_active = true
-					self.autocomplete.search_input.focus()
-
-					return true
-				}
-
-		})//end click event
-
-
-	return true
-}//end add_events
-
-
-
-/**
-* BUILD_CONTENT_DATA
-* Used too in search mode
-* @return DOM node content_data
-*/
-	// export const build_content_data = async function(self) {
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// inputs container
-	// 		// const inputs_container = ui.create_dom_element({
-	// 		// 	element_type	: 'ul',
-	// 		// 	class_name		: 'inputs_container'
-	// 		// })
-	// 		const inputs_container = new DocumentFragment()
-
-	// 	// build values (add all nodes from the rendered_section_record)
-	// 		// const build_values = function() {
-	// 		const build_values = async function() {
-
-	// 			// await version
-	// 				self.ar_instances = []
-	// 				const ar_section_record			= await self.get_ar_instances()
-	// 				const ar_section_record_length	= ar_section_record.length
-	// 				for (let i = 0; i < ar_section_record_length; i++) {
-
-	// 					const current_section_record = ar_section_record[i]
-
-	// 					// console.log("section record with status:",current_section_record.status);
-	// 					if (current_section_record.status!=='builded') {
-	// 						console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
-	// 						// console.trace()
-	// 						continue
-	// 					}
-
-	// 					// input_element. Get_input_element, also renders current section record
-	// 						// const input_element = await get_input_element(current_section_record)
-	// 						// inputs_container.appendChild(input_element)
-	// 						const input_element = await current_section_record.render()
-	// 							console.log("************************* input_element:",input_element);
-	// 						inputs_container.appendChild(input_element)
-	// 				}
-
-	// 			// promise version
-	// 				// self.get_ar_instances()
-	// 				// .then(function(ar_section_record){
-
-	// 				// 	const ar_section_record_length = ar_section_record.length
-	// 				// 	for (let i = 0; i < ar_section_record_length; i++) {
-
-	// 				// 		const current_section_record = ar_section_record[i]
-
-	// 				// 		// console.log("section record with status:",current_section_record.status);
-	// 				// 		if (current_section_record.status!=='builded') {
-	// 				// 			console.warn("Ignored section record with status:", current_section_record.status, current_section_record);
-	// 				// 			// console.trace()
-	// 				// 			continue
-	// 				// 		}
-
-	// 				// 		// input_element. Get_input_element, also renders current section record
-	// 				// 			// const input_element = get_input_element(current_section_record)
-	// 				// 			// inputs_container.appendChild(input_element)
-	// 				// 			current_section_record.render()
-	// 				// 			.then(function(input_element){
-	// 				// 				inputs_container.appendChild(input_element)
-	// 				// 			})
-	// 				// 	}
-	// 				// })
-
-	// 			// reset wrapper minHeight on each render (added from pagination to prevent page blink)
-	// 				// const wrapper = inputs_container.parentNode.parentNode
-	// 				// wrapper.style.minHeight = null
-	// 		}//end build_values
-	// 		fragment.appendChild(inputs_container)
-
-	// 	// set node only when it is in DOM (to save browser resources)
-	// 		// const observer = new IntersectionObserver(function(entries) {
-	// 		// 	const entry = entries[1] || entries[0]
-	// 		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-	// 		// 		observer.disconnect();
-	// 		// 		build_values()
-	// 		// 	}
-	// 		// }, { threshold: [0] });
-	// 		// observer.observe(inputs_container);
-	// 		await build_values()
-
-
-	// 	// build references
-	// 		if(self.data.references && self.data.references.length > 0){
-	// 			const references_node = render_references(self.data.references)
-	// 			fragment.appendChild(references_node)
-	// 		}
-
-	// 	// content_data
-	// 		const content_data = ui.component.build_content_data(self)
-	// 			  // content_data.classList.add("nowrap")
-	// 			  content_data.appendChild(fragment)
-
-
-	// 	return content_data
-	// }//end build_content_data
 
 
 
@@ -421,29 +203,6 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
-
-
-
-/**
-* BUILD_HEADER
-* Render portal list_header_node node ready to place it into 'list_body' node
-* Note that component_info column will be added if self.add_component_info is true. That if defined
-* when the component is built
-* Also, note that the list_header_node is hidden if the portal records are empty for clean look
-* @return DOM node content_data
-*/
-const build_header = function(columns_map, ar_section_record, self) {
-
-	// build using common ui builder
-		const list_header_node = ui.render_list_header(columns_map, self)
-
-	// hide list_header_node if no records found
-		if (ar_section_record.length<1) {
-			list_header_node.classList.add("hide")
-		}
-
-	return list_header_node;
-}//end build_header
 
 
 
@@ -549,63 +308,6 @@ render_edit_view_mosaic.render_column_id = function(options){
 
 
 /**
-* RENDER_REFERENCES
-* @return DocumentFragment
-*/
-const render_references = function(ar_references) {
-
-	const fragment = new DocumentFragment()
-
-	// ul
-		const ul = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'references',
-			parent			: fragment
-		})
-
-	// references label
-		ui.create_dom_element({
-			element_type	: 'div',
-			inner_html 		: get_label.references,
-			parent			: ul
-		})
-
-	const ref_length = ar_references.length
-	for (let i = 0; i < ref_length; i++) {
-
-		const reference = ar_references[i]
-
-		// li
-			const li = ui.create_dom_element({
-				element_type	: 'li',
-				parent			: ul
-			})
-			// button_link
-				const button_link = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button link',
-					parent			: li
-				})
-				button_link.addEventListener("click", function(e){
-					e.stopPropagation()
-					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
-					// window.open(url,'ref_edit')
-				})
-			// label
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					inner_html		: reference.label,
-					parent			: li
-				})
-	}
-
-	return fragment
-}//end render_references
-
-
-
-/**
 * GET_INPUT_ELEMENT
 * @return dom element li
 */
@@ -680,168 +382,168 @@ const render_references = function(ar_references) {
 * @param object self instance
 * @return DOM node buttons_container
 */
-const get_buttons = (self) => {
-	
-	const is_inside_tool		= self.is_inside_tool
-	const mode					= self.mode
-	const show					= self.rqo.show
-	const target_section		= self.target_section
-	const target_section_lenght	= target_section.length
-		  // sort section by label ascendant
-		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+	// const get_buttons = (self) => {
 
-	const fragment = new DocumentFragment()
+	// 	const is_inside_tool		= self.is_inside_tool
+	// 	const mode					= self.mode
+	// 	const show					= self.rqo.show
+	// 	const target_section		= self.target_section
+	// 	const target_section_lenght	= target_section.length
+	// 		  // sort section by label ascendant
+	// 		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-	// button_add
-		const button_add = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button add',
-			parent			: fragment
-		})
-		button_add.addEventListener("click", async function(e){
+	// 	const fragment = new DocumentFragment()
 
-			//TO ADD SECTION SELECTOR
-				const section_tipo = target_section_lenght >1
-					? false
-					: target_section[0].tipo
+	// 	// button_add
+	// 		const button_add = ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			class_name		: 'button add',
+	// 			parent			: fragment
+	// 		})
+	// 		button_add.addEventListener("click", async function(e){
 
-
-				// data_manager. create new record
-				const api_response = await data_manager.prototype.request({
-					body : {
-						action				: 'add_new_element',
-						source				: create_source(self),
-						target_section_tipo	: section_tipo
-					}
-				})
-				// add value to current data
-				if (api_response.result) {
-					self.refresh()
-				}else{
-					console.error("Error on api_response on try to create new row:", api_response);
-				}
-		})
-
-	// button_link
-		const button_link = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button link',
-			parent			: fragment
-		})
-		button_link.addEventListener("click", async function(){
-			// const section_tipo	= select_section.value
-			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
-			const section_tipo	= target_section[0].tipo
-			const section_label	= target_section[0].label;
-
-			// iframe
-				( () => {
-
-					const iframe_url = (tipo) => {
-						return '../page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
-					}
-
-					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
-					const iframe = ui.create_dom_element({
-						element_type	: 'iframe',
-						class_name		: 'fixed',
-						src				: iframe_url(section_tipo),
-						parent			: iframe_container
-					})
-
-					// select_section
-						const select_section = ui.create_dom_element({
-							element_type	: 'select',
-							class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
-						})
-						select_section.addEventListener("change", function(){
-							iframe.src = iframe_url(this.value)
-						})
-						// options for select_section
-							for (let i = 0; i < target_section_lenght; i++) {
-								const item = target_section[i]
-								ui.create_dom_element({
-									element_type	: 'option',
-									value			: item.tipo,
-									inner_html		: item.label + " [" + item.tipo + "]",
-									parent			: select_section
-								})
-							}
-
-					// header label
-						const header = ui.create_dom_element({
-							element_type	: 'span',
-							text_content	: get_label.seccion,
-							class_name		: 'label'
-						})
-
-					// header custom
-						const header_custom = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'header_custom'
-						})
-						header_custom.appendChild(header)
-						header_custom.appendChild(select_section)
-
-					// fix modal to allow close later, on set value
-					self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
-
-				})()
-				return
-		})
+	// 			//TO ADD SECTION SELECTOR
+	// 				const section_tipo = target_section_lenght >1
+	// 					? false
+	// 					: target_section[0].tipo
 
 
-	// button tree terms selector
-		if( self.rqo_config.show.interface &&
-			self.rqo_config.show.interface.button_tree &&
-			self.rqo_config.show.interface.button_tree=== true){
-			const button_tree_selector = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button gear',
-				parent			: fragment
-			})
-			// add listener to the select
-			button_tree_selector.addEventListener('mouseup',function(){
+	// 				// data_manager. create new record
+	// 				const api_response = await data_manager.prototype.request({
+	// 					body : {
+	// 						action				: 'add_new_element',
+	// 						source				: create_source(self),
+	// 						target_section_tipo	: section_tipo
+	// 					}
+	// 				})
+	// 				// add value to current data
+	// 				if (api_response.result) {
+	// 					self.refresh()
+	// 				}else{
+	// 					console.error("Error on api_response on try to create new row:", api_response);
+	// 				}
+	// 		})
 
-			})
-		}
+	// 	// button_link
+	// 		const button_link = ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			class_name		: 'button link',
+	// 			parent			: fragment
+	// 		})
+	// 		button_link.addEventListener("click", async function(){
+	// 			// const section_tipo	= select_section.value
+	// 			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
+	// 			const section_tipo	= target_section[0].tipo
+	// 			const section_label	= target_section[0].label;
+
+	// 			// iframe
+	// 				( () => {
+
+	// 					const iframe_url = (tipo) => {
+	// 						return '../page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
+	// 					}
+
+	// 					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
+	// 					const iframe = ui.create_dom_element({
+	// 						element_type	: 'iframe',
+	// 						class_name		: 'fixed',
+	// 						src				: iframe_url(section_tipo),
+	// 						parent			: iframe_container
+	// 					})
+
+	// 					// select_section
+	// 						const select_section = ui.create_dom_element({
+	// 							element_type	: 'select',
+	// 							class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
+	// 						})
+	// 						select_section.addEventListener("change", function(){
+	// 							iframe.src = iframe_url(this.value)
+	// 						})
+	// 						// options for select_section
+	// 							for (let i = 0; i < target_section_lenght; i++) {
+	// 								const item = target_section[i]
+	// 								ui.create_dom_element({
+	// 									element_type	: 'option',
+	// 									value			: item.tipo,
+	// 									inner_html		: item.label + " [" + item.tipo + "]",
+	// 									parent			: select_section
+	// 								})
+	// 							}
+
+	// 					// header label
+	// 						const header = ui.create_dom_element({
+	// 							element_type	: 'span',
+	// 							text_content	: get_label.seccion,
+	// 							class_name		: 'label'
+	// 						})
+
+	// 					// header custom
+	// 						const header_custom = ui.create_dom_element({
+	// 							element_type	: 'div',
+	// 							class_name		: 'header_custom'
+	// 						})
+	// 						header_custom.appendChild(header)
+	// 						header_custom.appendChild(select_section)
+
+	// 					// fix modal to allow close later, on set value
+	// 					self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
+
+	// 				})()
+	// 				return
+	// 		})
 
 
-		if( self.rqo_config.show.interface &&
-			self.rqo_config.show.interface.button_external &&
-			self.rqo_config.show.interface.button_external === true){
+	// 	// button tree terms selector
+	// 		if( self.rqo_config.show.interface &&
+	// 			self.rqo_config.show.interface.button_tree &&
+	// 			self.rqo_config.show.interface.button_tree=== true){
+	// 			const button_tree_selector = ui.create_dom_element({
+	// 				element_type	: 'span',
+	// 				class_name		: 'button gear',
+	// 				parent			: fragment
+	// 			})
+	// 			// add listener to the select
+	// 			button_tree_selector.addEventListener('mouseup',function(){
 
-			// button_update data external
-				const button_update_data_external = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button sync',
-					parent			: fragment
-				})
-				button_update_data_external.addEventListener("click", async function(e){
-					const source = self.rqo_config.show.find(item => item.typo === 'source')
-					source.build_options = {
-						get_dato_external : true
-					}
-					const builded = await self.build(true)
-					// render
-					if (builded) {
-						self.render({render_level : 'content'})
-					}
-				})
-		}
-
-	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-			  buttons_container.appendChild(fragment)
+	// 			})
+	// 		}
 
 
-	return buttons_container
-}//end get_buttons
+	// 		if( self.rqo_config.show.interface &&
+	// 			self.rqo_config.show.interface.button_external &&
+	// 			self.rqo_config.show.interface.button_external === true){
+
+	// 			// button_update data external
+	// 				const button_update_data_external = ui.create_dom_element({
+	// 					element_type	: 'span',
+	// 					class_name		: 'button sync',
+	// 					parent			: fragment
+	// 				})
+	// 				button_update_data_external.addEventListener("click", async function(e){
+	// 					const source = self.rqo_config.show.find(item => item.typo === 'source')
+	// 					source.build_options = {
+	// 						get_dato_external : true
+	// 					}
+	// 					const builded = await self.build(true)
+	// 					// render
+	// 					if (builded) {
+	// 						self.render({render_level : 'content'})
+	// 					}
+	// 				})
+	// 		}
+
+	// 	// buttons tools
+	// 		if (!is_inside_tool) {
+	// 			ui.add_tools(self, fragment)
+	// 		}
+
+	// 	// buttons container
+	// 		const buttons_container = ui.component.build_buttons_container(self)
+	// 			  buttons_container.appendChild(fragment)
+
+
+	// 	return buttons_container
+	// }//end get_buttons
 
 
 
@@ -851,222 +553,222 @@ const get_buttons = (self) => {
 * @param object instance
 * @return DOM node top
 */
-const get_top = function(self) {
+	// const get_top = function(self) {
 
-	if (self.mode!=='edit') {
-		return null;
-	}
+	// 	if (self.mode!=='edit') {
+	// 		return null;
+	// 	}
 
-	// sort vars
-		const is_inside_tool		= self.is_inside_tool
-		const mode					= self.mode
-		// const current_data_manager	= new data_manager()
-		const show					= self.rqo.show
-		const target_section		= self.rqo.sqo.section_tipo //filter(item => item.model==='section')
-		const target_section_lenght	= target_section.length
-		// sort section by label asc
-			target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+	// 	// sort vars
+	// 		const is_inside_tool		= self.is_inside_tool
+	// 		const mode					= self.mode
+	// 		// const current_data_manager	= new data_manager()
+	// 		const show					= self.rqo.show
+	// 		const target_section		= self.rqo.sqo.section_tipo //filter(item => item.model==='section')
+	// 		const target_section_lenght	= target_section.length
+	// 		// sort section by label asc
+	// 			target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-	const fragment = new DocumentFragment()
+	// 	const fragment = new DocumentFragment()
 
-	// select_section
-		// const select_section = ui.create_dom_element({
-		// 	element_type	: 'select',
-		// 	class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
-		// 	// parent			: fragment
-		// })
-		// select_section.addEventListener("click", function(e){
-		// 	// e.stopPropagation()
-		// })
-		// select_section.addEventListener("change", function(e){
-		// 		console.log("iframe_container:",iframe_container);
-		// })
+	// 	// select_section
+	// 		// const select_section = ui.create_dom_element({
+	// 		// 	element_type	: 'select',
+	// 		// 	class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
+	// 		// 	// parent			: fragment
+	// 		// })
+	// 		// select_section.addEventListener("click", function(e){
+	// 		// 	// e.stopPropagation()
+	// 		// })
+	// 		// select_section.addEventListener("change", function(e){
+	// 		// 		console.log("iframe_container:",iframe_container);
+	// 		// })
 
-		// // options for select_section
-		// 	for (let i = 0; i < target_section_lenght; i++) {
-		// 		const item = target_section[i]
-		// 		ui.create_dom_element({
-		// 			element_type	: 'option',
-		// 			value			: item.tipo,
-		// 			inner_html		: item.label + " [" + item.tipo + "]",
-		// 			parent			: select_section
-		// 		})
-		// 	}
+	// 		// // options for select_section
+	// 		// 	for (let i = 0; i < target_section_lenght; i++) {
+	// 		// 		const item = target_section[i]
+	// 		// 		ui.create_dom_element({
+	// 		// 			element_type	: 'option',
+	// 		// 			value			: item.tipo,
+	// 		// 			inner_html		: item.label + " [" + item.tipo + "]",
+	// 		// 			parent			: select_section
+	// 		// 		})
+	// 		// 	}
 
-	// button_add
-		// const button_add = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button add',
-		// 	parent			: fragment
-		// })
-		// button_add.addEventListener("click", async function(e){
+	// 	// button_add
+	// 		// const button_add = ui.create_dom_element({
+	// 		// 	element_type	: 'span',
+	// 		// 	class_name		: 'button add',
+	// 		// 	parent			: fragment
+	// 		// })
+	// 		// button_add.addEventListener("click", async function(e){
 
-		// 	// data_manager. create new record
-		// 		const api_response = await data_manager.prototype.request({
-		// 			body : {
-		// 				action			: 'create',
-		// 				section_tipo	: select_section.value
-		// 			}
-		// 		})
-		// 		// add value to current data
-		// 		if (api_response.result && api_response.result>0) {
-		// 			const value = {
-		// 				section_tipo	: select_section.value,
-		// 				section_id		: api_response.result
-		// 			}
-		// 			self.add_value(value)
-		// 		}else{
-		// 			console.error("Error on api_response on try to create new row:", api_response);
-		// 		}
-		// })
+	// 		// 	// data_manager. create new record
+	// 		// 		const api_response = await data_manager.prototype.request({
+	// 		// 			body : {
+	// 		// 				action			: 'create',
+	// 		// 				section_tipo	: select_section.value
+	// 		// 			}
+	// 		// 		})
+	// 		// 		// add value to current data
+	// 		// 		if (api_response.result && api_response.result>0) {
+	// 		// 			const value = {
+	// 		// 				section_tipo	: select_section.value,
+	// 		// 				section_id		: api_response.result
+	// 		// 			}
+	// 		// 			self.add_value(value)
+	// 		// 		}else{
+	// 		// 			console.error("Error on api_response on try to create new row:", api_response);
+	// 		// 		}
+	// 		// })
 
-	// button_link
-		// const button_link = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button link',
-		// 	parent			: fragment
-		// })
-		// button_link.addEventListener("click", async function(e){
+	// 	// button_link
+	// 		// const button_link = ui.create_dom_element({
+	// 		// 	element_type	: 'span',
+	// 		// 	class_name		: 'button link',
+	// 		// 	parent			: fragment
+	// 		// })
+	// 		// button_link.addEventListener("click", async function(e){
 
-		// 	// const section_tipo	= select_section.value
-		// 	// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
-		// 	const section_tipo	= target_section[0].tipo
-		// 	const section_label	= target_section[0].label;
+	// 		// 	// const section_tipo	= select_section.value
+	// 		// 	// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
+	// 		// 	const section_tipo	= target_section[0].tipo
+	// 		// 	const section_label	= target_section[0].label;
 
-		// 	// iframe
-		// 		( async () => {
-		// 			const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
-		// 			const iframe = ui.create_dom_element({
-		// 				element_type	: 'iframe',
-		// 				class_name		: 'fixed',
-		// 				src				: '../page/?tipo=' + section_tipo + '&mode=list&initiator='+ self.id,
-		// 				parent			: iframe_container
-		// 			})
+	// 		// 	// iframe
+	// 		// 		( async () => {
+	// 		// 			const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
+	// 		// 			const iframe = ui.create_dom_element({
+	// 		// 				element_type	: 'iframe',
+	// 		// 				class_name		: 'fixed',
+	// 		// 				src				: '../page/?tipo=' + section_tipo + '&mode=list&initiator='+ self.id,
+	// 		// 				parent			: iframe_container
+	// 		// 			})
 
-		// 			// select_section
-		// 				const select_section = ui.create_dom_element({
-		// 					element_type	: 'select',
-		// 					class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
-		// 					// parent			: fragment
-		// 				})
-		// 				select_section.addEventListener("click", function(e){
-		// 					// e.stopPropagation()
-		// 				})
-		// 				select_section.addEventListener("change", function(){
-		// 					iframe.src = '../page/?tipo=' + this.value + '&mode=list&initiator='+ self.id
-		// 				})
-		// 				// options for select_section
-		// 					for (let i = 0; i < target_section_lenght; i++) {
-		// 						const item = target_section[i]
-		// 						ui.create_dom_element({
-		// 							element_type	: 'option',
-		// 							value			: item.tipo,
-		// 							inner_html		: item.label + " [" + item.tipo + "]",
-		// 							parent			: select_section
-		// 						})
-		// 					}
+	// 		// 			// select_section
+	// 		// 				const select_section = ui.create_dom_element({
+	// 		// 					element_type	: 'select',
+	// 		// 					class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
+	// 		// 					// parent			: fragment
+	// 		// 				})
+	// 		// 				select_section.addEventListener("click", function(e){
+	// 		// 					// e.stopPropagation()
+	// 		// 				})
+	// 		// 				select_section.addEventListener("change", function(){
+	// 		// 					iframe.src = '../page/?tipo=' + this.value + '&mode=list&initiator='+ self.id
+	// 		// 				})
+	// 		// 				// options for select_section
+	// 		// 					for (let i = 0; i < target_section_lenght; i++) {
+	// 		// 						const item = target_section[i]
+	// 		// 						ui.create_dom_element({
+	// 		// 							element_type	: 'option',
+	// 		// 							value			: item.tipo,
+	// 		// 							inner_html		: item.label + " [" + item.tipo + "]",
+	// 		// 							parent			: select_section
+	// 		// 						})
+	// 		// 					}
 
-		// 			// header label
-		// 				const header = ui.create_dom_element({
-		// 					element_type	: 'span',
-		// 					text_content	: get_label.seccion,
-		// 					class_name		: 'label'
-		// 				})
+	// 		// 			// header label
+	// 		// 				const header = ui.create_dom_element({
+	// 		// 					element_type	: 'span',
+	// 		// 					text_content	: get_label.seccion,
+	// 		// 					class_name		: 'label'
+	// 		// 				})
 
-		// 			// header custom
-		// 				const header_custom = ui.create_dom_element({
-		// 					element_type	: 'div',
-		// 					class_name		: 'header_custom'
-		// 				})
-		// 				header_custom.appendChild(header)
-		// 				header_custom.appendChild(select_section)
+	// 		// 			// header custom
+	// 		// 				const header_custom = ui.create_dom_element({
+	// 		// 					element_type	: 'div',
+	// 		// 					class_name		: 'header_custom'
+	// 		// 				})
+	// 		// 				header_custom.appendChild(header)
+	// 		// 				header_custom.appendChild(select_section)
 
-		// 			// fix modal to allow close later, on set value
-		// 			self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
+	// 		// 			// fix modal to allow close later, on set value
+	// 		// 			self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
 
-		// 		})()
-		// 		return
+	// 		// 		})()
+	// 		// 		return
 
-		// 	// page
-		// 		// ( async () => {
+	// 		// 	// page
+	// 		// 		// ( async () => {
 
-		// 		// 	const options = {
-		// 		// 		model 			: 'section',
-		// 		// 		type 			: 'section',
-		// 		// 		tipo  			: section_tipo,
-		// 		// 		section_tipo  	: section_tipo,
-		// 		// 		section_id 		: null,
-		// 		// 		mode 			: 'list',
-		// 		// 		lang 			: page_globals.dedalo_data_lang
-		// 		// 	}
-		// 		// 	const page_element_call = await current_data_manager.get_page_element(options)
-		// 		// 	const page_element 		= page_element_call.result
+	// 		// 		// 	const options = {
+	// 		// 		// 		model 			: 'section',
+	// 		// 		// 		type 			: 'section',
+	// 		// 		// 		tipo  			: section_tipo,
+	// 		// 		// 		section_tipo  	: section_tipo,
+	// 		// 		// 		section_id 		: null,
+	// 		// 		// 		mode 			: 'list',
+	// 		// 		// 		lang 			: page_globals.dedalo_data_lang
+	// 		// 		// 	}
+	// 		// 		// 	const page_element_call = await current_data_manager.get_page_element(options)
+	// 		// 		// 	const page_element 		= page_element_call.result
 
-		// 		// 	const page = await get_instance({
-		// 		// 		model 		: 'page',
-		// 		// 		id_variant  : 'PORTAL_VARIANT',
-		// 		// 		elements 	: [page_element_call.result]
-		// 		// 	})
-		// 		// 	page.caller = self.caller
-		// 		// 	const build 		= await page.build()
-		// 		// 	const wrapper_page 	= await page.render()
-		// 		// 	const header = ui.create_dom_element({element_type : 'div',text_content : section_label})
-		// 		// 	const modal  = ui.attach_to_modal(header, wrapper_page, null, 'big')
-		// 		// 		console.log("page:",page);
-		// 		// })()
-		// 		// return
+	// 		// 		// 	const page = await get_instance({
+	// 		// 		// 		model 		: 'page',
+	// 		// 		// 		id_variant  : 'PORTAL_VARIANT',
+	// 		// 		// 		elements 	: [page_element_call.result]
+	// 		// 		// 	})
+	// 		// 		// 	page.caller = self.caller
+	// 		// 		// 	const build 		= await page.build()
+	// 		// 		// 	const wrapper_page 	= await page.render()
+	// 		// 		// 	const header = ui.create_dom_element({element_type : 'div',text_content : section_label})
+	// 		// 		// 	const modal  = ui.attach_to_modal(header, wrapper_page, null, 'big')
+	// 		// 		// 		console.log("page:",page);
+	// 		// 		// })()
+	// 		// 		// return
 
-		// 	// section
-		// 		// // find_section options. To create a complete set of options (including sqo), call API requesting a page_elemen
-		// 		// 	const options = {
-		// 		// 		model 			: 'section',
-		// 		// 		type 			: 'section',
-		// 		// 		tipo  			: section_tipo,
-		// 		// 		section_tipo  	: section_tipo,
-		// 		// 		section_id 		: null,
-		// 		// 		mode 			: 'list',
-		// 		// 		lang 			: page_globals.dedalo_data_lang
-		// 		// 	}
-		// 		// 	const page_element_call = await current_data_manager.get_page_element(options)
-		// 		// 	const page_element 		= page_element_call.result
-		// 		// 	// id_variant avoid instances id collisions
-		// 		// 		page_element.id_variant = 'ID_VARIANT_PORTAL'
-		// 		// 	const find_section_options = page_element
+	// 		// 	// section
+	// 		// 		// // find_section options. To create a complete set of options (including sqo), call API requesting a page_elemen
+	// 		// 		// 	const options = {
+	// 		// 		// 		model 			: 'section',
+	// 		// 		// 		type 			: 'section',
+	// 		// 		// 		tipo  			: section_tipo,
+	// 		// 		// 		section_tipo  	: section_tipo,
+	// 		// 		// 		section_id 		: null,
+	// 		// 		// 		mode 			: 'list',
+	// 		// 		// 		lang 			: page_globals.dedalo_data_lang
+	// 		// 		// 	}
+	// 		// 		// 	const page_element_call = await current_data_manager.get_page_element(options)
+	// 		// 		// 	const page_element 		= page_element_call.result
+	// 		// 		// 	// id_variant avoid instances id collisions
+	// 		// 		// 		page_element.id_variant = 'ID_VARIANT_PORTAL'
+	// 		// 		// 	const find_section_options = page_element
 
-		// 		// // find_section instance. Create target section page element and instance
-		// 		// 	const find_section = await get_instance(find_section_options)
+	// 		// 		// // find_section instance. Create target section page element and instance
+	// 		// 		// 	const find_section = await get_instance(find_section_options)
 
-		// 		// 	// set self as find_section caller (!)
-		// 		// 		find_section.caller = self
+	// 		// 		// 	// set self as find_section caller (!)
+	// 		// 		// 		find_section.caller = self
 
-		// 		// 	// load data and render wrapper
-		// 		// 		await find_section.build(true)
-		// 		// 		const find_section_wrapper = await find_section.render()
+	// 		// 		// 	// load data and render wrapper
+	// 		// 		// 		await find_section.build(true)
+	// 		// 		// 		const find_section_wrapper = await find_section.render()
 
-		// 		// // modal container
-		// 		// 	const header = ui.create_dom_element({
-		// 		// 		element_type	: 'div',
-		// 		// 		text_content 	: section_label
-		// 		// 	})
-		// 		// 	// fix modal to allow close later, on set value
-		// 		// 		self.modal = ui.attach_to_modal(header, find_section_wrapper, null, 'big')
-		// 		// 		self.modal.on_close = () =>{
-		// 		// 			find_section.destroy(true, true, true)
-		// 		// 		}
-		// })
+	// 		// 		// // modal container
+	// 		// 		// 	const header = ui.create_dom_element({
+	// 		// 		// 		element_type	: 'div',
+	// 		// 		// 		text_content 	: section_label
+	// 		// 		// 	})
+	// 		// 		// 	// fix modal to allow close later, on set value
+	// 		// 		// 		self.modal = ui.attach_to_modal(header, find_section_wrapper, null, 'big')
+	// 		// 		// 		self.modal.on_close = () =>{
+	// 		// 		// 			find_section.destroy(true, true, true)
+	// 		// 		// 		}
+	// 		// })
 
-	// top container
-		const top = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'top'
-		})
-		// top.addEventListener("click", function(e){
-		// 	e.stopPropagation()
-		// })
-		top.appendChild(fragment)
+	// 	// top container
+	// 		const top = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'top'
+	// 		})
+	// 		// top.addEventListener("click", function(e){
+	// 		// 	e.stopPropagation()
+	// 		// })
+	// 		top.appendChild(fragment)
 
 
-	return top
-}//end  get_top
+	// 	return top
+	// }//end  get_top
 
 

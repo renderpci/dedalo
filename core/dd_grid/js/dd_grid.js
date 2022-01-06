@@ -4,13 +4,13 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
-	import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
+	// import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
 	import {render_list_dd_grid} from '../../dd_grid/js/render_list_dd_grid.js'
 	import {render_table_dd_grid} from '../../dd_grid/js/render_table_dd_grid.js'
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
 
 
 

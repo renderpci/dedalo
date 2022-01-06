@@ -794,78 +794,77 @@ search.prototype.get_search_group_operator = function(search_group) {
 * GET_SEARCH_JSON_OBJECT
 * Resolve and configure the final search json object used for build sql query
 * @return object search_json_object
-*//*
-this.get_search_json_object = function() {
-
-	const self = this
-
-	// Always blur active component to force set dato Important (!)
-		document.activeElement.blur()
-
-	// json_filter
-		const json_filter = self.parse_dom_to_json_filter({
-			mode : "search"
-		})
-
-	// global_container
-		const search2_global_container 	= document.getElementById("search2_global_container")
-		const max_input 				= search2_global_container.querySelector("input.max_input")
-		//const select_path 			= decodeURIComponent(search2_global_container.dataset.select_path)
-		//const select 					= JSON.parse(select_path)
-
-	// modo default
-		const modo = "list"
-
-	// table_rows_list base search options
-		// Changed 21-03-2018
-		const table_rows_list 			= document.querySelector(".table_rows_list")
-		const search_options  			= decodeURIComponent(table_rows_list.dataset.search_options)
-		const search_options_object 	= JSON.parse(search_options)
-		const base_search_query_object 	= search_options_object.search_query_object
-
-		const select 					= base_search_query_object.select
-		let section_tipo 	  			= base_search_query_object.section_tipo
-
-	// Thesaurus mode
-		if (self.modo==="thesaurus") {
-			// Selected sections to search. From checkboxes
-			const wrapper_sections_selector_ul = document.getElementById("wrapper_sections_selector_ul")
-			const ar_checkboxes = wrapper_sections_selector_ul.querySelectorAll("input")
-			let ar_sections = []
-			const ar_checkboxes_len = ar_checkboxes.length
-			for (let i = 0; i < ar_checkboxes_len; i++) {
-				if(ar_checkboxes[i].checked === true) {
-					ar_sections.push(ar_checkboxes[i].value)
-				}
-			}
-			//console.log("ar_sections:",ar_sections);
-			if (ar_sections.length<1) {
-				alert("Please select at least one section to search")
-				return false
-			}
-			// Replace search_query_object section with user selected values
-			section_tipo = ar_sections
-		}
-
-	// Final search_json_object
-	const search_json_object = {
-			id 			 : base_search_query_object.id, //section_tipo + "_" + modo,
-			modo 		 : modo,
-			parsed 		 : false,
-			section_tipo : section_tipo,
-			limit 		 : parseInt(max_input.value) || 10,
-			offset 		 : 0,
-			type 		 : "search_json_object",
-			//context 	 : {context_name:false},
-			full_count   : (self.modo==="thesaurus") ? false : true,
-			order 	 	 : false,
-			filter 		 : json_filter.filter,
-			select 		 : select
-		}
-
-	return search_json_object
-};//end get_search_json_object
 */
+	// this.get_search_json_object = function() {
+
+	// 	const self = this
+
+	// 	// Always blur active component to force set dato Important (!)
+	// 		document.activeElement.blur()
+
+	// 	// json_filter
+	// 		const json_filter = self.parse_dom_to_json_filter({
+	// 			mode : "search"
+	// 		})
+
+	// 	// global_container
+	// 		const search2_global_container 	= document.getElementById("search2_global_container")
+	// 		const max_input 				= search2_global_container.querySelector("input.max_input")
+	// 		//const select_path 			= decodeURIComponent(search2_global_container.dataset.select_path)
+	// 		//const select 					= JSON.parse(select_path)
+
+	// 	// modo default
+	// 		const modo = "list"
+
+	// 	// table_rows_list base search options
+	// 		// Changed 21-03-2018
+	// 		const table_rows_list 			= document.querySelector(".table_rows_list")
+	// 		const search_options  			= decodeURIComponent(table_rows_list.dataset.search_options)
+	// 		const search_options_object 	= JSON.parse(search_options)
+	// 		const base_search_query_object 	= search_options_object.search_query_object
+
+	// 		const select 					= base_search_query_object.select
+	// 		let section_tipo 	  			= base_search_query_object.section_tipo
+
+	// 	// Thesaurus mode
+	// 		if (self.modo==="thesaurus") {
+	// 			// Selected sections to search. From checkboxes
+	// 			const wrapper_sections_selector_ul = document.getElementById("wrapper_sections_selector_ul")
+	// 			const ar_checkboxes = wrapper_sections_selector_ul.querySelectorAll("input")
+	// 			let ar_sections = []
+	// 			const ar_checkboxes_len = ar_checkboxes.length
+	// 			for (let i = 0; i < ar_checkboxes_len; i++) {
+	// 				if(ar_checkboxes[i].checked === true) {
+	// 					ar_sections.push(ar_checkboxes[i].value)
+	// 				}
+	// 			}
+	// 			//console.log("ar_sections:",ar_sections);
+	// 			if (ar_sections.length<1) {
+	// 				alert("Please select at least one section to search")
+	// 				return false
+	// 			}
+	// 			// Replace search_query_object section with user selected values
+	// 			section_tipo = ar_sections
+	// 		}
+
+	// 	// Final search_json_object
+	// 	const search_json_object = {
+	// 			id 			 : base_search_query_object.id, //section_tipo + "_" + modo,
+	// 			modo 		 : modo,
+	// 			parsed 		 : false,
+	// 			section_tipo : section_tipo,
+	// 			limit 		 : parseInt(max_input.value) || 10,
+	// 			offset 		 : 0,
+	// 			type 		 : "search_json_object",
+	// 			//context 	 : {context_name:false},
+	// 			full_count   : (self.modo==="thesaurus") ? false : true,
+	// 			order 	 	 : false,
+	// 			filter 		 : json_filter.filter,
+	// 			select 		 : select
+	// 		}
+
+	// 	return search_json_object
+	// };//end get_search_json_object
 
 
 

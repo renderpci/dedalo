@@ -13,7 +13,7 @@
 * RENDER_SEARCH_COMPONENT_SELECT
 * Manages the component's logic and apperance in client side
 */
-export const render_search_component_select = function(component) {
+export const render_search_component_select = function() {
 
 	return true
 };//end render_search_component_select
@@ -199,3 +199,5 @@ const get_input_element = (self) => {
 
 	return select
 };//end get_input_element
+
+

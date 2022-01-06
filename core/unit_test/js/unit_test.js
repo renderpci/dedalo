@@ -1,7 +1,12 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, describe, mocha */
+/*eslint no-undef: "error"*/
+
+
+
 // test.js
 import {get_instance, key_instances_builder, delete_instance, get_all_instances} from '../../common/js/instances.js'
-import {data_manager} from '../../common/js/data_manager.js'
-import {create_source} from '../../common/js/common.js'
+// import {data_manager} from '../../common/js/data_manager.js'
+// import {create_source} from '../../common/js/common.js'
 import {page} from '../../page/js/page.js'
 import {component_input_text} from '../../component_input_text/js/component_input_text.js'
 import {component_date} from '../../component_date/js/component_date.js'

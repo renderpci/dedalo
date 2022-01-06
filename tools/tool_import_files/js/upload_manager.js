@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL,DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 import {common} from '../../../core/common/js/common.js'

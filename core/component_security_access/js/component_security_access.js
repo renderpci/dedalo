@@ -6,8 +6,10 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_security_access} from '../../component_security_access/js/render_component_security_access.js'
-
+	import {render_edit_component_security_access} from '../../component_security_access/js/render_edit_component_security_access.js'
+	import {render_list_component_security_access} from '../../component_security_access/js/render_list_component_security_access.js'
+	import {render_mini_component_security_access} from '../../component_security_access/js/render_mini_component_security_access.js'
+	import {render_search_component_security_access} from '../../component_security_access/js/render_search_component_security_access.js'
 
 
 export const component_security_access = function(){
@@ -55,9 +57,12 @@ export const component_security_access = function(){
 	component_security_access.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_security_access.prototype.mini				= render_component_security_access.prototype.mini
-	component_security_access.prototype.list				= render_component_security_access.prototype.list
-	component_security_access.prototype.edit				= render_component_security_access.prototype.edit
-	component_security_access.prototype.edit_in_list		= render_component_security_access.prototype.edit
-	component_security_access.prototype.search				= render_component_security_access.prototype.search
+	component_security_access.prototype.mini				= render_mini_component_security_access.prototype.mini
+	component_security_access.prototype.list				= render_list_component_security_access.prototype.list
+	component_security_access.prototype.tm					= render_list_component_security_access.prototype.list
+	component_security_access.prototype.edit				= render_edit_component_security_access.prototype.edit
+	component_security_access.prototype.edit_in_list		= render_edit_component_security_access.prototype.edit
+	component_security_access.prototype.search				= render_search_component_security_access.prototype.search
 	component_security_access.prototype.change_mode			= component_common.prototype.change_mode
+
+

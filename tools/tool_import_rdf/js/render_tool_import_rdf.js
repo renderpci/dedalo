@@ -1,6 +1,11 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -153,6 +158,7 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 };//end get_content_data_edit
+
 
 
 /**

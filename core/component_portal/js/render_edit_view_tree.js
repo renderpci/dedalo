@@ -3,11 +3,11 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {create_source} from '../../common/js/common.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
+	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
+	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {object_to_url_vars} from '../../common/js/utils/index.js'
 	import {render_column_remove} from './render_edit_component_portal.js'
 
@@ -235,8 +235,8 @@ const rebuild_columns_map = async function(self) {
 const get_buttons = (self) => {
 
 	const is_inside_tool		= self.is_inside_tool
-	const mode					= self.mode
-	const show					= self.rqo.show
+	// const mode				= self.mode
+	// const show				= self.rqo.show
 	const target_section		= self.target_section
 	const target_section_lenght	= target_section.length
 		  // sort section by label ascendant

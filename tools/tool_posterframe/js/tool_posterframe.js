@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
@@ -269,42 +274,42 @@ tool_posterframe.prototype.generate_posterframe = async function(button_obj, cur
 	// // DONE
 	.done(function(received_data) {
 
-	// 	// Search 'error' string in response
-	// 	var error_response = /error/i.test(received_data);	//alert(error_response)
+		// 	// Search 'error' string in response
+		// 	var error_response = /error/i.test(received_data);	//alert(error_response)
 
-	// 	// If received_data contains 'error' show alert error with (received_data), else reload the page
-	// 	if(error_response) {
-	// 		// Warning msg
-	// 		var msg = "<span class='error'>Error when generate posterframe: \n" + received_data + "</span>" ;
-	// 			inspector.show_log_msg(msg);
-	// 			alert( $(msg).text() )
-	// 	}else{
-	// 		// Notification msg ok
-	// 		var msg = "<span class='ok'>"+received_data+"</span>";
-	// 			inspector.show_log_msg(msg);
-			
-	// 		// Update image av_posterframe
-	// 		if($(wrap_div).length===1) {
-	// 			let wrapper_id 		= $(wrap_div).attr('id')
-	// 			let my_arguments 	= null
-	// 			let varcallback 	= null
-	// 			top.component_common.load_component_by_wrapper_id(wrapper_id, my_arguments, varcallback);	//wrapper_id, my_arguments, callback
-	// 		}else{
-	// 			console.log("Error: wrap div not found! Sorry, no component update is done.");
-	// 		}
-	// 	}			
-	// })
-	// // FAIL ERROR
-	// .fail(function(error_data) {
-	// 	// Notify to log messages in top of page
-	// 	var msg = "<span class='error'>ERROR: on generate_posterframe data:" + error_data + "</span>";				
-	// 	inspector.show_log_msg(msg);
-	// 	if(SHOW_DEBUG===true) console.log(error_data);	
-	// })
-	// // ALWAYS
-	// .always(function() {
-	// 	html_page.loading_content( wrap_div_tool, 0 );
-	// })
+		// 	// If received_data contains 'error' show alert error with (received_data), else reload the page
+		// 	if(error_response) {
+		// 		// Warning msg
+		// 		var msg = "<span class='error'>Error when generate posterframe: \n" + received_data + "</span>" ;
+		// 			inspector.show_log_msg(msg);
+		// 			alert( $(msg).text() )
+		// 	}else{
+		// 		// Notification msg ok
+		// 		var msg = "<span class='ok'>"+received_data+"</span>";
+		// 			inspector.show_log_msg(msg);
+
+		// 		// Update image av_posterframe
+		// 		if($(wrap_div).length===1) {
+		// 			let wrapper_id 		= $(wrap_div).attr('id')
+		// 			let my_arguments 	= null
+		// 			let varcallback 	= null
+		// 			top.component_common.load_component_by_wrapper_id(wrapper_id, my_arguments, varcallback);	//wrapper_id, my_arguments, callback
+		// 		}else{
+		// 			console.log("Error: wrap div not found! Sorry, no component update is done.");
+		// 		}
+		// 	}
+		// })
+		// // FAIL ERROR
+		// .fail(function(error_data) {
+		// 	// Notify to log messages in top of page
+		// 	var msg = "<span class='error'>ERROR: on generate_posterframe data:" + error_data + "</span>";
+		// 	inspector.show_log_msg(msg);
+		// 	if(SHOW_DEBUG===true) console.log(error_data);
+		// })
+		// // ALWAYS
+		// .always(function() {
+		// 	html_page.loading_content( wrap_div_tool, 0 );
+		// })
 
 		// If received_data contains 'error' show alert error with (received_data), else reload the page
 		if(error_response) {

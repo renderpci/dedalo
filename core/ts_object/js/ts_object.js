@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, get_current_url_vars */
+/*eslint no-undef: "error"*/
+
+
+
 /**
 *	TS_OBJECT
 *	Manage a single thesaurus row element
@@ -7,6 +12,8 @@
 import {ui} from '../../common/js/ui.js'
 import * as instances from '../../common/js/instances.js'
 import {event_manager} from '../../common/js/event_manager.js'
+
+
 
 export const ts_object = new function() {
 

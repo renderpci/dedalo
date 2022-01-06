@@ -51,7 +51,7 @@ render_paginator.prototype.edit = async function(options) {
 		})
 
 	// events
-		add_wrapper_events(wrapper, self)
+		add_events(wrapper, self)
 
 
 	return wrapper
@@ -60,10 +60,11 @@ render_paginator.prototype.edit = async function(options) {
 
 
 /**
-* ADD_WRAPPER_EVENTS
+* ADD_EVENTS
 * Attach element generic events to wrapper
+* @return bool
 */
-const add_wrapper_events = (wrapper, self) => {
+const add_events = (wrapper, self) => {
 
 	// mousedown
 		wrapper.addEventListener("mousedown", function(e){
@@ -75,7 +76,7 @@ const add_wrapper_events = (wrapper, self) => {
 
 
 	return true
-};//end add_wrapper_events
+};//end add_events
 
 
 
@@ -102,7 +103,7 @@ const get_content_data = function(self) {
 		const offset_last		= self.offset_last
 
 		if(SHOW_DEBUG===true) {
-			const model = self.id.split("_")[1] +" "+ self.id.split("_")[2]
+			// const model = self.id.split("_")[1] +" "+ self.id.split("_")[2]
 			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
@@ -242,3 +243,5 @@ const get_content_data = function(self) {
 
 	return content_data
 };//end get_content_data
+
+

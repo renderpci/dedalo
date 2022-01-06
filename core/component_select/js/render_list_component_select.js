@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -13,7 +13,7 @@
 * render_list_component_select
 * Manages the component's logic and appearance in client side
 */
-export const render_list_component_select = function(component) {
+export const render_list_component_select = function() {
 
 	return true
 };//end render_list_component_select

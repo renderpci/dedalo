@@ -12,7 +12,7 @@
 * RENDER_COMPONENT_CALCULATION
 * Manage the components logic and appearance in client side
 */
-export const render_calculation = function(component) {
+export const render_calculation = function() {
 
 	return true
 }//end render_calculation
