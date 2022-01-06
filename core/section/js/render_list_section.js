@@ -216,15 +216,16 @@ const rebuild_columns_map = async function(self) {
 render_list_section.render_column_id = function(options){
 
 	// options
-		const self 			= options.caller
+		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
-		const offset 		= options.offset
+		const offset		= options.offset
+		const permissions	= self.permissions
 
 	const fragment = new DocumentFragment()
 
 	// section_id
-		const section_id_node = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'span',
 			text_content	: section_id,
 			class_name		: 'section_id',
@@ -233,6 +234,117 @@ render_list_section.render_column_id = function(options){
 
 	// buttons
 		switch(true){
+
+			case (self.initiator && self.initiator.indexOf('component_')!==-1):
+
+				// component portal caller (link)
+					const link_button = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button link',
+						parent			: fragment
+					})
+					link_button.addEventListener("click", function(){
+						// top window event
+						top.event_manager.publish('initiator_link_' + self.initiator, {
+							section_tipo	: section_tipo,
+							section_id		: section_id
+						})
+					})
+				// button edit (pen)
+					if (permissions>0) {
+						const edit_button = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button edit',
+							parent			: fragment
+						})
+						edit_button.addEventListener("click", async function(){
+							// navigate link
+								// const user_navigation_options = {
+								// 	tipo		: section_tipo,
+								// 	section_id	: section_id,
+								// 	model		: self.model,
+								// 	mode		: 'edit'
+								// }
+								const user_navigation_rqo = {
+									caller_id	: self.id,
+									source		: {
+										action			: 'search',
+										model			: 'section',
+										tipo			: section_tipo,
+										section_tipo	: section_tipo,
+										mode			: 'edit',
+										lang			: self.lang
+									},
+									sqo : {
+										section_tipo		: [{tipo : section_tipo}],
+										limit				: 1,
+										offset				: 0,
+										filter_by_locators	: [{
+											section_tipo : section_tipo,
+											section_id : section_id
+										}]
+									}
+								}
+								if(SHOW_DEBUG===true) {
+									console.log("// section_record build_id_column user_navigation_rqo initiator component:", user_navigation_rqo);
+								}
+								event_manager.publish('user_navigation', user_navigation_rqo)
+
+							// detail_section
+								// ( async () => {
+								// 	const options = {
+								// 		model 			: 'section',
+								// 		type 			: 'section',
+								// 		tipo  			: self.section_tipo,
+								// 		section_tipo  	: self.section_tipo,
+								// 		section_id 		: self.section_id,
+								// 		mode 			: 'edit',
+								// 		lang 			: page_globals.dedalo_data_lang
+								// 	}
+								// 	const current_data_manager	= new data_manager()
+								// 	const page_element_call 	= await current_data_manager.get_page_element(options)
+								// 	const page_element 			= page_element_call.result
+
+								// 	// detail_section instance. Create target section page element and instance
+								// 		const detail_section = await get_instance(page_element)
+
+								// 		// set self as detail_section caller (!)
+								// 			detail_section.caller = initiator
+
+								// 		// load data and render wrapper
+								// 			await detail_section.build(true)
+								// 			const detail_section_wrapper = await detail_section.render()
+
+								// 	// modal container (header, body, footer, size)
+								// 		const header = ui.create_dom_element({
+								// 			element_type	: 'div',
+								// 			text_content 	: detail_section.label
+								// 		})
+								// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
+								// 		modal.on_close = () => {
+								// 			detail_section.destroy(true, true, true)
+								// 		}
+								// })()
+
+							// iframe
+								// ( async () => {
+								// 	const iframe = ui.create_dom_element({
+								// 		element_type	: 'iframe',
+								// 		src 			: '../page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
+								// 	})
+								// 	// modal container (header, body, footer, size)
+								// 		const header = ui.create_dom_element({
+								// 			element_type	: 'div',
+								// 			text_content 	: detail_section.label
+								// 		})
+								// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
+								// 		modal.on_close = () => {
+								// 			detail_section.destroy(true, true, true)
+								// 	}
+								// })()
+						})
+					}
+				break
 
 			case (self.config && self.config.source_model==='section_tool'):
 
@@ -311,8 +423,9 @@ render_list_section.render_column_id = function(options){
 				break;
 		}
 
+
 	return fragment
-}// end render_column_id()
+};// end render_column_id()
 
 
 

@@ -1589,10 +1589,12 @@
 			// background-color: @color_white_dirty !important;
 			background-color: rgb(250 249 249 / 40%) !important;
 
-
-
 			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
-			overflow: initial !important;
+			overflow: initial; // !important
+
+			// resizeable
+				// resize: both;
+				// overflow: visible;
 
 			@media screen and (max-width: @width_break_point_1) {
 				flex: 0 0 calc(100% - 2em) !important;
@@ -1709,8 +1711,14 @@
 				min-height: calc(100% + 2px);
 				box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
 
+				>.buttons_fold {
+					position: sticky;
+					top: 68px;
+					margin: 0;
+				}
+
 				// buttons inside
-				>span {
+				span {
 					margin-left: 0.5em;
 					margin-bottom: 0.25em;
 				}

@@ -2984,7 +2984,7 @@ li .section_record.list .id_column {
 .wrapper_component.active {
   outline: 1px solid #f78a1c;
   background-color: rgba(250, 249, 249, 0.4) !important;
-  overflow: initial !important;
+  overflow: initial;
   z-index: 1;
 }
 @media screen and (max-width: 960px) {
@@ -3073,9 +3073,16 @@ li .section_record.list .id_column {
   min-height: calc(100% + 2px);
   box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
 }
-.section_record .wrapper_component > .buttons_container > span,
-.wrapper_tool .wrapper_component > .buttons_container > span,
-.search_group .wrapper_component > .buttons_container > span {
+.section_record .wrapper_component > .buttons_container > .buttons_fold,
+.wrapper_tool .wrapper_component > .buttons_container > .buttons_fold,
+.search_group .wrapper_component > .buttons_container > .buttons_fold {
+  position: sticky;
+  top: 68px;
+  margin: 0;
+}
+.section_record .wrapper_component > .buttons_container span,
+.wrapper_tool .wrapper_component > .buttons_container span,
+.search_group .wrapper_component > .buttons_container span {
   margin-left: 0.5em;
   margin-bottom: 0.25em;
 }
