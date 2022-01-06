@@ -9,7 +9,7 @@
 	import {
 		get_value_string
 	}
-	from '../../component_info/js/render_list_component_json.js'
+	from '../../component_json/js/render_list_component_json.js'
 
 
 
