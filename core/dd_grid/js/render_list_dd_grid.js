@@ -63,8 +63,7 @@ const get_grid_nodes = function(data) {
 		const current_data = data[i]
 
 		const cell_nodes = []
-
-		if (current_data.type) {
+		if (current_data && current_data.type) {
 			const node = get_div_container(current_data)
 
 			// label

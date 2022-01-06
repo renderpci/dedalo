@@ -72,7 +72,6 @@ dd_grid.prototype.build	= async function(autoload=true){
 	const api_response			= await current_data_manager.request({body:self.rqo})
 
 	self.data = api_response.result || null
-
 	// status update
 		self.status = 'builded'
 
