@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_LIST_SEARCH_COMPONENT_CHECK_BOX
+* RENDER_LIST_COMPONENT_CHECK_BOX
 * Manage the components logic and appearance in client side
 */
-export const render_list_search_component_check_box = function() {
+export const render_list_component_check_box = function() {
 
 	return true
-};//end render_list_search_component_check_box
+};//end render_list_component_check_box
 
 
 
@@ -25,7 +25,7 @@ export const render_list_search_component_check_box = function() {
 * Render node for use in list
 * @return DOM node
 */
-render_list_search_component_check_box.prototype.list = async function() {
+render_list_component_check_box.prototype.list = async function() {
 
 	const self = this
 

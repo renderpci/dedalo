@@ -78,8 +78,11 @@ export const get_content_data_edit = function(self) {
 		const widgets			= self.ar_instances
 		const widgets_length	= widgets.length
 		for (let i = 0; i < widgets_length; i++) {
-			const input_element_node = get_input_element_edit(i, widgets[i], self, is_inside_tool)
-			inputs_container.appendChild(input_element_node)
+			get_input_element_edit(i, widgets[i], self, is_inside_tool)
+			.then(function(input_element_node){
+				console.log("/////////// input_element_node:",input_element_node);
+				inputs_container.appendChild(input_element_node)
+			})
 		}
 
 	// content_data
@@ -131,6 +134,7 @@ const get_input_element_edit = async (i, current_widget, self) => {
 
 	await current_widget.build()
 	const widget_node = await current_widget.render()
+	console.log("widget_node:",widget_node);
 
 	// li
 		const li = ui.create_dom_element({

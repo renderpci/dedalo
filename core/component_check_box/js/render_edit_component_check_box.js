@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_COMPONENT_CHECK_BOX
+* RENDER_EDIT_COMPONENT_CHECK_BOX
 * Manage the components logic and appearance in client side
 */
-export const render_component_check_box = function() {
+export const render_edit_component_check_box = function() {
 
 	return true
-};//end render_component_check_box
+};//end render_edit_component_check_box
 
 
 
@@ -25,7 +25,7 @@ export const render_component_check_box = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_check_box.prototype.edit = async function(options) {
+render_edit_component_check_box.prototype.edit = async function(options) {
 
 	const self = this
 

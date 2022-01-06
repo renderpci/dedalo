@@ -13,10 +13,10 @@
 * render_mini_component_iri
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_iri_iri = function() {
+export const render_mini_component_iri = function() {
 
 	return true
-};//end render_mini_component_iri_iri
+};//end render_mini_component_iri
 
 
 
@@ -25,7 +25,7 @@ export const render_mini_component_iri_iri = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_iri_iri.prototype.mini = async function() {
+render_mini_component_iri.prototype.mini = async function() {
 
 	const self = this
 
