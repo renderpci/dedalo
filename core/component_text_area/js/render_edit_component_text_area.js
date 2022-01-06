@@ -264,7 +264,7 @@ const get_content_data_edit = function(self) {
 const get_buttons = (self) => {
 
 	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	// const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
@@ -285,7 +285,15 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
+		// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
 
 
 	return buttons_container

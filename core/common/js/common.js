@@ -211,98 +211,54 @@ common.prototype.render = async function (options={}) {
 
 				case 'content':
 					// replace content_data node in each element dom node
-						// const nodes_length = self.node.length
-						// for (let i = 0; i < nodes_length; i++) {
 
-						// 	const wrapper 				 = self.node[i]
-						// 	const old_content_data_node  = wrapper.querySelector(":scope >.content_data")
-						// 	const new_content_data_node  = (i===0) ? node : node.cloneNode(true)
+					// bool_select_list_body. Check if DOM structure contains list_body (sections and portals in table mode)
+						const wrapper_children		= self.node[0] ? self.node[0].children : [];
+						const bool_select_list_body	= [...wrapper_children].find(el => el.classList.contains('list_body'))
 
-						// 	if (typeof old_content_data_node==="undefined" || !old_content_data_node) {
-						// 		console.warn("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
-						// 	}
-						// 	//console.log("typeof old_content_data_node:",typeof old_content_data_node, old_content_data_node);
+					// replace each instance node
+						const nodes_length = self.node.length
+						for (let i = nodes_length - 1; i >= 0; i--) {
 
-						// 	wrapper.replaceChild(new_content_data_node, old_content_data_node)
-						// }
+							const wrapper = self.node[i]
 
-					const bool_select_list_body = (self.model==='section' && (self.mode==='list' || self.mode==='tm'))
-						|| (self.model==='component_portal' && self.context.view==='table' && self.mode!=='search');
+							// old content_data node
+								const old_content_data_node = await bool_select_list_body
+									? wrapper.querySelector(":scope >.list_body >.content_data")
+									: wrapper.querySelector(":scope >.content_data")
+								// warning if not found
+									if (typeof old_content_data_node==="undefined" || !old_content_data_node) {
+										console.warn("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
+									}
+								// console.log("typeof old_content_data_node:",typeof old_content_data_node, old_content_data_node);
+								// console.log("-----------------old_node:", old_content_data_node, self.model);
 
-					const nodes_length = self.node.length
-					for (let i = nodes_length - 1; i >= 0; i--) {
+							// new content data node (first is new rendered node, others are clones of it)
+								// const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true) (!) Removed 25-03-2020
+								// Note : In some context like dd-tiny, it is necessary to generate a fresh DOM node for each
+								// component node like text_area in a time machine refresh scenario
+								const new_content_data_node = (i===0)
+									? node // use already calculated node
+									: await self[render_mode]({render_level : render_level});
 
-						const wrapper = self.node[i]
+							// replace child from parent wrapper
+								const base_container = await bool_select_list_body
+									? wrapper.querySelector(":scope >.list_body")
+									: wrapper
 
-						// old content_data node
-							const old_content_data_node = bool_select_list_body
-								? wrapper.querySelector(":scope >.list_body >.content_data")
-								: wrapper.querySelector(":scope >.content_data")
+								if (!base_container.contains( old_content_data_node )) {
+									// error. not found case
+									console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
+									console.warn("------------- base_container:", base_container);
+									console.warn("------------- old_content_data_node:", old_content_data_node);
 
-							// const old_content_data_nodes = wrapper.querySelectorAll(":scope >.content_data")
-							// const get_content_data_node = () => {
-							// 	let result = null
-							// 	for (let v = 0; v < old_content_data_nodes.length; v++) {
-							// 		if (v===0) {
-							// 			result = old_content_data_nodes[v]
-							// 		}else{
-							// 			old_content_data_nodes[v].remove()
-							// 			console.warn("!!! Removed additional content_data noded:", v, self.model);
-							// 		}
-							// 	}
-							// 	return result
-							// }
-							// const old_content_data_node = get_content_data_node()
-
-							// warning if not found
-								if (typeof old_content_data_node==="undefined" || !old_content_data_node) {
-									console.warn("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
+									// old_content_data_node.remove()
+									// base_container.appendChild(new_content_data_node)
+								}else{
+									// ok found case
+									base_container.replaceChild(new_content_data_node, old_content_data_node)
 								}
-							//console.log("typeof old_content_data_node:",typeof old_content_data_node, old_content_data_node);
-							//console.log("-----------------old_node:", old_content_data_node, self.model);
-
-						// new content data node (first is new rendered node, others are clones of it)
-							// const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true) (!) Removed 25-03-2020
-							// Note : In some context like dd-tiny, it is necessary to generate a fresh DOM node for each
-							// component node like text_area in a time machine refresh scenario
-							const new_content_data_node = (i===0)
-								? node // use already calculated node
-								: await self[render_mode]({render_level : render_level});
-
-						// replace child from parent wrapper
-							// if (self.model==='section' && (self.mode==='list' || self.mode==='tm') ) {
-							// 	const list_body = wrapper.querySelector(":scope >.list_body")
-							// 	if (!list_body.contains( old_content_data_node )) {
-							// 		console.warn("------------- list_body:", list_body);
-							// 		console.warn("------------- old_content_data_node:", old_content_data_node);
-							// 	}else{
-							// 		list_body.replaceChild(new_content_data_node, old_content_data_node)
-							// 	}
-							// }else{
-
-							// 	if (!wrapper.contains( old_content_data_node )) {
-							// 		console.warn("------------- wrapper:", wrapper);
-							// 		console.warn("------------- old_content_data_node:", old_content_data_node);
-							// 	}else{
-							// 		wrapper.replaceChild(new_content_data_node, old_content_data_node)
-							// 	}
-							// }
-
-							const base_container = bool_select_list_body
-								? wrapper.querySelector(":scope >.list_body")
-								: wrapper
-
-							if (!base_container.contains( old_content_data_node )) {
-								console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
-								console.warn("------------- base_container:", base_container);
-								console.warn("------------- old_content_data_node:", old_content_data_node);
-
-								// old_content_data_node.remove()
-								// base_container.appendChild(new_content_data_node)
-							}else{
-								base_container.replaceChild(new_content_data_node, old_content_data_node)
-							}
-					}//end for (let i = nodes_length - 1; i >= 0; i--)
+						}//end for (let i = nodes_length - 1; i >= 0; i--)
 
 					// return the first edited node
 					return self.node[0]

@@ -215,11 +215,11 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data = function(self) {
 
-	const value				= self.data.value
+	// const value			= self.data.value
 	const datalist			= self.data.datalist
 	const datalist_length	= datalist.length
-	const mode				= self.mode
-	const is_inside_tool	= self.is_inside_tool
+	// const mode			= self.mode
+	// const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -324,9 +324,9 @@ const get_buttons = (self) => {
 */
 const get_input_element = (i, datalist_item, self) => {
 
-	const datalist_value 	 = datalist_item.value
-	const label 		 	 = datalist_item.label
-	const tipo	 		 	 = datalist_item.tipo
+	// const datalist_value	= datalist_item.value
+	const label				= datalist_item.label
+	const tipo				= datalist_item.tipo
 
 	// value
 	const value  		 	 = self.data.value || []
