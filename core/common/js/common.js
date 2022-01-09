@@ -756,7 +756,19 @@ common.prototype.get_columns_map = function(){
 							dd_object.column_id = column.id
 						}
 						break;
-
+					// in the mosaic case add the mosaic: true or false to create the mosaic and the alternative table with all ddo
+					case 'mosaic':
+						columns_map.push(
+							{
+								id		: dd_object.tipo,
+								label	: dd_object.tipo,
+								mosaic 	: dd_object.mosaic
+									? true
+									: false
+							}
+						)
+						dd_object.column_id = dd_object.tipo
+						break;
 					// by default every component will create the own column if the column is not defined, this behavior is used by sections.
 					default:
 						columns_map.push(
