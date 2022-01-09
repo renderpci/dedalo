@@ -1338,4 +1338,51 @@ class dd_core_api {
 
 
 
+
+	/**
+	* GET_RELATION_LIST
+	* @see class.request_query_object.php
+	* @return dd_grid object $result
+	*/
+	public static function get_relation_list($rqo){
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// validate input data
+			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
+				return $response;
+			}
+
+		// ddo_source
+			$ddo_source = $rqo->source;
+
+		// source vars
+			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
+			$section_id		= $ddo_source->section_id ?? null;
+			$tipo			= $ddo_source->tipo ?? null;
+			$modo			= $ddo_source->modo ?? 'edit'; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+			$sqo  			= !empty($rqo->sqo) ? $rqo->sqo : null;
+
+		# RELATION_LIST
+			$relation_list 	= new relation_list($tipo, $section_id, $section_tipo, $modo);
+			$relation_list->set_sqo($sqo);
+
+			$relation_list_json = $relation_list->get_json();
+
+			if ($relation_list_json !== false) {
+				$response->result 	= $relation_list_json;
+				$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+			}else{
+				$response->result 	= false;
+				$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			}
+
+		return $response;
+	}//end get_relation_list
+
+
+
 }//end dd_core_api
