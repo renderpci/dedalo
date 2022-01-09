@@ -49,7 +49,7 @@ render_edit_view_mosaic.render = async function(self, options) {
 		// list_body
 		const alt_list_body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'alt_list_body hide'
+			class_name		: 'alt_list_body display_none'
 		})
 		// close_alt_list_body
 		const close_alt_list_body = ui.create_dom_element({
@@ -58,7 +58,7 @@ render_edit_view_mosaic.render = async function(self, options) {
 			parent 			: alt_list_body
 		})
 		close_alt_list_body.addEventListener('click', function(){
-			alt_list_body.classList.add('hide')
+			alt_list_body.classList.add('display_none')
 		})
 
 		const alt_ar_section_record	= await self.get_ar_instances({mode:'list'})
@@ -207,7 +207,7 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 					const section_record	= ar_section_record[i]
 
 					const section_record_node = await section_record.render()
-					section_record_node.classList.add('hide')
+					section_record_node.classList.add('display_none')
 
 					event_manager.subscribe('mosaic_show_alt_'+section_record_node.id+'_alt', mosaic_show_alt)
 					function mosaic_show_alt(parent_node) {
@@ -219,10 +219,10 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 							if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
 								continue
 							}
-							node.classList.add('hide')
+							node.classList.add('display_none')
 						}
-						alt_list_body.classList.remove('hide')
-						section_record_node.classList.remove('hide')
+						alt_list_body.classList.remove('display_none')
+						section_record_node.classList.remove('display_none')
 					}
 
 					// section record
