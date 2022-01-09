@@ -891,7 +891,7 @@
 			min-height: 0.5rem;
 		}
 
-		&.edit, &.search, &.tm {
+		&.edit, &.search, &.tm, &.edit_in_list {
 			// grey line left and down of wrapper
 			// box-shadow: -1px 1px 0 @color_grey_medium;
 			box-shadow: -1px 1px 0 @color_grey_medium, inset -1px 1px 0 @color_grey_medium;
@@ -1574,6 +1574,8 @@
 		}//end &.list
 
 		&.edit_in_list {
+			box-shadow: none !important;
+
 			>.content_data  {
 				padding: 0 !important;
 			}
