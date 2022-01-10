@@ -149,15 +149,17 @@ const get_content_data = function(self) {
 
 	// relation_list container
 		if (self.caller.context.relation_list) {
-			const relation_list = ui.create_dom_element({
+			const relation_list_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'relation_list',
 				inner_html		: get_label.relaciones || "Relations",
 				parent			: content_data
 			})
-			relation_list.addEventListener('click', async function(){
+			relation_list_node.addEventListener('click', async function(){
 				const relation_list = await self.get_instance('relation_list')
-				relation_list.build()
+				await relation_list.build()
+				const relation_list_wrap = await relation_list.render()
+				relation_list_node.appendChild(relation_list_wrap)
 				
 			})
 		}
