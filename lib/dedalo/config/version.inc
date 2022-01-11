@@ -2620,6 +2620,9 @@
 		Updated jquery-ui to 1.13.0
 		05-01-2022
 		Fixed unique_server_check issue when the value is equal in more than one lang
+		11-01-2021
+		Removed login user notification errors. Could be unsafe on network errors
+
 
 
 	[/HISTORY]
@@ -2651,7 +2654,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '05-01-2022T18:25:23');
+	define('DEDALO_BUILD'	, '11-01-2022T11:29:41');
 
 
 	/*
