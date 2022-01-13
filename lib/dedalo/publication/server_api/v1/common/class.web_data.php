@@ -3207,36 +3207,43 @@ class web_data {
 				$options->get_matching_terms	= false; # boolean
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			if (is_array($options->ar_term_id)) {
-				$ar_term_id = $options->ar_term_id;
-			}else{
-				if(!$ar_term_id = json_decode($options->ar_term_id)) {
-					$ar_term_id = explode(',',$options->ar_term_id);
+			// ar_term_id. Could be an array or a sjon array or a coma separated terms
+				if (is_array($options->ar_term_id)) {
+					$ar_term_id = $options->ar_term_id;
+				}else{
+					if(!$ar_term_id = json_decode($options->ar_term_id)) {
+						$ar_term_id = explode(',',$options->ar_term_id);
+					}
 				}
-			}
+				$ar_term_id = array_map(function($term_id){
+					return trim($term_id);
+				}, (array)$ar_term_id);
+
+			// short vars
+				$table				= $options->table;
+				$lang				= $options->lang;
+				$combine			= $options->combine;
+				$get_matching_terms	= $options->get_matching_terms;
 
 			$ar_thesaurus_term = array();
-			foreach ( (array)$ar_term_id as $term_id ) {
+			foreach( (array)$ar_term_id as $term_id ) {
 
 				# Skip optional restricted terms (defined in config)
-				#if (in_array($term_id, $ar_restricted_terms)) {
-				#	continue;
-				#}
+					#if (in_array($term_id, $ar_restricted_terms)) {
+					#	continue;
+					#}
 
 				# Table optimized version contains only possible table instead all tables (reduce union query time)
-				$thesaurus_table = $options->table;
+				$thesaurus_table = $table;
 				foreach ($table_thesaurus_map as $tkey => $tvalue) {
 					if (strpos($term_id, $tkey)===0) {
 						$thesaurus_table = $tvalue; # break;
 					}
 				}
-				#dump($thesaurus_table, ' thesaurus_table ++ '.to_string($term_id));
-
-				//$search_data->result[$key] = (array)web_data::no_descriptor_to_descriptor( (object)$value_obj );
 
 				$ts_term_options = new stdClass();
 					$ts_term_options->table = $thesaurus_table;
-				$ts_term 			 = ts_term::get_ts_term_instance($term_id, $options->lang, $ts_term_options);
+				$ts_term 			 = ts_term::get_ts_term_instance($term_id, $lang, $ts_term_options);
 				$ts_term->load_data(); // Force load db data
 					#dump($ts_term, ' ts_term ++ '.to_string());
 				$ar_thesaurus_term[] = $ts_term;
@@ -3247,13 +3254,13 @@ class web_data {
 			# Combine results
 			# No is necessary set combine_terms value. var ar_thesaurus_term is edited directly into the method
 			$matching_terms = false;
-			if ($options->combine!==false && count($options->ar_term_id)>1) {
+			if ($combine!==false && count($ar_term_id)>1) {
 				$combine_options = new stdClass();
-					$combine_options->ar_term_id			= $options->ar_term_id;
-					$combine_options->mode					= $options->combine;
+					$combine_options->ar_term_id			= $ar_term_id;
+					$combine_options->mode					= $combine;
 					$combine_options->ar_ts_terms			= $ar_thesaurus_term;
-					$combine_options->get_matching_terms	= $options->get_matching_terms;
-					$combine_options->lang					= $options->lang;
+					$combine_options->get_matching_terms	= $get_matching_terms;
+					$combine_options->lang					= $lang;
 				$combine_result = web_data::combine_terms( $combine_options ); // $ar_thesaurus_term =
 				$matching_terms = $combine_result->matching_terms;
 			}
@@ -3311,6 +3318,8 @@ class web_data {
 							$ar_indexation[$ts_object->term_id][] = $key_compare;	//json_encode($c_locator);
 						}
 					}
+					// remove array indexes
+					$ar_indexation = array_values($ar_indexation);
 					#dump($ar_indexation, ' ar_indexation ++ '.to_string());
 
 					# Resolve simple intersections
