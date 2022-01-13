@@ -2287,8 +2287,8 @@ class web_data {
 				$options->video_url				= null; # Like 'http://mydomain.org/dedalo/media/av/404/'
 				$options->margin_seconds_in		= null;
 				$options->margin_seconds_out	= null;
-				$options->margin_chars_in		= 5;	# default 100
-				$options->margin_chars_out		= 100;	# default 100
+				$options->margin_chars_in		= 0; // 5;	# default 100
+				$options->margin_chars_out		= 0; // 100;	# default 100
 				$options->fragment_terms_inside	= false; # If true, calculate terms indexed inide this fragment
 				$options->indexation_terms		= false; # If true, calculate all terms used in this indexation
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
