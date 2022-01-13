@@ -2620,8 +2620,12 @@
 		Updated jquery-ui to 1.13.0
 		05-01-2022
 		Fixed unique_server_check issue when the value is equal in more than one lang
-		11-01-2021
+		11-01-2022
 		Removed login user notification errors. Could be unsafe on network errors
+		13-01-2022
+		Fixed issue with web_data::build_fragment margin chars in transcriptions with long pauses between time codes. Set to default zero value
+		Fixed web_data::get_thesaurus_term error on calculate combined terms
+		Revert jquery ui from 1.13.0 to 1.11.4 because drag and drop compatibility issues
 
 
 
@@ -2654,7 +2658,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-01-2022T11:29:41');
+	define('DEDALO_BUILD'	, '13-01-2022T09:58:22');
 
 
 	/*
