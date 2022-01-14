@@ -69,7 +69,6 @@ export const component_text_area = function(){
 	component_text_area.prototype.list				= render_list_component_text_area.prototype.list
 	component_text_area.prototype.edit				= render_edit_component_text_area.prototype.edit
 	component_text_area.prototype.edit_in_list		= render_edit_component_text_area.prototype.edit
-	component_text_area.prototype.tm				= render_edit_component_text_area.prototype.list
 	component_text_area.prototype.search			= render_search_component_text_area.prototype.search
 	component_text_area.prototype.change_mode		= component_common.prototype.change_mode
 
