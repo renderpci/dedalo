@@ -152,7 +152,7 @@ const get_content_data = function(self) {
 		}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
+		const content_data = ui.component.build_content_data(self, {button_close: null})
 			  content_data.classList.add("nowrap")
 			  content_data.appendChild(fragment)
 

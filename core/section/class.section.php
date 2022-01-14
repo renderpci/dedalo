@@ -2697,6 +2697,29 @@ class section extends common {
 
 
 
+	/**
+	* GET_RELATION_LIST
+	* get the relation_list tipo for the section
+	* @return tipo $relation_list_tipo
+	*/
+	public function get_relation_list() {
+
+		$section_tipo = $this->tipo;
+		$relation_list_tipo	= section::get_ar_childrens_by_model($section_tipo, ['relation_list']) ?? null;
+
+		$permissions = isset($relation_list_tipo)
+			? common::get_permissions( $section_tipo, $relation_list_tipo)
+			: null;
+
+		if(isset($permissions) && $permissions >0 ){
+			return $relation_list_tipo;
+		}else{
+			return null;
+		}
+	}//end get_relation_list
+
+
+
 	### RELATIONS #####################################################################################
 
 
@@ -3804,6 +3827,28 @@ class section extends common {
 		return $data;
 	}//end get_tm_ar_subdata
 
+
+
+	/**
+	* GET_TIME_MACHINE_LIST
+	* get the time machine list tipo for the section
+	* @return tipo $relation_list_tipo
+	*/
+	public function get_time_machine_list() {
+
+		$section_tipo = $this->tipo;
+		$time_machine_list_tipo	= section::get_ar_childrens_by_model($section_tipo, ['time_machine_list']) ?? null;
+
+		$permissions = isset($time_machine_list_tipo)
+			? common::get_permissions( $section_tipo, $time_machine_list_tipo)
+			: null;
+
+		if(isset($permissions) && $permissions >0 ){
+			return $time_machine_list_tipo;
+		}else{
+			return null;
+		}
+	}//end get_time_machine_list
 
 
 	/**

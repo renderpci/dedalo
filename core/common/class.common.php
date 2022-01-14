@@ -1447,7 +1447,7 @@ abstract class common {
 				? ($this->build_request_config() ?? [])
 				:  null;
 
-		// columns_map (moved to client JS)
+		// columns_map (the final calculation was moved to common JS)
 			$columns_map = !empty($request_config)
 				? ($this->get_columns_map() ?? [])
 				: null;
@@ -1496,6 +1496,12 @@ abstract class common {
 				if($model==='component_portal' || strpos($model, 'component_relation_')===0 || $model==='component_semantic_node'){
 					$dd_object->view = $this->get_view();
 				}
+			// relation_list // time_machine_list
+				if($model==='section'){
+					$dd_object->relation_list		= $this->get_relation_list();
+					$dd_object->time_machine_list	= $this->get_time_machine_list();
+				}
+
 
 
 		// cache. fix context dd_object
