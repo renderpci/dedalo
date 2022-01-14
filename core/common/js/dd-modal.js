@@ -20,11 +20,12 @@ class DDModal extends HTMLElement {
 				width: 100%;
 				height: 100%;
 				overflow: auto;
+				overflow-x: hidden;
 				background-color: rgba(0,0,0,0.4);
 				font-size: inherit;
 			}
 			.modal_show {
-				display: table;
+				display: block;
 			}
 
 			/* Modal Content */
@@ -79,6 +80,9 @@ class DDModal extends HTMLElement {
 				color: white;
 				font-weight: normal;
 				font-size: 1.4em;*/
+				position: sticky;
+				top: 0;
+				z-index: 1;
 			}
 			.modal-body {
 				padding: 2px 16px;
@@ -93,17 +97,23 @@ class DDModal extends HTMLElement {
 				/*
 				width: 99.79%;
 				min-height: 99.8%;
-				*/
+
 				width: calc(100vw - 16px);
 				min-height: 100vh;
+				*/
+				width: 97vw;
+				height: 97vh;
+				top: 1.5vh;
+				overflow: auto;
 			}
 			.modal_big .modal-body {
 				/*
 				height: 100%;
 				min-height: 90vh;
-				*/
+
 				width: calc(100vw - 32px);
 				min-height: 100vh;
+				*/
 			}
 		</style>
 		<div class="modal">

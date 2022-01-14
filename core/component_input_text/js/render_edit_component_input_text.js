@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global */
 /*eslint no-undef: "error"*/
 
 
@@ -25,15 +25,15 @@ export const render_edit_component_input_text = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_input_text.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_input_text.prototype.edit = async function(options) {
 
 	const self = this
 
+	// options
+		const render_level = options.render_level || 'full'
+
 	// fix non value scenarios
 		self.data.value = (self.data.value===null || self.data.value.length<1) ? [null] : self.data.value
-
-	// render_level
-		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -61,6 +61,7 @@ render_edit_component_input_text.prototype.edit = async function(options={render
 
 /**
 * ADD_EVENTS
+* Add delegate events to the wrapper
 * @return bool
 */
 const add_events = function(self, wrapper) {

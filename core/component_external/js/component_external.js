@@ -67,7 +67,6 @@ export const component_external = function(){
 	component_external.prototype.mini				= render_mini_component_external.prototype.mini
 	component_external.prototype.edit				= render_mini_component_external.prototype.mini
 	// component_external.prototype.edit_in_list	= render_edit_component_external.prototype.edit
-	// component_external.prototype.tm				= render_edit_component_external.prototype.edit
 
 	// component_external.prototype.change_mode		= component_common.prototype.change_mode
 

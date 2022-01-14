@@ -61,7 +61,6 @@ export const component_filter_records = function(){
 	// render
 	component_filter_records.prototype.mini					= render_mini_component_filter_records.prototype.mini
 	component_filter_records.prototype.list					= render_list_component_filter_records.prototype.list
-	component_filter_records.prototype.tm					= render_list_component_filter_records.prototype.list
 	component_filter_records.prototype.edit					= render_edit_component_filter_records.prototype.edit
 	component_filter_records.prototype.edit_in_list			= render_edit_component_filter_records.prototype.edit
 	component_filter_records.prototype.search				= render_search_component_filter_records.prototype.search

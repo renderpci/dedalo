@@ -62,7 +62,6 @@ export const component_info = function(){
 	// render
 	component_info.prototype.mini					= render_mini_component_info.prototype.mini
 	component_info.prototype.list					= render_list_component_info.prototype.list
-	component_info.prototype.tm						= render_list_component_info.prototype.list
 	component_info.prototype.edit					= render_edit_component_info.prototype.edit
 	// component_info.prototype.edit_in_list		= render_component_info.prototype.edit
 	component_info.prototype.search					= render_edit_component_info.prototype.edit

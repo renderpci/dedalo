@@ -54,7 +54,6 @@ export const paginator = function() {
 	paginator.prototype.edit			= render_paginator.prototype.edit
 	paginator.prototype.edit_in_list	= render_paginator.prototype.edit
 	paginator.prototype.list			= render_paginator.prototype.edit // same as edit
-	paginator.prototype.tm				= render_paginator.prototype.edit
 	paginator.prototype.render			= common.prototype.render
 	paginator.prototype.refresh			= common.prototype.refresh
 
