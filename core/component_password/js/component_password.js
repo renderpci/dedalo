@@ -56,7 +56,6 @@ export const component_password = function(){
 	// render
 	component_password.prototype.mini				= render_mini_component_password.prototype.mini
 	component_password.prototype.list				= render_list_component_password.prototype.list
-	component_password.prototype.tm					= render_list_component_password.prototype.list
 	component_password.prototype.edit				= render_edit_component_password.prototype.edit
 	component_password.prototype.edit_in_list		= render_edit_component_password.prototype.edit
 

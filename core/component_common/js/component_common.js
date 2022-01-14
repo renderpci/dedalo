@@ -228,80 +228,80 @@ component_common.prototype.build = async function(autoload=false){
 * @param object value (locator)
 * @return bool
 */
-component_common.prototype.build_OLD = async function(autoload=false){
-	const t0 = performance.now()
+	// component_common.prototype.build_OLD = async function(autoload=false){
+	// 	const t0 = performance.now()
 
-	const self = this
+	// 	const self = this
 
-	// status update
-		self.status = 'building'
+	// 	// status update
+	// 		self.status = 'building'
 
-	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.datum) self.datum = {data:[]}
+	// 	// self.datum. On building, if datum is not created, creation is needed
+	// 		if (!self.datum) self.datum = {data:[]}
 
-	// load data on auto-load true
-		if (autoload===true) {
+	// 	// load data on auto-load true
+	// 		if (autoload===true) {
 
-			// console.log("++++ self.rqo.show:", clone(self.rqo.show));
-			// console.log("self.context:",self.context);
-			// alert("Loading component " + self.model + " - " + self.tipo);
+	// 			// console.log("++++ self.rqo.show:", clone(self.rqo.show));
+	// 			// console.log("self.context:",self.context);
+	// 			// alert("Loading component " + self.model + " - " + self.tipo);
 
-			// set rqo if not exists
-				// if(!self.rqo.show){
-				// 	const request_config = self.context.request_config || null
-				// 	self.rqo.show = self.build_rqo('show', request_config, 'get_data')
-				// }
-				// const request_config	= self.context.request_config || null
-				const rqo = {
-					source	: create_source(self, 'get_data'),
-					action	: 'read'
-				}
+	// 			// set rqo if not exists
+	// 				// if(!self.rqo.show){
+	// 				// 	const request_config = self.context.request_config || null
+	// 				// 	self.rqo.show = self.build_rqo('show', request_config, 'get_data')
+	// 				// }
+	// 				// const request_config	= self.context.request_config || null
+	// 				const rqo = {
+	// 					source	: create_source(self, 'get_data'),
+	// 					action	: 'read'
+	// 				}
 
-			// load data
-				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body : rqo})
+	// 			// load data
+	// 				const current_data_manager	= new data_manager()
+	// 				const api_response			= await current_data_manager.request({body : rqo})
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					console.log(`[component_common.build] + api_response (${Math.round(performance.now()-t0)} ms) :`, api_response);
-				}
+	// 			// debug
+	// 				if(SHOW_DEBUG===true) {
+	// 					console.log(`[component_common.build] + api_response (${Math.round(performance.now()-t0)} ms) :`, api_response);
+	// 				}
 
-			// set context and data to current instance
-				await self.update_datum(api_response.result.data)
-				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+	// 			// set context and data to current instance
+	// 				await self.update_datum(api_response.result.data)
+	// 				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 
-			// rqo. build again rqo with updated request_config if exists
-				if (self.context.request_config) {
-					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
-				}
-		}
+	// 			// rqo. build again rqo with updated request_config if exists
+	// 				if (self.context.request_config) {
+	// 					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
+	// 				}
+	// 		}
 
-	// update instance properties from context
-		set_context_vars(self, self.context)
+	// 	// update instance properties from context
+	// 		set_context_vars(self, self.context)
 
-	// permissions. calculate and set (used by section records later)
-		// self.permissions = self.context.permissions
+	// 	// permissions. calculate and set (used by section records later)
+	// 		// self.permissions = self.context.permissions
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
-		}
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			// console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
+	// 		}
 
-	// build_custom optional
-		// if (typeof self.build_custom==='function') {
-		// 	await self.build_custom()
-		// }
+	// 	// build_custom optional
+	// 		// if (typeof self.build_custom==='function') {
+	// 		// 	await self.build_custom()
+	// 		// }
 
-	// is_inside_tool
-		self.is_inside_tool = ui.inside_tool(self)
+	// 	// is_inside_tool
+	// 		self.is_inside_tool = ui.inside_tool(self)
 
-	// status update
-		self.status = 'builded'
+	// 	// status update
+	// 		self.status = 'builded'
 
-	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
+	// 	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
 
-	return true
-};//end component_common.prototype.build
+	// 	return true
+	// };//end component_common.prototype.build
 
 
 

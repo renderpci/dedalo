@@ -78,7 +78,6 @@ export const component_semantic_node = component_portal
 // 	component_semantic_node.prototype.mini				= render_mini_component_semantic_node.prototype.mini
 // 	component_semantic_node.prototype.edit				= render_edit_component_semantic_node.prototype.edit
 // 	component_semantic_node.prototype.edit_in_list		= render_edit_component_semantic_node.prototype.edit
-// 	component_semantic_node.prototype.tm				= render_edit_component_semantic_node.prototype.edit
 
 // 	component_semantic_node.prototype.change_mode		= component_common.prototype.change_mode
 

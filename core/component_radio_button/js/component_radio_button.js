@@ -58,7 +58,6 @@ export const component_radio_button = function(){
 	// render
 	component_radio_button.prototype.mini				= render_mini_component_radio_button.prototype.mini
 	component_radio_button.prototype.list				= render_list_component_radio_button.prototype.list
-	component_radio_button.prototype.tm					= render_list_component_radio_button.prototype.list
 	component_radio_button.prototype.edit				= render_edit_component_radio_button.prototype.edit
 	component_radio_button.prototype.edit_in_list		= render_edit_component_radio_button.prototype.edit
 	component_radio_button.prototype.search				= render_search_component_radio_button.prototype.search

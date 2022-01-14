@@ -59,7 +59,6 @@ export const component_security_access = function(){
 	// render
 	component_security_access.prototype.mini				= render_mini_component_security_access.prototype.mini
 	component_security_access.prototype.list				= render_list_component_security_access.prototype.list
-	component_security_access.prototype.tm					= render_list_component_security_access.prototype.list
 	component_security_access.prototype.edit				= render_edit_component_security_access.prototype.edit
 	component_security_access.prototype.edit_in_list		= render_edit_component_security_access.prototype.edit
 	component_security_access.prototype.search				= render_search_component_security_access.prototype.search

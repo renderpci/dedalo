@@ -62,7 +62,6 @@ export const component_geolocation = function(){
 	// render
 	component_geolocation.prototype.mini				= render_mini_component_geolocation.prototype.mini
 	component_geolocation.prototype.list				= render_list_component_geolocation.prototype.list
-	component_geolocation.prototype.tm					= render_list_component_geolocation.prototype.list
 	component_geolocation.prototype.edit				= render_edit_component_geolocation.prototype.edit
 	component_geolocation.prototype.edit_in_list		= render_edit_component_geolocation.prototype.edit
 	component_geolocation.prototype.search				= render_search_component_geolocation.prototype.search

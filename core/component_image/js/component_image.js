@@ -65,7 +65,6 @@ export const component_image = function(){
 	// render
 	component_image.prototype.mini				= render_mini_component_image.prototype.mini
 	component_image.prototype.list				= render_list_component_image.prototype.list
-	component_image.prototype.tm				= render_list_component_image.prototype.list
 	component_image.prototype.edit				= render_edit_component_image.prototype.edit
 	component_image.prototype.search			= render_edit_component_image.prototype.search
 

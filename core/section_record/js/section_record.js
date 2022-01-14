@@ -68,7 +68,6 @@ export const section_record = function() {
 	section_record.prototype.destroy	= common.prototype.destroy
 	section_record.prototype.render		= common.prototype.render
 	section_record.prototype.list		= render_list_section_record.prototype.list
-	section_record.prototype.tm			= render_list_section_record.prototype.list
 	section_record.prototype.search		= render_list_section_record.prototype.list
 	section_record.prototype.edit		= render_edit_section_record.prototype.edit
 	section_record.prototype.mini		= render_mini_section_record.prototype.mini
@@ -168,7 +167,7 @@ const add_instance = async (self, current_context, section_id, current_data, col
 		if (self.matrix_id) {
 			instance_options.matrix_id = self.matrix_id
 		}
-	//column id
+	// column id
 		if(column_id){
 			instance_options.column_id = column_id
 		}
@@ -282,11 +281,11 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		}
 
 	// short vars
-		const mode			= self.mode
-		const tipo			= self.tipo
+		// const mode		= self.mode
+		// const tipo		= self.tipo
 		const section_tipo	= self.section_tipo
 		const section_id	= self.section_id
-		const matrix_id		= self.matrix_id // time machine 'tm' mode only
+		const matrix_id		= self.matrix_id // time machine case only
 		const columns_map	= await self.columns_map || []
 
 
@@ -351,7 +350,6 @@ section_record.prototype.get_ar_columns_instances = async function(){
 								if(current_ddo.fixed_mode){
 									new_context.fixed_mode = current_ddo.fixed_mode
 								}
-
 
 							// instance create and set
 								const current_instance = await add_instance(self, new_context, section_id, current_data, current_colum.id)
@@ -580,6 +578,23 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 
 
 /**
+* GET_COMPONENT_INFO
+* @return object component_data
+*/
+section_record.prototype.get_component_info = function(){
+
+	const self = this
+
+	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
+										&& item.section_id===self.section_id
+										&& item.section_tipo===self.section_tipo)
+
+	return component_info
+};//end get_component_info
+
+
+
+/**
 * GET_COMPONENT_RELATION_DATA
 * Don't used now (!)
 * @return object component_data
@@ -636,120 +651,102 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 
 
 /**
-* GET_COMPONENT_INFO
-* @return object component_data
-*/
-section_record.prototype.get_component_info = function(){
-
-	const self = this
-
-	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
-										&& item.section_id===self.section_id
-										&& item.section_tipo===self.section_tipo)
-
-	return component_info
-};//end get_component_info
-
-
-
-/**
 * GET_COMPONENT_CONTEXT
 * @return object context
-*//*
-section_record.prototype.get_component_context = function(component_tipo) {
-
-	const self = this
-
-	const context = self.context.filter(item => item.tipo===component_tipo && item.section_tipo===self.section_tipo)[0]
-
-	return context
-};//end get_component_context
 */
+	// section_record.prototype.get_component_context = function(component_tipo) {
+
+	// 	const self = this
+
+	// 	const context = self.context.filter(item => item.tipo===component_tipo && item.section_tipo===self.section_tipo)[0]
+
+	// 	return context
+	// };//end get_component_context
 
 
 
 /**
 * BUILD
 * @return promise
-*//*
-section_record.prototype.build = function() {
-
-	const self = this
-
-	const components = self.load_items()
-	//const groupers 	 = self.load_groupers()
-
-	return Promise.all([components]).then(function(){
-		self.builded = true
-	})
-};//end build
 */
+	// section_record.prototype.build = function() {
+
+	// 	const self = this
+
+	// 	const components = self.load_items()
+	// 	//const groupers 	 = self.load_groupers()
+
+	// 	return Promise.all([components]).then(function(){
+	// 		self.builded = true
+	// 	})
+	// };//end build
+
 
 
 
 /**
 * LOAD_items
 * @return promise load_items_promise
-*//*
-section_record.prototype.load_items = function() {
-
-	const self = this
-
-	const context 			= self.context
-	const context_lenght 	= context.length
-	const data 				= self.data
-	const section_tipo 		= self.section_tipo
-	const section_id 		= self.section_id
-
-	const load_items_promise = new Promise(function(resolve){
-
-		const instances_promises = []
-
-		// for every item in the context
-		for (let j = 0; j < context_lenght; j++) {
-
-			const current_item = context[j]
-
-			// remove the section of the create item instances (the section is instanciated, it's the current_section)
-				if(current_item.tipo===section_tipo) continue;
-
-			// item_data . Select the data for the current item. if current item is a grouper, it don't has data and will need the childrens for instance it.
-				let item_data = (current_item.type==='grouper') ? {} : data.filter(item => item.tipo===current_item.tipo && item.section_id===section_id)[0]
-
-				// undefined case. If the current item don't has data will be instanciated with the current section_id
-				if (typeof(item_data)==='undefined') {
-					item_data = {
-						section_id: section_id,
-						value: []
-					}
-				}
-
-			// build instance with the options
-				const item_options = {
-					model 			: current_item.model,
-					data			: item_data,
-					context 		: current_item,
-					section_tipo	: current_item.section_tipo,
-					section_id		: section_id,
-					tipo 			: current_item.tipo,
-					parent			: current_item.parent,
-					mode			: current_item.mode,
-					lang			: current_item.lang,
-					section_lang 	: self.lang,
-				}
-				const current_instance = instances.get_instance(item_options)
-
-			// add the instance to the array of instances
-				instances_promises.push(current_instance)
-		}
-
-		return Promise.all(instances_promises).then(function(){
-			resolve(true)
-		})
-	})
-
-
-	return load_items_promise
-};//end load_items
 */
+	// section_record.prototype.load_items = function() {
+
+	// 	const self = this
+
+	// 	const context 			= self.context
+	// 	const context_lenght 	= context.length
+	// 	const data 				= self.data
+	// 	const section_tipo 		= self.section_tipo
+	// 	const section_id 		= self.section_id
+
+	// 	const load_items_promise = new Promise(function(resolve){
+
+	// 		const instances_promises = []
+
+	// 		// for every item in the context
+	// 		for (let j = 0; j < context_lenght; j++) {
+
+	// 			const current_item = context[j]
+
+	// 			// remove the section of the create item instances (the section is instanciated, it's the current_section)
+	// 				if(current_item.tipo===section_tipo) continue;
+
+	// 			// item_data . Select the data for the current item. if current item is a grouper, it don't has data and will need the childrens for instance it.
+	// 				let item_data = (current_item.type==='grouper') ? {} : data.filter(item => item.tipo===current_item.tipo && item.section_id===section_id)[0]
+
+	// 				// undefined case. If the current item don't has data will be instanciated with the current section_id
+	// 				if (typeof(item_data)==='undefined') {
+	// 					item_data = {
+	// 						section_id: section_id,
+	// 						value: []
+	// 					}
+	// 				}
+
+	// 			// build instance with the options
+	// 				const item_options = {
+	// 					model 			: current_item.model,
+	// 					data			: item_data,
+	// 					context 		: current_item,
+	// 					section_tipo	: current_item.section_tipo,
+	// 					section_id		: section_id,
+	// 					tipo 			: current_item.tipo,
+	// 					parent			: current_item.parent,
+	// 					mode			: current_item.mode,
+	// 					lang			: current_item.lang,
+	// 					section_lang 	: self.lang,
+	// 				}
+	// 				const current_instance = instances.get_instance(item_options)
+
+	// 			// add the instance to the array of instances
+	// 				instances_promises.push(current_instance)
+	// 		}
+
+	// 		return Promise.all(instances_promises).then(function(){
+	// 			resolve(true)
+	// 		})
+	// 	})
+
+
+	// 	return load_items_promise
+	// };//end load_items
+
 

@@ -65,7 +65,6 @@ export const component_date = function(){
 	// render
 	component_date.prototype.mini				= render_mini_component_date.prototype.mini
 	component_date.prototype.list				= render_list_component_date.prototype.list
-	component_date.prototype.tm					= render_list_component_date.prototype.list
 	component_date.prototype.edit				= render_edit_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_edit_component_date.prototype.edit
 	component_date.prototype.search				= render_search_component_date.prototype.search
