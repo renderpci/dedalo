@@ -3429,7 +3429,7 @@ dd-modal .header.label,
 dd-modal .header > div.label,
 dd-modal .header > span.label {
   font-size: 1.4em;
-  line-height: 1.4em;
+  line-height: 1.5rem;
   padding-right: 0.5em;
 }
 dd-modal .header_custom {
