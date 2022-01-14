@@ -137,6 +137,43 @@ const get_content_data = function(self) {
 				event_manager.publish('new_section_' + self.caller.id)
 			})
 
+	// indexation_list container
+		if (self.caller.context.indexation_list) {
+			const indexation_list = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'indexation_list',
+				inner_html		: get_label.indexaciones || "Indexations",
+				parent			: content_data
+			})
+		}
+
+	// relation_list container
+		if (self.caller.context.relation_list) {
+			const relation_list = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'relation_list',
+				inner_html		: get_label.relaciones || "Relations",
+				parent			: content_data
+			})
+			relation_list.addEventListener('click', async function(){
+				const relation_list = await self.get_instance('relation_list')
+				relation_list.build()
+				
+			})
+		}
+
+
+	// project container
+		if (self.caller.context.time_machine_list) {
+			const time_machine_list = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'time_machine_list',
+				inner_html		: get_label.latest_changes || "Latest changes",
+				parent			: content_data
+			})
+		}
+
+
 	// project container
 		const project_container = ui.create_dom_element({
 			element_type	: 'div',

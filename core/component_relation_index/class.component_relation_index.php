@@ -183,7 +183,7 @@ class component_relation_index extends component_relation_common {
 	* Used by tool_indexation to get list of terms with index relation to current tag
 	* @return array $ar_indexations
 	*/
-	public static function get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang=DEDALO_DATA_LANG, $type=DEDALO_RELATION_TYPE_INDEX_TIPO) {
+	public static function get_indexations_from_tag_DES($component_tipo, $section_tipo, $section_id, $tag_id, $lang=DEDALO_DATA_LANG, $type=DEDALO_RELATION_TYPE_INDEX_TIPO) {
 		
 		# Search relation index in hierarchy tables		
 		$options = new stdClass();
@@ -233,7 +233,7 @@ class component_relation_index extends component_relation_common {
 	* GET_INDEXATIONS_SEARCH
 	* @return resource $result
 	*/
-	public static function get_indexations_search( $request_options ) {
+	public static function get_indexations_search_DES( $request_options ) {
 	
 		$options = new stdClass();
 			$options->fields = new stdClass();
@@ -274,7 +274,7 @@ class component_relation_index extends component_relation_common {
 	* Used to locate the correct locator inside relations container returned for SQL search
 	* @return objet $current_locator | null
 	*/
-	public static function get_locator_from_ar_relations($relations, $section_tipo, $section_id, $type, $tag_id=false) {
+	public static function get_locator_from_ar_relations_DES($relations, $section_tipo, $section_id, $type, $tag_id=false) {
 
 		// Locator to find
 			$locator = new locator();

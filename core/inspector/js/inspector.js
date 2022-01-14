@@ -7,6 +7,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {render_inspector} from './render_inspector.js'
+	import * as instances from '../../common/js/instances.js'
 
 
 
@@ -74,3 +75,21 @@ inspector.prototype.build = async function(){
 
 	return true
 };//end build
+
+
+inspector.prototype.get_instance = function(model){
+
+	const self = this
+
+	const instance_options = {
+			model 			: model,
+			tipo 			: self.caller.context[model],
+			section_tipo 	: self.section_tipo,
+			section_id		: self.section_id,
+			mode			: self.mode
+		}
+
+	const instance = instances.get_instance(instance_options)
+
+	return instance
+}

@@ -109,7 +109,7 @@ class sections extends common {
 		// if the sqo has related mode, get the section_tipo from data, 
 		// It's not possible know the sections because data is a list of references to the source.
 		// In some cases that sqo has specific sections because the search will be filtered only for those sections. 
-		// in these case we get the section_tipo from the sql self definition
+		// in these case we get the section_tipo from the SQL self definition
 		if(isset($this->search_query_object->mode) && $this->search_query_object->mode==='related'){
 			
 			// ar_section_tipo. If is defined, we done. Else, case 'all' get data to resolve used sections

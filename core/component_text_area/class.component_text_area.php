@@ -1672,7 +1672,7 @@ class component_text_area extends component_common {
 	* looking for index in tags inside
 	* @return array $ar_descriptors
 	*/
-	public static function get_descriptors( $raw_text, $section_tipo, $section_id, $component_tipo, $type='index' ) {
+	public static function get_descriptors_DES( $raw_text, $section_tipo, $section_id, $component_tipo, $type='index' ) {
 
 		$ar_descriptors = array();
 
