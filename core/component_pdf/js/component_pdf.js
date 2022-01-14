@@ -62,7 +62,6 @@ export const component_pdf = function(){
 	// render
 	component_pdf.prototype.mini				= render_mini_component_pdf.prototype.mini
 	component_pdf.prototype.list				= render_list_component_pdf.prototype.list
-	component_pdf.prototype.tm					= render_list_component_pdf.prototype.list
 	component_pdf.prototype.edit				= render_edit_component_pdf.prototype.edit
 
 

@@ -520,6 +520,7 @@ section.prototype.get_ar_instances = async function(){
 				if (self.mode==='tm') {
 					instance_options.matrix_id			= value[i].matrix_id
 					instance_options.modification_date	= value[i].timestamp
+					instance_options.mode				= 'list' // section record and components will be created in list mode (!)
 					// instance_options.state			= value[i].state
 				}
 
