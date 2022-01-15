@@ -73,6 +73,9 @@ tool_indexation.prototype.init = async function(options) {
 
 	const self = this
 
+	// call the generic common tool init
+		const common_init = tool_common.prototype.init.call(this, options);
+
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.lang	= options.lang // from page_globals.dedalo_data_lang
 		self.langs	= page_globals.dedalo_projects_default_langs
@@ -165,9 +168,6 @@ tool_indexation.prototype.init = async function(options) {
 				return true
 			}//end fn_click_tag_index
 
-
-	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
 
 	return common_init
 };//end init

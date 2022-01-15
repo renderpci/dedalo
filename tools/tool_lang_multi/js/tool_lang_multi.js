@@ -56,6 +56,9 @@ tool_lang_multi.prototype.init = async function(options) {
 
 	const self = this
 
+	// call the generic common tool init
+		const common_init = tool_common.prototype.init.call(this, options);
+
 	// langs
 		const lang	= options.lang || page_globals.dedalo_data_lang
 		const langs	= clone(page_globals.dedalo_projects_default_langs)
@@ -70,10 +73,6 @@ tool_lang_multi.prototype.init = async function(options) {
 		self.langs			= langs // page_globals.dedalo_projects_default_langs
 		self.source_lang	= options.caller ? options.caller.lang : lang
 		self.target_lang	= null
-
-
-	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
 
 
 	return common_init

@@ -58,8 +58,12 @@ export const tool_time_machine = function () {
 * INIT
 */
 tool_time_machine.prototype.init = async function(options) {
+	// console.log("tool_time_machine INIT options:",options);
 	
 	const self = this
+
+	// call the generic common tool init
+		const common_init = tool_common.prototype.init.call(this, options);
 
 	// fix dedalo_projects_langs
 		self.langs = page_globals.dedalo_projects_default_langs
@@ -75,12 +79,9 @@ tool_time_machine.prototype.init = async function(options) {
 			add_component(self, self.preview_component_container, self.lang, e.date, load_mode, matrix_id)
 			// fix selected matrix_id
 			self.selected_matrix_id = matrix_id
-			// show Appy button
+			// show Apply button
 			self.button_apply.classList.remove('hide')
 		}//end fn_tm_edit_record
-
-	// call the generic commom tool init
-		const common_init = tool_common.prototype.init.call(this, options);
 
 
 	return common_init
@@ -340,13 +341,13 @@ tool_time_machine.prototype.apply_value = function() {
 			.then(function(response){
 				dd_console("-> apply_value API response:",'DEBUG',response);
 
-				// close tool modal
-					self.modal_container.close()
-
 				// reload source component on finish close
 					if (self.caller) {
 						self.caller.refresh()
 					}
+
+				// close tool modal (implies destroy current tool instance)
+					self.modal_container.close()
 
 				resolve(response)
 			})
