@@ -82,12 +82,12 @@ class DDModal extends HTMLElement {
 				font-size: 1.4em;*/
 				position: sticky;
 				top: 0;
-				z-index: 1;
+				z-index: 2;
 			}
 			.modal-body {
-				padding: 2px 16px;
+				/*padding: 2px 16px;
 				margin: 20px 2px;
-				overflow: auto;
+				overflow: auto;*/
 			}
 			.modal_big {
 				padding: 0;
