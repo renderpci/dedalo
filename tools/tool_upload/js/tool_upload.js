@@ -54,11 +54,11 @@ tool_upload.prototype.init = async function(options) {
 
 	const self = this
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url = DEDALO_TOOLS_URL + "/tool_upload/trigger.tool_upload.php"
-
 	// call the generic common tool init
 		const common_init = tool_common.prototype.init.call(this, options);
+
+	// set the self specific vars not defined by the generic init (in tool_common)
+		self.trigger_url = DEDALO_TOOLS_URL + "/tool_upload/trigger.tool_upload.php"
 
 
 	return common_init
