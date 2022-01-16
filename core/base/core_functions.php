@@ -187,8 +187,6 @@ function debug_log($info, $level=logger::DEBUG) {
 		return false;
 	}
 
-	$msg = 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
-
 	if ($level<11) {
 		// $msg = $msg . PHP_EOL . str_repeat("!", 10);
 
@@ -221,8 +219,12 @@ function debug_log($info, $level=logger::DEBUG) {
 				'bg_cyan'			=> "\033[46m%s\033[0m",
 				'bg_white'		=> "\033[47m%s\033[0m"
 		);
-		$msg = sprintf($colorFormats['bg_yellow'], $msg);
+		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).'] '.PHP_EOL. $info;
+		$msg			= sprintf($colorFormats['bg_yellow'], $base_msg);
+	}else{
+		$msg = 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
 	}
+
 	error_log($msg);
 
 	// $GLOBALS['log_messages'][] = $msg;
@@ -279,14 +281,14 @@ function exec_time($start, $method=NULL, $result=NULL) {
 # EXEC_TIME_UNIT
 function exec_time_unit($start, $unit='ms', $round=3) {
 
-	$end = start_time();
-	$total = $end - $start;
-	if($unit==='ms') {
-		$total = $total*1000;
-	}else if($unit==='sec' || $unit==='secs') {
-		$total = $total;
-	}
-	return round($total,3);
+	$end		= start_time();
+	$total	= $end - $start;
+	$total	= ($unit==='ms')
+		? ($total*1000)
+		: $total;
+
+	// return round($total,3);
+	return number_format($total, 3);
 }//end exec_time_unit
 
 

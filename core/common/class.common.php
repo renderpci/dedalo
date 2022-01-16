@@ -1312,7 +1312,7 @@ abstract class common {
 
 		// cache structure_context using ddo_key
 			if (isset(self::$structure_context_cache[$ddo_key])) {
-				error_log("------------------------- get_structure_context CACHED ------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
+				error_log("------------------- get_structure_context CACHED - $this->tipo \t---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
 				return self::$structure_context_cache[$ddo_key];
 			}
 
@@ -1515,7 +1515,7 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
-				error_log("------------------------- get_structure_context ------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
+				error_log("------------------- get_structure_context -------- $this->tipo \t---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
 			}
 
 
@@ -1823,7 +1823,7 @@ abstract class common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				error_log("------------------------- get_subdatum ----------------------- $this->tipo ---- ". exec_time_unit($start_time,'ms')." ms - ". get_class($this));
+				error_log("------------------- get_subdatum ----------------- $this->tipo \t---- ". exec_time_unit($start_time,'ms')." ms ---- ". get_class($this));
 			}
 
 		return $subdatum;
