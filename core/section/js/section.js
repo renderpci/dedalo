@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER,  DEDALO_CORE_URL*/
+/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -322,9 +322,9 @@ section.prototype.build = async function(autoload=false) {
 											const elemRect	= debug.getBoundingClientRect()
 											const offset	= elemRect.top - bodyRect.top
 											window.scrollTo({
-											  top: offset,
-											  left: 0,
-											  behavior: 'smooth'
+												top			: offset,
+												left		: 0,
+												behavior	: 'smooth'
 											});
 									})
 								})
