@@ -1933,6 +1933,9 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 /**
 * RENDER_TREE_DATA
+* Load once jsonview lib js/css files and render the request data into the target node
+* @param JSON data
+* @param DOM node target_node
 * @return promise
 */
 export const render_tree_data = async function(data, target_node) {
@@ -1969,22 +1972,24 @@ export const render_tree_data = async function(data, target_node) {
 
 	// open main_children level
 		function open_main_children(tree) {
+
 			// open all nodes
 				JsonView.expandChildren(tree);
 
-			return
 			// open only first levels
-				JsonView.traverseTree(tree, function(node) {
-					if (node.depth<3) {
-						JsonView.showNodeChildren(node)
-						node.isExpanded = true;
-						// node.el.classList.remove('hide');
-						const icon = node.el.querySelector('.fas');
-						if (icon) {
-							icon.classList.replace('fa-caret-right', 'fa-caret-down');
-						}
-					}
-				});
+				// JsonView.traverseTree(tree, function(node) {
+				// 	if (node.depth<3) {
+				// 		JsonView.showNodeChildren(node)
+				// 		node.isExpanded = true;
+				// 		// node.el.classList.remove('hide');
+				// 		const icon = node.el.querySelector('.fas');
+				// 		if (icon) {
+				// 			icon.classList.replace('fa-caret-right', 'fa-caret-down');
+				// 		}
+				// 	}
+				// });
+
+			return
 		}
 		open_main_children(tree);
 
