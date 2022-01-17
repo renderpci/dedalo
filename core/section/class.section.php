@@ -3428,214 +3428,100 @@ class section extends common {
 			$rqo			= dd_core_api::$rqo; // from current client request
 			$source			= $rqo->source;
 			$sqo			= $rqo->sqo;
-			$component_ddo	= end($rqo->show->ddo_map);
+			$ddo_map		= $rqo->show->ddo_map;
+			$component_ddo	= end($ddo_map);
 			$component_tipo	= $component_ddo->tipo;
 			$component_lang	= $source->lang;
-
+			$section_tipo	= $this->tipo;
 		
 		$context = [];
 
 		// fixed columns
-			// ddo matrix id
-			$context[] = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model'			=> 'component_section_id',
-				'tipo'			=> 'dd784', // fake tipo only used to match ddo with data 'dd784'
-				'section_tipo'	=> $this->tipo,
-				'label'			=> 'matrix ID',
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
-			];
-			// ddo modification date
-			$context[] = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model'			=> 'component_date',
-				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
-			];
-			// ddo modification user id
-			$context[] = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model'			=> 'component_select',
-				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
-			];
+			// // ddo matrix id
+			// $context[] = (object)[
+			// 	'typo'			=> 'ddo',
+			// 	'type'			=> 'component',
+			// 	'model'			=> 'component_section_id',
+			// 	'tipo'			=> 'dd784', // fake tipo only used to match ddo with data 'dd784'
+			// 	'section_tipo'	=> $this->tipo,
+			// 	'label'			=> 'matrix ID',
+			// 	'mode'			=> 'list',
+			// 	'parent'		=> $this->tipo
+			// ];
+			// // ddo modification date
+			// $context[] = (object)[
+			// 	'typo'			=> 'ddo',
+			// 	'type'			=> 'component',
+			// 	'model'			=> 'component_date',
+			// 	'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
+			// 	'section_tipo'	=> $this->tipo,
+			// 	'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
+			// 	'mode'			=> 'list',
+			// 	'parent'		=> $this->tipo
+			// ];
+			// // ddo modification user id
+			// $context[] = (object)[
+			// 	'typo'			=> 'ddo',
+			// 	'type'			=> 'component',
+			// 	'model'			=> 'component_select',
+			// 	'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+			// 	'section_tipo'	=> $this->tipo,
+			// 	'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+			// 	'mode'			=> 'list',
+			// 	'parent'		=> $this->tipo
+			// ];
 
 		// component
-			$component_context = (function($tipo, $section_tipo, $lang) {
+			// $component_context = (function($tipo, $section_tipo, $lang) {
 
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $tipo,
-																 null,
-																 'list',
-																 $lang,
-																 $section_tipo);
-				// get component json
-					$get_json_options = new stdClass();
-						$get_json_options->get_context	= true;
-						$get_json_options->get_data		= false;
-					$element_json = $component->get_json($get_json_options);
+			// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			// 	$component 		= component_common::get_instance($modelo_name,
+			// 													 $tipo,
+			// 													 null,
+			// 													 'list',
+			// 													 $lang,
+			// 													 $section_tipo);
+			// 	// get component json
+			// 		$get_json_options = new stdClass();
+			// 			$get_json_options->get_context	= true;
+			// 			$get_json_options->get_data		= false;
+			// 		$element_json = $component->get_json($get_json_options);
 
-				// edit section_id to match section locator data item
-					$current_item_context = $element_json->context;
-
-
-
-				return $current_item_context;
-			})($component_tipo, $this->tipo, $component_lang);
-
-			$context = array_merge($context, $component_context);
-
-		/* OLD
-			$dd_request = dd_core_api::$dd_request; // $this->dd_request
-
-			// source form dd_request		
-				$source = array_find($dd_request, function($element){
-					return (isset($element->typo) && $element->typo==='source');
-				});
-			
-			// do
-				$ddo = array_find($dd_request, function($element){
-					return (isset($element->typo) && $element->typo==='ddo');
-				});
-				if (empty($ddo)) {
-					debug_log(__METHOD__." Error on get ddo element. Please check your dd_request and set a valid ddo object.", logger::ERROR);
-					dump($dd_request, ' invalid dd_request: ++ '.to_string());
-					return [];
-				}
-
-			//sqo
-				$sqo = array_find($dd_request, function($element){
-					return (isset($element->typo) && $element->typo==='sqo');
-				});
-
-			$component_tipo = $ddo->tipo;
-			$component_lang = $ddo->lang;
-			
-			$context = [];
+			// 	// edit section_id to match section locator data item
+			// 		$current_item_context = $element_json->context;
 
 
-			// sqo
-				// $item = (object)[
-				// 	'typo'				 => 'sqo',
-				// 	'id'				 => 'tmp',
-				// 	'mode'				 => 'tm',
-				// 	'section_tipo'		 => [$this->tipo],
-				// 	'filter_by_locators' => [(object)[
-				// 		'section_tipo'		=> $source->section_tipo,
-				// 		'section_id'		=> $source->section_id,
-				// 		'tipo'				=> $component_tipo,
-				// 		'lang'				=> $component_lang
-				// 	]],
-				// 	'full_count'		=> false,
-				// 	'limit'				=> 10,
-				// 	'offset'			=> 0,
-				// 	'order'				=> json_decode('[{
-				// 		direction : "DESC",
-				// 		path	  : [{component_tipo: "id"}]
-				// 	}]')
-				// ];
-				// $context[] = $item;
-				
+			// 	return $current_item_context;
+			// })($component_tipo, $this->tipo, $component_lang);
+			// $context = array_merge($context, $component_context);
 
-			// ddo section
-				$item = (object)[
-					'typo'			=> 'ddo',
-					'type'			=> 'section',
-					'model'			=> 'section',
-					'tipo'			=> $this->tipo,
-					'section_tipo'	=> $this->tipo,
-					'label'			=> RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true),
-					'mode'			=> 'tm',
-					'parent'		=> null,
-					'request_config'=> $dd_request
-				];
-				$context[] = $item;
+		$fixed_components = [
+			'dd784', // fake tipo only used to match ddo with data 'dd784' (matrix ID)
+			DEDALO_SECTION_INFO_MODIFIED_DATE, // dd201 (component_date)
+			DEDALO_SECTION_INFO_MODIFIED_BY_USER, // dd197 (component_select)
+		];
+		foreach ($ddo_map as $key => $item) {
+			if (in_array($item->tipo, $fixed_components)) {
 
+				// fixed components
+				$current_dd_object = new dd_object(
+					(object)[
+						'typo'			=> $item->typo, // 'ddo',
+						'type'			=> $item->type, // 'component',
+						'model'			=> $item->model,
+						'tipo'			=> $item->tipo,
+						'section_tipo'	=> $item->section_tipo, // this tipo
+						'label'			=> $item->label,
+						'mode'			=> $item->mode, // 'list',
+						'parent'		=> $item->parent // this tipo
+					]
+				);
+				$context[] = $current_dd_object;
 
-			// source
-				// $item = (object)[
-				// 	'typo'			=> 'source',
-				// 	'action'		=> 'search',
-				// 	'model'			=> 'section',
-				// 	'tipo'			=> $component_tipo,
-				// 	'section_tipo'	=> $this->tipo,
-				// 	'section_id'	=> $source->section_id,
-				// 	'component_tipo'=> $component_tipo,
-				// 	'mode'			=> 'tm',
-				// 	'lang'			=> $component_lang
-				// ];
-				// $context[] = $item;
+			}else{
 
-
-			// ddo matrix id
-				$item = (object)[
-					'typo'			=> 'ddo',
-					'type'			=> 'component',
-					'model'			=> 'component_section_id',
-					'tipo'			=> 'section_id_tipo', // fake tipo only used to match ddo with data
-					'section_tipo'	=> $this->tipo,
-					'label'			=> 'matrix ID',
-					'mode'			=> 'list',
-					'parent'		=> $this->tipo
-				];
-				$context[] = $item;
-
-
-			// ddo modification date
-				$item = (object)[
-					'typo'			=> 'ddo',
-					'type'			=> 'component',
-					'model'			=> 'component_date',
-					'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
-					'section_tipo'	=> $this->tipo,
-					'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
-					'mode'			=> 'list',
-					'parent'		=> $this->tipo
-				];
-				$context[] = $item;
-
-
-			// ddo modification user id
-				$item = (object)[
-					'typo'			=> 'ddo',
-					'type'			=> 'component',
-					'model'			=> 'component_select',
-					'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-					'section_tipo'	=> $this->tipo,
-					'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
-					'mode'			=> 'list',
-					'parent'		=> $this->tipo
-				];
-				$context[] = $item;
-
-
-			// ddo component
-				// $RecordObj_dd	= new RecordObj_dd($component_tipo);
-				// $properties		= $RecordObj_dd->get_properties();
-				// $item = (object)[
-				// 	'typo'			=> 'ddo',
-				// 	'type'			=> 'component',
-				// 	'model'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
-				// 	'tipo'			=> $component_tipo,
-				// 	'section_tipo'	=> $this->tipo,
-				// 	'label'			=> RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true),
-				// 	'mode'			=> 'list',
-				// 	'parent'		=> $this->tipo,
-				// 	'properties'	=> $properties
-				// ];
-				// $context[] = $item;
-				$context[] = (function($tipo, $section_tipo, $lang) {
+				// current time machine component/s
+				$component_context = (function($tipo, $section_tipo, $lang) {
 
 					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					$component 		= component_common::get_instance($modelo_name,
@@ -3643,7 +3529,7 @@ class section extends common {
 																	 null,
 																	 'list',
 																	 $lang,
-																	 $section_tipo);			
+																	 $section_tipo);
 					// get component json
 						$get_json_options = new stdClass();
 							$get_json_options->get_context	= true;
@@ -3651,12 +3537,14 @@ class section extends common {
 						$element_json = $component->get_json($get_json_options);
 
 					// edit section_id to match section locator data item
-						$current_item = reset($element_json->context);
+						$current_item_context = $element_json->context;
 
-					return $current_item;
-				})($component_tipo, $this->tipo, $component_lang);
-
-			*/
+					return $current_item_context;
+				})($item->tipo, $section_tipo, $component_lang);
+				$context = array_merge($context, $component_context);
+			}
+		}
+		// dump($context, ' context ++ '.to_string());
 
 		return (array)$context;
 	}//end get_tm_context
