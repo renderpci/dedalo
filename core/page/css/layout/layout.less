@@ -512,12 +512,19 @@
 						}
 					}
 
-					>pre {
-						margin-top: 0.25em;
-						white-space: pre-wrap;
-						word-break: break-word;
-						pre {
-							white-space: initial;
+					>.pre {
+
+						.json-container {
+							margin: 0;
+							padding: 0.5rem;
+							background-color: #f8fcff;
+						}
+
+						// margin-top: 0.25em;
+						// white-space: pre-wrap;
+						// word-break: break-word;
+						.pre {
+							// white-space: initial;
 							//white-space: pre-wrap;
 						}
 					}
@@ -988,28 +995,7 @@
 			// component_filter
 			&.component_filter {
 				>.buttons_container {
-					display: none;
-					background-color: #ffffff;
-					// background-color: #BDFF69;
-					flex: 0 1 1em;
-					padding: 0; // 0.15em;
-					// border-radius: 0.25em;
-					width: 2em;
-
-					// 2
-					position: absolute;
-					top: 0;
-					right: 0;
-
-					// 3
-					// left: 100%;
-					// right: 0;
-					z-index: 1;
-					background-color: @color_orange_dedalo;
-					height: 100%;
-					box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
-					border-top-right-radius: 0.25em;
-					border-bottom-right-radius: 0.25em;
+					left: calc(100% - 2em);
 				}
 			}
 
@@ -1627,7 +1613,7 @@
 
 		// inside .section_record.edit context
 		//.section_record.edit &, .components_container & { 22
-		.section_record &, .wrapper_tool &, .search_group & { // , .page &
+		.section_record &, .wrapper_tool &, .search_group &, .project_container & { // , .page &
 
 			// background-color: rgba(251, 251, 251, 0.70); // #FBFBFB;
 			// outline: 1px solid rgba(216, 216, 216, 0.43);
