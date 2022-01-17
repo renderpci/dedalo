@@ -151,11 +151,9 @@ class search {
 		$this->main_section_tipo = reset($this->ar_section_tipo);
 
 		# alias . Sort version of main_section_tipo
-		if ($count_ar_section_tipo > 1) {
-			$this->main_section_tipo_alias = 'mix';
-		}else{
-			$this->main_section_tipo_alias = self::trim_tipo($this->main_section_tipo);
-		}
+		$this->main_section_tipo_alias = ($count_ar_section_tipo > 1)
+			? 'mix'
+			: self::trim_tipo($this->main_section_tipo);
 
 		# matrix_table (for time machine if always fixed 'matrix_time_machine', not calculated)
 		if (get_class($this)!=='search_tm' && get_class($this)!=='search_related') {
@@ -201,25 +199,18 @@ class search {
 		$this->order_columns = [];
 
 		# Set allow this->allow_sub_select_by_id for speed (disable in some context like autocomplete)
-		if (!isset($search_query_object->allow_sub_select_by_id)) {
-			$this->allow_sub_select_by_id = true; // True is default
-		}else{
-			$this->allow_sub_select_by_id = $search_query_object->allow_sub_select_by_id;
-		}
+		$this->allow_sub_select_by_id = (isset($search_query_object->allow_sub_select_by_id))
+			? $search_query_object->allow_sub_select_by_id
+			: true; // True is default
 
 		# Set remove_distinct (useful for thesaurus search)
-		if ($count_ar_section_tipo > 1) {
-			$this->remove_distinct = true; # Force true when more than one section is passed
-		}else{
-			if (!isset($search_query_object->remove_distinct)) {
-				$this->remove_distinct = false; // false is default
-			}else{
-				$this->remove_distinct = $search_query_object->remove_distinct;
-			}
-		}
+		$this->remove_distinct = ($count_ar_section_tipo > 1)
+			? true // Force true when more than one section is passed
+			: (isset($search_query_object->remove_distinct)
+				? $search_query_object->remove_distinct
+				: false); // false is default
 
 		# Set skip_projects_filter. Default is false
-		$this->skip_projects_filter = isset($this->search_query_object->skip_projects_filter) ? $this->search_query_object->skip_projects_filter : false;
 		$ar_tables_skip_projects = [
 			'matrix_list',
 			'matrix_dd',
@@ -227,9 +218,11 @@ class search {
 			'matrix_hierarchy_main',
 			'matrix_langs'
 		];
-		if (in_array($this->matrix_table, $ar_tables_skip_projects, true)) {
-			$this->skip_projects_filter = true; // Skip filter
-		}
+		$this->skip_projects_filter = (in_array($this->matrix_table, $ar_tables_skip_projects, true))
+			? true
+			: (isset($this->search_query_object->skip_projects_filter)
+				? $this->search_query_object->skip_projects_filter
+				: false);
 
 
 		return true;
@@ -997,11 +990,9 @@ class search {
 		$ar_sql_select = [];
 		$ar_key_path   = [];
 
-		if ($this->remove_distinct===true) {
-			$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
-		}else{
-			$ar_sql_select[] = 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';
-		}
+		$ar_sql_select[] = ($this->remove_distinct===true)
+			? $this->main_section_tipo_alias.'.section_id'
+			: 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';
 
 		$ar_sql_select[] = $this->main_section_tipo_alias.'.section_tipo';
 
@@ -1063,11 +1054,9 @@ class search {
 						}else{
 
 							$sql_select .= $table_alias.'.datos';
-							if($select_object_type==='string') {
-								$sql_select .= '#>>';
-							}else{
-								$sql_select .= '#>';
-							}
+							$sql_select .= ($select_object_type==='string')
+								? '#>>'
+								: '#>';
 							$sql_select .= '\'{';
 							$sql_select .= $component_path;
 							$sql_select .= '}\'';
@@ -1767,18 +1756,13 @@ class search {
 				continue;
 			}
 
-			if ($key===1) {
-				$current_key = $base_key;
-			}else{
-				$current_key = implode('_', $ar_key_join);
-			}
-			#dump($current_key, ' current_key ++ '.to_string($key));
+			$current_key = ($key===1)
+				? $base_key
+				: implode('_', $ar_key_join);
 
-			if($key === $total_paths-1) {
-				$ar_key_join[] 	= self::trim_tipo($step_object->section_tipo);
-			}else{
-				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-			}
+			$ar_key_join[] = ($key === $total_paths-1)
+				? self::trim_tipo($step_object->section_tipo)
+				: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 
 			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
 			$last_section_tipo 	= $step_object->section_tipo;
@@ -1831,14 +1815,27 @@ class search {
 	* @return string $trimmed_tipo
 	*/
 	public static function trim_tipo($tipo, $max=2) {
-		//used by related search that don't know the section_tipo
-		if($tipo === 'all') return $tipo;
 
-		preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
+		// empty case
+			if (empty($tipo)) {
+				debug_log(__METHOD__." Error empty tipo is received ", logger::ERROR);
+				if(SHOW_DEBUG===true) {
+					$bt		= debug_backtrace();
+					dump($bt, ' debug_backtrace ++ '.to_string());
+				}
+				return null;
+			}
 
-		if (empty($matches)) {
-			debug_log(__METHOD__." Error on preg match tipo: $tipo ".to_string(), logger::ERROR);
-		}
+		// all case. Used by related search that don't know the section_tipo
+			if($tipo==='all') {
+				return $tipo;
+			}
+
+		// match regex
+			preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
+			if (empty($matches) || empty($matches[1]) || empty($matches[2]) ) {
+				debug_log(__METHOD__." Error on preg match tipo: $tipo ".to_string(), logger::ERROR);
+			}
 
 		$name 	= $matches[1];
 		$number = $matches[2];
@@ -1928,11 +1925,9 @@ class search {
 
 				$sql_where .= $table_alias . '.datos';
 
-				if($search_object_type==='string') {
-					$sql_where .= '#>>';
-				}else{
-					$sql_where .= '#>';
-				}
+				$sql_where .= ($search_object_type==='string')
+					? '#>>'
+					: '#>';
 
 				# json path
 				$sql_where .= '\'{' . $component_path . '}\'';
@@ -1948,13 +1943,11 @@ class search {
 					$sql_where .= 'f_unaccent(';
 				}
 
-				# q
-				// Escape parenthesis inside regex
-				if($search_object_type==='string') {
-					$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
-				}else{
-					$q_parsed_clean = $search_object->q_parsed;
-				}
+				// q. Escape parenthesis inside regex
+				$q_parsed_clean = ($search_object_type==='string')
+					? str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed)
+					: $search_object->q_parsed;
+
 				$sql_where .= $q_parsed_clean;
 				#$sql_where .= pg_escape_string(DBi::_getConnection(), stripslashes($search_object->q_parsed));
 
@@ -2121,11 +2114,9 @@ class search {
 
 			}else{
 
-				if ($key===$total -1) { // last
-					$ar_key[] = self::trim_tipo($step_object->section_tipo);
-				}else{
-					$ar_key[] = self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-				}
+				$ar_key[] = ($key === $total-1)
+					? self::trim_tipo($step_object->section_tipo) // last
+					: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 			}
 
 
