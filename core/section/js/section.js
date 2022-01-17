@@ -479,6 +479,9 @@ section.prototype.get_ar_instances = async function(){
 			? self.data.value
 			: []
 		const value_length	= value.length		
+		const section_record_mode = self.mode==='tm'
+			? 'list'
+			: self.mode
 
 		const ar_instances = []
 		for (let i = 0; i < value_length; i++) {
@@ -499,7 +502,7 @@ section.prototype.get_ar_instances = async function(){
 				tipo			: current_section_tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
-				mode			: self.mode,
+				mode			: section_record_mode,
 				lang			: lang,
 				context			: current_context,
 				// data			: current_data,
