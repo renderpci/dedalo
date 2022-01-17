@@ -122,7 +122,8 @@ common.prototype.render = async function (options={}) {
 	const self = this
 
 	// options
-		const render_level = options.render_level || 'full'
+		const render_level	= options.render_level || 'full'
+		const render_mode	= options.render_mode || self.mode
 
 	// console.trace()
 	// console.log("self:",self, render_level);
@@ -190,13 +191,13 @@ common.prototype.render = async function (options={}) {
 		//console.log("typeof self[render_mode]:",typeof self[render_mode], self.model);
 
 	// render node. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
-		const render_mode = (typeof self[self.mode]!=='function')
+		const current_render_mode = (typeof self[render_mode]!=='function')
 			? (function(){
-				console.warn(`Invalid function (render_mode: ${self.mode} ) using fallback to 'list' mode on instance:`, self);
+				console.warn(`Invalid function (render_mode: ${render_mode} ) using fallback to 'list' mode on instance:`, self);
 				return 'list';
 			  })()
-			: self.mode
-		const node = await self[render_mode]({
+			: render_mode
+		const node = await self[current_render_mode]({
 			render_level : render_level
 		})
 
@@ -543,7 +544,7 @@ export const create_source = function (self, action) {
 */
 common.prototype.load_style = function (src) {
 
-	const js_promise = new Promise(function(resolve, reject) {
+	return new Promise(function(resolve, reject) {
 
 		// check already loaded
 			const links 	= document.getElementsByTagName("link");
@@ -559,8 +560,6 @@ common.prototype.load_style = function (src) {
 			const element 	  = document.createElement("link")
 				  element.rel = "stylesheet"
 
-			//element.onload  = resolve(element)
-			//element.onerror = reject(src)
 			element.onload = function() {
 				resolve(src);
 			};
@@ -572,14 +571,7 @@ common.prototype.load_style = function (src) {
 
 			document.getElementsByTagName("head")[0].appendChild(element)
 	})
-
-	if(SHOW_DEBUG===true) {
-		//js_promise.then((response)=>{
-		//	console.log("++ Loaded style: ", response)
-		//})
-	}
-
-	return js_promise
+	.catch(err => { console.error(err) });
 }//end load_style
 
 
@@ -590,7 +582,7 @@ common.prototype.load_style = function (src) {
 */
 common.prototype.load_script = async function(src) {
 
-	const js_promise = new Promise(function(resolve, reject) {
+	return new Promise(function(resolve, reject) {
 
 		// check already loaded
 			const scripts 	  = document.getElementsByTagName("script");
@@ -606,9 +598,8 @@ common.prototype.load_script = async function(src) {
 			const element = document.createElement("script")
 			element.setAttribute("defer", "defer");
 
-			//element.onload  = resolve(element)
-			//element.onerror = reject(src)
 			element.onload = function() {
+
 				resolve(src);
 			};
 			element.onerror = function() {
@@ -619,14 +610,7 @@ common.prototype.load_script = async function(src) {
 
 			document.head.appendChild(element)
 	})
-
-	if(SHOW_DEBUG===true) {
-		//js_promise.then((response)=>{
-		//	console.log("++ Loaded script: ", response)
-		//})
-	}
-
-	return js_promise
+	.catch(err => { console.error(err) });
 }//end load_script
 
 
@@ -1868,44 +1852,6 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
 	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
 
-	// json view
-		// load dependences js/css
-		const load_promises = []
-		// css file load
-			const lib_css_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.css'
-			load_promises.push( common.prototype.load_style(lib_css_file) )
-		// js module import
-			// const load_promise = import('../../../lib/json-view/jsonview.bundle.js') // used minified version for now
-			const lib_js_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.js'
-			load_promises.push( common.prototype.load_script(lib_js_file) )
-
-		await Promise.all(load_promises)
-
-		function open_main_children(tree) {
-			// open all nodes
-				JsonView.expandChildren(tree);
-
-			return
-			// open only first levels
-				JsonView.traverseTree(tree, function(node) {
-					if (node.depth<3) {
-						JsonView.showNodeChildren(node)
-						node.isExpanded = true;
-						// node.el.classList.remove('hide');
-						const icon = node.el.querySelector('.fas');
-						if (icon) {
-							icon.classList.replace('fa-caret-right', 'fa-caret-down');
-						}
-					}
-				});
-		}
-		function render_tree(data, target_node) {
-			const tree = JsonView.createTree(data);
-			JsonView.render(tree, target_node);
-			open_main_children(tree);
-		}
-
-
 	// fragment
 		const fragment = new DocumentFragment();
 
@@ -1924,7 +1870,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 				text_content	: "rqo_show_original: \n",
 				parent			: fragment
 			})
-			render_tree(rqo_show_original, rqo_show_original_pre)
+			render_tree_data(rqo_show_original, rqo_show_original_pre)
 
 		// dd_request
 			if (dd_request) {
@@ -1933,7 +1879,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 					text_content	: "dd_request: \n",
 					parent			: fragment
 				})
-				render_tree(dd_request, dd_request_pre)
+				render_tree_data(dd_request, dd_request_pre)
 			}
 
 		// context
@@ -1942,8 +1888,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 				text_content	: "context: \n", // + JSON.stringify(response.result.context, null, "  "),
 				parent			: fragment
 			})
-			render_tree(response.result.context, context_pre)
-
+			render_tree_data(response.result.context, context_pre)
 
 		// data
 			const data_pre = ui.create_dom_element({
@@ -1951,7 +1896,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 				text_content	: "data: \n", // + JSON.stringify(response.result.data, null, "  "),
 				parent			: fragment
 			})
-			render_tree(response.result.data, data_pre)
+			render_tree_data(response.result.data, data_pre)
 
 	// time
 		// const time_info = "" +
@@ -1983,6 +1928,68 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 	return fragment
 }//end load_data_debug
+
+
+
+/**
+* RENDER_TREE_DATA
+* @return promise
+*/
+export const render_tree_data = async function(data, target_node) {
+
+	// load dependences js/css
+		const load_promises = []
+
+	// css file load
+		const lib_css_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.css'
+		load_promises.push( common.prototype.load_style(lib_css_file) )
+
+	// js module import
+		// const load_promise = import('../../../lib/json-view/jsonview.bundle.js') // used minified version for now
+		const lib_js_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.js'
+		load_promises.push( common.prototype.load_script(lib_js_file) )
+
+	// await all promises are done. It not means that lib is available, only started the load
+		await Promise.all(load_promises)
+
+	// if is not available, wait to finish load and try again
+		if (typeof JsonView==='undefined') {
+			return new Promise(function(resolve){
+				setTimeout(function(){
+					resolve( render_tree_data(data, target_node) )
+				}, 500)
+			})
+		}
+
+	// tree
+		const tree = JsonView.createTree(data);
+
+	// render
+		const result = JsonView.render(tree, target_node);
+
+	// open main_children level
+		function open_main_children(tree) {
+			// open all nodes
+				JsonView.expandChildren(tree);
+
+			return
+			// open only first levels
+				JsonView.traverseTree(tree, function(node) {
+					if (node.depth<3) {
+						JsonView.showNodeChildren(node)
+						node.isExpanded = true;
+						// node.el.classList.remove('hide');
+						const icon = node.el.querySelector('.fas');
+						if (icon) {
+							icon.classList.replace('fa-caret-right', 'fa-caret-down');
+						}
+					}
+				});
+		}
+		open_main_children(tree);
+
+	return result
+}//end render_tree_data
 
 
 
