@@ -144,7 +144,7 @@ export const get_instance = async function(options){
 			// }
 
 		const load_instance = () => {
-			return new Promise(async function(resolve){			
+			return new Promise(async function(resolve){
 
 				// search. first we see if the instance is inside the instances cache
 				const found_instance = instances.filter(instance => instance.id===key)
@@ -206,6 +206,7 @@ export const get_instance = async function(options){
 						resolve(found_instance[0])
 				}
 			})
+			.catch(err => { console.error(err) });
 		}//end load_instance
 
 	const instance = load_instance()
