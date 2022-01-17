@@ -69,21 +69,3 @@ export const component_select = function(){
 	component_select.prototype.change_mode			= component_common.prototype.change_mode
 
 
-
-/**
-* BUILD
-* @param object value (locator)
-* @return bool
-*/
-	// component_select.prototype.build = async function(autoload=false){
-
-	// 	const self = this
-
-	// 	// call the generic common tool init
-	// 		const common_init = component_common.prototype.build.call(self, autoload);
-
-
-	// 	return true
-	// };//end component_select.prototype.build
-
-

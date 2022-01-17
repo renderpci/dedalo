@@ -296,15 +296,15 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 	// instances
 	// get the columns of the component and match it with the ddo
-		// const ar_promises		= []
-		const columns_map_length	= columns_map.length
+		const columns_map_length = columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
-			const current_colum	= columns_map[i]
+			const current_column = columns_map[i]
 
 			// request_config could be multiple (Dédalo, Zenon, etc)
 				const ar_column_ddo = []
 				for (let j = 0; j < request_config_length; j++) {
+
 					const request_config_item = request_config[j]
 
 					// get the direct components of the caller (component or section)
@@ -317,7 +317,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 						const current_ddo = ar_first_level_ddo[k]
 
 						// if the ddo has column_id (normally all component has it, you can see it in common.js get_columns() method)
-						if(current_ddo.column_id && current_ddo.column_id===current_colum.id){
+						if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
 							// check if the column of the component is already loaded, if exists don't load it.
 							const exists = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
@@ -337,13 +337,14 @@ section_record.prototype.get_ar_columns_instances = async function(){
 									if (!current_context) {
 										console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
 										console.warn("self.datum.context:", self.datum.context);
+										console.warn("self:", self);
 										continue;
 									}
 
 							// new_context. clone the current_context to prevent changes in the original.
 								const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
-								new_context.columns_map = (current_colum.columns_map)
-									? current_colum.columns_map
+								new_context.columns_map = (current_column.columns_map)
+									? current_column.columns_map
 									: false
 								// set the fixed_mode when is set by preferences, properties or tools, to maintain the mode defined
 								// if not the ddo will get the mode of the section_record
@@ -352,7 +353,7 @@ section_record.prototype.get_ar_columns_instances = async function(){
 								}
 
 							// instance create and set
-								const current_instance = await add_instance(self, new_context, section_id, current_data, current_colum.id)
+								const current_instance = await add_instance(self, new_context, section_id, current_data, current_column.id)
 								self.ar_instances.push(current_instance)
 						}// end if(current_ddo.column_id..
 					}// end for (let k = 0; k < ar_first_level_ddo_len; k++)

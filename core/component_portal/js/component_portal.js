@@ -102,6 +102,9 @@ component_portal.prototype.init = async function(options) {
 	
 	const self = this
 
+	// call the generic common tool init
+		const common_init = component_common.prototype.init.call(self, options);
+
 	// autocomplete. set default values of service autocomplete
 		self.autocomplete			= null
 		self.autocomplete_active	= false
@@ -110,8 +113,6 @@ component_portal.prototype.init = async function(options) {
 		self.columns_map		= options.columns_map
 		self.add_component_info	= false
 
-	// call the generic common tool init
-		const common_init = component_common.prototype.init.call(self, options);
 
 	// events subscribe
 		// initiator_link. user click over list record_
@@ -143,6 +144,7 @@ component_portal.prototype.init = async function(options) {
 					return
 				}
 			}//end fn_initiator_link
+
 
 	return common_init
 };//end  init
@@ -244,7 +246,7 @@ component_portal.prototype.build = async function(autoload=false){
 		init_events_subscription(self)
 
 	// mode cases
-		if (self.mode==="edit" || self.mode==="edit_in_list") {
+		if (self.mode==="edit" || self.mode==="tm" || self.mode==="edit_in_list") {
 			// pagination vars only in edit mode
 
 			// pagination. update element pagination vars when are used

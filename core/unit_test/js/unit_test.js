@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, describe, mocha */
+/*global it, describe, mocha */
 /*eslint no-undef: "error"*/
 
 
@@ -779,6 +779,8 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 // exec mocha
-	// mocha.setup({ignoreLeaks: true});
-	mocha.checkLeaks(false)
+	// mocha.checkLeaks(true)
+	mocha.setup({globals: [
+		'flatpickr' // library used by component_date
+	]});
 	mocha.run();
