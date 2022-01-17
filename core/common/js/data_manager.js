@@ -327,6 +327,7 @@ data_manager.prototype.get_local_db = async function() {
 					// };
 			};
 	})
+	.catch(err => { console.error(err) });
 };//end local_db
 
 
