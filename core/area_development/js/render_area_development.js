@@ -6,7 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import {common} from '../../common/js/common.js'
+	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -268,16 +268,17 @@ const print_response = (container, api_response) => {
 
 	// json response result
 		const result = ui.create_dom_element({
-			element_type	: 'pre',
-			class_name		: "",
-			parent			: container,
-			inner_html		: JSON.stringify(api_response, null, " ").replace(/\\n/g, "<br>")
+			element_type	: 'div',
+			class_name		: 'pre',
+			parent			: container
 		})
+		render_tree_data(api_response, result)
+
 
 	container.classList.remove("preload")
 
 	return container
-};//end  print_response
+};//end print_response
 
 
 
