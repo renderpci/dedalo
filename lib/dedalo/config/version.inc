@@ -2626,7 +2626,9 @@
 		Fixed issue with web_data::build_fragment margin chars in transcriptions with long pauses between time codes. Set to default zero value
 		Fixed web_data::get_thesaurus_term error on calculate combined terms
 		Revert jquery ui from 1.13.0 to 1.11.4 because drag and drop compatibility issues
-
+		18-01-2022
+		Add posterframe for indexation tags
+		Changed from 6 secs to 180 secs the sleep time in autobackup
 
 
 	[/HISTORY]
@@ -2658,7 +2660,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '13-01-2022T09:58:22');
+	define('DEDALO_BUILD'	, '18-01-2022T22:21:12');
 
 
 	/*
