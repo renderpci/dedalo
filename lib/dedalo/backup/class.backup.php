@@ -107,7 +107,7 @@ abstract class backup {
 
 			}else{
 
-				$command = 'sleep 6s; nice -n 19 '.$command;
+				$command = 'sleep 180s; nice -n 19 '.$command;
 
 				# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
 				$prgfile = DEDALO_LIB_BASE_PATH.'/backup/temp/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
