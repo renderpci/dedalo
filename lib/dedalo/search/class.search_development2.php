@@ -3271,7 +3271,7 @@ class search_development2 {
 						// add the component_semantic_node label linked to the portal, the label doesn't have the portal and it could be confused.
 						if ($modelo_name==='component_semantic_node') {
 							$RecordObj_dd = new RecordObj_dd($component_tipo);
-							$ds_parent = $RecordObj_dd ->get_parent();
+							$ds_parent = $RecordObj_dd->get_parent();
 							$element->component_label .= ' '.RecordObj_dd::get_termino_by_tipo($ds_parent, DEDALO_DATA_LANG , true, true);
 
 						}

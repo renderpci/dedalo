@@ -226,7 +226,7 @@ class component_pdf extends component_common {
 			return 0;	
 		}
 		$locator  = new locator($dato);
-		$pdf_id	  = $locator->get_flat($dato);
+		$pdf_id	  = $locator->get_flat();
 
 		# Add lang
 		if ($this->traducible==='si') {

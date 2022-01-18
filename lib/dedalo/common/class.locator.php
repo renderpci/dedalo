@@ -204,7 +204,7 @@ class locator extends stdClass {
 
 	/**
 	* GET_FLAT
-	* Compound a chained plain flat locator string for use as media componet name, etc..	
+	* Compound a chained plain flat locator string for use as media component name, etc..
 	* @return string $name Like 'dd42_dd207_1'
 	*/
 	public function get_flat( ) {
@@ -221,19 +221,18 @@ class locator extends stdClass {
 		
 		$name = $this->component_tipo . locator::DELIMITER . $this->section_tipo . locator::DELIMITER . $this->section_id;
 
-		/*
-		if ( !empty($this->component_tipo) {
-			$name .= locator::DELIMITER . $this->component_tipo;
-		}
 
-		if ( !empty($this->from_component_tipo) {
-			$name .= locator::DELIMITER . $this->from_component_tipo;
-		}
+		// if ( !empty($this->component_tipo) {
+		// 	$name .= locator::DELIMITER . $this->component_tipo;
+		// }
 
-		if ( !empty($this->tag_id) {
-			$name .= locator::DELIMITER . $this->tag_id;
-		}
-		*/
+		// if ( !empty($this->from_component_tipo) {
+		// 	$name .= locator::DELIMITER . $this->from_component_tipo;
+		// }
+
+		// if ( !empty($this->tag_id)){
+		// 	$name .= locator::DELIMITER . $this->tag_id;
+		// }
 
 		return $name;
 	}//end get_flat
@@ -504,7 +503,7 @@ class locator extends stdClass {
 
 	/**
 	* DESTRUCT
-	* On destruct object, test if minimun data is set or not
+	* On destruct object, test if minimum data is set or not
 	*/
 	function __destruct() {
 
@@ -529,4 +528,3 @@ class locator extends stdClass {
 
 
 }
-?>

@@ -1,6 +1,9 @@
 <?php
 $start_time=microtime(1);
 include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
+require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
+require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 common::trigger_manager();
 
 
@@ -207,12 +210,45 @@ function fragment_info($json_data) {
 			$indexation_notes->html 	    = $html;
 	}
 	
+	#
+	# get the posterframe for the tag
+		$locator  = new locator();
+			$locator->section_tipo		= $section_tipo;
+			$locator->section_id		= $section_id;
+			$locator->component_tipo	= $component_obj->get_related_component_av_tipo();
+			$locator->tag_id			= $tag_id;
+
+			$video_id = $locator->get_flat();
+
+			if ( !empty($locator->tag_id)){
+				$video_id_tag = $video_id . locator::DELIMITER . $locator->tag_id;
+			}
+
+			$component_av = component_common::get_instance('component_av',
+															$locator->component_tipo,
+															$locator->section_id,
+															'list',
+															DEDALO_DATA_NOLAN,
+															$locator->section_tipo);
+
+			$component_av->set_video_id($video_id_tag);
+			$posterframe		= $component_av->get_posterframe_url();
+			$quality			= $component_av->get_quality(); //DEDALO_AV_QUALITY_DEFAULT
+			$posterframe_path	= $component_av->get_posterframe_path();
+			$posterframe_dir	= $component_av->get_posterframe_dir();
 	
-	$response->result 			= true;
-	$response->msg 	  			= 'Request done successfully';
-	$response->fragment_text 	= $fragment_text;
-	$response->indexations_list = $indexations_list;
-	$response->indexation_notes = isset($indexation_notes) ? $indexation_notes : null;	
+	$response->result					= true;
+	$response->msg				= 'Request done successfully';
+	$response->fragment_text	= $fragment_text;
+	$response->indexations_list	= $indexations_list;
+	$response->indexation_notes	= isset($indexation_notes) ? $indexation_notes : null;
+	$response->posterframe		= isset($posterframe) ? $posterframe : null;
+	$response->quality			= isset($quality) ? $quality : null;
+	$response->video_id			= isset($video_id) ? $video_id : null;
+	$response->tag_id			= isset($tag_id) ? $tag_id : null;
+	$response->posterframe_file	= isset($posterframe_path) ? $posterframe_path : null;
+	$response->posterframe_path	= isset($posterframe_dir) ? $posterframe_dir : null;
+	$response->av_locator		= isset($locator) ? $locator : null;
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -284,7 +320,7 @@ function indexations_list($json_data) {
 function delete_tag($json_data) {
 	global $start_time;
 
-	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang');
+	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang', 'av_locator');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
@@ -301,6 +337,31 @@ function delete_tag($json_data) {
 		$options->lang 			= $lang;
 
 	$response = tool_indexation::delete_tag($options);
+
+	// remove the posterframe
+		if(isset($av_locator)){
+			$locator  = new locator();
+				$locator->section_tipo		= $av_locator->section_tipo;
+				$locator->section_id		= $av_locator->section_id;
+				$locator->component_tipo	= $av_locator->component_tipo;
+				$locator->tag_id			= $av_locator->tag_id;
+
+				$video_id = $locator->get_flat();
+
+				if ( !empty($locator->tag_id)){
+					$video_id_tag = $video_id . locator::DELIMITER . $locator->tag_id;
+				}
+
+			$component_av = component_common::get_instance('component_av',
+															$locator->component_tipo,
+															$locator->section_id,
+															'list',
+															DEDALO_DATA_NOLAN,
+															$locator->section_tipo);
+
+			$component_av->set_video_id($video_id_tag);
+			$posterframe = $component_av->remove_posterframe();
+		}
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -337,5 +398,80 @@ function new_index_data_record($json_data) {
 
 	return (object)$response;
 }//end new_index_data_record
+
+
+
+
+/**
+* GENERATE_POSTERFRAME
+* Build a posterframe from current video tc
+* @param $quality
+* @param $video_id
+* @param $timecode
+*/
+function generate_posterframe($json_data){
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed generate_posterframe';
+
+	$vars = array('quality', 'video_id', 'tag_id' ,'seconds', 'ar_target', 'av_locator');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			if ($$name===false) {
+				$response->msg = 'Error. Empty mandatory var '.$name;
+				return $response;
+			}
+		}
+	$reelID		= $video_id ;
+	$quality 	= $quality ;
+
+	# AVObj
+	$AVObj		= new AVObj($reelID, $quality);
+
+	$ar_target = (array)$ar_target;
+
+	# Ffmpeg
+	$Ffmpeg		= new Ffmpeg();
+	$render		= $Ffmpeg->create_posterframe($AVObj, $seconds, $ar_target);			#create_posterframe(AVObj $AVObj, $timecode)
+
+	if($render){
+
+		$locator  = new locator();
+			$locator->section_tipo		= $av_locator->section_tipo;
+			$locator->section_id		= $av_locator->section_id;
+			$locator->component_tipo	= $av_locator->component_tipo;
+			$locator->tag_id			= $av_locator->tag_id;
+
+			$video_id = $locator->get_flat();
+
+			if ( !empty($locator->tag_id)){
+				$video_id_tag = $video_id . locator::DELIMITER . $locator->tag_id;
+			}
+
+		$component_av = component_common::get_instance('component_av',
+															$locator->component_tipo,
+															$locator->section_id,
+															'list',
+															DEDALO_DATA_NOLAN,
+															$locator->section_tipo);
+
+		$component_av->set_video_id($video_id_tag);
+		$posterframe = $component_av->get_posterframe_url();
+
+
+		$response->result		= true;
+		$response->msg			= 'Request done Posterframe generated';
+		$response->posterframe	= isset($posterframe) ? $posterframe : null;
+		$response->quality		= isset($quality) ? $quality : null;
+		$response->video_id		= isset($video_id) ? $video_id : null;
+	}else{
+		$response->msg = 'Error. Render failed '.$render;
+	}
+
+	return (object)$response;
+}//end generate_posterframe
+
+
 
 

@@ -169,7 +169,7 @@ class component_html_file extends component_common {
 			return 0;	
 		}
 		$locator  = new locator($dato);
-		$html_file_id = $locator->get_flat($dato);
+		$html_file_id = $locator->get_flat();
 			#dump($html_file_id,'html_file_id');	
 
 		return $this->html_file_id = $html_file_id;
