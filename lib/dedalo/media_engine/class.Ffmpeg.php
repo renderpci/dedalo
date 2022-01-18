@@ -478,7 +478,7 @@ class Ffmpeg {
 		
 		# SRC VIDEO FILE
 		$src_file = $AVObj->get_media_path_abs()	. $AVObj->get_name() . '.' . $AVObj->get_extension();
-		
+
 		$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
 		if($aspect_ratio == '4x3') {			
 			$aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio' ;

@@ -183,7 +183,7 @@ class component_av extends component_common {
 			return 0;	
 		}
 		$locator  = new locator($dato);
-		$video_id = $locator->get_flat($dato);
+		$video_id = $locator->get_flat();
 			#dump($video_id,'video_id');	
 
 		return $this->video_id = $video_id;
@@ -251,12 +251,46 @@ class component_av extends component_common {
 
 
 	/**
+	* get_posterframe_dir
+	*/
+	public function get_posterframe_dir() {
+
+		$video_id 	= $this->get_video_id();
+
+		$ar_video_parts = explode(locator::DELIMITER, $video_id);
+
+		if(count($ar_video_parts)>3){
+			$tag_path = $ar_video_parts[0] . locator::DELIMITER . $ar_video_parts[1] . locator::DELIMITER . $ar_video_parts[2];
+			$posterframe_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $tag_path . '/';
+		}else{
+			$posterframe_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/';
+		}
+
+		return $posterframe_dir;
+		// return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+	}
+
+
+
+	/**
 	* GET_POSTERFRAME_PATH
 	*/
 	public function get_posterframe_path() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+
+		$video_id 	= $this->get_video_id();
+
+		$ar_video_parts = explode(locator::DELIMITER, $video_id);
+
+		if(count($ar_video_parts)>3){
+			$tag_path = $ar_video_parts[0] . locator::DELIMITER . $ar_video_parts[1] . locator::DELIMITER . $ar_video_parts[2];
+			$posterframe_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $tag_path . '/' . $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		}else{
+			$posterframe_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		}
+
+		return $posterframe_path;
+		// return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 	}
-	
 
 
 	/**
@@ -264,13 +298,23 @@ class component_av extends component_common {
 	*/
 	public function get_posterframe_url($test_file=true, $absolute=false) {
 		
-		$video_id 	= $this->get_video_id();		
+		$video_id 	= $this->get_video_id();
 
-		$posterframe_url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		$ar_video_parts = explode(locator::DELIMITER, $video_id);
+
+		if(count($ar_video_parts)>3){
+			$tag_path = $ar_video_parts[0] . locator::DELIMITER . $ar_video_parts[1] . locator::DELIMITER . $ar_video_parts[2];
+			$posterframe_file =  DEDALO_AV_FOLDER .'/posterframe/'. $tag_path . '/' . $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		}else{
+			$posterframe_file =  DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		}
+
+		$posterframe_url = DEDALO_MEDIA_BASE_URL . $posterframe_file;
 
 		# FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
-			$file = DEDALO_MEDIA_BASE_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
+			$file = DEDALO_MEDIA_BASE_PATH . $posterframe_file;
+			// $file = DEDALO_MEDIA_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
 			}
@@ -541,7 +585,7 @@ class component_av extends component_common {
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
 	* "Remove" (rename and move files to deleted folder) all media file vinculated to current component (all quality versions)
-	* Is triggered wen section tha contain media elements is deleted
+	* Is triggered when section that contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
 	public function remove_component_media_files() {
@@ -758,6 +802,37 @@ class component_av extends component_common {
 	}#end av_file_exist
 
 
+
+	/**
+	* REMOVE_POSTERFRAME
+	* @return
+	*/
+	public function remove_posterframe() {
+
+		$date=date("Y-m-d_Hi");
+
+		$media_path = $this->get_posterframe_path();
+		if (file_exists($media_path)) {
+			# move / rename file
+			$folder_path_del 	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/deleted';
+
+			# delete folder exists ?
+			if( !is_dir($folder_path_del) ) {
+			$create_dir 	= mkdir($folder_path_del, 0777,true);
+			if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
+			}
+
+			$reelID 			= $this->get_video_id();
+			$media_path_moved 	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+
+			if(SHOW_DEBUG===true) {
+				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
+				debug_log($msg);
+				#dump($msg, ' msg');
+			}
+		}
+
+	}//end remove_posterframe
 	
 }//end component_av
-?>

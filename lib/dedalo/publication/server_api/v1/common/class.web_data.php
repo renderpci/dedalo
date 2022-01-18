@@ -2318,7 +2318,11 @@ class web_data {
 
 		// posterframe_url (from server config WEB_VIDEO_BASE_URL like: '/dedalo/media/av/404')
 			$base_url			= pathinfo(WEB_VIDEO_BASE_URL)['dirname'];
-			$posterframe_url	= $base_url .'/posterframe/'. AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id.'.jpg';
+			$video_id 			= AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id;
+			$posterframe_url	= $base_url .'/posterframe/'. $video_id .'.jpg';
+
+		// posterframe_tag_url
+			$posterframe_tag_url	= $base_url .'/posterframe/'. $video_id .'/'. $video_id .'_'. $options->tag_id.'.jpg';
 
 		// tags
 			$tag_in		= TR::get_mark_pattern('indexIn',  $standalone=false, $options->tag_id, $data=false);
@@ -2404,16 +2408,17 @@ class web_data {
 						// Subtitles url
 							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs, $options->lang);
 
-						$result->fragm				= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
-						#$result->fragm_raw			= $fragment_text_raw;
-						$result->video_url			= $video_url;
-						$result->posterframe_url	= $posterframe_url;
-						$result->subtitles_url		= $subtitles_url;
-						#$result->terms				= array();	// For unify object response only
-						#$result->tcin				= $tcin;
-						#$result->tcout				= $tcout;
-						$result->tcin_secs			= $tcin_secs;
-						$result->tcout_secs			= $tcout_secs;
+						$result->fragm					= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
+						#$result->fragm_raw				= $fragment_text_raw;
+						$result->video_url				= $video_url;
+						$result->posterframe_url		= $posterframe_url;
+						$result->posterframe_tag_url	= $posterframe_tag_url;
+						$result->subtitles_url			= $subtitles_url;
+						#$result->terms					= array();	// For unify object response only
+						#$result->tcin					= $tcin;
+						#$result->tcout					= $tcout;
+						$result->tcin_secs				= $tcin_secs;
+						$result->tcout_secs				= $tcout_secs;
 
 							#dump($result->fragm, '$result->fragm ++ '.to_string($video_url));
 						# FRAGMENT_TERMS INSIDE . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta indexacion
