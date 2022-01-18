@@ -2074,12 +2074,18 @@ abstract class common {
 	* Resolves the component config context with backward compatibility
 	* The proper config in v6 is on term properties config, NOT as related terms
 	* Note that section tipo 'self' will be replaced by argument '$section_tipo'
-	* @param string $tipo
-	*	component tipo
-	* @param bool $external
-	*	optional default false
-	* @param string $section_tipo
-	*	optional default null
+	* @param object options
+	*	 @param string $tipo
+	*		component tipo
+	*	 @param bool $external
+	*		optional default false
+	*	 @param string $section_tipo
+	*		optional default null
+	* 	@param string $mode
+	*		optional default 'list'
+	* 	@param string $section_id
+	*		optional default null
+	*
 	* @return object $request_config
 	*/
 	public static function get_ar_request_config($request_options) {
@@ -2092,7 +2098,7 @@ abstract class common {
 			$options->section_id	= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		// options
+		// options fix
 			$tipo			= $options->tipo;
 			$external		= $options->external;
 			$section_tipo	= $options->section_tipo;
@@ -2111,9 +2117,10 @@ abstract class common {
 				return $resolved_request_properties_parsed[$resolved_key];
 			}
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// model
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-		// get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
+		// properties. Get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
 		// by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
@@ -2141,7 +2148,6 @@ abstract class common {
 			}
 
 		// pagination defaults. Note that limit defaults are set on element construction based on properties
-			// $limit = $mode==='edit' ? ($model==='section' ? 1 : 5) : 10;
 			$limit = (function() use($model, $tipo, $section_tipo, $mode){
 				switch (true) {
 					case $model==='section':
@@ -2164,236 +2170,215 @@ abstract class common {
 			})();
 			$offset	= 0;
 
-		$ar_request_query_objects = [];
-		if(isset($properties->source->request_config) || $model==='component_autocomplete_hi'){
-			// V6, properties request_config is defined
+		// ar_request_query_objects
+			$ar_request_query_objects = [];
+			if(isset($properties->source->request_config) || $model==='component_autocomplete_hi'){
+				// V6, properties request_config is defined
 
-			// fallback component_autocomplete_hi
-				// if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi') {
-				// 	$properties->source->request_config = json_decode('[
-				//            {
-				//                "show": {
-				//                    "ddo_map": [
-				//                        "hierarchy25"
-				//                    ],
-				//                    "sqo_config": {
-				//                        "operator": "$or"
-				//                    }
-				//                },
-				//                "search": {
-				//                    "ddo_map": [
-				//                        "hierarchy25"
-				//                    ],
-				//                    "sqo_config": {
-				//                        "operator": "$or"
-				//                    }
-				//                },
-				//                "records_mode": "list",
-				//                "section_tipo": [
-				//                    {
-				//                        "value": [
-				//                            2
-				//                        ],
-				//                        "source": "hierarchy_types"
-				//                    }
-				//                ],
-				//                "search_engine": "search_dedalo"
-				//            }
-				//        ]');
-				//        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);
-				// }//end if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi')
-			foreach ($properties->source->request_config as $item_request_config) {
+				// fallback component_autocomplete_hi
+					// if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi') {
+					// 	$properties->source->request_config = json_decode('[
+					//            {
+					//                "show": {
+					//                    "ddo_map": [
+					//                        "hierarchy25"
+					//                    ],
+					//                    "sqo_config": {
+					//                        "operator": "$or"
+					//                    }
+					//                },
+					//                "search": {
+					//                    "ddo_map": [
+					//                        "hierarchy25"
+					//                    ],
+					//                    "sqo_config": {
+					//                        "operator": "$or"
+					//                    }
+					//                },
+					//                "records_mode": "list",
+					//                "section_tipo": [
+					//                    {
+					//                        "value": [
+					//                            2
+					//                        ],
+					//                        "source": "hierarchy_types"
+					//                    }
+					//                ],
+					//                "search_engine": "search_dedalo"
+					//            }
+					//        ]');
+					//        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);
+					// }//end if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi')
+				foreach ($properties->source->request_config as $item_request_config) {
 
-				// if($external===false && $item_request_config->sqo->type==='external') continue; // ignore external
+					// if($external===false && $item_request_config->sqo->type==='external') continue; // ignore external
 
-				// parsed_item. Base object to fulfill with the necessary properties (api_engine, sqo, show, search, choose)
-					$parsed_item = new stdClass();
-						// $parsed_item->typo = 'rqo';
-						// $parsed_item->sqo->tipo = $tipo;
+					// parsed_item. Base object to fulfill with the necessary properties (api_engine, sqo, show, search, choose)
+						$parsed_item = new stdClass();
+							// $parsed_item->typo = 'rqo';
+							// $parsed_item->sqo->tipo = $tipo;
 
-				// api_engine
-					$parsed_item->api_engine = isset($item_request_config->api_engine)
-						? $item_request_config->api_engine
-						: 'dedalo';
+					// api_engine
+						$parsed_item->api_engine = isset($item_request_config->api_engine)
+							? $item_request_config->api_engine
+							: 'dedalo';
 
-				// sqo. Add search query object property
-					$parsed_item->sqo = $item_request_config->sqo ?? new stdClass();
+					// sqo. Add search query object property
+						$parsed_item->sqo = $item_request_config->sqo ?? new stdClass();
 
-					// section_tipo. get the ar_sections as ddo
-						$ar_section_tipo = isset($parsed_item->sqo->section_tipo)
-							? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id)
-							: [$section_tipo];
+						// section_tipo. get the ar_sections as ddo
+							$ar_section_tipo = isset($parsed_item->sqo->section_tipo)
+								? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id)
+								: [$section_tipo];
 
-					// parsed_item (section_tipo). normalized ddo with tipo and label
-						$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
-							$ddo = new dd_object();
-								$ddo->set_tipo($section_tipo);
-								$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
-							return $ddo;
-						}, $ar_section_tipo);
+						// parsed_item (section_tipo). normalized ddo with tipo and label
+							$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
+								$ddo = new dd_object();
+									$ddo->set_tipo($section_tipo);
+									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+								return $ddo;
+							}, $ar_section_tipo);
 
-					// filter_by_list. get the filter_by_list (to set the prefilter selector)
-						if (isset($item_request_config->sqo->filter_by_list)) {
-							$parsed_item->sqo->filter_by_list = component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
-						}
+						// filter_by_list. get the filter_by_list (to set the prefilter selector)
+							if (isset($item_request_config->sqo->filter_by_list)) {
+								$parsed_item->sqo->filter_by_list = component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
+							}
 
-					// fixed_filter
-						if (isset($item_request_config->sqo->fixed_filter)) {
-							$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
-						}
+						// fixed_filter
+							if (isset($item_request_config->sqo->fixed_filter)) {
+								$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
+							}
 
-				// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
-					// dump($mode, ' $mode ++ '.to_string($tipo));
-					$parsed_item->show = ($mode==='list' && isset($item_request_config->show_list))
-						? $item_request_config->show_list
-						: $item_request_config->show;
+					// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
+						$parsed_item->show = ($mode==='list' && isset($item_request_config->show_list))
+							? $item_request_config->show_list
+							: $item_request_config->show;
 
-					// get the ddo_map from ontology, defined by specific term, like "section_map"
-						$get_ddo_map = $parsed_item->show->get_ddo_map ?? false;
-						if($get_ddo_map!==false){
-							$ar_ddo_calcutaled = [];
-							switch ($get_ddo_map->model) {
-								case 'section_map':
+						// get the ddo_map from ontology, defined by specific term, like "section_map"
+							$get_ddo_map		= $parsed_item->show->get_ddo_map ?? false;
+							$ar_ddo_calcutaled	= [];
+							if($get_ddo_map!==false) {
 
-									$procesed_component_tipo = [];
-									foreach ($ar_section_tipo as $current_section_tipo) {
+								switch ($get_ddo_map->model) {
 
-										$section_map = section::get_section_map( $current_section_tipo );
-										if(empty($section_map)) {
-											debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
-											continue;
-										}
+									case 'section_map':
+										$procesed_component_tipo = [];
+										foreach ($ar_section_tipo as $current_section_tipo) {
 
-										foreach ($get_ddo_map->columns as $current_column_path) {
-
-											$section_map_value = get_object_property($section_map, $current_column_path);
-
-											// ignore value
-											if(empty($section_map_value)){
+											$section_map = section::get_section_map( $current_section_tipo );
+											if(empty($section_map)) {
 												debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
 												continue;
 											}
-											$ar_component_tipo = (array)$section_map_value;
 
-											foreach ($ar_component_tipo as $current_component_tipo) {
-												if(in_array($current_component_tipo, $procesed_component_tipo)){
+											foreach ($get_ddo_map->columns as $current_column_path) {
 
-													$to_change_ddo = array_find($ar_ddo_calcutaled, function($ddo) use($current_component_tipo){
-														return $ddo->tipo === $current_component_tipo;
-													});
+												$section_map_value = get_object_property($section_map, $current_column_path);
 
-													$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
+												// ignore value
+												if(empty($section_map_value)){
+													debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
+													continue;
+												}
+												$ar_component_tipo = (array)$section_map_value;
 
-												}else{
-													// $column_name = end($current_column_path);
-													$ddo = new dd_object();
-														$ddo->set_tipo($current_component_tipo);
-														$ddo->set_section_tipo($current_section_tipo);
-														$ddo->set_parent($tipo);
-														// $ddo->set_column($column_name);
+												foreach ($ar_component_tipo as $current_component_tipo) {
+													if(in_array($current_component_tipo, $procesed_component_tipo)){
 
-													$procesed_component_tipo[] = $current_component_tipo;
-													$ar_ddo_calcutaled[] = $ddo;
+														$to_change_ddo = array_find($ar_ddo_calcutaled, function($ddo) use($current_component_tipo){
+															return $ddo->tipo === $current_component_tipo;
+														});
+
+														$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
+
+													}else{
+														// $column_name = end($current_column_path);
+														$ddo = new dd_object();
+															$ddo->set_tipo($current_component_tipo);
+															$ddo->set_section_tipo($current_section_tipo);
+															$ddo->set_parent($tipo);
+															// $ddo->set_column($column_name);
+
+														$procesed_component_tipo[] = $current_component_tipo;
+														$ar_ddo_calcutaled[] = $ddo;
+													}
 												}
 											}
-										}
+										}//end foreach ($ar_section_tipo as $current_section_tipo)
+										break;
+
+									default:
+										// Nothing to do
+										break;
+								}//end switch ($get_ddo_map->model)
+							}//end if($get_ddo_map!==false)
+
+						// get the all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
+						$ar_ddo_map = isset($parsed_item->show->ddo_map)
+							? $parsed_item->show->ddo_map
+							: $ar_ddo_calcutaled;
+
+						// ddo_map
+							$final_ddo_map = [];
+							foreach ($ar_ddo_map as $current_ddo_map) {
+
+								// check without tipo case
+									if (!isset($current_ddo_map->tipo)) {
+										debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
+										dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
+										continue;
 									}
-									break;
 
-								default:
-									// code...
-									break;
-							}
-						}
+								// label. Add to all ddo_map items
+									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
-					// get the all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
-					$ar_ddo_map = isset($parsed_item->show->ddo_map)
-						? $parsed_item->show->ddo_map
-						: $ar_ddo_calcutaled;
+								// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
+									$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+										? $ar_section_tipo
+										: $current_ddo_map->section_tipo;
 
-					// ddo_map
-						$final_ddo_map = [];
-						foreach ($ar_ddo_map as $current_ddo_map) {
+								// parent. Set the default "self" value to the current tipo (the parent)
+									$current_ddo_map->parent = $current_ddo_map->parent==='self'
+										? $tipo
+										: $current_ddo_map->parent;
 
-							// check without tipo case
-								if (!isset($current_ddo_map->tipo)) {
-									debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
-									dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
-									continue;
-								}
+								// when the mode is set in properties or is set by tool or user templates
+								// set the fixed_mode to true, to maintenance the mode across changes in render process
+									if(isset($current_ddo_map->mode)){
+										$current_ddo_map->fixed_mode = true;
+									}
 
-							// label. Add to all ddo_map items
-								$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+								// mode
+									$current_ddo_map->mode = isset($current_ddo_map->mode)
+										? $current_ddo_map->mode
+										: ($model !== 'section'
+											? 'list'
+											: $mode);
 
-							// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
-								$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
-									? $ar_section_tipo
-									: $current_ddo_map->section_tipo;
-
-							// parent. Set the default "self" value to the current tipo (the parent)
-								$current_ddo_map->parent = $current_ddo_map->parent==='self'
-									? $tipo
-									: $current_ddo_map->parent;
-
-							// when the mode is set in properties or is set by tool or user templates
-							// set the fixed_mode to true, to maintenance the mode across changes in render process
-								if(isset($current_ddo_map->mode)){
-									$current_ddo_map->fixed_mode = true;
-								}
-
-							// mode
-								$current_ddo_map->mode = isset($current_ddo_map->mode)
-									? $current_ddo_map->mode
-									: ($model !== 'section'
-										? 'list'
-										: $mode);
-
-							//fields_map; used by components external to map to different API format, defined in the component, when this property is present and true, get the component fields_map
-								if(isset($current_ddo_map->fields_map) && $current_ddo_map->fields_map===true){
-									$RecordObj_dd = new RecordObj_dd($current_ddo_map->tipo);
-									$properties = $RecordObj_dd->get_properties();
-									$current_ddo_map->properties = $properties;
-									$current_ddo_map->fields_map = isset($properties->fields_map)
-										? $properties->fields_map
-										: [];
-									$current_ddo_map->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-									$current_ddo_map->model			= $RecordObj_dd->get_modelo_name();
-									// $current_ddo_map->parent		= $current_ddo_map->section_tipo;
-									$current_ddo_map->permissions	= common::get_permissions($current_ddo_map->section_tipo, $current_ddo_map->tipo);
-								}
+								//fields_map; used by components external to map to different API format, defined in the component, when this property is present and true, get the component fields_map
+									if(isset($current_ddo_map->fields_map) && $current_ddo_map->fields_map===true){
+										$RecordObj_dd	= new RecordObj_dd($current_ddo_map->tipo);
+										$properties		= $RecordObj_dd->get_properties();
+										$current_ddo_map->properties = $properties;
+										$current_ddo_map->fields_map = isset($properties->fields_map)
+											? $properties->fields_map
+											: [];
+										$current_ddo_map->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+										$current_ddo_map->model			= $RecordObj_dd->get_modelo_name();
+										// $current_ddo_map->parent		= $current_ddo_map->section_tipo;
+										$current_ddo_map->permissions	= common::get_permissions($current_ddo_map->section_tipo, $current_ddo_map->tipo);
+									}
 
 
-							$final_ddo_map[] = $current_ddo_map;
-						}//end foreach ($ar_ddo_map as $current_ddo_map)
+								$final_ddo_map[] = $current_ddo_map;
+							}//end foreach ($ar_ddo_map as $current_ddo_map)
 
-					$parsed_item->show->ddo_map = $final_ddo_map;
+						$parsed_item->show->ddo_map = $final_ddo_map;
 
-					if (isset($parsed_item->show->sqo_config)) {
-						// fallback non defined operator
-						if (!isset($parsed_item->show->sqo_config->operator)) {
-							$parsed_item->show->sqo_config->operator = '$or';
-						}
-					}else{
-						// fallback non defined sqo_config
-						$sqo_config = new stdClass();
-							$sqo_config->full_count		= false;
-							// $sqo_config->add_select	= false;
-							// $sqo_config->direct		= true;
-							$sqo_config->limit			= $limit;
-							$sqo_config->offset			= $offset;
-							$sqo_config->mode			= $mode;
-							$sqo_config->operator		= '$or';
-						$parsed_item->show->sqo_config = $sqo_config;
-					}
-
-				// search
-					if (isset($item_request_config->search)) {
-						// set item
-						$parsed_item->search = $item_request_config->search;
-						if (isset($parsed_item->search->sqo_config)) {
+						if (isset($parsed_item->show->sqo_config)) {
 							// fallback non defined operator
-							if (!isset($parsed_item->search->sqo_config->operator)) {
-								$parsed_item->search->sqo_config->operator = '$or';
+							if (!isset($parsed_item->show->sqo_config->operator)) {
+								$parsed_item->show->sqo_config->operator = '$or';
 							}
 						}else{
 							// fallback non defined sqo_config
@@ -2405,249 +2390,264 @@ abstract class common {
 								$sqo_config->offset			= $offset;
 								$sqo_config->mode			= $mode;
 								$sqo_config->operator		= '$or';
-							$parsed_item->search->sqo_config = $sqo_config;
-						}
-					}
-
-				// choose
-					if (isset($item_request_config->choose)) {
-
-						$choose_ddo_map = $item_request_config->choose->ddo_map;
-						foreach ($choose_ddo_map as $current_ddo_map) {
-
-							// section_tipo
-								$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
-									? $ar_section_tipo
-									: $current_ddo_map->section_tipo;
-
-							// parent. Set the default "self" value to the current tipo (the parent)
-								$current_ddo_map->parent = $current_ddo_map->parent==='self'
-									? $tipo
-									: $current_ddo_map->parent;
-
-							$final_ddo_map[] = $current_ddo_map;
+							$parsed_item->show->sqo_config = $sqo_config;
 						}
 
-						// $parsed_item->show->ddo_map = $choose_ddo_map;
-						// set item
-						$parsed_item->choose = $item_request_config->choose;
-					}
-
-
-				// add complete parsed item
-					$ar_request_query_objects[] = $parsed_item;
-						// dump($ar_request_query_objects, ' ar_request_query_objects ++ '.to_string($tipo)); die();
-			}//end foreach ($properties->source->request_config as $item_request_config)
-
-		}else{
-			// V5 model
-
-			// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
-
-			switch ($mode) {
-				case 'edit':
-					if ($model==='section') {
-						// section
-						$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
-						$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
-					}elseif (in_array($model, common::$groupers)) {
-						// groupers
-						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-					}else{
-						// components
-						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-						// semantic node
-						$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'component_semantic_node', 'children', true);
-						if(!empty($ds_component)){
-							$ar_related = array_merge($ds_component, $ar_related );
-						}
-					}
-					break;
-				case 'related_list':
-					if ($model==='section') {
-						// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
-						$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=true);
-
-						// If not found children, try resolving real section
-						if (empty($ar_terms)) {
-							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
-						}// end if (empty($ar_terms))
-
-						if(isset($ar_terms[0])) {
-							# Use found related terms as new list
-							$current_term = $ar_terms[0];
-							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-						}
-					}
-
-					break;
-				case 'list':
-				case 'search':
-				case 'portal_list':
-				default:
-					if ($model==='section') {
-						# case section list is defined
-						$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
-						if(isset($ar_terms[0])) {
-							# Use found related terms as new list
-							$current_term = $ar_terms[0];
-							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-						}
-					}elseif (in_array($model, common::$groupers)) {
-						// groupers
-						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-					}else{
-						# portal cases
-						# case section list is defined
-						$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
-						if(isset($ar_terms[0])) {
-							# Use found related terms as new list
-							$current_term = $ar_terms[0];
-							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-						}else{
-							# Fallback related when section list is not defined; portal case.
-							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-						}
-					}
-					break;
-			}//end switch ($mode)
-
-
-			// related_clean
-				$ar_related_clean 	 = [];
-				$target_section_tipo = $section_tipo;
-
-				if (!empty($ar_related)) {
-					foreach ((array)$ar_related as $key => $current_tipo) {
-						$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						if ($current_model==='section') {
-							$target_section_tipo = $current_tipo; // Overwrite
-							continue;
-						}else if ($current_model==='section' || $current_model==='exclude_elements') {
-							continue;
-						}else if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO){
-							continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
-						}else if($model==='section' && $current_model==='component_semantic_node'){
-							continue; // remove the semantic node in the section ddo_map, but maintain when is called by the portal
-						}
-
-						$ar_related_clean[] = $current_tipo;
-					}
-				}
-				if (empty($ar_related_clean) && $model!=='component_relation_index') {
-					// $ar_related_clean = [$tipo]; Loop de la muerte (!)
-					debug_log(__METHOD__." Empty related items. Review your structure config to fix this error. model:$model - tipo:$tipo - ar_related_clean:".to_string($ar_related_clean), logger::ERROR);
-				}
-
-			// target_section_tipo
-				if (!isset($target_section_tipo)) {
-					$target_section_tipo = $section_tipo;
-				}
-
-			// sqo_config
-				$sqo_config = new stdClass();
-					$sqo_config->full_count		= false;
-					// $sqo_config->add_select	= false;
-					// $sqo_config->direct		= true;
-					$sqo_config->limit			= $limit;
-					$sqo_config->offset			= $offset;
-					$sqo_config->mode			= $mode;
-					$sqo_config->operator		= '$or';
-
-			// ddo_map
-					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string($tipo));
-					// $bt = debug_backtrace();
-					// dump($bt, ' bt ++ '.to_string());
-
-				$current_mode = $model !== 'section'
-					? 'list'
-					: $mode;
-
-
-				$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
-					$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					// the semantic node has his own section_tipo to be assigned
-					if($model ==='component_semantic_node'){
-						$RecordObj_dd	= new RecordObj_dd($current_tipo);
-						$properties		= $RecordObj_dd->get_properties();
-						if(isset($properties->source->request_config)){
-							foreach ($properties->source->request_config as $item_request_config) {
-								// sqo. Add search query object property
-								$parsed_item_sqo = $item_request_config->sqo ?? new stdClass();
-								// section_tipo. get the ar_sections as ddo
-								$target_section_tipo = isset($parsed_item_sqo->section_tipo)
-									? component_relation_common::get_request_config_section_tipo($parsed_item_sqo->section_tipo)
-									: [$target_section_tipo];
+					// search
+						if (isset($item_request_config->search)) {
+							// set item
+							$parsed_item->search = $item_request_config->search;
+							if (isset($parsed_item->search->sqo_config)) {
+								// fallback non defined operator
+								if (!isset($parsed_item->search->sqo_config->operator)) {
+									$parsed_item->search->sqo_config->operator = '$or';
+								}
+							}else{
+								// fallback non defined sqo_config
+								$sqo_config = new stdClass();
+									$sqo_config->full_count		= false;
+									// $sqo_config->add_select	= false;
+									// $sqo_config->direct		= true;
+									$sqo_config->limit			= $limit;
+									$sqo_config->offset			= $offset;
+									$sqo_config->mode			= $mode;
+									$sqo_config->operator		= '$or';
+								$parsed_item->search->sqo_config = $sqo_config;
 							}
 						}
-						if(isset($properties->mode)){
-							$current_mode = $properties->mode;
-							$current_fixed_mode = true;
+
+					// choose
+						if (isset($item_request_config->choose)) {
+
+							$choose_ddo_map = $item_request_config->choose->ddo_map;
+							foreach ($choose_ddo_map as $current_ddo_map) {
+
+								// section_tipo
+									$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+										? $ar_section_tipo
+										: $current_ddo_map->section_tipo;
+
+								// parent. Set the default "self" value to the current tipo (the parent)
+									$current_ddo_map->parent = $current_ddo_map->parent==='self'
+										? $tipo
+										: $current_ddo_map->parent;
+
+								$final_ddo_map[] = $current_ddo_map;
+							}
+
+							// $parsed_item->show->ddo_map = $choose_ddo_map;
+							// set item
+							$parsed_item->choose = $item_request_config->choose;
+						}
+
+					// add complete parsed item
+						$ar_request_query_objects[] = $parsed_item;
+				}//end foreach ($properties->source->request_config as $item_request_config)
+
+			}else{
+				// V5 model
+
+				// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
+
+				switch ($mode) {
+					case 'edit':
+						if ($model==='section') {
+							// section
+							$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
+							$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
+						}elseif (in_array($model, common::$groupers)) {
+							// groupers
+							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+						}else{
+							// components
+							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+							// semantic node
+							$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'component_semantic_node', 'children', true);
+							if(!empty($ds_component)){
+								$ar_related = array_merge($ds_component, $ar_related );
+							}
+						}
+						break;
+					case 'related_list':
+						if ($model==='section') {
+							// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
+							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=true);
+
+							// If not found children, try resolving real section
+							if (empty($ar_terms)) {
+								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+							}// end if (empty($ar_terms))
+
+							if(isset($ar_terms[0])) {
+								# Use found related terms as new list
+								$current_term = $ar_terms[0];
+								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+							}
+						}
+
+						break;
+					case 'list':
+					case 'search':
+					case 'portal_list':
+					default:
+						if ($model==='section') {
+							# case section list is defined
+							$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+							if(isset($ar_terms[0])) {
+								# Use found related terms as new list
+								$current_term = $ar_terms[0];
+								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+							}
+						}elseif (in_array($model, common::$groupers)) {
+							// groupers
+							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+						}else{
+							# portal cases
+							# case section list is defined
+							$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+							if(isset($ar_terms[0])) {
+								# Use found related terms as new list
+								$current_term = $ar_terms[0];
+								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+							}else{
+								# Fallback related when section list is not defined; portal case.
+								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+							}
+						}
+						break;
+				}//end switch ($mode)
+
+
+				// related_clean
+					$ar_related_clean 	 = [];
+					$target_section_tipo = $section_tipo;
+
+					if (!empty($ar_related)) {
+						foreach ((array)$ar_related as $key => $current_tipo) {
+							$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							if ($current_model==='section') {
+								$target_section_tipo = $current_tipo; // Overwrite
+								continue;
+							}else if ($current_model==='section' || $current_model==='exclude_elements') {
+								continue;
+							}else if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO){
+								continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+							}else if($model==='section' && $current_model==='component_semantic_node'){
+								continue; // remove the semantic node in the section ddo_map, but maintain when is called by the portal
+							}
+
+							$ar_related_clean[] = $current_tipo;
 						}
 					}
+					// check ar_related_clean is legal
+						$without_related_term_models = [
+							'component_relation_index',
+							'component_select_lang'
+						];
+						if (empty($ar_related_clean) && !in_array($model, $without_related_term_models)) {
+							// $ar_related_clean = [$tipo]; Loop de la muerte (!)
+							debug_log(__METHOD__." Empty related items. Review your structure config to fix this error. model:$model - tipo:$tipo - ar_related_clean:".to_string($ar_related_clean), logger::ERROR);
+						}
 
-					$ddo = new dd_object();
-						$ddo->set_tipo($current_tipo);
-						$ddo->set_model($model);
-						$ddo->set_section_tipo($target_section_tipo);
-						$ddo->set_parent($tipo);
-						$ddo->set_mode($current_mode);
-						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
-					// used by component_semantic_node for force the render mode
-					if(isset($current_fixed_mode)){
-						$ddo->set_fixed_mode($current_fixed_mode);
+				// target_section_tipo
+					if (!isset($target_section_tipo)) {
+						$target_section_tipo = $section_tipo;
 					}
 
-					return $ddo;
-				}, $ar_related_clean);
-					// dump($ar_related_clean, ' ar_related_clean ++ '.to_string());
+				// sqo_config
+					$sqo_config = new stdClass();
+						$sqo_config->full_count		= false;
+						// $sqo_config->add_select	= false;
+						// $sqo_config->direct		= true;
+						$sqo_config->limit			= $limit;
+						$sqo_config->offset			= $offset;
+						$sqo_config->mode			= $mode;
+						$sqo_config->operator		= '$or';
 
+				// ddo_map
+					$current_mode = ($model!=='section')
+						? 'list'
+						: $mode;
+					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
+						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						// the semantic node has his own section_tipo to be assigned
+						if($model ==='component_semantic_node'){
+							$RecordObj_dd	= new RecordObj_dd($current_tipo);
+							$properties		= $RecordObj_dd->get_properties();
+							if(isset($properties->source->request_config)){
+								foreach ($properties->source->request_config as $item_request_config) {
+									// sqo. Add search query object property
+									$parsed_item_sqo = $item_request_config->sqo ?? new stdClass();
+									// section_tipo. get the ar_sections as ddo
+									$target_section_tipo = isset($parsed_item_sqo->section_tipo)
+										? component_relation_common::get_request_config_section_tipo($parsed_item_sqo->section_tipo)
+										: [$target_section_tipo];
+								}
+							}
+							if(isset($properties->mode)){
+								$current_mode = $properties->mode;
+								$current_fixed_mode = true;
+							}
+						}
 
-			// show
-				$show = new stdClass();
-					$show->ddo_map		= $ddo_map;
-					$show->sqo_config	= $sqo_config;
+						$ddo = new dd_object();
+							$ddo->set_tipo($current_tipo);
+							$ddo->set_model($model);
+							$ddo->set_section_tipo($target_section_tipo);
+							$ddo->set_parent($tipo);
+							$ddo->set_mode($current_mode);
+							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
+						// used by component_semantic_node for force the render mode
+						if(isset($current_fixed_mode)){
+							$ddo->set_fixed_mode($current_fixed_mode);
+						}
 
-			// // search
-				// 	$search = new stdClass();
-				// 		$search->ddo_map	= $ar_related_clean;
-				// 		$search->sqo_config	= $sqo_config;
+						return $ddo;
+					}, $ar_related_clean);
 
-			// // select
-				// 	$select = new stdClass();
-				// 		$select->ddo_map	= $ar_related_clean;
+				// show
+					$show = new stdClass();
+						$show->ddo_map		= $ddo_map;
+						$show->sqo_config	= $sqo_config;
 
-			// sqo section_tipo as ddo
-				$ar_section_tipo = is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
-				$ddo_section_tipo = array_map(function($section_tipo){
-					$ddo = new dd_object();
-						$ddo->set_tipo($section_tipo);
-						$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
-					return $ddo;
-				}, $ar_section_tipo);
+				// search
+					// 	$search = new stdClass();
+					// 		$search->ddo_map	= $ar_related_clean;
+					// 		$search->sqo_config	= $sqo_config;
 
-			// sqo
-				$sqo = new stdClass();
-					$sqo->section_tipo = $ddo_section_tipo;
+				// select
+					// 	$select = new stdClass();
+					// 		$select->ddo_map	= $ar_related_clean;
 
-			// request_config_item. build
-				$request_config_item = new stdClass();
-					$request_config_item->api_engine	= 'dedalo';
-					$request_config_item->show			= $show;
-					$request_config_item->sqo			= $sqo;
-					// $request_config_item->sqo->tipo	= $tipo;
-					// $request_config_item->search		= $search;
-					// $request_config_item->select		= $select;
+				// sqo section_tipo as ddo
+					$ar_section_tipo	= is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
+					$ddo_section_tipo	= array_map(function($section_tipo){
+						$ddo = new dd_object();
+							$ddo->set_tipo($section_tipo);
+							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+						return $ddo;
+					}, $ar_section_tipo);
 
-					// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string());
+				// sqo
+					$sqo = new stdClass();
+						$sqo->section_tipo = $ddo_section_tipo;
 
-			// set item
-				$ar_request_query_objects[] = $request_config_item;
+				// request_config_item. build
+					$request_config_item = new stdClass();
+						$request_config_item->api_engine	= 'dedalo';
+						$request_config_item->show			= $show;
+						$request_config_item->sqo			= $sqo;
+						// $request_config_item->sqo->tipo	= $tipo;
+						// $request_config_item->search		= $search;
+						// $request_config_item->select		= $select;
 
-			// set var (TEMPORAL TO GIVE ACCESS FROM GET_SUB_DATA)
-				dd_core_api::$context_dd_objects = $ddo_map;
+				// set item
+					$ar_request_query_objects[] = $request_config_item;
 
-		}//end if(isset($properties->source->request_config) || $model==='component_autocomplete_hi')
+				// set var (TEMPORAL TO GIVE ACCESS FROM GET_SUB_DATA)
+					dd_core_api::$context_dd_objects = $ddo_map;
+
+			}//end if(isset($properties->source->request_config) || $model==='component_autocomplete_hi')
 
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
@@ -2995,12 +2995,12 @@ abstract class common {
 	public function get_data_item($value) {
 
 		$item = new stdClass();
-			$item->section_id 			= $this->get_section_id();
-			$item->section_tipo 		= $this->get_section_tipo();
-			$item->tipo 				= $this->get_tipo();
+			$item->section_id			= $this->get_section_id();
+			$item->section_tipo			= $this->get_section_tipo();
+			$item->tipo					= $this->get_tipo();
 			$item->pagination			= $this->get_pagination();
-			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
-			$item->value 				= $value;
+			$item->from_component_tipo	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->value				= $value;
 
 		return $item;
 	}//end get_data_item
@@ -3063,7 +3063,7 @@ abstract class common {
 			];
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		// options
+		// options set
 			$ar_section_tipo			= $options->ar_section_tipo;
 			$path						= $options->path;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements;
@@ -3125,11 +3125,11 @@ abstract class common {
 
 				if($element_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 
-				$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-
-				if (in_array($model, $ar_components_exclude)) {
-					continue;
-				}
+				// model
+					$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+					if (in_array($model, $ar_components_exclude)) {
+						continue;
+					}
 
 				// common temporal excluded/mapped models *******
 					$match_key = array_search($model, common::$ar_temp_map_models);
@@ -3142,6 +3142,7 @@ abstract class common {
 					}
 
 				switch (true) {
+
 					// component case
 					case (strpos($model, 'component_')===0):
 						$recordObjdd = new RecordObj_dd($element_tipo);
@@ -3192,7 +3193,7 @@ abstract class common {
 							$ddo->target_section_tipo = $target_section_tipo;
 						}else{
 							#$ddo->target_section_tipo = reset($target_section_tipo);
-							debug_log(__METHOD__." Ignored $element_tipo - $model with section tipo: ".to_string($target_section_tipo).' only allowed 1 section_tipo' , logger::ERROR);
+							debug_log(__METHOD__." (search section components list) Ignored $element_tipo - $model with section tipo: ".to_string($target_section_tipo).' only allowed 1 section_tipo' , logger::DEBUG);
 						}
 					}
 
