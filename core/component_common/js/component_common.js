@@ -729,8 +729,9 @@ component_common.prototype.change_value = async function(options) {
 
 	// user confirmation prevents remove accidentally
 		if (action==='remove' && label) {
-			const value = self.data.value[changed_data.key]
-			if (!confirm(`Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data)}\n\nvalue:\n${JSON.stringify(value)}`)) return false
+			if (!confirm(`Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`)) {
+				return false
+			}
 		}
 
 	const prev_status = self.status

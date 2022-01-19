@@ -4,14 +4,14 @@
 
 // fn_add_mask . buttons with icons
 	.fn_add_mask(@icon_name) {
-				mask-image: url("@{images_base_path}/icons/@{icon_name}");
-		-webkit-mask-image: url("@{images_base_path}/icons/@{icon_name}");
-				mask-size: contain;
+		-webkit-mask-image: url('@{images_base_path}/icons/@{icon_name}');
+				mask-image: url('@{images_base_path}/icons/@{icon_name}');
 		-webkit-mask-size: contain;
-				mask-repeat: no-repeat;
+				mask-size: contain;
 		-webkit-mask-repeat: no-repeat;
-				mask-position: center;
+				mask-repeat: no-repeat;
 		-webkit-mask-position: center;
+				mask-position: center;
 	}
 
 
@@ -22,18 +22,18 @@
 		// create base standard button
 		.button;
 
-		// custom size overwrite
-		width: @size;
-		height: @size;
-
-		// custom icon svg name
-		.fn_add_mask(@icon_name);
-
 		// custom icon color
 		background: @color;
 
 		// custom size overwrite
+		height: @size;
+		width: @size;
+
+		// custom size overwrite
 		opacity: @opacity;
+
+		// custom icon svg name
+		.fn_add_mask(@icon_name);
 	}
 
 
@@ -42,10 +42,10 @@
 	.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
 
 		&:before {
-			content: " ";
+			content: ' ';
 			display: inline-block;
-			width: 1em;
 			height: 1em;
+			width: 1em;
 			margin-right: 0.5em;
 			vertical-align: baseline;
 			background-color: @color;
@@ -60,17 +60,18 @@
 	.button { // @icon_name:null, @color:black, @opacity:0.7, @size:1em
 		background-color: #000000;
 		cursor: pointer;
-		user-select: none;
 		// display: inline-block;
 		display: inline-flex;
-		width: 1em;
-		min-width: 1em;
 		height: 1em;
-		// height: fit-content;
 		line-height: 1em;
-		margin: 0;
-		margin-right: 0.25rem;
+		margin: 0px;
 		margin-left: 0.25rem;
+		margin-right: 0.25rem;
+		min-width: 1em;
+		opacity: 1;
+		user-select: none;
+		width: 1em;
+		// height: fit-content;
 		// margin-top: 0.25rem;
 		// margin-left: 0.5em;
 		// margin-right: 0.5em;
@@ -81,7 +82,7 @@
 		// margin-top: 0.25em;
 		// margin-bottom: 0.25em;
 
-		opacity: 1;
+
 
 		&:hover {
 			opacity: 1 !important;
@@ -93,7 +94,7 @@
 	// inside buttons_container, all buttons are white
 		.buttons_container & {
 			background-color: #ffffff !important;
-			margin-top: 0;
+			margin-top: 0px;
 		}
 	// variants after create button
 		&.white {
@@ -111,13 +112,13 @@
 		// border-radius: 0.30em;
 		// color: #ffff;
 		// border: none;
-		width: max-content;
 		height: min-content;
+		margin-right: 0.25em;
+		padding-bottom: 0.275rem;
 		padding-left: 1rem;
 		padding-right: 1rem;
 		padding-top: 0.275rem;
-		padding-bottom: 0.275rem;
-		margin-right: 0.25em;
+		width: max-content;
 
 		// bootstrap
 		// display: inline-block;
@@ -146,33 +147,33 @@
 		color: #212529; // default dark grey
 
 		&.primary {
-			color: #ffffff;
 			background-color: @color_primary;
 			border-color: @color_primary;
+			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
 		}
 		&.secondary {
-			color: #ffffff;
 			background-color: @color_secondary;
 			border-color: @color_secondary;
+			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
 		}
 		&.success {
-			color: #ffffff;
 			background-color: @color_success;
 			border-color: @color_success;
+			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
 		}
 		&.danger {
-			color: #ffffff;
 			background-color: @color_danger;
 			border-color: @color_danger;
+			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
@@ -181,40 +182,40 @@
 			// color: #212529;
 			// background-color: #ffc107;
 			// border-color: #ffc107;
-			color: #ffffff;
 			background-color: @color_orange_dedalo;
 			border-color: darken(@color_orange_dedalo, 2%);
+			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
 		}
 		&.info {
-			color: #ffffff;
 			background-color: @color_info;
 			border-color: @color_info;
+			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
 		}
 		&.light {
-			color: #212529;
 			background-color: @color_light;
 			border-color: @color_light;
+			color: #212529;
 			&:before {
 				background-color: #212529 !important;
 			}
 		}
 		&.dark {
-			color: #ffffff;
 			background-color: @color_dark;
 			border-color: @color_dark;
+			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
 		}
 		&.link {
-			font-weight: 400;
 			color: @color_primary;
+			font-weight: 400;
 			text-decoration: none;
 		}
 
@@ -355,6 +356,17 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
+	.table {
+		@icon_name : 'table.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.info {
+		@icon_name : 'info.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+
 
 // .contenteditable_buttons (used by content editable)
 	.contenteditable_buttons {
