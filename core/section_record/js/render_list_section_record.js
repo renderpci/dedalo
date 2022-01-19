@@ -51,19 +51,23 @@ render_list_section_record.prototype.list = async function(options={}) {
 			// callback column case
 				if(current_column.callback && typeof current_column.callback==='function'){
 
-					const column_node	= render_column_node_callback(current_column, self)
-					const content_node	= current_column.callback({
-						section_tipo		: self.section_tipo,
-						section_id			: self.section_id,
-						row_key				: self.row_key,
-						offset				: self.offset,
-						caller				: self.caller,
-						matrix_id			: self.matrix_id, // tm var
-						modification_date	: self.modification_date || null // tm var
-					})
-					if (content_node) {
-						column_node.appendChild(content_node)
-					}
+					// column_node (standard section_record empty column to be filled with content_node)
+						const column_node = render_column_node_callback(current_column, self)
+
+					// content_node
+						const content_node = current_column.callback({
+							section_tipo		: self.section_tipo,
+							section_id			: self.section_id,
+							row_key				: self.row_key,
+							paginated_key		: self.paginated_key,
+							offset				: self.offset,
+							caller				: self.caller,
+							matrix_id			: self.matrix_id, // tm var
+							modification_date	: self.modification_date || null // tm var
+						})
+						if (content_node) {
+							column_node.appendChild(content_node)
+						}
 
 					fragment.appendChild(column_node)
 					continue;
@@ -131,6 +135,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 								  })()
 
 							const current_instance_node	= current_instance.node[0]
+							// console.log("// current_instance_node:", i, j, current_instance_node);
 							column_node.appendChild(current_instance_node)
 
 						}else{
@@ -167,6 +172,16 @@ render_list_section_record.prototype.list = async function(options={}) {
 			}
 		})
 		wrapper.appendChild(fragment)
+
+	// wrapper css
+		const css = self.caller.context.css && self.caller.context.css.section_record
+			? self.caller.context.css.section_record
+			: null
+		if (css) {
+			for(const key in css) {
+				wrapper.style[key] = css[key]
+			}
+		}
 
 
 	return wrapper

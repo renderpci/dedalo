@@ -167,8 +167,9 @@ export const render_column_component_info = function(options) {
 export const render_column_remove = function(options) {
 
 	// options
-		const self		= options.caller
-		const row_key	= options.row_key
+		const self			= options.caller
+		const row_key		= options.row_key
+		const paginated_key	= options.paginated_key
 
 	const fragment = new DocumentFragment()
 
@@ -176,7 +177,10 @@ export const render_column_remove = function(options) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button remove',
-			dataset			: { key : row_key },
+			dataset			: {
+				key				: row_key,
+				paginated_key	: paginated_key
+			},
 			parent			: fragment
 		})
 
@@ -425,36 +429,54 @@ export const add_events = function(self, wrapper) {
 						}
 						const label = ar_label.join(', ')
 
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: null
-					})
+					// changed_data
+						const changed_data = Object.freeze({
+							action	: 'remove',
+							// key	: JSON.parse(e.target.dataset.key),
+							key		: JSON.parse(e.target.dataset.paginated_key),
+							value	: null
+						})
 
-					const changed = self.change_value({
-						changed_data	: changed_data,
-						label			: label,
-						refresh			: false
-					})
-					changed.then(async ()=>{
+					// data pagination offset. Check and update self data to allow save request return the proper paginated data
+						const key = parseInt(e.target.dataset.key)
+						if (key===0 && self.data.pagination.offset>0) {
+							const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+							// set before exec API request on Save
+							self.data.pagination.offset = next_offset>0
+								? next_offset
+								: 0
+						}
 
-						// update pagination offset
-							self.update_pagination_values('remove')
+					// change_value (implies saves too)
+						const changed = self.change_value({
+							changed_data	: changed_data,
+							label			: label,
+							refresh			: false
+						})
+						changed.then(async (response)=>{
 
-						// refresh
-							await self.refresh({
-								build_autoload : false
-							})
+							// the user has selected cancel from delete dialog
+								if (response===false) {
+									return
+								}
 
-						// check if the caller has active a tag_id
-							if(self.active_tag){
-								// filter component data by tag_id and re-render content
-								self.filter_data_by_tag_id(self.active_tag)
-							}
+							// update pagination offset
+								self.update_pagination_values('remove')
 
-						// event to update the DOM elements of the instance
-							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-					})
+							// refresh
+								await self.refresh({
+									build_autoload : false
+								})
+
+							// check if the caller has active a tag_id
+								if(self.active_tag){
+									// filter component data by tag_id and re-render content
+									self.filter_data_by_tag_id(self.active_tag)
+								}
+
+							// event to update the DOM elements of the instance
+								event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+						})
 
 					return true
 				}//end if (e.target.matches('.button.remove')) {

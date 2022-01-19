@@ -378,6 +378,14 @@ component_portal.prototype.add_value = async function(value) {
 			console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
 		}
 
+	// data pagination offset. Check and update self data to allow save request return the proper paginated data
+		if (self.data.pagination.total>0 && key===self.data.pagination.total) {
+			const next_offset = (self.data.pagination.offset + self.data.pagination.limit)
+			if (self.data.pagination.total >= next_offset) {
+				self.data.pagination.offset = next_offset // set before exec API request on Save
+			}
+		}
+
 	// total_before
 		const total_before = clone(self.total)
 

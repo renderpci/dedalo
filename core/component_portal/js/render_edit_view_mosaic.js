@@ -42,62 +42,84 @@ render_edit_view_mosaic.render = async function(self, options) {
 	// options
 		const render_level 	= options.render_level || 'full'
 
-	// alternative view node with all ddo in table mode
-		self.columns_map_full	= JSON.parse(JSON.stringify(self.columns_map))
+	// untouched vars
+		const untouched_columns_map	= JSON.parse(JSON.stringify(self.columns_map))
+		const untouched_id_variant	= self.id_varian
 
-		const alt_columns_map	= await rebuild_columns_map(self, false)
-		self.columns_map		= alt_columns_map
-		// list_body
-		const alt_list_body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'alt_list_body display_none'
-		})
-		// close_alt_list_body
-		const close_alt_list_body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'button close close_alt_list_body',
-			parent 			: alt_list_body
-		})
-		close_alt_list_body.addEventListener('click', function(){
-			alt_list_body.classList.add('display_none')
-		})
+	// alt_list_body. Alternative view node with all ddo in table mode
+		const alt_list_body = await (async ()=>{
 
-		const alt_ar_section_record	= await self.get_ar_instances({mode:'list'})
+			// alt_list_body
+				const alt_list_body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'alt_list_body display_none'
+				})
 
-		// content_data
-		const alternative_table_view =  await get_alternative_table_view(self, alt_ar_section_record, alt_list_body)
-		// header
-		// build using common ui builder
-		const list_header_node = ui.render_list_header(alt_columns_map, self)
-		// const list_header_node = build_header(alt_columns_map, alt_ar_section_record, self)
-			alt_list_body.appendChild(list_header_node)
-			alt_list_body.appendChild(alternative_table_view)
+			// close_alt_list_body
+				const close_alt_list_body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'button close close_alt_list_body',
+					parent 			: alt_list_body
+				})
+				close_alt_list_body.addEventListener('click', function(){
+					alt_list_body.classList.add('display_none')
+				})
 
-		const alt_items				= ui.flat_column_items(alt_columns_map);
-		const alt_template_columns	= alt_items.join(' ')
-		Object.assign(
-			alt_list_body.style,
-			{
-				"grid-template-columns": alt_template_columns
-			}
-		)
+			// columns
+				const alt_columns_map	= await rebuild_columns_map(self, false)
+				self.columns_map		= alt_columns_map // overwrite temporally (!)
 
-	// create the mosaic with only the marked ddo as "mosaic" with true value
+			// header. Build using common ui builder
+				const list_header_node = ui.render_list_header(alt_columns_map, self)
+				alt_list_body.appendChild(list_header_node)
+
+			// alternative_table_view (body)
+				self.id_variant					= untouched_id_variant // 'alt' // reset always (take care about render level 'content' case)
+				const alt_ar_section_record		= await self.get_ar_instances({mode:'list'})
+				const alternative_table_view	= await get_alternative_table_view(self, alt_ar_section_record, alt_list_body)
+				alt_list_body.appendChild(alternative_table_view)
+
+			// alt_list_body columns
+				const alt_items				= ui.flat_column_items(alt_columns_map);
+				const alt_template_columns	= alt_items.join(' ')
+				Object.assign(
+					alt_list_body.style,
+					{
+						"grid-template-columns": alt_template_columns
+					}
+				)
+
+			// restore some temporal changed vars (!)
+				self.columns_map	= untouched_columns_map
+				self.id_variant		= untouched_id_variant
+
+			return alt_list_body
+		})()
+
+	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
 			const columns_map	= await rebuild_columns_map(self, true)
 			self.columns_map	= columns_map
-			self.id_variant		= 'alt'
-		// get the instances for create the mosaic
-			const ar_section_record	= await self.get_ar_instances({mode:'list'})
+
 		// content_data
-			const content_data = await get_content_data(self, ar_section_record)
+			self.id_variant			= 'alt' // temporal change of id_variant to modify section records id
+			const ar_section_record	= await self.get_ar_instances({mode:'list'})
+			console.log("ar_section_record:",ar_section_record);
+			const content_data		= await get_content_data(self, ar_section_record)
+
+			// alt_list_body add inside content_data
+			content_data.prepend( alt_list_body )
+
 			if (render_level==='content') {
 				// show header_wrapper_list if is hidden
-					if (ar_section_record.length>0) {
-						self.node.map(el => {
-							el.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
-						})
-					}
+					// if (ar_section_record.length>0) {
+					// 	self.node.map(el => {
+					// 		const header_wrapper_list = el.querySelector(":scope >.list_body>.header_wrapper_list")
+					// 		if (header_wrapper_list) {
+					// 			header_wrapper_list.classList.remove('hide')
+					// 		}
+					// 	})
+					// }
 				return content_data
 			}
 
@@ -106,7 +128,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 				element_type	: 'div',
 				class_name		: 'list_body'
 			})
-
 			const items				= ui.flat_column_items(columns_map);
 			const template_columns	= items.join(' ')
 			Object.assign(
@@ -115,7 +136,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 					"grid-template-columns": template_columns
 				}
 			)
-
 			list_body.appendChild(content_data)
 
 	// buttons
@@ -132,8 +152,9 @@ render_edit_view_mosaic.render = async function(self, options) {
 			// top			: top
 		})
 		wrapper.classList.add('portal', 'view_'+self.context.view)
+		// alt_list_body add
+		// wrapper.appendChild( await alt_list_body )
 
-		wrapper.appendChild(alt_list_body)
 
 	// events
 		add_events(self, wrapper)
@@ -155,25 +176,31 @@ const get_content_data = async function(self, ar_section_record) {
 		const fragment = new DocumentFragment()
 
 		// add all section_record rendered nodes
-			const ar_section_record_length	= ar_section_record.length
-			if (ar_section_record_length===0) {
+			const ar_section_record_length = ar_section_record.length
+			if (ar_section_record_length>0) {
 
-			}else{
-				// const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
 
-					const section_record	= ar_section_record[i]
-
-					const section_record_node = await section_record.render()
-
-					section_record_node.addEventListener('mouseup', function(){
-							event_manager.publish('mosaic_show_alt_'+section_record_node.id, section_record_node)
-					})
-
 					// section record
-						fragment.appendChild(section_record_node)
+						const section_record		= ar_section_record[i]
+						const section_record_node	= await section_record.render()
 
-					// image
+					// button alt view (table)
+						const button_alt = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button info',
+							parent			: section_record_node
+						})
+						// event publish
+						// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
+						button_alt.addEventListener('mouseup', function(e){
+							e.stopPropagation()
+							const event_id = 'mosaic_show_' + section_record_node.id
+							event_manager.publish(event_id, this)
+						})
+
+					// section record append
+						fragment.appendChild(section_record_node)
 				}
 			}//end if (ar_section_record_length===0)
 
@@ -186,58 +213,63 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 
-
 /**
-* GET_alternative_table_view
-* Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* GET_ALTERNATIVE_TABLE_VIEW
+* Render all received section records and place it into a DocumentFragment
+*
+* @param instance self
+* @param array ar_section_record
+* @param DOM node alt_list_body
+*
+* @return DocumentFragment
 */
 const get_alternative_table_view = async function(self, ar_section_record, alt_list_body) {
 
 	// build_values
 		const fragment = new DocumentFragment()
 
-		// add all section_record rendered nodes
-			const ar_section_record_length	= ar_section_record.length
-			if (ar_section_record_length===0) {
+	// add all section_record rendered nodes
+		const ar_section_record_length = ar_section_record.length
+		if (ar_section_record_length>0) {
 
-			}else{
-				// const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
+			for (let i = 0; i < ar_section_record_length; i++) {
 
-					const section_record	= ar_section_record[i]
+				// section_record
+					const section_record		= ar_section_record[i]
+					const section_record_node	= await section_record.render()
+						  section_record_node.classList.add('display_none')
 
-					const section_record_node = await section_record.render()
-					section_record_node.classList.add('display_none')
-
-					event_manager.subscribe('mosaic_show_alt_'+section_record_node.id+'_alt', mosaic_show_alt)
-					function mosaic_show_alt(parent_node) {
-						const ar_child_node = section_record_node.parentNode.children;
-						const len = ar_child_node.length
-
-						for (var i = len - 1; i >= 0; i--) {
+				// event subscribe
+				// On user click button 'alt' trigger a event that we subscribe here to show the
+				// proper table section record and hide the others
+					const event_id = 'mosaic_show_' + section_record_node.id + '_alt'
+					event_manager.subscribe(event_id, mosaic_show_alt)
+					function mosaic_show_alt() {
+						// hide all except the header
+						const ar_child_node	= section_record_node.parentNode.children;
+						const len			= ar_child_node.length
+						for (let i = len - 1; i >= 0; i--) {
 							const node = ar_child_node[i]
 							if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
 								continue
 							}
 							node.classList.add('display_none')
 						}
+						// show list
 						alt_list_body.classList.remove('display_none')
 						section_record_node.classList.remove('display_none')
 					}
 
-					// section record
-						fragment.appendChild(section_record_node)
-
-					// image
-				}
-			}//end if (ar_section_record_length===0)
-
-		// build references
-			if(self.data.references && self.data.references.length > 0){
-				const references_node = render_references(self.data.references)
-				fragment.appendChild(references_node)
+				// section record append
+					fragment.appendChild(section_record_node)
 			}
+		}//end if (ar_section_record_length===0)
+
+	// build references
+		if(self.data.references && self.data.references.length>0){
+			const references_node = render_references(self.data.references)
+			fragment.appendChild(references_node)
+		}
 
 	return fragment
 }//end get_alternative_table_view
@@ -253,40 +285,44 @@ const rebuild_columns_map = async function(self, view_mosaic) {
 
 	const columns_map = []
 
-	if(!view_mosaic){// column section_id check
-		columns_map.push({
-			id			: 'section_id',
-			label		: 'Id',
-			width 		: 'auto',
-			callback	: render_edit_view_mosaic.render_column_id
-		})
-	}
+	// column section_id
+		if(!view_mosaic) {
+			columns_map.push({
+				id			: 'section_id',
+				label		: 'Id',
+				width 		: 'auto',
+				callback	: render_column_id
+			})
+		}
+
 	// base_columns_map
 		const base_columns_map = view_mosaic
 			? await self.columns_map.filter(el => el.mosaic === true)
 			: await self.columns_map
 		columns_map.push(...base_columns_map)
 
-	if(!view_mosaic){
-		// column component_info check
-			if (self.add_component_info===true) {
-				columns_map.push({
-					id			: 'ddinfo',
-					label		: 'Info',
-					callback	: render_column_component_info
-				})
-			}
+	// column info and remove
+		if(!view_mosaic) {
+			// column component_info check
+				if (self.add_component_info===true) {
+					columns_map.push({
+						id			: 'ddinfo',
+						label		: 'Info',
+						callback	: render_column_component_info
+					})
+				}
 
-		// button_remove
-			if (self.permissions>1) {
-				columns_map.push({
-					id			: 'remove',
-					label		: '', // get_label.delete || 'Delete',
-					width 		: 'auto',
-					callback	: render_column_remove
-				})
-			}
-	}
+			// button_remove
+				if (self.permissions>1) {
+					columns_map.push({
+						id			: 'remove',
+						label		: '', // get_label.delete || 'Delete',
+						width 		: 'auto',
+						callback	: render_column_remove
+					})
+				}
+		}
+
 
 	return columns_map
 }//end rebuild_columns_map

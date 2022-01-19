@@ -21,6 +21,8 @@
 		.list_body {
 			.column {
 				display: flex !important;
+				height: 100%;
+				overflow: hidden;
 			}
 		}
 	}
@@ -31,11 +33,16 @@
 	}
 
 	.alt_list_body {
-		position: absolute;
+		position: sticky;
 		display: grid;
-		// height: 100%;
-		// width: calc(100% - 1px);
-		// background-color: #e1d44a;
+		box-shadow: 1px 1px 8px 0px rgb(38 38 38 / 45%);
+		z-index: 2;
+		left: 1rem;
+		top: 3.95rem;
+		// border: 1px solid #dbdbdb;
+		// border-radius: 3px;
+		overflow: hidden;
+		width: 100%;
 
 		>.header_wrapper_list {
 			display: contents;
@@ -47,9 +54,10 @@
 				display: flex !important;
 			}
 		}
-		.close_alt_list_body{
+		.close_alt_list_body {
 			position:absolute;
 			right: 0;
+			top: 4px;
 		}
 	}
 	// direct list_body from component in edit mode
