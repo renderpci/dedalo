@@ -24,9 +24,9 @@ export const render_list_section_record = function() {
 
 /**
 * LIST
-* Render node for use in list
+* Render node for use in list with all columns and rendered components
 * @param array ar_instances
-* @return DOM node wrapper
+* @return Promise DOM node wrapper
 */
 render_list_section_record.prototype.list = async function(options={}) {
 
@@ -140,7 +140,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 		}//end for (let i = 0; i < columns_map_length; i++) {
 
 
-	// // component_info
+	// component_info
 		// 	const component_info = self.get_component_info()
 		// 	if (component_info){
 		// 		const info_value = component_info.value.join('')

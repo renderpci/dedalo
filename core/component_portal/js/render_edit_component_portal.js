@@ -64,6 +64,65 @@ render_edit_component_portal.prototype.edit = async function(options) {
 
 
 /**
+* RENDER_COLUMN_ID
+* Generic render_column_id
+* Used by view table and mosaic renders
+* @param object options
+* @return DocumentFragment
+*/
+export const render_column_id = function(options){
+
+	// options
+		const self			= options.caller
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+
+	const fragment = new DocumentFragment()
+
+	// section_id
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'section_id',
+			text_content	: section_id,
+			parent			: fragment
+		})
+
+	// edit_button
+		const edit_button = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button edit',
+			parent			: fragment
+		})
+		edit_button.addEventListener("click", function(){
+			const user_navigation_rqo = {
+				caller_id	: self.id,
+				source		: {
+					action			: 'search',
+					model			: 'section',
+					tipo			: section_tipo,
+					section_tipo	: section_tipo,
+					mode			: 'edit',
+					lang			: self.lang
+				},
+				sqo : {
+					section_tipo		: [{tipo : section_tipo}],
+					filter				: null,
+					limit				: 1,
+					filter_by_locators	: [{
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+					}]
+				}
+			}
+			event_manager.publish('user_navigation', user_navigation_rqo)
+		})
+
+	return fragment
+}//end render_column_id
+
+
+
+/**
 * RENDER_COLUMN_COMPONENT_INFO
 * Render node for use in edit
 * @param object options
@@ -336,7 +395,7 @@ export const add_events = function(self, wrapper) {
 		//	//get_input_element(current_section_record, inputs_container)
 		//}
 
-	// subscribe to 'update_dom': if the dom was changed by other dom elements the value will be changed
+	// subscribe to 'update_dom': if the DOM was changed by other DOM elements the value will be changed
 		//self.events_tokens.push(
 		//	event_manager.subscribe('update_dom_'+self.id, (value) => {
 		//		// change the value of the current dom element
@@ -449,5 +508,62 @@ export const build_header = function(columns_map, ar_section_record, self) {
 
 	return list_header_node;
 }//end build_header
+
+
+
+/**
+* RENDER_REFERENCES
+* @return DocumentFragment
+*/
+export const render_references = function(ar_references) {
+
+	const fragment = new DocumentFragment()
+
+	// ul
+		const ul = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'references',
+			parent			: fragment
+		})
+
+	// references label
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html 		: get_label.references,
+			parent			: ul
+		})
+
+	const ref_length = ar_references.length
+	for (let i = 0; i < ref_length; i++) {
+
+		const reference = ar_references[i]
+
+		// li
+			const li = ui.create_dom_element({
+				element_type	: 'li',
+				parent			: ul
+			})
+			// button_link
+				const button_link = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button link',
+					parent			: li
+				})
+				button_link.addEventListener("click", function(e){
+					e.stopPropagation()
+					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
+					// window.open(url,'ref_edit')
+				})
+			// label
+				const button_edit = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					inner_html		: reference.label,
+					parent			: li
+				})
+	}
+
+	return fragment
+}//end render_references
 
 

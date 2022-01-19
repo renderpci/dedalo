@@ -831,20 +831,21 @@ component_common.prototype.get_ar_instances = async function(options={}){
 
 	const self = this
 
-	// // self data verification
-	// 	if (typeof self.data==="undefined") {
-	// 		self.data = {
-	// 			value : []
-	// 		}
-	// 	}
+	// self data verification
+		// 	if (typeof self.data==="undefined") {
+		// 		self.data = {
+		// 			value : []
+		// 		}
+		// 	}
 
 	// options
 		const mode = options.mode || self.mode || 'list'
 
-	// const records_mode	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
-	const lang				= self.section_lang
-	const value				= self.data.value || []
-	const value_length		= value.length
+	// short vars
+		// const records_mode	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
+		const lang				= self.section_lang
+		const value				= self.data.value || []
+		const value_length		= value.length
 
 	// console.log("---- get_ar_instances deep_render value:", clone(value));
 

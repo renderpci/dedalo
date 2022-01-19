@@ -70,7 +70,7 @@ const get_content_data_edit = function(self) {
 
 	// url
 		const datalist		= self.data.datalist
-		const quality		= '1.5MB' //'original' //
+		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
 		const url			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==='undefined') ? DEDALO_CORE_URL + '/themes/default/0.jpg' : url_object.url
 
@@ -84,21 +84,22 @@ const get_content_data_edit = function(self) {
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: '',
 			parent			: ul
 		})
 
 	// image. Only to get background color (!)
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			src 			: url
+			class_name 		: 'hidden'
 		})
 	// image background color
 		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
 			this.removeEventListener('load', set_bg_color, false)
 			ui.set_background_image(this, li)
+			image.classList.remove('hidden')
 		}
+		image.src = url
 
 
 	// object <object type="image/svg+xml" data="image.svg"></object>
@@ -117,7 +118,7 @@ const get_content_data_edit = function(self) {
 	// change event
 		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, img_quality_change)
 		self.events_tokens.push(image_change_event)
-		object.dataset.image_change_event = image_change_event
+		object.dataset.image_change_event = image_change_event // string like 'event_167'
 		function img_quality_change (img_src) {
 
 			// svg document inside the object tag

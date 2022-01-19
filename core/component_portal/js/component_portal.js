@@ -346,7 +346,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 /**
 * ADD_VALUE
-* Called from service autocomplete when user select an data list option
+* Called from service autocomplete when the user selects a datalist option
 * @param object value (locator)
 * @return bool
 */
