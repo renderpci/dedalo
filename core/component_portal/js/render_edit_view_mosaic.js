@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -12,11 +12,12 @@
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {
+		render_column_id,
 		render_column_component_info,
 		render_column_remove,
 		get_buttons,
 		add_events,
-		build_header
+		render_references
 	} from './render_edit_component_portal.js'
 
 
@@ -296,52 +297,54 @@ const rebuild_columns_map = async function(self, view_mosaic) {
 * RENDER_COLUMN_ID
 * @return DocumentFragment
 */
-render_edit_view_mosaic.render_column_id = function(options){
+	// render_edit_view_mosaic.render_column_id = function(options){
 
-	// options
-		const self			= options.caller
-		const section_id	= options.section_id
-		const section_tipo	= options.section_tipo
+	// 	// options
+	// 		const self			= options.caller
+	// 		const section_id	= options.section_id
+	// 		const section_tipo	= options.section_tipo
 
-	const fragment = new DocumentFragment()
+	// 	const fragment = new DocumentFragment()
 
-	// section_id
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'section_id',
-			text_content	: section_id,
-			parent			: fragment
-		})
+	// 	// section_id
+	// 		ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			class_name		: 'section_id',
+	// 			text_content	: section_id,
+	// 			parent			: fragment
+	// 		})
 
-	// edit_button
-		const edit_button = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button edit',
-			parent			: fragment
-		})
-		edit_button.addEventListener("click", function(){
-			const user_navigation_rqo = {
-				caller_id	: self.id,
-				source		: {
-					action			: 'search',
-					model			: 'section',
-					tipo			: section_tipo,
-					section_tipo	: section_tipo,
-					mode			: 'edit',
-					lang			: self.lang
-				},
-				sqo : {
-					section_tipo		: [{tipo : section_tipo}],
-					filter				: null,
-					limit				: 1,
-					filter_by_locators	: [{
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-					}]
-				}
-			}
-			event_manager.publish('user_navigation', user_navigation_rqo)
-		})
+	// 	// edit_button
+	// 		const edit_button = ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			class_name		: 'button edit',
+	// 			parent			: fragment
+	// 		})
+	// 		edit_button.addEventListener("click", function(){
+	// 			const user_navigation_rqo = {
+	// 				caller_id	: self.id,
+	// 				source		: {
+	// 					action			: 'search',
+	// 					model			: 'section',
+	// 					tipo			: section_tipo,
+	// 					section_tipo	: section_tipo,
+	// 					mode			: 'edit',
+	// 					lang			: self.lang
+	// 				},
+	// 				sqo : {
+	// 					section_tipo		: [{tipo : section_tipo}],
+	// 					filter				: null,
+	// 					limit				: 1,
+	// 					filter_by_locators	: [{
+	// 						section_tipo	: section_tipo,
+	// 						section_id		: section_id,
+	// 					}]
+	// 				}
+	// 			}
+	// 			event_manager.publish('user_navigation', user_navigation_rqo)
+	// 		})
 
-	return fragment
-}// end render_column_id()
+	// 	return fragment
+	// }// end render_column_id()
+
+

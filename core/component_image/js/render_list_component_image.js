@@ -40,7 +40,7 @@ render_list_component_image.prototype.list = function() {
 
 	// url
 		// const value		= data.value
-		const quality		= "1.5MB"
+		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
 		const url			= (typeof url_object==="undefined")
 			? DEDALO_CORE_URL + "/themes/default/0.jpg"
@@ -49,7 +49,7 @@ render_list_component_image.prototype.list = function() {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
-			class_name		: 'loading',
+			class_name		: 'hidden', // loading
 			parent			: wrapper
 		})
 		// image.loading = 'lazy'
@@ -57,10 +57,11 @@ render_list_component_image.prototype.list = function() {
 		ui.component.add_image_fallback(image)
 
 	// image background color
-		image.addEventListener("load", set_bg_color, false)
+		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
-			this.removeEventListener("load", set_bg_color, false)
-			ui.set_background_image(this, this)
+			this.removeEventListener('load', set_bg_color, false)
+			ui.set_background_image(this, wrapper)
+			image.classList.remove('hidden')
 		}
 
 	// set src

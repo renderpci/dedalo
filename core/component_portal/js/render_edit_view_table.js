@@ -12,11 +12,13 @@
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {
+		render_column_id,
 		render_column_component_info,
 		render_column_remove,
 		get_buttons,
 		add_events,
-		build_header
+		build_header,
+		render_references
 	} from './render_edit_component_portal.js'
 
 
@@ -220,7 +222,7 @@ const rebuild_columns_map = async function(self) {
 			id			: 'section_id',
 			label		: 'Id',
 			width 		: 'auto',
-			callback	: render_edit_view_table.render_column_id
+			callback	: render_column_id
 		})
 
 	// base_columns_map
@@ -255,112 +257,55 @@ const rebuild_columns_map = async function(self) {
 * RENDER_COLUMN_ID
 * @return DocumentFragment
 */
-render_edit_view_table.render_column_id = function(options){
+	// render_edit_view_table.render_column_id = function(options){
 
-	// options
-		const self			= options.caller
-		const section_id	= options.section_id
-		const section_tipo	= options.section_tipo
+	// 	// options
+	// 		const self			= options.caller
+	// 		const section_id	= options.section_id
+	// 		const section_tipo	= options.section_tipo
 
-	const fragment = new DocumentFragment()
+	// 	const fragment = new DocumentFragment()
 
-	// section_id
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'section_id',
-			text_content	: section_id,
-			parent			: fragment
-		})
+	// 	// section_id
+	// 		ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			class_name		: 'section_id',
+	// 			text_content	: section_id,
+	// 			parent			: fragment
+	// 		})
 
-	// edit_button
-		const edit_button = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button edit',
-			parent			: fragment
-		})
-		edit_button.addEventListener("click", function(){
-			const user_navigation_rqo = {
-				caller_id	: self.id,
-				source		: {
-					action			: 'search',
-					model			: 'section',
-					tipo			: section_tipo,
-					section_tipo	: section_tipo,
-					mode			: 'edit',
-					lang			: self.lang
-				},
-				sqo : {
-					section_tipo		: [{tipo : section_tipo}],
-					filter				: null,
-					limit				: 1,
-					filter_by_locators	: [{
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-					}]
-				}
-			}
-			event_manager.publish('user_navigation', user_navigation_rqo)
-		})
+	// 	// edit_button
+	// 		const edit_button = ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			class_name		: 'button edit',
+	// 			parent			: fragment
+	// 		})
+	// 		edit_button.addEventListener("click", function(){
+	// 			const user_navigation_rqo = {
+	// 				caller_id	: self.id,
+	// 				source		: {
+	// 					action			: 'search',
+	// 					model			: 'section',
+	// 					tipo			: section_tipo,
+	// 					section_tipo	: section_tipo,
+	// 					mode			: 'edit',
+	// 					lang			: self.lang
+	// 				},
+	// 				sqo : {
+	// 					section_tipo		: [{tipo : section_tipo}],
+	// 					filter				: null,
+	// 					limit				: 1,
+	// 					filter_by_locators	: [{
+	// 						section_tipo	: section_tipo,
+	// 						section_id		: section_id,
+	// 					}]
+	// 				}
+	// 			}
+	// 			event_manager.publish('user_navigation', user_navigation_rqo)
+	// 		})
 
-	return fragment
-}// end render_column_id()
-
-
-
-/**
-* RENDER_REFERENCES
-* @return DocumentFragment
-*/
-const render_references = function(ar_references) {
-
-	const fragment = new DocumentFragment()
-
-	// ul
-		const ul = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'references',
-			parent			: fragment
-		})
-
-	// references label
-		ui.create_dom_element({
-			element_type	: 'div',
-			inner_html 		: get_label.references,
-			parent			: ul
-		})
-
-	const ref_length = ar_references.length
-	for (let i = 0; i < ref_length; i++) {
-
-		const reference = ar_references[i]
-
-		// li
-			const li = ui.create_dom_element({
-				element_type	: 'li',
-				parent			: ul
-			})
-			// button_link
-				const button_link = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button link',
-					parent			: li
-				})
-				button_link.addEventListener("click", function(e){
-					e.stopPropagation()
-					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
-					// window.open(url,'ref_edit')
-				})
-			// label
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					inner_html		: reference.label,
-					parent			: li
-				})
-	}
-
-	return fragment
-}//end render_references
+	// 	return fragment
+	// }// end render_column_id()
 
 
 

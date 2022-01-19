@@ -178,18 +178,19 @@ class dd_core_api {
 																$mode,
 																$component_lang,
 																$section_tipo);
+					// component_semantic_node case
+						if(isset($data->row_locator) && $model==='component_semantic_node'){
+							$component->set_row_locator($data->row_locator);
+							$component->set_parent_section_tipo($data->parent_section_tipo);
+							$component->set_parent_section_id($data->parent_section_id);
+						}
 
-					if(isset($data->row_locator) && $model==='component_semantic_node'){
-						$component->set_row_locator($data->row_locator);
-						$component->set_parent_section_tipo($data->parent_section_tipo);
-						$component->set_parent_section_id($data->parent_section_id);
-					}
-				// get the component permissions
+				// permissions. Get the component permissions and check if the user can update the component
 					$permissions = $component->get_component_permissions();
-				// check if the user can update the component
 					if($permissions < 2) return $response;
 
 				if ($mode==='search') {
+
 					// force same changed_data
 						$component->set_dato([$changed_data->value]);
 
@@ -204,13 +205,13 @@ class dd_core_api {
 						$dato = $component->get_dato();
 				}
 
-				// pagination. Update offset basses on save request (portals)
+				// pagination. Update offset based on save request (portals)
 					$pagination = $json_data->data->pagination ?? null;
 					if (isset($pagination) && isset($pagination->offset)) {
 						$component->pagination->offset = $pagination->offset;
 					}
 
-				// element json
+				// element JSON
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 	= true;
 						$get_json_options->get_data 	= true;
@@ -233,7 +234,7 @@ class dd_core_api {
 
 		// result. if the process is correct, we return the $result to the client
 			$response->result 	= $result;
-			$response->msg 	  	= 'Ok. Request done';
+			$response->msg 	  	= 'OK. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -242,7 +243,8 @@ class dd_core_api {
 					$debug->json_data 	= $json_data;
 
 				$response->debug = $debug;
-				// dump($debug->exec_time, ' debug->exec_time ++ '.to_string());
+					// dump($debug->exec_time, ' debug->exec_time ++ '.to_string());
+					// dump($response->result->data, ' response->result->data +++++++++++++++++++++++++++++++++++ '.to_string());
 			}
 
 
