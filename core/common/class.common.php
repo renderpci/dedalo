@@ -2542,7 +2542,8 @@ abstract class common {
 					// check ar_related_clean is legal
 						$without_related_term_models = [
 							'component_relation_index',
-							'component_select_lang'
+							'component_select_lang',
+							'component_input_text'
 						];
 						if (empty($ar_related_clean) && !in_array($model, $without_related_term_models)) {
 							// $ar_related_clean = [$tipo]; Loop de la muerte (!)
