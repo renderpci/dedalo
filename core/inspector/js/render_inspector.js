@@ -149,19 +149,54 @@ const get_content_data = function(self) {
 
 	// relation_list container
 		if (self.caller.context.relation_list) {
-			const relation_list_node = ui.create_dom_element({
+			const relation_list_wrap = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'relation_list',
-				inner_html		: get_label.relaciones || "Relations",
 				parent			: content_data
 			})
-			relation_list_node.addEventListener('click', async function(){
-				const relation_list = await self.get_instance('relation_list')
+				const relation_list_head = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'relation_list_head',
+					inner_html		: get_label.relaciones || "Relations",
+					parent			: relation_list_wrap
+				})
+				const relation_list_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'relation_list_node',
+					parent			: relation_list_wrap
+				})
+			relation_list_head.addEventListener('click', async function(e){
+				self.section_id = self.caller.section_id
+				while (relation_list_node.firstChild) {
+						relation_list_node.removeChild(relation_list_node.firstChild);
+				}
+				const relation_list = await self.get_instance('relation_list',self.section_tipo, self.section_tipo, self.section_id)
 				await relation_list.build()
 				const relation_list_wrap = await relation_list.render()
 				relation_list_node.appendChild(relation_list_wrap)
 				
 			})
+			function fn_paginator_goto(){
+				self.section_id = self.caller.section_id
+				while (relation_list_node.firstChild) {
+						relation_list_node.removeChild(relation_list_node.firstChild)
+				}
+			}
+			async function fn_relation_list_paginator(relation_list){
+				self.section_id = self.caller.section_id
+				while (relation_list_node.firstChild) {
+						relation_list_node.removeChild(relation_list_node.firstChild)
+				}
+				// const relation_list = await self.get_instance('relation_list',self.section_tipo, self.section_tipo, self.section_id)
+				await relation_list.build()
+				const relation_list_wrap = await relation_list.render()
+				relation_list_node.appendChild(relation_list_wrap)
+			}
+
+			self.events_tokens.push(
+				event_manager.subscribe('paginator_goto_paginator_' + self.caller.id, fn_paginator_goto),
+				event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
+			)
 		}
 
 

@@ -310,7 +310,7 @@ class search {
 				}
 			}
 
-		// full_count
+		// full_count DEPRECATED DON'T USE IT
 			if ($this->search_query_object->full_count===true) {
 				# Exec a count query
 				# Converts json search_query_object to sql query string

@@ -49,6 +49,8 @@ inspector.prototype.init = function(options) {
 	self.node			= []
 	self.caller			= options.caller
 
+	self.events_tokens = []
+
 	// status update
 		self.status = 'initiated'
 
