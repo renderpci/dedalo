@@ -266,6 +266,7 @@ common.prototype.render = async function (options={}) {
 					break;
 
 				case 'full':
+
 					// set
 						self.node.push(node)
 
@@ -499,6 +500,24 @@ common.prototype.destroy = async function (delete_self=true, delete_dependencies
 			}
 
 			result.delete_self = await do_delete_self()
+		}
+
+
+
+	// remove_dom optional
+		if (remove_dom===true && delete_self===false) {
+			const remove_nodes = async () => {
+				const node_length = self.node.length
+				//for (let i = 0, l = node_length; i < l; i++) {
+				for (let i = node_length - 1; i >= 0; i--) {
+					const current_node = self.node[i]
+					while (current_node.firstChild) {
+						current_node.removeChild(current_node.firstChild);
+					}
+       				current_node.remove()
+				}
+			}
+			await remove_nodes()
 		}
 
 	// status update

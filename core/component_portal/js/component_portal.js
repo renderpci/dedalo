@@ -379,7 +379,7 @@ component_portal.prototype.add_value = async function(value) {
 		}
 
 	// data pagination offset. Check and update self data to allow save request return the proper paginated data
-		if (self.data.pagination.total>0 && key===self.data.pagination.total) {
+		if (self.data.pagination && self.data.pagination.total>0 && key===self.data.pagination.total) {
 			const next_offset = (self.data.pagination.offset + self.data.pagination.limit)
 			if (self.data.pagination.total >= next_offset) {
 				self.data.pagination.offset = next_offset // set before exec API request on Save

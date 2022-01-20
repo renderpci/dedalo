@@ -132,6 +132,7 @@ export const relation_list = function() {
 * extend component functions from component common
 */
 // prototypes assign
+	relation_list.prototype.destroy			= common.prototype.destroy
 	relation_list.prototype.edit			= render_relation_list.prototype.edit
 	relation_list.prototype.render			= common.prototype.render
 	relation_list.prototype.refresh			= common.prototype.refresh
@@ -156,7 +157,7 @@ relation_list.prototype.init = function(options) {
 	self.context 		= {}
 	self.limit			= options.limit || 10
 	self.offset			= options.offset || 0
-	self.full_count		= options.full_count || false
+	self.total			= options.total || null
 
   // status update
     self.status = 'initiated'
@@ -181,7 +182,7 @@ relation_list.prototype.build = async function(autoload=true){
 			data	: [],
 			context	: []
 		}
-		self.data = self.data || []
+		self.data = self.data || {}
 
 	const current_data_manager = new data_manager()
 
@@ -221,7 +222,32 @@ relation_list.prototype.build = async function(autoload=true){
 			// set the result to the datum
 				self.datum = api_response.result
 		}
-			console.log("self.datum----------///////////-----------------:",self.datum);
+
+	// total
+
+		if(!self.total){
+
+			const sqo_count = {
+				section_tipo		: ['all'],
+				mode				: 'related',
+				filter_by_locators	: [{
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id
+				}]
+			}
+
+			const rqo_count = {
+					action	: 'count',
+					sqo		: sqo_count
+			}
+
+			const current_data_manager_count = new data_manager()
+			self.total = await current_data_manager_count.request({body:rqo_count}).then(function(response){
+				if(response.result !== false){
+					return response.result.total
+				}
+			})
+		}
 
 	// status update
 		self.status = 'builded'
@@ -229,3 +255,37 @@ relation_list.prototype.build = async function(autoload=true){
 	return true
 };//end build
 
+
+// /**
+// * get_total_records
+// * @return data api_response
+// */
+// relation_list.prototype.get_total_records = async function() {
+
+// 	const self = this
+
+// 	const sqo = {
+// 		section_tipo		: ['all'],
+// 		mode				: 'related',
+// 		filter_by_locators	: [{
+// 			section_tipo	: self.section_tipo,
+// 			section_id		: self.section_id
+// 		}]
+// 	}
+
+// 	const rqo = {
+// 			action	: 'count',
+// 			sqo		: sqo
+// 	}
+
+// 	const current_data_manager = new data_manager()
+
+// 	const api_response = await current_data_manager.request({body:rqo})
+// 	console.log("RELATION_LIST api_response:", self.id, api_response);
+
+// // set the result to the datum
+// 	self.datum = api_response.result
+
+// 	console.log("self.datum----------///////////-----------------:",self.datum);
+
+// }; //end get_total_records
