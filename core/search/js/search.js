@@ -145,14 +145,16 @@ search.prototype.init = async function(options) {
 			ui.component.exec_save_successfully_animation(instance)
 		}
 
-		// toggle_search_panel. Triggered by button 'search' placed into section buttons
-		self.events_tokens.push(
-			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
-		)
-		function fn_toggle_search_panel(button_node) {
-			toggle_search_panel(self)
-		}
+		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+		// )
+		// function fn_toggle_search_panel(button_node) {
+		// 	toggle_search_panel(self)
+		// }
 
+	// status update
+		self.status = 'initiated'
 
 
 	return true

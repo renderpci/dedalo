@@ -11,6 +11,7 @@
 	import {common, set_context_vars, create_source, load_data_debug} from '../../common/js/common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
+	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_edit_section} from './render_edit_section.js'
@@ -171,6 +172,19 @@ section.prototype.init = async function(options) {
 				})
 			}
 		}//end fn_create_new_section
+
+		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
+		self.events_tokens.push(
+			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+		)
+		async function fn_toggle_search_panel() {
+			if (self.filter_container.children.length===0) {
+				await self.filter.build()
+				const filter_wrapper = await self.filter.render()
+				await self.filter_container.appendChild(filter_wrapper)
+			}
+			toggle_search_panel(self.filter)
+		}
 
 
 	// status update
