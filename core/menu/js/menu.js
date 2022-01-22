@@ -103,7 +103,7 @@ menu.prototype.build = async function(autoload=true){
 			// set the result to the datum
 				self.datum = cache_data.value
 
-			console.log("[menu.build] returned menu datum from local_db ", self.id, performance.now()-t0);
+			console.log("__Time [menu.build] returned menu datum from local_db ", self.id, performance.now()-t0);
 
 		}else{
 

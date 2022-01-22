@@ -238,8 +238,10 @@ section_record.prototype.get_ar_instances = async function(){
 
 			// parallel mode
 				const current_promise = new Promise(function(resolve){
+
 					const current_context	= items[i]
 					const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)
+
 					add_instance(self, current_context, section_id, current_data)
 					.then(function(current_instance){
 						// current_instance.instance_order_key = i

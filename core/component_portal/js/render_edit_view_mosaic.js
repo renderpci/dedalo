@@ -195,7 +195,8 @@ const get_content_data = async function(self, ar_section_record) {
 						// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
 						button_alt.addEventListener('mouseup', function(e){
 							e.stopPropagation()
-							const event_id = 'mosaic_show_' + section_record_node.id
+							const event_id = 'mosaic_show_' + section_record_node.id + '_table'
+							// console.log("publish event_id:",event_id);
 							event_manager.publish(event_id, this)
 						})
 

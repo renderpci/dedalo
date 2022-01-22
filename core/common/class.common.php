@@ -1503,7 +1503,6 @@ abstract class common {
 				}
 
 
-
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
 
@@ -1515,7 +1514,8 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
-				error_log("------------------- get_structure_context -------- $this->tipo \t---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
+				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
+				error_log("------------------- get_structure_context -------- $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
 			}
 
 
@@ -1556,7 +1556,7 @@ abstract class common {
 	* GET_SUBDATUM
 	* Used by sections and portal that has relations with other components and it need get the information of the other components
 	* subdatum: is the context and data of every section or component that the caller (this component) need to show, search or select
-	* ex: if the caller is a portal that call to toponomy section it will need the context and data of the pointer section and the components that will be showed or searched.
+	* ex: if the caller is a portal that call to toponymy section it will need the context and data of the pointer section and the components that will be showed or searched.
 	* This method use the data of the caller (ar_locators) to get only the data to be used, ex: only the first records of the section to show in list mode.
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
 	* @return object
@@ -1823,7 +1823,10 @@ abstract class common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$log = "------------------- get_subdatum ----------------- $this->tipo \t---- ". exec_time_unit($start_time,'ms')." ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
+				$text_lenght	= strlen($this->tipo);
+				$nchars			= 14;
+				$tipo_line		= $this->tipo .' '. str_repeat("-", $nchars - $text_lenght);
+				$log = "------------------- get_subdatum ----------------- $tipo_line ". exec_time_unit($start_time,'ms')." ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
 				error_log($log);
 			}
 

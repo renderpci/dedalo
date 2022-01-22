@@ -130,7 +130,7 @@ paginator.prototype.build = async function(){
 			// console.log("paginator total:",total);
 			const time = performance.now()-t0
 			if (time>2) {
-				console.log("+ Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
+				console.log("__Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
 			}
 		}
 
