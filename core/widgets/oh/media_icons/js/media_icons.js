@@ -9,6 +9,11 @@
 
 
 
+
+/**
+* MEDIA_ICONS
+*
+*/
 export const media_icons = function(){
 
 	this.id
