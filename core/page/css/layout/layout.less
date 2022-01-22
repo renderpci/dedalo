@@ -1577,6 +1577,7 @@
 				// background-color: #ffffff;
 				text-align: center;
 				display: block;
+				height: 100%;
 				// min-height: 5em;
 
 				>img {
@@ -2362,12 +2363,25 @@
 
 // disabled_component
 	.disabled_component {
-		position: relative;
-		pointer-events: none !important;
+		// pointer-events: none !important;
+
+		.content_data.component, .buttons_container {
+			pointer-events: none !important;
+		}
+
+		.autocomplete_searh_container {
+			display: none !important;
+		}
+
+
 
 		>.wrapper_component {
 			//opacity: 0.8;
 			//background-color: #F7B74C
+
+			.buttons_container {
+				display: none !important;
+			}
 		}
 
 		&:after {
