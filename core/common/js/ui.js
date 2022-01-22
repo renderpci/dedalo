@@ -277,6 +277,18 @@ export const ui = {
 						wrapper.classList.add("disabled_component")
 					}
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					wrapper.addEventListener("click", function(e){
+						if (e.altKey) {
+							e.stopPropagation()
+							e.preventDefault()
+							// common.render_tree_data(instance, document.getElementById('debug'))
+							console.log("/// selected instance:", instance);
+						}
+					})
+				}
+
 
 			return wrapper
 		},//end build_wrapper_edit
@@ -380,6 +392,19 @@ export const ui = {
 						instance.change_mode('edit_in_list', autoload)
 					})
 	 			}
+
+	 		// debug
+				if(SHOW_DEBUG===true) {
+					wrapper.addEventListener("click", function(e){
+						if (e.altKey) {
+							e.stopPropagation()
+							e.preventDefault()
+							// common.render_tree_data(instance, document.getElementById('debug'))
+							console.log("/// selected instance:", instance);
+						}
+					})
+					wrapper.classList.add('_'+instance.id)
+				}
 
 			return wrapper
 		},//end build_wrapper_list
