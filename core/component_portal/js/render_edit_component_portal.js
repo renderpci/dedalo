@@ -418,6 +418,7 @@ export const add_events = function(self, wrapper) {
 			// remove row
 				if (e.target.matches('.button.remove')) {
 					e.preventDefault()
+					e.stopPropagation()
 
 					// label
 						const children = e.target.parentNode.parentNode.children

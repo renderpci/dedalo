@@ -832,7 +832,7 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 
 
 /**
-* GET_AR_INSTANCES
+* GET_AR_INSTANCES (COMPONENT)
 * Create (init and build) a section_record for each component value
 * Used by portals to get all rows for render
 * @return array of objects (section_record instances)

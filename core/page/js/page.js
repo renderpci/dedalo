@@ -160,7 +160,7 @@ page.prototype.init = async function(options) {
 							const state = {
 								user_navigation_options : new_user_navigation_options
 							}
-							console.log("state:",state, title, url,history);
+							console.log("navigation history state:",state, title, url,history);
 							history.pushState(state, title, url)
 						}
 

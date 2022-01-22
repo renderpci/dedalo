@@ -330,6 +330,7 @@ common.prototype.refresh = async function(options={}) {
 
 	// destroy dependencies only
 		if (self.status==='rendered') {
+			// destroy params: (delete_self=true, delete_dependencies=false, remove_dom=false)
 			const destroyed = await self.destroy(false, true)
 		}else{
 			console.warn("/// destroyed fail (expected status 'rendered') with actual status:", self.model, self.status);
@@ -373,7 +374,7 @@ common.prototype.refresh = async function(options={}) {
 			result = false
 		}
 
-	// loading css remove
+	// loading css remove class
 		for (let i = nodes_lenght - 1; i >= 0; i--) {
 			self.node[i].classList.remove('loading')
 		}
@@ -398,7 +399,7 @@ common.prototype.refresh = async function(options={}) {
 * but it not delete the own section instance.
 * @return
 */
-common.prototype.destroy = async function (delete_self=true, delete_dependencies=false, remove_dom=false) {
+common.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
 	const self = this
 

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -101,9 +101,9 @@ search.prototype.init = async function(options) {
 	// short vars
 		self.section_tipo			= self.caller.section_tipo
 		self.events_tokens			= []
+		self.ar_instances			= []
 		self.parent_node			= null
 		self.components_list		= {}
-		self.ar_instances			= []
 		self.source					= self.caller.rqo.source
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus

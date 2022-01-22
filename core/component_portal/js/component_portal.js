@@ -117,7 +117,7 @@ component_portal.prototype.init = async function(options) {
 
 
 	// events subscribe
-		// initiator_link. user click over list record_
+		// initiator_link. Observes user click over list record_
 			self.events_tokens.push(
 				event_manager.subscribe('initiator_link_' + self.id, fn_initiator_link)
 			)
@@ -134,7 +134,7 @@ component_portal.prototype.init = async function(options) {
 					}
 			}//end fn_initiator_link
 
-			// link_term. Observe thesaurus tree link index button click
+		// link_term. Observes thesaurus tree link index button click
 			self.events_tokens.push(
 				event_manager.subscribe('link_term_' + self.id, fn_link_term)
 			)
