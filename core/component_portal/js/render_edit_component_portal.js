@@ -438,21 +438,37 @@ export const add_events = function(self, wrapper) {
 							value	: null
 						})
 
-					// data pagination offset. Check and update self data to allow save request return the proper paginated data
-						const key = parseInt(e.target.dataset.key)
-						if (key===0 && self.data.pagination.offset>0) {
-							const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
-							// set before exec API request on Save
-							self.data.pagination.offset = next_offset>0
-								? next_offset
-								: 0
+					// remove_dialog. User must to confirm the remove action to continue
+					// On true, data pagination offset is changed
+						const remove_dialog = function() {
+
+							const msg = SHOW_DEBUG
+								? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
+								: `Sure to remove value: ${label} ?}`
+
+							if( !confirm(msg) ) {
+								return false
+							}
+
+							// data pagination offset. Check and update self data to allow save API request return the proper paginated data
+								const key = parseInt(e.target.dataset.key)
+								if (key===0 && self.data.pagination.offset>0) {
+									const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+									// set before exec API request on Save
+									self.data.pagination.offset = next_offset>0
+										? next_offset
+										: 0
+								}
+
+							return true
 						}
 
 					// change_value (implies saves too)
 						const changed = self.change_value({
 							changed_data	: changed_data,
 							label			: label,
-							refresh			: false
+							refresh			: false,
+							remove_dialog	: remove_dialog
 						})
 						changed.then(async (response)=>{
 

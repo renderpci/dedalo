@@ -735,10 +735,16 @@ component_common.prototype.change_value = async function(options) {
 		const label				= options.label
 		const refresh			= typeof options.refresh!=='undefined' ? options.refresh : false
 		const build_autoload	= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
+		const remove_dialog 	= options.remove_dialog || function() {
+			const msg = SHOW_DEBUG
+				? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
+				: `Sure to remove value: ${label} ?`
+			return confirm( msg )
+		}
 
 	// user confirmation prevents remove accidentally
-		if (action==='remove' && label) {
-			if (!confirm(`Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`)) {
+		if (action==='remove') {
+			if ( !remove_dialog() ) {
 				return false
 			}
 		}
@@ -932,13 +938,12 @@ component_common.prototype.get_ar_instances = async function(options={}){
 		}//end for loop
 
 	// ar_instances. When all section_record instances are built, set them
-		await Promise.all(ar_promises).then((ar_instances) => {
-			// set
-			self.ar_instances = ar_instances
+		const ar_instances = await Promise.all(ar_promises).then((ready_instances) => {
+			return ready_instances
 		});
 
 
-	return self.ar_instances
+	return ar_instances
 };//end get_ar_instances
 
 

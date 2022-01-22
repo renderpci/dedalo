@@ -169,24 +169,26 @@ export const build_content_data = function(self) {
 		})
 
 	// build values (add all nodes from the rendered_section_record)
-		const build_values = function() {
+		const build_values = async function() {
 
-			self.get_ar_instances({mode:'mini'})
-			.then(function(ar_section_record){
+			const ar_section_record = await self.get_ar_instances({mode:'mini'})
+			// store to allow destroy later
+			self.ar_instances.push(...ar_section_record)
 
-				const length = ar_section_record.length
-				for (let i = 0; i < length; i++) {
+			const length = ar_section_record.length
+			for (let i = 0; i < length; i++) {
 
-					const current_section_record = ar_section_record[i]
-					if (!current_section_record) {
-						console.warn("empty current_section_record:",current_section_record)
-					}
-
-					// input_element. Get_input_element, also renders current section record
-					const input_element = get_input_element(current_section_record)
-					inputs_container.appendChild(input_element)
+				const current_section_record = ar_section_record[i]
+				if (!current_section_record) {
+					console.warn("empty current_section_record:",current_section_record)
 				}
-			})
+
+				// input_element. Get_input_element, also renders current section record
+				const input_element = get_input_element(current_section_record)
+				inputs_container.appendChild(input_element)
+			}
+
+			return true
 		}
 		fragment.appendChild(inputs_container)
 
