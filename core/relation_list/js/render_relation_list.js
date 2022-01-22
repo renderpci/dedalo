@@ -1,8 +1,3 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
-/*eslint no-undef: "error"*/
-
-
-
 // import
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
@@ -30,7 +25,6 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 	const self = this
 
 	const render_level = options.render_level
-	// console.log("self:",self.node);
 
 	// content_data
 	const current_content_data = await get_content_data(self)
@@ -38,82 +32,18 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 		return current_content_data
 	}
 
-	// wrapper. ui build_edit returns component wrapper
+	// wrapper.
 	const wrapper = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'wrapper_relation_list ' + self.model + ' ' + self.tipo + ' ' + self.mode
 	})
-
 	wrapper.appendChild(current_content_data)
 
+	// add the paginator to the warpper
 	parse_paginator_html(self, wrapper)
 
 	return wrapper
 };//end edit
-
-
-
-
- // /**
- //    * GET_SERVER_RECORDS
- //    * create the object to find inside the server
- //    * and send the promises to the load_relation_list_data
- //    * this send in async mode the two request, 1 data, 2 count
- //    */
- //    this.get_server_records = function(relation_wrap){
-
- //      let self = this
-
- //      //cretate the object to request the information
- //       const options = {
- //        modo                : relation_wrap.dataset.modo,
- //        tipo                : relation_wrap.dataset.tipo,
- //        section_tipo        : relation_wrap.dataset.section_tipo,
- //        section_id          : relation_wrap.dataset.section_id,
- //        limit               : parseInt(relation_wrap.dataset.limit),
- //        offset              : parseInt(relation_wrap.dataset.offset),
- //        count               : false,
- //      }
-
- //      // clean the global cotainer and remove all previuos styles
- //      const relation_list_wrap = this.relation_list_wrap;
- //      if (relation_list_wrap){
- //        relation_list_wrap.innerHTML=''
- //        relation_list_wrap.removeAttribute("style")
- //      }
-
- //      const loading_content   = common.create_dom_element({
- //                        element_type      : 'div',
- //                        parent            : relation_list_wrap,
- //                        class_name        : 'loading_content blink relation_list_waiting',
- //                        inner_html        : get_label['processing_wait']
- //                        })
- //      relation_list_wrap.appendChild(loading_content);
-
- //      // 1 send the request of the data
- //      options.count = false;
- //      self.load_relation_list_data(options).then(function(response){
- //        // remove loading_content
- //        loading_content.remove()
-
- //        // Render the data html
- //        self.parse_html(response)
- //      });
-
- //      // 2 sent the request for count the rows
- //      options.count = true;
- //      self.load_relation_list_data(options).then(function(response){
- //        const total_records_count = response.reduce(
- //              (accumulator, currentValue) => accumulator + parseInt( currentValue.count), 0
- //          );
- //          // Render the paginator
- //          self.parse_paginator_html(options, total_records_count);
- //      });
-
- //    };//end get_server_records
-
-
-
 
 
 /**
@@ -139,7 +69,7 @@ const get_content_data = function(self) {
 
 /**
 * PARSE_HTML
-* process the JSON recived
+* process the JSON received
 */
 const parse_html = function(datum, content_data_node){
 
@@ -147,7 +77,6 @@ const parse_html = function(datum, content_data_node){
 		const context     = datum.context;
 		const data        = datum.data;
 		const context_id  = context.filter(main_header => main_header.component_tipo === 'id');
-
 
 	// create new styleSheet
 		const style = document.createElement("style");
@@ -181,11 +110,8 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 	const css_selector = 'relation_grid_'+context.section_tipo
 	const columns_length = columns.length -1
 
-	// create the CSS_style_sheet with the variable grid colums, every section can has different number of columns
+	// create the CSS_style_sheet with the variable grid columns, every section can has different number of columns
 	CSS_style_sheet.insertRule( '.'+css_selector+'{display: grid;grid-template-columns: 60px repeat('+columns_length+', 1fr);}');
-
-	//get the parent node of the list
-	// const relation_list_wrap  = this.relation_list_wrap;
 
 	/* 1 Create the grid container */
 		// create a grid content
@@ -410,12 +336,12 @@ const edit_relation = function(self, current_data){
 	const section_tipo	= current_data.section_tipo
 
 	if (typeof section_id=="undefined") {
-		return console.error("[relation_list.edit] Error on find section_id", self.section_id);
+		return console.error("[relation_list.edit_relation] Error on find section_id", self.section_id);
 	}
 	if (typeof section_tipo=="undefined") {
-		return console.error("[relation_list.edit] Error on find section_tipo", self.section_tipo);
+		return console.error("[relation_list.edit_relation] Error on find section_tipo", self.section_tipo);
 	}
-
+	// create the navigation rqo, it will use to open the relation with the row reference
 	const user_navigation_rqo = {
 		caller_id	: self.id,
 		source		: {
@@ -440,31 +366,4 @@ const edit_relation = function(self, current_data){
 	event_manager.publish('user_navigation', user_navigation_rqo)
 
 };//end edit_relation
-
-
-
-
-/**
-* CLEAN_THE_LIST
-* remove the all previous inforamtion inside the global container
-*/
-const clean_the_list = function(){
-
-	const relation_list_wrap = this.relation_list_wrap
-	if (relation_list_wrap){
-		relation_list_wrap.innerHTML=''
-		relation_list_wrap.style.visibility = 'none'
-	}
-};//end clean_the_list
-
-
-/**
-* SHOW_EMPTY_RESULT
-*
-*/
-const show_empty_result = function(){
-
-	console.log('empty')
-
-};//end show_empty_result
 
