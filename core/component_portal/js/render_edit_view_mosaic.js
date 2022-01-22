@@ -44,9 +44,9 @@ render_edit_view_mosaic.render = async function(self, options) {
 
 	// untouched vars
 		const untouched_columns_map	= JSON.parse(JSON.stringify(self.columns_map))
-		const untouched_id_variant	= self.id_varian
+		const untouched_id_variant	= self.id_variant
 
-	// alt_list_body. Alternative view node with all ddo in table mode
+	// alt_list_body. Alternative table view node with all ddo in table mode
 		const alt_list_body = await (async ()=>{
 
 			// alt_list_body
@@ -54,6 +54,11 @@ render_edit_view_mosaic.render = async function(self, options) {
 					element_type	: 'div',
 					class_name		: 'alt_list_body display_none'
 				})
+
+			// inside tool_time_machine case. Do not create the alt_list_body columns
+				if (self.caller && self.caller.model==='tool_time_machine') {
+					return alt_list_body
+				}
 
 			// close_alt_list_body
 				const close_alt_list_body = ui.create_dom_element({
@@ -66,15 +71,15 @@ render_edit_view_mosaic.render = async function(self, options) {
 				})
 
 			// columns
-				const alt_columns_map	= await rebuild_columns_map(self, false)
-				self.columns_map		= alt_columns_map // overwrite temporally (!)
+				const alt_columns_map	= rebuild_columns_map(untouched_columns_map, self, false)
+				self.columns_map		= alt_columns_map // overwrite instance columns_map temporally (!)
 
 			// header. Build using common ui builder
 				const list_header_node = ui.render_list_header(alt_columns_map, self)
 				alt_list_body.appendChild(list_header_node)
 
 			// alternative_table_view (body)
-				self.id_variant					= untouched_id_variant // 'alt' // reset always (take care about render level 'content' case)
+				self.id_variant					= 'table';
 				const alt_ar_section_record		= await self.get_ar_instances({mode:'list'})
 				const alternative_table_view	= await get_alternative_table_view(self, alt_ar_section_record, alt_list_body)
 				alt_list_body.appendChild(alternative_table_view)
@@ -98,18 +103,21 @@ render_edit_view_mosaic.render = async function(self, options) {
 
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
-			const columns_map	= await rebuild_columns_map(self, true)
-			self.columns_map	= columns_map
+			const base_columns_map	= self.columns_map.filter(el => el.mosaic===true)
+			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
+			self.columns_map		= columns_map // overwrite instance columns_map
 
 		// content_data
-			self.id_variant			= 'alt' // temporal change of id_variant to modify section records id
+			// self.id_variant = self.id_variant
+			// 	? self.id_variant + 'alt'
+			// 	: 'alt' // temporal change of id_variant to modify section records id
 			const ar_section_record	= await self.get_ar_instances({mode:'list'})
-			console.log("ar_section_record:",ar_section_record);
 			const content_data		= await get_content_data(self, ar_section_record)
 
-			// alt_list_body add inside content_data
+		// alt_list_body . Prepend hidden node into content_data to allow refresh on render_level 'content'
 			content_data.prepend( alt_list_body )
 
+		// render_level
 			if (render_level==='content') {
 				// show header_wrapper_list if is hidden
 					// if (ar_section_record.length>0) {
@@ -243,7 +251,9 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 				// event subscribe
 				// On user click button 'alt' trigger a event that we subscribe here to show the
 				// proper table section record and hide the others
-					const event_id = 'mosaic_show_' + section_record_node.id + '_alt'
+					// const _id = section_record_node.id.replace('_table_','_')
+					const event_id = 'mosaic_show_' + section_record_node.id
+					// console.log("// subscribe event_id:",event_id);
 					event_manager.subscribe(event_id, mosaic_show_alt)
 					function mosaic_show_alt() {
 						// hide all except the header
@@ -280,15 +290,15 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @return obj columns_map
+* @return obj full_columns_map
 */
-const rebuild_columns_map = async function(self, view_mosaic) {
+const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 
-	const columns_map = []
+	const full_columns_map = []
 
 	// column section_id
 		if(!view_mosaic) {
-			columns_map.push({
+			full_columns_map.push({
 				id			: 'section_id',
 				label		: 'Id',
 				width 		: 'auto',
@@ -297,16 +307,13 @@ const rebuild_columns_map = async function(self, view_mosaic) {
 		}
 
 	// base_columns_map
-		const base_columns_map = view_mosaic
-			? await self.columns_map.filter(el => el.mosaic === true)
-			: await self.columns_map
-		columns_map.push(...base_columns_map)
+		full_columns_map.push(...base_columns_map)
 
 	// column info and remove
 		if(!view_mosaic) {
 			// column component_info check
 				if (self.add_component_info===true) {
-					columns_map.push({
+					full_columns_map.push({
 						id			: 'ddinfo',
 						label		: 'Info',
 						callback	: render_column_component_info
@@ -315,7 +322,7 @@ const rebuild_columns_map = async function(self, view_mosaic) {
 
 			// button_remove
 				if (self.permissions>1) {
-					columns_map.push({
+					full_columns_map.push({
 						id			: 'remove',
 						label		: '', // get_label.delete || 'Delete',
 						width 		: 'auto',
@@ -325,7 +332,7 @@ const rebuild_columns_map = async function(self, view_mosaic) {
 		}
 
 
-	return columns_map
+	return full_columns_map
 }//end rebuild_columns_map
 
 
