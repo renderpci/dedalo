@@ -38,6 +38,7 @@ export const component_portal = function(){
 	this.parent			= null
 	this.node			= null
 	this.modal			= null
+	this.caller			= null
 
 	// context - data
 	this.datum		= null
