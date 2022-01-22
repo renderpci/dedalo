@@ -28,7 +28,10 @@ render_mini_component_portal.prototype.mini = async function() {
 
 	const self = this
 
-	const ar_section_record = await self.get_ar_instances()
+	// ar_section_record
+		const ar_section_record = await self.get_ar_instances()
+		// store to allow destroy later
+		self.ar_instances.push(...ar_section_record)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)

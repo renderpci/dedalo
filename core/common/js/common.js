@@ -410,6 +410,12 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 			const do_delete_dependencies = async function() {
 
+				if (!self.ar_instances) {
+					console.log("Undefined self.ar_instances:", self);
+					return false
+				}
+
+
 				const ar_instances_length = self.ar_instances.length
 
 				// debug
@@ -422,7 +428,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 				// remove instances from self ar_instances
 					for (let i = ar_instances_length - 1; i >= 0; i--) {
 
-						// remove from array of instances of current element
+						// remove from current element array of instances
 							const destroyed_elements = self.ar_instances.splice(i, 1)
 
 						// prevent destroy non destroyable instances (menu, etc.)
@@ -431,8 +437,11 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 							}
 
 						// destroy instance
-							if (typeof destroyed_elements[0].destroy!=='undefined') {
+							if (typeof destroyed_elements[0].destroy==='function') {
 								destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+							}else{
+								console.warn("Ignored destroyed_elements[0] without property 'destroy':", self, destroyed_elements[0]);
+								console.warn("self.ar_instances:",self.ar_instances);
 							}
 					}
 
@@ -458,7 +467,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 				// delete paginator
 					if(self.paginator){
-						// await self.paginator.destroy();
+						self.paginator.destroy(true, true, false)
 						delete self.paginator
 					}
 
@@ -467,9 +476,29 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 						const services_length = self.services.length
 						for (let i = services_length - 1; i >= 0; i--) {
 							console.log("removed services:", i, services_length);
+							if (typeof self.services[i].destroy==='function') {
+								self.services[i].destroy(true, true, false)
+							}
 							delete self.services[i]
 						}
 					}
+
+				// self.inspector destroy if exists
+					if (self.inspector) {
+						self.inspector.destroy(true, true, false)
+						delete self.inspector
+					}
+
+				// self.filter destroy if exists
+					if (self.filter) {
+						self.filter.destroy(true, true, false)
+						delete self.filter
+					}
+
+				// self.filter destroy if exists
+					// if (self.filter) {
+					// 	self.filter.destroy(true, true, false)
+					// }
 
 				// remove_dom optional
 					if (remove_dom===true) {

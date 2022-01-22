@@ -40,6 +40,7 @@ export const state = function(){
 	// lifecycle
 	state.prototype.init	= widget_common.prototype.init
 	state.prototype.build	= widget_common.prototype.build
+	state.prototype.destroy	= widget_common.prototype.destroy
 	// render
 	state.prototype.edit	= render_edit_state.prototype.edit
 	state.prototype.list	= render_list_state.prototype.list

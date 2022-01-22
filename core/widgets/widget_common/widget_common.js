@@ -79,3 +79,28 @@ widget_common.prototype.build = async function(autoload=false) {
 };//end build
 
 
+
+/**
+* destroy
+* Generic widget destroy function
+* @param bool autoload
+* @return promise bool
+*/
+widget_common.prototype.destroy = async function() {
+
+	const self = this
+
+	// status update
+		self.status = 'destroying'
+
+	// call generic common tool build. params (delete_self=true, delete_dependencies=false, remove_dom=false)
+		await common.prototype.destroy.call(self, true, false, false);
+
+	// status update
+		self.status = 'destroyed'
+
+
+	return true
+};//end destroy
+
+
