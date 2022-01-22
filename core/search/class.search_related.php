@@ -23,7 +23,7 @@ class search_related extends search {
 		$offset 			= $this->search_query_object->offset;
 
 		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
-
+	dump($full_count, ' full_count +-------------------------+ '.to_string());
 		// reference locator it's the locator of the source section that will be used to get the sections with call to it.
 			$ar_locators = $this->filter_by_locators;
 
@@ -47,7 +47,7 @@ class search_related extends search {
 
 				$query	 = '';
 				$query	.= ($full_count===true)
-					? PHP_EOL . 'SELECT COUNT(*)'
+					? PHP_EOL . 'SELECT COUNT(*) as full_count'
 					: PHP_EOL . 'SELECT section_tipo, section_id, datos';
 				$query	.= PHP_EOL . 'FROM "'.$table.'"';
 				$query	.= PHP_EOL . 'WHERE ';
@@ -69,7 +69,7 @@ class search_related extends search {
 			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query);
 		
 		// Set order to maintain results stable
-		// count and pagination optionals
+		// count and pagination optional
 			if($full_count === false){
 				$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
 				if($limit !== false){
