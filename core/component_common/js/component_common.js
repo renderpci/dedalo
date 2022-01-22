@@ -67,6 +67,9 @@ component_common.prototype.init = async function(options) {
 
 		self.init_events_subscribed = false // initial value (false) is changed on build
 
+		// caller
+		self.caller = options.caller
+
 		// pagination info
 		// self.pagination = (self.data && self.data.pagination)
 		// 	? self.data.pagination

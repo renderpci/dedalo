@@ -56,6 +56,9 @@ common.prototype.init = async function(options) {
 
 		self.render_level	= null
 
+	// caller
+		self.caller = options.caller
+
 	// status update
 		self.status = 'initiated'
 
