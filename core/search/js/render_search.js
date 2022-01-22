@@ -1007,10 +1007,10 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			search_global_container.classList.remove("hide")
 
 			// Set search panel as opened
-				self.track_show_panel({
-					name	: "search_panel",
-					action	: "open"
-				})
+				// self.track_show_panel({
+				// 	name	: "search_panel",
+				// 	action	: "open"
+				// })
 
 			// Thesaurus mode case
 			// if (self.mode==="thesaurus") {
@@ -1026,11 +1026,11 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			search_global_container.classList.add("hide")
 
 			// Set search panel as closed
-				self.track_show_panel({
-					name 			: "search_panel",
-					action 			: "close",
-					section_tipo 	: section_tipo
-				})
+				// self.track_show_panel({
+				// 	name 			: "search_panel",
+				// 	action 			: "close",
+				// 	section_tipo 	: section_tipo
+				// })
 
 			// Thesaurus mode case
 			// if (self.mode==="thesaurus") {
