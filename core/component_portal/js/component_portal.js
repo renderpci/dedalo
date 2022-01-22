@@ -89,6 +89,7 @@ export const component_portal = function(){
 	component_portal.prototype.mini					= render_mini_component_portal.prototype.mini
 	component_portal.prototype.list					= render_list_component_portal.prototype.list
 	component_portal.prototype.edit					= render_edit_component_portal.prototype.edit
+	component_portal.prototype.tm					= render_edit_component_portal.prototype.edit
 	component_portal.prototype.edit_in_list			= render_edit_component_portal.prototype.edit
 	component_portal.prototype.search				= render_search_component_portal.prototype.search
 	component_portal.prototype.change_mode			= component_common.prototype.change_mode
@@ -380,7 +381,7 @@ component_portal.prototype.add_value = async function(value) {
 		}
 
 	// data pagination offset. Check and update self data to allow save request return the proper paginated data
-		if (self.data.pagination.total>0 && key===self.data.pagination.total) {
+		if (self.data.pagination && self.data.pagination.total>0 && key===self.data.pagination.total) {
 			const next_offset = (self.data.pagination.offset + self.data.pagination.limit)
 			if (self.data.pagination.total >= next_offset) {
 				self.data.pagination.offset = next_offset // set before exec API request on Save
