@@ -167,9 +167,11 @@ const add_instance = async (self, context, section_id, current_data, column_id) 
 		}
 
 		// id_variant . Propagate a custom instance id to children
-			if (self.id_variant) {
-				instance_options.id_variant = self.id_variant
-			}
+			const section_record_id_variant = self.caller.tipo +'_'+ section_id
+			instance_options.id_variant = self.id_variant
+				? self.id_variant + '_' + section_record_id_variant
+				: section_record_id_variant
+
 		// time machine matrix_id
 			if (self.matrix_id) {
 				instance_options.matrix_id = self.matrix_id
