@@ -48,6 +48,19 @@ render_edit_section_record.prototype.edit = async function(options={}) {
 			content_data	: content_data
 		})
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			wrapper.addEventListener("click", function(e){
+				if (e.altKey) {
+					e.stopPropagation()
+					e.preventDefault()
+					// common.render_tree_data(instance, document.getElementById('debug'))
+					console.log("/// selected instance:", self);
+				}
+			})
+			// wrapper.classList.add('_'+self.id)
+		}
+
 
 	return wrapper
 }//end edit

@@ -183,6 +183,19 @@ render_list_section_record.prototype.list = async function(options={}) {
 			}
 		}
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			wrapper.addEventListener("click", function(e){
+				if (e.altKey) {
+					e.stopPropagation()
+					e.preventDefault()
+					// common.render_tree_data(instance, document.getElementById('debug'))
+					console.log("/// selected instance:", self);
+				}
+			})
+			// wrapper.classList.add('_'+self.id)
+		}
+
 
 	return wrapper
 }//end render_list_section_record.prototype.list
