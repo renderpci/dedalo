@@ -266,6 +266,7 @@ common.prototype.render = async function (options={}) {
 					break;
 
 				case 'full':
+				default:
 					// set
 						self.node.push(node)
 

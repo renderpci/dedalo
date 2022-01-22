@@ -357,8 +357,14 @@ export const init_events_subscription = function(self) {
 					)
 
 				}else{
-					console.warn(`Invalid observe perform. Target function '${perform}' does not exists in ${self.model}:`, observe[i], typeof self[perform]);
-					console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
+
+					// event_name is defin ed but not perform case
+					if (event_name) {
+						console.group(`Invalid observe ${self.tipo} - ${self.model}`);
+						console.warn(`Invalid observe perform. Target function '${perform}' does not exists in ${self.model}:`, observe[i], typeof self[perform]);
+						console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
+						console.groupEnd();
+					}
 				}
 			}
 		}
@@ -832,15 +838,15 @@ component_common.prototype.get_ar_instances = async function(options={}){
 
 	const self = this
 
+	// options
+		const mode = options.mode || self.mode || 'list'
+
 	// self data verification
 		// 	if (typeof self.data==="undefined") {
 		// 		self.data = {
 		// 			value : []
 		// 		}
 		// 	}
-
-	// options
-		const mode = options.mode || self.mode || 'list'
 
 	// short vars
 		// const records_mode	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
@@ -926,7 +932,7 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				// // add instance
 				// 	ar_instances.push(current_section_record)
 
-			// promise
+			// promise add and continue. Init and build
 				ar_promises.push(new Promise(function(resolve){
 					instances.get_instance(instance_options)
 					.then(function(current_section_record){

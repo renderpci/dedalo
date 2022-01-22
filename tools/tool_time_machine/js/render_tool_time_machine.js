@@ -10,7 +10,7 @@
 
 
 /**
-* RENDER_tool_time_machine
+* RENDER_TOOL_TIME_MACHINE
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_time_machine = function() {
@@ -21,7 +21,7 @@ export const render_tool_time_machine = function() {
 
 
 /**
-* RENDER_tool_time_machine
+* EDIT
 * Render node for use like button
 * @return DOM node
 */
@@ -61,7 +61,7 @@ render_tool_time_machine.prototype.edit = async function (options) {
 		const header	= wrapper.querySelector('.tool_header')
 		const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
 		modal.on_close	= () => {
-			self.destroy(true, true, true)
+			self.destroy(true, true, true) // (delete_self, delete_dependencies, remove_dom)
 		}
 		// fix
 		self.modal_container = modal
