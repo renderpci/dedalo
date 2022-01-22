@@ -137,50 +137,54 @@ section_record.prototype.init = async function(options) {
 * Note that the returned promise await the build of the instance
 * @return promise current_instance
 */
-const add_instance = async (self, current_context, section_id, current_data, column_id) => {
-	// const t0 = performance.now()
+const add_instance = async (self, context, section_id, current_data, column_id) => {
 
-	const instance_options = {
-		model			: current_context.model,
-		tipo			: current_context.tipo,
-		section_tipo	: current_context.section_tipo,
-		section_id		: section_id,
-		mode			: (current_context.fixed_mode)
-			? current_context.mode
-			: self.mode,
-		lang			: current_context.lang,
-		section_lang	: self.lang,
-		parent			: current_context.parent,
-		type			: current_context.type,
-		context			: current_context,
-		data			: current_data,
-		datum			: self.datum,
-		request_config	: current_context.request_config,
-		columns_map		: current_context.columns_map
-	}
+	// current_context
+		const current_context = JSON.parse( JSON.stringify(context) )
 
-	// id_variant . Propagate a custom instance id to children
-		if (self.id_variant) {
-			instance_options.id_variant = self.id_variant
+		// Fix context issues with parent value
+		// (!) Note that the API prevents more than one same component in context.
+		// For this, only the first one is added and therefore parent value it is not reliable. Use always self.caller.tipo as parent
+			current_context.parent = self.caller.tipo
+
+	// instance_options options
+		const instance_options = {
+			model			: current_context.model,
+			tipo			: current_context.tipo,
+			section_tipo	: current_context.section_tipo,
+			section_id		: section_id,
+			mode			: (current_context.fixed_mode) ? current_context.mode : self.mode,
+			lang			: current_context.lang,
+			section_lang	: self.lang,
+			parent			: current_context.parent,
+			type			: current_context.type,
+			context			: current_context,
+			data			: current_data,
+			datum			: self.datum,
+			request_config	: current_context.request_config,
+			columns_map		: current_context.columns_map,
+			caller			: self
 		}
-	// time machine matrix_id
-		if (self.matrix_id) {
-			instance_options.matrix_id = self.matrix_id
-		}
-	// column id
-		if(column_id){
-			instance_options.column_id = column_id
-		}
+
+		// id_variant . Propagate a custom instance id to children
+			if (self.id_variant) {
+				instance_options.id_variant = self.id_variant
+			}
+		// time machine matrix_id
+			if (self.matrix_id) {
+				instance_options.matrix_id = self.matrix_id
+			}
+		// column id
+			if(column_id){
+				instance_options.column_id = column_id
+			}
 
 	// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
 		const current_instance = await instances.get_instance(instance_options)
-
 		if(!current_instance || typeof current_instance.build!=='function'){
 			console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
 			return
 		}
-	// add self as caller
-		current_instance.caller = self
 
 	// instance build await
 		await current_instance.build()
@@ -327,18 +331,31 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 							// add to the ddo to the column
 							ar_column_ddo.push(current_ddo)
 
-							// get the component data to assign to it and create the instance
+							// current_data. get the component data to assign to it and create the instance
 							const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 
 							// current_context. check if the section_tipo of the component
-								const current_context	= Array.isArray(current_ddo.section_tipo)
+								const current_context = Array.isArray(current_ddo.section_tipo)
 									? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 									: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
-									// check is valid context
+
+								// const current_context = Array.isArray(current_ddo.section_tipo)
+								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+								// 	: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.parent===self.caller.tipo && el.section_tipo===current_ddo.section_tipo)
+									// debug
+										// if (ar_current_context && ar_current_context.length>1) {
+										// 	console.warn("//// ar_current_context multiple:", self.caller.tipo, ar_current_context);
+										// 	// console.log("self:",self);
+										// 	// console.log("self.datum.context image :",self.datum.context.find(el => el.tipo=='rsc29'));
+										// }
+									// const current_context = ar_current_context[0] || null
+
+								// check is valid context
 									if (!current_context) {
-										console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
+										console.group(`[get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
 										console.warn("self.datum.context:", self.datum.context);
 										console.warn("self:", self);
+										console.groupEnd()
 										continue;
 									}
 
