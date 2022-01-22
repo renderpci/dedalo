@@ -1308,13 +1308,20 @@ abstract class common {
 			$mode			= $this->get_modo();
 			$label			= $this->get_label();
 			$lang			= $this->get_lang();
-			$ddo_key		= $section_tipo.'_'.$tipo.'_'.$mode;
 
 		// cache structure_context using ddo_key
-			if (isset(self::$structure_context_cache[$ddo_key])) {
-				error_log("------------------- get_structure_context CACHED - $this->tipo \t---- ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ".json_encode($add_request_config));
-				return self::$structure_context_cache[$ddo_key];
-			}
+			// (!) Note that 'sections_json.php' will filter out duplicated context items using this criteria:
+			// 	$el->tipo===$context_item->tipo &&
+			// 	$el->section_tipo===$context_item->section_tipo &&
+			// 	$el->mode===$context_item->mode;
+				$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
+				if (isset(self::$structure_context_cache[$ddo_key])) {
+					if(SHOW_DEBUG===true) {
+						$tipo_line = $tipo .' '. str_repeat("-", 14 - strlen($tipo));
+						error_log("------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config));
+					}
+					return self::$structure_context_cache[$ddo_key];
+				}
 
 		// properties
 			$properties = $this->get_properties() ?? new stdClass();
