@@ -27,10 +27,10 @@ export const inspector = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	inspector.prototype.edit 	= render_inspector.prototype.edit
-	inspector.prototype.render 	= common.prototype.render
-	inspector.prototype.refresh = common.prototype.refresh
-
+	inspector.prototype.edit	= render_inspector.prototype.edit
+	inspector.prototype.render	= common.prototype.render
+	inspector.prototype.refresh	= common.prototype.refresh
+	inspector.prototype.destroy	= common.prototype.destroy
 
 
 /**
@@ -49,7 +49,8 @@ inspector.prototype.init = function(options) {
 	self.node			= []
 	self.caller			= options.caller
 
-	self.events_tokens = []
+	self.events_tokens	= []
+	self.ar_instances	= []
 
 	// status update
 		self.status = 'initiated'

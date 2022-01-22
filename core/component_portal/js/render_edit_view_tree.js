@@ -39,6 +39,8 @@ render_edit_view_tree.render = async function(self, options) {
 
 	// ar_section_record
 		const ar_section_record	= await self.get_ar_instances({mode:'list'})
+		// store to allow destroy later
+		self.ar_instances.push(...ar_section_record)
 
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)

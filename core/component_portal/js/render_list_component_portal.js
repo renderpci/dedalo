@@ -47,6 +47,8 @@ render_list_component_portal.prototype.list = async function(options) {
 		const ar_section_record	= await self.get_ar_instances({
 			mode : mode
 		})
+		// store to allow destroy later
+		self.ar_instances.push(...ar_section_record)
 
 		// content_data
 			const content_data = await get_content_data(self, ar_section_record)

@@ -57,6 +57,9 @@ export const search = function() {
 * extend component functions from component common
 */
 // prototypes assign
+	// lifecycle
+	search.prototype.refresh						= common.prototype.refresh
+	search.prototype.destroy						= common.prototype.destroy
 	// render	
 	search.prototype.render							= common.prototype.render
 	search.prototype.list							= render_search.prototype.list

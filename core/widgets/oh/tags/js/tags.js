@@ -37,11 +37,12 @@ export const tags = function(){
 */
 // prototypes assign
 	// lifecycle
-	tags.prototype.init 	 		= widget_common.prototype.init
-	tags.prototype.build 	 		= widget_common.prototype.build
+	tags.prototype.init		= widget_common.prototype.init
+	tags.prototype.build	= widget_common.prototype.build
+	tags.prototype.destroy	= widget_common.prototype.destroy
 	// render
-	tags.prototype.edit 			= render_tags.prototype.edit
-	tags.prototype.list 			= render_tags.prototype.edit
+	tags.prototype.edit		= render_tags.prototype.edit
+	tags.prototype.list		= render_tags.prototype.edit
 
 
 /**

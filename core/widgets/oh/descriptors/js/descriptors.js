@@ -37,11 +37,12 @@ export const descriptors = function(){
 */
 // prototypes assign
 	// lifecycle
-	descriptors.prototype.init	= widget_common.prototype.init
-	descriptors.prototype.build	= widget_common.prototype.build
+	descriptors.prototype.init		= widget_common.prototype.init
+	descriptors.prototype.build		= widget_common.prototype.build
+	descriptors.prototype.destroy	= widget_common.prototype.destroy
 	// render
-	descriptors.prototype.edit	= render_descriptors.prototype.edit
-	descriptors.prototype.list	= render_descriptors.prototype.list
+	descriptors.prototype.edit		= render_descriptors.prototype.edit
+	descriptors.prototype.list		= render_descriptors.prototype.list
 
 
 /**

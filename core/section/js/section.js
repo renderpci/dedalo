@@ -551,10 +551,10 @@ section.prototype.get_ar_instances = async function(){
 		}//end for loop
 
 	// set
-		self.ar_instances = ar_instances
+		self.ar_instances.push(...ar_instances)
 	
 
-	return self.ar_instances
+	return ar_instances
 };//end get_ar_instances
 
 

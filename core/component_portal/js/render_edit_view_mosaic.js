@@ -81,6 +81,8 @@ render_edit_view_mosaic.render = async function(self, options) {
 			// alternative_table_view (body)
 				self.id_variant					= 'table';
 				const alt_ar_section_record		= await self.get_ar_instances({mode:'list'})
+				// store to allow destroy later
+				self.ar_instances.push(...alt_ar_section_record)
 				const alternative_table_view	= await get_alternative_table_view(self, alt_ar_section_record, alt_list_body)
 				alt_list_body.appendChild(alternative_table_view)
 
@@ -112,6 +114,8 @@ render_edit_view_mosaic.render = async function(self, options) {
 			// 	? self.id_variant + 'alt'
 			// 	: 'alt' // temporal change of id_variant to modify section records id
 			const ar_section_record	= await self.get_ar_instances({mode:'list'})
+			// store to allow destroy later
+			self.ar_instances.push(...ar_section_record)
 			const content_data		= await get_content_data(self, ar_section_record)
 
 		// alt_list_body . Prepend hidden node into content_data to allow refresh on render_level 'content'

@@ -39,6 +39,7 @@ export const get_archive_weights = function(){
 	// lifecycle
 	get_archive_weights.prototype.init		= widget_common.prototype.init
 	get_archive_weights.prototype.build		= widget_common.prototype.build
+	get_archive_weights.prototype.destroy	= widget_common.prototype.destroy
 	// render
 	get_archive_weights.prototype.edit 		= render_get_archive_weights.prototype.edit
 
