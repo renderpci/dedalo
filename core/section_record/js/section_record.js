@@ -195,11 +195,11 @@ const add_instance = async (self, current_context, section_id, current_data, col
 
 
 /**
-* GET_AR_INSTANCES (USED IN EDIT MODE)
+* GET_AR_INSTANCES_EDIT (USED IN EDIT MODE)
 * @see render_section get_content_data
 * @return array ar_instances
 */
-section_record.prototype.get_ar_instances = async function(){
+section_record.prototype.get_ar_instances_edit = async function(){
 
 	const self = this
 
@@ -264,15 +264,15 @@ section_record.prototype.get_ar_instances = async function(){
 
 
 	return self.ar_instances
-};//end get_ar_instances
+};//end get_ar_instances_edit
 
 
 
 /**
-* GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE. TIME MACHINE TOO)
+* GET_AR_COLUMNS_INSTANCES_LIST (USED IN LIST MODE. TIME MACHINE TOO)
 * @return array ar_instances
 */
-section_record.prototype.get_ar_columns_instances = async function(){
+section_record.prototype.get_ar_columns_instances_list = async function(){
 
 	const self = this
 
@@ -289,7 +289,6 @@ section_record.prototype.get_ar_columns_instances = async function(){
 		const section_id	= self.section_id
 		const matrix_id		= self.matrix_id // time machine case only
 		const columns_map	= await self.columns_map || []
-
 
 	// request config
 	// get the request_config with all ddo, it will be use to create the instances
@@ -364,14 +363,14 @@ section_record.prototype.get_ar_columns_instances = async function(){
 
 
 	return self.ar_instances
-};//end get_ar_columns_instances
+};//end get_ar_columns_instances_list
 
 
 
-// /**
-// * GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE. TIME MACHINE TOO)
-// * @return array ar_instances
-// */
+/**
+* GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE. TIME MACHINE TOO)
+* @return array ar_instances
+*/
 	// section_record.prototype.get_ar_columns_instances_DES = async function(){
 
 	// 	const self = this

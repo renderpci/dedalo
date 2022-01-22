@@ -34,7 +34,7 @@ render_edit_section_record.prototype.edit = async function(options={}) {
 
 	const render_level = options.render_level || 'full'
 
-	const ar_instances = await self.get_ar_instances()
+	const ar_instances = await self.get_ar_instances_edit()
 
 	// content_data
 		const content_data = await get_content_data_edit(self, ar_instances)
