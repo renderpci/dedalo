@@ -898,30 +898,13 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				if (self.id_variant) {
 					instance_options.id_variant = self.id_variant
 				}
+				// locator tag_id modifies id_variant when is present
 				if (locator.tag_id) {
-					if (instance_options.id_variant) {
-						instance_options.id_variant += ('_l' + locator.tag_id)
-					}else{
-						instance_options.id_variant = ('_l' + locator.tag_id)
-					}
+					const tag_id_add = '_l' + locator.tag_id
+					instance_options.id_variant = (instance_options.id_variant)
+						? instance_options.id_variant + tag_id_add
+						: tag_id_add
 				}
-
-				// des way
-					// if (locator.tag_id) {
-					// 	// modify self.id_variant adding tag_id
-					// 	self.id_variant = self.id_variant
-					// 		? self.id_variant + ('_l' + locator.tag_id)
-					// 		: ('l' + locator.tag_id)
-
-					// 	// if (instance_options.id_variant) {
-					// 	// 	instance_options.id_variant += ('_l' + locator.tag_id)
-					// 	// }else{
-					// 	// 	instance_options.id_variant = ('_l' + locator.tag_id)
-					// 	// }
-					// }
-					// if (self.id_variant) {
-					// 	instance_options.id_variant = self.id_variant
-					// }
 
 			// matrix id (time machine mode)
 				if (self.matrix_id) {
