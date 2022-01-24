@@ -1521,8 +1521,12 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
+				$time = exec_time_unit($start_time,'ms');
+				$time_string = $time>15
+					? sprintf("\033[31m%s\033[0m", $time)
+					: $time;
 				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
-				error_log("------------------- get_structure_context -------- $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
 			}
 
 
@@ -1627,7 +1631,7 @@ abstract class common {
 			}//end foreach ($request_config_dedalo as $request_config_item)
 
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
-			$full_ddo_map= array_unique($full_ddo_map, SORT_REGULAR);
+			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
 
 		// get the context and data for every locator
@@ -1677,8 +1681,11 @@ abstract class common {
 					// ar_subcontext_calculated
 						$cid = $current_tipo . '_' . $current_section_tipo;
 						// if (in_array($cid, $ar_subcontext_calculated)) {
-						// 	debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
+						// if (isset($ar_subcontext_calculated[$cid])) {
+						// 	// debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
 						// 	// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
+						// 	// continue;
+						// 	// $related_element = $ar_subcontext_calculated[$cid];
 						// }
 
 					// common temporal excluded/mapped models *******
@@ -1793,8 +1800,8 @@ abstract class common {
 
 							// row_section_id
 							// add parent_section_id with the main locator section_id that define the row, to preserve row coherence between all columns
-							// (some columns can has other portals or subdata and it's necessary preserve the root locator section_id)
-							// add parent_tipo with the caller tipo, it define the global context (portal or section) that are creating the rows.
+							// (some columns can has other portals or subdata and it's necessary to preserve the root locator section_id)
+							// add parent_tipo with the caller tipo, it defines the global context (portal or section) that are creating the rows.
 								$ar_final_subdata = [];
 								foreach ($element_json->data as $value_obj) {
 
@@ -1813,13 +1820,11 @@ abstract class common {
 
 							// data add
 								$ar_subdata = array_merge($ar_subdata, $ar_final_subdata);
-							// data add
-								#$ar_subdata[] = $element_json->data;
 						}//end if (isset($related_element))
 
 
 					// add calculated subcontext
-						$ar_subcontext_calculated[] = $cid;
+						// $ar_subcontext_calculated[$cid] = $related_element;
 
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 			}//end foreach($ar_locators as $current_locator)
@@ -1830,10 +1835,12 @@ abstract class common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$text_lenght	= strlen($this->tipo);
-				$nchars			= 14;
-				$tipo_line		= $this->tipo .' '. str_repeat("-", $nchars - $text_lenght);
-				$log = "------------------- get_subdatum ----------------- $tipo_line ". exec_time_unit($start_time,'ms')." ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
+				$time = exec_time_unit($start_time,'ms');
+				$time_string = $time>100
+					? sprintf("\033[31m%s\033[0m", $time)
+					: $time;
+				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
+				$log = "------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
 				error_log($log);
 			}
 
