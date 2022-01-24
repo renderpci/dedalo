@@ -19,6 +19,7 @@ export const data_manager = function() {
 * @return promise api_response
 */
 data_manager.prototype.request = async function(options) {
+	// console.log("// request options:",options);
 
 	this.url			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
 	this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
@@ -55,6 +56,32 @@ data_manager.prototype.request = async function(options) {
 			// console.log("-> json response 1 ok:",response);
 			const json_parsed = response.json().then((result)=>{
 				// console.log("-> json result 2:",result);
+
+				if (result.error) {
+
+					// debug console message
+						if (SHOW_DEBUG) {
+							console.error("result error:",result);
+						}
+
+					// alert msg to user
+						const msg = result.msg || result.error
+						alert("An error occurred in the connection with the API. \n" + msg);
+
+					// custom behabiours
+						switch (result.error) {
+							case 'not_logged':
+								// redirect to login page
+								location.reload();
+								break;
+
+							default:
+								// write message to the console
+								break;
+						}
+				}
+
+
 				return result
 			})
 			// console.log("-> api_response json_parsed:",json_parsed);
@@ -69,34 +96,6 @@ data_manager.prototype.request = async function(options) {
 			}
 		});
 
-
-	// const api_response = await fetch(this.url, {
-	// 		method		: this.method,
-	// 		mode		: this.mode,
-	// 		cache		: this.cache,
-	// 		credentials	: this.credentials,
-	// 		headers		: this.headers,
-	// 		redirect	: this.redirect,
-	// 		referrer	: this.referrer,
-	// 		body		: JSON.stringify(this.body)
-	// 	})
-	// if (api_response.status >= 200 && api_response.status <= 299) {
-	// 	const json_response = await api_response.json();
-	// 	console.log("json_response", json_response);
-	// 	return json_response
-	// } else {
-	// 	// Handle errors
-	// 	console.log(api_response.status, api_response.statusText);
-	// }
-
-	// debug
-	if (SHOW_DEBUG) {
-		api_response.then((response)=>{
-			if (response.result===false) {
-				console.error("api_response error:",response);
-			}			
-		})
-	}
 	
 
 	return api_response
