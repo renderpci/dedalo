@@ -1,13 +1,16 @@
+/*global get_label */
+/*eslint no-undef: "error"*/
+
+
+
 // import
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
-
 /**
-*  render_relation_list
-*
+* RENDER_RELATION_LIST
 */
 export const render_relation_list = function() {
 
@@ -15,10 +18,11 @@ export const render_relation_list = function() {
 };//end relation_list
 
 
+
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return DOM node wrapper
 */
 render_relation_list.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -27,23 +31,24 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 	const render_level = options.render_level
 
 	// content_data
-	const current_content_data = await get_content_data(self)
-	if (render_level==='content') {
-		return current_content_data
-	}
+		const current_content_data = await get_content_data(self)
+		if (render_level==='content') {
+			return current_content_data
+		}
 
 	// wrapper.
-	const wrapper = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'wrapper_relation_list ' + self.model + ' ' + self.tipo + ' ' + self.mode
-	})
-	wrapper.appendChild(current_content_data)
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper_relation_list ' + self.model + ' ' + self.tipo + ' ' + self.mode
+		})
+		wrapper.appendChild(current_content_data)
 
 	// add the paginator to the warpper
-	parse_paginator_html(self, wrapper)
+		parse_paginator_html(self, wrapper)
 
 	return wrapper
 };//end edit
+
 
 
 /**
@@ -52,12 +57,9 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 */
 const get_content_data = function(self) {
 
-	// const fragment = new DocumentFragment()
-
 	// content_data
 	const content_data = document.createElement("div")
-		content_data.classList.add("content_data", self.type)
-
+		  content_data.classList.add("content_data", self.type)
 
 	// Render the data html
 		parse_html(self.datum, content_data)
@@ -74,9 +76,9 @@ const get_content_data = function(self) {
 const parse_html = function(datum, content_data_node){
 
 	// get the context and the data information of the JSON recived
-		const context     = datum.context;
-		const data        = datum.data;
-		const context_id  = context.filter(main_header => main_header.component_tipo === 'id');
+		const context		= datum.context;
+		const data			= datum.data;
+		const context_id	= context.filter(main_header => main_header.component_tipo === 'id');
 
 	// create new styleSheet
 		const style = document.createElement("style");
@@ -86,15 +88,18 @@ const parse_html = function(datum, content_data_node){
 
 	// loop of the different section_tipo inside the context to build the specific list for every section_tipo
 	context_id.forEach(function(current_context){
-		const current_context_colums  = context.filter(current_context_colums => current_context_colums.section_tipo === current_context.section_tipo);
-		const current_data            = data.filter(current_data_header => current_data_header.section_tipo === current_context.section_tipo);
-		const count_data              = current_data.filter(current_data_count => current_data_count.component_tipo === 'id');
+
+		const current_context_colums	= context.filter(current_context_colums => current_context_colums.section_tipo === current_context.section_tipo);
+		const current_data				= data.filter(current_data_header => current_data_header.section_tipo === current_context.section_tipo);
+		const count_data				= current_data.filter(current_data_count => current_data_count.component_tipo === 'id');
 
 		// render the list html for current section_tipo
 		const node = build_grid_html(current_context, current_context_colums, current_data, count_data, CSS_style_sheet)
 
 		content_data_node.appendChild(node)
 	})
+
+	return true
 };//end parse_html
 
 
@@ -106,6 +111,7 @@ const parse_html = function(datum, content_data_node){
 const build_grid_html = function(context, columns, data, count_data, CSS_style_sheet){
 
 	const fragment = new DocumentFragment()
+
 	// create the css selector for the variable gid style
 	const css_selector = 'relation_grid_'+context.section_tipo
 	const columns_length = columns.length -1
@@ -117,91 +123,95 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 		// create a grid content
 		const grid  = ui.create_dom_element({
 			element_type	: 'div',
-			parent			: fragment,
 			class_name		: 'relation_list_grid',
+			parent			: fragment,
 		})
 
 	/* 2 Create the header */
 		//create a section_header, main info header, section name and counter
-		const header	= ui.create_dom_element({
+		const header = ui.create_dom_element({
 			element_type	: 'div',
-			parent			: grid,
 			class_name		: 'relation_list_header',
-			text_node		: context.section_label
+			text_node		: context.section_label,
+			parent			: grid
 		})
 
 		//create the counter
-		const header_count  = ui.create_dom_element({
+		const header_count = ui.create_dom_element({
 			element_type	: 'span',
-			parent			: header,
 			class_name		: 'relation_list_header relation_list_count',
-			text_node		: count_data.length
+			text_node		: count_data.length,
+			parent			: header
 		})
 
 		//create the columns labels container
-		const data_header  = ui.create_dom_element({
+		const data_header = ui.create_dom_element({
 			element_type	: 'ul',
-			parent			: grid,
-			class_name		: css_selector + ' relation_list_data_header'
+			class_name		: css_selector + ' relation_list_data_header',
+			parent			: grid
 		})
 
 		//create a labels colums info header, the name of the componets of the related sections
 		columns.forEach(function(column){
-			let class_name =''
-			if(column.component_label === 'id'){
-				class_name = 'relation_list_data_row_center'
-			}
 
-			const data_header_label  = ui.create_dom_element({
+			const class_name = (column.component_label==='id')
+				? 'relation_list_data_row_center'
+				: ''
+
+			const data_header_label = ui.create_dom_element({
 				element_type	: 'li',
-				parent			: data_header,
 				class_name		: class_name,
-				text_node		: column.component_label
-				})
+				text_node		: column.component_label,
+				parent			: data_header
+			})
 		})
 
 	/* 3 Create the rows with the data */
-		let curent_section_id = 0;
-		let data_row_header = ''
+		let curent_section_id	= 0;
+		let data_row_header		= ''
 		data.forEach(function(current_data){
 
 			//check if the columns id the first column for create the ul node and the first id column
-			if(curent_section_id	!== current_data.section_id){
-				curent_section_id	= current_data.section_id;
+			if(curent_section_id !== current_data.section_id){
+
+				curent_section_id = current_data.section_id;
 
 				//first row, id row, the ul is the container for all row
 				// const event_function	= [{'type':'click','name':'relation_list.edit_relation'}];
-				data_row_header			= ui.create_dom_element({
-					element_type			: 'ul',
-					parent					: grid,
-					class_name				: css_selector + ' relation_list_data_row',
+				data_row_header = ui.create_dom_element({
+					element_type				: 'ul',
+					class_name					: css_selector + ' relation_list_data_row',
 					// custom_function_events	: event_function,
-					// data_set				: current_data
+					// data_set					: current_data,
+					parent						: grid
 				})
 				data_row_header.addEventListener('click', ()=>{
 					edit_relation(self, current_data)
 				})
 
 				//the id information
-				const data_row			= ui.create_dom_element({
-					element_type			: 'li',
-					parent					: data_row_header,
-					class_name				: 'relation_list_data_row_center',
-					text_node				: current_data.section_id
+				const data_row = ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'relation_list_data_row_center',
+					text_node		: current_data.section_id,
+					parent			: data_row_header,
 				})
 
 			}else{
 				// the information colums of the components of the section
-				const data_row			= ui.create_dom_element({
-					element_type			: 'li',
-					parent					: data_row_header,
-					//class_name			: 'relation_list_data_hearder',
-					text_node				: current_data.value
+				const data_row = ui.create_dom_element({
+					element_type	: 'li',
+					//class_name	: 'relation_list_data_hearder',
+					text_node		: current_data.value,
+					parent			: data_row_header
 				})
 			}
 		})
+
+
 	return fragment
 };//end build_grid_html
+
 
 
 /**
@@ -286,6 +296,7 @@ const parse_paginator_html = async function(self, wrapper){
 };//end parse_paginator_html
 
 
+
 /**
 * PREVIOUS_RECORDS
 * build the previous button in the paginator
@@ -299,6 +310,7 @@ const previous_records = function(self){
 		event_manager.publish('relation_list_paginator', self)
 	}
 };//end previous_records
+
 
 
 /**
@@ -365,5 +377,7 @@ const edit_relation = function(self, current_data){
 	// launch event 'user_navigation' that page is watching
 	event_manager.publish('user_navigation', user_navigation_rqo)
 
+	return true
 };//end edit_relation
+
 

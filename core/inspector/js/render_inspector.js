@@ -149,67 +149,103 @@ const get_content_data = function(self) {
 
 	// relation_list container
 		if (self.caller.context.relation_list) {
+
 			const relation_list_wrap = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'relation_list',
 				parent			: content_data
 			})
+			// relation_list_head
 				const relation_list_head = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'relation_list_head',
+					class_name		: 'relation_list_head icon_arrow',
 					inner_html		: get_label.relaciones || "Relations",
 					parent			: relation_list_wrap
 				})
-				const relation_list_node = ui.create_dom_element({
+				relation_list_head.addEventListener('click', async function(){
+					// console.log("relation_list_wrap.clientHeight:", e.target.parentNode.clientHeight);
+					// relation_list_body.style.height = relation_list_body.style.height
+
+					while (relation_list_body.firstChild) {
+						relation_list_body.removeChild(relation_list_body.firstChild);
+					}
+					if (relation_list_head.classList.contains('up')) {
+						relation_list_head.classList.remove('up')
+						return
+					}
+					relation_list_head.classList.add('up')
+					self.section_id = self.caller.section_id
+					const relation_list = await self.get_instance('relation_list', self.section_tipo, self.section_tipo, self.section_id)
+					await relation_list.build()
+					const relation_list_wrap = await relation_list.render()
+					relation_list_body.appendChild(relation_list_wrap)
+				})
+			// relation_list_body
+				const relation_list_body = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'relation_list_node',
+					class_name		: 'relation_list_body',
 					parent			: relation_list_wrap
 				})
-			relation_list_head.addEventListener('click', async function(e){
-				self.section_id = self.caller.section_id
-				while (relation_list_node.firstChild) {
-						relation_list_node.removeChild(relation_list_node.firstChild);
+			// relation_list events
+				self.events_tokens.push(
+					event_manager.subscribe('paginator_goto_paginator_' + self.caller.id, fn_paginator_goto),
+					event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
+				)
+				function fn_paginator_goto() {
+					relation_list_head.classList.remove('up')
+					self.section_id = self.caller.section_id
+					while (relation_list_body.firstChild) {
+						relation_list_body.removeChild(relation_list_body.firstChild)
+					}
 				}
-				const relation_list = await self.get_instance('relation_list',self.section_tipo, self.section_tipo, self.section_id)
-				await relation_list.build()
-				const relation_list_wrap = await relation_list.render()
-				relation_list_node.appendChild(relation_list_wrap)
-				
-			})
-			function fn_paginator_goto(){
-				self.section_id = self.caller.section_id
-				while (relation_list_node.firstChild) {
-						relation_list_node.removeChild(relation_list_node.firstChild)
+				async function fn_relation_list_paginator(relation_list) {
+					relation_list_body.classList.add('loading')
+					// const relation_list = await self.get_instance('relation_list',self.section_tipo, self.section_tipo, self.section_id)
+					self.section_id = self.caller.section_id
+					await relation_list.build()
+					const relation_list_wrap = await relation_list.render()
+					while (relation_list_body.firstChild) {
+						relation_list_body.removeChild(relation_list_body.firstChild)
+					}
+					await relation_list_body.appendChild(relation_list_wrap)
+					relation_list_body.classList.remove('loading')
 				}
-			}
-			async function fn_relation_list_paginator(relation_list){
-				self.section_id = self.caller.section_id
-				while (relation_list_node.firstChild) {
-						relation_list_node.removeChild(relation_list_node.firstChild)
-				}
-				// const relation_list = await self.get_instance('relation_list',self.section_tipo, self.section_tipo, self.section_id)
-				await relation_list.build()
-				const relation_list_wrap = await relation_list.render()
-				relation_list_node.appendChild(relation_list_wrap)
-			}
+		}//end if (self.caller.context.relation_list)
 
-			self.events_tokens.push(
-				event_manager.subscribe('paginator_goto_paginator_' + self.caller.id, fn_paginator_goto),
-				event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
-			)
-		}
-
-
-	// project container
+	// time_machine_list container
 		if (self.caller.context.time_machine_list) {
-			const time_machine_list = ui.create_dom_element({
+
+			const time_machine_list_wrap = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'time_machine_list',
-				inner_html		: get_label.latest_changes || "Latest changes",
 				parent			: content_data
 			})
-		}
+			// relation_list_head
+				const time_machine_list_head = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'relation_list_head icon_arrow',
+					inner_html		: get_label.latest_changes || "Latest changes",
+					parent			: time_machine_list_wrap
+				})
+				time_machine_list_head.addEventListener('click', async function(){
+					while (time_machine_list_body.firstChild) {
+						time_machine_list_body.removeChild(time_machine_list_body.firstChild);
+					}
+					if (time_machine_list_head.classList.contains('up')) {
+						time_machine_list_head.classList.remove('up')
+						return
+					}
+					time_machine_list_head.classList.add('up')
+					// do something
 
+				})
+			// time_machine_list_body
+				const time_machine_list_body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'time_machine_list_body',
+					parent			: time_machine_list_wrap
+				})
+		}//end if (self.caller.context.time_machine_list)
 
 	// project container
 		const project_container = ui.create_dom_element({
@@ -218,38 +254,43 @@ const get_content_data = function(self) {
 			parent			: content_data
 		})
 
-	// data_link
-		const data_link = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'light eye data_link',
-			text_content	: 'View record data',
+	// buttons_bottom_container
+		const buttons_bottom_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_container bottom',
 			parent			: content_data
 		})
-		data_link.addEventListener("click", (e)=>{
-			e.preventDefault()
-			// window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
-			window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id )
-		})
-
-	// tool register files.	dd1340
-		const section_tipo = self.caller.tipo
-		if (section_tipo==="dd1340") {
-			const register_download = ui.create_dom_element({
+		// data_link . Open window to full seciton JSON data
+			const data_link = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning download register_download',
-				text_content	: "Download register file",
-				parent			: content_data
+				class_name		: 'light eye data_link',
+				text_content	: 'View record data',
+				parent			: buttons_bottom_container
 			})
-			register_download.addEventListener("click", (e)=>{
+			data_link.addEventListener("click", (e)=>{
 				e.preventDefault()
-				const url 		= DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id
-				const file_name = "register.json"
-				// download_url (import from data_manager) temporal link create and click
-				if (confirm(`Donwload file: ${file_name} ?`)) {
-					download_url(url, file_name)
-				}
+				// window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
+				window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id )
 			})
-		}
+		// tool register files.	dd1340
+			const section_tipo = self.caller.tipo
+			if (section_tipo==="dd1340") {
+				const register_download = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'warning download register_download',
+					text_content	: "Download register file",
+					parent			: buttons_bottom_container
+				})
+				register_download.addEventListener("click", (e)=>{
+					e.preventDefault()
+					const url		= DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id
+					const file_name	= "register.json"
+					// download_url (import from data_manager) temporal link create and click
+					if (confirm(`Donwload file: ${file_name} ?`)) {
+						download_url(url, file_name)
+					}
+				})
+			}
 
 
 	return content_data

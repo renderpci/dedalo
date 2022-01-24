@@ -8,17 +8,9 @@
 
 // inspector
 	.wrapper_inspector {
-		display:block;
-		padding: 0px;
+		display: block;
 		margin: 0px;
-		// width: 98.2%;
-		//position: fixed;
-		//background-color: #4ce6e4;
-		//width: 235px !important;
-		// @media screen and (max-width: @tablet_max_width) { // 980px
-		// @media screen and (max-width: 1800px) {
-		// 	width: 100% !important;
-		// }
+		padding: 0px;
 		width: 100%;
 
 		&.inspector_fixed {
@@ -29,75 +21,108 @@
 
 		// inspector_div_content
 		>.inspector_content_data {
-			position: relative;
 			display: block;
-			margin: 0;
-			padding: 0;
+			margin: 0px;
+			padding: 0px;
+			position: relative;
 
-			>* {
+			>div {
 				border-bottom: 1px solid #eeeeee;
 			}
 
-			>.paginator {
+			// icon_arrow
+				.icon_arrow {
+					padding: 0.33rem;
+					padding-right: 1.33rem;
 
-				.wrapper_paginator {
 
-				}
+					&:after {
+						background-image: url('@{images_base_path}/icons/arrow_down.svg');
+						background-repeat: no-repeat;
+						// background-size: auto 88%;
+						content: ' ';
+						cursor: pointer;
+						height: 1em;
+						margin-right: 0.33rem;
+						padding: 0.33rem;
+						position: absolute;
+						right: 0px;
+						transition: transform 0.26s ease-out;
+						width: 1em;
+					}
 
-				.content_data {
-					padding-top: 0.75em;
-					padding-bottom: 0.75rem;
-				}
+					&.up {
+						&:after {
+							transform: rotate(180deg);
+						}
+					}
 
-				.content_data.paginator {
-					flex-wrap: wrap;
-					>div {
-						// flex: 1 0 100%;
+					&:active {
+						opacity: 0.5;
 					}
 				}
-			}
 
-
-			.wrapper_component {
-				padding: 1em;
-
-				>.label {
+			// paginator
+				>.paginator {
 
 				}
-				>.content_data {
-					padding-top: 1em;
+
+			// buttons_container
+				>.buttons_container {
+
 				}
-			}
+
+			// relation_list
+				>.relation_list {
+
+				}
+
+			// time_machine_list
+				>.time_machine_list {
+
+				}
+
+			// project_container
+				>.project_container {
+
+				}
+
+			// buttons_bottom_container
+				>.buttons_container.bottom {
+
+				}
 
 
-			select {
-				width: 87px;
-			}
+			// select {
+			// 	width: 87px;
+			// }
 
-			.key, .value {
-				line-height: 1em;
-				margin-bottom: 1px;
-				padding: 2px;
-			}
-			.key {
-				display: block;
-				min-width: 60px;
-				background-color: #eee;
-				margin-right: 0;
-				text-align: right;
-				border-radius: 2px;
-				clear: left;
-				float: left;
-			}
-			.value {
-				margin-left: 2px;
-			    max-height: 300px;
-			    text-overflow: ellipsis;
-			    overflow: hidden;
-			    word-break: break-all;
-			    float: left;
-			    margin-left: 2px;
-			}
+			// .key, .value {
+			// 	line-height: 1em;
+			// 	margin-bottom: 1px;
+			// 	padding: 2px;
+			// }
+
+			// .key {
+			// 	display: block;
+			// 	min-width: 60px;
+			// 	background-color: #eee;
+			// 	margin-right: 0;
+			// 	text-align: right;
+			// 	border-radius: 2px;
+			// 	clear: left;
+			// 	float: left;
+			// }
+
+			// .value {
+			// 	margin-left: 2px;
+			// 	max-height: 300px;
+			// 	text-overflow: ellipsis;
+			// 	overflow: hidden;
+			// 	word-break: break-all;
+			// 	float: left;
+			// 	margin-left: 2px;
+			// }
 		}
 
 
@@ -127,278 +152,6 @@
 
 	}
 
-
-
-
-
-
-
-/*#inspector_div .inspector_div_content * { margin-left:4px; margin-right: 4px; }*/
-
-
-
-.value_bold {
-	color: #333333;
-	font-weight: bold;
-}
-.capitalize {
-	text-transform: capitalize;
-}
-
-
-
-/* INSPECTOR INFO
----------------------------------------- */
-	.inspector_info_body {
-		min-height: 13px;
-		width: auto;
-		padding-left: 6px;
-	}
-	.inspector_info_body_fixed {
-		min-height: 0px;
-	}
-
-
-
-/* INSPECTOR_INFO
----------------------------------------- */
-	#inspector_info {
-		min-height: 22px;
-		padding-left: 5px;
-	}
-
-
-
-/* INSPECTOR TOOLS
----------------------------------------- */
-#inspector_tools {
-	padding-left: 6px;
-	width: 100%;
-}
-/* INSPECTOR RELATIONS
----------------------------------------- */
-#inspector_relations {
-	padding-left: 6px;
-}
-#inspector_relation_list_tag {
-	min-height: 0px;
-	/*background-color: #a1e2dc;*/
-}
-#inspector_relation_list_sections {
-	display: block;
-	max-height: 360px;
-	overflow: auto;
-	padding: 0;
-	/*background-color: #bbe26d;*/
-}
-#inspector_relation_list_sections TD { }
-.title_group_relation_reverse_records {
-	font-size: 104%;
-	padding: 0;
-	padding-left: 4px;
-	padding-top: 3px;
-	text-transform: uppercase;
-	color: #222222;
-}
-/* INSPECTOR INDEXATIONS
----------------------------------------- */
-#inspector_indexations {
-	padding-left: 6px;
-	max-height: 250px;
-	overflow: auto;
-}
-/* INSPECTOR DEBUG
----------------------------------------- */
-#inspector_debug {
-
-}
-#inspector_debug .key {
-	//margin-left: 4px;
-}
-.css_span_debugger {
-	font-style: italic;
-	color: #999999;
-	font-size: smaller;
-}
-/* INSPECTOR EVENTS
----------------------------------------- */
-#inspector_events {
-	min-height: 16px;
-	padding-left: 4px;
-}
-/* INSPECTOR OTHERS
----------------------------------------- */
-#inspector_others {
-	min-height: 16px;
-	padding-left: 4px;
-}
-
-
-
-// Inspector activity log
-	#inspector_log {
-		display: block;
-		margin-top: 2px;
-		margin-bottom: 2px;
-		padding-left: 4px;
-		padding-right: 4px;
-		z-index: 10;
-		width: 100%;
-		min-width: 400px;
-		float: right;
-
-		&.inspector_info_body {
-			min-width: initial;
-		}
-
-		.ok, .error {
-			margin: 0px;
-			max-width: 99.9%;
-			opacity: 0.7;
-			float: right;
-			clear: both;
-			margin-bottom: 1px;
-		}
-		.ok::after {
-			content: "x";
-			position: relative;
-			float: right;
-			padding-left: 10px;
-			cursor: pointer;
-			font-weight: bold;
-		}
-
-		.span_save {
-			margin-top: 2px;
-			width: 100%;
-			min-width: 160px;
-			display: block;
-			background-position: 200px center !important;
-			//position: fixed;
-			//top: 4px;
-			//left:130px;
-		}
-	}
-
-	#tools_info_wrapper {
-		#inspector_log .ok, #inspector_log .error {
-			width: 99.9%;
-		}
-	}
-
-
-
-/* INSPECTOR COMMONS*/
-#inspector_info, #inspector_relations, #inspector_debug, #inspector_others {
-	max-height: 158px;
-	overflow: auto;
-}
-
-#inspector_info {
-	display: grid;
-	grid-template-columns: auto 3fr;
-}
-
-.label_lang_data_selector {
-	display: inline-block;
-	margin-right: 5px;
-}
-.label_lang_data_selector:first-letter {
-	 text-transform: uppercase;
-}
-
-
-// paginator
-	#wrap_inspector_paginator {
-		margin-bottom: 5px;
-
-		.css_rows_paginator_content {
-			padding: 5px;
-		}
-		.nav_buttons {
-			//zoom: 1.4;
-			vertical-align: middle;
-		}
-	}
-
-
-
-
-// tools common
-	div.tool_inspector_div {
-		display:block;
-		margin: 0px;
-		margin-bottom: 4px;
-		margin-top: 2px;
-		padding-top: 2px;
-		border-bottom:1px solid #c9c9c9;
-		line-height: 1.6em;
-
-		:first-letter {
-			text-transform: capitalize;
-		}
-		> .icon_bs {
-			top: -1px;
-		}
-	}
-
-
-	/* Elimina la última línea separadora del bottom */
-	div#inspector_tools .tool_inspector_div:last-of-type {
-	    border-bottom:none;
-	}
-	div.tool_inspector_div .icon_bs {
-		margin-right: 3px;
-	}
-
-
-
-// @media screen movil_max_width
-	@media screen and (max-width: @movil_max_width) { // 768px
-
-		// Title of info group
-		#inspector_div > .css_section_group_titulo {
-			display: none;
-		}
-		// info group content info
-		#inspector_div #inspector_info {
-			display: none;
-		}
-
-		// Other inspector elements
-		#tools_info_wrapper, #indexations_info_wrapper, #others_info_wrapper, #debug_info_wrapper {
-			display: none;
-		}
-
-		/*
-		#sidebar .css_wrap_rows_paginator {
-			height: 28px;
-			top: 0;
-			position: relative;
-			text-align: center;
-			zoom: 1.7;
-		}
-		*/
-	}//end @media screen and (max-width: @movil_max_width)
-
-
-
-// inspector log showed in tools
-	.tool_inspector_log {
-		text-align: right;
-		position: fixed;
-	    right: 0;
-	    margin-right: 0;
-	    top: 29px;
-	    opacity: 0.9;
-	    width: 37%;
-		min-height: 1.3em;
-		//background-color: #AFEBFF
-
-		.span_save {
-			white-space: nowrap;
-		}
-	}
 
 
 
