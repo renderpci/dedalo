@@ -323,10 +323,10 @@ common.prototype.refresh = async function(options={}) {
 		const render_level		= options.render_level || 'content'
 
 	// loading css add
-		const nodes_lenght = self.node.length
-		for (let i = nodes_lenght - 1; i >= 0; i--) {
-			self.node[i].classList.add('loading')
-		}
+		// const nodes_lenght = self.node.length
+		// for (let i = nodes_lenght - 1; i >= 0; i--) {
+		// 	self.node[i].classList.add('loading')
+		// }
 
 	// destroy dependencies only
 		if (self.status==='rendered') {
@@ -375,9 +375,9 @@ common.prototype.refresh = async function(options={}) {
 		}
 
 	// loading css remove class
-		for (let i = nodes_lenght - 1; i >= 0; i--) {
-			self.node[i].classList.remove('loading')
-		}
+		// for (let i = nodes_lenght - 1; i >= 0; i--) {
+		// 	self.node[i].classList.remove('loading')
+		// }
 
 	// debug
 		if(SHOW_DEBUG===true) {
