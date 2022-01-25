@@ -502,16 +502,18 @@ export const add_events = function(self, wrapper) {
 				if(self.autocomplete_active!==undefined && self.autocomplete_active===false){
 
 					// set rqo
-						self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-						// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
+						self.rqo_search		= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
+						// self.rqo.choose	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
 
 					self.autocomplete = new service_autocomplete()
 					self.autocomplete.init({
 						caller	: self,
 						wrapper : wrapper
 					})
-					self.autocomplete_active = true
-					self.autocomplete.search_input.focus()
+					.then(function(){
+						self.autocomplete_active = true
+						self.autocomplete.search_input.focus()
+					})
 
 					return true
 				}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)

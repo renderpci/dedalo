@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -7,6 +7,8 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {ui} from '../../../common/js/ui.js'
 	import * as instances from '../../../common/js/instances.js'
+
+
 
 /**
 * SERVICE_AUTOCOMPLETE
@@ -30,47 +32,47 @@ export const service_autocomplete = function() {
 	* INIT
 	* @return bool
 	*/
-	this.init = function(options) {
+	this.init = async function(options) {
 
 		const self = this
 
+		// options
+			self.caller		= options.caller
+			self.wrapper	= options.wrapper
 
+		// set properties
+			self.tipo					= self.caller.tipo
+			self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
+			self.request_config			= JSON.parse(JSON.stringify(self.caller.context.request_config))
+			self.sqo					= {}
+			self.dd_request				= self.request_config.find(el => el.api_engine==='dedalo')
+			self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
+			self.ar_filter_by_list		= []
+			self.operator				= null
+			self.properties				= self.caller.context.properties || {}
+			self.list_name				= 's_'+new Date().getUTCMilliseconds()
+			self.search_fired			= false
 
-		self.instance_caller		= options.caller
-		self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
-		self.wrapper				= options.wrapper
-
-		self.request_config			= JSON.parse(JSON.stringify(self.instance_caller.context.request_config))
-		
-		self.sqo 					= {}
-		
-		self.dd_request 			= self.request_config.find(el => el.api_engine==='dedalo')
-		self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
-		self.ar_filter_by_list		= []
-
-		self.operator 				= null
-
-		// self.ar_dd_request			= self.instance_caller.dd_request.search
-		// self.dd_request				= self.ar_dd_request[0]
-		// self.sqo						= self.dd_request.find(item => item.typo==='sqo')
-		// self.ar_search_section_tipo	= self.sqo.section_tipo
-		// self.ar_filter_by_list		= []
+			// self.ar_dd_request			= self.caller.dd_request.search
+			// self.dd_request				= self.ar_dd_request[0]
+			// self.sqo						= self.dd_request.find(item => item.typo==='sqo')
+			// self.ar_search_section_tipo	= self.sqo.section_tipo
+			// self.ar_filter_by_list		= []
 
 		// engine. get the search_engine sended or set the default value
-			// const engine			= self.request_config.find(el => el.api_engine==='dedalo')
-			self.search_engine		= (self.dd_request) ? self.dd_request.api_engine : 'dedalo';
-
-		// vars
-			self.tipo			= self.instance_caller.tipo
-			self.properties		= self.instance_caller.context.properties || {}
-			self.list_name		= 's_'+new Date().getUTCMilliseconds()
-			self.search_fired	= false
+			self.search_engine = (self.dd_request) ? self.dd_request.api_engine : 'dedalo';
 
 		// Custom events defined in properties
 			self.custom_events = (self.properties.custom_events) ? self.properties.custom_events : []
 
-		// Build_autocomplete_input
-		self.render()
+		// render. Build_autocomplete_input nodes
+			self.render()
+
+		// event keys
+			document.addEventListener('keydown', fn_service_autocomplete_keys, false)
+			function fn_service_autocomplete_keys(e) {
+				self.service_autocomplete_keys(e)
+			}
 
 		return true
 	};//end init
@@ -78,13 +80,81 @@ export const service_autocomplete = function() {
 
 
 	/**
+	* SERVICE_AUTOCOMPLETE_KEYS
+	* @return
+	*/
+	this.service_autocomplete_keys = function(e) {
+
+		const self = this
+
+		// console.log("/////////////// e.which:",e.which);
+
+		// down arrow
+		if(e.which === 40) {
+
+			const selected_node = self.datalist.querySelector('.selected')
+			if (selected_node) {
+				selected_node.classList.remove('selected')
+				if (selected_node.nextSibling) {
+					selected_node.nextSibling.classList.add('selected')
+				}
+			}else{
+				// select the first one
+				if (self.datalist.firstChild) {
+					self.datalist.firstChild.classList.add('selected')
+				}
+			}
+		}
+		// up arrow
+		else if (e.which === 38) {
+
+			const selected_node = self.datalist.querySelector('.selected')
+			if (selected_node) {
+				selected_node.classList.remove('selected')
+				if (selected_node.previousSibling) {
+					selected_node.previousSibling.classList.add('selected')
+				}
+			}
+		}
+		// enter
+		else if (e.which === 13) {
+
+			const selected_node = self.datalist.querySelector('.selected')
+			if (selected_node) {
+				selected_node.click()
+			}
+		}
+
+		return true
+	};//end service_autocomplete_keys
+
+
+
+	/**
+	* BUILD
+	* @return bool
+	*/
+	this.build = async function(){
+
+		const self = this
+
+
+		return true
+	};//end build
+
+
+
+	/**
 	* DESTROY
 	* @return bool
 	*/
-	this.destroy = function(){
+	this.destroy = async function(){
 
 		const self = this
+
 		self.searh_container.remove()
+
+		// document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 
 		return true
 	};//end destroy
@@ -116,7 +186,7 @@ export const service_autocomplete = function() {
 		// source selector (Dédalo, Zenon, etc.)
 			const source_selector = self.render_source_selector()
 			options_container.appendChild(source_selector)
-		
+
 		// sections selector
 			const sections_selector = self.render_filters_selector()
 			options_container.appendChild(sections_selector)
@@ -124,11 +194,11 @@ export const service_autocomplete = function() {
 		// components fields for inputs_list
 			const inputs_list = self.render_inputs_list()
 			options_container.appendChild(inputs_list)
-		
+
 		// operator selector
 			const operator_selector = self.render_operator_selector()
 			options_container.appendChild(operator_selector)
-		
+
 		// search_input
 			const search_input = self.render_search_input()
 			searh_container.appendChild(search_input)
@@ -589,7 +659,7 @@ export const service_autocomplete = function() {
 			const current_ddo = ddo_map[i]
 			// check if the current ddo is a semantic node and the caller it's not a component_semantic_node,
 			//if the caller is a portal the semantic node it's necessary remove it, because the semantic node has his own sqo (it's outside of the portal sqo )
-			if(current_ddo.model==='component_semantic_node' && self.instance_caller.model !== current_ddo.model) continue;
+			if(current_ddo.model==='component_semantic_node' && self.caller.model !== current_ddo.model) continue;
 			// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo is the component
 			const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
 			if(current_ar_valid_ddo.length !== 0) continue
@@ -637,9 +707,9 @@ export const service_autocomplete = function() {
 		// operator selector
 		// get the operator to use into the filter free
 		const operator	= self.dd_request.search && self.dd_request.search.sqo_config && self.dd_request.search.sqo_config.operator
-			? self.instance_caller.rqo_config.search.sqo_config.operator
+			? self.caller.rqo_config.search.sqo_config.operator
 			: '$and'
-		
+
 			const operator_selector = ui.create_dom_element({
 				element_type 	: "div",
 				class_name 	 	: "search_operators_div"
@@ -727,7 +797,7 @@ export const service_autocomplete = function() {
 		// all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
 		function get_last_ddo_data_value(current_path, value){
 			// check the path length sent, the first loop is the full path, but it is changed with the check data
-			const current_path_length = current_path.length 
+			const current_path_length = current_path.length
 			for (var i = 0; i < value.length; i++) {
 				const section_tipo 	= value[i].section_tipo
 				const section_id 	= value[i].section_id
@@ -749,7 +819,7 @@ export const service_autocomplete = function() {
 					return current_element_data
 				}{
 					return get_last_ddo_data_value(new_path, current_value)
-				}				
+				}
 			}
 		}
 
@@ -776,18 +846,30 @@ export const service_autocomplete = function() {
 			li_node.addEventListener('click', function(e){
 				e.stopPropagation()
 				const value = JSON.parse(this.dataset.value)
-				// if(self.instance_caller.mode==='search'){
-					// self.instance_caller.datum.data.push({value: current_locator})
+				// if(self.caller.mode==='search'){
+					// self.caller.datum.data.push({value: current_locator})
 				// }
-				// instance_caller is refreshed after add value
-				self.instance_caller.add_value(value)
+				// caller is refreshed after add value
+				self.caller.add_value(value)
+			});
+			// mouseover event
+			li_node.addEventListener('mouseover', async function(e){
+				const children = e.target.parentNode.children;
+				await [...children].map((el)=>{
+					if(el.classList.contains('selected')) el.classList.remove('selected')
+				})
+				e.target.classList.add('selected')
+			});
+			// mouseout event
+			li_node.addEventListener('mouseout', function(e){
+				e.target.classList.remove('selected')
 			});
 
 			// values. build the text of the row with label nodes in correct order (the ddo order in context).
 				const columns_length = columns.length
 				for (let i = 0; i < columns_length; i++) {
 						const current_path = columns[i]
-					// the columns has the last element in the chain in the first position of the array, 
+					// the columns has the last element in the chain in the first position of the array,
 					// the first position is the only component that is necessary to build and show
 						const ddo_item = current_path[0]
 						const current_element_data = get_last_ddo_data_value(current_path, [current_locator])
@@ -801,7 +883,7 @@ export const service_autocomplete = function() {
 							console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
 							continue
 						}
-				
+
 						const instance_options = {
 							context			: current_element_context,
 							data			: current_element_data,
@@ -883,7 +965,7 @@ export const service_autocomplete = function() {
 				return new Promise(()=>{})
 			}
 		// recombine the select ddo with the search ddo to get the list
-			// const select = self.instance_caller.dd_request.select
+			// const select = self.caller.dd_request.select
 			// const dd_request = (select)
 			// 	? self.dd_request.filter(item => item.typo!=='request_ddo')
 			// 	: [...self.dd_request]
@@ -922,11 +1004,11 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// search_query_object base stored in wrapper dataset
-			const original_rqo_search	= await self.instance_caller.rqo_search
+			const original_rqo_search	= await self.caller.rqo_search
 			const rqo_search			= JSON.parse(JSON.stringify(original_rqo_search))
 			self.rqo_search				= rqo_search
 			self.sqo					= rqo_search.sqo
-			
+
 
 			const sqo_options = original_rqo_search.sqo_options
 		// delete the sqo_options to the final rqo_options
@@ -964,7 +1046,7 @@ export const service_autocomplete = function() {
 							new_filter[new_operator] = current_filter
 						}
 					}
-				
+
 				// filter rebuilded
 					self.sqo.filter = {
 						"$and" : [new_filter]
@@ -1023,10 +1105,10 @@ export const service_autocomplete = function() {
 			const load_section_data_promise	= current_data_manager.request({body:rqo})
 
 		// render section on load data
-	 		const api_response = load_section_data_promise
-	 		if(SHOW_DEBUG===true) {
-	 			console.log("[service_autocomplete.dedalo_engine] api_response:", api_response);
-	 		}
+			const api_response = load_section_data_promise
+			if(SHOW_DEBUG===true) {
+				console.log("[service_autocomplete.dedalo_engine] api_response:", api_response);
+			}
 
 		return api_response
 	};//end dedalo_engine
@@ -1051,8 +1133,8 @@ export const service_autocomplete = function() {
 			// rqo build
 			// const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= true
-			const zenon_rqo = await self.instance_caller.build_rqo_show(dd_request, 'get_data', add_show)
-			self.rqo_search = self.instance_caller.build_rqo_search(zenon_rqo, 'search')
+			const zenon_rqo = await self.caller.build_rqo_show(dd_request, 'get_data', add_show)
+			self.rqo_search = self.caller.build_rqo_search(zenon_rqo, 'search')
 		}
 		generate_rqo()
 
@@ -1062,9 +1144,9 @@ export const service_autocomplete = function() {
 			console.log("[zenon_engine] dd_request:", dd_request);
 		}
 
-			// console.log("self.instance_caller-----------------:",self.instance_caller);
+			// console.log("self.caller-----------------:",self.caller);
 		// const request_ddo			= dd_request.find(item => item.typo === 'request_ddo').value
-		// const ar_selected_fields		= self.instance_caller.datum.context.filter(el => el.model === 'component_external')
+		// const ar_selected_fields		= self.caller.datum.context.filter(el => el.model === 'component_external')
 		// const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
 
 		// fields of Zenon "title" for zenon4
@@ -1074,13 +1156,13 @@ export const service_autocomplete = function() {
 			const section_tipo	= fields[0].section_tipo
 
 
-	  	// format data
-	  		const format_data = function(data){
-	  			if(SHOW_DEBUG===true) {
-	  				console.log("+++ data 1:",data);
+		// format data
+			const format_data = function(data){
+				if(SHOW_DEBUG===true) {
+					console.log("+++ data 1:",data);
 					//console.log("+++ dd_request 1:",dd_request);
 					//console.log("+++ source 1:",source);
-	  			}
+				}
 				const section_data		= []
 				const components_data	= []
 				const records			= data.records || []
@@ -1127,7 +1209,7 @@ export const service_autocomplete = function() {
 						}
 
 						// value
-							// const divisor = self.instance_caller.divisor || ' | '
+							// const divisor = self.caller.divisor || ' | '
 							const value = ar_value.join("")
 
 
@@ -1157,7 +1239,7 @@ export const service_autocomplete = function() {
 				// create the section and your data
 				const section ={
 					section_tipo	: section_tipo,
-					tipo			: self.instance_caller.tipo,
+					tipo			: self.caller.tipo,
 					value			: section_data,
 					typo			: 'sections'
 				}
