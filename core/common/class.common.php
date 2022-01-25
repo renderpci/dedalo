@@ -3264,6 +3264,13 @@ abstract class common {
 				|| 	!is_null($in_properties)
 			  ) {
 
+				// affected_tipos specific restriction like tool_indexation (only 'rsc36')
+					if (!empty($affected_tipos[0])) {
+						if(!in_array($tipo, $affected_tipos)) {
+							continue;
+						}
+					}
+
 				if ($requirement_translatable===true) {
 
 					$is_translatable = ($is_component===true)
