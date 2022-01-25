@@ -14,7 +14,7 @@ class DDModal extends HTMLElement {
 				display: none;
 				position: fixed;
 				z-index: 2;
-				padding-top: 80px;
+				/*padding-top: 80px;*/
 				left: 0;
 				top: 0;
 				width: 100%;
@@ -33,6 +33,8 @@ class DDModal extends HTMLElement {
 				position: relative;
 				background-color: #fefefe;
 				margin: auto;
+				/*margin-top: 80px;*/
+				top: 4.5vh;
 				padding: 0;
 				border: 1px solid #888;
 				width: 80%;
