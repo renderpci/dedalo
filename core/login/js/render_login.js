@@ -88,8 +88,8 @@ const add_events = function(self, wrapper, content_data) {
 						return false
 					}
 
-					//wrapper.classList.add("loading")
-					//wrapper.classList.add("preload")
+					//wrapper.classList.add('loading')
+					//wrapper.classList.add('preload')
 
 					const button		= e.target
 					const button_label	= button.querySelector('.button_label')

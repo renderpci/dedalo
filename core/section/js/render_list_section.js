@@ -99,6 +99,8 @@ render_list_section.prototype.list = async function(options) {
 				"grid-template-columns": template_columns
 			}
 		)
+		// fix last list_body (for pagination selection)
+		self.node_body = list_body
 
 	// list_header_node. Create and append if ar_instances is not empty
 		if (ar_section_record.length>0) {

@@ -387,11 +387,12 @@ section.prototype.build = async function(autoload=false) {
 				// fn_paginator_goto
 				const fn_paginator_goto = async function(offset) {
 					// loading
-						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
-						const node		= self.node && self.node[0]
-							? self.node[0].querySelector(selector)
-							: null
-						if (node) node.classList.add('loading')
+						// const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
+						// const node		= self.node && self.node[0]
+						// 	? await self.node[0].querySelector(selector)
+						// 	: null
+						// if (node) node.classList.add('loading')
+						self.node_body.classList.add('loading')
 
 					// fix new offset value
 						self.rqo.sqo.offset = offset
@@ -403,7 +404,8 @@ section.prototype.build = async function(autoload=false) {
 						await self.refresh() // refresh current section
 
 					// loading
-						if (node) node.classList.remove('loading')
+						// if (node) node.classList.remove('loading')
+						self.node_body.classList.remove('loading')
 				}
 				self.events_tokens.push(
 					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)

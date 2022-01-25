@@ -238,13 +238,13 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		// 	  automatic_translation_container.appendChild(button_automatic_translation)
 		button_automatic_translation.addEventListener("click", (e) => {
 
-			components_container.classList.add("loading")
+			components_container.classList.add('loading')
 
 			const translator  = translator_engine_select.value
 			const source_lang = source_select_lang.value
 			const target_lang = target_select_lang.value
 			const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
-				components_container.classList.remove("loading")
+				components_container.classList.remove('loading')
 			})
 		})
 

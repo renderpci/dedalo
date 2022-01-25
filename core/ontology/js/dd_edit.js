@@ -88,7 +88,7 @@ function edit_ts(formObj, e) {
 			}
 		}
 
-	formObj.classList.add("loading")
+	formObj.classList.add('loading')
 
 	// request to trigger using JSON format
 		data_manager.request({
@@ -101,7 +101,7 @@ function edit_ts(formObj, e) {
 		.then(function(response){
 			console.log('---- edit_ts response ',response)
 
-			formObj.classList.remove("loading")
+			formObj.classList.remove('loading')
 
 			if (response.result!==true) {
 				// error case
@@ -139,7 +139,7 @@ function edit_ts(formObj, e) {
 			}
 		})
 		.catch((error) => {
-			formObj.classList.remove("loading")
+			formObj.classList.remove('loading')
 			console.error('Error:', error);
 		});
 

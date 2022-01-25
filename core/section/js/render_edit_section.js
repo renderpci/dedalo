@@ -40,6 +40,8 @@ render_edit_section.prototype.edit = async function(options) {
 
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)
+		// fix last content_data (for pagination selection)
+		self.node_body = content_data
 		if (render_level==='content') {
 			return content_data
 		}
