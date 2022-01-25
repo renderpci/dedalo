@@ -1679,10 +1679,10 @@ abstract class common {
 						$label					= $dd_object->label ?? '';
 
 					// ar_subcontext_calculated
-						$cid = $current_tipo . '_' . $current_section_tipo;
+						// $cid = $current_section_tipo . '_' . $section_id . '_' . $current_tipo;
 						// if (in_array($cid, $ar_subcontext_calculated)) {
-						// if (isset($ar_subcontext_calculated[$cid])) {
-						// 	// debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
+						// // if (isset($ar_subcontext_calculated[$cid])) {
+						// 	debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
 						// 	// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
 						// 	// continue;
 						// 	// $related_element = $ar_subcontext_calculated[$cid];
@@ -1824,7 +1824,7 @@ abstract class common {
 
 
 					// add calculated subcontext
-						// $ar_subcontext_calculated[$cid] = $related_element;
+						// $ar_subcontext_calculated[] = $cid;
 
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 			}//end foreach($ar_locators as $current_locator)

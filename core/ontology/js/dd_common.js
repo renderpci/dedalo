@@ -259,7 +259,7 @@ function save_descriptor(input_node) {
 	// form lock
 		const form = document.getElementById("form1")
 		if (form) {
-			form.classList.add("loading")
+			form.classList.add('loading')
 		}
 
 	return new Promise(function(resolve){
@@ -282,7 +282,7 @@ function save_descriptor(input_node) {
 
 			// form unlock
 				if (form) {
-					form.classList.remove("loading")
+					form.classList.remove('loading')
 				}
 
 			if (response.result!==true) {

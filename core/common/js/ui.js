@@ -2083,7 +2083,7 @@ export const ui = {
 
 			// round rgb values
 				function correction(value) {
-					return value
+
 					const factor = 1.016
 
 					const result = (value>127)

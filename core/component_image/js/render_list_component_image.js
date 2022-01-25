@@ -68,6 +68,7 @@ render_list_component_image.prototype.list = function() {
 		image.src = url
 
 
+
 	return wrapper
 };//end list
 
