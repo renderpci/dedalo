@@ -216,7 +216,7 @@ export const ui = {
 					element_type : 'div'
  				})
  				// CSS
-	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
@@ -273,7 +273,7 @@ export const ui = {
 				wrapper.appendChild(fragment)
 
 				// read only. Disable events on permissions <2
-					if (instance.permissions<2 && model!=="section_group") {
+					if (instance.permissions<2) {
 						wrapper.classList.add("disabled_component")
 					}
 
@@ -2108,7 +2108,7 @@ export const ui = {
 		}
 
 		canvas.remove()
-		image.classList.remove("loading")
+		image.classList.remove('loading')
 
 		return image
 	}//end set_background_image
