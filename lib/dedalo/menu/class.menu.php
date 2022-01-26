@@ -132,7 +132,7 @@ class menu extends common {
 
 						# STRUCTURE LINK IN MENU.  && file_exists(DEDALO_LIB_BASE_PATH.'/dd')
 						if( (SHOW_DEBUG===true) ||
-							(DEDALO_ENTITY==='master' && $logged_user_is_global_admin===true && SHOW_DEVELOPER===true)
+							((DEDALO_ENTITY==='master' || DEDALO_ENTITY==='dedalo_edu') && $logged_user_is_global_admin===true && SHOW_DEVELOPER===true)
 						) {
 							// Structure links
 								$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
