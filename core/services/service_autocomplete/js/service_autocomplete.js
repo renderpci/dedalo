@@ -5,6 +5,7 @@
 
 // imports
 	import {data_manager} from '../../../common/js/data_manager.js'
+	import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
 	import * as instances from '../../../common/js/instances.js'
 
@@ -73,6 +74,9 @@ export const service_autocomplete = function() {
 			function fn_service_autocomplete_keys(e) {
 				self.service_autocomplete_keys(e)
 			}
+			event_manager.subscribe('destroy_'+self.id, ()=>{
+				document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
+			})
 
 		return true
 	};//end init
@@ -81,7 +85,7 @@ export const service_autocomplete = function() {
 
 	/**
 	* SERVICE_AUTOCOMPLETE_KEYS
-	* @return
+	* @return bool true
 	*/
 	this.service_autocomplete_keys = function(e) {
 
@@ -154,7 +158,10 @@ export const service_autocomplete = function() {
 
 		self.searh_container.remove()
 
-		// document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
+		event_manager.publish('destroy_'+self.id, this)
+
+		// status update
+		self.status = 'destroyed'
 
 		return true
 	};//end destroy
@@ -229,7 +236,7 @@ export const service_autocomplete = function() {
 
 
 		return true
-	};// end render
+	};//end render
 
 
 
@@ -953,8 +960,8 @@ export const service_autocomplete = function() {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				console.log("[service_autocomplete.autocomplete_search] search_engine:", self.search_engine)
-				console.log("self.dd_request", self.dd_request);
+				// console.log("[service_autocomplete.autocomplete_search] search_engine:", self.search_engine)
+				// console.log("self.dd_request", self.dd_request);
 			}
 
 			const engine = self.search_engine+'_engine'
@@ -1015,7 +1022,7 @@ export const service_autocomplete = function() {
 			delete rqo_search.sqo_options
 
 			if(SHOW_DEBUG===true) {
-				console.log("sqo_options:",sqo_options);
+				// console.log("sqo_options:", sqo_options);
 			}
 
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
@@ -1092,8 +1099,8 @@ export const service_autocomplete = function() {
 			rqo.prevent_lock = true
 
 		if(SHOW_DEBUG===true) {
-			console.log("options", options)
-			console.log("+++ [service_autocomplete.dedalo_engine] rqo:", rqo)
+			// console.log("options", options)
+			// console.log("+++ [service_autocomplete.dedalo_engine] rqo:", rqo)
 		}
 
 		// verify source is in list mode to allow lang fallback
@@ -1107,7 +1114,9 @@ export const service_autocomplete = function() {
 		// render section on load data
 			const api_response = load_section_data_promise
 			if(SHOW_DEBUG===true) {
-				console.log("[service_autocomplete.dedalo_engine] api_response:", api_response);
+				// api_response.then(function(response){
+				// 	console.log("[service_autocomplete.dedalo_engine] api_response:", api_response);
+				// })
 			}
 
 		return api_response
