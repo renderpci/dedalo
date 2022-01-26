@@ -13,14 +13,14 @@
 	canvas, details, embed, figure, figcaption,
 	footer, header, hgroup, menu, nav, output, ruby,
 	section, summary, time, mark, audio, video {
-		margin: 0;
-		padding: 0;
-		border: 0;
-		font-size: 100%;
+		border: 0px;
+		box-sizing: border-box;
 		font: inherit;
+		font-size: 100%;
+		margin: 0px;
+		padding: 0px;
 		vertical-align: baseline;
 		z-index: unset;
-		box-sizing:border-box;
 	}
 
 	article, aside, details, figcaption, figure,
@@ -41,9 +41,9 @@
 	}
 
 	ol, ul {
-		list-style:none;
-		margin: 0;
-		padding: 0;
+		list-style: none;
+		margin: 0px;
+		padding: 0px;
 	}
 
 	blockquote,	q {
@@ -187,7 +187,6 @@
 
 	abbr[title] {
 	  border-bottom: none; /* 1 */
-	  text-decoration: underline; /* 2 */
 	  text-decoration: underline dotted; /* 2 */
 	}
 

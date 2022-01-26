@@ -44,6 +44,13 @@
 		font-size: 0.85em;
 		color: @color_grey_ultradark;
 	}
+	.no_margin {
+		margin: 0px !important;;
+	}
+	.invisible {
+		visibility: hidden;
+	}
+
 
 
 
@@ -876,6 +883,10 @@
 				width: 100%;
 				margin-bottom: 0.5rem;
 				//border: 1px solid #BFBFBF;
+
+				@media screen and (max-width: @width_break_point_1) {
+					width: 100% !important;
+				}
 
 				>.label {
 					// background-color: @color_grey_dark;
@@ -2106,13 +2117,6 @@
 
 
 
-// section
-	.wrapper_section {
-
-	}
-
-
-
 // ul inside content data
 	ul {
 		.wrapper_component >.content_data & {
@@ -2477,7 +2481,7 @@
 
 
 
-// EXPERIMENTAL . singular for checking assignaments only
+// EXPERIMENTAL . singular for checking assignments only
 	.singular {
 
 		&.wrapper_component {
