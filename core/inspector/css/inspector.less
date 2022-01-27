@@ -67,21 +67,46 @@
 
 				}
 
-			// section_info
-				>.section_info {
+			// element_info
+				>.element_info_wrap	>.element_info {
 					font-size: 0.8rem;
 					display: grid;
 					grid-gap: 2px;
-					grid-template-columns: auto auto;
+					grid-template-columns: minmax(min-content, 35%) minmax(65%, 80%);
+					margin-top: 0.15rem;
+					margin-bottom: 0.25rem;
+
+					.link {
+						background-color: @color_orange_dedalo;
+						margin-left: 0.25rem;
+					}
 
 					.key {
 						background-color: @color_grey_light;
 						padding: 0.25rem;
 						text-align: right;
 						text-transform: capitalize;
+
+						&.wide {
+							grid-column-start: 1;
+							grid-column-end: 3;
+							text-align: center;
+						}
 					}
 					.value {
 						padding: 0.25rem;
+
+						&.wide {
+							grid-column-start: 1;
+							grid-column-end: 3;
+							max-height: 10rem;
+							overflow: auto;
+							word-break: break-word;
+						}
+
+						&.code {
+							white-space: pre-wrap;
+						}
 					}
 				}
 
