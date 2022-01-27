@@ -96,16 +96,12 @@ const get_wrapper = function(self, options) {
 	// options
 		const content_data = options.content_data
 
+	// short vars
+		const element_css	= self.context.css || {}
+		const fragment		= new DocumentFragment()
 
-	const element_css	= self.context.css || {}
-	const properties	= self.context.properties
-
-	const fragment = new DocumentFragment()
-
-	// label
-		if (typeof properties.label!=='undefined' && properties.label===null) {
-			// no label is added
-		}else{
+	// label (header)
+		if (self.context.add_label===true) {
 			const component_label = ui.create_dom_element({
 				element_type	: 'div',
 				inner_html		: self.label + ' ' + self.tipo + ' ' + (self.model) + ' [' + self.permissions + ']'
@@ -146,6 +142,11 @@ const get_wrapper = function(self, options) {
 						}
 					}
 			}
+		// no header cases. Remove margins on former section_group_div items
+			if (self.context.add_label===false) {
+				wrapper.classList.add('no_margin')
+			}
+
 		// add
 			wrapper.appendChild(fragment)
 
