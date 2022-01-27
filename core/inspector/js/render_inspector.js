@@ -317,16 +317,21 @@ const get_content_data = function(self) {
 */
 export const render_section_info = function(self) {
 
-	const container = self.section_info_container
+	const container		= self.section_info_container
+	const section		= self.caller
+	const section_data	= section.data.value && section.data.value[0]
+		? section.data.value[0]
+		: {}
+
 
 	// values from caller (section)
-		const section_id			= self.caller.section_id
-		const section_tipo			= self.caller.section_tipo
-		const label					= self.caller.label
-		const created_date			= self.caller.data.created_date
-		const modified_date			= self.caller.data.modified_date
-		const created_by_user_name	= self.caller.data.created_by_user_name
-		const modified_by_user_name	= self.caller.data.modified_by_user_name
+		const section_id			= section.section_id
+		const section_tipo			= section.section_tipo
+		const label					= section.label
+		const created_date			= section_data.created_date
+		const modified_date			= section_data.modified_date
+		const created_by_user_name	= section_data.created_by_user_name
+		const modified_by_user_name	= section_data.modified_by_user_name
 
 	const fragment = new DocumentFragment();
 
