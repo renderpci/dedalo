@@ -220,7 +220,15 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
+			// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
 
 
 	return buttons_container
@@ -265,8 +273,8 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	// service_tinymce
 		const current_service = new service_tinymce()
-		
-		// editor_config			
+
+		// editor_config
 			const editor_config = {
 				plugins : [
 					"advlist autolink lists link image charmap print preview hr anchor pagebreak",
@@ -282,7 +290,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 				custom_events	: get_custom_events(self, i, current_service)
 			}
 
-		// init editor		
+		// init editor
 			current_service.init(self, li, {
 				value			: current_value,
 				key				: i,
@@ -359,7 +367,7 @@ const get_custom_events = (self, i, service) => {
 
 	custom_events.blur = (evt, options) => {
 		// save. service save function calls current component save_value()
-			const actual_value 	= self.data.value[i]			
+			const actual_value 	= self.data.value[i]
 			service.save(actual_value)
 	};//end blur
 
