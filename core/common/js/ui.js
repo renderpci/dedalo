@@ -1246,6 +1246,7 @@ export const ui = {
 			const name						= options.name
 			const placeholder				= options.placeholder
 			const pattern					= options.pattern
+			const href						= options.href
 
 		// DOM node element
 			const element = document.createElement(element_type)
@@ -1257,7 +1258,7 @@ export const ui = {
 
 		// element_type. A element. Add default href property to element
 			if(element_type==='a'){
-				element.href = 'javascript:;'
+				element.href = href || 'javascript:;'
 			}
 
 		// type
