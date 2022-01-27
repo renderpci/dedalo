@@ -50,7 +50,7 @@ export const area_development = function() {
 // prototypes assign
 	area_development.prototype.init				= area_common.prototype.init
 	// area_development.prototype.build			= area_common.prototype.build
-	area_development.prototype.render			= common.prototype.render
+	// area_development.prototype.render		= common.prototype.render
 	area_development.prototype.refresh			= common.prototype.refresh
 	area_development.prototype.destroy			= common.prototype.destroy
 	area_development.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -74,13 +74,13 @@ area_development.prototype.build = async function(autoload=true) {
 
 	// rqo_config
 		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
-	
+
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
 		self.rqo.prevent_lock = true
 
 	// debug
-		const rqo_original = JSON.parse(JSON.stringify(self.rqo))		
+		const rqo_original = JSON.parse(JSON.stringify(self.rqo))
 
 	// load from DDBB
 		if (autoload===true) {
@@ -88,7 +88,7 @@ area_development.prototype.build = async function(autoload=true) {
 			// load data
 				const current_data_manager = new data_manager()
 				const api_response = await current_data_manager.request({body:self.rqo})
-		
+
 			// set the result to the datum
 				self.datum	= api_response.result
 
@@ -119,6 +119,29 @@ area_development.prototype.build = async function(autoload=true) {
 
 	return true
 };//end build
+
+
+
+/**
+* RENDER
+* @param object options
+*	render_level : level of deep that is rendered (full | content)
+* @return promise
+*	node first DOM node stored in instance 'node' array
+*/
+area_development.prototype.render = async function(options={}) {
+
+	const self = this
+
+	// call generic common render
+		const result_node = await common.prototype.render.call(this, options)
+
+	// event publish
+		event_manager.publish('render_instance', self)
+
+
+	return result_node
+};//end render
 
 
 
@@ -226,7 +249,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 	const js_promise = load_json_editor_files().then(()=>{
 
 		// dom elements
-			const widget_container = document.getElementById(widget_object.id) // "dedalo_api_test_environment"		
+			const widget_container = document.getElementById(widget_object.id) // "dedalo_api_test_environment"
 
 		// button submit
 			const button_submit = widget_container.querySelector("#submit_api")
