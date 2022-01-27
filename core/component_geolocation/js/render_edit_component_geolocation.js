@@ -338,7 +338,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 
 			observer.observe(map_container);
 		}
-		
+
 
 	return li
 };//end get_input_element_edit
@@ -384,7 +384,15 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
+			// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
 
 
 	return buttons_container
