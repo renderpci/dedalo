@@ -64,7 +64,7 @@ inspector.prototype.init = function(options) {
 * BUILD
 * @return bool true
 */
-inspector.prototype.build = async function(){
+inspector.prototype.build = async function() {
 
 	const self = this
 

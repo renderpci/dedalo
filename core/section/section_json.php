@@ -80,6 +80,20 @@
 
 				$value = [$locator];
 
+				// section self data
+					// $item = new stdClass();
+					// 	$item->typo						= 'section';
+					// 	$item->section_tipo				= $this->tipo;
+					// 	$item->tipo						= $this->tipo;
+					// 	$item->value					= $value;
+					// 	// section creation / modification data
+					// 	$item->created_date				= $this->get_created_date();
+					// 	$item->modified_date			= $this->get_modified_date();
+					// 	$item->created_by_user_name		= $this->get_created_by_user_name();
+					// 	$item->modified_by_user_name	= $this->get_modified_by_user_name();
+
+					// $data[] = $item;
+
 				// subdata add
 					$subdatum = $this->get_subdatum($tipo, $value);
 

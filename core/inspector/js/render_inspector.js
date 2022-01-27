@@ -200,7 +200,6 @@ const get_content_data = function(self) {
 				}
 				async function fn_relation_list_paginator(relation_list) {
 					relation_list_body.classList.add('loading')
-					// const relation_list = await self.get_instance('relation_list',self.section_tipo, self.section_tipo, self.section_id)
 					self.section_id = self.caller.section_id
 					await relation_list.build()
 					const relation_list_wrap = await relation_list.render()

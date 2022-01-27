@@ -568,7 +568,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 * @return object source
 */
 export const create_source = function (self, action) {
-	
+
 	const source = { // source object
 		typo			: "source",
 		action			: action,
@@ -669,7 +669,7 @@ common.prototype.load_script = async function(src) {
 
 /**
 * GET_COLUMNS
-* Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc) 
+* Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc)
 * and create the columns to be render by the section or portals
 * @return array ar_columns the the specific columns to render into the list, with inverse path format.
 */
@@ -852,13 +852,13 @@ common.prototype.get_columns_map = function(){
 
 /**
 * GET_AR_INVERTED_PATHS
-* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc) 
+* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc)
 * get the path in inverse format, the last in the chain will be the first object [0]
 * @return array ar_inverted_paths the the speific paths, with inverse path format.
 */
 export const get_ar_inverted_paths = function(full_ddo_map){
 
-	// get the parents for the column, creating the inverse path 
+	// get the parents for the column, creating the inverse path
 	// (from the last component to the main parent, the column will be with the data of the first item of the column)
 	function get_parents(ddo_map, current_ddo) {
 		const ar_parents = []
@@ -1073,7 +1073,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 * @return object rqo
 */
 common.prototype.build_rqo_show = async function(rqo_config, action, add_show=false){
-		
+
 	const self = this
 
 	// clone rqo_config
@@ -1085,7 +1085,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		// if(saved_rqo){
 
 		// 	if (rqo_config.sqo) {
-				
+
 		// 		let to_save = false
 
 		// 		saved_rqo.sqo = saved_rqo.sqo || {}
@@ -1147,8 +1147,8 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 				: [self.section_tipo]
 
 	sqo.section_tipo = ar_sections
-	
-	// Get the limit, offset, full count, and filter by locators. 
+
+	// Get the limit, offset, full count, and filter by locators.
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
 	// and finally if the rqo_config don't has sqo or sqo_config, set the default parameter to each.
 		sqo.limit = (sqo.limit)
@@ -1200,8 +1200,8 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 			}
 			console.warn("added rqo.show:", self.tipo, self.mode );
 		}
-		
-	
+
+
 	// local_db_data save
 		// current_data_manager.set_local_db_data(rqo, 'rqo')
 
@@ -1217,7 +1217,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 * @return object rqo
 */
 common.prototype.build_rqo_search = async function(rqo_config, action){
-		
+
 	const self = this
 
 	// build new one with source of the instance caller (self)
@@ -1225,9 +1225,9 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 	// get the operator to use into the filter free
 		const operator	= rqo_config.search && rqo_config.search.sqo_config && rqo_config.search.sqo_config.operator
-			? rqo_config.search.sqo_config.operator 
+			? rqo_config.search.sqo_config.operator
 			: '$or'
-		
+
 	// sqo. Set the sqo_config into a checked variable, get the sqo_config for search or show
 		const sqo_config = rqo_config.search && rqo_config.search.sqo_config
 			? rqo_config.search.sqo_config
@@ -1268,7 +1268,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		}
 
 
-	// FILTER_FREE 
+	// FILTER_FREE
 	// the filter will be used to set the q with all paths to use to search.
 		const filter_free			= {}
 			  filter_free[operator] = []
@@ -1357,7 +1357,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		// get the sub elements with the ddo_map, the method is recursive,
 		// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
 		const columns = get_ar_inverted_paths(ddo_map)
-	
+
 
 		//build the rqo
 		const rqo = {

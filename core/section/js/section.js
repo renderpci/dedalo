@@ -128,7 +128,7 @@ section.prototype.init = async function(options) {
 	self.columns_map 		= options.columns_map || []
 
 	self.config 			= options.config || null
-	
+
 	// events subscription
 		// new_section_
 		self.events_tokens.push(
@@ -154,7 +154,7 @@ section.prototype.init = async function(options) {
 				const source = create_source(self, 'search')
 					  source.section_id	= section_id
 					  source.mode		= 'edit'
-				
+
 				const sqo = {
 					mode				: self.mode,
 					section_tipo		: [{tipo:self.section_tipo}],
@@ -217,14 +217,14 @@ section.prototype.build = async function(autoload=false) {
 		self.data = self.data || {}
 
 	const current_data_manager	= new data_manager()
-		
+
 	// rqo
 		const generate_rqo = async function(){
 			// rqo_config. get the rqo_config from context
 			self.rqo_config	= self.context.request_config
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
 				: {}
-			
+
 			// rqo build
 			const action	= 'search'
 			const add_show	= self.mode==='tm'
@@ -247,7 +247,7 @@ section.prototype.build = async function(autoload=false) {
 			// self.filter.build()
 		}
 		// console.log("section build filter unactive (remember) ");
-	
+
 	// load data if is not already received as option
 		if (autoload===true) {
 
@@ -350,7 +350,7 @@ section.prototype.build = async function(autoload=false) {
 					self.events_tokens.push(event_token)
 				}
 		}//end if (autoload===true)
-	
+
 	// Update section mode/label with context declarations
 		const section_context = self.context || {
 			mode		: 'edit',
@@ -423,9 +423,9 @@ section.prototype.build = async function(autoload=false) {
 				const current_inspector = new inspector()
 				current_inspector.init({
 					section_tipo	: self.section_tipo,
-					section_id		: self.section_id
+					section_id		: self.section_id,
+					caller			: self
 				})
-				current_inspector.caller = self
 				// fix section inspector
 				self.inspector = current_inspector
 			// }
@@ -448,12 +448,12 @@ section.prototype.build = async function(autoload=false) {
 
 					if (element.matrix_id) { continue; } // skip verification in matrix data
 
-					const index = ar_used.findIndex(item => item.tipo===element.tipo && 
-													item.section_tipo===element.section_tipo && 
-													item.section_id==element.section_id && 
-													item.from_component_tipo===element.from_component_tipo && 
-													item.parent_section_id==element.parent_section_id && 
-													item.row_section_id==element.row_section_id 
+					const index = ar_used.findIndex(item => item.tipo===element.tipo &&
+													item.section_tipo===element.section_tipo &&
+													item.section_id==element.section_id &&
+													item.from_component_tipo===element.from_component_tipo &&
+													item.parent_section_id==element.parent_section_id &&
+													item.row_section_id==element.row_section_id
 													// && (item.matrix_id && item.matrix_id==element.matrix_id)
 													&& (item.tag_id && item.tag_id==element.tag_id)
 													)
@@ -511,13 +511,13 @@ section.prototype.get_ar_instances = async function(){
 		// 		value : []
 		// 	}
 		// }
-	
+
 	// iterate records
 		const lang 			= self.lang
 		const value			= self.data && self.data.value
 			? self.data.value
 			: []
-		const value_length	= value.length		
+		const value_length	= value.length
 		const section_record_mode = self.mode==='tm'
 			? 'list'
 			: self.mode
@@ -572,12 +572,12 @@ section.prototype.get_ar_instances = async function(){
 
 			// add instance
 				ar_instances.push(current_section_record)
-				
+
 		}//end for loop
 
 	// set
 		self.ar_instances.push(...ar_instances)
-	
+
 
 	return ar_instances
 };//end get_ar_instances
