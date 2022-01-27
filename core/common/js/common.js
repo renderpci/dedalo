@@ -281,8 +281,8 @@ common.prototype.render = async function (options={}) {
 
 	// event publish
 		event_manager.publish('render_'+self.id, result_node)
-		event_manager.publish('render_instance', self)
-	
+		// event_manager.publish('render_instance', self)
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			const total = (performance.now()-t0).toFixed(3)

@@ -89,42 +89,21 @@
 			$context = array_merge($context, $section_json->context);
 		}
 	}else{
-		// data item
-			$value = array_map(function($item) use($modo){
 
-				$locator = new stdClass();
-					$locator->section_tipo	= $item->section_tipo;
-					$locator->section_id	= $item->section_id;
-
-				// tm case
-					if($modo==='tm'){
-						$locator->matrix_id	= $item->id;
-						$locator->timestamp	= $item->timestamp;
-						$locator->state		= $item->state;
-					}
-
-				return $locator;
-			}, $dato);
-
-			$ar_section_tipo = array_map(function($locator){
-				return $locator->section_tipo;
-			}, $dato);
-
-
-
+		// data item (first data item. Note that 'value' and 'section_tipo' are fulfilled on each dato iteration)
 			$item = new stdClass();
 				$item->typo			= 'sections';
-				$item->section_tipo	= $ar_section_tipo;
 				$item->tipo			= $this->caller_tipo;
-				$item->value		= $value;
+				$item->section_tipo	= []; // $ar_section_tipo;
+				$item->value		= []; // $value;
 
 			$data[] = $item;
 
 		// subdatum
 			foreach ($dato as $key => $current_record) {
 
-				$section_id		= $current_record->section_id;
 				$section_tipo	= $current_record->section_tipo;
+				$section_id		= $current_record->section_id;
 
 				// section instance
 					$section = $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
@@ -138,24 +117,24 @@
 					$section->pagination = $pagination;
 
 				// set dato
-				if ($modo==='tm') {
-					$section->set_record($current_record); // inject whole db record as var
-				}else{
-					// inject dato to section when the dato come from db and set as loaded
-					$datos = $current_record->datos ?? null;
-					if (!is_null($datos)) {
-						$section->set_dato($datos);
-						$section->set_bl_loaded_matrix_data(true);
+					if ($modo==='tm') {
+						$section->set_record($current_record); // inject whole db record as var
 					}else{
-						// inject dato when the dato come from ar_locators
-						$section->set_dato($current_record);
+						// inject dato to section when the dato come from db and set as loaded
+						$datos = $current_record->datos ?? null;
+						if (!is_null($datos)) {
+							$section->set_dato($datos);
+							$section->set_bl_loaded_matrix_data(true);
+						}else{
+							// inject dato when the dato come from ar_locators
+							$section->set_dato($current_record);
+						}
 					}
-				}
 
-				// get the JSON data of the related component
+				// get the instance JSON context and data
 					$section_json = $section->get_json();
 
-				// context. prevent duplicated context. Get the unique context and subcontext that will be need to used in client.
+				// CONTEXT. prevent duplicated context. Get the unique context and subcontext that will be need to used in client.
 				// it's necessary to have all context called but only one it's necessary, in a list the context its calculated for every row and column, getting duplicated context and subcontext
 				// include the context that wasn't included in the previous loops.
 					$current_context = $section_json->context;
@@ -171,7 +150,30 @@
 						}
 					}
 
-				$data = array_merge($data, $section_json->data);
+				// DATA
+					$data = array_merge($data, $section_json->data);
+
+				// item sections value. Update in each iteration
+					$current_value = new stdClass();
+						$current_value->section_tipo			= $section_tipo;
+						$current_value->section_id				= $section_id;
+					// section info
+						$current_value->created_date			= $section->get_created_date();
+						$current_value->modified_date			= $section->get_modified_date();
+						$current_value->created_by_user_name	= $section->get_created_by_user_name();
+						$current_value->modified_by_user_name	= $section->get_modified_by_user_name();
+					// tm case
+						if($modo==='tm'){
+							$current_value->matrix_id	= $current_record->id;
+							$current_value->timestamp	= $current_record->timestamp;
+							$current_value->state		= $current_record->state;
+						}
+					// add value
+						$item->value[] = $current_value;
+					// add section_tipo if not already exists
+						if (!in_array($section_tipo, $item->section_tipo)) {
+							$item->section_tipo[] = $section_tipo;
+						}
 			}//end foreach ($dato as $current_record)
 	}//end if (empty($dato))
 

@@ -7,6 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {download_url} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import * as instances from '../../common/js/instances.js'
 
 
 
@@ -106,6 +107,15 @@ const get_content_data = function(self) {
 		// fix pointer to node placeholder
 		self.paginator_container = paginator_container
 
+	// section_info container
+		const section_info_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'section_info',
+			parent 			: content_data
+		})
+		// fix pointer to node placeholder
+		self.section_info_container = section_info_container
+
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -163,8 +173,6 @@ const get_content_data = function(self) {
 					parent			: relation_list_wrap
 				})
 				relation_list_head.addEventListener('click', async function(){
-					// console.log("relation_list_wrap.clientHeight:", e.target.parentNode.clientHeight);
-					// relation_list_body.style.height = relation_list_body.style.height
 
 					while (relation_list_body.firstChild) {
 						relation_list_body.removeChild(relation_list_body.firstChild);
@@ -174,8 +182,14 @@ const get_content_data = function(self) {
 						return
 					}
 					relation_list_head.classList.add('up')
-					self.section_id = self.caller.section_id
-					const relation_list = await self.get_instance('relation_list', self.section_tipo, self.section_tipo, self.section_id)
+					self.section_id		= self.caller.section_id
+					const relation_list	= await instances.get_instance({
+						model			: 'relation_list',
+						tipo			: self.caller.context['relation_list'],
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						mode			: self.mode
+					})
 					await relation_list.build()
 					const relation_list_wrap = await relation_list.render()
 					relation_list_body.appendChild(relation_list_wrap)
@@ -296,3 +310,97 @@ const get_content_data = function(self) {
 };//end get_content_data
 
 
+
+/**
+* RENDER_SECTION_INFO
+* @return DOM DocumentFragment
+*/
+export const render_section_info = function(self) {
+
+	const container = self.section_info_container
+
+	// values from caller (section)
+		const section_id			= self.caller.section_id
+		const section_tipo			= self.caller.section_tipo
+		const label					= self.caller.label
+		const created_date			= self.caller.data.created_date
+		const modified_date			= self.caller.data.modified_date
+		const created_by_user_name	= self.caller.data.created_by_user_name
+		const modified_by_user_name	= self.caller.data.modified_by_user_name
+
+	const fragment = new DocumentFragment();
+
+	// section name
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.seccion || 'Section',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: label,
+			parent			: fragment
+		})
+
+	// section id
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.id || 'ID',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: section_id,
+			parent			: fragment
+		})
+
+	// section created
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.creado || 'Created',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: created_date + ' ' + created_by_user_name,
+			parent			: fragment
+		})
+
+	// section modified
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.modificado || 'Modified',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: modified_date + ' ' + modified_by_user_name,
+			parent			: fragment
+		})
+
+
+	// clean container
+		while (container.firstChild) {
+			container.removeChild(container.firstChild);
+		}
+
+	container.appendChild(fragment)
+
+	return fragment
+};//end render_section_info
