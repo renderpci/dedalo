@@ -1,3 +1,10 @@
+// Variables
+@common_css: '../../page/css/layout';
+
+// Usage
+@import '@{common_css}/vars.less';
+
+
 
 @line_height: 20px;
 
@@ -16,8 +23,8 @@
 	.wrap_ts_object {
 		//background-color: rgba(198, 179, 227, 0.39);
 		//width: 100%;
-		position: relative;
 		display: table;
+		position: relative;
 		clear: both;
 		//margin-left: 52px;
 		//height: 1em;
@@ -28,8 +35,20 @@
 		&:hover > .id_column_content {
 			opacity: 1;
 		}
+
+		>.elements_contanier {
+
+		}
+
+		>.children_container {
+
+		}
+
+		&.hierarchy_root_node {
+			padding-left: 1rem;
+		}
 	}
-	
+
 
 	/* icons COMMON (ts_icons_all)
 	------------------------------------------------------- */
@@ -42,7 +61,7 @@
 		cursor: pointer;
 	}
 
-	
+
 	/* ID_COLUMN_CONTENT
 	------------------------------------------------------- */
 	.wrap_ts_object .id_column_content {
@@ -63,17 +82,17 @@
 			/* all buttons inside a link
 			------------------------------------------------------- */
 			.wrap_ts_object a.id_column_link div {
-				height: @line_height;				
-				//vertical-align: middle;				
-				//margin-top: 5px;				
+				height: @line_height;
+				//vertical-align: middle;
+				//margin-top: 5px;
 				margin-right: 6px;
 			}
-		
+
 
 
 			/* ADD_BUTTON
 			------------------------------------------------------- */
-			.wrap_ts_object .ts_object_add {	
+			.wrap_ts_object .ts_object_add {
 				//width: 25%;
 				//margin-right: 3px;
 				}
@@ -84,22 +103,22 @@
 					mask: url(../../../themes/default/add.svg) no-repeat 50% 50%;
 					*/
 					.ts_icons_all;
-					background-image: url(../../themes/default/icons/add.svg);					
+					background-image: url('../../themes/default/icons/add.svg');
 					// padding: 6px;
 
 					&:hover {
-						background-color: #B5A83A;		
+						background-color: #B5A83A;
+						border-radius: 3px;
 						filter: invert(100%);
-						border-radius: 3px;	
 					}
 				}
-				
 
-				
-			
+
+
+
 			/* DRAG_BUTTON
 			------------------------------------------------------- */
-			.wrap_ts_object .ts_object_drag {	
+			.wrap_ts_object .ts_object_drag {
 				margin-right: 4px;
 				}
 				.ts_object_drag_icon {
@@ -109,7 +128,7 @@
 					mask: url(../../../themes/default/add.svg) no-repeat 50% 50%;
 					*/
 					.ts_icons_all;
-					background-image: url(../../themes/default/icons/move.svg);					
+					background-image: url(../../themes/default/icons/move.svg);
 					}
 					.ts_object_drag_icon:hover {
 						background-color: #B5A83A;
@@ -119,7 +138,7 @@
 					}
 
 
-					
+
 			/* DELETE_BUTTON
 			------------------------------------------------------- */
 			.wrap_ts_object .ts_object_delete {
@@ -135,15 +154,15 @@
 					.ts_icons_all;
 					//background-image: url(../../themes/default/icon_delete.svg);
 					//background-size: 52%;
-					background-image: url(../../themes/default/icons/trash.svg);
+					background-image: url('../../themes/default/icons/trash.svg');
 					background-size: 76%;
-					margin-right: 2px;		
+					margin-right: 2px;
 					}
 					.wrap_ts_object .ts_object_delete .ts_object_delete_icon:hover {
 						background-color: #3DFFF5;
 						filter: invert(100%);
-						border-radius: 3px;	
-					}		
+						border-radius: 3px;
+					}
 
 
 
@@ -182,7 +201,7 @@
 				.wrap_ts_object .ts_object_edit:hover {
 					background-color: #FF7EF3;
 					filter: invert(100%);
-					border-radius: 3px;	
+					border-radius: 3px;
 				}
 				/* ID NUMBER
 				------------------------------------------------------- */
@@ -191,26 +210,26 @@
 					//min-width: 42px;
 					min-width: 36px;
 					float: left;
-					padding: 2px;				
-					font-size: 1.05em;	
-					padding-right: 4px;				
+					padding: 2px;
+					font-size: 1.05em;
+					padding-right: 4px;
 					text-align: right;
 					display: none;
 				}
 				/* EDIT_ICON
 				------------------------------------------------------- */
 				.wrap_ts_object .ts_object_edit .ts_object_edit_icon {
-					float: left;							
-					background-image: url(../../themes/default/icons/icon_edit.svg);
+					float: left;
+					background-image: url('../../themes/default/icons/icon_edit.svg');
 					background-repeat: no-repeat;
 					background-size: 70%;
     				background-position: center;
 					width: 24px;
 					height: @line_height;
-					cursor: pointer;			
+					cursor: pointer;
 					}
 					.wrap_ts_object .ts_object_edit .ts_object_edit_icon:hover{
-												
+
 					}
 				/* RELATED_ICON
 				------------------------------------------------------- */
@@ -228,7 +247,7 @@
 						.wrap_ts_object .ts_object_related .ts_object_related_icon:active {
 							opacity: 0.4;
 						}
-						
+
 
 
 
@@ -245,7 +264,7 @@
 		.wrap_ts_object .elements_container .list_thesaurus_element {
 			display: table-cell;
 			min-width: 24px;
-			padding: 0;	
+			padding: 0;
 			padding: 2px;
 			//padding-left: 5px;
 			padding-right: 5px;
@@ -258,16 +277,16 @@
 			// En pruebas
 			width: 29px;
 			vertical-align: top;
-			
-			//padding-top: 4px;	
-			//font-family: "Menlo",monospace;
+
+			//padding-top: 4px;
+			//font-family: 'Menlo',monospace;
 			opacity: 0.3;
 			}
 			.wrap_ts_object .elements_container .list_thesaurus_element:hover {
 				//font-weight: bolder;
 				color: #EF7D00 !important;
 				opacity: 1;
-			}			
+			}
 		/* LIST_THESAURUS SPECIFICS
 		------------------------------------------------------- */
 
@@ -300,7 +319,7 @@
 			top: -1px;
 			padding-left: 5px;
 			padding-right: 10px;
-			user-select: auto; 
+			user-select: auto;
 		}
 
 		/* ORDER NUMBER
@@ -315,13 +334,13 @@
 			opacity: 1;
 		}*/
 
-		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy40"],
-		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy91"] {
+		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy40'],
+		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy91'] {
 			background-color: @color_grey_medium;
 			opacity: 0.8;
+			border: 0;
 			padding-left: 4px;
 			padding-right: 3px;
-			border: none;
 			color: #717171;
 			border-radius: 3px;
 			/* line-height: 1em; */
@@ -333,15 +352,15 @@
 			font-size: 12px;
 			margin-right: 5px;
 			}
-			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy40"]:hover,
-			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy91"]:hover {
+			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy40']:hover,
+			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy91']:hover {
 				background-color: #ffb666;
 				color: #fff !important;
 			}
 
-	
+
 		/* TS_OBJECT_CHILDREN_ARROW_ICON
-		---------------------------------------- */	    
+		---------------------------------------- */
 		.term_img{
 			padding: 0px !important;
 		}
@@ -359,7 +378,7 @@
 			height: 0;
 			border-style: solid;
 			border-width: 10.4px 6px 0 6px;
-			border-color: @triangle_color transparent transparent transparent;			
+			border-color: @triangle_color transparent transparent transparent;
 		}
 		.triangle_right {
 			width: 0;
@@ -375,15 +394,15 @@
 			//top: -1px;
 			//color: #FF6900;
 			//line-height: 1.4em;
-			position: relative;		
+			position: relative;
+			height: 1.4em;
 			width: 1.4em;
-			height: 1.4em;			
 			margin: 3px;
 			.triangle_right;
 			opacity: 0.6;
 			}
 			/*.ts_object_children_arrow_icon:before{
-				content: " > ";//▶︎▼
+				content: ' > ';//▶︎▼
 				display: block;
 				font-size: 1.4em;
 			}*/
@@ -395,14 +414,14 @@
 				//  -webkit-transform: rotate(90deg);
 				//   transform: rotate(90deg);
 				.triangle_down;
-				top: 1px;
 				left: -2px;
+				top: 1px;
 			}
 			.wrap_ts_object .elements_container .arrow_spinner {
 				//background-color: aqua;
-				background: url(../../themes/default/icons/spinner.svg);
+				background: url('../../themes/default/icons/spinner.svg');
 				background-repeat: no-repeat;
-				border: none;
+				border: 0;
 				height: 18px;
 				width: 20px;
 				top: 0px;
@@ -414,8 +433,8 @@
 			.wrap_ts_object .elements_container .arrow_unactive {
 				display: none;
 			}
-			.wrap_ts_object .elements_container [data-type="link_children"] {
-				border: none;
+			.wrap_ts_object .elements_container [data-type='link_children'] {
+				border: 0;
 				opacity: 1;
 			}
 
@@ -443,7 +462,7 @@
 			padding: 0;
 			min-height: initial;
 		}
-	
+
 
 
 	/* CHILDREN_CONTAINER
@@ -485,15 +504,15 @@
 
 	/* NO_DESCRIPTOR TERM SPAN
 	------------------------------------------------------- */
-	//.wrap_ts_object .elements_container .list_thesaurus_element:has(span)  { 
+	//.wrap_ts_object .elements_container .list_thesaurus_element:has(span)  {
 	.no_descriptor {
-		// opacity: 0.5; 
-		// text-transform: inherit; 
-		// font-style: italic; 
+		// opacity: 0.5;
+		// text-transform: inherit;
+		// font-style: italic;
 		color: #a5a5a5;
 		}
 		.no_descriptor:before {
-			content: "[ND] "
+			content: '[ND] ';
 		}
 
 	.wrap_ts_object_nd > .id_column_content > .ts_object_edit {
@@ -508,9 +527,9 @@
 	.wrap_ts_object .indexations_container {
 		//background-color: rgba(195, 248, 213, 0.57);
 		.inline_common ;
+		height: 0px;
 		width: 100%;
-		height: 0;		
-	
+
 		.css_spinner {
 			float: left;
 			width: 21px;
@@ -524,8 +543,8 @@
 			font-size: 13px;
 		}
 	}
-		
-		
+
+
 
 
 	.wrap_ts_object_nd {
@@ -544,47 +563,43 @@
 		.loading_list_thesaurus_data {
 			min-height: 42px;
 			//background-color: transparent !important;
-		
+
 			&:after {
-				content: " loading... ";
+				background: url('../../themes/default/icons/spinner.svg');
+				background-position: 10px;
+				background-repeat: no-repeat;
+				background-size: 30px;
+				content: ' loading... ';
 				display: table-cell;
 				padding: 10px;
 				padding-left: 45px;
-				background: url(../../themes/default/icons/spinner.svg);
-				background-position: 10px;
-				background-size: 30px;
-				background-repeat: no-repeat;
 				margin-left: 50px;
 			}
 		}
-			
+
 
 
 		.visible_element {
-			visibility: visible !important;
 			background-color: #81C943;
+			visibility: visible !important;
 		}
-	
-	
+
+
 	/* DRAG AND DROP
 	------------------------------------------------------- */
 	.drag_over > .elements_container {
-		background-color: rgb(236, 236, 236);
+		// background-color: rgb(236, 236, 236);
+		background-color: #4a57c5;
   		border-radius: 3px;
-
-  		background-color: #4a57c5;
   		color: #ffffff;
 	}
 
 
-	
+
 
 	.list_thesaurus_element mark {
-		color: #333 !important;
+		color: #333333 !important;
 		font-style: italic;
 	}
-
-
-
 
 

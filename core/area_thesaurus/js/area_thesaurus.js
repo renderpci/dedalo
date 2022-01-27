@@ -5,8 +5,10 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {search} from '../../search/js/search.js'
+	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_thesaurus} from './render_area_thesaurus.js'
 
 
@@ -76,6 +78,9 @@ area_thesaurus.prototype.init = async function(options) {
 
 	const self = this
 
+	// call the generic common tool init
+		const common_init = area_common.prototype.init.call(this, options);
+
 	// ts_object adds on
 		const css_url = DEDALO_CORE_URL + "/ts_object/css/ts_object.css"
 		common.prototype.load_style(css_url)
@@ -83,8 +88,19 @@ area_thesaurus.prototype.init = async function(options) {
 		const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
 		common.prototype.load_style(css_url2)
 
-	// call the generic common tool init
-		const common_init = area_common.prototype.init.call(this, options);
+
+	// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
+		self.events_tokens.push(
+			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+		)
+		async function fn_toggle_search_panel() {
+			if (self.filter_container.children.length===0) {
+				await self.filter.build()
+				const filter_wrapper = await self.filter.render()
+				await self.filter_container.appendChild(filter_wrapper)
+			}
+			toggle_search_panel(self.filter)
+		}
 
 	return common_init
 };//end init
@@ -200,17 +216,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 	// section tipo
 		self.section_tipo = self.context.section_tipo || null
 
-	// filter
-		if (!self.filter) {
-			self.filter = new search()
-			self.filter.init({
-				caller	: self,
-				mode	: self.mode
-			})
-			// self.filter.build()
-		}
-		// console.log("Remember. Filter inactive");
-
 	// initiator . URL defined var or Caller of parent section
 	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
 		const searchParams = new URLSearchParams(window.location.href);
@@ -221,6 +226,16 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				: false
 		// fix initiator
 			self.initiator = JSON.parse(initiator)
+
+	// filter
+		if (!self.filter) {
+			self.filter = new search()
+			self.filter.init({
+				caller	: self,
+				mode	: self.mode
+			})
+			// self.filter.build()
+		}
 
 
 	// debug
