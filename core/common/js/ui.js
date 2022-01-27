@@ -605,29 +605,29 @@ export const ui = {
 				return false
 			}
 
-			if (component.id===actived_component.id) {
+			// match case
+				if (component.id===actived_component.id) {
 
-				// match . Add wrapper css active
-					component.node.map(function(item_node) {
-						item_node.classList.add("active")
-					})
+					// match . Add wrapper css active
+						component.node.map(function(item_node) {
+							item_node.classList.add("active")
+						})
 
-				return true
+					return true
+				}
 
-			}else{
+			// not match cases. Remove wrapper css active if exists
+				component.node.map(function(item_node) {
+					item_node.classList.remove("active")
+				})
 
-				// not match. Remove wrapper css active if exists
-					component.node.map(function(item_node) {
-						item_node.classList.remove("active")
-					})
+			// service autocomplete remove if active
+				if(component.autocomplete_active===true){
+					component.autocomplete.destroy()
+					component.autocomplete_active = false
+					component.autocomplete = null
+				}
 
-				// remove service autocomplete if active
-					if(component.autocomplete_active===true){
-						component.autocomplete.destroy()
-						component.autocomplete_active = false
-						component.autocomplete = null
-					}
-			}
 
 			return false
 		},//end active
