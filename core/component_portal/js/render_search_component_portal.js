@@ -145,6 +145,7 @@ export const add_events = function(self, wrapper) {
 };//end  add_events
 
 
+
 /**
 * BUILD_CONTENT_DATA
 * Used too in search mode
