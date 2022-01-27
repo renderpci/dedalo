@@ -413,7 +413,7 @@ section.prototype.build = async function(autoload=false) {
 		}//end if (!self.paginator)
 
 	// inspector
-		if (!self.inspector && self.permissions) {
+		if (self.mode==='edit' && !self.inspector && self.permissions) {
 			// if (initiator && initiator.model==='component_portal') {
 
 			// 	self.inspector = null
