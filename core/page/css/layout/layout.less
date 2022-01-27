@@ -1661,6 +1661,12 @@
 			>.label {
 				color: @color_orange_dedalo !important;
 			}
+
+			&.inside {
+				>.buttons_container {
+					left: calc(100% - 1.5rem);
+				}
+			}
 		}//end &.active
 
 		&.error {
@@ -1773,7 +1779,7 @@
 				// buttons inside
 				span {
 					margin-left: 0.5em;
-					margin-bottom: 0.25em;
+					margin-bottom: 0.45em;
 				}
 
 				// >.tools_buttons_container {
