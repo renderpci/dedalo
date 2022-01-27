@@ -186,7 +186,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @return object / string parent::$propiedades
 	*/
 	public function get_properties() {
-		
+
 		$properties = parent::get_properties();
 		if (is_null($properties)) {
 			return null;
@@ -255,7 +255,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* UPDATE_COUNTER
 	* @param string $tld
 	* @param int $current_value=false
-	* 
+	*
 	* @return int $counter_dato_updated
 	* Actualiza el contador para el tld dado (ej. 'dd').
 	* El 'current_value' es opcional. Si no se recibe se calcula
@@ -284,11 +284,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_COUNTER_VALUE
 	* @param string $tld
-	* 
+	*
 	* @return int $counter_value
 	*/
 	protected static function get_counter_value($tld) {
-		
+
 		$strQuery		= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
 		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
 		$counter_value	= pg_fetch_assoc($result)['counter'];
@@ -813,7 +813,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		} while ( !empty($parent) && ($parent !== $parent_zero) && $parent !== $parent_inicial );
 
 
-		# ordenamos a la inversa los padres		
+		# ordenamos a la inversa los padres
 		if($ksort===true) krsort($ar_parents_of_this);
 
 		# STORE CACHE DATA
@@ -1220,10 +1220,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @return bool
 	*/
 	public static function get_translatable($tipo) {
-		
+
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$translatable = $RecordObj_dd->get_traducible();
-		
+
 		return ($translatable==='si');
 	}//end get_translatable
 

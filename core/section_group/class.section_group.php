@@ -54,7 +54,7 @@ class section_group extends common {
 	public static function build_dummy_section_group($title, $body) {
 
 		$tab_id 	= 'tab_' . base64_encode($title);		#dump($identificador_unico,'identificador_unico');
-	
+
 		include( DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . 'dummy' . '.phtml' );
 	}//end build_dummy_section_group
 

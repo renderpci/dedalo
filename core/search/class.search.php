@@ -97,7 +97,7 @@ class search {
 			case 'related':
 				$search_class = 'search_related';
 				break;
-			
+
 			default:
 				$search_class = 'search';
 				break;
