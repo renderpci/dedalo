@@ -50,7 +50,8 @@ render_inspector.prototype.edit = async function(options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper_inspector text_unselectable',
+			id				: 'inspector',
+			class_name		: 'wrapper_inspector',
 		})
 
 	// add elements
@@ -107,15 +108,6 @@ const get_content_data = function(self) {
 		// fix pointer to node placeholder
 		self.paginator_container = paginator_container
 
-	// section_info container
-		const section_info_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'section_info',
-			parent 			: content_data
-		})
-		// fix pointer to node placeholder
-		self.section_info_container = section_info_container
-
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -145,6 +137,56 @@ const get_content_data = function(self) {
 			button_new.addEventListener('click', (e) => {
 				e.stopPropagation()
 				event_manager.publish('new_section_' + self.caller.id)
+			})
+
+	// element_info
+		const element_info_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'element_info_wrap',
+			parent			: content_data
+		})
+		// element_info_head
+			const element_info_head = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'element_info_head icon_arrow up',
+				inner_html		: get_label.info || "Info",
+				parent			: element_info_wrap
+			})
+			element_info_head.addEventListener('click', async function(){
+				element_info_container.classList.toggle('hide')
+				element_info_head.classList.toggle('up')
+			})
+		// element_info_container
+			const element_info_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'element_info',
+				parent			: element_info_wrap
+			})
+			// fix pointer to node placeholder
+			self.element_info_container = element_info_container
+
+	// project container
+		const project_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'project_wrap',
+			parent			: content_data
+		})
+		// project_head
+			const project_head = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'project_head icon_arrow up',
+				inner_html		: get_label.proyecto || "Project",
+				parent			: project_wrap
+			})
+			project_head.addEventListener('click', async function(){
+				project_container.classList.toggle('hide')
+				project_head.classList.toggle('up')
+			})
+		// project container
+			const project_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'project_container',
+				parent			: project_wrap
 			})
 
 	// indexation_list container
@@ -260,12 +302,7 @@ const get_content_data = function(self) {
 				})
 		}//end if (self.caller.context.time_machine_list)
 
-	// project container
-		const project_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'project_container',
-			parent			: content_data
-		})
+
 
 	// buttons_bottom_container
 		const buttons_bottom_container = ui.create_dom_element({
@@ -317,7 +354,7 @@ const get_content_data = function(self) {
 */
 export const render_section_info = function(self) {
 
-	const container		= self.section_info_container
+	const container		= self.element_info_container
 	const section		= self.caller
 	const section_data	= section.data.value && section.data.value[0]
 		? section.data.value[0]
@@ -325,7 +362,6 @@ export const render_section_info = function(self) {
 
 
 	// values from caller (section)
-		const section_id			= section.section_id
 		const section_tipo			= section.section_tipo
 		const label					= section.label
 		const created_date			= section_data.created_date
@@ -351,20 +387,29 @@ export const render_section_info = function(self) {
 			parent			: fragment
 		})
 
-	// section id
+	// tipo
 		// label
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.id || 'ID',
+			text_content	: get_label.tipo || 'Tipo',
 			parent			: fragment
 		})
 		// value
-		ui.create_dom_element({
+		const tipo_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: section_id,
+			text_content	: section_tipo,
 			parent			: fragment
+		})
+		const docu_link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'button link',
+			title			: 'Documentation',
+			parent			: tipo_info
+		})
+		docu_link.addEventListener("click", function(){
+			open_ontology_window(section_tipo)
 		})
 
 	// section created
@@ -409,3 +454,154 @@ export const render_section_info = function(self) {
 
 	return fragment
 };//end render_section_info
+
+
+
+/**
+* RENDER_component_INFO
+* @return DOM DocumentFragment
+*/
+export const render_component_info = function(self, component) {
+
+	const container	= self.element_info_container
+	console.log("component:",component);
+
+	// values from caller (section)
+		const tipo			= component.tipo
+		const label			= component.label
+		const model			= component.model
+		const translatable	= JSON.stringify(component.context.translatable)
+		const value			= JSON.stringify(component.data.value, null, 1)
+
+	const fragment = new DocumentFragment();
+
+	// section name
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.componente || 'Component',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: label,
+			parent			: fragment
+		})
+
+	// tipo
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.tipo || 'Tipo',
+			parent			: fragment
+		})
+		// value
+		const tipo_info = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: tipo,
+			parent			: fragment
+		})
+		const docu_link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'button link',
+			title			: 'Documentation',
+			parent			: tipo_info
+		})
+		docu_link.addEventListener("click", function(){
+			open_ontology_window(tipo)
+		})
+
+	// model
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.modelo || 'Model',
+			parent			: fragment
+		})
+		// value
+		const model_info = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: model,
+			parent			: fragment
+		})
+
+	// translatable
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			text_content	: get_label.traducible || 'Translatable',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: translatable,
+			parent			: fragment
+		})
+
+	// value
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key wide',
+			text_content	: get_label.dato || 'Data',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value wide code',
+			text_content	: value,
+			parent			: fragment
+		})
+
+
+
+	// clean container
+		while (container.firstChild) {
+			container.removeChild(container.firstChild);
+		}
+
+	container.appendChild(fragment)
+
+	return fragment
+};//end render_component_info
+
+
+
+/**
+* OPEN_ONTOLOGY_WINDOW
+* @return
+*/
+const open_ontology_window = function(tipo) {
+
+	window.docu_window = window.docu_window || null
+
+	// case online documentation window https://dedalo.dev/ontology
+
+	const url = 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
+	if (window.docu_window && !window.docu_window.closed) {
+		window.docu_window.location = url
+		window.docu_window.focus()
+	}else{
+		const window_width	= 1001
+		const screen_width	= window.screen.width
+		const screen_height	= window.screen.height
+		window.docu_window	= window.open(
+			url,
+			'docu_window',
+			`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
+		)
+	}
+
+	return true
+};//end open_ontology_window
