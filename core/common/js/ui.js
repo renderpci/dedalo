@@ -613,6 +613,18 @@ export const ui = {
 							item_node.classList.add("active")
 						})
 
+					// fix nearby inspector overlaping
+						const el				= component.node[0]
+						const el_rect			= el.getBoundingClientRect();
+						// console.log("/// el el_rect:",el_rect);
+						const inspector			= document.getElementById('inspector')
+						const inspector_rect	= inspector.getBoundingClientRect();
+						// console.log("/// inspector_rect:",inspector_rect);
+
+						if (el_rect.right > inspector_rect.left-20) {
+							el.classList.add('inside')
+						}
+
 					return true
 				}
 
