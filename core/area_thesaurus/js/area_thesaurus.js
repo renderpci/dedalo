@@ -17,7 +17,7 @@
 * AREA_THESAURUS
 */
 export const area_thesaurus = function() {
-	
+
 	this.id
 
 	// element properties declare
@@ -61,7 +61,7 @@ export const area_thesaurus = function() {
 // prototypes assign
 	// area_thesaurus.prototype.init		= area_common.prototype.init
 	// area_thesaurus.prototype.build		= area_common.prototype.build
-	area_thesaurus.prototype.render			= common.prototype.render
+	// area_thesaurus.prototype.render		= common.prototype.render
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
 	area_thesaurus.prototype.destroy		= common.prototype.destroy
 	area_thesaurus.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -144,7 +144,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			self.rqo_config	= self.context.request_config
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
 				: {}
-			
+
 			// rqo build
 			const action	= 'get_data'
 			const add_show	= false
@@ -162,7 +162,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 		// // build_options. Add custom area build_options to source
 		// 	const source = self.dd_request.show.find(element => element.typo==='source')
-		// 		  source.build_options = self.build_options	
+		// 		  source.build_options = self.build_options
 
 	// load data if not yet received as an option
 		if (autoload===true) {
@@ -205,7 +205,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				await generate_rqo()
 				console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
 	}//end if (autoload===true)
-		
+
 
 	// label
 		self.label = self.context.label
@@ -251,6 +251,29 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	return true
 };//end build
+
+
+
+/**
+* RENDER
+* @param object options
+*	render_level : level of deep that is rendered (full | content)
+* @return promise
+*	node first DOM node stored in instance 'node' array
+*/
+area_thesaurus.prototype.render = async function(options={}) {
+
+	const self = this
+
+	// call generic common render
+		const result_node = await common.prototype.render.call(this, options)
+
+	// event publish
+		event_manager.publish('render_instance', self)
+
+
+	return result_node
+};//end render
 
 
 

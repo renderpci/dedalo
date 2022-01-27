@@ -68,7 +68,7 @@ export const section = function() {
 */
 // prototypes assign
 	// life cycle
-	section.prototype.render			= common.prototype.render
+	// section.prototype.render			= common.prototype.render
 	section.prototype.destroy			= common.prototype.destroy
 	section.prototype.refresh			= common.prototype.refresh
 	section.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -471,6 +471,29 @@ section.prototype.build = async function(autoload=false) {
 
 	return true
 };//end build
+
+
+
+/**
+* RENDER
+* @param object options
+*	render_level : level of deep that is rendered (full | content)
+* @return promise
+*	node first DOM node stored in instance 'node' array
+*/
+section.prototype.render = async function(options={}) {
+
+	const self = this
+
+	// call generic common render
+		const result_node = await common.prototype.render.call(this, options)
+
+	// event publish
+		event_manager.publish('render_instance', self)
+
+
+	return result_node
+};//end render
 
 
 
