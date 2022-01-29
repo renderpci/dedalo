@@ -1014,7 +1014,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 		const section_node = section_instance.node[0]
 
 		// loading css add
-			section_node.classList.add("loading")
+			section_node.classList.add('loading')
 
 		// limit
 			const limit = self.limit && self.limit>0 ? self.limit : 10
@@ -1036,7 +1036,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 			js_promise.then(()=>{
 				// loading css remove
-					section_node.classList.remove("loading")
+					section_node.classList.remove('loading')
 				// refresh section paginator
 					if (paginator_node) {
 						section_instance.paginator.refresh()

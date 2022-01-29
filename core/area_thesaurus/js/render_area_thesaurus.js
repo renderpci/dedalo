@@ -95,11 +95,12 @@ render_area_thesaurus.prototype.list = async function(options) {
 				class_name		: 'filter',
 				parent			: fragment
 			})
-			self.filter.build().then(()=>{
-				self.filter.render().then(filter_wrapper =>{
-					filter_container.appendChild(filter_wrapper)
-				})
-			})
+			self.filter_container = filter_container
+			// self.filter.build().then(()=>{
+			// 	self.filter.render().then(filter_wrapper =>{
+			// 		filter_container.appendChild(filter_wrapper)
+			// 	})
+			// })
 		}
 
 	// content_data

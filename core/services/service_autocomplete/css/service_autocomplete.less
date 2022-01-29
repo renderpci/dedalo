@@ -61,10 +61,10 @@
 					direction: rtl;
 					display: flex;
 					float: left;
+					justify-content: flex-end;
 					margin-top: 1px;
 					overflow: hidden;
 					padding: 0.25em;
-					justify-content: flex-end;
 					white-space: nowrap;
 					width: 33.2%;
 
@@ -127,7 +127,7 @@
 			width: calc(100% - 3.25em);
 		}
 
-		>span.visible{
+		>span.visible {
 			display: block;
 		}
 
@@ -143,15 +143,17 @@
 				  border-top: 0;
 				}
 
-				&:hover {
+				&.selected {
 					background-color: darken(@service_bg_color, 7%);
 				}
+
 				&:active {
 					background-color: darken(@service_bg_color, 14%);
 				}
 
 				>span {
 					padding-right: 0.5em;
+					pointer-events: none;
 				}
 			}
 		}

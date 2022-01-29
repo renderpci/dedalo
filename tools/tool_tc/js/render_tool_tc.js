@@ -139,13 +139,13 @@ const content_data_edit = async function(self) {
 		})
 		button_preview.addEventListener("click", () => {
 
-			components_container.classList.add("loading")
+			components_container.classList.add('loading')
 
 			//TODO - add code to preview offset in the right part of the screen
 			//alert("Add some code to show offset calculation in the right part of the screen")
 				self.change_all_time_codes(false)
 
-			components_container.classList.remove("loading")
+			components_container.classList.remove('loading')
 		})
 
 	// apply button
@@ -158,7 +158,7 @@ const content_data_edit = async function(self) {
 
 		button_apply.addEventListener("click", (e) => {
 
-			components_container.classList.add("loading")
+			components_container.classList.add('loading')
 
 			//TODO - add code to save offset to DB
 				//alert("Add some code to save offset to DB")
@@ -166,7 +166,7 @@ const content_data_edit = async function(self) {
 				//class.tool_tc.php --> call the function with true value to save
 				//public function change_all_timecodes( $offset_seconds, $save=false )
 
-			components_container.classList.remove("loading")
+			components_container.classList.remove('loading')
 		})
 
 	// response div

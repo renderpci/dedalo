@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, paper, iro */
+/*global get_label,  SHOW_DEBUG, DEDALO_ROOT_WEB, paper, iro */
 /*eslint no-undef: "error"*/
 
 
@@ -8,6 +8,7 @@
 	import '../../../lib/iro/dist/iro.min.js';
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
+
 
 
 export const vector_editor = function(){
@@ -65,10 +66,10 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 	// canvas. create the base canvas
 		self.canvas_node = ui.create_dom_element({
-			id 				: self.id,
+			id				: self.id,
 			element_type	: "canvas",
-			class_name 		: 'canvas',
-			parent 			: object.parentNode
+			class_name		: 'canvas',
+			parent			: object.parentNode
 		})
 		// remove the original object node from dom
 			event_manager.unsubscribe(object.dataset.image_change_event)
@@ -87,11 +88,11 @@ vector_editor.prototype.init_canvas = async function(self) {
 			// canvas_node.setAttribute("hidpi","off")
 
 		// canvas -> active canvas_height = 432px (set in the instance)
-			// const context = canvas_node.getContext("2d");
-			const ratio_canvas 		= self.canvas_height / self.img_height
-			self.canvas_width 		= ratio_canvas * self.img_width
-			self.canvas_node.height = self.canvas_height
-			self.canvas_node.width  = self.canvas_width
+			// const context		= canvas_node.getContext("2d");
+			const ratio_canvas		= self.canvas_height / self.img_height
+			self.canvas_width		= ratio_canvas * self.img_width
+			self.canvas_node.height	= self.canvas_height
+			self.canvas_node.width	= self.canvas_width
 
 	// paper. create the paper instance
 		self.current_paper = new paper.PaperScope()

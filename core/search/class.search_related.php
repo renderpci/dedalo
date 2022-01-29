@@ -1,7 +1,7 @@
 <?php
 /*
-* CLASS SEARCH
-*
+* CLASS SEARCH_RELATED
+* Specific search related methods overwrite search methods
 *
 */
 class search_related extends search {
@@ -19,17 +19,17 @@ class search_related extends search {
 
 		$ar_tables_to_search = common::get_matrix_tables_with_relations();
 
-		$limit 				= $this->search_query_object->limit;
-		$offset 			= $this->search_query_object->offset;
+		$limit	= $this->search_query_object->limit;
+		$offset	= $this->search_query_object->offset;
 
 		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
-	dump($full_count, ' full_count +-------------------------+ '.to_string());
+
 		// reference locator it's the locator of the source section that will be used to get the sections with call to it.
 			$ar_locators = $this->filter_by_locators;
 
 
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
-		// if the section has all, the filter don't add any section to the WHERE 
+		// if the section has all, the filter don't add any section to the WHERE
 			$ar_section_tipo = $this->ar_section_tipo;
 			$ar_section_filter = [];
 			foreach ($ar_section_tipo as $section_tipo) {
@@ -57,7 +57,7 @@ class search_related extends search {
 					$locators_query[]	= PHP_EOL.'datos#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
 				}
 				$query	.= '(' . implode(' OR ', $locators_query) . ')';
-				
+
 				if ($section_filter!==false) {
 					$query	.= PHP_EOL . ' AND (' . $section_filter .')';
 				}
@@ -67,7 +67,7 @@ class search_related extends search {
 
 		// final query union with all tables
 			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query);
-		
+
 		// Set order to maintain results stable
 		// count and pagination optional
 			if($full_count === false){
@@ -106,13 +106,13 @@ class search_related extends search {
 				$sqo->set_offset($offset);
 				$sqo->set_filter_by_locators([$reference_locator]);
 
-			$search		= search::get_instance($sqo);			
+			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
 			// fix result ar_records as dato
 			$result	= $rows_data->ar_records;
 
 			$ar_inverse_locators = array();
-			
+
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
 
@@ -123,7 +123,7 @@ class search_related extends search {
 			}
 
 			foreach ($result as $row) {
-				
+
 				$current_section_id		= $row->section_id;
 				$current_section_tipo	= $row->section_tipo;
 				$current_relations		= $row->datos->relations;

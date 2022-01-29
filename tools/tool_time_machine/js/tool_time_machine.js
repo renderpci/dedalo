@@ -21,7 +21,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_time_machine = function () {
-	
+
 	this.id					= null
 	this.model				= null
 	this.mode				= null
@@ -64,7 +64,7 @@ export const tool_time_machine = function () {
 */
 tool_time_machine.prototype.init = async function(options) {
 	// console.log("tool_time_machine INIT options:",options);
-	
+
 	const self = this
 
 	// call the generic common tool init
@@ -187,11 +187,11 @@ tool_time_machine.prototype.load_time_machine = async function() {
 */
 tool_time_machine.prototype.load_section = async function() {
 
-	const self = this	
+	const self = this
 
 	// component
 		const component = self.main_component
-	
+
 	// short vars
 		const component_tipo	= component.tipo
 		const section_tipo		= component.section_tipo

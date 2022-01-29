@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEVELOPER, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEVELOPER, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -40,6 +40,8 @@ render_edit_section.prototype.edit = async function(options) {
 
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)
+		// fix last content_data (for pagination selection)
+		self.node_body = content_data
 		if (render_level==='content') {
 			return content_data
 		}
@@ -178,7 +180,7 @@ render_edit_section.prototype.edit = async function(options) {
 */
 const get_content_data = async function(self, ar_section_record) {
 	const t0 = performance.now()
-	
+
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes

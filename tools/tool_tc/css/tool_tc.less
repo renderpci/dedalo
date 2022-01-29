@@ -4,34 +4,40 @@
 
 // wrapper_tool
 .wrapper_tool.tool_tc {
+	padding: 1rem;
 
-	.components_container {
-		display: grid;
-	    grid-template-columns: 1fr 1fr;
-	    grid-gap: 1em;	    
+	>.content_data {
+
+		.components_container {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			grid-gap: 1em;
+		}
+
+		.offset_management_container {
+
+			>* {
+				margin-right: 0.5em;
+				vertical-align: middle;
+				font-size: 1em;
+			}
+
+			select, input {
+				height: 2.25em;
+			}
+
+			input {
+				height: 2em;
+				width: 6em;
+				text-align: center;
+			}
+
+			button {
+				text-transform: capitalize;
+			}
+		}
 	}
 
-	.offset_management_container {
 
-		>* {
-			margin-right: 0.5em;
-			vertical-align: middle;
-			font-size: 1em;
-		}
-
-		select, input {
-			height: 2.25em;
-		}
-
-		input {
-			height: 2em;
-			width: 6em;
-			text-align: center;
-		}
-
-		button {
-			text-transform: capitalize;
-		}
-	}
 
 }//end wrapper_tool

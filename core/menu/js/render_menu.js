@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -257,7 +257,7 @@ render_menu.prototype.edit = async function() {
 		})
 
 	// debug info bar
-		if(SHOW_DEBUG===true) {
+		if(SHOW_DEVELOPER===true) {
 			fragment.appendChild( get_debug_info_bar(self) );
 		}
 
@@ -386,7 +386,7 @@ const item_hierarchy = (options) => {
 		const ul_container	= options.ul_container
 		const root_ul		= options.root_ul
 		const item			= options.item
-		const current_tipo	= options.current_tipo				
+		const current_tipo	= options.current_tipo
 
 	// li
 		const li = ui.create_dom_element({
@@ -415,7 +415,7 @@ const item_hierarchy = (options) => {
 					// inactive all nodes
 					nodes_li[i].classList.add("menu_li_inactive")
 					nodes_li[i].classList.remove("menu_li_active")
-					
+
 					// close all ul nodes dependent of the current li
 					const close_id = nodes_li[i].dataset.children
 					close_all_children(close_id)
