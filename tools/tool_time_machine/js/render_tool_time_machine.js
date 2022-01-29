@@ -4,8 +4,9 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {get_ar_instances} from '../../../core/section/js/section.js'
 
 
 
@@ -32,8 +33,15 @@ render_tool_time_machine.prototype.edit = async function (options) {
 	// options
 		const render_level 	= options.render_level || 'full'
 
+	// columns_map
+		const columns_map = await rebuild_columns_map(self)
+		self.time_machine.columns_map = columns_map
+
+	// section_record
+		const ar_section_record = await get_ar_instances(self.time_machine)
+
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const current_content_data = await content_data_edit(self, ar_section_record)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -84,7 +92,7 @@ render_tool_time_machine.prototype.edit = async function (options) {
 * CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const content_data_edit = async function(self, ar_section_record) {
 
 	const fragment = new DocumentFragment()
 
@@ -170,10 +178,8 @@ const content_data_edit = async function(self) {
 		// const section		= await self.load_section()
 		// const section_node	= await section.render()
 		// fragment.appendChild(section_node)
-		const section		= await self.section
-		const section_node	= await section.render()
-		fragment.appendChild(section_node)
-
+		const time_machine_node	= await render_time_machine(self, ar_section_record)
+		fragment.appendChild(time_machine_node)
 
 	// buttons container
 		// const buttons_container = ui.create_dom_element({
@@ -192,6 +198,183 @@ const content_data_edit = async function(self) {
 	return content_data
 };//end content_data_edit
 
+
+
+/**
+* RENDER_TIME_MACHINE
+* @param array ar_section_record
+* 	Array of section_record instances (ar_instances)
+* @param instance self
+* 	Instance of current tool
+* @return DOM node content_data
+*/
+const render_time_machine = async function(self, ar_section_record) {
+
+	const fragment = new DocumentFragment()
+
+	const columns_map = self.time_machine.columns_map
+
+	// tm_content_data
+		const tm_content_data = document.createElement("div")
+			  tm_content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
+
+		// add all section_record rendered nodes
+			const ar_section_record_length = ar_section_record.length
+			if (ar_section_record_length===0) {
+
+				// no records found case
+				const no_records_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'no_records',
+					inner_html		: get_label.no_records || "No records found"
+				})
+				tm_content_data.appendChild(no_records_node)
+
+			}else{
+				// rows
+				// parallel mode
+					const ar_promises = []
+					for (let i = 0; i < ar_section_record_length; i++) {
+						const render_promise_node = ar_section_record[i].render()
+						ar_promises.push(render_promise_node)
+					}
+					await Promise.all(ar_promises).then(function(values) {
+					  for (let i = 0; i < ar_section_record_length; i++) {
+					  	const section_record_node = values[i]
+						tm_content_data.appendChild(section_record_node)
+					  }
+					});
+			}
+
+	// paginator container node
+		const paginator_div = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'paginator',
+			parent			: fragment
+		})
+		self.time_machine.paginator.build()
+		.then(function(){
+			self.time_machine.paginator.render().then(paginator_wrapper =>{
+				paginator_div.appendChild(paginator_wrapper)
+			})
+		})
+
+	// list_body
+		const list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_body',
+			parent			: fragment
+		})
+		// flat columns create a sequence of grid widths taking care of sub-column space
+		// like 1fr 1fr 1fr 3fr 1fr
+		const items				= ui.flat_column_items(columns_map)
+		const template_columns	= items.join(' ')
+		Object.assign(
+			list_body.style,
+			{
+				"grid-template-columns": template_columns
+			}
+		)
+		// fix last list_body (for pagination selection)
+		// self.node_body = list_body
+
+	// list_header_node. Create and append if ar_instances is not empty
+		if (ar_section_record.length>0) {
+			const list_header_node = ui.render_list_header(columns_map, self)
+			list_body.appendChild(list_header_node)
+		}
+
+	// tm_content_data append
+		list_body.appendChild(tm_content_data)
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'section',
+			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: 'wrapper_' + self.time_machine.type + ' ' + self.time_machine.model + ' ' + self.time_machine.tipo + ' ' + self.time_machine.mode
+		})
+		wrapper.appendChild(fragment)
+
+
+	return wrapper
+};//end render_time_machine
+
+
+
+/**
+* REBUILD_COLUMNS_MAP
+* Adding control columns to the columns_map that will processed by section_recods
+* @return obj columns_map
+*/
+const rebuild_columns_map = async function(self) {
+
+	const columns_map = []
+
+	// column section_id check
+		columns_map.push({
+			id			: 'section_id',
+			label		: 'Id',
+			width 		: 'auto',
+			callback	: render_tool_time_machine.render_column_id
+		})
+
+	// columns base
+		const base_columns_map = await self.time_machine.columns_map
+		columns_map.push(...base_columns_map)
+
+
+	return columns_map
+};//end rebuild_columns_map
+
+
+
+/**
+* RENDER_COLUMN_ID
+* @param object options
+* @return DOM DocumentFragment
+*/
+render_tool_time_machine.render_column_id = function(options){
+
+	// options
+		const self				= options.caller
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		// const offset			= options.offset
+		const matrix_id			= options.matrix_id
+		const modification_date	= options.modification_date
+
+	// permissions
+		const permissions = self.permissions
+
+	const fragment = new DocumentFragment()
+
+	// section_id
+		ui.create_dom_element({
+			element_type	: 'span',
+			text_content	: section_id,
+			class_name		: 'section_id',
+			parent			: fragment
+		})
+
+	// button time machine preview (eye)
+		const edit_button_tm = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button eye',
+			parent			: fragment
+		})
+		edit_button_tm.addEventListener("click", function(){
+			// publish event
+			event_manager.publish('tm_edit_record', {
+				tipo		: section_tipo,
+				section_id	: section_id,
+				matrix_id	: matrix_id,
+				date		: modification_date || null,
+				mode		: 'tm'
+			})
+		})
+
+	return fragment
+};// end render_column_id()
 
 
 /**
