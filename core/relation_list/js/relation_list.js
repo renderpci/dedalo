@@ -132,7 +132,7 @@ export const relation_list = function() {
 */
 relation_list.prototype.init = function(options) {
 
-  const self = this
+	const self = this
 
 	self.id				= 'relation_list_' + options.tipo
 	self.model			= 'relation_list'
@@ -146,10 +146,10 @@ relation_list.prototype.init = function(options) {
 	self.offset			= options.offset || 0
 	self.total			= options.total || null
 
-  // status update
-    self.status = 'initiated'
+	// status update
+	self.status = 'initiated'
 
-  return true
+	return true
 };//end init
 
 
