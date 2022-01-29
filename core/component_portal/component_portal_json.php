@@ -82,7 +82,7 @@
 		// value
 			switch ($modo) {
 				case 'list':
-					// data item (list mode result don't include self data, only subdata)				
+					// data item (list mode result don't include self data, only subdata)
 					$limit	= 2; // (!) note than in list mode, limit is always 2
 					$value	= $this->get_dato_paginated($limit);
 					break;
@@ -159,7 +159,7 @@
 		// $bt = debug_backtrace();
 		// 	dump($bt, ' bt ++ '.to_string());
 	// }
-	
+
 	// dump($data, ' data ++ '.to_string($this->tipo));
 
 

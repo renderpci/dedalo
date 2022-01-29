@@ -130,8 +130,10 @@ export const add_events = function(self, wrapper) {
 							caller	: self,
 							wrapper : wrapper
 						})
-						self.autocomplete_active = true
-						self.autocomplete.search_input.focus()
+						.then(function(){
+							self.autocomplete_active = true
+							self.autocomplete.search_input.focus()
+						})
 
 					return true
 				}
@@ -141,6 +143,7 @@ export const add_events = function(self, wrapper) {
 
 	return true
 };//end  add_events
+
 
 
 /**

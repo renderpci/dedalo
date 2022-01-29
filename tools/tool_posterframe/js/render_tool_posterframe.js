@@ -205,12 +205,12 @@ export const add_button = async (self, component_container, value, class_name = 
 
 		new_button.addEventListener("click", () => {
 
-			//component_container.classList.add("loading")
+			//component_container.classList.add('loading')
 
 			//TODO - implement different cases depending on the value of the clicked button
 			self.button_click(value, new_button)
 
-			//component_container.classList.remove("loading")
+			//component_container.classList.remove('loading')
 		})
 
 	return true

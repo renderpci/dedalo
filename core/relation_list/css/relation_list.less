@@ -4,90 +4,128 @@
 
 */
 .wrapper_relation_list {
+	font-size: 0.85rem;
+	color: #999999;
+
+	>.relation_list_paginator {
+		-moz-user-select: none;
+		-ms-user-select: none;
+		-webkit-user-select: none;
+		user-select: none;
+		padding: 0.33rem;
+
+
+		>.relation_list_paginator_buttons {
+			float: right;
+			display: flex;
+
+			.relation_list_paginator_current {
+				margin-left: 4px;
+			}
+
+
+			.relation_list_paginator_next {
+				.fn_build_button('play.svg', black, 1, 1em);
+				transform: scale(0.90)
+			}
+
+			.relation_list_paginator_previous {
+				.fn_build_button('play.svg', black, 1, 1em);
+				transform: scale(0.90) rotate(180deg);
+			}
+
+			.relation_list_paginator_next, .relation_list_paginator_previous {
+				display: inline-block;
+				// height: 1rem;
+				// width: 1rem;
+				margin: 0px;
+				margin-left: 0.5rem;
+				padding: 0px;
+				opacity: 0.5;
+			}
+
+			.relation_list_paginator_offset_off {
+				opacity: 0.1 ;
+			}
+		}
+	}
+
+	>.content_data {
+
+		.relation_list_grid {
+			border-left: 2px solid #ff951f;
+			margin-bottom: 5px;
+			padding-left: 5px;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+
+			>.relation_list_header {
+				color: #333333;
+				padding: 0.25rem;
+
+				&.relation_list_count {
+					float: right;
+				}
+			}
+
+			>ul.relation_list_data_header {
+				background-color: #eeeeee;
+				width: 100%;
+			}
+
+			>ul.relation_list_data_row {
+				border-bottom: 0.5px solid #d5d5d5;
+
+				&:hover {
+					color: #000000;
+					cursor: pointer;
+				}
+			}
+
+			li {
+				padding: 0.25rem;
+
+				&.relation_list_data_row_center {
+					justify-self: center;
+				}
+			}
+		}
+
+	}//end >.content_data
+
+
 
 	/* BUTTON relation_list
 	------------------------------------------------------- */
-	.relation_list_button{
-		background-position: -288px -119px;
-		float: right;
-		right: 5px;
-	}
-	.relation_list_button_off{
-		background-position: -312px -119px;
-		float: right;
-		right: 5px;
-	}
-	.relation_list_waiting{
-		padding: 10px;
-		padding-left: 15px;
-		font-size: 15px;
-	}
+		// .relation_list_button {
+		// 	background-position: -288px -119px;
+		// 	float: right;
+		// 	right: 5px;
+		// }
+
+		// .relation_list_button_off {
+		// 	background-position: -312px -119px;
+		// 	float: right;
+		// 	right: 5px;
+		// }
+
+		// .relation_list_waiting {
+		// 	font-size: 15px;
+		// 	padding: 10px;
+		// 	padding-left: 15px;
+		// }
+
+
+
 	/* WRAPPER relation_list
 	------------------------------------------------------- */
-		/*.relation_grid{
-			display: grid;
-			grid-template-columns: repeat(4, 1fr);
-		}*/
-		.relation_list_data_row_center{
-			justify-self: center;
-		}
-		.relation_list_data_row:hover{
-			color: #000;
-			cursor:pointer;
-		};
-		.relation_list_grid{
-			padding-left: 5px;
-			margin-bottom: 5px;
-			border-left: 2px solid #ff951f;
-			-webkit-user-select: none;
-			-moz-user-select: none;
-			-ms-user-select: none;
-			user-select: none;
-		}
-		.relation_list_header{
-			color: #333;
-			padding-left: 3px;
-			padding-right: 3px;
-		}.relation_list_count{
-			float: right;
-		}
-		.relation_list_data_header{
-			width: 100%;
-			background-color: #eee;
-		}
-		.relation_list_data_row{
-			border-bottom: 0.5px solid #d5d5d5;
-		}
 
-		/* PAGINATOR */
-		.relation_list_paginator{
-			-webkit-user-select: none;
-			-moz-user-select: none;
-			-ms-user-select: none;
-			user-select: none;
-		}
 
-		.relation_list_paginator_next{
-			background-position: -264px -72px;
-			transform: scale(1, 1);
-			margin-left: 4px;
-		}
-		.relation_list_paginator_previous{
-			background-position: -264px -72px;
-			transform: scale(-1, 1);
-			margin-left: 4px;
-		}
-		.relation_list_paginator_buttons{
-			float: right;
 
-		}
-		.relation_list_paginator_current{
-			margin-left: 4px;
-		}
-		.relation_list_paginator_offset_off{
-			opacity: .1 !important;
-		}
 
-}
+
+}//end .wrapper_relation_list
 
 

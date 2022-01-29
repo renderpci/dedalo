@@ -44,6 +44,7 @@ class dd_manager {
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
+					$response->error	= 'not_logged';
 				return $response;
 			}
 
@@ -63,6 +64,7 @@ class dd_manager {
 						$dedalo_data = new stdClass();
 							$dedalo_data->result	= false;
 							$dedalo_data->msg		= "Error. Undefined dd_utils_api method (action) : ".$rqo->action;
+							$response->error		= 'undefined_method';
 					}else{
 						$dedalo_data = (object)dd_utils_api::{$rqo->action}( $rqo );
 					}
@@ -74,6 +76,7 @@ class dd_manager {
 						$dedalo_data = new stdClass();
 							$dedalo_data->result	= false;
 							$dedalo_data->msg		= "Error. Undefined dd_core_api method (action) : ".$rqo->action;
+							$response->error		= 'undefined_method';
 					}else{
 						$dedalo_data = (object)dd_core_api::{$rqo->action}( $rqo );
 					}

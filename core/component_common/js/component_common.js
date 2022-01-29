@@ -402,8 +402,8 @@ component_common.prototype.save = async function(changed_data) {
 
 	// remove previous success/error css class if exists
 		self.node.map(item => {
-			item.classList.remove("error","save_success")
-			item.classList.add("loading")
+			item.classList.remove('error','save_success')
+			item.classList.add('loading')
 		})
 
 	// send_data
@@ -463,7 +463,7 @@ component_common.prototype.save = async function(changed_data) {
 		save_promise.then(async function(response){
 
 			self.node.map(item => {
-				item.classList.remove("loading")
+				item.classList.remove('loading')
 			})
 
 			// result expected is current section_id. False is returned if a problem found
@@ -583,7 +583,9 @@ component_common.prototype.update_datum = async function(new_data) {
 					self.datum.data.splice(index_to_delete, 1);
 				}else{
 					// Ops. data doesn't exists previously. Nothing to delete
-					console.warn(`(!) [update_datum] NOT FOUND index_to_delete ${i} in component datum:`, self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) )
+					if (self.datum.data.length>0) {
+						console.warn(`(!) [update_datum] NOT FOUND index_to_delete ${i} in component datum:`, self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) )
+					}
 				}
 			}
 

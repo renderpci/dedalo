@@ -207,7 +207,8 @@ const get_content_data = async function(self, ar_section_record) {
 						// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
 						button_alt.addEventListener('mouseup', function(e){
 							e.stopPropagation()
-							const event_id = 'mosaic_show_' + section_record_node.id + '_table'
+							// const event_id = 'mosaic_show_' + section_record_node.id + '_table'
+							const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 							// console.log("publish event_id:",event_id);
 							event_manager.publish(event_id, this)
 						})
@@ -255,8 +256,8 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 				// event subscribe
 				// On user click button 'alt' trigger a event that we subscribe here to show the
 				// proper table section record and hide the others
-					// const _id = section_record_node.id.replace('_table_','_')
-					const event_id = 'mosaic_show_' + section_record_node.id
+					// const event_id = 'mosaic_show_' + section_record_node.id + '_' + self.section_tipo + '_' + self.section_id
+					const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 					// console.log("// subscribe event_id:",event_id);
 					event_manager.subscribe(event_id, mosaic_show_alt)
 					function mosaic_show_alt() {

@@ -396,40 +396,40 @@ abstract class component_common extends common {
 			$this->pagination = new stdClass();
 				// $this->pagination->offset	= 0; // default
 				// $this->pagination->limit	= isset($properties->list_max_records) ? (int)$properties->list_max_records : 5;
-				
+
 					// structure properties
 						$properties = $this->get_properties();
 
 						$request_config = ( isset($properties->source->request_config) )
 							? $properties->source->request_config
 							: [];
-	
+
 						$found = array_find($request_config, function($el){
 							return isset($el->api_engine) && $el->api_engine==='dedalo';
 						});
 						$rqo = !empty($found)
-							? $found 
+							? $found
 							: (isset($request_config[0])
 								? $request_config[0]
 								: new stdClass());
 
 						// limit
-						$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit)) 
+						$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
 							? (int)$rqo->sqo->limit
 							: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
 								// show limit
 								?  (int)$rqo->show->sqo_config->limit
 								: 5);
-						
+
 						// offset
-						$this->pagination->offset =  (isset($rqo->sqo) && isset($rqo->sqo->offset)) 
+						$this->pagination->offset =  (isset($rqo->sqo) && isset($rqo->sqo->offset))
 							? (int)$rqo->sqo->offset
 							: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
 								? (int)$rqo->show->sqo_config->offset
 								: 0);
-						
-						
-		
+
+
+
 
 		return true;
 	}//end __construct
@@ -1483,7 +1483,7 @@ abstract class component_common extends common {
 				$search_query_object = new search_query_object();
 					$search_query_object->set_section_tipo($ar_target_section_tipo);
 					$search_query_object->set_limit(0);
-					$search_query_object->set_skip_projects_filter(true);				
+					$search_query_object->set_skip_projects_filter(true);
 
 				$hash_id ='';
 				break;
@@ -2110,12 +2110,12 @@ abstract class component_common extends common {
 			$dato = !empty($dato)
 				? $dato
 				: [null];
-		
+
 		$dato_fb = [];
 		// fallback if empty (or is annoying mce-bogus code from tinyMCE editor)
 		foreach ($dato as $key => $value) {
 			if(empty($value) || $value==='<br data-mce-bogus="1">'){
-				
+
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 					if ($lang!==$main_lang) {
 						$component->set_lang($main_lang);

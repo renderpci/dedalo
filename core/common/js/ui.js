@@ -216,7 +216,7 @@ export const ui = {
 					element_type : 'div'
  				})
  				// CSS
-	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
@@ -273,7 +273,7 @@ export const ui = {
 				wrapper.appendChild(fragment)
 
 				// read only. Disable events on permissions <2
-					if (instance.permissions<2 && model!=="section_group") {
+					if (instance.permissions<2) {
 						wrapper.classList.add("disabled_component")
 					}
 
@@ -605,29 +605,41 @@ export const ui = {
 				return false
 			}
 
-			if (component.id===actived_component.id) {
+			// match case
+				if (component.id===actived_component.id) {
 
-				// match . Add wrapper css active
-					component.node.map(function(item_node) {
-						item_node.classList.add("active")
-					})
+					// match . Add wrapper css active
+						component.node.map(function(item_node) {
+							item_node.classList.add("active")
+						})
 
-				return true
+					// fix nearby inspector overlaping
+						const el				= component.node[0]
+						const el_rect			= el.getBoundingClientRect();
+						// console.log("/// el el_rect:",el_rect);
+						const inspector			= document.getElementById('inspector')
+						const inspector_rect	= inspector.getBoundingClientRect();
+						// console.log("/// inspector_rect:",inspector_rect);
 
-			}else{
+						if (el_rect.right > inspector_rect.left-20) {
+							el.classList.add('inside')
+						}
 
-				// not match. Remove wrapper css active if exists
-					component.node.map(function(item_node) {
-						item_node.classList.remove("active")
-					})
+					return true
+				}
 
-				// remove service autocomplete if active
-					if(component.autocomplete_active===true){
-						component.autocomplete.destroy()
-						component.autocomplete_active = false
-						component.autocomplete = null
-					}
-			}
+			// not match cases. Remove wrapper css active if exists
+				component.node.map(function(item_node) {
+					item_node.classList.remove("active")
+				})
+
+			// service autocomplete remove if active
+				if(component.autocomplete_active===true){
+					component.autocomplete.destroy()
+					component.autocomplete_active = false
+					component.autocomplete = null
+				}
+
 
 			return false
 		},//end active
@@ -1234,6 +1246,7 @@ export const ui = {
 			const name						= options.name
 			const placeholder				= options.placeholder
 			const pattern					= options.pattern
+			const href						= options.href
 
 		// DOM node element
 			const element = document.createElement(element_type)
@@ -1245,7 +1258,7 @@ export const ui = {
 
 		// element_type. A element. Add default href property to element
 			if(element_type==='a'){
-				element.href = 'javascript:;'
+				element.href = href || 'javascript:;'
 			}
 
 		// type
@@ -2083,7 +2096,7 @@ export const ui = {
 
 			// round rgb values
 				function correction(value) {
-					return value
+
 					const factor = 1.016
 
 					const result = (value>127)
@@ -2108,7 +2121,7 @@ export const ui = {
 		}
 
 		canvas.remove()
-		image.classList.remove("loading")
+		image.classList.remove('loading')
 
 		return image
 	}//end set_background_image

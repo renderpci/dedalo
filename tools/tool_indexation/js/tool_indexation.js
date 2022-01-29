@@ -82,6 +82,10 @@ tool_indexation.prototype.init = async function(options) {
 
 	// id_base from transcription_component. Needed to set event subscriptions on init
 		const transcription_component_ddo = options.tool_config.ddo_map.find(el => el.role==='transcription_component')
+		if (!transcription_component_ddo) {
+			console.warn("Invalid transcription_component_ddo:", options );
+			return false
+		}
 		const id_base = transcription_component_ddo.section_tipo +'_'+ transcription_component_ddo.section_id +'_'+ transcription_component_ddo.tipo
 
 	// events

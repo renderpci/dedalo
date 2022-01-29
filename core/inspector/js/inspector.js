@@ -1,19 +1,18 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global */
 /*eslint no-undef: "error"*/
 
 
 
 // import
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
-	import {render_inspector} from './render_inspector.js'
-	import * as instances from '../../common/js/instances.js'
+	import {render_inspector, render_section_info, render_component_info} from './render_inspector.js'
+	// import * as instances from '../../common/js/instances.js'
 
 
 
 /**
-*  INSPECTOR
-*
+* INSPECTOR
 */
 export const inspector = function() {
 
@@ -33,11 +32,13 @@ export const inspector = function() {
 	inspector.prototype.destroy	= common.prototype.destroy
 
 
+
 /**
 * INIT
+* @param object options
 * @return bool true
 */
-inspector.prototype.init = function(options) {
+inspector.prototype.init = async function(options) {
 
 	const self = this
 
@@ -52,8 +53,33 @@ inspector.prototype.init = function(options) {
 	self.events_tokens	= []
 	self.ar_instances	= []
 
+	// nodes
+		self.paginator_container	= null
+		self.element_info_container	= null
+
+	// events
+		// section render
+			self.events_tokens.push(
+				event_manager.subscribe('render_' + self.caller.id, fn_update_section_info)
+			)
+			function fn_update_section_info() {
+				render_section_info(self)
+			}
+		// active_component (when user focus it in DOM)
+			self.events_tokens.push(
+				event_manager.subscribe('active_component', fn_active_component)
+			)
+			function fn_active_component(actived_component) {
+				render_component_info(self, actived_component)
+			}
+		// deactivate_component
+			self.events_tokens.push(
+				event_manager.subscribe('deactivate_component', fn_update_section_info)
+			)
+
 	// status update
 		self.status = 'initiated'
+
 
 	return true
 };//end init
@@ -64,7 +90,7 @@ inspector.prototype.init = function(options) {
 * BUILD
 * @return bool true
 */
-inspector.prototype.build = async function(){
+inspector.prototype.build = async function() {
 
 	const self = this
 
@@ -80,19 +106,3 @@ inspector.prototype.build = async function(){
 };//end build
 
 
-inspector.prototype.get_instance = function(model){
-
-	const self = this
-
-	const instance_options = {
-			model 			: model,
-			tipo 			: self.caller.context[model],
-			section_tipo 	: self.section_tipo,
-			section_id		: self.section_id,
-			mode			: self.mode
-		}
-
-	const instance = instances.get_instance(instance_options)
-
-	return instance
-}

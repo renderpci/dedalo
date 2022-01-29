@@ -1229,7 +1229,7 @@ function session_start_manager($request_options) {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 	// switch by save_handler
-	switch ($options->save_handler) {		
+	switch ($options->save_handler) {
 
 		case 'files':
 			$timeout					= $options->timeout_seconds;

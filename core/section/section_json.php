@@ -13,10 +13,10 @@
 // context
 	$context	= [];
 	$data		= [];
-	
+
 	// if($options->get_context===true  && $permissions>0 && empty($context)){
 	// 	switch ($options->context_type) {
-			
+
 	// 		case 'simple':
 
 	// 			// Component structure context_simple (tipo, relations, properties, etc.)
@@ -24,17 +24,17 @@
 	// 			break;
 
 	// 		default:
-				
+
 	// 			// if ($modo==='tm99') {
 	// 			// 	// Component structure context (tipo, relations, properties, etc.)
-	// 			// 		$context = $this->get_tm_context($permissions);					
+	// 			// 		$context = $this->get_tm_context($permissions);
 	// 			// }else{
 
 	// 			// section structure context (tipo, relations, properties, etc.)
 	// 				$context[] = $this->get_structure_context($permissions, $add_rqo=true);
-			
+
 	// 			// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
-	// 				$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);					
+	// 				$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
 	// 				foreach ($ar_subcontext as $current_context) {
 	// 					$context[] = $current_context;
 	// 				}
@@ -58,7 +58,7 @@
 				foreach ($ar_subcontext as $current_context) {
 					$context[] = $current_context;
 				}
-			
+
 			// subdata. Is specific for tm and is calculated in class section
 				$data = $this->get_tm_ar_subdata();
 
@@ -80,9 +80,23 @@
 
 				$value = [$locator];
 
+				// section self data
+					// $item = new stdClass();
+					// 	$item->typo						= 'section';
+					// 	$item->section_tipo				= $this->tipo;
+					// 	$item->tipo						= $this->tipo;
+					// 	$item->value					= $value;
+					// 	// section creation / modification data
+					// 	$item->created_date				= $this->get_created_date();
+					// 	$item->modified_date			= $this->get_modified_date();
+					// 	$item->created_by_user_name		= $this->get_created_by_user_name();
+					// 	$item->modified_by_user_name	= $this->get_modified_by_user_name();
+
+					// $data[] = $item;
+
 				// subdata add
 					$subdatum = $this->get_subdatum($tipo, $value);
-					
+
 					$ar_subcontext = $subdatum->context;
 					foreach ($ar_subcontext as $current_context) {
 						$context[] = $current_context;

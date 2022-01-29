@@ -5,8 +5,10 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {search} from '../../search/js/search.js'
+	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_thesaurus} from './render_area_thesaurus.js'
 
 
@@ -15,7 +17,7 @@
 * AREA_THESAURUS
 */
 export const area_thesaurus = function() {
-	
+
 	this.id
 
 	// element properties declare
@@ -59,7 +61,7 @@ export const area_thesaurus = function() {
 // prototypes assign
 	// area_thesaurus.prototype.init		= area_common.prototype.init
 	// area_thesaurus.prototype.build		= area_common.prototype.build
-	area_thesaurus.prototype.render			= common.prototype.render
+	// area_thesaurus.prototype.render		= common.prototype.render
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
 	area_thesaurus.prototype.destroy		= common.prototype.destroy
 	area_thesaurus.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -76,6 +78,9 @@ area_thesaurus.prototype.init = async function(options) {
 
 	const self = this
 
+	// call the generic common tool init
+		const common_init = area_common.prototype.init.call(this, options);
+
 	// ts_object adds on
 		const css_url = DEDALO_CORE_URL + "/ts_object/css/ts_object.css"
 		common.prototype.load_style(css_url)
@@ -83,8 +88,19 @@ area_thesaurus.prototype.init = async function(options) {
 		const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
 		common.prototype.load_style(css_url2)
 
-	// call the generic common tool init
-		const common_init = area_common.prototype.init.call(this, options);
+
+	// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
+		self.events_tokens.push(
+			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+		)
+		async function fn_toggle_search_panel() {
+			if (self.filter_container.children.length===0) {
+				await self.filter.build()
+				const filter_wrapper = await self.filter.render()
+				await self.filter_container.appendChild(filter_wrapper)
+			}
+			toggle_search_panel(self.filter)
+		}
 
 	return common_init
 };//end init
@@ -128,7 +144,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			self.rqo_config	= self.context.request_config
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
 				: {}
-			
+
 			// rqo build
 			const action	= 'get_data'
 			const add_show	= false
@@ -146,7 +162,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 		// // build_options. Add custom area build_options to source
 		// 	const source = self.dd_request.show.find(element => element.typo==='source')
-		// 		  source.build_options = self.build_options	
+		// 		  source.build_options = self.build_options
 
 	// load data if not yet received as an option
 		if (autoload===true) {
@@ -189,7 +205,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				await generate_rqo()
 				console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
 	}//end if (autoload===true)
-		
+
 
 	// label
 		self.label = self.context.label
@@ -199,17 +215,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	// section tipo
 		self.section_tipo = self.context.section_tipo || null
-
-	// filter
-		if (!self.filter) {
-			self.filter = new search()
-			self.filter.init({
-				caller	: self,
-				mode	: self.mode
-			})
-			// self.filter.build()
-		}
-		// console.log("Remember. Filter inactive");
 
 	// initiator . URL defined var or Caller of parent section
 	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
@@ -221,6 +226,16 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				: false
 		// fix initiator
 			self.initiator = JSON.parse(initiator)
+
+	// filter
+		if (!self.filter) {
+			self.filter = new search()
+			self.filter.init({
+				caller	: self,
+				mode	: self.mode
+			})
+			// self.filter.build()
+		}
 
 
 	// debug
@@ -236,6 +251,29 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	return true
 };//end build
+
+
+
+/**
+* RENDER
+* @param object options
+*	render_level : level of deep that is rendered (full | content)
+* @return promise
+*	node first DOM node stored in instance 'node' array
+*/
+area_thesaurus.prototype.render = async function(options={}) {
+
+	const self = this
+
+	// call generic common render
+		const result_node = await common.prototype.render.call(this, options)
+
+	// event publish
+		event_manager.publish('render_instance', self)
+
+
+	return result_node
+};//end render
 
 
 
