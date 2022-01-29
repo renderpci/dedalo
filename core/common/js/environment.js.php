@@ -1,6 +1,11 @@
 <?php
-# CONFIG
+// PREVENT_SESSION_LOCK
+define('PREVENT_SESSION_LOCK', true);
+// CONFIG
 include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
+
+// close session to unlock php tread
+session_write_close();
 
 // $page_globals = new stdClass();
 	// 	# version
@@ -48,7 +53,6 @@ include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 	// 	$page_globals->DEDALO_PUBLICATION_ALERT 	= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
 	// 	# float_window_features
 	// 	$page_globals->float_window_features 		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=470,height=415"}');
-
 
 // page_globals
 	$page_globals = (function() {
@@ -129,7 +133,6 @@ include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 		return $obj;
 	})();
 
-
 // plain global vars
 	$plain_vars = [
 		'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
@@ -142,18 +145,26 @@ include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 		'USE_CDN'					=> USE_CDN
 	];
 
-# Page globals
-header('Content-type: application/javascript; charset=utf-8');
+// headers
+	header('Content-type: application/javascript; charset=utf-8');
+	// cache optional
+		// $seconds_to_cache = 3600;
+		// $ts = gmdate("D, d M Y H:i:s", time() + $seconds_to_cache) . " GMT";
+		// header("Expires: $ts");
+		// header("Pragma: cache");
+		// header("Cache-Control: max-age=$seconds_to_cache");
 ?>
 "use strict";
-var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : json_encode($page_globals, JSON_UNESCAPED_UNICODE) ?>;
-var <?php // plain_vars
-echo implode(',', array_map(
-    function ($v, $k) { return sprintf("%s=%s", $k, json_encode($v, JSON_UNESCAPED_SLASHES)); },
-    $plain_vars,
-    array_keys($plain_vars)
-)) .';'. PHP_EOL;
-# Lang labels
+const page_globals=<?php
+	echo (SHOW_DEBUG===true)
+		? json_encode($page_globals, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)
+		: json_encode($page_globals, JSON_UNESCAPED_UNICODE)
+?>;
+const <?php // plain_vars
+echo implode(',', array_map(function ($v, $k) {
+	return sprintf("%s=%s", $k, json_encode($v, JSON_UNESCAPED_SLASHES));
+}, $plain_vars, array_keys($plain_vars))) .';'. PHP_EOL;
+// Lang labels
 include dirname(__FILE__) . '/lang/'.DEDALO_APPLICATION_LANG.'.js';
-# json_elements_data array
-echo ';'.js::get_json_elements_data();
+// json_elements_data array
+echo ';'.PHP_EOL.js::get_json_elements_data();

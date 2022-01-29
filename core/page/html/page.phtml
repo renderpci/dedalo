@@ -36,66 +36,57 @@
 			top:1em;
 		}
 	</style>
-	<link rel="stylesheet" type="text/css" href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>">
 	<link rel="preconnect" href="<?php echo DEDALO_PROTOCOL . DEDALO_HOST ?>" crossorigin />
 	<link rel="preload" href="../common/js/environment.js.php" as="script">
+	<link rel="stylesheet" type="text/css" href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>">
 	<?php /*
 	<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet">
 	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce.woff" as="font" type="font/woff" crossorigin>
 	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce-small.woff" as="font" type="font/woff" crossorigin>
 	<link rel="modulepreload" href="../common/js/components_list.js?v=<?php echo DEDALO_VERSION ?>">
 	*/?>
-	<link rel="modulepreload" href="../page/js/page.js">
-	<link rel="modulepreload" href="../common/js/data_manager.js">
-	<link rel="modulepreload" href="../common/js/event_manager.js">
-	<link rel="modulepreload" href="../common/js/instances.js">
-	<link rel="modulepreload" href="../common/js/common.js">
-	<link rel="modulepreload" href="../common/js/ui.js">
-	<link rel="modulepreload" href="../menu/js/menu.js">
-	<link rel="modulepreload" href="../section/js/section.js">
-	<link rel="modulepreload" href="../section_record/js/section_record.js">
-	<link rel="modulepreload" href="../../tools/tool_common/js/tool_common.js">
-
-	<link rel="preload" href="../../lib/tinymce/js/tinymce/tinymce.min.js" as="script">
+	<link rel="modulepreload" href="../page/js/module_preload.js">
+	<script rel="preload" defer="defer" src="../common/js/environment.js.php"></script>
 </head>
 <body>
 	<div id="main" class="hide"></div>
 	<div id="debug" class="debug hide"></div>
-</body>
-<script rel="preload" defer="defer" src="../common/js/environment.js.php"></script>
-<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
-<script type="module">
-	const t0 = performance.now()
 
-	// page instance
-	import {data_manager} from '../common/js/data_manager.js'
-	import {get_instance} from '../common/js/instances.js'
-	import {dd_console} from '../common/js/utils/index.js'
-	( async () => {
 
-		// main CSS add loading
-			const main = document.getElementById("main")
-				  main.classList.add("loading")
+	<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
+	<script type="module">
+		const t0 = performance.now()
 
 		// page instance
-			const page = await get_instance({
-				model	: 'page',
-				context	: <?php echo json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
-			});
+		import {data_manager} from '../common/js/data_manager.js'
+		import {get_instance} from '../common/js/instances.js'
+		import {dd_console} from '../common/js/utils/index.js'
+		( async () => {
 
-		// page instance build and render
-			const build			= await page.build()
-			const wrapper_page	= await page.render()
+			// main CSS add loading
+				const main = document.getElementById("main")
+					  main.classList.add("loading")
 
-		// main. Add node and restore class
-			main.appendChild(wrapper_page)
-			main.classList.remove("loading","hide")
+			// page instance
+				const page = await get_instance({
+					model	: 'page',
+					context	: <?php echo json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
+				});
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				// console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
-				dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
-			}
-	})()
-</script>
+			// page instance build and render
+				const build			= await page.build()
+				const wrapper_page	= await page.render()
+
+			// main. Add node and restore class
+				main.appendChild(wrapper_page)
+				main.classList.remove("loading","hide")
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					// console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
+					dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
+				}
+		})()
+	</script>
+</body>
 </html>

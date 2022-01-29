@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -257,7 +257,7 @@ render_menu.prototype.edit = async function() {
 		})
 
 	// debug info bar
-		if(SHOW_DEBUG===true) {
+		if(SHOW_DEVELOPER===true) {
 			fragment.appendChild( get_debug_info_bar(self) );
 		}
 
