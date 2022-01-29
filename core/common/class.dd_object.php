@@ -33,6 +33,7 @@ class dd_object {
 		'grouper',
 		'button',
 		'area',
+		'tm',
 		'widget',
 		'login',
 		'menu',
