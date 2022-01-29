@@ -10,9 +10,10 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
-	import {time_machine} from '../../../core/time_machine/js/time_machine.js'
+	// import {time_machine} from '../../../core/time_machine/js/time_machine.js'
 	import {section} from '../../../core/section/js/section.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
+	// import {paginator} from '../../../core/paginator/js/paginator.js'
 
 
 
@@ -33,11 +34,13 @@ export const tool_time_machine = function () {
 	this.type				= null
 
 	this.caller				= null
-	// this.section_tm
-	this.section			= null// custom section generated in tm mode on build
+	this.time_machine 		= null
+	// this.section			= null// custom section generated in tm mode on build
 	this.button_apply		= null
 	this.selected_matrix_id	= null
 	this.modal_container	= null
+
+
 
 	return true
 };//end tool_time_machine
@@ -54,10 +57,10 @@ export const tool_time_machine = function () {
 	tool_time_machine.prototype.destroy				= common.prototype.destroy
 	tool_time_machine.prototype.get_ar_instances	= section.get_ar_instances
 
-	// tool_time_machine.prototype.get_request_config	= time_machine.get_request_config
-	// tool_time_machine.prototype.load_tm				= time_machine.load_tm
-
 	tool_time_machine.prototype.edit				= render_tool_time_machine.prototype.edit
+
+	// tool_time_machine.prototype.build_rqo_show		= common.prototype.build_rqo_show
+	// tool_time_machine.prototype.get_columns_map		= common.prototype.get_columns_map
 
 /**
 * INIT
@@ -105,19 +108,27 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
-	// main_component. fix main_component for convenience
+	// fix main_component for convenience
 		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
 		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
 
-	// section list
-		// self.section = self.load_section() // don't wait here
-
 	// time_machine
-		self.context.request_config = await time_machine.get_request_config.call(self)
-			console.log("self.context:",self.context);
-		await time_machine.load_tm.call(self)
+	// Create, build and assign the time machine service to the instance
+		self.time_machine	= await get_instance({
+			model			: 'time_machine',
+			section_tipo	: self.caller.section_tipo,
+			section_id		: self.caller.section_id,
+			tipo			: self.main_component.tipo,
+			mode 			: 'tm',
+			lang			: page_globals.dedalo_data_nolan,
+			main_component  : self.main_component,
+			caller			: self
+		})
 
-		return
+	await self.time_machine.build(true)
+
+	// add to self instances list
+		self.ar_instances.push(self.time_machine)
 
 	return common_build
 };//end build_custom
