@@ -8,7 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {common, set_context_vars} from '../../common/js/common.js'
+	import {common, set_context_vars, get_columns_map} from '../../common/js/common.js'
 	import {component_common, init_events_subscription} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	// import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
@@ -80,7 +80,6 @@ export const component_portal = function(){
 	component_portal.prototype.update_datum			= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
-	component_portal.prototype.get_columns_map		= common.prototype.get_columns_map
 	component_portal.prototype.build_rqo_show		= common.prototype.build_rqo_show
 	component_portal.prototype.build_rqo_search		= common.prototype.build_rqo_search
 	component_portal.prototype.build_rqo_choose		= common.prototype.build_rqo_choose
@@ -319,7 +318,7 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// columns
 		// if(self.mode!=='list'){
-			self.columns_map = self.get_columns_map()
+			self.columns_map = get_columns_map(self.context)
 		// }
 
 	// component_info add
