@@ -10,9 +10,8 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
-	// import {time_machine} from '../../../core/time_machine/js/time_machine.js'
-	import {section} from '../../../core/section/js/section.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
+	import {render_time_machine_view} from './render_time_machine_view.js'
 	// import {paginator} from '../../../core/paginator/js/paginator.js'
 
 
@@ -55,12 +54,9 @@ export const tool_time_machine = function () {
 	tool_time_machine.prototype.refresh				= common.prototype.refresh
 	tool_time_machine.prototype.render				= common.prototype.render
 	tool_time_machine.prototype.destroy				= common.prototype.destroy
-	tool_time_machine.prototype.get_ar_instances	= section.get_ar_instances
 
 	tool_time_machine.prototype.edit				= render_tool_time_machine.prototype.edit
 
-	// tool_time_machine.prototype.build_rqo_show		= common.prototype.build_rqo_show
-	// tool_time_machine.prototype.get_columns_map		= common.prototype.get_columns_map
 
 /**
 * INIT
@@ -104,7 +100,6 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
@@ -124,6 +119,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			main_component  : self.main_component,
 			caller			: self
 		})
+		self.time_machine.view = render_time_machine_view
 
 	await self.time_machine.build(true)
 
@@ -132,216 +128,6 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	return common_build
 };//end build_custom
-
-
-
-/**
-* LOAD_SECTION
-* Build a new section custom request config based on current component requirements
-* Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
-* Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
-*/
-tool_time_machine.prototype.load_time_machine = async function() {
-
-	const self = this
-
-	// component
-		const component = self.main_component
-
-	// short vars
-		const component_tipo	= component.tipo
-		const section_tipo		= component.section_tipo
-		const section_id		= component.section_id
-		const lang				= component.lang
-		const model				= component.model
-		const label				= component.label
-
-
-	// instance options
-		const instance_options = {
-			model			: 'time_machine',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'tm',
-			lang			: lang,
-			caller			: self,
-			main_component	: component,
-			id_variant		: self.model // 'time_machine' // avoid conflicts
-		}
-
-	// init section instance
-		const time_machine = await get_instance(instance_options)
-
-	// build section with autoload as true
-		await time_machine.build(true)
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[tool_time_machine.load_section] time_machine:", time_machine);
-		}
-
-	// add to self instances list
-		self.ar_instances.push(time_machine)
-
-	return time_machine
-};//end load_section
-
-
-
-
-/**
-* LOAD_SECTION
-* Build a new section custom request config based on current component requirements
-* Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
-* Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
-*/
-tool_time_machine.prototype.load_section = async function() {
-
-	const self = this
-
-	// component
-		const component = self.main_component
-
-	// short vars
-		const component_tipo	= component.tipo
-		const section_tipo		= component.section_tipo
-		const section_id		= component.section_id
-		const lang				= component.lang
-		const model				= component.model
-		const label				= component.label
-
-	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
-	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
-		const ddo_map = [
-			//  matrix id
-			{
-				tipo			: 'dd784', // fake tipo from projects, only used to allow get tm column id data,
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_section_id',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				label			: 'Matrix id',
-				mode			: 'list'
-			},
-			// modification date DEDALO_SECTION_INFO_MODIFIED_DATE dd201
-			{
-				tipo			: 'dd201',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_date',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				label			: 'Modification date',
-				mode			: 'list'
-			},
-			// modification user id DEDALO_SECTION_INFO_MODIFIED_BY_USER dd197
-			{
-				tipo			: 'dd197',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_select',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				label			: 'Modification user',
-				mode			: 'list'
-			},
-			// component itself. Remember add component show y exists (portals) to ddo_map
-			{
-				tipo			: component_tipo,
-				type			: 'component',
-				typo			: 'ddo',
-				section_tipo	: section_tipo,
-				model			: model,
-				parent			: section_tipo,
-				label			: label,
-				mode			: 'list'
-			}
-		]
-		// component show . From rqo_config_show
-			const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-				? JSON.parse( JSON.stringify(component.rqo_config.show.ddo_map) )
-				: null
-			if (component_show) {
-				for (let i = 0; i < component_show.length; i++) {
-					const item = component_show[i]
-						  item.mode = 'list'
-					ddo_map.push(item)
-				}
-			}
-
-	// sqo
-		const sqo = {
-			id					: 'tmp',
-			mode				: 'tm',
-			section_tipo		: [{tipo:section_tipo}],
-			filter_by_locators	: [{
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				tipo			: component_tipo, // (!) used only in time machine to filter by column tipo
-				lang			: lang // (!) used only in time machine to filter by column lang
-			}],
-			limit				: 10,
-			offset				: 0,
-			order				: [{
-				direction	: 'DESC',
-				path		: [{component_tipo : 'id'}]
-			}]
-		}
-
-	// request_config
-		const request_config = [{
-			api_engine	: 'dedalo',
-			sqo			: sqo,
-			show		: {
-				ddo_map : ddo_map
-			}
-		}]
-
-	// context
-		const context = {
-			type			: 'section',
-			typo			: 'ddo',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			lang			: lang,
-			mode			: 'tm',
-			model			: 'section',
-			parent			: section_tipo,
-			request_config	: request_config
-		}
-
-	// instance options
-		const instance_options = {
-			model			: 'section',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'tm',
-			lang			: lang,
-			context			: context,
-			caller			: self,
-			id_variant		: self.model // 'time_machine' // avoid conflicts
-		}
-
-	// init section instance
-		const section = await get_instance(instance_options)
-
-	// build section with autoload as true
-		await section.build(true)
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[tool_time_machine.load_section] section:", section);
-		}
-
-	// add to self instances list
-		self.ar_instances.push(section)
-
-
-	return section
-};//end load_section
 
 
 
