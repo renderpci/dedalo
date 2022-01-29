@@ -145,7 +145,7 @@
 		display: grid;
 
 		// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
-		overflow: hidden;
+		// overflow: hidden;
 
 
 		// input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
@@ -743,126 +743,127 @@
 
 		&.edit {
 			.section_record_base; // flex base config
-				//background-color: #DBF5FF;
-				// outline: 1px solid rgba(216, 216, 216, 0.43);
+			//background-color: #DBF5FF;
+			// outline: 1px solid rgba(216, 216, 216, 0.43);
 
-				//&:before {
-				//	content: "Section record";
-				//	font-weight: bold;
-				//	width: 100%;
-				//	padding: 1em;
-				//}
+			//&:before {
+			//	content: "Section record";
+			//	font-weight: bold;
+			//	width: 100%;
+			//	padding: 1em;
+			//}
 
-				>.content_data {
-					display: flex;
-					flex-wrap: wrap;
+			// >.content_data {
+			// 	display: flex;
+			// 	flex-wrap: wrap;
 
-					// only affects when content data has a ONE child
-					div:only-child {
-						flex: 0 1 100%;
-						height: 100%;
-					}
-				}
+			// 	// only affects when content data has a ONE child
+			// 	// div:only-child {
+			// 	// 	flex: 0 1 100%;
+			// 	// 	height: 100%;
+			// 	// }
+			// }
 
-				// inside another content_data
-				>.content_data & {
-					margin-left: 0;
-				}
+			// inside another content_data
+			// >.content_data & {
+			// 	margin-left: 0;
+			// }
 		}//end section_record &.edit
 
 		&.list {
 			position: relative;
-			// background-color: #f7f7f7;
+			// background-color: #f43bc6;
 			// background-color: @color_white_input;
 			display: contents;
-
 			width: 100%;
-			height: 100%;
+			height: inherit;
 			// margin-right: 0.5em;
 			// outline: 1px solid #EAEAEA;
 
-			// portal and autocomplete
-			li & {
-				//background-color: #F4FF2F;
-				display: flex;
+			>.column {
+				// see list.less
 
-				.id_column {
-					flex: 0 0 7em;
-				}
-
-				.remove_column {
-					// background-color: #ff948e;
+				>.wrapper_component {
+					// height: inherit;
 				}
 			}
 
-			// hover main row
-			.section > &:hover {
-				//&:after {
-				//	content: " ";
-				//	display: block;
-				//	position: absolute;
-				//	left: 0;
-				//	bottom: 0;
-				//	height: 100%;
-				//	width: 100%;
-				//	//background-color: #000000;
-				//	//opacity: 0.035;
-				//	border-bottom: 3px solid #000000;
-				//	border-top: 3px solid #000000;
-				//}
-				div {
-					background-color: @color_grey_medium;
+			// inside view mosaic portal
+			.view_mosaic & {
+				// background-color: #31ff1d;
+
+				>.column {
+					// see list.less
+					width: 100%;
+
+					>.wrapper_component {
+						height: inherit;
+					}
+				}
+
+				// button info
+				.button.info {
+					position: absolute;
+					right: 0;
+					bottom: 0;
+					height: 1.5rem;
+					width: 1.5rem;
+					background-color: white;
+					margin: 0.33rem;
+
+					opacity: 0;
+					/* smartphones, touchscreens */
+					@media (hover: none) and (pointer: coarse) {
+						opacity: 1;
+					}
+				}
+				&:hover {
+					.button {
+						opacity: 1;
+					}
 				}
 			}
 
-			>* {
-				// height: auto;
-				//display: inline-block;
-				// padding: 1em;
-				//padding-left: 1em;
-				//padding-right: 0;
-				flex: 1 0;
-				//padding: 0;
-				//outline: 1px solid #EAEAEA;
-				word-wrap: break-word;
-				word-break: break-all;
-				// overflow: hidden;
-				// outline: 1px solid rgba(216,216,216,.43);
-				// border-bottom: 1px solid @color_grey_medium;
-				box-shadow: 0 -1px 0 @color_grey_light; // simulate outline
+			.DES {
+				// portal and autocomplete
+				li & {
+					//background-color: #F4FF2F;
+					display: flex;
 
-				.component_autocomplete & {
-					display: inline-block;
+					.id_column {
+						flex: 0 0 7em;
+					}
+
+					.remove_column {
+						// background-color: #ff948e;
+					}
 				}
 
-				&.info {
-					border-left: 1px solid #eaeaea;
-					//margin-left: 1em;
+				// hover main row
+				.section > &:hover {
+					div {
+						background-color: @color_grey_medium;
+					}
 				}
-			}//end >div
 
-			>.breakdown {
-				padding: 0;
-			}
+				>* {
+					flex: 1 0;
+					word-wrap: break-word;
+					word-break: break-all;
+					box-shadow: 0 -1px 0 @color_grey_light; // simulate outline
 
-			.button.info {
-				position: absolute;
-				right: 0;
-				bottom: 0;
-				height: 1.5rem;
-				width: 1.5rem;
-				background-color: white;
-				margin: 0.33rem;
+					.component_autocomplete & {
+						display: inline-block;
+					}
 
-				opacity: 0;
-				/* smartphones, touchscreens */
-				@media (hover: none) and (pointer: coarse) {
-					opacity: 1;
-				}
-			}
-			&:hover {
-				.button {
-					opacity: 1;
+					&.info {
+						border-left: 1px solid #eaeaea;
+						//margin-left: 1em;
+					}
+				}//end >div
+
+				>.breakdown {
+					padding: 0;
 				}
 			}
 		}//end list &.list
@@ -1246,7 +1247,7 @@
 							display: flex;
 							.column {
 								display: flex;
-								flex: 0 1 auto;
+								flex: 0 0 auto;
 								align-items: center;
 							}
 						}

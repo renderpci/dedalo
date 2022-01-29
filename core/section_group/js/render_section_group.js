@@ -15,7 +15,7 @@
 * Manage the components logic and appearance in client side
 */
 export const render_section_group = function() {
-	
+
 	return true
 };//end render_section_group
 
@@ -44,7 +44,7 @@ render_section_group.prototype.edit = async function(options) {
 		}
 
 	// content data state
-		data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
+		await data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
 		.then(function(ui_status){
 			if (!ui_status) {
 				// console.log("/// ui_status:",ui_status);

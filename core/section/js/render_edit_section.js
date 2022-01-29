@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEVELOPER, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEVELOPER, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -180,7 +180,7 @@ render_edit_section.prototype.edit = async function(options) {
 */
 const get_content_data = async function(self, ar_section_record) {
 	const t0 = performance.now()
-	
+
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes

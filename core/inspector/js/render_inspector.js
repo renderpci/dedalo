@@ -74,12 +74,12 @@ render_inspector.prototype.edit = async function(options) {
 const add_events = (wrapper, self) => {
 
 	// mousedown
-		// wrapper.addEventListener("mousedown", function(e){
-		// 	e.stopPropagation()
-		// 	//e.preventDefault()
-		// 	// prevent buble event to container element
-		// 	return false
-		// })
+		wrapper.addEventListener("click", function(e){
+			e.stopPropagation()
+			//e.preventDefault()
+			// prevent buble event to container element
+			return false
+		})
 
 
 	return true
@@ -301,8 +301,6 @@ const get_content_data = function(self) {
 					parent			: time_machine_list_wrap
 				})
 		}//end if (self.caller.context.time_machine_list)
-
-
 
 	// buttons_bottom_container
 		const buttons_bottom_container = ui.create_dom_element({

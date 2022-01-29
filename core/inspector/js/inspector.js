@@ -80,6 +80,7 @@ inspector.prototype.init = async function(options) {
 	// status update
 		self.status = 'initiated'
 
+
 	return true
 };//end init
 
