@@ -8,7 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common, set_context_vars, create_source, load_data_debug} from '../../common/js/common.js'
+	import {common, set_context_vars, create_source, load_data_debug, get_columns_map} from '../../common/js/common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
@@ -80,10 +80,6 @@ export const section = function() {
 	section.prototype.list_portal		= render_list_section.prototype.list
 	section.prototype.tm				= render_list_section.prototype.list
 	section.prototype.list_header		= render_list_section.prototype.list_header
-
-	section.prototype.get_columns_map	= common.prototype.get_columns_map
-
-
 
 /**
 * INIT
@@ -432,7 +428,7 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// columns_map. Get the columns_map to use into the list
-		self.columns_map = self.get_columns_map()
+		self.columns_map = get_columns_map(self.context)
 
 
 	// debug
@@ -501,9 +497,9 @@ section.prototype.render = async function(options={}) {
 * GET_AR_INSTANCES (section_records)
 * Generate a section_record instance for each data value
 */
-section.prototype.get_ar_instances = async function(){
+export const get_ar_instances = async function(self){
 
-	const self = this
+	// const self = this
 
 	// self data verification
 		// if (typeof self.data==="undefined") {
@@ -522,7 +518,8 @@ section.prototype.get_ar_instances = async function(){
 			? 'list'
 			: self.mode
 
-		const ar_instances = []
+		// const ar_instances = []
+		const ar_promises = []
 		for (let i = 0; i < value_length; i++) {
 			// console.groupCollapsed("section: section_record " + self.tipo +'-'+ value[i]);
 			const current_section_id	= value[i].section_id
@@ -566,17 +563,34 @@ section.prototype.get_ar_instances = async function(){
 					// instance_options.state			= value[i].state
 				}
 
-			// section_record. init and build
-				const current_section_record = await instances.get_instance(instance_options)
-				await current_section_record.build(true)
+			// // section_record. init and build
+			// 	const current_section_record = await instances.get_instance(instance_options)
+			// 	await current_section_record.build(true)
 
-			// add instance
-				ar_instances.push(current_section_record)
+			// // add instance
+			// 	ar_instances.push(current_section_record)
+
+			// promise add and continue. Init and build
+				ar_promises.push(new Promise(function(resolve){
+					instances.get_instance(instance_options)
+					.then(function(current_section_record){
+						current_section_record.build()
+						.then(function(){
+							resolve(current_section_record)
+						})
+					})
+				}))
+
 
 		}//end for loop
 
+	// ar_instances. When all section_record instances are built, set them
+		const ar_instances = await Promise.all(ar_promises).then((ready_instances) => {
+			return ready_instances
+		});
+
 	// set
-		self.ar_instances.push(...ar_instances)
+		// self.ar_instances.push(...ar_instances)
 
 
 	return ar_instances
