@@ -7,6 +7,7 @@
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_ar_instances} from './section.js'
 
 
 
@@ -36,11 +37,13 @@ render_list_section.prototype.list = async function(options) {
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
-	// section_record
-		const ar_section_record = await self.get_ar_instances()
+	// ar_section_record. section_record instances (initied and builded)
+		self.ar_instances = self.ar_instances && self.ar_instances.length>0
+			? self.ar_instances
+			: await get_ar_instances(self)
 
 	// content_data
-		const content_data = await get_content_data(ar_section_record, self)
+		const content_data = await get_content_data(self.ar_instances, self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -103,7 +106,7 @@ render_list_section.prototype.list = async function(options) {
 		self.node_body = list_body
 
 	// list_header_node. Create and append if ar_instances is not empty
-		if (ar_section_record.length>0) {
+		if (self.ar_instances.length>0) {
 			const list_header_node = ui.render_list_header(columns_map, self)
 			list_body.appendChild(list_header_node)
 		}

@@ -8,6 +8,7 @@
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_ar_instances} from './section.js'
 
 
 
@@ -34,12 +35,12 @@ render_edit_section.prototype.edit = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// ar_section_record. section_record instances (initied and builded)
-		const ar_section_record = self.ar_instances && self.ar_instances.length>0
+		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
-			: await self.get_ar_instances()
+			: await get_ar_instances(self)
 
 	// content_data
-		const content_data = await get_content_data(self, ar_section_record)
+		const content_data = await get_content_data(self, self.ar_instances)
 		// fix last content_data (for pagination selection)
 		self.node_body = content_data
 		if (render_level==='content') {
