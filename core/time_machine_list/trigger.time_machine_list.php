@@ -53,6 +53,3 @@ function get_time_machine_list_json($json_data) {
 	return (object)$response;
 
 }//end get_time_machine_list_json
-
-
-?>
