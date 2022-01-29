@@ -162,7 +162,7 @@ class time_machine_list extends common {
 
 		#dump($ar_data,'$ar_data');
 		$row_header = new stdClass();
-			$row_header->date				=	label::get_label('tiempo');
+			$row_header->date				= label::get_label('tiempo');
 			$row_header->mod_user_name		= label::get_label('modificado');
 			$row_header->component_label	= label::get_label('donde');
 			$row_header->lang_label			= label::get_label('idioma');

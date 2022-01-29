@@ -26,6 +26,3 @@ $file_name = $modo;
 		
 			break;	
 	}
-
-
-?>
