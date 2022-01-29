@@ -237,7 +237,7 @@ paginator.prototype.paginate = async function(offset) {
 	const self = this
 
 	// avoid overlap section calls if not ready
-		if (self.caller.status!=='rendered') {
+		if (self.caller.model !== 'time_machine' && self.caller.status!=='rendered') {
 			console.warn(`/// [paginator.paginate] Ignored (1) paginate offset (element is not ready status: ${self.caller.status}) :`, offset);
 			return false
 		}
@@ -249,7 +249,9 @@ paginator.prototype.paginate = async function(offset) {
 		}
 
 	// preserve caller wrapper height to prevent blink
+	if(self.caller.node){
 		self.caller.node[0].style.minHeight = self.caller.node[0].offsetHeight + 'px'
+	}
 
 	// set the new offset to the current paginator
 		// self.offset = offset
