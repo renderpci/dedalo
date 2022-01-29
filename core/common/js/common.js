@@ -702,33 +702,33 @@ common.prototype.load_script = async function(src) {
 * @return array columns_map
 * 	The the specific columns to render into the list.
 */
-common.prototype.get_columns_map = function(){
+export const get_columns_map = function(context){
 
-	const self = this
-
+		const tipo					= context.tipo
 	// request_config. get the request_config with all ddo to use in the columns
-		const request_config		= self.context.request_config
+		const request_config		= context.request_config
 		const request_config_length	= request_config.length
-
 	// source_columns_map. Get the columns_maps defined in the properties and assigned in context in the server or by the client.
 		// the columns_maps become as structure to complete with the request_config
 		// by default the columns are for every component that has direct link to the component(portal) or section
 		// if the portal has more component in deep, it can define as columns in the properties,
 		// but by default, the portal will be only one column (with all components joined in the cell).
-		const source_columns_map = (self.context.columns_map)
-			? self.context.columns_map
+		const source_columns_map = (context.columns_map)
+			? context.columns_map
 			: false
+	// view
+		const view = context.view
 
 	const columns_map = []
 	// storage of all ddo_map in flat array, without hierarchy, to find the components easily.
 	const full_ddo_map = []
-	full_ddo_map.push(self.context)
+	full_ddo_map.push(context)
 
 	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create the final grid.
 	for (let i = 0; i < request_config_length; i++) {
 		const request_config_item = request_config[i]
 		// get the direct components of the caller (component or section)
-		const ar_first_level_ddo = request_config_item.show.ddo_map.filter(item => item.parent === self.tipo)
+		const ar_first_level_ddo = request_config_item.show.ddo_map.filter(item => item.parent === tipo)
 		const ar_first_level_ddo_len = ar_first_level_ddo.length
 		// store the current component in the full ddo map
 		full_ddo_map.push(...request_config_item.show.ddo_map)
@@ -769,12 +769,12 @@ common.prototype.get_columns_map = function(){
 						continue
 					}
 
-				switch(self.context.view){
+				switch(view){
 					// component_portal will join the components that doesn't has columns defined.
 					case 'line':
 
 						// find if the general column was created, if not create new one with the tipo of the component_portal to include all components.
-						const found	= columns_map.find(el => el.id===self.tipo)
+						const found	= columns_map.find(el => el.id===tipo)
 
 						// if the column exist add general column to ddo information, else create the general column and add the id to the component.
 						if(found){
@@ -783,8 +783,8 @@ common.prototype.get_columns_map = function(){
 						}else{
 							//create the general column with the tipo of the component_portal
 							const column = {
-									id		: self.tipo,
-									label	: self.tipo
+									id		: tipo,
+									label	: tipo
 								}
 
 							columns_map.push(column)
