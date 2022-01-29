@@ -5,6 +5,8 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, get_columns_map} from '../../../core/common/js/common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
+	import {render_time_machine} from './render_time_machine.js'
+
 
 
 
@@ -36,9 +38,11 @@ export const time_machine = function () {
 * extend component functions from component common
 */
 // prototypes assign
+	time_machine.prototype.render			= common.prototype.render
 	time_machine.prototype.refresh			= common.prototype.refresh
 	time_machine.prototype.destroy			= common.prototype.destroy
 	time_machine.prototype.build_rqo_show	= common.prototype.build_rqo_show
+	time_machine.prototype.tm				= render_time_machine.prototype.tm
 	// time_machine.prototype.get_columns_map	= common.prototype.get_columns_map
 
 
@@ -67,6 +71,7 @@ time_machine.prototype.init = function(options) {
 	self.data			= options.data || {}
 
 	self.type			= 'tm'
+	self.node			= []
 
 	// columns_map
 	self.columns_map	= options.columns_map || []
@@ -95,7 +100,7 @@ time_machine.prototype.build = async function(autoload=false) {
 	// self.get_columns_map	= common.prototype.get_columns_map
 
 	// status update
-		self.status = 'loading'
+		self.status = 'building'
 
 	// self.datum. On building, if datum is not created, creation is needed
 		self.datum = self.datum || {
@@ -167,8 +172,7 @@ time_machine.prototype.build = async function(autoload=false) {
 				mode	: self.mode
 			})
 
-			// event paginator_goto_
-				// fn_paginator_goto
+			// event paginator_goto
 				const fn_paginator_goto = async function(offset) {
 					// loading
 						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
@@ -184,7 +188,7 @@ time_machine.prototype.build = async function(autoload=false) {
 						current_data_manager.set_local_db_data(self.rqo, 'rqo')
 
 					// refresh
-						await self.caller.refresh()
+						await self.refresh()
 
 					// loading
 						if (node) node.classList.remove('loading')
@@ -198,7 +202,7 @@ time_machine.prototype.build = async function(autoload=false) {
 		self.columns_map = get_columns_map(self.context)
 
 	// status update
-		self.status = 'loaded'
+		self.status = 'builded'
 
 	return true
 };//end build
@@ -223,17 +227,6 @@ time_machine.prototype.build_context = function() {
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
 		const lang				= component.lang || page_globals.dedalo_data_nolan
-
-		// const source = {
-		// 	typo			: 'source',
-		// 	action			: 'search',
-		// 	model			: 'section',
-		// 	section_tipo	: section_tipo,
-		// 	tipo			: section_tipo,
-		// 	section_id		: section_id,
-		// 	mode			: 'edit',
-		// 	lang			: 'lg-nolan'
-		// }
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
@@ -351,4 +344,5 @@ time_machine.prototype.build_context = function() {
 
 	return context
 };//end build_context
+
 
