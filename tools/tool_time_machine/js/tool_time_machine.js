@@ -10,6 +10,8 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {time_machine} from '../../../core/time_machine/js/time_machine.js'
+	import {section} from '../../../core/section/js/section.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 
 
@@ -47,12 +49,15 @@ export const tool_time_machine = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_time_machine.prototype.refresh	= common.prototype.refresh
-	tool_time_machine.prototype.render	= common.prototype.render
-	tool_time_machine.prototype.destroy	= common.prototype.destroy
-	tool_time_machine.prototype.edit	= render_tool_time_machine.prototype.edit
+	tool_time_machine.prototype.refresh				= common.prototype.refresh
+	tool_time_machine.prototype.render				= common.prototype.render
+	tool_time_machine.prototype.destroy				= common.prototype.destroy
+	tool_time_machine.prototype.get_ar_instances	= section.get_ar_instances
 
+	// tool_time_machine.prototype.get_request_config	= time_machine.get_request_config
+	// tool_time_machine.prototype.load_tm				= time_machine.load_tm
 
+	tool_time_machine.prototype.edit				= render_tool_time_machine.prototype.edit
 
 /**
 * INIT
@@ -105,11 +110,72 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
 
 	// section list
-		self.section = self.load_section() // don't wait here
+		// self.section = self.load_section() // don't wait here
 
+	// time_machine
+		self.context.request_config = await time_machine.get_request_config.call(self)
+			console.log("self.context:",self.context);
+		await time_machine.load_tm.call(self)
+
+		return
 
 	return common_build
 };//end build_custom
+
+
+
+/**
+* LOAD_SECTION
+* Build a new section custom request config based on current component requirements
+* Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
+* Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
+*/
+tool_time_machine.prototype.load_time_machine = async function() {
+
+	const self = this
+
+	// component
+		const component = self.main_component
+
+	// short vars
+		const component_tipo	= component.tipo
+		const section_tipo		= component.section_tipo
+		const section_id		= component.section_id
+		const lang				= component.lang
+		const model				= component.model
+		const label				= component.label
+
+
+	// instance options
+		const instance_options = {
+			model			: 'time_machine',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: 'tm',
+			lang			: lang,
+			caller			: self,
+			main_component	: component,
+			id_variant		: self.model // 'time_machine' // avoid conflicts
+		}
+
+	// init section instance
+		const time_machine = await get_instance(instance_options)
+
+	// build section with autoload as true
+		await time_machine.build(true)
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("[tool_time_machine.load_section] time_machine:", time_machine);
+		}
+
+	// add to self instances list
+		self.ar_instances.push(time_machine)
+
+	return time_machine
+};//end load_section
+
 
 
 
