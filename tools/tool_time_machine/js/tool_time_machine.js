@@ -114,11 +114,13 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
 			tipo			: self.main_component.tipo,
-			mode 			: 'tm',
+			mode			: 'tm',
 			lang			: page_globals.dedalo_data_nolan,
-			main_component  : self.main_component,
-			caller			: self
+			main_component	: self.main_component,
+			caller			: self,
+			id_variant		: self.model
 		})
+		// assign the render view function
 		self.time_machine.view = render_time_machine_view
 
 	await self.time_machine.build(true)

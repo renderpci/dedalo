@@ -37,7 +37,8 @@ class dd_object {
 		'widget',
 		'login',
 		'menu',
-		'tool'
+		'tool',
+		'detail' // used by time_machine_list, relation_list, component_history_list
 	];
 
 

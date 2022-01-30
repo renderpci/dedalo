@@ -45,6 +45,9 @@ common.prototype.init = async function(options) {
 		self.mode			= options.mode // current component mode like 'edit'
 		self.lang			= options.lang // current component lang like 'lg-nolan'
 
+	// type
+		self.type 			= options.type
+
 	// RQO - optional, used to define specific rqo for the instance, used in dd_grid (every dd_grind is loaded with specific rqo)
 		self.rqo			= options.rqo
 
