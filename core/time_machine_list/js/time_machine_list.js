@@ -8,7 +8,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {render_time_machine_list} from './render_time_machine_list.js'
-	import {render_time_machine_view} from './render_time_machine_view.js'
+	import {render_time_machine_list_view} from './render_time_machine_list_view.js'
 
 
 /**
@@ -95,9 +95,10 @@ time_machine_list.prototype.build = async function(autoload=true){
 			tipo			: self.section_tipo,
 			mode 			: 'tm',
 			lang			: page_globals.dedalo_data_nolan,
-			caller			: self
+			caller			: self,
+			id_variant		: self.model
 		})
-		self.time_machine.view = render_time_machine_view
+		self.time_machine.view = render_time_machine_list_view
 
 	await self.time_machine.build(true)
 

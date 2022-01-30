@@ -227,6 +227,7 @@ const get_content_data = function(self) {
 					self.section_id		= self.caller.section_id
 					const relation_list	= await instances.get_instance({
 						model			: 'relation_list',
+						type			: 'detail',
 						tipo			: self.caller.context['relation_list'],
 						section_tipo	: self.section_tipo,
 						section_id		: self.section_id,
@@ -296,6 +297,7 @@ const get_content_data = function(self) {
 					self.section_id		= self.caller.section_id
 					const time_machine_list	= await instances.get_instance({
 						model			: 'time_machine_list',
+						type			: 'detail',
 						tipo			: self.caller.context['time_machine_list'],
 						section_tipo	: self.section_tipo,
 						section_id		: self.section_id,
