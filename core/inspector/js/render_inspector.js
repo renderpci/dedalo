@@ -275,7 +275,7 @@ const get_content_data = function(self) {
 				class_name		: 'time_machine_list',
 				parent			: content_data
 			})
-			// relation_list_head
+			// time_machine_list_head
 				const time_machine_list_head = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'relation_list_head icon_arrow',
@@ -292,6 +292,19 @@ const get_content_data = function(self) {
 					}
 					time_machine_list_head.classList.add('up')
 					// do something
+
+					self.section_id		= self.caller.section_id
+					const time_machine_list	= await instances.get_instance({
+						model			: 'time_machine_list',
+						tipo			: self.caller.context['time_machine_list'],
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						mode			: self.mode
+					})
+					await time_machine_list.build()
+					const time_machine_list_wrap = await time_machine_list.render()
+					time_machine_list_body.appendChild(time_machine_list_wrap)
+
 
 				})
 			// time_machine_list_body

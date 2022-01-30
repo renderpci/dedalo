@@ -226,7 +226,9 @@ time_machine.prototype.build_context = function() {
 		// const component_tipo	= component.tipo
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
-		const lang				= component.lang || page_globals.dedalo_data_nolan
+		const lang				= component
+			? component.lang
+			: page_globals.dedalo_data_nolan
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
