@@ -17,7 +17,6 @@
 * the tool assign the name of this method when it create the time_machine instance in self.time_machine.view
 * the time_machine call here when the render() is fired
 *
-*
 * @param instance self
 * 	The time_machine instance (here the instance is not the tool)
 * @param instance options
@@ -114,8 +113,12 @@ const get_content_data = async function(ar_section_record, self) {
 		if (ar_section_record_length===0) {
 
 			// no records found case
-			const row_item = no_records_node()
-			fragment.appendChild(row_item)
+			const no_records_found_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'no_records',
+				inner_html		: get_label.no_records || 'No records found'
+			})
+			fragment.appendChild(no_records_found_node)
 
 		}else{
 			// rows
@@ -141,8 +144,6 @@ const get_content_data = async function(ar_section_record, self) {
 
 	return content_data
 };//end get_content_data
-
-
 
 
 
@@ -220,3 +221,5 @@ const render_column_id = function(options){
 
 	return fragment
 };// end render_column_id()
+
+

@@ -4,9 +4,10 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {get_ar_instances} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {get_ar_instances} from '../../../core/section/js/section.js'
+
 
 
 /**
@@ -14,7 +15,7 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_time_machine = function() {
-	
+
 	return true
 };//end render_tool_time_machine
 
@@ -122,8 +123,23 @@ const content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 		// lang selector
+		console.log("self.main_component:",self.main_component);
 			if (self.main_component.lang!=='lg-nolan') {
-				const on_change_select = function(e) {
+
+				// label
+				ui.create_dom_element({
+					element_type	: 'label',
+					text_content	: get_label.idioma,
+					parent			: tool_bar
+				})
+				// selector
+				const select_lang = ui.build_select_lang({
+					langs		: self.langs,
+					selected	: self.lang,
+					class_name	: '',
+					action		: on_change_select
+				})
+				function on_change_select(e) {
 					const lang = e.target.value
 					if (lang!==self.lang) {
 						self.lang					= lang
@@ -131,30 +147,7 @@ const content_data_edit = async function(self) {
 						self.refresh()
 					}
 				}
-				// label
-				ui.create_dom_element({
-					element_type	: 'label',
-					text_content 	: get_label.idioma,
-					parent 			: tool_bar
-				})
-				// selector
-				const lang_selector = ui.build_select_lang({
-					langs  		: self.langs,
-					selected 	: self.lang,
-					class_name	: '',
-					action 		: on_change_select,
-					parent 			: tool_bar
-				})
-				// lang_selector.addEventListener('change', async (e) => {
-				// 	e.stopPropagation()
-
-				// 	const lang = e.target.value
-				// 	if (lang!==self.lang) {
-				// 		self.lang = lang
-				// 		self.caller.lang = lang
-				// 		self.refresh()
-				// 	}
-				// })
+				tool_bar.appendChild(select_lang)
 			}
 
 		// button apply
@@ -203,7 +196,7 @@ const content_data_edit = async function(self) {
 * ADD_COMPONENT
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
-	
+
 	// user select blank lang_value case
 		if (!lang_value) {
 			while (component_container.firstChild) {
