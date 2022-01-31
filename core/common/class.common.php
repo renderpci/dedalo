@@ -1574,7 +1574,16 @@ abstract class common {
 	* 	Object with two properties: context, data
 	*/
 	public function get_subdatum($from_parent=null, $ar_locators=[]) {
-		$start_time=microtime(1);
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time=microtime(1);
+
+				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
+				$log = "------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
+				error_log($log);
+			}
+
 		// dump(null, ' get_ar_subcontext call this **************************** '.to_string($this->tipo).' - $from_parent: '.$from_parent);
 
 		$ar_subcontext	= [];

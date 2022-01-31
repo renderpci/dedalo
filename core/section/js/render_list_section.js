@@ -137,7 +137,7 @@ const get_content_data = async function(ar_section_record, self) {
 
 	// section_record instances (initied and builded)
 	// const ar_section_record = await self.get_ar_instances()
-	
+
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
@@ -615,7 +615,7 @@ const no_records_node = () => {
 	const node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'no_records',
-		inner_html		: get_label["no_records"] || "No records found"
+		inner_html		: get_label.no_records || "No records found"
 	})
 
 	return node
