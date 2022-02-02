@@ -11,7 +11,7 @@
 
 
 /**
-* RENDER_descriptors
+* RENDER_DESCRIPTORS
 * Manages the component's logic and apperance in client side
 */
 export const render_descriptors = function() {
@@ -50,7 +50,7 @@ render_descriptors.prototype.edit = async function(options) {
 
 
 /**
-* list
+* LIST
 * Render node for use in modes: list, list_in_list
 * @return DOM node wrapper
 */
@@ -88,16 +88,16 @@ const get_content_data_edit = async function(self) {
 	// values container
 		const values_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'values_container',
-			parent 			: fragment
+			class_name		: 'values_container',
+			parent			: fragment
 		})
 
 	// values
-		const ipo 			= self.ipo
-		const ipo_length 	= ipo.length
+		const ipo			= self.ipo
+		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data 		= self.value.filter(item => item.key === i)
+			const data = self.value.filter(item => item.key === i)
 			get_value_element(i, data , values_container, self)
 		}
 
@@ -128,38 +128,37 @@ const get_value_element = (i, data, values_container, self) => {
 
 	//column_id
 		const column_id = ui.create_dom_element({
-			type 		: 'div',
-			parent 		: li
+			element_type	: 'div',
+			parent			: li
 		})
 		// value
 		const indexation = data.find(item => item.id === 'indexation')
 		const column_id_value = ui.create_dom_element({
-			type 		: 'span',
-			class_name	: 'value',
-			inner_html 	: indexation.value,
-			parent 		: column_id
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: indexation.value,
+			parent			: column_id
 		})
 
 		column_id_value.addEventListener("click", async (e) => {
-			event.stopPropagation();
+			e.stopPropagation();
 
-			const dd_grid	= await instances.get_instance({
-					model 			: 'dd_grid',
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					tipo			: self.section_tipo,
-					mode 			: 'list',
-					lang 			: page_globals.dedalo_data_lang,
-				})
+			const dd_grid = await instances.get_instance({
+				model			: 'dd_grid',
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				tipo			: self.section_tipo,
+				mode			: 'list',
+				lang			: page_globals.dedalo_data_lang,
+			})
 
-			dd_grid.data = [data.find(item => item.id === 'terms').value]
+			dd_grid.data = [data.find(item => item.id==='terms').value]
 
 			const node = await dd_grid.render()
 
-
 			column_id_value.appendChild(node)
-
 		})
+
 
 	return li
 }//end get_value_element

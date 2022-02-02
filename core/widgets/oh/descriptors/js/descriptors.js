@@ -45,6 +45,7 @@ export const descriptors = function(){
 	descriptors.prototype.list		= render_descriptors.prototype.list
 
 
+
 /**
 * RENDER
 */
@@ -52,8 +53,8 @@ descriptors.prototype.render = async function(options={render_level:'full'}) {
 
 	const self = this
 
-	const render_level 	= options.render_level || 'full'
-	const render_mode 	= self.mode || 'edit'
+	const render_level	= options.render_level || 'full'
+	const render_mode	= self.mode || 'edit'
 
 	const node = await self[render_mode]({
 		render_level : render_level
@@ -63,3 +64,5 @@ descriptors.prototype.render = async function(options={render_level:'full'}) {
 
 	return node
 }//end render
+
+
