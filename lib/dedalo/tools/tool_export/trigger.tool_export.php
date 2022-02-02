@@ -53,7 +53,7 @@ function export_data($json_data) {
 			// dump($records, ' records ++ '.to_string());
 
 	// Result parsed as final string
-		$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);
+		$result_string = $tool_export->export_to('csv', $records, $encoding='UTF-8', $section_tipo);
 		#dump(dd_memory_usage(), ' dd_memory_usage fin export_to ++ '.to_string());
 		#error_log($result_string);
 
@@ -64,8 +64,8 @@ function export_data($json_data) {
 
 	if ($write_result->result===true ) {
 
-		// html table. Get csv file as table
-			$table = tool_export::read_csv_file_as_table( $write_result->path, true, null, false );
+		// html table. Get csv file as table. ($file, $header=false, $delimiter=null, $standalone=false)
+			$table = tool_export::read_csv_file_as_table( $write_result->path, true, null, false, $data_format );
 
 		// Build excel version (ISO-8859-1)
 		// Write result to file (excel ISO-8859-1)

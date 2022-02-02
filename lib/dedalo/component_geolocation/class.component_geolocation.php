@@ -278,7 +278,7 @@ class component_geolocation extends component_common {
 
 		$dato = $this->get_dato(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
 
-		if (empty($dato)) {
+		if (empty($dato) || empty($dato->lon) || empty($dato->lat)) {
 			return null;
 		}
 
