@@ -169,7 +169,9 @@ class tool_export extends tool_common {
 		$ar_records_deep_resolved=array();
 		foreach ((array)$ar_records as $key => $row) {
 			$section_id = $row->section_id;
-			$ar_records_deep_resolved[$section_id] = ($this->data_format==='dedalo') ? $this->deep_resolve_dedalo_row($row) : $this->deep_resolve_row($row);
+			$ar_records_deep_resolved[$section_id] = ($this->data_format==='dedalo')
+				? $this->deep_resolve_dedalo_row($row)
+				: $this->deep_resolve_row($row);
 		}
 		// dump($ar_records_deep_resolved, ' $ar_records_deep_resolved ++ '.to_string());
 		#$memory_usage = dd_memory_usage();
@@ -230,7 +232,7 @@ class tool_export extends tool_common {
 									// from_section label
 										if ($h_item->from_section_tipo!==$h_item->section_tipo && $h_item->from_section_tipo!==$section_tipo) {
 											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true);
-											$column_name .= ' ['.$h_item->from_section_tipo.'] ' . $internal_separator;											
+											$column_name .= ' ['.$h_item->from_section_tipo.'] ' . $internal_separator;
 										}
 									// section label
 										#$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator ;
@@ -238,7 +240,7 @@ class tool_export extends tool_common {
 									// from_component label
 										if ($h_item->from_component_tipo!==$h_item->component_tipo) {
 											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_component_tipo, DEDALO_DATA_LANG, true, true);
-											$column_name .= ' ['.$h_item->from_component_tipo.'] ' . $internal_separator;	
+											$column_name .= ' ['.$h_item->from_component_tipo.'] ' . $internal_separator;
 										}
 									// component label
 										$column_name .= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
@@ -472,13 +474,13 @@ class tool_export extends tool_common {
 
 			// skip id, section_tipo, section_id columns
 			if ($key==='id' || $key==='section_tipo' || $key==='section_id' || $key==='datos' || (strpos($component_tipo, '_order')!==false)) continue;
-		
+
 			switch (true) {
 				case ($modelo_name==='relation_list'):
 					$relation_list	= new relation_list($component_tipo, $section_id, $section_tipo, 'list');
 					$valor_export	= $relation_list->get_valor_export();
 					break;
-				
+
 				default:
 					// component
 						$component	= component_common::get_instance($modelo_name,
@@ -488,7 +490,7 @@ class tool_export extends tool_common {
 																	 $lang,
 																	 $section_tipo,
 																	 false);
-					
+
 					// section_list_custom
 						if ($modelo_name==='component_portal' && !empty($this->section_list_custom)) {
 							#dump($this->section_list_custom, ' section_list_custom ++ '.to_string());
@@ -574,13 +576,13 @@ class tool_export extends tool_common {
 			}
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			
+
 			switch ($modelo_name) {
 				case 'relation_list':
 					$relation_list	= new relation_list($component_tipo, $section_id, $section_tipo, 'list');
 					$valor_export	= $relation_list->get_dato_export();
 					break;
-				
+
 				default:
 					$component	= component_common::get_instance($modelo_name,
 																 $component_tipo,
@@ -591,14 +593,14 @@ class tool_export extends tool_common {
 																 false);
 
 					// Full source untouched dato
-						$valor_export = $this->get_valor_dedalo($component);					
+						$valor_export = $this->get_valor_dedalo($component);
 					break;
 			}
 
 			// escape delimiter for avoid breaks
 				$valor_export = self::format_valor_csv_export_string($valor_export);
 
-			// store row item				
+			// store row item
 				$row_item = new stdClass();
 					$row_item->model				= $modelo_name; // for debug info only
 					$row_item->component_tipo		= $component_tipo;

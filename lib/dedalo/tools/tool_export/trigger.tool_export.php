@@ -123,5 +123,3 @@ function export_data($json_data) {
 }//end export_data
 
 
-
-?>
