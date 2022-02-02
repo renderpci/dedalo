@@ -9,22 +9,22 @@
 
 
 /**
-* RENDER_PAGINATOR
+* RENDER_PAGINATOR_MINI.js
 * Manages the component's logic and apperance in client side
 */
-export const render_paginator = function() {
+export const render_paginator_mini = function() {
 
 	return true
-};//end render_paginator
+};//end render_paginator_mini.js
 
 
 
 /**
-* EDIT
-* Render node for use in edit
+* MINI
+* Render node for use in current mode
 * @return DOM node wrapper
 */
-render_paginator.prototype.edit = async function(options) {
+render_paginator_mini.prototype.mini = async function(options) {
 
 	const self = this
 
@@ -40,7 +40,7 @@ render_paginator.prototype.edit = async function(options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper_paginator edit full_width css_wrap_rows_paginator text_unselectable'
+			class_name		: 'wrapper_paginator mini full_width css_wrap_rows_paginator text_unselectable'
 		})
 
 	// content data. Added when total is ready
@@ -202,24 +202,23 @@ const get_content_data = function(self) {
 			parent			: paginator_info
 		})
 
-		const goto_page = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'goto_page',
-			text_content 	: get_label["go_to_page"],
-			parent			: paginator_info
-		})
-
-		// input_go_to_page
-			const input_go_to_page = ui.create_dom_element({
-				element_type	: 'input',
-				class_name		: 'input_go_to_page',
-				parent			: goto_page
-			})
-			input_go_to_page.placeholder = page_number
-			// add the Even onchage to the select, whe it change the section selected will be loaded
-			input_go_to_page.addEventListener('keyup',function(event){
-				self.go_to_page_json(this, event, total_pages, limit)
-			})
+		// const goto_page = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'goto_page',
+		// 	text_content 	: get_label["go_to_page"],
+		// 	parent			: paginator_info
+		// })
+		// // input_go_to_page
+		// 	const input_go_to_page = ui.create_dom_element({
+		// 		element_type	: 'input',
+		// 		class_name		: 'input_go_to_page',
+		// 		parent			: goto_page
+		// 	})
+		// 	input_go_to_page.placeholder = page_number
+		// 	// add the Even onchage to the select, whe it change the section selected will be loaded
+		// 	input_go_to_page.addEventListener('keyup',function(event){
+		// 		self.go_to_page_json(this, event, total_pages, limit)
+		// 	})
 
 		// let text = ""
 		// 	text += get_label["pagina"] || "Page"
