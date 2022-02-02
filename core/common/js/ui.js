@@ -6,6 +6,7 @@
 // imports
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'
 
@@ -1505,6 +1506,123 @@ export const ui = {
 
 		return true
 	},//end toggle_inspector
+
+
+
+	/**
+	* COLLAPSE_TOGGLE_TRACK
+	* Used by inspector to collapse information blocks like 'Relations'
+	* Manages a persistent view ob content (body) based on user selection
+	* Uses local DB to track the state of current element
+	* @param object options
+	*/
+	collapse_toggle_track : (options) => {
+
+		// options
+			const header			= options.header // DOM item (usually label)
+			const content_data		= options.content_data // DOM item (usually the body)
+			const collapsed_id		= options.collapsed_id // id to set DDBB record id
+			const collapse_callback	= options.collapse_callback // function
+			const expose_callback	= options.expose_callback // function
+			const default_state		= options.default_state || 'opened' // opened | closed . default body is exposed (open)
+
+
+		// local DDBB table
+			const collapsed_table = 'status'
+
+		// content data state
+			data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
+			.then(function(ui_status){
+
+				// (!) Note that ui_status only exists when element is collapsed
+				const is_collapsed = typeof ui_status==='undefined' || ui_status.value===false
+					? false
+					: true
+
+				// console.log(default_state, "ui_status:", ui_status, 'is_collapsed', is_collapsed);
+
+				if (is_collapsed) {
+
+					if (!content_data.classList.contains('hide')) {
+						content_data.classList.add('hide')
+					}
+
+					// exec function
+					if (typeof collapse_callback==='function') {
+						collapse_callback()
+					}
+
+				}else{
+
+					if (default_state==='closed' && !ui_status) {
+
+						// Nothing to do. Is the first time access. Not is set the local_db_data yet
+						// console.log("stopped open:",default_state, collapsed_id);
+
+					}else{
+
+						content_data.classList.remove('hide')
+						// exec function
+						if (typeof expose_callback==='function') {
+							expose_callback()
+						}
+					}
+				}
+			})
+
+		// event attach
+			header.addEventListener('click', fn_toggle_collapse)
+
+		// fn_toggle_collapse
+			function fn_toggle_collapse(e) {
+				e.stopPropagation()
+
+				const collapsed	= content_data.classList.contains('hide')
+				if (!collapsed) {
+
+					// close
+
+					// add record to local DB
+					data_manager.prototype.set_local_db_data({
+						id		: collapsed_id,
+						value	: true
+					}, collapsed_table)
+
+					content_data.classList.add('hide')
+
+					// exec function
+					if (typeof collapse_callback==='function') {
+						collapse_callback()
+					}
+				}else{
+
+					// open
+
+					// remove record from local DB (or set value=false)
+					if (default_state==='opened') {
+						// default case for section_group, inspector_project, etc.
+						data_manager.prototype.delete_local_db_data(collapsed_id, collapsed_table)
+					}else{
+						// when default is closed, we need to store the state as NOT collapsed
+						// to prevent an infinite loop
+						data_manager.prototype.set_local_db_data({
+							id		: collapsed_id,
+							value	: false
+						}, collapsed_table)
+					}
+
+					content_data.classList.remove('hide')
+
+					// exec function
+					if (typeof expose_callback==='function') {
+						expose_callback()
+					}
+				}
+			}
+
+
+		return true
+	},//end collapse_toggle_track
 
 
 

@@ -37,6 +37,7 @@
 	// label_top. Is used in section group and inspector labels
 	.label_top {
 		background-color: @color_grey_light;
+		position: relative;
 		padding: 0.33em;
 		padding-left: 0.5em;
 		cursor: pointer;
@@ -777,6 +778,7 @@
 			display: contents;
 			width: 100%;
 			height: inherit;
+			// flex-wrap: wrap;
 			// margin-right: 0.5em;
 			// outline: 1px solid #EAEAEA;
 
@@ -824,6 +826,25 @@
 				}
 			}
 
+			// hover main row
+			// .section > &:hover {
+			// 	div {
+			// 		background-color: @color_grey_medium !important;
+			// 	}
+			// }
+			.wrapper_section >.list_body >.content_data > &:hover {
+				// div {
+				// 	background-color: @color_grey_medium !important;
+				// }
+				>.column {
+					// box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgb(60 64 67 / 30%), 0 1px 3px 1px rgb(60 64 67 / 15%);
+					// box-shadow: 0 4px 2px -2px gray;
+					// box-shadow: 0 2px 2px 0px rgba(0,0,0,0.75);
+					// box-shadow: inset 0px 3px 3px 0#f78a1c, inset 0px -2px 3px 0#f78a1c;
+					z-index: 2;
+				}
+			}
+
 			.DES {
 				// portal and autocomplete
 				li & {
@@ -836,13 +857,6 @@
 
 					.remove_column {
 						// background-color: #ff948e;
-					}
-				}
-
-				// hover main row
-				.section > &:hover {
-					div {
-						background-color: @color_grey_medium;
 					}
 				}
 
@@ -1238,6 +1252,7 @@
 
 				>.content_data {
 					flex-wrap: wrap !important;
+					// overflow: auto;
 
 					.view_line& {
 						// background-color: #f0c2fe !important;
@@ -2205,7 +2220,7 @@
 	.inspector {
 		// @top_distance : 75px;
 		@inspector_width : 15em;
-
+		overflow: auto;
 		height: 100%;
 		width: @inspector_width;
 		background-color: @color_grey_untralight;
@@ -3362,3 +3377,35 @@
 	}
 
 
+
+// icon_arrow
+	.icon_arrow {
+		position: relative;
+		padding: 0.33rem;
+		padding-right: 1.33rem;
+
+		&:after {
+			background-image: url('@{images_base_path}/icons/arrow_down.svg');
+			background-repeat: no-repeat;
+			// background-size: auto 88%;
+			content: ' ';
+			cursor: pointer;
+			height: 1em;
+			margin-right: 0.33rem;
+			padding: 0.33rem;
+			position: absolute;
+			right: 0px;
+			transition: transform 0.26s ease-out;
+			width: 1em;
+		}
+
+		&.up {
+			&:after {
+				transform: rotate(180deg);
+			}
+		}
+
+		&:active {
+			opacity: 0.5;
+		}
+	}
