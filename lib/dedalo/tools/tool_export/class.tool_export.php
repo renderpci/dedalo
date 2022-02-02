@@ -959,7 +959,12 @@ class tool_export extends tool_common {
 
 					$dato = $section->get_component_dato($tipo, $current_lang, $lang_fallback=false);
 					if (!empty($dato)) {
-						$ar_valor[$current_lang] = $dato;
+
+						// safe string to use as JSON data
+							$dato_clean = self::normalize_quotes($dato);
+							$dato_clean = stripslashes($dato_clean);
+
+						$ar_valor[$current_lang] = $dato_clean;
 					}
 				}
 				#dump($ar_valor, ' $ar_valor ++ '.to_string());
@@ -1097,7 +1102,7 @@ class tool_export extends tool_common {
 	* @param string $file
 	* @return string $html
 	*/
-	public static function read_csv_file_as_table($file, $header=false, $delimiter=null, $standalone=false) {
+	public static function read_csv_file_as_table($file, $header=false, $delimiter=null, $standalone=false, $data_format='') {
 
 		if (empty($delimiter)) {
 			$delimiter = tool_export::$delimiter;
@@ -1112,7 +1117,7 @@ class tool_export extends tool_common {
 			$table_html .= "<div class=\"caption no-print\">TABLE FROM: $file</div>";
 		}
 		$table_html .= "<table class=\"table_csv\">\n\n";
-		ini_set('auto_detect_line_endings',TRUE);
+		// ini_set('auto_detect_line_endings',TRUE); // deprecated
 		$f = fopen($file, "r");
 		$i=0; while (($line = fgetcsv($f, 300000, $delimiter)) !== false) {
 
@@ -1136,6 +1141,11 @@ class tool_export extends tool_common {
 					// remove closing quotes
 						$cell = trim($cell,'"');
 
+					// htmlentities. Prevents to view raw data as parsed HTML (strong, em & other tags)
+						if ($data_format==='dedalo') {
+							$cell = htmlentities($cell);
+						}
+
 					$table_html .= $cell;
 					$table_html .= ($header && $i==0) ? '</th>' : '</td>';
 				}
@@ -1144,7 +1154,7 @@ class tool_export extends tool_common {
 				$i++;
 		}
 		fclose($f);
-		ini_set('auto_detect_line_endings',FALSE);
+		// ini_set('auto_detect_line_endings',FALSE); // deprecated
 		$table_html .= "\n</table>";
 
 		if ($standalone) {

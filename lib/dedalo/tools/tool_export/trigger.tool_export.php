@@ -64,7 +64,7 @@ function export_data($json_data) {
 
 	if ($write_result->result===true ) {
 
-		// html table. Get csv file as table. ($file, $header=false, $delimiter=null, $standalone=false)
+		// html table. Get csv file as table. ($file, $header=false, $delimiter=null, $standalone=false, $data_format='')
 			$table = tool_export::read_csv_file_as_table( $write_result->path, true, null, false, $data_format );
 
 		// Build excel version (ISO-8859-1)
