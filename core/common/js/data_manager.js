@@ -298,7 +298,7 @@ data_manager.prototype.get_local_db = async function() {
 		// onupgradeneeded event
 			db_request.onupgradeneeded = function(event) {
 				console.log("-> get_local_db onupgradeneeded:", event.target);
-					
+
 				const db = event.target.result;
 
 				// objectStore
@@ -306,7 +306,10 @@ data_manager.prototype.get_local_db = async function() {
 				// going to use "ssn" as our key path because it's guaranteed to be
 				// unique - or at least that's what I was told during the kickoff meeting.
 					db.createObjectStore('rqo', { keyPath: "id" });
+					// context. Context information about some elements like 'search'
 					db.createObjectStore('context', { keyPath: "id" });
+					// status. Collapse status of section groups, inspector blocks,etc.
+					db.createObjectStore('status', { keyPath: "id" });
 					db.createObjectStore('data', { keyPath: "id" });
 					db.createObjectStore('ontology', { keyPath: "id" });
 
