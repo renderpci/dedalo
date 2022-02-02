@@ -580,7 +580,8 @@ class tool_import_dedalo_csv extends tool_common {
 			$files_info[$current_file_name] = 'Records: '.$n_records.' - Columns: '.$n_columns.'<br>'.implode(', ', $file_info).'';
 
 			# Reference first row
-			$ar_reference = array();
+			$ar_reference			= array();
+			$ar_reference_errors	= array();
 			$preview_max = 10;
 			foreach ($ar_data as $dkey => $current_line) {
 
@@ -590,14 +591,14 @@ class tool_import_dedalo_csv extends tool_common {
 					# Test valid json
 					if (strpos($value,'[')===0 || strpos($value,'{')===0) {
 
-						if (!empty($value)) {
-							// test JSON valid
-							$test = json_decode($value);
-							if ($test===null) {
-								$current_line = '<span class="error">ERROR!! BAD JSON FORMAT </span>';
-								$current_line .= '<div>'.$value.'</div>';
-								debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
-							}
+						$test = json_decode($value);
+						if ($test===null) {
+							debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
+
+							$current_line  = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>";
+							$current_line .= '<div>'.$value.'</div>';
+
+							$ar_reference_errors[] = $current_line;
 						}
 					}
 				}
@@ -605,8 +606,11 @@ class tool_import_dedalo_csv extends tool_common {
 				// Stop on reach limit
 				if ($dkey>=$preview_max) break;
 			}
-			$files_info[$current_file_name] .= "<pre style=\"white-space:pre;display:none\">Reference row 1: ".print_r($ar_reference,true)."</pre>";
-		}
+
+			$files_info[$current_file_name] .= (!empty($ar_reference_errors))
+				? "<pre class=\"error\" style=\"white-space:pre;\">Reference row 1: ".print_r($ar_reference_errors,true)."</pre>"
+				: "<pre style=\"white-space:pre;display:none\">Reference row 1: ".print_r($ar_reference,true)."</pre>";
+		}//end foreach ($result as $current_file_name) {
 
 		$response = new stdClass();
 			$response->result 		= !empty($result) && is_array($result) ? true : false;
