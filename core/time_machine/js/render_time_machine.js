@@ -1,6 +1,8 @@
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
+
+
 /**
 * RENDER_TIME_MACHINE
 * Manages the component's logic and appearance in client side
@@ -9,6 +11,7 @@ export const render_time_machine = function() {
 
 	return true
 };//end render_time_machine
+
 
 
 /**
@@ -29,4 +32,6 @@ render_time_machine.prototype.tm = async function(options) {
 		}
 
 	return self.view(self, options)
-}//end tm
+};//end tm
+
+

@@ -2,6 +2,7 @@
 /*eslint no-undef: "error"*/
 
 
+
 // import
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
@@ -11,11 +12,9 @@
 	import {render_time_machine_view} from './render_time_machine_list_view.js'
 
 
+
 /**
-* time_machine_LIST
-*
-*
-*
+* TIME_MACHINE_LIST
 */
 export const time_machine_list = function() {
 
@@ -106,7 +105,6 @@ time_machine_list.prototype.build = async function(autoload=true){
 	// add to self instances list
 		self.ar_instances.push(self.time_machine)
 
-			console.log("self.time_machine:",self.time_machine);
 	// status update
 		self.status = 'builded'
 
