@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_ar_instances} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
@@ -51,6 +51,9 @@ export const render_time_machine_view = async function(self, options) {
 			class_name		: 'paginator',
 			parent			: fragment
 		})
+		// change paginator mode on the fly
+		// (!) Note that by default, is initied with the caller mode (time_machine))
+		self.paginator.mode = 'mini'
 		self.paginator.build()
 		.then(function(){
 			self.paginator.render().then(paginator_wrapper =>{
