@@ -15,7 +15,7 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_lang = function() {
-	
+
 	return true
 };//end render_tool_lang
 
@@ -159,8 +159,8 @@ const get_content_data_edit = async function(self) {
 	// source component
 		const source_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'source_component_container disabled_component',
-			parent 			: components_container
+			class_name		: 'source_component_container disabled_component',
+			parent			: components_container
 		})
 
 		// source default value check
@@ -175,8 +175,8 @@ const get_content_data_edit = async function(self) {
 	// target component
 		const target_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'target_component_container',
-			parent 			: components_container
+			class_name		: 'target_component_container',
+			parent			: components_container
 		})
 
 		// target default value check
@@ -187,8 +187,8 @@ const get_content_data_edit = async function(self) {
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: components_container
+			class_name		: 'buttons_container',
+			parent			: components_container
 		})
 
 		// automatic_translation
@@ -220,30 +220,32 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 	// container
 		const automatic_translation_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'automatic_translation_container'
-			//parent 			: buttons_container
+			class_name		: 'automatic_translation_container'
+			//parent		: buttons_container
 		})
 
 	// button
 		const button_automatic_translation = ui.create_dom_element({
-			element_type 	: 'button',
-			class_name 		: 'warning button_automatic_translation',
-			text_content 	: get_label.traduccion_automatica || "Automatic translation",
-			parent 			: automatic_translation_container
+			element_type	: 'button',
+			class_name		: 'warning button_automatic_translation',
+			text_content	: get_label.traduccion_automatica || "Automatic translation",
+			parent			: automatic_translation_container
 		})
 
 		// const button_automatic_translation = document.createElement('button');
 		// 	  button_automatic_translation.type = 'button'
 		// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
 		// 	  automatic_translation_container.appendChild(button_automatic_translation)
-		button_automatic_translation.addEventListener("click", (e) => {
+		button_automatic_translation.addEventListener("click", () => {
 
 			components_container.classList.add('loading')
 
-			const translator  = translator_engine_select.value
-			const source_lang = source_select_lang.value
-			const target_lang = target_select_lang.value
-			const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
+			const translator	= translator_engine_select.value
+			const source_lang	= source_select_lang.value
+			const target_lang	= target_select_lang.value
+
+			self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
+			.then(()=>{
 				components_container.classList.remove('loading')
 			})
 		})
@@ -297,3 +299,5 @@ export const add_component = async (self, component_container, value) => {
 
 	return true
 };//end add_component
+
+

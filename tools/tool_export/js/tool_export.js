@@ -5,12 +5,11 @@
 // import
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	// import {data_manager} from '../../../core/common/js/data_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import * as instances from '../../../core/common/js/instances.js'
-	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_export} from './render_tool_export.js'
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {
 		on_dragstart,
 		on_dragover,
@@ -22,10 +21,10 @@
 
 /**
 * TOOL_EXPORT
-* Tool to translate contents from one language to other in any text component
+* Tool to export data from sections
 */
 export const tool_export = function () {
-	
+
 	this.id					= null
 	this.model				= null
 	this.mode				= null
@@ -56,7 +55,6 @@ export const tool_export = function () {
 	// get and render list of components from common
 	tool_export.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
 	tool_export.prototype.calculate_component_path		= common.prototype.calculate_component_path
-
 	// drag
 	tool_export.prototype.on_dragstart					= on_dragstart
 	tool_export.prototype.on_dragover					= on_dragover
@@ -67,7 +65,7 @@ export const tool_export = function () {
 
 /**
 * INIT
-* 
+*
 * @param object options
 * Sample:
 * {
@@ -112,7 +110,7 @@ tool_export.prototype.init = async function(options) {
 
 
 /**
-* BUILD_CUSTOM
+* BUILD
 */
 tool_export.prototype.build = async function(autoload=false) {
 
@@ -182,7 +180,6 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 	// delete previous instances
 		const previous_dd_grid = self.ar_instances.find(el => el.model === 'dd_grid')
-
 		if(previous_dd_grid){
 			await previous_dd_grid.destroy()
 		}
@@ -206,12 +203,13 @@ tool_export.prototype.get_export_grid = async function(options) {
 		self.ar_instances.push(dd_grid)
 
 	return dd_grid_node
-}// end get_export_grid
+};//end get_export_grid
 
 
 
 /**
-* GET_EXPORT_CSV : load the export grid data
+* GET_EXPORT_CSV
+* Load the export grid data
 */
 tool_export.prototype.get_export_csv = async function (options) {
 
@@ -225,12 +223,13 @@ tool_export.prototype.get_export_csv = async function (options) {
 		tipo			: self.caller.section_tipo,
 		mode			: 'csv',
 		lang			: page_globals.dedalo_data_lang,
-		data_format 	: data_format,
+		data_format		: data_format,
 		rqo				: rqo
 	})
 
 	return dd_grid
-}// end get_export_csv
+};//end get_export_csv
+
 
 
 /**
@@ -278,4 +277,6 @@ tool_export.prototype.get_export_xsl = async function (options) {
 	link.download = filename;
 	link.href = uri + base64(format(template, ctx));
 	link.click();
-}
+};//end get_export_xsl
+
+
