@@ -5,7 +5,7 @@
 
 // import
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
+	// import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
@@ -17,11 +17,11 @@
 
 
 /**
-* tool_import_files
+* TOOL_IMPORT_FILES
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_import_files = function () {
-	
+
 	this.id					= null
 	this.model				= null
 	this.mode				= null
@@ -175,7 +175,6 @@ tool_import_files.prototype.build = async function(autoload=false) {
 */
 tool_import_files.prototype.process_files = function(){
 
-}
-
+}//end process_files
 
 

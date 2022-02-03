@@ -44,12 +44,12 @@ render_section_group.prototype.edit = async function(options) {
 		}
 
 	// content data state. Needed to prevent blink components show on page load
-		// await data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
-		// .then(function(ui_status){
-		// 	if (!ui_status) {
-		// 		content_data.classList.remove('hide')
-		// 	}
-		// })
+		await data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
+		.then(function(ui_status){
+			if (!ui_status) {
+				content_data.classList.remove('hide')
+			}
+		})
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	get_wrapper(self)
