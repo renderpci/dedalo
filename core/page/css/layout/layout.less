@@ -836,12 +836,46 @@
 				// div {
 				// 	background-color: @color_grey_medium !important;
 				// }
-				>.column {
+				@line_color : #acacac; // #f78a1c
+
+				>.column:first-of-type {
 					// box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgb(60 64 67 / 30%), 0 1px 3px 1px rgb(60 64 67 / 15%);
 					// box-shadow: 0 4px 2px -2px gray;
 					// box-shadow: 0 2px 2px 0px rgba(0,0,0,0.75);
 					// box-shadow: inset 0px 3px 3px 0#f78a1c, inset 0px -2px 3px 0#f78a1c;
-					z-index: 2;
+					// z-index: 2;
+
+					// border-left: 2px solid #f78a1c;
+					box-shadow: inset 1px 0px 0px 0px @line_color;
+
+
+					&:before {
+						content: " ";
+						width: calc(100vw - 3rem);
+						// background-color: @line_color;
+						position: absolute;
+						left: 0;
+						top: 0;
+						z-index: 2;
+						height: 2px;
+						box-shadow: inset 0px 1px 0px 0 @line_color;
+					}
+					&:after {
+						content: " ";
+						width: calc(100vw - 3rem);
+						background-color: @line_color;
+						position: absolute;
+						left: 0;
+						bottom: 0;
+						z-index: 2;
+						height: 1px;
+						// box-shadow: inset 0px 2px 0px 0 @line_color;
+						box-shadow: 0 1px 5px 0 #000000;
+					}
+				}
+				>.column:last-of-type {
+					// box-shadow: 2px 0 0px 0 @line_color;
+					box-shadow: inset -1px 0px 0 0px @line_color;
 				}
 			}
 
@@ -3023,34 +3057,7 @@
 
 
 
-	.content_data.widget {
 
-		li {
-			>div {
-				padding: 0.5em;
-				background-color: #f0f0f0;
-				border-right: 1px solid #c0c0c0;
-
-				&:last-of-type {
-				  border: none;
-				}
-
-				>.label, >.value {
-					padding: 0.5em;
-				}
-
-				>.label {
-					font-weight: 400;
-					white-space: nowrap;
-					overflow: hidden;
-					text-overflow: ellipsis;
-				}
-				>.value {
-					padding-left: 0;
-				}
-			}
-		}
-	}//end .content_data.widget
 
 
 
@@ -3410,4 +3417,42 @@
 		&:active {
 			opacity: 0.5;
 		}
-	}
+	}//end .icon_arrow
+
+
+
+// widgets common
+	.wrapper_widget {
+		font-size: 0.78rem;
+
+		li {
+			padding: 0;
+
+			>div {
+				padding: 0.15em;
+				// background-color: #f0f0f0;
+				// border-right: 1px solid #c0c0c0;
+				flex: 1 1 100%;
+
+				&:last-of-type {
+				  border: none;
+				}
+
+				>.label, >.value {
+					padding: 0.25em;
+				}
+
+				>.label {
+					// font-weight: 400;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+				>.value {
+					padding-left: 0;
+				}
+			}
+		}
+	}//end .wrapper_widget
+
+
