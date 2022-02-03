@@ -44,7 +44,7 @@ class tools_register {
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1 ) {
+					if ($basename==='tool_common' || $base_name==='tool_dummy' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1 ) {
 						debug_log(__METHOD__." Ignored dir  ".to_string($basename), logger::ERROR);
 						continue;
 					}
@@ -704,7 +704,7 @@ class tools_register {
 	}//end get_all_config_tool_client
 
 
-	
+
 }//end class tools_register
 
 
