@@ -4,13 +4,13 @@
 
 
 // import
+	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
-	import {render_tool_upload} from './render_tool_upload.js'
-
+	import {render_edit_tool_upload} from './render_edit_tool_upload.js'
+	import {render_mini_tool_upload} from './render_mini_tool_upload.js'
 
 
 /**
@@ -18,7 +18,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_upload = function () {
-	
+
 	this.id				= null
 	this.model			= null
 	this.mode			= null
@@ -75,6 +75,12 @@ tool_upload.prototype.build = async function(autoload=false) {
 
 	// fetch system info
 		const system_info = await get_system_info(self)
+		// set as tool properties
+			self.max_size_bytes			= system_info.max_size_bytes
+			self.sys_get_temp_dir		= system_info.sys_get_temp_dir
+			self.upload_tmp_dir			= system_info.upload_tmp_dir
+			self.upload_tmp_perms		= system_info.upload_tmp_perms
+			self.session_cache_expire	= system_info.session_cache_expire
 
 	// call generic common tool build
 		const common_build = tool_common.prototype.build.call(this, autoload);
@@ -113,14 +119,9 @@ const get_system_info = async function(self) {
 			.then(function(response){
 				dd_console("-> get_system_info API response:",'DEBUG',response);
 
-				// set
-					self.max_size_bytes			= response.result.max_size_bytes
-					self.sys_get_temp_dir		= response.result.sys_get_temp_dir
-					self.upload_tmp_dir			= response.result.upload_tmp_dir
-					self.upload_tmp_perms		= response.result.upload_tmp_perms
-					self.session_cache_expire	= response.result.session_cache_expire
+				const result = response.result
 
-				resolve(response)
+				resolve(result)
 			})
 		})
 };//end get_system_info
@@ -134,9 +135,18 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 
 	const self = this
 
+	// collect needed caller data
+		const component_tipo		= self.caller.tipo || null
+		const section_tipo			= self.caller.section_tipo || null
+		const section_id			= self.caller.section_id || null
+		const quality				= self.caller.context.default_target_quality || null
+		const target_dir			= self.caller.context.target_dir || null
+		const allowed_extensions	= self.caller.context.allowed_extensions
+		const caller_type			= self.caller.context.type
+		console.log("self.caller.context:",self.caller.context);
+
 	// check file extension
-		const allowed_extensions = self.caller.context.allowed_extensions
-		const file_extension 	 = file.name.split('.').pop().toLowerCase();
+		const file_extension = file.name.split('.').pop().toLowerCase();
 		if (!allowed_extensions.includes(file_extension)) {
 			alert( get_label.extension_no_valida + ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions) );
 			return false
@@ -150,12 +160,12 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 		}
 
 	// elements
-		const progress_info = progress_bar_container.querySelector('.progress_info')
-		const progress_line = progress_bar_container.querySelector('.progress_line')
-		const filedrag 		= content_data.querySelector('.filedrag')
+		const progress_info	= progress_bar_container.querySelector('.progress_info')
+		const progress_line	= progress_bar_container.querySelector('.progress_line')
+		const filedrag		= content_data.querySelector('.filedrag')
 
 	// hide filedrag
-		filedrag.classList.add("loading_file")
+		filedrag.classList.add('loading_file')
 
 	// FormData build
 		const fd = new FormData();

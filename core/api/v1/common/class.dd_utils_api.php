@@ -62,7 +62,7 @@ class dd_utils_api {
 			$get_json_options = new stdClass();
 				$get_json_options->get_context	= true;
 				$get_json_options->get_data		= true;
-			$login_json = $login->get_json($get_json_options);			
+			$login_json = $login->get_json($get_json_options);
 
 		$response->msg		= 'Ok. Request done';
 		$response->result	= $login_json;
@@ -211,8 +211,8 @@ class dd_utils_api {
 			if(SHOW_DEBUG===true) {
 				$check_status_exec_time = exec_time_unit($start_time,'ms')." ms";
 				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_response), logger::DEBUG);
-			}				
-			
+			}
+
 			if (	$remote_server_response->result!==false
 				 && $remote_server_response->code===200
 				 && $remote_server_response->error===false) {
@@ -386,10 +386,10 @@ class dd_utils_api {
 			$ar_dedalo_prefix_tipos = array_map(function($item){
 				return trim($item);
 			}, explode(',', $dedalo_prefix_tipos));
-			
+
 
 		$ar_tld	= empty($ar_dedalo_prefix_tipos) ? [] : $ar_dedalo_prefix_tipos;
-	
+
 		$file_name	= 'structure.json';
 		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
 
@@ -737,11 +737,11 @@ class dd_utils_api {
 	/**
 	* TOOL_REQUEST
 	* Call to tool method given and return and object with the response
-	* 
+	*
 	* Class file of current tool must be exists in path: DEDALO_TOOLS_PATH / my_tool_name / class.my_tool_name.php
 	* Method must be static and accept a only one object argument
 	* Method must return an object like { result: mixed, msg: string }
-	* 
+	*
 	* @param object $request_options
 	* sample:
 	* {
@@ -769,7 +769,7 @@ class dd_utils_api {
 			$source			= $request_options->source;
 			$tool_name		= $source->model;
 			$tool_method	= $source->action;
-			$arguments		= $source->arguments;
+			$arguments		= $source->arguments ?? [];
 
 		// load tool class file
 			$class_file = DEDALO_TOOLS_PATH . '/' .$tool_name. '/class.' . $tool_name .'.php';
@@ -781,18 +781,18 @@ class dd_utils_api {
 				return $response;
 			}
 			require $class_file;
-			
+
 		// method (static)
 			if (!method_exists($tool_name, $tool_method)) {
-				$response->msg = 'Error. tool method \''.$tool_method.'\' do not exists '; 
+				$response->msg = 'Error. tool method \''.$tool_method.'\' do not exists ';
 				return $response;
 			}
 			try {
 
-				$fn_result = call_user_func(array($tool_name, $tool_method), $arguments); 
+				$fn_result = call_user_func(array($tool_name, $tool_method), $arguments);
 
-			} catch (Exception $e) { // For PHP 5			
-				
+			} catch (Exception $e) { // For PHP 5
+
 				trigger_error($e->getMessage());
 
 				$fn_result = new stdClass();
