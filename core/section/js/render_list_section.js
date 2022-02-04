@@ -514,11 +514,11 @@ const get_buttons = function(self) {
 						case 'button_new':
 							event_manager.publish('new_section_' + self.id)
 							break;
-						case 'button_import':
-							event_manager.publish('load_tool', {
-								tool_context	: current_button.tools[0],
-								caller			: self
-							})
+						// case 'button_import':
+						// 	event_manager.publish('load_tool', {
+						// 		tool_context	: current_button.tools[0],
+						// 		caller			: self
+						// 	})
 							break;
 						default:
 							event_manager.publish('click_' + current_button.model)
@@ -529,6 +529,7 @@ const get_buttons = function(self) {
 
 	// tools
 		ui.add_tools(self, buttons_wrapper)
+
 
 	return fragment
 };//end get_buttons

@@ -976,8 +976,9 @@ export const ui = {
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
 			const mode			= instance.mode 	// like 'edit'
-			const label			= instance.context.label || ''
-			const description	= instance.context.description || ''
+			const context		= instance.context || {}
+			const label			= context.label || ''
+			const description	= context.description || ''
 			const name			= instance.constructor.name
 
 			const fragment = new DocumentFragment()
@@ -1054,12 +1055,9 @@ export const ui = {
 		build_section_tool_button : (tool_context, self) => {
 
 			// button
-				const class_name = 'warning ' + tool_context.model
-
-
 				const tool_button = ui.create_dom_element({
 					element_type	: 'button',
-					class_name		: class_name,
+					class_name		: 'warning ' + tool_context.model,
 					// text_content	: tool_context.label,
 					dataset			: {
 						tool : tool_context.name
@@ -1082,7 +1080,6 @@ export const ui = {
 
 			// Events
 				tool_button.addEventListener('click', publish_load_tool)
-
 				function publish_load_tool(e) {
 					e.stopPropagation();
 
@@ -1092,6 +1089,8 @@ export const ui = {
 						caller			: self
 					})
 				}
+
+
 			return tool_button
 		},//build_section_tool_button
 
@@ -1126,7 +1125,6 @@ export const ui = {
 				// 	dataset			: { tool : tool_context.name },
 				// 	title_label		: tool_context.label
 				// })
-
 
 			// Events
 				tool_button.addEventListener('click', publish_load_tool)
@@ -1409,11 +1407,17 @@ export const ui = {
 
 		for (let i = 0; i < tools_length; i++) {
 
-			if(self.type === 'component' && tools[i].show_in_component){
-				buttons_container.appendChild( ui.tool.build_component_tool_button(tools[i], self) )
-			}else if(self.type === 'section'){
-				buttons_container.appendChild( ui.tool.build_section_tool_button(tools[i], self) )
-			}
+			const tool_node = (self.type==='component' && tools[i].show_in_component)
+				? ui.tool.build_component_tool_button(tools[i], self)
+				: ui.tool.build_section_tool_button(tools[i], self)
+
+			buttons_container.appendChild(tool_node)
+
+			// if(self.type === 'component' && tools[i].show_in_component){
+			// 	buttons_container.appendChild( ui.tool.build_component_tool_button(tools[i], self) )
+			// }else if(self.type === 'section'){
+			// 	buttons_container.appendChild( ui.tool.build_section_tool_button(tools[i], self) )
+			// }
 		}
 
 		return tools

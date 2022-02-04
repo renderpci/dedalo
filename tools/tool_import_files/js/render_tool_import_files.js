@@ -5,28 +5,28 @@
 
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {ui} from '../../../core/common/js/ui.js'
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {create_source} from '../../../core/common/js/common.js'
 
 
 
 /**
-* RENDER_tool_import_files
+* RENDER_TOOL_IMPORT_FILES
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_import_files = function() {
-	
+
 	return true
 };//end render_tool_import_files
 
 
 
 /**
-* RENDER_tool_import_files
-* Render node for use like button
-* @return DOM node
+* EDIT
+* Render node for use in current mode
+* @return DOM node wrapper
 */
 render_tool_import_files.prototype.edit = async function(options={render_level:'full'}) {
 
