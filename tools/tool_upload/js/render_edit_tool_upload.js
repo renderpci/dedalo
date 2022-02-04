@@ -10,22 +10,22 @@
 
 
 /**
-* RENDER_TOOL_UPLOAD
+* render_edit_tool_upload
 * Manages the component's logic and apperance in client side
 */
-export const render_tool_upload = function() {
-	
+export const render_edit_tool_upload = function() {
+
 	return true
-};//end render_tool_upload
+};//end render_edit_tool_upload
 
 
 
 /**
-* RENDER_TOOL_upload
+* render_edit_tool_upload
 * Render node for use like button
 * @return DOM node
 */
-render_tool_upload.prototype.edit = async function (options) {
+render_edit_tool_upload.prototype.edit = async function (options) {
 
 	const self = this
 
@@ -73,7 +73,7 @@ render_tool_upload.prototype.edit = async function (options) {
 
 
 	return wrapper
-};//end render_tool_upload
+};//end render_edit_tool_upload
 
 
 
@@ -81,7 +81,7 @@ render_tool_upload.prototype.edit = async function (options) {
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = function(self) {
+export const get_content_data = function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -195,6 +195,7 @@ const get_content_data = function(self) {
 			parent			: response_container
 		})
 		preview_image.addEventListener("click", function(e){
+			e.stopPropagation()
 			window.open(this.src)
 		})
 
@@ -209,15 +210,17 @@ const get_content_data = function(self) {
 		// caller component
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: '<label>Caller component</label>' + self.caller.model,
+			inner_html		: '<label>Caller</label>' + self.caller.model,
 			parent			: info
 		})
 		// target quality
-		ui.create_dom_element({
-			element_type	: 'div',
-			inner_html		: '<label>Target quality</label>' + self.caller.context.default_target_quality,
-			parent			: info
-		})
+		if (self.caller.context.default_target_quality) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: '<label>Target quality</label>' + self.caller.context.default_target_quality,
+				parent			: info
+			})
+		}
 		// allowed extensions
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -282,7 +285,7 @@ const get_content_data = function(self) {
 /**
 * GET_PROGRESS_BAR
 */
-const get_progress_bar = function(self) {
+export const get_progress_bar = function(self) {
 
 	// progress_bar_container
 		const progress_bar_container = ui.create_dom_element({
@@ -315,7 +318,7 @@ const get_progress_bar = function(self) {
 /**
 * FILE_DRAG_HOVER
 */
-const file_drag_hover = function(e) {
+export const file_drag_hover = function(e) {
 
 	e.stopPropagation();
 	e.preventDefault();
@@ -334,7 +337,7 @@ const file_drag_hover = function(e) {
 /**
 * FILE_SELECT_HANDLER
 */
-const file_select_handler = function(e) {
+export const file_select_handler = function(e) {
 
 	// cancel event and hover styling
 	file_drag_hover(e);

@@ -43,9 +43,9 @@ export const tool_upload = function () {
 // prototypes assign
 	tool_upload.prototype.render	= common.prototype.render
 	tool_upload.prototype.destroy	= common.prototype.destroy
-	tool_upload.prototype.edit		= render_tool_upload.prototype.edit
-
-
+	tool_upload.prototype.edit		= render_edit_tool_upload.prototype.edit
+	tool_upload.prototype.list		= render_edit_tool_upload.prototype.edit
+	tool_upload.prototype.mini		= render_mini_tool_upload.prototype.mini
 
 /**
 * INIT
@@ -169,119 +169,125 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 
 	// FormData build
 		const fd = new FormData();
-			  fd.append("mode", 			"upload_file");
-			  fd.append("component_tipo", 	self.caller.tipo);
-			  fd.append("section_tipo", 	self.caller.section_tipo);
-			  fd.append("section_id", 		self.caller.section_id);
-			  fd.append("quality", 			self.caller.context.default_target_quality);
-			  // file
-			  fd.append("fileToUpload", file);
+		fd.append('mode', 				'upload_file');
+		fd.append('component_tipo', 	component_tipo);
+		fd.append('section_tipo', 		section_tipo);
+		fd.append('section_id', 		section_id);
+		fd.append('quality', 			quality);
+		fd.append('caller_type', 		caller_type);
+		fd.append('target_dir', 		JSON.stringify(target_dir));
+		fd.append('allowed_extensions', JSON.stringify(allowed_extensions));
+		// file
+		fd.append('fileToUpload', file);
 
-	// upload_loadstart
-		const upload_loadstart = function(evt) {
-			preview_image.src 	   = ''
-			progress_line.value    = 0;
-			response_msg.innerHTML = '<span class="blink">Loading file '+file.name+'</span>'
-		};//end upload_loadstart
 
-	// upload_load
-		const upload_load = function(evt) {
-			response_msg.innerHTML = '<span class="blink">Processing file '+file.name+'</span>'
-		};//end upload_load
-
-	// upload_error
-		const upload_error = function(evt) {
-			response_msg.innerHTML = `<span class="error">${get_label.error_al_subir_el_archivo} ${file.name}</span>`
-		};//end upload_error
-
-	// upload_abort
-		const upload_abort = function(evt) {
-			response_msg.innerHTML = '<span class="error">User aborts upload</span>'
-		};//end upload_abort
-
-	// upload_progress
-		const upload_progress = function(evt) {
-			const percent = parseInt(evt.loaded/evt.total*100);
-			// info line show numerical percentage of load
-		    progress_info.innerHTML = 'Upload progress: ' + percent + ' %'
-		    // progress line show graphic percentage of load
-		    progress_line.value = percent
-		};//end upload_progress
-
-	// xhr_load
-		const xhr_load = function(evt) {
-
-			// parse response string as JSON
-				const response = JSON.parse(evt.target.response);
-				if (!response) {
-					console.error("Error in XMLHttpRequest load response. Nothing is received");
-					return false
+		// upload_loadstart
+			const upload_loadstart = function() {
+				if (preview_image) {
+					preview_image.src = ''
 				}
+				progress_line.value		= 0;
+				response_msg.innerHTML	= '<span class="blink">Loading file '+file.name+'</span>'
+			};//end upload_loadstart
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					console.log("upload_file.XMLHttpRequest load response:", response);
-				}
+		// upload_load
+			const upload_load = function() {
+				response_msg.innerHTML = '<span class="blink">Processing file '+file.name+'</span>'
+			};//end upload_load
 
-			// print message
-				response_msg.innerHTML = response.msg
+		// upload_error
+			const upload_error = function() {
+				response_msg.innerHTML = `<span class="error">${get_label.error_al_subir_el_archivo} ${file.name}</span>`
+			};//end upload_error
 
-			// preview image
-				if (response.preview_url) {
-					preview_image.src = response.preview_url + '?' + (new Date().getTime())
-				}
+		// upload_abort
+			const upload_abort = function() {
+				response_msg.innerHTML = '<span class="error">User aborts upload</span>'
+			};//end upload_abort
 
-			// show filedrag
-				filedrag.classList.remove("loading_file")
+		// upload_progress
+			const upload_progress = function(evt) {
+				const percent = parseInt(evt.loaded/evt.total*100);
+				// info line show numerical percentage of load
+			    progress_info.innerHTML = 'Upload progress: ' + percent + ' %'
+			    // progress line show graphic percentage of load
+			    progress_line.value = percent
+			};//end upload_progress
 
-			// refresh component
-				self.caller.refresh().then((refresh_reponse)=>{
+		// xhr_load
+			const xhr_load = function(evt) {
 
-				})
+				// parse response string as JSON
+					let response = null
+					try {
+						response = JSON.parse(evt.target.response);
+					} catch (error) {
+						alert(evt.target.response)
+						console.warn("response:",evt.target.response);
+						console.error(error)
+					}
+					if (!response) {
+						console.error("Error in XMLHttpRequest load response. Invalid response is received");
+						return false
+					}
 
-			// close modal. On close, modal destroy the caller (this tool)
-				// setTimeout(()=>{
-				// 	const modal_container = document.querySelector('dd-modal')
-				// 	if (modal_container) {
-				// 		modal_container._closeModal()
-				// 	}
-				// }, 20000)
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log("upload_file.XMLHttpRequest load response:", response);
+					}
 
-			return true
-		};//end xhr_load
+				// print message
+					response_msg.innerHTML = response.msg
+
+				// preview image
+					if (preview_image && response.preview_url) {
+						preview_image.src = response.preview_url + '?' + (new Date().getTime())
+					}
+
+				// show filedrag
+					filedrag.classList.remove("loading_file")
+
+				// refresh caller (ussually a component)
+					self.caller.refresh()
 
 
-	// XMLHttpRequest
-		const xhr = new XMLHttpRequest();
+				return true
+			};//end xhr_load
 
-		// upload
-			// upload_loadstart (the upload begins)
-			xhr.upload.addEventListener("loadstart", upload_loadstart, false);
 
-			// upload_load file (the upload ends successfully)
-			xhr.upload.addEventListener("load", upload_load, false);
+		// XMLHttpRequest
+			const xhr = new XMLHttpRequest();
 
-			// upload_error (the upload ends in error)
-			xhr.upload.addEventListener("error", upload_error, false);
+			// upload
+				// upload_loadstart (the upload begins)
+				xhr.upload.addEventListener("loadstart", upload_loadstart, false);
 
-			// upload_abort (the upload has been aborted by the user)
-			xhr.upload.addEventListener("abort", upload_abort, false);
+				// upload_load file (the upload ends successfully)
+				xhr.upload.addEventListener("load", upload_load, false);
 
-			// progress
-			xhr.upload.addEventListener("progress", upload_progress, false);
+				// upload_error (the upload ends in error)
+				xhr.upload.addEventListener("error", upload_error, false);
 
-		// hxr
-			// xhr_load (the XMLHttpRequest ends successfully)
-			xhr.addEventListener("load", xhr_load, false);
+				// upload_abort (the upload has been aborted by the user)
+				xhr.upload.addEventListener("abort", upload_abort, false);
 
-			// open connection
-			xhr.open("POST", self.trigger_url, true);
+				// progress
+				xhr.upload.addEventListener("progress", upload_progress, false);
 
-			// request header
-			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+			// hxr
+				// xhr_load (the XMLHttpRequest ends successfully)
+				xhr.addEventListener("load", xhr_load, false);
+
+				// open connection
+				xhr.open("POST", self.trigger_url, true);
+
+				// request header
+				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
 			// send data
-			xhr.send(fd);
+				xhr.send(fd);
+
+
 
 
 	return true

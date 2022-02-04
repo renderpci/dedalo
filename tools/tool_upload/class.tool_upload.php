@@ -104,18 +104,25 @@ class tool_upload { // extends tool_common
 	public static function upload_file($request_options) {
 		$start_time=microtime(1);
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. '.label::get_label('error_al_subir_el_archivo');
-
+		// response
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= 'Error. '.label::get_label('error_al_subir_el_archivo');
 
 		// options
 			$options = new stdClass();
-				$options->component_tipo	= null;
-				$options->section_tipo		= null;
-				$options->section_id		= null;
-				$options->quality			= null;
+				$options->component_tipo		= null;
+				$options->section_tipo			= null;
+				$options->section_id			= null;
+				$options->quality				= null;
+				$options->caller_type			= null;
+				$options->allowed_extensions	= '[]';   // stringnified array like ['csv']
+				$options->target_dir			= 'null'; // stringnified object like {type:dedalo_config, value:DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH}
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// json decode encoded vars
+			$allowed_extensions	= json_decode($options->allowed_extensions);
+			$target_dir			= json_decode($options->target_dir);
 
 		// file_data. post file (sended across $_FILES)
 			// Example of received data:
@@ -147,40 +154,78 @@ class tool_upload { // extends tool_common
 					return $response;
 				}
 
-		// component
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($options->component_tipo,true);
-			$component	= component_common::get_instance($model,
-														 $options->component_tipo,
-														 $options->section_id,
-														 'edit',
-														 DEDALO_DATA_LANG,
-														 $options->section_tipo);
-
-			// fix current component target quality (defines the destination directory for the file, like 'original')
-				$component->set_quality($options->quality);
-
-			// add file
-				$add_file = $component->add_file($file_data);
-				if ($add_file->result===false) {
-					$response->msg = $add_file->msg;
-					return $response;
-				}
-				// dump($add_file, ' add_file ++ '.to_string());
-
-			// postprocessing file (add_file returns final renamed file with path info)
-				$process_file = $component->process_uploaded_file($add_file->ready);
-				if ($process_file->result===false) {
-					$response->msg = 'Upload is complete, but errors occurred on processing file: '.$process_file->msg;
+			// check extension
+				if (!in_array($file_data->extension, $allowed_extensions)) {
+					debug_log(__METHOD__." Error. Invalid file extension ".$file_data->extension, logger::ERROR);
+					$response->msg .= "Error. Invalid file extension ".$file_data->extension;
 					return $response;
 				}
 
-			// preview url. Usually the thumb image or posterframe
-				$preview_url = $component->get_preview_url();
+			// mime check
 
 
-		// all is OK
+		// manage uploaded file
+			switch (true) {
+
+				case ($options->caller_type==='component'):
+
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($options->component_tipo,true);
+					$component	= component_common::get_instance($model,
+																 $options->component_tipo,
+																 $options->section_id,
+																 'edit',
+																 DEDALO_DATA_LANG,
+																 $options->section_tipo);
+
+					// fix current component target quality (defines the destination directory for the file, like 'original')
+						$component->set_quality($options->quality);
+
+					// add file
+						$add_file = $component->add_file($file_data);
+						if ($add_file->result===false) {
+							$response->msg = $add_file->msg;
+							return $response;
+						}
+
+					// postprocessing file (add_file returns final renamed file with path info)
+						$process_file = $component->process_uploaded_file($add_file->ready);
+						if ($process_file->result===false) {
+							$response->msg = 'Upload is complete, but errors occurred on processing file: '.$process_file->msg;
+							return $response;
+						}
+
+					// preview url. Usually the thumb image or posterframe
+						$preview_url = $component->get_preview_url();
+
+					break;
+
+				case ($options->caller_type==='tool'):
+
+					if (!empty($target_dir) && $target_dir->type==='dedalo_config') {
+						$dir = defined($target_dir->value) ? constant($target_dir->value) : null;
+						if (isset($dir)) {
+							// move file to target path
+							$name			= basename($_FILES["fileToUpload"]["name"]);
+							$target_path	= $dir . '/' . $name;
+							$moved			= move_uploaded_file($file_data->tmp_name, $target_path);
+						}
+					}
+					if (!isset($moved) || $moved!==true) {
+						debug_log(__METHOD__." Error on get/move to target_dir ". to_string($target_dir), logger::ERROR);
+						$response->msg .= "Uploaded file Error on get/move to target_dir. ".to_string($target_dir->value);
+						return $response;
+					}
+					break;
+
+				default:
+					debug_log(__METHOD__." Error on manage uploaded file. Any target or manager is received. request_options: ".to_string($request_options), logger::ERROR);
+					break;
+			}//end switch (true)
+
+
+		// all is OK response
 			$response->result		= true;
-			$response->preview_url	= $preview_url;
+			$response->preview_url	= $preview_url ?? null;
 			$response->msg			= 'OK. '.label::get_label('fichero_subido_con_exito');
 
 		// debug
@@ -193,7 +238,7 @@ class tool_upload { // extends tool_common
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 					$debug->options		= $options;
 					$debug->file_data	= $file_data;
-					$debug->add_file	= $add_file;
+					$debug->add_file	= $add_file ?? null;
 
 				$response->debug = $debug;
 			}
@@ -230,6 +275,75 @@ class tool_upload { // extends tool_common
 
 		return $f_error_text;
 	}//end error_number_to_text
+
+
+
+	/**
+	* GET_KNOWN_MIME_TYPES
+	* @return array $mime_types
+	*/
+	public static function get_known_mime_types() {
+
+		$mime_types = array(
+
+			'txt'	=> 'text/plain',
+			'htm'	=> 'text/html',
+			'html'	=> 'text/html',
+			'php'	=> 'text/html',
+			'css'	=> 'text/css',
+			'csv'	=> 'text/csv',
+			'js'	=> 'application/javascript',
+			'json'	=> 'application/json',
+			'xml'	=> 'application/xml',
+			'swf'	=> 'application/x-shockwave-flash',
+			'flv'	=> 'video/x-flv',
+
+			// images
+			'png'	=> 'image/png',
+			'jpe'	=> 'image/jpeg',
+			'jpeg'	=> 'image/jpeg',
+			'jpg'	=> 'image/jpeg',
+			'gif'	=> 'image/gif',
+			'bmp'	=> 'image/bmp',
+			'ico'	=> 'image/vnd.microsoft.icon',
+			'tiff'	=> 'image/tiff',
+			'tif'	=> 'image/tiff',
+			'svg'	=> 'image/svg+xml',
+			'svgz'	=> 'image/svg+xml',
+
+			// archives
+			'zip'	=> 'application/zip',
+			'rar'	=> 'application/x-rar-compressed',
+			'exe'	=> 'application/x-msdownload',
+			'msi'	=> 'application/x-msdownload',
+			'cab'	=> 'application/vnd.ms-cab-compressed',
+
+			// audio/video
+			'mp3'	=> 'audio/mpeg',
+			'mp4'	=> 'video/mpeg',
+			'qt'	=> 'video/quicktime',
+			'mov'	=> 'video/quicktime',
+
+			// adobe
+			'pdf'	=> 'application/pdf',
+			'psd'	=> 'image/vnd.adobe.photoshop',
+			'ai'	=> 'application/postscript',
+			'eps'	=> 'application/postscript',
+			'ps'	=> 'application/postscript',
+
+			// ms office
+			'doc'	=> 'application/msword',
+			'rtf'	=> 'application/rtf',
+			'xls'	=> 'application/vnd.ms-excel',
+			'ppt'	=> 'application/vnd.ms-powerpoint',
+
+			// open office
+			'odt'	=> 'application/vnd.oasis.opendocument.text',
+			'ods'	=> 'application/vnd.oasis.opendocument.spreadsheet',
+		);
+
+		return $mime_types;
+	}//end get_known_mime_types
 
 
 
