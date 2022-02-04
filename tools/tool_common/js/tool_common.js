@@ -74,7 +74,7 @@ tool_common.prototype.init = async function(options) {
 /**
 * BUILD
 * Generic tool build function. Load basic tool config info (stored in component_json dd1353) and css files
-* 
+*
 * @param bool autoload
 * @return promise bool
 */
@@ -82,6 +82,9 @@ tool_common.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()
 
 	const self = this
+
+	// previous status
+		const previous_status = self.status
 
 	// status update
 		self.status = 'building'
@@ -95,7 +98,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 	// ddo_map load all elements inside ddo_map
 		const ar_promises = []
-		const ddo_map = self.tool_config.ddo_map
+		const ddo_map = self.tool_config.ddo_map || []
 		for (let i = 0; i < ddo_map.length; i++) {
 
 			const el = ddo_map[i]
@@ -141,7 +144,8 @@ tool_common.prototype.build = async function(autoload=false) {
 				// init and build instance
 					get_instance(element_options) // load and init
 					.then(function(element_instance){
-						element_instance.build(true) // build, loading data
+						const load_data = el.model.indexOf('component')!==-1
+						element_instance.build( load_data ) // build, loading data
 						.then(function(){
 							resolve(element_instance)
 						})
@@ -161,10 +165,12 @@ tool_common.prototype.build = async function(autoload=false) {
 			// mandatory vars check
 				if (!self.section_tipo || self.section_tipo.lenght<2) {
 					console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
+					self.status = previous_status
 					return false
 				}
-				if (!self.section_id || self.section_id.lenght<2) {
-					console.warn("[tool_common.build] Error. Undefined mandatory self.section_id:", self.section_id);
+				if (!self.section_id || self.section_id.lenght<1) {
+					console.warn("[tool_common.build] Warning. stopped autoload because undefined self.section_id:", self.section_id);
+					self.status = previous_status
 					return false
 				}
 
