@@ -2192,3 +2192,24 @@ common.prototype.calculate_component_path = function(component_context, path) {
 }//end calculate_component_path
 
 
+
+/**
+* VALIDATE_TIPO
+* 	Validate tipo format
+* @return string tipo
+*/
+export const validate_tipo = function(tipo) {
+
+	if (!tipo) {
+		return false
+	}
+
+	const regex	= /^[a-z]{2,}[0-9]{1,}$/;
+	const res	= regex.exec(tipo)
+
+	const result = (res && res[0]) ? true : false
+
+	return result
+}//end validate_tipo
+
+
