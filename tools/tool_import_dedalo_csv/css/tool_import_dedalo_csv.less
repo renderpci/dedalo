@@ -1,0 +1,125 @@
+/**
+* TOOL_import_dedalo_csv
+* Write here specific tool styles
+*/
+
+
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_import_dedalo_csv {
+	padding: 1rem;
+
+
+	>.content_data {
+
+		.file_uploader {
+			margin-bottom: 1rem;
+
+			.content_data {
+				padding: 0;
+			}
+		}
+
+		.file_item {
+			background-color: #f0f1f2;
+			margin-bottom: 0.5rem;
+			padding: 0.75rem;
+			border-radius: 0.25rem;
+
+			>* {
+				margin-bottom: 0.5rem;
+			}
+
+			>.file_line {
+				display: flex;
+				align-items: center;
+				position: relative;
+
+				.button.csv {
+					font-size: 1.25rem;
+				}
+
+				.checkbox_label {
+					display: block;
+					line-height: 1.1rem;
+					input {
+						margin-right: 0.5rem;
+						vertical-align: middle;
+					}
+				}
+
+				.section_tipo_label {
+					display: flex;
+					align-items: center;
+					margin-left: 2rem;
+					color: #a0a0a0;
+
+					input {
+						width: 5rem;
+						text-align: center;
+						font-size: 0.85rem;
+						margin-left: 0.33rem;
+					}
+				}
+
+				.button.delete {
+					position: absolute;
+					right: 0px;
+				}
+			}
+
+
+			>.warning {
+				background-color: #f76c1c;
+				color: #fff;
+				padding: 0.5rem;
+			}
+
+			.info_text {
+				.columns {
+					font-size: 0.75rem;
+				}
+			}
+
+			.button_preview {
+				text-transform: capitalize;
+			}
+
+			>.preview {
+				background-color: rgb(202 247 218); // green
+				font-size: 0.8rem;
+				white-space: pre;
+				overflow: auto;
+			}
+		}
+
+		>.submit_container {
+			padding: 1rem;
+			padding-left: 0;
+			display: flex;
+			align-items: center;
+
+			button {
+				margin-right: 1rem;
+			}
+
+			label {
+				input {
+					margin-right: 0.25rem;
+				}
+			}
+		}
+
+	}//end content_data
+
+
+
+}//end wrapper_tool
+
+
+
+// modal header tool modification
+	.tool_header.tool_import_dedalo_csv {
+		background-color: #17a2b8;
+	}
