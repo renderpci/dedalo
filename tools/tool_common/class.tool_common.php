@@ -71,7 +71,6 @@ class tool_common {
 
 		$component_tipo				= tools_register::$simple_tool_obj_component_tipo;
 
-
 		$model						= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$simple_tool_component		= component_common::get_instance($model,
 														 $component_tipo,
@@ -79,8 +78,8 @@ class tool_common {
 														 'list',
 														 DEDALO_DATA_NOLAN,
 														 $this->section_tipo);
-		$simple_tool_obj_dato 	= $simple_tool_component->get_dato();
-		$tool_object 			= reset($simple_tool_obj_dato);
+		$simple_tool_obj_dato	= $simple_tool_component->get_dato();
+		$tool_object			= reset($simple_tool_obj_dato);
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){
@@ -93,21 +92,48 @@ class tool_common {
 			})->value[0] ?? reset($tool_object->description)->value[0];
 
 		// context
-			$context = new stdClass();
-				$context->section_id			= $tool_object->section_id;
-				$context->section_tipo			= $tool_object->section_tipo;
-				$context->model					= $tool_object->name;
-				$context->name					= $tool_object->name;
-				$context->mode					= 'edit';
-				$context->label					= $tool_label;
-				$context->description			= $description;
-				$context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
-				$context->show_in_inspector		= $tool_object->show_in_inspector ?? null;
-				$context->show_in_component		= $tool_object->show_in_component ?? null;
-				$context->config				= $tool_object->config ?? null;
-				$context->properties 			= $tool_object->properties ?? null;
+			// $context = new stdClass();
+			// 	$context->section_id			= $tool_object->section_id;
+			// 	$context->section_tipo			= $tool_object->section_tipo;
+			// 	$context->model					= $tool_object->name;
+			// 	$context->name					= $tool_object->name;
+			// 	$context->mode					= 'edit';
+			// 	$context->label					= $tool_label;
+			// 	$context->description			= $description;
+			// 	$context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
+			// 	$context->show_in_inspector		= $tool_object->show_in_inspector ?? null;
+			// 	$context->show_in_component		= $tool_object->show_in_component ?? null;
+			// 	$context->config				= $tool_object->config ?? null;
+			// 	$context->properties 			= $tool_object->properties ?? null;
 
-		return $context;
+			$dd_object = new dd_object((object)[
+				'label'				=> $tool_label, // *
+				'tipo'				=> $component_tipo,
+				'section_tipo'		=> $tool_object->section_tipo, // *
+				'model'				=> $tool_object->name, // *
+				// 'parent'			=> $parent, // *
+				// 'parent_grouper'	=> $parent_grouper,
+				// 'lang'			=> $lang,
+				'mode'				=> 'edit',
+				// 'translatable'	=> $translatable,
+				'properties'		=> $tool_object->properties ?? null,
+				// 'css'			=> $css,
+				// 'permissions'	=> $permissions,
+				// 'tools'			=> $tools,
+				// 'buttons'		=> $buttons,
+				// 'request_config'	=> $request_config,
+				// 'columns_map'	=> $columns_map
+				'section_id'		=> $tool_object->section_id,
+				'name'				=> $tool_object->name,
+				'description'		=> $description,
+				'icon'				=> DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg',
+				'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
+				'show_in_component'	=> $tool_object->show_in_component ?? null,
+				'config'			=> $tool_object->config ?? null
+			]);
+
+
+		return $dd_object;
 	}//end get_context
 
 
@@ -270,8 +296,6 @@ class tool_common {
 
 
 
-
-
 	/**
 	* GET_CONFIG
 	* Get all tools and filter them matching tool_name given
@@ -290,6 +314,109 @@ class tool_common {
 
 		return $config;
 	}//end get_config
+
+
+
+	/**
+	* READ_FILES
+	* Read files from directory and return all files array filtered by extension
+	* @return array $ar_data
+	*/
+	public static function read_files($dir, $valid_extensions=['csv']) {
+
+		$ar_data = array();
+
+		// scan dir
+			try {
+				$root = scandir($dir);
+			} catch (Exception $e) {
+				debug_log(__METHOD__." Error on read dir ".to_string($dir), logger::ERROR);
+				//return($e);
+			}
+
+		// error on read the dir or empty result
+			if (!$root) {
+				return $ar_data; // empty array
+			}
+
+		// sort files in natural order
+			natsort($root);
+
+		// iterate and get only files. Skip others
+			foreach($root as $value) {
+
+				// Skip non valid extensions
+					$file_parts = pathinfo($value);
+					if(!isset($file_parts['extension']) || !in_array(strtolower($file_parts['extension']), $valid_extensions)) {
+						debug_log(__METHOD__." Skipped file: $value", logger::DEBUG);
+						continue;
+					}
+
+				// Case file
+					if(is_file("$dir/$value")) {
+						$ar_data[] = $value;
+					}
+
+				// Case dir recursive ($recursive=true)
+					// if($recursive) foreach(self::find_all_files("$dir/$value", $recursive) as $value) {
+					// 	$ar_data[] = $value;
+					// }
+			}
+
+		# SORT ARRAY (By custom core function build_sorter)
+		#usort($ar_data, build_sorter('numero_recurso'));
+		#dump($ar_data,'$ar_data');
+
+		return $ar_data;
+	}//end read_files
+
+
+
+	/**
+	* READ_CSV_FILE_AS_ARRAY
+	* Open give CSV file and read contents line by line.
+	* Return an array with all data
+	* @param string $file
+	* 	Full file path
+	* @param bool $skip_header
+	* @param string $csv_delimiter
+	* @param string $enclosure
+	* @param string $escape
+	*
+	* @return array $csv_array | bool false
+	*/
+	public static function read_csv_file_as_array($file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"') {
+
+		// file do not exists cases
+			if(!file_exists($file)) {
+				debug_log(__METHOD__." File not found ".to_string($file), logger::ERROR);
+				return false;
+			}
+
+		// open file in read mode
+			$f = fopen($file, 'r');
+
+		// read contents line by line and store data
+			$csv_array=[];
+			$i=0; while (($line = fgetcsv($f, 0, $csv_delimiter, $enclosure, $escape)) !== false) { //, $enclosure
+
+				if ($skip_header && $i===0) {
+					$i++;
+					continue;
+				}
+
+				foreach ($line as $cell) {
+					$csv_array[$i][] = trim($cell);
+				}
+				$i++;
+			}
+
+		// close file a end
+		fclose($f);
+
+
+		return $csv_array;
+	}//end read_csv_file_as_array
 
 
 
