@@ -148,11 +148,11 @@ session_write_close();
 // headers
 	header('Content-type: application/javascript; charset=utf-8');
 	// cache optional
-		// $seconds_to_cache = 3600;
-		// $ts = gmdate("D, d M Y H:i:s", time() + $seconds_to_cache) . " GMT";
-		// header("Expires: $ts");
-		// header("Pragma: cache");
-		// header("Cache-Control: max-age=$seconds_to_cache");
+		$seconds_to_cache = 3600;
+		$ts = gmdate("D, d M Y H:i:s", time() + $seconds_to_cache) . " GMT";
+		header("Expires: $ts");
+		header("Pragma: cache");
+		header("Cache-Control: max-age=$seconds_to_cache");
 ?>
 "use strict";
 const page_globals=<?php

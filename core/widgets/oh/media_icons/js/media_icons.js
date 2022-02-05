@@ -43,26 +43,26 @@ export const media_icons = function(){
 */
 // prototypes assign
 	// lifecycle
-	media_icons.prototype.init 	 		= widget_common.prototype.init
-	media_icons.prototype.build 	 	= widget_common.prototype.build
-	media_icons.prototype.destroy 	 	= widget_common.prototype.destroy
+	media_icons.prototype.init		= widget_common.prototype.init
+	media_icons.prototype.build		= widget_common.prototype.build
+	media_icons.prototype.destroy	= widget_common.prototype.destroy
 	// render
-	media_icons.prototype.edit 			= render_media_icons.prototype.edit
-	media_icons.prototype.list 			= render_media_icons.prototype.list
+	media_icons.prototype.edit		= render_media_icons.prototype.edit
+	media_icons.prototype.list		= render_media_icons.prototype.list
 
 
 
-// /**
-// * INIT
-// */
-// media_icons.prototype.init = async function(options) {
+/**
+* INIT
+*/
+	// media_icons.prototype.init = async function(options) {
 
-// 	const self = this
+	// 	const self = this
 
-// 	// call the generic commom init
-// 		const common_init = widget_common.prototype.init.call(this, options);
+	// 	// call the generic commom init
+	// 		const common_init = widget_common.prototype.init.call(this, options);
 
-// }//end init
+	// }//end init
 
 
 
@@ -73,8 +73,8 @@ media_icons.prototype.render = async function(options={render_level:'full'}) {
 
 	const self = this
 
-	const render_level 	= options.render_level || 'full'
-	const render_mode 	= self.mode || 'edit'
+	const render_level	= options.render_level || 'full'
+	const render_mode	= self.mode || 'edit'
 
 	const node = await self[render_mode]({
 		render_level : render_level
@@ -84,3 +84,5 @@ media_icons.prototype.render = async function(options={render_level:'full'}) {
 
 	return node
 }//end render
+
+

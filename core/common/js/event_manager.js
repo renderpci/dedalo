@@ -46,7 +46,7 @@ const event_manager_class = function(){
 
 		// return the token to save into the events_tokens properties inside the caller instance
 			return token
-	};//end  subscribe
+	};//end subscribe
 
 
 
@@ -72,7 +72,7 @@ const event_manager_class = function(){
 
 		// return the new array without the events
 			return result
-	};//end  unsubscribe
+	};//end unsubscribe
 
 
 

@@ -10,7 +10,7 @@
 
 
 /**
-* RENDER_media_icons
+* RENDER_MEDIA_ICONS
 * Manages the component's logic and apperance in client side
 */
 export const render_media_icons = function() {
@@ -49,7 +49,7 @@ render_media_icons.prototype.edit = async function(options) {
 
 
 /**
-* EDIT
+* LIST
 * Render node for use in modes: list, list_in_list
 * @return DOM node wrapper
 */
@@ -92,11 +92,11 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// values
-		const ipo 			= self.ipo
-		const ipo_length 	= ipo.length
+		const ipo			= self.ipo
+		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data 		= self.value.filter(item => item.key === i)
+			const data = self.value.filter(item => item.key === i)
 			get_value_element(i, data , values_container, self)
 		}
 
@@ -125,23 +125,23 @@ const get_value_element = (i, data, values_container, self) => {
 			parent			: values_container
 		})
 
-	//column_id
+	// column_id
 		const column_id = ui.create_dom_element({
-			type	: 'div',
-			parent	: li
+			element_type	: 'div',
+			parent			: li
 		})
 		// value
 		const data_id = data.find(item => item.id === 'id')
 
 		const column_id_value = ui.create_dom_element({
-			type		: 'span',
-			class_name	: 'value',
-			inner_html	: data_id.value,
-			parent		: column_id
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: data_id.value,
+			parent			: column_id
 		})
 
 		column_id_value.addEventListener("click", e => {
-			event.stopPropagation();
+			e.stopPropagation();
 			// event_manager
 				event_manager.publish('user_navigation', {
 					source : {
@@ -153,22 +153,22 @@ const get_value_element = (i, data, values_container, self) => {
 				})
 		})
 
-	//transcription
+	// transcription
 		const transcription = ui.create_dom_element({
-			type	: 'div',
-			parent	: li
+			element_type	: 'div',
+			parent			: li
 		})
 		// value
-		const data_transcription = data.find(item => item.id === 'transcription')
+		const data_transcription = data.find(item => item.id==='transcription')
 		const transcription_value = ui.create_dom_element({
-			type		: 'span',
-			class_name	: 'value',
-			inner_html	: 'TR ',
-			parent		: transcription
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: 'TR ',
+			parent			: transcription
 		})
 		if(data_transcription.tool_context){
 			transcription_value.addEventListener("click", e => {
-				event.stopPropagation();
+				e.stopPropagation();
 				// event_manager
 					event_manager.publish('user_navigation', {
 						source : {
@@ -181,65 +181,62 @@ const get_value_element = (i, data, values_container, self) => {
 			})
 		}
 
-
-	//indexation
+	// indexation
 		const indexation = ui.create_dom_element({
-			type	: 'div',
-			parent	: li
+			element_type	: 'div',
+			parent			: li
 		})
 		// value
 		const data_indexation = data.find(item => item.id === 'indexation')
 		const indexation_value = ui.create_dom_element({
-			type 		: 'span',
-			class_name	: 'value',
-			inner_html 	: 'IN ',
-			parent 		: indexation
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: 'IN ',
+			parent			: indexation
 		})
 
 		indexation_value.addEventListener("click", e => {
-			event.stopPropagation();
+			e.stopPropagation();
 			// event_manager
 				event_manager.publish('load_tool', {
-					tool_context	: data_indexation.tool_context
+					tool_context : data_indexation.tool_context
 				})
 		})
 
-	//translation
+	// translation
 		const translation = ui.create_dom_element({
-			type 		: 'div',
-			parent 		: li
+			element_type	: 'div',
+			parent			: li
 		})
 		// value
 		const data_translation = data.find(item => item.id === 'translation')
 		const translation_value = ui.create_dom_element({
-			type 		: 'span',
-			class_name	: 'value',
-			inner_html 	: 'TL ',
-			parent 		: translation
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: 'TL ',
+			parent			: translation
 		})
 
 		translation_value.addEventListener("click", e => {
 			event.stopPropagation();
 			// event_manager
 				event_manager.publish('load_tool', {
-					tool_context	: data_translation.tool_context
+					tool_context : data_translation.tool_context
 				})
 		})
 
-
-	//Time code
+	// time code
 		const column_tc = ui.create_dom_element({
-			type 		: 'div',
-			parent 		: li
+			element_type	: 'div',
+			parent			: li
 		})
 		// value
 		const data_tc = data.find(item => item.id === 'tc')
-
-		const column_tc_value = ui.create_dom_element({
-			type 		: 'span',
-			class_name	: 'value',
-			inner_html 	: data_tc.value,
-			parent 		: column_tc
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: data_tc.value,
+			parent			: column_tc
 		})
 
 

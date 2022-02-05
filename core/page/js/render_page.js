@@ -59,7 +59,6 @@ render_page.prototype.edit = async function(options) {
 		// page click
 			wrapper_page.addEventListener("click", fn_deactivate_components)
 			function fn_deactivate_components(e) {
-				console.log("e.target:",e.target);
 				const active_component = document.querySelector(".wrapper_component.active")
 				if (active_component) {
 					active_component.classList.remove("active")

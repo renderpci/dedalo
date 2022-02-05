@@ -12,6 +12,7 @@
 	import '../common/js/ui.js'
 	import '../menu/js/menu.js'
 	import '../login/js/login.js'
+	import '../inspector/js/inspector.js'
 	import '../section/js/section.js'
 	import '../section_record/js/section_record.js'
 	import '../../tools/tool_common/js/tool_common.js'

@@ -31,7 +31,7 @@ data_manager.prototype.request = async function(options) {
 	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 	this.body			= options.body // body data type must match "Content-Type" header
 
-	const handle_errors = function(response) {		
+	const handle_errors = function(response) {
 		if (!response.ok) {
 			console.warn("-> HANDLE_ERRORS response:",response);
 			throw Error(response.statusText);
@@ -96,7 +96,7 @@ data_manager.prototype.request = async function(options) {
 			}
 		});
 
-	
+
 
 	return api_response
 };//end request
@@ -298,7 +298,7 @@ data_manager.prototype.get_local_db = async function() {
 		// onupgradeneeded event
 			db_request.onupgradeneeded = function(event) {
 				console.log("-> get_local_db onupgradeneeded:", event.target);
-					
+
 				const db = event.target.result;
 
 				// objectStore
@@ -306,7 +306,10 @@ data_manager.prototype.get_local_db = async function() {
 				// going to use "ssn" as our key path because it's guaranteed to be
 				// unique - or at least that's what I was told during the kickoff meeting.
 					db.createObjectStore('rqo', { keyPath: "id" });
+					// context. Context information about some elements like 'search'
 					db.createObjectStore('context', { keyPath: "id" });
+					// status. Collapse status of section groups, inspector blocks,etc.
+					db.createObjectStore('status', { keyPath: "id" });
 					db.createObjectStore('data', { keyPath: "id" });
 					db.createObjectStore('ontology', { keyPath: "id" });
 
@@ -366,7 +369,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 			// const request	= objectStore.add(data);
 			// Put this updated object back into the database.
   			const request = objectStore.put(data);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);
@@ -415,7 +418,7 @@ data_manager.prototype.get_local_db_data = async function(id, table) {
 		// request
 			const objectStore	= transaction.objectStore(table);
 			const request		= objectStore.get(id);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);
@@ -457,7 +460,7 @@ data_manager.prototype.delete_local_db_data = async function(id, table) {
 		// request
 			const objectStore	= transaction.objectStore(table);
 			const request		= objectStore.delete(id);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);

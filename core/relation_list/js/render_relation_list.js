@@ -222,7 +222,7 @@ const parse_paginator_html = async function(self, wrapper){
 
 
 	//set the total_records_count into the options object
-		const total_records_count	= await self.total
+		const total_records_count = await self.total
 
 	//get the global container
 		// const relation_list_wrap = this.relation_list_wrap;
@@ -230,7 +230,7 @@ const parse_paginator_html = async function(self, wrapper){
 	//get the current limit and offset of the list
 		const current_offset	= self.offset;
 		const current_limit		= self.limit
-		// const current_total		= parseInt(options.total_records_count)
+		// const current_total	= parseInt(options.total_records_count)
 
 	//calculate the current page (offset + limit)/limit and the last page that paginator can show with the current configuration
 		const current_page	= (current_offset + current_limit)/current_limit
@@ -247,17 +247,17 @@ const parse_paginator_html = async function(self, wrapper){
 
 	// create a paginator previous button
 		const paginator_buttons	= ui.create_dom_element({
-			element_type			: 'span',
-			class_name				: 'relation_list_paginator_buttons',
-			parent					: paginator,
+			element_type	: 'span',
+			class_name		: 'relation_list_paginator_buttons',
+			parent			: paginator
 		})
 
 	// create a paginator current record
 		const currrent_record	= ui.create_dom_element({
-			element_type			: 'span',
-			class_name				: 'relation_list_paginator_current',
-			parent					: paginator_buttons,
-			text_node				: get_label['page']+ ': ' +current_page
+			element_type	: 'span',
+			class_name		: 'relation_list_paginator_current',
+			parent			: paginator_buttons,
+			text_node		: get_label['page']+ ': ' +current_page
 		})
 
 	//check if current page is the first of the final page to change the css of the buttons (switch on or off)
@@ -271,10 +271,9 @@ const parse_paginator_html = async function(self, wrapper){
 		// const event_previous	= [{'type':'click','name':'relation_list.previous_records'}];
 	// create a paginator previous button
 		const previous_button	= ui.create_dom_element({
-			element_type			: 'span',
-			class_name				: 'button relation_list_paginator_previous ' + css_previous_offset,
-			parent					: paginator_buttons,
-			// custom_function_events	: event_previous,
+			element_type	: 'span',
+			class_name		: 'button relation_list_paginator_previous ' + css_previous_offset,
+			parent			: paginator_buttons
 		})
 	// create the event to go to the previous record
 		previous_button.addEventListener('click', ()=>{
@@ -284,10 +283,9 @@ const parse_paginator_html = async function(self, wrapper){
 		// const event_next	= [{'type':'click','name':'relation_list.next_records'}];
 	// create a paginator next button
 		const next_button	= ui.create_dom_element({
-			element_type			: 'span',
-			class_name				: 'button relation_list_paginator_next ' + css_netx_offset,
-			parent					: paginator_buttons,
-			// custom_function_events	: event_next,
+			element_type	: 'span',
+			class_name		: 'button relation_list_paginator_next ' + css_netx_offset,
+			parent			: paginator_buttons
 		})
 	// create the event to go to the next record
 		next_button.addEventListener('click', ()=>{

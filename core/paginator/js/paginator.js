@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {render_paginator} from './render_paginator.js'
-
+	import {render_paginator_mini} from './render_paginator_mini.js'
 
 
 /**
@@ -55,6 +55,7 @@ export const paginator = function() {
 	paginator.prototype.tm				= render_paginator.prototype.edit
 	paginator.prototype.edit_in_list	= render_paginator.prototype.edit
 	paginator.prototype.list			= render_paginator.prototype.edit // same as edit
+	paginator.prototype.mini			= render_paginator_mini.prototype.mini
 	paginator.prototype.render			= common.prototype.render
 	paginator.prototype.refresh			= common.prototype.refresh
 
@@ -159,7 +160,7 @@ paginator.prototype.destroy = async function(){
 
 	// get the events that the instance was created
 		const events_tokens = self.events_tokens
-	
+
 	// delete the registred events
 		const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 

@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -14,7 +14,7 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_posterframe = function() {
-	
+
 	return true
 };//end render_tool_posterframe
 
@@ -69,22 +69,22 @@ const content_data_edit = async function(self) {
 	// components container
 		const components_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'components_container',
-			parent 			: fragment
+			class_name		: 'components_container',
+			parent			: fragment
 		})
 
 	// player av
 		const wrap_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'wrap_edit_video',
-			parent 			: components_container
+			class_name		: 'wrap_edit_video',
+			parent			: components_container
 		})
 
 		// Video container
 		const video_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'video_container',
-			parent 			: wrap_component_container
+			class_name		: 'video_container',
+			parent			: wrap_component_container
 		})
 
 	// source tag
@@ -94,17 +94,15 @@ const content_data_edit = async function(self) {
 
 	// video tag
 		const video = document.createElement("video")
-				video.poster = self.caller.data.posterframe_url
-				video.controls = true
-				video.classList.add("posterframe")
-				video.setAttribute("tabindex", 0)
-				video.appendChild(source)
+			  video.poster = self.caller.data.posterframe_url
+			  video.controls = true
+			  video.classList.add("posterframe")
+			  video.setAttribute("tabindex", 0)
+			  video.appendChild(source)
 
 	// keyup event
 		video.addEventListener("timeupdate", async (e) => {
-			// e.stopPropagation()
-
-
+			e.stopPropagation()
 			// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
 			// console.log("aqui:",frame);
 		})
@@ -117,21 +115,21 @@ const content_data_edit = async function(self) {
 
 	// Video controls container
 		const video_controls_container = ui.create_dom_element({
-			//id				: 'video_controls',
-			element_type 	: 'div',
-			class_name 		: 'posterframe_container',
-			parent 		 	: wrap_component_container
+			//id			: 'video_controls',
+			element_type	: 'div',
+			class_name		: 'posterframe_container',
+			parent			: wrap_component_container
 		})
 
 	//adding buttons
 		add_button(self, video_controls_container, "Play", "av_player_btn")
 
 		const tc_div = ui.create_dom_element({
-			id              : 'TCdiv',
+			id				: 'TCdiv',
 			element_type	: 'span',
-			class_name 		: 'video_container',
+			class_name		: 'video_container',
 			text_content	: '00:00:00.000',
-			parent 			: video_controls_container
+			parent			: video_controls_container
 		})
 
 		add_button(self, video_controls_container, "< 10 seg", "av_player_btn")
@@ -154,14 +152,14 @@ const content_data_edit = async function(self) {
 		const posterframe_select = ui.create_dom_element({
 			element_type	: 'select',
 			text_content	: 'xxxxxx',
-			parent 			: posterframe_options
+			parent			: posterframe_options
 		})
 
 		const posterframe_img = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'video_container',
+			class_name		: 'video_container',
 			//style			: "background-image:url('IMG_URL')".replace('IMG_URL', posterframe_url),
-			parent 			: posterframe_options
+			parent			: posterframe_options
 		})
 
 		posterframe_img.style.backgroundImage = "url('/dedalo_v6/media/media_development/av/posterframe/rsc35_rsc167_1.jpg')"
@@ -169,21 +167,20 @@ const content_data_edit = async function(self) {
 		add_button(self, posterframe_options, "Make Posterframe")
 
 		const button_delete_posterframe = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button remove',
-				parent 			: posterframe_options
-			})
+			element_type	: 'span',
+			class_name		: 'button remove',
+			parent			: posterframe_options
+		})
 
 		button_delete_posterframe.addEventListener("click", () => {
 
 			self.button_click('Delete Posterframe', button_delete_posterframe)
-
 		})
 
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -195,16 +192,16 @@ const content_data_edit = async function(self) {
 * ADD_BUTTON
 */
 export const add_button = async (self, component_container, value, class_name = "secondary button_preview") => {
+
 	// apply button
 		const new_button = ui.create_dom_element({
-			element_type 	: 'button',
-			class_name 		: class_name, //'css_button_generic css_av_video_controls_rew av_player_btn',
-			text_content 	: get_label[value] || value,
-			parent 			: component_container
+			element_type	: 'button',
+			class_name		: class_name, //'css_button_generic css_av_video_controls_rew av_player_btn',
+			text_content	: get_label[value] || value,
+			parent			: component_container
 		})
 
 		new_button.addEventListener("click", () => {
-
 			//component_container.classList.add('loading')
 
 			//TODO - implement different cases depending on the value of the clicked button
@@ -215,3 +212,5 @@ export const add_button = async (self, component_container, value, class_name = 
 
 	return true
 };//end add_button
+
+

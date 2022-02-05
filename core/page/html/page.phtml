@@ -18,26 +18,9 @@
 			padding: 0!important;
 			margin: 0!important;
 		}
-		.debug {
-			display: grid;
-			grid-template-columns: 1fr 1fr 1fr;
-			background-color: #f1f2f3;
-			padding: 1em;
-			overflow: auto;
-		}
-		.debug pre {
-			z-index: 0;
-			outline: 1px solid #cad0d4;
-			overflow-wrap: anywhere;
-		}
-		.debug .total_time {
-			position: fixed;
-			right:2em;
-			top:1em;
-		}
 	</style>
 	<link rel="preconnect" href="<?php echo DEDALO_PROTOCOL . DEDALO_HOST ?>" crossorigin />
-	<link rel="preload" href="../common/js/environment.js.php" as="script">
+	<link rel="preload" href="../common/js/environment.js.php<?php echo '?lang='.DEDALO_APPLICATION_LANG ?>" as="script">
 	<link rel="stylesheet" type="text/css" href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>">
 	<?php /*
 	<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet">
@@ -46,7 +29,7 @@
 	<link rel="modulepreload" href="../common/js/components_list.js?v=<?php echo DEDALO_VERSION ?>">
 	*/?>
 	<link rel="modulepreload" href="../page/js/module_preload.js">
-	<script rel="preload" defer="defer" src="../common/js/environment.js.php"></script>
+	<script rel="preload" defer="defer" src="../common/js/environment.js.php<?php echo '?lang='.DEDALO_APPLICATION_LANG ?>"></script>
 </head>
 <body>
 	<div id="main" class="hide"></div>

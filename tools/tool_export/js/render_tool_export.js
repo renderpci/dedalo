@@ -13,20 +13,20 @@
 
 
 /**
-* RENDER_tool_export
+* RENDER_TOOL_EXPORT
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_export = function() {
-	
+
 	return true
 };//end render_tool_export
 
 
 
 /**
-* RENDER_tool_export
-* Render node for use like button
-* @return DOM node
+* EDIT
+* Render DOM nodes of the tool
+* @return DOM node wrapper
 */
 render_tool_export.prototype.edit = async function (options={render_level:'full'}) {
 
@@ -218,7 +218,7 @@ const get_content_data_edit = async function(self) {
 				text_content	: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
-			button_export.addEventListener('click', async function(e){
+			button_export.addEventListener('click', async function() {
 
 				// clean target_div
 					while (export_data.hasChildNodes()) {
@@ -252,7 +252,7 @@ const get_content_data_edit = async function(self) {
 				text_content	: (get_label.descargar || 'Export') + ' csv',
 				parent			: export_buttons_options
 			})
-			button_export_csv.addEventListener('click',async function(event) {
+			button_export_csv.addEventListener('click', async function() {
 
 				const options = {
 					data_format			: select_data_format_export.value,
@@ -278,7 +278,7 @@ const get_content_data_edit = async function(self) {
 				text_content	: (get_label.descargar || 'Export') + ' Excel',
 				parent			: export_buttons_options
 			})
-			button_export_excel.addEventListener('click', function (event) {
+			button_export_excel.addEventListener('click', function() {
 
 				// Download it
 					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.xls';
@@ -290,7 +290,6 @@ const get_content_data_edit = async function(self) {
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
-
 			})
 
 			const button_export_html = ui.create_dom_element({
@@ -299,7 +298,7 @@ const get_content_data_edit = async function(self) {
 				text_content	: (get_label.descargar || 'Export') + ' html',
 				parent			: export_buttons_options
 			})
-			button_export_html.addEventListener('click', function (event) {
+			button_export_html.addEventListener('click', function() {
 
 				// Download it
 					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.html';
@@ -315,7 +314,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_print = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				text_content 	: get_label.imprimir || 'Print',
+				text_content	: get_label.imprimir || 'Print',
 				parent			: export_buttons_options
 			})
 
@@ -336,22 +335,18 @@ const get_content_data_edit = async function(self) {
 
 
 
-
 	return content_data
 };//end get_content_data_edit
 
 
 
-
-
 /**
-* BUILD_export_COMPONENT
+* BUILD_EXPORT_COMPONENT
 * @return dom object
 */
 render_tool_export.prototype.build_export_component = async function(parent_div, path, ddo) {
 
 	const self = this
-
 
 	const last_item		= path[path.length-1]
 	const first_item	= path[0]
@@ -369,11 +364,11 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 		})
 
 	// component  node
-	const component_node		= ui.create_dom_element({
+	const component_node = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'component_label',
 			inner_html		: ddo.label,
-			parent 			: export_component,
+			parent			: export_component,
 			data_set		: {
 				path			: path,
 				tipo			: ddo.tipo,
@@ -471,6 +466,5 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 
 	return true
 };//end build_export_component
-
 
 

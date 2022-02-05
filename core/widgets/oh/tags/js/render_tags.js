@@ -10,7 +10,7 @@
 
 
 /**
-* RENDER_GET_ARCHIVE_WEIGHTS
+* RENDER_TAGS
 * Manages the component's logic and apperance in client side
 */
 export const render_tags= function() {
@@ -104,52 +104,52 @@ const get_value_element = (i, data, values_container, self) => {
 	// reactive (Will be updated on every called event)
 		const reactive_items = []
 
-	// total_tc		
+	// total_tc
 		const total_tc = item_value_factory('total_tc', 'TC', data)
 		li.appendChild(total_tc)
 		reactive_items.push(total_tc)
 
-	// ar_tc_wrong		
+	// ar_tc_wrong
 		const ar_tc_wrong = item_value_factory('ar_tc_wrong', get_label.etiqueta_revisar, data)
 		li.appendChild(ar_tc_wrong)
 		reactive_items.push(ar_tc_wrong)
 
-	// total_index		
+	// total_index
 		const total_index = item_value_factory('total_index', 'INDEX', data)
 		li.appendChild(total_index)
 		reactive_items.push(total_index)
 
-	// total_missing_tags		
+	// total_missing_tags
 		const total_missing_tags = item_value_factory('total_missing_tags', (get_label.etiquetas_borradas || 'Removed tags'), data)
 		li.appendChild(total_missing_tags)
 		reactive_items.push(total_missing_tags)
 
-	// total_to_review_tags		
+	// total_to_review_tags
 		const total_to_review_tags = item_value_factory('total_to_review_tags', get_label.etiqueta_revisar, data)
 		li.appendChild(total_to_review_tags)
 		reactive_items.push(total_to_review_tags)
 
-	// total_private_notes		
+	// total_private_notes
 		const total_private_notes = item_value_factory('total_private_notes', 'Work NOTES', data)
 		li.appendChild(total_private_notes)
 		reactive_items.push(total_private_notes)
 
-	// total_public_notes		
+	// total_public_notes
 		const total_public_notes = item_value_factory('total_public_notes', 'Public NOTES', data)
 		li.appendChild(total_public_notes)
 		reactive_items.push(total_public_notes)
 
-	// total_chars		
+	// total_chars
 		const total_chars = item_value_factory('total_chars', 'CHARS', data)
 		li.appendChild(total_chars)
 		reactive_items.push(total_chars)
 
-	// total_chars_no_spaces		
+	// total_chars_no_spaces
 		const total_chars_no_spaces = item_value_factory('total_chars_no_spaces', 'NO SPACES', data)
 		li.appendChild(total_chars_no_spaces)
 		reactive_items.push(total_chars_no_spaces)
 
-	// total_real_chars		
+	// total_real_chars
 		const total_real_chars = item_value_factory('total_real_chars', 'CHARS REAL', data)
 		li.appendChild(total_real_chars)
 		reactive_items.push(total_real_chars)
@@ -159,7 +159,7 @@ const get_value_element = (i, data, values_container, self) => {
 		self.events_tokens.push(
 			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
 
-				function get_value_from_data(id) {				
+				function get_value_from_data(id) {
 					const found = changed_data.find(el => el.id===id)
 					const value = found
 						? found.value
@@ -173,6 +173,7 @@ const get_value_element = (i, data, values_container, self) => {
 				}
 			})
 		)
+
 
 	return li
 }//end get_value_element
@@ -206,7 +207,7 @@ const item_value_factory = function(id, label, data) {
 		const current_value	= found
 			? found.value
 			: ''
-		
+
 		const value_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
@@ -216,6 +217,7 @@ const item_value_factory = function(id, label, data) {
 
 	wrapper.value	= value_node
 	wrapper.id		= id
+
 
 	return wrapper
 }//end item_value_factory

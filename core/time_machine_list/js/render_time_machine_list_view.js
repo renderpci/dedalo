@@ -4,9 +4,9 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {ui} from '../../../core/common/js/ui.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_ar_instances} from '../../../core/section/js/section.js'
+	import {ui} from '../../../core/common/js/ui.js'
 
 
 
@@ -51,6 +51,9 @@ export const render_time_machine_list_view = async function(self, options) {
 			class_name		: 'paginator',
 			parent			: fragment
 		})
+		// change paginator mode on the fly
+		// (!) Note that by default, is initied with the caller mode (time_machine))
+		self.paginator.mode = 'mini'
 		self.paginator.build()
 		.then(function(){
 			self.paginator.render().then(paginator_wrapper =>{
@@ -114,8 +117,12 @@ const get_content_data = async function(ar_section_record, self) {
 		if (ar_section_record_length===0) {
 
 			// no records found case
-			const row_item = no_records_node()
-			fragment.appendChild(row_item)
+			const no_records_found_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'no_records',
+				inner_html		: get_label.no_records || "No records found"
+			})
+			fragment.appendChild(no_records_found_node)
 
 		}else{
 			// rows
@@ -178,45 +185,47 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DOM DocumentFragment
 */
-const render_column_id = function(options){
+	// const render_column_id = function(options){
 
-	// options
-		const self				= options.caller
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		// const offset			= options.offset
-		const matrix_id			= options.matrix_id
-		const modification_date	= options.modification_date
+	// 	// options
+	// 		const self				= options.caller
+	// 		const section_id		= options.section_id
+	// 		const section_tipo		= options.section_tipo
+	// 		// const offset			= options.offset
+	// 		const matrix_id			= options.matrix_id
+	// 		const modification_date	= options.modification_date
 
-	// permissions
-		const permissions = self.permissions
+	// 	// permissions
+	// 		const permissions = self.permissions
 
-	const fragment = new DocumentFragment()
+	// 	const fragment = new DocumentFragment()
 
-	// section_id
-		ui.create_dom_element({
-			element_type	: 'span',
-			text_content	: section_id,
-			class_name		: 'section_id',
-			parent			: fragment
-		})
+	// 	// section_id
+	// 		ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			text_content	: section_id,
+	// 			class_name		: 'section_id',
+	// 			parent			: fragment
+	// 		})
 
-	// button time machine preview (eye)
-		const edit_button_tm = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button eye',
-			parent			: fragment
-		})
-		edit_button_tm.addEventListener("click", function(){
-			// publish event
-			event_manager.publish('tm_edit_record', {
-				tipo		: section_tipo,
-				section_id	: section_id,
-				matrix_id	: matrix_id,
-				date		: modification_date || null,
-				mode		: 'tm'
-			})
-		})
+	// 	// button time machine preview (eye)
+	// 		const edit_button_tm = ui.create_dom_element({
+	// 			element_type	: 'span',
+	// 			class_name		: 'button eye',
+	// 			parent			: fragment
+	// 		})
+	// 		edit_button_tm.addEventListener("click", function(){
+	// 			// publish event
+	// 			event_manager.publish('tm_edit_record', {
+	// 				tipo		: section_tipo,
+	// 				section_id	: section_id,
+	// 				matrix_id	: matrix_id,
+	// 				date		: modification_date || null,
+	// 				mode		: 'tm'
+	// 			})
+	// 		})
 
-	return fragment
-};// end render_column_id()
+	// 	return fragment
+	// };// end render_column_id()
+
+
