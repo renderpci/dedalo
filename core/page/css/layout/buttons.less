@@ -85,7 +85,6 @@
 		// margin-bottom: 0.25em;
 
 
-
 		&:hover {
 			opacity: 1 !important;
 		}
@@ -365,6 +364,11 @@
 	}
 	.info {
 		@icon_name : 'info.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.csv {
+		@icon_name : 'csv.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}

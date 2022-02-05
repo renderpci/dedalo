@@ -11,6 +11,7 @@
 		display: block;
 		margin: 0px;
 		padding: 0px;
+		padding-bottom: 1rem;
 		width: 100%;
 
 		&.inspector_fixed {
@@ -32,6 +33,7 @@
 
 			// icon_arrow
 				.icon_arrow {
+					/*
 					padding: 0.33rem;
 					padding-right: 1.33rem;
 
@@ -60,6 +62,7 @@
 					&:active {
 						opacity: 0.5;
 					}
+					*/
 				}
 
 			// paginator
@@ -115,14 +118,33 @@
 
 				}
 
+			// indexation_list
+				.indexation_list {
+					.indexation_list_head {
+						text-transform: capitalize;
+					}
+					.indexation_list_body {
+						background-color: @color_orange_dedalo;
+						padding: 0.33rem;
+						padding-bottom: 1rem;
+						padding-top: 1rem;
+						font-size: 0.78rem;
+						color: white;
+					}
+				}
+
 			// relation_list
 				>.relation_list {
-
+					>.relation_list_body {
+						font-size: 0.78rem;
+					}
 				}
 
 			// time_machine_list
 				>.time_machine_list {
-
+					>.time_machine_list_body {
+						font-size: 0.78rem;
+					}
 				}
 
 			// project_container

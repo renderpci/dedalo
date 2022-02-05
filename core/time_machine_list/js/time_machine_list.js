@@ -2,6 +2,7 @@
 /*eslint no-undef: "error"*/
 
 
+
 // import
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
@@ -11,11 +12,9 @@
 	import {render_time_machine_list_view} from './render_time_machine_list_view.js'
 
 
+
 /**
-* time_machine_LIST
-*
-*
-*
+* TIME_MACHINE_LIST
 */
 export const time_machine_list = function() {
 
@@ -51,10 +50,12 @@ export const time_machine_list = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	time_machine_list.prototype.destroy			= common.prototype.destroy
-	time_machine_list.prototype.refresh			= common.prototype.refresh
-	time_machine_list.prototype.render			= common.prototype.render
-	time_machine_list.prototype.edit			= render_time_machine_list.prototype.edit
+	time_machine_list.prototype.destroy	= common.prototype.destroy
+	time_machine_list.prototype.refresh	= common.prototype.refresh
+	time_machine_list.prototype.render	= common.prototype.render
+	time_machine_list.prototype.edit	= render_time_machine_list.prototype.edit
+
+
 
 /**
 * INIT
@@ -105,7 +106,6 @@ time_machine_list.prototype.build = async function(autoload=true){
 	// add to self instances list
 		self.ar_instances.push(self.time_machine)
 
-			console.log("self.time_machine:",self.time_machine);
 	// status update
 		self.status = 'builded'
 
@@ -162,7 +162,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 //     this.init = function(time_machine_wrap) {
 
 //       let self = this
-      
+
 //       /* get the current button state
 //        * if the button has the class "time_machine_list_button"     = off   and can process the the request to the server
 //        * if the button has the class "time_machine_list_button_off" = on    and can't do anything
@@ -183,7 +183,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 //         inspector_div_content.classList.add("hide")
 //         self.clean_the_list()
 //       }
-    
+
 //     }
 
 
@@ -222,7 +222,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 //                         inner_html        : get_label['processing_wait']
 //                         })
 //       time_machine_list_wrap.appendChild(loading_content);
-                
+
 //       // 1 send the request of the data
 //       options.count = false;
 //       self.load_time_machine_list_data(options).then(function(response){
@@ -241,9 +241,8 @@ time_machine_list.prototype.build = async function(autoload=true){
 //       self.parse_paginator_html(options, total_records_count);
 
 //       });
-      
+
 
 //     }//end get_server_records
-
 
 // }//end time_machine_list

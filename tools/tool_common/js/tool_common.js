@@ -22,7 +22,7 @@ export const tool_common = function(){
 /**
 * INIT
 * Generic tool init function.
-* 
+*
 * @param object options
 * Sample:
 * {
@@ -38,7 +38,7 @@ export const tool_common = function(){
 */
 tool_common.prototype.init = async function(options) {
 	// dd_console(`init tool options`, 'DEBUG', options)
-	
+
 	const self = this
 
 	// options
@@ -74,7 +74,7 @@ tool_common.prototype.init = async function(options) {
 /**
 * BUILD
 * Generic tool build function. Load basic tool config info (stored in component_json dd1353) and css files
-* 
+*
 * @param bool autoload
 * @return promise bool
 */
@@ -82,6 +82,9 @@ tool_common.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()
 
 	const self = this
+
+	// previous status
+		const previous_status = self.status
 
 	// status update
 		self.status = 'building'
@@ -95,7 +98,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 	// ddo_map load all elements inside ddo_map
 		const ar_promises = []
-		const ddo_map = self.tool_config.ddo_map
+		const ddo_map = self.tool_config.ddo_map || []
 		for (let i = 0; i < ddo_map.length; i++) {
 
 			const el = ddo_map[i]
@@ -141,7 +144,8 @@ tool_common.prototype.build = async function(autoload=false) {
 				// init and build instance
 					get_instance(element_options) // load and init
 					.then(function(element_instance){
-						element_instance.build(true) // build, loading data
+						const load_data = el.model.indexOf('component')!==-1
+						element_instance.build( load_data ) // build, loading data
 						.then(function(){
 							resolve(element_instance)
 						})
@@ -161,10 +165,12 @@ tool_common.prototype.build = async function(autoload=false) {
 			// mandatory vars check
 				if (!self.section_tipo || self.section_tipo.lenght<2) {
 					console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
+					self.status = previous_status
 					return false
 				}
-				if (!self.section_id || self.section_id.lenght<2) {
-					console.warn("[tool_common.build] Error. Undefined mandatory self.section_id:", self.section_id);
+				if (!self.section_id || self.section_id.lenght<1) {
+					console.warn("[tool_common.build] Warning. stopped autoload because undefined self.section_id:", self.section_id);
+					self.status = previous_status
 					return false
 				}
 
@@ -303,18 +309,16 @@ tool_common.prototype.load_component = async function(options) {
 * Called by page observe event (init)
 * To load tool, don't call directly, publish a event as
 *	event_manager.publish('load_tool', {
-*		self 		: self,
-*		tool_object : tool_object
+*		tool_context : tool_context,
+* 		caller 		 : self
 *	})
 * The event is fired by the tool button created with method ui.build_tool_button.
 * When the user triggers the click event, a publish 'load_tool' is made
-* @param tool_object options
-* @param self instance_caller
-*
+* @param object options*
 * @return tool instance | bool false
 */
 export const load_tool = async (options) => {
-	// dd_console(`load tool options`, 'DEBUG', options)
+	dd_console(`load tool [tool_common] options`, 'DEBUG', options)
 
 	// options
 		const caller		= options.caller
@@ -347,14 +351,14 @@ export const load_tool = async (options) => {
 				})
 			}
 
-		// lang set
-			tool_context.lang = caller.lang
+		// tool context additional properties
+			tool_context.lang	= caller.lang
+			tool_context.type	= 'tool'
 
 	// instance options
 		const intance_options = Object.assign({
 			caller : caller // add caller to tool_context (only to refresh it on close the tool)
 		}, tool_context)
-		// dd_console(`instance_options`, 'DEBUG', intance_options)
 
 	// instance load / recover
 		const tool_instance = await get_instance(intance_options)
@@ -477,7 +481,7 @@ export const open_tool = async (options) => {
 * GET_TOOL_LABEL
 * Return the label in the current language.
 * If the label is not defined, try with lang_default, not lang and received label_name if nothing is found
-* 
+*
 * @param string label_name like 'indexation_tool'
 * @return string label_item like 'Indexation Tool'
 */
@@ -490,7 +494,7 @@ const get_tool_label = function(label_name) {
 
 	let label_item = tool_labels.find(item => item.name===label_name && item.lang===self.lang).value
 	if(typeof label_item==='undefined'){
-		
+
 		label_item = tool_labels.find(item => item.name===label_name && item.lang===lang_default).value
 
 		if(typeof label_item==='undefined'){
@@ -501,8 +505,8 @@ const get_tool_label = function(label_name) {
 				label_item = label_name
 			}
 		}
-	}	
-	
+	}
+
 
 	return label_item
 };//end get_tool_label

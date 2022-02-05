@@ -10,13 +10,14 @@
 
 
 /**
-* RENDER_GET_ARCHIVE_WEIGHTS
+* RENDER_LIST_STATE
 * Manages the component's logic and apperance in client side
 */
 export const render_list_state = function() {
 
 	return true
 }//end render_list_state
+
 
 
 /**
@@ -48,7 +49,7 @@ render_list_state.prototype.list = async function(options) {
 
 
 /**
-* GET_CONTENT_DATA_list
+* GET_CONTENT_DATA_LIST
 * @return DOM node content_data
 */
 const get_content_data_list = async function(self) {
@@ -58,16 +59,16 @@ const get_content_data_list = async function(self) {
 	// values container
 		const values_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'values_container',
-			parent 			: fragment
+			class_name		: 'values_container',
+			parent			: fragment
 		})
 
 	// values
-		const ipo 			= self.ipo
-		const ipo_length 	= ipo.length
+		const ipo			= self.ipo
+		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data 		= self.value.filter(item => item.key === i)
+			const data = self.value.filter(item => item.key === i)
 			get_value_element(i, data , values_container, self)
 		}
 
@@ -93,15 +94,15 @@ const get_value_element = (i, data, values_container, self) => {
 		const container = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'state',
-			parent 			: values_container
+			parent			: values_container
 		})
 
 		// important!, data don't has all info
 		// is neccesary get the langs for create the all lang nodes
 		// when the component is traslatable, data can't has all languages, in the data will only has the langs that has value
 		// but when the component id non translatable, data has always the node reference (empty or with value)
-		const project_langs = page_globals.dedalo_projects_default_langs
-		const nolan 		= page_globals.dedalo_data_nolan
+		// const project_langs = page_globals.dedalo_projects_default_langs
+		// const nolan 		= page_globals.dedalo_data_nolan
 		// select the current ipo.output
 		const output		= self.ipo[i].output
 		// we will store the nodes to re-create the value when the components change our data and send the 'update_widget_value' event
@@ -115,22 +116,22 @@ const get_value_element = (i, data, values_container, self) => {
 
 			// Situation
 				// get the total item for situation
-				const situation_total = data.find(item => item.id === output_item.id
+				const situation_total = data.find(item =>  item.id === output_item.id
 														&& item.column === 'situation'
 														&& item.type ==='total')
 
 			// State
 				// get the total item for state
-				const state_total = data.find(item => item.id === output_item.id
+				const state_total = data.find(item =>  item.id === output_item.id
 													&& item.column === 'state'
 													&& item.type ==='total')
 
 				if(situation_total.value > 0 || state_total.value > 0){
 					// node for the colum situation
 					const situation = ui.create_dom_element({
-						element_type 	: 'span',
+						element_type	: 'span',
 						class_name		: 'state_icon '+output_item.id,
-						parent 			: container
+						parent			: container
 					})
 
 					situation.addEventListener('click', function(e){
@@ -142,11 +143,11 @@ const get_value_element = (i, data, values_container, self) => {
 						const tooltip = get_value_tooltip(output_item, data, self)
 
 						tooltip_node = ui.create_dom_element({
-							element_type 	: 'span',
+							element_type	: 'span',
 							class_name		: 'state_tooltip ',
-							parent 			: container
+							parent			: container
 						})
-						tooltip_node.addEventListener('click', function(e){
+						tooltip_node.addEventListener('click', function(){
 							tooltip_node.remove()
 						})
 
@@ -159,8 +160,8 @@ const get_value_element = (i, data, values_container, self) => {
 		self.events_tokens.push(
 			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
 				// get all detail nodes 'situation' and 'state' in DOM
-				const detail_nodes = ar_nodes //.filter(node => node.type === 'detail')
-				const node_length = detail_nodes.length
+				const detail_nodes	= ar_nodes //.filter(node => node.type === 'detail')
+				const node_length	= detail_nodes.length
 
 				for (let o = node_length - 1; o >= 0; o--) {
 					const node = detail_nodes[o]
@@ -171,7 +172,7 @@ const get_value_element = (i, data, values_container, self) => {
 															&& item.key === i
 															&& item.type === node.type
 														)
-			
+
 					// set the new value
 					if(new_data){
 						node.node_value.innerHTML = new_data.value +'%'
@@ -203,20 +204,22 @@ const get_value_tooltip = (output_item, data, self) => {
 
 	const fragment = new DocumentFragment()
 
+	const project_langs = page_globals.dedalo_projects_default_langs
+
 	// row container
-	const container = ui.create_dom_element({
-			element_type 	: 'div',
+		const container = ui.create_dom_element({
+			element_type	: 'div',
 			class_name		: '',
-			parent 			: fragment
+			parent			: fragment
 		})
 
 		// label for the row
 		const label = ui.create_dom_element({
-			element_type 	: 'label',
-			inner_html 		: get_label[output_item.label] || output_item.id,
-			parent 			: container
+			element_type	: 'label',
+			inner_html		: get_label[output_item.label] || output_item.id,
+			parent			: container
 		})
-		const nolan 		= page_globals.dedalo_data_nolan
+		const nolan = page_globals.dedalo_data_nolan
 	// Situation
 		// check if the component is translatable, with the first item in the data of the current column
 		const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
@@ -231,29 +234,29 @@ const get_value_tooltip = (output_item, data, self) => {
 
 		// node for the colum situation
 		const situation = ui.create_dom_element({
-			element_type 	: 'div',
+			element_type	: 'div',
 			class_name		: 'situation',
-			parent 			: container
+			parent			: container
 		})
 			// total
 			const situation_total_node = ui.create_dom_element({
-				element_type 	: 'div',
+				element_type	: 'div',
 				class_name		: 'total',
-				parent 			: situation
+				parent			: situation
 			})
 			// create the node with the total value
 			const situation_total_value = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'value',
-					inner_html 		: situation_total.value+'%',
-					parent 			: situation_total_node
-				})
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: situation_total.value+'%',
+				parent			: situation_total_node
+			})
 
 		// detail node with all languages
 		const situation_detail = ui.create_dom_element({
-			element_type 	: 'div',
+			element_type	: 'div',
 			class_name		: 'detail',
-			parent 			: situation
+			parent			: situation
 		})
 		// situation detail
 		for (let j = 0; j < situation_length; j++) {
@@ -302,29 +305,29 @@ const get_value_tooltip = (output_item, data, self) => {
 
 		// node for state colum
 		const state = ui.create_dom_element({
-			element_type 	: 'div',
+			element_type	: 'div',
 			class_name		: 'state',
-			parent 			: container
+			parent			: container
 		})
 			// total
 			const total_node = ui.create_dom_element({
-				element_type 	: 'div',
+				element_type	: 'div',
 				class_name		: 'total',
-				parent 			: state
+				parent			: state
 			})
 			// create the node with the value
 			const total_value = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html 		: state_total.value+'%',
-				parent 			: total_node
+				inner_html		: state_total.value+'%',
+				parent			: total_node
 			})
 
 			// detail with all languages
 			const detail = ui.create_dom_element({
-				element_type 	: 'div',
+				element_type	: 'div',
 				class_name		: 'detail',
-				parent 			: state
+				parent			: state
 			})
 
 		for (let k = 0; k < item_length; k++) {
@@ -364,5 +367,8 @@ const get_value_tooltip = (output_item, data, self) => {
 
 		}// end for (let k = 0; k < item_length; k++)
 
+
 	return fragment
 }// end get_value_tooltip()
+
+

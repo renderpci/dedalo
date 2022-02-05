@@ -53,7 +53,7 @@ class area_development extends area_common {
 				$item->label	= label::get_label('hacer_backup');
 				$item->info		= null;
 				$file_name		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
-				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';					
+				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
@@ -76,7 +76,7 @@ class area_development extends area_common {
 				$item->parent	= $this->tipo;
 				$item->label	= 'REGENERATE TABLE RELATIONS DATA';
 				$item->info		= null;
-				$item->body		= 'Delete and create again table relations records based on locators data of sections in current table';					
+				$item->body		= 'Delete and create again table relations records based on locators data of sections in current table';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
@@ -116,7 +116,7 @@ class area_development extends area_common {
 				$confirm_text	 = '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
 				$confirm_text	.= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
 				$confirm_text	.= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
-				$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;	
+				$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_form',
 					'options' => (object)[
@@ -147,7 +147,7 @@ class area_development extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('exportar_estructura_json');
-				$item->info		= null;				
+				$item->info		= null;
 
 				$file_name		= 'structure.json';
 				$file_path		= 'Target: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
@@ -221,7 +221,7 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('registrar_herramientas');				
+				$item->label	= label::get_label('registrar_herramientas');
 				$list = array_map(function($path){
 					// ignore folders with name different from pattern 'tool_*'
 					if (1!==preg_match('/tools\/tool_*/', $path, $output_array)) {
@@ -238,7 +238,7 @@ class area_development extends area_common {
 					}
 				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
 				$item->body 	= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
-				$item->body 	.= implode('<br>', array_filter($list));					
+				$item->body 	.= implode('<br>', array_filter($list));
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_form',
 					'options' => (object)[
@@ -259,8 +259,8 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('build_structure_css');				
-				$item->body 	= 'Regenerate css from actual structure (Ontology)';									
+				$item->label	= label::get_label('build_structure_css');
+				$item->body 	= 'Regenerate css from actual structure (Ontology)';
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_form',
 					'options' => (object)[
@@ -332,7 +332,7 @@ class area_development extends area_common {
 				$ar_widgets[] = $item;
 			}
 
-		
+
 		// Dédalo API test environment
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
@@ -381,7 +381,7 @@ class area_development extends area_common {
 					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
-		
+
 
 		// dedalo version
 			$item = new stdClass();
@@ -424,17 +424,34 @@ class area_development extends area_common {
 				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
 			$ar_widgets[] = $item;
 
-		
+
 		// unit test (alpha)
 			$info = posix_getpwuid(posix_geteuid());
 			$item = new stdClass();
-				$item->id 		= 'unit_test';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'TEST';
-				$item->info 	= null;
-				$item->body 	= '<a href="../unit_test" target="_blank">Open alpha unit test</a> <hr><a href="../unit_test/test.php" target="_blank">Open clean_component_dato script</a>';
+				$item->id		= 'unit_test';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'TEST';
+				$item->info		= null;
+				$item->body		= '<a href="../unit_test" target="_blank">Open alpha unit test</a>';
+				$item->body		.= '<hr><a href="../unit_test/test.php" target="_blank">Open clean_component_dato script</a>';
+				// $item->body		.= '<hr><a href="javascript:open_tool_import_dedalo_csv()">Tool import Dedalo CSV</a>';
+				// $item->script	= '
+				// 	function open_tool_import_dedalo_csv(){
+				// 		const tool_context = {
+				// 			label	: "Tool import Dedalo CSV",
+				// 			mode	: "edit",
+				// 			model	: "tool_import_dedalo_csv",
+				// 			name	: "tool_import_dedalo_csv"
+				// 		}
+				// 		event_manager.publish("load_tool", {
+				// 			tool_context	: tool_context,
+				// 			caller			: {}
+				// 		})
+
+				// 	}
+				// ';
 			$ar_widgets[] = $item;
 
 
@@ -488,15 +505,15 @@ class area_development extends area_common {
 	* @return object
 	*/
 	public static function generate_relations_table_data($tables='*') {
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= array('Error. Request failed '.__METHOD__);
-		
+
 
 		// tables to propagate
 			$ar_tables = (function($tables) {
-				
+
 				if ($tables==='*') {
 					// all relation able tables (implies to truncate relations table)
 					return area_development::$ar_tables_with_relations;
@@ -507,8 +524,8 @@ class area_development extends area_common {
 					foreach ($items as $key => $table) {
 						$ar_tables[] = trim($table);
 					}
-					return $ar_tables;	
-				}				
+					return $ar_tables;
+				}
 			})($tables);
 
 		// truncate relations table on *
@@ -528,7 +545,7 @@ class area_development extends area_common {
 					$response->msg = $response->msg[0].' - Unable to alter SEQUENCE relations_id_seq!';
 					return $response;
 				}
-			}	
+			}
 
 
 		foreach ($ar_tables as $key => $table) {
@@ -588,13 +605,13 @@ class area_development extends area_common {
 
 						// propagate component dato
 							foreach ($component_dato as $from_component_tipo => $ar_locators) {
-								
+
 								$propagate_options = new stdClass();
 									$propagate_options->ar_locators			= $ar_locators;
 									$propagate_options->section_id			= $section_id;
 									$propagate_options->section_tipo		= $section_tipo;
 									$propagate_options->from_component_tipo	= $from_component_tipo;
-								
+
 								// propagate_component_dato_to_relations_table takes care of delete and insert new relations
 								$propagate_response = search::propagate_component_dato_to_relations_table($propagate_options);
 							}
@@ -623,7 +640,7 @@ class area_development extends area_common {
 
 			// debug
 				// debug_log(__METHOD__." Updated table data table $table  ", logger::WARNING);
-		
+
 		}//end foreach ($ar_tables as $key => $table)
 
 		// response
@@ -631,7 +648,7 @@ class area_development extends area_common {
 			$response->msg[0] = "OK. All data is propagated successfully"; // Override first message
 			$response->msg    = "<br>".implode('<br>', $response->msg);
 
-		
+
 		return $response;
 	}//end generate_relations_table_data
 

@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*eslint no-undef: "error"*/
+
+
+
 /*
 
     # FORMAT OF THE JSON GET FROM SERVER
@@ -106,7 +111,7 @@ export const relation_list = function() {
 	this.status			= null
 	this.filter			= null
 
-	this.rqo_config		= null			
+	this.rqo_config		= null
 	this.rqo			= null
 
 	return true
@@ -248,3 +253,5 @@ relation_list.prototype.build = async function(autoload=true){
 
 	return true
 };//end build
+
+

@@ -1,13 +1,12 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {get_ar_instances} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {get_ar_instances} from '../../../core/section/js/section.js'
-
 
 
 
@@ -24,7 +23,7 @@ export const render_time_machine_list = function() {
 
 /**
 * EDIT
-* Render node for use like button
+* Render node for use in edit mode
 * @return DOM node
 */
 render_time_machine_list.prototype.edit = async function (options) {
@@ -54,7 +53,8 @@ render_time_machine_list.prototype.edit = async function (options) {
 
 
 /**
-* get_CONTENT_DATA
+* GET_CONTENT_DATA
+* Rendered by time_machine using function from render_time_machine_list view)
 * @return DOM node content_data
 */
 const get_content_data = async function(self) {
@@ -64,4 +64,5 @@ const get_content_data = async function(self) {
 
 	return content_data
 };//end get_content_data
+
 

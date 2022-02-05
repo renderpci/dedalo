@@ -37,6 +37,7 @@
 	// label_top. Is used in section group and inspector labels
 	.label_top {
 		background-color: @color_grey_light;
+		position: relative;
 		padding: 0.33em;
 		padding-left: 0.5em;
 		cursor: pointer;
@@ -606,6 +607,8 @@
 
 // section
 	.wrapper_section {
+		overflow-x:hidden; // prevent scrollbars affect content
+		display: table;
 
 		// label
 		>.label {
@@ -777,6 +780,7 @@
 			display: contents;
 			width: 100%;
 			height: inherit;
+			// flex-wrap: wrap;
 			// margin-right: 0.5em;
 			// outline: 1px solid #EAEAEA;
 
@@ -824,6 +828,59 @@
 				}
 			}
 
+			// hover main row
+			// .section > &:hover {
+			// 	div {
+			// 		background-color: @color_grey_medium !important;
+			// 	}
+			// }
+			.wrapper_section >.list_body >.content_data > &:hover {
+				// div {
+				// 	background-color: @color_grey_medium !important;
+				// }
+				@line_color : #acacac; // #f78a1c
+
+				>.column:first-of-type {
+					// box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgb(60 64 67 / 30%), 0 1px 3px 1px rgb(60 64 67 / 15%);
+					// box-shadow: 0 4px 2px -2px gray;
+					// box-shadow: 0 2px 2px 0px rgba(0,0,0,0.75);
+					// box-shadow: inset 0px 3px 3px 0#f78a1c, inset 0px -2px 3px 0#f78a1c;
+					// z-index: 2;
+
+					// border-left: 2px solid #f78a1c;
+					box-shadow: inset 1px 0px 0px 0px @line_color;
+
+
+					&:before {
+						content: " ";
+						width: calc(100vw - 2rem);
+						// background-color: @line_color;
+						position: absolute;
+						left: 0;
+						top: -1px;
+						z-index: 2;
+						height: 2px;
+						box-shadow: inset 0px 1px 0px 0px @line_color;
+					}
+					&:after {
+						content: " ";
+						width: calc(100vw - 2rem);
+						background-color: #7d7d7d;
+						position: absolute;
+						left: 0;
+						bottom: -1px;
+						z-index: 2;
+						height: 1px;
+						// box-shadow: inset 0px 2px 0px 0 @line_color;
+						box-shadow: 0px 2px 5px 0px #000000;
+					}
+				}
+				>.column:last-of-type {
+					// box-shadow: 2px 0 0px 0 @line_color;
+					box-shadow: inset -1px 0px 0 0px @line_color;
+				}
+			}
+
 			.DES {
 				// portal and autocomplete
 				li & {
@@ -836,13 +893,6 @@
 
 					.remove_column {
 						// background-color: #ff948e;
-					}
-				}
-
-				// hover main row
-				.section > &:hover {
-					div {
-						background-color: @color_grey_medium;
 					}
 				}
 
@@ -1238,6 +1288,7 @@
 
 				>.content_data {
 					flex-wrap: wrap !important;
+					// overflow: auto;
 
 					.view_line& {
 						// background-color: #f0c2fe !important;
@@ -2075,7 +2126,7 @@
 		z-index: unset;
 
 		.header {
-			padding: 1em;
+			padding: 1rem;
 			background-color: @color_orange_dedalo;
 			color: white;
 			font-weight: normal;
@@ -2085,6 +2136,11 @@
 				font-size: 1.4em;
 				line-height: 1.5rem;
 				padding-right: 0.5em;
+			}
+			.description {
+				font-size: 0.95rem;
+				font-weight: 300;
+				padding-top: 0.25rem;
 			}
 		}
 
@@ -2205,7 +2261,7 @@
 	.inspector {
 		// @top_distance : 75px;
 		@inspector_width : 15em;
-
+		overflow: auto;
 		height: 100%;
 		width: @inspector_width;
 		background-color: @color_grey_untralight;
@@ -2215,9 +2271,11 @@
 		outline: 1px solid @color_grey_light;
 
 		@media screen and (max-width: @width_break_point_0) {
+			display: contents;
 			width: 100%;
 			left: 0;
 			position: initial;
+			margin-bottom: 1rem;
 		}
 	}//end .inspector
 	// .toggle_inspector {
@@ -3006,34 +3064,7 @@
 
 
 
-	.content_data.widget {
 
-		li {
-			>div {
-				padding: 0.5em;
-				background-color: #f0f0f0;
-				border-right: 1px solid #c0c0c0;
-
-				&:last-of-type {
-				  border: none;
-				}
-
-				>.label, >.value {
-					padding: 0.5em;
-				}
-
-				>.label {
-					font-weight: 400;
-					white-space: nowrap;
-					overflow: hidden;
-					text-overflow: ellipsis;
-				}
-				>.value {
-					padding-left: 0;
-				}
-			}
-		}
-	}//end .content_data.widget
 
 
 
@@ -3360,5 +3391,75 @@
 		font-size: 14px;
 		border-radius: 3px;
 	}
+
+
+
+// icon_arrow
+	.icon_arrow {
+		position: relative;
+		padding: 0.33rem;
+		padding-right: 1.33rem;
+
+		&:after {
+			background-image: url('@{images_base_path}/icons/arrow_down.svg');
+			background-repeat: no-repeat;
+			// background-size: auto 88%;
+			content: ' ';
+			cursor: pointer;
+			height: 1em;
+			margin-right: 0.33rem;
+			padding: 0.33rem;
+			position: absolute;
+			right: 0px;
+			transition: transform 0.26s ease-out;
+			width: 1em;
+		}
+
+		&.up {
+			&:after {
+				transform: rotate(180deg);
+			}
+		}
+
+		&:active {
+			opacity: 0.5;
+		}
+	}//end .icon_arrow
+
+
+
+// widgets common
+	.wrapper_widget {
+		font-size: 0.78rem;
+
+		li {
+			padding: 0;
+
+			>div {
+				padding: 0.15em;
+				// background-color: #f0f0f0;
+				// border-right: 1px solid #c0c0c0;
+				flex: 1 1 100%;
+
+				&:last-of-type {
+				  border: none;
+				}
+
+				>.label, >.value {
+					padding: 0.25em;
+				}
+
+				>.label {
+					// font-weight: 400;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+				>.value {
+					padding-left: 0;
+				}
+			}
+		}
+	}//end .wrapper_widget
 
 

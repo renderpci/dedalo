@@ -198,11 +198,20 @@ const build_widget = (item, self) => {
 
 		// body info
 			const body_info = ui.create_dom_element({
-				element_type : 'div',
-				class_name 	 : "body_info",
-				parent 		 : body,
-				inner_html	 : item.body || ''
+				element_type	: 'div',
+				class_name		: "body_info",
+				parent			: body,
+				inner_html		: item.body || ''
 			})
+
+		// script (javascript code)
+			// if (item.script) {
+			// 	const script = ui.create_dom_element({
+			// 		element_type	: 'script',
+			// 		parent			: body,
+			// 		inner_html		: item.script
+			// 	})
+			// }
 
 		// body response
 			const body_response = ui.create_dom_element({

@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	// import {get_instance} from '../../../core/common/js/instances.js'
@@ -51,7 +56,7 @@ export const time_machine = function () {
 */
 time_machine.prototype.init = function(options) {
 	// console.log("time_machine INIT options:",options);
-	
+
 	const self = this
 
 	self.model			= options.model || 'time_machine'
@@ -86,6 +91,7 @@ time_machine.prototype.init = function(options) {
 };//end init
 
 
+
 /**
 * BUILD
 * @return promise
@@ -95,7 +101,7 @@ time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	console.log("self.prototype:",self);
+	// console.log("self.prototype:",self);
 	// self.build_rqo_show	= common.prototype.build_rqo_show
 	// self.get_columns_map	= common.prototype.get_columns_map
 
@@ -206,6 +212,7 @@ time_machine.prototype.build = async function(autoload=false) {
 
 	return true
 };//end build
+
 
 
 /**

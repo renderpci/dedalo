@@ -7,6 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {download_url} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 
 
@@ -78,6 +79,29 @@ const add_events = (wrapper, self) => {
 			e.stopPropagation()
 			//e.preventDefault()
 			// prevent buble event to container element
+
+			// label click collapse 'content_data'
+				if (e.target.matches('.label')) {
+
+					// const collapsed_id		= e.target.id //.classList.join('_')
+					// const collapsed_table	= 'context'
+
+					// const content_data	= e.target.nextSibling
+					// const collapsed		= content_data.classList.contains('hide')
+					// if (!collapsed) {
+					// 	// add record to local DB
+					// 	data_manager.prototype.set_local_db_data({
+					// 		id		: collapsed_id,
+					// 		value	: !collapsed
+					// 	}, collapsed_table)
+					// 	content_data.classList.add('hide')
+					// }else{
+					// 	// remove record from local DB
+					// 	data_manager.prototype.delete_local_db_data(collapsed_id, collapsed_table)
+					// 	content_data.classList.remove('hide')
+					// }
+				}
+
 			return false
 		})
 
@@ -103,7 +127,7 @@ const get_content_data = function(self) {
 		const paginator_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'paginator',
-			parent 			: content_data
+			parent			: content_data
 		})
 		// fix pointer to node placeholder
 		self.paginator_container = paginator_container
@@ -140,181 +164,29 @@ const get_content_data = function(self) {
 			})
 
 	// element_info
-		const element_info_wrap = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'element_info_wrap',
-			parent			: content_data
-		})
-		// element_info_head
-			const element_info_head = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'element_info_head icon_arrow up',
-				inner_html		: get_label.info || "Info",
-				parent			: element_info_wrap
-			})
-			element_info_head.addEventListener('click', async function(){
-				element_info_container.classList.toggle('hide')
-				element_info_head.classList.toggle('up')
-			})
-		// element_info_container
-			const element_info_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'element_info',
-				parent			: element_info_wrap
-			})
-			// fix pointer to node placeholder
-			self.element_info_container = element_info_container
+		const element_info = render_element_info(self)
+		content_data.appendChild(element_info)
 
 	// project container
-		const project_wrap = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'project_wrap',
-			parent			: content_data
-		})
-		// project_head
-			const project_head = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'project_head icon_arrow up',
-				inner_html		: get_label.proyecto || "Project",
-				parent			: project_wrap
-			})
-			project_head.addEventListener('click', async function(){
-				project_container.classList.toggle('hide')
-				project_head.classList.toggle('up')
-			})
-		// project container
-			const project_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'project_container',
-				parent			: project_wrap
-			})
+		const project_block = render_project_block(self)
+		content_data.appendChild(project_block)
 
 	// indexation_list container
-		if (self.caller.context.indexation_list) {
-			const indexation_list = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'indexation_list',
-				inner_html		: get_label.indexaciones || "Indexations",
-				parent			: content_data
-			})
-		}
+		// if (self.caller.context.indexation_list) {
+			const indexation_list = render_indexation_list(self)
+			content_data.appendChild(indexation_list)
+		// }
 
 	// relation_list container
 		if (self.caller.context.relation_list) {
-
-			const relation_list_wrap = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'relation_list',
-				parent			: content_data
-			})
-			// relation_list_head
-				const relation_list_head = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'relation_list_head icon_arrow',
-					inner_html		: get_label.relaciones || "Relations",
-					parent			: relation_list_wrap
-				})
-				relation_list_head.addEventListener('click', async function(){
-
-					while (relation_list_body.firstChild) {
-						relation_list_body.removeChild(relation_list_body.firstChild);
-					}
-					if (relation_list_head.classList.contains('up')) {
-						relation_list_head.classList.remove('up')
-						return
-					}
-					relation_list_head.classList.add('up')
-					self.section_id		= self.caller.section_id
-					const relation_list	= await instances.get_instance({
-						model			: 'relation_list',
-						type			: 'detail',
-						tipo			: self.caller.context['relation_list'],
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
-						mode			: self.mode
-					})
-					await relation_list.build()
-					const relation_list_wrap = await relation_list.render()
-					relation_list_body.appendChild(relation_list_wrap)
-				})
-			// relation_list_body
-				const relation_list_body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'relation_list_body',
-					parent			: relation_list_wrap
-				})
-			// relation_list events
-				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_paginator_' + self.caller.id, fn_paginator_goto),
-					event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
-				)
-				function fn_paginator_goto() {
-					relation_list_head.classList.remove('up')
-					self.section_id = self.caller.section_id
-					while (relation_list_body.firstChild) {
-						relation_list_body.removeChild(relation_list_body.firstChild)
-					}
-				}
-				async function fn_relation_list_paginator(relation_list) {
-					relation_list_body.classList.add('loading')
-					self.section_id = self.caller.section_id
-					await relation_list.build()
-					const relation_list_wrap = await relation_list.render()
-					while (relation_list_body.firstChild) {
-						relation_list_body.removeChild(relation_list_body.firstChild)
-					}
-					await relation_list_body.appendChild(relation_list_wrap)
-					relation_list_body.classList.remove('loading')
-				}
+			const relation_list = render_relation_list(self)
+			content_data.appendChild(relation_list)
 		}//end if (self.caller.context.relation_list)
 
 	// time_machine_list container
 		if (self.caller.context.time_machine_list) {
-
-			const time_machine_list_wrap = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'time_machine_list',
-				parent			: content_data
-			})
-			// time_machine_list_head
-				const time_machine_list_head = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'relation_list_head icon_arrow',
-					inner_html		: get_label.latest_changes || "Latest changes",
-					parent			: time_machine_list_wrap
-				})
-				time_machine_list_head.addEventListener('click', async function(){
-					while (time_machine_list_body.firstChild) {
-						time_machine_list_body.removeChild(time_machine_list_body.firstChild);
-					}
-					if (time_machine_list_head.classList.contains('up')) {
-						time_machine_list_head.classList.remove('up')
-						return
-					}
-					time_machine_list_head.classList.add('up')
-					// do something
-
-					self.section_id		= self.caller.section_id
-					const time_machine_list	= await instances.get_instance({
-						model			: 'time_machine_list',
-						type			: 'detail',
-						tipo			: self.caller.context['time_machine_list'],
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
-						mode			: self.mode
-					})
-					await time_machine_list.build()
-					const time_machine_list_wrap = await time_machine_list.render()
-					time_machine_list_body.appendChild(time_machine_list_wrap)
-
-
-				})
-			// time_machine_list_body
-				const time_machine_list_body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'time_machine_list_body',
-					parent			: time_machine_list_wrap
-				})
+			const time_machine_list = render_time_machine_list(self)
+			content_data.appendChild(time_machine_list)
 		}//end if (self.caller.context.time_machine_list)
 
 	// buttons_bottom_container
@@ -363,6 +235,7 @@ const get_content_data = function(self) {
 
 /**
 * RENDER_SECTION_INFO
+* Called from info.js throw event manager: render_' + self.caller.id
 * @return DOM DocumentFragment
 */
 export const render_section_info = function(self) {
@@ -477,7 +350,7 @@ export const render_section_info = function(self) {
 export const render_component_info = function(self, component) {
 
 	const container	= self.element_info_container
-	console.log("component:",component);
+	// console.log("component:",component);
 
 	// values from caller (section)
 		const tipo			= component.tipo
@@ -538,7 +411,7 @@ export const render_component_info = function(self, component) {
 			parent			: fragment
 		})
 		// value
-		const model_info = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
 			text_content	: model,
@@ -578,7 +451,6 @@ export const render_component_info = function(self, component) {
 		})
 
 
-
 	// clean container
 		while (container.firstChild) {
 			container.removeChild(container.firstChild);
@@ -586,8 +458,337 @@ export const render_component_info = function(self, component) {
 
 	container.appendChild(fragment)
 
+
 	return fragment
 };//end render_component_info
+
+
+
+/**
+* RENDER_ELEMENT_INFO
+* Note that self.element_info_containe is fixed to allow inspector init event
+* to locate the target node when is invoked
+* @return DOM node element_info_wrap
+*/
+const render_element_info = function(self) {
+
+	// wrapper
+	const element_info_wrap = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'element_info_wrap'
+	})
+
+	// element_info_head
+		const element_info_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'element_info_head label icon_arrow up',
+			inner_html		: get_label.info || "Info",
+			parent			: element_info_wrap
+		})
+
+	// element_info_container (body)
+		const element_info_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'element_info hide',
+			parent			: element_info_wrap
+		})
+		// fix pointer to node placeholder
+		self.element_info_container = element_info_body
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: element_info_head,
+			content_data		: element_info_body,
+			collapsed_id		: 'inspector_element_info_block',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			element_info_head.classList.remove('up')
+		}
+		function expose() {
+			element_info_head.classList.add('up')
+		}
+
+
+	return element_info_wrap
+};//end render_element_info
+
+
+
+/**
+* RENDER_PROJECT_BLOCK
+* @return DOM node project_wrap
+*/
+const render_project_block = function(self) {
+
+	// wrap
+		const project_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'project_wrap'
+		})
+
+	// project_head
+		const project_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'project_head icon_arrow up',
+			inner_html		: get_label.proyecto || "Project",
+			parent			: project_wrap
+		})
+
+	// project container
+		const project_container_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'project_container hide',
+			parent			: project_wrap
+		})
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: project_head,
+			content_data		: project_container_body,
+			collapsed_id		: 'inspector_project_block',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			console.log("collapsed project:", this);
+			project_head.classList.remove('up')
+		}
+		function expose() {
+			project_head.classList.add('up')
+		}
+
+
+	return project_wrap
+};//end render_project_block
+
+
+
+/**
+* RENDER_INDEXATION_LIST
+* @return DOM node relation_list_wrap
+*/
+const render_indexation_list = function(self) {
+
+	// wrapper
+		const indexation_list_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'indexation_list'
+		})
+
+	// indexation_list_head
+		const indexation_list_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'indexation_list_head icon_arrow',
+			inner_html		: get_label.indexaciones || 'Indexations',
+			parent			: indexation_list_wrap
+		})
+
+	// indexation_list_body
+		const indexation_list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'indexation_list_body hide',
+			inner_html		: 'Working here..',
+			parent			: indexation_list_wrap
+		})
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: indexation_list_head,
+			content_data		: indexation_list_body,
+			collapsed_id		: 'inspector_indexation_list_block',
+			collapse_callback	: collapse,
+			expose_callback		: expose,
+			default_state		: 'closed'
+		})
+		function collapse() {
+			indexation_list_head.classList.remove('up')
+		}
+		function expose() {
+			indexation_list_head.classList.add('up')
+		}
+
+
+	return indexation_list_wrap
+};//end render_indexation_list
+
+
+
+/**
+* RENDER_RELATION_LIST
+* @return DOM node relation_list_wrap
+*/
+const render_relation_list = function(self) {
+
+	// wrapper
+		const relation_list_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list'
+		})
+
+	// relation_list_head
+		const relation_list_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_head icon_arrow',
+			inner_html		: get_label.relaciones || "Relations",
+			parent			: relation_list_wrap
+		})
+
+	// relation_list_body
+		const relation_list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_body hide',
+			parent			: relation_list_wrap
+		})
+
+	// relation_list events
+		self.events_tokens.push(
+			event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator),
+			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
+		)
+		function fn_relation_list_paginator(relation_list) {
+			relation_list_body.classList.add('loading')
+			load_relation_list(relation_list)
+			.then(function(){
+				relation_list_body.classList.remove('loading')
+			})
+		}
+		function fn_updated_section() {
+			// triggered after section pagination, it forces relation list update
+			const is_open = !relation_list_body.classList.contains('hide')
+			if (is_open) {
+				load_relation_list()
+			}
+		}
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: relation_list_head,
+			content_data		: relation_list_body,
+			collapsed_id		: 'inspector_relation_list',
+			collapse_callback	: unload_relation_list,
+			expose_callback		: load_relation_list,
+			default_state		: 'closed'
+		})
+		async function load_relation_list( instance ) {
+			self.section_id	= self.caller.section_id
+
+			relation_list_head.classList.add('up')
+
+			const relation_list	= (instance && instance.model==='relation_list')
+				? instance // pagination case do not need to init relation_list
+				: await instances.get_instance({
+					model			: 'relation_list',
+					tipo			: self.caller.context['relation_list'],
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					mode			: self.mode
+				})
+
+			await relation_list.build()
+			const relation_list_wrap = await relation_list.render()
+			while (relation_list_body.firstChild) {
+				relation_list_body.removeChild(relation_list_body.firstChild)
+			}
+			relation_list_body.appendChild(relation_list_wrap)
+		}
+		function unload_relation_list() {
+			self.section_id = self.caller.section_id
+
+			while (relation_list_body.firstChild) {
+				relation_list_body.removeChild(relation_list_body.firstChild);
+			}
+			relation_list_head.classList.remove('up')
+		}
+
+
+	return relation_list_wrap
+};//end render_relation_list
+
+
+
+/**
+* RENDER_TIME_MACHINE_LIST
+* @return DOM node time_machine_list_wrap
+*/
+const render_time_machine_list = function(self) {
+
+	// wrapper
+		const time_machine_list_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'time_machine_list'
+		})
+
+	// time_machine_list_head
+		const time_machine_list_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_head icon_arrow',
+			inner_html		: get_label.latest_changes || 'Latest changes',
+			parent			: time_machine_list_wrap
+		})
+
+	// time_machine_list_body
+		const time_machine_list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'time_machine_list_body hide',
+			parent			: time_machine_list_wrap
+		})
+
+	// relation_list events
+		self.events_tokens.push(
+			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
+		)
+		function fn_updated_section(){
+			// triggered after section pagination, it forces relation list update
+			const is_open = !time_machine_list_body.classList.contains('hide')
+			if (is_open) {
+				load_time_machine_list()
+			}
+		}
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: time_machine_list_head,
+			content_data		: time_machine_list_body,
+			collapsed_id		: 'inspector_time_machine_list',
+			collapse_callback	: unload_time_machine_list,
+			expose_callback		: load_time_machine_list,
+			default_state		: 'closed'
+		})
+		async function load_time_machine_list( instance ) {
+			self.section_id	= self.caller.section_id
+
+			const time_machine_list	= (instance && instance.model==='time_machine_list')
+				? instance // pagination case do not need to init time_machine_list
+				: await instances.get_instance({
+					model			: 'time_machine_list',
+					tipo			: self.caller.context['time_machine_list'],
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					mode			: self.mode
+				})
+
+			await time_machine_list.build()
+			const time_machine_list_wrap = await time_machine_list.render()
+			while (time_machine_list_body.firstChild) {
+				time_machine_list_body.removeChild(time_machine_list_body.firstChild)
+			}
+			await time_machine_list_body.appendChild(time_machine_list_wrap)
+			time_machine_list_head.classList.add('up')
+		}
+		function unload_time_machine_list() {
+			self.section_id = self.caller.section_id
+
+			while (time_machine_list_body.firstChild) {
+				time_machine_list_body.removeChild(time_machine_list_body.firstChild);
+			}
+			time_machine_list_head.classList.remove('up')
+		}
+
+
+	return time_machine_list_wrap
+};//end render_time_machine_list
 
 
 

@@ -25,10 +25,10 @@ export const render_paginator = function() {
 * @return DOM node wrapper
 */
 render_paginator.prototype.edit = async function(options) {
-	
+
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// refresh case. Only content data is returned
@@ -40,7 +40,7 @@ render_paginator.prototype.edit = async function(options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper_paginator full_width css_wrap_rows_paginator text_unselectable'
+			class_name		: 'wrapper_paginator edit full_width css_wrap_rows_paginator text_unselectable'
 		})
 
 	// content data. Added when total is ready
@@ -85,7 +85,7 @@ const add_events = (wrapper, self) => {
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
-	
+
 	// build vars
 		const total				= self.caller.total
 		const limit				= self.get_limit()

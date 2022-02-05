@@ -61,7 +61,7 @@ class dd_object {
 		// set model in first time
 			if(isset($data->model)) {
 				$this->set_model($data->model);
-			}			
+			}
 
 		// set all properties
 			foreach ($data as $key => $value) {
@@ -88,6 +88,8 @@ class dd_object {
 				$type = 'login';
 			}elseif ($model==='menu') {
 				$type = 'menu';
+			}elseif (strpos($model, 'tool_')===0) {
+				$type = 'tool';
 			}else{
 				$msg = __METHOD__." UNDEFINED model: $model - ".$this->tipo;
 				debug_log($msg, logger::ERROR);
@@ -116,7 +118,7 @@ class dd_object {
 			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
 		$this->tipo = $value;
-	}
+	}//end set_tipo
 
 
 
@@ -131,7 +133,7 @@ class dd_object {
 		// 	throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
 		// }
 		$this->section_tipo = $value;
-	}
+	}//end set_section_tipo
 
 
 
@@ -143,7 +145,7 @@ class dd_object {
 			throw new Exception("Error Processing Request. Invalid parent: $value", 1);
 		}
 		$this->parent = $value;
-	}
+	}//end set_parent
 
 
 
@@ -155,7 +157,7 @@ class dd_object {
 			throw new Exception("Error Processing Request. Invalid parent_grouper: $value", 1);
 		}
 		$this->parent_grouper = $value;
-	}
+	}//end set_parent_grouper
 
 
 
@@ -167,7 +169,7 @@ class dd_object {
 			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
 		}
 		$this->lang = $value;
-	}
+	}//end set_lang
 
 
 
@@ -177,7 +179,7 @@ class dd_object {
 	public function set_mode(string $value) {
 
 		$this->mode = $value;
-	}
+	}//end set_mode
 
 
 
@@ -187,7 +189,7 @@ class dd_object {
 	public function set_model(string $value) {
 
 		$this->model = $value;
-	}
+	}//end set_model
 
 
 
@@ -200,7 +202,7 @@ class dd_object {
 			$value = 'ddo';
 		}
 		$this->typo = $value;
-	}
+	}//end set_typo
 
 
 
@@ -214,7 +216,7 @@ class dd_object {
 			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
 		}
 		$this->type = $value;
-	}
+	}//end set_type
 
 
 
@@ -226,7 +228,7 @@ class dd_object {
 	public function set_properties($value) {
 
 		$this->properties = $value;
-	}
+	}//end set_properties
 
 
 
@@ -236,7 +238,7 @@ class dd_object {
 	public function set_permissions(int $value) {
 
 		$this->permissions = $value;
-	}
+	}//end set_permissions
 
 
 
@@ -256,7 +258,7 @@ class dd_object {
 	public function set_translatable(bool $value) {
 
 		$this->translatable = $value;
-	}
+	}//end set_translatable
 
 
 
@@ -270,7 +272,7 @@ class dd_object {
 		}
 
 		$this->tools = $value;
-	}
+	}//end set_tools
 
 
 
@@ -284,7 +286,7 @@ class dd_object {
 		}
 
 		$this->buttons = $value;
-	}
+	}//end set_buttons
 
 
 
@@ -294,7 +296,7 @@ class dd_object {
 	public function set_css($value) {
 
 		$this->css = $value;
-	}
+	}//end set_css
 
 
 
@@ -304,16 +306,18 @@ class dd_object {
 	public function set_target_sections($value) {
 
 		$this->target_sections = $value;
-	}
+	}//end set_target_sections
+
 
 
 	/**
-	* SET_request_config
+	* SET_REQUEST_CONFIG
 	*/
 	public function set_request_config($value) {
 
 		$this->request_config = $value;
-	}
+	}//end set_request_config
+
 
 
 	/**
@@ -322,7 +326,8 @@ class dd_object {
 	public function set_ar_sections_tipo($value) {
 
 		$this->ar_sections_tipo = $value;
-	}
+	}//end set_ar_sections_tipo
+
 
 
 	/**
@@ -331,15 +336,19 @@ class dd_object {
 	public function set_config_type($value) {
 
 		$this->config_type = $value;
-	}
+	}//end set_config_type
+
+
 
 	/**
-	* SET_COLUMN
+	* SET_COLUMNS_MAP
 	*/
 	public function set_columns_map($value) {
 
 		$this->columns_map = $value;
-	}
+	}//end set_columns_map
+
+
 
 	/**
 	* SET_VIEW
@@ -347,7 +356,9 @@ class dd_object {
 	public function set_view($value) {
 
 		$this->view = $value;
-	}
+	}//end set_view
+
+
 
 	/**
 	* SET_FIXED_MODE
@@ -355,9 +366,81 @@ class dd_object {
 	public function set_fixed_mode($value) {
 
 		$this->fixed_mode = $value;
-	}
+	}//end set_fixed_mode
 
 
+
+	/**
+	* SET_SECTION_ID
+	* Used by tools
+	*/
+	public function set_section_id($value) {
+
+		$this->section_id = $value;
+	}//end set_section_id
+
+
+	/**
+	* SET_NAME
+	* Used by tools
+	*/
+	public function set_name($value) {
+
+		$this->name = $value;
+	}//end set_name
+
+
+	/**
+	* SET_DESCRIPTION
+	* Used by tools
+	*/
+	public function set_description($value) {
+
+		$this->description = $value;
+	}//end set_description
+
+
+
+	/**
+	* SET_ICON
+	* Used by tools
+	*/
+	public function set_icon($value) {
+
+		$this->icon = $value;
+	}//end set_icon
+
+
+	/**
+	* SET_show_in_inspector
+	* Used by tools
+	*/
+	public function set_show_in_inspector($value) {
+
+		$this->show_in_inspector = $value;
+	}//end set_show_in_inspector
+
+
+
+	/**
+	* SET_show_in_component
+	* Used by tools
+	*/
+	public function set_show_in_component($value) {
+
+		$this->show_in_component = $value;
+	}//end set_show_in_component
+
+
+
+	/**
+	* SET_config
+	* Used by tools
+	*/
+	public function set_config($value) {
+
+		$this->config = $value;
+	}//end set_config
 
 
 

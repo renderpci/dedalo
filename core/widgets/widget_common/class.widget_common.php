@@ -1,10 +1,13 @@
 <?php
 
 
+
 /**
-* WIDGET
+* WIDGET_COMMON
 */
 class widget_common {
+
+
 
 	public $section_tipo;
 	public $section_id;
@@ -12,7 +15,27 @@ class widget_common {
 	public $ipo;
 
 
+
 	/**
+	* __CONSTRUCT
+	* Protected constructor to prevent creating a new instance of the
+	* *widget* via the `new` operator from outside of this class.
+	*/
+	protected function __construct($options) {
+
+		$this->section_tipo	= $options->section_tipo;
+		$this->section_id	= $options->section_id;
+		$this->lang			= $options->lang;
+		$this->ipo			= $options->ipo;
+
+
+		return true;
+	}//end __construct
+
+
+
+	/**
+	* GET_INSTANCE
 	* Returns the *widget* instance of this class.
 	*
 	* @return widget The *widget* instance.
@@ -35,22 +58,10 @@ class widget_common {
 		$instance = new $widget_name($options);
 
 		return $instance;
-	}
+	}//end get_instance
 
 
 
-	/**
-	 * Protected constructor to prevent creating a new instance of the
-	 * *widget* via the `new` operator from outside of this class.
-	 */
-	protected function __construct($options) {
-
-		$this->section_tipo		= $options->section_tipo;
-		$this->section_id 		= $options->section_id;
-		$this->lang 			= $options->lang;
-		$this->ipo 				= $options->ipo;
-
-	}
+}//end class widget_common
 
 
-}
