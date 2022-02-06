@@ -97,7 +97,6 @@ function dump($val, $var_name=NULL, $arguments=array()){
 
 	# PRINT
 	if(SHOW_DEBUG===true) {
-
 		// print wrap_pre($html);
 		// echo "<script>console.log('PHP: ".$html."');</script>";
 
@@ -109,12 +108,8 @@ function dump($val, $var_name=NULL, $arguments=array()){
 		}
 	}
 
-	# LOG MESSAGE
-	#$GLOBALS['log_messages'][] = wrap_pre($html);
-
 	# CONSOLE ERROR LOG ALWAYS
 	error_log(PHP_EOL.'-->'.$html);
-
 
 	#return wrap_pre($html);
 	return $html;
@@ -227,7 +222,6 @@ function debug_log($info, $level=logger::DEBUG) {
 
 	error_log($msg);
 
-	// $GLOBALS['log_messages'][] = $msg;
 	return true;
 }//end debug_log
 
@@ -1079,7 +1073,8 @@ function cast($destination, $sourceObject) {
 * LOG_MESSAGES
 * Print a message in all pages to active users
 */
-function log_messages($vars,$level='error') {
+function log_messages($vars, $level='error') {
+
 	$html ='';
 
 	if (is_array($vars)) {
@@ -1091,8 +1086,8 @@ function log_messages($vars,$level='error') {
 	}else{
 		$html .= $vars;
 	}
-	#$GLOBALS['log_messages'] .= "<div class=\"$level\">$html</div>";
-	$GLOBALS['log_messages'][] = "<div class=\"$level\">$html</div>";
+
+
 }//end log_messages
 
 
@@ -1107,19 +1102,6 @@ function notice_to_active_users( $ar_options ) {
 	$mode = $ar_options['mode'];
 
 	log_messages($msg, $mode);
-	/*
-	switch ($mode) {
-		case 'warning':
-			$msg = "<span class=\"warning notice_to_active_users\">$msg</span>";
-			break;
-
-		default:
-			# code...
-			break;
-	}
-	// Write msg in globals var array
-	$GLOBALS['log_messages'][] = $msg;
-	*/
 }//end notice_to_active_users
 
 

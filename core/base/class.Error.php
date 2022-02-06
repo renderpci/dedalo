@@ -26,14 +26,6 @@ class dd_error {
 		$error_to_show['debug']  = "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
 		$error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
 
-
-		if(SHOW_DEBUG===true) {
-			$GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
-		}else{
-			#$GLOBALS['log_messages'][] = $error_to_show['user'];
-		}
-
-
 		# DEDALO FILE LOGGER
 		if ( class_exists('logger') && isset(logger::$obj['error']) ) {
 			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::ERROR, __METHOD__);
@@ -54,19 +46,11 @@ class dd_error {
 
 			$message = safe_xss($exception->getMessage());
 			// Display content $exception variable
-			$error_to_show['user']   = "<span class='error'>Ops.. [Exception] " . $message ."</span>";
-			$error_to_show['debug']  = "<span class='error'>Ops.. [Exception] " . $message ."</span>";
-			$error_to_show['dump']   = '<pre>' . print_r($exception,true) . '</pre>';
+			$error_to_show['user']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
+			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
+			$error_to_show['dump']	= '<pre>' . print_r($exception,true) . '</pre>';
 
-			if(SHOW_DEBUG===true) {
-				$GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
-			}else{
-				$GLOBALS['log_messages'][] = $error_to_show['user'];
-			}
-
-			$log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
-			print trim($log_messages);
-
+			// $log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
 			error_log($error_to_show['debug'].$error_to_show['dump']);
 		}
 		catch (Exception $exception2) {
@@ -75,19 +59,13 @@ class dd_error {
 			$message2 = safe_xss($exception2->getMessage());
 
 			// Display content $exception variable
-			$error_to_show['user']  = "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
-			$error_to_show['debug'] = "<span class='error'>Ops.. [Exception2] " . $message ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
-			$error_to_show['dump']  = '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
+			$error_to_show['user']	= "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
+			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception2] " . $message ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
+			$error_to_show['dump']	= '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
 
-			if(SHOW_DEBUG===true) {
-				$GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
-			}else{
-				$GLOBALS['log_messages'][] = $error_to_show['user'];
-			}
-
-			#print self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
-			$log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
-			print safe_xss($log_messages);
+			// $log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
+			// print safe_xss($log_messages);
+			error_log('Exception 2 : '.$message2);
 		}
 
 
@@ -118,14 +96,7 @@ class dd_error {
 			$error_to_show['debug']  = "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
 			$error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
 
-
-			if(SHOW_DEBUG===true) {
-				$GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
-			}else{
-				$GLOBALS['log_messages'][] = $error_to_show['user'];
-			}
-
-			print self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
+			error_log( json_encode($error_to_show) );
 
 		} else {
 			return true;
