@@ -11,7 +11,7 @@
 
 
 /**
-* RENDER_TIME_MACHINE_VIEW
+* RENDER_TIME_MACHINE_LIST_VIEW
 *
 * Used by time_machine to render by itself in the same way that portals views
 * the tool assign the name of this method when it create the time_machine instance in self.time_machine.view
@@ -24,7 +24,7 @@
 * 	The generic options, used for assign render_level
 * @return DOM node wrapper
 */
-export const render_time_machine_view = async function(self, options) {
+export const render_time_machine_list_view = async function(self, options) {
 
 	// options
 		const render_level 	= options.render_level || 'full'
@@ -99,7 +99,7 @@ export const render_time_machine_view = async function(self, options) {
 
 
 	return wrapper
-};//end render_time_machine_view
+};//end render_time_machine_list_view
 
 
 
