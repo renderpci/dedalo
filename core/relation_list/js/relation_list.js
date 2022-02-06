@@ -140,8 +140,8 @@ relation_list.prototype.init = function(options) {
 
 	const self = this
 
-	self.id				= 'relation_list_' + options.tipo
 	self.model			= 'relation_list'
+	self.type			= options.type || 'detail'
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
 	self.tipo			= options.tipo
