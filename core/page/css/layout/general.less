@@ -1,0 +1,113 @@
+
+
+
+// general styles
+	.mark{
+		font-style: italic;
+	}
+	[hidden] {
+		display: none;
+	}
+	.unselectable {
+		-webkit-user-select: none !important;
+		-khtml-user-select: none !important;
+		-moz-user-select: none !important;
+		-o-user-select: none !important;
+		user-select: none !important;
+	}
+	.noevents {
+		-webkit-user-select: none !important;
+		-khtml-user-select: none !important;
+		-moz-user-select: none !important;
+		-o-user-select: none !important;
+		user-select: none !important;
+	}
+	// lock
+	.lock {
+		pointer-events: none;
+		opacity: 0.35;
+	}
+	// label_top. Is used in section group and inspector labels
+	.label_top {
+		background-color: @color_grey_light;
+		position: relative;
+		padding: 0.33em;
+		padding-left: 0.5em;
+		cursor: pointer;
+		text-transform: uppercase;
+		font-size: 0.85em;
+		color: @color_grey_ultradark;
+	}
+	.no_margin {
+		margin: 0px !important;;
+	}
+	.invisible {
+		visibility: hidden;
+	}
+	// centered
+	.centered {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+	// preload
+	.preload {
+		//background-image: url(../../themes/default/icons/preload.svg);
+		.fn_build_button('preload.svg', black, 1);
+		// mask-size: 30% !important;
+		 // -webkit-mask-size: 30% !important;
+		min-height: 3em;
+		min-width: 3em;
+		vertical-align: middle;
+		position: relative;
+		z-index: 99;
+
+		&:before {
+			content: " ";
+			background-color: #3c3c3c;
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+
+		}
+	}
+
+
+
+// icon_arrow
+// Used in section groups, inspector blocks, area_development widgets...
+	.icon_arrow {
+		position: relative;
+		padding: 0.33rem;
+		padding-right: 1.33rem;
+
+		&:after {
+			.fn_add_mask('arrow_down.svg');
+			background-color: @color_grey_dark;
+
+			content: ' ';
+			cursor: pointer;
+			height: 1em;
+			margin-right: 0.33rem;
+			padding: 0.33rem;
+			position: absolute;
+			right: 0px;
+			transition: transform 0.26s ease-out;
+			width: 1em;
+		}
+
+		&.up {
+			&:after {
+				transform: rotate(180deg);
+			}
+		}
+
+		&:active {
+			opacity: 0.5;
+		}
+	}//end .icon_arrow
+
+
