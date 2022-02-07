@@ -114,7 +114,7 @@ export const ui = {
 			}
 
 			// short vars
-				const id			= instance.id || 'id is not set'
+				// const id			= instance.id || 'id is not set'
 				const model			= instance.model 	// like component_input-text
 				const type			= instance.type 	// like 'component'
 				const tipo			= instance.tipo 	// like 'rsc26'
@@ -135,8 +135,7 @@ export const ui = {
 					// default
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
-						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
-						inner_html		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+						inner_html		: label // + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
 					})
 					fragment.appendChild(component_label)
 					// css
