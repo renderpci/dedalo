@@ -360,8 +360,12 @@ export const render_component_info = function(self, component) {
 		const tipo			= component.tipo
 		const label			= component.label
 		const model			= component.model
-		const translatable	= JSON.stringify(component.context.translatable)
-		const value			= JSON.stringify(component.data.value, null, 1)
+		const translatable	= component.context.translatable
+			? JSON.stringify(component.context.translatable)
+			: 'no'
+		const value			= component.data.value
+			? JSON.stringify(component.data.value, null, 1)
+			: ''
 
 	const fragment = new DocumentFragment();
 
