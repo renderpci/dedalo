@@ -470,6 +470,8 @@ component_common.prototype.save = async function(changed_data) {
 			const result = response.result
 			if (result===false) {
 
+				// error case
+
 				self.node.map(item => {
 					item.classList.add("error")
 				})
@@ -484,7 +486,7 @@ component_common.prototype.save = async function(changed_data) {
 				console.error("ERROR response:",response);
 
 			}else{
-				// success
+				// success case
 
 				// update datum (centralized update datum call)
 					await self.update_datum(result.data)
@@ -505,6 +507,12 @@ component_common.prototype.save = async function(changed_data) {
 				// 	},2000)
 					ui.component.exec_save_successfully_animation(self)
 			}
+
+			// dispatch event save
+				event_manager.publish('save', {
+					instance		: self,
+					api_response	: response
+				})
 		})
 
 	return save_promise
@@ -603,7 +611,7 @@ component_common.prototype.update_datum = async function(new_data) {
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
 		// It's necessary update the data in all components (self, observers), not only the caller.
 			const ar_instances = instances.get_all_instances()
-			/* OLD WAY MONO 
+			/* OLD WAY MONO
 				for (let i = new_data_length - 1; i >= 0; i--) {
 					const data_item = new_data[i]
 					const current_instance = ar_instances.find(inst => inst.tipo===data_item.tipo && inst.section_tipo===data_item.section_tipo && inst.section_id==data_item.section_id)
@@ -618,7 +626,7 @@ component_common.prototype.update_datum = async function(new_data) {
 				*/
 			// new way multi. Iterate data and instances with equal data
 			for (let i = new_data_length - 1; i >= 0; i--) {
-				
+
 				const data_item			= new_data[i]
 				const current_instances	= ar_instances.filter(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
 				const instances_length	= current_instances.length
@@ -634,7 +642,7 @@ component_common.prototype.update_datum = async function(new_data) {
 					console.warn(`(!) [update_datum] Not found current instance: tipo:${data_item.tipo}, section_tipo:${data_item.section_tipo}, section_id:${data_item.section_id} in instances:`, current_instances)
 				}
 			}
-			
+
 
 		// check data
 			if (typeof self.data==="undefined") {
@@ -730,7 +738,7 @@ component_common.prototype.change_value = async function(options) {
 				resolve( function_queue(self, self.change_value_pool, self.change_value, options) );
 			})
 		}
-	
+
 	// options
 		const changed_data		= options.changed_data
 		const action			= changed_data.action
