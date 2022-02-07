@@ -491,7 +491,7 @@ class area_development extends area_common {
 				$item->parent 	= $this->tipo;
 				$item->label 	= 'PHP INFO';
 				$item->info 	= null;
-				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
+				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\'"></iframe>';
 			$ar_widgets[] = $item;
 
 

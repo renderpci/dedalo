@@ -16,19 +16,9 @@
 * Manages the area apperance in client side
 */
 export const render_area_development = function() {
+
 	return true
-};//end  render_area_development
-
-
-
-/**
-* LIST
-* Alias of edit
-* @return DOM node
-*/
-render_area_development.prototype.list = async function(options={render_level:'full'}) {
-	return this.edit(options)
-};//end  list
+};//end render_area_development
 
 
 
@@ -60,7 +50,19 @@ render_area_development.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end  edit
+};//end edit
+
+
+
+/**
+* LIST
+* Alias of edit
+* @return DOM node
+*/
+render_area_development.prototype.list = async function(options={render_level:'full'}) {
+
+	return this.edit(options)
+};//end list
 
 
 
@@ -108,7 +110,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end  content_data
+};//end content_data
 
 
 
@@ -118,53 +120,49 @@ const get_content_data = function(self) {
 const build_widget = (item, self) => {
 
 	const container = ui.create_dom_element({
-		id 			 : item.id,
-		element_type : 'div',
-		dataset 	 : {},
-		class_name 	 : "widget_container " + (item.class || '')
+		id				: item.id,
+		element_type	: 'div',
+		dataset			: {},
+		class_name		: "widget_container " + (item.class || '')
 	})
 
 	// label
 		const label = ui.create_dom_element({
-			element_type : 'div',
-			class_name 	 : "widget_label",
-			parent 		 : container,
-			inner_html	 : item.label || ''
-		})
-		label.addEventListener("click", function(e){
-			e.stopPropagation()
-			const body = e.target.nextElementSibling
-			if (body.classList.contains("display_none")) {
-				// show
-				body.classList.remove("display_none")
-				localStorage.removeItem('ad_hide_' + item.id)
-			}else{
-				// hide
-				body.classList.add("display_none")
-				localStorage.setItem('ad_hide_' + item.id, 'true')
-			}
+			element_type	: 'div',
+			class_name		: "widget_label icon_arrow",
+			parent			: container,
+			inner_html		: item.label || ''
 		})
 
 	// body
 		const body = ui.create_dom_element({
-			element_type : 'div',
-			class_name 	 : "widget_body",
-			parent 		 : container
+			element_type	: 'div',
+			class_name		: "widget_body hide",
+			parent			: container
 		})
 
-		// cookie hide body value
-			const hide_value = localStorage.getItem('ad_hide_' + item.id)
-			if (hide_value==='true') {
-				body.classList.add("display_none")
+	// collapse_toggle_track
+			ui.collapse_toggle_track({
+				header				: label,
+				content_data		: body,
+				collapsed_id		: 'collapsed_' + item.id,
+				collapse_callback	: collapse,
+				expose_callback		: expose
+			})
+			function collapse() {
+				label.classList.remove('up')
+			}
+			function expose() {
+				label.classList.add('up')
 			}
 
 		// item info
 			if (item.info) {
 				const widget_info = ui.create_dom_element({
-					element_type : 'div',
-					class_name 	 : "link",
-					parent 		 : body,
-					inner_html	 : item.info || ''
+					element_type	: 'div',
+					class_name		: "link",
+					parent			: body,
+					inner_html		: item.info || ''
 				})
 
 				// action
@@ -182,9 +180,9 @@ const build_widget = (item, self) => {
 						// data_manager
 						const api_response = await data_manager.prototype.request({
 							body : {
-								dd_api		: item.trigger.dd_api,
-								action 		: item.trigger.action,
-								options 	: item.trigger.options
+								dd_api	: item.trigger.dd_api,
+								action	: item.trigger.action,
+								options	: item.trigger.options
 							}
 						})
 						// console.log("api_response:",api_response);
@@ -215,9 +213,9 @@ const build_widget = (item, self) => {
 
 		// body response
 			const body_response = ui.create_dom_element({
-				element_type : 'div',
-				class_name 	 : "body_response",
-				parent 		 : body,
+				element_type	: 'div',
+				class_name		: "body_response",
+				parent			: body,
 			})
 
 	// run widget scripts
@@ -300,7 +298,7 @@ const buttons = async function(self) {
 	const buttons = []
 
 	return buttons
-};//end  buttons
+};//end buttons
 
 
 
@@ -423,6 +421,6 @@ export const build_form = function(widget_object) {
 
 
 	return form_container
-};//end  build_form
+};//end build_form
 
 
