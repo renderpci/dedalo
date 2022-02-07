@@ -7,7 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {download_url} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 
 
@@ -188,6 +188,10 @@ const get_content_data = function(self) {
 			const time_machine_list = render_time_machine_list(self)
 			content_data.appendChild(time_machine_list)
 		}//end if (self.caller.context.time_machine_list)
+
+	// activity_info
+		const activity_info = render_activity_info(self)
+		content_data.appendChild(activity_info)
 
 	// buttons_bottom_container
 		const buttons_bottom_container = ui.create_dom_element({
@@ -723,7 +727,7 @@ const render_time_machine_list = function(self) {
 	// time_machine_list_head
 		const time_machine_list_head = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'relation_list_head icon_arrow',
+			class_name		: 'time_machine_list_head icon_arrow',
 			inner_html		: get_label.latest_changes || 'Latest changes',
 			parent			: time_machine_list_wrap
 		})
@@ -735,7 +739,7 @@ const render_time_machine_list = function(self) {
 			parent			: time_machine_list_wrap
 		})
 
-	// relation_list events
+	// time_machine_list events
 		self.events_tokens.push(
 			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
 		)
@@ -793,6 +797,100 @@ const render_time_machine_list = function(self) {
 
 
 /**
+* RENDER_ACTIVITY_INFO
+* @return DOM node time_machine_list_wrap
+*/
+const render_activity_info = function(self) {
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info'
+		})
+
+	// activity_info_head
+		const activity_info_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_head icon_arrow',
+			inner_html		: get_label.actividad || 'Activity',
+			parent			: wrapper
+		})
+
+	// activity_info_body
+		const activity_info_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_body hide',
+			parent			: wrapper
+		})
+
+	// events
+		self.events_tokens.push(
+			event_manager.subscribe('save', fn_saved)
+		)
+		function fn_saved(options){
+			// options
+				const instance		= options.instance
+				const api_response	= options.api_response
+
+			// node_info. create temporal node info
+				const node_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'node_info_save_msg'
+				})
+				// add at top
+				activity_info_body.prepend(node_info)
+				node_info.addEventListener("click", function(){
+					node_info.remove()
+				})
+
+			// msg. Based on API response result
+				if (api_response.result===false) {
+					node_info.classList.add('error')
+					const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
+					node_info.insertAdjacentHTML('afterbegin', text)
+					// error msg
+						const msg = []
+						if (api_response.error) {
+							msg.push(api_response.error)
+						}
+						if (api_response.msg) {
+							msg.push(api_response.msg)
+						}
+						if (msg.length>0) {
+							node_info.insertAdjacentHTML('beforeend', '<br>' + msg.join('<br>') )
+						}
+				}else{
+					node_info.classList.add('ok')
+					const text = `${instance.label} ${get_label.guardado || 'Saved'}`
+					node_info.insertAdjacentHTML('afterbegin', text)
+					setTimeout(function(){
+						node_info.remove()
+					}, 15000)
+				}
+		}
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: activity_info_head,
+			content_data		: activity_info_body,
+			collapsed_id		: 'inspector_activity_info',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			activity_info_head.classList.remove('up')
+		}
+		function expose() {
+			activity_info_head.classList.add('up')
+		}
+
+
+	return wrapper
+};//end render_activity_info
+
+
+
+/**
 * OPEN_ONTOLOGY_WINDOW
 * @return
 */
@@ -819,3 +917,5 @@ const open_ontology_window = function(tipo) {
 
 	return true
 };//end open_ontology_window
+
+
