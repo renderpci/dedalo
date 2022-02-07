@@ -406,14 +406,22 @@
 				letter-spacing: 0.025em;
 				user-select: none;
 				cursor: pointer;
+				position: relative;
 
-				&:before {
-					content: " ";
-					.fn_build_button('gear.svg', white, 0.7);
-					float: right;
-					margin: 0;
-					cursor: default;
+				&.icon_arrow {
+					&:after {
+						margin-right: 0.87rem;
+						background-color: white;
+					}
 				}
+
+				// &:before {
+				// 	content: " ";
+				// 	.fn_build_button('gear.svg', white, 0.7);
+				// 	float: right;
+				// 	margin: 0;
+				// 	cursor: default;
+				// }
 
 				>* {
 					pointer-events: none;
@@ -3401,9 +3409,13 @@
 		padding-right: 1.33rem;
 
 		&:after {
-			background-image: url('@{images_base_path}/icons/arrow_down.svg');
-			background-repeat: no-repeat;
-			// background-size: auto 88%;
+			// background-image: url('@{images_base_path}/icons/arrow_down.svg');
+			// background-repeat: no-repeat;
+			// // background-size: auto 88%;
+
+			.fn_add_mask('arrow_down.svg');
+			background-color: @color_grey_dark;
+
 			content: ' ';
 			cursor: pointer;
 			height: 1em;
