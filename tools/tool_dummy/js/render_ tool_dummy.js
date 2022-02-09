@@ -21,13 +21,13 @@ export const render_tool_dummy = function() {
 
 
 /**
-* TOOL_DUMMY
+* EDIT
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_dummy.js'
 * @param object options
 * @return DOM node
 */
-tool_dummy.prototype.edit = async function(options) {
+render_tool_dummy.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -55,7 +55,7 @@ tool_dummy.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end tool_dummy
+};//end edit
 
 
 

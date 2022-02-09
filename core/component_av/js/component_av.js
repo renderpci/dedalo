@@ -88,7 +88,7 @@ component_av.prototype.go_to_time = function(options){
 	const self = this
 
 	// const tag_time = options.tag.dataset.data
-	const seconds  = options.tag
+	const seconds = options.tag
 		? self.tc_to_seconds(options.tag.dataset.data)
 		: options
 
@@ -132,11 +132,11 @@ component_av.prototype.get_data_tag = function(){
 
 	const tc 	= self.get_current_tc()
 	const data_tag = {
-		type 	: 'tc',
-		tag_id 	: tc,
-		state 	: 'n',
-		label 	: tc,
-		data 	: tc
+		type	: 'tc',
+		tag_id	: tc,
+		state	: 'n',
+		label	: tc,
+		data	: tc
 	}
 
 	return data_tag
@@ -167,26 +167,26 @@ component_av.prototype.tc_to_seconds = function(tc) {
 
 	if(Number.isInteger(tc)) return tc
 
-	//var tc = "00:09:52.432";
-	const ar 		= tc.split(":")
-	const ar_ms 	= tc.split(".")
+	//var tc		= "00:09:52.432";
+	const ar		= tc.split(":")
+	const ar_ms		= tc.split(".")
 
-	const hours 	= parseFloat(ar[0])>0 ? parseFloat(ar[0]) : 0
-	const minutes 	= parseFloat(ar[1])>0 ? parseFloat(ar[1]) : 0
-	const seconds 	= parseFloat(ar[2])>0 ? parseFloat(ar[2]) : 0
-	const mseconds 	= parseFloat(ar_ms[1])>0 ? parseFloat(ar_ms[1]) : 0
-
+	const hours		= parseFloat(ar[0])>0 ? parseFloat(ar[0]) : 0
+	const minutes	= parseFloat(ar[1])>0 ? parseFloat(ar[1]) : 0
+	const seconds	= parseFloat(ar[2])>0 ? parseFloat(ar[2]) : 0
+	const mseconds	= parseFloat(ar_ms[1])>0 ? parseFloat(ar_ms[1]) : 0
 
 	const total_seconds = parseFloat( (hours * 3600) + (minutes * 60) + seconds +'.'+ mseconds)
 
-	return total_seconds ;
+
+	return total_seconds
 };//end  tc_to_seconds
 
 
 
 /**
 * TIME_TO_TC
-* get the time of the video and convert to tc
+* Get the time of the video and convert to tc
 * with the 00:00:00.000 format
 */
 component_av.prototype.time_to_tc = function(time) {
@@ -216,16 +216,18 @@ component_av.prototype.time_to_tc = function(time) {
 					: ms);
 	}
 
-	const hours 	= wrap(date.getHours() < 13
+	const hours		= wrap(date.getHours() < 13
 		? date.getHours()
 		: (date.getHours() - 12));
-	const minutes 	= wrap(date.getMinutes());
-	const seconds 	= wrap(date.getSeconds());
-	const mseconds 	= wrap_ms(date.getMilliseconds()) //fps: wrap(Math.floor(((time % 1) * frame_rate)));
+	const minutes	= wrap(date.getMinutes());
+	const seconds	= wrap(date.getSeconds());
+	const mseconds	= wrap_ms(date.getMilliseconds()) //fps: wrap(Math.floor(((time % 1) * frame_rate)));
 
-	const tc    = hours+':'+minutes+':'+seconds+'.'+mseconds;
+	// tc
+	const tc = hours+':'+minutes+':'+seconds+'.'+mseconds;
+
 
 	return tc
-};//end  time_to_tc
+};//end time_to_tc
 
 

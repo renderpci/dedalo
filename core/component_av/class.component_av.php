@@ -13,7 +13,7 @@ class component_av extends component_media_common {
 	# Overwrite __construct var lang passed in this component
 	#protected $lang = DEDALO_DATA_LANG;
 
-	# file name formated as 'tipo'-'order_id' like dd732-1
+	# file name formatted as 'tipo'-'order_id' like dd732-1
 	public $video_id ;
 	public $video_url ;
 	public $quality ;
@@ -164,7 +164,7 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor_export
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -205,7 +205,7 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET VIDEO ID
+	* GET_VIDEO_ID
 	*/
 	public function get_video_id() {
 
@@ -336,7 +336,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_subtitles_path( $lang=DEDALO_DATA_LANG ) {
 		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
-	}
+	}//end get_subtitles_path
 
 
 
@@ -345,7 +345,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_subtitles_url( $lang=DEDALO_DATA_LANG ) {
 		return DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
-	}
+	}//end get_subtitles_url
 
 
 
