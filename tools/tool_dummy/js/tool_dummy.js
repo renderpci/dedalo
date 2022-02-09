@@ -49,6 +49,8 @@ export const tool_dummy = function () {
 	tool_dummy.prototype.render		= common.prototype.render
 	// destroy: using common destroy method
 	tool_dummy.prototype.destroy	= common.prototype.destroy
+	// refresh: using common refresh method
+	tool_dummy.prototype.refresh	= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_dummy.prototype.edit		= render_tool_dummy.prototype.edit
 

@@ -205,10 +205,9 @@ const get_buttons = (self) => {
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		})
 
+
 	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
+		ui.add_tools(self, fragment)
 
 	// des
 		// const button_info = ui.create_dom_element({
