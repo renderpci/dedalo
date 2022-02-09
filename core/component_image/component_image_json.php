@@ -13,7 +13,7 @@
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
+	if($options->get_context===true && $permissions>0) {
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
@@ -24,8 +24,11 @@
 				$current_context = $this->get_structure_context($permissions);
 
 				// append additional info
-					$current_context->allowed_extensions 	 = $this->get_allowed_extensions();
-					$current_context->default_target_quality = $this->get_original_quality();
+					$current_context->allowed_extensions		= $this->get_allowed_extensions();
+					$current_context->default_target_quality	= $this->get_original_quality();
+					$current_context->ar_quality				= $this->get_ar_quality(); // defined in config
+					$current_context->default_quality			= $this->get_default_quality();
+					$current_context->quality					= $this->get_quality(); // current instance quality
 
 				$context[] = $current_context;
 				break;
@@ -37,43 +40,62 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		$value = $this->get_dato();
-		// get the quality url of the available image files
-			$valid_urls		= [];
-			$test_file 			= ($modo==='list') ? false : true;
-			$absolute  			= false;
-			$image_ar_quality 	= ($modo==='edit')
-				? unserialize(DEDALO_IMAGE_AR_QUALITY)
-				: [DEDALO_IMAGE_QUALITY_DEFAULT];
-
-			foreach ($image_ar_quality as $current_quality) {
-
-				if($current_quality===DEDALO_IMAGE_THUMB_DEFAULT) continue;
-
-				$default_add = $current_quality===DEDALO_IMAGE_QUALITY_DEFAULT ? true : false;
-
-				$current_url = $this->get_image_url($current_quality, $test_file, $absolute, $default_add); // $quality=false, $test_file=true, $absolute=false, $default_add=true
-
-				if ($current_url!==false) {
-
-					$image_item = new stdClass();
-						$image_item->url 	 = $current_url;
-						$image_item->quality = $current_quality;
-
-					$valid_urls[] = $image_item;
-				}
+		// value as array always
+			$value = $this->get_dato();
+			if (!is_array($value)) {
+				$value = [$value];
 			}
 
+		// get the quality url of the available image files
+			switch ($modo) {
+				case 'edit':
+					$datalist = $this->get_files_info();
+					break;
+
+				case 'list':
+				default:
+					// $valid_urls			= [];
+					// $test_file			= false;
+					// $absolute			= false;
+					// $image_ar_quality	= [DEDALO_IMAGE_QUALITY_DEFAULT];
+					// foreach ($image_ar_quality as $current_quality) {
+
+					// 	if($current_quality===DEDALO_IMAGE_THUMB_DEFAULT) continue;
+
+					// 	$default_add = $current_quality===DEDALO_IMAGE_QUALITY_DEFAULT ? true : false;
+
+					// 	$current_url = $this->get_image_url($current_quality, $test_file, $absolute, $default_add); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+					// 	if ($current_url!==false) {
+
+					// 		$image_item = new stdClass();
+					// 			$image_item->url 	 = $current_url;
+					// 			$image_item->quality = $current_quality;
+
+					// 		$valid_urls[] = $image_item;
+					// 	}
+					// }
+
+					// files_info. For fast list we add directly the default image
+						$quality	= DEDALO_IMAGE_QUALITY_DEFAULT;  // DEDALO_IMAGE_QUALITY_DEFAULT | DEDALO_IMAGE_THUMB_DEFAULT
+						$url		= $this->get_image_url($quality, false, false, false);
+						$image_item = new stdClass();
+							$image_item->url		= $url;
+							$image_item->quality	= $quality;
+						$datalist = [$image_item];
+					break;
+			}
+
+
 		// data item
-		$item = $this->get_data_item($value);
-
-		$item->datalist = $valid_urls;
-
-		// base_svg_url
+			$item = $this->get_data_item($value);
+			// base_svg_url
 			$item->base_svg_url = $this->get_base_svg_url(true);
-		
+			// item datalist
+			$item->datalist = $datalist;
+
+
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
 

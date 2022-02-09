@@ -184,5 +184,74 @@ class component_media_common extends component_common {
 
 
 
+	/**
+	* GET_FILES_INFO
+	* Get file info for every quality
+	* @return array $files_info
+	*/
+	public function get_files_info() {
+
+		$ar_quality = $this->get_ar_quality();
+
+		// files check
+			$files_info = [];
+			foreach ($ar_quality as $quality) {
+
+				$path = ($quality==='original')
+					? $this->get_original_file_path($quality)
+					: $this->get_path($quality);
+
+				// file_exist
+					$file_exist	= file_exists($path);
+						// $this->file_exist($quality);
+
+				// file_size
+					$file_size	= ($file_exist===true)
+						? (function() use($path) {
+							try {
+								$size		= @filesize($path);
+								$size_kb	= round($size / 1024);
+								$file_size	= ($size_kb <= 1024)
+									? $size_kb . ' KB'
+									: round($size_kb / 1024, 2) . ' MB';
+							} catch (Exception $e) {
+								trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
+							}
+							return $file_size ?? null;
+						  })()
+						: null;
+
+				// file_url
+					$file_url	= ($file_exist===true) //  && $quality!=='original'
+						? $this->get_url($quality)
+						: null;
+
+				// item
+					$files_info[] = (object)[
+						'quality'		=> $quality,
+						'file_exist'	=> $file_exist,
+						'file_size'		=> $file_size,
+						'url'			=> $file_url
+					];
+			}
+
+		return $files_info;
+	}//end get_files_info
+
+
+
+	/**
+	* GET_QUALITY
+	* 	Takes quality from fixed value or fallback to default config value
+	*/
+	public function get_quality() {
+
+		$quality = $this->quality ?? $this->get_default_quality();
+
+		return $quality;
+	}//end get_quality
+
+
+
 
 }//end component_media_common
