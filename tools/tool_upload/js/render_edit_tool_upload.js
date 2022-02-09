@@ -214,10 +214,11 @@ export const get_content_data = function(self) {
 			parent			: info
 		})
 		// target quality
-		if (self.caller.context.default_target_quality) {
+		const target_quality = self.caller.context.target_quality || self.caller.context.default_target_quality
+		if (target_quality) {
 			ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: '<label>Target quality</label>' + self.caller.context.default_target_quality,
+				inner_html		: '<label>Target quality</label>' + target_quality,
 				parent			: info
 			})
 		}
