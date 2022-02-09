@@ -426,6 +426,17 @@ class component_image extends component_media_common {
 
 
 	/**
+	* GET_PATH
+	* Alias of get_image_path
+	*/
+	public function get_path($quality=false) {
+
+		return $this->get_image_path($quality);
+	}//end get_path
+
+
+
+	/**
 	* GET_IMAGE_URL
 	* Get image url for current quality
 	* @param string | bool $quality
@@ -438,15 +449,18 @@ class component_image extends component_media_common {
 	public function get_image_url($quality=false, $test_file=true, $absolute=false, $default_add=true) {
 
 		// quality fallback to default
-			if(!$quality)
-			$quality 	= $this->get_quality();
+			if($quality===false) {
+				$quality = $this->get_quality();
+			}
 
 		// image id
-			$image_id 	= $this->get_image_id();
+			$image_id = $this->get_image_id();
 
 		// Check ImageObj
 			if (!isset($this->ImageObj)) {
-				throw new Exception("Error Processing Request (get_image_url)", 1);
+				// throw new Exception("Error Processing Request (get_image_url)", 1);
+				trigger_error('Error Processing Request (get_image_url)');
+				return null;
 			}
 
 		// ImageObj
@@ -474,6 +488,23 @@ class component_image extends component_media_common {
 
 		return $image_url;
 	}//end get_image_url
+
+
+
+	/**
+	* GET_URL
+	* Comon unified function used by component_media_common get_files_info
+	* @see component_media_common->get_files_info()
+	*
+	* @param string quality
+	* @return string | null
+	*/
+	public function get_url($quality=false) {
+
+		$url = $this->get_image_url($quality, $test_file=false, $absolute=false, $default_add=false);
+
+		return $url;
+	}//end get_url
 
 
 
@@ -517,11 +548,21 @@ class component_image extends component_media_common {
 	/**
 	* GET QUALITY
 	*/
-	public function get_quality() {
-		if(!isset($this->quality))	return DEDALO_IMAGE_QUALITY_DEFAULT;
+		// public function get_quality() {
 
-		return $this->quality;
-	}//end get_quality
+		// 	if(!isset($this->quality))	return DEDALO_IMAGE_QUALITY_DEFAULT;
+
+		// 	return $this->quality;
+		// }//end get_quality
+
+
+	/**
+	* GET_DEFAULT_QUALITY
+	*/
+	public function get_default_quality() {
+
+		return DEDALO_IMAGE_QUALITY_DEFAULT;
+	}//end get_default_quality
 
 
 
@@ -869,6 +910,7 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_ORIGINAL
+	* Returns extension of the orinal file
 	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
 	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
 	* @return bool | string (file extension)
@@ -885,26 +927,28 @@ class component_image extends component_media_common {
 		$ar_originals 	= array();
 		$target_dir 	= $this->get_target_dir();
 
-		if(!file_exists($target_dir)) return false;
+		if(!file_exists($target_dir)) {
+			return false;
+		}
 
 		if ($handle = opendir($target_dir)) {
-		    while (false !== ($file = readdir($handle))) {
+			while (false !== ($file = readdir($handle))) {
 
-		        // note that '.' and '..' is returned even
-		        $findme = $this->get_image_id() . '.';
-		        if( strpos($file, $findme) !== false ) {
-		        	if ($exclude_converted) {
-		        		# Verify too that extension is different to dedalo extension (like .tiff)
-		        		if (strpos($file, $this->get_target_filename()) === false) {
-		        			$ar_originals[] = $file;
-		        		}
-		        	}else{
-		        		# Included all originals (witl all extensions)
-		        		$ar_originals[] = $file;
-		        	}
-		        }
-		    }
-		    closedir($handle);
+				// note that '.' and '..' is returned even
+				$findme = $this->get_image_id() . '.';
+				if( strpos($file, $findme) !== false ) {
+					if ($exclude_converted) {
+						# Verify too that extension is different to dedalo extension (like .tiff)
+						if (strpos($file, $this->get_target_filename()) === false) {
+							$ar_originals[] = $file;
+						}
+					}else{
+						# Included all originals (witl all extensions)
+						$ar_originals[] = $file;
+					}
+				}
+			}
+			closedir($handle);
 		}
 		#dump($ar_originals, ' target_dir ++ '.to_string($target_dir));
 
@@ -930,6 +974,79 @@ class component_image extends component_media_common {
 
 		// return current component quality
 		$this->quality 	= $initial_quality;
+
+		return $result;
+	}//end get_original
+
+
+
+	/**
+	* GET_ORIGINAL_FILE_PATH
+	* Returns the full path of the original file (with no default extension) if exists
+	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
+	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
+	* @param string $quality
+	* @return bool | string (file name)
+	*/
+	public function get_original_file_path($quality) {
+
+		$result = false;
+
+		// quality
+			$initial_quality = $this->get_quality();
+			// change current component quality temporally
+			$this->set_quality($quality);
+
+		// target_dir
+			$target_dir = $this->get_target_dir();
+			if(!file_exists($target_dir)) {
+				return false;
+			}
+
+		// files in target_dir
+			$ar_originals = array();
+			if ($handle = opendir($target_dir)) {
+
+				while( false!==($file = readdir($handle)) ) {
+
+					// note that '.' and '..' is returned even
+					$findme = $this->get_id() . '.';
+					if( strpos($file, $findme)!==false ) {  // && strpos($file, $this->get_target_filename())===false
+						$ar_originals[] = $file;
+					}
+				}
+				closedir($handle);
+			}
+
+		// remove conversions if exists
+			$n = count($ar_originals);
+			if ($n>1) {
+				foreach ($ar_originals as $file) {
+					$ext = pathinfo($file, PATHINFO_EXTENSION);
+					if(strtolower($ext)!==strtolower(DEDALO_IMAGE_EXTENSION)) {
+						// overwrite ar_originals with only one value
+						$ar_originals = [$file];
+						break;
+					}
+				}
+			}
+
+		// check found files
+			$n = count($ar_originals);
+			if ($n===0) {
+				$result = false;
+			}elseif($n===1) {
+				$result = $target_dir.'/'.$ar_originals[0];
+			}else{
+				if(SHOW_DEBUG===true) {
+					dump($ar_originals, "ar_originals ".to_string($ar_originals));
+					trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
+				}
+			}
+
+		// return current component quality
+			$this->quality = $initial_quality;
+
 
 		return $result;
 	}//end get_original_file_path
@@ -1120,7 +1237,7 @@ class component_image extends component_media_common {
 
 		return $last_file_path;
 	}//end get_deleted_image
-	
+
 
 
 	/**
@@ -1171,16 +1288,16 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_AR_IMAGE_QUALITY
+	* GET_AR_QUALITY
 	* Get the list of defined image qualities in Dédalo config
 	* @return array $ar_image_quality
 	*/
-	public function get_ar_image_quality() {
+	public function get_ar_quality() {
 
 		$ar_image_quality = unserialize(DEDALO_IMAGE_AR_QUALITY);
 
 		return $ar_image_quality;
-	}//end get_ar_image_quality
+	}//end get_ar_quality
 
 
 

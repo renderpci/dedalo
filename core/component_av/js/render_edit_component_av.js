@@ -112,10 +112,10 @@ render_edit_component_av.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	// const is_inside_tool = self.is_inside_tool
-
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	const quality = self.quality || self.context.quality
 
 	const fragment = new DocumentFragment()
 
@@ -128,9 +128,26 @@ const get_content_data_edit = function(self) {
 
 	// urls
 		// posterframe
-		const posterframe_url	= self.data.posterframe_url
+			const posterframe_url = self.data.posterframe_url
 		// media
-		const video_url			= self.data.video_url
+			// const video_url = self.context.quality!==self.context.default_quality
+			// 	? (()=>{
+			// 		const file_info	= self.data.datalist.find(el => el.quality===self.context.quality)
+			// 		const url		= file_info
+			// 			? file_info.url
+			// 			: null
+			// 		return url
+			// 	  })()
+			// 	: self.data.video_url
+		// media url from data.datalist based on selected context quality
+			const video_url = (()=>{
+				const file_info	= self.data.datalist.find(el => el.quality===quality)
+				const url		= file_info
+					? file_info.url
+					: null
+				return url
+			})()
+			console.log("video_url:", video_url, quality, self.data.datalist);
 
 	// build_video_node
 		const build_video_node = function() {
@@ -189,9 +206,11 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
-
 	const fragment = new DocumentFragment()
+
+	if (self.caller.type==='tool') {
+		return fragment
+	}
 
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({

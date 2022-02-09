@@ -239,19 +239,19 @@ const get_quality_selector = (self) => {
 			event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
-		const datalist 	= data.datalist
-		const datalist_len = datalist.length
-		for (let i = 0; i < datalist_len; i++) {
+		const quality_list		= data.datalist.filter(el => el.file_exist===true && el.quality!=='thumb')
+		const quality_list_len	= quality_list.length
+		for (let i = 0; i < quality_list_len; i++) {
 			//create the node with the all qualities sended by server
 			const quality = ui.create_dom_element({
 				element_type	: 'option',
 				class_name 		: 'quality',
-				value 			: (typeof datalist[i].url==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : datalist[i].url,
+				value 			: (typeof quality_list[i].url==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : quality_list[i].url,
 				parent			: quality_selector,
-				text_node 		: datalist[i].quality
+				text_node 		: quality_list[i].quality
 			})
-			//set the default datalist to config variable dedalo_image_quality_default
-			quality.selected = datalist[i].quality===page_globals.dedalo_image_quality_default ? true : false
+			//set the default quality_list to config variable dedalo_image_quality_default
+			quality.selected = quality_list[i].quality===page_globals.dedalo_image_quality_default ? true : false
 		}
 
 	return quality_selector

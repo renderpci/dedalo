@@ -133,8 +133,8 @@ class component_av extends component_media_common {
 		// data item
 		$item  = new stdClass();
 			$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
-			$item->video_url		= $this->av_file_exist()
-				? $this->get_video_url(false)
+			$item->video_url		= $this->file_exist()
+				? $this->get_url(false)
 				: null;
 
 
@@ -232,12 +232,25 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET QUALITY
+	* GET_QUALITY
+	* 	Takes quality from fixed value or fallback to default config value
 	*/
-	public function get_quality() {
-		if(!isset($this->quality)) return DEDALO_AV_QUALITY_DEFAULT;
-		return $this->quality;
-	}//end get_quality
+		// public function get_quality() {
+
+		// 	$quality = $this->quality ?? $this->get_default_quality();
+
+		// 	return $quality;
+		// }//end get_quality
+
+
+
+	/**
+	* GET_DEFAULT_QUALITY
+	*/
+	public function get_default_quality() {
+
+		return DEDALO_AV_QUALITY_DEFAULT;
+	}//end get_default_quality
 
 
 
@@ -255,9 +268,9 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_VIDEO_URL
+	* GET_URL
 	*/
-	public function get_video_url($quality=false) {
+	public function get_url($quality=false) {
 
 		if($quality===false) {
 			$quality = $this->get_quality();
@@ -271,7 +284,7 @@ class component_av extends component_media_common {
 		$video_url = $path . $name;
 
 		return $video_url;
-	}//end get_video_url
+	}//end get_url
 
 
 
@@ -287,6 +300,17 @@ class component_av extends component_media_common {
 
 		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
 	}//end get_video_path
+
+
+
+	/**
+	* GET_PATH
+	* Alias of get_video_path
+	*/
+	public function get_path($quality=false) {
+
+		return $this->get_video_path($quality);
+	}//end get_path
 
 
 
@@ -351,12 +375,14 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_ORIGINAL_FILE_PATH
+	* Returns the full path of the original file if exists
 	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
 	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
 	* @param string $quality
-	* @return bool | string (file extension)
+	* @return bool | string (file path)
 	*/
 	public function get_original_file_path($quality) {
+
 		$result = false;
 		$initial_quality = $this->get_quality();
 
@@ -364,33 +390,34 @@ class component_av extends component_media_common {
 		$ar_originals 	= array();
 		$target_dir 	= $this->get_target_dir();
 
-		if(!file_exists($target_dir)) return null;
+		if(!file_exists($target_dir)) {
+			return false;
+		}
 
 		if ($handle = opendir($target_dir)) {
 
 		    while (false !== ($file = readdir($handle))) {
 
 		    	if($this->get_video_id() == $file && is_dir($target_dir.'/'.$file)){
-		    		/*
-		    		$dvd_folder = $target_dir.'/'.$file;
-					# dvd_folder dir set permissions 0777
 
-					$stat = stat($dvd_folder);
-						//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
+		    		// DES
+						// $dvd_folder = $target_dir.'/'.$file;
+						// # dvd_folder dir set permissions 0777
 
-		    		if(posix_geteuid() != $stat['uid']){
-						chown($dvd_folder, posix_geteuid());
-		    		}
+						// $stat = stat($dvd_folder);
+						// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
 
-					$wantedPerms = 0777;
-					$actualPerms = fileperms($dvd_folder);
-					if($actualPerms < $wantedPerms) {
-						$chmod = chmod($dvd_folder, $wantedPerms);
-						if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
-					}
+						// if(posix_geteuid() != $stat['uid']){
+						// 	chown($dvd_folder, posix_geteuid());
+						// }
 
+						// $wantedPerms = 0777;
+						// $actualPerms = fileperms($dvd_folder);
+						// if($actualPerms < $wantedPerms) {
+						// 	$chmod = chmod($dvd_folder, $wantedPerms);
+						// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
+						// }
 
-					*/
 		    		$ar_originals[] = $file;
 		    		continue;
 		    	}
@@ -399,7 +426,6 @@ class component_av extends component_media_common {
 
 		        if( strpos($file, $findme)!==false ) {  // && strpos($file, $this->get_target_filename())===false
 		        	$ar_originals[] = $file;
-
 		        }
 		    }
 		    closedir($handle);
@@ -739,7 +765,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_diffusion_value( $lang=null ) {
 
-		$diffusion_value = $this->get_video_url(DEDALO_AV_QUALITY_DEFAULT);
+		$diffusion_value = $this->get_url(DEDALO_AV_QUALITY_DEFAULT);
 
 
 		return (string)$diffusion_value;
@@ -748,16 +774,18 @@ class component_av extends component_media_common {
 
 
 	/**
-	* AV_FILE_EXIST
-	* @return BOOL
+	* FILE_EXIST
+	* Check if quality given file exists.
+	* If not quality is received, default will be used (404 normally)
+	* @return bool
 	*/
-	public function av_file_exist($quality=false) {
+	public function file_exist($quality=false) {
 
 		$video_path  = $this->get_video_path($quality);
 		$file_exists = file_exists($video_path);
 
 		return $file_exists;
-	}//end av_file_exist
+	}//end file_exist
 
 
 
@@ -1058,6 +1086,227 @@ class component_av extends component_media_common {
 
 		return $media_streams;
 	}//end get_media_streams
+
+
+
+	/**
+	* GET_AR_QUALITY
+	* Get the list of defined av qualities in Dédalo config
+	* @return array $ar_quality
+	*/
+	public function get_ar_quality() {
+
+		$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
+
+		return $ar_quality;
+	}//end get_ar_quality
+
+
+
+	/**
+	* DELETE_FILE
+	* Remove quality version moving the file to a deleted files dir
+	* @see component_av->remove_component_media_files
+	*
+	* @return object $response
+	*/
+	public function delete_file($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// short vars
+			$video_id			= $this->get_video_id();
+			$file_name			= $this->get_target_filename(); // ex. rsc15_rsc78_45.mp4
+			$folder_path_del	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/deleted';
+
+		// file_path
+			$file_path = ($quality==='original')
+					? $this->get_original_file_path($quality)
+					: $this->get_path($quality);
+
+		if(!file_exists($file_path)) {
+
+			$response->msg .= PHP_EOL . 'File not found';
+			debug_log(__METHOD__." Error deleting file. File not found: ".to_string($file_path), logger::ERROR);
+		}else{
+
+			try{
+
+				// delete folder. Check exists
+					if( !is_dir($folder_path_del) ) {
+						$create_dir = mkdir($folder_path_del, 0777,true);
+						if(!$create_dir) {
+							$response->msg .= PHP_EOL . 'Error on read or create directory "deleted". Permission denied . The files are not deleted';
+							return $response;
+						}
+					}
+
+				// delete folder set permissions
+					$wantedPerms	= 0777;
+					$actualPerms	= fileperms($folder_path_del);
+					if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
+
+				// move / rename file
+					$file_base_name	= pathinfo($file_path, PATHINFO_BASENAME); // Like rsc15_rsc78_45.mov._original
+					$file_ext		= pathinfo($file_path, PATHINFO_EXTENSION);// Like mov
+					$target_name	= $folder_path_del . "/$file_base_name" . '_deleted_' . date("Y-m-dHi") . '.' . $file_ext;
+					if(!rename($file_path, $target_name)){
+						$response->msg .= PHP_EOL . 'Error on move files to folder "deleted" . Permission denied . The files are not deleted';
+						return $response;
+					}
+
+				// delete temp sh file
+					$tmp_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$video_id.'.sh';
+					if(file_exists($tmp_file)) {
+						$del_sh = unlink($tmp_file);
+						if(!$del_sh) {
+							$response->msg .= PHP_EOL . 'Error on delete temp file . Temp file is not deleted';
+							return $response;
+						}
+					}
+
+				// delete posterframe if media deleted is quality default
+					if($quality===DEDALO_AV_QUALITY_DEFAULT) {
+						$poster_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$video_id}.jpg";
+						if(file_exists($poster_file)) {
+							unlink($poster_file);
+						}
+					}
+
+				// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+					logger::$obj['activity']->log_message(
+						'DELETE FILE',
+						logger::INFO,
+						$this->tipo,
+						NULL,
+						[
+							'msg'			=> 'Deleted av file (file is renamed and moved to delete folder)',
+							'tipo'			=> $this->tipo,
+							'section_tipo'	=> $this->section_tipo,
+							'section_id'	=> $this->section_id,
+							'top_id'		=> TOP_ID ?? null,
+							'top_tipo'		=> TOP_TIPO ?? null,
+							'video_id'		=> $video_id,
+							'quality'		=> $quality
+						]
+					);
+
+				// response OK
+					$response->result	= true;
+					$response->msg		= 'File deleted successfully. ' . $file_name;
+
+			} catch (Exception $e) {
+				$response->msg .= PHP_EOL . $e->getMessage();
+			}
+		}//end if(!file_exists($file))
+
+
+		return $response;
+	}//end delete_file
+
+
+
+	/**
+	* BUILD_VERSION
+	* Creates a new version using FFMEPG conversion using settings based on target quality
+	* @param string $quality
+	* @return object $response
+	*/
+	public function build_version($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// short vars
+			$video_id		= $this->get_video_id();
+			$source_quality	= $this->get_source_quality_to_build($quality);
+
+		// AVObj
+			$AVObj = new AVObj($video_id, $source_quality);
+
+		// Ffmpeg
+			$Ffmpeg				= new Ffmpeg();
+			$setting_name		= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
+			$command_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
+
+		// response
+			$response->result			= true;
+			$response->msg				= 'Building av file in background';
+			$response->command_response	= $command_response;
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'NEW VERSION',
+				logger::INFO,
+				$this->tipo,
+				NULL,
+				[
+					'msg'				=> 'Generated av file',
+					'tipo'				=> $this->tipo,
+					'parent'			=> $this->section_id,
+					'top_id'			=> TOP_ID ?? null,
+					'top_tipo'			=> TOP_TIPO ?? null,
+					'video_id'			=> $video_id,
+					'quality'			=> $quality,
+					'source_quality'	=> $source_quality
+				]
+			);
+
+		return $response;
+	}//end build_version
+
+
+
+	/**
+	* CONFORM_HEADERS
+	* Creates a new version from original in given quality rebuilding headers
+	* @param string $quality
+	* @return object $response
+	*/
+	public function conform_headers($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// short vars
+			$video_id = $this->get_video_id();
+
+		// AVObj
+			$AVObj = new AVObj($video_id, $quality);
+
+		// Ffmpeg
+			$Ffmpeg				= new Ffmpeg();
+			$command_response	= $Ffmpeg->conform_header($AVObj);
+
+		// response
+			$response->result			= true;
+			$response->msg				= 'Rebuilding av file headers in background';
+			$response->command_response	= $command_response;
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'NEW VERSION',
+				logger::INFO,
+				$this->tipo,
+				NULL,
+				[
+					'msg'		=> 'conform_header av file',
+					'tipo'		=> $this->tipo,
+					'parent'	=> $this->section_id,
+					'top_id'	=> TOP_ID ?? null,
+					'top_tipo'	=> TOP_TIPO ?? null,
+					'video_id'	=> $video_id,
+					'quality'	=> $quality
+				]
+			);
+				dump($response, ' response ++ '.to_string());
+
+		return $response;
+	}//end conform_headers
 
 
 

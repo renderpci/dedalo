@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -36,6 +36,7 @@ export const component_av = function(){
 	this.tools
 
 	this.video
+	this.quality
 
 	this.fragment = null
 
@@ -72,6 +73,29 @@ export const component_av = function(){
 	component_av.prototype.search				= render_edit_component_av.prototype.search
 	component_av.prototype.player				= render_player_component_av.prototype.player
 	component_av.prototype.change_mode			= component_common.prototype.change_mode
+
+
+
+/**
+* BUILD
+* Custom tool build
+*/
+	// component_av.prototype.build99 = async function(autoload=false) {
+
+	// 	const self = this
+
+	// 	// call generic common tool build
+	// 		const common_build = await common.prototype.build.call(this, autoload);
+
+	// 	// quality. Prevents to be overwrited on rebuild from fresh context
+	// 	// (!) To refresh the component in a different quality, set instance.quality and refresh()
+	// 		self.quality = self.quality || self.context.quality
+
+
+	// 		console.log("tool av versions self:",self);
+
+	// 	return common_build
+	// };//end build_custom
 
 
 
