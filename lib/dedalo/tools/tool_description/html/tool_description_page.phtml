@@ -25,12 +25,12 @@
 			});
 
 			$html .= '<div class="section_group_container container_'.$section_group_tipo.' wrap_section_group_'.$section_group_tipo.'">';
-				
-				foreach ($sg_ar_components as $key => $current_element) {	
-					
+
+				foreach ($sg_ar_components as $key => $current_element) {
+
 					$current_component  = $current_element->component;
 					$current_tipo 		= $current_component->get_tipo();
-	
+
 					# Skip propiedades defined skip_components
 					if (in_array($current_tipo, $skip_components)) {
 						continue;
@@ -41,8 +41,8 @@
 						}
 						$current_component->context->skip_components = $skip_components;
 					}
-						
-					$current_component->set_modo('edit'); // $tool_name					
+
+					$current_component->set_modo('edit'); // $tool_name
 
 					$current_component_dato = $current_component->get_dato();
 						#dump($current_component_dato, '$current_component_dato ++ '.to_string());
@@ -50,26 +50,26 @@
 						$pseudo_locator_dato = $current_component_dato[0]->section_tipo .'_'. $current_component_dato[0]->section_id;
 					}else{
 						$pseudo_locator_dato = $key;
-					}					
-										
+					}
+
 					#if (in_array($pseudo_locator_dato, $ar_used_values)) {
-						
+
 					#	$value  = "Opss. Target component value duplicate found! <div class=\"notes\">" .to_string($current_component_dato[0])."</div>";
 					#	$value .= "Info: <i>".$current_component->get_label()."</i> value in <i>".$section_label."</i>";
 					#	$value .= "<br><h5><a href=\"".DEDALO_LIB_BASE_URL."/main/?t=$section_tipo&id=$section_id\" target=\"_blank\">Go to section: ".$section_label."</a></h5>";
-					
-					#}else{					
+
+					#}else{
 
 						$value = $current_component->get_html();
 					#}
 
-					#$ar_used_values[] = $pseudo_locator_dato; 
+					#$ar_used_values[] = $pseudo_locator_dato;
 
 					#
 					# Component wrap
 					$html .= '<div class="component_container container_'.$current_tipo.'">';
 					$html .= $value;
-					
+
 					# look_inside
 					$look_inside = isset($current_element->component->propiedades->look_inside) ? (bool)$current_element->component->propiedades->look_inside : false;
 					# Iterate relationable components too when look_inside is true
@@ -79,9 +79,9 @@
 						# INDIRECT COMPONENTS
 						$ar_related_component_tipo = common::get_ar_related_by_model('component_',$current_tipo,false);
 						foreach ((array)$current_component_dato as $current_locator) {
-											
+
 							foreach ($ar_related_component_tipo as $current_component_tipo) {
-								
+
 								# Skip propiedades defined skip_components
 								if (in_array($current_component_tipo, $skip_components)) {
 									continue;
@@ -98,13 +98,13 @@
 																						 DEDALO_DATA_LANG,
 																						 $current_section_tipo);
 
-								$value = $current_component->get_html();								
-								
+								$value = $current_component->get_html();
+
 								$html .= '<div class="component_container container_look_inside container_'.$current_component_tipo.'">';
 								$html .= $value;
 								$html .= '</div>';
 							}
-						}						
+						}
 					}//end if( true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) )
 
 					$html .= '</div>';
@@ -115,7 +115,7 @@
 		#$html .= '</div>';//end container_rigth
 
 
-		
+
 	$html .= '</div>'; //<!-- /wrap_tool_description_page -->"; //page body wrap
 
 
@@ -124,5 +124,6 @@
 
 
 
-	print $html;		
-?>
+	echo $html;
+
+
