@@ -1242,7 +1242,7 @@
 
 
 	Valencia 26-03-2018 4.8.3c20
-		search2 : Added operators to relationable components (radio_button, select, etc.)
+		search2 : Added operators to relation-able components (radio_button, select, etc.)
 
 
 	Valencia 28-03-2018 4.8.4
@@ -1363,7 +1363,7 @@
 	Valencia 13-07-2018 4.9.6
 		search_development2 : fixed issue with window subquery order in autocomplete searches
 		all components : added and review unified edit mode render html init in javascript
-						 minor js ecma6 code unifications
+						 minor js ecma6 code unification
 		component_check_box : fixed issue when is not available js class in new records when in dataframe mode (uncertainly)
 		inspector : changed div to static mode and remove js for maintain vertical position
 		tool_indexation : delete_tag : fixed bug when delete tag with indexations not delete indexation locator
@@ -1479,7 +1479,7 @@
 
 
 	Valencia 08-01-2019 5.1.4
-		search_development2 : Changed sequential insert relations sql in propagate_component_dato_to_relations_table to múltiple insert for speed
+		search_development2 : Changed sequential insert relations sql in propagate_component_dato_to_relations_table to multiple insert for speed
 
 
 	Valencia 17-01-2019 5.1.9
@@ -1605,7 +1605,7 @@
 
 
 	Valencia 18-09-2019 5.4.84
-		Fix search error on having searches (left join keys are more reliables now)
+		Fix search error on having searches (left join keys are more reliable now)
 
 
 	Valencia 23-09-2019 5.4.88
@@ -1747,7 +1747,7 @@
 
 
 	Valencia 18-05-2020 5.5.55
-		Added class.process_result.php as auxiliar class to search than allow post process results
+		Added class.process_result.php as auxiliary class to search than allow post process results
 
 
 	Valencia 19-05-2020 5.5.56
@@ -2353,9 +2353,9 @@
 		Removed web_data sanitize $sql_options->sql_filter (incompatible with some configurations)
 		03-05-2021
 		Fixed component portal buttons issue within tool time machine
-		Fixed Ontology css error when non transtaled terms are not displayed as italic font
+		Fixed Ontology css error when non translated terms are not displayed as italic font
 		05-05-2021
-		Add mandatory style to autocompete
+		Add mandatory style to autocomplete
 		Change the css of the mandatory style
 		Added tool_time_machine notes to make user annotations about the data changes
 		Added component_number 'in_column' mode to search as section_id is doing now
@@ -2380,7 +2380,7 @@
 		09-05-2021
 		Added php lib 'less_php' to build structure css file. Replaces leafo.lessphp
 		Updated .gitignore file to allow sync lib 'less_php'
-		Changed class css BUILD_STRUCTURE_CSS mothod to use new lib php_less
+		Changed class css BUILD_STRUCTURE_CSS method to use new lib php_less
 		Fixed refresh issues on delete and create time machine notes
 		10-05-2021
 		Fixed css an appearance issues in inspector and component history / tool time machine
@@ -2396,7 +2396,7 @@
 		Optimized order results moving null values at end (class search_development)
 		Improved search order to move blank values to the end
 		Added search get_query_path component_portal and select_lang path resolution.
-		Now, component_portal can be configurated to use a specific related component in search tasks: 'propiedades->order_component_tipo'
+		Now, component_portal can be configured to use a specific related component in search tasks: 'propiedades->order_component_tipo'
 		Update the pdf filename removing lang
 		Added updates v582 SQL_update
 
@@ -2634,6 +2634,10 @@
 		Added tool_import_dedalo_csv bad JSON notification on preview list
 		Fixed missing encoding value in trigger.tool_export.php -> export_data method
 		Fixed bug on tool_export when some double quote values was not properly escaped, generating JSON format errors on import. Now individual lang values quotes are normalized and escaped before create the csv string
+		10-02-2022
+		Fixed issue in tool_description where where mce editor was not available
+		Added column 'death_context' in custom search global (class.diffusion_sql and class.web_data)
+
 
 
 	[/HISTORY]
@@ -2665,7 +2669,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '02-02-2022T17:26:03');
+	define('DEDALO_BUILD'	, '10-02-2022T10:34:21');
 
 
 	/*
