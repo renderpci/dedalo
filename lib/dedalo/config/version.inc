@@ -2637,7 +2637,7 @@
 		10-02-2022
 		Fixed issue in tool_description where where mce editor was not available
 		Added column 'death_context' in custom search global (class.diffusion_sql and class.web_data)
-
+		Added column 'buried_type' in custom search global (class.diffusion_sql and class.web_data)
 
 
 	[/HISTORY]
@@ -2669,7 +2669,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-02-2022T10:34:21');
+	define('DEDALO_BUILD'	, '10-02-2022T11:15:52');
 
 
 	/*
