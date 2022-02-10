@@ -4626,12 +4626,8 @@ class web_data {
 				if (!empty($json_data->filters->gender)) {
 					$ar_filter[] = 'gender = '. (int)$json_data->filters->gender;
 				}
-				// death_context. added 10-02-2022
-				if (!empty($json_data->filters->death_context)) {
-					$ar_filter[] = 'death_context = '. (int)$json_data->filters->death_context;
-				}
-				// (!) Remember to add filters too in diffusion_mysql::save_global_search_data
 
+				// (!) Remember to add filters too in diffusion_mysql::save_global_search_data
 
 				// Added 09-12-2021. Is the same as above but in bulk mode
 					foreach ([
@@ -4645,7 +4641,9 @@ class web_data {
 						'intervention_types'		=> 'text_array', // like ["1"]
 						'result'					=> 'text_array', // like ["1"]
 						'graves_genders'			=> 'text_array', // like ["1","2"]
-						'ages'						=> 'text_array'  // like ["1","2"]
+						'ages'						=> 'text_array',  // like ["1","2"]
+						'death_context'				=> 'text_array',  // like ["1","2"] added 10-02-2022
+						'buried_type'				=> 'text_array'  // like ["1","2"] added 10-02-2022
 					] as $_cname => $_ctype) {
 
 						// skip empty columns

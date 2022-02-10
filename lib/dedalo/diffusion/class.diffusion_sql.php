@@ -1829,7 +1829,8 @@ class diffusion_sql extends diffusion  {
 					'graves_genders',
 					'ages',
 					// added 10-02-2022
-					'death_context'
+					'death_context',
+					'buried_type'
 				];
 
 			$fields_array = [];
