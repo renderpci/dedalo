@@ -210,20 +210,16 @@ class component_media_common extends component_common {
 					$file_size	= ($file_exist===true)
 						? (function() use($path) {
 							try {
-								$size		= @filesize($path);
-								$size_kb	= round($size / 1024);
-								$file_size	= ($size_kb <= 1024)
-									? $size_kb . ' KB'
-									: round($size_kb / 1024, 2) . ' MB';
+								$size = @filesize($path);
 							} catch (Exception $e) {
 								trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
 							}
-							return $file_size ?? null;
+							return $size ?? null; // in bytes
 						  })()
 						: null;
 
 				// file_url
-					$file_url	= ($file_exist===true) //  && $quality!=='original'
+					$file_url = ($file_exist===true) //  && $quality!=='original'
 						? $this->get_url($quality)
 						: null;
 
@@ -252,6 +248,83 @@ class component_media_common extends component_common {
 		return $quality;
 	}//end get_quality
 
+
+
+	/**
+	* DELETE_FILE
+	* Remove quality version moving the file to a deleted files dir
+	* @see component_image->remove_component_media_files
+	*
+	* @return object $response
+	*/
+	public function delete_file($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// remove_component_media_files returns bool value
+		$result = $this->remove_component_media_files([$quality]);
+		if ($result===true) {
+
+			// save To update valor_list
+				$this->Save();
+
+			$response->result	= true;
+			$response->msg		= 'File deleted successfully. ' . $quality;
+		}
+
+
+		return $response;
+	}//end delete_file
+
+
+
+	/**
+	* REMOVE_COMPONENT_MEDIA_FILES
+	* "Remove" (rename and move files to deleted folder) all media file vinculated to current component (all quality versions)
+	* Is triggered wen section tha contain media elements is deleted
+	* @see section:remove_section_media_files
+	*/
+	public function remove_component_media_files( $ar_quality=[] ) {
+
+		$date=date("Y-m-d_Hi");
+
+		// ar_quality
+			if (empty($ar_quality)) {
+				$ar_quality = $this->get_ar_quality();
+			}
+
+		// files remove
+			foreach ($ar_quality as $current_quality) {
+
+				// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
+					$media_path = $this->get_path($current_quality);
+					if (!file_exists($media_path)) continue; # Skip
+
+				// delete dir
+					$folder_path_del = $this->get_target_dir() . 'deleted';
+					if( !is_dir($folder_path_del) ) {
+						if( !mkdir($folder_path_del, 0777,true) ) {
+							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
+							return false;
+						}
+					}
+
+				// move/rename file
+					$file_name			= $this->get_id();
+					$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $this->get_extension();
+					if( !rename($media_path, $media_path_moved) ) {
+						trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
+						return false;
+					}
+
+				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+			}//end foreach
+
+
+		return true;
+	}//end remove_component_media_files
 
 
 

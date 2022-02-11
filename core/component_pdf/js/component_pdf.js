@@ -31,6 +31,7 @@ export const component_pdf = function(){
 	this.node
 
 	this.tools
+	this.quality
 
 	this.file_name
 	this.file_dir

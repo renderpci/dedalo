@@ -34,7 +34,7 @@ class tool_pdf_extractor extends tool_common {
 														 'list',
 														 DEDALO_DATA_NOLAN,
 														 $component_options->section_tipo);
-			$pdf_path = $component->get_pdf_path();
+			$pdf_path = $component->get_path();
 
 		// pdf_path error on missing properties
 			if (empty($pdf_path) || !file_exists($pdf_path)) {

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -31,6 +31,7 @@ export const component_svg = function(){
 	this.node
 
 	this.tools
+	this.quality
 
 	this.file_name
 	this.file_dir
@@ -47,7 +48,7 @@ export const component_svg = function(){
 // prototypes assign
 	// lifecycle
 	component_svg.prototype.init				= component_common.prototype.init
-	//component_svg.prototype.build				= component_common.prototype.build
+	component_svg.prototype.build				= component_common.prototype.build
 	component_svg.prototype.render				= common.prototype.render
 	component_svg.prototype.refresh				= common.prototype.refresh
 	component_svg.prototype.destroy				= common.prototype.destroy
@@ -67,23 +68,22 @@ export const component_svg = function(){
 
 
 
-
 /**
 * BUILD
 */
-component_svg.prototype.build = async function(autoload=false) {
+	// component_svg.prototype.build = async function(autoload=false) {
 
-	const self = this
+	// 	const self = this
 
-	// call generic component commom build
-		const common_build = component_common.prototype.build.call(this, autoload);
+	// 	// call generic component commom build
+	// 		const common_build = component_common.prototype.build.call(this, autoload);
 
-	// fix useful vars
-		self.allowed_extensions		= self.context.allowed_extensions
-		self.default_target_quality	= self.context.default_target_quality
+	// 	// fix useful vars
+	// 		self.allowed_extensions		= self.context.allowed_extensions
+	// 		self.default_target_quality	= self.context.default_target_quality
 
 
-	return common_build
-};//end build_custom
+	// 	return common_build
+	// };//end build_custom
 
 

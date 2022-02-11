@@ -16,26 +16,27 @@
 
 export const component_image = function(){
 
-	this.id				= null
+	this.id
 
 	// element properties declare
-	this.model			= null
-	this.tipo			= null
-	this.section_tipo	= null
-	this.section_id		= null
-	this.mode			= null
-	this.lang			= null
+	this.model
+	this.tipo
+	this.section_tipo
+	this.section_id
+	this.mode
+	this.lang
 
-	this.section_lang	= null
-	this.context		= null
-	this.data			= null
-	this.parent			= null
-	this.node			= null
+	this.section_lang
+	this.context
+	this.data
+	this.parent
+	this.node
 
-	this.tools			= null
+	this.tools
+	this.quality
 
-	this.file_name		= null
-	this.file_dir		= null
+	this.file_name
+	this.file_dir
 
 
 	return true

@@ -147,7 +147,7 @@ class tools_register {
 
 		// session. Remove previous stored data in session
 			unset($_SESSION['dedalo']['registered_tools']);
-
+			unset($_SESSION['dedalo']['tools']); // cache of already calculated tools
 
 		// debug
 			if(SHOW_DEBUG===true) {

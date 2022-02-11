@@ -121,25 +121,13 @@ const get_content_data_edit = function(self) {
 	// urls
 		// posterframe
 			const posterframe_url = self.data.posterframe_url
-		// media
-			// const video_url = self.context.quality!==self.context.default_quality
-			// 	? (()=>{
-			// 		const file_info	= self.data.datalist.find(el => el.quality===self.context.quality)
-			// 		const url		= file_info
-			// 			? file_info.url
-			// 			: null
-			// 		return url
-			// 	  })()
-			// 	: self.data.video_url
 		// media url from data.datalist based on selected context quality
-			const video_url = (()=>{
-				const file_info	= self.data.datalist.find(el => el.quality===quality)
-				const url		= file_info
-					? file_info.url
-					: null
-				return url
-			})()
-			console.log("video_url:", video_url, quality, self.data.datalist);
+			const quality	= self.quality || self.context.quality
+			const datalist	= self.data.datalist
+			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+			const video_url	= file_info
+				? file_info.url
+				: null
 
 	// build_video_node
 		const build_video_node = function() {
@@ -166,11 +154,18 @@ const get_content_data_edit = function(self) {
 			// append the video node to the instance
 				self.video = video
 				video_container.appendChild(video)
+
+			// event
+				// video.addEventListener('canplay', fn_canplay)
+				// function fn_canplay() {
+				// 	// self.main_component.video.removeEventListener('canplay', fn_play);
+				// 	video.play()
+				// }
 		}
 
-	if (video_url) {
-
-		// set video node only when it is in DOM (to save browser resources)
+	// observers. Renders video node only when is vissible
+		if (video_url) {
+			// observer. Set video node only when it is in DOM (to save browser resources)
 			const observer = new IntersectionObserver(function(entries) {
 				const entry = entries[1] || entries[0]
 				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
@@ -179,7 +174,7 @@ const get_content_data_edit = function(self) {
 				}
 			}, { threshold: [0] });
 			observer.observe(video_container);
-	}
+		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)

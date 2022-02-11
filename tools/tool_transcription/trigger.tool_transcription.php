@@ -123,7 +123,7 @@ function pdf_automatic_transcription($json_data) {
 													 "edit",
 													 DEDALO_DATA_LANG,
 													 $section_tipo);
-	$path_pdf 		= $component_pdf->get_pdf_path();
+	$path_pdf 		= $component_pdf->get_path();
 
 	#
 	# FILE TEXT FROM PDF
