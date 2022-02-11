@@ -9,6 +9,8 @@ class component_svg extends component_media_common {
 
 	public $quality;
 
+
+
 	/**
 	* GET VALOR
 	* LIST:

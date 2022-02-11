@@ -34,7 +34,6 @@ export const component_av = function(){
 	this.node
 
 	this.tools
-
 	this.video
 	this.quality
 

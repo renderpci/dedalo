@@ -44,7 +44,7 @@ class tools_register {
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || $base_name==='tool_dummy' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1 ) {
+					if ($basename==='tool_common' || $basename==='tool_dummy' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
 						debug_log(__METHOD__." Ignored dir  ".to_string($basename), logger::ERROR);
 						continue;
 					}
@@ -80,7 +80,7 @@ class tools_register {
 
 				}else{
 
-					debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
+					// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
 				}
 
 				// add info_objects_parsed

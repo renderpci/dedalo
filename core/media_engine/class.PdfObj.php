@@ -4,12 +4,12 @@ require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
 
 
 class PdfObj extends MediaObj {
-	
+
 	protected $pdf_id ;			# pdf_id
 	protected $quality ;
-		
-	function __construct($pdf_id, $quality=false, $aditional_path=false, $initial_media_path=false) {		
-		
+
+	function __construct($pdf_id, $quality=false, $aditional_path=false, $initial_media_path=false) {
+
 		# SPECIFIC VARS
 		$this->set_pdf_id($pdf_id);
 		$this->set_name($pdf_id);
@@ -17,12 +17,12 @@ class PdfObj extends MediaObj {
 
 		$this->initial_media_path = $initial_media_path; // No usada de momento
 		$this->aditional_path 	  = $aditional_path;
-		
+
 		parent::__construct($pdf_id);
 
 	}
-	
-	
+
+
 	# MANDATORY DEFINITIONS
 	protected function define_name(){
 		return $this->pdf_id ;

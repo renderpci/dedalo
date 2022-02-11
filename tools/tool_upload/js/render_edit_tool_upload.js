@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -103,7 +103,7 @@ export const get_content_data = function(self) {
 			id				: 'file_to_upload',
 			parent			: form
 		})
-		input.addEventListener("change", function(e){
+		input.addEventListener("change", function(){
 			const file = this.files[0]
 			self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 		})

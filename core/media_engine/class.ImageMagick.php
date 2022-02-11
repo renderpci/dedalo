@@ -220,9 +220,10 @@ class ImageMagick {
 
 
 		# convert 21900.jpg json: : Get info aboout source file Colorspace
-		#$colorspace_info  = shell_exec( MAGICK_PATH . "identify -verbose " .$source_file." | grep \"Colorspace:\" ");
-		$colorspace_info  = shell_exec( MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]" );	//-format "%[EXIF:DateTimeOriginal]"
-			#dump($colorspace_info,'colorspace_info');
+		#$colorspace_info	= MAGICK_PATH . "identify -verbose " .$source_file." | grep \"Colorspace:\" ";
+		$colorspace_command = MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]";
+		$colorspace_info	= shell_exec($colorspace_command);	//-format "%[EXIF:DateTimeOriginal]"
+			// dump($colorspace_info,'colorspace_info '.to_string($colorspace_command));
 
 		# Layers info
 		# get thumbail identification

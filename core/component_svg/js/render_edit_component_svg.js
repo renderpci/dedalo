@@ -10,7 +10,7 @@
 
 
 /**
-* render_edit_component_svg
+* RENDER_EDIT_COMPONENT_SVG
 * Manage the components logic and appearance in client side
 */
 export const render_edit_component_svg = function() {
@@ -29,7 +29,7 @@ render_edit_component_svg.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data

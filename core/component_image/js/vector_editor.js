@@ -1075,16 +1075,16 @@ vector_editor.prototype.load_layer = function(self, layer) {
 			const raster = project.activeLayer.firstChild
 			// subscription to the image quality change event
 			self.events_tokens.push(
-				event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
+				event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
 			)
-			function img_quality_change (img_src) {
+			function fn_img_quality_change (img_src) {
 				// get the current raster layer bounds and save it for apply later
 					const layer_bounds	= raster.layer.bounds
 				// change the value of the current raster element
 					raster.source = img_src
-					raster.onLoad = function(e) {
+					raster.onLoad = function() {
 						// new image ratio (1200 / new image height)
-						const ratio 			= self.img_view_height / raster.height
+						const ratio = self.img_view_height / raster.height
 						// scale the raster to new ratio
 						raster.setScaling(ratio)
 						// apply the original layer bounds to the new layer situation

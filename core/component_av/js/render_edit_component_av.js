@@ -3,9 +3,6 @@
 
 
 
-// provisional
-	// import * as instances from '../../common/js/instances.js'
-
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
@@ -32,7 +29,7 @@ render_edit_component_av.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -111,11 +108,6 @@ render_edit_component_av.prototype.edit = async function(options) {
 * @return DOM node content_data
 */
 const get_content_data_edit = function(self) {
-
-	// fix non value scenarios
-		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
-	const quality = self.quality || self.context.quality
 
 	const fragment = new DocumentFragment()
 

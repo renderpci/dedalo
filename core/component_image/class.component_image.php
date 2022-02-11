@@ -621,7 +621,7 @@ class component_image extends component_media_common {
 	* CONVERT_QUALITY
 	* @return bool
 	*/
-	public function convert_quality( $source_quality, $target_quality ) {
+	public function convert_quality($source_quality, $target_quality) {
 
 		// invalid targets check
 			if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
@@ -1270,7 +1270,7 @@ class component_image extends component_media_common {
 		if ($f_extension!==DEDALO_IMAGE_EXTENSION) {
 
 			# Create new file path
-			$new_file_path = substr($uploaded_file_path, 0, -(strlen($f_extension)) ).DEDALO_IMAGE_EXTENSION;
+			$new_file_path = substr($uploaded_file_path, 0, -(strlen($f_extension)) ) . DEDALO_IMAGE_EXTENSION;
 			# Convert
 			ImageMagick::convert($uploaded_file_path, $new_file_path);
 
