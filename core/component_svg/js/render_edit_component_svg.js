@@ -122,14 +122,15 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-
 	const fragment = new DocumentFragment()
 
-	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
+	// prevent show buttons inside a tool
+		if (self.caller && self.caller.type==='tool') {
+			return fragment
 		}
+
+	// buttons tools
+		ui.add_tools(self, fragment)
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
