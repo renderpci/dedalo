@@ -29,8 +29,8 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
-		const render_level = options.render_level || ''
+	// options
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -125,8 +125,7 @@ const add_events = function(self, wrapper) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const value				= self.data.value
-		// const is_inside_tool	= self.is_inside_tool
+		const value = self.data.value
 
 	const fragment = new DocumentFragment()
 

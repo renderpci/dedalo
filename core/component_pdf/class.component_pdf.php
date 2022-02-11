@@ -20,6 +20,7 @@ class component_pdf extends component_media_common {
 	public $PdfObj ; # Instance of PdfObj with current data
 
 
+
 	# COMPONENT_PDF COSNTRUCT
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
@@ -80,6 +81,7 @@ class component_pdf extends component_media_common {
 	}//end Save
 
 
+
 	/**
 	* GET_ADITIONAL_PATH
 	* Calculate image aditional path from 'properties' json config.
@@ -131,7 +133,8 @@ class component_pdf extends component_media_common {
 		}
 
 		return $this->aditional_path = $ar_aditional_path[$this->pdf_id];
-	}
+	}//end get_aditional_path
+
 
 
 	/**
@@ -153,14 +156,18 @@ class component_pdf extends component_media_common {
 			$this->initial_media_path = false;
 		}
 		return $this->initial_media_path;
-	}
+	}//end get_initial_media_path
+
 
 
 	# GET DATO : Format
 	public function get_dato() {
+
 		$dato = parent::get_dato();
+
 		return $dato;
-	}
+	}//end get_dato
+
 
 
 	# SET_DATO
@@ -168,6 +175,7 @@ class component_pdf extends component_media_common {
 
 		parent::set_dato( $dato );
 	}//end set_dato
+
 
 
 	/**
@@ -181,6 +189,7 @@ class component_pdf extends component_media_common {
 	}//end get_valor
 
 
+
 	/**
 	* GET_ID
 	* Alias of get_pdf_id
@@ -189,6 +198,7 @@ class component_pdf extends component_media_common {
 
 		return $this->get_pdf_id();
 	}//end get_id
+
 
 
 	/**
@@ -250,7 +260,8 @@ class component_pdf extends component_media_common {
 
 		#return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();
-	}// end get_target_dir
+	}//end get_target_dir
+
 
 
 	/**
@@ -342,7 +353,8 @@ class component_pdf extends component_media_common {
 		$pdf_id 	= $this->get_pdf_id();
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
 		return $PdfObj->get_size();
-	}
+	}//end get_pdf_size
+
 
 
 	/**
@@ -356,7 +368,7 @@ class component_pdf extends component_media_common {
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
 
 		return $PdfObj->get_file_exists();
-	}
+	}//end get_file_exists
 
 
 

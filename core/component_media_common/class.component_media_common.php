@@ -187,6 +187,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_FILES_INFO
 	* Get file info for every quality
+	* Used as 'datalist' in component data API response
 	* @return array $files_info
 	*/
 	public function get_files_info() {

@@ -560,7 +560,6 @@ const render_project_block = function(self) {
 			expose_callback		: expose
 		})
 		function collapse() {
-			console.log("collapsed project:", this);
 			project_head.classList.remove('up')
 		}
 		function expose() {

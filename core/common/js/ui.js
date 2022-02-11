@@ -697,6 +697,8 @@ export const ui = {
 		*/
 		add_image_fallback : (img_node) => {
 
+			img_node.addEventListener("error", change_src, true)
+
 			function change_src(item) {
 
 				// remove onerror listener to avoid infinite loop (!)
@@ -707,8 +709,6 @@ export const ui = {
 
 				return true
 			}
-
-			img_node.addEventListener("error", change_src, true)
 
 
 			return true

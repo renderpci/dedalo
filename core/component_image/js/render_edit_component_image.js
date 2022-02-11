@@ -30,7 +30,7 @@ render_edit_component_image.prototype.edit = async function(options) {
 	const self = this
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data_edit(self)
