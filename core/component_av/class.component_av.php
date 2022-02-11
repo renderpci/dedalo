@@ -611,68 +611,76 @@ class component_av extends component_media_common {
 
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file vinculated to current component (all quality versions)
-	* Is triggered wen section tha contain media elements is deleted
+	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
+	* Is triggered wen section that contains media elements is deleted
 	* @see section:remove_section_media_files
 	*/
-	public function remove_component_media_files() {
+	public function remove_component_media_files($ar_quality=[], $remove_posterframe=true) {
 
 		$date=date("Y-m-d_Hi");
 
-		#
-		# AV remove
-		$ar_quality = (array)unserialize(DEDALO_AV_AR_QUALITY);
-		foreach ($ar_quality as $current_quality) {
-			# media_path
-			$media_path = $this->get_video_path($current_quality);
-			if(SHOW_DEBUG===true) {
-				#dump($media_path, ' media_path $current_quality:'.$current_quality);
-			}
-			if (!file_exists($media_path)) continue; # Skip
-
-			# move / rename file
-			$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $current_quality . '/deleted';
-
-			# delete folder exists ?
-			if( !is_dir($folder_path_del) ) {
-			$create_dir 	= mkdir($folder_path_del, 0777,true);
-			if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
+		// ar_quality
+			if (empty($ar_quality)) {
+				$ar_quality = $this->get_ar_quality();
 			}
 
-			$reelID 			= $this->get_video_id();
-			$media_path_moved 	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_EXTENSION;
-			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+		// files remove
+			foreach ($ar_quality as $current_quality) {
 
-			if(SHOW_DEBUG===true) {
-				$msg=__METHOD__." Moved file \n$media_path to \n$media_path_moved";
-				debug_log($msg);
-				#dump($msg, ' msg');
-			}
-		}#end foreach ($ar_quality as $current_quality)
+				// media_path
+					$media_path = $this->get_video_path($current_quality);
+					if (!file_exists($media_path)) continue; # Skip
 
-		#
-		# Posterframe remove
-		$media_path = $this->get_posterframe_path();
-		if (file_exists($media_path)) {
-			# move / rename file
-			$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/deleted';
+				// delete dir
+					$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $current_quality . '/deleted';
+					if( !is_dir($folder_path_del) ) {
+						$create_dir 	= mkdir($folder_path_del, 0777,true);
+						if(!$create_dir) {
+							trigger_error(" Error on read or create directory \"deleted\". Permission denied.");
+							return false;
+						}
+					}
 
-			# delete folder exists ?
-			if( !is_dir($folder_path_del) ) {
-			$create_dir 	= mkdir($folder_path_del, 0777,true);
-			if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
-			}
+				// move/rename file
+					$reelID				= $this->get_video_id();
+					$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_EXTENSION;
+					if( !rename($media_path, $media_path_moved) ) {
+						trigger_error(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+						return false;
+					}
 
-			$reelID 			= $this->get_video_id();
-			$media_path_moved 	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
-			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
+			}//end foreach ($ar_quality as $current_quality)
 
-			if(SHOW_DEBUG===true) {
-				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-				debug_log($msg);
-				#dump($msg, ' msg');
-			}
-		}
+
+		// posterframe remove (default is true)
+			if ($remove_posterframe===true) {
+
+				$media_path = $this->get_posterframe_path();
+				if (file_exists($media_path)) {
+
+					// delete dir
+						$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/deleted';
+						if( !is_dir($folder_path_del) ) {
+							$create_dir = mkdir($folder_path_del, 0777,true);
+							if(!$create_dir) {
+								trigger_error("Error on read or create directory \"deleted\". Permission denied");
+								return false;
+							}
+						}
+
+					// move/rename file
+						$reelID				= $this->get_video_id();
+						$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+						if( !rename($media_path, $media_path_moved) ) {
+							trigger_error("Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+							return false;
+						}
+
+					debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
+				}
+			}//end if ($remove_posterframe===true)
+
 
 		return true;
 	}//end remove_component_media_files
@@ -906,7 +914,8 @@ class component_av extends component_media_common {
 	*/
 	public function get_preview_url() {
 
-		$preview_url = $this->get_posterframe_url($test_file=true, $absolute=false, $avoid_cache=false);
+		// $preview_url = $this->get_posterframe_url($test_file=true, $absolute=false, $avoid_cache=false);
+		$preview_url = $this->get_posterframe_url($test_file=false, $absolute=false, $avoid_cache=true);
 
 		return $preview_url;
 	}//end get_preview_url
@@ -1116,91 +1125,103 @@ class component_av extends component_media_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-		// short vars
-			$video_id			= $this->get_video_id();
-			$file_name			= $this->get_target_filename(); // ex. rsc15_rsc78_45.mp4
-			$folder_path_del	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/deleted';
+		// remove_component_media_files returns bool value
+		$result = $this->remove_component_media_files([$quality], $remove_posterframe=false);
+		if ($result===true) {
 
-		// file_path
-			$file_path = ($quality==='original')
-					? $this->get_original_file_path($quality)
-					: $this->get_path($quality);
+			// save To update valor_list
+				$this->Save();
 
-		if(!file_exists($file_path)) {
+			$response->result	= true;
+			$response->msg		= 'File deleted successfully. ' . $quality;
+		}
 
-			$response->msg .= PHP_EOL . 'File not found';
-			debug_log(__METHOD__." Error deleting file. File not found: ".to_string($file_path), logger::ERROR);
-		}else{
+		// DES
+			// // short vars
+			// 	$video_id			= $this->get_video_id();
+			// 	$file_name			= $this->get_target_filename(); // ex. rsc15_rsc78_45.mp4
+			// 	$folder_path_del	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/deleted';
 
-			try{
+			// // file_path
+			// 	$file_path = ($quality==='original')
+			// 			? $this->get_original_file_path($quality)
+			// 			: $this->get_path($quality);
 
-				// delete folder. Check exists
-					if( !is_dir($folder_path_del) ) {
-						$create_dir = mkdir($folder_path_del, 0777,true);
-						if(!$create_dir) {
-							$response->msg .= PHP_EOL . 'Error on read or create directory "deleted". Permission denied . The files are not deleted';
-							return $response;
-						}
-					}
+			// if(!file_exists($file_path)) {
 
-				// delete folder set permissions
-					$wantedPerms	= 0777;
-					$actualPerms	= fileperms($folder_path_del);
-					if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
+			// 	$response->msg .= PHP_EOL . 'File not found';
+			// 	debug_log(__METHOD__." Error deleting file. File not found: ".to_string($file_path), logger::ERROR);
+			// }else{
 
-				// move / rename file
-					$file_base_name	= pathinfo($file_path, PATHINFO_BASENAME); // Like rsc15_rsc78_45.mov._original
-					$file_ext		= pathinfo($file_path, PATHINFO_EXTENSION);// Like mov
-					$target_name	= $folder_path_del . "/$file_base_name" . '_deleted_' . date("Y-m-dHi") . '.' . $file_ext;
-					if(!rename($file_path, $target_name)){
-						$response->msg .= PHP_EOL . 'Error on move files to folder "deleted" . Permission denied . The files are not deleted';
-						return $response;
-					}
+			// 	try{
 
-				// delete temp sh file
-					$tmp_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$video_id.'.sh';
-					if(file_exists($tmp_file)) {
-						$del_sh = unlink($tmp_file);
-						if(!$del_sh) {
-							$response->msg .= PHP_EOL . 'Error on delete temp file . Temp file is not deleted';
-							return $response;
-						}
-					}
+			// 		// delete folder. Check exists
+			// 			if( !is_dir($folder_path_del) ) {
+			// 				$create_dir = mkdir($folder_path_del, 0777,true);
+			// 				if(!$create_dir) {
+			// 					$response->msg .= PHP_EOL . 'Error on read or create directory "deleted". Permission denied . The files are not deleted';
+			// 					return $response;
+			// 				}
+			// 			}
 
-				// delete posterframe if media deleted is quality default
-					if($quality===DEDALO_AV_QUALITY_DEFAULT) {
-						$poster_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$video_id}.jpg";
-						if(file_exists($poster_file)) {
-							unlink($poster_file);
-						}
-					}
+			// 		// delete folder set permissions
+			// 			$wantedPerms	= 0777;
+			// 			$actualPerms	= fileperms($folder_path_del);
+			// 			if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
 
-				// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-					logger::$obj['activity']->log_message(
-						'DELETE FILE',
-						logger::INFO,
-						$this->tipo,
-						NULL,
-						[
-							'msg'			=> 'Deleted av file (file is renamed and moved to delete folder)',
-							'tipo'			=> $this->tipo,
-							'section_tipo'	=> $this->section_tipo,
-							'section_id'	=> $this->section_id,
-							'top_id'		=> TOP_ID ?? null,
-							'top_tipo'		=> TOP_TIPO ?? null,
-							'video_id'		=> $video_id,
-							'quality'		=> $quality
-						]
-					);
+			// 		// move / rename file
+			// 			$file_base_name	= pathinfo($file_path, PATHINFO_BASENAME); // Like rsc15_rsc78_45.mov._original
+			// 			$file_ext		= pathinfo($file_path, PATHINFO_EXTENSION);// Like mov
+			// 			$target_name	= $folder_path_del . "/$file_base_name" . '_deleted_' . date("Y-m-dHi") . '.' . $file_ext;
+			// 			if(!rename($file_path, $target_name)){
+			// 				$response->msg .= PHP_EOL . 'Error on move files to folder "deleted" . Permission denied . The files are not deleted';
+			// 				return $response;
+			// 			}
 
-				// response OK
-					$response->result	= true;
-					$response->msg		= 'File deleted successfully. ' . $file_name;
+			// 		// delete temp sh file
+			// 			$tmp_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$video_id.'.sh';
+			// 			if(file_exists($tmp_file)) {
+			// 				$del_sh = unlink($tmp_file);
+			// 				if(!$del_sh) {
+			// 					$response->msg .= PHP_EOL . 'Error on delete temp file . Temp file is not deleted';
+			// 					return $response;
+			// 				}
+			// 			}
 
-			} catch (Exception $e) {
-				$response->msg .= PHP_EOL . $e->getMessage();
-			}
-		}//end if(!file_exists($file))
+			// 		// delete posterframe if media deleted is quality default
+			// 			if($quality===DEDALO_AV_QUALITY_DEFAULT) {
+			// 				$poster_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$video_id}.jpg";
+			// 				if(file_exists($poster_file)) {
+			// 					unlink($poster_file);
+			// 				}
+			// 			}
+
+			// 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			// 			logger::$obj['activity']->log_message(
+			// 				'DELETE FILE',
+			// 				logger::INFO,
+			// 				$this->tipo,
+			// 				NULL,
+			// 				[
+			// 					'msg'			=> 'Deleted av file (file is renamed and moved to delete folder)',
+			// 					'tipo'			=> $this->tipo,
+			// 					'section_tipo'	=> $this->section_tipo,
+			// 					'section_id'	=> $this->section_id,
+			// 					'top_id'		=> TOP_ID ?? null,
+			// 					'top_tipo'		=> TOP_TIPO ?? null,
+			// 					'video_id'		=> $video_id,
+			// 					'quality'		=> $quality
+			// 				]
+			// 			);
+
+			// 		// response OK
+			// 			$response->result	= true;
+			// 			$response->msg		= 'File deleted successfully. ' . $file_name;
+
+			// 	} catch (Exception $e) {
+			// 		$response->msg .= PHP_EOL . $e->getMessage();
+			// 	}
+			// }//end if(!file_exists($file))
 
 
 		return $response;
@@ -1221,7 +1242,7 @@ class component_av extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// short vars
-			$video_id		= $this->get_video_id();
+			$video_id		= $this->get_id();
 			$source_quality	= $this->get_source_quality_to_build($quality);
 
 		// AVObj

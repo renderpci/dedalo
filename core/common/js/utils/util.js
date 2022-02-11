@@ -175,4 +175,53 @@ export function open_window_with_post(url, data) {
 	document.body.removeChild(form);
 
 	return false;
-};//end
+};//end open_window_with_post
+
+
+
+/**
+* BYTES_FORMAT
+* Convert bytes to human readable text like '152 kB'
+* @param integer bytes
+* @return bool string | bool false
+*/
+export function bytes_format(bytes) {
+
+	if (!bytes || bytes<1) {
+		return false
+	}
+
+	const kb		= (bytes/1024)
+	const _locale	= 'en-US'
+
+	let result
+	switch (true) {
+
+		case (kb >= 1048576):
+			// Giga Bytes
+			const gb = (kb / 1048576).toLocaleString(_locale, {
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 2
+			})
+			result = `${gb} GB`
+			break;
+
+		case (kb >= 1024):
+			// Mega Bytes
+			const mb = (kb / 1024).toLocaleString(_locale, {
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 2
+			})
+			result = `${mb} MB`
+			break;
+
+		default:
+			// KBytes
+			const kb_round = Math.round(kb)
+			result = `${kb_round} KB`
+	}
+
+	return result
+};//end bytes_format
+
+

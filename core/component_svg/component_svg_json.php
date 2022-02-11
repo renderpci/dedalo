@@ -24,9 +24,12 @@
 
 				$current_context = $this->get_structure_context($permissions);
 
-				// allowed_extensions
-				$current_context->allowed_extensions = $this->get_allowed_extensions();
-				$current_context->default_target_quality = $this->get_original_quality();
+				// append additional info
+					$current_context->allowed_extensions		= $this->get_allowed_extensions();
+					$current_context->default_target_quality	= $this->get_original_quality();
+					$current_context->ar_quality				= $this->get_ar_quality(); // defined in config
+					$current_context->default_quality			= $this->get_default_quality();
+					$current_context->quality					= $this->get_quality(); // current instance quality
 
 				$context[] = $current_context;
 				break;
@@ -38,24 +41,49 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Available image files
-			$value = [];
+		// // Available image files
+		// 	$value = [];
 
-		$test_file = true;
+		// $test_file = true;
 
-		$svg_item = new stdClass();
-			$svg_item->url = $this->get_url(false, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
-			$svg_item->quality = DEDALO_SVG_QUALITY_DEFAULT;
+		// $svg_item = new stdClass();
+		// 	$svg_item->url = $this->get_url(false, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+		// 	$svg_item->quality = DEDALO_SVG_QUALITY_DEFAULT;
 
-		$value[] = $svg_item;
+		// $value[] = $svg_item;
+
+		// value as array always
+			$value = $this->get_dato();
+			if (!is_array($value)) {
+				$value = [$value];
+			}
+
+		// get the quality url of the available image files
+			switch ($modo) {
+				case 'edit':
+					$datalist = $this->get_files_info();
+					break;
+
+				case 'list':
+				default:
+					// files_info. For fast list we add directly the default image
+						$quality	= DEDALO_SVG_QUALITY_DEFAULT;
+						$url		= $this->get_url($quality, false, false, false);
+						$image_item = new stdClass();
+							$image_item->url		= $url;
+							$image_item->quality	= $quality;
+						$datalist = [$image_item];
+					break;
+			}
 
 		// data item
-		$item  = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
+			// item datalist
+			$item->datalist = $datalist;
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

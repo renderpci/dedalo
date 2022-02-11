@@ -59,14 +59,20 @@ render_edit_component_svg.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	// const is_inside_tool = self.is_inside_tool
-
 	const fragment = new DocumentFragment()
 
 	// value (array)
-		const value = self.data.value || []
+		// const value = self.data.value || []
 
-	// inputs container
+	// media url from data.datalist based on selected context quality
+		const quality	= self.quality || self.context.quality
+		const datalist	= self.data.datalist
+		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+		const url		= file_info
+			? file_info.url
+			: null
+
+	// ul inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'inputs_container',
@@ -74,11 +80,30 @@ const get_content_data_edit = function(self) {
 		})
 
 	// svg elements
-		const value_length = value.length
-		for (let i = 0; i < value_length; i++) {
-			const svg_element = get_svg_element(value[i])
-			inputs_container.appendChild(svg_element)
+		// const value_length = value.length
+		// for (let i = 0; i < value_length; i++) {
+		// 	const svg_element = get_svg_element(value[i])
+		// 	inputs_container.appendChild(svg_element)
+		// }
+
+	// svg item
+		if (url) {
+			// li
+				const li = ui.create_dom_element({
+					element_type	: 'li',
+					parent			: inputs_container
+				})
+
+			// image
+				const image = ui.create_dom_element({
+					element_type	: 'img',
+					class_name		: 'image svg_element',
+					src				: url,
+					parent			: li
+				})
+				image.setAttribute('tabindex', 0)
 		}
+
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -129,30 +154,36 @@ const get_buttons = (self) => {
 * @param object item_value
 * @return DOM node li
 */
-const get_svg_element = function(item_value) {
+	// const get_svg_element = function(item_value) {
 
-	const url = (typeof item_value==="undefined")
-		? DEDALO_CORE_URL + "/themes/icons/dedalo_icon_grey.svg"
-		: item_value.url
+	// 	const url = (typeof item_value==="undefined")
+	// 		? DEDALO_CORE_URL + "/themes/icons/dedalo_icon_grey.svg"
+	// 		: item_value.url
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
-		})
+	// 	// media url from data.datalist based on selected context quality
+	// 		// const quality	= self.quality || self.context.quality
+	// 		// const file_info	= self.data.datalist.find(el => el.quality===quality)
+	// 		// const url		= file_info
+	// 		// 	? file_info.url
+	// 		// 	: null
 
-	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			src				: url,
-			class_name		: 'image svg_element',
-			parent			: li
-		})
-		image.setAttribute("tabindex", 0)
-		ui.component.add_image_fallback(image)
-		// li.appendChild(image)
+	// 	// li
+	// 		const li = ui.create_dom_element({
+	// 			element_type : 'li'
+	// 		})
+
+	// 	// image
+	// 		const image = ui.create_dom_element({
+	// 			element_type	: "img",
+	// 			src				: url,
+	// 			class_name		: 'image svg_element',
+	// 			parent			: li
+	// 		})
+	// 		image.setAttribute("tabindex", 0)
+	// 		// ui.component.add_image_fallback(image)
 
 
-	return li
-};//end get_svg_element
+	// 	return li
+	// };//end get_svg_element
 
 

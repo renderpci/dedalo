@@ -613,7 +613,7 @@ export const ui = {
 							item_node.classList.add("active")
 						})
 
-					// fix nearby inspector overlaping
+					// fix nearby inspector overlapping
 						const el				= component.node[0]
 						const el_rect			= el.getBoundingClientRect();
 						// console.log("/// el el_rect:",el_rect);
@@ -621,7 +621,9 @@ export const ui = {
 						const inspector_rect	= inspector.getBoundingClientRect();
 						// console.log("/// inspector_rect:",inspector_rect);
 
-						if (el_rect.right > inspector_rect.left-20) {
+						if (inspector_rect.left > 50 // prevent affects responsive mobile view
+							&& el_rect.right > inspector_rect.left-20
+							) {
 							el.classList.add('inside')
 						}
 
@@ -998,6 +1000,19 @@ export const ui = {
 						inner_html		: label,
 						parent			: tool_header
 					})
+
+					// icon (optional)
+					if (context.icon) {
+						const icon = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button white', // gear
+							style : {
+								"-webkit-mask"	: "url('" +context.icon +"')",
+								"mask"			: "url('" +context.icon +"')"
+							}
+						})
+						component_label.prepend(icon)
+					}
 				}
 
 			// description

@@ -338,30 +338,30 @@ export const file_drag_hover = function(e) {
 /**
 * FILE_SELECT_HANDLER
 */
-export const file_select_handler = function(e) {
+	// export const file_select_handler = function(e) {
 
-	// cancel event and hover styling
-	file_drag_hover(e);
+	// 	// cancel event and hover styling
+	// 	file_drag_hover(e);
 
-	// fetch FileList object
-	const files = e.target.files || e.dataTransfer.files;
+	// 	// fetch FileList object
+	// 	const files = e.target.files || e.dataTransfer.files;
 
-	// process all File objects
-	for (let i = 0; i < files.length; i++) {
+	// 	// process all File objects
+	// 	for (let i = 0; i < files.length; i++) {
 
-		const file = files[i]
+	// 		const file = files[i]
 
-		// parse file info
-		// parse_local_file(file);
+	// 		// parse file info
+	// 		// parse_local_file(file);
 
-		// upload
-		self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
+	// 		// upload
+	// 		self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 
-		break; // only one is allowed
-	}
+	// 		break; // only one is allowed
+	// 	}
 
-	return true
-};//end file_select_handler
+	// 	return true
+	// };//end file_select_handler
 
 
 // Removed for the time being (!)

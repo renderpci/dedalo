@@ -110,11 +110,13 @@ class component_image extends component_media_common {
 
 		$dato = $this->dato;
 
-		foreach ($dato as $current_value) {
-			if(isset($current_value->svg_file_data)){
-				$svg_file_data = $current_value->svg_file_data;
-				$this->create_svg_file($svg_file_data);
-				unset($current_value->svg_file_data);
+		if (!empty($dato)) {
+			foreach ($dato as $current_value) {
+				if(isset($current_value->svg_file_data)){
+					$svg_file_data = $current_value->svg_file_data;
+					$this->create_svg_file($svg_file_data);
+					unset($current_value->svg_file_data);
+				}
 			}
 		}
 
@@ -234,7 +236,7 @@ class component_image extends component_media_common {
 	*/
 	public function get_valor() {
 
-		return $this->get_image_id() .'.'. DEDALO_IMAGE_EXTENSION;
+		return $this->get_image_id() .'.'. $this->get_extension();
 	}//end get_valor
 
 
@@ -1059,54 +1061,55 @@ class component_image extends component_media_common {
 	* Is triggered wen section tha contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
-	public function remove_component_media_files( $ar_quality=array() ) {
+	public function remove_component_media_files( $ar_quality=[] ) {
 
 		$date=date("Y-m-d_Hi");
 
-		#
-		# Image remove
-		if (empty($ar_quality)) {
-			$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
-		}
-		foreach ($ar_quality as $current_quality) {
-			# media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
-			$media_path = $this->get_image_path($current_quality);
-			if(SHOW_DEBUG===true) {
-				#dump($media_path, "DEBUG INFO ".__METHOD__.' media_path $current_quality:'.$current_quality." - ".$this->get_target_dir() );
-			}
-			if (!file_exists($media_path)) continue; # Skip
-
-			# move / rename file
-			$folder_path_del 	= $this->get_target_dir()  . 'deleted';
-
-			# delete folder exists ?
-			if( !is_dir($folder_path_del) ) {
-				if( !mkdir($folder_path_del, 0777,true) ) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
+		// ar_quality
+			if (empty($ar_quality)) {
+				$ar_quality = $this->get_ar_quality();
 			}
 
-			$image_name 		= $this->get_image_id();
-			$media_path_moved 	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . DEDALO_IMAGE_EXTENSION;
-			if( !rename($media_path, $media_path_moved) ) {
-				#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-				trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
-			}
-			debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+		// files remove
+			foreach ($ar_quality as $current_quality) {
 
-			// Move original files too (PNG,TIF,Etc.)
-			// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
-			$original_extension = $this->get_original( $current_quality );
-			$path_parts 		= pathinfo($media_path);
-			$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
-			#$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-			$original_file_moved= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-			if (file_exists($original_file)) {
-				if( !rename($original_file, $original_file_moved) ) {
-					#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-					trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
-				}
-			}
+				// media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
+					$media_path = $this->get_image_path($current_quality);
+					if (!file_exists($media_path)) continue; # Skip
 
-		}//end foreach
+				// delete dir
+					$folder_path_del = $this->get_target_dir()  . 'deleted';
+					if( !is_dir($folder_path_del) ) {
+						if( !mkdir($folder_path_del, 0777,true) ) {
+							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
+							return false;
+						}
+					}
+
+				// move/rename file
+					$image_name			= $this->get_image_id();
+					$media_path_moved	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . $this->get_extension();
+					if( !rename($media_path, $media_path_moved) ) {
+						trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
+						return false;
+					}
+
+				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+
+				// Move original files too (PNG,TIF,Etc.)
+				// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
+					$original_extension	= $this->get_original( $current_quality );
+					$path_parts			= pathinfo($media_path);
+					$original_file		= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
+					#$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+					$original_file_moved= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+					if (file_exists($original_file)) {
+						if( !rename($original_file, $original_file_moved) ) {
+							trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
+							return false;
+						}
+					}
+			}//end foreach
 
 		#
 		# Original image remove
@@ -1138,7 +1141,7 @@ class component_image extends component_media_common {
 			if(SHOW_DEBUG===true) {
 				#dump($folder_path_del, "folder_path_del current_quality:$current_quality - get_image_id:$image_id");
 			}
-			$file_pattern 	= $folder_path_del .'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
+			$file_pattern 	= $folder_path_del .'/'.$image_id .'_*.'. $this->get_extension();
 			$ar_files 		= glob($file_pattern);
 			if(SHOW_DEBUG===true) {
 				#dump($ar_files, ' ar_files');#continue;
@@ -1218,16 +1221,13 @@ class component_image extends component_media_common {
 	public function get_deleted_image( $quality ) {
 
 		# media_path
-		$media_path 	 = $this->get_image_path($quality);
-		$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-		$image_id 		 = $this->get_image_id();
+		$media_path			= $this->get_image_path($quality);
+		$folder_path_del	= pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
+		$image_id			= $this->get_image_id();
 
-		#$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'.$quality.'/deleted';
-		$file_pattern 	= $folder_path_del.'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
-		$ar_files 		= glob($file_pattern);
-		if(SHOW_DEBUG===true) {
-			#dump($ar_files, ' ar_files');#continue;
-		}
+		#$media_path		= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'.$quality.'/deleted';
+		$file_pattern		= $folder_path_del .'/'. $image_id .'_*.'. $this->get_extension();
+		$ar_files			= glob($file_pattern);
 		if (empty($ar_files)) {
 			debug_log(__METHOD__." No files were found for image_id:$image_id in quality:$quality. ".to_string(), logger::DEBUG);
 			return false;
@@ -1429,10 +1429,10 @@ class component_image extends component_media_common {
 	* GET_PREVIEW_URL
 	* @return string $url
 	*/
-	public function get_preview_url() {
+	public function get_preview_url($quality=DEDALO_IMAGE_QUALITY_DEFAULT) {
 
 		// $preview_url = $this->get_thumb_url();
-		$preview_url = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT, $test_file=true, $absolute=false, $default_add=false);
+		$preview_url = $component->get_image_url($quality, $test_file=false, $absolute=false, $default_add=false);
 
 		return $preview_url;
 	}//end get_preview_url
@@ -1568,7 +1568,7 @@ class component_image extends component_media_common {
 
 		$svg_data = file_get_contents($svg_file_path);
 
-		$img_file_name 	= $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+		$img_file_name 	= $image_id .'.'. $this->get_extension();
 		$img_file_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_IMAGE_QUALITY_DEFAULT . $aditional_path . '/' . $img_file_name;
 
 		$type = pathinfo($img_file_path, PATHINFO_EXTENSION);
@@ -1726,5 +1726,113 @@ class component_image extends component_media_common {
 
 
 
+	/**
+	* ROTATE
+	*	Rotates the given quality image file
+	* @param string $degrees
+	* 	0 to 360 (positive/negative)
+	* @return string $result
+	*
+	*/
+	public function rotate($degrees, $quality=null) {
 
-}//end class
+		$source = $this->get_path($quality);
+
+		$result = ImageMagick::rotate($source, $degrees);
+
+		return $result;
+	}//end rotate
+
+
+
+	/**
+	* DELETE_FILE
+	* Remove quality version moving the file to a deleted files dir
+	* @see component_image->remove_component_media_files
+	*
+	* @return object $response
+	*/
+	public function delete_file($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// remove_component_media_files returns bool value
+		$result = $this->remove_component_media_files([$quality]);
+		if ($result===true) {
+
+			// save To update valor_list
+				$this->Save();
+
+			$response->result	= true;
+			$response->msg		= 'File deleted successfully. ' . $quality;
+		}
+
+
+		return $response;
+	}//end delete_file
+
+
+
+	/**
+	* BUILD_VERSION
+	* Creates a new version using FFMEPG conversion using settings based on target quality
+	* @param string $quality
+	* @return object $response
+	*/
+	public function build_version($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// short vars
+			$image_id		= $this->get_id();
+			$source_quality	= $this->get_source_quality_to_build($quality);
+			$target_quality = $quality;
+
+		// convert. Returns boolean
+			$result = $this->convert_quality($source_quality, $target_quality);
+
+		// response
+			$response->result			= $result;
+			$response->msg				= 'Building av file in background';
+			$response->command_response	= null;
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'NEW VERSION',
+				logger::INFO,
+				$this->tipo,
+				NULL,
+				[
+					'msg'				=> 'Generated av file',
+					'tipo'				=> $this->tipo,
+					'parent'			=> $this->section_id,
+					'top_id'			=> TOP_ID ?? null,
+					'top_tipo'			=> TOP_TIPO ?? null,
+					'image_id'			=> $image_id,
+					'quality'			=> $quality,
+					'source_quality'	=> $source_quality
+				]
+			);
+
+		return $response;
+	}//end build_version
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_IMAGE_EXTENSION from config
+	*/
+	public function get_extension() {
+
+		return DEDALO_IMAGE_EXTENSION;
+	}//end get_extension
+
+
+
+
+}//end class component_image
