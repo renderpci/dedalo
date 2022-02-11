@@ -378,13 +378,31 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
+	.media {
+		@icon_name : 'media.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.rotate {
+		@icon_name : 'rotate.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+		&.right {
+			transform: scaleX(-1);
+		}
+	}
+	.repair {
+		@icon_name : 'repair.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
 
 
 // .contenteditable_buttons (used by content editable)
 	.contenteditable_buttons {
 		position: absolute;
-		top: -1.54em;
 		height: 1.5em;
+		top: -1.54em;
 		z-index: 9;
 		display: flex;
 		background-color: @color_grey_dark;
@@ -397,10 +415,10 @@
 
 			&:before {
 				content: " ";
-				width: 1em;
-				height: 1em;
 				background-size: contain;
 				background-repeat: no-repeat;
+				height: 1em;
+				width: 1em;
 				margin-right: 0.25em;
 				padding-right: 1em;
 				vertical-align: text-bottom;
