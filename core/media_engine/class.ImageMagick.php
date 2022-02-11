@@ -328,23 +328,52 @@ class ImageMagick {
 			$command	= MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
 			$output		= shell_exec($command);
 
+		// parse output
+			if (!empty($output)) {
 
-		$output		= trim($output);
-		$ar_lines	= explode("\n", $output);
-		foreach ($ar_lines as $key => $value) {
+				$output		= trim($output);
+				$ar_lines	= explode("\n", $output);
+				foreach ($ar_lines as $key => $value) {
 
-			$ar_part2	= explode(":", $value);
-			$layer_key	= $ar_part2[0];
+					$ar_part2	= explode(":", $value);
+					$layer_key	= $ar_part2[0];
 
-			$layer_type = ($tiff_format<=2 && $key>0)
-				? 'REDUCEDIMAGE'
-				: ($ar_part2[1] ?? null);
+					$layer_type = ($tiff_format<=2 && $key>0)
+						? 'REDUCEDIMAGE'
+						: ($ar_part2[1] ?? null);
 
-			$ar_layers[$layer_key] = $layer_type;
-		}
+					$ar_layers[$layer_key] = $layer_type;
+				}
+			}
 
 		return (array)$ar_layers;
 	}//end get_layers_file_info
+
+
+
+	/**
+	* ROTATE
+	* 	Rotate annd save source image to target (self or other)
+	* @param string $source
+	* @param string
+	* @return string $result
+	*/
+	public static function rotate($source, $degrees, $target=false) {
+
+		// fallback target to source (overwrite file)
+			$target = $target
+				? $target
+				: $source;
+
+		// command
+			$command	= MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
+			$result		= shell_exec($command);
+
+		debug_log(__METHOD__." Exec Command:  $command", logger::DEBUG);
+
+
+		return $result;
+	}//end rotate
 
 
 
