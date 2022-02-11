@@ -50,6 +50,7 @@ render_tool_media_versions.prototype.edit = async function(options) {
 		const header = wrapper.querySelector('.tool_header') // is created by ui.tool.build_wrapper_edit
 		const modal  = ui.attach_to_modal(header, wrapper, null)
 		modal.on_close = () => {
+			self.caller.refresh()
 			// when closing the modal, common destroy is called to remove tool and elements instances
 			self.destroy(true, true, true)
 		}
@@ -282,14 +283,12 @@ const get_line_file_exists = function(ar_quality, self) {
 						class_name		: 'button media',
 						parent			: file_info_node
 					})
-					button_file_av.addEventListener("click", function() {
+					button_file_av.addEventListener("click", async function() {
+						self.node[0].classList.add('loading')
 						// change component av quality and refresh
 						self.main_component.quality = quality
-						self.node[0].classList.add('loading')
-						self.main_component.refresh()
-						.then(function() {
-							self.node[0].classList.remove('loading')
-						})
+						await self.main_component.refresh()
+						self.node[0].classList.remove('loading')
 					})
 				}else{
 					// const extension = file_info.url.split(".").pop();
@@ -388,7 +387,7 @@ const get_line_file_upload = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
+				// const file_info = self.files_info.find(el => el.quality===quality)
 
 				// 'file_exist'
 				// 'file_size'
@@ -563,11 +562,11 @@ const get_line_file_delete = function(ar_quality, self) {
 					self.node[0].classList.add('loading')
 					// exec delete_file
 					const response = await self.delete_file(quality)
-					self.node[0].classList.remove('loading')
 					if (response===true) {
 						// self.main_component_quality = quality
 						self.refresh()
 					}
+					self.node[0].classList.remove('loading')
 				})
 			}
 		}
@@ -614,7 +613,6 @@ const get_line_build_version = function(ar_quality, self) {
 			})
 
 			if (quality!=='original') {
-
 				const button_build_version = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button gear',
@@ -624,7 +622,6 @@ const get_line_build_version = function(ar_quality, self) {
 					self.node[0].classList.add('loading')
 					// exec build_version
 					const result = await self.build_version(quality)
-					self.node[0].classList.remove('loading')
 					if (result===true) {
 
 						// building
@@ -652,6 +649,7 @@ const get_line_build_version = function(ar_quality, self) {
 						}
 						check_file()
 					}
+					self.node[0].classList.remove('loading')
 				})
 			}
 		}//end for (let i = 0; i < ar_quality_length; i++)
@@ -709,12 +707,11 @@ const get_line_conform_headers = function(ar_quality, self) {
 					self.node[0].classList.add('loading')
 					// exec conform_headers
 					const result = await self.conform_headers(quality)
-					self.node[0].classList.remove('loading')
-
 					if (result===true) {
 						self.main_component_quality = quality
 						self.refresh()
 					}
+					self.node[0].classList.remove('loading')
 				})
 			}
 		}//end for (let i = 0; i < ar_quality_length; i++)
@@ -772,13 +769,12 @@ const get_line_rotate = function(ar_quality, self) {
 				button_rotate_left.addEventListener("click", async function(){
 					self.node[0].classList.add('loading')
 					// exec rotate
-					const result = self.rotate(quality, -90)
-					self.node[0].classList.remove('loading')
-
+					const result = await self.rotate(quality, -90)
 					if (result===true) {
 						self.main_component.quality = quality
 						self.main_component.refresh()
 					}
+					self.node[0].classList.remove('loading')
 				})
 
 				// right rotate
@@ -790,14 +786,12 @@ const get_line_rotate = function(ar_quality, self) {
 				button_rotate_right.addEventListener("click", async function(){
 					self.node[0].classList.add('loading')
 					// exec rotate
-					self.rotate(quality, 90)
-					.then(function(result){
-						if (result===true) {
-							self.main_component.quality = quality
-							self.main_component.refresh()
-						}
-						self.node[0].classList.remove('loading')
-					})
+					const result = await self.rotate(quality, 90)
+					if (result===true) {
+						self.main_component.quality = quality
+						self.main_component.refresh()
+					}
+					self.node[0].classList.remove('loading')
 				})
 			}
 		}//end for (let i = 0; i < ar_quality_length; i++)

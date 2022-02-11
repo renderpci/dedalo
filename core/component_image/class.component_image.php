@@ -626,10 +626,9 @@ class component_image extends component_media_common {
 	public function convert_quality($source_quality, $target_quality) {
 
 		// invalid targets check
-			if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. Wrong target quality: $target_quality", 1);
-				}
+			// if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
+			if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL) {
+				trigger_error("Error Processing Request. Wrong target quality: $target_quality");
 				return false;
 			}
 
@@ -1432,7 +1431,7 @@ class component_image extends component_media_common {
 	public function get_preview_url($quality=DEDALO_IMAGE_QUALITY_DEFAULT) {
 
 		// $preview_url = $this->get_thumb_url();
-		$preview_url = $component->get_image_url($quality, $test_file=false, $absolute=false, $default_add=false);
+		$preview_url = $this->get_image_url($quality, $test_file=false, $absolute=false, $default_add=false);
 
 		return $preview_url;
 	}//end get_preview_url
