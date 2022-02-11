@@ -318,9 +318,12 @@ const get_input_element_edit = function(self, i, current_value, pdf_url) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-
 	const fragment = new DocumentFragment()
+
+	// prevent show buttons inside a tool
+		if (self.caller && self.caller.type==='tool') {
+			return fragment
+		}
 
 	// button full_screen
 		// const button_full_screen = ui.create_dom_element({
@@ -335,9 +338,7 @@ const get_buttons = (self) => {
 		// })
 
 	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
+		ui.add_tools(self, fragment)
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)

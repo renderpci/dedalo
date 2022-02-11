@@ -190,16 +190,19 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
-
 	const fragment = new DocumentFragment()
+
+	// prevent show buttons inside a tool
+		if (self.caller && self.caller.type==='tool') {
+			return fragment
+		}
 
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button full_screen',
+			class_name		: 'button full_screen',
 			title			: 'Fullscreen',
-			parent 			: fragment
+			parent			: fragment
 		})
 		button_full_screen.addEventListener("mouseup", () =>{
 			self.node[0].classList.toggle('fullscreen')
@@ -208,16 +211,14 @@ const get_buttons = (self) => {
 		})
 
 	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
+		ui.add_tools(self, fragment)
 
 	// open svg editor tools
 		const vector_editor = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button vector_editor',
-			title 			: 'Toggle vector editor',
-			parent 			: fragment
+			class_name		: 'button vector_editor',
+			title			: 'Toggle vector editor',
+			parent			: fragment
 		})
 		vector_editor.addEventListener("mouseup", () => {
 			vector_editor_tools.classList.toggle('hide')
@@ -231,8 +232,8 @@ const get_buttons = (self) => {
 	// svg editor tools
 		const vector_editor_tools = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'vector_editor_tools hide',
-			parent 			: fragment
+			class_name		: 'vector_editor_tools hide',
+			parent			: fragment
 		})
 		self.vector_editor_tools = vector_editor_tools
 
@@ -269,7 +270,7 @@ const get_quality_selector = (self) => {
 	// create the quality selector
 		const quality_selector = ui.create_dom_element({
 			element_type	: 'select',
-			class_name 		: 'quality_selector',
+			class_name		: 'quality_selector',
 			parent			: fragment
 		})
 		quality_selector.addEventListener("change", (e) =>{

@@ -44,12 +44,12 @@ render_section_group.prototype.edit = async function(options) {
 		}
 
 	// content data state. Needed to prevent blink components show on page load
-		await data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
-		.then(function(ui_status){
+		const ui_status = await data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
+		// .then(function(ui_status){
 			if (!ui_status) {
 				content_data.classList.remove('hide')
 			}
-		})
+		// })
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	get_wrapper(self)
@@ -60,7 +60,7 @@ render_section_group.prototype.edit = async function(options) {
 		}else{
 			const component_label = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'icon_arrow',
+				class_name		: 'icon_arrow' + (!ui_status ? ' up' : ''),
 				inner_html		: self.label + ' ' + self.tipo + ' ' + (self.model) + ' [' + self.permissions + ']'
 			})
 			// css

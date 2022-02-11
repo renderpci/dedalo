@@ -195,9 +195,10 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	if (self.caller.type==='tool') {
-		return fragment
-	}
+	// prevent show buttons inside a tool
+		if (self.caller && self.caller.type==='tool') {
+			return fragment
+		}
 
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({
