@@ -5,17 +5,17 @@
 
 
 /*
-* CLASS TOOL_AV_VERSIONS
+* CLASS TOOL_MEDIA_VERSIONS
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
 *
 */
-class tool_av_versions extends tool_common {
+class tool_media_versions extends tool_common {
 
 
 
 	/**
 	* GET_FILES_INFO
-	* Get file info for every quality
+	* Get file info for every quality like 'datalist' do
 	* @param object $request_options
 	* @return object $response
 	*/
@@ -173,6 +173,60 @@ class tool_av_versions extends tool_common {
 
 		return (object)$response;
 	}//end conform_headers
+
+
+
+	/**
+	* ROTATE
+	* 	Apply a rotation process to the selected file
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function rotate($request_options) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// options
+			$options = new stdClass();
+				$options->tipo			= null;
+				$options->section_tipo	= null;
+				$options->section_id	= null;
+				$options->quality		= null;
+				$options->degrees		= null; // 0 - 360 (positive/negative)
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// short vars
+			$tipo			= $options->tipo;
+			$section_tipo	= $options->section_tipo;
+			$section_id		= $options->section_id;
+			$quality		= $options->quality;
+			$degrees		= $options->degrees;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance($model,
+														 $tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+
+			$command_result = $component->rotate($degrees, $quality);
+
+		// response
+			if (empty($command_result)) {
+				// success
+				$response->result	= true;
+				$response->msg		= 'Success. Request done';
+			}else{
+				$response->msg		.= PHP_EOL . ' Error on rotate file. '.to_string($command_result);
+			}
+
+
+		return (object)$response;
+	}//end rotate
 
 
 }//end class

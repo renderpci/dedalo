@@ -83,22 +83,31 @@ function download_file($json_data) {
 		header("Content-Length: " . $file_bytes_size);
 
 		// download
-		$file = @fopen($file_path,"rb");
-		if ($file) {
-			while(!feof($file)) {
-				print(fread($file, 1024*8));
-				flush();
-				if (connection_status()!=0) {
-					@fclose($file);
-					die();
+		try {
+
+			$file = @fopen($file_path,"rb");
+			if ($file) {
+				while(!feof($file)) {
+					print(fread($file, 1024*8));
+					flush();
+					if (connection_status()!=0) {
+						@fclose($file);
+						die();
+					}
 				}
+				@fclose($file);
 			}
-			@fclose($file);
+
+			// debug
+				$exec_time	= exec_time_unit($start_time,'ms')." ms";
+				debug_log(__METHOD__." Downloaded file $download_name ".$mime_type." in ".$exec_time, logger::DEBUG);
+
+		} catch (Exception $e) {
+			$msg = 'Caught exception: ' . $e->getMessage();
+			trigger_error($msg);
 		}
 
-	// debug
-		$exec_time	= exec_time_unit($start_time,'ms')." ms";
-		debug_log(__METHOD__." Downloaded file $download_name in ".$exec_time, logger::DEBUG);
+
 
 	return true;
 }//end download_file

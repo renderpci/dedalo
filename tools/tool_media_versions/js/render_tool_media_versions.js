@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_av_versions */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_media_versions */
 /*eslint no-undef: "error"*/
 
 
@@ -6,28 +6,29 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {bytes_format} from '../../../core/common/js/utils/index.js'
 
 
 
 /**
-* RENDER_tool_av_versions
+* RENDER_TOOL_MEDIA_VERSIONS
 * Manages the component's logic and appearance in client side
 */
-export const render_tool_av_versions = function() {
+export const render_tool_media_versions = function() {
 
 	return true
-};//end render_tool_av_versions
+};//end render_tool_media_versions
 
 
 
 /**
 * EDIT
 * Render tool DOM nodes
-* This function is called by render common attached in 'tool_av_versions.js'
+* This function is called by render common attached in 'tool_media_versions.js'
 * @param object options
 * @return DOM node
 */
-render_tool_av_versions.prototype.edit = async function(options) {
+render_tool_media_versions.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -55,7 +56,7 @@ render_tool_av_versions.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end tool_av_versions
+};//end tool_media_versions
 
 
 
@@ -121,7 +122,7 @@ const get_versions_grid = function(self) {
 		Object.assign(
 			versions_container.style,
 			{
-				'grid-template-columns': `20% repeat(${ar_quality.length}, 1fr)`
+				'grid-template-columns': `minmax(6rem, 20%) repeat(${ar_quality.length}, 1fr)`
 			}
 		)
 
@@ -144,10 +145,45 @@ const get_versions_grid = function(self) {
 		versions_container.appendChild( get_line_file_delete(ar_quality, self) )
 
 	// line_file_build_version
-		versions_container.appendChild( get_line_build_version(ar_quality, self) )
+		if (ar_quality.length>1) {
+			versions_container.appendChild( get_line_build_version(ar_quality, self) )
+		}
 
-	// line_file_conform_headers
-		versions_container.appendChild( get_line_conform_headers(ar_quality, self) )
+	// specific_actions. Special features based on main_component model. They are defined in tool properties.
+		// sample:
+		// {
+		//   "specific_actions": {
+		//     "rotate": [
+		//       "component_image"
+		//     ],
+		//     "conform_headers": [
+		//       "component_av"
+		//     ]
+		//   }
+		// }
+		const specific_actions = self.context.properties.specific_actions || {}
+		// functions mapper. Maps action name with handler function
+		// Define here the list of available specific tool functions
+		const fn_mapper = {
+			conform_headers	: get_line_conform_headers,
+			rotate			: get_line_rotate
+		}
+		for(const action_name in specific_actions) {
+
+			const ar_models = specific_actions[action_name]
+			if (ar_models.includes(self.main_component.model)) {
+
+				// check valid function call
+					if(typeof fn_mapper[action_name]!=='function') {
+						console.log("Ignored invalid function name:", action_name);
+						continue;
+					}
+
+				// build line node and add
+					const line_node = fn_mapper[action_name](ar_quality, self)
+					versions_container.appendChild(line_node)
+			}
+		}
 
 
 	return fragment
@@ -243,26 +279,16 @@ const get_line_file_exists = function(ar_quality, self) {
 				if (file_info.url) {
 					const button_file_av = ui.create_dom_element({
 						element_type	: 'span',
-						class_name		: 'button file_av',
+						class_name		: 'button media',
 						parent			: file_info_node
 					})
-					button_file_av.addEventListener("click", function(){
+					button_file_av.addEventListener("click", function() {
 						// change component av quality and refresh
 						self.main_component.quality = quality
-						console.log("self.main_component:",self.main_component);
+						self.node[0].classList.add('loading')
 						self.main_component.refresh()
-						.then(function(){
-
-							console.log("///////////// self.main_component.video:", self.main_component.video);
-
-							// self.main_component.video.addEventListener('canplay', fn_play)
-							// function fn_play() {
-
-							// 	// self.main_component.video.removeEventListener('canplay', fn_play);
-							// 	self.main_component.video.play()
-							// }
-							// self.main_component.video.pause()
-							// self.main_component.video.play()
+						.then(function() {
+							self.node[0].classList.remove('loading')
 						})
 					})
 				}else{
@@ -319,10 +345,15 @@ const get_line_file_size = function(ar_quality, self) {
 			})
 
 			if (file_info.file_exist===true) {
-				const button_file_av = ui.create_dom_element({
+
+				// size
+				const size = bytes_format(file_info.file_size)
+
+				// icon file
+				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: '',
-					inner_html		: file_info.file_size,
+					inner_html		: size,
 					parent			: file_info_node
 				})
 			}
@@ -376,25 +407,27 @@ const get_line_file_upload = function(ar_quality, self) {
 			})
 			button_file_upload.addEventListener("click", function(){
 				// open tool_upload
-					// tool context minimun
+					// tool context minimum
 						const tool_context = {
 							model	: 'tool_upload',
-							name	: 'tool_upload'
+							name	: 'tool_upload',
+							mode	: 'edit',
+							label	: 'Upload file'
 						}
 					// update caller context quality
-						self.caller.context.target_quality = quality
-
+						self.main_component.context.target_quality = quality
 					// event publish
 						event_manager.publish('load_tool', {
 							tool_context	: tool_context,
-							caller			: self.caller
+							caller			: self.main_component
 						})
 
 				// event on refresh caller
-					const token = event_manager.subscribe('render_'+self.caller.id, fn_refresh)
+					const token = event_manager.subscribe('render_'+self.main_component.id, fn_refresh)
 					self.events_tokens.push(token)
 					function fn_refresh() {
 						event_manager.unsubscribe(token)
+						self.main_component_quality = quality
 						self.refresh()
 					}
 			})
@@ -526,14 +559,15 @@ const get_line_file_delete = function(ar_quality, self) {
 					class_name		: 'button delete',
 					parent			: file_info_node
 				})
-				button_file_download.addEventListener("click", function(){
+				button_file_download.addEventListener("click", async function(){
+					self.node[0].classList.add('loading')
 					// exec delete_file
-						self.delete_file(quality)
-						.then(function(response){
-							if (response===true) {
-								self.refresh()
-							}
-						})
+					const response = await self.delete_file(quality)
+					self.node[0].classList.remove('loading')
+					if (response===true) {
+						// self.main_component_quality = quality
+						self.refresh()
+					}
 				})
 			}
 		}
@@ -567,7 +601,7 @@ const get_line_build_version = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
+				// const file_info = self.files_info.find(el => el.quality===quality)
 
 				// 'file_exist'
 				// 'file_size'
@@ -586,37 +620,38 @@ const get_line_build_version = function(ar_quality, self) {
 					class_name		: 'button gear',
 					parent			: file_info_node
 				})
-				button_build_version.addEventListener("click", function(){
+				button_build_version.addEventListener("click", async function(){
+					self.node[0].classList.add('loading')
 					// exec build_version
-						self.build_version(quality)
-						.then(function(result){
-							if (result===true) {
+					const result = await self.build_version(quality)
+					self.node[0].classList.remove('loading')
+					if (result===true) {
 
-								// building
-								button_build_version.remove()
+						// building
+						button_build_version.remove()
 
-								ui.create_dom_element({
-									element_type	: 'span',
-									class_name		: 'blink',
-									inner_html		: get_label.procesando || 'Processing',
-									parent			: file_info_node
-								})
-								function check_file() {
-									setTimeout(async function(){
-										const files_info = await self.get_files_info()
-										const found = files_info.find(el => el.quality===quality)
-										if (found && found.url) {
-											// processing_label.remove()
-											// button_build_version.classList.remove('hide')
-											self.refresh()
-										}else{
-											check_file()
-										}
-									}, 5000)
-								}
-								check_file()
-							}
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'blink',
+							inner_html		: get_label.procesando || 'Processing',
+							parent			: file_info_node
 						})
+						function check_file() {
+							setTimeout(async function(){
+								const files_info = await self.get_files_info()
+								const found = files_info.find(el => el.quality===quality)
+								if (found && found.url) {
+									// processing_label.remove()
+									// button_build_version.classList.remove('hide')
+									self.main_component_quality = quality
+									self.refresh()
+								}else{
+									check_file()
+								}
+							}, 5000)
+						}
+						check_file()
+					}
 				})
 			}
 		}//end for (let i = 0; i < ar_quality_length; i++)
@@ -629,6 +664,7 @@ const get_line_build_version = function(ar_quality, self) {
 
 /**
 * GET_LINE_CONFORM_HEADERS
+* 	Specific component_av feature
 * @return DOM node fragment
 */
 const get_line_conform_headers = function(ar_quality, self) {
@@ -666,17 +702,19 @@ const get_line_conform_headers = function(ar_quality, self) {
 
 				const button_build_version = ui.create_dom_element({
 					element_type	: 'span',
-					class_name		: 'button gear',
+					class_name		: 'button repair',
 					parent			: file_info_node
 				})
-				button_build_version.addEventListener("click", function(){
+				button_build_version.addEventListener("click", async function(){
+					self.node[0].classList.add('loading')
 					// exec conform_headers
-						self.conform_headers(quality)
-						.then(function(result){
-							if (result===true) {
-								self.refresh()
-							}
-						})
+					const result = await self.conform_headers(quality)
+					self.node[0].classList.remove('loading')
+
+					if (result===true) {
+						self.main_component_quality = quality
+						self.refresh()
+					}
 				})
 			}
 		}//end for (let i = 0; i < ar_quality_length; i++)
@@ -684,3 +722,88 @@ const get_line_conform_headers = function(ar_quality, self) {
 
 	return fragment
 };//end get_line_conform_headers
+
+
+
+/**
+* GET_LINE_ROTATE
+* 	Specific component_image feature
+* @return DOM node fragment
+*/
+const get_line_rotate = function(ar_quality, self) {
+
+ 	const fragment = new DocumentFragment()
+
+ 	// main label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			text_content	: (get_label.rotar || 'Rotate'),
+			parent			: fragment
+		})
+
+	// info columns
+		const ar_quality_length = ar_quality.length
+		for (let i = 0; i < ar_quality_length; i++) {
+
+			const quality = ar_quality[i]
+
+			// file_info
+				const file_info = self.files_info.find(el => el.quality===quality)
+
+				// 'file_exist'
+				// 'file_size'
+				// 'url'
+
+			const file_info_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				parent			: fragment
+			})
+
+			if (file_info.file_exist===true) {
+
+				// left rotate
+				const button_rotate_left = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button rotate',
+					parent			: file_info_node
+				})
+				button_rotate_left.addEventListener("click", async function(){
+					self.node[0].classList.add('loading')
+					// exec rotate
+					const result = self.rotate(quality, -90)
+					self.node[0].classList.remove('loading')
+
+					if (result===true) {
+						self.main_component.quality = quality
+						self.main_component.refresh()
+					}
+				})
+
+				// right rotate
+				const button_rotate_right = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button rotate right',
+					parent			: file_info_node
+				})
+				button_rotate_right.addEventListener("click", async function(){
+					self.node[0].classList.add('loading')
+					// exec rotate
+					self.rotate(quality, 90)
+					.then(function(result){
+						if (result===true) {
+							self.main_component.quality = quality
+							self.main_component.refresh()
+						}
+						self.node[0].classList.remove('loading')
+					})
+				})
+			}
+		}//end for (let i = 0; i < ar_quality_length; i++)
+
+
+	return fragment
+};//end get_line_rotate
+
+

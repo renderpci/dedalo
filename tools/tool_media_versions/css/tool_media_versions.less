@@ -1,5 +1,5 @@
 /**
-* TOOL_AV_VERSIONS
+* TOOL_MEDIA_VERSIONS
 * Write here specific tool styles
 */
 
@@ -11,7 +11,7 @@
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-.wrapper_tool.tool_av_versions {
+.wrapper_tool.tool_media_versions {
 	padding: 1rem;
 
 
@@ -28,6 +28,12 @@
 			height: 404px;
 			min-width: 720px;
 			display: table;
+
+			@media screen and (max-width: @width_break_point_1) {
+				min-width: unset;
+				height: unset;
+			}
+
 
 			.wrapper_component.component_av {
 				// height: 404px;
@@ -52,6 +58,11 @@
 			background-color: #fafafa;
 			width: 100%;
 			max-width: 1600px;
+			overflow: auto;
+
+			// @media screen and (max-width: @width_break_point_1) {
+			// 	grid-template-columns: auto !important;
+			// }
 
 			>.label, >.file_info {
 				border-bottom: 1px solid #eeeeee;
@@ -71,11 +82,12 @@
 
 					&.button {
 						font-size: 1.1rem;
+						background-color: #767676;
 					}
 				}
 
 				&.default {
-					background-color: @color_grey_medium;
+					background-color: #f2f2f2;
 				}
 			}
 
@@ -91,6 +103,6 @@
 
 
 // modal header tool modification
-	.tool_header.tool_av_versions {
+	.tool_header.tool_media_versions {
 		background-color: #a24540;
 	}
