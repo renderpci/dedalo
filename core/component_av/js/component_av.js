@@ -106,7 +106,7 @@ export const component_av = function(){
 * the video player use seconds, if the information comes from tag it will convert this tc to seconds.
 * @return int seconds
 */
-component_av.prototype.go_to_time = function(options){
+component_av.prototype.go_to_time = function(options) {
 
 	const self = this
 
@@ -125,7 +125,7 @@ component_av.prototype.go_to_time = function(options){
 /**
 * PLAY_PAUSE
 */
-component_av.prototype.play_pause = function(){
+component_av.prototype.play_pause = function() {
 
 	const self = this
 
@@ -149,7 +149,7 @@ component_av.prototype.play_pause = function(){
 * GET_DATA_TAG
 * Send the data_tag to the text_area when it need create a new tag
 */
-component_av.prototype.get_data_tag = function(){
+component_av.prototype.get_data_tag = function() {
 
 	const self 	= this
 

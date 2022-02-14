@@ -62,7 +62,7 @@ render_player_component_av.prototype.player = async function(options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_PLAYER
 * @param instance self
 * @return DOM node content_data
 */
