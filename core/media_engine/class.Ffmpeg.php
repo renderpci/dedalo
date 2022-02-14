@@ -473,67 +473,66 @@ class Ffmpeg {
 	* @return $posterFrame_command_exc
 	*	Terminal commnad response
 	*/
-	public function create_posterframe(AVObj $AVObj, $timecode, $ar_target=false) {
+	public function create_posterframe(AVObj $AVObj, $timecode, $ar_target=null) {
 
 		# SRC VIDEO FILE
-		$src_file = $AVObj->get_media_path_abs()	. $AVObj->get_name() . '.' . $AVObj->get_extension();
+		$src_file = $AVObj->get_media_path_abs() . $AVObj->get_name() . '.' . $AVObj->get_extension();
 
-		$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
-		if($aspect_ratio == '4x3') {
-			$aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio' ;
-		}else{
-			$aspect_ratio = '';
-		}
+		// aspect_ratio_cmd
+			$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
+			$aspect_ratio_cmd = ($aspect_ratio==='4x3')
+				? '-vf scale=540:404:force_original_aspect_ratio'
+				: '';
 
-		# SI NO EXISTE EL DEFAULT, BUSCAMOS OTRO DE MAYOR A MENOR
-		if(!file_exists($src_file)) {
-			$src_file		= $this->get_master_media_file($AVObj);
-		}
-		if (!$src_file) {
-			debug_log(__METHOD__." Error: src_file not found src_file 2. ".to_string($src_file), logger::ERROR);
-			return false;
-		}
+		// src_file. If the default does not exist, we look for another from higher to lower
+			if(!file_exists($src_file)) {
+				$src_file = $this->get_master_media_file($AVObj);
+			}
+			if (!$src_file) {
+				debug_log(__METHOD__." Error: src_file not found src_file 2. ".to_string($src_file), logger::ERROR);
+				return false;
+			}
 
+		// target_file. image jpg target file
+			if (!empty($ar_target)) {
+				# Forced case. Paths ar received directly (identifying image for example)
+				$target_path	= $ar_target['target_path'];  // Absolute path to image dir
+				$target_file	= $ar_target['target_file'];  // Absolute final path of file (included target_path)
+			}else{
+				# Deafult case . Paths are extracted from PosterFrameObj
+				$PosterFrameObj	= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
+				$target_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe';
+				$target_file	= $target_path .'/'. $AVObj->get_name() .'.' . $PosterFrameObj->get_extension();
+			}
 
-		# IMAGE JPG TARGET FILE
-		if ($ar_target) {
-			# Forced case. Paths ar received directly (identifying image for example)
-			$target_path 	= $ar_target['target_path'];  // Absolute path to image dir
-			$target_file 	= $ar_target['target_file'];  // Absolute final path of file (included target_path)
-		}else{
-			# Deafult case . Paths are extracted from PosterFrameObj
-			$PosterFrameObj	= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
-			$target_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe';
-			$target_file	= $target_path .'/'. $AVObj->get_name() . '.' . $PosterFrameObj->get_extension();
-		}
-
-			# posterframe dir exists
+		// posterframe dir exists
 			if( !is_dir($target_path) ) {
-				$create_dir = mkdir($target_path, 0777);
-				if(!$create_dir) die(" Sorry. Error on read or create directory for \"posterframe\" folder. Permission denied !  ") ; # [$final_target_path]
-
+				$create_dir = mkdir($target_path, 0775);
+				if(!$create_dir) {
+					trigger_error('Sorry. Error on read or create directory for "posterframe" folder. Permission denied !');
+					return false;
+				}
 				# image zero 0.jpg from dedalo images to posterframe images
 				if(!file_exists("{$target_path}/0.jpg")) {
 					$image_zero = DEDALO_ROOT ."/images/0.jpg";
-					if(file_exists($image_zero))
-					copy($image_zero, "{$target_path}/0.".DEDALO_AV_POSTERFRAME_EXTENSION);
+					if(file_exists($image_zero)) {
+						copy($image_zero, "{$target_path}/0.".DEDALO_AV_POSTERFRAME_EXTENSION);
+					}
 				}
 			}
 
-			# tmp dir set permissions 0777
+		// tmp dir set permissions 0777
 			$wantedPerms = 1777;
 			$actualPerms = fileperms($target_path);
 			if($actualPerms < $wantedPerms) {
 				$chmod = chmod($target_path, $wantedPerms);
 				if(!$chmod) {
-					throw new Exception("Error Processing Request. Sorry. Error on set valid permissions to directory for \"posterframe\".", 1);
-				 	#die(" Sorry. Error on set valid permissions to directory for \"posterframe\".  ") ;
+					trigger_error("Error Processing Request. Sorry. Error on set valid permissions to directory for \"posterframe\".");
+				 	return false;
 				}
 			}
 
-
 		# COMMANDS SHELL
-		$command	 = '';
 
 		# FFMPEG timecode
 		# Convertivos el valor recibido a número flotante y
@@ -541,12 +540,12 @@ class Ffmpeg {
 		$timecode = number_format((float)$timecode, 3, '.', '');
 
 		# paso 1 sólo video
-		#$command	.= DEDALO_AV_FFMPEG_PATH . " -itsoffset -$timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file > /dev/null  ";
-		$command	.= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio $target_file ";
-
+		#$command	= DEDALO_AV_FFMPEG_PATH . " -itsoffset -$timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file > /dev/null  ";
+		$command	= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $target_file ";
 
 		# EXEC COMMAND
 		$posterFrame_command_exc = exec_::exec_command($command);
+
 
 		return $posterFrame_command_exc;
 	}//end create_posterframe
