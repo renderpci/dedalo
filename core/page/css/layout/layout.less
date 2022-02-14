@@ -971,7 +971,7 @@
 			}
 		}
 
-		&.edit, &.search, &.tm, &.edit_in_list {
+		&.edit, &.search, &.tm, &.edit_in_list, &.player {
 			// grey line left and down of wrapper
 			// box-shadow: -1px 1px 0 @color_grey_medium;
 			box-shadow: -1px 1px 0 @color_grey_medium, inset -1px 1px 0 @color_grey_medium;
@@ -1029,6 +1029,34 @@
 						&:focus {
 							.hilite(-1px);
 						}
+					}
+				}
+
+				.av_control_buttons {
+					display: flex;
+					width: 100%;
+					align-items: center;
+					justify-content: center;
+					padding-bottom: 0.75rem;
+
+					>button {
+						height: 2rem;
+						text-align: center;
+
+						&:before {
+							margin: 0;
+						}
+
+						&:last-of-type {
+							margin-right: 0;
+						}
+					}
+
+					.smpte {
+						width: 9rem;
+						padding-left: 0.75rem;
+						padding-right: 0.75rem;
+						font-size: 1.2rem;
 					}
 				}
 			}
