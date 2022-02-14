@@ -200,7 +200,7 @@
 		}
 		&.light {
 			background-color: @color_light;
-			border-color: @color_light;
+			border-color: darken(@color_light, 5%); // #e7e7e7
 			color: #212529;
 			&:before {
 				background-color: #212529 !important;
@@ -393,6 +393,16 @@
 	}
 	.repair {
 		@icon_name : 'repair.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.pause {
+		@icon_name : 'pause.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.play {
+		@icon_name : 'play.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
