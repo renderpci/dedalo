@@ -21,7 +21,7 @@ export const render_player_component_av = function() {
 
 
 /**
-* EDIT
+* PLAYER
 * Render node for use in modes: edit, edit_in_list
 * @param object options
 * @return DOM node wrapper
@@ -30,11 +30,11 @@ render_player_component_av.prototype.player = async function(options) {
 
 	const self = this
 
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
+
+	// fix non value scenarios
+		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// content_data
 		const current_content_data = get_content_data_player(self)
@@ -42,14 +42,13 @@ render_player_component_av.prototype.player = async function(options) {
 			return current_content_data
 		}
 
-	// av_control_buttons
-		const av_control_buttons = get_av_control_buttons(self)
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : current_content_data
 		})
 
+	// av_control_buttons
+		const av_control_buttons = get_av_control_buttons(self)
 		wrapper.appendChild(av_control_buttons)
 
 	// add events
@@ -72,66 +71,71 @@ const get_content_data_player = function(self) {
 
 	// urls
 		// posterframe
-		const posterframe_url	= self.data.posterframe_url
+			const posterframe_url = self.data.posterframe_url
 		// media
-		const video_url			= self.data.video_url
+			// const video_url = self.data.video_url
+			const quality	= self.quality || self.context.quality
+			const datalist	= self.data.datalist
+			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+			const video_url	= file_info
+				? file_info.url
+				: null
 
-	if (video_url) {
+	// player
+		if (video_url) {
 
-		//fragment
-		const tc_in = (!self.fragment)
-			? null
-			: (self.fragment && self.fragment.tc_in)
-				? 'vbegin='+ self.fragment.tc_in
-				: 'vbegin=0';
-		const tc_out = (!self.fragment)
-			? null
-			:(self.fragment && self.fragment.tc_out)
-				? 'vend='+ self.fragment.tc_out
-				: 'vend='+ self.video.duration;
+			// fragment
+				const tc_in = (!self.fragment)
+					? null
+					: (self.fragment.tc_in)
+						? 'vbegin='+ self.fragment.tc_in
+						: 'vbegin=0';
 
+				const tc_out = (!self.fragment)
+					? null
+					:(self.fragment.tc_out)
+						? 'vend='+ self.fragment.tc_out
+						: 'vend='+ self.video.duration;
 
-		const fragment_url = (tc_in)
-			? tc_in + '&' + tc_out
-			: null
+				const fragment_url = (tc_in)
+					? tc_in + '&' + tc_out
+					: null
 
-		// source tag
-			const source = document.createElement("source")
-			source.type = "video/mp4"
-			source.src  = (self.fragment)
-				? video_url + '?' + fragment_url
-				: video_url
+			// source tag
+				const source	= document.createElement("source")
+				source.type		= "video/mp4"
+				source.src		= (self.fragment)
+					? video_url + '?' + fragment_url
+					: video_url
 
-		// video tag
-			const video = document.createElement("video")
-			video.poster	= posterframe_url
-			video.controls	= true
-			video.classList.add("posterframe")
-			video.setAttribute("tabindex", 0)
-			video.appendChild(source)
+			// video tag
+				const video		= document.createElement("video")
+				video.poster	= posterframe_url
+				video.controls	= true
+				video.classList.add("posterframe")
+				video.setAttribute("tabindex", 0)
+				video.appendChild(source)
 
-		// Creates subtitles track
-			const subtitles		= self.data.subtitles
-
-			if(subtitles.subtitles_url){
-				const subtitles_track = document.createElement('track')
-				subtitles_track.type 	= 'text/vtt'
+			// subtitles track
+				const subtitles	= self.data.subtitles
+				if(subtitles && subtitles.subtitles_url) {
+					const subtitles_track = document.createElement('track')
+					subtitles_track.type	= 'text/vtt'
 					subtitles_track.label	= subtitles.lang_name
 					subtitles_track.srclang	= subtitles.lang
 					subtitles_track.src		= subtitles.subtitles_url
 					subtitles_track.default	= true
-
 					// Add new track to video
-					video.appendChild(subtitles_track)
-			}
+						video.appendChild(subtitles_track)
+				}
 
-		// append the video node to the instance
-			self.video = video
-			fragment.appendChild(video)
-	}
+			// append the video node to the instance
+				self.video = video
+				fragment.appendChild(video)
+		}
 
 	// content_data
-		const content_data = document.createElement("div")
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
 
@@ -149,139 +153,149 @@ const get_av_control_buttons =  (self) =>{
 
 	const fragment = new DocumentFragment()
 
-	//button go to begin of av
-	const av_begin = ui.create_dom_element({
+	// css
+		const btn_class = 'light'
+
+	// av_begin_button. button go to begin of av
+		const av_begin_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: get_label.inicio,
-			parent 			: fragment
+			class_name		: btn_class,
+			text_content	: get_label.inicio || 'Beginning',
+			parent			: fragment
 		})
-		av_begin.addEventListener("mouseup", () =>{
+		av_begin_button.addEventListener("mouseup", () =>{
 			self.go_to_time(0);
 		})
 
-	// play / pause
-	const av_play = ui.create_dom_element({
+	// av_play_button. play / pause media
+		const av_play_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: get_label.play,
-			parent 			: fragment
+			class_name		: btn_class + ' play',
+			// text_content	: get_label.play || 'Play',
+			parent			: fragment
 		})
-		av_play.addEventListener("mouseup", () =>{
-			const playing = self.play_pause();
-			av_play.textContent =  (playing)
-				? get_label.pause
-				: get_label.play
+		av_play_button.addEventListener("mouseup", () =>{
+			// const playing = self.play_pause();
+			// av_play_button.textContent = (!playing)
+			// 	? get_label.pause || 'Pause'
+			// 	: get_label.play  || 'Play'
+			if(!self.video.paused) {
+				av_play_button.classList.remove('pause')
+				av_play_button.classList.add('play')
+			}else{
+				av_play_button.classList.remove('play')
+				av_play_button.classList.add('pause')
+			}
+			// toggle play/pause
+			self.play_pause();
 		})
 
-	// show the smpte (time code)
-	const av_smpte = ui.create_dom_element({
+	// av_smpte. Show the smpte (time code)
+		const av_smpte = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'av_player_smpte',
-			parent 			: fragment,
-			inner_html 		: self.get_current_tc()
+			class_name		: 'smpte',
+			parent			: fragment,
+			inner_html		: self.get_current_tc()
 		})
 		self.video.addEventListener("timeupdate", async () =>{
 			av_smpte.innerHTML = self.get_current_tc();
 		})
 
-	// go to 10 secons before of the current time ( - 10 seconds )
-	const av_minus_10_seg = ui.create_dom_element({
+	// av_minus_10_seg. Go to 10 secons before of the current time ( - 10 seconds )
+		const av_minus_10_seg = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: '< 10s',
-			parent 			: fragment
+			class_name		: btn_class,
+			text_content	: '< 10s',
+			parent			: fragment
 		})
 		av_minus_10_seg.addEventListener("mouseup", () =>{
 			const seconds = self.video.currentTime - 10
 			self.go_to_time(seconds);
 		})
 
-	// go to 5 secons before of the current time ( - 5 seconds )
-	const av_minus_5_seg = ui.create_dom_element({
+	// av_minus_5_seg. Go to 5 secons before of the current time ( - 5 seconds )
+		const av_minus_5_seg = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: '< 5s',
-			parent 			: fragment
+			class_name		: btn_class,
+			text_content	: '< 5s',
+			parent			: fragment
 		})
 		av_minus_5_seg.addEventListener("mouseup", () =>{
 			const seconds = self.video.currentTime - 5
 			self.go_to_time(seconds);
 		})
 
-	// go to 1 frame before of the current time ( - 1 frame )
-	// the server send the head information in the media_info streams
-	// the video is the first item of the streams array
-	const av_minus_1_frame = ui.create_dom_element({
+	// av_minus_1_frame. Go to 1 frame before of the current time ( - 1 frame )
+		// the server send the head information in the media_info streams
+		// the video is the first item of the streams array
+		const av_minus_1_frame = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: '- 1',
-			parent 			: fragment
+			class_name		: btn_class,
+			text_content	: '- 1',
+			parent			: fragment
 		})
 		av_minus_1_frame.addEventListener("mouseup", () =>{
-
-			//get the r_frame_rate of the video stream and get the time for 1 frame
-			const r_frame_rate = self.data.media_info.streams[0].r_frame_rate
-			const ar_frame_rate_opeartor = r_frame_rate.split('/')
-			const frame_rate =  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
-			const time_for_frame = 1 / frame_rate
-
-			const seconds = (self.video.currentTime - time_for_frame).toFixed(3)
+			// get the r_frame_rate of the video stream and get the time for 1 frame
+			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
+			const ar_frame_rate_opeartor	= r_frame_rate.split('/')
+			const frame_rate				=  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
+			const time_for_frame			= 1 / frame_rate
+			const seconds					= (self.video.currentTime - time_for_frame).toFixed(3)
 			self.go_to_time(seconds);
 		})
 
-	// go to 1 frame after of the current time ( + 1 frame )
-	// the server send the head information in the media_info streams
-	// the video is the first item of the streams array
-	const av_plus_1_frame = ui.create_dom_element({
+	// av_plus_1_frame. go to 1 frame after of the current time ( + 1 frame )
+		// the server se	nd the head information in the media_info streams
+		// the video is the first item of the streams array
+		const av_plus_1_frame = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: '+ 1',
-			parent 			: fragment
+			class_name		: btn_class,
+			text_content	: '+ 1',
+			parent			: fragment
 		})
 		av_plus_1_frame.addEventListener("mouseup", () =>{
 
 			//get the r_frame_rate of the video stream and get the time for 1 frame
-			const r_frame_rate = self.data.media_info.streams[0].r_frame_rate
-			const ar_frame_rate_opeartor = r_frame_rate.split('/')
-			const frame_rate =  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
-
-			const time_for_frame = (1 / frame_rate)
-			const seconds = (self.video.currentTime + time_for_frame).toFixed(3)
+			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
+			const ar_frame_rate_opeartor	= r_frame_rate.split('/')
+			const frame_rate				=  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
+			const time_for_frame			= (1 / frame_rate)
+			const seconds					= (self.video.currentTime + time_for_frame).toFixed(3)
 
 			self.go_to_time(seconds);
 		})
 
-	// go to 5 secons after of the current time ( + 5 seconds )
-	const av_plus_5_seg = ui.create_dom_element({
+	// av_plus_5_seg. Go to 5 secons after of the current time ( + 5 seconds )
+		const av_plus_5_seg = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: '> 5s',
-			parent 			: fragment
+			class_name		: btn_class,
+			text_content	: '> 5s',
+			parent			: fragment
 		})
 		av_plus_5_seg.addEventListener("mouseup", () =>{
 			const seconds = self.video.currentTime + 5
 			self.go_to_time(seconds);
 		})
 
-	// go to 10 secons after of the current time ( + 10 seconds )
-	const av_plus_10_seg = ui.create_dom_element({
+	// av_plus_10_seg. Go to 10 secons after of the current time ( + 10 seconds )
+		const av_plus_10_seg = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary',
-			text_content 	: '> 10s',
-			parent 			: fragment
+			class_name		: btn_class,
+			text_content	: '> 10s',
+			parent			: fragment
 		})
 		av_plus_10_seg.addEventListener("mouseup", () =>{
 			const seconds = self.video.currentTime + 10
 			self.go_to_time(seconds);
 		})
 
-	// main button cotainer
-	const av_control_buttons = ui.create_dom_element({
+	// av_control_buttons main cotainer
+		const av_control_buttons = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'av_control_buttons'
+			class_name		: 'av_control_buttons'
 		})
-	av_control_buttons.appendChild(fragment)
+		av_control_buttons.appendChild(fragment)
+
 
 	return av_control_buttons
 };//end get_av_control_buttons

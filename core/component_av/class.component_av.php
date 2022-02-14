@@ -175,7 +175,7 @@ class component_av extends component_media_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$av_file_path = $this->get_valor() . '.'.DEDALO_AV_EXTENSION;
+		$av_file_path = $this->get_valor() . '.' . $this->get_extension();
 
 		$test_file 		= true;	// output dedalo image placeholder when not file exists
 		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
@@ -258,7 +258,7 @@ class component_av extends component_media_common {
 	* UPLOAD NEEDED
 	*/
 	public function get_target_filename() {
-		return $this->video_id .'.'. DEDALO_AV_EXTENSION ;
+		return $this->video_id .'.'. $this->get_extension();
 	}
 	public function get_target_dir() {
 		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $this->get_quality() ;
@@ -279,7 +279,7 @@ class component_av extends component_media_common {
 		$video_id = $this->get_video_id();
 
 		$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
-		$name = $video_id .'.'. DEDALO_AV_EXTENSION;
+		$name = $video_id .'.'. $this->get_extension();
 
 		$video_url = $path . $name;
 
@@ -298,7 +298,7 @@ class component_av extends component_media_common {
 		}
 		$video_id 	= $this->get_video_id();
 
-		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
+		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. $this->get_extension();
 	}//end get_video_path
 
 
@@ -315,11 +315,23 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_POSTERFRAME_FILE_NAME
+	*  like 'rsc35_rsc167_1.jpg'
+	*/
+	public function get_posterframe_file_name() {
+
+		return $this->get_id() .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+	}//end get_posterframe_file_name
+
+
+
+	/**
 	* GET_POSTERFRAME_PATH
 	*/
 	public function get_posterframe_path() {
 
-		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+		$file_name = $this->get_posterframe_file_name();
+		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
 	}//end get_posterframe_path
 
 
@@ -330,12 +342,13 @@ class component_av extends component_media_common {
 	public function get_posterframe_url($test_file=true, $absolute=false, $avoid_cache=false) {
 
 		$video_id 	= $this->get_video_id();
+		$file_name = $this->get_posterframe_file_name();
 
-		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
 
 		# FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
-			$file = DEDALO_MEDIA_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
+			$file = DEDALO_MEDIA_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $file_name ;
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 			}
@@ -463,7 +476,7 @@ class component_av extends component_media_common {
 			$quality 	= $this->get_quality();
 			$video_id 	= $this->get_video_id();
 
-			$filename 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
+			$filename 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. $this->get_extension();
 		}
 
 		if ( !file_exists( $filename )) {
@@ -643,7 +656,7 @@ class component_av extends component_media_common {
 
 				// move/rename file
 					$reelID				= $this->get_video_id();
-					$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_EXTENSION;
+					$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . $this->get_extension();
 					if( !rename($media_path, $media_path_moved) ) {
 						trigger_error(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 						return false;
@@ -707,7 +720,7 @@ class component_av extends component_media_common {
 			if(SHOW_DEBUG===true) {
 				#dump($media_path, "media_path current_quality:$current_quality - get_video_id:$video_id");	#continue;
 			}
-			$file_pattern 	= $media_path.'/'.$video_id.'_*.'.DEDALO_AV_EXTENSION;
+			$file_pattern 	= $media_path .'/'. $video_id .'_*.'. $this->get_extension();
 			$ar_files 		= glob($file_pattern);
 			if(SHOW_DEBUG===true) {
 				#dump($ar_files, ' ar_files');#continue;
@@ -1113,6 +1126,17 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_EXTENSION
+	* @return string DEDALO_AV_EXTENSION from config
+	*/
+	public function get_extension() {
+
+		return DEDALO_AV_EXTENSION;
+	}//end get_extension
+
+
+
+	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files dir
 	* @see component_av->remove_component_media_files
@@ -1328,6 +1352,65 @@ class component_av extends component_media_common {
 
 		return $response;
 	}//end conform_headers
+
+
+
+	/**
+	* CREATE_POSTERFRAME
+	* Creates a image 'posterframe' from the default quality of current video file
+	*
+	* @param float $current_time
+	* 	A double-precision floating-point value indicating the current playback time in seconds.
+	* 	From HML5 video element command 'currentTime'
+	* @param string | null $quality
+	* @param array | string $ar_target
+	* 	Optional array value with forced target destination path and file name
+	* @return string $command_response
+	* 	FFMPEG terminal command response
+	*/
+	public function create_posterframe($current_time, $target_quality=null, $ar_target=null) {
+
+		$reelID		= $this->get_id();
+		$quality	= $target_quality ?? $this->get_quality_default();
+
+		# AVObj
+		$AVObj = new AVObj($reelID, $quality);
+
+		# Ffmpeg
+		$Ffmpeg				= new Ffmpeg();
+		$command_response	= $Ffmpeg->create_posterframe($AVObj, $current_time, $ar_target);
+
+		return $command_response;
+	}//end create_posterframe
+
+
+
+	/**
+	* DELETE_POSTERFRAME
+	* 	Remove the file 'posterframe' from the disk
+	* @return bool
+	*/
+	public function delete_posterframe() {
+
+		$name	= $this->get_id();
+		$file	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe/' . $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+
+		// check file already exists
+			if(!file_exists($file)) {
+				debug_log(__METHOD__." Posterframe file do not exists ".to_string($file), logger::DEBUG);
+				return false;
+			}
+
+		 // delete file
+			if(!unlink($file)) {
+				trigger_error(" Error on delete posterframe file. Posterframe file is not deleted");
+				return false;
+			}
+
+
+		return true;
+	}//end delete_posterframe
+
 
 
 
