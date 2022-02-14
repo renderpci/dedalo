@@ -1343,9 +1343,9 @@ class component_image extends component_media_common {
 			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// vars
-			$original_file_name = $file_data->original_file_name; 	// kike "my photo785.jpg"
-			$full_file_name 	= $file_data->full_file_name;		// like "test175_test65_1.jpg"
-			$full_file_path 	= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
+			$original_file_name	= $file_data->original_file_name; 	// kike "my photo785.jpg"
+			// $full_file_name	= $file_data->full_file_name;		// like "test175_test65_1.jpg"
+			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
 
 		// imagemagick. Normalize uploaded image format to Dédalo working format like jpg from tif
 			try {
@@ -1381,7 +1381,7 @@ class component_image extends component_media_common {
 						$result = custom_postprocessing_image($this);
 					}
 
-				// Generate default image quality from original if need
+				// Generate default image quality from original if is needed
 					$overwrite 	= ($this->quality===$this->get_original_quality()) ? true : false;
 					$default 	= $this->generate_default($overwrite);
 
@@ -1541,7 +1541,8 @@ class component_image extends component_media_common {
 			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/' .DEDALO_SVG_EXTENSION . $aditional_path;
 			$filename 		= $media_path . '/' . $image_id . '.svg';
 			if(!file_put_contents($filename, trim($svg_string_node) )){
-				throw new Exception("Error Processing Request. Error on write svg file", 1);
+				trigger_error("Error Processing Request. Error on write svg file");
+				return false;
 			}
 
 		return true;

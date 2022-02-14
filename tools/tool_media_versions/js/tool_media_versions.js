@@ -100,12 +100,10 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 				self.main_component.context.quality = self.main_component_quality
 			}
 
-
 	// fix important vars
 		self.ar_quality	= self.caller.context.ar_quality
 		self.files_info	= self.caller.data.datalist
 
-		console.log("tool av versions self:",self);
 
 	return common_build
 };//end build_custom
@@ -302,9 +300,10 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 /**
 * ROTATE
 * 	Apply a rotation process to the selected file
-* @para string quality
+* @param string quality
 * @param string degrees
 * 	-90 / 90
+* @return promise > array
 */
 tool_media_versions.prototype.rotate = async function(quality, degrees) {
 
