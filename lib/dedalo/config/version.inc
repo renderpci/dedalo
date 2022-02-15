@@ -2648,6 +2648,9 @@
 		Re-formulate the diffusion_rdf to use easyrdf library
 		Remove the html tag in values for RDF
 		Fix html tags in the literal text for RDF
+		Added comments of class.ontology.php
+		Change the lang of the component to get_valor()
+		Revert "Fix get diffusion value lang when it has required"
 
 
 
@@ -2680,7 +2683,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-02-2022T19:13:16');
+	define('DEDALO_BUILD'	, '15-02-2022T21:49:26');
 
 
 	/*
