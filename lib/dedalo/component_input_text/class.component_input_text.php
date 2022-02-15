@@ -82,10 +82,18 @@ class component_input_text extends component_common {
 	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
 
 		$valor ='';
+		// save the actual lang
+		$previous_lang = $this->get_lang();
 
+		// set the requested lang
+		if($lang !== $previous_lang ){
+			$this->set_lang($lang);
+		};
 		$dato = $this->get_dato();
 
 		if(empty($dato)) {
+			// set the original lang
+			$this->set_lang($previous_lang);
 			return (string)$valor;
 		}
 
@@ -106,7 +114,10 @@ class component_input_text extends component_common {
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
 		}
 
-
+		// set the original lang
+			if($lang !== $previous_lang ){
+				$this->set_lang($previous_lang);
+			};
 		return (string)$valor;
 	}//end get_valor
 
