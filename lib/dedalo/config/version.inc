@@ -2638,6 +2638,17 @@
 		Fixed issue in tool_description where where mce editor was not available
 		Added column 'death_context' in custom search global (class.diffusion_sql and class.web_data)
 		Added column 'buried_type' in custom search global (class.diffusion_sql and class.web_data)
+		15-02-2022
+		Add posterframe for indexation tags
+		Add time variable to the tag posterframe to refresh the posterframe
+		Fix empty lang in the component_autocomplete
+		Fix the get_valor when the lang is required
+		Fix get diffusion value lang when it has required
+		Remove the old class diffusion_rdf
+		Re-formulate the diffusion_rdf to use easyrdf library
+		Remove the html tag in values for RDF
+		Fix html tags in the literal text for RDF
+
 
 
 	[/HISTORY]
@@ -2669,7 +2680,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-02-2022T11:15:52');
+	define('DEDALO_BUILD'	, '15-02-2022T19:13:16');
 
 
 	/*
