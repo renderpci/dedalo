@@ -5,7 +5,7 @@
 *
 */
 class component_section_id extends component_common {
-	
+
 	# GET DATO
 	public function get_dato() {
 		return (int)$this->parent;
@@ -18,7 +18,7 @@ class component_section_id extends component_common {
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
@@ -31,7 +31,7 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -45,7 +45,7 @@ class component_section_id extends component_common {
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search=null, $current_lang=null, $search_value='', $comparison_operator='=') {
-		
+
 		$search_query='';
 		if ( empty($search_value) ) {
 			return $search_query;
@@ -63,13 +63,13 @@ class component_section_id extends component_common {
 						$value = trim($value);
 						$ar_q[] = " a.section_id = ". intval( $value );
 					}
-					$search_query = ' ('.implode(' OR ', $ar_q). ') ';					
+					$search_query = ' ('.implode(' OR ', $ar_q). ') ';
 				}else{
 					$search_query = " a.section_id = ". intval($search_value);
 				}
 				break;
 
-			case ($comparison_operator==='BETWEEN'):				
+			case ($comparison_operator==='BETWEEN'):
 				$separator='...';
 				if (strpos($search_value, $separator)!==false) {
 					// Transform "12...25" to "12 AND 25"
@@ -82,13 +82,13 @@ class component_section_id extends component_common {
 					$search_query = " a.section_id = ". intval($search_value);
 				}
 				break;
-			
+
 			default:
 				$search_query = " a.section_id $comparison_operator " . intval($search_value).' ';
 				break;
 		}
-		
-		
+
+
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
@@ -103,11 +103,11 @@ class component_section_id extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
+
 		$q = $query_object->q;
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
 			$q = json_decode($q);
-		}	
+		}
 
     	# Always set fixed values
 		$query_object->type = 'number';
@@ -117,16 +117,16 @@ class component_section_id extends component_common {
 
 		$between_separator  = '...';
 		$sequence_separator = ',';
-	
+
 		// Case is an array of values
-		if (is_array($q)) {	
+		if (is_array($q)) {
 			$q = implode($sequence_separator, $q);
 		}
 
 		# component path
 		$query_object->component_path = ['section_id'];
-		
-		$query_object->unaccent = false;	
+
+		$query_object->unaccent = false;
 
 
         switch (true) {
@@ -147,14 +147,14 @@ class component_section_id extends component_common {
 
 				// Return an array instead object
 				#$query_object = [$query_object_one,$query_object_two];
-				
+
 				// Group in a new "AND"
 				$current_op = '$and';
 				$new_query_object = new stdClass();
 					$new_query_object->{$current_op} = [$query_object_one,$query_object_two];
 
 				$query_object = $new_query_object;
-				break;	
+				break;
         	# SEQUENCE
 			case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
@@ -198,7 +198,7 @@ class component_section_id extends component_common {
 				$q_clean  = (int)str_replace($operator, '', $q);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= $q_clean;
-				break;		
+				break;
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
@@ -218,9 +218,9 @@ class component_section_id extends component_common {
 				$operator = '=';
 				$q_clean  = (int)str_replace('+', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;	
+				$query_object->q_parsed	= $q_clean;
 				break;
-		}//end switch (true) {		
+		}//end switch (true) {
 		// debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 
@@ -235,7 +235,7 @@ class component_section_id extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'...' 	=> 'entre',
 			',' 	=> 'secuencia',
@@ -249,7 +249,7 @@ class component_section_id extends component_common {
 		return $ar_operators;
 	}//end search_operators_info
 
-	
-	
+
+
 }
 ?>

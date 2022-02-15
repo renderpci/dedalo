@@ -23,7 +23,7 @@ class relation_list extends common {
 
 	/**
 	* CONSTRUCT
-	* 
+	*
 	*/
 	public function __construct($tipo, $section_id, $section_tipo, $modo='edit') {
 
@@ -37,11 +37,11 @@ class relation_list extends common {
 
 	/**
 	* GET_DATO
-	* @return 
+	* @return
 	*/
 	public function get_dato() {
 
-		return [];		
+		return [];
 	}//end get_dato
 
 
@@ -63,12 +63,12 @@ class relation_list extends common {
 		$reference_locator = new locator();
 			$reference_locator->set_section_tipo($this->section_tipo);
 			$reference_locator->set_section_id($this->section_id);
-		
+
 		# Get calculated inverse locators for all matrix tables
 		$inverse_locators = search_development2::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
 
 
-		return (array)$inverse_locators;	
+		return (array)$inverse_locators;
 	}//end get_inverse_references
 
 
@@ -77,8 +77,8 @@ class relation_list extends common {
 	* GET_RELATION_LIST_OBJ
 	*
 	*/
-	public function get_relation_list_obj($ar_inverse_references, $value_resolved=false){		
-		
+	public function get_relation_list_obj($ar_inverse_references, $value_resolved=false){
+
 		$ar_context	= [];
 		$ar_data	= [];
 
@@ -86,7 +86,7 @@ class relation_list extends common {
 		$ar_relation_components	= [];
 		# loop the locators that call to the section
 		foreach ((array)$ar_inverse_references as $current_locator) {
-			
+
 			$current_section_tipo = $current_locator->from_section_tipo;
 
 			# 1 get the @context
@@ -136,7 +136,7 @@ class relation_list extends common {
 							}
 						}
 					}
-					
+
 				}// end if (!in_array($current_section_tipo, $sections_related )
 
 			# 2 get ar_data
@@ -145,14 +145,14 @@ class relation_list extends common {
 				}else{
 					$current_component = null;
 					debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
-				}					
-				$ar_data_result	= $this->get_ar_data($current_locator, $current_component, $value_resolved);			
+				}
+				$ar_data_result	= $this->get_ar_data($current_locator, $current_component, $value_resolved);
 				$ar_data		= array_merge($ar_data, $ar_data_result);
 
 		}// end foreach ar_inverse_references
 
 		$context = 'context';
-		
+
 		$json = new stdClass;
 			$json->{$context}	= $ar_context;
 			$json->data			= $ar_data;
@@ -179,17 +179,17 @@ class relation_list extends common {
 			$current_id->component_tipo	= 'id';
 
 		$data[] = $current_id;
-		
+
 		if($value_resolved===true && isset($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
 					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
 					$current_component	= component_common::get_instance(
-																		$modelo_name, 
-																		$tipo, 
+																		$modelo_name,
+																		$tipo,
 																		$section_id,
-																		'list', 
-																		DEDALO_DATA_LANG, 
+																		'list',
+																		DEDALO_DATA_LANG,
 																		$section_tipo
 																		);
 					$value = $current_component->get_valor();
@@ -204,7 +204,7 @@ class relation_list extends common {
 				}
 			}
 		}
-	
+
 		return $data;
 	}//end get_data
 
@@ -216,15 +216,15 @@ class relation_list extends common {
 	public function get_json(){
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
-		
-			# Class name is called class (ex. component_input_text), not this class (common)	
+
+			# Class name is called class (ex. component_input_text), not this class (common)
 			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-		
+
 		return $json;
 	}//end get_json
 
@@ -233,16 +233,16 @@ class relation_list extends common {
 	/**
 	* GET_DIFFUSION_DATO
 	* @return string $diffusion_value
-	* 
+	*
 	* @see numisdata1021
 	*/
-	public function get_diffusion_dato() {	
+	public function get_diffusion_dato() {
 
 		# Propiedades of diffusion element that references this component
 		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
 		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
 		$diffusion_properties	= $this->get_diffusion_properties();
-		$process_dato_arguments	= isset($diffusion_properties->process_dato_arguments) 
+		$process_dato_arguments	= isset($diffusion_properties->process_dato_arguments)
 			? $diffusion_properties->process_dato_arguments
 			: null;
 		$ar_inverse_references	= $this->get_inverse_references($limit=false, $offset=0, $count=false);
@@ -299,7 +299,7 @@ class relation_list extends common {
 	}//end get_diffusion_dato
 
 
-	
+
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
@@ -321,15 +321,15 @@ class relation_list extends common {
 		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
 		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
 		$diffusion_properties = $this->get_diffusion_properties();
-		
+
 		$data_to_be_used = isset($diffusion_properties->data_to_be_used)
-			? $diffusion_properties->data_to_be_used 
+			? $diffusion_properties->data_to_be_used
 			: 'dato';
 
 		// overwrite data_to_be_used
 			if (isset($diffusion_properties->process_dato_arguments) && isset($diffusion_properties->process_dato_arguments->data_to_be_used)) {
 				$data_to_be_used = $diffusion_properties->process_dato_arguments->data_to_be_used;
-			}	
+			}
 
 		switch ($data_to_be_used) {
 
@@ -429,16 +429,16 @@ class relation_list extends common {
 
 								$custom_locator = new locator();
 									$custom_locator->set_section_tipo($current_locator->from_section_tipo);
-									$custom_locator->set_section_id($current_locator->from_section_id);	
+									$custom_locator->set_section_id($current_locator->from_section_id);
 
 								$current_dato = [$custom_locator];
 
 								$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
-									$process_dato_arguments->lang = $lang;		
+									$process_dato_arguments->lang = $lang;
 
 								$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
 									// dump($current_value, ' current_value ++ '.to_string());
-								
+
 								$value_obj->{$map_key} = $current_value;
 							}
 
@@ -447,12 +447,12 @@ class relation_list extends common {
 							}
 						}
 
-					}//end foreach ($custom_map as $map_item)					
+					}//end foreach ($custom_map as $map_item)
 				}
 
 				$diffusion_value = $ar_values;
 				break;
-			
+
 			case 'valor':
 				$ar_values = [];
 				$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
@@ -466,7 +466,7 @@ class relation_list extends common {
 					$ar_values[] = $current_locator;
 				}
 
-				$ar_relations_lists	= $this->get_relation_list_obj($ar_values, $value_resolved=true);	
+				$ar_relations_lists	= $this->get_relation_list_obj($ar_values, $value_resolved=true);
 				$diffusion_value	= $ar_relations_lists;
 				break;
 
@@ -503,25 +503,25 @@ class relation_list extends common {
 					// 		debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 					// 		continue;
 					// 	}
-					// 	$ar_values[] = $current_locator->section_tipo;					
+					// 	$ar_values[] = $current_locator->section_tipo;
 					// }
 
 					// $diffusion_value = array_unique($ar_values);
-	
+
 				$diffusion_value = $this->get_diffusion_dato();
 				break;
 		}
 
 		// remove duplicates option
-			if (isset($diffusion_properties->process_dato_arguments) 
+			if (isset($diffusion_properties->process_dato_arguments)
 				&& isset($diffusion_properties->process_dato_arguments->remove_duplicates)
 				&& $diffusion_properties->process_dato_arguments->remove_duplicates===true) {
-				
+
 				if (is_array($diffusion_value)) {
 					$diffusion_value = array_unique($diffusion_value, SORT_REGULAR);
 				}
 			}
-				
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value
@@ -533,7 +533,7 @@ class relation_list extends common {
 	* @return array $ar_values
 	*/
 	public function get_valor_export() {
-		
+
 		$ar_values = [];
 		$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
 		foreach ($ar_inverse_references as $current_locator) {
@@ -555,10 +555,10 @@ class relation_list extends common {
 
 	/**
 	* GET_DATO_EXPORT
-	* @return array $ar_values 
+	* @return array $ar_values
 	*/
 	public function get_dato_export() {
-		
+
 		$ar_values = [];
 		$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
 		foreach ($ar_inverse_references as $current_locator) {

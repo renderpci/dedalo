@@ -1,8 +1,8 @@
-<?php 
-		
+<?php
+
 
 		$html .= "<div class=\"header_tool\">";
-		
+
 		#
 		# TOOL NAME
 		$html .= "<div class=\"header_info header_tool_name tool_tr_portal_icon\">";
@@ -24,7 +24,7 @@
 		#
 		# TOP_ID SELECTOR
 		if (isset($inverse_locators) && is_array($inverse_locators)) {
-			
+
 			$html .= "<div class=\"top_id_selector\">";
 
 			$html .= "<select id=\"top_id_selector\" class=\"custom_dropdown\"  >"; // onchange=\"$tool_name.update_top_id(this)\"
@@ -37,10 +37,10 @@
 			$html .= "</select>";
 
 			#$html .= "<script>";
-			#$html .= "{$tool_name}.update_top_id(document.getElementById('top_id_selector'));";			
+			#$html .= "{$tool_name}.update_top_id(document.getElementById('top_id_selector'));";
 			#$html .= "</script>";
 
-			$html .= "</div>";//end top_id_selector			
+			$html .= "</div>";//end top_id_selector
 		}
 
 
@@ -58,9 +58,9 @@
 			if (isset($button_tool_time_machine_html)) {
 				$html .= $button_tool_time_machine_html;
 			}
-		$html .= "</div>";//end header_buttons	
+		$html .= "</div>";//end header_buttons
 
-		
+
 		#
 		# COMPONENT STATE
 		#$html   .= $component_state_html;
@@ -69,4 +69,3 @@
 	$html .= "</div><!-- /header_tool -->";
 
 
-?>

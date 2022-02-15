@@ -1242,7 +1242,7 @@
 
 
 	Valencia 26-03-2018 4.8.3c20
-		search2 : Added operators to relationable components (radio_button, select, etc.)
+		search2 : Added operators to relation-able components (radio_button, select, etc.)
 
 
 	Valencia 28-03-2018 4.8.4
@@ -1363,7 +1363,7 @@
 	Valencia 13-07-2018 4.9.6
 		search_development2 : fixed issue with window subquery order in autocomplete searches
 		all components : added and review unified edit mode render html init in javascript
-						 minor js ecma6 code unifications
+						 minor js ecma6 code unification
 		component_check_box : fixed issue when is not available js class in new records when in dataframe mode (uncertainly)
 		inspector : changed div to static mode and remove js for maintain vertical position
 		tool_indexation : delete_tag : fixed bug when delete tag with indexations not delete indexation locator
@@ -1479,7 +1479,7 @@
 
 
 	Valencia 08-01-2019 5.1.4
-		search_development2 : Changed sequential insert relations sql in propagate_component_dato_to_relations_table to múltiple insert for speed
+		search_development2 : Changed sequential insert relations sql in propagate_component_dato_to_relations_table to multiple insert for speed
 
 
 	Valencia 17-01-2019 5.1.9
@@ -1605,7 +1605,7 @@
 
 
 	Valencia 18-09-2019 5.4.84
-		Fix search error on having searches (left join keys are more reliables now)
+		Fix search error on having searches (left join keys are more reliable now)
 
 
 	Valencia 23-09-2019 5.4.88
@@ -1661,19 +1661,19 @@
 	Valencia 10-03-2020 5.5.31
 		Fix error on resolve recursive levels in diffusion_sql class, method -> update_record
 
-	
+
 	Valencia 11-03-2020 5.5.32
 		Fix error on resolve_portals_custom (diffusion) when value is already an object
 
-	
+
 	Valencia 21-03-2020 5.5.34
 		Improve search_development2 count performance (specially in matrix_activity)
 
-	
+
 	Valencia 26-03-2020 5.5.36
 		Update class web_data->get_records method to allow send sequences of section id to the API server
 
-	
+
 	Valencia 04-04-2020 5.5.36
 		Fix error on search development when only first element of relational component was calculated
 
@@ -1688,7 +1688,7 @@
 
 	Valencia 23-04-2020 5.5.40
 		Added component_autocomplete_hi diffusion options of parents by properties custom_parents
-	
+
 
 	Valencia 23-04-2020 5.5.41
 		Add get_diffusion_resolve_value method to component_autocomplete and integrate it in class diffusion_sql
@@ -1699,7 +1699,7 @@
 
 
 	Valencia 29-04-2020 5.5.43
-		Fix error on load security xml classes by SAML login 
+		Fix error on load security xml classes by SAML login
 
 
 	Valencia 01-05-2020 5.5.44
@@ -1708,7 +1708,7 @@
 
 	Valencia 01-05-2020 5.5.45
 		Avoid diffusion global to write empty array fields
-	
+
 
 	Valencia 04-05-2020 5.5.46
 		Minor clean code
@@ -1747,9 +1747,9 @@
 
 
 	Valencia 18-05-2020 5.5.55
-		Added class.process_result.php as auxiliar class to search than allow post process results
+		Added class.process_result.php as auxiliary class to search than allow post process results
 
-	
+
 	Valencia 19-05-2020 5.5.56
 		Updated method component_relation_parent->get_diffusion_value adding ts_object::get_term_dato_by_locator method
 
@@ -1763,7 +1763,7 @@
 
 	Valencia 22-05-2020 5.5.58
 		Fix bug in class component_relation_common->Save where table relations data is not deleted when component data is deleted.
-		(!) Its recommended to run administration tool 'generate_relations_table_data' to force relations table data regeneration 
+		(!) Its recommended to run administration tool 'generate_relations_table_data' to force relations table data regeneration
 
 
 	Valencia 28-05-2020 5.5.59
@@ -1772,16 +1772,16 @@
 
 	Valencia 16-06-2020 5.5.60
 		Fix search 'get_components_from_section' error on show nested section_group_div / tab components in filter selectionable list
-		
+
 
 	Valencia 21-06-2020 5.5.61
-		Added properties column to manage jer_dd structure table		
+		Added properties column to manage jer_dd structure table
 		Add capacity to structure edit 'properties'
 
-	
+
 	Valencia 26-06-2020 5.5.62
-		Improved tool import dcnav to allow documents group sections 
-	
+		Improved tool import dcnav to allow documents group sections
+
 
 	Valencia 04-07-2020 5.5.63
 		Fix dd edit relation window issues
@@ -1789,16 +1789,16 @@
 
 	Valencia 06-07-2020 5.6.3
 		Fix version number error to 5.6.x (data version changes to 5.6 on add jer_dd properties column)
-	
+
 
 	Valencia 08-07-2020 5.6.4
 		Fix issue where component_input_text export value generates comma separators instead ' | ' in array data
-	
+
 
 	Valencia 09-07-2020 5.6.5
 		Fix publication bug when json encoded strings are not escaped correctly. Now, mysqli real_escape_string is applied to all strings on conform_field_value
 
-	
+
 	Valencia 09-07-2020 5.6.6
 		Fix publication update record error when recursion_level is not incremented on each recursion loop, generating very long time process on complex records
 
@@ -1806,7 +1806,7 @@
 	Valencia 10-07-2020 5.6.7
 		Fix publication check error on diffusion sql 'resolve_value' method
 
-	
+
 	Valencia 13-07-2020 5.6.8
 		Added tool administration import/export options to manage structure
 
@@ -1826,7 +1826,7 @@
 	Valencia 02-09-2020 5.6.14
 		Add component relation common get_diffusion value control to avoid publish non publishable target indexations
 
-	
+
 	Valencia 08-09-2020 5.6.15
 		Add relation_list get_diffusion_value option value 'custom' to allow custom calculations on relation data calculated values (see qdp341)
 
@@ -1859,19 +1859,19 @@
 		Fix tool metadata issues and deficiencies
 		Increase default quality value from 90 to 94 in class ImageMagick thumb generation
 		Added diffusion preference to both component_av and component_image to output clean value only instead the complete file path
-		Added tool metadata 
+		Added tool metadata
 
-	
+
 	Valencia 26-09-2020 5.6.4
 		Update Dedalo_basic_library_pack
 		Updated dedalo4_install database. Changed format from custom to PGSQL zipped)
-	
+
 
 	Valencia 27-09-2020 5.6.4c
 		Added tool administration update Dédalo code feature (download from master and exec rsync on caller installation)
 		Fix update_head_code issues on trigger.db_utils.php (used by master only)
 
-	
+
 	Valencia 28-09-2020 5.6.4e
 		Fixed error on Dédalo counter when new counter is created and some record already exists in section (users case) that generates a incorrect id (2)
 		Add install warning about default entity name config
@@ -1880,14 +1880,14 @@
 	Valencia 29-09-2020 5.7.0
 		Added library pack as default libs to easy install
 
-	
+
 	Valencia 30-09-2020 5.7.1
 		Fixed tool administration issues with github download code and added php no Zip lib available warning
 
-	
+
 	Valencia 11-10-2020 5.7.2
 		Added Public API web_data method 'get_full_interview' to easily retrieve interview data
-		
+
 
 	Valencia 12-10-2020 5.7.3
 		Added server_config_headers.php include to subtitles public API to allow access from different domains
@@ -1904,12 +1904,12 @@
 	Valencia 03-11-2020 5.7.4d
 		Fix load edit page error on Safari when page wrapper is not properly css set to display : table
 
-	
+
 	Valencia 04-11-2020 5.7.5
 		Fix bug on class section when on Delete a record, data comparison failed
 		Added INSERT  ON CONFLICT ON CONSTRAINT relations_all_constraint DO NOTHING to prevent conflicts when new records are added to relations table
 		Modified import_files dcnav way to manage file code. Now full filename is used instead a regex
-		Changed confuse response message on diffusion delete_record when no record is found	
+		Changed confuse response message on diffusion delete_record when no record is found
 
 
 	Valencia 07-11-2020 5.7.6
@@ -1917,7 +1917,7 @@
 		Fix bug when q_operator is non defined in class.tool_import_files_dcnav search query object (import files)
 		Fix error trigger on UploadHandler when image Orientation is not available
 		Update version info to 5.7.6
-	
+
 
 	Valencia 07-11-2020 5.7.7
 		Added optional unaccent property on query object (component_input_text)
@@ -1929,7 +1929,7 @@
 	Valencia 09-11-2020 5.7.8
 		Changed tool_import_files_dcnav	paths to xml files. Now are placed in /media/xml/original
 
-	
+
 	Valencia 13-11-2020 5.7.9
 		Fix lib lessc.inc.php legacy issues with modern php versions >=7.3
 		Improved error managing and unified path to lib /vendor/leafo/lessphp/lessc.inc.php
@@ -1938,88 +1938,88 @@
 
 
 	Valencia 17-11-2020 5.7.10
-		Changed ts_object button show_indexations filter to dynamic (from fixed tipo to dynamic model [component_relation_index and component_relation_struct]) 
+		Changed ts_object button show_indexations filter to dynamic (from fixed tipo to dynamic model [component_relation_index and component_relation_struct])
 
-	
+
 	Valencia 23-11-2020 5.7.11
 		Added control to verify database integrity issues like column existence, etc. (ex. 'properties' in jer_dd)
-		
+
 
 	Valencia 25-11-2020 5.7.12b
 		Added component text area build_geolocation_data_geojson
-		
-	
+
+
 	Valencia 25-11-2020 5.7.13
-		Fix issue with double quotes on set config_auto.php file contents 
+		Fix issue with double quotes on set config_auto.php file contents
 
 
 	Valencia 25-11-2020 5.7.14
 		Added diffusion method 'build_geolocation_data_geojson' (converts text area value to geojson data)
 
-	
+
 	Valencia 07-12-2020 5.7.15
 		Added warning to 'Update Dédalo code' button (tool administration) to avoid mistakes on local development mode
 		Optimized filter children_sentences in diffusion process_result
 
-	
+
 	Valencia 08-12-2020 5.7.16
 		Fix tool portal search set value error in component_autocomplete_hi
 
 
 	Valencia 09-12-2020 5.7.17
-		Fix url path issue on tool administration when link to public API viewer (Safari only) 
+		Fix url path issue on tool administration when link to public API viewer (Safari only)
 
-	
+
 	Valencia 09-12-2020 5.7.18
 		Added fixed filter symbol_state_tipos to public API get_global_search_json
 
-	
+
 	Valencia 17-12-2020 5.7.19
 		Fix error on get_diffusion_resolve_value when the lang was not correctly set on diffusion
-	
-	
+
+
 	Valencia 18-12-2020 5.7.20
 		Added tool_administration errors control for sell executions
-	
+
 
 	Valencia 18-12-2020 5.7.21
 		Fix issue on class subtitles when generated VTT fragments are incorrect length calculated, cutting words
-	
-	
+
+
 	Valencia 28-12-2020 5.7.22
 		Added trigger tool_import_files_dcnav control to manage exceptions and return valid JSON response
 		Fix incorrect search_query_object order value. Set to false instead
 		Added search_development2 parse control to manage non valid values on 'select' and 'order' properties
-		
-	
-	Valencia 28-12-2020 5.7.23	
+
+
+	Valencia 28-12-2020 5.7.23
 		Fix error in search_development2 var name component_parser_order
 
-	
-	Valencia 03-01-2021 5.7.24	
+
+	Valencia 03-01-2021 5.7.24
 		Added support for resolve portals using children locators
 
 
-	Valencia 12-01-2021 5.7.25	
+	Valencia 12-01-2021 5.7.25
 		Fixed problem when tool administration hangs checking self host resolution using CURL (limited timeout to 1.5 secs)
 
 
-	Valencia 13-01-2021 5.7.26	
+	Valencia 13-01-2021 5.7.26
 		Added new warning to admins when they try to remove a term in the Dédalo ontology (structure)
 
-	
+
 	Valencia 14-01-2021 5.7.27
 		Added 'skip_publication_state_check' optional property (structure field 'propiedades') to force skip publication state (Bibliography authors for example)
 
-	
+
 	Valencia 14-01-2021 5.7.28
 		Unify diffusion property name from 'skip_publication_state_check' to 'is_publicable'
 
-	
+
 	Valencia 14-01-2021 5.7.29
-		Propagated diffusion 'is_publicable' behavior to all diffusion class methods that use publication check to locators data 
-		
-	
+		Propagated diffusion 'is_publicable' behavior to all diffusion class methods that use publication check to locators data
+
+
 	Valencia 20-01-2021 5.7.30
 		Added file dd_renderers.css to component_html_text_editor_default.css
 		Removed component_html_text remove chars (\r\n|\n|\r) options on save to preserve html tabs and returns
@@ -2033,13 +2033,13 @@
 	Valencia 24-01-2021 5.7.32
 		Clean and optimize code of propagate_component_dato_to_relations_table methods and tools
 
-	
+
 	Valencia 25-01-2021 5.7.33
 		Added specific render_list_value to component_html_text to strip tags value (avoid problems with unclosed tags in list)
 		Updated Dédalo publication api docu 1.0.12 => 1.0.13
 		Clean controllers code
 
-	
+
 	Valencia 25-01-2021 5.7.34
 		Extends error log information fro debug in class.component_external.php
 		Added timeout to all curl calls to avoid long delay in bad connection scenarios
@@ -2052,14 +2052,14 @@
 		Add component_lang value check on section save_component_dato
 		Fix a spelling mistake
 
-	
+
 	Valencia 26-01-2021 5.7.36
 		Fix issue with 'saves publication data' that overwrites user modifications (moved temporarily)
 
 
 	Valencia 26-01-2021 5.7.37
 		Added component_external additional errors info and control when remote connection fails
-	
+
 
 	Valencia 27-01-2021 5.7.38
 		Fix error on blur element when component is deselected in lock-component process
@@ -2090,20 +2090,20 @@
 	Valencia 01-02-2021 5.7.45
 		Added user dialog alert when user password is a non accepted sequence of number/letters (component_password verify password)
 
-	
+
 	Valencia 02-02-2021 5.7.46
 		Fixed issue with component image in edit mode. Now, component_image_read.js and paper.js are loaded always by component image across page css loader
 		Fixed issue with enter key in thesaurus (conflicts between search form and input fields like order, edit term)
-	
-	
+
+
 	Valencia 02-02-2021 5.7.47
 		Added hide class on first appearance of thesaurus_search_selector (toponymy, lang, etc.)
 
-	
+
 	Valencia 02-02-2021 5.7.48
 		Fixed issue with no file context in component image container
 
-	
+
 	Valencia 03-02-2021 5.7.49
 		Add get_archive_states widget to the mdcat extras
 		Fixed issue in Publication API json_environment where protocol HTTPS is not detected correctly
@@ -2116,7 +2116,7 @@
 		Added column 'gender' to web_data get_global_search_json
 		Added column 'gender' to diffusion_sql save_global_search_data
 		Added diffusion function map_locator_to_int (allow process gender column mdcat3713)
-		Added process_dato option to diffusion_sql::resolve_value 
+		Added process_dato option to diffusion_sql::resolve_value
 
 
 	Valencia 04-02-2021 5.7.51
@@ -2124,7 +2124,7 @@
 		Added ontology section and tool_docu
 		Added tool_docu automatic tool icon load to the inspector
 
-	
+
 	Valencia 05-02-2021 5.7.52
 		Added ontology section connection with structure (for testing purposes)
 
@@ -2132,7 +2132,7 @@
 	Valencia 05-02-2021 5.7.53
 		Separates functionalities of export structure and build head code version from git into 2 buttons
 
-	
+
 	Valencia 05-02-2021 5.7.54
 		Added ontology edit form lock when descriptor is saving
 
@@ -2140,16 +2140,16 @@
 	Valencia 05-02-2021 5.7.55
 		Fix load ontology sync mode using promise instead jquery defer
 
-	
+
 	Valencia 06-02-2021 5.7.56
 		Optimized ontology tree load
 
-	
+
 	Valencia 06-02-2021 5.7.57
 		Removed the no longer used directory 'dd'
 		Removed the no longer used directory 'dd'
 
-	
+
 	Valencia 06-02-2021 5.7.58
 		Fixed JSON editor issues on ontology dd_edit
 		Enabled save ontology data on non master servers
@@ -2157,11 +2157,11 @@
 
 
 	Valencia 06-02-2021 5.7.59
-		Added diffusion function 'resolve_jer_dd_data' to allow direct jer_dd access on publication 
+		Added diffusion function 'resolve_jer_dd_data' to allow direct jer_dd access on publication
 		Removed descriptors def column access. It is no longer necessary now
 		Fix error on dd_edit
 
-	
+
 	Valencia 07-02-2021 5.7.60
 		Removed unnecessary window reposition on tool_upload
 		Added available hierarchy files list on export_hierarchy from tool_administration
@@ -2171,18 +2171,18 @@
 		Added tool_export options to manage 'relation_list' elements
 
 
-	Valencia 08-02-2021 5.7.62	
+	Valencia 08-02-2021 5.7.62
 		Fixed general bug when PHP8 generates an error on 'abs' calls with a temp section (string non convertible to int)
 
-	
-	Valencia 10-02-2021 5.7.63	
+
+	Valencia 10-02-2021 5.7.63
 		Added tool lang bulk_translate
 
-	
+
 	Valencia 10-02-2021 5.7.64
 		Fixed component geolocation issue when the map is inside a section tab and current tab is hidden, map needs to refresh when tab is activated by the user
-	
-	
+
+
 	Valencia 11-02-2021 5.7.65
 		Fixed class diffusion sql map_locator_to_int method to static
 
@@ -2195,9 +2195,9 @@
 		Fixed tool administration import ontology error when a path is not defined in config vars
 		Unified structure_json_file_path and fallback (tool_administration)
 
-	
+
 	Valencia 12-02-2021 5.7.68
-		Fixed syntax error on tool administration 
+		Fixed syntax error on tool administration
 
 
 	Valencia 16-02-2021 5.7.69
@@ -2229,7 +2229,7 @@
 		Fixed appearance issues in tool_diffusion buttons in list mode
 		Fixed error on delete previous record when diffusion mysql insert record is called
 
-	
+
 	Valencia 22-02-2021 5.7.72
 		Added which_command_posix function to tool_admiinstration
 		Fixed component text area people labels
@@ -2245,8 +2245,8 @@
 	Valencia 01-03-2021 5.7.74
 		Added class relation list value format options from properties to override default locator output
 		Added diffusion resolve_value relation_list support to export inverse locators data
-		
-	
+
+
 	Valencia 01-03-2021 5.7.75
 		Added relation_list diffusion remove duplicates option
 
@@ -2274,7 +2274,7 @@
 		Fixed tool_export error when user records selection is ordered
 		Fixed search_development search sort error. Now, to avoid ambiguity in pagination of sorted equal values, the column id is added always
 
-	
+
 	Valencia 17-03-2021 5.7.79
 		Fixed error on create new layout print templates from tool_layout_print
 
@@ -2282,7 +2282,7 @@
 	Valencia 17-03-2021 5.7.80
 		Added tool layout print error notifications
 
-	
+
 	Valencia 18-03-2021 5.8.0
 		Increased max time for CURL get_remote_data on update structure to 300 (matrix_dd take long time to download on slow connections)
 		Added user activity statistics section with daily totals per user
@@ -2294,7 +2294,7 @@
 		Fixed php compatibility issues on update_activity_data method
 		Added updates dato version from 5.6.2 to 5.8.0 to unify version data and software numbers
 		Fixed small issues on diffusion section stats. Now publication actions are excluded of totals
-		
+
 
 	Valencia 25-03-2021 5.8.1
 		Fixed parse_totals_for_js label lang fallback
@@ -2353,16 +2353,16 @@
 		Removed web_data sanitize $sql_options->sql_filter (incompatible with some configurations)
 		03-05-2021
 		Fixed component portal buttons issue within tool time machine
-		Fixed Ontology css error when non transtaled terms are not displayed as italic font
+		Fixed Ontology css error when non translated terms are not displayed as italic font
 		05-05-2021
-		Add mandatory style to autocompete
+		Add mandatory style to autocomplete
 		Change the css of the mandatory style
 		Added tool_time_machine notes to make user annotations about the data changes
 		Added component_number 'in_column' mode to search as section_id is doing now
 		Added class.area_thesaurus get_hierarchy_sections validation before continue to prevent errors on non defined hierarchies type
 		Clean css code in component_text_area
 		07-05-2021
-		Improved Tool time machine notes. Added inspector view of current component history changes and user permissions control over notes 
+		Improved Tool time machine notes. Added inspector view of current component history changes and user permissions control over notes
 		Fixed tool time machine inspector user selection and save events issues
 		Prevent overload the component tm_history request in inspector calls
 		Fixed tool_time_machine pagination error
@@ -2380,7 +2380,7 @@
 		09-05-2021
 		Added php lib 'less_php' to build structure css file. Replaces leafo.lessphp
 		Updated .gitignore file to allow sync lib 'less_php'
-		Changed class css BUILD_STRUCTURE_CSS mothod to use new lib php_less		
+		Changed class css BUILD_STRUCTURE_CSS method to use new lib php_less
 		Fixed refresh issues on delete and create time machine notes
 		10-05-2021
 		Fixed css an appearance issues in inspector and component history / tool time machine
@@ -2396,11 +2396,11 @@
 		Optimized order results moving null values at end (class search_development)
 		Improved search order to move blank values to the end
 		Added search get_query_path component_portal and select_lang path resolution.
-		Now, component_portal can be configurated to use a specific related component in search tasks: 'propiedades->order_component_tipo'
+		Now, component_portal can be configured to use a specific related component in search tasks: 'propiedades->order_component_tipo'
 		Update the pdf filename removing lang
-		Added updates v582 SQL_update	
-	
-	
+		Added updates v582 SQL_update
+
+
 	Valencia 21-11-2021 5.8.3
 		03-06-2021
 		Added component_html_text references manager feature (like component_text_area)
@@ -2427,9 +2427,9 @@
 		Minor fixes in updates.php file to prevent issues updating Dédalo from old versions
 		Fixed issue when DEDALO_DIFFUSION_RESOLVE_LEVELS is not defined in config. Now a value of 2 levels is used as default
 		Fixed error in component_text_area where geolocation tags were not updated correctly causing a failure to save (besides, refactorized update_tag function)
-		16-07-2021		
+		16-07-2021
 		Fixed issue on updates when matrix_stats already exists cases
-		Fixed error in publication web_data when lang 'lg-vlca' don't pass the security verification regex 
+		Fixed error in publication web_data when lang 'lg-vlca' don't pass the security verification regex
 		29-07-2021
 		Added check_remote_server curl error notification on error
 		30-07-2021
@@ -2629,6 +2629,15 @@
 		18-01-2022
 		Add posterframe for indexation tags
 		Changed from 6 secs to 180 secs the sleep time in autobackup
+		02-02-2022
+		Fixed get_diffusion_value_as_geojson issues on json decode when data is empty
+		Added tool_import_dedalo_csv bad JSON notification on preview list
+		Fixed missing encoding value in trigger.tool_export.php -> export_data method
+		Fixed bug on tool_export when some double quote values was not properly escaped, generating JSON format errors on import. Now individual lang values quotes are normalized and escaped before create the csv string
+		10-02-2022
+		Fixed issue in tool_description where where mce editor was not available
+		Added column 'death_context' in custom search global (class.diffusion_sql and class.web_data)
+		Added column 'buried_type' in custom search global (class.diffusion_sql and class.web_data)
 
 
 	[/HISTORY]
@@ -2660,7 +2669,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '18-01-2022T22:21:12');
+	define('DEDALO_BUILD'	, '10-02-2022T11:15:52');
 
 
 	/*

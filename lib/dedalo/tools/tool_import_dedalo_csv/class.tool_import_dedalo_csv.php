@@ -110,7 +110,7 @@ class tool_import_dedalo_csv extends tool_common {
 																			 $section_id,
 																			 'list',
 																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);							
+																			 $section_tipo);
 							$component->set_dato($user_locator);
 							$section->set_component_relation_dato($component);
 
@@ -397,7 +397,7 @@ class tool_import_dedalo_csv extends tool_common {
 		}else{
 			// locator or array of locators is received
 			$locator_base = is_array($value_json) ? reset($value_json) : $value_json;
-			
+
 			// is full locator. Inject safe fixed properties to avoid errors
 			$locator = new locator($locator_base);
 				if (!property_exists($locator_base, 'type')) {
@@ -406,10 +406,10 @@ class tool_import_dedalo_csv extends tool_common {
 				if (!property_exists($locator_base, 'section_tipo')) {
 					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 				}
-				if (!property_exists($locator_base, 'from_component_tipo')) {					
+				if (!property_exists($locator_base, 'from_component_tipo')) {
 					$locator->set_from_component_tipo($from_component_tipo);
 				}
-		}		
+		}
 
 		if (!isset($locator->section_id)) {
 			debug_log(__METHOD__." Error on get user locator value from: ".to_string($value), logger::ERROR);
@@ -456,7 +456,7 @@ class tool_import_dedalo_csv extends tool_common {
 					if (isset($value_obj->{DEDALO_DATA_NOLAN})) {
 						$value_obj = is_array($value_obj->{DEDALO_DATA_NOLAN})
 							? reset($value_obj->{DEDALO_DATA_NOLAN})
-							: $value_obj->{DEDALO_DATA_NOLAN}; 
+							: $value_obj->{DEDALO_DATA_NOLAN};
 					}
 
 				// Add start property if not present
@@ -491,7 +491,7 @@ class tool_import_dedalo_csv extends tool_common {
 						'component_dato' => $value_obj,
 						'timestamp' 	 => $timestamp
 					);
-				
+
 			}else{
 				return null;
 			}
@@ -580,7 +580,8 @@ class tool_import_dedalo_csv extends tool_common {
 			$files_info[$current_file_name] = 'Records: '.$n_records.' - Columns: '.$n_columns.'<br>'.implode(', ', $file_info).'';
 
 			# Reference first row
-			$ar_reference = array();
+			$ar_reference			= array();
+			$ar_reference_errors	= array();
 			$preview_max = 10;
 			foreach ($ar_data as $dkey => $current_line) {
 
@@ -590,14 +591,14 @@ class tool_import_dedalo_csv extends tool_common {
 					# Test valid json
 					if (strpos($value,'[')===0 || strpos($value,'{')===0) {
 
-						#if (version_compare(phpversion(), "7.3.0", ">=")) {
-						#	$test = json_decode($value, JSON_THROW_ON_ERROR);
-						#}else{
-							$test = json_decode($value);
-						#}
+						$test = json_decode($value);
 						if ($test===null) {
-							$current_line = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>";
 							debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
+
+							$current_line  = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>";
+							$current_line .= '<div>'.$value.'</div>';
+
+							$ar_reference_errors[] = $current_line;
 						}
 					}
 				}
@@ -605,8 +606,11 @@ class tool_import_dedalo_csv extends tool_common {
 				// Stop on reach limit
 				if ($dkey>=$preview_max) break;
 			}
-			$files_info[$current_file_name] .= "<pre style=\"white-space:pre;display:none\">Reference row 1: ".print_r($ar_reference,true)."</pre>";
-		}
+
+			$files_info[$current_file_name] .= (!empty($ar_reference_errors))
+				? "<pre class=\"error\" style=\"white-space:pre;\">Reference row 1: ".print_r($ar_reference_errors,true)."</pre>"
+				: "<pre style=\"white-space:pre;display:none\">Reference row 1: ".print_r($ar_reference,true)."</pre>";
+		}//end foreach ($result as $current_file_name) {
 
 		$response = new stdClass();
 			$response->result 		= !empty($result) && is_array($result) ? true : false;
