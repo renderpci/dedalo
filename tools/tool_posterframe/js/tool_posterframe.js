@@ -91,9 +91,6 @@ tool_posterframe.prototype.build = async function(autoload=false) {
 		// main_component
 			const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
 			self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
-			// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
-			self.main_component.mode	= 'player'
-			await self.main_component.build(true)
 
 		// ar_identifying_image (used to fullfil the identifying_image selector options)
 			self.ar_identifying_image = await self.get_ar_identifying_image()

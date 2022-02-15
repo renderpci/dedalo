@@ -73,12 +73,16 @@ const get_content_data = async function(self) {
 	// main_component_container
 		const main_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'main_component_container',
+			class_name		: 'main_component_container loading',
 			parent			: fragment
 		})
-		self.main_component.render()
-		.then(function(component_node){
+		// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
+		self.main_component.mode = 'player'
+		self.main_component.build(true)
+		.then(async function(){
+			const component_node = await self.main_component.render()
 			main_component_container.appendChild(component_node)
+			main_component_container.classList.remove('loading')
 		})
 
 	// buttons_container
