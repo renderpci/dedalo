@@ -538,7 +538,7 @@ class diffusion_rdf extends diffusion {
 									// create an array to store all ddo data
 									$current_value = [];
 									foreach ($ar_ddo_to_join as $current_ddo_to_join) {
-										$current_value[] = $current_ddo_to_join->value;
+										$current_value[] = strip_tags( $current_ddo_to_join->value );
 									}
 									// create the ddo
 									$procesed_ddo = new stdClass();
