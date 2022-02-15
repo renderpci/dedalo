@@ -144,7 +144,7 @@ class component_autocomplete extends component_relation_common {
 			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
 
 		# lang never must be DEDALO_DATA_NOLAN
-		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
+		if ($lang===DEDALO_DATA_NOLAN || empty($lang)) $lang=DEDALO_DATA_LANG;
 
 
 		$ar_values = array();
