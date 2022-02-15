@@ -538,7 +538,7 @@ class diffusion_rdf extends diffusion {
 									// create an array to store all ddo data
 									$current_value = [];
 									foreach ($ar_ddo_to_join as $current_ddo_to_join) {
-										$current_value[] = strip_tags( $current_ddo_to_join->value );
+										$current_value[] =  $current_ddo_to_join->value;
 									}
 									// create the ddo
 									$procesed_ddo = new stdClass();
@@ -552,7 +552,7 @@ class diffusion_rdf extends diffusion {
 							foreach ($ar_processed_ddo as $ddo_value) {
 								// set the value to the graph if the ddo has value
 								if(!empty($ddo_value->value)){
-									$node_graph->addLiteral($object_name, $ddo_value->value, $ddo_value->lang);
+									$node_graph->addLiteral($object_name, strip_tags($ddo_value->value), $ddo_value->lang);
 									$result = true;
 								}
 							}
