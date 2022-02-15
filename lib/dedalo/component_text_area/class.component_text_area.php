@@ -1555,23 +1555,10 @@ class component_text_area extends component_common {
 	*/
 	public function get_diffusion_value($lang=null) {
 
-		// save the actual lang
-		$previous_lang = $this->get_lang();
-
-		// set the requested lang
-		if($lang !== $previous_lang ){
-			$this->set_lang($lang);
-		};
-
 		$diffusion_value = $this->get_dato();  # Important: use raw text (!)
 
 		// Decode entities
 			$diffusion_value = html_entity_decode($diffusion_value);
-
-		// set the original lang
-			if($lang !== $previous_lang ){
-				$this->set_lang($previous_lang);
-			};
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
