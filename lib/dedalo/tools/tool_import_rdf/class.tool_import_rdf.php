@@ -191,9 +191,9 @@ class tool_import_rdf extends tool_common {
 
 			$RecordObj_dd = new RecordObj_dd($ObjectProperty_tipo);
 				$propiedades = $RecordObj_dd->get_propiedades(true);
-				if(isset($propiedades->match)){
-						dump($propiedades, ' propiedades ++ '.to_string());
-				}
+				// if(isset($propiedades->match)){
+				// 		dump($propiedades, ' propiedades ++ '.to_string());
+				// }
 
 			if($children_dd_tipo){
 				$current_resource = $rdf_graph->getResource($base_uri, $object_property_name);
