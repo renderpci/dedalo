@@ -628,6 +628,7 @@ class diffusion_rdf extends diffusion {
 				if(!empty($dato_full)){
 					foreach ($dato_full as $current_lang => $value) {
 						if(!empty($value)){
+							$component->set_lang($current_lang);
 							$lang	= lang::get_alpha2_from_code($current_lang);
 							$value	= $component->{$value_fn}($current_lang);
 
