@@ -14,6 +14,47 @@
 .wrapper_tool.tool_posterframe {
 	padding: 1rem;
 
+	>div {
+		max-width: calc(720px + 2rem);
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	// av component container
+	>.main_component_container {
+		// background-color: @color_grey_medium;
+		background-color: #fafafa;
+		min-width: 720px;
+		// height: 404px;
+		// display: table;
+		height: 500px;
+		// display: block;
+
+		@media screen and (max-width: @width_break_point_1) {
+			min-width: unset;
+			height: unset;
+		}
+
+		>img {
+			display: block;
+			padding: 1rem;
+			padding-top: 2rem;
+			padding-bottom: 1rem;
+		}
+
+
+		.wrapper_component.component_av {
+			// height: 404px;
+
+			.content_data {
+				justify-content: center;
+			}
+
+			video {
+				max-height: 404px;
+			}
+		}
+	}
 
 	>.content_data {
 		display: flex;
@@ -22,34 +63,7 @@
 		// display: grid;
 		// grid-template-rows: 1fr 1fr;
 
-		// av component container
-		>.main_component_container {
-			// background-color: @color_grey_medium;
-			background-color: #fafafa;
-			min-width: 720px;
-			// height: 404px;
-			display: table;
-			height: 500px;
-			// display: block;
 
-			@media screen and (max-width: @width_break_point_1) {
-				min-width: unset;
-				height: unset;
-			}
-
-
-			.wrapper_component.component_av {
-				// height: 404px;
-
-				.content_data {
-					justify-content: center;
-				}
-
-				video {
-					max-height: 404px;
-				}
-			}
-		}
 
 		// buttons and preview container
 		>.buttons_container {
@@ -66,7 +80,7 @@
 				margin-top: 1.5rem;
 				color: #aaa;
 				width: 100%;
-				max-width: calc(720px + 2rem);
+				// max-width: calc(720px + 2rem);
 				margin-left: auto;
 				margin-right: auto;
 

@@ -1036,6 +1036,30 @@
 					}
 				}
 
+				.quality_selector {
+					margin: 0;
+					position: absolute;
+					// bottom: 0;
+					// margin-left: 1em;
+					// width: calc(100% - 2em);
+					// margin-bottom: 1em;
+					// background-color: @color_grey_dark;
+					// opacity: 1;
+					// color: white;
+					top: 0.5rem;
+					width: 5rem;
+					right: 1rem;
+					height: 1.25rem;
+					font-size: 0.9rem;
+					border: none;
+					outline: none;
+					padding: 0;
+
+					.fullscreen& {
+						width: auto !important;
+					}
+				}
+
 				.av_control_buttons {
 					display: flex;
 					flex-wrap: wrap;
@@ -2178,8 +2202,9 @@
 				padding-right: 0.5em;
 
 				.button {
-					vertical-align: top;
+					vertical-align: text-bottom;
 					margin-right: 0.5em;
+					display: inline-block;
 				}
 			}
 			.description {

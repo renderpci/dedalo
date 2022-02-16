@@ -14,7 +14,36 @@
 .wrapper_tool.tool_media_versions {
 	padding: 1rem;
 
+	// av component container
+	.main_component_container {
+		// background-color: @color_grey_medium;
+		height: calc(404px + 3rem);
+		min-width: 720px;
+		width: 720px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
 
+		@media screen and (max-width: @width_break_point_1) {
+			min-width: unset;
+			height: unset;
+		}
+
+		.wrapper_component.component_av {
+			// height: 404px;
+
+			.content_data {
+				justify-content: center;
+			}
+
+			video {
+				max-height: 404px;
+			}
+		}
+	}
+
+
+	// content_data
 	>.content_data {
 		display: flex;
 		flex-wrap: wrap;
@@ -22,31 +51,6 @@
 		// display: grid;
 		// grid-template-rows: 1fr 1fr;
 
-		// av component container
-		>.main_component_container {
-			// background-color: @color_grey_medium;
-			height: 404px;
-			min-width: 720px;
-			display: table;
-
-			@media screen and (max-width: @width_break_point_1) {
-				min-width: unset;
-				height: unset;
-			}
-
-
-			.wrapper_component.component_av {
-				// height: 404px;
-
-				.content_data {
-					justify-content: center;
-				}
-
-				video {
-					max-height: 404px;
-				}
-			}
-		}
 
 		// versions_container. grid of quality versions and options
 		>.versions_container {
