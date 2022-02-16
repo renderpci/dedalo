@@ -197,9 +197,9 @@ component_common.prototype.build = async function(autoload=false){
 				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 
 			// rqo. build again rqo with updated request_config if exists
-				if (self.context.request_config) {
-					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
-				}
+				// if (self.context.request_config) {
+				// 	self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
+				// }
 		}
 
 	// update instance properties from context
