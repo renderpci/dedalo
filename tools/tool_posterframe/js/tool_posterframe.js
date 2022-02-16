@@ -92,12 +92,24 @@ tool_posterframe.prototype.build = async function(autoload=false) {
 			const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
 			self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
 
-		// ar_identifying_image (used to fullfil the identifying_image selector options)
-			self.ar_identifying_image = await self.get_ar_identifying_image()
-			console.log("//// tool self:",self);
 
 	return common_build
 };//end build_custom
+
+
+
+/**
+* GET_AR_IDENTIFYING_IMAGE
+* Call to API to get values to identifying_image selector options
+* (used to fullfil the identifying_image selector options)
+* @return array self.ar_identifying_image
+*/
+tool_posterframe.prototype.get_ar_identifying_image = async function() {
+
+	self.ar_identifying_image = self.ar_identifying_image || await self.get_ar_identifying_image();
+
+	return self.ar_identifying_image
+};//end get_ar_identifying_image
 
 
 
