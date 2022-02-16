@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -41,9 +41,31 @@ render_tool_posterframe.prototype.edit = async function(options) {
 		}
 
 	// wrapper. ui build_edit returns a standard built tool wrapper
-		const wrapper = ui.tool.build_wrapper_edit(self, {
-			content_data : content_data
+		const wrapper = ui.tool.build_wrapper_edit(self, {})
+
+	// main_component_container
+		const main_component_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'main_component_container',
+			parent			: wrapper
 		})
+		// temporal image to show while main_component is rebuilt and rendered
+		const main_component_image = ui.create_dom_element({
+			element_type	: 'img',
+			src				: self.main_component.data.posterframe_url,
+			parent			: main_component_container
+		})
+		// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
+		self.main_component.mode = 'player'
+		self.main_component.build(true)
+		.then(async function(){
+			const component_node = await self.main_component.render()
+			main_component_image.remove()
+			main_component_container.appendChild(component_node)
+		})
+
+	// content data add
+		wrapper.appendChild(content_data)
 
 	// modal container
 		const header = wrapper.querySelector('.tool_header') // is created by ui.tool.build_wrapper_edit
@@ -71,19 +93,25 @@ const get_content_data = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// main_component_container
-		const main_component_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'main_component_container loading',
-			parent			: fragment
-		})
-		// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
-		self.main_component.mode = 'player'
-		self.main_component.build(true)
-		.then(async function(){
-			const component_node = await self.main_component.render()
-			main_component_container.appendChild(component_node)
-			main_component_container.classList.remove('loading')
-		})
+		// const main_component_container = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'main_component_container',
+		// 	parent			: fragment
+		// })
+		// // temporal image to show while main_component is rebuilt and rendered
+		// const main_component_image = ui.create_dom_element({
+		// 	element_type	: 'img',
+		// 	src				: self.main_component.data.posterframe_url,
+		// 	parent			: main_component_container
+		// })
+		// // rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
+		// self.main_component.mode = 'player'
+		// self.main_component.build(true)
+		// .then(async function(){
+		// 	const component_node = await self.main_component.render()
+		// 	main_component_image.remove()
+		// 	main_component_container.appendChild(component_node)
+		// })
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -142,19 +170,23 @@ const get_buttons = function(self) {
 				class_name		: 'identifying_image_selector',
 				parent			: identifying_image_block
 			})
-			const ar_identifying_image_length = self.ar_identifying_image.length
-			for (let i = 0; i < ar_identifying_image_length; i++) {
+			// options
+			self.get_ar_identifying_image()
+			.then(function(ar_identifying_image){
 
-				const item = self.ar_identifying_image[i]
-				// option
-				ui.create_dom_element({
-					element_type	: 'option',
-					value			: JSON.stringify(item),
-					text_content	: item.label + ' - ' + item.section_id,
-					parent			: identifying_image_selector
-				})
-			}
+				const ar_identifying_image_length = ar_identifying_image.length
+				for (let i = 0; i < ar_identifying_image_length; i++) {
 
+					const item = ar_identifying_image[i]
+					// option
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: JSON.stringify(item),
+						text_content	: item.label + ' - ' + item.section_id,
+						parent			: identifying_image_selector
+					})
+				}
+			})
 
 	// manage_posterframe_block
 		const manage_posterframe_block = ui.create_dom_element({
