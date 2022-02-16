@@ -1,4 +1,4 @@
-/*global it, describe, mocha */
+/*global it, describe, mocha assert */
 /*eslint no-undef: "error"*/
 
 
@@ -15,7 +15,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 // utilities
-	function fn_random_string(length=128) {		
+	function fn_random_string(length=128) {
 
 		let result = '';
 
@@ -27,7 +27,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		const charactersLength	= characters.length;
 		for ( let i = 0; i < length; i++ ) {
 		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
-		   if (i>2) { break }		  
+		   if (i>2) { break }
 		}
 		return result;
 	}
@@ -56,7 +56,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				// value.paginated_key 	= paginated_key
 			// }
 			value.from_component_tipo 	= from_component_tipo // "test144"
-		
+
 		return value
 	}
 	function fn_custom_locator() {
@@ -71,7 +71,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 			section_tipo		: section_tipo, // "dd501"
 			from_component_tipo	: from_component_tipo // "test144"
 		}
-		
+
 		return value
 	}
 	function fn_random_date() {
@@ -273,7 +273,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		// 	}
 		// })('component_portal', 'test204', section_tipo, section_id, mode, lang, fn_custom_locator, ['es1', 'test204', 0, 1]) )
 
-		
+
 		// options.push( (function(model, tipo){
 		// 	return {
 		// 		model				: model,
@@ -287,7 +287,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		// 	}
 		// })('component_publication', 'test148') )
 
-		
+
 		// options.push( (function(model, tipo){
 		// 	return {
 		// 		model				: model,
@@ -379,7 +379,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 						"mode"			: mode,
 						"lang"			: lang
 					}, `${model}_${tipo}_${section_tipo}_${section_id}_${mode}_${lang}`); // like 'component_input_text_test52_test65_1_edit_lg-eng'
-				
+
 				// using null as section_id value
 					make_test({
 						"model"			: model,
@@ -425,7 +425,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 							mode	: mode,
 							lang	: lang,
 							context	: {}
-						}, component_input_text); 
+						}, component_input_text);
 				});
 			// tool_lang instance
 				describe("builds tool_lang instance from options", function() {
@@ -504,7 +504,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					// })
 					// // console.log("************* calculated element_context:",element_context.result[0]);
 					// options.context = element_context.result[0]
-					
+
 				// direct miniumun context
 					const request_config = [{
 						api_engine	: "dedalo",
@@ -530,13 +530,11 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					if (stage==='render') {
 						await new_instance.render()
 					}
-
-					if (stage==='refresh') {
+					else if (stage==='refresh') {
 						await new_instance.render()
 						await new_instance.refresh()
 					}
-
-					if (stage==='destroy') {
+					else if (stage==='destroy') {
 
 						const instance_id	= new_instance.id
 						//const instance_key 	= options.key || key_instances_builder(options, true)
@@ -546,7 +544,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 						// 	console.log("instance_id:",instance_id)
 						// 		console.log("instance_key:",instance_key);
 
-						const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
+						// const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
 						await new_instance.destroy()
 
 						// exists after destroy ?
@@ -575,7 +573,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 							break;
 					}
 				}
-				
+
 				await new_instance.destroy()
 			});
 		}//end function make_test
@@ -608,7 +606,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		// render
 			describe("RENDER component based on options values to create a component instance: status = builded and permissions = 1", function() {
 
-				for (let i = 0; i < options.length; i++) {					
+				for (let i = 0; i < options.length; i++) {
 					describe(options[i].model, function() {
 						// params: options, property, expected, stage
 						make_test(options[i], 'status', 'rendered', 'render')
@@ -647,9 +645,9 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 	describe("components : change data", function(){
 
 		function make_test_change_data(options, equals) {
-			
+
 			const new_value = options.new_value(options.new_value_params) //  old_value + 1
-			
+
 			const test_title = (equals===true)
 				? `${options.model} => Save new_value  = new_value (` + JSON.stringify(new_value) + ')'
 				: `${options.model} => Save new_value != old_value (` + JSON.stringify(new_value) + ')'
@@ -689,7 +687,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 					// const new_value = old_value + 1
 					// const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
-					
+
 					// save
 						const changed_data = Object.freeze({
 							action	: 'insert',
@@ -716,7 +714,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 						const reference_value	= new_value
 						const data_value		= new_instance.data.value[0]
-						
+
 						// locator case check
 						if (data_value && typeof data_value.from_component_tipo!=="undefined" && data_value.from_component_tipo) {
 
