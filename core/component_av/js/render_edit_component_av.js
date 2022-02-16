@@ -176,6 +176,10 @@ const get_content_data_edit = function(self) {
 			observer.observe(video_container);
 		}
 
+	// quality_selector
+		const quality_selector = get_quality_selector(self)
+		fragment.appendChild(quality_selector)
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
@@ -262,6 +266,55 @@ const get_buttons = (self) => {
 
 	return buttons_container
 };//end  get_buttons
+
+
+
+/**
+* GET_QUALITY_SELECTOR
+* @return DOM node select
+*/
+const get_quality_selector = (self) => {
+
+	// short vars
+		const data		= self.data
+		const quality	= self.quality || self.context.quality
+
+		const fragment = new DocumentFragment()
+
+	// create the quality selector
+		const quality_selector = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'quality_selector',
+			parent			: fragment
+		})
+		quality_selector.addEventListener("change", (e) =>{
+			const src = e.target.value
+			self.video.src = src
+			// event_manager.publish('image_quality_change_'+self.id, img_src)
+			console.log("src:",src);
+		})
+
+		const quality_list		= data.datalist.filter(el => el.file_exist===true)
+		const quality_list_len	= quality_list.length
+		for (let i = 0; i < quality_list_len; i++) {
+			// create the node with the all qualities sended by server
+			const value = (typeof quality_list[i].url==="undefined")
+				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
+				: quality_list[i].url
+
+			const select_option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: value,
+				text_node		: quality_list[i].quality,
+				parent			: quality_selector
+			})
+			//set the default quality_list to config variable dedalo_image_quality_default
+			select_option.selected = quality_list[i].quality===quality ? true : false
+		}
+
+
+	return quality_selector
+};//end get_quality_selector
 
 
 
