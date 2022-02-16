@@ -614,17 +614,17 @@ export const ui = {
 						})
 
 					// fix nearby inspector overlapping
-						const el				= component.node[0]
-						const el_rect			= el.getBoundingClientRect();
-						// console.log("/// el el_rect:",el_rect);
-						const inspector			= document.getElementById('inspector')
-						const inspector_rect	= inspector.getBoundingClientRect();
-						// console.log("/// inspector_rect:",inspector_rect);
-
-						if (inspector_rect.left > 50 // prevent affects responsive mobile view
-							&& el_rect.right > inspector_rect.left-20
-							) {
-							el.classList.add('inside')
+						const el = component.node[0]
+						if (el) {
+							const el_rect			= el.getBoundingClientRect();
+							const inspector			= document.getElementById('inspector')
+							const inspector_rect	= inspector.getBoundingClientRect();
+							// console.log("/// inspector_rect:",inspector_rect);
+							if (inspector_rect.left > 50 // prevent affects responsive mobile view
+								&& el_rect.right > inspector_rect.left-20
+								) {
+								el.classList.add('inside')
+							}
 						}
 
 					return true
