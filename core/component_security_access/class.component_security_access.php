@@ -1,14 +1,15 @@
 <?php
 /*
 * CLASS COMPONENT SECURITY ACCESS
-* Manages
+* Manages ontology elements access and permissions
 *
 */
 class component_security_access extends component_common {
 
 
+
 	/**
-	* GET DATO 
+	* GET DATO
 	* @return object $dato
 	* Format [{"tipo":"dd21","parent":"dd20","value":3}]
 	*/
@@ -19,7 +20,8 @@ class component_security_access extends component_common {
 		}
 
 		return (array)$dato;
-	}
+	}//end get_dato
+
 
 
 	/**
@@ -27,6 +29,7 @@ class component_security_access extends component_common {
 	* @param object $dato
 	*/
 	public function set_dato($dato) {
+
 		if (!is_array($dato)) {
 			if(empty($dato)) {
 				$dato = [];
@@ -34,14 +37,15 @@ class component_security_access extends component_common {
 				$dato = (array)$dato;
 			}
 		}
-		parent::set_dato($dato);
-	}
-	
+
+		return parent::set_dato($dato);
+	}//end set_dato
+
 
 
 	/**
 	* GET_DATALIST
-	* @return 
+	* @return
 	*/
 	public function get_datalist() {
 
@@ -63,7 +67,7 @@ class component_security_access extends component_common {
 
 			foreach ($ar_permisions_areas as $item) {
 				$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
-			}	
+			}
 		}
 
 		$datalist = new stdClass();
@@ -91,10 +95,9 @@ class component_security_access extends component_common {
 
 		if(!empty($ar_result[0])) {
 			$tipo					= $ar_result[0];
-			$obj 					= new RecordObj_dd($tipo);
+			$obj					= new RecordObj_dd($tipo);
 			$ar_childrens_of_this	= $obj->get_ar_childrens_of_this();
-			$ar_tesauro 			= $ar_childrens_of_this;
-			#dump($ar_tesauro);
+			$ar_tesauro				= $ar_childrens_of_this;
 		}
 		# Añadimos el propio termino como padre del arbol
 		#array_push($ar_tesauro, $tipo);
@@ -103,10 +106,8 @@ class component_security_access extends component_common {
 		# STORE CACHE DATA
 		$ar_tipo_admin = $ar_tesauro ;
 
-		#dump($ar_tesauro," ar_tesauro");
-
 		return $ar_tesauro ;
-	}
+	}//end get_ar_tipo_admin
 
 
 
@@ -169,10 +170,9 @@ class component_security_access extends component_common {
 
 			return $response;
 			break;
-		}		
+		}
 	}//end update_dato_version
 
 
-	
-};
-?>
+
+}//end class
