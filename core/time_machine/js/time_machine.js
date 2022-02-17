@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -43,11 +43,11 @@ export const time_machine = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	time_machine.prototype.render			= common.prototype.render
-	time_machine.prototype.refresh			= common.prototype.refresh
-	time_machine.prototype.destroy			= common.prototype.destroy
-	time_machine.prototype.build_rqo_show	= common.prototype.build_rqo_show
-	time_machine.prototype.tm				= render_time_machine.prototype.tm
+	time_machine.prototype.render				= common.prototype.render
+	time_machine.prototype.refresh				= common.prototype.refresh
+	time_machine.prototype.destroy				= common.prototype.destroy
+	time_machine.prototype.build_rqo_show		= common.prototype.build_rqo_show
+	time_machine.prototype.tm					= render_time_machine.prototype.tm
 	// time_machine.prototype.get_columns_map	= common.prototype.get_columns_map
 
 
@@ -142,8 +142,8 @@ time_machine.prototype.build = async function(autoload=false) {
 				}
 
 			// set the result to the datum
-				self.datum = api_response.result
-				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
+				self.datum	= api_response.result
+				self.data	= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
 
 			// count rows
 				if (!self.total) {
@@ -216,7 +216,7 @@ time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
-* build_context
+* BUILD_CONTEXT
 * Build a new time_machine custom request config based on caller requirements
 * Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
 * Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'

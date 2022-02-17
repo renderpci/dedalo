@@ -173,32 +173,27 @@ abstract class common {
 	*/
 	public static function get_permissions( $parent_tipo=null, $tipo=null ) {
 
-		if(login::is_logged()!==true)
-			return 0;
+		// no logged case
+			if(login::is_logged()!==true) {
+				return 0;
+			}
 
 		if( empty($parent_tipo) ) {
 			if(SHOW_DEBUG===true) {
-				dump($parent_tipo,'parent_tipo');
-				throw new Exception("Error Processing Request. get_permissions: parent_tipo is empty", 1);
+				dump($parent_tipo, 'parent_tipo');
+				trigger_error("Error Processing Request. get_permissions: parent_tipo is empty");
 			}
-			#die("Error Processing Request. get_permissions: tipo is empty");
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
 		if( empty($tipo) ) {
 			if(SHOW_DEBUG===true) {
-				dump($tipo,'get_permissions error for tipo');
-				throw new Exception("Error Processing Request. get_permissions: tipo is empty", 1);
+				dump($tipo, 'get_permissions error for tipo');
+				trigger_error("Error Processing Request. get_permissions: tipo is empty");
 			}
-			#die("Error Processing Request. get_permissions: tipo is empty");
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
-
-		// dd1324 Tools Register section
-			if ($parent_tipo==='dd1324') {
-				return 1;
-			}
 
 		$permissions = security::get_security_permissions($parent_tipo, $tipo);
 

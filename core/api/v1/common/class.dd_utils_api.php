@@ -275,7 +275,7 @@ class dd_utils_api {
 				$ar_label 	 = label::get_ar_label($lang); // Get all properties
 					#dump($ar_label, ' ar_label');
 
-				file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+				file_put_contents( DEDALO_CORE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
 				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 			}
 

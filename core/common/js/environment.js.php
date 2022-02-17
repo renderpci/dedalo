@@ -157,7 +157,7 @@ session_write_close();
 "use strict";
 const page_globals=<?php
 	echo (SHOW_DEBUG===true)
-		? json_encode($page_globals, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)
+		? json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
 		: json_encode($page_globals, JSON_UNESCAPED_UNICODE)
 ?>;
 const <?php // plain_vars
