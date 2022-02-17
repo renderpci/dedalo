@@ -69,7 +69,7 @@ class ontology {
 	* @return object $item
 	*/
 	public static function tipo_to_json_item(string $tipo, $request_options=[
-		'tipo' 			=> true,
+		'tipo'			=> true,
 		'tld'			=> true,
 		'is_model'		=> true,
 		'model'			=> true,
@@ -285,8 +285,8 @@ class ontology {
 			});
 			$new_tld = 'tool'.++$counter;
 
-			$item->tipo = $new_tld;
-			$item->tld 	= 'tool';
+			$item->tipo	= $new_tld;
+			$item->tld	= 'tool';
 
 			foreach ($ar_items_childrens as $key => $current_element) {
 				$ontology[$key]->parent = $new_tld;
@@ -312,8 +312,8 @@ class ontology {
 		}
 
 		# STATIC CACHE
-		static $childrens_recursive_data;
-		if(isset($childrens_recursive_data[$tipo])) return $childrens_recursive_data[$tipo];
+		static $children_recursive_data;
+		if(isset($children_recursive_data[$tipo])) return $children_recursive_data[$tipo];
 
 		$ar_elements = [];
 
@@ -322,33 +322,34 @@ class ontology {
 
 			case 'section':
 
-				$section_tipo 			 = $tipo;
-				$ar_modelo_name_required = array('section_group','section_tab','button_','relation_list','time_machine_list');
+				$section_tipo				= $tipo;
+				$ar_modelo_name_required	= ['section_group','section_tab','button_','relation_list','time_machine_list'];
 
 				# Real section
 				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
-				$ar_ts_childrens   = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+				$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
 
 				# Virtual section too is neccesary (buttons specifics)
-				$ar_ts_childrens_v = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
-				$ar_ts_childrens = array_merge($ar_ts_childrens, $ar_ts_childrens_v);
+				$ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
+				$ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
 				break;
 
 			default:
+
 				# Areas
-				$RecordObj_dd	 = new RecordObj_dd($tipo);
-				$ar_ts_childrens = $RecordObj_dd->get_ar_childrens_of_this();
+				$RecordObj_dd		= new RecordObj_dd($tipo);
+				$ar_ts_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
 				break;
 		}
 
 
-		$ar_exclude_modelo 		= array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
-		$ar_exclude_components 	= defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
+		$ar_exclude_modelo		= ['component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements']; # ,'filter','tools'
+		$ar_exclude_components	= defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
 		foreach((array)$ar_ts_childrens as $element_tipo) {
 
 			// Remove_exclude_models
 				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-				if( in_array($component_model, $ar_exclude_modelo)) {
+				if( in_array($component_model, $ar_exclude_modelo) ) {
 					continue ;
 				}
 
@@ -358,25 +359,26 @@ class ontology {
 				}
 
 			// get the ontology json format
-				$ar_elements[]	= ontology::tipo_to_json_item($element_tipo,[
-						'tipo' 			=> true,
-						'tld'			=> false,
-						'is_model'		=> false,
-						'model'			=> true,
-						'model_tipo'	=> false,
-						'parent'		=> true,
-						'order'			=> true,
-						'translatable'	=> false,
-						'properties'	=> false,
-						'relations'		=> false,
-						'descriptors'	=> false,
-						'label'			=> true]);
+				$ar_elements[] = ontology::tipo_to_json_item($element_tipo, [
+					'tipo'			=> true,
+					'tld'			=> false,
+					'is_model'		=> false,
+					'model'			=> true,
+					'model_tipo'	=> false,
+					'parent'		=> true,
+					'order'			=> true,
+					'translatable'	=> false,
+					'properties'	=> false,
+					'relations'		=> false,
+					'descriptors'	=> false,
+					'label'			=> true
+				]);
 
-			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo));
+			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo) );
 		}
 
 		# STORE CACHE DATA
-		$childrens_recursive_data[$tipo] = $ar_elements;
+		$children_recursive_data[$tipo] = $ar_elements;
 
 		if(SHOW_DEBUG===true) {
 			$total=round(microtime(1)-$start_time,3);
@@ -394,7 +396,7 @@ class ontology {
 	* @return int $section_id
 	*/
 	public static function add_term($options) {
-		
+
 		// options
 			$term_id = $options->term_id;
 
@@ -477,7 +479,7 @@ class ontology {
 
 		// component parent
 			// (function($value) use($section_tipo, $section_id, $lang) {
-				
+
 			// 	$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
 			// 	$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
@@ -499,7 +501,7 @@ class ontology {
 			// 					]
 			// 				}
 			// 			]
-			// 		}';				
+			// 		}';
 			// 		$sqo = json_decode('{
 			// 			"parsed": false,
 			// 			"section_tipo": "'.$section_tipo.'",
@@ -539,7 +541,7 @@ class ontology {
 			// 			$component->Save();
 			// 		}else{
 			// 			trigger_error('Parent not found! term_id not exists: '.to_string($value));
-			// 		}				
+			// 		}
 			// })($parent);
 
 		// component is_model
@@ -575,14 +577,14 @@ class ontology {
 
 	/**
 	* EDIT_TERM
-	* Edit term in section 'Ontology'. 
+	* Edit term in section 'Ontology'.
 	* Note on save section finish, also is saved the value in 'matrix_descriptors_dd'
 	* @param object $options
 	* @return bool
 	*/
 	public static function edit_term($options) {
-		
-		// options			
+
+		// options
 			$term_id	= $options->term_id;
 			$dato		= $options->dato;
 			$dato_tipo	= $options->dato_tipo; // termino | def | obs
@@ -606,7 +608,7 @@ class ontology {
 
 		// update value
 			if (!empty($section_id)) {
-				
+
 				$component_tipo = (function($dato_tipo){
 					switch ($dato_tipo) {
 						case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
@@ -615,10 +617,10 @@ class ontology {
 					}
 					return null;
 				})($dato_tipo);
-				
-				// component save value 
+
+				// component save value
 				if (!empty($component_tipo)) {
-					
+
 					(function($value) use($section_tipo, $section_id, $component_tipo, $lang, $dato_tipo) {
 						// dump($lang, ' $lang ++ component_tipo: '.$component_tipo.' - dato_tipo: '.$dato_tipo. ' - value: '.to_string($value));
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -628,7 +630,7 @@ class ontology {
 																		 'edit',
 																		 $lang,
 																		 $section_tipo);
-						
+
 						$dato = ($modelo_name==='component_input_text') ? [$value] : $value;
 						$component->set_dato($dato);
 						$component->Save();
@@ -657,7 +659,7 @@ class ontology {
 			}else{
 				trigger_error('edit_term : Invalid section_id '.$section_id);
 			}
-		
+
 		return false;
 	}//end edit_term
 
@@ -666,11 +668,11 @@ class ontology {
 	/**
 	* GET_SECTION_ID_BY_TERM_ID
 	* Search in DDBB for records in section Ontology where term_id is requested term_id
-	* @return int | null 
+	* @return int | null
 	* @param string $term_id
 	*/
 	public static function get_section_id_by_term_id(string $term_id) {
-		
+
 		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 		$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -708,7 +710,7 @@ class ontology {
 				"skip_projects_filter": true,
 				"select": []
 			}');
-		
+
 		$dedalo_version = explode(".", DEDALO_VERSION);
 		if ( (int)$dedalo_version[0]>5 ) {
 			// v6
