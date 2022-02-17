@@ -2651,7 +2651,8 @@
 		Added comments of class.ontology.php
 		Change the lang of the component to get_valor()
 		Revert "Fix get diffusion value lang when it has required"
-
+		16-02-2022
+		Added library qrcode (EasyQRCodeJS)
 
 
 	[/HISTORY]
@@ -2683,7 +2684,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-02-2022T21:49:26');
+	define('DEDALO_BUILD'	, '16-02-2022T14:19:32');
 
 
 	/*
