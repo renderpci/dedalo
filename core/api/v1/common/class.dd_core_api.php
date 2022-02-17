@@ -80,7 +80,7 @@ class dd_core_api {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					foreach($vars as $name) {
 						$debug->{$name} = $$name;
 					}
@@ -127,10 +127,11 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
 
 				$response->debug = $debug;
 			}
+
 
 		return (object)$response;
 	}//end read
@@ -239,7 +240,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					$debug->json_data 	= $json_data;
 
 				$response->debug = $debug;
@@ -319,7 +320,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					$debug->json_data 	= $json_data;
 
 				$response->debug = $debug;
@@ -366,7 +367,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$result->debug  = $result->debug ?? new stdClass();
-				$result->debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+				$result->debug->exec_time = exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $result;
@@ -409,15 +410,14 @@ class dd_core_api {
 					break;
 
 				// case $model==='section_tm':
-				// 	$section_id 	= $source->section_id;
-				// 	$element 		= section_tm::get_instance($section_id, $section_tipo);
-				// 	// set rqo (source)
-				// 	$element->set_rqo([$source]); // inject whole source
-				// 	break;
+					// 	$section_id 	= $source->section_id;
+					// 	$element 		= section_tm::get_instance($section_id, $section_tipo);
+					// 	// set rqo (source)
+					// 	$element->set_rqo([$source]); // inject whole source
+					// 	break;
 
 				case strpos($model, 'area')===0:
 					$element = area::get_instance($model, $tipo, $mode);
-
 					break;
 
 				case strpos($model, 'component_')!==false:
@@ -663,12 +663,12 @@ class dd_core_api {
 		$filter_components = common::get_section_elements_context([
 			'ar_section_tipo'	=> $ar_section_tipo,
 			'context_type'		=> $context_type
-		]);			
+		]);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $filter_components;
@@ -678,7 +678,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					$debug->json_data	= $json_data;
 				$response->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
@@ -711,7 +711,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $editing_preset;
@@ -742,7 +742,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $save_temp_preset;
@@ -774,7 +774,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $filter_components;
@@ -830,8 +830,8 @@ class dd_core_api {
 
 		// default result
 			$result = new stdClass();
-				$result->context = [];
-				$result->data 	 = [];
+				$result->context	= [];
+				$result->data		= [];
 
 		// fix rqo
 			dd_core_api::$rqo = $rqo;
@@ -856,7 +856,6 @@ class dd_core_api {
 			// 	$ddo_source = reset($ar_source);
 
 
-
 		// source vars
 			$action			= $ddo_source->action ?? 'search';
 			$mode			= $ddo_source->mode ?? 'list';
@@ -867,7 +866,7 @@ class dd_core_api {
 			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 
 
-		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values 
+		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values
 			$sqo_id	= implode('_', [$model,$section_tipo]);
 			$sqo	= !empty($rqo->sqo)
 				? $rqo->sqo
@@ -913,11 +912,11 @@ class dd_core_api {
 
 						// 	}
 						// $sqo = common::build_search_query_object($sqo_options);
-						
+
 						$sqo = new search_query_object();
 							$sqo->set_id($sqo_id);
 							$sqo->set_mode($mode);
-							$sqo->set_section_tipo([$section_tipo]);							
+							$sqo->set_section_tipo([$section_tipo]);
 							$sqo->set_limit($limit);
 							$sqo->set_offset($offset);
 
@@ -927,7 +926,7 @@ class dd_core_api {
 									$self_locator->set_section_id($section_id);
 								$sqo->set_filter_by_locators([$self_locator]);
 							}
-						
+
 						// tm case
 							// if ($mode==='tm') {
 							// 	$search_query_object->order = json_decode('[{"direction": "DESC","path": [{"component_tipo": "id"}]}]');
@@ -944,8 +943,8 @@ class dd_core_api {
 							// dump($search_query_object, ' search_query_object 2 (autogenerated) ++ '.to_string());
 
 						// debug
-							// error_log("------------------------- build_json_rows sqo ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
-					
+							// error_log("------------------------- build_json_rows sqo ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+
 						return $sqo;
 					  })());
 
@@ -956,7 +955,7 @@ class dd_core_api {
 			// 	switch ($action) {
 
 			// 		case 'search': // example use: get section records in list or edit mode, search in autocomplete service
-						
+
 			// 			// sections
 			// 				$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
@@ -986,11 +985,11 @@ class dd_core_api {
 			// 			}else if(strpos($model, 'area')===0) {
 			// 				// area
 			// 					$element = area::get_instance($model, $tipo, $mode);
-			// 			}else{							
+			// 			}else{
 			// 				// others
 			// 					// get data model not defined
-			// 					debug_log(__METHOD__." WARNING context:get_data model not defined for ".to_string($model), logger::WARNING);						
-			// 			}						
+			// 					debug_log(__METHOD__." WARNING context:get_data model not defined for ".to_string($model), logger::WARNING);
+			// 			}
 			// 			break;
 
 			// 		default:
@@ -1017,18 +1016,18 @@ class dd_core_api {
 			// 	// fix final static var context
 			// 		// dd_core_api::$context = $context;
 
-			// $context_exec_time	= exec_time_unit($start_time,'ms')." ms";
+			// $context_exec_time	= exec_time_unit($start_time,'ms').' ms';
 
 
 		// DATA
 			// $data = [];
 
 				$data_start_time=microtime(1);
-				
+
 				unset($element);
 
 				switch ($action) {
-					
+
 					case 'search': // Used by section and service autocomplete
 
 						// if ($model==='section'){
@@ -1063,7 +1062,7 @@ class dd_core_api {
 								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							}
 						break;
-					
+
 					case 'get_data': // Used by components and areas
 
 						if (strpos($model, 'component')===0) {
@@ -1083,7 +1082,7 @@ class dd_core_api {
 									// overwritten to get time machine dato instead the real dato
 									$element->matrix_id = $ddo_source->matrix_id;
 								}
-								// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
+								// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
 
 							// pagination. fix pagination vars (defined in class component_common)
 								if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
@@ -1093,7 +1092,7 @@ class dd_core_api {
 
 									$element->pagination = $pagination;
 								}
-						
+
 						}else if (strpos($model, 'area')===0) {
 
 							// areas
@@ -1129,7 +1128,7 @@ class dd_core_api {
 					case 'resolve_data': // Used by components in search mode like portals to resolve locators data
 
 						if (strpos($model, 'component')===0) {
-							
+
 							// component
 								$RecordObj_dd	= new RecordObj_dd($tipo);
 								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
@@ -1150,7 +1149,7 @@ class dd_core_api {
 										$pagination->offset	= $rqo->sqo->offset;
 
 									$element->pagination = $pagination;
-								}						
+								}
 
 						}else{
 
@@ -1199,7 +1198,7 @@ class dd_core_api {
 			// smart remove data duplicates (!)
 				#$data = self::smart_remove_data_duplicates($data);
 
-			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
+			$data_exec_time	= exec_time_unit($data_start_time,'ms').' ms';
 
 				// dump($context, ' context ++ '.to_string());
 				// dump($data, ' data ++ '.to_string());
@@ -1216,12 +1215,12 @@ class dd_core_api {
 					// $debug->rqo					= $rqo;
 					// $debug->context_exec_time	= $context_exec_time;
 					$debug->data_exec_time			= $data_exec_time;
-					$debug->exec_time				= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time				= exec_time_unit($start_time,'ms').' ms';
 					$debug->memory_usage			= dd_memory_usage();
 				$result->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
 			}
-			
+
 		return $result;
 	}//end build_json_rows
 

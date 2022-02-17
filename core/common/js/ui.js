@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -150,7 +150,7 @@ export const ui = {
 				}
 
 			// buttons
-				if (items.buttons) {
+				if (items.buttons && instance.permissions>1) {
 					fragment.appendChild(items.buttons)
 				}
 
@@ -1153,7 +1153,7 @@ export const ui = {
 					})
 				}
 			return tool_button
-		},//build_component_tool_button
+		}//build_component_tool_button
 
 
 
@@ -1190,7 +1190,7 @@ export const ui = {
 
 
 			return wrapper
-		},//end build_wrapper_edit
+		}//end build_wrapper_edit
 	},//end widget
 
 
@@ -2220,7 +2220,7 @@ export const ui = {
 	/**
 	* SET_BACKGROUND_IMAGE
 	*/
-	set_background_image : (image, target_node) =>{
+	set_background_image : (image, target_node) => {
 
 		const canvas	= document.createElement('canvas');
 		canvas.width	= image.width;
