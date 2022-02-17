@@ -58,6 +58,7 @@ lib/dedalo/publication/client_api
 !lib/htmLawed
 !lib/tcpdf
 !lib/less_php
+!lib/qrcode
 
 
 # extras ignore all except common
