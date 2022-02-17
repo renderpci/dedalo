@@ -325,13 +325,27 @@ class ontology {
 				$section_tipo				= $tipo;
 				$ar_modelo_name_required	= ['section_group','section_tab','button_','relation_list','time_machine_list'];
 
-				# Real section
-				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
-				$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+				// Real section
+					// ($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
+					$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section(
+						$section_tipo, // section_tipo
+						$ar_modelo_name_required, // ar_modelo_name_required
+						true, // from_cache
+						true, // resolve_virtual
+						false, // recursive
+						false // search_exact
+					);
 
-				# Virtual section too is neccesary (buttons specifics)
-				$ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
-				$ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
+				// Virtual section too is neccesary (buttons specifics)
+					// $ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section(
+					// 	$section_tipo, // section_tipo
+					// 	$ar_modelo_name_required, // ar_modelo_name_required
+					// 	true, // from_cache
+					// 	false, // resolve_virtual
+					// 	false, // recursive
+					// 	false // search_exact
+					// );
+					// $ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
 				break;
 
 			default:
