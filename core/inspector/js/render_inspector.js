@@ -363,7 +363,7 @@ export const render_component_info = function(self, component) {
 		const translatable	= component.context.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
-		const value			= component.data.value
+		const value			= component.data && component.data.value
 			? JSON.stringify(component.data.value, null, 1)
 			: ''
 
