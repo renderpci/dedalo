@@ -212,6 +212,11 @@ class dd_core_api {
 						$component->pagination->offset = $pagination->offset;
 					}
 
+				// datalist. if is received, inject to the component for recycle
+					if (isset($json_data->data->datalist)) {
+						$component->datalist = $json_data->data->datalist;
+					}
+
 				// element JSON
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 	= true;
@@ -397,7 +402,7 @@ class dd_core_api {
 			$source			= $json_data->source;
 
 			$tipo			= $source->tipo ?? null;
-			$section_tipo	= $source->section_tipo ?? $source->tipo;
+			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
 			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
@@ -434,9 +439,24 @@ class dd_core_api {
 
 				case strpos($model, 'tool_')!==false:
 
-					$element = new tool_common($section_id, $section_tipo);
+					// tool section_tipo and section_id can be resolved from model if is necessary
+						if (empty($section_id) || empty($section_id)) {
+							// resolve
+							$registered_tools = tool_common::get_client_registered_tools();
+							$tool_found = array_find($registered_tools, function($el) use($model){
+								return $el->name===$model;
+							});
+							if (!empty($tool_found)) {
+								$section_tipo	= $tool_found->section_tipo;
+								$section_id		= $tool_found->section_id;
+							}else{
+								debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+							}
+						}
 
+					$element = new tool_common($section_id, $section_tipo);
 					break;
+
 				default:
 					#throw new Exception("Error Processing Request", 1);
 					$response->msg = 'Error. model not found: '.$model;
@@ -787,32 +807,34 @@ class dd_core_api {
 
 	/**
 	* ONTOLOGY_GET_CHILDREN_RECURSIVE
+	*
+	* @param object $json_data
 	* @return object $response
 	*/
-		// static function ontology_get_children_recursive($json_data){
-		// 	global $start_time;
+	static function ontology_get_children_recursive($json_data){
+		global $start_time;
 
-		// 	// session_write_close();
+		// session_write_close();
 
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// 		$target_tipo = $json_data->target_tipo;
+		// ontology call
+			$target_tipo	= $json_data->target_tipo;
+			$children		= ontology::get_children_recursive($target_tipo);
 
-		// 		$childrens = ontology::get_children_recursive($target_tipo);
+		// debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = new stdClass();
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
+			}
 
-		// 	// Debug
-		// 		if(SHOW_DEBUG===true) {
-		// 			$response->debug = new stdClass();
-		// 				$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-		// 		}
+		$response->result	= $children;
+		$response->msg		= 'Ok. Request done';
 
-		// 	$response->result	= $childrens;
-		// 	$response->msg		= 'Ok. Request done';
-
-		// 	return (object)$response;
-		// }//end ontology_get_areas
+		return (object)$response;
+	}//end ontology_get_areas
 
 
 
