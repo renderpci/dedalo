@@ -26,15 +26,15 @@ export const render_edit_component_security_access = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_security_access.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_security_access.prototype.edit = async function(options) {
 
 	const self = this
 
+	// options
+		const render_level = options.render_level
+
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
-	// render_level
-		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -67,10 +67,11 @@ const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
+			event_manager.subscribe('update_value_'+self.id, fn_update_value)
 		)
-		function update_value (changed_data) {
-			//console.log("-------------- - event update_value changed_data:", changed_data);
+		function fn_update_value(changed_data) {
+			//console.log("-------------- - event fn_update_value changed_data:", changed_data);
+
 			// change the value of the current dom element
 			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
 			changed_node.value = changed_data.value
@@ -96,7 +97,7 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* get_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
@@ -108,13 +109,13 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	level_hierarchy({
-		datalist 		: datalist,
-		value 			: value,
-		ul_container 	: fragment,
-		parent_tipo		: 'dd1'
-	})
-
+	// hiearchize terms
+		level_hierarchy({
+			datalist		: datalist,
+			value			: value,
+			ul_container	: fragment,
+			parent_tipo		: 'dd1'
+		})
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -215,6 +216,7 @@ const get_buttons = (self) => {
 
 /**
 * LEVEL HIERARCHY
+* @param object options
 * @return bool
 */
 const level_hierarchy = async (options) => {
@@ -225,13 +227,13 @@ const level_hierarchy = async (options) => {
 		const ul_container	= options.ul_container
 		const parent_tipo	= options.parent_tipo
 
-	const root_areas = datalist.filter(item => item.parent === parent_tipo)
+	const root_areas = datalist.filter(item => item.parent===parent_tipo)
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: ul_container
+			class_name		: 'inputs_container',
+			parent			: ul_container
 		})
 
 	// values (inputs)
@@ -293,11 +295,11 @@ const item_hierarchy = async (options) => {
 		})
 
 		// checked option set on match
-		if (typeof item_value !=='undefined') {
-			item_value.value== 2 ? input.indeterminate = true :	input.checked = true
+		if (typeof item_value!=='undefined') {
+			item_value.value==2 ? (input.indeterminate = true) : (input.checked = true)
 		}
 
-		input.addEventListener("change", e => {
+		input.addEventListener("change", (e) => {
 			e.stopPropagation()
 			parents_node(li, input.checked)
 		})
@@ -315,19 +317,20 @@ const item_hierarchy = async (options) => {
 		if (children_item) {
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: li
+				class_name		: 'icon_arrow',
+				parent			: li
 			})
 			button_add_input.addEventListener("mousedown", e => {
 				e.stopPropagation()
 
-				if(button_add_input.classList.contains('open')){
+				if(button_add_input.classList.contains('up')){
 
-					button_add_input.classList.remove ('open')
+					button_add_input.classList.remove ('up')
 					li.removeChild(li.querySelector('ul'))
 
 				}else{
-					button_add_input.classList.add ('open')
+
+					button_add_input.classList.add ('up')
 					level_hierarchy({
 						datalist		: datalist,
 						value			: value,
@@ -336,6 +339,22 @@ const item_hierarchy = async (options) => {
 					})
 				}
 			})
+			// track collapse toggle state of content
+				// const ul = li.querySelector('ul')
+				// console.log("ul:",ul);
+				// ui.collapse_toggle_track({
+				// 	header				: button_add_input,
+				// 	content_data		: ul,
+				// 	collapsed_id		: 'security_access_level_block',
+				// 	collapse_callback	: collapse,
+				// 	expose_callback		: expose
+				// })
+				// function collapse() {
+				// 	button_add_input.classList.remove('up')
+				// }
+				// function expose() {
+				// 	button_add_input.classList.add('up')
+				// }
 		}//end if (children_item)
 
 	// button_section
@@ -343,18 +362,19 @@ const item_hierarchy = async (options) => {
 
 			const button_section = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: li
+				class_name		: 'button close',
+				parent			: li
 			})
 			button_section.addEventListener("mouseup", async (e) => {
 				e.stopPropagation()
+
 				// data_manager
 					const current_data_manager = new data_manager()
 
 					const api_response = await current_data_manager.request({
 						body : {
-							action 		: 'ontology_get_children_recursive',
-							target_tipo : item.tipo
+							action		: 'ontology_get_children_recursive',
+							target_tipo	: item.tipo
 						}
 					})
 
