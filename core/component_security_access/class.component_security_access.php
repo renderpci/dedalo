@@ -7,6 +7,9 @@
 class component_security_access extends component_common {
 
 
+	public $datalist;
+
+
 
 	/**
 	* GET DATO
@@ -49,6 +52,10 @@ class component_security_access extends component_common {
 	*/
 	public function get_datalist() {
 
+		if (isset($this->datalist)) {
+			return $this->datalist;
+		}
+
 		$user_id			= navigator::get_user_id();
 		$is_global_admin	= security::is_global_admin($user_id);
 		$ar_areas			= [];
@@ -70,8 +77,13 @@ class component_security_access extends component_common {
 			}
 		}
 
-		$datalist = new stdClass();
-			$datalist->result = $ar_areas;
+		// $datalist = new stdClass();
+		// 	$datalist->result = $ar_areas;
+
+		$datalist = $ar_areas;
+
+		// fix value
+			$this->datalist = $datalist;
 
 		return $datalist;
 	}//end get_datalist
