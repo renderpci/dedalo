@@ -249,7 +249,7 @@ function file_get_contents_curl($url) {
 	if(curl_errno($ch) || $data===false){
 		$error = curl_error($ch);
 		debug_log(__METHOD__." +++++++++++++++++++++++++++++++++++++++ CURL ERROR ".to_string($error), logger::ERROR);
-	}	
+	}
 
 	curl_close($ch);
 
@@ -1488,7 +1488,7 @@ function show_msg($msg, $type='ERROR') {
 */
 function array_find($xs, $f) {
 
-	if (is_array($xs)) {	
+	if (is_array($xs)) {
 		foreach ($xs as $x) {
 			if (call_user_func($f, $x) === true)
 			return $x;
