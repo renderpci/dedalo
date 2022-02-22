@@ -2657,6 +2657,8 @@
 		Updated publication API docu/ui (swagger ui) from 2.4.0 to 4.5.2
 		Fixed Swagger UI viewer vars XSS vulnerability
 		Improved server_api web_data check_safe_value verification and errors log. Now table names with only numbers are rejected and sql_fullselect, sql_filter are more restrictive.
+		Fixed web_data regex error in table name verification
+
 
 
 	[/HISTORY]
@@ -2688,7 +2690,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-02-2022T12:00:12');
+	define('DEDALO_BUILD'	, '22-02-2022T12:22:41');
 
 
 	/*
