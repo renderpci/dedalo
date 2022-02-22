@@ -8,7 +8,7 @@
 
 		lang : Code lang of requested data like lg-spa
 			   Is set as constant 'WEB_CURRENT_LANG_CODE' and you can use later as a valid constant in all server api
-		
+
 		options : json encoded data than contains all vars necessaries to build the api logic
 				The first var inside json object is 'dedalo_get' and is used to determine the function to call in each case
 
@@ -36,9 +36,9 @@
 
 
 
-// safe_xss 
+// safe_xss
 	$safe_xss = function($value) {
-		
+
 		if (is_string($value)) {
 			if ($decode_json=json_decode($value)) {
 				// If var is a stringify json, not verify string yet
@@ -52,10 +52,10 @@
 	};//end safe_xss
 
 
-// js fetch calls try with format like 
-	# {	
+// js fetch calls try with format like
+	# {
 	#	code 		: 'mmycode',
-	# 	dedalo_get 	: 'records', 
+	# 	dedalo_get 	: 'records',
 	#	db_name 	: 'web_myweb',
 	# 	table 		: 'mytable',
 	# 	lang 		: 'lg-spa',
@@ -76,13 +76,13 @@
 // auth code . Must to be identic to server config defined code
 	$code = isset($_REQUEST['code']) ? $safe_xss($_REQUEST['code']) : false;
 
-// lang 
+// lang
 	$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;
 
-// db 
+// db
 	$db_name = isset($_REQUEST['db_name']) ? $safe_xss($_REQUEST['db_name']) : false;
 
-// config . Load server api config vars 
+// config . Load server api config vars
 	# If received code if different to defined code, and error was launched
 	# lang for the api was fixed here with received lang var or default value is used if not
 	if(!include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php')) {
@@ -98,17 +98,17 @@
 	}
 
 
-// options . Get request vars options to send to manager 
+// options . Get request vars options to send to manager
 	$options = isset($_REQUEST['options']) ? $_REQUEST['options'] : false;
 
 	if ($options!==false) {
-		if (is_string($options)) { 
+		if (is_string($options)) {
 			$options = json_decode( $options );
 		}
 	}else{
 		$options = new stdClass();
 		foreach ($_REQUEST as $key => $cvalue) {
-			
+
 			switch ($cvalue) {
 				case 'true':
 					$cvalue = true;
@@ -122,7 +122,7 @@
 		}
 	}
 
-// dedalo_get. Inject option dedalo_get as current dir name (captured as var from Apache regex) 
+// dedalo_get. Inject option dedalo_get as current dir name (captured as var from Apache regex)
 	$dedalo_get = isset($_REQUEST['dedalo_get']) ? $safe_xss($_REQUEST['dedalo_get']) : false;
 	if ($dedalo_get!==false && is_object($options)) {
 		$options->dedalo_get = $dedalo_get;
@@ -138,13 +138,13 @@
 // manager
 	$manager = new manager();
 	try {
-		
+
 		$dedalo_data = $manager->manage_request( $options );
 		$result 	 = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
 		echo $result;
-	
+
 	}catch (Exception $e) {
-		
+
 		$error_obj = new stdClass();
 			$error_obj->result 	= false;
 			$error_obj->msg 	= 'Exception when calling Dédalo API: '. $e->getMessage();
@@ -156,8 +156,8 @@
 	#if(SHOW_DEBUG===true) {
 	#	error_log("api call ".PHP_EOL. json_encode($options, JSON_PRETTY_PRINT));
 	#	error_log("api result ".PHP_EOL. $result);
-	#	
-	#	$t = time();	
+	#
+	#	$t = time();
 	#	error_log( 'API SERVER CALL $_REQUEST: '. $t . PHP_EOL . print_r($_REQUEST,true));
 	#}
 

@@ -15,5 +15,8 @@ $json_content = json_decode( $json_content );
 # Encode again
 $json_content = json_encode($json_content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+// print as json data
+header('Content-Type: application/json');
+
 # Echo modified json file here
 print( $json_content );
