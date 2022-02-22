@@ -2663,7 +2663,8 @@
 		Released version 5.8.5
 
 	Queue build
-
+		Removed jquery unnecessary lib files
+		Removed nvd3 unnecessary lib files
 
 
 
@@ -2696,7 +2697,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-02-2022T12:35:23');
+	define('DEDALO_BUILD'	, '22-02-2022T12:50:28');
 
 
 	/*
