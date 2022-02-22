@@ -199,8 +199,9 @@ class web_data {
 
 			case 'table':
 				$value = is_array($value) ? implode(',', $value) : $value;
-				preg_match('/^[a-zA-Z0-9|_|,]{2,}$/i', $value, $output_array);
+				preg_match('/^[a-zA-Z|_|,]{2,}[0-9]*$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -208,6 +209,7 @@ class web_data {
 			case 'db_name':
 				preg_match('/^[a-zA-Z0-9|_]{2,}$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -245,6 +247,7 @@ class web_data {
 						}
 
 						if (empty($output_array[0])) {
+							debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 							return false;
 						}
 					}
@@ -262,8 +265,9 @@ class web_data {
 						return false;
 					}
 
-				preg_match_all("/=|delete|update|insert|truncate|extractvalue|DBMS_PIPE| union |set names|where|user|having|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
+				preg_match_all("/=|delete|update|insert|truncate|extractvalue|\*{2,}|MD5|DBMS_PIPE| union |set names|where|user|having|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
 				if (!empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -275,8 +279,9 @@ class web_data {
 						return false;
 					}
 
-				preg_match_all("/select |delete|update|insert|truncate|extractvalue|DBMS_PIPE| union |set names|where|having|user|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
+				preg_match_all("/select |delete|update|insert|truncate|extractvalue|\*{2,}|MD5|DBMS_PIPE| union |set names|where|having|user|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
 				if (!empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -284,6 +289,7 @@ class web_data {
 			case 'lang':
 				preg_match('/^lg-[a-z]{2,5}$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -291,6 +297,7 @@ class web_data {
 			case 'section_id':
 				preg_match('/^[0-9|,| |]+$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -298,6 +305,7 @@ class web_data {
 			case 'order':
 				preg_match('/^[a-z0-9|,| |`|_|\(|\)]+$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -305,6 +313,7 @@ class web_data {
 			case 'group':
 				preg_match('/^[a-z| |`|,|_]+$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -313,6 +322,7 @@ class web_data {
 			case 'offset':
 				preg_match('/^[0-9]+$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
@@ -321,11 +331,13 @@ class web_data {
 			case 'section_tipo':
 				preg_match('/^[a-z1-9|_]+$/i', $value, $output_array);
 				if (empty($output_array[0])) {
+					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
 				}
 				break;
 
 			default:
+				debug_log(__METHOD__." test $name not passed! ".to_string(), logger::ERROR);
 				return false;
 				break;
 		}
