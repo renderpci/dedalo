@@ -39,7 +39,7 @@
 			$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 			$html .= $msg;
 		}
-		
+
 
 		# Check DB config
 		if (empty(DB_BIN_PATH)) {
@@ -156,7 +156,7 @@
 
 					$show_button_run_update_version = isset($updates->{$update_version_plain}->show_button_run_update_version)
 						? $updates->{$update_version_plain}->show_button_run_update_version
-						: true; 
+						: true;
 
 					if($show_button_run_update_version===true) {
 						// Show updates object (current target correspondence) with all config to apply to current update script
@@ -376,7 +376,7 @@
 				$html   .= " <div class=\"panel_option_subcontent\">";
 
 				// file structure_json_file_path
-				$structure_json_file_path = (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';	
+				$structure_json_file_path = (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
 				$html .= "<div>Target path: $structure_json_file_path</div>";
 				$ar_tld			= backup::get_all_tld();
 				$ar_tld_string	= implode(',',$ar_tld);
@@ -402,7 +402,7 @@
 					$html   .= "<div>Disable import structure from file</div>";
 				}else{
 
-					// file structure_json_file_path				
+					// file structure_json_file_path
 					$structure_json_file_path = tool_administration::get_ontology_import_fron_json_file_path();
 					$html .= "<div>Using file path: $structure_json_file_path</div>";
 
@@ -411,7 +411,7 @@
 						$html .= '<div class="warning">structure.json file not found in: '.$structure_json_file_path.'</div>';
 					}else{
 						$file_url	= str_replace(DEDALO_ROOT, DEDALO_ROOT_WEB, $structure_json_file_path);
-						$html   .= "<a href=\"$file_url\" target=\"_blank\">$file_url</a>";
+						$html   .= "<a href=\"$file_url\" target=\"_blank\" rel=\"noopener noreferrer\">$file_url</a>";
 						$size = filesize($structure_json_file_path);
 						$file_structure_size = format_size_units( $size );
 						$html   .= "<div>File size: $file_structure_size</div>";
@@ -451,7 +451,7 @@
 				$html   .= "<div class=\"panel_option\">";
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
 				$url 	 = DEDALO_LIB_BASE_URL."/main/?m=tool_metadata&t=".DEDALO_AREA_ROOT_TIPO."";
-				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"remove_av_temporals\">".label::get_label('tool_metadata')."</a>";
+				$html   .= " <a href=\"$url\" target=\"_blank\" rel=\"noopener noreferrer\" data-mode=\"remove_av_temporals\">".label::get_label('tool_metadata')."</a>";
 				$html   .= "</div>";
 
 
@@ -528,7 +528,7 @@
 					foreach ($api_web_user_code_multiple as $key => $current_element) {
 						$html .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
 						$url   = DEDALO_LIB_BASE_URL."/publication/server_api/v1/docu/ui/?code=" . $current_element['code'] .'&db_name='.$current_element['db_name'].'&lang='.DEDALO_DATA_LANG;
-						$html .= ' <a href="'.$url.'" target="_blank" data-mode="">API DOC --> '.$current_element['db_name'].' - '.$current_element['code'].'</a> <br>';
+						$html .= ' <a href="'.$url.'" target="_blank" rel="noopener noreferrer" data-mode="">API DOC --> '.$current_element['db_name'].' - '.$current_element['code'].'</a> <br>';
 					}
 
 				$html   .= "</div>";#end panel_option
@@ -540,7 +540,7 @@
 				$html   .= "<div class=\"panel_option form-inline\"> ";
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
 				$url 	 = DEDALO_LIB_BASE_URL."/extras/geonames/import_geonames.php?code=";
-				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">DOWNLOAD JSON DATA FROM GEONAMES API</a>";
+				$html   .= " <a href=\"$url\" target=\"_blank\" rel=\"noopener noreferrer\" data-mode=\"\">DOWNLOAD JSON DATA FROM GEONAMES API</a>";
 				$html   .= "</div>";#end panel_option
 
 
@@ -549,7 +549,7 @@
 				$html   .= '<div class="panel_option form-inline">';
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
 				$url 	 = DEDALO_LIB_BASE_URL."/tools/tool_administration/html/navigate_records.php?section_tipo=";
-				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">Navigate records</a>";				
+				$html   .= " <a href=\"$url\" target=\"_blank\" rel=\"noopener noreferrer\" data-mode=\"\">Navigate records</a>";
 				$html   .= '</div>';
 
 
@@ -576,7 +576,7 @@
 			#
 			# UPDATE DEDALO CODE
 				$html   .= "<div class=\"panel_option form-inline\">";
-				$html   .= "<span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";				
+				$html   .= "<span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
 				try {
 					if (($_SERVER['SERVER_PORT']!=='80' && $_SERVER['SERVER_PORT']!=='443') || $_SERVER['REMOTE_ADDR']==='127.0.0.1') {
 						$html .= '<div class="warning">Warning. You are in localhost !</div>';
@@ -586,7 +586,7 @@
 				}
 				$html   .= "<input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Update Dédalo code\" data-mode=\"update_dedalo_code\" onclick=\"tool_administration.update_dedalo_code(this,event)\" /> ";
 				$html   .= '<input type="checkbox" id="update_dedalo_code_check" value="true"> <label for="update_dedalo_code_check">Preview only</label>';
-				$html   .= ' <span style="float:right"><a href="'.DEDALO_SOURCE_VERSION_URL.'" target="_blank">'.DEDALO_SOURCE_VERSION_URL.'</a></span>';
+				$html   .= ' <span style="float:right"><a href="'.DEDALO_SOURCE_VERSION_URL.'" target="_blank" rel="noopener noreferrer">'.DEDALO_SOURCE_VERSION_URL.'</a></span>';
 				$html   .= "<div id=\"update_dedalo_code_response\"></div>";
 				// check zip lib is installed
 				try {
@@ -762,7 +762,7 @@
 				$html .= $msg;
 			}
 
-			
+
 			#
 			# SEE YOURSELF
 			$command	= 'curl --max-time 2 -X GET "' . DEDALO_PROTOCOL . '' . DEDALO_HOST . DEDALO_LIB_BASE_URL . '/tools/tool_administration/html/test.php" ';
@@ -772,7 +772,7 @@
 			}catch (Exception $e) {
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
-			}			
+			}
 			$info = empty($output) ? '<error class="error">Error. Server can\'t connect with itself. Review your server host config to fix this issue</error>' : $output;
 			$html .= tool_administration::show_info( "SEE YOURSELF",
 													 $command,
@@ -792,8 +792,8 @@
 			}catch (Exception $e) {
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
-			}			
-		
+			}
+
 
 			#
 			# DISK SPACE
@@ -806,7 +806,7 @@
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
 			}
-			
+
 
 
 			#
@@ -921,7 +921,7 @@
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
 			}
-			
+
 
 			#
 			# DEDALO_AV_FASTSTART_PATH
@@ -935,7 +935,7 @@
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
 			}
-			
+
 
 			#
 			# IMAGE MAGICK
@@ -951,7 +951,7 @@
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
 			}
-			
+
 
 			#
 			# NODE JS
@@ -965,7 +965,7 @@
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
 			}
-			
+
 
 			#
 			# TINYMCE
@@ -1005,7 +1005,7 @@
 				$msg = 'Error on exec command - Exception: ' . $e->getMessage();
 				$html .= $msg;
 			}
-			
+
 
 
 			#
@@ -1034,7 +1034,7 @@
 														 $info." - ".$path,
 														 $result
 														);
-			
+
 
 		$html   .= "</ul>";//end list-group
 
@@ -1058,10 +1058,10 @@
 		$html   .= "  </div>";
 		#$html   .= "  <div class=\"panel-body\">";
 		$html   .= "<ul class=\"list-group panel-body\" style=\"display:none\">";
-			
+
 
 			#
-			# SECTIONS			
+			# SECTIONS
 				$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
 				$ar_sections = array();
 				foreach ($ar_section_tipo as $current_section_tipo) {
@@ -1071,11 +1071,11 @@
 				$html .= tool_administration::show_info( "SECTIONS",
 														 count($ar_section_tipo),
 														 $ar_sections
-														);			
+														);
 
 
 			#
-			# DB TABLES			
+			# DB TABLES
 				$tables = (array)backup::get_tables();
 				$ar_tables=array();
 				foreach ($tables as $current_table) {
@@ -1089,7 +1089,7 @@
 
 
 			#
-			# DB DATA CHECK			
+			# DB DATA CHECK
 				require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
 				$data_check = new data_check();
 				$response 	= $data_check->check_sequences();
@@ -1103,7 +1103,7 @@
 														 "",
 														 $response->msg
 														);
-			
+
 
 
 			#
@@ -1161,7 +1161,7 @@
 				    $len = strpos($string, $end, $ini) - $ini;
 				    return substr($string, $ini, $len);
 				}
-				$parsed = get_string_between($version_file_content, '[HISTORY]', '[/HISTORY]');					
+				$parsed = get_string_between($version_file_content, '[HISTORY]', '[/HISTORY]');
 
 			} catch (Exception $e) {
 			    echo 'Caught exception: ',  $e->getMessage(), "\n";
@@ -1171,10 +1171,10 @@
 				$html   .= '<pre style="white-space: pre; padding-left: 0; tab-size: 4;">' . $parsed . '</pre>';
 			}else{
 				$html   .= '<div class="error">Error on read file version.inc</div>';
-			}			
+			}
 			$html   .= '</div>';
 			$html   .= '</div>';
-		
+
 
 		$html   .= "  </div>";//end panel-body
 		$html   .= "</div>";//end panel-info
