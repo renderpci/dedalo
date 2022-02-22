@@ -2529,7 +2529,7 @@
 		Re-factorized ontology code
 
 
-	queue builds
+	Valencia 21-11-2021 5.8.4
 		22-11-2021
 		Added IS EXACTLY EQUAL == operator to component_input_text to allow saerchches with @> operator (case Ontologies term_id dd1475)
 		Added component_json read only mode controled by properties
@@ -2618,6 +2618,8 @@
 		Updated process_result::sum_totals function
 		Added posterframe to web_data::build_fragment method
 		Updated jquery-ui to 1.13.0
+
+	Valencia 21-11-2021 5.8.5
 		05-01-2022
 		Fixed unique_server_check issue when the value is equal in more than one lang
 		11-01-2022
@@ -2658,6 +2660,10 @@
 		Fixed Swagger UI viewer vars XSS vulnerability
 		Improved server_api web_data check_safe_value verification and errors log. Now table names with only numbers are rejected and sql_fullselect, sql_filter are more restrictive.
 		Fixed web_data regex error in table name verification
+		Released version 5.8.5
+
+	Queue build
+
 
 
 
@@ -2684,13 +2690,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.4';
+	$DEDALO_VERSION = '5.8.5';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-02-2022T12:22:41');
+	define('DEDALO_BUILD'	, '22-02-2022T12:35:23');
 
 
 	/*
