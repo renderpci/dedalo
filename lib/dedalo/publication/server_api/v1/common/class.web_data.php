@@ -199,7 +199,7 @@ class web_data {
 
 			case 'table':
 				$value = is_array($value) ? implode(',', $value) : $value;
-				preg_match('/^[a-zA-Z|_|,]{2,}[0-9]*$/i', $value, $output_array);
+				preg_match('/^[a-zA-Z|_|,]{2,}.*$/i', $value, $output_array);
 				if (empty($output_array[0])) {
 					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;
