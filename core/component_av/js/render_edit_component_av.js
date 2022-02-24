@@ -129,6 +129,22 @@ const get_content_data_edit = function(self) {
 				? file_info.url
 				: null
 
+		// background video_container
+			if (posterframe_url) {
+				const image = ui.create_dom_element({
+					element_type: 'img'
+				})
+				// image background color
+				image.addEventListener('load', set_bg_color, false)
+				function set_bg_color() {
+					this.removeEventListener('load', set_bg_color, false)
+					ui.set_background_image(this, video_container)
+					image.remove()
+				}
+				image.src = posterframe_url
+			}
+
+
 	// build_video_node
 		const build_video_node = function() {
 
@@ -139,7 +155,9 @@ const get_content_data_edit = function(self) {
 
 			// video tag
 				const video		= document.createElement("video")
-				video.poster	= posterframe_url
+				if (posterframe_url) {
+					video.poster = posterframe_url
+				}
 				video.controls	= true
 				video.classList.add("posterframe")
 				video.setAttribute("tabindex", 0)
@@ -174,6 +192,14 @@ const get_content_data_edit = function(self) {
 				}
 			}, { threshold: [0] });
 			observer.observe(video_container);
+		}else{
+			// image default logo
+			ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'posterframe',
+				src				: posterframe_url,
+				parent			: video_container
+			})
 		}
 
 	// quality_selector
