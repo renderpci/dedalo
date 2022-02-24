@@ -162,6 +162,23 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment,
 			text_content	: page_globals.username
 		})
+		if (page_globals.username!=='root') {
+			logged_user_name.addEventListener("click", fn_load_user_admin_tool)
+			function fn_load_user_admin_tool(e) {
+				e.stopPropagation();
+
+				// open tool_user_admin
+				event_manager.publish('load_tool', {
+					tool_context	: {
+						model		: 'tool_user_admin',
+						tool_config	: {
+							ddo_map : []
+						}
+					},
+					caller			: self
+				})
+			}
+		}
 
 	// application lang selector
 		const lang_datalist = self.data.langs_datalist

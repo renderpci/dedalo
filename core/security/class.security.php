@@ -152,11 +152,14 @@ class security {
 	*/
 	private static function get_ar_permissions_in_matrix_for_current_user() {
 
-		$dato=array();
+		// get reliable component (assigned profile checked)
+			$component_security_access = security::get_user_security_access();
 
-		$component_security_access = self::get_user_security_access();
-
-		$dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
+		// dato_access. is the first value of the result array if not empty
+		// $dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
+			$dato_access = !empty($component_security_access)
+				? $component_security_access->get_dato()[0]
+				: [];
 
 		return $dato_access;
 	}//end get_ar_permissions_in_matrix_for_current_user
@@ -165,6 +168,7 @@ class security {
 
 	/**
 	* GET_USER_SECURITY_ACCESS
+	* Locate component_security_access of current logged user based on user profile
 	* @return component
 	*/
 	private static function get_user_security_access() {
@@ -238,17 +242,29 @@ class security {
 
 	/**
 	* GET_AR_AUTHORIZED_AREAS_FOR_USER
-	* get the authorizes areas of the user
-	* @return array $permissions | null
+	* Returns the user authorized areas
+	* @return array $area_permissions
 	*/
 	public static function get_ar_authorized_areas_for_user() {
 
 		// cached permissions_table
-		$permissions_table = self::get_permissions_table();
+			$full_permissions_table = security::get_permissions_table();
 
-		$area_permissions = array_filter($permissions_table, function($item) {
-			return (isset($item->type) && $item->type==='area') ? $item : null;
-		});
+		// $area_permissions = array_filter($permissions_table, function($item) {
+		// 	// return (isset($item->type) && $item->type==='area') ? $item : null;
+		// 	return ($item->tipo===$item->section_tipo) ? $item : null;
+		// });
+
+		// filter area_permissions
+			$area_permissions = [];
+			$total = sizeof($full_permissions_table);
+			for ($i=0; $i < $total; $i++) {
+				$item = $full_permissions_table[$i];
+				if ($item->tipo===$item->section_tipo) {
+					$area_permissions[] = $item;
+				}
+			}
+
 
 		return $area_permissions;
 	}//end get_ar_authorized_areas_for_user
@@ -347,28 +363,32 @@ class security {
 			$current_section_tipo = $options->ar_sections[$i];
 
 			$section_permisions = new stdClass();
-				$section_permisions->tipo	= $current_section_tipo;
-				$section_permisions->parent	= $current_section_tipo;
-				$section_permisions->type	= 'area';
-				$section_permisions->value	= $permissions;
+				$section_permisions->tipo			= $current_section_tipo;
+				// $section_permisions->parent		= $current_section_tipo;
+				// $section_permisions->type		= 'area';
+				$section_permisions->section_tipo	= $current_section_tipo;
+				$section_permisions->value			= $permissions;
 
 			$component_security_access_dato[] = $section_permisions;
 
 			# Components inside section
 			$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
-			$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section($real_section,
-																					  $ar_modelo_name_required=array('component','button','section_group'),
-																					  $from_cache=true,
-																					  $resolve_virtual=false,
-																					  $recursive=true,
-																					  $search_exact=false);
+			$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section(
+				$real_section,
+				$ar_modelo_name_required=array('component','button','section_group'),
+				$from_cache=true,
+				$resolve_virtual=false,
+				$recursive=true,
+				$search_exact=false
+			);
 
 			foreach ($ar_children as $children_tipo) {
 
 				$component_permisions = new stdClass();
-					$component_permisions->tipo		= $children_tipo;
-					$component_permisions->parent	= $current_section_tipo;
-					$component_permisions->value	= $permissions;
+					$component_permisions->tipo			= $children_tipo;
+					// $component_permisions->parent	= $current_section_tipo;
+					$component_permisions->section_tipo	= $current_section_tipo;
+					$component_permisions->value		= $permissions;
 
 				$component_security_access_dato[] = $component_permisions;
 			}
