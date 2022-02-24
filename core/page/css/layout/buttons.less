@@ -42,15 +42,19 @@
 	.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
 
 		&:before {
+			background-color: @color;
 			content: ' ';
 			display: inline-block;
 			height: 1em;
-			width: 1em;
 			margin-right: 0.5em;
-			vertical-align: baseline;
-			background-color: @color;
 			opacity: @opacity;
+			vertical-align: baseline;
+			width: 1em;
 			.fn_add_mask(@icon_name);
+
+			@media screen and (max-width: @width_break_point_1) {
+				margin-right: 0px;
+			}
 		}
 	}
 
@@ -83,7 +87,6 @@
 		//padding: 0.5em;
 		// margin-top: 0.25em;
 		// margin-bottom: 0.25em;
-
 
 		&:hover {
 			opacity: 1 !important;
@@ -143,6 +146,17 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
+
+		&.folding {
+			@media screen and (max-width: @width_break_point_1) {
+			// padding-right: 0.25rem;
+			text-indent: -9999em;
+		}
+		}
+		// @media screen and (max-width: @width_break_point_1) {
+		// 	// padding-right: 0.25rem;
+		// 	text-indent: -9999em;
+		// }
 
 		// color
 		color: #212529; // default dark grey
