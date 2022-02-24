@@ -325,18 +325,22 @@ class ontology {
 				$section_tipo				= $tipo;
 				$ar_modelo_name_required	= ['section_group','section_tab','button_','relation_list','time_machine_list'];
 
+				// section is real or virtual
+					$section_real_tipo	= section::get_section_real_tipo_static($section_tipo);
+					$resolve_virtual	= $section_real_tipo!==$section_tipo;
+
 				// Real section
 					// ($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
 					$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section(
 						$section_tipo, // section_tipo
 						$ar_modelo_name_required, // ar_modelo_name_required
 						true, // from_cache
-						true, // resolve_virtual
+						$resolve_virtual, // resolve_virtual bool
 						false, // recursive
 						false // search_exact
 					);
 
-				// Virtual section too is neccesary (buttons specifics)
+				// Virtual section too is necessary (buttons specifics)
 					// $ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section(
 					// 	$section_tipo, // section_tipo
 					// 	$ar_modelo_name_required, // ar_modelo_name_required
@@ -367,13 +371,13 @@ class ontology {
 					continue ;
 				}
 
-			// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+			// remove_exclude_terms : config excludes. If installation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
 				if (in_array($element_tipo, $ar_exclude_components)) {
 					continue;
 				}
 
-			// get the ontology json format
-				$ar_elements[] = ontology::tipo_to_json_item($element_tipo, [
+			// get the ontology JSON format
+				$item = ontology::tipo_to_json_item($element_tipo, [
 					'tipo'			=> true,
 					'tld'			=> false,
 					'is_model'		=> false,
@@ -388,7 +392,24 @@ class ontology {
 					'label'			=> true
 				]);
 
-			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo) );
+			// parent. Set virtual section tipo as parent when current section is virtual
+				if (isset($section_real_tipo)
+					&& $section_real_tipo!==$section_tipo // is virtual
+					&& $item->parent===$section_real_tipo)
+				{
+					$item->parent = $section_tipo;
+				}
+
+			// add item
+				$ar_elements[] = $item;
+
+			// deep_children recursion
+				$deep_children = self::get_children_recursive($element_tipo);
+				if(!empty($deep_children)) {
+					foreach ($deep_children as $child) {
+						$ar_elements[] = $child;
+					}
+				}
 		}
 
 		# STORE CACHE DATA
@@ -837,9 +858,9 @@ class ontology {
 		// get all terms
 		$sql_query = '
 			create or replace function naturalsort(text)
-			    returns bytea language sql immutable strict as $f$
-			    select string_agg(convert_to(coalesce(r[2], length(length(r[1])::text) || length(r[1])::text || r[1]), \'SQL_ASCII\'),\'\x00\')
-			    from regexp_matches($1, \'0*([0-9]+)|([^0-9]+)\', \'g\') r;
+				returns bytea language sql immutable strict as $f$
+				select string_agg(convert_to(coalesce(r[2], length(length(r[1])::text) || length(r[1])::text || r[1]), \'SQL_ASCII\'),\'\x00\')
+				from regexp_matches($1, \'0*([0-9]+)|([^0-9]+)\', \'g\') r;
 			$f$;
 			SELECT "terminoID" FROM "jer_dd" WHERE tld!=\'test\' ORDER BY naturalsort("terminoID") ASC;
 		';
@@ -865,6 +886,163 @@ class ontology {
 
 
 
+	/**
+	* GET_ONTOLOGY_FULL
+	* Search all ontology terms excluding box_elements and orphan terms
+	* @param object | array $request_options
+	* @return array $ar_rows_clean
+	*/
+		// public static function get_ontology_full($request_options=[]) {
+		// 	$start_time=microtime(1);
+
+		// 	// options
+		// 	$options = new stdClass();
+		// 		$options->filter_models	= null;
+		// 		$options->lang			= null;
+		// 		$options->langs			= null;
+		// 		$options->order_custom	= null;
+		// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// 	$db_conn = DBi::_getConnection();
+
+		// 	// filter_models
+		// 		$filter_models = $options->filter_models ?? (function(){
+		// 			$beats = [
+		// 				'md2.dato = \'root\'',
+		// 				'md2.dato LIKE \'area%\'',
+		// 				'md2.dato = \'section\''
+		// 				// 'md2.dato LIKE \'component%\'',
+		// 				// 'md2.dato LIKE \'button%\''
+		// 			];
+		// 			return implode(' OR ', $beats);
+		// 		})();
+
+		// 	// lang
+		// 		$lang = $options->lang ?? DEDALO_DATA_LANG;
+
+		// 	// langs
+		// 		$langs = $options->langs ?? common::get_ar_all_langs();
+
+		// 	// order_custom (langs order)
+		// 		$order_custom = $options->order_custom ?? (function() use($lang, $langs){
+		// 			array_unshift($langs, $lang); // add current data lang at beginning
+		// 			$langs_order = array_unique($langs);
+		// 			$beats = [];
+		// 			foreach ($langs_order as $key => $current_lang) {
+		// 				$beats[] = 'WHEN md.lang = \''.$current_lang.'\' THEN ' . ($key+1);
+		// 			}
+		// 			return ' CASE '.PHP_EOL. implode(PHP_EOL, $beats) . PHP_EOL . 'END';
+		// 		})();
+
+		// 	// search full ontology
+		// 		$strQuery = 'SELECT
+		// 			jer_dd."terminoID" as tipo,
+		// 			jer_dd.parent,
+		// 			jer_dd.modelo as model,
+		// 			jer_dd.norden as order,
+		// 			md.lang,
+		// 			md2.dato as model_name,
+		// 			md.dato as label
+		// 			FROM "jer_dd"
+		// 			LEFT JOIN "matrix_descriptors_dd" AS md ON jer_dd."terminoID"=md."parent" AND md."tipo"=\'termino\'
+		// 			LEFT JOIN "matrix_descriptors_dd" AS md2 ON jer_dd."modelo"=md2."parent"  AND md2."tipo"=\'termino\' AND md2.lang = \'lg-spa\'
+		// 			WHERE
+		// 			('.$filter_models.')
+		// 			-- AND jer_dd."terminoID" LIKE \'oh%\'
+		// 			ORDER BY jer_dd.norden ASC,
+		// 			jer_dd."terminoID" ASC,
+		// 			'.$order_custom.'
+		// 		';
+		// 			dump($strQuery, ' strQuery ++ '.to_string($strQuery));
+		// 		$result = pg_query($db_conn, $strQuery);
+
+		// 	// resolve model
+		// 		$ar_rows = [];
+		// 		while ($row = pg_fetch_object($result)) {
+
+		// 			if (isset($ar_rows[$row->tipo])) {
+
+		// 				// lang fallback when row exists and label is empty
+		// 				if (empty($ar_rows[$row->tipo]->label) && !empty($row->label)) {
+		// 					$ar_rows[$row->tipo]->label	= '<mark>'.$row->label.'</mark>';
+		// 					$ar_rows[$row->tipo]->lang	= $lang;
+		// 				}
+
+		// 			}else{
+
+		// 				$label = ($row->lang===$lang)
+		// 					? $row->label
+		// 					: (!empty($row->label) ? '<mark>'.$row->label.'</mark>' : null);
+
+		// 				$ar_rows[$row->tipo] = (object)[
+		// 					'tipo'		=> $row->tipo,
+		// 					'model'		=> $row->model_name,
+		// 					'parent'	=> $row->parent,
+		// 					'label'		=> $label
+		// 					// 'lang'	=> $row->lang,
+		// 					// 'order'	=> $row->order
+		// 				];
+
+		// 				// section cases. Real and virtual
+		// 				if ($row->model_name==='section') {
+		// 					$children_recursive = ontology::get_children_recursive($row->tipo);
+		// 						// dump($children_recursive, ' children_recursive ++ '.to_string());
+		// 					foreach ($children_recursive as $child) {
+		// 						$ar_rows[] = $child;
+		// 					}
+		// 				}
+		// 			}
+		// 		}//end while iteration
+		// 		// dump(null, ' strQuery ++ '.to_string($strQuery));
+		// 		// dump($ar_rows, ' ar_rows ++ '.count($ar_rows));
+
+		// 	// remove orphan terms
+		// 		// $ar_rows_clean = [];
+		// 		// foreach ($ar_rows as $tipo => $row) {
+		// 		// 	// check parents given path to dd1
+		// 		// 	if (true===self::check_parents($row, $ar_rows, 'dd1')) {
+		// 		// 		$ar_rows_clean[] = $row;
+		// 		// 	}
+		// 		// }
+		// 		// dump($ar_rows_clean, ' ar_rows_clean ++ '.count($ar_rows_clean));
+		// 		$ar_rows_clean = array_values($ar_rows);
+
+		// 	// debug
+		// 		if(SHOW_DEBUG===true) {
+		// 			$total=round(microtime(1)-$start_time,3);
+		// 			// dump($ar_rows_clean, ' ar_rows_clean total ++ '.$total. ' - ' . count($ar_rows_clean));
+		// 		}
+
+
+		// 	return $ar_rows_clean;
+		// }//end get_ontology_full
+
+
+
+	/**
+	* CHECK_PARENTS
+	* Checks if ontology element have full path to root term (dd1) recursively
+	* @param object $row
+	* 	Current db row object
+	* @param array $ar_rows
+	* 	Whole db result rows
+	*/
+		// public static function check_parents($row, $ar_rows, $root='dd1') {
+
+		// 	// path already exists from top root
+		// 	if ($row->parent===$root) {
+		// 		return true;
+		// 	}
+
+		// 	if (isset($ar_rows[$row->parent])) {
+		// 		return self::check_parents($ar_rows[$row->parent], $ar_rows, $root);
+		// 	}
+
+		// 	return false;
+		// }//end check_parents
+
+
+
 }//end ontology
 
 
@@ -875,97 +1053,97 @@ DBi::_getConnection();
 include('class.RecordObj_dd_edit.php');
 $ontology_data = json_decode('[
   {
-    "tipo": "oh81",
-    "tld": "oh",
-    "model": "section_tool",
-    "model_tipo": "dd125",
-    "parent": "oh80",
-    "order": 1,
-    "translatable": false,
-    "properties": {
-      "context": {
-        "context_name": "section_tool",
-        "tool_section_tipo": "oh81",
-        "top_tipo": "oh1",
-        "target_section_tipo": "rsc167",
-        "target_component_tipo": "rsc35",
-        "target_tool": "tool_transcription",
-        "prueba":"Hola test 7"
-      }
-    },
-    "relations": null,
-    "descriptors": [
-      {
-        "value": "Transcription nuevisimo",
-        "lang": "lg-eng",
-        "type": "term"
-      },
-      {
-        "value": "Transcripción entrevistas",
-        "lang": "lg-spa",
-        "type": "term"
-      },
-      {
-        "value": "Transcripció dentrevistes",
-        "lang": "lg-cat",
-        "type": "term"
-      },
-      {
-        "value": "Μεταγραφή συνεντεύξεις",
-        "lang": "lg-ell",
-        "type": "term"
-      }
-    ]
+	"tipo": "oh81",
+	"tld": "oh",
+	"model": "section_tool",
+	"model_tipo": "dd125",
+	"parent": "oh80",
+	"order": 1,
+	"translatable": false,
+	"properties": {
+	  "context": {
+		"context_name": "section_tool",
+		"tool_section_tipo": "oh81",
+		"top_tipo": "oh1",
+		"target_section_tipo": "rsc167",
+		"target_component_tipo": "rsc35",
+		"target_tool": "tool_transcription",
+		"prueba":"Hola test 7"
+	  }
+	},
+	"relations": null,
+	"descriptors": [
+	  {
+		"value": "Transcription nuevisimo",
+		"lang": "lg-eng",
+		"type": "term"
+	  },
+	  {
+		"value": "Transcripción entrevistas",
+		"lang": "lg-spa",
+		"type": "term"
+	  },
+	  {
+		"value": "Transcripció dentrevistes",
+		"lang": "lg-cat",
+		"type": "term"
+	  },
+	  {
+		"value": "Μεταγραφή συνεντεύξεις",
+		"lang": "lg-ell",
+		"type": "term"
+	  }
+	]
   },
   {
-    "tipo": "oh82",
-    "tld": "oh",
-    "model": "section_list",
-    "model_tipo": "dd91",
-    "parent": "oh81",
-    "order": 1,
-    "translatable": false,
-    "properties": null,
-    "relations": [
-      {
-        "tipo": "rsc21"
-      },
-      {
-        "tipo": "rsc19"
-      },
-      {
-        "tipo": "rsc23"
-      },
-      {
-        "tipo": "rsc263"
-      },
-      {
-        "tipo": "rsc36"
-      },
-      {
-        "tipo": "rsc244"
-      },
-      {
-        "tipo": "rsc35"
-      }
-    ],
-    "descriptors": [
-      {
-        "value": "Listado",
-        "lang": "lg-spa",
-        "type": "term"
-      },
-      {
-        "value": "Llistat",
-        "lang": "lg-cat",
-        "type": "term"
-      },
-      {
-        "value": "List",
-        "lang": "lg-eng",
-        "type": "term"
-      }
-    ]
+	"tipo": "oh82",
+	"tld": "oh",
+	"model": "section_list",
+	"model_tipo": "dd91",
+	"parent": "oh81",
+	"order": 1,
+	"translatable": false,
+	"properties": null,
+	"relations": [
+	  {
+		"tipo": "rsc21"
+	  },
+	  {
+		"tipo": "rsc19"
+	  },
+	  {
+		"tipo": "rsc23"
+	  },
+	  {
+		"tipo": "rsc263"
+	  },
+	  {
+		"tipo": "rsc36"
+	  },
+	  {
+		"tipo": "rsc244"
+	  },
+	  {
+		"tipo": "rsc35"
+	  }
+	],
+	"descriptors": [
+	  {
+		"value": "Listado",
+		"lang": "lg-spa",
+		"type": "term"
+	  },
+	  {
+		"value": "Llistat",
+		"lang": "lg-cat",
+		"type": "term"
+	  },
+	  {
+		"value": "List",
+		"lang": "lg-eng",
+		"type": "term"
+	  }
+	]
   }
 ]');
 #ontology::import($ontology_data);
