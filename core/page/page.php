@@ -15,7 +15,7 @@
 		$tipo		= $_GET['t'] 	?? $_GET['tipo']		?? $default_section_tipo; //MAIN_FALLBACK_SECTION;
 		$section_id	= $_GET['id']	?? $_GET['section_id']	?? null;
 		// $mode	= $_GET['m'] 	?? $_GET['mode']		?? (!empty($section_id) ? 'edit' : 'list');
-		$mode		= $_GET['m'] 	?? $_GET['mode']		?? 'list';	
+		$mode		= $_GET['m'] 	?? $_GET['mode']		?? 'list';
 	}
 	define('MODE', $mode);
 
@@ -24,7 +24,7 @@
 // context
 	$context = [];
 	if (login::is_logged()!==true) {
-		
+
 		// not logged case
 
 		// check_basic_system (lang and structure files)
@@ -35,7 +35,7 @@
 
 		// page context elements [login]
 			$login = new login('edit');
-	
+
 		// add to page context
 			$context[] = $login->get_structure_context();
 
@@ -161,7 +161,7 @@
 
 					$area = area::get_instance($model, $tipo, MODE);
 					$area->set_lang(DEDALO_DATA_LANG);
-					
+
 					// add to page context
 						$current_context =$area->get_structure_context(1, true);
 						$context[] = $current_context;
@@ -193,7 +193,7 @@
 
 
 // load page
-	
+
 	// load base html
 		$page_html = dirname(__FILE__) . '/html/page.phtml';
 		if( !include($page_html) ) echo '<div class="error">Invalid page file</div>';

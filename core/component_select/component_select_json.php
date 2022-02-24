@@ -49,7 +49,7 @@
 		// data item
 		$item  = $this->get_data_item($value);
 
-		// dataset
+		// datalist
 			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 				$item->datalist = $ar_list_of_values->result;
 			}
