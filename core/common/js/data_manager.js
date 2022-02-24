@@ -392,14 +392,22 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 *	current_data_manager.get_local_db_data('tool_export_config', 'data')
 * @return promise
 */
-data_manager.prototype.get_local_db_data = async function(id, table) {
+const db_table = {}
+data_manager.prototype.get_local_db_data = async function(id, table, cache=false) {
 	const t0 = performance.now()
 
 	const self = this
 
 	// get local db
-		const db = await self.get_local_db()
-		console.log(`__Time [data_manager.get_local_db_data] table:${table} id:${id} ms: `, performance.now()-t0);
+		const db = cache===true
+			? await (async ()=>{
+				if (!db_table[table]) {
+					db_table[table] = await self.get_local_db()
+				}
+				return db_table[table]
+			  })()
+			: await self.get_local_db()
+		// console.log(`__Time [data_manager.get_local_db_data] table:${table} id:${id} ms: `, performance.now()-t0);
 
 	return new Promise(function(resolve, reject){
 
