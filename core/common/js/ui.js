@@ -267,7 +267,9 @@ export const ui = {
 				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
-						event_manager.publish('active_component', instance)
+						if (!wrapper.classList.contains('active')) {
+							event_manager.publish('active_component', instance)
+						}
 					})
 
 				wrapper.appendChild(fragment)
@@ -1305,7 +1307,7 @@ export const ui = {
 			}
 
 		// value
-			if(value){
+			if(value!==undefined){
 				element.value = value
 			}
 
@@ -1549,7 +1551,7 @@ export const ui = {
 			const collapsed_table = 'status'
 
 		// content data state
-			data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
+			data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table, true)
 			.then(function(ui_status){
 
 				// (!) Note that ui_status only exists when element is collapsed
@@ -2260,7 +2262,49 @@ export const ui = {
 		image.classList.remove('loading')
 
 		return image
-	}//end set_background_image
+	},//end set_background_image
+
+
+
+	/**
+	* SET_PARENT_CHECKED_VALUE
+	* Set input check value based on direct children checked values
+	* Could be checked, unchecked or indeterminate
+	* @return bool
+	*/
+	set_parent_checked_value : (input_node, all_direct_children, callback) => {
+
+		// look children status until find checked value false
+			const all_children_checked = (()=>{
+
+				const all_direct_children_length = all_direct_children.length
+				for (let i = 0; i < all_direct_children_length; i++) {
+					if(all_direct_children[i].checked!==true) {
+						return false
+					}
+				}
+
+				return true
+			})()
+
+		// set checked value
+			if (all_children_checked===true) {
+				// full checked
+				input_node.indeterminate	= false
+				input_node.checked			= true
+			}else{
+				// intermediate
+				input_node.checked			= false
+				input_node.indeterminate	= true
+			}
+
+		// callback
+			if (callback) {
+				callback(input_node)
+			}
+
+		return true
+	}//end set_parent_checked_value
 
 
 
