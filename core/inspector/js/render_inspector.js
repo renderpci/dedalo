@@ -81,7 +81,7 @@ const add_events = (wrapper, self) => {
 			// prevent buble event to container element
 
 			// label click collapse 'content_data'
-				if (e.target.matches('.label')) {
+				// if (e.target.matches('.label')) {
 
 					// const collapsed_id		= e.target.id //.classList.join('_')
 					// const collapsed_table	= 'context'
@@ -100,7 +100,7 @@ const add_events = (wrapper, self) => {
 					// 	data_manager.prototype.delete_local_db_data(collapsed_id, collapsed_table)
 					// 	content_data.classList.remove('hide')
 					// }
-				}
+				// }
 
 			return false
 		})
@@ -363,9 +363,9 @@ export const render_component_info = function(self, component) {
 		const translatable	= component.context.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
-		const value			= component.data && component.data.value
-			? JSON.stringify(component.data.value, null, 1)
-			: ''
+		// const value			= component.data && component.data.value
+		// 	? JSON.stringify(component.data.value, null, 1)
+		// 	: ''
 
 	const fragment = new DocumentFragment();
 
@@ -451,12 +451,21 @@ export const render_component_info = function(self, component) {
 			parent			: fragment
 		})
 		// value
-		ui.create_dom_element({
+		const value_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value wide code',
-			text_content	: value,
+			// text_content	: value,
+			text_content	: 'Parsing data..',
 			parent			: fragment
 		})
+		// parse data. This time out prevents lock component selection
+		setTimeout(function(){
+			const value = component.data && component.data.value
+				? JSON.stringify(component.data.value, null, 1)
+				: ''
+			value_node.innerHTML = ''
+			value_node.insertAdjacentHTML('afterbegin', value)
+		}, 50)
 
 
 	// clean container
@@ -465,6 +474,7 @@ export const render_component_info = function(self, component) {
 		}
 
 	container.appendChild(fragment)
+
 
 
 	return fragment
