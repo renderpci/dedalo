@@ -250,7 +250,12 @@ section.prototype.build = async function(autoload=false) {
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
 				if(SHOW_DEVELOPER===true) {
-					dd_console("SECTION api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug.exec_time]);
+					if (!api_response || !api_response.result) {
+						console.error("section build autoload api_response:",api_response);
+					}
+					const response	= JSON.parse(JSON.stringify(api_response))
+					const exec_time	= api_response.debug ? api_response.debug.exec_time : null
+					dd_console("SECTION api_response:", 'DEBUG', [self.id, response, exec_time]);
 				}
 
 			// set the result to the datum

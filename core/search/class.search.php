@@ -1260,7 +1260,7 @@ class search {
 					$ar_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_filter'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 					if (!isset($ar_component_filter[0])) {
 						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
-						throw new Exception("Error Processing Request. Filter not found is this section ($section_tipo) $section_name", 1);
+						trigger_error("Error Processing Request. Filter not found is this section ($section_tipo) $section_name");
 					}else{
 						$component_filter_tipo = $ar_component_filter[0];
 					}
