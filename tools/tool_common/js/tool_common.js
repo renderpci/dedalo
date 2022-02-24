@@ -162,17 +162,17 @@ tool_common.prototype.build = async function(autoload=false) {
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// mandatory vars check
-				if (!self.section_tipo || self.section_tipo.lenght<2) {
-					console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
-					self.status = previous_status
-					return false
-				}
-				if (!self.section_id || self.section_id.lenght<1) {
-					console.warn("[tool_common.build] Warning. stopped autoload because undefined self.section_id:", self.section_id);
-					self.status = previous_status
-					return false
-				}
+			// mandatory vars check. (!) Not mandatory anymore
+				// if (!self.section_tipo || self.section_tipo.lenght<2) {
+				// 	console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
+				// 	self.status = previous_status
+				// 	return false
+				// }
+				// if (!self.section_id || self.section_id.lenght<1) {
+				// 	console.warn("[tool_common.build] Warning. stopped autoload because undefined self.section_id:", self.section_id);
+				// 	self.status = previous_status
+				// 	return false
+				// }
 
 			// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
 				const rqo = {
