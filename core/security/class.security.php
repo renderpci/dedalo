@@ -33,7 +33,8 @@ class security {
 
 		// user id check
 			if(empty($_SESSION['dedalo']['auth']['user_id'])) {
-				$msg=" <span class='error'> Error: Session user_id is not defined! </span>";
+				$msg = " <span class='error'> Error: Session user_id is not defined! </span>";
+				trigger_error($msg);
 				if(SHOW_DEBUG===true) {
 					throw new Exception( __METHOD__ . $msg);
 				}
@@ -45,6 +46,7 @@ class security {
 		// permissions root check
 			if( !defined('DEDALO_PERMISSIONS_ROOT') ) {
 				$msg = "<span class='error'> Error: permissions_root is not defined! </span>";
+				trigger_error($msg);
 				if(SHOW_DEBUG===true) {
 					throw new Exception( __METHOD__ . $msg);
 				}
@@ -60,24 +62,31 @@ class security {
 
 	/**
 	* GET_SECURITY_PERMISSIONS
-	* @param string $tipo
+	* @param string $parent_tipo
 	*	tipo of section / area
-	* @param string $sub_tipo
-	* 	tipo of element
+	* @param string $tipo
+	* 	tipo of element (usually component)
 	*/
-	public static function get_security_permissions( $parent_tipo, $tipo ) {
+	public static function get_security_permissions(string $parent_tipo, string $tipo) {
 
 		if ((int)$_SESSION['dedalo']['auth']['user_id']===DEDALO_SUPERUSER) {
 			return 3;
 		}
 
-		# PERMISSIONS_TABLE
-		$permissions_table = self::get_permissions_table();
+		// Tools Register section 'dd1324'
+			if ($parent_tipo===DEDALO_REGISTER_TOOLS_SECTION_TIPO) {
+				return 1;
+			}
 
-		$permissions = array_reduce($permissions_table, function($carry, $item) use ($parent_tipo, $tipo){
-			return ($item->parent===$parent_tipo && $item->tipo===$tipo) ? $item->value : $carry;
-		}, 0);
+		// permissions_table
+			$permissions_table = security::get_permissions_table();
 
+		// permissions_table find
+			$found = array_find($permissions_table, function($el) use($parent_tipo, $tipo){
+				return $el->section_tipo===$parent_tipo && $el->tipo===$tipo;
+			});
+
+			$permissions = $found->value ?? 0;
 
 		return $permissions;
 	}//end get_security_permissions
@@ -87,7 +96,7 @@ class security {
 	/**
 	* PERMISSIONS TABLE
 	* Calculated once and stored in cache
-	* Optionalment stored in $_SESSION['dedalo']['auth']['permissions_table']
+	* Optional stored in $_SESSION['dedalo']['auth']['permissions_table']
 	*
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
@@ -97,38 +106,36 @@ class security {
 		static $permissions_table;
 
 		switch (true) {
-			# STATIC CACHE (RAM)
+			// STATIC CACHE (RAM)
 			case (isset($permissions_table)):
-				# Cached once by script run
+				// Cached once by script run
 				return $permissions_table;
 				break;
 
-			# DEVELOPMENT_SERVER (Non session cache is used)
+			// DEVELOPMENT_SERVER (Non session cache is used)
 			case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
-				# Break and continue calculation without session cache
+				// Break and continue calculation without session cache
 				break;
 
-			# SESSION CACHE (HD)
+			// SESSION CACHE (HD)
 			case (isset($_SESSION['dedalo']['auth']['permissions_table'])):
-				#debug_log(__METHOD__." Loaded permissions_table session");
+				// debug_log(__METHOD__." Loaded permissions_table session");
 				$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
 				return $permissions_table;
 				break;
-			# FILE DATA
-			#case (file_exists($this->filename_user_permissions_table)):
-			#	#trigger_error("Loaded permissions_table from file");
-			#	return unserialize( file_get_contents($this->filename_user_permissions_table) );
-			#	break;
-			# DEFAULT
+
+			// DEFAULT
 			default:
-				# Continue calculating
+				// Continue calculating
 				break;
 		}
 
-		$permissions_table = self::get_ar_permissions_in_matrix_for_current_user();
+		// calculation
+			$permissions_table = security::get_ar_permissions_in_matrix_for_current_user();
 
-		# SESSION CACHED TABLE
-		$_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+		// session cached table
+			$_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+
 
 		return (array)$permissions_table;
 	}//end get_permissions_table
@@ -203,7 +210,7 @@ class security {
 	*/
 	public static function get_permissions_table_of_specific_user( $user_id ) {
 
-		$permissions_table = self::get_ar_permissions_in_matrix_for_current_user( $user_id );
+		$permissions_table = security::get_ar_permissions_in_matrix_for_current_user( $user_id );
 
 		return (array)$permissions_table;
 	}//end get_permissions_table_of_specific_user
@@ -252,7 +259,7 @@ class security {
 	* IS_GLOBAL_ADMIN
 	* Test if received user is global admin
 	* @param $user_id
-	*	User id · int · can be the login user or not.
+	*	User id · int · can be the current logged user or not.
 	* @return bool
 	*/
 	public static function is_global_admin($user_id) {
@@ -271,17 +278,22 @@ class security {
 
 		// cached value. If request user_id is the same as current logged user, return session value, without acces to component
 			if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
-				return isset($_SESSION['dedalo']['auth']['is_global_admin']) ? $_SESSION['dedalo']['auth']['is_global_admin'] : false;
+
+				return isset($_SESSION['dedalo']['auth']['is_global_admin'])
+					? $_SESSION['dedalo']['auth']['is_global_admin']
+					: false;
 			}
 
 		// Resolve from component
 			$security_administrator_model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
-			$component_security_administrator	= component_common::get_instance($security_administrator_model,
-																				 DEDALO_SECURITY_ADMINISTRATOR_TIPO,
-																				 $user_id,
-																				 'edit',
-																				 DEDALO_DATA_NOLAN,
-																				 DEDALO_SECTION_USERS_TIPO);
+			$component_security_administrator	= component_common::get_instance(
+				$security_administrator_model,
+				DEDALO_SECURITY_ADMINISTRATOR_TIPO,
+				$user_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
 
 			$security_administrator_dato = $component_security_administrator->get_dato();
 
@@ -324,7 +336,7 @@ class security {
 		# Permissions
 		$permissions = 2;
 
-		$component_security_access		= self::get_user_security_access();
+		$component_security_access		= security::get_user_security_access();
 		$component_security_access_dato	= $component_security_access->get_dato();
 
 		# Iterate sections (normally like ts1,ts2)
