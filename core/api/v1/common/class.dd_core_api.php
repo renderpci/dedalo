@@ -1087,7 +1087,11 @@ class dd_core_api {
 
 					case 'get_data': // Used by components and areas
 
-						if (strpos($model, 'component')===0) {
+						if ($section_id<1) {
+							// invalid call
+							debug_log(__METHOD__." WARNING data:get_data invalid section_id ", logger::WARNING);
+
+						}else if (strpos($model, 'component')===0) {
 
 							// component
 								$RecordObj_dd	= new RecordObj_dd($tipo);
@@ -1214,7 +1218,10 @@ class dd_core_api {
 							// 	dump($ar_all_section_id, ' ar_all_section_id ++ '.to_string());
 
 					}//end if (isset($element))
-
+					else {
+						debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ".to_string(), logger::WARNING);
+						$context = $data = [];
+					}
 
 
 			// smart remove data duplicates (!)
