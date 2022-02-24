@@ -168,10 +168,9 @@ class menu extends common {
 				'mode'			=> $mode,
 				'permissions'	=> $permissions
 			]);
-		
+
 		return $dd_object;
 	}//end get_structure_context
-
 
 
 

@@ -1604,7 +1604,10 @@ function check_basic_system() {
 function array_find($xs, $fn) {
 
 	if (is_array($xs)) {
-		foreach ($xs as $x) {
+		// foreach ($xs as $x) {
+		$xs_length = sizeof($xs);
+		for ($i=0; $i < $xs_length ; $i++) {
+			$x = $xs[$i];
 			if (call_user_func($fn, $x) === true)
 			return $x;
 		}
