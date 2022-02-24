@@ -21,22 +21,67 @@ class security_v5_to_v6 {
 		if($section_tipo===DEDALO_SECTION_PROFILES_TIPO){	// PROFILES TABLE
 
 			// security_access / areas
-				$security_acces_dato	= $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
-				$security_acces_areas	= $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}  ?? new stdClass(); // expected object
+				// dd249 COMPONENT_SECURITY_AREAS
+				$security_acces_areas = $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}  ?? new stdClass(); // expected object
+				// dd774 COMPONENT_SECURITY_ACCESS
+				$security_acces_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
 
 				if (is_object($security_acces_dato)) {
 
-					// change areas dato
+					// change areas dato dd249
+						// sample data dd249
+						// from
+						// {
+						// "ad1": 3,
+						// "ds1": 3
+						// }
+						// to
+						// {
+						// 	"tipo": "ad1",
+						// 	"section_tipo": "ad1",
+						// 	"value": 3
+						// }
+						// {
+						// 	"tipo": "ds1",
+						// 	"section_tipo": "ds1",
+						// 	"value": 3
+						// }
 					$new_access_dato = [];
 					foreach ($security_acces_areas as $current_tipo => $value) {
+
 						$current_dato = new stdClass();
-							$current_dato->tipo		= $current_tipo;
-							$current_dato->parent	= $current_tipo;
-							$current_dato->type		= 'area';
-							$current_dato->value	= $value;
+							$current_dato->tipo			= $current_tipo;
+							$current_dato->section_tipo	= $current_tipo; // self (section, area) tipo as section tipo
+							// $current_dato->parent	= $parent;
+							// $current_dato->type		= 'area';
+							$current_dato->value		= $value;
 						$new_access_dato[] = $current_dato;
 					}
-					// change access dato
+
+					// change access dato dd774
+						// sample data dd774
+						// from
+						// {
+						// "ad1": {
+						// 	"hierarchy21": 2,
+						// 	"hierarchy22": 2
+						// },
+						// "ad2": {
+						// 	"hierarchy21": 2,
+						// 	"hierarchy22": 2
+						// }
+						// to
+						// {
+						// 	"tipo": "hierarchy21",
+						// 	"section_tipo": "ad1",
+						// 	"value": 1
+						// }
+						// {
+						// 	"tipo": "hierarchy22",
+						// 	"section_tipo": "ad1",
+						// 	"value": 1
+						// }
+						// ...
 					foreach ($security_acces_dato as $current_parent => $current_ar_tipo) {
 						if (empty($current_ar_tipo)) {
 							debug_log(__METHOD__." Empty current_ar_tipo for parent $current_parent in security_acces_dato. IGNORED !".to_string(), logger::ERROR);
@@ -44,9 +89,10 @@ class security_v5_to_v6 {
 						}
 						foreach ($current_ar_tipo as $current_tipo => $value) {
 							$current_dato = new stdClass();
-								$current_dato->tipo		= $current_tipo;
-								$current_dato->parent	= $current_parent;
-								$current_dato->value	= $value;
+								$current_dato->tipo			= $current_tipo;
+								$current_dato->section_tipo	= $current_parent; // current area/section
+								// $current_dato->parent	= $current_parent;
+								$current_dato->value		= $value;
 							$new_access_dato[] = $current_dato;
 						}
 					}
