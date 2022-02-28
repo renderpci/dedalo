@@ -88,8 +88,7 @@ const get_content_data = async function(self) {
 			ar_promises.push(new Promise(async function(resolve){
 
 				// context
-					const current_context	= Object.assign({}, component_list[i])
-					const permissions		= current_context.permissions
+					const current_context = Object.assign({}, component_list[i])
 
 				// init
 					const instance_options = {
@@ -116,7 +115,9 @@ const get_content_data = async function(self) {
 					await component_instance.build(true)
 
 				// (!) update permissions more restrictively after build
-					component_instance.permissions = permissions
+					if (typeof current_context.permissions!=='undefined') {
+						component_instance.permissions = current_context.permissions
+					}
 
 				// render
 					const node = await component_instance.render()
