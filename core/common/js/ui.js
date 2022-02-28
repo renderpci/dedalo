@@ -150,7 +150,7 @@ export const ui = {
 				}
 
 			// buttons
-				if (items.buttons && instance.permissions>1) {
+				if (items.buttons ) { // && instance.permissions>1
 					fragment.appendChild(items.buttons)
 				}
 
@@ -1097,6 +1097,7 @@ export const ui = {
 					parent : tool_button
 				})
 				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
+
 
 			// Events
 				tool_button.addEventListener('click', publish_load_tool)
