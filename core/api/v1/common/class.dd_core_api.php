@@ -889,7 +889,7 @@ class dd_core_api {
 
 
 		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values
-			$sqo_id	= implode('_', [$model,$section_tipo]);
+			$sqo_id	= implode('_', [$model, $section_tipo]);
 			$sqo	= !empty($rqo->sqo)
 				? $rqo->sqo
 				: (($model==='section' && ($mode==='edit' || $mode==='list') && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]))
@@ -1087,37 +1087,38 @@ class dd_core_api {
 
 					case 'get_data': // Used by components and areas
 
-						if ($section_id<1) {
-							// invalid call
-							debug_log(__METHOD__." WARNING data:get_data invalid section_id ", logger::WARNING);
+						if (strpos($model, 'component')===0) {
 
-						}else if (strpos($model, 'component')===0) {
+							if ($section_id>=1) {
+								// invalid call
+								debug_log(__METHOD__." WARNING data:get_data invalid section_id ", logger::WARNING);
 
-							// component
-								$RecordObj_dd	= new RecordObj_dd($tipo);
-								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-								$element		= component_common::get_instance($model,
-																				 $tipo,
-																				 $section_id,
-																				 $mode,
-																				 $component_lang,
-																				 $section_tipo);
-								if ($mode==='tm') {
-									// set matrix_id value to component to allow it search dato in
-									// matrix_time_machine component function 'get_dato' will be
-									// overwritten to get time machine dato instead the real dato
-									$element->matrix_id = $ddo_source->matrix_id;
-								}
-								// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+								// component
+									$RecordObj_dd	= new RecordObj_dd($tipo);
+									$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+									$element		= component_common::get_instance($model,
+																					 $tipo,
+																					 $section_id,
+																					 $mode,
+																					 $component_lang,
+																					 $section_tipo);
+									if ($mode==='tm') {
+										// set matrix_id value to component to allow it search dato in
+										// matrix_time_machine component function 'get_dato' will be
+										// overwritten to get time machine dato instead the real dato
+										$element->matrix_id = $ddo_source->matrix_id;
+									}
+									// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
 
-							// pagination. fix pagination vars (defined in class component_common)
-								if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
-									$pagination = new stdClass();
-										$pagination->limit	= $rqo->sqo->limit;
-										$pagination->offset	= $rqo->sqo->offset;
+								// pagination. fix pagination vars (defined in class component_common)
+									if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
+										$pagination = new stdClass();
+											$pagination->limit	= $rqo->sqo->limit;
+											$pagination->offset	= $rqo->sqo->offset;
 
-									$element->pagination = $pagination;
-								}
+										$element->pagination = $pagination;
+									}
+							}//end if ($section_id>=1)
 
 						}else if (strpos($model, 'area')===0) {
 
