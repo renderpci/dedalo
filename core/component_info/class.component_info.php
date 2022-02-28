@@ -8,6 +8,7 @@ include_once dirname(dirname(__FILE__)). '/widgets/widget_common/class.widget_co
 class component_info extends component_common {
 
 
+
 	/**
 	* GET_DATO
 	* @return array $dato

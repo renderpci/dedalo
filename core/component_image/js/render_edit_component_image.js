@@ -86,7 +86,6 @@ const get_content_data_edit = function(self) {
 			}
 		}
 
-
 	// ul inputs container
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',

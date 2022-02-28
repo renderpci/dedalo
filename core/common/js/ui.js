@@ -618,14 +618,16 @@ export const ui = {
 					// fix nearby inspector overlapping
 						const el = component.node[0]
 						if (el) {
-							const el_rect			= el.getBoundingClientRect();
-							const inspector			= document.getElementById('inspector')
-							const inspector_rect	= inspector.getBoundingClientRect();
-							// console.log("/// inspector_rect:",inspector_rect);
-							if (inspector_rect.left > 50 // prevent affects responsive mobile view
-								&& el_rect.right > inspector_rect.left-20
-								) {
-								el.classList.add('inside')
+							const el_rect	= el.getBoundingClientRect();
+							const inspector	= document.getElementById('inspector')
+							if (inspector) {
+								const inspector_rect = inspector.getBoundingClientRect();
+								// console.log("/// inspector_rect:",inspector_rect);
+								if (inspector_rect.left > 50 // prevent affects responsive mobile view
+									&& el_rect.right > inspector_rect.left-20
+									) {
+									el.classList.add('inside')
+								}
 							}
 						}
 
@@ -986,47 +988,49 @@ export const ui = {
 
 			const fragment = new DocumentFragment()
 
-			// header
-				const tool_header = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_header ' + name,
-					parent			: fragment
-				})
-
-			// label
-				if (label!==null) {
-					// default
-					const component_label = ui.create_dom_element({
+			if (mode!=='mini') {
+				// header
+					const tool_header = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'label',
-						inner_html		: label,
-						parent			: tool_header
+						class_name		: 'tool_header ' + name,
+						parent			: fragment
 					})
 
-					// icon (optional)
-					if (context.icon) {
-						const icon = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button white', // gear
-							style : {
-								"-webkit-mask"	: "url('" +context.icon +"')",
-								"mask"			: "url('" +context.icon +"')"
-							}
+				// label
+					if (label!==null) {
+						// default
+						const component_label = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'label',
+							inner_html		: label,
+							parent			: tool_header
 						})
-						component_label.prepend(icon)
-					}
-				}
 
-			// description
-				if (description!==null) {
-					// default
-					const component_description = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'description',
-						inner_html		: description,
-						parent			: tool_header
-					})
-				}
+						// icon (optional)
+						if (context.icon) {
+							const icon = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button white', // gear
+								style : {
+									"-webkit-mask"	: "url('" +context.icon +"')",
+									"mask"			: "url('" +context.icon +"')"
+								}
+							})
+							component_label.prepend(icon)
+						}
+					}
+
+				// description
+					if (description!==null) {
+						// component_description
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'description',
+							inner_html		: description,
+							parent			: tool_header
+						})
+					}
+			}//end if (mode!=='mini')
 
 			// buttons
 				if (items.buttons) {

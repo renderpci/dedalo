@@ -85,15 +85,19 @@ class component_filter_records extends component_common {
 
 			// object item
 			$sections[] = (object)[
-				'tipo' 			=> $area_item->tipo,
-				'label' 		=> RecordObj_dd::get_termino_by_tipo($area_item->tipo, DEDALO_DATA_LANG, true, true),
-				'permissions' 	=> $area_item->value
+				'tipo'			=> $area_item->tipo,
+				'label'			=> RecordObj_dd::get_termino_by_tipo($area_item->tipo, DEDALO_DATA_LANG, true, true),
+				'permissions'	=> $area_item->value
 			];
 		}
 
 		// sort by label
 			uasort($sections, function($a, $b) {
-			    return $a->label > $b->label;
+				// return $a->label > $b->label;
+				if ($a->label == $b->label) {
+					return 0;
+				}
+				return ($a->label < $b->label) ? -1 : 1;
 			});
 
 		// regenerate array keys

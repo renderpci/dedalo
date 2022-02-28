@@ -98,9 +98,9 @@ component_image.prototype.init = async function(options) {
 		self.vector_editor 			= null
 
 
-
 	// call the generic common tool init
-		const common_init = component_common.prototype.init.call(this, options);
+		const common_init = component_common.prototype.init.call(this, options)
+
 
 	return common_init
 };//end init
@@ -396,33 +396,5 @@ component_image.prototype.update_draw_data = function() {
 
 	return true
 };//end update_draw_data
-
-
-
-/**
-* OLD_WAY TAG
-* SAVE_DRAW_DATA
-*/
-	// component_image.prototype.save_draw_data = function() {
-
-	// 	const self = this
-
-	// 	const ar_tag		= self.ar_tag_loaded
-	// 	const ar_tag_len	= ar_tag.length
-
-	// 	for (let i = ar_tag_len- 1; i >= 0; i--) {
-	// 		const current_tag = ar_tag[i]
-	// 		// UPDATE_TAG
-	// 		event_manager.publish('draw_change_tag' +'_'+ self.tipo, current_tag)
-	// 		if(i === 0){
-	// 			current_tag.save = true
-	// 			event_manager.publish('draw_change_tag' +'_'+ self.tipo, current_tag)
-	// 		}
-	// 			console.log("tag_data:",current_tag);
-	// 	}
-
-
-	// 	return true
-	// };//end save_draw_data
 
 
