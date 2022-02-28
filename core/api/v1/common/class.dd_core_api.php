@@ -425,7 +425,8 @@ class dd_core_api {
 					$element = area::get_instance($model, $tipo, $mode);
 					break;
 
-				case strpos($model, 'component_')!==false:
+				case strpos($model, 'component_')===0:
+
 					$RecordObj_dd	= new RecordObj_dd($tipo);
 					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
@@ -437,7 +438,7 @@ class dd_core_api {
 															  $section_tipo);
 					break;
 
-				case strpos($model, 'tool_')!==false:
+				case strpos($model, 'tool_')===0:
 
 					// tool section_tipo and section_id can be resolved from model if is necessary
 						if (empty($section_id) || empty($section_id)) {
