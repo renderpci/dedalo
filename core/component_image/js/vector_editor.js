@@ -11,7 +11,7 @@
 
 
 
-export const vector_editor = function(){
+export const vector_editor = function() {
 
 	this.id
 	// paper vars
@@ -25,11 +25,11 @@ export const vector_editor = function(){
 
 
 
-
 /**
 * INIT_CANVAS
 * @param instance self
 * @return promise
+* 	bool true
 */
 vector_editor.prototype.init_canvas = async function(self) {
 
@@ -51,7 +51,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 		// we need the uri of the image inside svg,
 		// for select the attribute is necesary use the namespace of the attribute
 		// xlink:href ; namespace for xlink = http://www.w3.org/1999/xlink, atribute href
-		self.img_src 	= image.getAttributeNS('http://www.w3.org/1999/xlink','href')
+		self.img_src = image.getAttributeNS('http://www.w3.org/1999/xlink','href')
 
 	// set the self specific libraries and variables not defined by the generic init
 		// load dependences js/css
@@ -78,11 +78,9 @@ vector_editor.prototype.init_canvas = async function(self) {
 		// set the resize of the canvas to be controlled by paper changes.
 			self.canvas_node.setAttribute("resize", true)
 
-			//size
-			//get the current resized canvas size
-			const canvas_w		= self.canvas_node.clientWidth
-			const canvas_h		= self.canvas_node.clientHeight
-
+		// size. get the current resized canvas size
+			const canvas_w	= self.canvas_node.clientWidth
+			const canvas_h	= self.canvas_node.clientHeight
 
 		// hidpi. Avoid double size on canvas,(don't used)
 			// canvas_node.setAttribute("hidpi","off")
@@ -141,9 +139,9 @@ vector_editor.prototype.init_canvas = async function(self) {
 		const top_left = new self.current_paper.Point(-1, -1)
 
 			const main_canvas_area = new self.current_paper.Path.Rectangle({
-				point: top_left,
-				size: size,
-				strokeColor: 'black'
+				point		: top_left,
+				size		: size,
+				strokeColor	: 'black'
 			});
 			self.current_paper.project.deselectAll();
 			main_canvas_area.name = 'main_area'
@@ -180,6 +178,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 			return
 		}// end full_screen_change
 
+
 	return true
 };//end init_canvas
 
@@ -188,18 +187,19 @@ vector_editor.prototype.init_canvas = async function(self) {
 /**
 * INIT_TOOLS
 * init paper tools
+* @return bool true
 */
-vector_editor.prototype.init_tools = function(self){
+vector_editor.prototype.init_tools = function(self) {
 
 	// paper. Curent paper vars
-		const project 	= self.current_paper.project
-		const Layer   	= self.current_paper.Layer
-		const Color   	= self.current_paper.Color
-		const Tool    	= self.current_paper.Tool
-		const Point   	= self.current_paper.Point
-		const Size    	= self.current_paper.Size
-		const Path    	= self.current_paper.Path
-		const Raster 	= self.current_paper.Raster
+		const project	= self.current_paper.project
+		const Layer		= self.current_paper.Layer
+		const Color		= self.current_paper.Color
+		const Tool		= self.current_paper.Tool
+		const Point		= self.current_paper.Point
+		const Size		= self.current_paper.Size
+		const Path		= self.current_paper.Path
+		const Raster	= self.current_paper.Raster
 
 		this.active_fill_color = new Color({
 					hue: 360,
@@ -697,7 +697,7 @@ vector_editor.prototype.init_tools = function(self){
 /**
 * RENDER_TOOLS_BUTTONS
 */
-vector_editor.prototype.render_tools_buttons = function(self){
+vector_editor.prototype.render_tools_buttons = function(self) {
 
 	// Tool buttons. Show
 		// const view			= self.current_paper.view
@@ -957,7 +957,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 * get the color of the current active layer to set to the color picker and the button color picker
 * @return
 */
-vector_editor.prototype.set_color_picker = function(item){
+vector_editor.prototype.set_color_picker = function(item) {
 
 	// get the item selected color
 		this.active_fill_color = item.fillColor
@@ -975,14 +975,14 @@ vector_editor.prototype.set_color_picker = function(item){
 /**
 * LOAD_LAYER
 * get the layers loaded and show into window
-* @return
+* @return bool true
 */
 vector_editor.prototype.load_layer = function(self, layer) {
 
 	// curent paper vars
-		const project 		= self.current_paper.project
-		const Layer   		= self.current_paper.Layer
-		const Color   		= self.current_paper.Color
+		const project	= self.current_paper.project
+		const Layer		= self.current_paper.Layer
+		const Color		= self.current_paper.Color
 
 	// set the layer data
 		const layer_id		= layer.layer_id
@@ -1100,6 +1100,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		// Send the raster layer to the back of the layers
 		const raster_layer = project.layers['raster']
 		raster_layer.sendToBack()
+
 	return true
 };//end load_layer
 
@@ -1108,9 +1109,9 @@ vector_editor.prototype.load_layer = function(self, layer) {
 /**
 * CREATE_RASTER_LAYER
 * get the layers loaded and show into window
-* @return
+* @return object raster
 */
-vector_editor.prototype.create_raster_layer = function(self){
+vector_editor.prototype.create_raster_layer = function(self) {
 
 	// fixed height for the image
 	// get the image height with fixed 1200px and set the view_width
@@ -1142,6 +1143,7 @@ vector_editor.prototype.create_raster_layer = function(self){
 
 /**
 * ACTIVATE_LAYER
+* @return bool true
 */
 vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 
@@ -1183,21 +1185,22 @@ vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 
 /**
 * LAYER_SELECTOR
-* @return
+* @return DOM node layer_selector
 */
-vector_editor.prototype.render_layer_selector = function(self){
+vector_editor.prototype.render_layer_selector = function(self) {
 
 	// get the layers loaded in the image instance
 	const ar_layers = self.ar_layer_loaded
 
 	const fragment = new DocumentFragment()
+
 	// add button
 		const add_layer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'button add',
-			parent 			: fragment,
+			class_name		: 'button add',
+			parent			: fragment
 		})
-		add_layer.addEventListener("click", (e) =>{
+		add_layer.addEventListener("click", () =>{
 			// add the data in the instance
 			const layer_id 	= self.add_layer()
 			const new_layer = self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
@@ -1209,8 +1212,8 @@ vector_editor.prototype.render_layer_selector = function(self){
 	// close button
 		const close = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'button close',
-			parent 			: fragment,
+			class_name		: 'button close',
+			parent			: fragment,
 		})
 		close.addEventListener("click", (e) =>{
 			e.preventDefault()
@@ -1220,8 +1223,8 @@ vector_editor.prototype.render_layer_selector = function(self){
 	// rows container
 		const layer_ul = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'layer_ul',
-			parent 			: fragment
+			class_name		: 'layer_ul',
+			parent			: fragment
 		})
 
 		// load the layer into the layer box
@@ -1235,9 +1238,9 @@ vector_editor.prototype.render_layer_selector = function(self){
 
 	// layer_selector
 		const layer_selector = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'layer_selector',
-				})
+			element_type	: 'div',
+			class_name		: 'layer_selector',
+		})
 		layer_selector.appendChild(fragment)
 
 	return layer_selector
@@ -1246,10 +1249,10 @@ vector_editor.prototype.render_layer_selector = function(self){
 
 
 /**
-*  LAYER_SELECTOR
-* @return
+* RENDER_LAYER_ROW
+* @return DOM node layer_li
 */
-vector_editor.prototype.render_layer_row = function(self, layer){
+vector_editor.prototype.render_layer_row = function(self, layer) {
 
 	const project = self.current_paper.project
 
@@ -1279,7 +1282,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 		})
 		// set the raster layer with specific class to remove css behavior (hover...)
 		if(layer.layer_id===0){
-				layer_li.classList.add('raster_layer')
+			layer_li.classList.add('raster_layer')
 		}
 
 		// set the active layer, remove the raster layer to the active option
@@ -1466,3 +1469,5 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 
 	return layer_li
 };//end layer_selector
+
+
