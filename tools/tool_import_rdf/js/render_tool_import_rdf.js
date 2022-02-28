@@ -86,18 +86,17 @@ const get_content_data_edit = async function(self) {
 		})
 
 		const btn_validate = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'success button_apply',
-					inner_html		: 'ok',
-					parent			: buttons_container
-			})
-
+			element_type	: 'button',
+			class_name		: 'success button_apply',
+			inner_html		: 'ok',
+			parent			: buttons_container
+		})
 
 		const view_rdf_data_wrapper = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'view_rdf_data_wrapper',
-				parent			: fragment
-			})
+			element_type	: 'div',
+			class_name		: 'view_rdf_data_wrapper',
+			parent			: fragment
+		})
 
 		// when user click the button do the import of the data.
 		btn_validate.addEventListener('click',()=>{
@@ -107,7 +106,7 @@ const get_content_data_edit = async function(self) {
 					element_type	: 'span',
 					class_name		: 'spinner',
 					parent			: view_rdf_data_wrapper
-			})
+				})
 
 				const len = component_data_value.length
 				const ar_values = []
@@ -153,7 +152,7 @@ const get_content_data_edit = async function(self) {
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data

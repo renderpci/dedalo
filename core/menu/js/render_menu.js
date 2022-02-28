@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER */
+/*global get_label, page_globals, DEDALO_CORE_URL, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -151,7 +151,8 @@ render_menu.prototype.edit = async function() {
 			text_content	: 'Ontology'
 		})
 		ontology_link.addEventListener("click", ()=>{
-			const win = window.open('../ontology', '_blank');
+			const url = DEDALO_CORE_URL + '/ontology'
+			const win = window.open(url, '_blank');
 				  win.focus();
 		})
 
@@ -509,7 +510,6 @@ const item_hierarchy = (options) => {
 		// when the user do click publish the tipo to go and set the mode in list
 		// the action can be executed mainly in page, but it can be used for any instance.
 			link.addEventListener("click", e => {
-					console.warn("click item:",item);
 
 				// nonactive menu case
 				if (self.menu_active===false) {
