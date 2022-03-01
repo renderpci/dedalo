@@ -371,8 +371,8 @@ class tool_administration extends tool_common {
 			#return $current_version;
 			return false;
 		}
-	
-		foreach ($updates as $key => $version_to_update) {						
+
+		foreach ($updates as $key => $version_to_update) {
 			if($current_version[0] == $version_to_update->update_from_major){
 				if($current_version[1] == $version_to_update->update_from_medium){
 					if($current_version[2] == $version_to_update->update_from_minor){
@@ -405,7 +405,7 @@ class tool_administration extends tool_common {
 			return false;
 		}
 
-		$version = tool_administration::get_current_version_in_db();		
+		$version = tool_administration::get_current_version_in_db();
 
 		if (   $version[0]>$rv[0]
 			|| ($version[0]==$rv[0] && $version[1]>$rv[1])
@@ -1356,7 +1356,7 @@ class tool_administration extends tool_common {
 	* @return object $response
 	*/
 	public static function generate_relations_table_data( $tables='*', $truncate=false ) {
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= array('Error. Request failed '.__METHOD__);
@@ -1472,9 +1472,9 @@ class tool_administration extends tool_common {
 
 					#break;
 				}//end for ($i=$min; $i<=$max; $i++)
-			
+
 			// debug msg
-				$response->msg[] = " Updated table data table $table ";			
+				$response->msg[] = " Updated table data table $table ";
 				debug_log(__METHOD__." Updated table data table $table  ", logger::WARNING);
 				#break; // stop now
 
@@ -1886,7 +1886,7 @@ class tool_administration extends tool_common {
 				if (!file_exists($config_auto_path)) {
 					$content = '<?php // config_auto [check_db_ready] '.PHP_EOL;
 					if(!file_put_contents($config_auto_path, $content)){
-						throw new Exception("Error Processing Request. Unable to create config_auto file", 1);						
+						throw new Exception("Error Processing Request. Unable to create config_auto file", 1);
 					}
 					debug_log(__METHOD__. 'File config_auto.php not found. '.PHP_EOL . ' Created new one', logger::ERROR);
 				}
@@ -1899,17 +1899,17 @@ class tool_administration extends tool_common {
 				}
 
 				if ($result===true) {
-					
+
 					$file = DEDALO_LIB_BASE_PATH.'/config/config_auto.php';
 
 					// remove last php tag if exists
-						$content = file_get_contents($file);						
-					
+						$content = file_get_contents($file);
+
 					// add vars
 						if (strpos($content, 'ADDED_COLUMN_PROPERTIES')===false) {
 							// line
 							$line = PHP_EOL . ' define(\'ADDED_COLUMN_PROPERTIES\', true); ';
-							// Write the contents to the file, 
+							// Write the contents to the file,
 							// using the FILE_APPEND flag to append the content to the end of the file
 							// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
 							file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
@@ -1929,7 +1929,7 @@ class tool_administration extends tool_common {
 	* @return string $file_path
 	*/
 	public static function get_ontology_import_fron_json_file_path() {
-		
+
 		// file structure_json_file_path
 			$structure_json_file_path			= (defined('STRUCTURE_DOWNLOAD_JSON_FILE')
 				? STRUCTURE_DOWNLOAD_JSON_FILE
@@ -1940,7 +1940,7 @@ class tool_administration extends tool_common {
 		$file_path = (file_exists($overwrite_structure_json_file_path))
 			? $overwrite_structure_json_file_path
 			: $structure_json_file_path;
-		
+
 		return $file_path;
 	}//end get_ontology_import_fron_json_file_path
 
@@ -1953,12 +1953,12 @@ class tool_administration extends tool_common {
 	* @return string $result
 	*/
 	public function which_command_posix($binary_name) {
-		
+
 		$command = 'command -v '.$binary_name.' 2>&1 || { echo >&2 "I require '.$binary_name.' but it\'s not installed.  Aborting."; exit 1; }';
 		// $command = 'type nohup 2>&1 || { echo >&2 "I require foo but it\'s not installed.  Aborting."; exit 1; }';
 		// $command = 'hash nohup 2>/dev/null || { echo >&2 "I require nohup but it\'s not installed.  Aborting."; exit 1; }';
 
-		// $result = shell_exec($command . ' 2>&1');		
+		// $result = shell_exec($command . ' 2>&1');
 		exec($command . ' 2>&1', $result);
 
 		return $result;
@@ -1979,7 +1979,7 @@ class tool_administration extends tool_common {
 	* @return string | false
 	*/
 	public static function format_old_activity_value($value) {
-		
+
 		if (is_array($value)) {
 			$locator	= reset($value);
 			$tipo		= 'dd' . $locator->section_id;
@@ -1997,11 +1997,11 @@ class tool_administration extends tool_common {
 	*/
 	public static function update_activity_data($row, $datos=false) {
 
-		$modified = (!empty($datos));	
+		$modified = (!empty($datos));
 
 		$id		= (int)$row->id;
 		$datos	= $datos ?? json_decode($row->datos);
-	
+
 
 		// what
 			$component_tipo = logger_backend_activity::$_COMPONENT_QUE['tipo'];
@@ -2009,7 +2009,7 @@ class tool_administration extends tool_common {
 
 				$key = $datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
 				if ($key) {
-					
+
 					$key = !is_string($key)
 						? self::format_old_activity_value($key)
 						: $key;
@@ -2031,11 +2031,11 @@ class tool_administration extends tool_common {
 
 				$key = $datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
 				if ($key) {
-					
+
 					$key = !is_string($key)
 						? self::format_old_activity_value($key)
 						: $key;
-					
+
 					$component_dato = json_decode('{
 						"dato": {
 							"lg-nolan": '.json_encode($key).'
@@ -2046,7 +2046,7 @@ class tool_administration extends tool_common {
 					$modified = true;
 				}
 			}
-		
+
 		// ip
 			$component_tipo = logger_backend_activity::$_COMPONENT_IP['tipo'];
 			if (isset($datos->components->{$component_tipo}->valor)) {
@@ -2059,7 +2059,7 @@ class tool_administration extends tool_common {
 
 				$modified = true;
 			}
-		
+
 		// messages
 			$component_tipo = logger_backend_activity::$_COMPONENT_DATOS['tipo'];
 			if (isset($datos->components->{$component_tipo}->valor)) {
@@ -2086,10 +2086,10 @@ class tool_administration extends tool_common {
 					debug_log(__METHOD__." Update data activity record with old dato format - section_id: $section_id - ".to_string(), logger::WARNING);
 				}
 				// pg_send_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
-				// $res = pg_get_result(DBi::_getConnection());				
+				// $res = pg_get_result(DBi::_getConnection());
 				debug_log(__METHOD__." Sent record to update activity data found with old dato format. id: $id ".to_string(), logger::WARNING);
 			}
-		
+
 
 		return $modified;
 	}//end update_activity_data
@@ -2139,17 +2139,17 @@ class tool_administration extends tool_common {
 		// update users stats
 			$strQuery = 'SELECT * FROM "matrix_users" ORDER BY id ASC;';
 			$result   = pg_query(DBi::_getConnection(), $strQuery);
-			while ($row = pg_fetch_object($result)) {				
-				
+			while ($row = pg_fetch_object($result)) {
+
 				$user_id = $row->section_id;
-				
+
 				// user activity update stats
 				diffusion_section_stats::update_user_activity_stats($user_id);
 
 				debug_log(__METHOD__." Updated user activity. user: $user_id".to_string(), logger::DEBUG);
 			}
 
-			
+
 		return true;
 	}//end update_matrix_activity_records
 
@@ -2160,11 +2160,11 @@ class tool_administration extends tool_common {
 	* @return bool true
 	*/
 	public static function iterate_rows($table, $offset, $total, $done, $callback, $last_id=null) {
-		
+
 		$limit = 10000;
 
-		// debug			
-			$memory = tools::get_memory_usage();			
+		// debug
+			$memory = tools::get_memory_usage();
 			debug_log(__METHOD__." Working group total: $total - limit: $limit - offset: $offset - done: $done - last_id: $last_id - memory: ".to_string($memory), logger::DEBUG);
 
 		// optimizing huge offset tables
@@ -2216,7 +2216,7 @@ class tool_administration extends tool_common {
 
 	/**
 	* REMOVE_LANG_TO_FILENAMES
-	* @return 
+	* @return
 	*/
 	public static function remove_lang_to_filenames($component_tipo, $section_tipo, $translatable=false) {
 
@@ -2234,14 +2234,14 @@ class tool_administration extends tool_common {
 													false);
 
 		$dir_path	= $component->get_target_dir();
-	
+
 		$filenames = [];
 		$iterator = new DirectoryIterator($dir_path);
 		foreach ($iterator as $file_info) {
 			if ($file_info->getType()==='file') {
 
 				$file_name = $file_info->getFilename();
-		
+
 				preg_match('/('.$pattern.'[0-9]{1,})(_lg-[a-z]{3,})(.pdf)/', $file_name, $output_array);
 				if (!isset($output_array[2])) {
 					continue; // already renamed
@@ -2261,7 +2261,7 @@ class tool_administration extends tool_common {
 					if ($renamed===true) {
 						debug_log(__METHOD__." Renamed file from $source to $target".to_string(), logger::WARNING);
 					}
-				
+
 				}catch (Exception $e) {
 					trigger_error('Caught exception: '.$e->getMessage());
 				}
