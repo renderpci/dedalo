@@ -15,15 +15,14 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_lang_multi = function() {
-	
+
 	return true
 };//end render_tool_lang_multi
 
 
 
 /**
-* RENDER_TOOL_LANG_MULTI
-* Render node for use like button
+* EDIT
 * @return DOM node
 */
 render_tool_lang_multi.prototype.edit = async function (options={render_level:'full'}) {

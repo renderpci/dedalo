@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -40,6 +40,7 @@ export const tool_pdf_extractor = function () {
 // prototypes assign
 	tool_pdf_extractor.prototype.render		= common.prototype.render
 	tool_pdf_extractor.prototype.destroy	= common.prototype.destroy
+	tool_pdf_extractor.prototype.refresh	= common.prototype.refresh
 	tool_pdf_extractor.prototype.edit		= render_tool_pdf_extractor.prototype.edit
 
 
@@ -52,7 +53,7 @@ tool_pdf_extractor.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url = DEDALO_TOOLS_URL + '/tool_pdf_extractor/trigger.tool_pdf_extractor.php'
@@ -81,7 +82,8 @@ tool_pdf_extractor.prototype.build = async function(autoload=false) {
 	const self = this
 
 	// call generic commom tool build
-		const common_build = tool_common.prototype.build.call(this, autoload);
+		const common_build = await tool_common.prototype.build.call(this, autoload);
+
 
 	return common_build
 };//end build_custom

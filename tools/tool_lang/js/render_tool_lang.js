@@ -22,15 +22,15 @@ export const render_tool_lang = function() {
 
 
 /**
-* RENDER_TOOL_LANG
+* EDIT
 * Render node for use like button
 * @return DOM node
 */
-render_tool_lang.prototype.edit = async function(options={render_level:'full'}) {
+render_tool_lang.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -159,7 +159,7 @@ const get_content_data_edit = async function(self) {
 	// source component
 		const source_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'source_component_container disabled_component',
+			class_name		: 'source_component_container',
 			parent			: components_container
 		})
 
@@ -169,6 +169,7 @@ const get_content_data_edit = async function(self) {
 			// }
 			self.main_component.render()
 			.then(function(node){
+				node.classList.add('disabled_component')
 				source_component_container.appendChild(node)
 			})
 

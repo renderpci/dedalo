@@ -1,41 +1,60 @@
-// tool_import_files
+/**
+* tool_import_files
+* Write here specific tool styles
+*/
 
 
 
-// template_container. Where de rows are placed
-	.template_container {
-		border: 1px solid #eeeeee;
-		padding: 1em;
-		margin-top: 1em;
-	}//end .template_container
+@import '../../../core/page/css/layout/vars.less';
 
 
 
-// file-row. Each row line
-	.file-row {
-		margin: 1em;
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: left;
-		align-items: center;
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_import_files {
+	padding: 1rem;
 
-		// each column inside
-		>* {
-			margin-right: 1em;
-			min-width: 128px;
+	>.content_data {
 
-		}
-	}//end .file-row
+		// template_container. Where de rows are placed
+			.template_container {
+				border: 1px solid #eeeeee;
+				padding: 1em;
+				margin-top: 1em;
+			}//end .template_container
+
+		// file-row. Each row line
+			.file-row {
+				margin: 1em;
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: left;
+				align-items: center;
+
+				// each column inside
+				>* {
+					margin-right: 1em;
+					min-width: 128px;
+
+				}
+			}//end .file-row
+
+		// inputs_container. Temporal sections container
+			.inputs_container {
+				padding: 1em;
+				margin-top: 2em;
+				background-color: #f1f1f1;
+				display: flex;
+				flex-wrap: wrap;
+			}//end .inputs_container
+
+	}//end content_data
 
 
-
-// inputs_container. Temporal sections container
-	.inputs_container {
-		padding: 1em;
-		margin-top: 2em;
-		background-color: #f1f1f1;
-		display: flex;
-		flex-wrap: wrap;
-	}//end .inputs_container
+}//end wrapper_tool
 
 
+// modal header tool modification
+	.tool_header.tool_import_files {
+		background-color: #007bff;
+	}

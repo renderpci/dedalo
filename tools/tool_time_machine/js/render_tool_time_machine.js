@@ -101,16 +101,16 @@ const content_data_edit = async function(self) {
 	// current_component_container
 		const current_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'current_component_container disabled_component',
-			parent 			: fragment
+			class_name		: 'current_component_container',
+			parent			: fragment
 		})
 		await add_component(self, current_component_container, self.main_component.lang, get_label.ahora, 'edit', null)
 
 	// preview_component_container
 		const preview_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'preview_component_container disabled_component',
-			parent 			: fragment
+			class_name		: 'preview_component_container',
+			parent			: fragment
 		})
 		// set
 		self.preview_component_container = preview_component_container
@@ -119,8 +119,8 @@ const content_data_edit = async function(self) {
 	// tool_bar
 		const tool_bar = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'tool_bar',
-			parent 			: fragment
+			class_name		: 'tool_bar',
+			parent			: fragment
 		})
 		// lang selector
 		console.log("self.main_component:",self.main_component);
@@ -220,6 +220,7 @@ export const add_component = async (self, component_container, lang_value, label
 		while (component_container.firstChild) {
 			component_container.removeChild(component_container.firstChild)
 		}
+		node.classList.add('disabled_component')
 		component_container.appendChild(node)
 
 	// label

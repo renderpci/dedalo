@@ -10,26 +10,27 @@
 
 
 /**
-* RENDER_TOOL_UPLOAD
+* RENDER_TOOL_PDF_EXTRACTOR
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_pdf_extractor = function() {
-	
+
 	return true
 };//end render_tool_pdf_extractor
 
 
 
 /**
-* RENDER_TOOL_upload
-* Render node for use like button
+* EDIT
+* Render node
 * @return DOM node
 */
-render_tool_pdf_extractor.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_pdf_extractor.prototype.edit = async function (options) {
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// options
+		const render_level 	= options.render_level
 
 	// content_data
 		const current_content_data = await get_content_data(self)
@@ -43,11 +44,11 @@ render_tool_pdf_extractor.prototype.edit = async function (options={render_level
 		})
 
 	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: wrapper
-	// 	})
+		// 	const buttons_container = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name 		: 'buttons_container',
+		// 		parent 			: wrapper
+		// 	})
 
 
 	// tool_container
@@ -256,3 +257,5 @@ const get_content_data = async function(self) {
 
 	return content_data
 };//end get_content_data
+
+

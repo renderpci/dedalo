@@ -48,9 +48,10 @@ export const tool_import_rdf = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_import_rdf.prototype.render 	= common.prototype.render
-	tool_import_rdf.prototype.destroy 	= common.prototype.destroy
-	tool_import_rdf.prototype.edit 		= render_tool_import_rdf.prototype.edit
+	tool_import_rdf.prototype.render	= common.prototype.render
+	tool_import_rdf.prototype.destroy	= common.prototype.destroy
+	tool_import_rdf.prototype.refresh	= common.prototype.refresh
+	tool_import_rdf.prototype.edit		= render_tool_import_rdf.prototype.edit
 
 
 
@@ -60,10 +61,6 @@ export const tool_import_rdf = function () {
 tool_import_rdf.prototype.init = async function(options) {
 
 	const self = this
-
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang = options.lang // page_globals.dedalo_data_lang
-
 
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
@@ -89,6 +86,7 @@ tool_import_rdf.prototype.build = async function(autoload=false) {
 		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
 		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
 
+
 	return common_build
 };//end build_custom
 
@@ -103,7 +101,6 @@ tool_import_rdf.prototype.load_component = async function(lang) {
 
 	// to_delete_instances. Select instances with different lang to main_component
 		const to_delete_instances = self.ar_instances.filter(el => el.lang!==self.main_component.lang)
-
 
 	// context (clone and edit)
 		const context = Object.assign(clone(self.main_component.context),{
