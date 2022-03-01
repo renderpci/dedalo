@@ -1,4 +1,4 @@
-/*global get_label, page_globals, DEDALO_CORE_URL, SHOW_DEVELOPER */
+/*global get_label, page_globals, DEDALO_CORE_URL, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -283,6 +283,13 @@ render_menu.prototype.edit = async function() {
 		const menu_wrapper = document.createElement("div")
 			  menu_wrapper.classList.add("menu_wrapper")
 			  menu_wrapper.appendChild(fragment)
+		// menu left band
+			if (SHOW_DEBUG===true) {
+				menu_wrapper.classList.add('show_debug')
+			}
+			else if (SHOW_DEVELOPER===true) {
+				menu_wrapper.classList.add('show_developer')
+			}
 
 
 	return menu_wrapper
