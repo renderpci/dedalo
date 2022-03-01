@@ -10,7 +10,7 @@
 
 
 /**
-* render_edit_tool_upload
+* RENDER_EDIT_TOOL_UPLOAD
 * Manages the component's logic and apperance in client side
 */
 export const render_edit_tool_upload = function() {
@@ -21,7 +21,7 @@ export const render_edit_tool_upload = function() {
 
 
 /**
-* render_edit_tool_upload
+* EDIT
 * Render node for use like button
 * @return DOM node
 */

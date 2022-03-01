@@ -65,7 +65,7 @@ tool_posterframe.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 

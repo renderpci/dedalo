@@ -43,9 +43,12 @@ export const tool_upload = function () {
 // prototypes assign
 	tool_upload.prototype.render	= common.prototype.render
 	tool_upload.prototype.destroy	= common.prototype.destroy
+	tool_upload.prototype.refresh	= common.prototype.refresh
 	tool_upload.prototype.edit		= render_edit_tool_upload.prototype.edit
 	tool_upload.prototype.list		= render_edit_tool_upload.prototype.edit
 	tool_upload.prototype.mini		= render_mini_tool_upload.prototype.mini
+
+
 
 /**
 * INIT
@@ -55,7 +58,7 @@ tool_upload.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.trigger_url = DEDALO_TOOLS_URL + "/tool_upload/trigger.tool_upload.php"
@@ -73,6 +76,9 @@ tool_upload.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// call generic common tool build
+		const common_build = await tool_common.prototype.build.call(this, autoload);
+
 	// fetch system info
 		const system_info = await get_system_info(self)
 		// set as tool properties
@@ -81,9 +87,6 @@ tool_upload.prototype.build = async function(autoload=false) {
 			self.upload_tmp_dir			= system_info.upload_tmp_dir
 			self.upload_tmp_perms		= system_info.upload_tmp_perms
 			self.session_cache_expire	= system_info.session_cache_expire
-
-	// call generic common tool build
-		const common_build = tool_common.prototype.build.call(this, autoload);
 
 
 	return common_build
@@ -96,7 +99,6 @@ tool_upload.prototype.build = async function(autoload=false) {
 * Call trigger to obtain useful system info
 */
 const get_system_info = async function(self) {
-
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(arguments)

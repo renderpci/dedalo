@@ -13,8 +13,9 @@
 
 
 /**
-* TOOL_UPLOAD
-* Tool to translate contents from one language to other in any text component
+* TOOL_DD_LABEL
+* Tool to easy create labels in diferent languages for tools
+* (!) It's only used in section 'dd1340' component 'dd1372' (Tool labels)
 */
 export const tool_dd_label = function () {
 
@@ -38,10 +39,11 @@ export const tool_dd_label = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_dd_label.prototype.render 		= common.prototype.render
-	tool_dd_label.prototype.destroy 	= common.prototype.destroy
-	tool_dd_label.prototype.build 		= tool_common.prototype.build
-	tool_dd_label.prototype.edit 		= render_tool_dd_label.prototype.edit
+	tool_dd_label.prototype.render	= common.prototype.render
+	tool_dd_label.prototype.destroy	= common.prototype.destroy
+	tool_dd_label.prototype.refresh	= common.prototype.refresh
+	tool_dd_label.prototype.build	= tool_common.prototype.build
+	tool_dd_label.prototype.edit	= render_tool_dd_label.prototype.edit
 
 
 
@@ -73,9 +75,11 @@ tool_dd_label.prototype.init = async function(options) {
 * Set new json data to json editor
 */
 tool_dd_label.prototype.update_data = function() {
-	
+
 	const self = this
 	this.caller.set_value(self.ar_data)
 
 	return true
 };//end update_data
+
+

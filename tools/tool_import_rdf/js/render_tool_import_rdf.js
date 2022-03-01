@@ -10,7 +10,7 @@
 
 
 /**
-* render_tool_import_rdf
+* RENDER_TOOL_IMPORT_RDF
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_import_rdf = function() {
@@ -21,7 +21,7 @@ export const render_tool_import_rdf = function() {
 
 
 /**
-* render_tool_import_rdf
+* RENDER_TOOL_IMPORT_RDF
 * Render node for use like button
 * @return DOM node
 */
@@ -64,7 +64,6 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
-
 
 	// components container
 		const components_container = ui.create_dom_element({
@@ -198,4 +197,5 @@ const render_component_dato = function(self) {
 
 	return source_component_container
 };//end render_component_dato
+
 

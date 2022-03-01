@@ -28,11 +28,11 @@ export const render_tool_import_files = function() {
 * Render node for use in current mode
 * @return DOM node wrapper
 */
-render_tool_import_files.prototype.edit = async function(options={render_level:'full'}) {
+render_tool_import_files.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -50,9 +50,10 @@ render_tool_import_files.prototype.edit = async function(options={render_level:'
 		const header = wrapper.querySelector('.tool_header')
 		self.tool_container  = ui.attach_to_modal(header, wrapper, null, 'big')
 		self.tool_container.on_close = () => {
+			self.caller.refresh()
 			// set the images in the dropzone instance, that were uploaded and stay in the server, to ADDED status, to prevent delete them in the server when the tool close
 			const files = self.active_dropzone.files
-			for (var i = files.length - 1; i >= 0; i--) {
+			for (let i = files.length - 1; i >= 0; i--) {
 				files[i].status = Dropzone.ADDED
 			}
 			self.active_dropzone.destroy()
@@ -72,7 +73,6 @@ render_tool_import_files.prototype.edit = async function(options={render_level:'
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
-
 
 	// options container
 		const options_wrapper = ui.create_dom_element({
@@ -472,6 +472,9 @@ const get_content_data_edit = async function(self) {
 
 
 
+/**
+* CREATE_TEMPLATE
+*/
 const create_template = async function(self) {
 
 	const fragment = new DocumentFragment();
@@ -991,7 +994,7 @@ const create_template = async function(self) {
 
 
 	return fragment
-}//end create_template
+};//end create_template
 
 
 
@@ -1015,7 +1018,8 @@ const get_temp_sections = async function(self){
 	}
 
 	return fragment
-}//end get_temp_sections
+};//end get_temp_sections
+
 
 
 /**
@@ -1053,6 +1057,6 @@ const set_import_mode = function (self, apply){
 	}
 
 	return true
-}//end set_import_mode
+};//end set_import_mode
 
 

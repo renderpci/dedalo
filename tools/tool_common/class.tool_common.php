@@ -274,14 +274,14 @@ class tool_common {
 				}
 
 				// append config
-				$current_config = array_filter($ar_config, function($item) use($current_value){
-					if($item->name === $current_value->name) {
-						return $item;
-					}
-				});
-				$current_value->config = !empty($current_config[0])
-					? $current_config[0]->config
-					: null;
+					$current_config = array_filter($ar_config, function($item) use($current_value){
+						if($item->name === $current_value->name) {
+							return $item;
+						}
+					});
+					$current_value->config = !empty($current_config[0])
+						? $current_config[0]->config
+						: null;
 
 				$registered_tools[] = $current_value;
 			}//end foreach ($client_registered_tools_records as $record)

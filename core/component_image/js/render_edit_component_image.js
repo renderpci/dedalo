@@ -23,7 +23,7 @@ export const render_edit_component_image = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return DOM node wrapper
 */
 render_edit_component_image.prototype.edit = async function(options) {
 
@@ -43,13 +43,9 @@ render_edit_component_image.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
-
-	// quality_selector
-		// const quality_selector = get_quality_selector(self)
-		// wrapper.appendChild(quality_selector)
 
 
 	return wrapper
@@ -193,7 +189,7 @@ const get_buttons = (self) => {
 
 	// prevent show buttons inside a tool
 		if (self.caller && self.caller.type==='tool') {
-			return fragment
+			// return fragment
 		}
 
 	// button full_screen

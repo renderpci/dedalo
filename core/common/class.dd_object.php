@@ -253,6 +253,18 @@ class dd_object {
 
 
 	/**
+	* SET_LABELS
+	* Used by tools
+	* @param array | null $value
+	*/
+	public function set_labels($value) {
+
+		$this->labels = $value;
+	}
+
+
+
+	/**
 	* SET_TRANSLATABLE
 	*/
 	public function set_translatable(bool $value) {

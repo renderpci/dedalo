@@ -194,7 +194,11 @@ component_common.prototype.build = async function(autoload=false){
 
 			// set context and data to current instance
 				await self.update_datum(api_response.result.data)
-				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				if (!context) {
+					console.error("context not found in api_response:", api_response);
+				}
+				self.context = context
 
 			// rqo. build again rqo with updated request_config if exists
 				// if (self.context.request_config) {
