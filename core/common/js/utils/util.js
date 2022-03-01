@@ -225,3 +225,25 @@ export function bytes_format(bytes) {
 };//end bytes_format
 
 
+
+/**
+* PRINTF
+* JavaScript equivalent to printf/String.Format
+* Tokens '{0}', '{1}', etc. will be replaced by arguments preserving order
+* Example: 'The content of {0} records from {1}' => 'The content of 25 records from 12'
+* @param mixed format
+* 	Like: 'The content of {0} records from {1}', 25, 12
+* @return string
+*/
+export function printf(format) {
+
+	const args = Array.prototype.slice.call(arguments, 1);
+
+	return format.replace(/{(\d+)}/g, function(match, number) {
+		return typeof args[number] != 'undefined'
+			? args[number]
+			: match
+	})
+};//end printf
+
+
