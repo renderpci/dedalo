@@ -87,8 +87,12 @@ class tools_register {
 					$info_objects_parsed[] = $new_info_object;
 
 				// info_file_processed
-					$name		= reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'});
-					$version	= reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'});
+					$name = isset($info_object->components->{$tipo_name})
+						? reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'})
+						: null;
+					$version = isset($info_object->components->{$tipo_version})
+						? reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'})
+						: null;
 					$info_file_processed[] = (object)[
 						'dir'		=> str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
 						'name'		=> $name,
