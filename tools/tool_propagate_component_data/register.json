@@ -1,0 +1,208 @@
+{
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1333"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1331"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "3",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "inf": "Fecha de creación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 28,
+                            "hour": 16,
+                            "time": 64993769715,
+                            "year": 2022,
+                            "month": 2,
+                            "minute": 55,
+                            "second": 15
+                        }
+                    }
+                ]
+            }
+        },
+        "dd201": {
+            "inf": "Fecha de modificación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 1,
+                            "hour": 10,
+                            "time": 64994093112,
+                            "year": 2022,
+                            "month": 3,
+                            "minute": 45,
+                            "second": 12
+                        }
+                    }
+                ]
+            }
+        },
+        "dd612": {
+            "inf": "Descripción [component_text_area]",
+            "dato": {
+                "lg-eng": [
+                    "Propagate component data to same component across records"
+                ]
+            }
+        },
+        "dd799": {
+            "inf": "Etiqueta [component_input_text]",
+            "dato": {
+                "lg-eng": [
+                    "Propagate component data"
+                ]
+            }
+        },
+        "dd1326": {
+            "inf": "Nombre de la herramienta [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "tool_propagate_component_data"
+                ]
+            }
+        },
+        "dd1327": {
+            "inf": "Versión [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "2.0.0"
+                ]
+            }
+        },
+        "dd1328": {
+            "inf": "Versión Dédalo mínima [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            }
+        },
+        "dd1372": {
+            "inf": "Etiquetas [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    [
+                        {
+                            "lang": "lg-spa",
+                            "name": "tool_do_add",
+                            "value": "Añadir el contenido"
+                        },
+                        {
+                            "lang": "lg-cat",
+                            "name": "tool_do_add",
+                            "value": "Afegir el contigut"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "tool_do_add",
+                            "value": "Add the content"
+                        },
+                        {
+                            "lang": "lg-ita",
+                            "name": "tool_do_add",
+                            "value": "Aggiungere il contenuto"
+                        },
+                        {
+                            "lang": "lg-ell",
+                            "name": "tool_do_add",
+                            "value": "Προσθέστε το περιεχόμενο"
+                        },
+                        {
+                            "lang": "lg-spa",
+                            "name": "tool_do_delete",
+                            "value": "Elminar el contenido"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "tool_do_delete",
+                            "value": "Delete the content"
+                        },
+                        {
+                            "lang": "lg-cat",
+                            "name": "tool_do_delete",
+                            "value": "Eliminar el contingut"
+                        },
+                        {
+                            "lang": "lg-ell",
+                            "name": "tool_do_delete",
+                            "value": "Διαγράψτε το περιεχόμενο"
+                        },
+                        {
+                            "lang": "lg-spa",
+                            "name": "content_will_be_added_removed",
+                            "value": "Se añadirá o eliminará el contenido del componente en los {0} registros actuales"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "content_will_be_added_removed",
+                            "value": "The content of the component in the current {0} records will be added or removed"
+                        },
+                        {
+                            "lang": "lg-ell",
+                            "name": "content_will_be_added_removed",
+                            "value": "Το περιεχόμενο του στοιχείου στις τρέχουσες εγγραφές {0} θα προστεθεί ή θα αφαιρεθεί"
+                        }
+                    ]
+                ]
+            }
+        }
+    },
+    "section_id": 11,
+    "created_date": "2022-02-28 16:55:15",
+    "section_tipo": "dd1340",
+    "modified_date": "2022-03-01 10:45:12",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd73",
+    "modified_by_userID": -1
+}
