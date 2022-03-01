@@ -1201,6 +1201,65 @@ class tool_administration extends tool_common {
 
 
 	/**
+	* DELETE_SECTIONS
+	* Remove section based on comma separated section is list.
+	* Preserves the Time Machine historic version
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function delete_sections( $request_options ) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		$options = new stdClass();
+			$options->section_tipo	= null;
+			$options->section_id	= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// short vars
+			$section_tipo	= safe_tipo($options->section_tipo);
+			$section_id		= (array)$options->section_id;
+
+		$deleted_sections	= [];
+		$deleted_result		= true;
+		foreach ($section_id as $current_section_id) {
+
+			$section = section::get_instance(
+				$current_section_id,
+				$section_tipo,
+				'list', // modo
+				false // cache
+			);
+
+			$deleted = $section->Delete('delete_record');
+
+			if ($deleted!==true) {
+				$deleted_result = false;
+				debug_log(__METHOD__." Error deleting section: $section_tipo - $section_id ".to_string(), logger::ERROR);
+			}
+
+			$deleted_sections[] = (object)[
+				'section_tipo'	=> $section_tipo,
+				'section_id'	=> $current_section_id,
+				'deleted'		=> $deleted
+			];
+
+		}//end foreach ($section_id as $current_section_id)
+
+		$response->deleted_sections	= $deleted_sections;
+		$response->result			= $deleted_result;
+		$response->msg				= $deleted_result===true
+			? 'Success deleting '.count($section_id).' sections ['.$section_tipo.']'
+			: 'Errors found deleting sections ['.$section_tipo.']';
+
+		return $response;
+	}//end delete_sections
+
+
+
+	/**
 	* ADD_GEONAMES_CODE
 	* @return object $response
 	*/

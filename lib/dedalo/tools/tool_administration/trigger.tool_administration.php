@@ -328,6 +328,55 @@ function renumerate_sections($json_data) {
 
 
 /**
+* DELETE_SECTIONS
+*/
+function delete_sections($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('section_tipo','section_id');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			// if ($name==='save') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	// section_id. Is an string separated by commas. Explode and trim
+		$section_id		= explode(',', $section_id);
+		$ar_section_id	= array_map(function($value){
+			return (int)trim($value);
+		}, $section_id);
+
+	$options = new stdClass();
+		$options->section_tipo	= $section_tipo;
+		$options->section_id	= $ar_section_id;
+	$response = (object)tool_administration::delete_sections( $options );
+
+	# Debug
+	if(SHOW_DEVELOPER===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end delete_sections
+
+
+
+/**
 * UPDATE_VERSION
 * Update the version, components, SQL, etc, the script look the updates.php file and apply to the current installation data
 */

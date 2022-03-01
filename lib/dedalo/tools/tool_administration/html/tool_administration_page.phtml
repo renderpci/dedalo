@@ -347,6 +347,28 @@
 
 
 			#
+			# DELETE SECTIONS
+				$html   .= "<div class=\"panel_option form-inline\"> ";
+
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$html   .= " <span>".label::get_label('borrar_secciones')." (Preserving Time Machine history version)</span>";
+
+				$html   .= " <div class=\"panel_option_subcontent\">";
+
+				// $html   .= "  <span title=\"section tipo\">section tipo</span>";
+				$html   .= "  <input type=\"text\" class=\"form-control input-sm input_section_tipo\" style=\"width:12%\" autocomplete=\"off\" placeholder=\"section tipo as: oh1\" />";
+
+				// $html   .= "  <span title=\"section id\">section id</span>";
+				$html   .= "  <input type=\"text\" class=\"form-control input-sm input_section_id\" style=\"width:77%\" autocomplete=\"off\" placeholder=\"section id as: 1,2,3...\" />";
+
+				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('borrar'))."\" data-mode=\"delete_sections\" onclick=\"tool_administration.delete_sections(this,event)\" />";
+				$html   .= "  <div id=\"delete_sections_response\"></div>";
+				$html   .= " </div>";#end panel_option_subcontent
+
+				$html   .= "</div>";#end panel_option
+
+
+			#
 			# EXPORT HIERARCHY (TOPONOMY)
 				$html   .= "<div class=\"panel_option form-inline\"> ";
 
