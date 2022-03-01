@@ -14,7 +14,7 @@ include_once( dirname(__FILE__) . '/lang/lang_code.php' );
 	$is_logged			= login::is_logged();
 	$is_global_admin	= security::is_global_admin(CURRENT_LOGGED_USED_ID);
 	if($is_logged!==true || $is_global_admin!==true) {
-		$url =  DEDALO_ROOT_WEB ."/main/";
+		$url =  DEDALO_ROOT_WEB;
 		header("Location: $url");
 		exit();
 	}
@@ -77,7 +77,7 @@ if(!empty($data) && $data->mode==='listadoHijos') {
 	$response = new stdClass();
 		$response->result	= false;
 		$response->msg		= 'Error. Request failed (listadoHijos)';
-	
+
 	// data vars
 		$terminoID			= $data->terminoID;
 		$ts_lang			= $data->ts_lang;
@@ -86,14 +86,14 @@ if(!empty($data) && $data->mode==='listadoHijos') {
 		$terminoIDresalte	= $data->terminoIDresalte ?? null;
 
 	if(!empty($terminoID)) {
-	
+
 		$parentInicial		= $terminoID;
 		$terminoIDActual	= false;
-		
+
 		# init dd in requested modo
 		$dd		= new dd($modo, $type, $ts_lang);
 		$html	= $dd->buildTree($parentInicial, $terminoIDActual, $terminoIDresalte);
-		
+
 		// echo $html;
 		$response->result	= $html;
 		$response->msg		= 'Ok. Request done (listadoHijos '.$terminoID.')';
@@ -543,7 +543,7 @@ if($accion==='update_tr_order') {
 * Al recibir get accion = "searchTSform", buscamos recursivamente los padres de cada termino coincidente para crear la secuencia de apertura de divs. Guardamos el resultado en la cookie cookieOpenDivs_dd
 */
 if($accion==='searchTSform') {
-	
+
 	$type = $nombre ;
 
 	# IMPORTANTE : Sólo buscaremos con un tipo seleccionado
@@ -570,30 +570,30 @@ if($accion==='searchTSform') {
 			$modelo = trim($modelo);
 		}
 
-	
+
 	// case only select type
 		if( empty($terminoID) && empty($termino) && empty($def) && empty($modelo) && strlen($type)>0) {
 			$url = "dd_list.php?modo={$modo}&type={$type}";
 			header("Location: $url");
 			exit();
 		}
-	
+
 	// case nothing is received
 		if(empty($terminoID) && empty($termino) && empty($def) && empty($modelo)){
 			header("Location: dd_list.php?modo={$modo}");
 			exit();
 		}
-	
+
 	// build getString
-		$getString = "&terminoID=$terminoID&termino=$termino&def=$def&type=$type&modelo=$modelo";	
+		$getString = "&terminoID=$terminoID&termino=$termino&def=$def&type=$type&modelo=$modelo";
 		if($modo) {
 			$getString .= "&modo=$modo";
-		}	
-	
-	
+		}
+
+
 	# init dd in requested modo
-		$dd = new dd($modo,$type,$ts_lang);	
-	
+		$dd = new dd($modo,$type,$ts_lang);
+
 		$resultArray = $dd->searchTSform($terminoID, $termino, $def, $type, $modelo);
 
 		$n = isset($resultArray['total'])
@@ -609,32 +609,32 @@ if($accion==='searchTSform') {
 			: false;
 
 		$t = 'form';
-	
+
 	# con la lista de los terminos encontrados, saltamos a la función de buscar sus padres para poder desplegarlos
 	#echo searchTSlist($terminoIDlist, $t, $n, $max, $getString);
-	
+
 		# HTML
 		# cabeceras javascript
 		$html  = $codHeader ;
 		$html .= js::build_tag('inc/cookies.js');
 		$html .= js::build_tag('js/dd_common.js');
 		$html .= '<script type="text/javascript">';
-		
-		$terminosList = $dd->listaDeResultados2cookie($terminoIDlist);		
+
+		$terminosList = $dd->listaDeResultados2cookie($terminoIDlist);
 
 		$html .= "set_localStorage('cookieOpenDivs_dd','$terminosList',7);";
-		
+
 		# eliminamos del url "searchTSlist" (para poder recargar la página sin perder los cambios posteriores)
-		# y redireccionamos por javascript a la página general del listado	
+		# y redireccionamos por javascript a la página general del listado
 		$url   = "dd_list.php?modo={$modo}&terminoIDlist={$terminoIDlist}&total={$t}&n={$n}&max={$max}&ts_lang={$ts_lang}" . $getString ;
-		$html .= "document.location = '$url' ";	
+		$html .= "document.location = '$url' ";
 		$html .= '</script>';
 
 	# Write session to unlock session file
 	session_write_close();
-	
+
 	print $html;
-	
+
 	exit();
 }//end searchTSform
 

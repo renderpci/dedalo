@@ -6,15 +6,15 @@ require_once( dirname(__FILE__) .'/config/config_ontology.php' );
 require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 // login
-	$is_logged	= login::is_logged();		
+	$is_logged	= login::is_logged();
 	if($is_logged!==true) {
-		$url =  DEDALO_ROOT_WEB ."/main/";
+		$url =  DEDALO_ROOT_WEB;
 		header("Location: $url");
 		exit();
 	}
 	$is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
 	if($is_global_admin!==true) {
-		$url =  DEDALO_ROOT_WEB ."/main/";
+		$url =  DEDALO_ROOT_WEB;
 		header("Location: $url");
 		exit();
 	}
@@ -61,7 +61,7 @@ $terminoID = trim($terminoID);
 	$traducible			= $RecordObj_dd->get_traducible();
 	$propiedades		= $RecordObj_dd->get_propiedades();
 	$properties			= $RecordObj_dd->get_properties();
-	#$usableIndex		= $RecordObj_dd->get_usableIndex();	
+	#$usableIndex		= $RecordObj_dd->get_usableIndex();
 	#$codNomenclator	= $RecordObj_dd->get_codNomenclator();
 	#$type				= $RecordObj_dd->get_jerarquia_type();
 
@@ -92,7 +92,7 @@ $ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();
 		$parent_desc				= $terminoID;
 		$lang						= $RecordObj_descriptors_dd->get_lang();
 		$mainLang					= $RecordObj_descriptors_dd->get_mainLang();
-		$langFull					= lang::get_name_from_code( $lang ); 
+		$langFull					= lang::get_name_from_code( $lang );
 
 		if(empty($id)) {
 			die( "Sorry: descriptors id ($id) not found for terminoID:<b>$terminoID</b>, lang:<b>$lang</b> <br> ");
@@ -100,7 +100,7 @@ $ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();
 
 	# TR DESCRIPTOR MAIN LANG AND DEF
 		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $terminoID, $lang, $tipo='def');	
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $terminoID, $lang, $tipo='def');
 		$def			= $RecordObj->get_dato();
 		$def_id			= $RecordObj->get_ID();
 
@@ -114,7 +114,7 @@ $ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();
 
 	# TR OBS MAIN LANG
 		$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
-		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $terminoID, $lang, $tipo='obs');		
+		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $terminoID, $lang, $tipo='obs');
 		$obs			= $RecordObj->get_dato();
 		$obs_id			= $RecordObj->get_ID();
 
