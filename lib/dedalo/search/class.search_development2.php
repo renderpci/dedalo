@@ -276,10 +276,10 @@ class search_development2 {
 				// dump($this->search_query_object, ' search_query_object ++ '.to_string());
 
 				if (!empty($ar_row_children)) {
-									
+
 					$ar_rows_mix = array_merge($ar_row_children, $ar_records);
 					$new_sqo 	 = $this->generate_children_recursive_search($ar_rows_mix);
-					
+
 					// new full search
 						$new_search_development2 = new search_development2($new_sqo);
 						$result = $new_search_development2->search();
@@ -314,7 +314,7 @@ class search_development2 {
 
 			// ar_records
 				$records_data->ar_records = $ar_records;
-			
+
 			// debug info
 				if(SHOW_DEVELOPER===true) {
 					$records_data->generated_time['parsed_time'] 	 = $parsed_time;
@@ -343,7 +343,7 @@ class search_development2 {
 	/**
 	* GENERATE_CHILDREN_RECURSIVE_SEARCH
 	* Create a new filter to inject in current search query object
-	* 
+	*
 	* @return object $new_sqo
 	*/
 	public function generate_children_recursive_search($ar_rows) {
@@ -359,14 +359,14 @@ class search_development2 {
 
 		// not count
 			$new_sqo->full_count = false;
-		
+
 		// new full filter
 			$filter = new stdClass();
 			$op = '$or';
 			$filter->{$op} = [];
 
 			foreach ($ar_rows as $row_value) {
-				
+
 				$item = json_decode('{
 			        "q": "'.$row_value->section_id.'",
 			        "q_operator": null,
@@ -394,20 +394,27 @@ class search_development2 {
 
 	/**
 	* GET_FILTERED_RELATIONS
+	* Filter relations list by component tipo
+	* @param string $relations_data_string
+	* @param string $component_tipo
+	*
 	* @return string $filtered_relations
-	* json encoded array
+	* 	json encoded array
 	*/
 	public static function get_filtered_relations($relations_data_string, $component_tipo) {
 
 		$filtered_relations = [];
 
-		if($relations_data = json_decode($relations_data_string)) {
+		if (!empty($relations_data_string)) {
 
-			$filtered_relations = array_filter($relations_data, function($locator) use($component_tipo) {
-				return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
-			});
+			if($relations_data = json_decode($relations_data_string)) {
 
-			$filtered_relations = array_values($filtered_relations); // Avoid json encoding objects
+				$filtered_relations = array_filter($relations_data, function($locator) use($component_tipo) {
+					return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
+				});
+
+				$filtered_relations = array_values($filtered_relations); // Avoid json encoding objects
+			}
 		}
 
 		return json_encode($filtered_relations);
@@ -447,16 +454,16 @@ class search_development2 {
 
 		# SELECT
 			if (!empty($this->search_query_object->select)) {
-				
+
 				if (is_array($this->search_query_object->select)) {
-					
+
 					$new_search_query_object_select = [];
 					foreach ($this->search_query_object->select as $key => $select_object) {
 						$new_search_query_object_select[] = search_development2::component_parser_select( $select_object );
 					}
 					# Replace select array with components preparsed values
 					$this->search_query_object->select = $new_search_query_object_select;
-				
+
 				}else{
 					// dump($this->search_query_object, ' $this->search_query_object ++ '.to_string());
 					debug_log(__METHOD__." Error. Ignored invalid select value. Use array format instead: ".to_string($this->search_query_object->select), logger::ERROR);
@@ -467,9 +474,9 @@ class search_development2 {
 
 		# ORDER
 			if (!empty($this->search_query_object->order)) {
-				
+
 				if (is_array($this->search_query_object->order)) {
-					
+
 					$new_search_query_object_order = [];
 					foreach ((array)$this->search_query_object->order as $key => $order_object) {
 						$new_search_query_object_order[] = search_development2::component_parser_order( $order_object );
@@ -483,7 +490,7 @@ class search_development2 {
 					debug_log(__METHOD__." Error. Ignored invalid order value. Use array format instead: ".to_string($this->search_query_object->order), logger::ERROR);
 
 					$this->search_query_object->order = []; // reset
-				}				
+				}
 			}
 
 		#dump($this->search_query_object, 'preparsed $this->search_query_object 2 ++ '.to_string()); die();
@@ -947,7 +954,7 @@ class search_development2 {
 		// if ($full_count!==true && (!empty($this->search_query_object->order) || !empty($this->search_query_object->order_custom))) {
 		// 	$this->remove_distinct = true;
 		// }
-		
+
 		// having reset and build
 			$this->having_search_objects = [];
 
@@ -1796,7 +1803,7 @@ class search_development2 {
 
 						# Add to global order columns (necessary for order...)
 						# This array is added when query select is calculated
-						$this->order_columns[] = $column;					
+						$this->order_columns[] = $column;
 
 						// $line = $alias . ' ' . $direction;
 						// reduce blank records noise
@@ -1805,12 +1812,12 @@ class search_development2 {
 						}else{
 							$line = 'NULLIF('.$alias.', \'\') '.$direction.' NULLS LAST';
 						}
-						
-						
+
+
 						// debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);
 
 
-						
+
 					}
 
 					$ar_order[] = $line;
@@ -2504,10 +2511,10 @@ class search_development2 {
 					: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
 
 				$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
-				break;	
+				break;
 
 		}//end switch ($search_object->type)
-		
+
 
 
 		return $sql_where;
@@ -2681,7 +2688,7 @@ class search_development2 {
 							$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
 						}
 						break;
-					
+
 					default:
 						$ar_terminos_relacionados	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
 						$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
@@ -3081,7 +3088,7 @@ class search_development2 {
 					}
 
 				// DEDALO_SECTION_SI_NO_TIPO. Avoid save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO)
-				// (!) DISABLED CONTINUE. Needed for sort columns like 'Publication' 19-05-2021. 
+				// (!) DISABLED CONTINUE. Needed for sort columns like 'Publication' 19-05-2021.
 				// (!) Use user admin panel 'propagate relations' to restore values
 					// if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO || $target_section_tipo===DEDALO_SECTION_USERS_TIPO) {
 					// 	continue;
@@ -3225,7 +3232,7 @@ class search_development2 {
 					// }, $ar_section_group);
 					// dump($a, ' a ++ '.to_string());
 					// dump($ar_children, ' ar_children ++ '.to_string());
-				}			
+				}
 
 			$ar_added_components = [];
 			foreach ($ar_section_group_parsed as $section_group_tipo) {
@@ -3233,11 +3240,11 @@ class search_development2 {
 				// section_group label / model
 					$section_group_label	= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
 					$section_group_model	= RecordObj_dd::get_modelo_name_by_tipo($section_group_tipo,true);
-				
+
 				// section group children (components)
-					// $ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');				
+					// $ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
 					$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');
-				
+
 				// iterate children (components)
 					foreach ($ar_section_group_childrens as $component_tipo) {
 
@@ -3722,9 +3729,9 @@ class search_development2 {
 	public static function check_column_exists($table, $column) {
 
 		try {
-			
+
 			$strQuery = 'SELECT (SELECT 1 -- EXISTS
-						FROM information_schema.columns 
+						FROM information_schema.columns
 						WHERE table_schema=\'public\' AND table_name=\''.$table.'\' AND column_name=\''.$column.'\');';
 			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
 			if (!$result) {
@@ -3735,17 +3742,17 @@ class search_development2 {
 			debug_log(__METHOD__." Column properties check result: ".json_encode($val), logger::ERROR);
 			if ($val===null) {
 				// The column do not exists
-				trigger_error(" Column properties does not exists: ".json_encode($val));				
-				return false;				
+				trigger_error(" Column properties does not exists: ".json_encode($val));
+				return false;
 			}
 
 		}catch (Exception $e) {
     		trigger_error('[check_column_exists] Caught exception: '.$e->getMessage());
     		return false;
 		}
-		
 
-		return true;	
+
+		return true;
 	}//end check_column_exists
 
 
@@ -3755,7 +3762,7 @@ class search_development2 {
 	* @return bool
 	*/
 	public static function add_column($table, $column, $type) {
-		
+
 		try {
 			$strQuery = "ALTER TABLE \"$table\" ADD IF NOT EXISTS \"$column\" $type NULL;";
 			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
@@ -3767,7 +3774,7 @@ class search_development2 {
     		trigger_error('[add_column] Caught exception: '.$e->getMessage());
     		return false;
 		}
-		
+
 
 		return true;
 	}//end add_column
