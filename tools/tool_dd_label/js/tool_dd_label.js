@@ -59,9 +59,9 @@ tool_dd_label.prototype.init = async function(options) {
 
 	// languages
 		self.loaded_langs 	= page_globals.dedalo_projects_default_langs
-		self.ar_data		= typeof this.caller.data.value[0]==="object" && JSON.stringify(this.caller.data.value[0])==="{}"
+		self.ar_data		= typeof self.caller.data.value[0]==="object" && JSON.stringify(self.caller.data.value[0])==="{}"
 			? []
-			: this.caller.data.value[0]
+			: self.caller.data.value[0] || []
 		self.ar_names 		= [...new Set(self.ar_data.map(item => item.name))];
 
 
