@@ -608,9 +608,14 @@
 		// section buttons container (export, new, print, etc.)
 		>.buttons {
 			display: flex;
+			flex-wrap: wrap;
 			justify-content: flex-end;
 			width: 100%;
 			padding: 0;
+
+			>button {
+				margin-bottom: 0.25rem;
+			}
 
 			>.button {
 				background-color: @color_orange_dedalo;
@@ -815,6 +820,7 @@
 			// 		background-color: @color_grey_medium !important;
 			// 	}
 			// }
+			@media screen and (min-width: @width_break_point_0) {
 			.wrapper_section >.list_body >.content_data > &:hover {
 				// div {
 				// 	background-color: @color_grey_medium !important;
@@ -860,6 +866,7 @@
 					// box-shadow: 2px 0 0px 0 @line_color;
 					box-shadow: inset -1px 0px 0 0px @line_color;
 				}
+			}
 			}
 
 			.DESACTIVO {

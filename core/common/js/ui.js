@@ -2309,7 +2309,61 @@ export const ui = {
 			}
 
 		return true
-	}//end set_parent_checked_value
+	},//end set_parent_checked_value
+
+
+
+	/**
+	* MAKE_COLUMN_RESPONSIVE
+	* @return bool
+	*/
+	make_column_responsive : function(options) {
+
+		// options
+			const selector	= options.selector // as '#column_id_rsc3652'
+			const label		= options.label
+
+		const add_css_rule = function (selector, css) {
+
+			// create new styleSheet if not already exists
+			if (!window.css_style_sheet) {
+				const style = document.createElement("style");
+				style.type = 'text/css'
+				document.head.appendChild(style);
+				window.css_style_sheet = style.sheet;
+			}
+
+			const css_style_sheet	= window.css_style_sheet
+			const rules				= css_style_sheet.rules
+			const rules_length		= rules.length
+			for (let i = rules_length - 1; i >= 0; i--) {
+
+				const current_selector = rules[i].selectorText
+				if(current_selector===selector) {
+					// already exists
+					// console.warn("/// stop current_selector:",current_selector);
+					return false
+				}
+			}
+
+			const propText = typeof css==='string'
+				? css
+				: Object.keys(css).map(function (p) {
+					return p + ':' + (p==='content' ? "'" + css[p] + "'" : css[p]);
+				  }).join(';');
+			css_style_sheet.insertRule(selector + '{' + propText + '}', css_style_sheet.cssRules.length);
+
+			return true
+		};
+
+		// const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+		// if (width<960) {
+			// return add_css_rule(`#column_id_${column_id}::before`, {
+			return add_css_rule(`${selector}::before`, {
+				content	: label
+			});
+		// }
+	},//end make_column_responsive
 
 
 

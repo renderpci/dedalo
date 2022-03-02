@@ -33,7 +33,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 	const self = this
 
 	const render_level = options.render_level || 'full'
-	
+
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
@@ -482,9 +482,18 @@ const render_column_node = function(component_instance, self, ar_instances){
 
 	const column_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'column column_' + column_id + ' ' + model
+		class_name		: 'column column_' + column_id + ' ' + model,
+		id				: `col_${column_id}`
 	})
 	// column_node.id = column_id
+
+	// column_responsive mobile add-ons
+		if (self.caller.model==='section') {
+			ui.make_column_responsive({
+				selector	: `#col_${column_id}`,
+				label		: component_instance.label
+			})
+		}//end mobile add-ons
 
 	if (model==='component_portal') {
 
@@ -528,9 +537,18 @@ const render_column_node_callback = function(column_obj, self){
 
 	const column_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'column column_' + column_id + ' ' + model
+		class_name		: 'column column_' + column_id + ' ' + model,
+		id				: `col_${column_id}`
 	})
 	// column_node.id = column_id
+
+	// column_responsive mobile add-ons
+		if (self.caller.model==='section') {
+			ui.make_column_responsive({
+				selector	: `#col_${column_id}`,
+				label		: column_obj.label
+			})
+		}//end mobile add-ons
 
 	return column_node
 }// end render_column_node_callback
