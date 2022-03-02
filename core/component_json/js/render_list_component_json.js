@@ -30,7 +30,7 @@ render_list_component_json.prototype.list = function() {
 	const self = this
 
 	// value_string
-		const value_string = get_value_string()
+		const value_string = get_value_string(self)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -48,9 +48,7 @@ render_list_component_json.prototype.list = function() {
 * Get component value as string
 * @return string value_string
 */
-export const get_value_string = function() {
-
-	const self = this
+export const get_value_string = function(self) {
 
 	// short vars
 		const data = self.data
