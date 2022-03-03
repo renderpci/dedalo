@@ -2323,6 +2323,11 @@ export const ui = {
 			const selector	= options.selector // as '#column_id_rsc3652'
 			const label		= options.label
 
+		// strip label HTML tags
+			const label_node = document.createElement("div");
+			label_node.innerHTML = label;
+			const label_text = label_node.textContent || label_node.innerText || "";
+
 		const add_css_rule = function (selector, css) {
 
 			// create new styleSheet if not already exists
@@ -2360,7 +2365,7 @@ export const ui = {
 		// if (width<960) {
 			// return add_css_rule(`#column_id_${column_id}::before`, {
 			return add_css_rule(`${selector}::before`, {
-				content	: label
+				content	: label_text
 			});
 		// }
 	},//end make_column_responsive

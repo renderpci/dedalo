@@ -34,7 +34,7 @@ render_mini_component_inverse.prototype.mini = function() {
 			: null
 
 	// Set value
-		wrapper.textContent = value_string
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper
