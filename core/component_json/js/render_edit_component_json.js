@@ -258,56 +258,14 @@ const get_input_element = (i, current_value, self) => {
 				button_save.addEventListener("click", function(e) {
 					e.stopPropagation()
 
-					const current_value = editor.get()
+					self.save_sequence(editor)
+					.then(function(){
 
-					// check json format and validate
-						if (validated!==true) {
+						on_change(self, editor)
 
-							// manual check valid value
-							let v = false
-							try {
-								v = JSON.parse(JSON.stringify(current_value))
-							}catch(e) {
-								console.warn("Error. JSON value is invalid!",);
-							}
-
-							if (!v) {
-								// styles as error
-									self.node.map(item => {
-										item.classList.add("error")
-									})
-								alert("Error: component_json. Trying so save non validated json value!");
-								return false
-							}
-						}
-
-					// check data has really changed. If not, stop save
-						const db_value 	= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
-						const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
-						if (!changed) {
-							console.log("No changes are detected. Stop save");
-							return false
-						}
-
-					// save sequence
-						const changed_data = Object.freeze({
-							action	: 'update',
-							key		: 0,
-							value	: current_value
-						})
-						self.change_value({
-							changed_data : changed_data,
-							refresh 	 : false
-						})
-						.then((save_response)=>{
-							// event to update the dom elements of the instance
-							event_manager.publish('update_value_'+self.id, changed_data)
-
-							on_change(self, editor)
-
-							editor.frame.classList.remove("isDirty")
-							button_save.classList.remove("warning")
-						})
+						editor.frame.classList.remove("isDirty")
+						button_save.classList.remove("warning")
+					})
 				})
 
 			// editor_options
@@ -405,7 +363,7 @@ const get_input_element = (i, current_value, self) => {
 /**
 * ON_CHANGE
 */
-const on_change = function(self, editor) {
+export const on_change = function(self, editor) {
 
 	const editor_wrapper	= editor.frame
 	const button_save		= editor_wrapper.previousElementSibling
