@@ -101,7 +101,7 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 
 /**
 * GET_COMPONENT_LIST
-* 	Get the llist of section components selectables to update cache
+* 	Get the list of section components selectables to update cache
 * @return promise > bool
 */
 tool_update_cache.prototype.get_component_list = function() {
