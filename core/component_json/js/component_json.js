@@ -7,7 +7,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_edit_component_json} from '../../component_json/js/render_edit_component_json.js'
+	import {render_edit_component_json, on_change} from '../../component_json/js/render_edit_component_json.js'
 	import {render_list_component_json} from '../../component_json/js/render_list_component_json.js'
 	import {render_mini_component_json} from '../../component_json/js/render_mini_component_json.js'
 	import {render_search_component_json} from '../../component_json/js/render_search_component_json.js'
@@ -106,10 +106,85 @@ component_json.prototype.set_value = async function(value) {
 
 	const self = this
 
-	await self.editors[0].set(value)
+	const editor = self.editors[0]
+
+	await editor.set(value)
+	// await editor.update(value);
+	await editor.refresh();
+
+	on_change(self, editor)
 
 	return true
 };//end set_value
+
+
+
+/**
+* SAVE_SEQUENCE
+* @return promise
+*/
+component_json.prototype.save_sequence = async function(editor) {
+
+	const self = this
+
+	let validated = true
+
+	const current_value = editor.get()
+
+	// check json format and validate
+		if (validated!==true) {
+
+			// manual check valid value
+			let v = false
+			try {
+				v = JSON.parse(JSON.stringify(current_value))
+			}catch(e) {
+				console.warn("Error. JSON value is invalid!",);
+			}
+
+			if (!v) {
+				// styles as error
+					self.node.map(item => {
+						item.classList.add("error")
+					})
+				alert("Error: component_json. Trying so save non validated json value!");
+				return false
+			}
+		}
+
+	// check data has really changed. If not, stop save
+		const db_value 	= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+		const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
+		if (!changed) {
+			console.log("No changes are detected. Stop save");
+			return false
+		}
+
+	// save sequence
+		return new Promise(function(resolve){
+
+			const changed_data = Object.freeze({
+				action	: 'update',
+				key		: 0,
+				value	: current_value
+			})
+			self.change_value({
+				changed_data : changed_data,
+				refresh 	 : false
+			})
+			.then((save_response)=>{
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, changed_data)
+
+				// on_change(self, editor)
+
+				// editor.frame.classList.remove("isDirty")
+				// button_save.classList.remove("warning")
+
+				resolve(save_response)
+			})
+		})
+};//end save_sequence
 
 
 
