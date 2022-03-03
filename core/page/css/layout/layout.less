@@ -10,6 +10,7 @@
 		box-shadow: 0 0 10px @color_hilite; //rgba(26, 154, 245, .5);
 		opacity: 1;
 		z-index: 1;
+		// pointer-events: none;
 
 		&.input_value {
 			padding-right: 2em;
@@ -269,8 +270,10 @@
 			padding: 1em;
 			//padding-top: 2.1em;
 			// width: calc(100vw - 2em);
-			overflow-x: auto;
-			overflow-y: hidden; // (!) important to prevent Chrome issues
+			@media screen and (min-width: @width_break_point_0) {
+				overflow-x: auto;
+				overflow-y: hidden; // (!) important to prevent Chrome issues
+			}
 			display: table;
 			width: 100%;
 		}
@@ -587,7 +590,9 @@
 
 // section
 	.wrapper_section {
-		overflow-x: hidden; // prevent scrollbars affect content
+		@media screen and (min-width: @width_break_point_0) {
+			overflow-x: hidden; // prevent scrollbars affect content
+		}
 		display: table;
 		width: 100%;
 
@@ -827,7 +832,7 @@
 				// }
 				@line_color : #acacac; // #f78a1c
 
-				>.column:first-of-type {
+				>.column99:first-of-type {
 					// box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgb(60 64 67 / 30%), 0 1px 3px 1px rgb(60 64 67 / 15%);
 					// box-shadow: 0 4px 2px -2px gray;
 					// box-shadow: 0 2px 2px 0px rgba(0,0,0,0.75);
@@ -862,7 +867,7 @@
 						box-shadow: 0px 2px 5px 0px #000000;
 					}
 				}
-				>.column:last-of-type {
+				>.column99:last-of-type {
 					// box-shadow: 2px 0 0px 0 @line_color;
 					box-shadow: inset -1px 0px 0 0px @line_color;
 				}
@@ -1897,6 +1902,9 @@
 				height: 100%;
 				// min-height: 5em;
 				height: 5em;
+				@media screen and (max-width: @width_break_point_0) {
+					height: auto;
+				}
 
 				>img {
 					display: block;
@@ -2086,6 +2094,7 @@
 				box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
 
 				.buttons_fold {
+					position: -webkit-sticky;
 					position: sticky;
 					margin: 0;
 					top: 68px;

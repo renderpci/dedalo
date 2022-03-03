@@ -44,9 +44,23 @@ render_inspector.prototype.edit = async function(options) {
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'label',
+			class_name		: 'label icon_arrow up',
 			inner_html		: 'Inspector'
 		})
+		// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: label,
+			content_data		: content_data,
+			collapsed_id		: 'inspector_element_info_block',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			label.classList.remove('up')
+		}
+		function expose() {
+			label.classList.add('up')
+		}
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -120,7 +134,7 @@ const get_content_data = function(self) {
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_data inspector_content_data',
+			class_name		: 'content_data inspector_content_data hide',
 		})
 
 	// paginator container
@@ -266,14 +280,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.seccion || 'Section',
+			inner_html		: get_label.seccion || 'Section',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: label,
+			inner_html		: label,
 			parent			: fragment
 		})
 
@@ -282,14 +296,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.tipo || 'Tipo',
+			inner_html		: get_label.tipo || 'Tipo',
 			parent			: fragment
 		})
 		// value
 		const tipo_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: section_tipo,
+			inner_html		: section_tipo,
 			parent			: fragment
 		})
 		const docu_link = ui.create_dom_element({
@@ -307,14 +321,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.creado || 'Created',
+			inner_html		: get_label.creado || 'Created',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: created_date + ' ' + created_by_user_name,
+			inner_html		: created_date + ' ' + created_by_user_name,
 			parent			: fragment
 		})
 
@@ -323,14 +337,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.modificado || 'Modified',
+			inner_html		: get_label.modificado || 'Modified',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: modified_date + ' ' + modified_by_user_name,
+			inner_html		: modified_date + ' ' + modified_by_user_name,
 			parent			: fragment
 		})
 
@@ -374,14 +388,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.componente || 'Component',
+			inner_html	: get_label.componente || 'Component',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: label,
+			inner_html	: label,
 			parent			: fragment
 		})
 
@@ -390,14 +404,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.tipo || 'Tipo',
+			inner_html	: get_label.tipo || 'Tipo',
 			parent			: fragment
 		})
 		// value
 		const tipo_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: tipo,
+			inner_html	: tipo,
 			parent			: fragment
 		})
 		const docu_link = ui.create_dom_element({
@@ -415,14 +429,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.modelo || 'Model',
+			inner_html	: get_label.modelo || 'Model',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: model,
+			inner_html	: model,
 			parent			: fragment
 		})
 
@@ -431,14 +445,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.traducible || 'Translatable',
+			inner_html		: get_label.traducible || 'Translatable',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: translatable,
+			inner_html		: translatable,
 			parent			: fragment
 		})
 
@@ -447,7 +461,7 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key wide',
-			text_content	: get_label.dato || 'Data',
+			inner_html		: get_label.dato || 'Data',
 			parent			: fragment
 		})
 		// value

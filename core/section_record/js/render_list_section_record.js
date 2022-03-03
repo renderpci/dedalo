@@ -165,13 +165,57 @@ render_list_section_record.prototype.list = async function(options={}) {
 			id				: self.id,
 			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
-		wrapper.addEventListener("click", (e) => {
-			// e.stopPropagation()
-			if (!e.target.classList.contains("row_active")) {
-				e.target.classList.add("row_active")
-			}
-		})
 		wrapper.appendChild(fragment)
+
+		// click event
+			wrapper.addEventListener("click", (e) => {
+				e.stopPropagation()
+				if (!e.target.classList.contains("row_active")) {
+					e.target.classList.add("row_active")
+				}
+			})
+
+		// hilite_row. User mouse enter creates an DOM node to hilite current row
+			let hilite_row
+			wrapper.addEventListener("mouseenter", function(e){
+				e.stopPropagation()
+
+				if (hilite_row) {
+					hilite_row.remove()
+					hilite_row = null
+				}
+
+				const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+				if (width<960) {
+					return
+				}
+
+				const firstChild_el_rect	= wrapper.firstChild.getBoundingClientRect();
+				const lastChild_el_rect		= wrapper.lastChild.getBoundingClientRect();
+
+				const style = {
+					'left'		: parseFloat(firstChild_el_rect.x) + 'px',
+					'top'		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
+					'height'	: parseFloat(firstChild_el_rect.height) + 'px',
+					'width'		: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
+				}
+
+				// hilite_row
+				hilite_row = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'hilite_row',
+					style			: style
+				})
+				wrapper.prepend(hilite_row)
+			})
+			wrapper.addEventListener("mouseleave", function(e){
+				e.stopPropagation()
+
+				if (hilite_row) {
+					hilite_row.remove()
+					hilite_row = null
+				}
+			})
 
 	// wrapper css
 		const css = self.caller.context.css && self.caller.context.css.section_record
@@ -228,7 +272,7 @@ const build_id_column_DES = function(self) {
 		})
 
 		// section id
-			const section_id_info = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'section_id',
 				text_content	: self.section_id,
