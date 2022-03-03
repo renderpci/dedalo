@@ -42,7 +42,7 @@ render_list_component_geolocation.prototype.list = async function() {
 		const value_string = value.join(' | ')
 
 	// Set value
-		wrapper.textContent = value_string
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper
