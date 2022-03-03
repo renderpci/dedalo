@@ -579,7 +579,7 @@ const get_tool_label = function(label_name, ...rest) {
 		// current lang try
 			const found = tool_labels.find(el => el.name===label_name && el.lang===self.lang)
 			if (found) {
-				return printf(found.value, rest)
+				return printf(found.value, ...rest)
 				// return found.value
 			}
 
@@ -587,14 +587,14 @@ const get_tool_label = function(label_name, ...rest) {
 			const lang_default 	= page_globals.dedalo_application_langs_default
 			const found_default = tool_labels.find(el => el.name===label_name && el.lang===lang_default)
 			if (found_default) {
-				return printf(found_default.value, rest)
+				return printf(found_default.value, ...rest)
 				// return found_default.value
 			}
 
 		// fallback to any lang available
 			const found_any = tool_labels.find(el => el.name===label_name)
 			if (found_any) {
-				return printf(found_any.value, rest)
+				return printf(found_any.value, ...rest)
 				// return found_any.value
 			}
 	}
