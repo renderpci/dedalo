@@ -54,9 +54,10 @@ background-color: #FFFF00;
 		top: 0px;
 		left:0px;
 
+		position: -webkit-sticky;
 		position: sticky;
 
-		@media screen and (max-width: @width_break_point_1) {
+		@media screen and (max-width: @width_break_point_0) {
 			position: initial;
 		}
 
@@ -118,6 +119,7 @@ background-color: #FFFF00;
 		#menu_hierarchy {
     		padding: 0;
     		margin-left: 0.5rem;
+    		z-index: 2;
     	}
 
 		// direct children elements
