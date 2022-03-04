@@ -281,6 +281,7 @@ page.prototype.get_ar_instances = async function(){
 		await Promise.all(ar_promises).then((ar_instances) => {
 			self.ar_instances = ar_instances
 		})
+		console.log("page self.ar_instances:",self.ar_instances);
 
 	return self.ar_instances
 };//end get_ar_instances
