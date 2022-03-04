@@ -633,16 +633,16 @@ class component_image extends component_media_common {
 			}
 
 		// vars
-			$image_id 			= $this->get_image_id();
-			$aditional_path 	= $this->get_aditional_path();
-			$initial_media_path = $this->get_initial_media_path();
+			$image_id			= $this->get_image_id();
+			$aditional_path		= $this->get_aditional_path();
+			$initial_media_path	= $this->get_initial_media_path();
 
 		// Image source
 			$source_ImageObj		= new ImageObj($image_id, $source_quality, $aditional_path, $initial_media_path);
-			$source_image 			= $source_ImageObj->get_local_full_path();
-			$image_dimensions 		= $source_ImageObj->get_image_dimensions();
-			$source_pixels_width  	= $image_dimensions[0] ?? null;
-			$source_pixels_height 	= $image_dimensions[1] ?? null;
+			$source_image			= $source_ImageObj->get_local_full_path();
+			$image_dimensions		= $source_ImageObj->get_image_dimensions();
+			$source_pixels_width	= $image_dimensions[0] ?? null;
+			$source_pixels_height	= $image_dimensions[1] ?? null;
 			// $source_pixels_width	= $source_ImageObj->get_image_width();
 			// $source_pixels_height	= $source_ImageObj->get_image_height();
 				// dump($source_ImageObj,'ImageObj');
@@ -650,10 +650,10 @@ class component_image extends component_media_common {
 
 		// Image target
 			$target_ImageObj		= new ImageObj($image_id, $target_quality, $aditional_path, $initial_media_path);
-			$target_image 			= $target_ImageObj->get_local_full_path();
-			$ar_target 				= ImageObj::get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality);
-			$target_pixels_width 	= $ar_target[0];
-			$target_pixels_height 	= $ar_target[1];
+			$target_image			= $target_ImageObj->get_local_full_path();
+			$ar_target				= ImageObj::get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality);
+			$target_pixels_width	= $ar_target[0];
+			$target_pixels_height	= $ar_target[1];
 				#dump($target_image,"target_image $target_pixels_width x $target_pixels_height");
 
 		# Target folder verify (EXISTS AND PERMISSIONS)
@@ -664,8 +664,8 @@ class component_image extends component_media_common {
 
 		# Avoid enlarge images
 			if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
-				$target_pixels_width  = $source_pixels_width;
-				$target_pixels_height = $source_pixels_height;
+				$target_pixels_width	= $source_pixels_width;
+				$target_pixels_height	= $source_pixels_height;
 			}
 
 		// defaults when no value is available
@@ -1776,6 +1776,34 @@ class component_image extends component_media_common {
 
 
 	/**
+	* GET_SOURCE_QUALITY_TO_BUILD
+	* Iterate array DEDALO_IMAGE_AR_QUALITY (Order by quality big to small)
+	*/
+	public function get_source_quality_to_build($target_quality) {
+
+		$ar_quality_source_valid = array();
+		$ar_quality 			 = unserialize(DEDALO_IMAGE_AR_QUALITY);
+			#dump($ar_quality,'$ar_quality');
+
+		foreach($ar_quality as $current_quality) {
+
+			if($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL) continue;
+
+			# Current file
+			$filename = $this->get_original_file_path($current_quality);
+
+			if ($current_quality!==$target_quality && file_exists($filename)) {
+				return $current_quality;
+			}
+		}#end foreach($ar_quality as $quality)
+
+
+		return false;
+	}//end get_source_quality_to_build
+
+
+
+	/**
 	* BUILD_VERSION
 	* Creates a new version using FFMEPG conversion using settings based on target quality
 	* @param string $quality
@@ -1791,6 +1819,10 @@ class component_image extends component_media_common {
 			$image_id		= $this->get_id();
 			$source_quality	= $this->get_source_quality_to_build($quality);
 			$target_quality = $quality;
+
+			// $source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+			// $original_image_path = $source_ImageObj->get_local_full_path();
+			// $real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
 
 		// convert. Returns boolean
 			$result = $this->convert_quality($source_quality, $target_quality);
