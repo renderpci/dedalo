@@ -100,29 +100,28 @@ login.prototype.build = async function(autoload=true) {
 	// status update
 		self.status = 'building'
 
-
 	if (autoload===true) {
 
-		// rqo build
-			const rqo = {
-				action : 'get_login',
-				dd_api : 'dd_utils_api',
-				source : create_source(self, null)
-			}
+		// // rqo build
+		// 	const rqo = {
+		// 		action : 'get_login',
+		// 		dd_api : 'dd_utils_api',
+		// 		source : create_source(self, null)
+		// 	}
 
-		// load data. get context and data
-			const current_data_manager	= new data_manager()
-			const api_response			= await current_data_manager.request({
-				body : rqo
-			})		
+		// // load data. get context and data
+		// 	const current_data_manager	= new data_manager()
+		// 	const api_response			= await current_data_manager.request({
+		// 		body : rqo
+		// 	})
 
-		// set the result to the datum
-			self.datum = api_response.result
+		// // set the result to the datum
+		// 	self.datum = api_response.result
+
+		// set context and data to current instance
+			// self.context	= self.datum.context.find(element => element.tipo===self.tipo);
+			// self.data		= self.datum.data.find(element => element.tipo===self.tipo);
 	}
-
-	// set context and data to current instance
-		self.context	= self.datum.context.find(element => element.tipo===self.tipo);
-		self.data		= self.datum.data.find(element => element.tipo===self.tipo);
 
 	// debug
 		if(SHOW_DEBUG===true) {

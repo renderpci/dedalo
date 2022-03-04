@@ -147,12 +147,10 @@ const add_events = function(self, wrapper, content_data) {
 */
 const get_content_data = function(self) {
 
-	const dedalo_application_langs = self.data.value.dedalo_application_langs
-
 	const fragment = new DocumentFragment()
 
 	// select lang
-		const langs			= dedalo_application_langs
+		const langs			= self.context.properties.dedalo_application_langs
 		const select_lang	= ui.build_select_lang({
 			langs 	 : langs,
 			selected : page_globals.dedalo_application_lang,
@@ -160,7 +158,7 @@ const get_content_data = function(self) {
 				const lang = e.target.value || null
 				if (lang) {
 					// data_manager api call
-					const api_response = await data_manager.prototype.request({
+					await data_manager.prototype.request({
 						body : {
 							action	: 'change_lang',
 							dd_api	: 'dd_utils_api',

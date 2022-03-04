@@ -150,6 +150,32 @@ export function object_to_url_vars( vars_obj ) {
 
 
 /**
+* URL_VARS_TO_OBJECT
+* @param string query_string
+* @return object vars_obj
+*/
+export function url_vars_to_object(query_string) {
+
+	// parse query string
+	const params = new URLSearchParams(query_string);
+
+	const vars_obj = {};
+
+	// iterate over all keys
+	for (const key of params.keys()) {
+		if (params.getAll(key).length > 1) {
+			vars_obj[key] = params.getAll(key);
+		} else {
+			vars_obj[key] = params.get(key);
+		}
+	}
+
+	return vars_obj;
+}//end url_vars_to_object
+
+
+
+/**
 * OPEN_WINDOW_WITH_POST
 * @return bool false
 */
@@ -245,5 +271,21 @@ export function printf(format) {
 			: match
 	})
 };//end printf
+
+
+
+/**
+* STRIP_TAGS
+* @param string value
+* @return string text_clean
+*/
+export function strip_tags(value) {
+
+	const aux_node = document.createElement("div")
+	aux_node.insertAdjacentHTML('afterbegin', value)
+	const text_clean = aux_node.textContent || aux_node.innerText || "";
+
+	return text_clean;
+}//end strip_tags
 
 
