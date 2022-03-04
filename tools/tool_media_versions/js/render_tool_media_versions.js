@@ -204,7 +204,7 @@ const get_line_labels = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: get_label.quality || 'Quality',
+			inner_html		: get_label.quality || 'Quality',
 			parent			: fragment
 		})
 
@@ -230,7 +230,7 @@ const get_line_labels = function(ar_quality, self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'label',
-				text_content	: quality,
+				inner_html		: quality,
 				parent			: file_info_node
 			})
 		}
@@ -253,7 +253,7 @@ const get_line_file_exists = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: get_label.fichero || 'File',
+			inner_html		: get_label.fichero || 'File',
 			parent			: fragment
 		})
 
@@ -295,7 +295,7 @@ const get_line_file_exists = function(ar_quality, self) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: '',
-						text_content	: `-`,
+						inner_html		: `-`,
 						parent			: file_info_node
 					})
 				}
@@ -320,7 +320,7 @@ const get_line_file_size = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: get_label.tamano || 'Size',
+			inner_html		: get_label.tamano || 'Size',
 			parent			: fragment
 		})
 
@@ -376,7 +376,7 @@ const get_line_file_upload = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: get_label.subir || 'Upload',
+			inner_html		: get_label.subir || 'Upload',
 			parent			: fragment
 		})
 
@@ -450,7 +450,7 @@ const get_line_file_download = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: get_label.descargar || 'Download',
+			inner_html		: get_label.descargar || 'Download',
 			parent			: fragment
 		})
 
@@ -528,7 +528,7 @@ const get_line_file_delete = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: get_label.borrar || 'Delete',
+			inner_html		: get_label.borrar || 'Delete',
 			parent			: fragment
 		})
 
@@ -589,7 +589,7 @@ const get_line_build_version = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: (get_label.generar || 'Build') + ' ' + (get_label.version || 'version'),
+			inner_html		: (get_label.generar || 'Build') + ' ' + (get_label.version || 'version'),
 			parent			: fragment
 		})
 
@@ -673,7 +673,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: (get_label.conformar_cabeceras || 'Conform headers'),
+			inner_html		: (get_label.conformar_cabeceras || 'Conform headers'),
 			parent			: fragment
 		})
 
@@ -735,7 +735,7 @@ const get_line_rotate = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: (get_label.rotar || 'Rotate'),
+			inner_html		: (get_label.rotar || 'Rotate'),
 			parent			: fragment
 		})
 

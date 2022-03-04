@@ -332,7 +332,7 @@ const get_text_column = function(current_data) {
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		text_content	: text
+		inner_html		: text
 	})
 
 	return text_node
@@ -452,7 +452,7 @@ const get_json_column = function(current_data) {
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		text_content	: (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
+		inner_html		: (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
 			? ''
 			: JSON.stringify(current_data.value)
 	})
@@ -475,7 +475,7 @@ const get_section_id_column = function(current_data) {
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		text_content	: current_data.value
+		inner_html		: current_data.value
 	})
 
 	return section_id_node

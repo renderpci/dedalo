@@ -229,7 +229,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		const button_automatic_translation = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning button_automatic_translation',
-			text_content	: get_label.traduccion_automatica || "Automatic translation",
+			inner_html		: get_label.traduccion_automatica || "Automatic translation",
 			parent			: automatic_translation_container
 		})
 
@@ -260,9 +260,9 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			const engine = translator_engine[i]
 			ui.create_dom_element({
 				element_type	: 'option',
-				value 			: JSON.stringify(engine),
-				text_content 	: engine.label,
-				parent 			: translator_engine_select
+				value			: JSON.stringify(engine),
+				inner_html		: engine.label,
+				parent			: translator_engine_select
 			})
 		}
 

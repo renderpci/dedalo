@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {strip_tags} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -286,12 +287,18 @@ const get_input_element_edit = (i, current_value, self) => {
 			element_type	: 'li'
 		})
 
+	// strip label HTML tags
+		const placeholder_label = mode.indexOf('edit')!==-1
+			? (get_label.title || 'Tilte')
+			: null
+		const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
+
 	// input title field
 		const input_title = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			placeholder		: ((mode==='edit' || 'edit_in_list') ? get_label.title : null),
+			placeholder		: placeholder_text,
 			dataset			: { key : i },
 			value			: title,
 			parent			: li

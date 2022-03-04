@@ -329,7 +329,7 @@ const get_grouper_element = (i, datalist_item, self) => {
 		const grouper_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'grouper_label',
-			text_content	: datalist_item.label,
+			inner_html		: datalist_item.label,
 			parent			: grouper
 		})
 

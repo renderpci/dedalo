@@ -107,7 +107,7 @@ const get_content_data_edit = async function(self) {
 			const list_title = ui.create_dom_element({
 				element_type	: 'h1',
 				class_name		: 'list_title',
-				text_content	: get_label.elementos_activos || 'Active elements',
+				inner_html		: get_label.elementos_activos || 'Active elements',
 				parent			: export_components_container
 			})
 		// drag and drop events
@@ -153,26 +153,26 @@ const get_content_data_edit = async function(self) {
 				const section_label = ui.create_dom_element({
 					element_type	: 'h1',
 					class_name		: 'section_label',
-					text_content 	: self.caller.label,
+					inner_html		: self.caller.label,
 					parent			: export_buttons_config
 				})
 				const total_records_label = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'total_records',
-					text_content 	: get_label.total_records + ': ',
+					inner_html		: get_label.total_records + ': ',
 					parent			: export_buttons_config
 				})
 				const total_records = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'total_records',
-					text_content 	: self.caller.total,
+					inner_html		: self.caller.total,
 					parent			: total_records_label
 				})
 		// export format
 			const data_format = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'records_info',
-				text_content 	: get_label.formato,
+				inner_html		: get_label.formato,
 				parent			: export_buttons_config
 			})
 			// select
@@ -183,39 +183,39 @@ const get_content_data_edit = async function(self) {
 				})
 					const select_option_standard= ui.create_dom_element({
 						element_type	: 'option',
-						text_content 	: get_label.estandar || 'standard',
-						value 			: 'standard',
+						inner_html		: get_label.estandar || 'standard',
+						value			: 'standard',
 						parent			: select_data_format_export
 					})
 					const select_option_html= ui.create_dom_element({
 						element_type	: 'option',
-						text_content 	: get_label.html || 'HTML',
-						value 			: 'html',
+						inner_html		: get_label.html || 'HTML',
+						value			: 'html',
 						parent			: select_data_format_export
 					})
 					const select_option_breakdown= ui.create_dom_element({
 						element_type	: 'option',
-						text_content 	: get_label.desglose || 'breakdown',
-						value 			: 'breakdown',
+						inner_html		: get_label.desglose || 'breakdown',
+						value			: 'breakdown',
 						parent			: select_data_format_export
 					})
 					const select_option_breakdown_html = ui.create_dom_element({
 						element_type	: 'option',
-						text_content 	: (get_label.desglose || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
-						value 			: 'breakdown_html',
+						inner_html		: (get_label.desglose || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
+						value			: 'breakdown_html',
 						parent			: select_data_format_export
 					})
 					const select_option_dedalo = ui.create_dom_element({
 						element_type	: 'option',
-						text_content 	: 'Dédalo (Raw)',
-						value 			: 'dedalo',
+						inner_html		: 'Dédalo (Raw)',
+						value			: 'dedalo',
 						parent			: select_data_format_export
 					})
 		// button export
 			const button_export = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button_export success',
-				text_content	: get_label.tool_export || 'Export',
+				inner_html		: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
 			button_export.addEventListener('click', async function() {
@@ -249,7 +249,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				text_content	: (get_label.descargar || 'Export') + ' csv',
+				inner_html		: (get_label.descargar || 'Export') + ' csv',
 				parent			: export_buttons_options
 			})
 			button_export_csv.addEventListener('click', async function() {
@@ -275,7 +275,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				text_content	: (get_label.descargar || 'Export') + ' Excel',
+				inner_html		: (get_label.descargar || 'Export') + ' Excel',
 				parent			: export_buttons_options
 			})
 			button_export_excel.addEventListener('click', function() {
@@ -295,7 +295,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_html = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				text_content	: (get_label.descargar || 'Export') + ' html',
+				inner_html		: (get_label.descargar || 'Export') + ' html',
 				parent			: export_buttons_options
 			})
 			button_export_html.addEventListener('click', function() {
@@ -314,7 +314,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_print = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				text_content	: get_label.imprimir || 'Print',
+				inner_html		: get_label.imprimir || 'Print',
 				parent			: export_buttons_options
 			})
 
@@ -355,8 +355,8 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 	// export_component container. Create dom element before load html from trigger
 		const export_component = ui.create_dom_element({
 			element_type	: 'div',
-			parent			: parent_div,
 			class_name		: "export_component",
+			parent			: parent_div
 			// data_set		: {
 			// 	path		: path_plain,
 			// 	// section_id	: section_id

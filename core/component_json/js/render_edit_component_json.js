@@ -250,10 +250,10 @@ const get_input_element = (i, current_value, self) => {
 
 			// button_save
 				const button_save = ui.create_dom_element({
-					element_type : 'button',
-					class_name	 : 'primary save button_save',
-					text_content : "Save",
-					parent 		 : li
+					element_type	: 'button',
+					class_name		: 'primary save button_save',
+					inner_html		: get_label.salvar || 'Save',
+					parent			: li
 				})
 				button_save.addEventListener("click", function(e) {
 					e.stopPropagation()

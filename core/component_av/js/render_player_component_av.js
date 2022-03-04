@@ -160,7 +160,7 @@ const get_av_control_buttons =  (self) =>{
 		const av_begin_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
-			text_content	: get_label.inicio || 'Beginning',
+			inner_html		: get_label.inicio || 'Beginning',
 			parent			: fragment
 		})
 		av_begin_button.addEventListener("mouseup", () =>{

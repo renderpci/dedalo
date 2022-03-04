@@ -129,7 +129,7 @@ const content_data_edit = async function(self) {
 				// label
 				ui.create_dom_element({
 					element_type	: 'label',
-					text_content	: get_label.idioma,
+					inner_html		: get_label.idioma,
 					parent			: tool_bar
 				})
 				// selector
@@ -154,7 +154,7 @@ const content_data_edit = async function(self) {
 			self.button_apply = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning button_apply hide',
-				text_content	: get_label.aplicar_y_salvar || 'Apply and save',
+				inner_html		: get_label.aplicar_y_salvar || 'Apply and save',
 				parent			: tool_bar
 			})
 			self.button_apply.addEventListener("click", self.apply_value.bind(self))
@@ -227,7 +227,7 @@ export const add_component = async (self, component_container, lang_value, label
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'time_label',
-			text_content	: label,
+			inner_html		: label,
 			parent			: component_container
 		})
 

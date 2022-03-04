@@ -1016,15 +1016,15 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 	const user_option_cancelar = ui.create_dom_element({
 		element_type	: 'button',
 		class_name		: 'user_option ',
-		parent			: footer,
-		text_content	: get_label.cancelar
+		inner_html		: get_label.cancelar || 'Cancel',
+		parent			: footer
 	})
 
 	const user_option_ok = ui.create_dom_element({
 		element_type	: 'button',
-		class_name		: 'user_option ',
-		parent			: footer,
-		text_content	: get_label.insertar_etiqueta
+		class_name		: 'user_option',
+		inner_html		: get_label.insertar_etiqueta || 'Insert label',
+		parent			: footer
 	})
 
 	const page_selector = ui.attach_to_modal( header, body, footer)

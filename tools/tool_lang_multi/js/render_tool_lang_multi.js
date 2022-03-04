@@ -122,7 +122,7 @@ export const create_target_component = (lang, self) => {
 	const target_component_title = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'target_component_title',
-		text_content	: lang.label,
+		inner_html		: lang.label,
 		parent			: target_component_container
 	})
 

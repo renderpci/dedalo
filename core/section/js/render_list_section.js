@@ -504,7 +504,7 @@ const get_buttons = function(self) {
 				const button_node	= ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: class_name,
-					text_content	: current_button.label,
+					inner_html		: current_button.label,
 					parent			: buttons_wrapper
 				})
 				button_node.addEventListener('click', (e) => {

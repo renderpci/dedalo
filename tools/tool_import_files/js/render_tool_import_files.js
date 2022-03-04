@@ -109,9 +109,9 @@ const get_content_data_edit = async function(self) {
 
 					const option_procesor_node = ui.create_dom_element({
 						element_type	: 'option',
-						class_name 		: 'component select',
-						text_content 	: self.get_tool_label(option.function_name),
-						parent 			: select_process
+						class_name		: 'component select',
+						inner_html		: self.get_tool_label(option.function_name),
+						parent			: select_process
 					})
 					option_procesor_node.value = option.function_name
 			}// end for
@@ -156,9 +156,9 @@ const get_content_data_edit = async function(self) {
 
 					const option_node = ui.create_dom_element({
 						element_type	: 'option',
-						class_name 		: 'component select',
-						text_content 	: option.label,
-						parent 			: select_options
+						class_name		: 'component select',
+						inner_html		: option.label,
+						parent			: select_options
 					})
 
 					if(option.default){
@@ -200,9 +200,9 @@ const get_content_data_edit = async function(self) {
 
 					const label_field_check_box = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'checkbox-label',
-							text_content 	: get_label.name_to_field || 'Name indicates field',
-							parent 			: name_control_field
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.name_to_field || 'Name indicates field',
+							parent			: name_control_field
 						})
 
 
@@ -220,8 +220,8 @@ const get_content_data_edit = async function(self) {
 
 								const option_node = ui.create_dom_element({
 									element_type	: 'option',
-									text_content 	: map_name + option.label,
-									parent 			: info_options
+									inner_html		: map_name + option.label,
+									parent			: info_options
 								})
 						}// end for
 
@@ -250,9 +250,9 @@ const get_content_data_edit = async function(self) {
 
 					const label_section_id_check_box = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'checkbox-label',
-							text_content 	: get_label.name_to_record_id || 'Name indicates id',
-							parent 			: name_control_section_id
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.name_to_record_id || 'Name indicates id',
+							parent			: name_control_section_id
 						})
 
 
@@ -280,9 +280,9 @@ const get_content_data_edit = async function(self) {
 
 					const label_same_name_check_box = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'checkbox-label',
-							text_content 	: get_label.same_name_same_record || 'Same name same record',
-							parent 			: same_name_same_section
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.same_name_same_record || 'Same name same record',
+							parent			: same_name_same_section
 						})
 
 
@@ -394,7 +394,7 @@ const get_content_data_edit = async function(self) {
 		const button_process_import = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'processing_import success',
-			text_content 	: 'OK',
+			inner_html		: 'OK',
 			parent			: fragment
 		})
 		button_process_import.addEventListener('click', function(e){

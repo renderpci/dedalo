@@ -174,7 +174,7 @@ const get_content_data_edit = async function(self) {
 		const loading_info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'loading_info',
-			text_content	: `Rendering ${datalist_length} Ontology elements`,
+			inner_html		: `Rendering ${datalist_length} Ontology elements`,
 			parent			: content_data
 		})
 
@@ -599,7 +599,7 @@ const create_permissions_radio_group = function(self, item, permissions) {
 		const radio_input_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'radio_label',
-			text_content	: title
+			inner_html		: title
 		})
 		radio_input_label.prepend(radio_input)
 
@@ -699,7 +699,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 		const radio_input_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'radio_label',
-			text_content	: title
+			inner_html		: title
 		})
 		radio_input_label.prepend(radio_input)
 
@@ -860,10 +860,10 @@ const get_buttons = (self) => {
 
 	// button_save
 		const button_save = ui.create_dom_element({
-			element_type : 'button',
-			class_name	 : 'primary save button_save folding hide',
-			text_content : "Save",
-			parent 		 : buttons_fold
+			element_type	: 'button',
+			class_name		: 'primary save button_save folding hide',
+			inner_html		: get_label.salvar || 'Save',
+			parent			: buttons_fold
 		})
 		button_save.addEventListener("click", async function(e){
 			e.stopPropagation()
@@ -883,7 +883,7 @@ const get_buttons = (self) => {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'warning_label_text blink',
-						text_content	: get_label.sin_salvar || 'Unsaved changes!',
+						inner_html		: get_label.sin_salvar || 'Unsaved changes!',
 						parent			: label
 					})
 				}
