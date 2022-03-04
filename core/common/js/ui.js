@@ -150,7 +150,7 @@ export const ui = {
 				}
 
 			// buttons
-				if (items.buttons ) { // && instance.permissions>1
+				if (items.buttons && instance.permissions>1) { // && instance.permissions>1
 					fragment.appendChild(items.buttons)
 				}
 
