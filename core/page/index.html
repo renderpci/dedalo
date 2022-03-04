@@ -27,41 +27,54 @@
 			margin: 0!important;
 		}
 	</style>
-	<link rel="preconnect" href="<?php echo DEDALO_PROTOCOL . DEDALO_HOST ?>" crossorigin />
-	<link rel="preload" href="../common/js/environment.js.php<?php echo '?lang='.DEDALO_APPLICATION_LANG ?>" as="script">
-	<link rel="stylesheet" type="text/css" href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>">
-	<?php /*
-	<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet">
-	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce.woff" as="font" type="font/woff" crossorigin>
-	<link rel="preload" href="../../lib/tinymce/js/tinymce/skins/lightgray/fonts/tinymce-small.woff" as="font" type="font/woff" crossorigin>
-	<link rel="modulepreload" href="../common/js/components_list.js?v=<?php echo DEDALO_VERSION ?>">
-	*/?>
-	<link rel="modulepreload" href="../page/js/module_preload.js">
-	<script rel="preload" defer="defer" src="../common/js/environment.js.php<?php echo '?lang='.DEDALO_APPLICATION_LANG ?>"></script>
+	<link rel="stylesheet" type="text/css" href="../page/css/main.css">
+	<script defer="defer" src="../common/js/environment.js.php"></script>
+	<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
 </head>
 <body>
 	<div id="main" class="hide"></div>
 	<div id="debug" class="debug hide"></div>
 
-
-	<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
 	<script type="module">
 		const t0 = performance.now()
 
 		// page instance
 		import {data_manager} from '../common/js/data_manager.js'
 		import {get_instance} from '../common/js/instances.js'
-		import {dd_console} from '../common/js/utils/index.js'
+		import {dd_console, url_vars_to_object} from '../common/js/utils/index.js'
+		import {common} from '../common/js/common.js'
+		import '../common/js/dd-modal.js'
+		import {page} from '../page/js/page.js'
+		import {login} from '../login/js/login.js'
 		( async () => {
 
 			// main CSS add loading
 				const main = document.getElementById("main")
 					  main.classList.add("loading")
 
+			// start bootstrap
+				// rqo (request query object)
+				const rqo = {
+					action			: 'start',
+					search_obj		: url_vars_to_object(location.search),
+					prevent_lock	: true
+				}
+				const api_response = await data_manager.prototype.request({
+					body : rqo
+				})
+				console.log("+++ start api_response:",api_response);
+
+			// error case
+				if (api_response.result===false) {
+					main.innerHTML = api_response.msg;
+					main.classList.remove("loading","hide")
+					return
+				}
+
 			// page instance
 				const page = await get_instance({
 					model	: 'page',
-					context	: <?php echo json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
+					context	: api_response.result // php echo json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
 				});
 
 			// page instance build and render

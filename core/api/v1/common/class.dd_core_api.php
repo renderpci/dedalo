@@ -42,6 +42,201 @@ class dd_core_api {
 
 
 	/**
+	* START
+	* Builds the start page minimun context
+	* @return array $result
+	*/
+	static function start($json_data) {
+		global $start_time;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// options
+			$search_obj = $json_data->search_obj ?? new StdClass(); // url vars
+
+		// bootstrap context
+
+		// page mode and tipo
+			$default_section_tipo = 'test38';
+			if (isset($search_obj->locator)) {
+				$locator	= json_decode($search_obj->locator);
+				$tipo		= $locator->section_tipo ?? $default_section_tipo;
+				$section_id	= $locator->section_id ?? null;
+				$mode		= $locator->mode ?? 'list';
+			}else{
+				$tipo		= $search_obj->t	?? $search_obj->tipo		?? $default_section_tipo; //MAIN_FALLBACK_SECTION;
+				$section_id	= $search_obj->id	?? $search_obj->section_id	?? null;
+				$mode		= $search_obj->m	?? $search_obj->mode		?? 'list';
+			}
+
+		// context
+			$context = [];
+			if (login::is_logged()!==true) {
+
+				// not logged case
+
+				// check_basic_system (lang and structure files)
+					$is_system_ready = check_basic_system();
+					if ($is_system_ready->result===false) {
+						return $is_system_ready;
+					}
+
+				// page context elements [login]
+					$login = new login();
+
+				// add to page context
+					$context[] = $login->get_structure_context();
+
+			}else{
+
+				// logged case
+
+				$initiator = $search_obj->initiator ?? false;
+
+				// menu. Get the mandatory menu element
+					if ($initiator===false) {
+
+						$menu = new menu();
+						$menu->set_lang(DEDALO_DATA_LANG);
+
+						// add to page context
+							$context[] = $menu->get_structure_context();
+					}
+
+				// section/area/tool. Get the page element from get url vars
+					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					switch (true) {
+
+						case ($model==='section_tool'):
+
+							$section_tool_tipo = $tipo;
+
+							$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
+							$properties		= $RecordObj_dd->get_properties();
+
+							// overwrite (!)
+								$model	= 'section';
+								$tipo	= $properties->config->target_section_tipo ?? $tipo;
+								$config	= $properties->config ?? null;
+
+							// tool_context
+								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
+									? array_key_first(get_object_vars($properties->tool_config))
+									: false;
+								if ($tool_name) {
+									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
+									if (empty($ar_tool_object)) {
+										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
+									}else{
+										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
+										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+										$config->tool_context = $tool_context;
+										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+									}
+								}
+							// (!) note non break switch here. Continue with overwriten section tipo
+
+						case ($model==='section'):
+
+							$section = section::get_instance($section_id, $tipo, $mode);
+							$section->set_lang(DEDALO_DATA_LANG);
+
+							$current_context = $section->get_structure_context(1, true);
+
+							// section_id given case. If is received section_id, we build a custom sqo with the proper filter
+							// and override default request_config sqo into the section context
+							if (!empty($section_id)) {
+
+								$current_context->mode			= 'edit'; // force edit mode
+								$current_context->section_id	= $section_id; // set section_id in context
+
+								// request_config
+									$request_config = array_find($current_context->request_config, function($el){
+										return $el->api_engine==='dedalo';
+									});
+									if (!empty($request_config)) {
+										// sqo
+											$sqo = new search_query_object();
+											$sqo->set_section_tipo([(object)[
+												'tipo'	=> $tipo,
+												'label'	=> ''
+											]]);
+											$sqo->set_filter_by_locators([(object)[
+												'section_tipo'	=> $tipo,
+												'section_id'	=> $section_id
+											]]);
+
+										// overwrite default sqo
+										$request_config->sqo = $sqo;
+									}
+							}//end if (!empty($section_id))
+
+							// add to page context
+								$context[] = $current_context;
+							break;
+
+						case ($model==='area_thesaurus'):
+
+							$area = area::get_instance($model, $tipo, $mode);
+							$area->set_lang(DEDALO_DATA_LANG);
+
+							// add to page context
+								$current_context = $area->get_structure_context(1, true);
+
+								if (isset($search_obj->thesaurus_mode)) {
+									$current_context->thesaurus_mode = $search_obj->thesaurus_mode;
+								}
+								if (isset($search_obj->hierarchy_types)) {
+									$current_context->hierarchy_types = json_decode($search_obj->hierarchy_types);
+								}
+								if (isset($search_obj->hierarchy_sections)) {
+									$current_context->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
+								}
+								if (isset($search_obj->hierarchy_terms)) {
+									$current_context->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
+								}
+
+							// add to page context
+								$context[] = $current_context;
+							break;
+
+						case (strpos($model, 'area')===0):
+
+							$area = area::get_instance($model, $tipo, $mode);
+							$area->set_lang(DEDALO_DATA_LANG);
+
+							$current_context =$area->get_structure_context(1, true);
+
+							// add to page context
+								$context[] = $current_context;
+							break;
+
+						default:
+							// ..
+							break;
+					}//end switch (true)
+			}//end if (login::is_logged()!==true)
+
+
+		$response->result	= $context;
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
+
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end start
+
+
+
+	/**
 	* CREATE
 	* @return array $result
 	*/
