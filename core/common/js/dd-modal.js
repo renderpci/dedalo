@@ -30,11 +30,12 @@ class DDModal extends HTMLElement {
 
 			/* Modal Content */
 			.modal-content {
-				position: relative;
+				/*position: relative;*/
 				background-color: #fefefe;
 				margin: auto;
 				/*margin-top: 80px;*/
-				top: 4.5vh;
+				/*top: 4.5vh;*/
+				margin-top: 3.5vh;
 				padding: 0;
 				border: 1px solid #888;
 				width: 80%;
@@ -105,7 +106,8 @@ class DDModal extends HTMLElement {
 				*/
 				width: 97vw;
 				height: 97vh;
-				top: 1.5vh;
+				/*top: 1.5vh;*/
+				margin-top: 1.5vh;
 				overflow: auto;
 			}
 			.modal_big .modal-body {
@@ -137,15 +139,15 @@ class DDModal extends HTMLElement {
 	connectedCallback() {
 		this._modal = this.shadowRoot.querySelector(".modal");
 		// this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
-		this.shadowRoot.querySelector(".close_modal").addEventListener('click', this._hideModal.bind(this));
-		this.shadowRoot.querySelector(".modal").addEventListener('click', this._hideModal.bind(this));
+		this.shadowRoot.querySelector(".close_modal").addEventListener('mousedown', this._hideModal.bind(this));
+		this.shadowRoot.querySelector(".modal").addEventListener('mousedown', this._hideModal.bind(this));
 		document.addEventListener('keyup', this.detect_key)
 		window.modal = this // fix modal in window for easy access to close
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
-		this.shadowRoot.querySelector(".close_modal").removeEventListener('click', this._hideModal.bind(this));
-		this.shadowRoot.querySelector(".modal").removeEventListener('click', this._hideModal.bind(this));
+		this.shadowRoot.querySelector(".close_modal").removeEventListener('mousedown', this._hideModal.bind(this));
+		this.shadowRoot.querySelector(".modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		document.removeEventListener('keyup', this.detect_key);
 	}
 	_showModal() {
