@@ -17,7 +17,7 @@
 * Manages the area appearance in client side
 */
 export const render_area_thesaurus = function() {
-	
+
 	return true
 };//end render_area_thesaurus
 
@@ -517,7 +517,7 @@ const get_buttons = function(self) {
 				const button_node	= ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: class_name,
-					text_content	: current_button.label,
+					inner_html		: current_button.label,
 					parent			: buttons_wrapper
 				})
 				button_node.addEventListener('click', (e) => {

@@ -33,7 +33,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 	const self = this
 
 	const render_level = options.render_level || 'full'
-	
+
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances = await self.get_ar_columns_instances_list()

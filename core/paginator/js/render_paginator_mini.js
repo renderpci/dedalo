@@ -187,25 +187,25 @@ const get_content_data = function(self) {
 			class_name		: 'paginator_info',
 			parent			: fragment
 		})
-
-		const page_info = ui.create_dom_element({
+		// page_info
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'page_info',
-			text_content 	: (get_label["pagina"] || "Page") + ` ${page_number} ` + (get_label["de"] || "of") + ` ${total_pages} `,
+			inner_html		: (get_label.pagina || 'Page') + ` ${page_number} ` + (get_label.de || 'of') + ` ${total_pages} `,
 			parent			: paginator_info
 		})
-
-		const displayed_records = ui.create_dom_element({
+		// displayed_records
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'displayed_records',
-			text_content 	: `Showed ${page_row_begin}-${page_row_end} of ${total}. `,
+			inner_html		: `Showed ${page_row_begin}-${page_row_end} of ${total}. `,
 			parent			: paginator_info
 		})
 
 		// const goto_page = ui.create_dom_element({
 		// 	element_type	: 'span',
 		// 	class_name		: 'goto_page',
-		// 	text_content 	: get_label["go_to_page"],
+		// 	inner_html 	: get_label["go_to_page"],
 		// 	parent			: paginator_info
 		// })
 		// // input_go_to_page
