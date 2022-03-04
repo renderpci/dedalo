@@ -160,8 +160,8 @@ render_menu.prototype.edit = async function() {
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
-			parent			: fragment,
-			text_content	: page_globals.username
+			text_content	: page_globals.username,
+			parent			: fragment
 		})
 		if (page_globals.username!=='root') {
 			logged_user_name.addEventListener("click", fn_load_user_admin_tool)
