@@ -117,7 +117,7 @@ class dd_manager {
 					$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL;
 					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
-		
+
 
 
 		return $dedalo_data;

@@ -574,7 +574,7 @@ const get_custom_buttons = (self, i, service) => {
 				tooltip	: save_label,
 				icon	: false,
 				onclick	: function(evt) {
-					// save. service save function calls current component save_value()						
+					// save. service save function calls current component save_value()
 					service.save()
 				}
 			}
@@ -607,7 +607,7 @@ const get_custom_events = (self, i, service) => {
 
 	// blur
 		custom_events.blur = (evt, options) => {
-			// save. service save function calls current component save_value()				
+			// save. service save function calls current component save_value()
 			service.save()
 		};//end blur
 

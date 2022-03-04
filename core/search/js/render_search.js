@@ -1160,7 +1160,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	* @return string localized
 	*/
 	const localize_operator = (operator) => {
-		
+
 		// Remove '$' (first char)
 		const clean_operator = operator.slice(1)
 

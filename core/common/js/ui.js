@@ -1100,7 +1100,7 @@ export const ui = {
 
 
 			// Events
-				tool_button.addEventListener('click', publish_load_tool)
+				tool_button.addEventListener('mousedown', publish_load_tool)
 				function publish_load_tool(e) {
 					e.stopPropagation();
 
@@ -2067,8 +2067,8 @@ export const ui = {
 					const user_option = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'user_option ' + option.class_name,
-						parent			: footer,
-						text_content	: option.label
+						inner_html		: option.label,
+						parent			: footer
 					})
 					// add option_id property
 					user_option.option_id = option.id

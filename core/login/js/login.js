@@ -176,8 +176,3 @@ export const quit = async function() {
 };//end quit
 
 
-
-// expose login functions to window
-	// window.login = {
-	// 	quit : quit
-	// }
