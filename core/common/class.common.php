@@ -691,7 +691,7 @@ abstract class common {
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		return (string)$html;
@@ -2591,6 +2591,20 @@ abstract class common {
 					$current_mode = ($model!=='section')
 						? 'list'
 						: $mode;
+
+				// auth check each element permissions
+					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
+						// check each element permissions
+						$result = [];
+						foreach ($ar_related_clean as $item_tipo) {
+							$permissions = common::get_permissions($target_section_tipo, $item_tipo);
+							if ($permissions>0) {
+								$result[] = $item_tipo;
+							}
+						}
+						return $result;
+					})();
+
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						// the semantic node has his own section_tipo to be assigned
@@ -2626,7 +2640,7 @@ abstract class common {
 						}
 
 						return $ddo;
-					}, $ar_related_clean);
+					}, $ar_related_clean_auth);
 
 				// show
 					$show = new stdClass();
@@ -3330,7 +3344,9 @@ abstract class common {
 
 				// permissions
 					$permissions = common::get_permissions($tipo, $current_button_tipo);
-					if($permissions<1) continue;
+					if($permissions<2) {
+						continue;
+					}
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
@@ -3342,9 +3358,9 @@ abstract class common {
 					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
 					$button_properties	= $RecordObj_dd->get_properties();
 
-				// toool_context
+				// button_import. tool_context
 					$tools = null;
-					if($model === 'button_import'){
+					if($model==='button_import'){
 
 						// tools_list
 						$tools_list	= tool_common::get_client_registered_tools();
