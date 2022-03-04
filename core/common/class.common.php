@@ -2032,9 +2032,10 @@ abstract class common {
 						$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						$sqo_id	= implode('_', [$model,$section_tipo]);
 						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-							// replace default sqo with the already stored in session (except section_tipo to void loose labels and limit to avoid overwrite list in edit and viceversa)
+							// replace default sqo with the already stored in session (except section_tipo to prevent to
+							// loose labels and limit to avoid overwrite list in edit and viceversa)
 							foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
-								if($key==='section_tipo' || $key==='limit') continue;
+								if($key==='section_tipo' || $key==='limit' || $key==='generated_time') continue;
 								if (!isset($dedalo_request_config->sqo)) {
 									$dedalo_request_config->sqo = new stdClass();
 								}

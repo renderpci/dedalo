@@ -1092,58 +1092,68 @@ class dd_core_api {
 					? $_SESSION['dedalo']['config']['sqo'][$sqo_id]
 					: (function() use($model, $tipo, $section_tipo, $section_id, $mode, $rqo, $sqo_id, $start_time) {
 
-						//get the limit from the show
-						if (isset($rqo->show) && isset($rqo->show->sqo_config->limit)) {
-							$limit = $rqo->show->sqo_config->limit;
-						}else{
-							// user preset check (defined sqo limit)
-							$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, navigator::get_user_id(), $mode, $view=null);
-							if (!empty($user_preset)) {
-								$user_preset_rqo = $user_preset->rqo;
-								if ($user_preset_rqo && isset($user_preset_rqo->show->sqo_config->limit)) {
-									$limit = $user_preset_rqo->show->sqo_config->limit;
-								}
-							}
-						}
+						// limit. get the limit from the show
+							$limit = (isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+								? $rqo->show->sqo_config->limit
+								: (function() use($tipo, $section_tipo, $mode){
+									// user preset check (defined sqo limit)
+									$user_preset = layout_map::search_user_preset_layout_map(
+										$tipo,
+										$section_tipo,
+										navigator::get_user_id(),
+										$mode,
+										$view=null
+									);
+									if (!empty($user_preset)) {
+										$user_preset_rqo = $user_preset->rqo;
+										if (isset($user_preset_rqo) && isset($user_preset_rqo->show->sqo_config->limit)) {
+											$limit = $user_preset_rqo->show->sqo_config->limit;
+										}
+									}
+									return $limit ?? ($mode==='list' ? 10 : 1);
+								  })();
+
+						// offset . reset to zero
+							$offset	= 0;
 
 						// build the new sqo from show or user preset
-						$limit	= $limit ?? ($mode==='list' ? 10 : 1);
-						$offset	= 0;
 
-						// $sqo_options = new stdClass();
-						// 	$sqo_options->id			= $sqo_id;
-						// 	$sqo_options->mode			= $mode;
-						// 	$sqo_options->section_tipo	= [$section_tipo];
-						// 	$sqo_options->tipo			= $section_tipo;
-						// 	$sqo_options->full_count	= false;
-						// 	$sqo_options->add_select	= false;
-						// 	$sqo_options->limit			= $limit;
-						// 	$sqo_options->offset		= $offset;
-						// 	$sqo_options->direct		= true;
-						// 	// filter_by_locators. when section_id is received
+						// des
+							// $sqo_options = new stdClass();
+							// 	$sqo_options->id			= $sqo_id;
+							// 	$sqo_options->mode			= $mode;
+							// 	$sqo_options->section_tipo	= [$section_tipo];
+							// 	$sqo_options->tipo			= $section_tipo;
+							// 	$sqo_options->full_count	= false;
+							// 	$sqo_options->add_select	= false;
+							// 	$sqo_options->limit			= $limit;
+							// 	$sqo_options->offset		= $offset;
+							// 	$sqo_options->direct		= true;
+							// 	// filter_by_locators. when section_id is received
 
-						// 	if (!empty($section_id)) {
-						// 		$self_locator = new locator();
-						// 			$self_locator->set_section_tipo($section_tipo);
-						// 			$self_locator->set_section_id($section_id);
-						// 		$sqo_options->filter_by_locators = [$self_locator];
+							// 	if (!empty($section_id)) {
+							// 		$self_locator = new locator();
+							// 			$self_locator->set_section_tipo($section_tipo);
+							// 			$self_locator->set_section_id($section_id);
+							// 		$sqo_options->filter_by_locators = [$self_locator];
 
-						// 	}
-						// $sqo = common::build_search_query_object($sqo_options);
+							// 	}
+							// $sqo = common::build_search_query_object($sqo_options);
 
-						$sqo = new search_query_object();
-							$sqo->set_id($sqo_id);
-							$sqo->set_mode($mode);
-							$sqo->set_section_tipo([$section_tipo]);
-							$sqo->set_limit($limit);
-							$sqo->set_offset($offset);
+						// sqo create
+							$sqo = new search_query_object();
+								$sqo->set_id($sqo_id);
+								$sqo->set_mode($mode);
+								$sqo->set_section_tipo([$section_tipo]);
+								$sqo->set_limit($limit);
+								$sqo->set_offset($offset);
 
-							if (!empty($section_id)) {
-								$self_locator = new locator();
-									$self_locator->set_section_tipo($section_tipo);
-									$self_locator->set_section_id($section_id);
-								$sqo->set_filter_by_locators([$self_locator]);
-							}
+								if (!empty($section_id)) {
+									$self_locator = new locator();
+										$self_locator->set_section_tipo($section_tipo);
+										$self_locator->set_section_id($section_id);
+									$sqo->set_filter_by_locators([$self_locator]);
+								}
 
 						// tm case
 							// if ($mode==='tm') {
@@ -1432,7 +1442,6 @@ class dd_core_api {
 		// Set result object
 			$result->context = $context;
 			$result->data 	 = $data;
-
 
 		// Debug
 			if(SHOW_DEBUG===true) {

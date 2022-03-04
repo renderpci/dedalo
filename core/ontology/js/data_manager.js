@@ -30,7 +30,7 @@ data_manager.prototype.request = async function(options) {
 	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 	this.body			= options.body // body data type must match "Content-Type" header
 
-	const handle_errors = function(response) {		
+	const handle_errors = function(response) {
 		if (!response.ok) {
 			console.warn("-> HANDLE_ERRORS response:",response);
 			throw Error(response.statusText);
@@ -95,38 +95,6 @@ data_manager.prototype.request = async function(options) {
 
 
 /**
-* GET_LOGIN
-* Generic section data loader (API read)
-* @param object context
-* @return promise api_response
-*/
-	// data_manager.prototype.get_login = async function() {
-
-	// 	// data_manager
-	// 		const api_response = this.request(
-	// 			{
-	// 				body : {
-	// 					action	: 'get_login',
-	// 					dd_api	: 'dd_utils_api'
-	// 				}
-	// 			}
-	// 		)
-
-	// 	// debug
-	// 		if(SHOW_DEBUG===true) {
-	// 			api_response.then((response)=>{
-	// 				const exec_time = response.debug ? response.debug.exec_time : ''
-	// 				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response);
-	// 			})
-	// 		}
-
-	// 	return api_response
-	// };//end get_login
-
-
-
-
-/**
 * READ
 * Generic section data loader (API read)
 * @param object context
@@ -152,66 +120,6 @@ data_manager.prototype.request = async function(options) {
 
 	// 	return api_response
 	// };//end read
-
-
-
-/**
-* COUNT
-* Generic section data loader
-* @param object context
-* @return promise api_response
-*/
-data_manager.prototype.count = async function(sqo) {
-
-	// data_manager
-		const api_response = this.request({
-			body : {
-				action	: 'count',
-				sqo		: sqo
-			}
-		})
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("----------------------------------- count sqo:", sqo);
-			// console.log("----------------------------------- count total:", total);
-			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
-			// console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
-		}
-
-	return api_response
-};//end count
-
-
-
-/**
-* COUNT
-* Generic section data loader
-* @param object context
-* @return promise api_response
-*/
-data_manager.prototype.count_OLD = async function(sqo) {
-
-	// data_manager
-		const api_response = await this.request({
-			body : {
-				action	: 'count',
-				sqo		: sqo
-			}
-		})
-
-	const total = api_response.result.total
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("----------------------------------- count sqo:", sqo);
-			// console.log("----------------------------------- count total:", total);
-			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
-			console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
-		}
-
-	return total
-};//end count
 
 
 
@@ -312,8 +220,8 @@ data_manager.prototype.get_local_db = async function() {
 		// success case
 			db_request.onsuccess = function(event) {
 				// console.log("-> get_local_db success:", event.target);
-				
-				const db = event.target.result;			
+
+				const db = event.target.result;
 
 				resolve(db)
 			};
@@ -321,7 +229,7 @@ data_manager.prototype.get_local_db = async function() {
 		// onupgradeneeded event
 			db_request.onupgradeneeded = function(event) {
 				console.log("-> get_local_db onupgradeneeded:", event.target);
-					
+
 				const db = event.target.result;
 
 				// objectStore
@@ -382,7 +290,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 			// const request	= objectStore.add(data);
 			// Put this updated object back into the database.
   			const request = objectStore.put(data);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);
@@ -424,7 +332,7 @@ data_manager.prototype.get_local_db_data = async function(id, table) {
 		// request
 			const objectStore	= transaction.objectStore(table);
 			const request		= objectStore.get(id);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);
@@ -466,7 +374,7 @@ data_manager.prototype.delete_local_db_data = async function(id, table) {
 		// request
 			const objectStore	= transaction.objectStore(table);
 			const request		= objectStore.delete(id);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);

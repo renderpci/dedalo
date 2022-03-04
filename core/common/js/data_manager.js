@@ -103,96 +103,6 @@ data_manager.prototype.request = async function(options) {
 
 
 /**
-* GET_LOGIN
-* Generic section data loader (API read)
-* @param object context
-* @return promise api_response
-*/
-	// data_manager.prototype.get_login = async function() {
-
-	// 	// data_manager
-	// 		const api_response = this.request(
-	// 			{
-	// 				body : {
-	// 					action	: 'get_login',
-	// 					dd_api	: 'dd_utils_api'
-	// 				}
-	// 			}
-	// 		)
-
-	// 	// debug
-	// 		if(SHOW_DEBUG===true) {
-	// 			api_response.then((response)=>{
-	// 				const exec_time = response.debug ? response.debug.exec_time : ''
-	// 				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response);
-	// 			})
-	// 		}
-
-	// 	return api_response
-	// };//end get_login
-
-
-
-
-/**
-* READ
-* Generic section data loader (API read)
-* @param object context
-* @return promise api_response
-*/
-	// data_manager.prototype.read = async function(dd_request) {
-
-	// 	// data_manager
-	// 		const api_response = this.request({
-	// 			body : {
-	// 				action		: 'read',
-	// 				dd_request	: dd_request
-	// 			}
-	// 		})
-
-	// 	// debug
-	// 		if(SHOW_DEBUG===true) {
-	// 			api_response.then((response)=>{
-	// 				const exec_time = response.debug ? response.debug.exec_time : '';
-	// 				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `dd_request:`, dd_request);
-	// 			})
-	// 		}
-
-	// 	return api_response
-	// };//end read
-
-
-
-/**
-* COUNT
-* Generic section data loader
-* @param object context
-* @return promise api_response
-*/
-	// data_manager.prototype.count = async function(sqo) {
-
-	// 	// data_manager
-	// 		const api_response = this.request({
-	// 			body : {
-	// 				action	: 'count',
-	// 				sqo		: sqo
-	// 			}
-	// 		})
-
-	// 	// debug
-	// 		if(SHOW_DEBUG===true) {
-	// 			// console.log("----------------------------------- count sqo:", sqo);
-	// 			// console.log("----------------------------------- count total:", total);
-	// 			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
-	// 			// console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
-	// 		}
-
-	// 	return api_response
-	// };//end count
-
-
-
-/**
 * GET_ELEMENT_CONTEXT
 * Resolves full element context based on minimal source vars
 * Like:
@@ -379,7 +289,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 				reject(event.target.error);
 			};
 	})
-}//end set_local_db_data
+};//end set_local_db_data
 
 
 
@@ -436,7 +346,7 @@ data_manager.prototype.get_local_db_data = async function(id, table, cache=false
 				reject(event.target.error);
 			};
 	})
-}//end get_local_db_data
+};//end get_local_db_data
 
 
 
@@ -478,7 +388,7 @@ data_manager.prototype.delete_local_db_data = async function(id, table) {
 				reject(event.target.error);
 			};
 	})
-}//end get_local_db_data
+};//end get_local_db_data
 
 
 
@@ -499,7 +409,7 @@ export function download_url(url, filename) {
 		}
 		);
 	});
-}//end download_url
+};//end download_url
 
 
 
