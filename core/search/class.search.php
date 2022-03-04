@@ -2024,6 +2024,14 @@ class search {
 				$sql_where .= $search_object->q_parsed;
 				break;
 
+			case 'in_column':
+				$pre = ($component_path==='section_id')
+					? $table_alias .'.'.$component_path
+					: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
+
+				$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
+				break;
+
 		}//end switch ($search_object->type)
 
 
