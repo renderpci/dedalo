@@ -88,7 +88,7 @@ const get_content_data = async function(self) {
 		const add_button = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button tool add',
-			text_content	: '',
+			inner_html		: '',
 			parent			: fragment
 		})
 		add_button.addEventListener("mouseup", async (e) =>{
@@ -187,7 +187,7 @@ const get_rows = async function(self, ar_langs, header=false, name, key) {
 		const label_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label name',
-			text_content	: header===true ? 'name' : name,
+			inner_html		: header===true ? 'name' : name,
 			contenteditable	: header===true ? false : true,
 			parent			: li
 		})
@@ -242,7 +242,7 @@ const get_inputs = async function(self, current_lang, header, name, key, li) {
 		const label_language = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content	: header===true ? current_lang.label : label_value,
+			inner_html		: header===true ? current_lang.label : label_value,
 			dataset			: header===true ? '' : {"placeholder": name},
 			contenteditable	: header===true ? false : true,
 			parent			: li

@@ -454,7 +454,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 
 	const span_year = ui.create_dom_element({
 		element_type	: 'label',
-		text_content	: label_year,
+		inner_html		: label_year,
 		parent			: inputs_container
 	})
 
@@ -470,7 +470,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 
 	const span_month = ui.create_dom_element({
 		element_type	: 'label',
-		text_content	: label_month,
+		inner_html		: label_month,
 		parent			: inputs_container
 	})
 
@@ -486,7 +486,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 
 	const span_day = ui.create_dom_element({
 		element_type	: 'label',
-		text_content	: label_day,
+		inner_html	: label_day,
 		parent			: inputs_container
 	})
 

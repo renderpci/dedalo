@@ -260,7 +260,7 @@ export const service_autocomplete = function() {
 			ui.create_dom_element({
 				element_type	: "label",
 				class_name		: "css_label label",
-				text_content	: get_label.origen || "Source",
+				inner_html		: get_label.origen || "Source",
 				parent			: source_selector
 			})
 			// select
@@ -726,7 +726,7 @@ export const service_autocomplete = function() {
 					element_type	: "label",
 					class_name		: "css_label label",
 					parent			: operator_selector,
-					text_content	: get_label.operadores_de_busqueda || "Search operators"
+					inner_html		: get_label.operadores_de_busqueda || "Search operators"
 				})
 				const select = ui.create_dom_element({
 					element_type	: "select",
@@ -739,15 +739,15 @@ export const service_autocomplete = function() {
 				})
 				const option_or = ui.create_dom_element({
 					element_type	: "option",
-					parent			: select,
 					value			: "$or",
-					text_content	: get_label.o
+					inner_html		: get_label.o || 'o',
+					parent			: select
 				})
 				const option_and = ui.create_dom_element({
 					element_type	: "option",
-					parent			: select,
 					value			: "$and",
-					text_content	: get_label.y
+					inner_html		: get_label.y || 'y',
+					parent			: select
 				})
 				if (operator==='$or') {
 					option_or.setAttribute("selected", true)

@@ -134,7 +134,7 @@ const get_tag_info = function(self) {
 			for (let k = 0; k < states.length; k++) {
 				ui.create_dom_element({
 					element_type	: 'option',
-					text_content	: states[k].label,
+					inner_html		: states[k].label,
 					value			: states[k].value,
 					parent			: tag_state_selector
 				})

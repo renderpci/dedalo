@@ -115,22 +115,22 @@ const get_content_data = async function(self) {
  			// checkbox label
 				const option_label = ui.create_dom_element({
 					element_type	: 'label',
-					text_content 	: item.label,
-					parent 			: components_list_container
+					inner_html		: item.label,
+					parent			: components_list_container
 				})
 				// info
 				ui.create_dom_element({
 					element_type	: 'span',
-					text_content 	: `${item.model} - ${item.tipo}`,
-					parent 			: option_label
+					inner_html		: `${item.model} - ${item.tipo}`,
+					parent			: option_label
 				})
 
 			// input checkbox
 				const option = ui.create_dom_element({
 					element_type	: 'input',
-					type 			: 'checkbox',
-					id 				: section_tipo + '_' +  item.tipo,
-					value 			: item.tipo
+					type			: 'checkbox',
+					id				: section_tipo + '_' +  item.tipo,
+					value			: item.tipo
 				})
 				if (item.model==='component_section_id') {
 					option.disabled = true

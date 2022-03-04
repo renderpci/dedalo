@@ -135,7 +135,7 @@ const content_data_edit = async function(self) {
 		const button_preview = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'secondary button_preview',
-			text_content	: get_label.preview || "Preview",
+			inner_html		: get_label.preview || "Preview",
 			parent			: tc_management_container
 		})
 		button_preview.addEventListener("click", () => {
@@ -151,10 +151,10 @@ const content_data_edit = async function(self) {
 
 	// apply button
 		const button_apply = ui.create_dom_element({
-			element_type 	: 'button',
-			class_name 		: 'warning button_apply',
-			text_content 	: get_label['apply'] || "Apply",
-			parent 			: tc_management_container
+			element_type	: 'button',
+			class_name		: 'warning button_apply',
+			inner_html		: get_label['apply'] || "Apply",
+			parent			: tc_management_container
 		})
 
 		button_apply.addEventListener("click", (e) => {

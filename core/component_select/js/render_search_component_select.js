@@ -184,9 +184,9 @@ const get_input_element = (self) => {
 
 			const option = ui.create_dom_element({
 				element_type	: 'option',
-				value 			: JSON.stringify(datalist_item.value),
-				text_content 	: current_label,
-				parent 			: select
+				value			: JSON.stringify(datalist_item.value),
+				inner_html		: current_label,
+				parent			: select
 			})
 			// selected options set on match
 			if (value_compare && datalist_item.value &&

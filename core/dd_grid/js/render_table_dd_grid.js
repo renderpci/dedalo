@@ -314,7 +314,7 @@ const get_header_column = function(current_data) {
 	const label_node 	= ui.create_dom_element({
 		// id			: current_data.id,
 		element_type	: 'th',
-		text_content	:  even_labels.join(' | ')
+		inner_html		:  even_labels.join(' | ')
 	})
 
 	return label_node
@@ -345,7 +345,7 @@ const get_text_column = function(current_data) {
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		text_content	: value || fallback_value
+		inner_html		: value || fallback_value
 	})
 
 	return text_node
@@ -465,7 +465,7 @@ const get_json_column = function(current_data) {
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		text_content	: (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
+		inner_html		: (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
 			? ''
 			: JSON.stringify(current_data.value)
 	})
@@ -488,7 +488,7 @@ const get_section_id_column = function(current_data) {
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		text_content	: current_data.value
+		inner_html		: current_data.value
 	})
 
 	return section_id_node

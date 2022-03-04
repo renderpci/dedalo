@@ -182,7 +182,7 @@ const get_buttons = function(self) {
 					ui.create_dom_element({
 						element_type	: 'option',
 						value			: JSON.stringify(item),
-						text_content	: item.label + ' - ' + item.section_id,
+						inner_html		: item.label + ' - ' + item.section_id,
 						parent			: identifying_image_selector
 					})
 				}

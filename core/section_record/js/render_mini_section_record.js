@@ -122,7 +122,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 							if(j === ar_instances_length-1) continue
 							const node_divisor = ui.create_dom_element({
 								element_type	: 'span',
-								text_content 	: self.caller.divisor || ' | ',
+								inner_html		: self.caller.divisor || ' | ',
 								parent			: column_node
 							})
 

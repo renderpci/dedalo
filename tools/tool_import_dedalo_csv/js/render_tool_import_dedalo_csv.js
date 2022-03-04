@@ -316,7 +316,7 @@ const render_file_info = function(self, item) {
 				element_type	: 'pre',
 				class_name		: 'preview error hide',
 				// inner_html	: text, // text.replaceAll('<br>','\n'),
-				text_content	: text.replaceAll('<br>','\n'),
+				inner_html		: text.replaceAll('<br>','\n'),
 				parent			: fragment
 			})
 			button_preview.classList.add('error')
@@ -330,7 +330,7 @@ const render_file_info = function(self, item) {
 				element_type	: 'pre',
 				class_name		: 'preview hide',
 				// inner_html	: text,
-				text_content	: text.replaceAll('<br>','\n'),
+				inner_html		: text.replaceAll('<br>','\n'),
 				parent			: fragment
 			})
 			button_preview.classList.add('ok')
