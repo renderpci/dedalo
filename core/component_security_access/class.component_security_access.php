@@ -1,14 +1,18 @@
 <?php
 /*
 * CLASS COMPONENT SECURITY ACCESS
-* Manages
+* Manages ontology elements access and permissions
 *
 */
 class component_security_access extends component_common {
 
 
+	public $datalist;
+
+
+
 	/**
-	* GET DATO 
+	* GET DATO
 	* @return object $dato
 	* Format [{"tipo":"dd21","parent":"dd20","value":3}]
 	*/
@@ -19,7 +23,8 @@ class component_security_access extends component_common {
 		}
 
 		return (array)$dato;
-	}
+	}//end get_dato
+
 
 
 	/**
@@ -27,6 +32,7 @@ class component_security_access extends component_common {
 	* @param object $dato
 	*/
 	public function set_dato($dato) {
+
 		if (!is_array($dato)) {
 			if(empty($dato)) {
 				$dato = [];
@@ -34,40 +40,81 @@ class component_security_access extends component_common {
 				$dato = (array)$dato;
 			}
 		}
-		parent::set_dato($dato);
-	}
-	
+
+		return parent::set_dato($dato);
+	}//end set_dato
+
 
 
 	/**
 	* GET_DATALIST
-	* @return 
+	* @return array $datalist
 	*/
 	public function get_datalist() {
+
+		if (isset($this->datalist)) {
+			return $this->datalist;
+		}
+
+		// cache datalist from session
+			if (isset($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG])) {
+				return $_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG];
+			}
 
 		$user_id			= navigator::get_user_id();
 		$is_global_admin	= security::is_global_admin($user_id);
 		$ar_areas			= [];
 
-		if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
+		// areas (including sections)
+			if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
 
-			$ar_areas = area::get_areas();
+				// full areas and sections list
+				$ar_areas = area::get_areas();
 
-		}else{
+			}else{
 
-			$dato = $this->get_dato();
+				// only areas and sections already included into the dato
+				$dato = $this->get_dato();
 
-			$ar_permisions_areas = array_filter($dato, function($item) {
-				return (isset($item->type) && $item->type==='area') ? $item : null;
-			});
+				$ar_permisions_areas = array_filter($dato, function($item) {
+					return (isset($item->type) && $item->type==='area') ? $item : null;
+				});
 
-			foreach ($ar_permisions_areas as $item) {
-				$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
-			}	
-		}
+				foreach ($ar_permisions_areas as $item) {
+					$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
+				}
+			}
 
-		$datalist = new stdClass();
-			$datalist->result = $ar_areas;
+		// ar_clean. resolve section (real and virtual) components
+			$ar_clean = [];
+			foreach ($ar_areas as $current_area) {
+
+				$current_area->section_tipo	= $current_area->tipo;
+				$current_area->type			= 'area';
+
+				$ar_clean[] = $current_area; // area could be area,area_thesaurus,section, ...
+
+				if ($current_area->model==='section') {
+
+					$children_recursive = ontology::get_children_recursive($current_area->tipo);
+					foreach ($children_recursive as $current_child) {
+						$child					= clone $current_child;
+						$child->section_tipo	= $current_area->tipo;
+						$ar_clean[]				= $child;
+					}
+				}
+			}
+
+		// datalist set
+		$datalist = $ar_clean;
+			// dump($ar_clean, ' ar_clean ++ '.to_string());
+
+		// fix value
+			$this->datalist = $datalist;
+
+		// cache session. Store in session for speed
+			$_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG] = $datalist;
+
 
 		return $datalist;
 	}//end get_datalist
@@ -91,10 +138,9 @@ class component_security_access extends component_common {
 
 		if(!empty($ar_result[0])) {
 			$tipo					= $ar_result[0];
-			$obj 					= new RecordObj_dd($tipo);
+			$obj					= new RecordObj_dd($tipo);
 			$ar_childrens_of_this	= $obj->get_ar_childrens_of_this();
-			$ar_tesauro 			= $ar_childrens_of_this;
-			#dump($ar_tesauro);
+			$ar_tesauro				= $ar_childrens_of_this;
 		}
 		# Añadimos el propio termino como padre del arbol
 		#array_push($ar_tesauro, $tipo);
@@ -103,10 +149,8 @@ class component_security_access extends component_common {
 		# STORE CACHE DATA
 		$ar_tipo_admin = $ar_tesauro ;
 
-		#dump($ar_tesauro," ar_tesauro");
-
 		return $ar_tesauro ;
-	}
+	}//end get_ar_tipo_admin
 
 
 
@@ -169,10 +213,9 @@ class component_security_access extends component_common {
 
 			return $response;
 			break;
-		}		
+		}
 	}//end update_dato_version
 
 
-	
-};
-?>
+
+}//end class

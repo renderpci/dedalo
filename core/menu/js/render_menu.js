@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER */
+/*global get_label, page_globals, DEDALO_CORE_URL, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -151,7 +151,8 @@ render_menu.prototype.edit = async function() {
 			text_content	: 'Ontology'
 		})
 		ontology_link.addEventListener("click", ()=>{
-			const win = window.open('../ontology', '_blank');
+			const url = DEDALO_CORE_URL + '/ontology'
+			const win = window.open(url, '_blank');
 				  win.focus();
 		})
 
@@ -159,9 +160,26 @@ render_menu.prototype.edit = async function() {
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
-			parent			: fragment,
-			text_content	: page_globals.username
+			text_content	: page_globals.username,
+			parent			: fragment
 		})
+		if (page_globals.username!=='root') {
+			logged_user_name.addEventListener("click", fn_load_user_admin_tool)
+			function fn_load_user_admin_tool(e) {
+				e.stopPropagation();
+
+				// open tool_user_admin
+				event_manager.publish('load_tool', {
+					tool_context	: {
+						model		: 'tool_user_admin',
+						tool_config	: {
+							ddo_map : []
+						}
+					},
+					caller			: self
+				})
+			}
+		}
 
 	// application lang selector
 		const lang_datalist = self.data.langs_datalist
@@ -265,6 +283,13 @@ render_menu.prototype.edit = async function() {
 		const menu_wrapper = document.createElement("div")
 			  menu_wrapper.classList.add("menu_wrapper")
 			  menu_wrapper.appendChild(fragment)
+		// menu left band
+			if (SHOW_DEBUG===true) {
+				menu_wrapper.classList.add('show_debug')
+			}
+			else if (SHOW_DEVELOPER===true) {
+				menu_wrapper.classList.add('show_developer')
+			}
 
 
 	return menu_wrapper
@@ -492,7 +517,6 @@ const item_hierarchy = (options) => {
 		// when the user do click publish the tipo to go and set the mode in list
 		// the action can be executed mainly in page, but it can be used for any instance.
 			link.addEventListener("click", e => {
-					console.warn("click item:",item);
 
 				// nonactive menu case
 				if (self.menu_active===false) {

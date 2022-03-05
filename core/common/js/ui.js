@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -114,7 +114,7 @@ export const ui = {
 			}
 
 			// short vars
-				const id			= instance.id || 'id is not set'
+				// const id			= instance.id || 'id is not set'
 				const model			= instance.model 	// like component_input-text
 				const type			= instance.type 	// like 'component'
 				const tipo			= instance.tipo 	// like 'rsc26'
@@ -135,8 +135,7 @@ export const ui = {
 					// default
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
-						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
-						inner_html		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+						inner_html		: label // + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
 					})
 					fragment.appendChild(component_label)
 					// css
@@ -151,7 +150,7 @@ export const ui = {
 				}
 
 			// buttons
-				if (items.buttons) {
+				if (items.buttons && instance.permissions>1) { // && instance.permissions>1
 					fragment.appendChild(items.buttons)
 				}
 
@@ -268,7 +267,9 @@ export const ui = {
 				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
-						event_manager.publish('active_component', instance)
+						if (!wrapper.classList.contains('active')) {
+							event_manager.publish('active_component', instance)
+						}
 					})
 
 				wrapper.appendChild(fragment)
@@ -614,16 +615,20 @@ export const ui = {
 							item_node.classList.add("active")
 						})
 
-					// fix nearby inspector overlaping
-						const el				= component.node[0]
-						const el_rect			= el.getBoundingClientRect();
-						// console.log("/// el el_rect:",el_rect);
-						const inspector			= document.getElementById('inspector')
-						const inspector_rect	= inspector.getBoundingClientRect();
-						// console.log("/// inspector_rect:",inspector_rect);
-
-						if (el_rect.right > inspector_rect.left-20) {
-							el.classList.add('inside')
+					// fix nearby inspector overlapping
+						const el = component.node[0]
+						if (el) {
+							const el_rect	= el.getBoundingClientRect();
+							const inspector	= document.getElementById('inspector')
+							if (inspector) {
+								const inspector_rect = inspector.getBoundingClientRect();
+								// console.log("/// inspector_rect:",inspector_rect);
+								if (inspector_rect.left > 50 // prevent affects responsive mobile view
+									&& el_rect.right > inspector_rect.left-20
+									) {
+									el.classList.add('inside')
+								}
+							}
 						}
 
 					return true
@@ -698,6 +703,8 @@ export const ui = {
 		*/
 		add_image_fallback : (img_node) => {
 
+			img_node.addEventListener("error", change_src, true)
+
 			function change_src(item) {
 
 				// remove onerror listener to avoid infinite loop (!)
@@ -708,8 +715,6 @@ export const ui = {
 
 				return true
 			}
-
-			img_node.addEventListener("error", change_src, true)
 
 
 			return true
@@ -983,34 +988,49 @@ export const ui = {
 
 			const fragment = new DocumentFragment()
 
-			// header
-				const tool_header = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_header ' + name,
-					parent			: fragment
-				})
-
-			// label
-				if (label!==null) {
-					// default
-					const component_label = ui.create_dom_element({
+			if (mode!=='mini') {
+				// header
+					const tool_header = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'label',
-						inner_html		: label,
-						parent			: tool_header
+						class_name		: 'tool_header ' + name,
+						parent			: fragment
 					})
-				}
 
-			// description
-				if (description!==null) {
-					// default
-					const component_description = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'description',
-						inner_html		: description,
-						parent			: tool_header
-					})
-				}
+				// label
+					if (label!==null) {
+						// default
+						const component_label = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'label',
+							inner_html		: label,
+							parent			: tool_header
+						})
+
+						// icon (optional)
+						if (context.icon) {
+							const icon = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button white', // gear
+								style : {
+									"-webkit-mask"	: "url('" +context.icon +"')",
+									"mask"			: "url('" +context.icon +"')"
+								}
+							})
+							component_label.prepend(icon)
+						}
+					}
+
+				// description
+					if (description!==null) {
+						// component_description
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'description',
+							inner_html		: description,
+							parent			: tool_header
+						})
+					}
+			}//end if (mode!=='mini')
 
 			// buttons
 				if (items.buttons) {
@@ -1078,8 +1098,9 @@ export const ui = {
 				})
 				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
 
+
 			// Events
-				tool_button.addEventListener('click', publish_load_tool)
+				tool_button.addEventListener('mousedown', publish_load_tool)
 				function publish_load_tool(e) {
 					e.stopPropagation();
 
@@ -1139,7 +1160,7 @@ export const ui = {
 					})
 				}
 			return tool_button
-		},//build_component_tool_button
+		}//build_component_tool_button
 
 
 
@@ -1176,7 +1197,7 @@ export const ui = {
 
 
 			return wrapper
-		},//end build_wrapper_edit
+		}//end build_wrapper_edit
 	},//end widget
 
 
@@ -1291,7 +1312,7 @@ export const ui = {
 			}
 
 		// value
-			if(value){
+			if(value!==undefined){
 				element.value = value
 			}
 
@@ -1535,7 +1556,7 @@ export const ui = {
 			const collapsed_table = 'status'
 
 		// content data state
-			data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
+			data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table, true)
 			.then(function(ui_status){
 
 				// (!) Note that ui_status only exists when element is collapsed
@@ -2046,8 +2067,8 @@ export const ui = {
 					const user_option = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'user_option ' + option.class_name,
-						parent			: footer,
-						text_content	: option.label
+						inner_html		: option.label,
+						parent			: footer
 					})
 					// add option_id property
 					user_option.option_id = option.id
@@ -2206,7 +2227,7 @@ export const ui = {
 	/**
 	* SET_BACKGROUND_IMAGE
 	*/
-	set_background_image : (image, target_node) =>{
+	set_background_image : (image, target_node) => {
 
 		const canvas	= document.createElement('canvas');
 		canvas.width	= image.width;
@@ -2246,7 +2267,108 @@ export const ui = {
 		image.classList.remove('loading')
 
 		return image
-	}//end set_background_image
+	},//end set_background_image
+
+
+
+	/**
+	* SET_PARENT_CHECKED_VALUE
+	* Set input check value based on direct children checked values
+	* Could be checked, unchecked or indeterminate
+	* @return bool
+	*/
+	set_parent_checked_value : (input_node, all_direct_children, callback) => {
+
+		// look children status until find checked value false
+			const all_children_checked = (()=>{
+
+				const all_direct_children_length = all_direct_children.length
+				for (let i = 0; i < all_direct_children_length; i++) {
+					if(all_direct_children[i].checked!==true) {
+						return false
+					}
+				}
+
+				return true
+			})()
+
+		// set checked value
+			if (all_children_checked===true) {
+				// full checked
+				input_node.indeterminate	= false
+				input_node.checked			= true
+			}else{
+				// intermediate
+				input_node.checked			= false
+				input_node.indeterminate	= true
+			}
+
+		// callback
+			if (callback) {
+				callback(input_node)
+			}
+
+		return true
+	},//end set_parent_checked_value
+
+
+
+	/**
+	* MAKE_COLUMN_RESPONSIVE
+	* @return bool
+	*/
+	make_column_responsive : function(options) {
+
+		// options
+			const selector	= options.selector // as '#column_id_rsc3652'
+			const label		= options.label
+
+		// strip label HTML tags
+			const label_node = document.createElement("div");
+			label_node.innerHTML = label;
+			const label_text = label_node.textContent || label_node.innerText || "";
+
+		const add_css_rule = function (selector, css) {
+
+			// create new styleSheet if not already exists
+			if (!window.css_style_sheet) {
+				const style = document.createElement("style");
+				style.type = 'text/css'
+				document.head.appendChild(style);
+				window.css_style_sheet = style.sheet;
+			}
+
+			const css_style_sheet	= window.css_style_sheet
+			const rules				= css_style_sheet.rules
+			const rules_length		= rules.length
+			for (let i = rules_length - 1; i >= 0; i--) {
+
+				const current_selector = rules[i].selectorText
+				if(current_selector===selector) {
+					// already exists
+					// console.warn("/// stop current_selector:",current_selector);
+					return false
+				}
+			}
+
+			const propText = typeof css==='string'
+				? css
+				: Object.keys(css).map(function (p) {
+					return p + ':' + (p==='content' ? "'" + css[p] + "'" : css[p]);
+				  }).join(';');
+			css_style_sheet.insertRule(selector + '{' + propText + '}', css_style_sheet.cssRules.length);
+
+			return true
+		};
+
+		// const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+		// if (width<960) {
+			// return add_css_rule(`#column_id_${column_id}::before`, {
+			return add_css_rule(`${selector}::before`, {
+				content	: label_text
+			});
+		// }
+	},//end make_column_responsive
 
 
 

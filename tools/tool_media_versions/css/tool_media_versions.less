@@ -1,0 +1,112 @@
+/**
+* TOOL_MEDIA_VERSIONS
+* Write here specific tool styles
+*/
+
+
+
+@import '../../../core/page/css/layout/vars.less';
+
+
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_media_versions {
+	padding: 1rem;
+
+	// av component container
+	.main_component_container {
+		// background-color: @color_grey_medium;
+		height: calc(404px + 3rem);
+		min-width: 720px;
+		width: 720px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+
+		@media screen and (max-width: @width_break_point_1) {
+			min-width: unset;
+			height: unset;
+		}
+
+		.wrapper_component.component_av {
+			// height: 404px;
+
+			.content_data {
+				justify-content: center;
+			}
+
+			video {
+				max-height: 404px;
+			}
+		}
+	}
+
+
+	// content_data
+	>.content_data {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		// display: grid;
+		// grid-template-rows: 1fr 1fr;
+
+
+		// versions_container. grid of quality versions and options
+		>.versions_container {
+			// background-color: #a8b9e2;
+			display: grid;
+			margin: 1rem;
+			margin-top: 1.5rem;
+			color: #aaa;
+			background-color: #fafafa;
+			width: 100%;
+			max-width: 1600px;
+			overflow: auto;
+
+			// @media screen and (max-width: @width_break_point_1) {
+			// 	grid-template-columns: auto !important;
+			// }
+
+			>.label, >.file_info {
+				border-bottom: 1px solid #eeeeee;
+				padding: 0.60rem;
+			}
+
+			>.label {
+				text-transform: capitalize;
+			}
+
+			.file_info {
+				text-align: center;
+
+				>span {
+					color: #525252;
+					font-size: 0.9rem;
+
+					&.button {
+						font-size: 1.1rem;
+						background-color: #767676;
+					}
+				}
+
+				&.default {
+					background-color: #f2f2f2;
+				}
+			}
+
+		}
+
+
+	}//end content_data
+
+
+
+}//end wrapper_tool
+
+
+
+// modal header tool modification
+	.tool_header.tool_media_versions {
+		background-color: #a24540;
+	}

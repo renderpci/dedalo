@@ -18,7 +18,7 @@
 * Tool to translate contents from one language to the rest of the configured languages in any text component
 */
 export const tool_lang_multi = function () {
-	
+
 	this.id				= null
 	this.model			= null
 	this.mode			= null
@@ -45,6 +45,7 @@ export const tool_lang_multi = function () {
 // prototypes assign
 	tool_lang_multi.prototype.render	= common.prototype.render
 	tool_lang_multi.prototype.destroy	= common.prototype.destroy
+	tool_lang_multi.prototype.refresh	= common.prototype.refresh
 	tool_lang_multi.prototype.edit		= render_tool_lang_multi.prototype.edit
 
 
@@ -57,7 +58,7 @@ tool_lang_multi.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// langs
 		const lang	= options.lang || page_globals.dedalo_data_lang
@@ -93,8 +94,6 @@ tool_lang_multi.prototype.build = async function(autoload=false) {
 	// main_component. fix main_component for convenience
 		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
 		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
-
-	// specific actions..
 
 
 	return common_build

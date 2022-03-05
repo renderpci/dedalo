@@ -10,18 +10,18 @@
 
 
 /**
-* RENDER_tool_indexation
+* RENDER_TOOL_INDEXATION
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_indexation = function() {
-	
+
 	return true
 };//end render_tool_indexation
 
 
 
 /**
-* RENDER_tool_indexation
+* EDIT
 * Render node for use like button
 * @return DOM node
 */
@@ -55,7 +55,7 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 				}
 		}
 
-	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation		
+	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
 		header.appendChild(related_list_node)
 
@@ -81,7 +81,7 @@ const get_tag_info = function(self) {
 	let tag_id	= ''
 
 	const info_container = self.info_container
-	
+
 	// clean previous nodes
 		while (info_container.lastChild) {
 			info_container.removeChild(info_container.lastChild)
@@ -134,7 +134,7 @@ const get_tag_info = function(self) {
 			for (let k = 0; k < states.length; k++) {
 				ui.create_dom_element({
 					element_type	: 'option',
-					text_content	: states[k].label,
+					inner_html		: states[k].label,
 					value			: states[k].value,
 					parent			: tag_state_selector
 				})
@@ -170,7 +170,7 @@ const get_tag_info = function(self) {
 				inner_html		: get_label.borrar,
 				parent			: wrap_delete_tag
 			})
-			
+
 
 	// active values
 		self.active_value("tag_id", function(value){
@@ -178,7 +178,7 @@ const get_tag_info = function(self) {
 			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
 			button_delete_label.textContent	= get_label.borrar + " " + value // update delete label
-			
+
 
 			if (self.info_container.classList.contains('hide')) {
 				self.info_container.classList.remove('hide')
@@ -220,7 +220,7 @@ const get_content_data_edit = async function(self) {
 			thesaurus_container.appendChild(node)
 		})
 
-	// right_container 
+	// right_container
 		const right_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'right_container',
@@ -326,7 +326,7 @@ export const add_component = async (self, component_container, value) => {
 
 /**
 * RENDER_RELATED_LIST
-* This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation	
+* This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 */
 const render_related_list = function(self){
 
@@ -352,7 +352,7 @@ const render_related_list = function(self){
 		const value			= sections.value
 		const value_length	= value.length
 		for (let i = 0; i < value_length; i++) {
-			
+
 			const current_locator = {
 				section_top_tipo	: value[i].section_tipo,
 				section_top_id		: value[i].section_id

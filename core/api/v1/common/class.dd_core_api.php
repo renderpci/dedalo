@@ -42,6 +42,201 @@ class dd_core_api {
 
 
 	/**
+	* START
+	* Builds the start page minimun context
+	* @return array $result
+	*/
+	static function start($json_data) {
+		global $start_time;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// options
+			$search_obj = $json_data->search_obj ?? new StdClass(); // url vars
+
+		// bootstrap context
+
+		// page mode and tipo
+			$default_section_tipo = 'test38';
+			if (isset($search_obj->locator)) {
+				$locator	= json_decode($search_obj->locator);
+				$tipo		= $locator->section_tipo ?? $default_section_tipo;
+				$section_id	= $locator->section_id ?? null;
+				$mode		= $locator->mode ?? 'list';
+			}else{
+				$tipo		= $search_obj->t	?? $search_obj->tipo		?? $default_section_tipo; //MAIN_FALLBACK_SECTION;
+				$section_id	= $search_obj->id	?? $search_obj->section_id	?? null;
+				$mode		= $search_obj->m	?? $search_obj->mode		?? 'list';
+			}
+
+		// context
+			$context = [];
+			if (login::is_logged()!==true) {
+
+				// not logged case
+
+				// check_basic_system (lang and structure files)
+					$is_system_ready = check_basic_system();
+					if ($is_system_ready->result===false) {
+						return $is_system_ready;
+					}
+
+				// page context elements [login]
+					$login = new login();
+
+				// add to page context
+					$context[] = $login->get_structure_context();
+
+			}else{
+
+				// logged case
+
+				$initiator = $search_obj->initiator ?? false;
+
+				// menu. Get the mandatory menu element
+					if ($initiator===false) {
+
+						$menu = new menu();
+						$menu->set_lang(DEDALO_DATA_LANG);
+
+						// add to page context
+							$context[] = $menu->get_structure_context();
+					}
+
+				// section/area/tool. Get the page element from get url vars
+					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					switch (true) {
+
+						case ($model==='section_tool'):
+
+							$section_tool_tipo = $tipo;
+
+							$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
+							$properties		= $RecordObj_dd->get_properties();
+
+							// overwrite (!)
+								$model	= 'section';
+								$tipo	= $properties->config->target_section_tipo ?? $tipo;
+								$config	= $properties->config ?? null;
+
+							// tool_context
+								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
+									? array_key_first(get_object_vars($properties->tool_config))
+									: false;
+								if ($tool_name) {
+									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
+									if (empty($ar_tool_object)) {
+										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
+									}else{
+										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
+										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+										$config->tool_context = $tool_context;
+										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+									}
+								}
+							// (!) note non break switch here. Continue with overwriten section tipo
+
+						case ($model==='section'):
+
+							$section = section::get_instance($section_id, $tipo, $mode);
+							$section->set_lang(DEDALO_DATA_LANG);
+
+							$current_context = $section->get_structure_context(1, true);
+
+							// section_id given case. If is received section_id, we build a custom sqo with the proper filter
+							// and override default request_config sqo into the section context
+							if (!empty($section_id)) {
+
+								$current_context->mode			= 'edit'; // force edit mode
+								$current_context->section_id	= $section_id; // set section_id in context
+
+								// request_config
+									$request_config = array_find($current_context->request_config, function($el){
+										return $el->api_engine==='dedalo';
+									});
+									if (!empty($request_config)) {
+										// sqo
+											$sqo = new search_query_object();
+											$sqo->set_section_tipo([(object)[
+												'tipo'	=> $tipo,
+												'label'	=> ''
+											]]);
+											$sqo->set_filter_by_locators([(object)[
+												'section_tipo'	=> $tipo,
+												'section_id'	=> $section_id
+											]]);
+
+										// overwrite default sqo
+										$request_config->sqo = $sqo;
+									}
+							}//end if (!empty($section_id))
+
+							// add to page context
+								$context[] = $current_context;
+							break;
+
+						case ($model==='area_thesaurus'):
+
+							$area = area::get_instance($model, $tipo, $mode);
+							$area->set_lang(DEDALO_DATA_LANG);
+
+							// add to page context
+								$current_context = $area->get_structure_context(1, true);
+
+								if (isset($search_obj->thesaurus_mode)) {
+									$current_context->thesaurus_mode = $search_obj->thesaurus_mode;
+								}
+								if (isset($search_obj->hierarchy_types)) {
+									$current_context->hierarchy_types = json_decode($search_obj->hierarchy_types);
+								}
+								if (isset($search_obj->hierarchy_sections)) {
+									$current_context->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
+								}
+								if (isset($search_obj->hierarchy_terms)) {
+									$current_context->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
+								}
+
+							// add to page context
+								$context[] = $current_context;
+							break;
+
+						case (strpos($model, 'area')===0):
+
+							$area = area::get_instance($model, $tipo, $mode);
+							$area->set_lang(DEDALO_DATA_LANG);
+
+							$current_context =$area->get_structure_context(1, true);
+
+							// add to page context
+								$context[] = $current_context;
+							break;
+
+						default:
+							// ..
+							break;
+					}//end switch (true)
+			}//end if (login::is_logged()!==true)
+
+
+		$response->result	= $context;
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
+
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end start
+
+
+
+	/**
 	* CREATE
 	* @return array $result
 	*/
@@ -80,7 +275,7 @@ class dd_core_api {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					foreach($vars as $name) {
 						$debug->{$name} = $$name;
 					}
@@ -127,10 +322,11 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
 
 				$response->debug = $debug;
 			}
+
 
 		return (object)$response;
 	}//end read
@@ -211,6 +407,11 @@ class dd_core_api {
 						$component->pagination->offset = $pagination->offset;
 					}
 
+				// datalist. if is received, inject to the component for recycle
+					if (isset($json_data->data->datalist)) {
+						$component->datalist = $json_data->data->datalist;
+					}
+
 				// element JSON
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 	= true;
@@ -239,7 +440,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					$debug->json_data 	= $json_data;
 
 				$response->debug = $debug;
@@ -319,7 +520,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					$debug->json_data 	= $json_data;
 
 				$response->debug = $debug;
@@ -366,7 +567,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$result->debug  = $result->debug ?? new stdClass();
-				$result->debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+				$result->debug->exec_time = exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $result;
@@ -396,7 +597,7 @@ class dd_core_api {
 			$source			= $json_data->source;
 
 			$tipo			= $source->tipo ?? null;
-			$section_tipo	= $source->section_tipo ?? $source->tipo;
+			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
 			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
@@ -409,18 +610,18 @@ class dd_core_api {
 					break;
 
 				// case $model==='section_tm':
-				// 	$section_id 	= $source->section_id;
-				// 	$element 		= section_tm::get_instance($section_id, $section_tipo);
-				// 	// set rqo (source)
-				// 	$element->set_rqo([$source]); // inject whole source
-				// 	break;
+					// 	$section_id 	= $source->section_id;
+					// 	$element 		= section_tm::get_instance($section_id, $section_tipo);
+					// 	// set rqo (source)
+					// 	$element->set_rqo([$source]); // inject whole source
+					// 	break;
 
 				case strpos($model, 'area')===0:
 					$element = area::get_instance($model, $tipo, $mode);
-
 					break;
 
-				case strpos($model, 'component_')!==false:
+				case strpos($model, 'component_')===0:
+
 					$RecordObj_dd	= new RecordObj_dd($tipo);
 					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
@@ -432,11 +633,26 @@ class dd_core_api {
 															  $section_tipo);
 					break;
 
-				case strpos($model, 'tool_')!==false:
+				case strpos($model, 'tool_')===0:
+
+					// tool section_tipo and section_id can be resolved from model if is necessary
+						if (empty($section_id) || empty($section_id)) {
+							// resolve
+							$registered_tools = tool_common::get_client_registered_tools();
+							$tool_found = array_find($registered_tools, function($el) use($model){
+								return $el->name===$model;
+							});
+							if (!empty($tool_found)) {
+								$section_tipo	= $tool_found->section_tipo;
+								$section_id		= $tool_found->section_id;
+							}else{
+								debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+							}
+						}
 
 					$element = new tool_common($section_id, $section_tipo);
-
 					break;
+
 				default:
 					#throw new Exception("Error Processing Request", 1);
 					$response->msg = 'Error. model not found: '.$model;
@@ -663,12 +879,12 @@ class dd_core_api {
 		$filter_components = common::get_section_elements_context([
 			'ar_section_tipo'	=> $ar_section_tipo,
 			'context_type'		=> $context_type
-		]);			
+		]);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $filter_components;
@@ -678,7 +894,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					$debug->json_data	= $json_data;
 				$response->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
@@ -711,7 +927,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $editing_preset;
@@ -742,7 +958,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $save_temp_preset;
@@ -774,7 +990,7 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
 		$response->result	= $filter_components;
@@ -787,32 +1003,34 @@ class dd_core_api {
 
 	/**
 	* ONTOLOGY_GET_CHILDREN_RECURSIVE
+	*
+	* @param object $json_data
 	* @return object $response
 	*/
-		// static function ontology_get_children_recursive($json_data){
-		// 	global $start_time;
+	static function ontology_get_children_recursive($json_data){
+		global $start_time;
 
-		// 	// session_write_close();
+		// session_write_close();
 
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// 		$target_tipo = $json_data->target_tipo;
+		// ontology call
+			$target_tipo	= $json_data->target_tipo;
+			$children		= ontology::get_children_recursive($target_tipo);
 
-		// 		$childrens = ontology::get_children_recursive($target_tipo);
+		// debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = new stdClass();
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
+			}
 
-		// 	// Debug
-		// 		if(SHOW_DEBUG===true) {
-		// 			$response->debug = new stdClass();
-		// 				$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-		// 		}
+		$response->result	= $children;
+		$response->msg		= 'Ok. Request done';
 
-		// 	$response->result	= $childrens;
-		// 	$response->msg		= 'Ok. Request done';
-
-		// 	return (object)$response;
-		// }//end ontology_get_areas
+		return (object)$response;
+	}//end ontology_get_areas
 
 
 
@@ -830,8 +1048,8 @@ class dd_core_api {
 
 		// default result
 			$result = new stdClass();
-				$result->context = [];
-				$result->data 	 = [];
+				$result->context	= [];
+				$result->data		= [];
 
 		// fix rqo
 			dd_core_api::$rqo = $rqo;
@@ -856,7 +1074,6 @@ class dd_core_api {
 			// 	$ddo_source = reset($ar_source);
 
 
-
 		// source vars
 			$action			= $ddo_source->action ?? 'search';
 			$mode			= $ddo_source->mode ?? 'list';
@@ -867,67 +1084,77 @@ class dd_core_api {
 			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 
 
-		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values 
-			$sqo_id	= implode('_', [$model,$section_tipo]);
+		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values
+			$sqo_id	= implode('_', [$model, $section_tipo]);
 			$sqo	= !empty($rqo->sqo)
 				? $rqo->sqo
 				: (($model==='section' && ($mode==='edit' || $mode==='list') && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]))
 					? $_SESSION['dedalo']['config']['sqo'][$sqo_id]
 					: (function() use($model, $tipo, $section_tipo, $section_id, $mode, $rqo, $sqo_id, $start_time) {
 
-						//get the limit from the show
-						if (isset($rqo->show) && isset($rqo->show->sqo_config->limit)) {
-							$limit = $rqo->show->sqo_config->limit;
-						}else{
-							// user preset check (defined sqo limit)
-							$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, navigator::get_user_id(), $mode, $view=null);
-							if (!empty($user_preset)) {
-								$user_preset_rqo = $user_preset->rqo;
-								if ($user_preset_rqo && isset($user_preset_rqo->show->sqo_config->limit)) {
-									$limit = $user_preset_rqo->show->sqo_config->limit;
-								}
-							}
-						}
+						// limit. get the limit from the show
+							$limit = (isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+								? $rqo->show->sqo_config->limit
+								: (function() use($tipo, $section_tipo, $mode){
+									// user preset check (defined sqo limit)
+									$user_preset = layout_map::search_user_preset_layout_map(
+										$tipo,
+										$section_tipo,
+										navigator::get_user_id(),
+										$mode,
+										$view=null
+									);
+									if (!empty($user_preset)) {
+										$user_preset_rqo = $user_preset->rqo;
+										if (isset($user_preset_rqo) && isset($user_preset_rqo->show->sqo_config->limit)) {
+											$limit = $user_preset_rqo->show->sqo_config->limit;
+										}
+									}
+									return $limit ?? ($mode==='list' ? 10 : 1);
+								  })();
+
+						// offset . reset to zero
+							$offset	= 0;
 
 						// build the new sqo from show or user preset
-						$limit	= $limit ?? ($mode==='list' ? 10 : 1);
-						$offset	= 0;
 
-						// $sqo_options = new stdClass();
-						// 	$sqo_options->id			= $sqo_id;
-						// 	$sqo_options->mode			= $mode;
-						// 	$sqo_options->section_tipo	= [$section_tipo];
-						// 	$sqo_options->tipo			= $section_tipo;
-						// 	$sqo_options->full_count	= false;
-						// 	$sqo_options->add_select	= false;
-						// 	$sqo_options->limit			= $limit;
-						// 	$sqo_options->offset		= $offset;
-						// 	$sqo_options->direct		= true;
-						// 	// filter_by_locators. when section_id is received
+						// des
+							// $sqo_options = new stdClass();
+							// 	$sqo_options->id			= $sqo_id;
+							// 	$sqo_options->mode			= $mode;
+							// 	$sqo_options->section_tipo	= [$section_tipo];
+							// 	$sqo_options->tipo			= $section_tipo;
+							// 	$sqo_options->full_count	= false;
+							// 	$sqo_options->add_select	= false;
+							// 	$sqo_options->limit			= $limit;
+							// 	$sqo_options->offset		= $offset;
+							// 	$sqo_options->direct		= true;
+							// 	// filter_by_locators. when section_id is received
 
-						// 	if (!empty($section_id)) {
-						// 		$self_locator = new locator();
-						// 			$self_locator->set_section_tipo($section_tipo);
-						// 			$self_locator->set_section_id($section_id);
-						// 		$sqo_options->filter_by_locators = [$self_locator];
+							// 	if (!empty($section_id)) {
+							// 		$self_locator = new locator();
+							// 			$self_locator->set_section_tipo($section_tipo);
+							// 			$self_locator->set_section_id($section_id);
+							// 		$sqo_options->filter_by_locators = [$self_locator];
 
-						// 	}
-						// $sqo = common::build_search_query_object($sqo_options);
-						
-						$sqo = new search_query_object();
-							$sqo->set_id($sqo_id);
-							$sqo->set_mode($mode);
-							$sqo->set_section_tipo([$section_tipo]);							
-							$sqo->set_limit($limit);
-							$sqo->set_offset($offset);
+							// 	}
+							// $sqo = common::build_search_query_object($sqo_options);
 
-							if (!empty($section_id)) {
-								$self_locator = new locator();
-									$self_locator->set_section_tipo($section_tipo);
-									$self_locator->set_section_id($section_id);
-								$sqo->set_filter_by_locators([$self_locator]);
-							}
-						
+						// sqo create
+							$sqo = new search_query_object();
+								$sqo->set_id($sqo_id);
+								$sqo->set_mode($mode);
+								$sqo->set_section_tipo([$section_tipo]);
+								$sqo->set_limit($limit);
+								$sqo->set_offset($offset);
+
+								if (!empty($section_id)) {
+									$self_locator = new locator();
+										$self_locator->set_section_tipo($section_tipo);
+										$self_locator->set_section_id($section_id);
+									$sqo->set_filter_by_locators([$self_locator]);
+								}
+
 						// tm case
 							// if ($mode==='tm') {
 							// 	$search_query_object->order = json_decode('[{"direction": "DESC","path": [{"component_tipo": "id"}]}]');
@@ -944,8 +1171,8 @@ class dd_core_api {
 							// dump($search_query_object, ' search_query_object 2 (autogenerated) ++ '.to_string());
 
 						// debug
-							// error_log("------------------------- build_json_rows sqo ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
-					
+							// error_log("------------------------- build_json_rows sqo ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+
 						return $sqo;
 					  })());
 
@@ -956,7 +1183,7 @@ class dd_core_api {
 			// 	switch ($action) {
 
 			// 		case 'search': // example use: get section records in list or edit mode, search in autocomplete service
-						
+
 			// 			// sections
 			// 				$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
@@ -986,11 +1213,11 @@ class dd_core_api {
 			// 			}else if(strpos($model, 'area')===0) {
 			// 				// area
 			// 					$element = area::get_instance($model, $tipo, $mode);
-			// 			}else{							
+			// 			}else{
 			// 				// others
 			// 					// get data model not defined
-			// 					debug_log(__METHOD__." WARNING context:get_data model not defined for ".to_string($model), logger::WARNING);						
-			// 			}						
+			// 					debug_log(__METHOD__." WARNING context:get_data model not defined for ".to_string($model), logger::WARNING);
+			// 			}
 			// 			break;
 
 			// 		default:
@@ -1017,18 +1244,18 @@ class dd_core_api {
 			// 	// fix final static var context
 			// 		// dd_core_api::$context = $context;
 
-			// $context_exec_time	= exec_time_unit($start_time,'ms')." ms";
+			// $context_exec_time	= exec_time_unit($start_time,'ms').' ms';
 
 
 		// DATA
 			// $data = [];
 
 				$data_start_time=microtime(1);
-				
+
 				unset($element);
 
 				switch ($action) {
-					
+
 					case 'search': // Used by section and service autocomplete
 
 						// if ($model==='section'){
@@ -1063,37 +1290,42 @@ class dd_core_api {
 								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							}
 						break;
-					
+
 					case 'get_data': // Used by components and areas
 
 						if (strpos($model, 'component')===0) {
 
-							// component
-								$RecordObj_dd	= new RecordObj_dd($tipo);
-								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-								$element		= component_common::get_instance($model,
-																				 $tipo,
-																				 $section_id,
-																				 $mode,
-																				 $component_lang,
-																				 $section_tipo);
-								if ($mode==='tm') {
-									// set matrix_id value to component to allow it search dato in
-									// matrix_time_machine component function 'get_dato' will be
-									// overwritten to get time machine dato instead the real dato
-									$element->matrix_id = $ddo_source->matrix_id;
-								}
-								// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
+							if ($section_id>=1) {
+								// invalid call
+								debug_log(__METHOD__." WARNING data:get_data invalid section_id ", logger::WARNING);
 
-							// pagination. fix pagination vars (defined in class component_common)
-								if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
-									$pagination = new stdClass();
-										$pagination->limit	= $rqo->sqo->limit;
-										$pagination->offset	= $rqo->sqo->offset;
+								// component
+									$RecordObj_dd	= new RecordObj_dd($tipo);
+									$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+									$element		= component_common::get_instance($model,
+																					 $tipo,
+																					 $section_id,
+																					 $mode,
+																					 $component_lang,
+																					 $section_tipo);
+									if ($mode==='tm') {
+										// set matrix_id value to component to allow it search dato in
+										// matrix_time_machine component function 'get_dato' will be
+										// overwritten to get time machine dato instead the real dato
+										$element->matrix_id = $ddo_source->matrix_id;
+									}
+									// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
 
-									$element->pagination = $pagination;
-								}
-						
+								// pagination. fix pagination vars (defined in class component_common)
+									if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
+										$pagination = new stdClass();
+											$pagination->limit	= $rqo->sqo->limit;
+											$pagination->offset	= $rqo->sqo->offset;
+
+										$element->pagination = $pagination;
+									}
+							}//end if ($section_id>=1)
+
 						}else if (strpos($model, 'area')===0) {
 
 							// areas
@@ -1129,7 +1361,7 @@ class dd_core_api {
 					case 'resolve_data': // Used by components in search mode like portals to resolve locators data
 
 						if (strpos($model, 'component')===0) {
-							
+
 							// component
 								$RecordObj_dd	= new RecordObj_dd($tipo);
 								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
@@ -1150,7 +1382,7 @@ class dd_core_api {
 										$pagination->offset	= $rqo->sqo->offset;
 
 									$element->pagination = $pagination;
-								}						
+								}
 
 						}else{
 
@@ -1193,13 +1425,16 @@ class dd_core_api {
 							// 	dump($ar_all_section_id, ' ar_all_section_id ++ '.to_string());
 
 					}//end if (isset($element))
-
+					else {
+						debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ".to_string(), logger::WARNING);
+						$context = $data = [];
+					}
 
 
 			// smart remove data duplicates (!)
 				#$data = self::smart_remove_data_duplicates($data);
 
-			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
+			$data_exec_time	= exec_time_unit($data_start_time,'ms').' ms';
 
 				// dump($context, ' context ++ '.to_string());
 				// dump($data, ' data ++ '.to_string());
@@ -1208,7 +1443,6 @@ class dd_core_api {
 			$result->context = $context;
 			$result->data 	 = $data;
 
-
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
@@ -1216,12 +1450,12 @@ class dd_core_api {
 					// $debug->rqo					= $rqo;
 					// $debug->context_exec_time	= $context_exec_time;
 					$debug->data_exec_time			= $data_exec_time;
-					$debug->exec_time				= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time				= exec_time_unit($start_time,'ms').' ms';
 					$debug->memory_usage			= dd_memory_usage();
 				$result->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
 			}
-			
+
 		return $result;
 	}//end build_json_rows
 

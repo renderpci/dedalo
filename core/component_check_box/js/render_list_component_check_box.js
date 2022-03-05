@@ -42,7 +42,7 @@ render_list_component_check_box.prototype.list = async function() {
 		const value_string = value.join(self.divisor)
 
 	// Set value
-		wrapper.textContent = value_string
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper

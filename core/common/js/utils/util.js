@@ -150,6 +150,32 @@ export function object_to_url_vars( vars_obj ) {
 
 
 /**
+* URL_VARS_TO_OBJECT
+* @param string query_string
+* @return object vars_obj
+*/
+export function url_vars_to_object(query_string) {
+
+	// parse query string
+	const params = new URLSearchParams(query_string);
+
+	const vars_obj = {};
+
+	// iterate over all keys
+	for (const key of params.keys()) {
+		if (params.getAll(key).length > 1) {
+			vars_obj[key] = params.getAll(key);
+		} else {
+			vars_obj[key] = params.get(key);
+		}
+	}
+
+	return vars_obj;
+}//end url_vars_to_object
+
+
+
+/**
 * OPEN_WINDOW_WITH_POST
 * @return bool false
 */
@@ -175,4 +201,91 @@ export function open_window_with_post(url, data) {
 	document.body.removeChild(form);
 
 	return false;
-};//end
+};//end open_window_with_post
+
+
+
+/**
+* BYTES_FORMAT
+* Convert bytes to human readable text like '152 kB'
+* @param integer bytes
+* @return bool string | bool false
+*/
+export function bytes_format(bytes) {
+
+	if (!bytes || bytes<1) {
+		return false
+	}
+
+	const kb		= (bytes/1024)
+	const _locale	= 'en-US'
+
+	let result
+	switch (true) {
+
+		case (kb >= 1048576):
+			// Giga Bytes
+			const gb = (kb / 1048576).toLocaleString(_locale, {
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 2
+			})
+			result = `${gb} GB`
+			break;
+
+		case (kb >= 1024):
+			// Mega Bytes
+			const mb = (kb / 1024).toLocaleString(_locale, {
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 2
+			})
+			result = `${mb} MB`
+			break;
+
+		default:
+			// KBytes
+			const kb_round = Math.round(kb)
+			result = `${kb_round} KB`
+	}
+
+	return result
+};//end bytes_format
+
+
+
+/**
+* PRINTF
+* JavaScript equivalent to printf/String.Format
+* Tokens '{0}', '{1}', etc. will be replaced by arguments preserving order
+* Example: 'The content of {0} records from {1}' => 'The content of 25 records from 12'
+* @param mixed format
+* 	Like: 'The content of {0} records from {1}', 25, 12
+* @return string
+*/
+export function printf(format) {
+
+	const args = Array.prototype.slice.call(arguments, 1);
+
+	return format.replace(/{(\d+)}/g, function(match, number) {
+		return typeof args[number] != 'undefined'
+			? args[number]
+			: match
+	})
+};//end printf
+
+
+
+/**
+* STRIP_TAGS
+* @param string value
+* @return string text_clean
+*/
+export function strip_tags(value) {
+
+	const aux_node = document.createElement("div")
+	aux_node.insertAdjacentHTML('afterbegin', value)
+	const text_clean = aux_node.textContent || aux_node.innerText || "";
+
+	return text_clean;
+}//end strip_tags
+
+

@@ -20,6 +20,7 @@ class component_pdf extends component_media_common {
 	public $PdfObj ; # Instance of PdfObj with current data
 
 
+
 	# COMPONENT_PDF COSNTRUCT
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
@@ -80,6 +81,7 @@ class component_pdf extends component_media_common {
 	}//end Save
 
 
+
 	/**
 	* GET_ADITIONAL_PATH
 	* Calculate image aditional path from 'properties' json config.
@@ -131,7 +133,8 @@ class component_pdf extends component_media_common {
 		}
 
 		return $this->aditional_path = $ar_aditional_path[$this->pdf_id];
-	}
+	}//end get_aditional_path
+
 
 
 	/**
@@ -153,14 +156,18 @@ class component_pdf extends component_media_common {
 			$this->initial_media_path = false;
 		}
 		return $this->initial_media_path;
-	}
+	}//end get_initial_media_path
+
 
 
 	# GET DATO : Format
 	public function get_dato() {
+
 		$dato = parent::get_dato();
+
 		return $dato;
-	}
+	}//end get_dato
+
 
 
 	# SET_DATO
@@ -168,6 +175,7 @@ class component_pdf extends component_media_common {
 
 		parent::set_dato( $dato );
 	}//end set_dato
+
 
 
 	/**
@@ -181,6 +189,7 @@ class component_pdf extends component_media_common {
 	}//end get_valor
 
 
+
 	/**
 	* GET_ID
 	* Alias of get_pdf_id
@@ -189,6 +198,7 @@ class component_pdf extends component_media_common {
 
 		return $this->get_pdf_id();
 	}//end get_id
+
 
 
 	/**
@@ -221,17 +231,32 @@ class component_pdf extends component_media_common {
 
 
 		return $this->pdf_id = $pdf_id;
-	}
+	}//end get_pdf_id
+
 
 
 	/**
-	* GET QUALITY
+	* GET_DEFAULT_QUALITY
 	*/
-	public function get_quality() {
-		if(!isset($this->quality))	return DEDALO_PDF_QUALITY_DEFAULT;
+	public function get_default_quality() {
 
-		return $this->quality;
-	}
+		return DEDALO_PDF_QUALITY_DEFAULT;
+	}//end get_default_quality
+
+
+
+	/**
+	* GET_AR_QUALITY
+	* Get the list of defined image qualities in Dédalo config
+	* @return array $ar_image_quality
+	*/
+	public function get_ar_quality() {
+
+		$ar_image_quality = unserialize(DEDALO_PDF_AR_QUALITY);
+
+		return $ar_image_quality;
+	}//end get_ar_quality
+
 
 
 	/**
@@ -239,8 +264,9 @@ class component_pdf extends component_media_common {
 	*/
 	public function get_target_filename() {
 
-		return $this->pdf_id .'.'. DEDALO_PDF_EXTENSION ;
-	}
+		return $this->pdf_id .'.'. $this->get_extension() ;
+	}//end get_target_filename
+
 
 
 	/**
@@ -250,7 +276,8 @@ class component_pdf extends component_media_common {
 
 		#return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();
-	}// end get_target_dir
+	}//end get_target_dir
+
 
 
 	/**
@@ -281,7 +308,7 @@ class component_pdf extends component_media_common {
 			$PdfObj->set_quality($quality);
 
 		// url
-			$url = $PdfObj->get_media_path() . $pdf_id .'.'. DEDALO_PDF_EXTENSION;
+			$url = $PdfObj->get_media_path() .'/'. $pdf_id .'.'. $this->get_extension();
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
@@ -304,31 +331,39 @@ class component_pdf extends component_media_common {
 	}//end get_pdf_url
 
 
+
 	/**
-	* GET_PDF_PATH complete absolute file path like '/Users/myuser/works/Dedalo/pdf/standar/dd152-1.pdf'
+	* GET_URL
+	* 	Variant of get_pdf_url. Is not exactly the same
+	*/
+	public function get_url($quality=false) {
+
+		$url = $this->get_pdf_url($quality, $test_file=false, $absolute=false, $default_add=false);
+
+		return $url;
+	}//end get_url
+
+
+
+	/**
+	* GET_PATH complete absolute file path like '/Users/myuser/works/Dedalo/pdf/standar/dd152-1.pdf'
 	* @param string $quality default false
 	* @return string $pdf_path
 	*/
-	public function get_pdf_path($quality=false) {
-		/*
-		if(!$quality) {
-		$quality 	= $this->get_quality();
-		}
+	public function get_path($quality=false) {
 
-		$pdf_id 	= $this->get_pdf_id();
-		$pdf_path 	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $quality . '/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
-
-		return $pdf_path;
-		*/
-		if(!$quality) {
-		$quality = $this->get_quality();
+		if(empty($quality)) {
+			$quality = $this->get_quality();
 		}
 
 		$PdfObj = $this->PdfObj;
 		$PdfObj->set_quality($quality);
 
-		return $PdfObj->get_local_full_path();
-	}
+		$path = $PdfObj->get_local_full_path();
+
+		return $path;
+	}//end get_path
+
 
 
 	/**
@@ -342,7 +377,8 @@ class component_pdf extends component_media_common {
 		$pdf_id 	= $this->get_pdf_id();
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
 		return $PdfObj->get_size();
-	}
+	}//end get_pdf_size
+
 
 
 	/**
@@ -356,7 +392,7 @@ class component_pdf extends component_media_common {
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
 
 		return $PdfObj->get_file_exists();
-	}
+	}//end get_file_exists
 
 
 
@@ -366,42 +402,42 @@ class component_pdf extends component_media_common {
 	* Is triggered wen section tha contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
-	public function remove_component_media_files() {
+		// public function remove_component_media_files() {
 
-		$date=date("Y-m-d_Hi");
+		// 	$date=date("Y-m-d_Hi");
 
-		#
-		# PDF remove
-		$ar_quality = (array)unserialize(DEDALO_PDF_AR_QUALITY);
-		foreach ($ar_quality as $current_quality) {
-			# media_path
-			$media_path = $this->get_pdf_path($current_quality);
+		// 	#
+		// 	# PDF remove
+		// 	$ar_quality = (array)unserialize(DEDALO_PDF_AR_QUALITY);
+		// 	foreach ($ar_quality as $current_quality) {
+		// 		# media_path
+		// 		$media_path = $this->get_path($current_quality);
 
-			if (!file_exists($media_path)) continue; # Skip
+		// 		if (!file_exists($media_path)) continue; # Skip
 
-			# move / rename file
-			#$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $current_quality . '/deleted';
-			$folder_path_del 	= $this->get_target_dir()  . 'deleted';
+		// 		# move / rename file
+		// 		#$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $current_quality . '/deleted';
+		// 		$folder_path_del 	= $this->get_target_dir()  . 'deleted';
 
-			# delete folder exists ?
-			if( !is_dir($folder_path_del) ) {
-			$create_dir 	= mkdir($folder_path_del, 0777,true);
-			if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
-			}
+		// 		# delete folder exists ?
+		// 		if( !is_dir($folder_path_del) ) {
+		// 		$create_dir 	= mkdir($folder_path_del, 0777,true);
+		// 		if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
+		// 		}
 
-			$pdf_id 			= $this->get_pdf_id();
-			$media_path_moved 	= $folder_path_del . "/$pdf_id" . '_deleted_' . $date . '.' . DEDALO_PDF_EXTENSION;
-			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+		// 		$pdf_id 			= $this->get_pdf_id();
+		// 		$media_path_moved 	= $folder_path_del . "/$pdf_id" . '_deleted_' . $date . '.' . DEDALO_PDF_EXTENSION;
+		// 		if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 
-			if(SHOW_DEBUG===true) {
-				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-				error_log($msg);
-			}
-		}//end foreach
+		// 		if(SHOW_DEBUG===true) {
+		// 			$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
+		// 			error_log($msg);
+		// 		}
+		// 	}//end foreach
 
 
-		return true;
-	}//end remove_component_media_files
+		// 	return true;
+		// }//end remove_component_media_files
 
 
 
@@ -422,7 +458,7 @@ class component_pdf extends component_media_common {
 			$media_path = $this->get_target_dir().'/deleted';
 			$pdf_id 	= $this->get_pdf_id();
 
-			$file_pattern 	= $media_path.'/'.$pdf_id.'_*.'.DEDALO_PDF_EXTENSION;
+			$file_pattern 	= $media_path .'/'. $pdf_id .'_*.'. $this->get_extension();
 			$ar_files 		= glob($file_pattern);
 
 			if (empty($ar_files)) {
@@ -431,7 +467,7 @@ class component_pdf extends component_media_common {
 			}
 			natsort($ar_files);	# sort the files from newest to oldest
 			$last_file_path = end($ar_files);
-			$new_file_path 	= $this->get_pdf_path($current_quality);
+			$new_file_path 	= $this->get_path($current_quality);
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
 			if(SHOW_DEBUG===true) {
@@ -483,7 +519,7 @@ class component_pdf extends component_media_common {
 
 		#
 		# THUMB NOT EXISTS: GENERATE FROM PDF
-		$path = $this->get_pdf_path();
+		$path = $this->get_path();
 		if (file_exists($path)) {
 
 			$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 102;
@@ -646,7 +682,7 @@ class component_pdf extends component_media_common {
 
 				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
 				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-				$target_pdf_path					= $this->get_pdf_path();
+				$target_pdf_path					= $this->get_path();
 
 				try {
 					$options = new stdClass();
@@ -915,6 +951,47 @@ class component_pdf extends component_media_common {
 
 	    return preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
 	}//end utf8_clean
+
+
+
+	/**
+	* DELETE_FILE
+	* Remove quality version moving the file to a deleted files dir
+	* @see component_image->remove_component_media_files
+	*
+	* @return object $response
+	*/
+	public function delete_file($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// remove_component_media_files returns bool value
+		$result = $this->remove_component_media_files([$quality]);
+		if ($result===true) {
+
+			// save To update valor_list
+				$this->Save();
+
+			$response->result	= true;
+			$response->msg		= 'File deleted successfully. ' . $quality;
+		}
+
+
+		return $response;
+	}//end delete_file
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_PDF_EXTENSION from config
+	*/
+	public function get_extension() {
+
+		return DEDALO_PDF_EXTENSION;
+	}//end get_extension
 
 
 

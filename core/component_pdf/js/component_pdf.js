@@ -31,6 +31,7 @@ export const component_pdf = function(){
 	this.node
 
 	this.tools
+	this.quality
 
 	this.file_name
 	this.file_dir
@@ -46,7 +47,7 @@ export const component_pdf = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_pdf.prototype.init				= component_common.prototype.init
+	component_pdf.prototype.init                = component_common.prototype.init
 	//component_pdf.prototype.build				= component_common.prototype.build
 	component_pdf.prototype.render				= common.prototype.render
 	component_pdf.prototype.refresh				= common.prototype.refresh

@@ -44,7 +44,7 @@ class tools_register {
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || $base_name==='tool_dummy' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1 ) {
+					if ($basename==='tool_common' || $basename==='tool_dummy' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
 						debug_log(__METHOD__." Ignored dir  ".to_string($basename), logger::ERROR);
 						continue;
 					}
@@ -52,24 +52,29 @@ class tools_register {
 				// info_file register.json file check
 					$info_file = $current_dir_tool . '/register.json';
 					if(!file_exists($info_file)){
-						debug_log(__METHOD__." file register.json does not exist into $current_dir_tool ".to_string(), logger::ERROR);
+						debug_log(__METHOD__." ERROR. File register.json does not exist into $current_dir_tool ".to_string(), logger::ERROR);
 						continue;
 					}
 
 				// info object (JSON encoded)
 					if( !$info_object = json_decode( file_get_contents($info_file) ) ){
-						debug_log(__METHOD__." wrong file register.json . Is not json valid file ".to_string(), logger::ERROR);
+						debug_log(__METHOD__." ERROR. Wrong file register.json . Is not json valid file ".to_string(), logger::ERROR);
 						continue;
 					}
 
 					$new_info_object = clone $info_object;
 
 				// ontology from info object
-					$current_ontology = (isset($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}))
-						? $info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}
+					$current_ontology = (isset($new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}))
+						? $new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}
 						: null;
 
 				if(!empty($current_ontology)){
+
+					if (isset($current_ontology[1])) {
+						debug_log(__METHOD__." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)".to_string(), logger::ERROR);
+						continue;
+					}
 
 					$new_ontology = tools_register::renumerate_term_id($current_ontology, $counter);
 
@@ -80,15 +85,19 @@ class tools_register {
 
 				}else{
 
-					debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
+					// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
 				}
 
 				// add info_objects_parsed
 					$info_objects_parsed[] = $new_info_object;
 
 				// info_file_processed
-					$name		= reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'});
-					$version	= reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'});
+					$name = isset($info_object->components->{$tipo_name})
+						? reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'})
+						: null;
+					$version = isset($info_object->components->{$tipo_version})
+						? reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'})
+						: null;
 					$info_file_processed[] = (object)[
 						'dir'		=> str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
 						'name'		=> $name,
@@ -147,7 +156,7 @@ class tools_register {
 
 		// session. Remove previous stored data in session
 			unset($_SESSION['dedalo']['registered_tools']);
-
+			unset($_SESSION['dedalo']['config']['tools']); // cache of already calculated tools
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -437,7 +446,7 @@ class tools_register {
 
 			$tipo = $item->tipo;
 			$ar_items_childrens = array_filter($ontology, function($current_element) use($tipo){
-				return $current_element->parent === $tipo;
+				return isset($current_element->parent) && $current_element->parent===$tipo;
 			});
 			$new_tld = 'tool'.++$counter;
 

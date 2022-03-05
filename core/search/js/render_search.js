@@ -130,7 +130,7 @@ render_search.prototype.render_base = function() {
 		const button_save_preset = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_save_preset hide',
-			text_content	: get_label.salvar +' '+ get_label.cambios,
+			inner_html		: get_label.salvar +' '+ get_label.cambios,
 			parent			: search_global_container
 		})
 		.addEventListener('click',function(){
@@ -141,7 +141,7 @@ render_search.prototype.render_base = function() {
 		const toggle_container_selector = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toggle_container_selector',
-			text_content	: get_label.campos,
+			inner_html		: get_label.campos,
 			parent			: search_global_container
 		})
 		.addEventListener('click',function(){
@@ -468,7 +468,7 @@ render_search.prototype.render_search_buttons = function(){
 		const max_input_label = ui.create_dom_element({
 			element_type	: "span",
 			class_name		: "max_input_label",
-			text_content	: "max", // get_label["max"]
+			inner_html		: get_label.max || 'max',
 			parent			: max_group
 		})
 	// max input
@@ -504,7 +504,7 @@ render_search.prototype.render_search_buttons = function(){
 		const show_all_button = ui.create_dom_element({
 			element_type	: "button",
 			class_name		: "button show_all",
-			text_content	: get_label.mostrar_todos || 'Show all',
+			inner_html		: get_label.mostrar_todos || 'Show all',
 			parent			: reset_group
 		})
 		show_all_button.addEventListener("click", function(e){
@@ -517,7 +517,7 @@ render_search.prototype.render_search_buttons = function(){
 			element_type	: "button",
 			id				: "button_submit",
 			class_name		: "button submit",
-			text_content	: get_label.aplicar || 'Submit',
+			inner_html		: get_label.aplicar || 'Submit',
 			parent			: search_buttons_container
 		})
 		submit_button.addEventListener("click", function(e){
@@ -582,8 +582,8 @@ render_search.prototype.render_search_group = function(parent_div, options) {
 		const search_group_operator = ui.create_dom_element({
 			element_type	: 'div',
 			parent			: search_group,
-			//text_content	: operator.slice(1) + " "+counter,
-			text_content	: localize_operator(operator)+ " ["+counter+"]",
+			//inner_html	: operator.slice(1) + " "+counter,
+			inner_html		: localize_operator(operator)+ " ["+counter+"]",
 			data_set		: { value : operator },
 			class_name		: "operator search_group_operator" + (operator==="$and" ? " and" : " or")
 		})
@@ -613,7 +613,7 @@ render_search.prototype.render_search_group = function(parent_div, options) {
 		const search_group_button_plus = ui.create_dom_element({
 			element_type	: 'span',
 			parent			: search_group,
-			//text_content	: "X",
+			//inner_html	: "X",
 			class_name		: "button add"
 		})
 		search_group_button_plus.addEventListener("click", function(e){
@@ -638,7 +638,7 @@ render_search.prototype.render_search_group = function(parent_div, options) {
 render_search.prototype.build_search_component = async function(parent_div, path_plain, current_value, q_operator, section_id) {
 
 	const self = this
-	
+
 	// short vars
 		const path			= JSON.parse(path_plain)
 		const last_item		= path[path.length-1]
@@ -797,7 +797,7 @@ render_search.prototype.render_user_preset_list = function(ar_elements, permissi
 			const span_name = ui.create_dom_element({
 				element_type	: 'span',
 				parent			: li_element,
-				text_content	: element.name,
+				inner_html		: element.name,
 				class_name		: "css_span_dato",
 				data_set		: {
 					parent			: element.section_id,
@@ -879,9 +879,9 @@ const render_sections_selector = (self) => {
 			for (let i = 0; i < typologies_length; i++) {
 				ui.create_dom_element({
 					element_type	: 'option',
-					value 			: typologies[i].section_id,
-					text_content	: typologies[i].label,
-					parent 			: typology_selector
+					value			: typologies[i].section_id,
+					inner_html		: typologies[i].label,
+					parent			: typology_selector
 				})
 			}
 
@@ -1160,7 +1160,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	* @return string localized
 	*/
 	const localize_operator = (operator) => {
-		
+
 		// Remove '$' (first char)
 		const clean_operator = operator.slice(1)
 

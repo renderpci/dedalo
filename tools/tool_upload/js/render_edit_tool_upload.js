@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -10,7 +10,7 @@
 
 
 /**
-* render_edit_tool_upload
+* RENDER_EDIT_TOOL_UPLOAD
 * Manages the component's logic and apperance in client side
 */
 export const render_edit_tool_upload = function() {
@@ -21,7 +21,7 @@ export const render_edit_tool_upload = function() {
 
 
 /**
-* render_edit_tool_upload
+* EDIT
 * Render node for use like button
 * @return DOM node
 */
@@ -103,7 +103,7 @@ export const get_content_data = function(self) {
 			id				: 'file_to_upload',
 			parent			: form
 		})
-		input.addEventListener("change", function(e){
+		input.addEventListener("change", function(){
 			const file = this.files[0]
 			self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 		})
@@ -214,10 +214,11 @@ export const get_content_data = function(self) {
 			parent			: info
 		})
 		// target quality
-		if (self.caller.context.default_target_quality) {
+		const target_quality = self.caller.context.target_quality || self.caller.context.default_target_quality
+		if (target_quality) {
 			ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: '<label>Target quality</label>' + self.caller.context.default_target_quality,
+				inner_html		: '<label>Target quality</label>' + target_quality,
 				parent			: info
 			})
 		}
@@ -337,30 +338,30 @@ export const file_drag_hover = function(e) {
 /**
 * FILE_SELECT_HANDLER
 */
-export const file_select_handler = function(e) {
+	// export const file_select_handler = function(e) {
 
-	// cancel event and hover styling
-	file_drag_hover(e);
+	// 	// cancel event and hover styling
+	// 	file_drag_hover(e);
 
-	// fetch FileList object
-	const files = e.target.files || e.dataTransfer.files;
+	// 	// fetch FileList object
+	// 	const files = e.target.files || e.dataTransfer.files;
 
-	// process all File objects
-	for (let i = 0; i < files.length; i++) {
+	// 	// process all File objects
+	// 	for (let i = 0; i < files.length; i++) {
 
-		const file = files[i]
+	// 		const file = files[i]
 
-		// parse file info
-		// parse_local_file(file);
+	// 		// parse file info
+	// 		// parse_local_file(file);
 
-		// upload
-		self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
+	// 		// upload
+	// 		self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 
-		break; // only one is allowed
-	}
+	// 		break; // only one is allowed
+	// 	}
 
-	return true
-};//end file_select_handler
+	// 	return true
+	// };//end file_select_handler
 
 
 // Removed for the time being (!)

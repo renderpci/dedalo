@@ -3,7 +3,7 @@
 
     Dédalo : Intangible Cultural Heritage Management Platform
 
-	Copyright (C) 2011  Authors: Juan Francisco Onielfa, Alejandro Peña
+	Copyright (C) 2022  Authors: Juan Francisco Onielfa, Alejandro Peña
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -18,8 +18,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	http://www.fmomo.org
-	dedalo@fmomo.org
+	https://dedalo.dev
 
 ************************************************************************/
 header("HTTP/1.1 301 Moved Permanently");

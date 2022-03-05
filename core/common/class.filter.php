@@ -7,6 +7,7 @@
 abstract class filter {
 
 
+
 	public static $user_authorized_projects_cache;
 
 
@@ -71,12 +72,14 @@ abstract class filter {
 
 		$dato = null;
 		if ( !empty($user_id) || abs($user_id)>0 ) {
-			$component_filter_master 	= component_common::get_instance('component_filter_master',
-																		 DEDALO_FILTER_MASTER_TIPO,
-																		 $user_id,
-																		 'list',
-																		 DEDALO_DATA_NOLAN,
-																		 DEDALO_SECTION_USERS_TIPO);
+			$component_filter_master = component_common::get_instance(
+				'component_filter_master',
+				DEDALO_FILTER_MASTER_TIPO,
+				$user_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
 			$dato = (array)$component_filter_master->get_dato();
 		}
 
@@ -119,7 +122,7 @@ abstract class filter {
 			$projects_name_tipo = $properties->thesaurus->term;
 
 		// typology tipo
-			$typology_tipo 		= $properties->thesaurus->typology ?? 'dd157';
+			$typology_tipo = $properties->thesaurus->typology ?? 'dd157';
 
 
 		// filter by filter_master

@@ -14,15 +14,15 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_tc = function() {
-	
+
 	return true
 };//end render_tool_tc
 
 
 
 /**
-* RENDER_TOOL_TC
-* Render node for use like button
+* EDIT
+* Render node
 * @return DOM node
 */
 render_tool_tc.prototype.edit = async function (options={render_level:'full'}) {
@@ -78,7 +78,7 @@ const content_data_edit = async function(self) {
 	// source
 		const source_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'source_component_container disabled_component',
+			class_name 		: 'source_component_container',
 			parent 			: components_container
 		})
 
@@ -86,7 +86,7 @@ const content_data_edit = async function(self) {
 		const target_component_container = ui.create_dom_element({
 			id				: 'tc_target_content',
 			element_type	: 'div',
-			class_name 		: 'target_component_container disabled_component',
+			class_name 		: 'target_component_container',
 			parent 			: components_container
 		})
 
@@ -113,6 +113,7 @@ const content_data_edit = async function(self) {
 				// left side component (use already loaded on build, self.main_component)
 				self.main_component.render()
 				.then(function(node){
+					node.classList.add('disabled_component')
 					source_component_container.appendChild(node)
 				})
 				// right side component
@@ -134,7 +135,7 @@ const content_data_edit = async function(self) {
 		const button_preview = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'secondary button_preview',
-			text_content	: get_label.preview || "Preview",
+			inner_html		: get_label.preview || "Preview",
 			parent			: tc_management_container
 		})
 		button_preview.addEventListener("click", () => {
@@ -150,10 +151,10 @@ const content_data_edit = async function(self) {
 
 	// apply button
 		const button_apply = ui.create_dom_element({
-			element_type 	: 'button',
-			class_name 		: 'warning button_apply',
-			text_content 	: get_label['apply'] || "Apply",
-			parent 			: tc_management_container
+			element_type	: 'button',
+			class_name		: 'warning button_apply',
+			inner_html		: get_label['apply'] || "Apply",
+			parent			: tc_management_container
 		})
 
 		button_apply.addEventListener("click", (e) => {
@@ -209,6 +210,7 @@ export const add_component = (self, component_container, value) => {
 			while (component_container.firstChild) {
 				component_container.removeChild(component_container.firstChild)
 			}
+			node.classList.add('disabled_component')
 			component_container.appendChild(node)
 		})
 	})

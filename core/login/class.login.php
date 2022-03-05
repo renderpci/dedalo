@@ -1266,6 +1266,11 @@ class login extends common {
 				];
 			}
 
+		// langs list
+			$dedalo_application_langs = (array)unserialize(DEDALO_APPLICATION_LANGS);
+			// $dedalo_application_langs = common::get_ar_all_langs_resolved();
+			$properties->dedalo_application_langs = $dedalo_application_langs;
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'			=> $label,

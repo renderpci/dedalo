@@ -3,9 +3,6 @@
 
 
 
-// provisional
-	// import * as instances from '../../common/js/instances.js'
-
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
@@ -32,7 +29,7 @@ render_edit_component_av.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -112,11 +109,6 @@ render_edit_component_av.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	// const is_inside_tool = self.is_inside_tool
-
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	const fragment = new DocumentFragment()
 
 	// video_container
@@ -128,9 +120,30 @@ const get_content_data_edit = function(self) {
 
 	// urls
 		// posterframe
-		const posterframe_url	= self.data.posterframe_url
-		// media
-		const video_url			= self.data.video_url
+			const posterframe_url = self.data.posterframe_url
+		// media url from data.datalist based on selected context quality
+			const quality	= self.quality || self.context.quality
+			const datalist	= self.data.datalist
+			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+			const video_url	= file_info
+				? file_info.url
+				: null
+
+		// background video_container
+			if (posterframe_url) {
+				const image = ui.create_dom_element({
+					element_type: 'img'
+				})
+				// image background color
+				image.addEventListener('load', set_bg_color, false)
+				function set_bg_color() {
+					this.removeEventListener('load', set_bg_color, false)
+					ui.set_background_image(this, video_container)
+					image.remove()
+				}
+				image.src = posterframe_url
+			}
+
 
 	// build_video_node
 		const build_video_node = function() {
@@ -142,7 +155,9 @@ const get_content_data_edit = function(self) {
 
 			// video tag
 				const video		= document.createElement("video")
-				video.poster	= posterframe_url
+				if (posterframe_url) {
+					video.poster = posterframe_url
+				}
 				video.controls	= true
 				video.classList.add("posterframe")
 				video.setAttribute("tabindex", 0)
@@ -157,11 +172,18 @@ const get_content_data_edit = function(self) {
 			// append the video node to the instance
 				self.video = video
 				video_container.appendChild(video)
+
+			// event
+				// video.addEventListener('canplay', fn_canplay)
+				// function fn_canplay() {
+				// 	// self.main_component.video.removeEventListener('canplay', fn_play);
+				// 	video.play()
+				// }
 		}
 
-	if (video_url) {
-
-		// set video node only when it is in DOM (to save browser resources)
+	// observers. Renders video node only when is vissible
+		if (video_url) {
+			// observer. Set video node only when it is in DOM (to save browser resources)
 			const observer = new IntersectionObserver(function(entries) {
 				const entry = entries[1] || entries[0]
 				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
@@ -170,7 +192,19 @@ const get_content_data_edit = function(self) {
 				}
 			}, { threshold: [0] });
 			observer.observe(video_container);
-	}
+		}else{
+			// image default logo
+			ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'posterframe',
+				src				: posterframe_url,
+				parent			: video_container
+			})
+		}
+
+	// quality_selector
+		const quality_selector = get_quality_selector(self)
+		fragment.appendChild(quality_selector)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -189,9 +223,12 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
-
 	const fragment = new DocumentFragment()
+
+	// prevent show buttons inside a tool
+		if (self.caller && self.caller.type==='tool') {
+			return fragment
+		}
 
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({
@@ -205,10 +242,9 @@ const get_buttons = (self) => {
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		})
 
+
 	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
+		ui.add_tools(self, fragment)
 
 	// des
 		// const button_info = ui.create_dom_element({
@@ -256,6 +292,55 @@ const get_buttons = (self) => {
 
 	return buttons_container
 };//end  get_buttons
+
+
+
+/**
+* GET_QUALITY_SELECTOR
+* @return DOM node select
+*/
+const get_quality_selector = (self) => {
+
+	// short vars
+		const data		= self.data
+		const quality	= self.quality || self.context.quality
+
+		const fragment = new DocumentFragment()
+
+	// create the quality selector
+		const quality_selector = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'quality_selector',
+			parent			: fragment
+		})
+		quality_selector.addEventListener("change", (e) =>{
+			const src = e.target.value
+			self.video.src = src
+			// event_manager.publish('image_quality_change_'+self.id, img_src)
+			console.log("src:",src);
+		})
+
+		const quality_list		= data.datalist.filter(el => el.file_exist===true)
+		const quality_list_len	= quality_list.length
+		for (let i = 0; i < quality_list_len; i++) {
+			// create the node with the all qualities sended by server
+			const value = (typeof quality_list[i].url==="undefined")
+				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
+				: quality_list[i].url
+
+			const select_option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: value,
+				text_node		: quality_list[i].quality,
+				parent			: quality_selector
+			})
+			//set the default quality_list to config variable dedalo_image_quality_default
+			select_option.selected = quality_list[i].quality===quality ? true : false
+		}
+
+
+	return quality_selector
+};//end get_quality_selector
 
 
 

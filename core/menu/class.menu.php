@@ -52,68 +52,94 @@ class menu extends common {
 			$ar_areas = area::get_areas();
 
 		}else{
+
+			// ar_full_areas. Is needed to preserve the order of elements
+			$ar_full_areas = area::get_areas();
+
 			// get authorized areas for the current user with the data of component_security_access
 			$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
 
-			// foreach ($ar_permisions_areas as $item) {
-			$ar_permisions_areas_length = sizeof($ar_permisions_areas);
-			for ($i=0; $i < $ar_permisions_areas_length ; $i++) {
-				$item		= $ar_permisions_areas[$i];
-				$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
+			// foreach ($ar_full_areas as $area_item) {
+			$ar_full_areas_length = sizeof($ar_full_areas);
+			for ($i=0; $i < $ar_full_areas_length ; $i++) {
+
+				$area_item = $ar_full_areas[$i];
+
+				$found = array_find($ar_permisions_areas, function($permisions_item) use($area_item){
+					return $permisions_item->tipo===$area_item->tipo;
+				});
+				if (!is_null($found)) {
+					$ar_areas[] = $area_item;
+				}
 			}
+
+			// foreach ($ar_permisions_areas as $item) {
+			// $ar_permisions_areas_length = sizeof($ar_permisions_areas);
+			// for ($i=0; $i < $ar_permisions_areas_length ; $i++) {
+			// 	$item		= $ar_permisions_areas[$i];
+			// 	$ar_areas[]	= ontology::tipo_to_json_item($item->tipo, [
+			// 		'tipo'			=> true,
+			// 		'tld'			=> false,
+			// 		'is_model'		=> false,
+			// 		'model'			=> true,
+			// 		'model_tipo'	=> false,
+			// 		'parent'		=> true,
+			// 		'order'			=> false,
+			// 		'translatable'	=> false,
+			// 		'properties'	=> true,
+			// 		'relations'		=> false,
+			// 		'descriptors'	=> false,
+			// 		'label'			=> true
+			// 	]);
+			// }
 		}
 
 		// section_tool case
 		// section_tool is a alias of the section that will be use to load the information to the specific tool
 		// all process use the target_section_tipo, because it has the information inside the db and the instances need to be connected to these section_tipo
 		// menu replace the model and the tipo with the target section, and add the config for use to change the behavior of the real section.
+			$tree_datalist = [];
 			$ar_areas_length = sizeof($ar_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
 
 				$current_area = $ar_areas[$i];
 
-				if($current_area->model==='section_tool'){
+				// section_tool case
+					if($current_area->model==='section_tool'){
 
-					$section_tool_tipo = $current_area->tipo;
+						$section_tool_tipo	= $current_area->tipo;
+						$properties			= $current_area->properties;
 
-					$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
-					$properties		= $RecordObj_dd->get_properties();
+						// tool_context
+							$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
+								? array_key_first(get_object_vars($properties->tool_config)) // ? key($properties->tool_config) // deprecated PHP>=8.1
+								: false;
 
-					// overwrite current_area (!)
-						$current_area->model	= 'section';
-						$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
-						$current_area->config	= $properties->config ?? null;
+							if ($tool_name!==false) {
 
-					$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
-					$properties		= $RecordObj_dd->get_properties();
+								$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
+								if (empty($ar_tool_object)) {
+									debug_log(__METHOD__." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area ".to_string($current_area), logger::WARNING);
+									continue;
+								}else{
 
-					// overwrite current_area (!)
-						$current_area->model	= 'section';
-						$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
-						$current_area->config	= $properties->config ?? null;
+									$tool_config	= $properties->tool_config->{$tool_name} ?? false;
+									$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
 
-					// tool_context
-						$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
-							// ? key($properties->tool_config) // deprecated PHP>=8.1
-							? array_key_first(get_object_vars($properties->tool_config))
-							: false;
-
-						if ($tool_name) {
-							$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
-							if (empty($ar_tool_object)) {
-								debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in current_area ".to_string($current_area), logger::ERROR);
-							}else{
-								$tool_config	= $properties->tool_config->{$tool_name} ?? false;
-								$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
-								$current_area->config->tool_context = $tool_context;
-								// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+									// overwrite current_area (!)
+									$current_area->model	= 'section';
+									$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
+									$current_area->config	= $properties->config ?? new StdClass();
+									$current_area->config->tool_context = $tool_context;
+									// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+								}
 							}
-						}
-				}
+					}//end if($current_area->model==='section_tool'){
+
+				// add
+					$tree_datalist[] = $current_area;
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
-
-		$tree_datalist = $ar_areas;
-
+				// dump($tree_datalist, ' tree_datalist ++ '.to_string());
 
 		return $tree_datalist;
 	}//end get_tree_datalist
@@ -168,10 +194,9 @@ class menu extends common {
 				'mode'			=> $mode,
 				'permissions'	=> $permissions
 			]);
-		
+
 		return $dd_object;
 	}//end get_structure_context
-
 
 
 

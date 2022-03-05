@@ -91,6 +91,9 @@ class tool_common {
 				return $el->lang===DEDALO_DATA_LANG;
 			})->value[0] ?? reset($tool_object->description)->value[0];
 
+		// labels
+			$labels = $tool_object->labels ?? null;
+
 		// context
 			// $context = new stdClass();
 			// 	$context->section_id			= $tool_object->section_id;
@@ -123,6 +126,7 @@ class tool_common {
 				// 'buttons'		=> $buttons,
 				// 'request_config'	=> $request_config,
 				// 'columns_map'	=> $columns_map
+				'labels'			=> $labels,
 				'section_id'		=> $tool_object->section_id,
 				'name'				=> $tool_object->name,
 				'description'		=> $description,
@@ -274,14 +278,14 @@ class tool_common {
 				}
 
 				// append config
-				$current_config = array_filter($ar_config, function($item) use($current_value){
-					if($item->name === $current_value->name) {
-						return $item;
-					}
-				});
-				$current_value->config = !empty($current_config[0])
-					? $current_config[0]->config
-					: null;
+					$current_config = array_filter($ar_config, function($item) use($current_value){
+						if($item->name === $current_value->name) {
+							return $item;
+						}
+					});
+					$current_value->config = !empty($current_config[0])
+						? $current_config[0]->config
+						: null;
 
 				$registered_tools[] = $current_value;
 			}//end foreach ($client_registered_tools_records as $record)
@@ -417,6 +421,70 @@ class tool_common {
 
 		return $csv_array;
 	}//end read_csv_file_as_array
+
+
+
+	/**
+	* CALL_COMPONENT_METHOD
+	* Call component method
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function call_component_method($request_options) {
+
+		// Working here... (!)
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// options
+			$$options = new stdClass();
+				$options->component_tipo	= null;
+				$options->section_id		= null;
+				$options->section_tipo		= null;
+				$options->method			= null;
+				$options->method_arguments	= null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// short vars
+			$tipo				= $options->tipo;
+			$section_tipo		= $options->section_tipo;
+			$section_id			= $options->section_id;
+			$method				= $options->method;
+			$method_arguments	= $options->method_arguments;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance($model,
+														 $tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+			if (method_exists($component, $method)) {
+
+				// call component
+					$call_result = $component->{$method}($method_arguments);
+
+				// response
+					$result = isset($call_result->result)
+						? $call_result->result
+						: $call_result;
+					$response->msg = isset($call_result->msg)
+						? $call_result->msg
+						: 'Request done ['.__FUNCTION__.']';
+
+			}else{
+
+				// response error
+					$response->result	= false;
+					$response->msg		.= '. Method does not exists: '.$method .' in '.$model;
+			}
+
+
+		return $response;
+	}//end call_component_method
 
 
 

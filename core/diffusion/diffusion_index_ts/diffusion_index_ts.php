@@ -20,7 +20,7 @@
 			if(SHOW_DEBUG) {
 				debug_log(__METHOD__." Warning: current_section_tipo: $current_section_tipo ($section_name) is not defined in structure to be showed. <br>
 				This section have indexations but will be not displayed in these results. Please fix this ASAP ".to_string(), logger::WARNING);
-				echo "<div class=\"warning\">".end($GLOBALS['log_messages'])."</div>";
+				// echo "<div class=\"warning\">".end($GLOBALS['log_messages'])."</div>";
 			}
 			continue;
 		}

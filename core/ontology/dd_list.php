@@ -13,14 +13,14 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 $is_logged	= login::is_logged();
 
 if($is_logged!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
+	$url =  DEDALO_ROOT_WEB ;//."/main/";
 	header("Location: $url");
 	exit();
 }
 $is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
 
 if($is_global_admin!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
+	$url =  DEDALO_ROOT_WEB ;//."/main/";
 	header("Location: $url");
 	exit();
 }

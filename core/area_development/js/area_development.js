@@ -34,9 +34,6 @@ export const area_development = function() {
 	this.node
 	this.status
 
-	// this.dd_request	= {
-	// 	show	: null
-	// }
 
 	return true
 };//end area_development
@@ -116,6 +113,7 @@ area_development.prototype.build = async function(autoload=true) {
 
 	// status update
 		self.status = 'builded'
+
 
 	return true
 };//end build

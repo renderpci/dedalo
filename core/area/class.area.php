@@ -56,7 +56,7 @@ class area extends area_common  {
 					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 
 				// areas. Get the JSON format of the ontology
-					$areas[] = ontology::tipo_to_json_item($area_tipo,[
+					$areas[] = ontology::tipo_to_json_item($area_tipo, [
 						'tipo'			=> true,
 						'tld'			=> false,
 						'is_model'		=> false,
@@ -65,29 +65,31 @@ class area extends area_common  {
 						'parent'		=> true,
 						'order'			=> false,
 						'translatable'	=> false,
-						'properties'	=> false,
+						'properties'	=> true,
 						'relations'		=> false,
 						'descriptors'	=> false,
-						'label'			=> true]);
+						'label'			=> true
+					]);
 
 				// group_areas. get the all children areas and sections of current
 					$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 
 					// get the JSON format of the ontology for all children
 					foreach ($ar_group_areas as $children_area) {
-						$areas[] = ontology::tipo_to_json_item($children_area,[
-						'tipo'			=> true,
-						'tld'			=> false,
-						'is_model'		=> false,
-						'model'			=> true,
-						'model_tipo'	=> false,
-						'parent'		=> true,
-						'order'			=> false,
-						'translatable'	=> false,
-						'properties'	=> false,
-						'relations'		=> false,
-						'descriptors'	=> false,
-						'label'			=> true]);
+						$areas[] = ontology::tipo_to_json_item($children_area, [
+							'tipo'			=> true,
+							'tld'			=> false,
+							'is_model'		=> false,
+							'model'			=> true,
+							'model_tipo'	=> false,
+							'parent'		=> true,
+							'order'			=> false,
+							'translatable'	=> false,
+							'properties'	=> true,
+							'relations'		=> false,
+							'descriptors'	=> false,
+							'label'			=> true
+						]);
 					}
 			}//end foreach ($ar_root_areas as $area_tipo)
 

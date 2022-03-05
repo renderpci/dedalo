@@ -331,10 +331,12 @@ const get_input_element_edit = (i, current_value, self) => {
 		}
 
 	// label
-		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
+		const label_string = (SHOW_DEBUG===true)
+			? label + ' [' + section_id + ']'
+			: label
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
-			text_content	: label_string,
+			inner_html		: label_string,
 			parent			: li
 		})
 		input_label.setAttribute("for", input_id)

@@ -18,9 +18,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	http://www.fmomo.org
-    https://github.com/renderpci/dedalo
-	dedalo@fmomo.org
+	https://dedalo.dev
 
 ************************************************************************/
 header("HTTP/1.1 301 Moved Permanently");

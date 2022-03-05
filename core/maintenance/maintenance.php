@@ -46,8 +46,6 @@
 
 	# NOTICE TO ADMIN ONLY
 	if ( isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER ) {
-		$GLOBALS['log_messages'][] = "<span class=\"warning\">".label::get_label('sitio_en_mantenimiento')."</span>";
+		// $GLOBALS['log_messages'][] = "<span class=\"warning\">".label::get_label('sitio_en_mantenimiento')."</span>";
 	}
 
-
-?>

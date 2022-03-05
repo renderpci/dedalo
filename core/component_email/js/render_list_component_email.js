@@ -41,7 +41,7 @@ render_list_component_email.prototype.list = async function() {
 		const value_string = data.value.join(self.divisor)
 
 	// Set value
-		wrapper.textContent = value_string
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
 };//end list

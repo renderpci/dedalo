@@ -8,6 +8,7 @@ include_once dirname(dirname(__FILE__)). '/widgets/widget_common/class.widget_co
 class component_info extends component_common {
 
 
+
 	/**
 	* GET_DATO
 	* @return array $dato
@@ -18,7 +19,7 @@ class component_info extends component_common {
 		// get the widgets defined in the ontology
 		$widgets = isset($properties->widgets) ? $properties->widgets : null;
 		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__." Empty defined widgets for $component_name : $label [$tipo] ".to_string($widgets), logger::WARNING);
+			debug_log(__METHOD__." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
 			return null;
 		}
 		// the component info dato will be the all widgets data
@@ -102,7 +103,7 @@ class component_info extends component_common {
 		// get the widgets defined in the ontology
 		$widgets = isset($properties->widgets) ? $properties->widgets : null;
 		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__." Empty defined widgets for $component_name : $label [$tipo] ".to_string($widgets), logger::WARNING);
+			debug_log(__METHOD__." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
 			return null;
 		}
 		// the component info dato will be the all widgets data

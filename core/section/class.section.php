@@ -171,7 +171,7 @@ class section extends common {
 			$this->pagination = new stdClass();
 				$this->pagination->offset	= 0; // default
 				$this->pagination->limit	= isset($properties->list_max_records)
-					? (int)$properties->list_max_records 
+					? (int)$properties->list_max_records
 					: ($modo==='list' ? 10 : 1);
 
 		// debug
@@ -216,12 +216,12 @@ class section extends common {
 						: new stdClass();
 				}
 				return $this->dato;
-			}		
+			}
 
 		// data is not loaded. Load once
 			if($this->bl_loaded_matrix_data!==true) {
 
-				// if virtual section have section_tipo "real" in properties, change the tipo of the section to the real					
+				// if virtual section have section_tipo "real" in properties, change the tipo of the section to the real
 					$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
 						? $this->get_section_real_tipo()
 						: $this->tipo;
@@ -243,7 +243,7 @@ class section extends common {
 					// 		dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
 					// 	}
 					// 	throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
-					// }				
+					// }
 
 				// set as loaded
 					$this->bl_loaded_matrix_data = true;
@@ -271,7 +271,7 @@ class section extends common {
 		$all_component_data = $this->get_all_component_data($component_tipo);
 
 		if ($lang_fallback===true) { // case mode list (see component common)
-			
+
 			if (isset($all_component_data->dato->{$lang}) && !empty($all_component_data->dato->{$lang})) {
 				// lang data exists
 				$component_dato = $all_component_data->dato->{$lang};
@@ -288,7 +288,7 @@ class section extends common {
 				? $all_component_data->dato->{$lang}
 				: null;
 		}
-		
+
 		return $component_dato;
 	}//end get_component_dato
 
@@ -1792,30 +1792,59 @@ class section extends common {
 			$section_real_tipo = $this->get_section_real_tipo();
 
 		// section virtual case
-		if ($this->section_virtual===true ) {
+		if ($section_real_tipo!==$this->tipo) {
 
-			# ar_excluded_tipo. Exclude elements of layout edit
-			$ar_excluded_tipo			= false;
-			$ar_exclude_elements_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements');
-			if (!isset($ar_exclude_elements_tipo[0])) {
-				error_log("Warning. exclude_elements of section $this->tipo not found (2). All virtual section must has defined exclude_elements");
-			}else{
-				// locate excluded tipos (related terms) in this virtual section
-				$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);
-			}
+			// ar_excluded_tipo. Exclude elements of layout edit
+			// vars: $section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false
+				$ar_excluded_tipo			= false;
+				$ar_exclude_elements_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section(
+					$this->tipo, // section_tipo
+					['exclude_elements'], // ar_modelo_name_required
+					true // from_cache
+				);
+				if (!isset($ar_exclude_elements_tipo[0])) {
+					error_log("Warning. exclude_elements of section $this->tipo not found (2). All virtual section must has defined exclude_elements");
+				}else{
+					// locate excluded tipos (related terms) in this virtual section
+					$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);
+				}
 
 			// real section
-			$children_real_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_', $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_excluded_tipo);
+				$children_real_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$section_real_tipo, // section_tipo
+					['button_'], // ar_modelo_name_required
+					true, // from_cache
+					false, // resolve_virtual
+					false, // recursive
+					false, // search_exact
+					$ar_excluded_tipo // ar_tipo_exclude_elements
+				);
 
 			// virtual section. Add the specific buttons of the virtual section, if the virtual have buttons add to the list.
-			$children_virtual_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=false, $ar_excluded_tipo);
+				$children_virtual_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$this->tipo, // section_tipo
+					['button_'], // ar_modelo_name_required
+					true, // from_cache
+					false, // resolve_virtual
+					false, // recursive
+					false, // search_exact
+					$ar_excluded_tipo // ar_tipo_exclude_elements
+				);
 
 			$ar_buttons_tipo = array_merge($children_virtual_tipo, $children_real_tipo);
 
 		}else{
 
 			// if the section is a real section, add the buttons directly
-			$ar_buttons_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=false, $ar_excluded_tipo=false);
+			$ar_buttons_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$this->tipo, // section_tipo
+				['button_'], // ar_modelo_name_required
+				true, // from_cache
+				false, // resolve_virtual
+				false, // recursive
+				false, // search_exact
+				false //ar_tipo_exclude_elements
+			);
 
 		}//end if ($this->section_virtual==true )
 
@@ -3422,7 +3451,7 @@ class section extends common {
 	* Build specific context when section is in 'tm' (time machine) mode
 	* @return array $context
 	*/
-	public function get_tm_context($permissions) {		
+	public function get_tm_context($permissions) {
 
 		// short vars
 			$rqo			= dd_core_api::$rqo; // from current client request
@@ -3433,7 +3462,7 @@ class section extends common {
 			$component_tipo	= $component_ddo->tipo;
 			$component_lang	= $source->lang;
 			$section_tipo	= $this->tipo;
-		
+
 		$context = [];
 
 		// fixed columns
@@ -3567,7 +3596,7 @@ class section extends common {
 		}
 
 		$source_model	= get_called_class();
-		
+
 		// subdata time machine
 			$section_id		= $current_record->section_id;
 			$section_tipo	= $current_record->section_tipo;
@@ -3577,7 +3606,7 @@ class section extends common {
 			$timestamp		= $current_record->timestamp;
 			$user_id		= $current_record->userID;
 			$component_dato	= $current_record->dato;
-		
+
 		// matrix ID (component_section_id)
 			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id) {
 
@@ -3594,7 +3623,7 @@ class section extends common {
 					'debug_mode'			=> 'list',
 					'matrix_id'				=> $id
 				];
-				
+
 				return $current_item;
 			})($tipo, $section_tipo, $section_id, $lang, $id);
 
@@ -3626,7 +3655,7 @@ class section extends common {
 				// edit section_id to match section locator data item
 					$current_item = reset($element_json->data);
 						$current_item->matrix_id = $id;
-				
+
 				return $current_item;
 			})($tipo, $section_tipo, $section_id, $lang, $id, $timestamp);
 
@@ -3659,10 +3688,10 @@ class section extends common {
 				// edit section_id to match section locator data item
 					$current_item = reset($element_json->data);
 						$current_item->matrix_id = $id;
-				
+
 				return $current_item;
 			})($tipo, $section_tipo, $section_id, $lang, $id, $user_id);
-		
+
 		// component. Data of actual component to show in section list
 			$element_json = (function($tipo, $section_tipo, $section_id, $lang, $id, $component_dato='no_value') {
 
@@ -3810,7 +3839,7 @@ class section extends common {
 			$component_tipo = $component->get_tipo();
 
 		// ontology sync. Syncronize this section values with equivalents in table 'matrix_descriptors_dd'. Only master server
-			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true && 
+			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true &&
 				defined('ONTOLOGY_SECTION_TIPOS') && ONTOLOGY_SECTION_TIPOS['section_tipo']===$section_tipo) {
 
 				$ar_update_tipos = [
@@ -3822,7 +3851,7 @@ class section extends common {
 
 					// term_id
 						$term_id = (function() use($section_id, $section_tipo){
-							
+
 							$component_tipo = ONTOLOGY_SECTION_TIPOS['term_id'];
 							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 							$component 		= component_common::get_instance($modelo_name,
@@ -3840,7 +3869,7 @@ class section extends common {
 					if (empty($term_id)) {
 						debug_log(__METHOD__." term_id value is mandatoy. Nothing is propagated to descriptors ".to_string($term_id), logger::ERROR);
 					}else{
-						
+
 						$dato_tipo = (function() use($component_tipo){
 							switch ($component_tipo) {
 								case ONTOLOGY_SECTION_TIPOS['term']:		return 'termino';	break;
@@ -3851,7 +3880,7 @@ class section extends common {
 						})();
 
 						if (!empty($dato_tipo)) {
-							
+
 							$value = $component->get_valor();
 
 							// set and save the value to descriptors dd

@@ -52,7 +52,6 @@
     ],
     "components": {
         "dd199": {
-            "inf": "Fecha de creación [component_date]",
             "dato": {
                 "lg-nolan": [
                     {
@@ -70,28 +69,26 @@
             }
         },
         "dd201": {
-            "inf": "Fecha de modificación [component_date]",
             "dato": {
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 27,
-                            "hour": 12,
-                            "time": 64934742128,
-                            "year": 2020,
-                            "month": 4,
-                            "minute": 22,
-                            "second": 8
+                            "day": 2,
+                            "hour": 13,
+                            "time": 64994187666,
+                            "year": 2022,
+                            "month": 3,
+                            "minute": 1,
+                            "second": 6
                         }
                     }
                 ]
             }
         },
         "dd612": {
-            "inf": "Descripción [component_text_area]",
             "dato": {
                 "lg-eng": [
-                    "Tool for translate the content to other langs"
+                    "Tool for translate the content to another langs"
                 ],
                 "lg-spa": [
                     "Herramienta de traducción de contenido a otras lenguas"
@@ -99,7 +96,6 @@
             }
         },
         "dd799": {
-            "inf": "Etiqueta [component_input_text]",
             "dato": {
                 "lg-cat": [
                     "Traducció"
@@ -113,7 +109,6 @@
             }
         },
         "dd999": {
-            "inf": "Configuración [component_json]",
             "dato": {
                 "lg-nolan": [
                     {
@@ -153,7 +148,6 @@
             }
         },
         "dd1326": {
-            "inf": "nombre [component_input_text]",
             "dato": {
                 "lg-nolan": [
                     "tool_lang"
@@ -161,7 +155,6 @@
             }
         },
         "dd1327": {
-            "inf": "versión [component_input_text]",
             "dato": {
                 "lg-nolan": [
                     "2.0.0"
@@ -169,16 +162,75 @@
             }
         },
         "dd1328": {
-            "inf": "Versión Dédalo [component_input_text]",
             "dato": {
                 "lg-nolan": [
                     "6.0.0"
                 ]
             }
         },
-        "dd1334": {},
+        "dd1334": {
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "tld": "tool_dev",
+                        "tipo": "tool_dev2",
+                        "model": "section_list",
+                        "order": 1,
+                        "parent": "tool_dev1",
+                        "is_model": "no",
+                        "relations": [
+                            {
+                                "tipo": "rsc21"
+                            },
+                            {
+                                "tipo": "rsc19"
+                            },
+                            {
+                                "tipo": "rsc23"
+                            },
+                            {
+                                "tipo": "rsc263"
+                            },
+                            {
+                                "tipo": "rsc36"
+                            },
+                            {
+                                "tipo": "rsc244"
+                            },
+                            {
+                                "tipo": "rsc35"
+                            }
+                        ],
+                        "model_tipo": "dd91",
+                        "properties": null,
+                        "descriptors": [
+                            {
+                                "lang": "lg-ita",
+                                "type": "term",
+                                "value": "Elenco"
+                            },
+                            {
+                                "lang": "lg-spa",
+                                "type": "term",
+                                "value": "Listado"
+                            },
+                            {
+                                "lang": "lg-cat",
+                                "type": "term",
+                                "value": "Llistat"
+                            },
+                            {
+                                "lang": "lg-eng",
+                                "type": "term",
+                                "value": "List"
+                            }
+                        ],
+                        "translatable": false
+                    }
+                ]
+            }
+        },
         "dd1335": {
-            "inf": "properties [component_json]",
             "dato": {
                 "lg-nolan": [
                     {
@@ -194,22 +246,19 @@
             }
         },
         "dd1350": {
-            "inf": "Afecta a los tipos: [component_json]",
             "dato": {
                 "lg-nolan": []
             }
         },
         "dd1353": {
-            "inf": "Simple tool object [component_json]",
             "dato": {
                 "lg-nolan": []
             }
         },
         "dd1362": {
-            "inf": "Dev info [component_text_area]",
             "dato": {
                 "lg-nolan": [
-                    "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators, <br>must be defined in Dédalo tools config file:<br><br> \/config\/tools\/config_tool_lang.json<br><br> as:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.render.es\/babel_engine\/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');"
+                    "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators, <br>must be defined in Dédalo tools config file:<br><br> \/config\/tools\/config_tool_lang.json<br><br> as:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.render.es\/babel_engine\/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');<br><br>\/\/ example of ontology (dd1334)<br>{<br> \"tld\": \"tool_dev\",<br> \"tipo\": \"tool_dev1\",<br> \"model\": \"section_tool\",<br> \"order\": 1,<br> \"parent\": \"oh80\",<br> \"is_model\": \"no\",<br> \"relations\": null,<br> \"model_tipo\": \"dd125\",<br> \"properties\": {<br> \"context\": {<br> \"top_tipo\": \"oh1\",<br> \"target_tool\": \"tool_transcription\",<br> \"context_name\": \"section_tool\",<br> \"tool_section_tipo\": \"tool_dev1\",<br> \"target_section_tipo\": \"rsc167\",<br> \"target_component_tipo\": \"rsc35\"<br> }<br> },<br> \"descriptors\": [<br> {<br> \"lang\": \"lg-ita\",<br> \"type\": \"term\",<br> \"value\": \"Trascrizioni interviste\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"term\",<br> \"value\": \"Transcription\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"term\",<br> \"value\": \"Transcripción entrevistas\"<br> },<br> {<br> \"lang\": \"lg-cat\",<br> \"type\": \"term\",<br> \"value\": \"Transcripció d'entrevistes\"<br> },<br> {<br> \"lang\": \"lg-ell\",<br> \"type\": \"term\",<br> \"value\": \"Μεταγραφή συνεντεύξεις\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"des\",<br> \"value\": \"Tool for translate the content to other langs\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"des\",<br> \"value\": \"Herramienta de traducción de contenido a otras lenguas\"<br> }<br> ],<br> \"translatable\": false<br>}<br>"
                 ]
             }
         }
@@ -217,12 +266,9 @@
     "section_id": 1,
     "created_date": "2019-11-05 16:06:56",
     "section_tipo": "dd1340",
-    "modified_date": "2020-04-27 12:22:08",
+    "modified_date": "2022-03-02 13:01:06",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",
-    "modified_by_userID": -1,
-    "section_creator_top_tipo": "dd1340",
-    "section_creator_portal_tipo": "",
-    "section_creator_portal_section_tipo": ""
+    "modified_by_userID": -1
 }

@@ -28,11 +28,11 @@ export const render_tool_import_files = function() {
 * Render node for use in current mode
 * @return DOM node wrapper
 */
-render_tool_import_files.prototype.edit = async function(options={render_level:'full'}) {
+render_tool_import_files.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -50,9 +50,10 @@ render_tool_import_files.prototype.edit = async function(options={render_level:'
 		const header = wrapper.querySelector('.tool_header')
 		self.tool_container  = ui.attach_to_modal(header, wrapper, null, 'big')
 		self.tool_container.on_close = () => {
+			self.caller.refresh()
 			// set the images in the dropzone instance, that were uploaded and stay in the server, to ADDED status, to prevent delete them in the server when the tool close
 			const files = self.active_dropzone.files
-			for (var i = files.length - 1; i >= 0; i--) {
+			for (let i = files.length - 1; i >= 0; i--) {
 				files[i].status = Dropzone.ADDED
 			}
 			self.active_dropzone.destroy()
@@ -72,7 +73,6 @@ render_tool_import_files.prototype.edit = async function(options={render_level:'
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
-
 
 	// options container
 		const options_wrapper = ui.create_dom_element({
@@ -109,9 +109,9 @@ const get_content_data_edit = async function(self) {
 
 					const option_procesor_node = ui.create_dom_element({
 						element_type	: 'option',
-						class_name 		: 'component select',
-						text_content 	: self.get_tool_label(option.function_name),
-						parent 			: select_process
+						class_name		: 'component select',
+						inner_html		: self.get_tool_label(option.function_name),
+						parent			: select_process
 					})
 					option_procesor_node.value = option.function_name
 			}// end for
@@ -156,9 +156,9 @@ const get_content_data_edit = async function(self) {
 
 					const option_node = ui.create_dom_element({
 						element_type	: 'option',
-						class_name 		: 'component select',
-						text_content 	: option.label,
-						parent 			: select_options
+						class_name		: 'component select',
+						inner_html		: option.label,
+						parent			: select_options
 					})
 
 					if(option.default){
@@ -200,9 +200,9 @@ const get_content_data_edit = async function(self) {
 
 					const label_field_check_box = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'checkbox-label',
-							text_content 	: get_label.name_to_field || 'Name indicates field',
-							parent 			: name_control_field
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.name_to_field || 'Name indicates field',
+							parent			: name_control_field
 						})
 
 
@@ -220,8 +220,8 @@ const get_content_data_edit = async function(self) {
 
 								const option_node = ui.create_dom_element({
 									element_type	: 'option',
-									text_content 	: map_name + option.label,
-									parent 			: info_options
+									inner_html		: map_name + option.label,
+									parent			: info_options
 								})
 						}// end for
 
@@ -250,9 +250,9 @@ const get_content_data_edit = async function(self) {
 
 					const label_section_id_check_box = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'checkbox-label',
-							text_content 	: get_label.name_to_record_id || 'Name indicates id',
-							parent 			: name_control_section_id
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.name_to_record_id || 'Name indicates id',
+							parent			: name_control_section_id
 						})
 
 
@@ -280,9 +280,9 @@ const get_content_data_edit = async function(self) {
 
 					const label_same_name_check_box = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'checkbox-label',
-							text_content 	: get_label.same_name_same_record || 'Same name same record',
-							parent 			: same_name_same_section
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.same_name_same_record || 'Same name same record',
+							parent			: same_name_same_section
 						})
 
 
@@ -394,7 +394,7 @@ const get_content_data_edit = async function(self) {
 		const button_process_import = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'processing_import success',
-			text_content 	: 'OK',
+			inner_html		: 'OK',
 			parent			: fragment
 		})
 		button_process_import.addEventListener('click', function(e){
@@ -472,6 +472,9 @@ const get_content_data_edit = async function(self) {
 
 
 
+/**
+* CREATE_TEMPLATE
+*/
 const create_template = async function(self) {
 
 	const fragment = new DocumentFragment();
@@ -991,7 +994,7 @@ const create_template = async function(self) {
 
 
 	return fragment
-}//end create_template
+};//end create_template
 
 
 
@@ -1015,7 +1018,8 @@ const get_temp_sections = async function(self){
 	}
 
 	return fragment
-}//end get_temp_sections
+};//end get_temp_sections
+
 
 
 /**
@@ -1053,6 +1057,6 @@ const set_import_mode = function (self, apply){
 	}
 
 	return true
-}//end set_import_mode
+};//end set_import_mode
 
 

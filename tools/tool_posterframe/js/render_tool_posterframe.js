@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_posterframe */
 /*eslint no-undef: "error"*/
 
 
@@ -11,7 +11,7 @@
 
 /**
 * RENDER_TOOL_POSTERFRAME
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_tool_posterframe = function() {
 
@@ -21,161 +21,106 @@ export const render_tool_posterframe = function() {
 
 
 /**
-* RENDER_TOOL_POSTERFRAME
-* Render node for use like button
+* EDIT
+* Render tool DOM nodes
+* This function is called by render common attached in 'tool_posterframe.js'
+* @param object options
 * @return DOM node
 */
-render_tool_posterframe.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_posterframe.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// options
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.tool.build_wrapper_edit(self, {
-			content_data : current_content_data
+	// wrapper. ui build_edit returns a standard built tool wrapper
+		const wrapper = ui.tool.build_wrapper_edit(self, {})
+
+	// main_component_container
+		const main_component_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'main_component_container',
+			parent			: wrapper
+		})
+		// temporal image to show while main_component is rebuilt and rendered
+		const main_component_image = ui.create_dom_element({
+			element_type	: 'img',
+			src				: self.main_component.data.posterframe_url,
+			parent			: main_component_container
+		})
+		// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
+		self.main_component.mode = 'player'
+		self.main_component.build(true)
+		.then(async function(){
+			const component_node = await self.main_component.render()
+			main_component_image.remove()
+			main_component_container.appendChild(component_node)
 		})
 
-	// fix wrapper
-		self.wrapper = wrapper
+	// content data add
+		wrapper.appendChild(content_data)
 
 	// modal container
-		const header = wrapper.querySelector('.tool_header')
+		const header = wrapper.querySelector('.tool_header') // is created by ui.tool.build_wrapper_edit
 		const modal  = ui.attach_to_modal(header, wrapper, null)
 		modal.on_close = () => {
+			self.caller.refresh()
+			// when closing the modal, common destroy is called to remove tool and elements instances
 			self.destroy(true, true, true)
 		}
 
 
 	return wrapper
-};//end render_tool_tc
+};//end edit
 
 
 
 /**
-* CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
+* Render tool body or 'content_data'
+* @param instance self
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// components container
-		const components_container = ui.create_dom_element({
+	// main_component_container
+		// const main_component_container = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'main_component_container',
+		// 	parent			: fragment
+		// })
+		// // temporal image to show while main_component is rebuilt and rendered
+		// const main_component_image = ui.create_dom_element({
+		// 	element_type	: 'img',
+		// 	src				: self.main_component.data.posterframe_url,
+		// 	parent			: main_component_container
+		// })
+		// // rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
+		// self.main_component.mode = 'player'
+		// self.main_component.build(true)
+		// .then(async function(){
+		// 	const component_node = await self.main_component.render()
+		// 	main_component_image.remove()
+		// 	main_component_container.appendChild(component_node)
+		// })
+
+	// buttons_container
+		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'components_container',
+			class_name		: 'buttons_container',
 			parent			: fragment
 		})
-
-	// player av
-		const wrap_component_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrap_edit_video',
-			parent			: components_container
-		})
-
-		// Video container
-		const video_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'video_container',
-			parent			: wrap_component_container
-		})
-
-	// source tag
-		const source = document.createElement("source")
-			  source.src  = self.caller.data.video_url
-			  source.type = "video/mp4"
-
-	// video tag
-		const video = document.createElement("video")
-			  video.poster = self.caller.data.posterframe_url
-			  video.controls = true
-			  video.classList.add("posterframe")
-			  video.setAttribute("tabindex", 0)
-			  video.appendChild(source)
-
-	// keyup event
-		video.addEventListener("timeupdate", async (e) => {
-			e.stopPropagation()
-			// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-			// console.log("aqui:",frame);
-		})
-
-	// append the video node to the instance
-	self.video = video
-	video_container.appendChild(video)
-
-	//********
-
-	// Video controls container
-		const video_controls_container = ui.create_dom_element({
-			//id			: 'video_controls',
-			element_type	: 'div',
-			class_name		: 'posterframe_container',
-			parent			: wrap_component_container
-		})
-
-	//adding buttons
-		add_button(self, video_controls_container, "Play", "av_player_btn")
-
-		const tc_div = ui.create_dom_element({
-			id				: 'TCdiv',
-			element_type	: 'span',
-			class_name		: 'video_container',
-			text_content	: '00:00:00.000',
-			parent			: video_controls_container
-		})
-
-		add_button(self, video_controls_container, "< 10 seg", "av_player_btn")
-		add_button(self, video_controls_container, "< 5 seg", "av_player_btn")
-		add_button(self, video_controls_container, "- 1", "av_player_btn")
-		add_button(self, video_controls_container, "+ 1", "av_player_btn")
-		add_button(self, video_controls_container, "5 seg >", "av_player_btn")
-		add_button(self, video_controls_container, "10 seg >", "av_player_btn")
-
-
-	// Posterframe options
-		const posterframe_options = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'posterframe_container',
-			parent 			: components_container
-		})
-
-		add_button(self, posterframe_options, "Create identifyying image")
-
-		const posterframe_select = ui.create_dom_element({
-			element_type	: 'select',
-			text_content	: 'xxxxxx',
-			parent			: posterframe_options
-		})
-
-		const posterframe_img = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'video_container',
-			//style			: "background-image:url('IMG_URL')".replace('IMG_URL', posterframe_url),
-			parent			: posterframe_options
-		})
-
-		posterframe_img.style.backgroundImage = "url('/dedalo_v6/media/media_development/av/posterframe/rsc35_rsc167_1.jpg')"
-
-		add_button(self, posterframe_options, "Make Posterframe")
-
-		const button_delete_posterframe = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button remove',
-			parent			: posterframe_options
-		})
-
-		button_delete_posterframe.addEventListener("click", () => {
-
-			self.button_click('Delete Posterframe', button_delete_posterframe)
-		})
+		const buttons_wrapper = get_buttons(self)
+		buttons_container.appendChild(buttons_wrapper)
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -184,33 +129,133 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-};//end content_data_edit
+};//end get_content_data
 
 
 
 /**
-* ADD_BUTTON
+* GET_BUTTONS
+* @param object instance self
+* @return DOM node buttons_wrapper
 */
-export const add_button = async (self, component_container, value, class_name = "secondary button_preview") => {
+const get_buttons = function(self) {
 
-	// apply button
-		const new_button = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: class_name, //'css_button_generic css_av_video_controls_rew av_player_btn',
-			text_content	: get_label[value] || value,
-			parent			: component_container
+	const fragment = new DocumentFragment()
+
+	// identifying_image_block
+		const identifying_image_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'identifying_image_block',
+			parent			: fragment
 		})
 
-		new_button.addEventListener("click", () => {
-			//component_container.classList.add('loading')
+		// button_create_identifying_image
+			const button_create_identifying_image = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light create_identifying_image',
+				inner_html		: get_label.crear_imagen_identificativa || 'Create identifying image',
+				parent			: identifying_image_block
+			})
+			button_create_identifying_image.addEventListener("click", async function(){
+				identifying_image_block.classList.add('loading')
+				const item_value	= JSON.parse(identifying_image_selector.value)
+				const current_time	= self.main_component.video.currentTime
+				await self.create_identifying_image(item_value, current_time)
+				identifying_image_block.classList.remove('loading')
+			})
 
-			//TODO - implement different cases depending on the value of the clicked button
-			self.button_click(value, new_button)
+		// identifying_image_selector
+			const identifying_image_selector = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'identifying_image_selector',
+				parent			: identifying_image_block
+			})
+			// options
+			self.get_ar_identifying_image()
+			.then(function(ar_identifying_image){
 
-			//component_container.classList.remove('loading')
+				const ar_identifying_image_length = ar_identifying_image.length
+				for (let i = 0; i < ar_identifying_image_length; i++) {
+
+					const item = ar_identifying_image[i]
+					// option
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: JSON.stringify(item),
+						inner_html		: item.label + ' - ' + item.section_id,
+						parent			: identifying_image_selector
+					})
+				}
+			})
+
+	// manage_posterframe_block
+		const manage_posterframe_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'manage_posterframe_block',
+			parent			: fragment
 		})
 
-	return true
-};//end add_button
+		// button_create_posterframe
+			const button_create_posterframe = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning gear create_posterframe',
+				inner_html		: get_label.crear || 'Create',
+				parent			: manage_posterframe_block
+			})
+			button_create_posterframe.addEventListener("click", async function(){
+				image_posterframe.classList.add('loading')
+				const current_time = self.main_component.video.currentTime
+				await self.create_posterframe(current_time)
+				if (self.main_component.data.posterframe_url===page_globals.fallback_image) {
+					// initial no posterframe case
+					await self.main_component.refresh()
+				}
+				image_posterframe.src = self.main_component.data.posterframe_url + '?' + Math.random()
+				image_posterframe.classList.remove('loading')
+			})
+
+		// button_delete_posterframe
+			const button_delete_posterframe = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light delete delete_posterframe',
+				inner_html		: get_label.borrar || 'Delete',
+				parent			: manage_posterframe_block
+			})
+			button_delete_posterframe.addEventListener("click", async function(){
+				image_posterframe.classList.add('loading')
+				const deleted = await self.delete_posterframe()
+				image_posterframe.src = deleted===true
+					? page_globals.fallback_image
+					: self.main_component.data.posterframe_url + '?' + Math.random()
+				image_posterframe.classList.remove('loading')
+			})
+
+		// image_posterframe
+			const image_posterframe = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'image_posterframe',
+				src				: self.main_component.data.posterframe_url + '?' + Math.random(),
+				parent			: fragment
+			})
+			// const token = event_manager.subscribe('render_'+self.main_component.id, fn_update_posterframe)
+			// self.events_tokens.push(token)
+			// function fn_update_posterframe() {
+			// 	image_posterframe.src = self.main_component.data.posterframe_url + '?' + Math.random()
+			// 	console.log("updated image_posterframe.src:", image_posterframe.src);
+			// 	event_manager.unsubscribe(token)
+			// }
+
+
+	// buttons_wrapper
+		const buttons_wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_wrapper'
+		})
+		buttons_wrapper.appendChild(fragment)
+
+
+	return buttons_wrapper
+}//end get_buttons
+
 
 

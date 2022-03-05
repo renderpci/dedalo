@@ -11,19 +11,19 @@
 
 
 /**
-* RENDER_TOOL_transcription
+* RENDER_TOOL_TRANSCRIPTION
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_transcription = function() {
-	
+
 	return true
 };//end render_tool_transcription
 
 
 
 /**
-* RENDER_TOOL_transcription
-* Render node for use like button
+* EDIT
+* Render node
 * @return DOM node
 */
 render_tool_transcription.prototype.edit = async function(options={render_level:'full'}) {
@@ -149,7 +149,6 @@ const get_content_data_edit = async function(self) {
 
 
 
-
 /**
 * RENDER_RELATED_LIST
 * This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
@@ -220,6 +219,5 @@ const render_related_list = function(self){
 
 	return fragment
 };//end render_related_list
-
 
 

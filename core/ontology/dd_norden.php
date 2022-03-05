@@ -11,15 +11,15 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 * LOGIN
 */
 $is_logged	= login::is_logged();
-	
+
 if($is_logged!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
+	$url =  DEDALO_ROOT_WEB;
 	header("Location: $url");
 	exit();
 }
 $is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
 if($is_global_admin!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
+	$url =  DEDALO_ROOT_WEB;
 	header("Location: $url");
 	exit();
 }
@@ -45,22 +45,22 @@ $tabla			= 'jer_'.$tld ;
 
 // actualizar orden
 if(isset($_REQUEST["accion"]) && $_REQUEST["accion"]==="norden") {
-	
+
 	$terminoIDf		= safe_xss($_REQUEST['terminoID']);
 	$parent			= safe_xss($_REQUEST['parent']);
-	$ordenActual	= safe_xss($_REQUEST['ordenActual']);	
-	$ordenNuevo		= safe_xss($_REQUEST['ordenNuevo']);	
+	$ordenActual	= safe_xss($_REQUEST['ordenActual']);
+	$ordenNuevo		= safe_xss($_REQUEST['ordenNuevo']);
 	$ordenF			= safe_xss($_REQUEST['ordenF']);	 //formato(1.23,2.68 ...)
-	
+
 	#echo "terminoActual: $terminoIDf, ordenActual: $ordenActual ,  ordenNuevo: $ordenNuevo <br><br> ";
-	
+
 	// construimos el array
 	$ordenF = str_replace(".", "=", $ordenF);  //formato(1=23,2=68 ...)
 	$piecesArray = explode(",", $ordenF);
-	
-	// eliminamos el termino actual	
+
+	// eliminamos el termino actual
 	function remove_element($arr, $val) {
-	
+
 		foreach ($arr as $key => $value){
 		  if ($arr[$key] == $val){
 			  unset($arr[$key]);
@@ -68,9 +68,9 @@ if(isset($_REQUEST["accion"]) && $_REQUEST["accion"]==="norden") {
 		}
 		return $arr = array_values($arr);
 	}
-	$piecesArray2 = remove_element($piecesArray, "$terminoIDf=$ordenActual");	
-	
-	
+	$piecesArray2 = remove_element($piecesArray, "$terminoIDf=$ordenActual");
+
+
 	// reordenamos el array resultante
 	$i = 1;
 	if(is_array($piecesArray2)) foreach($piecesArray2 as $value)
@@ -80,8 +80,8 @@ if(isset($_REQUEST["accion"]) && $_REQUEST["accion"]==="norden") {
 		$key 		= $i ++ ;
 		$piecesArray3[$key] = "$value";
 	}
-	
-	
+
+
 	// a todos los valores superiores al ordenNuevo les sumamos 1
 	if(is_array($piecesArray3)) foreach($piecesArray3 as $key => $value){
 		if($key >= $ordenNuevo){
@@ -89,27 +89,27 @@ if(isset($_REQUEST["accion"]) && $_REQUEST["accion"]==="norden") {
 			$piecesArray4['a'][$key] = $value;
 		}else{
 			$piecesArray4['a'][$key] = $value;
-		}			
+		}
 	}
 	// insertamos nuestro termino con el n de orden nuevo
 	$piecesArray4['a'][$ordenNuevo] = $terminoIDf;
-		
-	
+
+
 	// lo recorremos para construir los UPDATE a mysql
 	if(is_array($piecesArray4)) foreach($piecesArray4 as $key => $value) {
 
-		if(is_array($value)) foreach($value as $norden => $terminoID) {			
-			$updateSQL = "UPDATE \"$tabla\" SET norden = $norden WHERE \"terminoID\" = '$terminoID' ";	  	
+		if(is_array($value)) foreach($value as $norden => $terminoID) {
+			$updateSQL = "UPDATE \"$tabla\" SET norden = $norden WHERE \"terminoID\" = '$terminoID' ";
 			$result	= JSON_RecordObj_matrix::search_free($updateSQL);
 		}
 	}
 
-	# PADRE 
-	
+	# PADRE
+
 	// recargamos la ventana del termino y cerramos esta
 	$codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
 	echo $codHeader ;
-    echo "<script type=\"text/javascript\">";   
+    echo "<script type=\"text/javascript\">";
     if( substr($parent, 2)==0 ) {
     	echo "window.opener.location.reload();";
     }else{
@@ -117,9 +117,9 @@ if(isset($_REQUEST["accion"]) && $_REQUEST["accion"]==="norden") {
     }
     echo "window.close();";
     echo "</script>";
-	exit();	
+	exit();
 }
-	 
+
 
 
 // se reinicia para cada parent
@@ -149,15 +149,15 @@ $rows 	= pg_fetch_array($result, NULL, PGSQL_ASSOC);
 
 $no				= $rows['no'];
 $estaOrdenado 	= 1;
-if($no>0) 
+if($no>0)
 $estaOrdenado 	= 0;
 
 
-$sql 	= "	SELECT \"terminoID\", norden 
-			FROM $tabla 
-			WHERE 
-			parent = '$padre' AND 
-			esdescriptor = 'si' 
+$sql 	= "	SELECT \"terminoID\", norden
+			FROM $tabla
+			WHERE
+			parent = '$padre' AND
+			esdescriptor = 'si'
 			ORDER BY norden ASC
 		 ";
 $result	= JSON_RecordObj_matrix::search_free($sql);
@@ -167,24 +167,24 @@ $ordenF = false;
 
 # Create array objs with all records founded
 while ($rows = pg_fetch_assoc($result)) {
-	
+
 	#}
 	#if(($result->num_rows)>0) while ($rows = $result->fetch_array(MYSQLI_ASSOC) ) {
-	
+
 	if($estaOrdenado == 0) {
 		// Si NO están ordenados, Asignamos una numeración virtual
 		$norden	= $nordenV ++ ;
 	}else{
 		// Si lo están, Usamos la de su numeracion
 		$norden	= $rows["norden"];
-	}	
+	}
 	$parent		= $padre ;
 	$terminoID	= $rows["terminoID"];
 	$termino	= RecordObj_dd::get_termino_by_tipo($terminoID);
-	
+
 	$nordenArray[] = "$terminoID,$norden" ;
-	
-	$ordenF .= "$terminoID.$norden,";	
+
+	$ordenF .= "$terminoID.$norden,";
 }
 
 # Free result set

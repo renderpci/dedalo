@@ -161,11 +161,12 @@ const get_label_column = function(current_data) {
 
 	const label_node = ui.create_dom_element({
 		element_type	: 'label',
-		text_content	:  current_data.label
+		inner_html		: current_data.label
 	})
 
 	return label_node
 }//end get_label_column
+
 
 
 /**
@@ -180,7 +181,7 @@ const get_text_column = function(current_data) {
 	const text_node = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: class_list,
-		text_content	: current_data.value.join('')
+		inner_html		: current_data.value.join('')
 	})
 
 	return text_node
@@ -280,7 +281,7 @@ const get_json_column = function(current_data) {
 	const text_json = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: class_list,
-		text_content	: JSON.stringify(current_data.value)
+		inner_html		: JSON.stringify(current_data.value)
 	})
 
 	return text_json
@@ -300,7 +301,7 @@ const get_section_id_column = function(current_data) {
 	const section_id_node = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: class_list,
-		text_content	: current_data.value
+		inner_html		: current_data.value
 	})
 
 	return section_id_node

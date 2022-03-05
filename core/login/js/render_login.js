@@ -6,6 +6,7 @@
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {strip_tags} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -146,12 +147,10 @@ const add_events = function(self, wrapper, content_data) {
 */
 const get_content_data = function(self) {
 
-	const dedalo_application_langs = self.data.value.dedalo_application_langs
-
 	const fragment = new DocumentFragment()
 
 	// select lang
-		const langs			= dedalo_application_langs
+		const langs			= self.context.properties.dedalo_application_langs
 		const select_lang	= ui.build_select_lang({
 			langs 	 : langs,
 			selected : page_globals.dedalo_application_lang,
@@ -159,7 +158,7 @@ const get_content_data = function(self) {
 				const lang = e.target.value || null
 				if (lang) {
 					// data_manager api call
-					const api_response = await data_manager.prototype.request({
+					await data_manager.prototype.request({
 						body : {
 							action	: 'change_lang',
 							dd_api	: 'dd_utils_api',
@@ -194,9 +193,9 @@ const get_content_data = function(self) {
 			id				: 'username',
 			element_type	: 'input',
 			type			: 'text',
+			placeholder		: strip_tags(login_item_username.label),
 			parent			: form
 		})
-		user_input.placeholder	= login_item_username.label
 		user_input.autocomplete	= "username"
 
 	// Authorization input
@@ -205,9 +204,9 @@ const get_content_data = function(self) {
 			id				: 'auth',
 			element_type	: 'input',
 			type			: 'password',
+			placeholder		: strip_tags(login_item_password.label),
 			parent			: form
 		})
-		auth_input.placeholder = login_item_password.label
 		auth_input.autocomplete= "current-password"
 
 	// Button
@@ -227,7 +226,7 @@ const get_content_data = function(self) {
 		const button_enter_content = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button_label',
-			text_content	: login_item_enter.label,
+			inner_html		: strip_tags(login_item_enter.label),
 			parent			: button_enter
 		})
 
@@ -252,7 +251,7 @@ const get_content_data = function(self) {
 			// label
 				ui.create_dom_element({
 					element_type	: 'span',
-					text_content	: item.label,
+					inner_html		: item.label,
 					parent			: info
 				})
 
@@ -273,7 +272,7 @@ const get_content_data = function(self) {
 			// value
 				ui.create_dom_element({
 					element_type	: 'span',
-					text_content	: value,
+					inner_html		: value,
 					class_name		: class_name,
 					parent			: info
 				})

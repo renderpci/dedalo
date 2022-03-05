@@ -20,7 +20,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_indexation = function () {
-	
+
 	this.id							= null
 	this.model						= null
 	this.mode						= null
@@ -50,13 +50,14 @@ export const tool_indexation = function () {
 // prototypes assign
 	tool_indexation.prototype.render	= common.prototype.render
 	tool_indexation.prototype.destroy	= common.prototype.destroy
+	tool_indexation.prototype.refresh	= common.prototype.refresh
 	tool_indexation.prototype.edit		= render_tool_indexation.prototype.edit
 
 
 
 /**
 * INIT
-* 
+*
 * @param object options
 * Sample:
 * {
@@ -74,10 +75,9 @@ tool_indexation.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang	= options.lang // from page_globals.dedalo_data_lang
 		self.langs	= page_globals.dedalo_projects_default_langs
 
 	// id_base from transcription_component. Needed to set event subscriptions on init
@@ -431,7 +431,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 	// 		const tipo					= button_obj.dataset.tipo
 	// 		const section_tipo			= button_obj.dataset.section_tipo
 	// 		const lang					= button_obj.dataset.lang
-		
+
 	// 	// component_id is 'dataset.identificador_unico'
 	// 		const component_id = identificador_unico
 
@@ -476,7 +476,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 
 	// 	// Positioned to begin of range
 	// 		range_clon.setStart(startContainer, startOffset)
-		
+
 	// 	// Insert note at beginning of range
 	// 		range_clon.collapse(true) // Go to start of range position
 	// 		range_clon.insertNode(image_in)
@@ -538,7 +538,7 @@ tool_indexation.prototype.create_indexation = async function ( data ) {
 
 	// re-filter indexing_component data according current selected tag_id
 		self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id===tag_id )
-	
+
 	// force render indexing_component content again (as refresh)
 		self.indexing_component.render({render_level : 'content'})
 
@@ -639,13 +639,13 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 			tag_id							: tag_id // current selected tag (passed as param)
 		}
 
-	// rqo		
+	// rqo
 		const rqo = {
 			dd_api	: 'dd_utils_api',
 			action	: 'tool_request',
 			source	: source
 		}
-	
+
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 

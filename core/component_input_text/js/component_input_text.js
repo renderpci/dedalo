@@ -60,6 +60,9 @@ export const component_input_text = function(){
 	component_input_text.prototype.update_datum			= component_common.prototype.update_datum
 	component_input_text.prototype.change_value			= component_common.prototype.change_value
 	component_input_text.prototype.build_rqo			= common.prototype.build_rqo
+	// component_input_text.prototype.build_rqo_show		= common.prototype.build_rqo_show
+	// component_input_text.prototype.build_rqo_search		= common.prototype.build_rqo_search
+	// component_input_text.prototype.build_rqo_choose		= common.prototype.build_rqo_choose
 
 	// render
 	component_input_text.prototype.list					= render_list_component_input_text.prototype.list

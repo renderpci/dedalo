@@ -32,7 +32,8 @@ render_edit_section_record.prototype.edit = async function(options={}) {
 
 	const self = this
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	const ar_instances = await self.get_ar_instances_edit()
 
@@ -72,7 +73,7 @@ render_edit_section_record.prototype.edit = async function(options={}) {
 * @return DOM node get_content_data_edit
 */
 const get_content_data_edit = async function(self, ar_instances) {
-		
+
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes

@@ -1,50 +1,73 @@
+/**
+* tool_dd_label
+* Write here specific tool styles
+*/
 
 
 
-// wrapper_tool
-	.wrapper_tool.tool_dd_label {
+@import '../../../core/page/css/layout/vars.less';
 
 
-		>.content_data {
+@bg_color : #0336a8;
 
-			>.label_matix{
-				display: grid;
 
-				>li {
-					display: contents;
 
-					>* {
-						align-items: center;
-						justify-items: center;
-					}
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_dd_label {
+	padding: 1rem;
 
-					&.label_header{
-						>.label{
-							padding: 0.6em;
-							text-align: center;
-							background-color: #f78a1c;
-						    color: #fff;
-						    font-weight: 400;
-						    z-index: 2;
-						}
-					}
+	>.content_data {
 
-					&.row{
-						// system info
-						>.label {
-							&[contentEditable=true]:empty:not(:focus):before{
-							    content:attr(data-placeholder);
-								color: #aaa;
-							}
-							// height:20px;
-							border:1px solid gray;
+		>.label_matix{
+			display: grid;
+
+			>li {
+				display: contents;
+
+				>* {
+					align-items: center;
+					justify-items: center;
+					word-break: break-word;
+					padding: 0.25rem;
+				}
+
+				&.label_header{
+					>.label{
+						padding: 0.6em;
+						text-align: center;
+						background-color: @bg_color;
+						color: #fff;
+						font-weight: 400;
+						z-index: 2;
+						border-right: 1px solid #ffffff;
+
+						&.name {
+							background-color: #818181;
 						}
 					}
 				}
+
+				&.row{
+					// system info
+					>.label {
+						&[contentEditable=true]:empty:not(:focus):before{
+						    content:attr(data-placeholder);
+							color: #aaa;
+						}
+						// height:20px;
+						border:1px solid gray;
+					}
+				}
 			}
+		}
+
+	}//end content_data
+
+}//end .wrapper_tool.tool_dd_label
 
 
-
-		}//end content_data
-
-	}//end .wrapper_tool.tool_dd_label
+// modal header tool modification
+	.tool_header.tool_dd_label {
+		background-color: @bg_color;
+	}

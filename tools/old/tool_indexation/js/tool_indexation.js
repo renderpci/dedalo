@@ -1,7 +1,11 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*eslint no-undef: "error"*/
+
+
+
 "use strict";
 /**
 *  TOOL_INDEXATION CLASS
-*
 *
 */
 var tool_indexation = new function() {
@@ -29,8 +33,8 @@ var tool_indexation = new function() {
 
 			// Init split pane
 			Split(['#left_side', '#right_side'], {
-				sizes: [45, 55],
-				minSize: '40%'
+				sizes	: [45, 55],
+				minSize	: '40%'
 			});
 
 			// READY (EVENT)
@@ -510,25 +514,25 @@ var tool_indexation = new function() {
 
 		// Tabs
 		const button_tab_2 = common.create_dom_element({
-			element_type: "span",
-			id 			: "section_tab_2",
-			class_name 	: "section_tab_label",
-			text_content: get_label.info || 'Info',
-			parent 		: div
-			})
-			button_tab_2.addEventListener("click", function(e){
-				self.set_tab_active(this)
-			})
+			element_type	: "span",
+			id				: "section_tab_2",
+			class_name		: "section_tab_label",
+			inner_html		: get_label.info || 'Info',
+			parent			: div
+		})
+		button_tab_2.addEventListener("click", function(e){
+			self.set_tab_active(this)
+		})
 		const button_tab_1 = common.create_dom_element({
-			element_type: "span",
-			id 			: "section_tab_1",
-			class_name 	: "section_tab_label section_tab_active",
-			text_content: get_label.indexacion || 'Indexation',
-			parent 		: div
-			})
-			button_tab_1.addEventListener("click", function(e){
-				self.set_tab_active(this)
-			})
+			element_type	: "span",
+			id				: "section_tab_1",
+			class_name		: "section_tab_label section_tab_active",
+			inner_html		: get_label.indexacion || 'Indexation',
+			parent			: div
+		})
+		button_tab_1.addEventListener("click", function(e){
+			self.set_tab_active(this)
+		})
 
 
 		const tab_1 = document.createElement('section')
