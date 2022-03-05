@@ -118,9 +118,10 @@ abstract class component_common extends common {
 			}
 			if (strpos($component_name, 'component_')!==0) {
 				if(SHOW_DEBUG===true) {
-					$bt = debug_backtrace();
-					dump($bt, ' bt ++ '.to_string($tipo));
-					throw new Exception("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__, 1);
+					// $bt = debug_backtrace();
+					// dump($bt, ' bt ++ '.to_string($tipo));
+					// throw new Exception("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__, 1);
+					trigger_error("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__);
 				}
 				return null;
 			}
