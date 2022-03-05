@@ -1871,6 +1871,23 @@ abstract class common {
 																 $mode,
 																 $lang,
 																 $section_tipo);
+		// null component, when the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
+			if($current_component === null){
+				$value = false;
+
+				// data item
+				$item  = $this->get_data_item($value);
+					$item->parent_tipo				= $this->get_tipo();
+					$item->parent_section_id		= $this->get_section_id();
+					$data = [$item];
+
+				$element_json = new stdClass();
+					$element_json->context 	= [];
+					$element_json->data 	= $data;
+
+				return $element_json;
+			}
+
 		// properties
 			// if (isset($dd_object->properties)){
 			// 	$current_component->set_properties($dd_object->properties);

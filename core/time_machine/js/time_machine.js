@@ -138,12 +138,13 @@ time_machine.prototype.build = async function(autoload=false) {
 			// get context and data
 				const api_response = await current_data_manager.request({body:self.rqo})
 				if(SHOW_DEVELOPER===true) {
-					dd_console("TIME_MACHINE api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug.exec_time]);
+
+					dd_console("TIME_MACHINE api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug ? api_response.debug.exec_time : '']);
 				}
 
 			// set the result to the datum
-				self.datum = api_response.result
-				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
+				self.datum	= api_response.result
+				self.data	= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
 
 			// count rows
 				if (!self.total) {
@@ -242,7 +243,7 @@ time_machine.prototype.build_context = function() {
 		const ddo_map = [
 			//  matrix id
 			{
-				tipo			: 'dd784', // fake tipo from projects, only used to allow get tm column id data,
+				tipo			: 'dd1573',
 				type			: 'component',
 				typo			: 'ddo',
 				model			: 'component_section_id',
@@ -299,6 +300,18 @@ time_machine.prototype.build_context = function() {
 					ddo_map.push(item)
 				}
 			}
+		}else{
+			ddo_map.push({
+				tipo			: 'dd1574',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_input_text',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				label			: 'Value',
+				mode			: 'list'
+			})
+
 		}
 
 	const filter_by_locators = (component)

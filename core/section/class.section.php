@@ -3579,9 +3579,9 @@ class section extends common {
 			$component_dato	= $current_record->dato;
 		
 		// matrix ID (component_section_id)
-			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id) {			
+			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id) {
 
-				$fake_tipo = 'dd784'; // fake tipo from projects, only used to allow get tm column id data
+				$fake_tipo = 'dd1573';
 				$current_item = (object)[
 					'section_id'			=> $section_id,
 					'section_tipo'			=> $section_tipo,
@@ -3664,35 +3664,89 @@ class section extends common {
 			})($tipo, $section_tipo, $section_id, $lang, $id, $user_id);
 		
 		// component. Data of actual component to show in section list
-			// $data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $component_dato) {
+			$element_json = (function($tipo, $section_tipo, $section_id, $lang, $id, $component_dato='no_value') {
 
-			// des
-				// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				// 	$component 		= component_common::get_instance($modelo_name,
-				// 													 $tipo,
-				// 													 $section_id,
-				// 													 'list',
-				// 													 $lang,
-				// 													 $section_tipo);
-				// 	$component->set_dato($component_dato); // inject dato from time machine record
+				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$mode	= 'list';
 
-				// 	// get component json
-				// 		$get_json_options = new stdClass();
-				// 			$get_json_options->get_context	= false;
-				// 			$get_json_options->get_data		= true;
-				// 		$element_json = $component->get_json($get_json_options);
+				// component
+					$current_component  = component_common::get_instance($model,
+																		 $tipo,
+																		 $section_id,
+																		 $mode,
+																		 $lang,
+																		 $section_tipo);
 
-				// 	// edit section_id to match section locator data item
-				// 		$current_item = reset($element_json->data);
-				// 		if (!empty($current_item)) {
-				// 			$current_item->matrix_id = $id;
-				// 		}
+				// null component, when the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
+					if($current_component===null) {
 
-				// 	return $current_item;
-				// })($tipo, $section_tipo, $section_id, $lang, $id, $component_dato);
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$mode			= 'list';
-			$element_json	= $this->build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $component_dato);
+						$value = false;
+
+						// data item
+						$item = $this->get_data_item($value);
+							$item->parent_tipo			= $this->get_tipo();
+							$item->parent_section_id	= $this->get_section_id();
+
+						$data = [$item];
+
+						$element_json = new stdClass();
+							$element_json->context 	= [];
+							$element_json->data 	= $data;
+
+						return $element_json;
+					}//end if($current_component===null)
+
+				// properties
+					// if (isset($dd_object->properties)){
+					// 	$current_component->set_properties($dd_object->properties);
+					// }
+
+				// Inject this tipo as related component from_component_tipo
+					if (strpos($model, 'component_')===0){
+						$current_component->from_component_tipo = $tipo;
+						$current_component->from_section_tipo 	= $section_tipo;
+					}
+
+				// inject dato if is received
+					if ($component_dato!=='no_value') {
+						$current_component->set_dato($component_dato);
+					}
+
+				// dump($this->context, '$this->context ++ '.to_string($this->tipo));
+
+
+				// valor as plain text
+					$valor = $current_component->get_valor();
+
+						dump($valor, ' valor +--------------/////////----------------------+ '.to_string());
+
+				// placeholder component for mixed component tipo
+
+
+
+				// get component json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context 	= false;
+						$get_json_options->get_data 	= true;
+					$element_json = $current_component->get_json($get_json_options);
+
+				// dd_info, additional information to the component, like parents
+					// $value_with_parents = $dd_object->value_with_parents ?? false;
+					// if ($value_with_parents===true) {
+					// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
+					// 	$ar_subdata[] = $dd_info;
+					// }
+
+
+				// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
+
+				return $element_json;
+			})($tipo, $section_tipo, $section_id, $lang, $id, $component_dato);
+
+
+			// $model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			// $mode			= 'list';
+			// $element_json	= $this->build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $component_dato);
 			$component_data	= array_map(function($value_obj) use($id, $section_id){
 				// $value_obj->row_section_id	= $section_id; // they are not necessary here !
 				// $value_obj->parent_tipo		= $this->tipo; // they are not necessary here !
