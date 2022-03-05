@@ -40,12 +40,21 @@ class dd_manager {
 			}
 
 		// logged
-			if ($rqo->action!=='login' && $rqo->action!=='get_login' && login::is_logged()!==true) {
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
-					$response->error	= 'not_logged';
-				return $response;
+			$no_loggin_needed_actions = [
+				'start',
+				'change_lang',
+				'login'
+			];
+			if (in_array($rqo->action, $no_loggin_needed_actions)) {
+				// do not check login here
+			}else{
+				if (login::is_logged()!==true) {
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
+						$response->error	= 'not_logged';
+					return $response;
+				}
 			}
 
 		// rqo check
@@ -117,7 +126,7 @@ class dd_manager {
 					$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL;
 					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
-		
+
 
 
 		return $dedalo_data;

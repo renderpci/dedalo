@@ -4,16 +4,16 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-	$properties 		= $this->get_properties();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$properties		= $this->get_properties();
 
 
 
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
+	if($options->get_context===true && $permissions>0) {
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
@@ -23,9 +23,12 @@
 			default:
 				$current_context = $this->get_structure_context($permissions);
 
-				// allowed_extensions
-				$current_context->allowed_extensions = $this->get_allowed_extensions();
-				$current_context->default_target_quality = $this->get_original_quality();
+				// append additional info
+					$current_context->allowed_extensions		= $this->get_allowed_extensions();
+					$current_context->default_target_quality	= $this->get_original_quality();
+					$current_context->ar_quality				= $this->get_ar_quality(); // defined in config
+					$current_context->default_quality			= $this->get_default_quality();
+					$current_context->quality					= $this->get_quality(); // current instance quality
 
 				$context[] = $current_context;
 				break;
@@ -37,25 +40,38 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
-		$value = $this->get_dato();
+		// value as array always
+			$value = $this->get_dato();
+			if (!is_array($value)) {
+				$value = [$value];
+			}
 
-		$valid_urls = [];
-		$pdf_item = new stdClass();
-			$pdf_item->url 	 	= $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT, true); // $quality=false, $test_file=true, $absolute=false, $default_add=false
-			$pdf_item->quality 	= DEDALO_PDF_QUALITY_DEFAULT;
+		// get the quality url of the available image files
+			switch ($modo) {
+				case 'edit':
+					$datalist = $this->get_files_info();
+					break;
 
-		$valid_urls[] = $pdf_item;
+				case 'list':
+				default:
+					// files_info. For fast list we add directly the default image
+						$quality	= DEDALO_PDF_QUALITY_DEFAULT;
+						$url		= $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT, true);
+						$pdf_item = new stdClass();
+							$pdf_item->url		= $url;
+							$pdf_item->quality	= $quality;
+						$datalist = [$pdf_item];
+					break;
+			}
 
 		// data item
-		$item = $this->get_data_item($value);
-
-		$item->datalist = $valid_urls;
+			$item = $this->get_data_item($value);
+			// item datalist
+			$item->datalist = $datalist;
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

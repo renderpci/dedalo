@@ -73,13 +73,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 3,
-                            "hour": 12,
-                            "time": 64991593722,
+                            "day": 2,
+                            "hour": 13,
+                            "time": 64994190780,
                             "year": 2022,
-                            "month": 2,
-                            "minute": 28,
-                            "second": 42
+                            "month": 3,
+                            "minute": 53,
+                            "second": 0
                         }
                     }
                 ]
@@ -96,7 +96,7 @@
             "inf": "Etiqueta [component_input_text]",
             "dato": {
                 "lg-eng": [
-                    "Import Dédalo CSV"
+                    "Import"
                 ]
             }
         },
@@ -123,30 +123,12 @@
                     "6.0.0"
                 ]
             }
-        },
-        "dd1350": {
-            "dato": {
-                "lg-nolan": [
-                    null
-                ]
-            }
-        },
-        "dd1372": {
-            "dato": {
-                "lg-nolan": [
-                    [
-                        {
-                            "test_label": "Test label"
-                        }
-                    ]
-                ]
-            }
         }
     },
     "section_id": 6,
     "created_date": "2020-01-23 18:30:08",
     "section_tipo": "dd1340",
-    "modified_date": "2022-02-03 12:28:42",
+    "modified_date": "2022-03-02 13:53:00",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",

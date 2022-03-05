@@ -42,15 +42,19 @@
 	.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
 
 		&:before {
+			background-color: @color;
 			content: ' ';
 			display: inline-block;
 			height: 1em;
-			width: 1em;
-			margin-right: 0.5em;
-			vertical-align: baseline;
-			background-color: @color;
+			margin-right: 0.25em;
 			opacity: @opacity;
+			vertical-align: baseline;
+			width: 1em;
 			.fn_add_mask(@icon_name);
+
+			@media screen and (max-width: @width_break_point_1) {
+				margin-right: 0px;
+			}
 		}
 	}
 
@@ -83,7 +87,6 @@
 		//padding: 0.5em;
 		// margin-top: 0.25em;
 		// margin-bottom: 0.25em;
-
 
 		&:hover {
 			opacity: 1 !important;
@@ -137,12 +140,23 @@
 		font-size: 1rem;
 		font-weight: 400;
 		line-height: 1.5;
-		border-radius: .25rem;
-		transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+		border-radius: 0.25rem;
+		transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
+
+		&.folding {
+			@media screen and (max-width: @width_break_point_1) {
+			// padding-right: 0.25rem;
+			text-indent: -9999em;
+		}
+		}
+		// @media screen and (max-width: @width_break_point_1) {
+		// 	// padding-right: 0.25rem;
+		// 	text-indent: -9999em;
+		// }
 
 		// color
 		color: #212529; // default dark grey
@@ -200,7 +214,7 @@
 		}
 		&.light {
 			background-color: @color_light;
-			border-color: @color_light;
+			border-color: darken(@color_light, 5%); // #e7e7e7
 			color: #212529;
 			&:before {
 				background-color: #212529 !important;
@@ -239,6 +253,7 @@
 // generic recyclable icons for buttons
 	.remove, .delete {
 		@icon_name : 'trash.svg';
+		// @icon_name : 'trash_bold.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -372,13 +387,51 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
+	.file_av {
+		@icon_name : 'file_av.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.media {
+		@icon_name : 'media.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.rotate {
+		@icon_name : 'rotate.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+		&.right {
+			transform: scaleX(-1);
+		}
+	}
+	.repair {
+		@icon_name : 'repair.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.pause {
+		@icon_name : 'pause.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.play {
+		@icon_name : 'play.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.list {
+		@icon_name : 'list.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
 
 
 // .contenteditable_buttons (used by content editable)
 	.contenteditable_buttons {
 		position: absolute;
-		top: -1.54em;
 		height: 1.5em;
+		top: -1.54em;
 		z-index: 9;
 		display: flex;
 		background-color: @color_grey_dark;
@@ -391,10 +444,10 @@
 
 			&:before {
 				content: " ";
-				width: 1em;
-				height: 1em;
 				background-size: contain;
 				background-repeat: no-repeat;
+				height: 1em;
+				width: 1em;
 				margin-right: 0.25em;
 				padding-right: 1em;
 				vertical-align: text-bottom;

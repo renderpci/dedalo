@@ -236,7 +236,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field latitude
 			ui.create_dom_element({
 				element_type 	: 'label',
-				text_content 	: get_label['latitud'],
+				inner_html 	: get_label['latitud'],
 				parent 		 	: inputs_container
 			})
 
@@ -254,7 +254,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field longitude
 			ui.create_dom_element({
 				element_type	: 'label',
-				text_content	: get_label['longitud'],
+				inner_html		: get_label.longitud,
 				parent			: inputs_container
 			})
 
@@ -272,7 +272,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field zoom
 			ui.create_dom_element({
 				element_type	: 'label',
-				text_content	: get_label['mapa_zoom'],
+				inner_html		: get_label.mapa_zoom,
 				parent			: inputs_container
 			})
 
@@ -290,7 +290,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field altitude
 			ui.create_dom_element({
 				element_type	: 'label',
-				text_content	: get_label['altitude'],
+				inner_html		: get_label.altitude,
 				parent			: inputs_container
 			})
 
@@ -363,7 +363,7 @@ const get_buttons = (self) => {
 			class_name 		: 'button full_screen',
 			parent 			: fragment
 		})
-		button_full_screen.addEventListener("mouseup", (e) =>{
+		button_full_screen.addEventListener("mouseup", () =>{
 			self.node[0].classList.toggle('fullscreen')
 			const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)

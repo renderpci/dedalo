@@ -10,18 +10,18 @@
 
 
 /**
-* RENDER_TOOL_UPLOAD
+* RENDER_TOOL_DD_LABEL
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_dd_label = function() {
-	
+
 	return true
 };//end render_tool_dd_label
 
 
 
 /**
-* RENDER_TOOL_upload
+* RENDER_TOOL_DD_LABEL
 * Render node for use like button
 * @return DOM node
 */
@@ -46,7 +46,15 @@ render_tool_dd_label.prototype.edit = async function (options={render_level:'ful
 		const header = wrapper.querySelector('.tool_header')
 		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
 		// const modal  = ui.attach_to_modal(header, wrapper, null)
-		modal.on_close = () => {
+		modal.on_close = async () => {
+
+			// save caller data and refresh it
+			const editor = self.caller.editors[0]
+			self.caller.save_sequence(editor)
+			.then(function(){
+				self.caller.refresh()
+			})
+
 			self.destroy(true, true, true)
 		}
 
@@ -70,8 +78,9 @@ render_tool_dd_label.prototype.edit = async function (options={render_level:'ful
 */
 const get_content_data = async function(self) {
 
-	const ar_langs = self.loaded_langs
-	const ar_names = self.ar_names
+	// short vars
+		const ar_langs = self.loaded_langs
+		const ar_names = self.ar_names
 
 	const fragment = new DocumentFragment()
 
@@ -79,10 +88,12 @@ const get_content_data = async function(self) {
 		const add_button = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button tool add',
-			text_content 	: '',
-			parent 			: fragment
+			inner_html		: '',
+			parent			: fragment
 		})
 		add_button.addEventListener("mouseup", async (e) =>{
+			e.stopPropagation()
+
 			const row = await get_rows(self, ar_langs, false, '', ar_names.length)
 			label_matix.appendChild(row)
 		})
@@ -91,11 +102,10 @@ const get_content_data = async function(self) {
 		const label_matix = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'label_matix',
-			parent 			: fragment
+			parent			: fragment
 		})
-	label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr);
-	grid-template-rows: repeat(${ar_names.length+1}, 1fr);
-	`
+	label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr);`
+	// grid-template-rows: repeat(${ar_names.length+1}, 1fr);
 
 
 	// header
@@ -104,12 +114,12 @@ const get_content_data = async function(self) {
 	label_matix.appendChild(header)
 
 	// labels
-
-	for (let i = 0; i < ar_names.length; i++) {
-		const current_name = ar_names[i]
-		const row = await get_rows(self, ar_langs, false, current_name, i)
-		label_matix.appendChild(row)
-	}
+		const ar_names_length = ar_names.length
+		for (let i = 0; i < ar_names_length; i++) {
+			const current_name = ar_names[i]
+			const row = await get_rows(self, ar_langs, false, current_name, i)
+			label_matix.appendChild(row)
+		}
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -137,35 +147,39 @@ const get_rows = async function(self, ar_langs, header=false, name, key) {
 		})
 
 	// remove button
-	if(header !==true){
+	if(header!==true){
+
 		const remove_button = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button tool remove',
-			parent 			: li
+			parent			: li
 		})
 		remove_button.addEventListener("mouseup", async (e) =>{
-				const old_value 	= self.ar_names[key]
+			e.stopPropagation()
 
-				for (let i = self.ar_data.length - 1; i >= 0; i--) {
-					const item = self.ar_data[i]
-					if(item.name === old_value){
-						self.ar_data.splice(i,1)
-					}
+			const old_value = self.ar_names[key]
+
+			for (let i = self.ar_data.length - 1; i >= 0; i--) {
+				const item = self.ar_data[i]
+				if(item.name === old_value){
+					self.ar_data.splice(i,1)
 				}
-				 self.ar_names.splice(key,1)
-				// for (var i = 0; i < ar_keys.length; i++) {
-				// 	self.ar_data.splice(ar_keys[i],1)
-				// }
-				li.remove()
-				self.update_data()
+			}
+			 self.ar_names.splice(key,1)
+			// for (var i = 0; i < ar_keys.length; i++) {
+			// 	self.ar_data.splice(ar_keys[i],1)
+			// }
+			li.remove()
+			self.update_data()
 		})
+
 	}else{
+
 		const remove_button = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: '',
 			parent 			: li
 		})
-
 	}
 
 
@@ -173,15 +187,16 @@ const get_rows = async function(self, ar_langs, header=false, name, key) {
 		const label_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label name',
-			text_content 	: header===true ? 'name' : name,
-			contenteditable : header===true ? false : true,
-			parent 			: li
+			inner_html		: header===true ? 'name' : name,
+			contenteditable	: header===true ? false : true,
+			parent			: li
 		})
-		label_name.addEventListener("blur", function(e){
-			const old_value 	= self.ar_names[key]
-			const dirty_value 	= label_name.innerText
-			const lower_value 	= dirty_value.replace(/\w/g, u => u.toLowerCase())
-			const value 		= lower_value.replace(/\s/g, '_')
+		label_name.addEventListener("blur", function(){
+
+			const old_value		= self.ar_names[key]
+			const dirty_value	= label_name.innerText
+			const lower_value	= dirty_value.replace(/\w/g, u => u.toLowerCase())
+			const value			= lower_value.replace(/\s/g, '_')
 
 			const data = self.ar_data.filter(item => item.name === old_value)
 
@@ -211,7 +226,6 @@ const get_rows = async function(self, ar_langs, header=false, name, key) {
 
 
 
-
 /**
 * GET_INPUTS
 * @return DOM node content_data
@@ -228,10 +242,10 @@ const get_inputs = async function(self, current_lang, header, name, key, li) {
 		const label_language = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_content 	: header===true ? current_lang.label : label_value,
-			dataset 		: header===true ? '' : {"placeholder": name},
-			contenteditable : header===true ? false : true,
-			parent 			: li
+			inner_html		: header===true ? current_lang.label : label_value,
+			dataset			: header===true ? '' : {"placeholder": name},
+			contenteditable	: header===true ? false : true,
+			parent			: li
 		})
 
 		// label_language.addEventListener("change", async (e) =>{
@@ -244,7 +258,7 @@ const get_inputs = async function(self, current_lang, header, name, key, li) {
 		// 	label_language.focus();
 		// })
 		// when the user blur the text box save the name into the layer structure
-		label_language.addEventListener("blur", (e)=>{
+		label_language.addEventListener("blur", ()=>{
 
 			if(label_language.innerText==='') return
 			if(typeof data !== 'undefined'){
@@ -271,3 +285,5 @@ const get_inputs = async function(self, current_lang, header, name, key, li) {
 			if(e.keyCode === 13) label_language.blur()
 		})
 };//end get_inputs
+
+

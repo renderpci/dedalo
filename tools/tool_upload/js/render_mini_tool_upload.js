@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -14,8 +14,9 @@
 	} from './render_edit_tool_upload.js'
 
 
+
 /**
-* RENDER_mini_TOOL_UPLOAD
+* RENDER_MINI_TOOL_UPLOAD
 * Manages the component's logic and apperance in client side
 */
 export const render_mini_tool_upload = function() {

@@ -1,186 +1,150 @@
+/**
+* tool_posterframe
+* Write here specific tool styles
+*/
 
 
+
+@import '../../../core/page/css/layout/vars.less';
+
+
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
 .wrapper_tool.tool_posterframe {
+	padding: 1rem;
 
-	.components_container {
-		//display: grid;
-	    //grid-template-columns: 1fr 1fr;
-	    //grid-gap: 1em;	
+	>div {
+		max-width: calc(720px + 2rem);
+		margin-left: auto;
+		margin-right: auto;
+	}
 
-	    .wrap_edit_video{ 
-	    	display: block;
-	 		width: 99.9%;   
-	 	}
+	// av component container
+	>.main_component_container {
+		// background-color: @color_grey_medium;
+		background-color: #fafafa;
+		min-width: 720px;
+		// height: 404px;
+		// display: table;
+		height: 500px;
+		// display: block;
 
-	    button {
-			display: inline-block;
-			margin-left: 0.5rem;	
+		@media screen and (max-width: @width_break_point_1) {
+			min-width: unset;
+			height: unset;
 		}
 
-		button.secondary {
-    		color: #000;
-    		background-color: #ccc;
-    		border-color: #ccc;      		 		
+		>img {
+			display: block;
+			padding: 1rem;
+			padding-top: 2rem;
+			padding-bottom: 1rem;
 		}
 
-		button.av_player_btn{
-			color: #000;
-    		background-color: #ccc;
-    		border-color: #ccc;   
-			padding: 4px; 
-		}
 
-		.posterframe_container {
-			margin-top: 22px;
-		}
+		.wrapper_component.component_av {
+			// height: 404px;
 
-		/* TC DIV SHOW GREEN TIMECODE LIKE 00:02:36.432 */
-		#TCdiv { 
-			color: #fd7f26;
-			padding: 0;
-			margin: 0;
-			font-family: Verdana,Geneva,sans-serif;
-			font-size: 23px;
-			// width: 175px;
-			height: 1em;
-			display: inline-block;
-			vertical-align: baseline;
-			text-shadow: 1px 2px 2px #b9b9b9;
-			position: relative;
-			top: 3px;
-			padding-right: 5px;
-			padding-left: 3px;
+			.content_data {
+				justify-content: center;
+			}
+
+			video {
+				max-height: 404px;
+			}
 		}
 	}
 
-	.offset_management_container {
+	>.content_data {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		// display: grid;
+		// grid-template-rows: 1fr 1fr;
 
-		>* {
-			margin-right: 0.5em;
-			vertical-align: middle;
-			font-size: 1em;
-		}
 
-		select, input {
-			height: 2.25em;
-		}
 
-		input {
-			height: 2em;
-			width: 6em;
-			text-align: center;
-		}
+		// buttons and preview container
+		>.buttons_container {
+			width: 100%;
+			// max-width: calc(720px + 2rem);
+			// margin-left: auto;
+			// margin-right: auto;
 
-		button {
-			text-transform: capitalize;
-		}
+			>.buttons_wrapper {
+				background-color: #fafafa;
+				display: flex;
+				flex-wrap: wrap;
+				margin: 1rem;
+				margin-top: 1.5rem;
+				color: #aaa;
+				width: 100%;
+				// max-width: calc(720px + 2rem);
+				margin-left: auto;
+				margin-right: auto;
 
+				.identifying_image_block {
+					// background-color: #dff4b6;
+					flex: 1 1 auto;
+					display: flex;
+					flex-wrap: wrap;
+					justify-content: space-evenly;
+					align-items: center;
+					padding: 1rem;
+					width: 35%;
+
+					button.create_identifying_image {
+
+					}
+
+					select.identifying_image_selector {
+
+					}
+				}//end .identifying_image_block
+
+				.manage_posterframe_block {
+					// background-color: #f2dab4;
+					flex: 1 1 auto;
+					display: flex;
+					flex-wrap: wrap;
+					justify-content: space-evenly;
+					align-items: center;
+					padding: 1rem;
+					width: 31%;
+					border-left: 1px solid #eeeeee;
+
+					button.create_posterframe {
+
+					}
+
+					button.delete_posterframe {
+
+					}
+				}
+
+				img.image_posterframe {
+					// background-color: #e8caf2;
+					flex: 1 1 auto;
+					object-fit: contain;
+					width: 13rem;
+					height: auto;
+					display: block;
+				}
+			}
+
+		}//end .buttons_container
+
+
+	}//end content_data
+
+
+
+}//end wrapper_tool
+
+
+
+// modal header tool modification
+	.tool_header.tool_posterframe {
+		background-color: #779a32;
 	}
-
-	
-}
-// /* INSPECTOR */
-
-
-// /* PAGE */
-// .wrap_tool_posterframe_page {
-// 	display: block;
-// 	width: 99.9%;
-// 	}
-// 	.tool_posterframe_content {
-// 		text-align: center;
-// 		padding-top: 5px;
-// 		}
-// 		/* PLAYER AV
-// 		----------------------------------------------- */
-// 		#player_av {
-// 			height: 500px;
-// 			overflow: hidden;
-// 			}
-// 			#player_av iframe#videoFrame {
-// 				width: 736px;
-// 				height: 532px;
-// 				border: none;
-// 			}
-// 		/* OPTIONS
-// 		----------------------------------------------- */		
-// 		.tool_posterframe_options {
-// 			display: block;
-// 			margin-left: auto;
-// 			margin-right:auto;
-// 			width: 720px;
-// 			height: 80px;
-// 			/*background-color: #FFE374;*/
-// 			}
-// 			/* COMMON
-// 			----------------------------------------------- */				
-// 			#identifying_image_wrapper,
-// 			#posterframe_wrapper {
-// 				width: 50%;
-// 				float: left;
-// 				display: table;
-// 				vertical-align: middle;
-// 				position: relative;
-// 			}
-// 			/* IDENTIFYING_IMAGE
-// 			----------------------------------------------- */
-// 			#identifying_image_wrapper {
-// 				/*background-color: #A3FF74;*/				
-// 				}
-// 				#identifying_image_wrapper .identifying_image_new {
-// 					margin-top: 21px;
-//   					float: left;
-// 				}
-// 				#identifying_image_wrapper select#identifying_image_selector {
-// 					float: left;
-// 					margin-top: 22px;
-// 					-webkit-appearance: none;
-// 					padding: 6px;
-// 					padding-right: 20px;
-// 					border: 1px solid #CFCFCF;
-// 					background-image: url('../../../themes/default/select_2x.png');
-// 					background-repeat: no-repeat;
-// 					background-position-x: 95%;
-// 					background-position-y: center;
-// 					background-size: 10px 6px;
-// 				}
-// 			/* POSTERFRAME
-// 			----------------------------------------------- */	
-// 			#posterframe_wrapper {
-// 				/*background-color: #95FFF7;*/				
-// 				}
-// 				#posterframe_wrapper .posterframe_button_new {					
-// 					float: right;
-// 					margin-right: 19px;
-// 					margin-top: 21px;
-// 				}
-// 				#posterframe_wrapper .posterframe_button_delete {
-// 					float: right;
-// 					margin-right: 18px;
-// 					margin-top: 28px;
-// 					background-position: -456px 0px;
-// 				}
-// 				#posterframe_wrapper .posterframe_thumb_image {
-// 					/*
-// 					float: left;
-// 					position: relative;
-// 					top: -75%;
-// 					*/
-// 					width: 125px;
-// 					height: 70px;	
-// 					box-shadow: inset 0px 0px 15px rgba(0,0,0,0.9);
-// 					border-radius: 3px;
-// 					background-size: cover;
-// 				}
-
-// 		#inspector_log {
-			
-// 			height: 40px;
-// 			display: block;
-// 			margin-left: auto;
-// 			margin-right:auto;
-// 			width: 720px;
-// 		}
-
-
-

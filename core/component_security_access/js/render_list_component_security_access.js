@@ -34,7 +34,7 @@ render_list_component_security_access.prototype.list = async function() {
 		const data = self.data
 
 	// Value as string
-		const value_string = data.value.join(self.divisor)
+		const value_string = JSON.stringify(data.value, null, 2)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

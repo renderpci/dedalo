@@ -54,9 +54,10 @@ background-color: #FFFF00;
 		top: 0px;
 		left:0px;
 
+		position: -webkit-sticky;
 		position: sticky;
 
-		@media screen and (max-width: @width_break_point_1) {
+		@media screen and (max-width: @width_break_point_0) {
 			position: initial;
 		}
 
@@ -73,26 +74,53 @@ background-color: #FFFF00;
 		// font-family: "Oxygen-light", sans-serif;
 		font-size: 0.84em;
 		color: #ffffff;
-	    line-height: 1.2em;
+		line-height: 1.2em;
 
-	    &.menu_wrapper_debug {
-			background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
+		&:before {
+			content : " ";
+			position: absolute;
+			left: 0px;
+			top: 0px;
+			height: 100%;
+			width: 3px;
+			background-color: green;
 		}
 
-		&.menu_wrapper_debug_development {
-			//background: linear-gradient(to bottom, rgba(214,21,0,0.9) 0%,rgba(135,0,13,0.9) 100%) !important; /* W3C */
-			background-color: #a20401 !important;
+		&.show_developer {
+			&:before {
+				background-color: orange;
+			}
+		}
+		&.show_debug {
+			&:before {
+				background-color: red;
+			}
 		}
 
-		&.menu_wrapper_debug_master {
-			//background: linear-gradient(to bottom, rgba(44, 177, 20, 0.8) 0, rgba(12, 115, 34, 0.8) 100%) !important;
-			background: linear-gradient(to bottom, rgba(35, 189, 7, 0.8) 0, rgba(9, 97, 28, 0.8) 100%) !important
-		}
+	    // &.menu_wrapper_debug {
+		// 	background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
+		// }
 
-		&.menu_wrapper_global_admin {
-			//background-image: url('../../themes/default/dedalo_logo_red.svg');
-			border-top: 1px solid @color_orange_dedalo;
-		}
+		// &.menu_wrapper_debug_development {
+		// 	//background: linear-gradient(to bottom, rgba(214,21,0,0.9) 0%,rgba(135,0,13,0.9) 100%) !important; /* W3C */
+		// 	background-color: #a20401 !important;
+		// }
+
+		// &.menu_wrapper_debug_master {
+		// 	//background: linear-gradient(to bottom, rgba(44, 177, 20, 0.8) 0, rgba(12, 115, 34, 0.8) 100%) !important;
+		// 	background: linear-gradient(to bottom, rgba(35, 189, 7, 0.8) 0, rgba(9, 97, 28, 0.8) 100%) !important
+		// }
+
+		// &.menu_wrapper_global_admin {
+		// 	//background-image: url('../../themes/default/dedalo_logo_red.svg');
+		// 	border-top: 1px solid @color_orange_dedalo;
+		// }
+
+		#menu_hierarchy {
+    		padding: 0;
+    		margin-left: 0.5rem;
+    		z-index: 2;
+    	}
 
 		// direct children elements
 		>* {
@@ -159,7 +187,7 @@ background-color: #FFFF00;
 
 				// width: auto;
 				// outline: none;
-				
+
 				//line-height: 1.1em;
 
 				//padding: 2px;
@@ -186,7 +214,7 @@ background-color: #FFFF00;
 
 				&.unsync {
 					color: #fdcf39;
-			    	opacity: 0.9;
+					opacity: 0.9;
 				}
 			}
 
@@ -248,10 +276,12 @@ background-color: #FFFF00;
 				width: 100%;
 				margin: 0;
 				padding: 0;
+				padding-right: 0.5rem;
 				display: flex;
 				flex-wrap: wrap;
+				flex-basis: 100%;
 
-				>* {
+				>div {
 					padding-left: 1em;
 					color: #9d9d9d;
 					font-size: 94%;
@@ -292,7 +322,7 @@ background-color: #FFFF00;
 	@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
 	#menu_hierarchy {
 		// font-family: "Oxygen-light", sans-serif;
-		z-index: 9999;
+		// z-index: 9999;
 		//position:relative;
 		padding: 0;
 
@@ -585,13 +615,13 @@ background-color: #FFFF00;
 				/*
 				@media screen and (max-width: @content_data_max_width) { // 768px
 					background-color: #727272;
-				    position: absolute;
-				    top: 32px;
-				    margin: 0;
-				    right: 0;
-				    height: 15px;
-				    padding-top: 0px;
-				    text-align: right;
+					position: absolute;
+					top: 32px;
+					margin: 0;
+					right: 0;
+					height: 15px;
+					padding-top: 0px;
+					text-align: right;
 				}
 				*/
 
@@ -622,8 +652,8 @@ background-color: #FFFF00;
 			margin-right: 7px;
 			width: 14px;
 			height: 14px;
-		  	float: left;
-		  	opacity: 1;
+			float: left;
+			opacity: 1;
 		}
 		*/
 
@@ -672,13 +702,13 @@ background-color: #FFFF00;
 	//padding-top: 0px;
 	color: #ECF4F8 !important;
 	position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 1001;
-    opacity: 0.95;
-    overflow: hidden;
-    line-height: 24px;
-    display: flex;
+	left: 0;
+	top: 0;
+	z-index: 1001;
+	opacity: 0.95;
+	overflow: hidden;
+	line-height: 24px;
+	display: flex;
 	}
 	.debug_line_wrap a,	.debug_line_wrap span {
 		color: #dcdcdc !important;
@@ -744,21 +774,21 @@ background-color: #FFFF00;
 		// left: 50%;
 	}
 	#menu_wrapper #quit{
-	    top: 0px;
+		top: 0px;
 		width: 45px;
 		height: 45px;
 		text-align: center;
-   		line-height: 45px;
+		line-height: 45px;
 	}
 
 	#menu_wrapper #toggle_menu{
-	    top: 0px;
+		top: 0px;
 		width: 45px;
 		height: 45px;
 		text-align: center;
-   		line-height: 45px;
-   		display: inline-block;
-   		-webkit-user-select: none;
+		line-height: 45px;
+		display: inline-block;
+		-webkit-user-select: none;
 		-khtml-user-select: none;
 		-moz-user-select: none;
 		-o-user-select: none;
@@ -816,7 +846,7 @@ background-color: #FFFF00;
 		//top: 10px;
 		//right: 65px;
 		//position: absolute;
-    	//margin-left: 0px;
+		//margin-left: 0px;
 
 		top: -35px;
 		right: 10px;

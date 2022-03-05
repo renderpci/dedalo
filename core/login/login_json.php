@@ -28,7 +28,7 @@
 	if($options->get_data===true && $permissions>0){
 
 		$value = new stdClass();
-			$value->dedalo_application_langs = (array)unserialize(DEDALO_APPLICATION_LANGS);
+			// $value->dedalo_application_langs = (array)unserialize(DEDALO_APPLICATION_LANGS);
 
 		// data item
 			$item  = $this->get_data_item($value);

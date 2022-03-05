@@ -10,26 +10,27 @@
 
 
 /**
-* RENDER_TOOL_UPLOAD
+* RENDER_TOOL_PDF_EXTRACTOR
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_pdf_extractor = function() {
-	
+
 	return true
 };//end render_tool_pdf_extractor
 
 
 
 /**
-* RENDER_TOOL_upload
-* Render node for use like button
+* EDIT
+* Render node
 * @return DOM node
 */
-render_tool_pdf_extractor.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_pdf_extractor.prototype.edit = async function (options) {
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// options
+		const render_level 	= options.render_level
 
 	// content_data
 		const current_content_data = await get_content_data(self)
@@ -43,11 +44,11 @@ render_tool_pdf_extractor.prototype.edit = async function (options={render_level
 		})
 
 	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: wrapper
-	// 	})
+		// 	const buttons_container = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name 		: 'buttons_container',
+		// 		parent 			: wrapper
+		// 	})
 
 
 	// tool_container
@@ -97,16 +98,16 @@ const get_content_data = async function(self) {
 		const page_range = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'page_in',
-			text_content 	: '',
-			parent 			: fragment
+			inner_html		: '',
+			parent			: fragment
 		})
 
 		// page_in
 			const page_in_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_in',
-				text_content 	: self.get_label('page_in'),
-				parent 			: page_range
+				inner_html		: self.get_label('page_in'),
+				parent			: page_range
 			})
 			const page_in = ui.create_dom_element({
 				element_type	: 'input',
@@ -115,18 +116,16 @@ const get_content_data = async function(self) {
 				parent 			: page_range
 			})
 			page_in.addEventListener('change',(e)=>{
-				if(e.target.value === ''){
-					self.config.page_in = false
-				}else{
-					self.config.page_in = e.target.value
-				}
+				self.config.page_in = (!e.target.value || e.target.value==='')
+					? false
+					: e.target.value
 			})
 		// page_out
 			const page_out_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_in',
-				text_content 	: self.get_label('page_out'),
-				parent 			: page_range
+				inner_html		: self.get_label('page_out'),
+				parent			: page_range
 			})
 			const page_out = ui.create_dom_element({
 				element_type	: 'input',
@@ -135,19 +134,17 @@ const get_content_data = async function(self) {
 				parent 			: page_range
 			})
 			page_out.addEventListener('change',(e)=>{
-				if(e.target.value === ''){
-					self.config.page_out = false
-				}else{
-					self.config.page_out = e.target.value
-				}
+				self.config.page_out = (!e.target.value || e.target.value==='')
+					? false
+					: e.target.value
 			})
 		// method
 		// the user can choose the methof of the extaction, it can be "text" or "html", the process will change the daemon into the server
 			const method_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_in',
-				text_content 	: self.get_label('proces_method'),
-				parent 			: page_range
+				inner_html		: self.get_label('proces_method'),
+				parent			: page_range
 			})
 				// ul
 				const radio_ul = ui.create_dom_element({
@@ -162,45 +159,45 @@ const get_content_data = async function(self) {
 					// option txt
 						const option_txt = ui.create_dom_element({
 							element_type	: 'input',
-							type 			: 'radio',
-							value 			: 'txt',
-							name 			: self.id,
-							parent 			: radio_li
+							type			: 'radio',
+							value			: 'txt',
+							name			: self.id,
+							parent			: radio_li
 						})
 						option_txt.checked = 'checked'
-						option_txt.addEventListener('change',(e)=>{
+						option_txt.addEventListener('change', ()=>{
 							self.config.method = 'text_engine'
 						})
 						const option_txt_label = ui.create_dom_element({
 							element_type	: 'label',
-							text_content 	: 'txt',
-							parent 			: radio_li
+							inner_html		: 'txt',
+							parent			: radio_li
 						})
 					// option html
 						const option_html = ui.create_dom_element({
 							element_type	: 'input',
-							type 			: 'radio',
-							value 			: 'html',
-							name 			: self.id,
-							parent 			: radio_li
+							type			: 'radio',
+							value			: 'html',
+							name			: self.id,
+							parent			: radio_li
 						})
-						option_html.addEventListener('change',(e)=>{
+						option_html.addEventListener('change',()=>{
 							self.config.method = 'html_engine'
 						})
 						const option_html_label = ui.create_dom_element({
 							element_type	: 'label',
-							text_content 	: 'html',
-							parent 			: radio_li
+							inner_html		: 'html',
+							parent			: radio_li
 						})
 		// buton submit
 
 		const button_submit = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning',
-			text_content 	: self.get_label('do_process'),
-			parent 			: page_range
+			inner_html		: self.get_label('do_process'),
+			parent			: page_range
 		})
-		button_submit.addEventListener('mouseup',async (e)=>{
+		button_submit.addEventListener('mouseup', async ()=>{
 			const extracted_data 	= await self.get_pdf_data(self)
 			const pdf_data 			= await self.process_pdf_data(extracted_data.result)
 			const changed_data 		= {
@@ -229,7 +226,7 @@ const get_content_data = async function(self) {
 		const info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'info',
-			// text_content 	: '',
+			// inner_html 	: '',
 			parent 			: fragment
 		})
 		// caller component
@@ -256,3 +253,5 @@ const get_content_data = async function(self) {
 
 	return content_data
 };//end get_content_data
+
+

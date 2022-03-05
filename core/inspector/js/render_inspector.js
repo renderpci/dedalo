@@ -7,7 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {download_url} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 
 
@@ -44,9 +44,23 @@ render_inspector.prototype.edit = async function(options) {
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'label',
+			class_name		: 'label icon_arrow up',
 			inner_html		: 'Inspector'
 		})
+		// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: label,
+			content_data		: content_data,
+			collapsed_id		: 'inspector_element_info_block',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			label.classList.remove('up')
+		}
+		function expose() {
+			label.classList.add('up')
+		}
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -81,7 +95,7 @@ const add_events = (wrapper, self) => {
 			// prevent buble event to container element
 
 			// label click collapse 'content_data'
-				if (e.target.matches('.label')) {
+				// if (e.target.matches('.label')) {
 
 					// const collapsed_id		= e.target.id //.classList.join('_')
 					// const collapsed_table	= 'context'
@@ -100,7 +114,7 @@ const add_events = (wrapper, self) => {
 					// 	data_manager.prototype.delete_local_db_data(collapsed_id, collapsed_table)
 					// 	content_data.classList.remove('hide')
 					// }
-				}
+				// }
 
 			return false
 		})
@@ -120,7 +134,7 @@ const get_content_data = function(self) {
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_data inspector_content_data',
+			class_name		: 'content_data inspector_content_data hide',
 		})
 
 	// paginator container
@@ -188,6 +202,10 @@ const get_content_data = function(self) {
 			const time_machine_list = render_time_machine_list(self)
 			content_data.appendChild(time_machine_list)
 		}//end if (self.caller.context.time_machine_list)
+
+	// activity_info
+		const activity_info = render_activity_info(self)
+		content_data.appendChild(activity_info)
 
 	// buttons_bottom_container
 		const buttons_bottom_container = ui.create_dom_element({
@@ -262,14 +280,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.seccion || 'Section',
+			inner_html		: get_label.seccion || 'Section',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: label,
+			inner_html		: label,
 			parent			: fragment
 		})
 
@@ -278,14 +296,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.tipo || 'Tipo',
+			inner_html		: get_label.tipo || 'Tipo',
 			parent			: fragment
 		})
 		// value
 		const tipo_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: section_tipo,
+			inner_html		: section_tipo,
 			parent			: fragment
 		})
 		const docu_link = ui.create_dom_element({
@@ -303,14 +321,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.creado || 'Created',
+			inner_html		: get_label.creado || 'Created',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: created_date + ' ' + created_by_user_name,
+			inner_html		: created_date + ' ' + created_by_user_name,
 			parent			: fragment
 		})
 
@@ -319,14 +337,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.modificado || 'Modified',
+			inner_html		: get_label.modificado || 'Modified',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: modified_date + ' ' + modified_by_user_name,
+			inner_html		: modified_date + ' ' + modified_by_user_name,
 			parent			: fragment
 		})
 
@@ -356,8 +374,12 @@ export const render_component_info = function(self, component) {
 		const tipo			= component.tipo
 		const label			= component.label
 		const model			= component.model
-		const translatable	= JSON.stringify(component.context.translatable)
-		const value			= JSON.stringify(component.data.value, null, 1)
+		const translatable	= component.context.translatable
+			? JSON.stringify(component.context.translatable)
+			: 'no'
+		// const value			= component.data && component.data.value
+		// 	? JSON.stringify(component.data.value, null, 1)
+		// 	: ''
 
 	const fragment = new DocumentFragment();
 
@@ -366,14 +388,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.componente || 'Component',
+			inner_html	: get_label.componente || 'Component',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: label,
+			inner_html	: label,
 			parent			: fragment
 		})
 
@@ -382,14 +404,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.tipo || 'Tipo',
+			inner_html	: get_label.tipo || 'Tipo',
 			parent			: fragment
 		})
 		// value
 		const tipo_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: tipo,
+			inner_html	: tipo,
 			parent			: fragment
 		})
 		const docu_link = ui.create_dom_element({
@@ -407,14 +429,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.modelo || 'Model',
+			inner_html	: get_label.modelo || 'Model',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: model,
+			inner_html	: model,
 			parent			: fragment
 		})
 
@@ -423,14 +445,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			text_content	: get_label.traducible || 'Translatable',
+			inner_html		: get_label.traducible || 'Translatable',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: translatable,
+			inner_html		: translatable,
 			parent			: fragment
 		})
 
@@ -439,16 +461,25 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key wide',
-			text_content	: get_label.dato || 'Data',
+			inner_html		: get_label.dato || 'Data',
 			parent			: fragment
 		})
 		// value
-		ui.create_dom_element({
+		const value_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value wide code',
-			text_content	: value,
+			// text_content	: value,
+			text_content	: 'Parsing data..',
 			parent			: fragment
 		})
+		// parse data. This time out prevents lock component selection
+		setTimeout(function(){
+			const value = component.data && component.data.value
+				? JSON.stringify(component.data.value, null, 1)
+				: ''
+			value_node.innerHTML = ''
+			value_node.insertAdjacentHTML('afterbegin', value)
+		}, 50)
 
 
 	// clean container
@@ -457,6 +488,7 @@ export const render_component_info = function(self, component) {
 		}
 
 	container.appendChild(fragment)
+
 
 
 	return fragment
@@ -552,7 +584,6 @@ const render_project_block = function(self) {
 			expose_callback		: expose
 		})
 		function collapse() {
-			console.log("collapsed project:", this);
 			project_head.classList.remove('up')
 		}
 		function expose() {
@@ -723,7 +754,7 @@ const render_time_machine_list = function(self) {
 	// time_machine_list_head
 		const time_machine_list_head = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'relation_list_head icon_arrow',
+			class_name		: 'time_machine_list_head icon_arrow',
 			inner_html		: get_label.latest_changes || 'Latest changes',
 			parent			: time_machine_list_wrap
 		})
@@ -735,7 +766,7 @@ const render_time_machine_list = function(self) {
 			parent			: time_machine_list_wrap
 		})
 
-	// relation_list events
+	// time_machine_list events
 		self.events_tokens.push(
 			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
 		)
@@ -793,6 +824,100 @@ const render_time_machine_list = function(self) {
 
 
 /**
+* RENDER_ACTIVITY_INFO
+* @return DOM node time_machine_list_wrap
+*/
+const render_activity_info = function(self) {
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info'
+		})
+
+	// activity_info_head
+		const activity_info_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_head icon_arrow',
+			inner_html		: get_label.actividad || 'Activity',
+			parent			: wrapper
+		})
+
+	// activity_info_body
+		const activity_info_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_body hide',
+			parent			: wrapper
+		})
+
+	// events
+		self.events_tokens.push(
+			event_manager.subscribe('save', fn_saved)
+		)
+		function fn_saved(options){
+			// options
+				const instance		= options.instance
+				const api_response	= options.api_response
+
+			// node_info. create temporal node info
+				const node_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'node_info_save_msg'
+				})
+				// add at top
+				activity_info_body.prepend(node_info)
+				node_info.addEventListener("click", function(){
+					node_info.remove()
+				})
+
+			// msg. Based on API response result
+				if (api_response.result===false) {
+					node_info.classList.add('error')
+					const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
+					node_info.insertAdjacentHTML('afterbegin', text)
+					// error msg
+						const msg = []
+						if (api_response.error) {
+							msg.push(api_response.error)
+						}
+						if (api_response.msg) {
+							msg.push(api_response.msg)
+						}
+						if (msg.length>0) {
+							node_info.insertAdjacentHTML('beforeend', '<br>' + msg.join('<br>') )
+						}
+				}else{
+					node_info.classList.add('ok')
+					const text = `${instance.label} ${get_label.guardado || 'Saved'}`
+					node_info.insertAdjacentHTML('afterbegin', text)
+					setTimeout(function(){
+						node_info.remove()
+					}, 15000)
+				}
+		}
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: activity_info_head,
+			content_data		: activity_info_body,
+			collapsed_id		: 'inspector_activity_info',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			activity_info_head.classList.remove('up')
+		}
+		function expose() {
+			activity_info_head.classList.add('up')
+		}
+
+
+	return wrapper
+};//end render_activity_info
+
+
+
+/**
 * OPEN_ONTOLOGY_WINDOW
 * @return
 */
@@ -819,3 +944,5 @@ const open_ontology_window = function(tipo) {
 
 	return true
 };//end open_ontology_window
+
+

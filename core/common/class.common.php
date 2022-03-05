@@ -173,32 +173,27 @@ abstract class common {
 	*/
 	public static function get_permissions( $parent_tipo=null, $tipo=null ) {
 
-		if(login::is_logged()!==true)
-			return 0;
+		// no logged case
+			if(login::is_logged()!==true) {
+				return 0;
+			}
 
 		if( empty($parent_tipo) ) {
 			if(SHOW_DEBUG===true) {
-				dump($parent_tipo,'parent_tipo');
-				throw new Exception("Error Processing Request. get_permissions: parent_tipo is empty", 1);
+				dump($parent_tipo, 'parent_tipo');
+				trigger_error("Error Processing Request. get_permissions: parent_tipo is empty");
 			}
-			#die("Error Processing Request. get_permissions: tipo is empty");
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
 		if( empty($tipo) ) {
 			if(SHOW_DEBUG===true) {
-				dump($tipo,'get_permissions error for tipo');
-				throw new Exception("Error Processing Request. get_permissions: tipo is empty", 1);
+				dump($tipo, 'get_permissions error for tipo');
+				trigger_error("Error Processing Request. get_permissions: tipo is empty");
 			}
-			#die("Error Processing Request. get_permissions: tipo is empty");
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
-
-		// dd1324 Tools Register section
-			if ($parent_tipo==='dd1324') {
-				return 1;
-			}
 
 		$permissions = security::get_security_permissions($parent_tipo, $tipo);
 
@@ -696,7 +691,7 @@ abstract class common {
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		return (string)$html;
@@ -2054,9 +2049,10 @@ abstract class common {
 						$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						$sqo_id	= implode('_', [$model,$section_tipo]);
 						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-							// replace default sqo with the already stored in session (except section_tipo to void loose labels and limit to avoid overwrite list in edit and viceversa)
+							// replace default sqo with the already stored in session (except section_tipo to prevent to
+							// loose labels and limit to avoid overwrite list in edit and viceversa)
 							foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
-								if($key==='section_tipo' || $key==='limit') continue;
+								if($key==='section_tipo' || $key==='limit' || $key==='generated_time') continue;
 								if (!isset($dedalo_request_config->sqo)) {
 									$dedalo_request_config->sqo = new stdClass();
 								}
@@ -2612,6 +2608,20 @@ abstract class common {
 					$current_mode = ($model!=='section')
 						? 'list'
 						: $mode;
+
+				// auth check each element permissions
+					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
+						// check each element permissions
+						$result = [];
+						foreach ($ar_related_clean as $item_tipo) {
+							$permissions = common::get_permissions($target_section_tipo, $item_tipo);
+							if ($permissions>0) {
+								$result[] = $item_tipo;
+							}
+						}
+						return $result;
+					})();
+
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						// the semantic node has his own section_tipo to be assigned
@@ -2647,7 +2657,7 @@ abstract class common {
 						}
 
 						return $ddo;
-					}, $ar_related_clean);
+					}, $ar_related_clean_auth);
 
 				// show
 					$show = new stdClass();
@@ -3351,7 +3361,9 @@ abstract class common {
 
 				// permissions
 					$permissions = common::get_permissions($tipo, $current_button_tipo);
-					if($permissions<1) continue;
+					if($permissions<2) {
+						continue;
+					}
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
@@ -3363,9 +3375,9 @@ abstract class common {
 					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
 					$button_properties	= $RecordObj_dd->get_properties();
 
-				// toool_context
+				// button_import. tool_context
 					$tools = null;
-					if($model === 'button_import'){
+					if($model==='button_import'){
 
 						// tools_list
 						$tools_list	= tool_common::get_client_registered_tools();

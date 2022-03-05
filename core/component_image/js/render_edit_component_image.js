@@ -23,14 +23,14 @@ export const render_edit_component_image = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return DOM node wrapper
 */
 render_edit_component_image.prototype.edit = async function(options) {
 
 	const self = this
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -41,16 +41,11 @@ render_edit_component_image.prototype.edit = async function(options) {
 	// buttons
 		const buttons = get_buttons(self)
 
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
-
-	// quality
-		const quality = get_quality_selector(self)
-		wrapper.appendChild(quality)
 
 
 	return wrapper
@@ -64,17 +59,30 @@ render_edit_component_image.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	// const is_inside_tool = ui.inside_tool(self)
-
 	const fragment = new DocumentFragment()
 
 	// url
-		const datalist		= self.data.datalist
-		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
-		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==='undefined') ? DEDALO_CORE_URL + '/themes/default/0.jpg' : url_object.url
+		let url
+		const quality	= self.quality || self.context.quality
+		const datalist	= self.data.datalist
+		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+		url = file_info
+			? file_info.url
+			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
 
-	// ul
+	// fallback to default (when not already in default)
+		if (!url && quality!==self.context.default_quality) {
+			const file_info	= datalist.find(el => el.quality===self.context.default_quality && el.file_exist===true)
+			url = file_info
+				? file_info.url
+				: null
+			if (url) {
+				// change the quality
+				self.quality = self.context.default_quality
+			}
+		}
+
+	// ul inputs container
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'inputs_container',
@@ -84,61 +92,85 @@ const get_content_data_edit = function(self) {
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
+			class_name 		: '',
 			parent			: ul
 		})
 
-	// image. Only to get background color (!)
-		const image = ui.create_dom_element({
-			element_type	: 'img',
-			class_name 		: 'hidden'
-		})
-	// image background color
-		image.addEventListener('load', set_bg_color, false)
-		function set_bg_color() {
-			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, li)
-			image.classList.remove('hidden')
+	// image. (!) Only to get background color and apply to li node
+		if (url) {
+			const image = ui.create_dom_element({
+				element_type	: 'img',
+				class_name 		: 'hide'
+			})
+			// image background color
+			image.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				this.removeEventListener('load', set_bg_color, false)
+				ui.set_background_image(this, li)
+				image.classList.remove('hide')
+			}
+			image.src = url
 		}
-		image.src = url
 
-
-	// object <object type="image/svg+xml" data="image.svg"></object>
-		const object = ui.create_dom_element({
+	// object_node <object type="image/svg+xml" data="image.svg"></object>
+		const object_node = ui.create_dom_element({
 			element_type	: 'object',
 			class_name		: 'image',
 			parent			: li
 		})
-		object.type = "image/svg+xml"
+		object_node.type = "image/svg+xml"
 		if (self.data.base_svg_url) {
-			object.data = self.data.base_svg_url
+			object_node.data = self.data.base_svg_url
 		}
+		self.object_node = object_node
 
-		self.object_node = object
+		// autochange the first time
+		object_node.onload = async function() {
+			if (quality!==self.context.default_quality) {
+				await fn_img_quality_change(url)
+			}
+			li.classList.remove('hide')
+		}
 
 	// change event
-		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, img_quality_change)
+		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
 		self.events_tokens.push(image_change_event)
-		object.dataset.image_change_event = image_change_event // string like 'event_167'
-		function img_quality_change (img_src) {
+		object_node.dataset.image_change_event = image_change_event // string like 'event_167'
+		async function fn_img_quality_change (img_src) {
 
-			// svg document inside the object tag
-			const svg_doc 	= object.contentDocument;
+			self.img_src = img_src
+
+			// svg document inside the object_node tag
+			const svg_doc 	= object_node.contentDocument;
 			// Get one of the svg items by ID;
-			const image 	= svg_doc.querySelector('image')
-			// set the new source to the image node into the svg
-			self.img_src 	= image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
+			const image_node = svg_doc
+				? await svg_doc.querySelector('image')
+				: null
 
-			// add spinner when new image is loading
-			li.classList.add('preload')
-			image.addEventListener('load', function(){
-				li.classList.remove("preload")
-			})
+			// self.img_src = image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
+			if (image_node) {
+
+				// add spinner when new image is loading
+				li.classList.add('loading')
+				image_node.addEventListener('load', function(){
+					li.classList.remove("loading")
+				})
+
+				// set the new source to the image node into the svg
+				await image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', img_src)
+			}
+
+			return true
 		}
+
+
+	// quality_selector
+		const quality_selector = get_quality_selector(self)
+		fragment.appendChild(quality_selector)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
-
 
 
 	return content_data
@@ -153,16 +185,19 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
-
 	const fragment = new DocumentFragment()
+
+	// prevent show buttons inside a tool
+		if (self.caller && self.caller.type==='tool') {
+			// return fragment
+		}
 
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button full_screen',
+			class_name		: 'button full_screen',
 			title			: 'Fullscreen',
-			parent 			: fragment
+			parent			: fragment
 		})
 		button_full_screen.addEventListener("mouseup", () =>{
 			self.node[0].classList.toggle('fullscreen')
@@ -171,16 +206,14 @@ const get_buttons = (self) => {
 		})
 
 	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
+		ui.add_tools(self, fragment)
 
 	// open svg editor tools
 		const vector_editor = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button vector_editor',
-			title 			: 'Toggle vector editor',
-			parent 			: fragment
+			class_name		: 'button vector_editor',
+			title			: 'Toggle vector editor',
+			parent			: fragment
 		})
 		vector_editor.addEventListener("mouseup", () => {
 			vector_editor_tools.classList.toggle('hide')
@@ -194,8 +227,8 @@ const get_buttons = (self) => {
 	// svg editor tools
 		const vector_editor_tools = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'vector_editor_tools hide',
-			parent 			: fragment
+			class_name		: 'vector_editor_tools hide',
+			parent			: fragment
 		})
 		self.vector_editor_tools = vector_editor_tools
 
@@ -224,14 +257,15 @@ const get_buttons = (self) => {
 const get_quality_selector = (self) => {
 
 	// short vars
-		const data = self.data
+		const data		= self.data
+		const quality	= self.quality || self.context.quality
 
 		const fragment = new DocumentFragment()
 
 	// create the quality selector
 		const quality_selector = ui.create_dom_element({
 			element_type	: 'select',
-			class_name 		: 'quality_selector',
+			class_name		: 'quality_selector',
 			parent			: fragment
 		})
 		quality_selector.addEventListener("change", (e) =>{
@@ -239,20 +273,24 @@ const get_quality_selector = (self) => {
 			event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
-		const datalist 	= data.datalist
-		const datalist_len = datalist.length
-		for (let i = 0; i < datalist_len; i++) {
-			//create the node with the all qualities sended by server
-			const quality = ui.create_dom_element({
+		const quality_list		= data.datalist.filter(el => el.file_exist===true)
+		const quality_list_len	= quality_list.length
+		for (let i = 0; i < quality_list_len; i++) {
+			// create the node with the all qualities sended by server
+			const value = (typeof quality_list[i].url==="undefined")
+				? DEDALO_CORE_URL + "/themes/default/0.jpg"
+				: quality_list[i].url
+
+			const select_option = ui.create_dom_element({
 				element_type	: 'option',
-				class_name 		: 'quality',
-				value 			: (typeof datalist[i].url==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : datalist[i].url,
-				parent			: quality_selector,
-				text_node 		: datalist[i].quality
+				value			: value,
+				text_node		: quality_list[i].quality,
+				parent			: quality_selector
 			})
-			//set the default datalist to config variable dedalo_image_quality_default
-			quality.selected = datalist[i].quality===page_globals.dedalo_image_quality_default ? true : false
+			//set the default quality_list to config variable dedalo_image_quality_default
+			select_option.selected = quality_list[i].quality===quality ? true : false
 		}
+
 
 	return quality_selector
 };//end get_quality_selector

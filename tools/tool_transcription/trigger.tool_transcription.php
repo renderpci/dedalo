@@ -33,7 +33,7 @@ function pdf_automatic_transcription($json_data) {
 				return $response;
 			}
 		}
-		
+
 
 		#
 		# FUNCTIONS
@@ -43,10 +43,10 @@ function pdf_automatic_transcription($json_data) {
 		# http://en.wikipedia.org/wiki/UTF-8
 		# Implemented as a recursive descent parser based on a simple state machine
 		# copyright 2005 Maarten Meijer
-		# This cries out for a C-implementation to be included in PHP core	
+		# This cries out for a C-implementation to be included in PHP core
 		function valid_utf8($string) {
 			$len = strlen($string);
-			$i = 0;    
+			$i = 0;
 			while( $i < $len ) {
 				$char = ord(substr($string, $i++, 1));
 				if(valid_1byte($char)) {    // continue
@@ -73,7 +73,7 @@ function pdf_automatic_transcription($json_data) {
 		function valid_1byte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0x80) == 0x00;
-		}	
+		}
 		function valid_2byte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0xE0) == 0xC0;
@@ -85,7 +85,7 @@ function pdf_automatic_transcription($json_data) {
 		function valid_4byte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0xF8) == 0xF0;
-		}	
+		}
 		function valid_nextbyte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0xC0) == 0x80;
@@ -106,7 +106,7 @@ function pdf_automatic_transcription($json_data) {
 
 	#
 	# TEST ENGINE PDF TO TEXT
-	if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {		
+	if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
 		$response->msg = 'Error. Request failed ['.__FUNCTION__.'] config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined';
 		return $response;
 	}else{
@@ -123,7 +123,7 @@ function pdf_automatic_transcription($json_data) {
 													 "edit",
 													 DEDALO_DATA_LANG,
 													 $section_tipo);
-	$path_pdf 		= $component_pdf->get_pdf_path();
+	$path_pdf 		= $component_pdf->get_path();
 
 	#
 	# FILE TEXT FROM PDF
@@ -134,32 +134,32 @@ function pdf_automatic_transcription($json_data) {
 	$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $path_pdf";
 	$output   = shell_exec( $command );			# Generate text version file in same dir as pdf
 
-	if (!file_exists($filename)) {		
+	if (!file_exists($filename)) {
 		$response->msg = 'Error. Request failed ['.__FUNCTION__.'] Text file not found';
 		return $response;
 	}
 	$pdf_text = file_get_contents($filename);	# Read current text file
-		
+
 		#
 		# TEST STRING VALUE IS VALID
 		# Test is valid utf8
 		$test_utf8 = valid_utf8($pdf_text);
 		if (!$test_utf8) {
 			error_log("WARNING: Current string is NOT utf8 valid. Anyway continue ...");
-		}		
+		}
 
 		# Remove non utf8 chars
 		$pdf_text = utf8_clean($pdf_text);
 
 		# Test JSON conversion before save
-		$pdf_text 	= json_handler::encode($pdf_text);		
-		if (!$pdf_text) {			
+		$pdf_text 	= json_handler::encode($pdf_text);
+		if (!$pdf_text) {
 			$response->msg = 'Error. Request failed ['.__FUNCTION__.'] String is not saved because format encoding is wrong';
 			return $response;
-		}		
+		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
 		#echo "\n pdf_text: ".$pdf_text;
-	
+
 	# Check empty text
 	if (empty($pdf_text)) {
 		$response->msg = 'Error. Request failed ['.__FUNCTION__.'] Empty text';
@@ -167,16 +167,16 @@ function pdf_automatic_transcription($json_data) {
 	}
 
 	#
-	# PAGES TAGS	
+	# PAGES TAGS
 	$pages = explode("", $pdf_text);
 	$i=1;
 	$pdf_text='';
-	foreach ($pages as $current_page) {		
+	foreach ($pages as $current_page) {
 	    $pdf_text .= '[page-n-'. $i .']';
 	    $pdf_text .= '<br>';
 	    $pdf_text .= nl2br($current_page);
 	    $i++;
-	}	
+	}
 
 
 	#
@@ -210,7 +210,7 @@ function pdf_automatic_transcription($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end pdf_automatic_transcription
 

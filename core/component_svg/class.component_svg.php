@@ -9,6 +9,8 @@ class component_svg extends component_media_common {
 
 	public $quality;
 
+
+
 	/**
 	* GET VALOR
 	* LIST:
@@ -204,42 +206,56 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET QUALITY
+	* GET_DEFAULT_QUALITY
 	*/
-	public function get_quality() {
-		if(!isset($this->quality))	return DEDALO_SVG_QUALITY_DEFAULT;
+	public function get_default_quality() {
 
-		return $this->quality;
-	}
+		return DEDALO_SVG_QUALITY_DEFAULT;
+	}//end get_default_quality
 
 
 
 	/**
-	* GET_FILE_PATH
+	* GET_AR_QUALITY
+	* Get the list of defined image qualities in Dédalo config
+	* @return array $ar_image_quality
+	*/
+	public function get_ar_quality() {
+
+		$ar_quality = unserialize(DEDALO_SVG_AR_QUALITY);
+
+		return $ar_quality;
+	}//end get_ar_quality
+
+
+
+	/**
+	* GET_PATH
 	* @return string $file_path
 	*/
-	public function get_file_path() {
+	public function get_path($quality=false) {
 
-		if(!$this->quality) {
-			$this->quality = $this->get_quality();
+		if(empty($quality)) {
+			$quality = $this->get_quality();
 		}
 
 		$aditional_path = $this->get_aditional_path();
 
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . $this->quality . $aditional_path . '/' . $file_name;
+		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . $quality . $aditional_path . '/' . $file_name;
 
 		return $file_path;
-	}//end get_file_path
+	}//end get_path
+
 
 
 	/**
 	* GET_FILE_CONTENT
-	* @return
+	* @return string | null
 	*/
 	public function get_file_content() {
 
-		$file_path		= $this->get_file_path();
+		$file_path		= $this->get_path();
 		$file_content	= (file_exists($file_path))
 			? file_get_contents($file_path)
 			: null;
@@ -281,26 +297,26 @@ class component_svg extends component_media_common {
 
 
 
-	// /**
-	// * GET_URL
-	// * @return string $url
-	// * @param bool $absolute
-	// *	Return relative o absolute url. Default false (relative)
-	// */
-	// public function get_url($absolute=false) {
+	/**
+	* GET_URL
+	* @return string $url
+	* @param bool $absolute
+	*	Return relative o absolute url. Default false (relative)
+	*/
+		// public function get_url($absolute=false) {
 
-	// 	$aditional_path = $this->get_aditional_path();
+		// 	$aditional_path = $this->get_aditional_path();
 
-	// 	$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-	// 	$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+		// 	$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
+		// 	$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
 
-	// 	# ABSOLUTE (Default false)
-	// 	if ($absolute) {
-	// 		$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-	// 	}
+		// 	# ABSOLUTE (Default false)
+		// 	if ($absolute) {
+		// 		$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+		// 	}
 
-	// 	return $url;
-	// }//end get_url
+		// 	return $url;
+		// }//end get_url
 
 
 
@@ -323,14 +339,14 @@ class component_svg extends component_media_common {
 			$image_id 	= $this->get_svg_id();
 
 		// url
-			$aditional_path 	= $this->get_aditional_path();
-			$initial_media_path = $this->get_initial_media_path();
-			$file_name 			= $image_id .'.'. DEDALO_SVG_EXTENSION;
-			$image_url 			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $aditional_path . '/' . $file_name;
+			$aditional_path		= $this->get_aditional_path();
+			$initial_media_path	= $this->get_initial_media_path();
+			$file_name			= $image_id .'.'. DEDALO_SVG_EXTENSION;
+			$image_url			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $aditional_path . '/' . $file_name;
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
-				$file = $this->get_file_path();
+				$file = $this->get_path();
 
 				if(!file_exists($file)) {
 					if ($default_add===false) {
@@ -431,6 +447,47 @@ class component_svg extends component_media_common {
 
 		return $preview_url;
 	}//end get_preview_url
+
+
+
+	/**
+	* DELETE_FILE
+	* Remove quality version moving the file to a deleted files dir
+	* @see component_image->remove_component_media_files
+	*
+	* @return object $response
+	*/
+	public function delete_file($quality) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// remove_component_media_files returns bool value
+		$result = $this->remove_component_media_files([$quality]);
+		if ($result===true) {
+
+			// save To update valor_list
+				$this->Save();
+
+			$response->result	= true;
+			$response->msg		= 'File deleted successfully. ' . $quality;
+		}
+
+
+		return $response;
+	}//end delete_file
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_SVG_EXTENSION from config
+	*/
+	public function get_extension() {
+
+		return DEDALO_SVG_EXTENSION;
+	}//end get_extension
 
 
 

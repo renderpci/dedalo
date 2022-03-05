@@ -320,7 +320,7 @@ abstract class component_common extends common {
 		// tipo
 			if ( empty($tipo) ) {
 				$msg = "Component common: valid 'tipo' value is mandatory!";
-				$GLOBALS['log_messages'][] = $msg;
+				// $GLOBALS['log_messages'][] = $msg;
 				throw new Exception($msg, 1);
 			}elseif ($tipo==='dummy') {
 				throw new Exception("Error dummy caller!!", 1);
@@ -349,7 +349,7 @@ abstract class component_common extends common {
 				$lang = $this->lang;
 			}elseif ( empty($lang) ) {
 				$msg = __METHOD__.' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
-				$GLOBALS['log_messages'][] = $msg;
+				// $GLOBALS['log_messages'][] = $msg;
 				trigger_error($msg);
 				$lang = DEDALO_DATA_LANG;
 			}

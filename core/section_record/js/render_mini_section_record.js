@@ -33,7 +33,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 	const self = this
 
 	const render_level = options.render_level || 'full'
-	
+
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
@@ -122,7 +122,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 							if(j === ar_instances_length-1) continue
 							const node_divisor = ui.create_dom_element({
 								element_type	: 'span',
-								text_content 	: self.caller.divisor || ' | ',
+								inner_html		: self.caller.divisor || ' | ',
 								parent			: column_node
 							})
 

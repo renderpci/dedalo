@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_TOOLS_URL */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -8,7 +8,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {clone, dd_console, printf} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -76,15 +76,88 @@ tool_common.prototype.init = async function(options) {
 * Generic tool build function. Load basic tool config info (stored in component_json dd1353) and css files
 *
 * @param bool autoload
+* @param object options
+* 	callback function 'load_ddo_map'
 * @return promise bool
 */
-tool_common.prototype.build = async function(autoload=false) {
+tool_common.prototype.build = async function(autoload=false, options={}) {
 	// const t0 = performance.now()
 
 	const self = this
 
+	// options
+		// load_ddo_map could be a callback or the default loader function
+		const load_ddo_map = typeof options.load_ddo_map==='function'
+			? options.load_ddo_map
+			: async function() {
+				// default loads all elements inside ddo_map
+				const ar_promises		= []
+				const ddo_map			= self.tool_config.ddo_map || []
+				const ddo_map_length	= ddo_map.length
+				for (let i = 0; i < ddo_map_length; i++) {
+
+					const el = ddo_map[i]
+
+					ar_promises.push( new Promise(async (resolve) => {
+
+						// context. In is not given get from caller or request to the API
+							const context = el.context
+								? el.context
+								: await (async function(){
+									// caller context
+									const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
+									if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
+										// get context from available caller
+										return caller_context
+									}
+									// resolve whole context from API (init event observer problem..)
+									// const api_response	= await current_data_manager.get_element_context(el)
+									// return api_response.result[0]
+									return {}
+								  })()
+
+						// generic try
+							// const element_instance = load_component_generic({
+							// 	self				: self,
+							// 	context				: context,
+							// 	to_delete_instances	: null
+							// })
+							// resolve(element_instance)
+
+						const element_options = {
+							model			: el.model,
+							mode			: el.mode,
+							tipo			: el.tipo,
+							section_tipo	: el.section_tipo,
+							section_id		: el.section_id,
+							lang			: self.lang,
+							type			: el.type,
+							context			: context,
+							id_variant		: self.model,  // id_variant prevents id conflicts
+							caller			: self // set tool as caller of the component :-)
+						}
+						// init and build instance
+							get_instance(element_options) // load and init
+							.then(function(element_instance){
+								const load_data = el.model.indexOf('component')!==-1
+								element_instance.build( load_data ) // build, loading data
+								.then(function(){
+									resolve(element_instance)
+								})
+							})
+					}))
+				}//end for (let i = 0; i < ddo_map.length; i++)
+
+				// set on finish
+				await Promise.all(ar_promises).then((ar_instances) => {
+					// dd_console(`ar_instances`, 'DEBUG', ar_instances)
+					self.ar_instances = ar_instances
+				})
+				return true
+			  }
+
 	// previous status
-		const previous_status = self.status
+		// const previous_status = self.status
 
 	// status update
 		self.status = 'building'
@@ -93,86 +166,23 @@ tool_common.prototype.build = async function(autoload=false) {
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
 		common.prototype.load_style(tool_css_url)
 
-	// data manager
-		// const current_data_manager = new data_manager()
-
-	// ddo_map load all elements inside ddo_map
-		const ar_promises = []
-		const ddo_map = self.tool_config.ddo_map || []
-		for (let i = 0; i < ddo_map.length; i++) {
-
-			const el = ddo_map[i]
-
-			ar_promises.push( new Promise(async (resolve) => {
-
-				// context. In is not given get from caller or request to the API
-					const context = el.context
-						? el.context
-						: await (async function(){
-							// caller context
-							const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
-							if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
-								// get context from available caller
-								return caller_context
-							}
-							// resolve whole context from API (init event observer problem..)
-							// const api_response	= await current_data_manager.get_element_context(el)
-							// return api_response.result[0]
-							return {}
-						  })()
-
-				// generic try
-					// const element_instance = load_component_generic({
-					// 	self				: self,
-					// 	context				: context,
-					// 	to_delete_instances	: null
-					// })
-					// resolve(element_instance)
-
-				const element_options = {
-					model			: el.model,
-					mode			: el.mode,
-					tipo			: el.tipo,
-					section_tipo	: el.section_tipo,
-					section_id		: el.section_id,
-					lang			: self.lang,
-					type			: el.type,
-					context			: context,
-					id_variant		: self.model,  // id_variant prevents id conflicts
-					caller			: self // set tool as caller of the component :-)
-				}
-				// init and build instance
-					get_instance(element_options) // load and init
-					.then(function(element_instance){
-						const load_data = el.model.indexOf('component')!==-1
-						element_instance.build( load_data ) // build, loading data
-						.then(function(){
-							resolve(element_instance)
-						})
-					})
-			}))
-		}//end for (let i = 0; i < ddo_map.length; i++)
-
-		// set on finish
-			await Promise.all(ar_promises).then((ar_instances) => {
-				// dd_console(`ar_instances`, 'DEBUG', ar_instances)
-				self.ar_instances = ar_instances
-			})
+	// load_ddo_map. Exec load ddo_map elements
+		await load_ddo_map()
 
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// mandatory vars check
-				if (!self.section_tipo || self.section_tipo.lenght<2) {
-					console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
-					self.status = previous_status
-					return false
-				}
-				if (!self.section_id || self.section_id.lenght<1) {
-					console.warn("[tool_common.build] Warning. stopped autoload because undefined self.section_id:", self.section_id);
-					self.status = previous_status
-					return false
-				}
+			// mandatory vars check. (!) Not mandatory anymore
+				// if (!self.section_tipo || self.section_tipo.lenght<2) {
+				// 	console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
+				// 	self.status = previous_status
+				// 	return false
+				// }
+				// if (!self.section_id || self.section_id.lenght<1) {
+				// 	console.warn("[tool_common.build] Warning. stopped autoload because undefined self.section_id:", self.section_id);
+				// 	self.status = previous_status
+				// 	return false
+				// }
 
 			// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
 				const rqo = {
@@ -197,7 +207,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					console.log("[tool_common.build] api_response:", api_response);
+					console.log("/// [tool_common.build] api_response:", api_response);
 				}
 		}
 
@@ -214,6 +224,78 @@ tool_common.prototype.build = async function(autoload=false) {
 
 	return true
 };//end build
+
+
+
+const load_default_ddo_map = async function() {
+
+	const self = this
+
+	const ar_promises		= []
+	const ddo_map			= self.tool_config.ddo_map || []
+	const ddo_map_length	= ddo_map.length
+	for (let i = 0; i < ddo_map_length; i++) {
+
+		const el = ddo_map[i]
+
+		ar_promises.push( new Promise(async (resolve) => {
+
+			// context. In is not given get from caller or request to the API
+				const context = el.context
+					? el.context
+					: await (async function(){
+						// caller context
+						const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
+						if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
+							// get context from available caller
+							return caller_context
+						}
+						// resolve whole context from API (init event observer problem..)
+						// const api_response	= await current_data_manager.get_element_context(el)
+						// return api_response.result[0]
+						return {}
+					  })()
+
+			// generic try
+				// const element_instance = load_component_generic({
+				// 	self				: self,
+				// 	context				: context,
+				// 	to_delete_instances	: null
+				// })
+				// resolve(element_instance)
+
+			const element_options = {
+				model			: el.model,
+				mode			: el.mode,
+				tipo			: el.tipo,
+				section_tipo	: el.section_tipo,
+				section_id		: el.section_id,
+				lang			: self.lang,
+				type			: el.type,
+				context			: context,
+				id_variant		: self.model,  // id_variant prevents id conflicts
+				caller			: self // set tool as caller of the component :-)
+			}
+			// init and build instance
+				get_instance(element_options) // load and init
+				.then(function(element_instance){
+					const load_data = el.model.indexOf('component')!==-1
+					element_instance.build( load_data ) // build, loading data
+					.then(function(){
+						resolve(element_instance)
+					})
+				})
+		}))
+	}//end for (let i = 0; i < ddo_map.length; i++)
+
+	// set on finish
+	await Promise.all(ar_promises).then((ar_instances) => {
+		// dd_console(`ar_instances`, 'DEBUG', ar_instances)
+		self.ar_instances = ar_instances
+	})
+
+	return true
+}//end if (load_ddo_map===true)
 
 
 
@@ -483,32 +565,42 @@ export const open_tool = async (options) => {
 * If the label is not defined, try with lang_default, not lang and received label_name if nothing is found
 *
 * @param string label_name like 'indexation_tool'
-* @return string label_item like 'Indexation Tool'
+* @param mixed ...rest (accept an indefinite number of arguments as an array)
+* @return string | null
+* 	like 'Indexation Tool'
 */
-const get_tool_label = function(label_name) {
+const get_tool_label = function(label_name, ...rest) {
 
 	const self = this
 
-	const tool_labels 	= self.tool_labels
-	const lang_default 	= page_globals.dedalo_application_langs_default
+	const tool_labels = self.context.labels || []
+	if (tool_labels.length>0) {
 
-	let label_item = tool_labels.find(item => item.name===label_name && item.lang===self.lang).value
-	if(typeof label_item==='undefined'){
-
-		label_item = tool_labels.find(item => item.name===label_name && item.lang===lang_default).value
-
-		if(typeof label_item==='undefined'){
-
-			label_item = tool_labels.find(item => item.name===label_name).value
-
-			if(typeof label_item==='undefined'){
-				label_item = label_name
+		// current lang try
+			const found = tool_labels.find(el => el.name===label_name && el.lang===self.lang)
+			if (found) {
+				return printf(found.value, ...rest)
+				// return found.value
 			}
-		}
+
+		// fallback to application lang default
+			const lang_default 	= page_globals.dedalo_application_langs_default
+			const found_default = tool_labels.find(el => el.name===label_name && el.lang===lang_default)
+			if (found_default) {
+				return printf(found_default.value, ...rest)
+				// return found_default.value
+			}
+
+		// fallback to any lang available
+			const found_any = tool_labels.find(el => el.name===label_name)
+			if (found_any) {
+				return printf(found_any.value, ...rest)
+				// return found_any.value
+			}
 	}
 
 
-	return label_item
+	return null
 };//end get_tool_label
 
 

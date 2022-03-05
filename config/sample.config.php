@@ -9,8 +9,7 @@
 
 	Juan Francisco Onielfa Veneros
 	Alejandro Peña Carbonell
-	http://www.fmomo.org/
-	http://dedalo4.antropolis.net/
+	https://dedalo.dev
 
 	Reviewed: 12-05-2018
 */

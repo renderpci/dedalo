@@ -224,7 +224,7 @@ class area_development extends area_common {
 				$item->label	= label::get_label('registrar_herramientas');
 				$list = array_map(function($path){
 					// ignore folders with name different from pattern 'tool_*'
-					if (1!==preg_match('/tools\/tool_*/', $path, $output_array)) {
+					if (1!==preg_match('/tools\/tool_*/', $path, $output_array) || 1===preg_match('/tools\/tool_dummy/', $path, $output_array)) {
 						return null;
 					}else{
 						$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
@@ -491,7 +491,7 @@ class area_development extends area_common {
 				$item->parent 	= $this->tipo;
 				$item->label 	= 'PHP INFO';
 				$item->info 	= null;
-				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
+				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\'"></iframe>';
 			$ar_widgets[] = $item;
 
 

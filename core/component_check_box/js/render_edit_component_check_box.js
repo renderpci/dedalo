@@ -327,8 +327,8 @@ const get_input_element_edit = (i, current_value, self) => {
 		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
-			text_content 	: label_string,
-			parent 			: li
+			inner_html		: label_string,
+			parent			: li
 		})
 		option_label.setAttribute("for", self.id +"_"+ i)
 

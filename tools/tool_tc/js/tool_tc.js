@@ -20,7 +20,7 @@
 * Tool to manage time codes
 */
 export const tool_tc = function () {
-	
+
 	this.id				= null
 	this.model			= null
 	this.mode			= null
@@ -46,9 +46,10 @@ export const tool_tc = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_tc.prototype.render 	= common.prototype.render
-	tool_tc.prototype.destroy 	= common.prototype.destroy
-	tool_tc.prototype.edit 		= render_tool_tc.prototype.edit
+	tool_tc.prototype.render	= common.prototype.render
+	tool_tc.prototype.destroy	= common.prototype.destroy
+	tool_tc.prototype.refrsh	= common.prototype.refrsh
+	tool_tc.prototype.edit		= render_tool_tc.prototype.edit
 
 
 
@@ -60,10 +61,9 @@ tool_tc.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic commom tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang			= options.lang
 		self.langs			= page_globals.dedalo_projects_default_langs
 		self.source_lang	= options.caller.lang
 

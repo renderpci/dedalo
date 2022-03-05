@@ -19,7 +19,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_lang = function () {
-	
+
 	this.id				= null
 	this.model			= null
 	this.mode			= null
@@ -44,9 +44,10 @@ export const tool_lang = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_lang.prototype.render 		= common.prototype.render
-	tool_lang.prototype.destroy 	= common.prototype.destroy
-	tool_lang.prototype.edit 		= render_tool_lang.prototype.edit
+	tool_lang.prototype.render	= common.prototype.render
+	tool_lang.prototype.destroy	= common.prototype.destroy
+	tool_lang.prototype.refresh	= common.prototype.refresh
+	tool_lang.prototype.edit	= render_tool_lang.prototype.edit
 
 
 
@@ -61,7 +62,6 @@ tool_lang.prototype.init = async function(options) {
 		const common_init = tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang			= options.lang // page_globals.dedalo_data_lang
 		self.langs			= page_globals.dedalo_projects_default_langs
 		self.source_lang	= options.caller.lang
 		self.target_lang	= null
@@ -73,7 +73,8 @@ tool_lang.prototype.init = async function(options) {
 
 
 /**
-* BUILD_CUSTOM
+* BUILD
+* Custom build
 */
 tool_lang.prototype.build = async function(autoload=false) {
 
@@ -81,13 +82,10 @@ tool_lang.prototype.build = async function(autoload=false) {
 
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
+
 	// main_component. fix main_component for convenience
 		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
 		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
-		dd_console(`main_component_ddo`, 'DEBUG', main_component_ddo, self.main_component)
-
-
-	// specific actions..
 
 
 	return common_build

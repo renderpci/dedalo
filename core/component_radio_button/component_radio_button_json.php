@@ -4,8 +4,8 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
 
 
 
@@ -45,16 +45,15 @@
 		}
 
 		// data item
-		$item = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
 
 		// datalist
-		if (isset($ar_list_of_values)) {
-			$result = isset($ar_list_of_values->result) ? $ar_list_of_values->result : [];
-			$item->datalist = $result;
-		}
+			if (isset($ar_list_of_values)) {
+				$result = isset($ar_list_of_values->result) ? $ar_list_of_values->result : [];
+				$item->datalist = $result;
+			}
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

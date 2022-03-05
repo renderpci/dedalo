@@ -50,7 +50,7 @@ render_list_component_av.prototype.list = async function() {
 		})
 		// image.loading = 'lazy'
 		// image.setAttribute('crossOrigin', 'Anonymous');
-		ui.component.add_image_fallback(image)
+		// ui.component.add_image_fallback(image)
 
 	// image background color
 		image.addEventListener("load", set_bg_color, false)

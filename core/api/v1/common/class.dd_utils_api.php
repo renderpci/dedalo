@@ -46,37 +46,37 @@ class dd_utils_api {
 
 
 	/**
-	* GET_LOGIN
+	* GET_LOGIN (!) No longer used. Login now only need context, no data to render
 	* @return object $response
 	*/
-	public static function get_login($request_options=null) {
-		global $start_time;
+		// public static function get_login($request_options=null) {
+		// 	global $start_time;
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		// 	$response = new stdClass();
+		// 		$response->result 	= false;
+		// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$login = new login();
+		// 	$login = new login();
 
-		// login json
-			$get_json_options = new stdClass();
-				$get_json_options->get_context	= true;
-				$get_json_options->get_data		= true;
-			$login_json = $login->get_json($get_json_options);
+		// 	// login json
+		// 		$get_json_options = new stdClass();
+		// 			$get_json_options->get_context	= true;
+		// 			$get_json_options->get_data		= true;
+		// 		$login_json = $login->get_json($get_json_options);
 
-		$response->msg		= 'Ok. Request done';
-		$response->result	= $login_json;
+		// 	$response->msg		= 'Ok. Request done';
+		// 	$response->result	= $login_json;
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
+		// 	// Debug
+		// 		if(SHOW_DEBUG===true) {
+		// 			$debug = new stdClass();
+		// 				$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+		// 				$debug->request_options	= $request_options;
+		// 			$response->debug = $debug;
+		// 		}
 
-		return (object)$response;
-	}//end get_login
+		// 	return (object)$response;
+		// }//end get_login
 
 
 
@@ -275,7 +275,7 @@ class dd_utils_api {
 				$ar_label 	 = label::get_ar_label($lang); // Get all properties
 					#dump($ar_label, ' ar_label');
 
-				file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+				file_put_contents( DEDALO_CORE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
 				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 			}
 

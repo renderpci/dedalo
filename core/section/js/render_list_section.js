@@ -258,6 +258,7 @@ render_list_section.render_column_id = function(options){
 							section_id		: section_id
 						})
 					})
+
 				// button edit (pen)
 					if (permissions>0) {
 						const edit_button = ui.create_dom_element({
@@ -437,7 +438,10 @@ render_list_section.render_column_id = function(options){
 					})
 
 				// remove button
-					if (self.permissions>1) {
+					const button_delete = self.context.buttons
+						? self.context.buttons.find(el => el.model==='button_delete')
+						: null
+					if (button_delete) {
 						const delete_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button remove',
@@ -504,7 +508,7 @@ const get_buttons = function(self) {
 				const button_node	= ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: class_name,
-					text_content	: current_button.label,
+					inner_html		: current_button.label,
 					parent			: buttons_wrapper
 				})
 				button_node.addEventListener('click', (e) => {

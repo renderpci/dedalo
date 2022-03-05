@@ -195,7 +195,7 @@ class tool_upload { // extends tool_common
 						}
 
 					// preview url. Usually the thumb image or posterframe
-						$preview_url = $component->get_preview_url();
+						$preview_url = $component->get_preview_url($options->quality);
 
 					break;
 

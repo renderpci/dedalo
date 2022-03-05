@@ -216,7 +216,8 @@ class search {
 			'matrix_dd',
 			'matrix_hierarchy',
 			'matrix_hierarchy_main',
-			'matrix_langs'
+			'matrix_langs',
+			'matrix_tools'
 		];
 		$this->skip_projects_filter = (in_array($this->matrix_table, $ar_tables_skip_projects, true))
 			? true
@@ -1247,6 +1248,7 @@ class search {
 						$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
 
 						$sql_filter .= ')';
+
 					break;
 				##### DEFAULT #########################################################
 				default:
@@ -1260,7 +1262,7 @@ class search {
 					$ar_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_filter'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 					if (!isset($ar_component_filter[0])) {
 						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
-						throw new Exception("Error Processing Request. Filter not found is this section ($section_tipo) $section_name", 1);
+						trigger_error("Error Processing Request. Filter not found is this section ($section_tipo) $section_name");
 					}else{
 						$component_filter_tipo = $ar_component_filter[0];
 					}
@@ -2020,6 +2022,14 @@ class search {
 
 				# q
 				$sql_where .= $search_object->q_parsed;
+				break;
+
+			case 'in_column':
+				$pre = ($component_path==='section_id')
+					? $table_alias .'.'.$component_path
+					: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
+
+				$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
 				break;
 
 		}//end switch ($search_object->type)

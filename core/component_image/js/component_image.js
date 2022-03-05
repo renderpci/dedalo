@@ -16,26 +16,27 @@
 
 export const component_image = function(){
 
-	this.id				= null
+	this.id
 
 	// element properties declare
-	this.model			= null
-	this.tipo			= null
-	this.section_tipo	= null
-	this.section_id		= null
-	this.mode			= null
-	this.lang			= null
+	this.model
+	this.tipo
+	this.section_tipo
+	this.section_id
+	this.mode
+	this.lang
 
-	this.section_lang	= null
-	this.context		= null
-	this.data			= null
-	this.parent			= null
-	this.node			= null
+	this.section_lang
+	this.context
+	this.data
+	this.parent
+	this.node
 
-	this.tools			= null
+	this.tools
+	this.quality
 
-	this.file_name		= null
-	this.file_dir		= null
+	this.file_name
+	this.file_dir
 
 
 	return true
@@ -87,8 +88,7 @@ component_image.prototype.init = async function(options) {
 		self.img_view_height		= 1200
 		self.canvas_height			= 432
 		self.canvas_width			= null
-
-	//canvas node
+	// canvas node
 		self.canvas_node 			= null
 
 	// editor init vars
@@ -97,8 +97,10 @@ component_image.prototype.init = async function(options) {
 		self.current_paper 			= null
 		self.vector_editor 			= null
 
+
 	// call the generic common tool init
-		const common_init = component_common.prototype.init.call(this, options);
+		const common_init = component_common.prototype.init.call(this, options)
+
 
 	return common_init
 };//end init
@@ -394,33 +396,5 @@ component_image.prototype.update_draw_data = function() {
 
 	return true
 };//end update_draw_data
-
-
-
-/**
-* OLD_WAY TAG
-* SAVE_DRAW_DATA
-*/
-	// component_image.prototype.save_draw_data = function() {
-
-	// 	const self = this
-
-	// 	const ar_tag		= self.ar_tag_loaded
-	// 	const ar_tag_len	= ar_tag.length
-
-	// 	for (let i = ar_tag_len- 1; i >= 0; i--) {
-	// 		const current_tag = ar_tag[i]
-	// 		// UPDATE_TAG
-	// 		event_manager.publish('draw_change_tag' +'_'+ self.tipo, current_tag)
-	// 		if(i === 0){
-	// 			current_tag.save = true
-	// 			event_manager.publish('draw_change_tag' +'_'+ self.tipo, current_tag)
-	// 		}
-	// 			console.log("tag_data:",current_tag);
-	// 	}
-
-
-	// 	return true
-	// };//end save_draw_data
 
 

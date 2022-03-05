@@ -59,7 +59,7 @@ export const page = function () {
 * @param object options
 */
 page.prototype.init = async function(options) {
-	
+
 	const self = this
 
 	self.model			= 'page'
@@ -86,25 +86,25 @@ page.prototype.init = async function(options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
 				// check valid vars
-					if (!user_navigation_options.source) { 
+					if (!user_navigation_options.source) {
 						console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
 						return false
 					}
 
-				// reset status to prevent errors lock 
+				// reset status to prevent errors lock
 					self.status = 'rendered'
 
 				// loading css add
-					// const node = self.node && self.node[0]
-					// 	? self.node[0].querySelector('.content_data.page')
-					// 	: null
-					// if (node) { node.classList.add('loading') }
+					const node = self.node && self.node[0]
+						? self.node[0].querySelector('.content_data.page')
+						: null
+					if (node) { node.classList.add('loading') }
 
 				// do the work
 				return new Promise(async function(resolve){
 
 					// basic vars
-						// Only source is mandatory but if sqo is received, is placed in a new request_config 
+						// Only source is mandatory but if sqo is received, is placed in a new request_config
 						// to allow sections and components manage properly the offset and limit
 						const source			= user_navigation_options.source
 						const caller_id			= user_navigation_options.caller_id || null
@@ -121,19 +121,19 @@ page.prototype.init = async function(options) {
 						if (!new_page_element_instance) {
 							console.error("error on get new_page_element_instance:", new_page_element_instance);
 							// loading css remove
-							// if (node) {setTimeout(()=> node.classList.remove('loading'), 150 )}
+							if (node) {setTimeout(()=> node.classList.remove('loading'), 150 )}
 							console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
 							return false
 						}
 
-					// page context elements to stay. Menu and other static elements don't need to be built and rendered every time 
+					// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
 						const base_models		= ['menu']
 						const elements_to_stay	= self.context.filter( item => base_models.includes(item.model))
 						// add current source from options
 							elements_to_stay.push(source)
 						// fix new page context
 							self.context = elements_to_stay
-					
+
 					// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
 						const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
 						for (let i = instances_to_stay.length - 1; i >= 0; i--) {
@@ -149,8 +149,8 @@ page.prototype.init = async function(options) {
 							const current_tipo = (source.config && source.config.source_section_tipo)
 								? source.config.source_section_tipo
 								: source.tipo
-							
-							// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');							
+
+							// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
 							const title	= new_page_element_instance.id
 							const url	= "?t="+ current_tipo + '&m=' + source.mode
 
@@ -165,7 +165,7 @@ page.prototype.init = async function(options) {
 						}
 
 					// loading css remove
-						// if (node) { node.classList.remove('loading') }
+						if (node) { node.classList.remove('loading') }
 
 
 					resolve(new_page_element_instance.id)
@@ -174,7 +174,7 @@ page.prototype.init = async function(options) {
 
 
 	// window onpopstate. Triggered when user make click on browser navigation buttons
-		// note that navigation calls generate a history of event state, and when user click's on back button, 
+		// note that navigation calls generate a history of event state, and when user click's on back button,
 		// the browser get this event form history with the state info stored previously
 		window.onpopstate = function(event) {
 			if (event.state) {
@@ -220,7 +220,7 @@ page.prototype.init = async function(options) {
 
 	// status update
 		self.status = 'initiated'
-	
+
 
  	return true
 };//end init
@@ -231,7 +231,7 @@ page.prototype.init = async function(options) {
 * BUILD
 */
 page.prototype.build = async function() {
-	
+
 	const self = this
 
 	// instances (like section). Instances are returned init and builded
@@ -263,7 +263,7 @@ page.prototype.get_ar_instances = async function(){
 
 			const current_ddo = self.context[i]
 			ar_promises.push( new Promise(function(resolve){
-			
+
 				instantiate_page_element(self, current_ddo)
 				.then(function(current_instance){
 
@@ -281,6 +281,7 @@ page.prototype.get_ar_instances = async function(){
 		await Promise.all(ar_promises).then((ar_instances) => {
 			self.ar_instances = ar_instances
 		})
+		console.log("page self.ar_instances:",self.ar_instances);
 
 	return self.ar_instances
 };//end get_ar_instances
@@ -303,7 +304,7 @@ const instantiate_page_element = function(self, ddo) {
 	const mode			= ddo.mode
 	const lang			= ddo.lang
 	const config		= ddo.config || null
-	
+
 	// instance options
 		const instance_options = {
 			model			: model,
