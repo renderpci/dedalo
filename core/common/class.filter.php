@@ -19,39 +19,43 @@ abstract class filter {
 	*/
 	public static function get_profiles_for_areas($ar_area_tipo) {
 
-		$ar_filter = [];
-		foreach ((array)$ar_area_tipo as $area_tipo) {
-			$profile_sql = '';
+		// short vars
+			$tipo = DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
+			$lang = DEDALO_DATA_NOLAN;
 
-			# old format
-			#$profile_sql.= "\n datos#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$area_tipo\":3}' ";
-			#$profile_sql.= "OR datos#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$area_tipo\":2}' ";
+		// sql_filter
+			$ar_filter = [];
+			foreach ((array)$ar_area_tipo as $area_tipo) {
 
-			// Reference:
-			// {
-			//	"tipo": "ich1",
-			//	"type": "area",
-			//	"value": 3,
-			//	"parent": "ich1"
-			// }
+				// Reference:
+				// {
+				//	"tipo": "ich1",
+				//	"value": 3,
+				//	"section_tipo": "ich1"
+				// }
 
-			$profile_sql.= 'datos#>\'{components,'.DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":3}]\'';
-			$profile_sql.= ' OR ';
-			$profile_sql.= 'datos#>\'{components,'.DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":2}]\'';
+				$entences_sql = [];
 
-			$ar_filter[] = '('.$profile_sql.')';
-		}
-		$sql_filter = implode(' OR ', $ar_filter);
+				// value 3 try
+				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":3}]]\'';
 
-		#
-		# SEARCH PROFILES WITH CURRENT USER AREAS
-		$profile_sql = 'SELECT section_id FROM "matrix_profiles" WHERE ' . $sql_filter;
-		$result = JSON_RecordObj_matrix::search_free($profile_sql);
-		$ar_profile_id=array();
-		while ($rows = pg_fetch_assoc($result)) {
-			$section_id 	 = $rows['section_id'];
-			$ar_profile_id[] = $section_id;
-		}
+				// value 2 try
+				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":2}]]\'';
+
+				$ar_filter[] = '('. implode(' OR ', $entences_sql) .')';
+			}
+			$sql_filter = implode(' OR ', $ar_filter);
+
+		// search profiles with current user areas
+			$profile_sql	= 'SELECT section_id FROM "matrix_profiles" WHERE ' . $sql_filter;
+			$result			= JSON_RecordObj_matrix::search_free($profile_sql);
+
+		// ar_profile_id
+			$ar_profile_id = [];
+			while ($row = pg_fetch_assoc($result)) {
+				$ar_profile_id[] = $row['section_id'];
+			}
+
 
 		return (array)$ar_profile_id;
 	}//end get_profiles_for_areas
