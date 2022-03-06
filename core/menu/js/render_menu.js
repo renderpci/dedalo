@@ -34,6 +34,9 @@ render_menu.prototype.edit = async function() {
 	// menu_active. set the first state of the menu
 		self.menu_active = false
 
+	// username
+		const username = self.data.username
+
 	const fragment = new DocumentFragment()
 
 	// quit_button
@@ -160,10 +163,10 @@ render_menu.prototype.edit = async function() {
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
-			text_content	: page_globals.username,
+			text_content	: username,
 			parent			: fragment
 		})
-		if (page_globals.username!=='root') {
+		if (username!=='root') {
 			logged_user_name.addEventListener("click", fn_load_user_admin_tool)
 			function fn_load_user_admin_tool(e) {
 				e.stopPropagation();
