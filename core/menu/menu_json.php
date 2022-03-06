@@ -51,7 +51,7 @@
 			$item->tree_datalist	= $tree_datalist;
 			$item->langs_datalist	= $langs_datalist;
 			$item->info_data		= $info_data;
-
+			$item->username			= $_SESSION['dedalo']['auth']['username'] ?? null;
 
 		$data[] = $item;
 

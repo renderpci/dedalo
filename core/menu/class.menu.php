@@ -136,8 +136,15 @@ class menu extends common {
 							}
 					}//end if($current_area->model==='section_tool'){
 
+				$datalist_item = (object)[
+					'tipo'		=> $current_area->tipo,
+					'model'		=> $current_area->model,
+					'parent'	=> $current_area->parent,
+					'label'		=> $current_area->label
+				];
+
 				// add
-					$tree_datalist[] = $current_area;
+					$tree_datalist[] = $datalist_item;
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
 				// dump($tree_datalist, ' tree_datalist ++ '.to_string());
 
