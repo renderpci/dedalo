@@ -6,6 +6,7 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	// import {clone} from '../../common/js/utils/index.js'
 	import {render_edit_component_security_access} from '../../component_security_access/js/render_edit_component_security_access.js'
 	import {render_list_component_security_access} from '../../component_security_access/js/render_list_component_security_access.js'
@@ -101,10 +102,8 @@ component_security_access.prototype.update_value = function(item, input_value) {
 
 	const self = this
 
-	const changed_value = self.changed_value
-		? self.changed_value
-		: self.data.value[0]
-			? [...self.data.value[0]]
+	const value = self.data.value
+			? [...self.data.value]
 			: []
 
 	if (!item) {
@@ -113,7 +112,7 @@ component_security_access.prototype.update_value = function(item, input_value) {
 	}
 
 	// find if already exists
-	const found = changed_value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
+	const found = value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
 	if (found) {
 		// update
 		found.value = parseInt(input_value)
@@ -125,17 +124,105 @@ component_security_access.prototype.update_value = function(item, input_value) {
 			// parent		: item.parent,
 			value			: parseInt(input_value)
 		}
-		changed_value.push(object_value)
+		value.push(object_value)
 	}
 
 	// fix changed_value
-		self.changed_value = changed_value
+		self.data.value = value
+
+		event_manager.publish('update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo, input_value)
 
 	// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
 
-	return changed_value
+	return value
 }//end update_value
 
+
+
+component_security_access.prototype.get_parents = function(item) {
+
+	const self = this
+
+	const ar_parents = []
+	const parents = (item.model==='section' || item.model.indexOf('area')===0)
+		? self.data.datalist.filter(el => el.tipo === item.parent)
+		: self.data.datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
+
+	if(parents){
+		ar_parents.push(...parents)
+		const parents_length = parents.length
+		for (let i = 0; i < parents_length; i++) {
+			const current_parent = parents[i]
+			const recursive_parents = self.get_parents(current_parent)
+			ar_parents.push(...recursive_parents)
+		}
+	}
+	return ar_parents
+}
+
+component_security_access.prototype.get_children = function(item) {
+
+	const self = this
+
+	const ar_children = []
+	const children = (item.model==='section' || item.model.indexOf('area')===0)
+		? self.data.datalist.filter(el => el.parent === item.tipo)
+		: self.data.datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo)
+
+	if(children){
+		ar_children.push(...children)
+		const children_length = children.length
+		for (let i = 0; i < children_length; i++) {
+			const current_parent = children[i]
+			const recursive_parents = self.get_children(current_parent)
+			ar_children.push(...recursive_parents)
+		}
+	}
+	return ar_children
+}
+
+component_security_access.prototype.update_parents_radio_butons = async function(item, input_value){
+
+	const self = this
+
+	const parents = self.get_parents(item)
+
+	let diff_value = false
+	// set the data of the parents and change the DOM node with update_value event
+	const parents_length = parents.length
+	for (let i = 0; i < parents_length; i++) {
+
+		const current_parent = parents[i]
+
+		if(diff_value===false) {
+			const current_children = self.get_children(current_parent)
+			const current_children_length = current_children.length
+			for (let k = current_children_length - 1; k >= 0; k--) {
+
+				const child = current_children[k]
+
+				// exclude sections and areas
+				if(child.tipo===child.section_tipo) continue
+
+				const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
+				if (!data_found) {
+					diff_value = true
+					break
+				}
+				if(data_found.value !== input_value) {
+					diff_value = true
+					break
+				}
+			}
+		}//end if(diff_value===false)
+
+		const value_to_propagete = (diff_value===false)
+			? input_value
+			: null
+		// parent target value update
+		event_manager.publish('update_area_radio_' + self.id + '_' + current_parent.tipo + '_' + current_parent.section_tipo, value_to_propagete)
+	}//end for
+}
 
 
 /**
@@ -158,18 +245,16 @@ component_security_access.prototype.save_changes = async function() {
 
 		// rebuild value removing empty zero values
 			const clean_changed_value = []
-			const changed_value_length = self.changed_value.length
-			for (let i = 0; i < changed_value_length; i++) {
-				const value_item = self.changed_value[i]
+			const value_length = self.data.value.length
+			for (let i = 0; i < value_length; i++) {
+				const value_item = self.data.value[i]
 				if (value_item.value>0) {
 					clean_changed_value.push(value_item)
 				}
 			}
 
-		const action = typeof self.data.value[0]!=='undefined' ? 'update' : 'insert'
 		const changed_data = Object.freeze({
-			action	: action,
-			key		: 0,
+			action	: 'set_data',
 			value	: clean_changed_value
 		})
 		// console.log("changed_data:",changed_data);

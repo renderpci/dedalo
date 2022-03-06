@@ -12,7 +12,7 @@
 
 /**
 * RENDER_EDIT_COMPONENT_SECURITY_ACCESS
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_edit_component_security_access = function() {
 
@@ -21,8 +21,8 @@ export const render_edit_component_security_access = function() {
 
 
 
-let propagating = false
-const datalist_object = {}
+// let propagating = false
+// const datalist_object = {}
 
 
 
@@ -140,16 +140,14 @@ const get_content_data_edit = async function(self) {
 
 	// array of objects with all elements from Ontology
 	const datalist	= self.data.datalist
-	// array of arrays from DB
-	const value		= self.data.value && self.data.value[0]
-		? self.data.value[0]
-		: []
+	// array from DB
+	const value		= self.data.value || []
 
 	// datalist object. Created to optimize large array nodes selection
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			const key = datalist[i].section_tipo + '_' + datalist[i].tipo // parent[0] is the section tipo
-			datalist_object[key] = datalist[i]
+			// datalist_object[key] = datalist[i]
 		}
 
 	// debug
@@ -331,6 +329,7 @@ const render_area_item = function(item, datalist, value, self, target) {
 			name			: tipo + '_' + section_tipo,
 			parent			: li
 		})
+		input_checkbox.item = item
 		// checked option set on match
 			if (typeof item_value!=='undefined') {
 				// console.log("item_value.value:", item_value.value, item.tipo);
@@ -342,47 +341,81 @@ const render_area_item = function(item, datalist, value, self, target) {
 
 				}
 			}
+
+		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+			self.events_tokens.push(
+				event_manager.subscribe('update_value_' + self.id + '_' + tipo + '_' + section_tipo, fn_update_value)
+			)
+			function fn_update_value(changed_data) {
+				// console.log("-------------- - event update_value changed_data:", changed_data);
+				// change the value of the current dom element
+				if (changed_data===2) {
+					input_checkbox.checked = true
+					input_checkbox.indeterminate = false
+				}else if(changed_data===1) {
+					input_checkbox.checked = false
+					input_checkbox.indeterminate = true
+				}else if(changed_data===0) {
+					input_checkbox.checked = false
+					input_checkbox.indeterminate = false
+				}
+			}
+
 		// change event
 			input_checkbox.addEventListener("change", async function(e) {
 				e.preventDefault()
 
-				// propagate checked value upwards recursively
-					await propagate_parents_node(input_checkbox, function(input){
-						// executed on each change
-						const input_value = input.checked
-							? 2
-							: input.indeterminate
-								? 1
-								: 0
-
-						// update data
-							const current_item = datalist_object[input.name]
-							self.update_value(current_item, input_value)
-					})
-
-				// propagate downwards recursively
-					await propagate_downwards(input_checkbox, function(input){
-
-						// executed on each change
-						const input_value = input.checked
-							? 2
-							: input.indeterminate
-								? 1
-								: 0
-
-						// update data
-							const current_item = datalist_object[input.name]
-							self.update_value(current_item, input_value)
-					})
-
-
-				// update self item data
-					const input_value = input_checkbox.checked
+				const input_value = input_checkbox.checked
 						? 2
 						: input_checkbox.indeterminate
 							? 1
 							: 0
-					await self.update_value(item, input_value)
+
+				// get the all parents of the item
+				const parents = await self.get_parents(input_checkbox.item)
+
+				const parents_length = parents.length
+				// set the data of the parents and change the DOM node with update_value event
+				for (var i = parents_length - 1; i >= 0; i--) {
+					const current_parent = parents[i]
+					self.update_value(current_parent, input_value)
+				}
+
+				// update self item data
+					self.update_value(item, input_value)
+
+
+
+				// propagate checked value upwards recursively
+					// await propagate_parents_node(input_checkbox, function(input){
+					// 	// executed on each change
+					// 	const input_value = input.checked
+					// 		? 2
+					// 		: input.indeterminate
+					// 			? 1
+					// 			: 0
+
+					// 	// update data
+					// 		const current_item = datalist_object[input.name]
+					// 		self.update_value(current_item, input_value)
+					// })
+
+				// propagate downwards recursively
+					// await propagate_downwards(input_checkbox, function(input){
+
+					// 	// executed on each change
+					// 	const input_value = input.checked
+					// 		? 2
+					// 		: input.indeterminate
+					// 			? 1
+					// 			: 0
+
+					// 	// update data
+					// 		const current_item = datalist_object[input.name]
+					// 		self.update_value(current_item, input_value)
+					// })
+
+
 
 				// save
 					// self.save_changes()
@@ -561,34 +594,61 @@ const create_permissions_radio_group = function(self, item, permissions) {
 		if(permissions===radio_value) {
 			radio_input.checked = true
 		}
-		// console.log("permissions:",permissions, "radio_value",radio_value, "tipo", item.tipo);
-		radio_input.addEventListener("change", async function(e) {
-			e.stopPropagation()
-			e.preventDefault()
 
-			if (propagating===true) {
-				console.log("stopped propagation... ", item);
-				return
+		radio_input.item = item
+
+		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+			self.events_tokens.push(
+				event_manager.subscribe('update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo, fn_update_value)
+			)
+			function fn_update_value(changed_data) {
+				// console.log("-------------- - event update_value changed_data:", changed_data);
+				// change the value of the current dom element
+				if (changed_data===radio_value) {
+					radio_input.checked = true
+				}
 			}
 
-			// propagate changes
-				const container_node = radio_input.parentNode.parentNode.parentNode.querySelector(
-					':scope > .branch'
-				)
-				propagate_radio_changes(radio_input, container_node, true, function(input) {
-					// update data. executed on each change
-					const input_value	= input.value
-					const key			= input.name
-					const current_item	= datalist_object[key]
-					self.update_value(current_item, input_value)
-				})
+		radio_input.addEventListener("change", async function(e) {
+			// e.stopPropagation()
+			// e.preventDefault()
 
-			// update data
-				const input_value = radio_input.value
+			const input_value = parseInt(radio_input.value)
+			// get the all parents of the item
+
+			const children = self.get_children(radio_input.item)
+
+			const children_length = children.length
+			// set the data of the parents and change the DOM node with update_value event
+			for (let i = children_length - 1; i >= 0; i--) {
+				const current_child = children[i]
+				self.update_value(current_child, input_value)
+			}
+
+			// update self item data
 				self.update_value(item, input_value)
+			//update the state of all parents, checking his children state
+				self.update_parents_radio_butons(item, input_value)
 
-			// propagate upwards
-				propagate_permissions_upwards(radio_input)
+
+			// // propagate changes
+			// 	const container_node = radio_input.parentNode.parentNode.parentNode.querySelector(
+			// 		':scope > .branch'
+			// 	)
+			// 	propagate_radio_changes(radio_input, container_node, true, function(input) {
+			// 		// update data. executed on each change
+			// 		const input_value	= input.value
+			// 		const key			= input.name
+			// 		const current_item	= datalist_object[key]
+			// 		self.update_value(current_item, input_value)
+			// 	})
+
+			// // update data
+			// 	const input_value = radio_input.value
+			// 	self.update_value(item, input_value)
+
+			// // propagate upwards
+			// 	propagate_permissions_upwards(radio_input)
 
 			// save changes with delay
 				// self.save_changes()
@@ -623,29 +683,50 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 
 	const fragment = new DocumentFragment()
 
-	// children recursive
-		const children_radio_input = components_container.querySelectorAll(
-			'.radio_value'
-		)
+	// // children recursive
+	// 	const children_radio_input = components_container.querySelectorAll(
+	// 		'.radio_value'
+	// 	)
 
-		// children state. Counts each child checked value to resolve is any is full checked
-		const children_radio_input_length = children_radio_input.length
-		if (children_radio_input_length===0) {
-			return fragment
-		}
+	// 	// children state. Counts each child checked value to resolve is any is full checked
+	// 	const children_radio_input_length = children_radio_input.length
+	// 	if (children_radio_input_length===0) {
+	// 		return fragment
+	// 	}
 
-		const radio_values = {
-			'0'	: 0, // x
-			'1'	: 0, // r
-			'2'	: 0  // rw
-		}
+	// 	const radio_values = {
+	// 		'0'	: 0, // x
+	// 		'1'	: 0, // r
+	// 		'2'	: 0  // rw
+	// 	}
 
-		for (let i = 0; i < children_radio_input_length; i++) {
-			const input = children_radio_input[i]
-			if (input.checked) {
-				radio_values[input.value]++
+	// 	for (let i = 0; i < children_radio_input_length; i++) {
+	// 		const input = children_radio_input[i]
+	// 		if (input.checked) {
+	// 			radio_values[input.value]++
+	// 		}
+	// 	}
+
+	const children			= self.get_children(item)
+	const children_length	= children.length
+	let child_value			= null
+	let last_value			= null
+	for (let i = children_length - 1; i >= 0; i--) {
+		const child = children[i]
+		if(child.tipo === child.section_tipo) continue
+		const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
+		if(data_found){
+			if (last_value && data_found.value!==last_value) {
+				child_value = null
+				break;
 			}
+			last_value	= data_found.value
+			child_value	= data_found.value
+		}else{
+			child_value = null
+			break;
 		}
+	}
 
 	const create_radio = (radio_value, title) => {
 		// radio_input
@@ -656,43 +737,69 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 			value			: radio_value,
 			name			: item.section_tipo +'_'+ item.tipo
 		})
-		// checked value match
-		if(children_radio_input_length>0) {
-			if(radio_values[radio_value]===(children_radio_input_length/3)) {
+		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+			self.events_tokens.push(
+				event_manager.subscribe('update_area_radio_' + self.id + '_' + item.tipo + '_' + item.section_tipo, fn_update_value)
+			)
+			function fn_update_value(changed_data) {
+				// console.log("-------------- - event update_value changed_data:", changed_data);
+				// change the value of the current dom element
+				if (changed_data===radio_value) {
+					radio_input.checked = true
+				}
+
+				if(changed_data === null && radio_input.checked){
+					radio_input.checked = false
+				}
+			}
+
+		// checked status set
+			if (child_value && radio_value===child_value) {
 				radio_input.checked = true
 			}
-		}else{
-			if (radio_value===0) {
-				radio_input.checked = true
-			}
-		}
+
 		radio_input.addEventListener("change", async function(e) {
-			e.stopPropagation()
-			e.preventDefault()
 
-			if (propagating===true) {
-				return
+			const input_value = parseInt(radio_input.value)
+
+			for (let i = children_length - 1; i >= 0; i--) {
+				const child = children[i]
+				if(child.tipo === child.section_tipo){
+					event_manager.publish('update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo, input_value)
+				}else{
+					self.update_value(child, input_value)
+				}
 			}
 
-			propagating = true
-			self.node[0].classList.add('loading')
+			self.update_parents_radio_butons(item, input_value)
 
-			// propagate changes
-				const container_node = components_container
-				await propagate_radio_changes(radio_input, container_node, true, function(input) {
-					// update data. executed on each change
-					const input_value	= input.value
-					const key			= input.name
-					const current_item	= datalist_object[key]
-					self.update_value(current_item, input_value)
-				})
+
+			// e.stopPropagation()
+			// e.preventDefault()
+
+			// if (propagating===true) {
+			// 	return
+			// }
+
+			// propagating = true
+			// self.node[0].classList.add('loading')
+
+			// // propagate changes
+			// 	const container_node = components_container
+			// 	await propagate_radio_changes(radio_input, container_node, true, function(input) {
+			// 		// update data. executed on each change
+			// 		const input_value	= input.value
+			// 		const key			= input.name
+			// 		const current_item	= datalist_object[key]
+			// 		self.update_value(current_item, input_value)
+			// 	})
 
 			// save with delay
 				// self.save_changes()
 				event_manager.publish('show_save_button_'+self.id)
 
-			propagating = false
-			self.node[0].classList.remove('loading')
+			// propagating = false
+			// self.node[0].classList.remove('loading')
 		})//end radio_input.addEventListener("change", async function(e)
 
 		// radio_input_label
@@ -714,119 +821,119 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 
 
 
-/**
-* PROPAGATE_PARENTS_NODE
-* Recursive parents input set value based on direct children checked values
-* @return bool
-*/
-const propagate_parents_node = async (input_checkbox, callback) => {
+// /**
+// * PROPAGATE_PARENTS_NODE
+// * Recursive parents input set value based on direct children checked values
+// * @return bool
+// */
+// const propagate_parents_node = async (input_checkbox, callback) => {
 
-	const parent_input_checkbox	= input_checkbox.parentNode.parentNode.parentNode.querySelector(
-		':scope > .input_value'
-	)
-	if(parent_input_checkbox) {
+// 	const parent_input_checkbox	= input_checkbox.parentNode.parentNode.parentNode.querySelector(
+// 		':scope > .input_value'
+// 	)
+// 	if(parent_input_checkbox) {
 
-		// set checked or indeterminate value based on direct children values
-			ui.set_parent_checked_value(
-				parent_input_checkbox,
-				parent_input_checkbox.parentNode.querySelectorAll(
-					':scope > .branch > li > .input_value'
-				),
-				callback // called on every changed node
-			)
+// 		// set checked or indeterminate value based on direct children values
+// 			ui.set_parent_checked_value(
+// 				parent_input_checkbox,
+// 				parent_input_checkbox.parentNode.querySelectorAll(
+// 					':scope > .branch > li > .input_value'
+// 				),
+// 				callback // called on every changed node
+// 			)
 
-		// recursion
-			propagate_parents_node(parent_input_checkbox, callback)
-	}
+// 		// recursion
+// 			propagate_parents_node(parent_input_checkbox, callback)
+// 	}
 
-	return true
-};//end propagate_parents_node
-
-
-
-/**
-* PROPAGATE_DOWNWARDS
-* Recursive parents input set value based on direct children checked values
-* @return bool
-*/
-const propagate_downwards = async (input_checkbox, callback) => {
-
-	const branch = get_next_sibling(input_checkbox, '.branch')
-	if(branch) {
-
-		const children_input_checkbox = branch.querySelectorAll(
-			'.input_value'
-		)
-
-		const children_input_checkbox_length = children_input_checkbox.length
-		for (let i = 0; i < children_input_checkbox_length; i++) {
-			const el = children_input_checkbox[i]
-			el.checked = input_checkbox.checked
-			callback(el) // called on every changed node
-		}
-	}
-
-	return true
-};//end propagate_downwards
+// 	return true
+// };//end propagate_parents_node
 
 
 
-/**
-* PROPAGATE_RADIO_CHANGES
-* Recursive updates children radio values downwards
-* @return bool
-*/
-const propagate_radio_changes = (radio_input, branch_node, recursive=true, callback) => {
+// /**
+// * PROPAGATE_DOWNWARDS
+// * Recursive parents input set value based on direct children checked values
+// * @return bool
+// */
+// const propagate_downwards = async (input_checkbox, callback) => {
 
-	const t2 = performance.now()
+// 	const branch = get_next_sibling(input_checkbox, '.branch')
+// 	if(branch) {
 
-	// branch_node
-		// const branch_node = radio_input.parentNode.parentNode.parentNode.querySelector(
-		// 	':scope > .branch'
-		// )
-		if (!branch_node) {
-			return
-		}
+// 		const children_input_checkbox = branch.querySelectorAll(
+// 			'.input_value'
+// 		)
 
-	// children_radio_input
-		const style_selector = (recursive===true)
-			? `.radio_value[value="${radio_input.value}"]`
-			: `:scope > li > .radio_buttons_container > label > .radio_value[value="${radio_input.value}"]`
-		const children_radio_input = branch_node.querySelectorAll(
-			style_selector
-		)
-		// console.log("style_selector:",style_selector);
-		// console.log("children_radio_input:", children_radio_input);
+// 		const children_input_checkbox_length = children_input_checkbox.length
+// 		for (let i = 0; i < children_input_checkbox_length; i++) {
+// 			const el = children_input_checkbox[i]
+// 			el.checked = input_checkbox.checked
+// 			callback(el) // called on every changed node
+// 		}
+// 	}
 
-	console.log("__***Time performance.now()-t2 propagate_radio_changes selection:", children_radio_input.length, style_selector, performance.now()-t2);
-
-
-	if(children_radio_input) {
-		const t3 = performance.now()
-
-		const children_radio_input_length = children_radio_input.length
-		for (let i = 0; i < children_radio_input_length; i++) {
-
-			const input = children_radio_input[i]
-			if (input.checked!==radio_input.checked) {
-				// update checked value
-				input.checked = radio_input.checked
-				// callback
-				if (callback) {
-					callback(input)
-				}
-			}
-		}
-
-		console.log("__***Time performance.now()-t3 propagate_radio_changes propagation:", children_radio_input_length, performance.now()-t3);
-	}
-
-	console.log("__***Time performance.now()-t2 propagate_radio_changes total:", style_selector, performance.now()-t2);
+// 	return true
+// };//end propagate_downwards
 
 
 
-	return true
-};//end propagate_radio_changes
+// /**
+// * PROPAGATE_RADIO_CHANGES
+// * Recursive updates children radio values downwards
+// * @return bool
+// */
+// const propagate_radio_changes = (radio_input, branch_node, recursive=true, callback) => {
+
+// 	const t2 = performance.now()
+
+// 	// branch_node
+// 		// const branch_node = radio_input.parentNode.parentNode.parentNode.querySelector(
+// 		// 	':scope > .branch'
+// 		// )
+// 		if (!branch_node) {
+// 			return
+// 		}
+
+// 	// children_radio_input
+// 		const style_selector = (recursive===true)
+// 			? `.radio_value[value="${radio_input.value}"]`
+// 			: `:scope > li > .radio_buttons_container > label > .radio_value[value="${radio_input.value}"]`
+// 		const children_radio_input = branch_node.querySelectorAll(
+// 			style_selector
+// 		)
+// 		// console.log("style_selector:",style_selector);
+// 		// console.log("children_radio_input:", children_radio_input);
+
+// 	console.log("__***Time performance.now()-t2 propagate_radio_changes selection:", children_radio_input.length, style_selector, performance.now()-t2);
+
+
+// 	if(children_radio_input) {
+// 		const t3 = performance.now()
+
+// 		const children_radio_input_length = children_radio_input.length
+// 		for (let i = 0; i < children_radio_input_length; i++) {
+
+// 			const input = children_radio_input[i]
+// 			if (input.checked!==radio_input.checked) {
+// 				// update checked value
+// 				input.checked = radio_input.checked
+// 				// callback
+// 				if (callback) {
+// 					callback(input)
+// 				}
+// 			}
+// 		}
+
+// 		console.log("__***Time performance.now()-t3 propagate_radio_changes propagation:", children_radio_input_length, performance.now()-t3);
+// 	}
+
+// 	console.log("__***Time performance.now()-t2 propagate_radio_changes total:", style_selector, performance.now()-t2);
+
+
+
+// 	return true
+// };//end propagate_radio_changes
 
 
 
@@ -896,115 +1003,115 @@ const get_buttons = (self) => {
 
 
 
-/**
-* GET_CLOSEST
-* Get the closest matching element up the DOM tree
-*/
-const get_closest = function(elem, parent_selector, child_selector) {
+// /**
+// * GET_CLOSEST
+// * Get the closest matching element up the DOM tree
+// */
+// const get_closest = function(elem, parent_selector, child_selector) {
 
-	const parent_found = elem.parentNode.closest(parent_selector);
-	if (!parent_found || parent_found===elem) {
-		return null
-	}
+// 	const parent_found = elem.parentNode.closest(parent_selector);
+// 	if (!parent_found || parent_found===elem) {
+// 		return null
+// 	}
 
-	const target = parent_found.querySelector(child_selector)
-		|| get_closest(parent_found, parent_selector, child_selector)
-
-
-	return target;
-};//end get_closest
+// 	const target = parent_found.querySelector(child_selector)
+// 		|| get_closest(parent_found, parent_selector, child_selector)
 
 
-
-/**
-* GET_NEXT_SIBLING
-*/
-const get_next_sibling = function (elem, selector) {
-
-	// Get the next sibling element
-	let sibling = elem.nextElementSibling;
-
-	// If the sibling matches our selector, use it
-	// If not, jump to the next sibling and continue the loop
-	while (sibling) {
-		if (sibling.matches(selector)) return sibling;
-		sibling = sibling.nextElementSibling
-	}
-};
+// 	return target;
+// };//end get_closest
 
 
 
-/**
-* PROPAGATE_PERMISSIONS_UPWARDS
-* @return bool
-*/
-const propagate_permissions_upwards = function(radio_input) {
+// /**
+// * GET_NEXT_SIBLING
+// */
+// const get_next_sibling = function (elem, selector) {
 
-	// permissions_global
-		const permissions_global = get_closest(radio_input, 'li', ':scope > .permissions_global')
-		if (!permissions_global) {
-			console.log("No permissions_global:", radio_input, permissions_global);
-			return false
-		}
+// 	// Get the next sibling element
+// 	let sibling = elem.nextElementSibling;
 
-	const branch = get_next_sibling(permissions_global, '.branch')
+// 	// If the sibling matches our selector, use it
+// 	// If not, jump to the next sibling and continue the loop
+// 	while (sibling) {
+// 		if (sibling.matches(selector)) return sibling;
+// 		sibling = sibling.nextElementSibling
+// 	}
+// };
 
-	// children recursive
-	const children_radio_input = branch.querySelectorAll(
-		'.radio_value'
-	)
-	// children state. Counts each child checked value to resolve is any is full checked
-	const children_radio_input_length = children_radio_input.length
-	if (children_radio_input_length===0) {
-		return false
-	}
 
-	propagating = true
 
-	// summarize all
-		const radio_values = {
-			'0'	: 0, // x
-			'1'	: 0, // r
-			'2'	: 0  // rw
-		}
-		for (let i = 0; i < children_radio_input_length; i++) {
-			const input = children_radio_input[i]
-			if (input.checked) {
-				radio_values[input.value]++
-			}
-		}
+// /**
+// * PROPAGATE_PERMISSIONS_UPWARDS
+// * @return bool
+// */
+// const propagate_permissions_upwards = function(radio_input) {
 
-	// checked value match
-		let item_checked = null
-		const ar_radio_input = permissions_global.querySelectorAll('input.radio_value')
-		for (let i = 0; i < ar_radio_input.length; i++) {
+// 	// permissions_global
+// 		const permissions_global = get_closest(radio_input, 'li', ':scope > .permissions_global')
+// 		if (!permissions_global) {
+// 			console.log("No permissions_global:", radio_input, permissions_global);
+// 			return false
+// 		}
 
-			const global_radio_input	= ar_radio_input[i]
-			const full_ratio			= children_radio_input_length/3
-			const current_value			= global_radio_input.value
+// 	const branch = get_next_sibling(permissions_global, '.branch')
 
-			// default is unchecked
-			global_radio_input.checked = false
+// 	// children recursive
+// 	const children_radio_input = branch.querySelectorAll(
+// 		'.radio_value'
+// 	)
+// 	// children state. Counts each child checked value to resolve is any is full checked
+// 	const children_radio_input_length = children_radio_input.length
+// 	if (children_radio_input_length===0) {
+// 		return false
+// 	}
 
-			// match checked if is full_ratio
-			for (const [key, value] of Object.entries(radio_values)) {
-				// console.log(`${key}: ${value}`);
-				if(value===full_ratio && current_value==key) {
-					global_radio_input.checked = true
-					item_checked = global_radio_input
-				}
-			}
-		}
+// 	propagating = true
 
-		if(item_checked) {
-			// propagate_permissions_upwards(item_checked)
-			// console.log("item_checked:",item_checked);
-		}
+// 	// summarize all
+// 		const radio_values = {
+// 			'0'	: 0, // x
+// 			'1'	: 0, // r
+// 			'2'	: 0  // rw
+// 		}
+// 		for (let i = 0; i < children_radio_input_length; i++) {
+// 			const input = children_radio_input[i]
+// 			if (input.checked) {
+// 				radio_values[input.value]++
+// 			}
+// 		}
 
-	propagating = false
+// 	// checked value match
+// 		let item_checked = null
+// 		const ar_radio_input = permissions_global.querySelectorAll('input.radio_value')
+// 		for (let i = 0; i < ar_radio_input.length; i++) {
 
-	return true
-}//end propagate_permissions_upwards
+// 			const global_radio_input	= ar_radio_input[i]
+// 			const full_ratio			= children_radio_input_length/3
+// 			const current_value			= global_radio_input.value
+
+// 			// default is unchecked
+// 			global_radio_input.checked = false
+
+// 			// match checked if is full_ratio
+// 			for (const [key, value] of Object.entries(radio_values)) {
+// 				// console.log(`${key}: ${value}`);
+// 				if(value===full_ratio && current_value==key) {
+// 					global_radio_input.checked = true
+// 					item_checked = global_radio_input
+// 				}
+// 			}
+// 		}
+
+// 		if(item_checked) {
+// 			// propagate_permissions_upwards(item_checked)
+// 			// console.log("item_checked:",item_checked);
+// 		}
+
+// 	propagating = false
+
+// 	return true
+// }//end propagate_permissions_upwards
 
 
 

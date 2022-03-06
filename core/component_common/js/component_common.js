@@ -217,6 +217,9 @@ component_common.prototype.build = async function(autoload=false){
 		// 	await self.build_custom()
 		// }
 
+	// set the server data to preserve the data that is saved in DDBB
+		self.db_data = JSON.parse(JSON.stringify(self.data))
+
 	// is_inside_tool
 		self.is_inside_tool = ui.inside_tool(self)
 
@@ -698,9 +701,15 @@ component_common.prototype.update_data_value = function(changed_data){
 		// const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
 		// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
 	}
+	const action		= changed_data.action
+	const data_key		= changed_data.key || null
+	const changed_value	= changed_data.value
 
-	const data_key 		= changed_data.key
-	const changed_value = changed_data.value
+	// if action is set_data the value is changed as is, bulk insert or update the data of the component.
+	if(action==='set_data'){
+		self.data.value = changed_value || []
+		return true
+	}
 
 	// when the data_key is false the value is propagated to all items in the array
 		if (data_key===false && changed_value===null) {
