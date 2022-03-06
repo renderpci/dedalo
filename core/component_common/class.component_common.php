@@ -2994,6 +2994,17 @@ abstract class component_common extends common {
 				}
 				break;
 
+			// set the all data sent by the client without check the array key, bulk insert or update
+			case 'set_data':
+
+				$this->set_dato($changed_data->value);
+				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
+				$this->observable_dato = (get_called_class() === 'component_relation_related')
+					? $this->get_dato_with_references()
+					: $changed_data->value;
+
+				break;
+
 			default:
 				// error
 				debug_log(__METHOD__." Error on update_data_value. changed_data->action is not valid! ".to_string($changed_data->action), logger::DEBUG);
