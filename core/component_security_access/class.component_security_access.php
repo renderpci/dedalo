@@ -89,18 +89,29 @@ class component_security_access extends component_common {
 			$ar_clean = [];
 			foreach ($ar_areas as $current_area) {
 
-				$current_area->section_tipo	= $current_area->tipo;
-				$current_area->type			= 'area';
+				$section_tipo = $current_area->tipo; // same as tipo
 
-				$ar_clean[] = $current_area; // area could be area,area_thesaurus,section, ...
+				// area could be area, area_thesaurus, section, ...
+				$ar_clean[] = (object)[
+					'tipo'			=> $current_area->tipo,
+					'section_tipo'	=> $section_tipo,
+					'model'			=> $current_area->model,
+					'label'			=> $current_area->label,
+					'parent'		=> $current_area->parent
+				];
 
 				if ($current_area->model==='section') {
 
 					$children_recursive = ontology::get_children_recursive($current_area->tipo);
 					foreach ($children_recursive as $current_child) {
-						$child					= clone $current_child;
-						$child->section_tipo	= $current_area->tipo;
-						$ar_clean[]				= $child;
+
+						$ar_clean[] = (object)[
+							'tipo'			=> $current_child->tipo,
+							'section_tipo'	=> $section_tipo,
+							'model'			=> $current_child->model,
+							'label'			=> $current_child->label,
+							'parent'		=> $current_child->parent
+						];
 					}
 				}
 			}
