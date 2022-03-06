@@ -1191,13 +1191,19 @@ class search {
 							}
 							// check empty ar_area_tipo case
 								if (empty($ar_area_tipo)) {
-									debug_log(__METHOD__." Profile ($profile_id) without data!! ", logger::ERROR);
+									debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed security_areas data!! ", logger::ERROR);
 									header("Location: " . DEDALO_ROOT_WEB);
 									exit();
 								}
 
 					# SEARCH PROFILES WITH CURRENT USER AREAS
 						$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
+							// check empty ar_profile_id case
+							if (empty($ar_profile_id)) {
+								debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed ar_profile_id data!! ", logger::ERROR);
+								header("Location: " . DEDALO_ROOT_WEB);
+								exit();
+							}
 						$ar_filter_profile = [];
 						foreach ($ar_profile_id as $current_profile_id) {
 							#$ar_filter_profile[] = PHP_EOL . $section_alias.'.'.$datos_container.'#>\'{components,'.DEDALO_USER_PROFILE_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\' = \''.$current_profile_id.'\' ';
