@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -84,7 +84,6 @@ export const component_security_access = function(){
 		parent: "mht39"
 		tipo: "mht55"
 		section_tipo: "mht5"
-		value: "2"
 	}
 * @param int input_value
 *
@@ -102,34 +101,37 @@ component_security_access.prototype.update_value = function(item, input_value) {
 
 	const self = this
 
-	const value = self.data.value
-			? [...self.data.value]
-			: []
+	// value . Copy of current data.value
+		const value = self.data.value
+				? [...self.data.value]
+				: []
 
-	if (!item) {
-		console.warn("Ignored undefined item:", input_value);
-		return changed_value
-	}
+	// item check
+		if (!item) {
+			console.warn("Ignored undefined item:", input_value);
+			return value
+		}
 
 	// find if already exists
-	const found = value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
-	if (found) {
-		// update
-		found.value = parseInt(input_value)
-	}else{
-		// add
-		const object_value = {
-			tipo			: item.tipo,
-			section_tipo	: item.section_tipo,
-			// parent		: item.parent,
-			value			: parseInt(input_value)
+		const found = value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
+		if (found) {
+			// update
+			found.value = parseInt(input_value)
+		}else{
+			// add
+			const object_value = {
+				tipo			: item.tipo,
+				section_tipo	: item.section_tipo,
+				// parent		: item.parent,
+				value			: parseInt(input_value)
+			}
+			value.push(object_value)
 		}
-		value.push(object_value)
-	}
 
-	// fix changed_value
+	// fix updated changed_value
 		self.data.value = value
 
+	// event. publish update_value_xx event on change data.value
 		event_manager.publish('update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo, input_value)
 
 	// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
@@ -139,53 +141,113 @@ component_security_access.prototype.update_value = function(item, input_value) {
 
 
 
+/**
+* GET_PARENTS
+* Get parents recursively from given item
+* @param object item
+* 	datalist item with info about tipo, model, value as
+	{
+		label: "Descripción"
+		model: "section_group"
+		parent: "mht39"
+		tipo: "mht55"
+		section_tipo: "mht5"
+	}
+* @return array ar_parents
+*/
 component_security_access.prototype.get_parents = function(item) {
 
 	const self = this
 
-	const ar_parents = []
-	const parents = (item.model==='section' || item.model.indexOf('area')===0)
+	let ar_parents = []
+
+	// const parents = (item.model==='section' || item.model.indexOf('area')===0)
+	const parents = (item.tipo===item.section_tipo)
 		? self.data.datalist.filter(el => el.tipo === item.parent)
 		: self.data.datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
 
-	if(parents){
-		ar_parents.push(...parents)
-		const parents_length = parents.length
+	const parents_length = parents.length
+	if(parents_length>0){
+		// ar_parents.push(...parents)
+		ar_parents = parents
 		for (let i = 0; i < parents_length; i++) {
-			const current_parent = parents[i]
-			const recursive_parents = self.get_parents(current_parent)
+			const recursive_parents = self.get_parents( parents[i] )
 			ar_parents.push(...recursive_parents)
 		}
 	}
-	return ar_parents
-}
 
-component_security_access.prototype.get_children = function(item) {
+	return ar_parents
+}//end get_parents
+
+
+
+/**
+* GET_CHILDREN
+* Get datalist children recursively from given item
+* @param object item
+* 	datalist item with info about tipo, model, value as
+	{
+		label: "Descripción"
+		model: "section_group"
+		parent: "mht39"
+		tipo: "mht55"
+		section_tipo: "mht5"
+	}
+* @return array ar_children
+*/
+component_security_access.prototype.get_children = function(item, datalist) {
 
 	const self = this
 
-	const ar_children = []
-	const children = (item.model==='section' || item.model.indexOf('area')===0)
-		? self.data.datalist.filter(el => el.parent === item.tipo)
-		: self.data.datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo)
+	let ar_children = []
 
-	if(children){
-		ar_children.push(...children)
+	datalist = datalist || self.data.datalist
+
+	// const children = (item.model==='section' || item.model.indexOf('area')===0)
+	const children = (item.tipo===item.section_tipo)
+		? datalist.filter(el => el.parent === item.tipo) // section / area case
+		: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
+
+	const children_length = children.length
+	if(children_length>0){
+		// ar_children.push(...children)
+		ar_children = children
 		const children_length = children.length
 		for (let i = 0; i < children_length; i++) {
-			const current_parent = children[i]
-			const recursive_parents = self.get_children(current_parent)
+			const recursive_parents	= self.get_children( children[i], datalist )
 			ar_children.push(...recursive_parents)
 		}
 	}
-	return ar_children
-}
 
+	return ar_children
+}//end get_children
+
+
+
+/**
+* UPDATE_PARENTS_RADIO_BUTONS
+* Check all resursive parents and get children values of each one. If
+* all of children have the same value, the parent is set with this value (ex. 2)
+* @param object item
+* 	datalist item with info about tipo, model, value as
+	{
+		label: "Descripción"
+		model: "section_group"
+		parent: "mht39"
+		tipo: "mht55"
+		section_tipo: "mht5"
+	}
+* @param integer input_value
+*
+* @return bool diff_value
+*/
 component_security_access.prototype.update_parents_radio_butons = async function(item, input_value){
 
 	const self = this
 
-	const parents = self.get_parents(item)
+	// parents (recursive)
+		const parents = self.get_parents(item)
+
 
 	let diff_value = false
 	// set the data of the parents and change the DOM node with update_value event
@@ -195,6 +257,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 		const current_parent = parents[i]
 
 		if(diff_value===false) {
+			// check values of every child finding a different value from last value found
 			const current_children = self.get_children(current_parent)
 			const current_children_length = current_children.length
 			for (let k = current_children_length - 1; k >= 0; k--) {
@@ -222,51 +285,44 @@ component_security_access.prototype.update_parents_radio_butons = async function
 		// parent target value update
 		event_manager.publish('update_area_radio_' + self.id + '_' + current_parent.tipo + '_' + current_parent.section_tipo, value_to_propagete)
 	}//end for
-}
+
+	return diff_value
+}//end update_parents_radio_butons
+
 
 
 /**
 * SAVE_CHANGES
-* @return bool true
+* Rebuild self.data.value removing empty zero values and save result
+* @return promise
 */
-// save timer vars
-// let save_timer;			// Timer identifier
-// const wait_time = 600;	// Wait time in milliseconds before save
 component_security_access.prototype.save_changes = async function() {
 
 	const self = this
 
-	// clear timer on each call to prevent multiple actions by user
-	// in sort time, generating multiple saves
-	// clearTimeout(save_timer);
-
-	// wait for X ms and, if no new call is received, then process the request
-	// save_timer = setTimeout(() => {
-
-		// rebuild value removing empty zero values
-			const clean_changed_value = []
-			const value_length = self.data.value.length
-			for (let i = 0; i < value_length; i++) {
-				const value_item = self.data.value[i]
-				if (value_item.value>0) {
-					clean_changed_value.push(value_item)
-				}
+	// rebuild value removing empty zero values
+		const clean_changed_value	= []
+		const value_length			= self.data.value.length
+		for (let i = 0; i < value_length; i++) {
+			const value_item = self.data.value[i]
+			if (value_item.value>0) {
+				clean_changed_value.push(value_item)
 			}
+		}
 
+	// changed_data build. (!) Note that action is 'set_data' instead 'insert' or 'update', to save whole array data as raw
 		const changed_data = Object.freeze({
 			action	: 'set_data',
 			value	: clean_changed_value
 		})
-		// console.log("changed_data:",changed_data);
-		await self.change_value({
+
+	// change_value to save
+		const result = self.change_value({
 			changed_data	: changed_data,
 			refresh			: false
 		})
-		.then((save_response)=>{
-			console.log("save_response:",save_response);
-		})
 
-	// }, wait_time);
-
-	return true
+	return result
 }//end save_changes
+
+
