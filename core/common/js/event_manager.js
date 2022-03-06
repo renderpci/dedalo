@@ -153,6 +153,8 @@ export const event_manager = new event_manager_class()
 * Set as global window var to be available for all, included
 * iframes calling as parent.window
 */
-window.event_manager = event_manager
+if (typeof window!=='undefined') {
+	window.event_manager = event_manager
+}
 
 
