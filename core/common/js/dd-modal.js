@@ -1,3 +1,4 @@
+if (typeof HTMLElement!=='undefined') {
 class DDModal extends HTMLElement {
 	constructor() {
 		super();
@@ -236,3 +237,4 @@ class DDModal extends HTMLElement {
 	}
 }
 customElements.define('dd-modal',DDModal);
+}
