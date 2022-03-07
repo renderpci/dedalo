@@ -182,8 +182,12 @@ const get_content_data = function(self) {
 		content_data.appendChild(element_info)
 
 	// project container
-		const project_block = render_project_block(self)
-		content_data.appendChild(project_block)
+		// (!) Note that the filter node is collected from a subscribed
+		// event 'render_component_filter_xx' from self inspector init event
+		if (self.component_filter_node) {
+			const project_block = render_project_block(self)
+			content_data.appendChild(project_block)
+		}
 
 	// indexation_list container
 		// if (self.caller.context.indexation_list) {
@@ -195,13 +199,13 @@ const get_content_data = function(self) {
 		if (self.caller.context.relation_list) {
 			const relation_list = render_relation_list(self)
 			content_data.appendChild(relation_list)
-		}//end if (self.caller.context.relation_list)
+		}
 
 	// time_machine_list container
 		if (self.caller.context.time_machine_list) {
 			const time_machine_list = render_time_machine_list(self)
 			content_data.appendChild(time_machine_list)
-		}//end if (self.caller.context.time_machine_list)
+		}
 
 	// activity_info
 		const activity_info = render_activity_info(self)
@@ -362,7 +366,7 @@ export const render_section_info = function(self) {
 
 
 /**
-* RENDER_component_INFO
+* RENDER_COMPONENT_INFO
 * @return DOM DocumentFragment
 */
 export const render_component_info = function(self, component) {
@@ -574,6 +578,8 @@ const render_project_block = function(self) {
 			class_name		: 'project_container hide',
 			parent			: project_wrap
 		})
+		// component_filter_node (collected in inspector init event 'render_component_filter_xx')
+		project_container_body.appendChild(self.component_filter_node)
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
