@@ -298,7 +298,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 	// request config
 	// get the request_config with all ddo, it will be use to create the instances
-		const request_config		= self.caller.context.request_config
+		const request_config		= self.caller.context.request_config || []
 		const request_config_length	= request_config.length
 
 	// instances
@@ -579,8 +579,8 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 			// 	}
 			// }
 		// }
-	
-		
+
+
 	// undefined case. If the current item don't has data will be instantiated with the current section_id
 		if(!component_data) {
 			// empty component data build
@@ -629,7 +629,7 @@ section_record.prototype.get_component_info = function(){
 	// 	const parent			= component.parent
 	// 	const section_tipo		= component.section_tipo
 	// 	const component_tipo	= component.tipo
-	// 	const component_data	= self.datum.data.find(item => item.tipo===component_tipo && item.row_section_id===section_id)	
+	// 	const component_data	= self.datum.data.find(item => item.tipo===component_tipo && item.row_section_id===section_id)
 	// 	// console.log("component_data:",component_data);
 
 	// 	// // get the f_path it has full path from the main section to last component in the chain, (sectui b¡)

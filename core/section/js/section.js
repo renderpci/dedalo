@@ -211,11 +211,13 @@ section.prototype.build = async function(autoload=false) {
 			context	: []
 		}
 		self.data = self.data || {}
+		self.context = self.context || {}
 
 	const current_data_manager	= new data_manager()
 
 	// rqo
 		const generate_rqo = async function(){
+
 			// rqo_config. get the rqo_config from context
 			self.rqo_config	= self.context.request_config
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
@@ -262,8 +264,8 @@ section.prototype.build = async function(autoload=false) {
 				self.datum = api_response.result
 
 			// set context and data to current instance
-				self.context	= self.datum.context.find(el => el.section_tipo===self.section_tipo)
-				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
+				self.context	= self.datum.context.find(el => el.section_tipo===self.section_tipo) || {}
+				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections') || {}
 				self.section_id	= self.mode!=='list' && self.data && self.data.value
 					? self.data.value.find(el => el.section_tipo===self.section_tipo).section_id
 					: null
@@ -329,8 +331,9 @@ section.prototype.build = async function(autoload=false) {
 									load_data_debug(self, api_response, self.rqo)
 									.then(function(info_node){
 										// debug.classList.add("hide")
-
-										debug.appendChild(info_node)
+										if (info_node) {
+											debug.appendChild(info_node)
+										}
 
 										// scroll debug to top of page
 											const bodyRect	= document.body.getBoundingClientRect()
