@@ -11,13 +11,14 @@
 */
 class security {
 
+
+
 	# VARS
 	private $permissions;
 
 	private $user_id;
 	private $permissions_tipo;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG)
 	private $permissions_dato;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG) QUE CONTIENE LOS DATOS
-
 
 	private static $ar_permissions_in_matrix_for_current_user; # AR DATO
 	private static $ar_permissions_table;
@@ -158,7 +159,7 @@ class security {
 		// dato_access. is the first value of the result array if not empty
 		// $dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
 			$dato_access = !empty($component_security_access)
-				? $component_security_access->get_dato()[0]
+				? $component_security_access->get_dato()
 				: [];
 
 		return $dato_access;
