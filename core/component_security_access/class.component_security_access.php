@@ -195,7 +195,7 @@ class component_security_access extends component_common {
 			case '6.0.0':
 
 			// old dato: {"oh1":{"oh2":2}}
-			// new dato :[{"tipo":"oh2","parent":"oh1","value":2}]
+			// new dato :[{"tipo":"oh2","section_tipo":"oh1","value":2}]
 
 			if(!empty($dato_unchanged) && is_object($dato_unchanged)) {
 
@@ -203,9 +203,10 @@ class component_security_access extends component_common {
 				foreach ($dato_unchanged as $current_parent => $current_ar_tipo) {
 					foreach ($current_ar_tipo as $current_tipo => $value) {
 						$current_dato = new stdClass();
-						$current_dato->tipo 	= $current_tipo;
-						$current_dato->parent 	= $current_parent;
-						$current_dato->value 	= $value;
+							$current_dato->tipo			= $current_tipo;
+							$current_dato->section_tipo	= $current_parent;
+							$current_dato->value		= intval($value);
+						// add
 						$new_dato[] = $current_dato;
 					}
 				}
