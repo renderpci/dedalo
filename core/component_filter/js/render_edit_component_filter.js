@@ -228,35 +228,45 @@ const get_content_data = function(self) {
 		})
 
 		// render all items sequentially
+			const tree_object = {}
 			for (let i = 0; i < datalist_length; i++) {
 
 				const datalist_item = datalist[i];
 
-				if (datalist_item.type==='typology') {
-					// grouper
-					const grouper_element = get_grouper_element(i, datalist_item, self)
-					inputs_container.appendChild(grouper_element)
-				}else{
-					// input
-					const input_element = get_input_element(i, datalist_item, self)
-					inputs_container.appendChild(input_element)
-				}
+				const tree_node = (datalist_item.type==='typology')
+					? get_grouper_element(i, datalist_item, self) // grouper
+					: get_input_element(i, datalist_item, self) // input checkbox
+
+				tree_node.item = datalist_item
+
+				// store in the tree_object
+				const key = datalist_item.section_tipo +'_'+ datalist_item.section_id
+				tree_object[key] = tree_node
 			}
 
-		// realocate rendered dom items
-			const nodes_lenght = inputs_container.childNodes.length
-			// iterate in reverse order to avoid problems on move nodes
-			for (let i = nodes_lenght - 1; i >= 0; i--) {
+		// hierarchize nodes
+			const tree_fragment = new DocumentFragment()
+			for(const key in tree_object) {
 
-				const item = inputs_container.childNodes[i]
-				if (item.dataset.parent) {
-					//const parent_id = datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id
-					const current_parent = inputs_container.querySelector("[data-id='"+item.dataset.parent+"']")
-					if (current_parent) {
-						current_parent.appendChild(item)
+				const tree_node	= tree_object[key]
+
+				if (!tree_node.item.parent) {
+					// add to root level
+					tree_fragment.appendChild(tree_node)
+				}else{
+					// add to parent typology branch
+					const parent_key = tree_node.item.parent.section_tipo + '_' + tree_node.item.parent.section_id
+					if(tree_object[parent_key]) {
+						// add to parent branch
+						tree_object[parent_key].branch.appendChild(tree_node)
+						// console.log("Added to parent branch:", key, parent_key);
+					}else{
+						// add to root level
+						tree_fragment.appendChild(tree_node)
 					}
 				}
 			}
+			inputs_container.appendChild(tree_fragment)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -317,22 +327,49 @@ const get_buttons = (self) => {
 */
 const get_grouper_element = (i, datalist_item, self) => {
 
+	const key = datalist_item.section_tipo +'_'+ datalist_item.section_id
+
 	// grouper
 		const grouper = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'grouper',
-			data_set		: {
-				id		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
-				parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
-			}
+			class_name		: 'grouper'
+			// data_set		: {
+			// 	id		: key,
+			// 	parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
+			// }
 		})
 
+	// grouper_label
 		const grouper_label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'grouper_label',
+			class_name		: 'grouper_label icon_arrow',
 			inner_html		: datalist_item.label,
 			parent			: grouper
 		})
+
+	// branch
+		const branch = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'branch',
+			parent			: grouper
+		})
+		grouper.branch = branch
+
+	// collapse_toggle_track
+		ui.collapse_toggle_track({
+			header				: grouper_label,
+			content_data		: branch,
+			collapsed_id		: 'collapsed_component_filter_group_' + key,
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			grouper_label.classList.remove('up')
+		}
+		function expose() {
+			grouper_label.classList.add('up')
+		}
+
 
 	return grouper
 };//end get_grouper_element

@@ -177,9 +177,6 @@ const get_content_data = function(self) {
 				event_manager.publish('new_section_' + self.caller.id)
 			})
 
-	// element_info
-		const element_info = render_element_info(self)
-		content_data.appendChild(element_info)
 
 	// project container
 		// (!) Note that the filter node is collected from a subscribed
@@ -188,6 +185,10 @@ const get_content_data = function(self) {
 			const project_block = render_project_block(self)
 			content_data.appendChild(project_block)
 		}
+
+	// element_info
+		const element_info = render_element_info(self)
+		content_data.appendChild(element_info)
 
 	// indexation_list container
 		// if (self.caller.context.indexation_list) {
@@ -578,8 +579,10 @@ const render_project_block = function(self) {
 			class_name		: 'project_container hide',
 			parent			: project_wrap
 		})
+		// fix project_container_body
+		self.project_container_body = project_container_body
 		// component_filter_node (collected in inspector init event 'render_component_filter_xx')
-		project_container_body.appendChild(self.component_filter_node)
+		update_project_container_body(self)
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
@@ -599,6 +602,26 @@ const render_project_block = function(self) {
 
 	return project_wrap
 };//end render_project_block
+
+
+
+/**
+* UPDATE_PROJECT_CONTAINER_BODY
+* Clean project_container_body and add init event wath fixed node: 'self.component_filter_node'
+* @return bool true
+*/
+export const update_project_container_body = function(self) {
+
+	// clean self.project_container_body
+		while (self.project_container_body.firstChild) {
+			self.project_container_body.removeChild(self.project_container_body.firstChild);
+		}
+
+	// add the new component_filter_node
+		self.project_container_body.appendChild(self.component_filter_node)
+
+	return true
+}//end update_project_container_body
 
 
 
