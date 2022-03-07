@@ -57,10 +57,12 @@ session_write_close();
 // page_globals
 	$page_globals = (function() {
 
-		$mode			= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
-		$user_id		= $_SESSION['dedalo']['auth']['user_id'] ?? null;
-		$username		= $_SESSION['dedalo']['auth']['username'] ?? null;
-		$full_username	= $_SESSION['dedalo']['auth']['full_username'] ?? null;
+		$mode				= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
+		$user_id			= $_SESSION['dedalo']['auth']['user_id'] ?? null;
+		$username			= $_SESSION['dedalo']['auth']['username'] ?? null;
+		$full_username		= $_SESSION['dedalo']['auth']['full_username'] ?? null;
+		$is_global_admin	= $_SESSION['dedalo']['auth']['is_global_admin'] ?? null;
+		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();
 			# version
@@ -103,7 +105,8 @@ session_write_close();
 			$obj->username						= $username;
 			$obj->full_username					= $full_username;
 			# is_global_admin
-			#$obj->is_global_admin				= (bool)$is_global_admin;
+			$obj->is_global_admin				= $is_global_admin;
+			$obj->is_root						= $is_root;
 			# components_to_refresh
 			#$obj->components_to_refresh		= [];
 			# portal

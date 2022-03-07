@@ -64,7 +64,7 @@ render_menu.prototype.edit = async function() {
 			id				: 'dedalo_icon_top',
 			parent			: fragment
 		})
-		dedalo_icon.addEventListener("click", function(e){
+		dedalo_icon.addEventListener("click", function(){
 			window.open('https://dedalo.dev', 'Dédalo Site', []);
 		})
 
@@ -84,7 +84,7 @@ render_menu.prototype.edit = async function() {
 		})
 
 		// click . Manages global click action on the menu items
-			hierarchy.addEventListener("click", e => {
+			hierarchy.addEventListener("click", (e) => {
 				// first menu items only (when the ul is the main menu)
 
 				//close all menu items when the menu change to inactive
@@ -287,11 +287,11 @@ render_menu.prototype.edit = async function() {
 			  menu_wrapper.classList.add("menu_wrapper")
 			  menu_wrapper.appendChild(fragment)
 		// menu left band
-			if (SHOW_DEBUG===true) {
-				menu_wrapper.classList.add('show_debug')
+			if (page_globals.is_root===true) {
+				menu_wrapper.classList.add('is_root')
 			}
-			else if (SHOW_DEVELOPER===true) {
-				menu_wrapper.classList.add('show_developer')
+			else if (page_globals.is_global_admin===true) {
+				menu_wrapper.classList.add('is_global_admin')
 			}
 
 

@@ -178,27 +178,32 @@ class security {
 
 		// user profile
 			$component_profile_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
-			$component_profile			= component_common::get_instance($component_profile_model,
-																		 DEDALO_USER_PROFILE_TIPO,
-																		 (int)$user_id,
-																		 'list',
-																		 DEDALO_DATA_NOLAN,
-																		 DEDALO_SECTION_USERS_TIPO);
+			$component_profile			= component_common::get_instance(
+				$component_profile_model,
+				DEDALO_USER_PROFILE_TIPO,
+				(int)$user_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
 			$profile_dato = $component_profile->get_dato();
 			if (empty($profile_dato)) {
 				return false;
 			}
 
+			// locator
 			$profile_id = (int)$profile_dato[0]->section_id;
 
-
 		// component_security_access
-			$component_security_access = component_common::get_instance('component_security_access',
-																		DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
-																		$profile_id,
-																		'edit',
-																		DEDALO_DATA_NOLAN,
-																		DEDALO_SECTION_PROFILES_TIPO);
+			$component_security_access = component_common::get_instance(
+				'component_security_access',
+				DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
+				$profile_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_PROFILES_TIPO
+			);
+
 
 		return $component_security_access;
 	}//end get_user_security_access
