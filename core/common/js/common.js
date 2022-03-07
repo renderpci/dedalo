@@ -712,7 +712,7 @@ export const get_columns_map = function(context) {
 	// tipo
 		const tipo				= context.tipo
 	// request_config. get the request_config with all ddo to use in the columns
-		const request_config	= context.request_config
+		const request_config	= context.request_config || []
 	// source_columns_map. Get the columns_maps defined in the properties and assigned in context in the server or by the client.
 		// the columns_maps become as structure to complete with the request_config
 		// by default the columns are for every component that has direct link to the component(portal) or section

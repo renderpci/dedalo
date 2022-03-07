@@ -5,8 +5,8 @@
 
 // element configuration vars
 	// $ar_section_tipo	= $this->get_ar_section_tipo();
-	$modo				= $this->get_modo();
-	$section_class		= 'section';
+	$modo			= $this->get_modo();
+	$section_class	= 'section';
 
 
 
@@ -104,6 +104,11 @@
 
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
+
+				$permissions	= common::get_permissions($section_tipo, $section_tipo);
+				if($permissions<1){
+					continue;
+				}
 
 				// section instance
 					$section = $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
