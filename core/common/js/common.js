@@ -1925,12 +1925,24 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 			// })
 
 		// rqo_show_original
-			const rqo_show_original_pre	= ui.create_dom_element({
+			// const rqo_show_original_pre	= ui.create_dom_element({
+			// 	element_type	: 'pre',
+			// 	text_content	: "rqo_show_original: \n",
+			// 	parent			: fragment
+			// })
+			// render_tree_data(rqo_show_original, rqo_show_original_pre)
+
+		// response_debug
+			const combi = {
+				'debug'				: response.debug,
+				'rqo_show_original'	: rqo_show_original
+			};
+			const response_debug_pre = ui.create_dom_element({
 				element_type	: 'pre',
-				text_content	: "rqo_show_original: \n",
+				text_content	: "response_debug: \n",
 				parent			: fragment
 			})
-			render_tree_data(rqo_show_original, rqo_show_original_pre)
+			render_tree_data(combi, response_debug_pre)
 
 		// dd_request
 			if (dd_request) {

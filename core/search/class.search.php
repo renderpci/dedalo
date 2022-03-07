@@ -328,10 +328,11 @@ class search {
 				$records_data->ar_records = $ar_records;
 
 		// debug
-			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+			if(SHOW_DEVELOPER===true) {
+				$exec_time = round(microtime(1)-$start_time, 3);
 				$records_data->generated_time['parsed_time'] = $parsed_time;
 				# Info about required time to exec the search
-				$records_data->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+				$records_data->generated_time['get_records_data'] = $exec_time;
 				# Query to database string
 				$records_data->strQuery = $sql_query;
 				if (isset($full_count_sql_query)) {
@@ -339,11 +340,11 @@ class search {
 				}
 				#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
 				#dump($records_data, '$records_data', array());
-				$this->search_query_object->generated_time 	= $records_data->generated_time['get_records_data'];
+				$this->search_query_object->generated_time 	= $exec_time;
 
 				$ar_sections = (array)$this->search_query_object->section_tipo;
 				$ar_sections = array_map(function($section_tipo){
-					return $section_tipo . ' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+					return $section_tipo .' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 				}, $ar_sections);
 
 				// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
@@ -352,6 +353,7 @@ class search {
 				// debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 				// debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
 				// error_log("sql_query: \n" . to_string($sql_query));
+				dd_core_api::$sql_query_searchs[] = '-- TIME sec: '. $exec_time . PHP_EOL . $sql_query;
 			}
 
 
@@ -386,12 +388,15 @@ class search {
 				#$records_data->search_query_object	= $this->search_query_object;
 				$records_data->total = $total;
 				if(SHOW_DEVELOPER===true) {
+					$exec_time = round(microtime(1)-$start_time, 3);
 					# Info about required time to exec the search
 					$records_data->debug = $records_data->debug ?? new stdClass();
-					$records_data->debug->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+					$records_data->debug->generated_time['get_records_data'] = $exec_time;
 					# Query to database string
-					$records_data->debug->strQuery = $count_sql_query;
-					$this->search_query_object->generated_time 	= $records_data->debug->generated_time['get_records_data'];
+					$records_data->debug->strQuery				= $count_sql_query;
+					$this->search_query_object->generated_time	= $exec_time;
+
+					dd_core_api::$sql_query_searchs[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
 				}
 
 		//sleep(4);
