@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
@@ -127,14 +127,9 @@ const get_content_data_edit = async function(self, ar_instances) {
 				// component_filter case . Send to inspector
 					if (current_instance.model==='component_filter') {
 
-						ui.place_element({
-							source_node			: current_instance_node,
-							source_instance		: self,
-							target_instance		: self.caller.inspector,
-							container_selector	: ".project_container",
-							target_selector		: ".wrapper_component.component_filter",
-							place_mode			: 'replace' // add | replace
-						})
+						// render_component_filter_xx event is observed by inspector init
+						// to get the component DOM node and to place it into the inspector container
+						event_manager.publish('render_component_filter_' + current_instance.section_tipo, current_instance_node)
 
 						continue;
 					}
