@@ -325,14 +325,23 @@ section.prototype.build = async function(autoload=false) {
 									parent			: debug
 								})
 								button_debug.addEventListener("click", function(){
-									this.remove()
+
+									if (debug_container.hasChildNodes()) {
+										debug_container.classList.toggle('hide')
+										return
+									}
+
+									// clean
+										// while (debug_container.firstChild) {
+										// 	debug_container.removeChild(debug_container.firstChild)
+										// }
 
 									// collect debug data
 									load_data_debug(self, api_response, self.rqo)
 									.then(function(info_node){
 										// debug.classList.add("hide")
 										if (info_node) {
-											debug.appendChild(info_node)
+											debug_container.appendChild(info_node)
 										}
 
 										// scroll debug to top of page
@@ -345,6 +354,13 @@ section.prototype.build = async function(autoload=false) {
 												behavior	: 'smooth'
 											});
 									})
+								})
+
+							// debug_container
+								const debug_container = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'debug_container',
+									parent			: debug
 								})
 
 							// show

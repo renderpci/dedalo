@@ -25,7 +25,10 @@ class dd_core_api {
 
 	// context . Whole calculated context
 		// static $context;
-		static $ddo_map =[]; // fixed in get_structure_context()
+		static $ddo_map = []; // fixed in get_structure_context()
+
+	// static debug sql_query searchs
+		static $sql_query_searchs = [];
 
 
 
@@ -43,7 +46,9 @@ class dd_core_api {
 
 	/**
 	* START
-	* Builds the start page minimun context
+	* Builds the start page minimun context.
+	* Normally is a menu and a section (based on url vars)
+	* This function tells to page what must to be request based on url vars
 	* @return array $result
 	*/
 	static function start($json_data) {
@@ -59,7 +64,7 @@ class dd_core_api {
 		// bootstrap context
 
 		// page mode and tipo
-			$default_section_tipo = 'test38';
+			$default_section_tipo = MAIN_FALLBACK_SECTION; // 'test38';
 			if (isset($search_obj->locator)) {
 				$locator	= json_decode($search_obj->locator);
 				$tipo		= $locator->section_tipo ?? $default_section_tipo;
@@ -325,6 +330,10 @@ class dd_core_api {
 					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
 
 				$response->debug = $debug;
+
+				if (!empty(dd_core_api::$sql_query_searchs)) {
+					$response->debug->sql_query_searchs = dd_core_api::$sql_query_searchs;
+				}
 			}
 
 
