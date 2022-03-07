@@ -758,15 +758,17 @@ component_common.prototype.change_value = async function(options) {
 		const label				= options.label
 		const refresh			= typeof options.refresh!=='undefined' ? options.refresh : false
 		const build_autoload	= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
-		const remove_dialog 	= options.remove_dialog || function() {
-			const msg = SHOW_DEBUG
-				? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
-				: `Sure to remove value: ${label} ?`
-			return confirm( msg )
-		}
+		const remove_dialog 	= typeof options.remove_dialog!=='undefined'
+			? options.remove_dialog
+			: function() {
+				const msg = SHOW_DEBUG
+					? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
+					: `Sure to remove value: ${label} ?`
+				return confirm( msg )
+			  }
 
 	// user confirmation prevents remove accidentally
-		if (action==='remove') {
+		if (action==='remove' && typeof remove_dialog==='function') {
 			if ( !remove_dialog() ) {
 				return false
 			}

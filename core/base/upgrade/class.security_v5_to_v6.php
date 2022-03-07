@@ -41,11 +41,6 @@ class security_v5_to_v6 {
 						// 	"section_tipo": "ad1",
 						// 	"value": 3
 						// }
-						// {
-						// 	"tipo": "ds1",
-						// 	"section_tipo": "ds1",
-						// 	"value": 3
-						// }
 					$new_access_dato = [];
 					foreach ($security_acces_areas as $current_tipo => $value) {
 
