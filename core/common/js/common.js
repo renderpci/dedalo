@@ -705,12 +705,14 @@ common.prototype.load_script = async function(src) {
 * @return array columns_map
 * 	The the specific columns to render into the list.
 */
-export const get_columns_map = function(context){
+export const get_columns_map = function(context) {
 
-		const tipo					= context.tipo
+	const columns_map = []
+
+	// tipo
+		const tipo				= context.tipo
 	// request_config. get the request_config with all ddo to use in the columns
-		const request_config		= context.request_config
-		const request_config_length	= request_config.length
+		const request_config	= context.request_config
 	// source_columns_map. Get the columns_maps defined in the properties and assigned in context in the server or by the client.
 		// the columns_maps become as structure to complete with the request_config
 		// by default the columns are for every component that has direct link to the component(portal) or section
@@ -722,130 +724,133 @@ export const get_columns_map = function(context){
 	// view
 		const view = context.view
 
-	const columns_map = []
 	// storage of all ddo_map in flat array, without hierarchy, to find the components easily.
-	const full_ddo_map = []
-	full_ddo_map.push(context)
+		const full_ddo_map = []
+		full_ddo_map.push(context)
 
 	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create the final grid.
-	for (let i = 0; i < request_config_length; i++) {
-		const request_config_item = request_config[i]
-		// get the direct components of the caller (component or section)
-		const ar_first_level_ddo = request_config_item.show.ddo_map.filter(item => item.parent === tipo)
-		const ar_first_level_ddo_len = ar_first_level_ddo.length
-		// store the current component in the full ddo map
-		full_ddo_map.push(...request_config_item.show.ddo_map)
+		const request_config_length	= request_config.length
+		for (let i = 0; i < request_config_length; i++) {
 
-		for (let j = 0; j < ar_first_level_ddo_len; j++) {
-			const dd_object = ar_first_level_ddo[j]
-			// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
-			if (dd_object.column_id && source_columns_map){
-				const column_exists = columns_map.find(el => el.id === dd_object.column_id)
-				// if the column has stored by previous ddo, don't touch the array, it's necessary maintain the order of the columns_map
-				if(column_exists) continue
+			const request_config_item = request_config[i]
+			// get the direct components of the caller (component or section)
+			const ar_first_level_ddo		= request_config_item.show.ddo_map.filter(item => item.parent === tipo)
+			const ar_first_level_ddo_len	= ar_first_level_ddo.length
+			// store the current component in the full ddo map
+			full_ddo_map.push(...request_config_item.show.ddo_map)
 
-				const found		= source_columns_map.find(el => el.id===dd_object.column_id)
-				// check if the ddo has defined the column_id in the columns_map, if not add new column with the ddo information.
-				const column	= (found)
-					? found
-					: {	id		: dd_object.tipo,
-						label	: dd_object.tipo}
+			for (let j = 0; j < ar_first_level_ddo_len; j++) {
 
-				dd_object.column_id = column.id
-				columns_map.push(column)
+				const dd_object = ar_first_level_ddo[j]
+				// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
+				if (dd_object.column_id && source_columns_map){
+					const column_exists = columns_map.find(el => el.id === dd_object.column_id)
+					// if the column has stored by previous ddo, don't touch the array, it's necessary maintain the order of the columns_map
+					if(column_exists) continue
 
-			}else{
-				// if the ddo don't has column_id and the column_map is not defined in properties,
-				// create a new column with the ddo information or join all components in one column
+					const found		= source_columns_map.find(el => el.id===dd_object.column_id)
+					// check if the ddo has defined the column_id in the columns_map, if not add new column with the ddo information.
+					const column	= (found)
+						? found
+						: {	id		: dd_object.tipo,
+							label	: dd_object.tipo}
 
-				// semantic node is a exception, it will create a column for itself,
-				// it works with different sqo than his parent portal and it's necessary always his own space to change the sqo active.
-					if(dd_object.model==='component_semantic_node'){
+					dd_object.column_id = column.id
+					columns_map.push(column)
 
-						columns_map.push(
-							{
-								id		: dd_object.tipo,
-								label	: dd_object.tipo
-							}
-						)
-						dd_object.column_id = dd_object.tipo
-						continue
-					}
+				}else{
+					// if the ddo don't has column_id and the column_map is not defined in properties,
+					// create a new column with the ddo information or join all components in one column
 
-				switch(view){
-					// component_portal will join the components that doesn't has columns defined.
-					case 'line':
+					// semantic node is a exception, it will create a column for itself,
+					// it works with different sqo than his parent portal and it's necessary always his own space to change the sqo active.
+						if(dd_object.model==='component_semantic_node'){
 
-						// find if the general column was created, if not create new one with the tipo of the component_portal to include all components.
-						const found	= columns_map.find(el => el.id===tipo)
-
-						// if the column exist add general column to ddo information, else create the general column and add the id to the component.
-						if(found){
-							dd_object.column_id = found.id
-
-						}else{
-							//create the general column with the tipo of the component_portal
-							const column = {
-									id		: tipo,
-									label	: tipo
+							columns_map.push(
+								{
+									id		: dd_object.tipo,
+									label	: dd_object.tipo
 								}
-
-							columns_map.push(column)
-							// set the column_id of the component with the column id
-							dd_object.column_id = column.id
+							)
+							dd_object.column_id = dd_object.tipo
+							continue
 						}
-						break;
-					// in the mosaic case add the mosaic: true or false to create the mosaic and the alternative table with all ddo
-					case 'mosaic':
-						columns_map.push(
-							{
-								id		: dd_object.tipo,
-								label	: dd_object.tipo,
-								mosaic 	: dd_object.mosaic
-									? true
-									: false
-							}
-						)
-						dd_object.column_id = dd_object.tipo
-						break;
-					// by default every component will create the own column if the column is not defined, this behavior is used by sections.
-					default:
-						columns_map.push(
-							{
-								id		: dd_object.tipo,
-								label	: dd_object.tipo
-							}
-						)
-						dd_object.column_id = dd_object.tipo
-						break;
-				}//end switch
-			}//end if (dd_object.column_id && source_columns_map)
-		}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
-	}//end for (let i = 0; i < request_config_length; i++)
 
-	// resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
+					switch(view){
+						// component_portal will join the components that doesn't has columns defined.
+						case 'line':
+
+							// find if the general column was created, if not create new one with the tipo of the component_portal to include all components.
+							const found	= columns_map.find(el => el.id===tipo)
+
+							// if the column exist add general column to ddo information, else create the general column and add the id to the component.
+							if(found){
+								dd_object.column_id = found.id
+
+							}else{
+								//create the general column with the tipo of the component_portal
+								const column = {
+										id		: tipo,
+										label	: tipo
+									}
+
+								columns_map.push(column)
+								// set the column_id of the component with the column id
+								dd_object.column_id = column.id
+							}
+							break;
+						// in the mosaic case add the mosaic: true or false to create the mosaic and the alternative table with all ddo
+						case 'mosaic':
+							columns_map.push(
+								{
+									id		: dd_object.tipo,
+									label	: dd_object.tipo,
+									mosaic 	: dd_object.mosaic
+										? true
+										: false
+								}
+							)
+							dd_object.column_id = dd_object.tipo
+							break;
+						// by default every component will create the own column if the column is not defined, this behavior is used by sections.
+						default:
+							columns_map.push(
+								{
+									id		: dd_object.tipo,
+									label	: dd_object.tipo
+								}
+							)
+							dd_object.column_id = dd_object.tipo
+							break;
+					}//end switch
+				}//end if (dd_object.column_id && source_columns_map)
+			}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
+		}//end for (let i = 0; i < request_config_length; i++)
+
+	// parse_columns. resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
 	// here will be using the full_ddo_map to find the specific ddo
-	function parse_columns(columns_map){
+		function parse_columns(columns_map){
 
-		const columns_map_len = columns_map.length
+			const columns_map_len = columns_map.length
 
-		for (let i = columns_map_len - 1; i >= 0; i--) {
-			const column_item = columns_map[i]
-			// all columns has a label  property that point to the ddo tipo to use, finding the ddo it is possible obtain the label to use in the column.
-			const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label)
-			// check if the ddo has label, if not empty label will set.
-			column_item.label = (ddo_object && ddo_object.label)
-				? ddo_object.label
-				: column_item.label
+			for (let i = columns_map_len - 1; i >= 0; i--) {
+				const column_item = columns_map[i]
+				// all columns has a label  property that point to the ddo tipo to use, finding the ddo it is possible obtain the label to use in the column.
+				const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label)
+				// check if the ddo has label, if not empty label will set.
+				column_item.label = (ddo_object && ddo_object.label)
+					? ddo_object.label
+					: column_item.label
 
-			// if the columns has sub-columns, begin again.
-			if(column_item.columns_map)
-				parse_columns(column_item.columns_map)
+				// if the columns has sub-columns, begin again.
+				if(column_item.columns_map)
+					parse_columns(column_item.columns_map)
+			}
 		}
-	}
+		// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
 
-	// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
-	parse_columns(columns_map)
+	// exec parse_columns of result columns_map
+		parse_columns(columns_map)
 
 
 	return columns_map

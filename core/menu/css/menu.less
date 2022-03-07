@@ -83,17 +83,17 @@ background-color: #FFFF00;
 			top: 0px;
 			height: 100%;
 			width: 3px;
-			background-color: green;
+			background-color: green; // regular user
 		}
 
-		&.show_developer {
+		&.is_global_admin {
 			&:before {
-				background-color: orange;
+				background-color: orange; // global admin (no projects)
 			}
 		}
-		&.show_debug {
+		&.is_root {
 			&:before {
-				background-color: red;
+				background-color: red; // superuser (root)
 			}
 		}
 
