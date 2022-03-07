@@ -179,7 +179,7 @@ export const service_autocomplete = function() {
 		// search container
 			const searh_container = ui.create_dom_element({
 				element_type	: "div",
-				class_name		: "autocomplete_searh_container", // css_autocomplete_hi_search_field
+				class_name		: "autocomplete_search_container", // css_autocomplete_hi_search_field
 				parent			: self.wrapper
 			})
 
@@ -1186,9 +1186,9 @@ export const service_autocomplete = function() {
 						const authors_ar_value	= []
 
 						switch(field) {
+
 							case 'authors':
 								// console.log("++ authors:",record[field]);
-
 								if(SHOW_DEBUG===true) {
 									//console.log("primary:",primary);	console.log("secondary:",secondary);	console.log("corporate:",corporate);
 								}
@@ -1204,6 +1204,7 @@ export const service_autocomplete = function() {
 								}
 								ar_value.push(authors_ar_value.join(separator))
 								break;
+
 							default:
 								if (Array.isArray(record[field])) {
 									if (record[field].length>0) {
