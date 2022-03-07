@@ -6,7 +6,12 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
-	import {render_inspector, render_section_info, render_component_info} from './render_inspector.js'
+	import {
+		render_inspector,
+		render_section_info,
+		render_component_info,
+		update_project_container_body
+	} from './render_inspector.js'
 	// import * as instances from '../../common/js/instances.js'
 
 
@@ -81,7 +86,12 @@ inspector.prototype.init = async function(options) {
 				event_manager.subscribe('render_component_filter_' + self.section_tipo, fn_render_filter)
 			)
 			function fn_render_filter(instance_node) {
+				// fix rendered node
 				self.component_filter_node = instance_node
+				// update project_container_body if it is already defined (pagination cases)
+				if (self.project_container_body) {
+					update_project_container_body(self)
+				}
 			}
 
 	// status update
