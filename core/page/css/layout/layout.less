@@ -1716,6 +1716,7 @@
 						font-weight: bold;
 						font-size: larger;
 						letter-spacing: 0.05em;
+						color: white;
 					}
 				}
 
@@ -2499,13 +2500,17 @@
 				&.grouper {
 					flex-wrap: wrap;
 					padding-bottom: 0.25em;
+					margin-left: 0;
+					padding: 0;
 
-					>li {
+					li {
+						flex: 0 0 100%;
 						padding: 0.25em;
-						padding-left: 1em;
+						// padding-left: 1em;
 						width: 100%;
 						// height: 100%;
 						height: inherit;
+						font-size: 0.90em;
 					}
 
 					>.grouper_label {
@@ -2514,6 +2519,7 @@
 						padding-bottom: 0.25em;
 						opacity: 0.7;
 						font-size: 0.80em;
+						padding-left: 0;
 					}
 
 					input {
