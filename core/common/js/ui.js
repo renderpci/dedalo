@@ -2272,48 +2272,6 @@ export const ui = {
 
 
 	/**
-	* SET_PARENT_CHECKED_VALUE
-	* Set input check value based on direct children checked values
-	* Could be checked, unchecked or indeterminate
-	* @return bool
-	*/
-	set_parent_checked_value : (input_node, all_direct_children, callback) => {
-
-		// look children status until find checked value false
-			const all_children_checked = (()=>{
-
-				const all_direct_children_length = all_direct_children.length
-				for (let i = 0; i < all_direct_children_length; i++) {
-					if(all_direct_children[i].checked!==true) {
-						return false
-					}
-				}
-
-				return true
-			})()
-
-		// set checked value
-			if (all_children_checked===true) {
-				// full checked
-				input_node.indeterminate	= false
-				input_node.checked			= true
-			}else{
-				// intermediate
-				input_node.checked			= false
-				input_node.indeterminate	= true
-			}
-
-		// callback
-			if (callback) {
-				callback(input_node)
-			}
-
-		return true
-	},//end set_parent_checked_value
-
-
-
-	/**
 	* MAKE_COLUMN_RESPONSIVE
 	* @return bool
 	*/
@@ -2369,6 +2327,48 @@ export const ui = {
 			});
 		// }
 	},//end make_column_responsive
+
+
+
+	/**
+	* SET_PARENT_CHECKED_VALUE
+	* Set input check value based on direct children checked values
+	* Could be checked, unchecked or indeterminate
+	* @return bool
+	*/
+		// set_parent_checked_value : (input_node, all_direct_children, callback) => {
+
+		// 	// look children status until find checked value false
+		// 		const all_children_checked = (()=>{
+
+		// 			const all_direct_children_length = all_direct_children.length
+		// 			for (let i = 0; i < all_direct_children_length; i++) {
+		// 				if(all_direct_children[i].checked!==true) {
+		// 					return false
+		// 				}
+		// 			}
+
+		// 			return true
+		// 		})()
+
+		// 	// set checked value
+		// 		if (all_children_checked===true) {
+		// 			// full checked
+		// 			input_node.indeterminate	= false
+		// 			input_node.checked			= true
+		// 		}else{
+		// 			// intermediate
+		// 			input_node.checked			= false
+		// 			input_node.indeterminate	= true
+		// 		}
+
+		// 	// callback
+		// 		if (callback) {
+		// 			callback(input_node)
+		// 		}
+
+		// 	return true
+		// },//end set_parent_checked_value
 
 
 
