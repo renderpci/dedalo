@@ -126,11 +126,9 @@ const get_content_data_edit = async function(self, ar_instances) {
 
 				// component_filter case . Send to inspector
 					if (current_instance.model==='component_filter') {
-
 						// render_component_filter_xx event is observed by inspector init
 						// to get the component DOM node and to place it into the inspector container
 						event_manager.publish('render_component_filter_' + current_instance.section_tipo, current_instance_node)
-
 						continue;
 					}
 

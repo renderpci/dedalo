@@ -142,19 +142,19 @@ const build_widget = (item, self) => {
 		})
 
 	// collapse_toggle_track
-			ui.collapse_toggle_track({
-				header				: label,
-				content_data		: body,
-				collapsed_id		: 'collapsed_' + item.id,
-				collapse_callback	: collapse,
-				expose_callback		: expose
-			})
-			function collapse() {
-				label.classList.remove('up')
-			}
-			function expose() {
-				label.classList.add('up')
-			}
+		ui.collapse_toggle_track({
+			header				: label,
+			content_data		: body,
+			collapsed_id		: 'collapsed_' + item.id,
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			label.classList.remove('up')
+		}
+		function expose() {
+			label.classList.add('up')
+		}
 
 		// item info
 			if (item.info) {

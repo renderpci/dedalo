@@ -111,12 +111,13 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action  : action,
 						key 	: changed_key,
-						value 	: changed_value,
+						value 	: changed_value
 					})
 					self.change_value({
-						changed_data : changed_data,
-						//label 		 : e.target.nextElementSibling.textContent,
-						refresh 	 : false
+						changed_data	: changed_data,
+						//label			: e.target.nextElementSibling.textContent,
+						refresh			: false,
+						remove_dialog	: false
 					})
 					.then((api_response)=>{
 						self.selected_key = e.target.dataset.key

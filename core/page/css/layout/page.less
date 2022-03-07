@@ -134,14 +134,18 @@
 	}
 // debug
 	.debug {
-		display: grid;
-		grid-template-columns: 1fr 1fr 1fr;
-		background-color: #f1f2f3;
 		padding: 1em;
-		overflow: auto;
-		@media screen and (max-width: @width_break_point_0) {
-			display: block;
-			width: 100%;
+
+		.debug_container {
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
+			background-color: #f1f2f3;
+			padding: 0;
+			overflow: auto;
+			@media screen and (max-width: @width_break_point_0) {
+				display: block;
+				width: 100%;
+			}
 		}
 	}
 	.debug pre {
