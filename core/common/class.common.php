@@ -427,15 +427,27 @@ abstract class common {
 
 	/**
 	* SET_DATO
+	* @param mixed dato
+	* @return bool true
 	*/
-	public function set_dato($dato){
+	public function set_dato($dato) {
 
-		# UNSET previous calculated valor
-		unset($this->valor);
-		# UNSET previous calculated ar_list_of_values
-		unset($this->ar_list_of_values);
+		// UNSET previous calculated valor
+		if (isset($this->valor)) {
+			unset($this->valor);
+		}
+		// UNSET previous calculated ar_list_of_values
+		if (isset($this->ar_list_of_values)) {
+			unset($this->ar_list_of_values);
+		}
 
+		// set
 		$this->dato = $dato;
+
+		// loaded. Fix this element as data loaded to prevent overwrite current fixed dato, with database dato
+		$this->bl_loaded_matrix_data = true;
+
+		return true;
 	}//end set_dato
 
 
