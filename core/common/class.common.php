@@ -3052,6 +3052,18 @@ abstract class common {
 	}//end get_request_query_object
 
 
+
+	/**
+	* GET SECTION ID
+	* Section id está en el dato (registro matrix) de la sección estructurado en json
+	* tal que: {"section_id": 2 ..}
+	*/
+	public function get_section_id() {
+
+		return $this->section_id;
+	}//end get_section_id
+
+
 	/**
 	* GET_DATA_ITEM
 	* Only to maintain vars and format unified
@@ -3283,10 +3295,10 @@ abstract class common {
 	public function get_tools() {
 
 		// cache
-			$cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
-			if (isset($_SESSION['dedalo']['config']['tools'][$cache_key])) {
-				return $_SESSION['dedalo']['config']['tools'][$cache_key];
-			}
+			// $cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
+			// if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
+			// 	return $_SESSION['dedalo']['tools'][$cache_key];
+			// }
 
 		$registered_tools	= tool_common::get_client_registered_tools();
 		$model				= get_class($this);
@@ -3368,7 +3380,7 @@ abstract class common {
 		}//end foreach ($registered_tools as $tool)
 
 		// cache
-			$_SESSION['dedalo']['config']['tools'][$cache_key] = $tools;
+			// $_SESSION['dedalo']['tools'][$cache_key] = $tools;
 
 
 		return $tools;

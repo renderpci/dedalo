@@ -733,11 +733,9 @@ class section extends common {
 			# SECTION VIRTUAL . Correct tipo
 			# Si estamos en una sección virtual, despejaremos el tipo real (la sección de destino) y
 			# trabajaremos con el tipo real a partir de ahora
-			if($tipo===DEDALO_ACTIVITY_SECTION_TIPO){
-				$section_real_tipo = $tipo;
-			}else{
-				$section_real_tipo = $this->get_section_real_tipo();
-			}
+			$section_real_tipo = ($tipo===DEDALO_ACTIVITY_SECTION_TIPO)
+				? $tipo
+				: $this->get_section_real_tipo();
 
 		// user id. Current logged user id
 			$user_id  = navigator::get_user_id();
@@ -911,6 +909,8 @@ class section extends common {
 
 					// update section dato with final object. Important
 						$this->dato = $section_dato;
+
+
 
 					// Set as loaded
 						$this->bl_loaded_matrix_data = true;
@@ -1966,18 +1966,6 @@ class section extends common {
 
 		return $this->get_tipo();
 	}//end get_section_tipo
-
-
-
-	/**
-	* GET SECTION ID
-	* Section id está en el dato (registro matrix) de la sección estructurado en json
-	* tal que: {"section_id":"2"..}
-	*/
-	public function get_section_id() {
-
-		return $this->section_id;
-	}//end get_section_id
 
 
 

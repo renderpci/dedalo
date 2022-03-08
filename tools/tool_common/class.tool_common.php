@@ -210,6 +210,10 @@ class tool_common {
 
 	/**
 	* GET_REGISTERED_TOOLS
+	* Get the full or filtered list data of current registered tools in database
+	*
+	* @param array $ar_tools
+	* 	If defined, is used as filter list for tool names
 	* @return array $registered_tools
 	*/
 	public static function get_client_registered_tools($ar_tools=null) {
@@ -249,7 +253,7 @@ class tool_common {
 					$search	= search::get_instance($sqo_tool_active);
 					$result	= $search->search();
 
-					// fix cache
+					// fix cache static
 					$client_registered_tools_records = $result->ar_records;
 			}
 		// get all tools config sections
