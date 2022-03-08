@@ -328,8 +328,8 @@ abstract class component_common extends common {
 			$this->tipo = $tipo;
 
 		// $section_id
-			$this->parent 		= $section_id;
-			$this->section_id 	= $section_id;
+			$this->parent		= $section_id;
+			$this->section_id	= $section_id;
 
 		// modo
 			if ( empty($modo) ) {
@@ -501,17 +501,17 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATO
-	* @return
+	* @param mixed dato
+	* @return bool true
 	*/
 	public function set_dato($dato) {
 
+		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
 		parent::set_dato($dato);
 
 		$this->dato_resolved = $dato;
 
-		# Fix this component as data loaded to avoid overwrite current fixed dato, with database dato
-		# Set as loaded
-		$this->bl_loaded_matrix_data = true;
+		return true;
 	}//end set_dato
 
 
@@ -2876,10 +2876,11 @@ abstract class component_common extends common {
 	* Alias of get_parent()
 	* @return int
 	*/
-	public function get_section_id() {
+		// public function get_section_id() {
 
-		return $this->get_parent();
-	}//end get_section_id
+		// 	// return $this->get_parent();
+		// 	return $this->section_id;
+		// }//end get_section_id
 
 
 

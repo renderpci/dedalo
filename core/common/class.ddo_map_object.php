@@ -7,7 +7,7 @@
 * {
 * 	"tipo"					: "numisdata309",
 * 	"section_tipo"			: "self",
-* 	"parent"				:  "numisdata3",
+* 	"parent"				: "numisdata3",
 * 	"model"					: "component_input_text",
 * 	"mode"					: "list",
 * 	"label"					: "catalog",*
