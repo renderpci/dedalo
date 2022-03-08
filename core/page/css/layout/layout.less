@@ -505,6 +505,12 @@
 						}
 					}
 
+					.spinner {
+						position: relative;
+						margin-top: 1rem;
+						margin-bottom: 1rem;
+					}
+
 					>.pre {
 
 						.json-container {
@@ -1125,6 +1131,28 @@
 				>.content_data {
 					overflow: auto;
 				}
+
+				&.view_tools {
+					ul {
+						display: grid;
+						grid-template-columns: 1fr 1fr;
+					}
+					li {
+						margin-left: 1.5rem;
+						line-height: 1rem;
+						border-bottom: 1px solid #eeeeee;
+						padding: 0.33rem;
+						display: flex;
+						align-items: center;
+					}
+					.tool_icon {
+						height: 1.33rem;
+						width: 1.33rem;
+						margin-right: 0.5rem;
+						margin-left: 0;
+						vertical-align: text-bottom;
+					}
+				}
 			}
 
 			// component_date
@@ -1740,7 +1768,7 @@
 
 				.content_data {
 					display: block;
-					min-height: 25rem;
+					min-height: 12rem;
 					pointer-events: unset !important; // prevent time machine lock tree arrows
 
 					ul.inputs_container {

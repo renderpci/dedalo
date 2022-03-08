@@ -523,56 +523,6 @@ template {
   left: 50%;
   transform: translate(-50%, -50%);
 }
-.preload {
-  background-color: #000000;
-  cursor: pointer;
-  display: inline-flex;
-  line-height: 1em;
-  margin: 0px;
-  margin-left: 0.25rem;
-  margin-right: 0.25rem;
-  min-width: 1em;
-  user-select: none;
-  background: black;
-  height: 1em;
-  width: 1em;
-  opacity: 1;
-  -webkit-mask-image: url('../../themes/default/icons/preload.svg');
-  mask-image: url('../../themes/default/icons/preload.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  min-height: 3em;
-  min-width: 3em;
-  vertical-align: middle;
-  position: relative;
-  z-index: 99;
-}
-.preload:hover {
-  opacity: 1 !important;
-}
-.preload:active {
-  opacity: 0.4 !important;
-}
-.buttons_container .preload {
-  background-color: #ffffff !important;
-  margin-top: 0px;
-}
-.preload.white {
-  background-color: #ffffff !important;
-}
-.preload:before {
-  content: " ";
-  background-color: #3c3c3c;
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-}
 .blink {
   animation: blink-animation 1s steps(5, start) infinite;
   -webkit-animation: blink-animation 1s steps(5, start) infinite;
@@ -2591,6 +2541,11 @@ li .reset_input select {
 .area .widget_container > .widget_body > .body_response.preload > * {
   opacity: 0.3;
 }
+.area .widget_container > .widget_body > .body_response .spinner {
+  position: relative;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
 .area .widget_container > .widget_body > .body_response > .pre .json-container {
   margin: 0;
   padding: 0.5rem;
@@ -3036,6 +2991,37 @@ li .reset_input select {
 .wrapper_component.edit_in_list.component_check_box > .content_data,
 .wrapper_component.player.component_check_box > .content_data {
   overflow: auto;
+}
+.wrapper_component.edit.component_check_box.view_tools ul,
+.wrapper_component.search.component_check_box.view_tools ul,
+.wrapper_component.tm.component_check_box.view_tools ul,
+.wrapper_component.edit_in_list.component_check_box.view_tools ul,
+.wrapper_component.player.component_check_box.view_tools ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.wrapper_component.edit.component_check_box.view_tools li,
+.wrapper_component.search.component_check_box.view_tools li,
+.wrapper_component.tm.component_check_box.view_tools li,
+.wrapper_component.edit_in_list.component_check_box.view_tools li,
+.wrapper_component.player.component_check_box.view_tools li {
+  margin-left: 1.5rem;
+  line-height: 1rem;
+  border-bottom: 1px solid #eeeeee;
+  padding: 0.33rem;
+  display: flex;
+  align-items: center;
+}
+.wrapper_component.edit.component_check_box.view_tools .tool_icon,
+.wrapper_component.search.component_check_box.view_tools .tool_icon,
+.wrapper_component.tm.component_check_box.view_tools .tool_icon,
+.wrapper_component.edit_in_list.component_check_box.view_tools .tool_icon,
+.wrapper_component.player.component_check_box.view_tools .tool_icon {
+  height: 1.33rem;
+  width: 1.33rem;
+  margin-right: 0.5rem;
+  margin-left: 0;
+  vertical-align: text-bottom;
 }
 .wrapper_component.edit.component_date .calendar,
 .wrapper_component.search.component_date .calendar,
@@ -3888,7 +3874,7 @@ li .reset_input select {
 .wrapper_component.edit_in_list.component_security_access .content_data,
 .wrapper_component.player.component_security_access .content_data {
   display: block;
-  min-height: 25rem;
+  min-height: 12rem;
   pointer-events: unset !important;
 }
 .wrapper_component.edit.component_security_access .content_data ul.inputs_container,
