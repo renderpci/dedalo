@@ -1507,9 +1507,9 @@ abstract class common {
 				}
 
 			// view, used only by portals
-				if($model==='component_portal' || strpos($model, 'component_relation_')===0 || $model==='component_semantic_node'){
+				// if($model==='component_portal' || strpos($model, 'component_relation_')===0 || $model==='component_semantic_node'){
 					$dd_object->view = $this->get_view();
-				}
+				// }
 			// relation_list // time_machine_list
 				if($model==='section'){
 					$dd_object->relation_list		= $this->get_relation_list();
