@@ -262,6 +262,22 @@ class section extends common {
 
 
 	/**
+	* SET_DATO
+	* Set wholesection data as raw object
+	* Fix section relations and components to prevent save issues
+	* @return bool true
+	*/
+	public function set_dato($dato) {
+
+		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
+		parent::set_dato($dato);
+
+		return true;
+	}//end set_dato
+
+
+
+	/**
 	* GET_COMPONENT_DATO
 	* Extrae del contenedor de la sección, el dato específico de cada componente en el idioma requerido
 	* will be deprecated with the get_all_component_data (08-2017)
