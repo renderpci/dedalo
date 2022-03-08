@@ -161,8 +161,8 @@ const build_widget = (item, self) => {
 				const widget_info = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: "link",
-					parent			: body,
-					inner_html		: item.info || ''
+					inner_html		: item.info || '',
+					parent			: body
 				})
 
 				// action
@@ -175,7 +175,13 @@ const build_widget = (item, self) => {
 							}
 
 						widget_info.classList.add("lock")
-						body_response.classList.add("preload")
+
+						// spinner
+						const spinner = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: "spinner",
+							parent			: body_response
+						})
 
 						// data_manager
 						const api_response = await data_manager.prototype.request({
@@ -190,7 +196,7 @@ const build_widget = (item, self) => {
 						print_response(body_response, api_response)
 
 						widget_info.classList.remove("lock")
-						body_response.classList.remove("preload")
+						spinner.remove()
 					})
 			}//end if (item.info) {
 
@@ -282,7 +288,7 @@ const print_response = (container, api_response) => {
 		render_tree_data(api_response, result)
 
 
-	container.classList.remove("preload")
+	// container.classList.remove("preload")
 
 	return container
 };//end print_response
@@ -339,7 +345,13 @@ export const build_form = function(widget_object) {
 
 				// submit data
 					form_container.classList.add("lock")
-					body_response.classList.add("preload")
+
+					// spinner
+					const spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: "spinner",
+						parent			: body_response
+					})
 
 					// collect values from inputs
 					const values = input_nodes.map((el)=>{
@@ -365,7 +377,7 @@ export const build_form = function(widget_object) {
 					print_response(body_response, api_response)
 
 					form_container.classList.remove("lock")
-					body_response.classList.remove("preload")
+					spinner.remove()
 			}
 		})
 
