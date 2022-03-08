@@ -8,10 +8,16 @@ class tools_register {
 
 
 
-	static $section_tools_tipo				= 'dd1324';
+	static $section_tools_tipo				= 'dd1324'; // Tools register section
 	static $simple_tool_obj_component_tipo	= 'dd1353';
-
-
+	static $tipo_tool_name					= 'dd1326';
+	static $tipo_tool_label					= 'dd799';
+	static $tipo_ontology					= 'dd1334';
+	static $tipo_version					= 'dd1327';
+	static $tipo_dedalo_version_minimal		= 'dd1328';
+	static $section_tools_config_tipo		= 'dd996';
+	static $tipo_affeted_models				= 'dd1330';
+	static $tipo_properties					= 'dd1335';
 
 	/**
 	* IMPORT_TOOLS
@@ -26,13 +32,12 @@ class tools_register {
 		$info_file_processed = [];
 
 		// tipos
-			$tipo_name		= 'dd1326';
-			$tipo_ontology	= 'dd1334';
-			$tipo_version	= 'dd1327';
+			$tipo_name		= self::$tipo_tool_name; // 'dd1326';
+			$tipo_ontology	= self::$tipo_ontology; // 'dd1334';
+			$tipo_version	= self::$tipo_version; // 'dd1327';
 
 		// get the all tools folders
 			$ar_tools = (array)glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
-
 
 		// Ontologies. Get the all tools ontologies
 			$counter				= 0;
@@ -103,7 +108,6 @@ class tools_register {
 						'name'		=> $name,
 						'version'	=> $version
 					];
-
 			}//end foreach ($ar_tools)
 
 
@@ -127,36 +131,57 @@ class tools_register {
 			if (!empty($info_objects_parsed)) {
 
 				// Clean. remove tools section records in the database
-					tools_register::clean_section_tools_data();
+					// tools_register::clean_section_tools_data();
 
 				// import record (section tool1) in db matrix_tools
 					$section_id_counter = 1; // first section_id to use
-					foreach ($info_objects_parsed as $current_info_object) {
+					foreach ($info_objects_parsed as $current_tool_section_data) {
+
+						// section save raw data
+							$tool_name = reset($current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN});
+							if (empty($tool_name)) {
+								debug_log(__METHOD__." Error. tool name is empty ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
+								continue;
+							}
+							$tool_found			= self::get_tool_by_name($tool_name, self::$section_tools_tipo); // return section record raw data or null
+							$current_section_id	= !empty($tool_found->section_id)
+								? (int)$tool_found->section_id
+								: null;
+							$section = section::get_instance(
+								$current_section_id, // null if not found existing by name
+								self::$section_tools_tipo, // dd1324
+								'edit',
+								false // cache
+							);
+							$section->set_dato($current_tool_section_data);
+							$created_section_id = $section->Save();
 
 						// save new record with serialized section_id
-						$created_section_id = tools_register::import_info_object($current_info_object, $section_id_counter);
+							// $created_section_id = tools_register::import_info_object($current_tool_section_data, $section_id_counter);
 
 						// build tool_object (simple)
-						$tool_object = tools_register::create_simple_tool_object(tools_register::$section_tools_tipo, $created_section_id);
+							$tool_object = tools_register::create_simple_tool_object(self::$section_tools_tipo, $created_section_id);
 
 						// tool_obj . Set and save updated section
-							$component_tipo = 'dd1353';
-							$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-							$component 		= component_common::get_instance($model,
-																			 $component_tipo,
-																			 $created_section_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 tools_register::$section_tools_tipo);
+							$component_tipo	= self::$simple_tool_obj_component_tipo; // 'dd1353'; // component_json (Simple tool object)
+							$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$component		= component_common::get_instance(
+								$model,
+								$component_tipo,
+								$created_section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								tools_register	::$section_tools_tipo
+							);
 							$component->set_dato([$tool_object]);
-							$component->save();
+							$component->Save();
 							$tool_config = tools_register::create_tool_config($tool_object->name);
 					}
 			}
 
 		// session. Remove previous stored data in session
 			unset($_SESSION['dedalo']['registered_tools']);
-			unset($_SESSION['dedalo']['config']['tools']); // cache of already calculated tools
+			unset($_SESSION['dedalo']['tools']); // cache of already calculated tools
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -166,6 +191,57 @@ class tools_register {
 
 		return $info_file_processed;
 	}//end import_tools
+
+
+
+	/**
+	* GET_TOOL_BY_NAME
+	* Gets current tool from the tool name
+	* Note that this function can search in any virtual of section 'Tools' (dd73)
+	* @param string $tool_name
+	* @return object $tool_full_data | null
+	*/
+	public static function get_tool_by_name($tool_name, $section_tipo) {
+
+		// search by tool name
+			$sqo = json_decode('{
+				   "typo": "sqo",
+				   "id": "temp",
+				   "section_tipo": [
+				      "'.$section_tipo.'"
+				   ],
+				   "filter": {
+				      "$and": [
+				         {
+				            "q": [
+				               "'.$tool_name.'"
+				            ],
+				            "q_operator": "=",
+				            "path": [
+				               {
+				                  "section_tipo": "'.$section_tipo.'",
+				                  "component_tipo": "'.self::$tipo_tool_name.'",
+				                  "modelo": "component_input_text",
+				                  "name": "Tool name"
+				               }
+				            ],
+				            "type": "jsonb"
+				         }
+				      ]
+				   },
+				   "select": [],
+				   "limit": 1,
+				   "offset": 0,
+				   "full_count": false
+			   }');
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
+
+		// whole section record raw data
+		$tool_full_data = $result->ar_records[0] ?? null;
+
+		return $tool_full_data;
+	}//end get_tool_by_name
 
 
 
@@ -186,7 +262,7 @@ class tools_register {
 			$tool_object->section_id 	= $section_id;
 
 		// name
-			$component_tipo = 'dd1326';
+			$component_tipo = self::$tipo_tool_name; // 'dd1326';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
 															 $component_tipo,
@@ -200,7 +276,7 @@ class tools_register {
 
 
 		// label
-			$component_tipo = 'dd799';
+			$component_tipo = self::$tipo_tool_label; // 'dd799';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
 															 $component_tipo,
@@ -210,16 +286,18 @@ class tools_register {
 															 $section_tipo);
 			$dato 			= $component->get_dato_full();
 			$value 			= [];
-			foreach ($dato as $curent_lang => $current_value) {
-				$value[] = (object)[
-					'lang'  => $curent_lang,
-					'value' => reset($current_value)
-				];
+			if (!empty($dato)) {
+				foreach ($dato as $curent_lang => $current_value) {
+					$value[] = (object)[
+						'lang'  => $curent_lang,
+						'value' => reset($current_value)
+					];
+				}
 			}
 			$tool_object->label = $value;
 
 		// version
-			$component_tipo = 'dd1327';
+			$component_tipo = self::$tipo_version; //  'dd1327';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
 															 $component_tipo,
@@ -232,7 +310,7 @@ class tools_register {
 			$tool_object->vesion = $value;
 
 		// dedalo version (minimal requeriment)
-			$component_tipo = 'dd1328';
+			$component_tipo = self::$tipo_dedalo_version_minimal; // 'dd1328';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
 															 $component_tipo,
@@ -245,7 +323,7 @@ class tools_register {
 			$tool_object->dd_version = $value;
 
 		// affected components (models)
-			$component_tipo = 'dd1330';
+			$component_tipo = self::$tipo_affeted_models; // 'dd1330';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component_lang = RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component 		= component_common::get_instance($model,
@@ -269,11 +347,13 @@ class tools_register {
 
 			$dato 			= $component->get_dato_full();
 			$value 			= [];
-			foreach ($dato as $curent_lang => $current_value) {
-				$value[] = (object)[
-					'lang'  => $curent_lang,
-					'value' => $current_value
-				];
+			if (!empty($dato)) {
+				foreach ($dato as $curent_lang => $current_value) {
+					$value[] = (object)[
+						'lang'  => $curent_lang,
+						'value' => $current_value
+					];
+				}
 			}
 			$tool_object->description = $value;
 
@@ -301,7 +381,9 @@ class tools_register {
 															 $component_lang,
 															 $section_tipo);
 			$dato 			= $component->get_dato();
-			$dato_ref 		= reset($dato)->section_id;
+			$dato_ref 		= !empty($dato)
+				? reset($dato)->section_id
+				: null;
 			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_inspector = $value;
 
@@ -316,7 +398,9 @@ class tools_register {
 															 $component_lang,
 															 $section_tipo);
 			$dato 			= $component->get_dato();
-			$dato_ref 		= reset($dato)->section_id;
+			$dato_ref 		= !empty($dato)
+				? reset($dato)->section_id
+				: null;
 			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_component = $value;
 
@@ -336,7 +420,7 @@ class tools_register {
 			$tool_object->requirement_translatable = $value;
 
 		// ontology
-			$component_tipo = 'dd1334';
+			$component_tipo = self::$tipo_ontology; // 'dd1334';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
 															 $component_tipo,
@@ -350,7 +434,7 @@ class tools_register {
 
 
 		// properties
-			$component_tipo = 'dd1335';
+			$component_tipo = self::$tipo_properties; // 'dd1335';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
 															 $component_tipo,
@@ -386,27 +470,27 @@ class tools_register {
 	* Info object is exactly a dedalo raw record data
 	* @return int $section_id
 	*/
-	private static function import_info_object($info_object, &$section_id_counter) {
+		// private static function import_info_object($info_object, &$section_id_counter) {
 
-		// replace object section_id with new forced counter
-		$info_object->section_id = $section_id_counter;
-		$info_object->label 	 = 'Tools register';
-		$datos 	 				 = json_handler::encode($info_object);
-		$section_tools_tipo 	 = tools_register::$section_tools_tipo; //  'dd1324';
+		// 	// replace object section_id with new forced counter
+		// 	$info_object->section_id = $section_id_counter;
+		// 	$info_object->label 	 = 'Tools register';
+		// 	$datos 	 				 = json_handler::encode($info_object);
+		// 	$section_tools_tipo 	 = tools_register::$section_tools_tipo; //  'dd1324';
 
-		$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING section_id';
-		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_tools_tipo, $datos ));
+		// 	$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING section_id';
+		// 	$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_tools_tipo, $datos ));
 
-		// update counter on every imported record
-		counter::update_counter($section_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
+		// 	// update counter on every imported record
+		// 	counter::update_counter($section_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
 
-		// if all is ok, update counter value
-		$section_id_counter++;
+		// 	// if all is ok, update counter value
+		// 	$section_id_counter++;
 
-		$section_id = pg_fetch_result($result,0,'section_id');
+		// 	$section_id = pg_fetch_result($result,0,'section_id');
 
-		return $section_id;
-	}//end import_info_object
+		// 	return $section_id;
+		// }//end import_info_object
 
 
 
@@ -414,19 +498,19 @@ class tools_register {
 	* CLEAN_SECTION_TOOLS_DATA
 	* @return bool true
 	*/
-	private static function clean_section_tools_data() {
+		// private static function clean_section_tools_data() {
 
-		// section
-			$section_tools_tipo 	= 'dd1324';
-			$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_tools_tipo.'\';';
-			$result_delete_section 	= pg_query(DBi::_getConnection(), $sql_query);
+		// 	// section
+		// 		$section_tools_tipo 	= 'dd1324';
+		// 		$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_tools_tipo.'\';';
+		// 		$result_delete_section 	= pg_query(DBi::_getConnection(), $sql_query);
 
-			// reset counter
-			$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_tools_tipo.'\';';
-			$result_reset_counter 	= pg_query(DBi::_getConnection(), $sql_reset_counter);
+		// 		// reset counter
+		// 		$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_tools_tipo.'\';';
+		// 		$result_reset_counter 	= pg_query(DBi::_getConnection(), $sql_reset_counter);
 
-		return true;
-	}//end clean_section_tools_data
+		// 	return true;
+		// }//end clean_section_tools_data
 
 
 
@@ -470,48 +554,17 @@ class tools_register {
 	public static function create_tool_config($tool_name) {
 
 		// section
-			$section_tools_config_tipo	= 'dd996';
-			$component_tipo_tool_name	= 'dd1326';
+			$section_tools_config_tipo	= self::$section_tools_config_tipo; // 'dd996';
+			$component_tipo_tool_name	= self::$tipo_tool_name; // 'dd1326';
 
-		// search by tool name
-			$sqo = json_decode('{
-				   "typo": "sqo",
-				   "id": "temp",
-				   "section_tipo": [
-				      "'.$section_tools_config_tipo.'"
-				   ],
-				   "filter": {
-				      "$and": [
-				         {
-				            "q": [
-				               "'.$tool_name.'"
-				            ],
-				            "q_operator": "=",
-				            "path": [
-				               {
-				                  "section_tipo": "'.$section_tools_config_tipo.'",
-				                  "component_tipo": "'.$component_tipo_tool_name.'",
-				                  "modelo": "component_input_text",
-				                  "name": "Tool name"
-				               }
-				            ],
-				            "type": "jsonb"
-				         }
-				      ]
-				   },
-				   "select": [],
-				   "limit": 1,
-				   "offset": 0,
-				   "full_count": false
-			   }');
-			$search		= search::get_instance($sqo);
-			$result 	= $search->search();
+		// search by tool name. (!) Note that section_tipo is dd996 (Tools configuration) a virtual of 'dd73'
+			$tool_by_name = self::get_tool_by_name($tool_name, $section_tools_config_tipo);
 
 		// empty result case
-			if(empty($result->ar_records)) {
+			if(empty($tool_by_name)) {
 
-				$section_tools_reg_tipo		= 'dd1324';
-				$component_tipo_tool_name	= 'dd1326';
+				$section_tools_reg_tipo		= self::$section_tools_tipo; // 'dd1324';
+				$component_tipo_tool_name	= self::$tipo_tool_name; // 'dd1326';
 				// get the register tool
 				$reg_sqo = json_decode('{
 					   "typo": "sqo",
@@ -592,7 +645,7 @@ class tools_register {
 				}else{
 					return false;
 				}
-			}//end if(empty($result->ar_records))
+			}//end if(empty($tool_by_name))
 
 			// else{
 			// 	$record = reset($result->ar_records);
@@ -633,7 +686,7 @@ class tools_register {
 		$config_search	= search::get_instance($sqo_config_tool_active);
 		$config_result	= $config_search->search();
 		$ar_records		= $config_result->ar_records ?? [];
-		$name_tipo		= 'dd1326';
+		$name_tipo		= self::$tipo_tool_name; // 'dd1326';
 		$config_tipo	= 'dd999';
 		$ar_config		= array_map(function($record) use($name_tipo, $config_tipo){
 
@@ -711,6 +764,57 @@ class tools_register {
 
 		return $ar_client_config;
 	}//end get_all_config_tool_client
+
+
+
+	/**
+	* GET_PROFILE_ALLOWED_TOOLS
+	* Get activated tool names of given profile
+	* @param int $user_id
+	* @return array $allowed_tools
+	* 	Array of tool names as ['tool_lang','tool_print']
+	*/
+		// public static function get_profile_allowed_tools($user_id) {
+
+		// 	// user profile
+		// 		$user_profile = security::get_user_profile($user_id);
+		// 		if (empty($user_profile)) {
+		// 			return false;
+		// 		}
+		// 		$user_profile_id = (int)$user_profile->section_id;
+
+		// 	// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
+		// 		$model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,true);
+		// 		$component	= component_common::get_instance(
+		// 			$model,
+		// 			DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
+		// 			$user_profile_id,
+		// 			'list',
+		// 			DEDALO_DATA_NOLAN,
+		// 			DEDALO_SECTION_PROFILES_TIPO
+		// 		);
+
+		// 	// dato
+		// 		$dato = $component->get_dato();
+		// 			dump($dato, ' dato ++ '.to_string());
+		// 		if (empty($dato)) {
+		// 			return [];
+		// 		}
+
+		// 	// allowed_tools
+		// 		$allowed_tools		= [];
+		// 		$registered_tools	= tool_common::get_client_registered_tools();
+		// 		$ar_id = array_map(function($el){
+		// 			return $el->section_id;
+		// 		}, $dato);
+		// 		foreach ($registered_tools as $tool_data) {
+		// 			if (in_array($tool_data->section_id, $ar_id)) {
+		// 				$allowed_tools[] = $tool_data->name;
+		// 			}
+		// 		}
+
+		// 	return $allowed_tools;
+		// }//end get_profile_allowed_tools
 
 
 
