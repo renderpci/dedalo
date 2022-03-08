@@ -6,7 +6,8 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-
+	import {render_edit_view_default} from './render_edit_view_default.js'
+	import {render_edit_view_tools} from './render_edit_view_tools.js'
 
 
 /**
@@ -22,36 +23,29 @@ export const render_edit_component_check_box = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @return DOM node
+* Chose the view render module to generate DOM nodes
+* @param object options
+* @return DOM node wrapper | null
 */
 render_edit_component_check_box.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
-		const render_level = options.render_level || 'full'
+	// view
+		const view	= self.context.view || 'default'
 
-	// content_data
-		const content_data = get_content_data_edit(self)
-		if (render_level==='content') {
-			return content_data
-		}
+	switch(view) {
 
-	// buttons
-		const buttons = get_buttons(self)
+		case 'tools':
+			return render_edit_view_tools.render(self, options)
 
-	// ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data	: content_data,
-			buttons			: buttons
-		})
+		case 'default':
+		default:
+			return render_edit_view_default.render(self, options)
+	}
 
-	// events
-		add_events(self, wrapper)
-
-	return wrapper
-};//end edit
+	return null
+}//end edit
 
 
 
@@ -59,7 +53,7 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 * ADD_EVENTS
 * @return bool
 */
-const add_events = function(self, wrapper) {
+export const add_events = function(self, wrapper) {
 
 	// events delegated
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
@@ -90,7 +84,7 @@ const add_events = function(self, wrapper) {
 		)
 		async function reset_element(instance) {
 			// change all elements inside of content_data
-			const new_content_data = await content_data_edit(instance)
+			const new_content_data = await get_content_data_edit(instance)
 			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
 			wrapper.childNodes[1].replaceWith(new_content_data)
 		}
@@ -109,12 +103,12 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action  : action,
 						key 	: changed_key,
-						value 	: changed_value,
+						value 	: changed_value
 					})
 					self.change_value({
-						changed_data : changed_data,
-						//label 		 : e.target.nextElementSibling.textContent,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false,
+						remove_dialog	: false
 					})
 					.then((api_response)=>{
 						self.selected_key = e.target.dataset.key
@@ -186,59 +180,11 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @return
-*/
-const get_content_data_edit = function(self) {
-
-	const value				= self.data.value
-	const datalist			= self.data.datalist || []
-	const mode				= self.mode
-	const is_inside_tool	= self.is_inside_tool
-
-	const fragment = new DocumentFragment()
-
-	// inputs
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
-
-		// build options
-		const datalist_length = datalist.length
-		for (let i = 0; i < datalist_length; i++) {
-			const input_element = get_input_element_edit(i, datalist[i], self)
-			inputs_container.appendChild(input_element)
-		}
-
-	// buttons
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_container',
-			parent			: fragment
-		})
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
-
-		content_data.classList.add("nowrap")
-		content_data.appendChild(fragment)
-
-
-	return content_data
-};//end get_content_data_edit
-
-
-
-/**
 * GET_BUTTONS
 * @param object instance
 * @return DOM node buttons_container
 */
-const get_buttons = (self) => {
+export const get_buttons = (self) => {
 
 	const is_inside_tool= self.is_inside_tool
 	const mode 			= self.mode
@@ -283,57 +229,5 @@ const get_buttons = (self) => {
 
 	return buttons_container
 };//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT_EDIT
-* @return DOM node li
-*/
-const get_input_element_edit = (i, current_value, self) => {
-
-	const value				= self.data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value
-	const datalist_value	= datalist_item.value
-	const label				= datalist_item.label
-	const section_id		= datalist_item.section_id
-
-	// create li
-		const li = ui.create_dom_element({
-			element_type	: 'li'
-		})
-
-	// input checkbox
-		const option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			id 				: self.id +"_"+ i,
-			dataset 	 	: { key : i },
-			value 			: JSON.stringify(datalist_value),
-			parent 			: li
-		})
-		// checked option set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					option.checked = 'checked'
-			}
-		}
-
-	// label
-		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
-		const option_label = ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: label_string,
-			parent			: li
-		})
-		option_label.setAttribute("for", self.id +"_"+ i)
-
-
-	return li
-};//end get_input_element_edit
 
 
