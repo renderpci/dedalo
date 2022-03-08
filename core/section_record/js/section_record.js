@@ -544,23 +544,22 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 * If no elements matches, a empty object is created to prevent gaps
 * @return object component_data
 */
-section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null){
+section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
 
 	const self = this
-		// console.log("section record self.mode:",self.mode, self.tipo);
-		// console.log("self.caller.mode:", self.caller.mode, self.caller.model, self.caller.tipo);
 
-	// const component_data = self.caller.mode==='tm' // self.mode==='tm'
-	// 	? self.datum.data.find(el => el.tipo===ddo.tipo && el.section_id===section_id && el.section_tipo===section_tipo && el.matrix_id===matrix_id)
-	// 	: self.datum.data.find(el => el.tipo===ddo.tipo && el.section_id===section_id && el.section_tipo===section_tipo)
+	// prevent no data elements find
+		if (ddo.model==='section_group') {
+			return null;
+		}
 
 	// component_data
-		const component_data = 	self.datum.data.find(function(el){
-			if (el.tipo===ddo.tipo && el.section_id===section_id && el.section_tipo===section_tipo) {
+		const component_data = self.datum.data.find(function(el) {
+			if (el.tipo===ddo.tipo && parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo) {
 
 				if (el.matrix_id) {
 					// console.error("match matrix_id:", el.matrix_id);
-					return el.matrix_id===matrix_id
+					return parseInt(el.matrix_id)===parseInt(matrix_id)
 				}
 				return true
 			}
@@ -588,6 +587,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				tipo			: ddo.tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id,
+				info			: 'No component data is found',
 				value			: [],
 				fallback_value	: ['']
 			}
