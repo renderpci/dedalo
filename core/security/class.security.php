@@ -178,6 +178,39 @@ class security {
 			$user_id = $_SESSION['dedalo']['auth']['user_id'];
 
 		// user profile
+			$user_profile = security::get_user_profile($user_id);
+			if (empty($user_profile)) {
+				return false;
+			}
+
+			// locator
+			$profile_id = (int)$user_profile->section_id;
+
+		// component_security_access
+			$component_security_access = component_common::get_instance(
+				'component_security_access',
+				DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
+				$profile_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_PROFILES_TIPO
+			);
+
+
+		return $component_security_access;
+	}//end get_user_security_access
+
+
+
+	/**
+	* GET_USER_PROFILE
+	* Resolve user profile id by user_id
+	* @param int $user_id
+	* @return object $locator
+	*/
+	public static function get_user_profile($user_id) {
+
+		// user profile
 			$component_profile_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
 			$component_profile			= component_common::get_instance(
 				$component_profile_model,
@@ -193,21 +226,11 @@ class security {
 			}
 
 			// locator
-			$profile_id = (int)$profile_dato[0]->section_id;
-
-		// component_security_access
-			$component_security_access = component_common::get_instance(
-				'component_security_access',
-				DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
-				$profile_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				DEDALO_SECTION_PROFILES_TIPO
-			);
+			$locator = $profile_dato[0];
 
 
-		return $component_security_access;
-	}//end get_user_security_access
+		return $locator;
+	}//end get_user_profile
 
 
 
