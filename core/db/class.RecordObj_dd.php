@@ -396,6 +396,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 				return 'component_json';
 			}elseif ($this->terminoID==='hierarchy48') { // hierarchy 'order'
 				return 'component_number';
+			}elseif ($this->terminoID==='dd1067') { // tools component_security_tools
+				return 'component_check_box';
 			}
 
 		$model = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
@@ -416,6 +418,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 			elseif ($model==='component_relation_struct') {
 				$model='component_relation_index';
 			}
+			elseif ($model==='component_security_tools') {
+				$model='component_check_box';
+			}
+
 		return $model;
 	}//end get_modelo_name
 
