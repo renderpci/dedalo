@@ -33,8 +33,24 @@ class component_json extends component_common {
 		$dato = parent::get_dato() ?? [];
 
 		if(!empty($dato) && !is_array($dato)) {
-			trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));
-			$dato = [];
+			// trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));
+			// dump($dato, ' dato ++ '.to_string());
+			try {
+
+				$data_string = !is_string($dato)
+					? json_encode($dato)
+					: $dato;
+
+				$data_object = json_decode($data_string);
+				$new_data = ($data_object)
+					? [$data_object]
+					: [];
+
+			} catch (Exception $e) {
+				$new_data = [];
+			}
+
+			$dato = $new_data;
 		}
 
 		return $dato;
