@@ -56,6 +56,7 @@ class security_v5_to_v6 {
 					// change access dato dd774
 						// sample data dd774
 						// from
+						// "oh8": "2",
 						// {
 						// "ad1": {
 						// 	"hierarchy21": 2,
@@ -82,6 +83,12 @@ class security_v5_to_v6 {
 							debug_log(__METHOD__." Empty current_ar_tipo for parent $current_parent in security_acces_dato. IGNORED !".to_string(), logger::ERROR);
 							continue;
 						}
+						// areas direct case
+						if (is_string($current_ar_tipo)) {
+							$current_ar_tipo = (object)[
+								$current_parent => $current_ar_tipo
+							];
+						}
 						foreach ($current_ar_tipo as $current_tipo => $value) {
 							$current_dato = new stdClass();
 								$current_dato->tipo			= $current_tipo;
@@ -105,26 +112,132 @@ class security_v5_to_v6 {
 			// security tools
 				$security_tools_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
 
+				// sample data
+
 				if (is_object($security_tools_dato)) {
 
-					$new_tool_dato = [];
-					foreach ($security_tools_dato as $tool => $value) {
+					// change areas dato dd1067
+						// [{
+						// 	"tool_qr": 2,
+						// 	"tool_tc": 2
+						// }]
+						// to
+						// [{
+						// 	"type": "dd151",
+						// 	"section_id": "8",
+						// 	"section_tipo": "dd1324",
+						// 	"from_component_tipo": "dd1067"
+						// }]
 
-						$current_dato = new stdClass();
-							$current_dato->name		= $tool;
-							$current_dato->value	= $value;
-						$new_tool_dato[] = $current_dato;
+					// v5 tools list
+						// "tool_qr": 2,
+						// "tool_tc": 2,
+						// "tool_docu": 2,
+						// "tool_lang": 2,
+						// "tool_note": 2,
+						// "tool_sort": 2,
+						// "tool_export": 2,
+						// "tool_portal": 2,
+						// "tool_upload": 2,
+						// "tool_calendar": 2,
+						// "tool_metadata": 2,
+						// "tool_relation": 2,
+						// "tool_tr_print": 2,
+						// "tool_ts_print": 2,
+						// "tool_diffusion": 2,
+						// "tool_import_av": 2,
+						// "tool_subtitles": 2,
+						// "tool_tr_portal": 2,
+						// "tool_watermark": 2,
+						// "tool_cataloging": 2,
+						// "tool_import_kml": 2,
+						// "tool_import_rdf": 2,
+						// "tool_indexation": 2,
+						// "tool_lang_multi": 2,
+						// "tool_user_admin": 2,
+						// "tool_av_versions": 2,
+						// "tool_description": 2,
+						// "tool_posterframe": 2,
+						// "tool_import_files": 2,
+						// "tool_layout_print": 2,
+						// "tool_pdf_versions": 2,
+						// "tool_time_machine": 2,
+						// "tool_update_cache": 2,
+						// "tool_import_bibtex": 2,
+						// "tool_import_images": 2,
+						// "tool_import_marc21": 2,
+						// "tool_import_zotero": 2,
+						// "tool_structuration": 2,
+						// "tool_transcription": 2,
+						// "tool_administration": 2,
+						// "tool_image_versions": 2,
+						// "tool_semantic_nodes": 2,
+						// "tool_import_dedalo_csv": 2,
+						// "tool_add_component_data": 2,
+						// "tool_import_files_dcnav": 2,
+						// "tool_replace_component_data": 2
+
+					$new_tool_dato = [];
+					foreach ($security_tools_dato as $tool_name => $value) {
+
+						$new_name = (function() use($tool_name){
+
+							$new_tool_name = '';
+
+							switch ($tool_name) {
+								case 'tool_av_versions':
+								case 'tool_pdf_versions':
+								case 'tool_image_versions':
+									$new_tool_name = 'tool_media_versions';
+									break;
+
+								case 'tool_add_component_data':
+								case 'tool_replace_component_data':
+									$new_tool_name = 'tool_propagate_component_data';
+									break;
+
+								default:
+									$new_tool_name = $tool_name;
+									break;
+							}
+							return $new_tool_name;
+						})();
+
+						// find tool by name in registered tools
+						$target_section_tipo	= tools_register::$section_tools_tipo; // dd1324
+						$tool_found				= tools_register::get_tool_by_name($new_name, $target_section_tipo); // return section record raw data or null
+						if (empty($tool_found)) {
+							$msg = 'Error on import tool permissions. Tool: '.$tool_name.' not found in tools_register section [Ignored]';
+							trigger_error($msg);
+							continue;
+						}
+
+						$locator = new locator();
+							$locator->set_section_tipo($target_section_tipo);
+							$locator->set_section_id($tool_found->section_id);
+							$locator->set_from_component_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO); // dd1067
+							$locator->set_type(DEDALO_RELATION_TYPE_LINK); // dd151
+
+						if(!locator::in_array_locator( $locator, $new_tool_dato, ['section_id'])) {
+							$new_tool_dato[] = $locator;
+						}
 					}
-					// replace data
-					if ( isset($dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato) && isset($dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}) ) {
-						$dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_tool_dato;
-					}
+					// add data to relations
+						if (!empty($new_tool_dato)) {
+							// relations
+							if (!isset($dato->relations)) {
+								$dato->relations = [];
+							}
+							foreach ($new_tool_dato as $current_locator) {
+								$dato->relations[] = $current_locator;
+							}
+						}
+
 				}else{
 					debug_log(__METHOD__." 'security_tools_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($security_tools_dato).' - value: '.to_string($security_tools_dato), logger::ERROR);
 				}
-
-
-		}else if ($section_tipo===DEDALO_SECTION_USERS_TIPO){	// USERS TABLE
+		}
+		else if ($section_tipo===DEDALO_SECTION_USERS_TIPO){	// USERS TABLE
 
 			// security_administrator
 				$security_admin_dato	= $dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? 0;
@@ -190,8 +303,8 @@ class security_v5_to_v6 {
 						}
 
 						// replace data
-						$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN}  = $new_filter_records_dato;
-						$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->valor->{DEDALO_DATA_NOLAN} = null;
+						$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_filter_records_dato;
+						// $dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->valor->{DEDALO_DATA_NOLAN} = null;
 					}else{
 						debug_log(__METHOD__." 'filter_records_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($filter_records_dato).' - value: '.to_string($filter_records_dato), logger::ERROR);
 					}
