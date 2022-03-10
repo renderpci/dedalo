@@ -158,6 +158,15 @@ class tools_register {
 							$section->set_dato($current_tool_section_data);
 							$created_section_id = $section->Save();
 
+						// info_file_processed. Added info
+							$info_file_processed_item = array_find($info_file_processed, function($el) use($tool_name){
+								return $el->name===$tool_name;
+							});
+							if ($info_file_processed_item!==null) {
+								$info_file_processed_item->existing_tool	= $current_section_id==$created_section_id;
+								$info_file_processed_item->section_id		= $created_section_id;
+							}
+
 						// save new record with serialized section_id
 							// $created_section_id = tools_register::import_info_object($current_tool_section_data, $section_id_counter);
 
