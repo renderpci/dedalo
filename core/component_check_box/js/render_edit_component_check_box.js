@@ -193,10 +193,33 @@ export const get_buttons = (self) => {
 
 	// button edit
 		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool){
-			ui.create_dom_element({
+			const button_edit = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button edit',
 				parent 			: fragment
+			})
+			button_edit.addEventListener("click", function(e){
+				e.stopPropagation()
+				try {
+					// target_section
+						const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
+						const target_section_tipo = sqo.section_tipo[0].tipo
+					// navigation
+						const user_navigation_options = {
+							source		: {
+								action			: 'search',
+								model			: 'section',
+								tipo			: target_section_tipo,
+								section_tipo	: target_section_tipo,
+								mode			: 'list',
+								lang			: self.lang
+							},
+							sqo : sqo
+						}
+					event_manager.publish('user_navigation', user_navigation_options)
+				} catch (error) {
+					console.error(error)
+				}
 			})
 		}
 

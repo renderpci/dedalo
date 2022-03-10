@@ -20,7 +20,7 @@
 				break;
 
 			default:
-				$context[] = $this->get_structure_context($permissions);
+				$context[] = $this->get_structure_context($permissions, $add_request_config=true);
 				break;
 		}
 	}//end if($options->get_context===true)
