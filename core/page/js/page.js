@@ -85,8 +85,14 @@ page.prototype.init = async function(options) {
 			async function fn_user_navigation(user_navigation_options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
+				// options
+					const source			= user_navigation_options.source
+					const sqo				= user_navigation_options.sqo || null
+					const event_in_history	= user_navigation_options.event_in_history || false
+
+
 				// check valid vars
-					if (!user_navigation_options.source) {
+					if (!source) {
 						console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
 						return false
 					}
@@ -106,9 +112,6 @@ page.prototype.init = async function(options) {
 					// basic vars
 						// Only source is mandatory but if sqo is received, is placed in a new request_config
 						// to allow sections and components manage properly the offset and limit
-						const source			= user_navigation_options.source
-						const caller_id			= user_navigation_options.caller_id || null
-						const sqo				= user_navigation_options.sqo || null
 						const request_config	= [{
 							api_engine	: 'dedalo',
 							sqo			: sqo,
@@ -144,7 +147,7 @@ page.prototype.init = async function(options) {
 						const refresh_result = await self.refresh()
 
 					// url history track
-						if(refresh_result===true && user_navigation_options.event_in_history!==true)  {
+						if(refresh_result===true && event_in_history!==true)  {
 
 							const current_tipo = (source.config && source.config.source_section_tipo)
 								? source.config.source_section_tipo

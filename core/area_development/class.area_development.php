@@ -305,7 +305,7 @@ class area_development extends area_common {
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
 					$item->label	= label::get_label('actualizar').' '.label::get_label('datos');
-					$item->info		= 'Click to update dedalo data version';
+					// $item->info		= 'Click to update dedalo data version';
 					$item->body		= '<span style="color:red">Current data version: '.$current_version_in_db . '</span> -----> '. implode('.', $update_version);
 					// Actions list
 						#dump($updates->$update_version_plain, '$updates->$update_version_plain ++ '.to_string());
@@ -324,6 +324,12 @@ class area_development extends area_common {
 								}
 							}
 						}
+					$item->run[]	= (object)[
+						'fn' 	  => 'init_form',
+						'options' => (object)[
+							'confirm_text' => label::get_label('seguro')
+						]
+					];
 					$item->trigger 	= (object)[
 						'dd_api'	=> 'dd_utils_api',
 						'action'	=> 'update_version',

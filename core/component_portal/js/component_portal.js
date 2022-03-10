@@ -22,7 +22,7 @@
 /**
 * COMPONENT_PORTAL
 */
-export const component_portal = function(){
+export const component_portal = function() {
 
 	this.id = null
 
@@ -100,7 +100,7 @@ export const component_portal = function(){
 * @return bool
 */
 component_portal.prototype.init = async function(options) {
-	
+
 	const self = this
 
 	// call the generic common tool init
@@ -157,7 +157,7 @@ component_portal.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_portal.prototype.build = async function(autoload=false){
+component_portal.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()
 
 	const self = this
@@ -165,7 +165,7 @@ component_portal.prototype.build = async function(autoload=false){
 	// status update
 		self.status = 'building'
 
-	// self.datum. On building, if datum is not created, creation is needed		
+	// self.datum. On building, if datum is not created, creation is needed
 		self.datum = self.datum || {
 			data	: [],
 			context	: []
@@ -175,7 +175,7 @@ component_portal.prototype.build = async function(autoload=false){
 	const current_data_manager = new data_manager()
 
 	// rqo
-		const generate_rqo = async function(){
+		const generate_rqo = async function() {
 			// rqo_config. get the rqo_config from context
 			self.rqo_config	= self.context && self.context.request_config
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
@@ -215,7 +215,7 @@ component_portal.prototype.build = async function(autoload=false){
 		// 		}
 		// 	}
 		// }
-	
+
 	// load data if not yet received as an option
 		if (autoload===true) {
 
@@ -255,7 +255,7 @@ component_portal.prototype.build = async function(autoload=false){
 					self.total			= self.data.pagination.total
 					self.rqo.sqo.offset	= self.data.pagination.offset
 					// set value
-					current_data_manager.set_local_db_data(self.rqo, 'rqo')					
+					current_data_manager.set_local_db_data(self.rqo, 'rqo')
 				}
 
 			// paginator
@@ -297,8 +297,8 @@ component_portal.prototype.build = async function(autoload=false){
 					self.autocomplete_active = false
 					self.autocomplete 		 = null
 				}
-		
-		}else if(self.mode==="search"){
+
+		}else if(self.mode==="search") {
 
 			// active / prepare the autocomplete in search mode
 
@@ -322,11 +322,10 @@ component_portal.prototype.build = async function(autoload=false){
 		// }
 
 	// component_info add
-		try {
-			self.add_component_info = self.context.request_config.find(el => el.api_engine==="dedalo").show.ddo_map[0].value_with_parents || false
-		}catch(error){
-			console.warn("error:",error);
-		}
+		const rqo = self.context.request_config.find(el => el.api_engine==='dedalo')
+		self.add_component_info = rqo
+			? (rqo.show.ddo_map[0] ? rqo.show.ddo_map[0].value_with_parents : false)
+			: false
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -544,20 +543,20 @@ component_portal.prototype.update_pagination_values = function(action) {
 * The portal will show only the locators for the tag selected
 * @return promise self.render
 */
-component_portal.prototype.filter_data_by_tag_id = function(options){
+component_portal.prototype.filter_data_by_tag_id = function(options) {
 
 	const self = this
 
 	// options
 		const tag_element = options.tag // DOM node selected
-		
+
 	// Fix received options from event as 'active_tag'
 		self.active_tag = options
 
 	// tag_id from node dataset
 		const tag_id = tag_element.dataset.tag_id
 
-	// get all data from datum because if the user select one tag the portal data is filtered by the tag_id, 
+	// get all data from datum because if the user select one tag the portal data is filtered by the tag_id,
 	// in the next tag selection by user the data doesn't have all locators and is necessary get the original data
 	// the full_data is clone to a new object because need to preserve the datum from these changes.
 		const full_data	= self.datum.data.find(el => el.tipo===self.tipo
@@ -586,7 +585,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options){
 * reset filtered data to the original and full server data
 * @return promise self.render
 */
-component_portal.prototype.reset_filter_data = function(){
+component_portal.prototype.reset_filter_data = function() {
 
 	const self = this
 
@@ -601,7 +600,7 @@ component_portal.prototype.reset_filter_data = function(){
 		// for (let i = 0; i < self.ar_instances.length; i++) {
 		// 	self.ar_instances[i].status = 'builded'
 		// }
-	
+
 	// re-render content
 		return self.render({
 			render_level : 'content'

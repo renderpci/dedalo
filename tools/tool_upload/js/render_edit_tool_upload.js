@@ -42,13 +42,12 @@ render_edit_tool_upload.prototype.edit = async function (options) {
 			content_data : current_content_data
 		})
 
-	// // buttons container
+	// buttons container
 		// 	const buttons_container = ui.create_dom_element({
 		// 		element_type	: 'div',
 		// 		class_name 		: 'buttons_container',
 		// 		parent 			: wrapper
 		// 	})
-
 
 	// tool_container
 		//const tool_container = document.getElementById('tool_container')
