@@ -276,6 +276,11 @@ class tool_common {
 																 DEDALO_DATA_NOLAN,
 																 $record->section_tipo);
 				$dato = $component->get_dato();
+				if (empty($dato)) {
+					debug_log(__METHOD__." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id ".to_string($model), logger::WARNING);
+					continue;
+				}
+
 				$current_value = reset($dato);
 				if(isset($ar_tools) && !in_array($current_value->name, $ar_tools)){
 					continue;

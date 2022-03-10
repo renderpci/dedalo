@@ -88,7 +88,12 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 							$new_locator->set_section_top_tipo($locator->section_top_tipo);
 						}
 
-					$target_component_tipo = $component_tipo[$locator->component_tipo];
+					$target_component_tipo = $component_tipo[$locator->component_tipo] ?? null;
+					if (empty($target_component_tipo)) {
+						trigger_error('Error getting component_tipo from locator: ' . json_encode($locator));
+						continue;
+					}
+
 					$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
 
 					$target_component = component_common::get_instance($model,

@@ -72,7 +72,8 @@ class activity_v5_to_v6 extends v5_to_v6 {
 							$new_what_dato->set_from_component_tipo('dd545');
 							$new_what_dato->set_type('dd151');
 
-						$found = array_filter($dato->relations, function($item) use($new_what_dato){
+						$dato_relations = $dato->relations ?? [];
+						$found = array_filter($dato_relations, function($item) use($new_what_dato){
 							if (true===locator::compare_locators($item, $new_what_dato)) {
 								return $item;
 							}

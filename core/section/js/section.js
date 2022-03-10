@@ -454,7 +454,6 @@ section.prototype.build = async function(autoload=false) {
 	// columns_map. Get the columns_map to use into the list
 		self.columns_map = get_columns_map(self.context)
 
-
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));

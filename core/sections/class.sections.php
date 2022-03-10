@@ -106,12 +106,12 @@ class sections extends common {
 				return $this->ar_section_tipo;
 			}
 
-		// if the sqo has related mode, get the section_tipo from data, 
+		// if the sqo has related mode, get the section_tipo from data,
 		// It's not possible know the sections because data is a list of references to the source.
-		// In some cases that sqo has specific sections because the search will be filtered only for those sections. 
+		// In some cases that sqo has specific sections because the search will be filtered only for those sections.
 		// in these case we get the section_tipo from the SQL self definition
 		if(isset($this->search_query_object->mode) && $this->search_query_object->mode==='related'){
-			
+
 			// ar_section_tipo. If is defined, we done. Else, case 'all' get data to resolve used sections
 				$this->ar_section_tipo = (reset($this->search_query_object->section_tipo)!=='all')
 					? $this->search_query_object->section_tipo
@@ -119,13 +119,13 @@ class sections extends common {
 
 			// calculated
 				if($this->ar_section_tipo===false){
-					
+
 					// force load dato
 					$dato = $this->get_dato();
 
 					$ar_section_tipo = [];
 					foreach ($dato as $record) {
-						
+
 						$current_section_tipo = $record->section_tipo;
 						if (!in_array($current_section_tipo, $ar_section_tipo)) {
 							$ar_section_tipo[] = $current_section_tipo;
@@ -133,11 +133,11 @@ class sections extends common {
 					}
 					$this->ar_section_tipo = $ar_section_tipo;
 				}
-	
+
 		}else{
 			$this->ar_section_tipo = $this->search_query_object->section_tipo;
 		}
-		
+
 
 		return $this->ar_section_tipo;
 	}//end get_ar_section_tipo
@@ -149,7 +149,7 @@ class sections extends common {
 	* @return array $ar_all_section_id
 	*/
 	public function get_ar_all_section_id() {
-		
+
 		$ar_all_section_id = isset($this->search_query_object)
 			? (function($sqo){
 				// sqo config
@@ -165,7 +165,7 @@ class sections extends common {
 				return array_map(function($row){
 					return (int)$row->section_id;
 				}, $rows_data->ar_records);
-			
+
 			})($this->search_query_object)
 			: [];
 

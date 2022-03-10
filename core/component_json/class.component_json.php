@@ -165,13 +165,13 @@ class component_json extends component_common {
 
 		// file info
 			$file_extension = strtolower(pathinfo($file_data->name, PATHINFO_EXTENSION));
-	
-		// validate extension			
+
+		// validate extension
 			if (!in_array($file_extension, $this->get_allowed_extensions())) {
 				$response->msg  = "Error: " .$file_extension. " is an invalid file type ! ";
 				$response->msg .= "Allowed file extensions are: ". implode(', ', $allowed_extensions);
 				return $response;
-			}		
+			}
 
 		// read the uploaded file
 			$file_content = file_get_contents($file_data->tmp_name);
@@ -181,7 +181,7 @@ class component_json extends component_common {
 
 		// read content
 			if ($value = json_decode($file_content)) {
-				
+
 				// uploaded ready file info
 				$response->ready 	= (object)[
 					'imported_parsed_data' => $value
@@ -191,12 +191,12 @@ class component_json extends component_common {
 
 				$response->msg  = "Error: " .$file_data->name. " content is an invalid json data";
 				return $response;
-			}			
+			}
 
 		// all is ok
 			$response->result 	= true;
 			$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
-		
+
 
 		return $response;
 	}//end add_file
@@ -219,7 +219,7 @@ class component_json extends component_common {
 		// wrap data with array to maintain component data format
 			$dato = [$imported_data];
 			$this->set_dato($dato);
-		
+
 		// save full dato
 			$this->Save();
 
@@ -231,7 +231,7 @@ class component_json extends component_common {
 	}//end process_uploaded_file
 
 
-				
+
 
 
 

@@ -19,6 +19,8 @@ class tools_register {
 	static $tipo_affeted_models				= 'dd1330';
 	static $tipo_properties					= 'dd1335';
 
+
+
 	/**
 	* IMPORT_TOOLS
 	* Read all dedalo dir 'tools' subfolders and extract property 'ontology' from all 'register.json' files
