@@ -1125,6 +1125,10 @@ export const ui = {
 		*/
 		build_component_tool_button : (tool_context, self) => {
 
+			if (tool_context.show_in_component===false) {
+				return null
+			}
+
 			// button
 				const tool_button = ui.create_dom_element({
 					element_type	: 'span',
@@ -1428,11 +1432,13 @@ export const ui = {
 
 		for (let i = 0; i < tools_length; i++) {
 
-			const tool_node = (self.type==='component' && tools[i].show_in_component)
+			const tool_node = (self.type==='component')
 				? ui.tool.build_component_tool_button(tools[i], self)
 				: ui.tool.build_section_tool_button(tools[i], self)
 
-			buttons_container.appendChild(tool_node)
+			if (tool_node) {
+				buttons_container.appendChild(tool_node)
+			}
 
 			// if(self.type === 'component' && tools[i].show_in_component){
 			// 	buttons_container.appendChild( ui.tool.build_component_tool_button(tools[i], self) )
