@@ -3,6 +3,7 @@ class DDModal extends HTMLElement {
 	constructor() {
 		super();
 		this._modalVisible = false;
+		this.mini = false;
 		this._modal;
 		// this.caller_instance;
 		this.on_close;
@@ -30,107 +31,171 @@ class DDModal extends HTMLElement {
 			}
 
 			/* Modal Content */
-			.modal-content {
-				/*position: relative;*/
-				background-color: #fefefe;
-				margin: auto;
-				/*margin-top: 80px;*/
-				/*top: 4.5vh;*/
-				margin-top: 3.5vh;
-				padding: 0;
-				border: 1px solid #888;
-				width: 80%;
-				box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
-				font-size: inherit;
-				/*
-				-webkit-animation-name: animatetop;
-				-webkit-animation-duration: 0.4s;
-				animation-name: animatetop;
-				animation-duration: 0.4s;
-				*/
-			}
+				.modal-content {
+					/*position: relative;*/
+					background-color: #fefefe;
+					margin: auto;
+					/*margin-top: 80px;*/
+					/*top: 4.5vh;*/
+					margin-top: 3.5vh;
+					padding: 0;
+					border: 1px solid #888;
+					width: 80%;
+					box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+					font-size: inherit;
+					/*
+					-webkit-animation-name: animatetop;
+					-webkit-animation-duration: 0.4s;
+					animation-name: animatetop;
+					animation-duration: 0.4s;
+					*/
+				}
 
 			/* Add Animation */
-			@-webkit-keyframes animatetop {
-				from {top:-300px; opacity:0}
-				to {top:0; opacity:1}
-			}
-			@keyframes animatetop {
-				from {top:-300px; opacity:0}
-				to {top:0; opacity:1}
-			}
+				@-webkit-keyframes animatetop {
+					from {top:-300px; opacity:0}
+					to {top:0; opacity:1}
+				}
+				@keyframes animatetop {
+					from {top:-300px; opacity:0}
+					to {top:0; opacity:1}
+				}
+
+			/* Mini Button */
+				.mini_modal {
+					color: white;
+					float: right;
+					font-size: 1.75em;
+					font-weight: bold;
+					position: relative;
+	    			top: 0.25em;
+	    			right: 2.25em;
+	    			z-index: 3;
+				}
+				.mini_modal:hover,
+				.mini_modal:focus {
+					color: #000;
+					text-decoration: none;
+					cursor: pointer;
+				}
 
 			/* The Close Button */
-			.close_modal {
-				color: white;
-				float: right;
-				font-size: 1.75em;
-				font-weight: bold;
-				position: relative;
-    			top: 0.25em;
-    			right: 0.5em;
-    			z-index: 3;
-			}
-			.close_modal:hover,
-			.close_modal:focus {
-				color: #000;
-				text-decoration: none;
-				cursor: pointer;
-			}
+				.close_modal {
+					color: white;
+					float: right;
+					font-size: 1.75em;
+					font-weight: bold;
+					position: relative;
+					top: 0.25em;
+					right: 0.5em;
+					z-index: 3;
+				}
+				.close_modal:hover,
+				.close_modal:focus {
+					color: #000;
+					text-decoration: none;
+					cursor: pointer;
+				}
+			/* modal header */
+				.modal-header {
+					/*padding: 1em;
+					background-color: #FF9800;
+					color: white;
+					font-weight: normal;
+					font-size: 1.4em;*/
+					position: sticky;
+					top: 0;
+					z-index: 2;
+				}
+			/* modal body */
+				.modal-body {
+					/*padding: 2px 16px;
+					margin: 20px 2px;
+					overflow: auto;*/
+				}
+			/* modal_big */
+				.modal_big {
+					padding: 0;
+					z-index: 9999;
+				}
+				.modal_big > .modal-content {
+					/*
+					width: 99.79%;
+					min-height: 99.8%;
 
-			.modal-header {
-				/*padding: 1em;
-				background-color: #FF9800;
-				color: white;
-				font-weight: normal;
-				font-size: 1.4em;*/
-				position: sticky;
-				top: 0;
-				z-index: 2;
-			}
-			.modal-body {
-				/*padding: 2px 16px;
-				margin: 20px 2px;
-				overflow: auto;*/
-			}
-			.modal_big {
-				padding: 0;
-				z-index: 9999;
-			}
-			.modal_big > .modal-content {
-				/*
-				width: 99.79%;
-				min-height: 99.8%;
+					width: calc(100vw - 16px);
+					min-height: 100vh;
+					*/
+					width: 97vw;
+					height: 97vh;
+					/*top: 1.5vh;*/
+					margin-top: 1.5vh;
+					overflow: auto;
+				}
+				.modal_big .modal-body {
+					/*
+					height: 100%;
+					min-height: 90vh;
 
-				width: calc(100vw - 16px);
-				min-height: 100vh;
-				*/
-				width: 97vw;
-				height: 97vh;
-				/*top: 1.5vh;*/
-				margin-top: 1.5vh;
-				overflow: auto;
-			}
-			.modal_big .modal-body {
-				/*
-				height: 100%;
-				min-height: 90vh;
+					width: calc(100vw - 32px);
+					min-height: 100vh;
+					*/
+				}
+			/* modal mini */
+				.mini {
+					position: fixed;
+					z-index: 9999;
+					width: 15rem;
+					height: 60px;
+					overflow: hidden;
+					left: unset;
+					top: unset;
+					/* bottom: 5px; */
+					right: 5px;
+					margin: 0;
+					background: none;
+					/*position: relative;
+					right: 0;*/
+				}
+				.mini > .modal-content {
+					margin: 0;
+					box-shadow: none;
+					overflow: hidden;
+					position: relative;
+					width: 100%;
+					right: 5px;
+					bottom: 5px;
+					width: 15rem;
+					height: 60px;
+					display: contents;
+				}
+				.mini > .modal-body, .mini > .modal-footer {
+					display: none;
+				}
+				.mini .mini_modal {
+					position: absolute;
+					right: 10px;
+					top: -8px;
+				}
+				.mini .close_modal {
+					right: 0;
+					display: none;
+				}
+				.mini .header {
 
-				width: calc(100vw - 32px);
-				min-height: 100vh;
-				*/
-			}
+				}
 		</style>
 		<div class="modal">
 			<div class="modal-content">
-				<div class="modal-header">
+				<div class="modal-header" part="header">
+					<span class="mini_modal">_</span>
 					<span class="close_modal">&times;</span>
 					<slot name="header" class="header">Modal box default header</slot>
 				</div>
-				<div class="modal-body">
+				<div class="modal-body" part="body">
 					<slot name="body">Modal box default body<slot>
 				</div>
-				<div class="modal-footer">
+				<div class="modal-footer" part="footer">
 					<slot name="footer"><slot>
 				</div>
 			</div>
@@ -140,6 +205,7 @@ class DDModal extends HTMLElement {
 	connectedCallback() {
 		this._modal = this.shadowRoot.querySelector(".modal");
 		// this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
+		this.shadowRoot.querySelector(".mini_modal").addEventListener('mousedown', this._miniModal.bind(this));
 		this.shadowRoot.querySelector(".close_modal").addEventListener('mousedown', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").addEventListener('mousedown', this._hideModal.bind(this));
 		document.addEventListener('keyup', this.detect_key)
@@ -147,6 +213,7 @@ class DDModal extends HTMLElement {
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
+		this.shadowRoot.querySelector(".mini_modal").removeEventListener('mousedown', this._miniModal.bind(this));
 		this.shadowRoot.querySelector(".close_modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		document.removeEventListener('keyup', this.detect_key);
@@ -175,12 +242,71 @@ class DDModal extends HTMLElement {
 	}
 	_hideModal(e) {
 		e.stopPropagation();
+		// force close always
+		if (e.target.matches('.close_modal')) {
+			this.mini = false
+		}
 		// only click over base modal or button close are aceppted
 		if (e.target.matches('.modal') || e.target.matches('.close_modal')) {
 			this._closeModal()
 		}
 	}
+	_miniModal(e) {
+		e.stopPropagation();
+		if (e.target.matches('.mini_modal')) {
+
+			if (this.mini) {
+
+				// already minified. un-minimize
+
+				this.shadowRoot.querySelector(".modal").classList.remove('mini')
+				// this.shadowRoot.querySelector(".header").classList.add('mini')
+				const header = this.querySelector("[slot='header']")
+				header.classList.remove('mini')
+				this.mini = false
+
+				// setTimeout(()=>{
+				// 	const wrapper_page = document.querySelector('.wrapper_page')
+				// 	wrapper_page.appendChild(this)
+				// }, 2000)
+
+			}else{
+
+				// minimize
+
+				this.shadowRoot.querySelector(".modal").classList.add('mini')
+				// this.shadowRoot.querySelector(".header").classList.add('mini')
+				const header = this.querySelector("[slot='header']")
+				header.classList.add('mini')
+				this.mini = true
+
+				const items = document.querySelectorAll('dd-modal')
+				if (items.length>0) {
+					let offset = 60
+					for (let i = 0; i < items.length; i++) {
+						const el = items[i]
+						// console.log("el:",el);
+
+						// const elemRect = el.getBoundingClientRect()
+    					const bottom = parseInt((offset*i)) + (5*i+5)
+    					// console.log("bottom:",bottom);
+
+    					const modal = el.shadowRoot.querySelector('.modal')
+    					// console.log("modal:",modal);
+    					modal.style.bottom = bottom + "px";
+					}
+				}
+
+				// const inspector_content_data = document.querySelector('.inspector_content_data')
+				// inspector_content_data.appendChild(this)
+			}
+		}
+	}
 	_closeModal() {
+
+		if (this.mini) {
+			return true
+		}
 
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
@@ -229,7 +355,7 @@ class DDModal extends HTMLElement {
 	* Detect user keyup event and close modal when key is 'ESC'
 	*/
 	detect_key(e) {
-		if (e.keyCode===27) {
+		if (e.keyCode===27 && window.modal) {
 			window.modal._closeModal()
 			window.modal = null
 			return
