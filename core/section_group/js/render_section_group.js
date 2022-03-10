@@ -53,6 +53,7 @@ render_section_group.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	get_wrapper(self)
+			  wrapper.content_data = content_data // used in section_group selection
 
 	// header (label)
 		if (self.context.add_label===false) {
