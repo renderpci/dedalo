@@ -2598,9 +2598,6 @@ li .reset_input select {
   width: 100%;
 }
 @media screen and (min-width: 1024px) {
-  .wrapper_section {
-    overflow-x: hidden;
-  }
 }
 .wrapper_section > .label {
   margin-bottom: 0.2em;
@@ -2992,6 +2989,30 @@ li .reset_input select {
 .wrapper_component.player.component_check_box > .content_data {
   overflow: auto;
 }
+.wrapper_component.edit.component_check_box > .content_data li,
+.wrapper_component.search.component_check_box > .content_data li,
+.wrapper_component.tm.component_check_box > .content_data li,
+.wrapper_component.edit_in_list.component_check_box > .content_data li,
+.wrapper_component.player.component_check_box > .content_data li {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.25rem;
+}
+.wrapper_component.edit.component_check_box > .content_data li .show_on_active,
+.wrapper_component.search.component_check_box > .content_data li .show_on_active,
+.wrapper_component.tm.component_check_box > .content_data li .show_on_active,
+.wrapper_component.edit_in_list.component_check_box > .content_data li .show_on_active,
+.wrapper_component.player.component_check_box > .content_data li .show_on_active {
+  display: none;
+  margin-left: 0.5rem;
+}
+.wrapper_component.edit.component_check_box.active li > .show_on_active,
+.wrapper_component.search.component_check_box.active li > .show_on_active,
+.wrapper_component.tm.component_check_box.active li > .show_on_active,
+.wrapper_component.edit_in_list.component_check_box.active li > .show_on_active,
+.wrapper_component.player.component_check_box.active li > .show_on_active {
+  display: block;
+}
 .wrapper_component.edit.component_check_box.view_tools ul,
 .wrapper_component.search.component_check_box.view_tools ul,
 .wrapper_component.tm.component_check_box.view_tools ul,
@@ -3009,8 +3030,6 @@ li .reset_input select {
   line-height: 1rem;
   border-bottom: 1px solid #eeeeee;
   padding: 0.33rem;
-  display: flex;
-  align-items: center;
 }
 .wrapper_component.edit.component_check_box.view_tools .tool_icon,
 .wrapper_component.search.component_check_box.view_tools .tool_icon,
@@ -3640,20 +3659,29 @@ li .reset_input select {
 .wrapper_component.player.component_publication .switcher_publication input:checked + i::after {
   transform: translate3d(22px, 2px, 0);
 }
-.wrapper_component.edit.component_radio_button > .content_data ul.inputs_container,
-.wrapper_component.search.component_radio_button > .content_data ul.inputs_container,
-.wrapper_component.tm.component_radio_button > .content_data ul.inputs_container,
-.wrapper_component.edit_in_list.component_radio_button > .content_data ul.inputs_container,
-.wrapper_component.player.component_radio_button > .content_data ul.inputs_container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8em, auto));
+.wrapper_component.edit.component_radio_button > .content_data li,
+.wrapper_component.search.component_radio_button > .content_data li,
+.wrapper_component.tm.component_radio_button > .content_data li,
+.wrapper_component.edit_in_list.component_radio_button > .content_data li,
+.wrapper_component.player.component_radio_button > .content_data li {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.25rem;
 }
-.wrapper_component.edit.component_radio_button > .content_data ul.inputs_container > li,
-.wrapper_component.search.component_radio_button > .content_data ul.inputs_container > li,
-.wrapper_component.tm.component_radio_button > .content_data ul.inputs_container > li,
-.wrapper_component.edit_in_list.component_radio_button > .content_data ul.inputs_container > li,
-.wrapper_component.player.component_radio_button > .content_data ul.inputs_container > li {
-  padding-bottom: 0.25em;
+.wrapper_component.edit.component_radio_button > .content_data li .show_on_active,
+.wrapper_component.search.component_radio_button > .content_data li .show_on_active,
+.wrapper_component.tm.component_radio_button > .content_data li .show_on_active,
+.wrapper_component.edit_in_list.component_radio_button > .content_data li .show_on_active,
+.wrapper_component.player.component_radio_button > .content_data li .show_on_active {
+  display: none;
+  margin-left: 0.5rem;
+}
+.wrapper_component.edit.component_radio_button.active li > .show_on_active,
+.wrapper_component.search.component_radio_button.active li > .show_on_active,
+.wrapper_component.tm.component_radio_button.active li > .show_on_active,
+.wrapper_component.edit_in_list.component_radio_button.active li > .show_on_active,
+.wrapper_component.player.component_radio_button.active li > .show_on_active {
+  display: block;
 }
 .wrapper_component.edit.component_svg > .content_data,
 .wrapper_component.search.component_svg > .content_data,
@@ -4566,6 +4594,7 @@ li .reset_input select {
   align-items: flex-start;
   padding: 1em;
   padding-top: 0.5em;
+  overflow: hidden;
 }
 .list .section_record .wrapper_component > .content_data,
 .list .wrapper_tool .wrapper_component > .content_data,
@@ -4671,6 +4700,27 @@ dd-modal .header .description {
   font-weight: 300;
   padding-top: 0.25rem;
 }
+dd-modal .header.mini {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  height: 60px;
+  width: 100%;
+}
+dd-modal .header.mini .label {
+  width: calc(100% - 1rem);
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: normal;
+  line-height: 1.2rem;
+  padding: 0.5rem;
+}
+dd-modal .header.mini .description {
+  display: none;
+}
+dd-modal .header.mini .wrapper_tool {
+  display: none;
+}
 dd-modal .header_custom {
   position: absolute;
   width: 100%;
@@ -4690,6 +4740,12 @@ dd-modal .footer {
 dd-modal .footer > * {
   margin: 1em;
   margin-left: 0;
+}
+dd-modal::part(header) {
+  background-color: pink;
+}
+ul.branch {
+  width: 100%;
 }
 .wrapper_component > .content_data ul {
   display: flex;
@@ -4719,12 +4775,13 @@ dd-modal .footer > * {
   font-size: 0.9em;
 }
 .wrapper_component > .content_data ul > li.grouper > .grouper_label {
-  width: 100%;
+  width: auto;
+  padding-left: 0;
   padding-top: 0.25em;
   padding-bottom: 0.25em;
+  padding-right: 1.66rem;
   opacity: 0.7;
   font-size: 0.8em;
-  padding-left: 0;
 }
 .wrapper_component > .content_data ul > li.grouper input {
   vertical-align: text-top;
@@ -5470,6 +5527,10 @@ danger {
   right: 2em;
   top: 1em;
 }
+.developer_info {
+  opacity: 0.5;
+  font-size: 95%;
+}
 .text_unselectable {
   -webkit-user-select: none !important;
   -khtml-user-select: none !important;
@@ -5900,6 +5961,9 @@ section {
   position: relative;
   border-radius: 4px;
   margin-bottom: 1px;
+}
+.wrapper_inspector > .inspector_content_data .activity_info .node_info_save_msg.warning {
+  background-color: #f78a1c;
 }
 .wrapper_inspector > .inspector_content_data .activity_info .node_info_save_msg:after {
   content: "x";

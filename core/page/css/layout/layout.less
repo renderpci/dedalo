@@ -598,7 +598,7 @@
 // section
 	.wrapper_section {
 		@media screen and (min-width: @width_break_point_0) {
-			overflow-x: hidden; // prevent scrollbars affect content
+			// overflow-x: hidden; // prevent scrollbars affect content
 		}
 		display: table;
 		width: 100%;
@@ -1130,6 +1130,23 @@
 			&.component_check_box {
 				>.content_data {
 					overflow: auto;
+
+					li {
+						display: flex;
+						align-items: center;
+						padding-bottom: 0.25rem;
+
+						.show_on_active {
+							display: none;
+							margin-left: 0.5rem;
+						}
+					}
+				}
+
+				&.active {
+					li >.show_on_active {
+						display: block;
+					}
 				}
 
 				&.view_tools {
@@ -1142,8 +1159,6 @@
 						line-height: 1rem;
 						border-bottom: 1px solid #eeeeee;
 						padding: 0.33rem;
-						display: flex;
-						align-items: center;
 					}
 					.tool_icon {
 						height: 1.33rem;
@@ -1576,14 +1591,29 @@
 			// component_radio_button
 			&.component_radio_button {
 				>.content_data {
-					ul.inputs_container {
-						// auto-create columns with min width of 8em
-						display: grid;
-						// grid-template-columns: repeat( auto-fit, minmax(8em, 1fr) );
-						grid-template-columns: repeat( auto-fit, minmax(8em, auto) );
-						>li {
-							padding-bottom: 0.25em;
+
+					li {
+						display: flex;
+						align-items: center;
+						padding-bottom: 0.25rem;
+
+						.show_on_active {
+							display: none;
+							margin-left: 0.5rem;
 						}
+					}
+
+					// ul.inputs_container {
+					// 	// auto-create columns with min width of 8em
+					// 	display: grid;
+					// 	// grid-template-columns: repeat( auto-fit, minmax(8em, 1fr) );
+					// 	grid-template-columns: repeat( auto-fit, minmax(8em, auto) );
+					// }
+				}
+
+				&.active {
+					li >.show_on_active {
+						display: block;
 					}
 				}
 			}
@@ -2333,6 +2363,7 @@
 				align-items: flex-start;
 				padding: 1em;
 				padding-top: 0.5em;
+				overflow: hidden;
 
 				.list & {
 					padding: 0;
@@ -2465,7 +2496,38 @@
 				font-weight: 300;
 				padding-top: 0.25rem;
 			}
+
+			&.mini {
+				// padding: 0.5rem;
+				// font-size: 1rem;
+				display: flex;
+				align-items: center;
+				padding: 0;
+				height: 60px;
+				width: 100%;
+
+				.close_modal {
+
+				}
+				.label {
+					width: calc(100% - 1rem);
+					overflow: hidden;
+					font-size: 15px;
+					font-weight: normal;
+					line-height: 1.2rem;
+					padding: 0.5rem;
+				}
+				.description {
+					display: none;
+				}
+
+				.wrapper_tool {
+					display: none;
+				}
+			}
 		}
+
+
 
 		.header_custom {
 			// background-color: #3070d8;
@@ -2504,8 +2566,19 @@
 
 
 
+	dd-modal::part(header) {
+		background-color	: pink;
+		// font-size			: 10px;
+		// font-weight			: 300;
+	}
+
+
 // ul inside content data
 	ul {
+		&.branch {
+			width: 100%;
+		}
+
 		.wrapper_component >.content_data & {
 			//background-color: #74D6BA;
 			display: flex;
@@ -2542,12 +2615,13 @@
 					}
 
 					>.grouper_label {
-						width: 100%;
+						width: auto;
+						padding-left: 0;
 						padding-top: 0.25em;
 						padding-bottom: 0.25em;
+						padding-right: 1.66rem;
 						opacity: 0.7;
 						font-size: 0.80em;
-						padding-left: 0;
 					}
 
 					input {
