@@ -52,7 +52,7 @@ export const component_check_box = function(){
 	component_check_box.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_check_box.prototype.update_datum		= component_common.prototype.update_datum
 	component_check_box.prototype.change_value		= component_common.prototype.change_value
-	component_check_box.prototype.build_rqo			= common.prototype.build_rqo
+	component_check_box.prototype.build_rqo_show	= common.prototype.build_rqo_show
 
 	// render
 	component_check_box.prototype.mini				= render_mini_component_check_box.prototype.mini
@@ -61,6 +61,38 @@ export const component_check_box = function(){
 	component_check_box.prototype.edit_in_list		= render_edit_component_check_box.prototype.edit
 	component_check_box.prototype.search			= render_search_component_check_box.prototype.search
 	component_check_box.prototype.change_mode		= component_common.prototype.change_mode
+
+
+
+/**
+* BUILD
+*/
+	// component_check_box.prototype.build = async function(autoload=false) {
+
+	// 	const self = this
+
+	// 	// call generic common tool build
+	// 		const common_build = await component_common.prototype.build.call(this, autoload);
+
+	// 	// rqo
+	// 		// const generate_rqo = async function(){
+	// 		// 	// rqo_config. get the rqo_config from context
+	// 		// 	self.rqo_config	= self.context && self.context.request_config
+	// 		// 		? self.context.request_config.find(el => el.api_engine==='dedalo')
+	// 		// 		: {}
+	// 		// 	// rqo build
+	// 		// 	const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
+	// 		// 	const add_show	= false
+	// 		// 	self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
+	// 		// 	if(self.mode==='search') {
+	// 		// 		self.rqo.source.value = self.data.value
+	// 		// 	}
+	// 		// }
+	// 		// await generate_rqo()
+
+
+	// 	return common_build
+	// };//end build_custom
 
 
 

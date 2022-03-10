@@ -10,7 +10,9 @@
 		get_buttons,
 		add_events
 	} from './render_edit_component_check_box.js'
-
+	import {
+		render_edit_view_default
+	} from './render_edit_view_default.js'
 
 
 /**
@@ -35,7 +37,7 @@ render_edit_view_tools.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -59,12 +61,15 @@ render_edit_view_tools.render = async function(self, options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @return
+* GET_CONTENT_DATA
+* Render content_data node with all included contents
+* @param instance object self
+* @return DOM node content_data
 */
-const get_content_data_edit = function(self) {
+const get_content_data = function(self) {
 
-	const datalist = self.data.datalist || []
+	// shor vars
+		const datalist = self.data.datalist || []
 
 	const fragment = new DocumentFragment()
 
@@ -75,15 +80,15 @@ const get_content_data_edit = function(self) {
 			parent			: fragment
 		})
 
-		// build options
+		// input elements
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			const input_element = get_input_element_edit(i, datalist[i], self)
+			const input_element = get_input_element(i, datalist[i], self)
 			inputs_container.appendChild(input_element)
 		}
 
-	// buttons
-		const buttons_container = ui.create_dom_element({
+	// buttons_container
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons_container',
 			parent			: fragment
@@ -94,20 +99,20 @@ const get_content_data_edit = function(self) {
 			autoload : true
 		})
 
-		content_data.classList.add("nowrap")
+		// content_data.classList.add("nowrap")
 		content_data.appendChild(fragment)
 
 
 	return content_data
-};//end get_content_data_edit
+};//end get_content_data
 
 
 
 /**
-* GET_INPUT_ELEMENT_EDIT
+* GET_INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element_edit = (i, current_value, self) => {
+const get_input_element = (i, current_value, self) => {
 
 	const value				= self.data.value || []
 	const value_length		= value.length
@@ -144,13 +149,60 @@ const get_input_element_edit = (i, current_value, self) => {
 		const label_parts	= label.split(' | ')
 		const tool_label	= label_parts[0]
 		const tool_name		= label_parts[1]
-		const label_string	= (SHOW_DEBUG===true) ? tool_label + ` [${tool_name} - ${section_id}]` : tool_label
+		// const label_string	= (SHOW_DEBUG===true) ? tool_label + ` [${tool_name} - ${section_id}]` : tool_label
 		const option_label	= ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: label_string,
+			inner_html		: tool_label,
 			parent			: li
 		})
 		option_label.setAttribute("for", self.id +"_"+ i)
+
+	// developer_info
+		const developer_info = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'developer_info show_on_active',
+			text_content	: `[${tool_name} - ${section_id}]`,
+			parent			: li
+		})
+
+	// button_edit
+		const button_edit = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button edit show_on_active',
+			parent			: li
+		})
+		button_edit.addEventListener("click", function(e){
+			e.stopPropagation()
+			try {
+				// target_section
+					const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
+					const target_section_tipo = sqo.section_tipo[0].tipo
+					console.log("+++ sqo:",sqo);
+				// navigation
+					const user_navigation_options = {
+						source		: {
+							action			: 'search',
+							model			: 'section',
+							tipo			: target_section_tipo,
+							section_tipo	: target_section_tipo,
+							mode			: 'edit',
+							lang			: self.lang
+						},
+						sqo : {
+							section_tipo		: [{tipo : target_section_tipo}],
+							filter				: null,
+							limit				: 1,
+							filter_by_locators	: [{
+								section_tipo	: target_section_tipo,
+								section_id		: section_id
+							}]
+						}
+					}
+				event_manager.publish('user_navigation', user_navigation_options)
+			} catch (error) {
+				console.error(error)
+			}
+		})
 
 	// tool_icon
 		const icon_url = DEDALO_TOOLS_URL + '/' + tool_name + '/img/icon.svg'
@@ -162,6 +214,6 @@ const get_input_element_edit = (i, current_value, self) => {
 		li.prepend(tool_icon)
 
 	return li
-};//end get_input_element_edit
+};//end get_input_element
 
 

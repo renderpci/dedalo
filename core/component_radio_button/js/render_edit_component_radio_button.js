@@ -250,10 +250,34 @@ const get_buttons = (self) => {
 
 	// button edit
 		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool){
-			ui.create_dom_element({
+			const button_edit = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button edit',
 				parent 			: fragment
+			})
+			button_edit.addEventListener("click", function(e){
+				e.stopPropagation()
+				try {
+					// target_section
+						const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
+						const target_section_tipo = sqo.section_tipo[0].tipo
+					// navigation
+						const user_navigation_options = {
+							source		: {
+								action			: 'search',
+								model			: 'section',
+								tipo			: target_section_tipo,
+								section_tipo	: target_section_tipo,
+								mode			: 'list',
+								lang			: self.lang
+							},
+							sqo : sqo
+						}
+						console.log("user_navigation_options:",user_navigation_options);
+					event_manager.publish('user_navigation', user_navigation_options)
+				} catch (error) {
+					console.error(error)
+				}
 			})
 		}
 
@@ -331,15 +355,63 @@ const get_input_element_edit = (i, current_value, self) => {
 		}
 
 	// label
-		const label_string = (SHOW_DEBUG===true)
-			? label + ' [' + section_id + ']'
-			: label
+		// const label_string = (SHOW_DEBUG===true)
+		// 	? label + ' [' + section_id + ']'
+		// 	: label
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: label_string,
+			inner_html		: label,
 			parent			: li
 		})
 		input_label.setAttribute("for", input_id)
+
+	// developer_info
+		const developer_info = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'developer_info show_on_active',
+			text_content	: `[${section_id}]`,
+			parent			: li
+		})
+
+
+	// button_edit
+		const button_edit = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button edit show_on_active',
+			parent			: li
+		})
+		button_edit.addEventListener("click", function(e){
+			e.stopPropagation()
+			try {
+				// target_section
+					const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
+					const target_section_tipo = sqo.section_tipo[0].tipo
+					console.log("+++ sqo:",sqo);
+				// navigation
+					const user_navigation_options = {
+						source		: {
+							action			: 'search',
+							model			: 'section',
+							tipo			: target_section_tipo,
+							section_tipo	: target_section_tipo,
+							mode			: 'edit',
+							lang			: self.lang
+						},
+						sqo : {
+							section_tipo		: [{tipo : target_section_tipo}],
+							filter				: null,
+							limit				: 1,
+							filter_by_locators	: [{
+								section_tipo	: target_section_tipo,
+								section_id		: section_id
+							}]
+						}
+					}
+				event_manager.publish('user_navigation', user_navigation_options)
+			} catch (error) {
+				console.error(error)
+			}
+		})
 
 
 	return li
