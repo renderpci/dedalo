@@ -179,24 +179,41 @@ const build_widget = (item, self) => {
 						// spinner
 						const spinner = ui.create_dom_element({
 							element_type	: 'div',
-							class_name		: "spinner",
-							parent			: body_response
+							class_name		: "spinner"
 						})
+						body_response.prepend(spinner)
 
 						// data_manager
-						const api_response = await data_manager.prototype.request({
-							body : {
+							// const api_response = await data_manager.prototype.request({
+							// 	body : {
+							// 		dd_api	: item.trigger.dd_api,
+							// 		action	: item.trigger.action,
+							// 		options	: item.trigger.options
+							// 	}
+							// })
+							// print_response(body_response, api_response)
+							// widget_info.classList.remove("lock")
+							// spinner.remove()
+
+						// delegates get_children task to worker. When finish, create global radio for current area
+							const current_worker = new Worker('../area_development/js/worker.js', {
+								type : 'module'
+							});
+							current_worker.postMessage({
+								url		: DEDALO_CORE_URL + '/api/v1/json/',
 								dd_api	: item.trigger.dd_api,
 								action	: item.trigger.action,
 								options	: item.trigger.options
+							});
+							current_worker.onmessage = function(e) {
+								const api_response = e.data.api_response
+
+								print_response(body_response, api_response)
+								widget_info.classList.remove("lock")
+								spinner.remove()
+
+								current_worker.terminate()
 							}
-						})
-						// console.log("api_response:",api_response);
-
-						print_response(body_response, api_response)
-
-						widget_info.classList.remove("lock")
-						spinner.remove()
 					})
 			}//end if (item.info) {
 
@@ -349,9 +366,9 @@ export const build_form = function(widget_object) {
 					// spinner
 					const spinner = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: "spinner",
-						parent			: body_response
+						class_name		: "spinner"
 					})
+					body_response.prepend(spinner)
 
 					// collect values from inputs
 					const values = input_nodes.map((el)=>{
@@ -366,18 +383,37 @@ export const build_form = function(widget_object) {
 						: values
 
 					// data_manager
-					const api_response = await data_manager.prototype.request({
-						body : {
+						// const api_response = await data_manager.prototype.request({
+						// 	body : {
+						// 		dd_api	: widget_object.trigger.dd_api,
+						// 		action	: widget_object.trigger.action,
+						// 		options	: options
+						// 	}
+						// })
+						// print_response(body_response, api_response)
+						// form_container.classList.remove("lock")
+						// spinner.remove()
+
+					// delegates get_children task to worker. When finish, create global radio for current area
+						const current_worker = new Worker('../area_development/js/worker.js', {
+							type : 'module'
+						});
+						current_worker.postMessage({
+							url		: DEDALO_CORE_URL + '/api/v1/json/',
 							dd_api	: widget_object.trigger.dd_api,
 							action	: widget_object.trigger.action,
 							options	: options
+						});
+						current_worker.onmessage = function(e) {
+							const api_response = e.data.api_response
+
+							print_response(body_response, api_response)
+
+							form_container.classList.remove("lock")
+							spinner.remove()
+
+							current_worker.terminate()
 						}
-					})
-
-					print_response(body_response, api_response)
-
-					form_container.classList.remove("lock")
-					spinner.remove()
 			}
 		})
 
