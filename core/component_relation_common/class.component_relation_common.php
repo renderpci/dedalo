@@ -1436,7 +1436,7 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 			$new_dato[] = $locator;
-			
+
 		// get the inverse references
 			//old way done in relations table
 				// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
@@ -1962,7 +1962,7 @@ class component_relation_common extends component_common {
 							foreach ($dato as $current_record) {
 
 								$section = section::get_instance($current_record->section_id, $current_record->section_tipo, 'list', $cache=true);
-								
+
 								// inject datos to section and set as loaded
 								$datos = $current_record->datos ?? null;
 								if (!is_null($datos)) {
@@ -1984,7 +1984,7 @@ class component_relation_common extends component_common {
 										$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
 										if (!empty($section_modelo_name)) {
 											$ar_section_tipo[] = $current_section_tipo;
-										}										
+										}
 									}
 								}
 							}//end foreach ($dato as $current_record)
@@ -2012,28 +2012,48 @@ class component_relation_common extends component_common {
 		$ar_fixed_filter = [];
 
 		foreach ($ar_fixed as $search_item) {
-			
-			$operator = $search_item->operator ?? '$or';
-			
+
+			$operator	= $search_item->operator ?? '$or';
+			$source		= $search_item->source;
+
 			$dato_filter = new stdClass();
 				$dato_filter->{$operator} = [];
 
-			switch ($search_item->source) {
-				
+			switch ($source) {
+
 				case 'fixed_dato':
+					// sample (qdp449)
+					// {
+					// 	"value": [
+					// 		{
+					// 		"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"hierarchy24"},
+					// 		"path": [
+					// 		{
+					// 			"name": "Usable in indexing",
+					// 			"modelo": "component_radio_button",
+					// 			"section_tipo": "hierarchy20",
+					// 			"component_tipo": "hierarchy24"
+					// 		}
+					// 	],
+					// 		"q_operator": null
+					// 	}
+					// 	],
+					// 	"source": "fixed_dato"
+					// }
 					foreach ($search_item->value as $object) {
-						foreach ($object->q->value as $q_value) {
-							$filter_item = new stdClass();
-								$filter_item->q		= '';
-								$filter_item->path	= [];
-							foreach ($object->f_path as $key => $value) {
-								if($key % 2 ===0){
-									$filter_item->path[] = search::get_query_path($value, $object->f_path[$key+1],false,false)[0];
-								}
-							}
-							$filter_item->q = $q_value;
-							$dato_filter->{$operator}[] =  $filter_item;
-						}
+						// foreach ($object->q->value as $q_value) {
+						// 	$filter_item = new stdClass();
+						// 		$filter_item->q		= '';
+						// 		$filter_item->path	= [];
+						// 	foreach ($object->f_path as $key => $value) {
+						// 		if($key % 2 ===0){
+						// 			$filter_item->path[] = search::get_query_path($value, $object->f_path[$key+1],false,false)[0];
+						// 		}
+						// 	}
+						// 	$filter_item->q = $q_value;
+						// 	$dato_filter->{$operator}[] =  $filter_item;
+						// }
+						$dato_filter->{$operator}[] = $object;
 					}
 					break;
 
