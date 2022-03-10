@@ -5,8 +5,11 @@
 
 // configuration vars
 	$tipo			= $this->get_tipo();
-	$permissions	= common::get_permissions($tipo, $tipo);
 	$modo			= $this->get_modo();
+	$permissions	= common::get_permissions($tipo, $tipo);
+	if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO && $permissions>1) {
+		$permissions = 1;
+	}
 
 
 

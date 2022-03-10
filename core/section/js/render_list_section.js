@@ -260,7 +260,7 @@ render_list_section.render_column_id = function(options){
 					})
 
 				// button edit (pen)
-					if (permissions>0) {
+					if (permissions>1) {
 						const edit_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button edit',
@@ -377,7 +377,7 @@ render_list_section.render_column_id = function(options){
 			case (self.config && self.config.source_model==='section_tool'):
 
 				// edit button (pen)
-					if (self.permissions>0) {
+					if (self.permissions>1) {
 						const edit_button = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: '',
@@ -411,31 +411,33 @@ render_list_section.render_column_id = function(options){
 			default:
 
 				// edit button (pen)
-					const edit_button = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button edit',
-						parent			: fragment
-					})
-					edit_button.addEventListener("click", function(){
-						const user_navigation_rqo = {
-							caller_id	: self.id,
-							source		: {
-								action			: 'search',
-								model			: 'section',
-								tipo			: section_tipo,
-								section_tipo	: section_tipo,
-								mode			: 'edit',
-								lang			: self.lang
-							},
-							sqo : {
-								section_tipo	: [{tipo : section_tipo}],
-								limit			: 1,
-								offset			: offset,
-								filter			: self.rqo.sqo.filter || null
+					if (self.permissions>1) {
+						const edit_button = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button edit',
+							parent			: fragment
+						})
+						edit_button.addEventListener("click", function(){
+							const user_navigation_rqo = {
+								caller_id	: self.id,
+								source		: {
+									action			: 'search',
+									model			: 'section',
+									tipo			: section_tipo,
+									section_tipo	: section_tipo,
+									mode			: 'edit',
+									lang			: self.lang
+								},
+								sqo : {
+									section_tipo	: [{tipo : section_tipo}],
+									limit			: 1,
+									offset			: offset,
+									filter			: self.rqo.sqo.filter || null
+								}
 							}
-						}
-						event_manager.publish('user_navigation', user_navigation_rqo)
-					})
+							event_manager.publish('user_navigation', user_navigation_rqo)
+						})
+					}
 
 				// remove button
 					const button_delete = self.context.buttons
