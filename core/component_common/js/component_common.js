@@ -403,9 +403,35 @@ component_common.prototype.save = async function(changed_data) {
 				console.error("+++++ Invalid changed_data [stop save]:", changed_data)
 				console.trace()
 			}
+			const msg = "Error on save. changed_data is undefined!"
 			alert("Error on save. changed_data is undefined!")
+
+			// dispatch event save
+				event_manager.publish('save', {
+					instance		: self,
+					api_response	: null,
+					msg				: msg
+				})
 			return false
 		}
+
+	// check data is changed
+		if (changed_data.action==='update') {
+			const original_value	= self.db_data.value[changed_data.key]
+			const new_value			= changed_data.value
+			// console.log("original_value:", original_value, new_value, new_value==original_value);
+			if (new_value==original_value) {
+				// dispatch event save
+					event_manager.publish('save', {
+						instance		: self,
+						api_response	: null,
+						msg				: get_label.dato_no_modificado || 'The data was not modified. Canceled save'
+					})
+
+				return false
+			}
+		}
+
 
 	// remove previous success/error css class if exists
 		self.node.map(item => {
