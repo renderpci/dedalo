@@ -463,16 +463,16 @@ export const render_component_info = function(self, component) {
 
 	// value
 		// label
-		ui.create_dom_element({
+		const value_label_node = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'key wide',
+			class_name		: 'key wide icon_arrow',
 			inner_html		: get_label.dato || 'Data',
 			parent			: fragment
 		})
 		// value
 		const value_node = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'value wide code',
+			class_name		: 'value wide code hide',
 			// text_content	: value,
 			text_content	: 'Parsing data..',
 			parent			: fragment
@@ -485,6 +485,22 @@ export const render_component_info = function(self, component) {
 			value_node.innerHTML = ''
 			value_node.insertAdjacentHTML('afterbegin', value)
 		}, 50)
+
+		// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: value_label_node,
+			content_data		: value_node,
+			collapsed_id		: 'inspector_component_value',
+			collapse_callback	: collapse,
+			expose_callback		: expose,
+			default_state		: 'closed'
+		})
+		function collapse() {
+			value_label_node.classList.remove('up')
+		}
+		function expose() {
+			value_label_node.classList.add('up')
+		}
 
 
 	// clean container
@@ -886,7 +902,8 @@ const render_activity_info = function(self) {
 		function fn_saved(options){
 			// options
 				const instance		= options.instance
-				const api_response	= options.api_response
+				const api_response	= options.api_response // object or null
+				const event_msg		= options.msg
 
 			// node_info. create temporal node info
 				const node_info = ui.create_dom_element({
@@ -900,29 +917,40 @@ const render_activity_info = function(self) {
 				})
 
 			// msg. Based on API response result
-				if (api_response.result===false) {
-					node_info.classList.add('error')
-					const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
-					node_info.insertAdjacentHTML('afterbegin', text)
-					// error msg
-						const msg = []
-						if (api_response.error) {
-							msg.push(api_response.error)
-						}
-						if (api_response.msg) {
-							msg.push(api_response.msg)
-						}
-						if (msg.length>0) {
-							node_info.insertAdjacentHTML('beforeend', '<br>' + msg.join('<br>') )
-						}
+				if(api_response) {
+					if (api_response.result===false) {
+						node_info.classList.add('error')
+						const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
+						node_info.insertAdjacentHTML('afterbegin', text)
+						// error msg
+							const msg = []
+							if (api_response.error) {
+								msg.push(api_response.error)
+							}
+							if (api_response.msg) {
+								msg.push(api_response.msg)
+							}
+							if (msg.length>0) {
+								node_info.insertAdjacentHTML('beforeend', '<br>' + msg.join('<br>') )
+							}
+					}else{
+						node_info.classList.add('ok')
+						const text = `${instance.label} ${get_label.guardado || 'Saved'}`
+						node_info.insertAdjacentHTML('afterbegin', text)
+						setTimeout(function(){
+							node_info.remove()
+						}, 15000)
+					}
 				}else{
-					node_info.classList.add('ok')
-					const text = `${instance.label} ${get_label.guardado || 'Saved'}`
+					// saved false case
+					node_info.classList.add('warning')
+					const text = `${event_msg} <br>${instance.label}`
 					node_info.insertAdjacentHTML('afterbegin', text)
 					setTimeout(function(){
 						node_info.remove()
-					}, 15000)
+					}, 30000)
 				}
+
 		}
 
 	// track collapse toggle state of content
