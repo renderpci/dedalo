@@ -1864,6 +1864,8 @@ abstract class component_common extends common {
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
 	* Sección/es de la que se alimenta de registros el portal/autocomplete. No confundir con la sección en la que está el portal
+	* @return array ar_target_section_tipo
+	* 	Array of string like ['dd153']
 	*/
 	public function get_ar_target_section_tipo() {
 
@@ -1897,7 +1899,7 @@ abstract class component_common extends common {
 			if(SHOW_DEBUG===true) {
 				if ( empty($ar_target_section_tipo)) {
 					$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
-					throw new Exception("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo", 1);
+					trigger_error("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo");
 				}
 			}
 

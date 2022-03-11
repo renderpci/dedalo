@@ -183,7 +183,7 @@ class menu extends common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=1, $add_rqo=false) {
+	public function get_structure_context($permissions=1, $add_rqo=false, $fallback=false) {
 
 		// short vars
 			$tipo	= $this->get_tipo();

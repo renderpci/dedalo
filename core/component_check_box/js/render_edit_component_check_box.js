@@ -191,44 +191,45 @@ export const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// button edit
-		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool){
-			const button_edit = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button edit',
-				parent 			: fragment
-			})
-			button_edit.addEventListener("click", function(e){
-				e.stopPropagation()
-				try {
-					// target_section
-						const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
-						const target_section_tipo = sqo.section_tipo[0].tipo
-					// navigation
-						const user_navigation_options = {
-							source		: {
-								action			: 'search',
-								model			: 'section',
-								tipo			: target_section_tipo,
-								section_tipo	: target_section_tipo,
-								mode			: 'list',
-								lang			: self.lang
-							},
-							sqo : sqo
+	// button edit (go to target section)
+		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
+
+			const target_sections			= self.context.target_sections
+			const target_sections_length	= target_sections.length
+			for (let i = 0; i < target_sections_length; i++) {
+
+				const item = target_sections[i]
+
+				const label = (SHOW_DEBUG===true)
+					? `${item.label} [${item.tipo}]`
+					: item.label
+
+				const button_edit = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button edit',
+					title			: label,
+					parent			: fragment
+				})
+				button_edit.addEventListener("click", function(e){
+					e.stopPropagation()
+					// navigate link
+					event_manager.publish('user_navigation', {
+						source : {
+							tipo	: item.tipo,
+							model	: 'section',
+							mode	: 'list'
 						}
-					event_manager.publish('user_navigation', user_navigation_options)
-				} catch (error) {
-					console.error(error)
-				}
-			})
+					})
+				})
+			}
 		}
 
 	// button reset
 		if(mode==='edit' || mode==='edit_in_list'){// && !is_inside_tool){
 			ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button reset',
-				parent 			: fragment
+				class_name		: 'button reset',
+				parent			: fragment
 			})
 		}
 

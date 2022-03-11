@@ -1304,7 +1304,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=0, $add_request_config=false) {
+	public function get_structure_context($permissions=0, $add_request_config=false, $callback=false) {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		// short vars
@@ -1505,7 +1505,6 @@ abstract class common {
 					$dd_object->search_operators_info	= $this->search_operators_info();
 					$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
 				}
-
 			// view, used only by portals
 				// if($model==='component_portal' || strpos($model, 'component_relation_')===0 || $model==='component_semantic_node'){
 					$dd_object->view = $this->get_view();
@@ -1516,6 +1515,10 @@ abstract class common {
 					$dd_object->time_machine_list	= $this->get_time_machine_list();
 				}
 
+		// callback
+			if ($callback!==false) {
+				$callback($dd_object);
+			}
 
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
