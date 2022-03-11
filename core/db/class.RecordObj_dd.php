@@ -415,6 +415,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 			elseif ($model==='section_group_div') {
 				$model='section_group';
 			}
+			elseif ($model==='tab') {
+				$model='section_tab';
+			}
 			elseif ($model==='component_relation_struct') {
 				$model='component_relation_index';
 			}

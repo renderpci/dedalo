@@ -2770,6 +2770,48 @@ li .reset_input select {
   align-content: stretch;
   flex-wrap: wrap;
 }
+.section_tab > .tab_label {
+  display: inline-block;
+  margin: 0;
+  font-weight: 600;
+  text-align: center;
+  color: #bbb;
+  border: 1px solid transparent;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  top: 1px;
+  position: relative;
+  padding: 0.5rem;
+  padding-left: 1.33rem;
+  padding-right: 1.33rem;
+}
+.section_tab > .tab_label:before {
+  margin-right: 10px;
+}
+.section_tab > .tab_label:hover {
+  color: #888;
+  cursor: pointer;
+}
+.section_tab > .tab_label.active {
+  color: #555;
+  border: 1px solid #ddd;
+  border-top: 2px solid orange;
+  border-bottom: 1px solid #ffffff;
+  background-color: rgba(249, 249, 249, 0.65);
+  background-color: #ffffff;
+  z-index: 1;
+  margin-bottom: 0;
+}
+.section_tab > .tab {
+  display: none;
+  width: 100%;
+}
+.section_tab > .tab.active {
+  display: table;
+}
 .wrapper_component {
   position: relative;
   margin: 0;
@@ -4787,7 +4829,7 @@ ul.branch {
   vertical-align: text-top;
 }
 .wrapper_component > .content_data ul > li input {
-  margin-right: 0.5em;
+  margin-right: 0.33em;
 }
 .wrapper_component > .content_data ul > li > input.q_operator {
   width: 3em;

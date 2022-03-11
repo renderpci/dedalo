@@ -974,6 +974,70 @@
 
 
 
+// section_tab
+	.section_tab {
+
+		// tab headers
+		>.tab_label {
+			display: inline-block;
+			margin: 0;
+			font-weight: 600;
+			text-align: center;
+			color: #bbb;
+			border: 1px solid transparent;
+			-webkit-user-select: none;
+			-khtml-user-select: none;
+			-moz-user-select: none;
+			-o-user-select: none;
+			user-select: none;
+			top: 1px;
+			position: relative;
+			padding: 0.5rem;
+			padding-left: 1.33rem;
+			padding-right: 1.33rem;
+
+			&:before {
+				//font-family: fontawesome;
+				//font-weight: normal;
+				margin-right: 10px;
+			}
+
+			&:hover {
+				color: #888;
+				cursor: pointer;
+			}
+
+			&.active {
+				color: #555;
+				border: 1px solid #ddd;
+				border-top: 2px solid orange;
+				border-bottom: 1px solid #ffffff;
+				background-color: rgba(249,249,249,0.65);
+				background-color: #ffffff;
+				z-index: 1;
+				margin-bottom: 0;
+
+			}
+		}
+
+		// tab content
+		>.tab {
+			//background-color: #A3E1BF;
+			display: none;
+			// padding-top: 5px;
+			// border: 1px solid #ddd;
+			// background-color: rgba(249,249,249,0.65);
+			width: 100%;
+
+			&.active {
+				display: table;
+				// padding-top: 2px;
+			}
+		}
+	}
+
+
+
 // component
 	.wrapper_component {
 		// base config
@@ -2636,7 +2700,7 @@
 				}
 
 				input {
-					margin-right: 0.5em;
+					margin-right: 0.33em;
 				}
 
 				// q_operator
