@@ -1,16 +1,16 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
 
 // import
 	// import {event_manager} from '../../common/js/event_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {get_instance} from '../../common/js/instances.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
 	import {render_time_machine_list} from './render_time_machine_list.js'
 	import {render_time_machine_list_view} from './render_time_machine_list_view.js'
-
+	// import {service_time_machine} from '../../services/service_time_machine/js/service_time_machine.js'
 
 
 /**
@@ -87,27 +87,32 @@ time_machine_list.prototype.build = async function(autoload=true){
 	// status update
 		self.status = 'building'
 
-	// time_machine
-	// Create, build and assign the time machine service to the instance
-		self.time_machine	= await get_instance({
-			model			: 'time_machine',
+	// time_machine. Create, build and assign the time machine service to the instance
+		self.time_machine = await get_instance({
+			// model		: 'time_machine',
+			model			: 'service_time_machine',
 			section_tipo	: self.section_tipo,
 			section_id		: self.section_id,
 			tipo			: self.section_tipo,
-			mode 			: 'tm',
+			mode			: 'tm',
 			lang			: page_globals.dedalo_data_nolan,
 			caller			: self,
-			id_variant		: self.model
+			id_variant		: self.model,
+			direct_path		: '../../services/service_time_machine/js/service_time_machine.js'
 		})
+
+	// assign our view render (as callback render function to 'time_machine' instance)
 		self.time_machine.view = render_time_machine_list_view
 
-	await self.time_machine.build(true)
+	// build
+		await self.time_machine.build(true)
 
 	// add to self instances list
 		self.ar_instances.push(self.time_machine)
 
 	// status update
 		self.status = 'builded'
+
 
 	return true
 };//end build
