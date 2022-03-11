@@ -1,25 +1,23 @@
-/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL*/
+/*global page_globals, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
 
 // import
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-	// import {get_instance} from '../../../core/common/js/instances.js'
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {common, get_columns_map} from '../../../core/common/js/common.js'
-	import {paginator} from '../../paginator/js/paginator.js'
-	import {render_time_machine} from './render_time_machine.js'
-
+	import {event_manager} from '../../../../core/common/js/event_manager.js'
+	// import {get_instance} from '../../../../core/common/js/instances.js'
+	import {clone, dd_console} from '../../../../core/common/js/utils/index.js'
+	import {data_manager} from '../../../../core/common/js/data_manager.js'
+	import {common, get_columns_map} from '../../../../core/common/js/common.js'
+	import {paginator} from '../../../paginator/js/paginator.js'
 
 
 
 /**
-* TIME_MACHINE
-* Tool to translate contents from one language to other in any text component
+* SERVICE_TIME_MACHINE
+*   Time machine data logic service. Dot use to render !
 */
-export const time_machine = function () {
+export const service_time_machine = function () {
 
 	this.id					= null
 	this.model				= null
@@ -34,32 +32,31 @@ export const time_machine = function () {
 	this.caller				= null
 
 	return true
-};//end time_machine
+};//end service_time_machine
 
 
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* extend element functions from common
 */
 // prototypes assign
-	time_machine.prototype.render				= common.prototype.render
-	time_machine.prototype.refresh				= common.prototype.refresh
-	time_machine.prototype.destroy				= common.prototype.destroy
-	time_machine.prototype.build_rqo_show		= common.prototype.build_rqo_show
-	time_machine.prototype.tm					= render_time_machine.prototype.tm
-	// time_machine.prototype.get_columns_map	= common.prototype.get_columns_map
+	service_time_machine.prototype.render			= common.prototype.render
+	service_time_machine.prototype.refresh			= common.prototype.refresh
+	service_time_machine.prototype.destroy			= common.prototype.destroy
+	service_time_machine.prototype.build_rqo_show	= common.prototype.build_rqo_show
+
 
 
 /**
 * INIT
 */
-time_machine.prototype.init = function(options) {
-	// console.log("time_machine INIT options:",options);
+service_time_machine.prototype.init = function(options) {
+	// console.log("service_time_machine INIT options:",options);
 
 	const self = this
 
-	self.model			= options.model || 'time_machine'
+	self.model			= options.model || 'service_time_machine'
 	self.tipo			= options.tipo
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
@@ -97,9 +94,11 @@ time_machine.prototype.init = function(options) {
 * @return promise
 *	bool true
 */
-time_machine.prototype.build = async function(autoload=false) {
+service_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
+
+	console.log("===================== 1 build service_time_machine:",self);
 
 	// console.log("self.prototype:",self);
 	// self.build_rqo_show	= common.prototype.build_rqo_show
@@ -139,7 +138,7 @@ time_machine.prototype.build = async function(autoload=false) {
 				const api_response = await current_data_manager.request({body:self.rqo})
 				if(SHOW_DEVELOPER===true) {
 
-					dd_console("TIME_MACHINE api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug ? api_response.debug.exec_time : '']);
+					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug ? api_response.debug.exec_time : '']);
 				}
 
 			// set the result to the datum
@@ -218,11 +217,11 @@ time_machine.prototype.build = async function(autoload=false) {
 
 /**
 * BUILD_CONTEXT
-* Build a new time_machine custom request config based on caller requirements
+* Build a new service_time_machine custom request config based on caller requirements
 * Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
 * Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
 */
-time_machine.prototype.build_context = function() {
+service_time_machine.prototype.build_context = function() {
 
 	const self = this
 
@@ -302,7 +301,7 @@ time_machine.prototype.build_context = function() {
 			}
 		}else{
 			ddo_map.push({
-				tipo			: 'dd1574',
+				tipo			: 'dd1574', // generic tm info ontology item 'Value'
 				type			: 'component',
 				typo			: 'ddo',
 				model			: 'component_input_text',
@@ -364,7 +363,30 @@ time_machine.prototype.build_context = function() {
 			request_config	: request_config
 		}
 
+
 	return context
 };//end build_context
+
+
+
+/**
+* TM (render callback manager)
+* Chose the view render module to generate DOM nodes
+* @param object options
+* @return DOM node wrapper | null
+*/
+service_time_machine.prototype.tm = async function(options) {
+
+	const self = this
+
+	// view (is injected by the caller)
+		const view	= self.view || null
+		if (!view) {
+			console.error("Error. self view is not defined:", self);
+			return false
+		}
+
+	return self.view(self, options)
+};//end tm
 
 

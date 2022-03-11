@@ -115,7 +115,6 @@ const content_data_edit = async function(self) {
 		// set
 		self.preview_component_container = preview_component_container
 
-
 	// tool_bar
 		const tool_bar = ui.create_dom_element({
 			element_type	: 'div',
@@ -123,37 +122,36 @@ const content_data_edit = async function(self) {
 			parent			: fragment
 		})
 		// lang selector
-		console.log("self.main_component:",self.main_component);
-			if (self.main_component.lang!=='lg-nolan') {
+		if (self.main_component.lang!=='lg-nolan') {
 
-				// label
-				ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: get_label.idioma,
-					parent			: tool_bar
-				})
-				// selector
-				const select_lang = ui.build_select_lang({
-					langs		: self.langs,
-					selected	: self.lang,
-					class_name	: '',
-					action		: on_change_select
-				})
-				function on_change_select(e) {
-					const lang = e.target.value
-					if (lang!==self.lang) {
-						self.lang					= lang
-						self.main_component.lang	= lang
-						self.refresh()
-					}
+			// label
+			ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: get_label.idioma,
+				parent			: tool_bar
+			})
+			// selector
+			const select_lang = ui.build_select_lang({
+				langs		: self.langs,
+				selected	: self.lang,
+				class_name	: '',
+				action		: on_change_select
+			})
+			function on_change_select(e) {
+				const lang = e.target.value
+				if (lang!==self.lang) {
+					self.lang					= lang
+					self.main_component.lang	= lang
+					self.refresh()
 				}
-				tool_bar.appendChild(select_lang)
 			}
+			tool_bar.appendChild(select_lang)
+		}
 
 		// button apply
 			self.button_apply = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning button_apply hide',
+				class_name		: 'warning button_apply lock',
 				inner_html		: get_label.aplicar_y_salvar || 'Apply and save',
 				parent			: tool_bar
 			})
@@ -166,10 +164,7 @@ const content_data_edit = async function(self) {
 		// 	parent 			: fragment
 		// })
 
-	// section list
-		// const section		= await self.load_section()
-		// const section_node	= await section.render()
-		// fragment.appendChild(section_node)
+	// section list. Call time machine service render callback
 		const time_machine_node	= await self.time_machine.render()
 		fragment.appendChild(time_machine_node)
 
@@ -179,7 +174,6 @@ const content_data_edit = async function(self) {
 		// 	class_name 		: 'buttons_container',
 		// 	parent 			: components_container
 		// })
-
 
 	// content_data
 		const content_data = document.createElement("div")

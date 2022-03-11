@@ -54,13 +54,14 @@ render_time_machine_list.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
-* Rendered by time_machine using function from render_time_machine_list view)
+* Rendered by time_machine using callback function from render_time_machine_list view)
 * @return DOM node content_data
 */
 const get_content_data = async function(self) {
 
-	// content_data
+	// content_data. Call time machine service render callback
 		const content_data	= await self.time_machine.render()
+
 
 	return content_data
 };//end get_content_data

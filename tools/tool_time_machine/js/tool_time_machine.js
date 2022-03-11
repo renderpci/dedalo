@@ -51,11 +51,11 @@ export const tool_time_machine = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_time_machine.prototype.refresh				= common.prototype.refresh
-	tool_time_machine.prototype.render				= common.prototype.render
-	tool_time_machine.prototype.destroy				= common.prototype.destroy
+	tool_time_machine.prototype.refresh	= common.prototype.refresh
+	tool_time_machine.prototype.render	= common.prototype.render
+	tool_time_machine.prototype.destroy	= common.prototype.destroy
+	tool_time_machine.prototype.edit	= render_tool_time_machine.prototype.edit
 
-	tool_time_machine.prototype.edit				= render_tool_time_machine.prototype.edit
 
 
 /**
@@ -84,7 +84,7 @@ tool_time_machine.prototype.init = async function(options) {
 			// fix selected matrix_id
 			self.selected_matrix_id = matrix_id
 			// show Apply button
-			self.button_apply.classList.remove('hide')
+			self.button_apply.classList.remove('hide','lock')
 		}//end fn_tm_edit_record
 
 
@@ -95,6 +95,9 @@ tool_time_machine.prototype.init = async function(options) {
 
 /**
 * BUILD (CUSTOM)
+* @param bool autoload
+* 	callback function 'load_ddo_map'
+* @return promise bool
 */
 tool_time_machine.prototype.build = async function(autoload=false) {
 
@@ -109,8 +112,9 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	// time_machine
 	// Create, build and assign the time machine service to the instance
-		self.time_machine	= await get_instance({
-			model			: 'time_machine',
+		self.time_machine = await get_instance({
+			// model		: 'time_machine',
+			model			: 'service_time_machine',
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
 			tipo			: self.main_component.tipo,
@@ -118,15 +122,19 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			lang			: page_globals.dedalo_data_nolan,
 			main_component	: self.main_component,
 			caller			: self,
-			id_variant		: self.model
+			id_variant		: self.model,
+			direct_path		: '../../services/service_time_machine/js/service_time_machine.js'
 		})
-		// assign the render view function
+
+	// assign the render view function
 		self.time_machine.view = render_time_machine_view
 
-	await self.time_machine.build(true)
+	// build
+		await self.time_machine.build(true)
 
 	// add to self instances list
 		self.ar_instances.push(self.time_machine)
+
 
 	return common_build
 };//end build_custom
