@@ -45,26 +45,26 @@ render_section_group.prototype.edit = async function(options) {
 
 	// content data state. Needed to prevent blink components show on page load
 		const ui_status = await data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
-		// .then(function(ui_status){
-			if (!ui_status) {
-				content_data.classList.remove('hide')
-			}
-		// })
+		if (!ui_status) {
+			content_data.classList.remove('hide')
+		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	get_wrapper(self)
-			  wrapper.content_data = content_data // used in section_group selection
+		// set wrapper content data property (used as grouper selector from section_record)
+		wrapper.content_data = content_data
 
 	// header (label)
 		if (self.context.add_label===false) {
 			wrapper.classList.add('no_margin')
 		}else{
+
 			const component_label = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'icon_arrow' + (!ui_status ? ' up' : ''),
 				inner_html		: self.label + ' ' + self.tipo + ' ' + (self.model) + ' [' + self.permissions + ']'
 			})
-			// css
+			// CSS
 				const element_css = self.context.css || {}
  				const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 				const ar_css = ['label', ...label_structure_css]
@@ -91,8 +91,6 @@ render_section_group.prototype.edit = async function(options) {
 
 	// content_data
 		wrapper.appendChild(content_data)
-
-
 
 
 	return wrapper
@@ -153,14 +151,5 @@ const get_content_data = function(self) {
 
 	return content_data
 };//end get_content_data
-
-
-
-/**
-* LIST
-* Render node for use in list
-* @return DOM node
-*/
-// render_section_group.prototype.list = render_section_group.prototype.edit
 
 
