@@ -291,12 +291,38 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// button edit
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button edit',
-			parent 			: fragment
-		})
+	// button edit (go to target section)
+		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
+
+			const target_sections			= self.context.target_sections
+			const target_sections_length	= target_sections.length
+			for (let i = 0; i < target_sections_length; i++) {
+
+				const item = target_sections[i]
+
+				const label = (SHOW_DEBUG===true)
+					? `${item.label} [${item.tipo}]`
+					: item.label
+
+				const button_edit = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button edit',
+					title			: label,
+					parent			: fragment
+				})
+				button_edit.addEventListener("click", function(e){
+					e.stopPropagation()
+					// navigate link
+					event_manager.publish('user_navigation', {
+						source : {
+							tipo	: item.tipo,
+							model	: 'section',
+							mode	: 'list'
+						}
+					})
+				})
+			}
+		}
 
 	// button reset
 		ui.create_dom_element({

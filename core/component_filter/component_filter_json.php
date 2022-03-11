@@ -4,8 +4,8 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
 
 
 
@@ -16,13 +16,29 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$item_context = $this->get_structure_context_simple($permissions);
 				break;
 
 			default:
-				$context[] = $this->get_structure_context($permissions);
+				$item_context = $this->get_structure_context(
+					$permissions,
+					false, // add_request_config
+					$fallback = function($dd_object) {
+						// add target_sections to the context
+						$dd_object->set_target_sections(
+							array_map(function($tipo) {
+								return [
+									'tipo'	=> $tipo,
+									'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
+								];
+							}, $this->get_ar_target_section_tipo())
+						);
+					}
+				);
 				break;
 		}
+
+		$context[] = $item_context;
 	}//end if($options->get_context===true)
 
 
@@ -32,28 +48,28 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		// Value
-		switch ($modo) {
-			case 'list':
-				$value = $this->get_valor(null,'array');
-				break;
-			case 'edit':
-			default:
-				$value = $this->get_dato();
-				$datalist = $this->get_datalist();
-				break;
-		}
+		// value
+			switch ($modo) {
+				case 'list':
+					$value = $this->get_valor(null,'array');
+					break;
+
+				case 'edit':
+				default:
+					$value		= $this->get_dato();
+					$datalist	= $this->get_datalist();
+					break;
+			}
 
 		// data item
-		$item = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
 
 		// datalist
-		if (isset($datalist)) {
-			$item->datalist = $datalist;
-		}
+			if (isset($datalist)) {
+				$item->datalist = $datalist;
+			}
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

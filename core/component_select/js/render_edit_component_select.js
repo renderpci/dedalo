@@ -196,19 +196,14 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// button go to target section
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+	// button edit (go to target section)
+		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
 
-			const target_section = self.data.target_section && self.data.target_section.length>0
-				? self.data.target_section
-				: []
-			const target_section_lenght	= target_section.length
-			// sort section by label asc
-				target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+			const target_sections			= self.context.target_sections
+			const target_sections_length	= target_sections.length
+			for (let i = 0; i < target_sections_length; i++) {
 
-			for (let i = 0; i < target_section_lenght; i++) {
-
-				const item = target_section[i]
+				const item = target_sections[i]
 
 				const label = (SHOW_DEBUG===true)
 					? `${item.label} [${item.tipo}]`
@@ -220,15 +215,16 @@ const get_buttons = (self) => {
 					title			: label,
 					parent			: fragment
 				})
-				button_edit.addEventListener("click", function(){
+				button_edit.addEventListener("click", function(e){
+					e.stopPropagation()
 					// navigate link
-						event_manager.publish('user_navigation', {
-							source : {
-								tipo	: item.tipo,
-								model	: 'section',
-								mode	: 'list'
-							}
-						})
+					event_manager.publish('user_navigation', {
+						source : {
+							tipo	: item.tipo,
+							model	: 'section',
+							mode	: 'list'
+						}
+					})
 				})
 			}
 		}
