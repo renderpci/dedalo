@@ -1,93 +1,111 @@
+/*global get_label, page_globals, SHOW_DEBUG*/
+/*eslint no-undef: "error"*/
+
+
+
+// imports
+	// import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {common} from '../../common/js/common.js'
+	// import {component_common} from '../../component_common/js/component_common.js'
+	import {render_section_tab} from './render_section_tab.js'
+
+
+
 /**
-* SECTION_TABS
-*
-*
-*
+* SECTION_tab
 */
-var section_tabs = new function() {
+export const section_tab = function(){
 
-	'use strict';
+	this.id				= null
 
+	// element properties declare
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
+	this.context		= null
+	this.parent			= null
+	this.type			= null
+	this.label			= null
 
-	/**
-	* SET_TAB_ACTIVE
-	* Save in local storage the id of current section_tab active (on click action)
-	*/
-	this.set_tab_active = function( button_object ) {
+	this.node			= null
 
-		// Save selected section_tab
-			set_localStorage('section_tab_active', button_object.id)
+	this.id_variant		= null
+	this.children		= null
 
-		const section_tab_tipo 	  = button_object.dataset.tipo
-		const section_tab_wrapper = button_object.parentNode
-
-		// section_tab_active. reset
-			const section_tab_active = section_tab_wrapper.querySelector('span.section_tab_active')
-			section_tab_active.classList.remove("section_tab_active")
-
-		// button activate
-			button_object.classList.add("section_tab_active");
-
-		// section_tabs_containers
-			const tab_wrapper_nodes 	  = section_tab_wrapper.childNodes
-			const tab_wrapper_nodes_len   = tab_wrapper_nodes.length
-			const section_tabs_containers = []
-			for (let i = 0; i < tab_wrapper_nodes_len; i++) {
-				const node = tab_wrapper_nodes[i]
-				if (node.classList.contains("section_tab_content")) {
-					section_tabs_containers.push(node)
-				}
-			}
-
-			const section_tabs_containers_len 	= section_tabs_containers.length
-			const section_tab_active_id 		= 'section_tab_content_' + section_tab_tipo; // section_tab_active current
-			for (let i = 0; i < section_tabs_containers_len; i++) {
-
-				const container = section_tabs_containers[i]
-
-				if(container.id===section_tab_active_id ){
-					//container.style.display = 'table';
-					container.classList.add("tab_content_active");
-				}else{
-					//container.style.display = 'none';
-					if (container.classList.contains("tab_content_active")) {
-						container.classList.remove("tab_content_active");
-					}
-				}
-			}
-
-		return true
-	};//end set_tab_active
+	return true
+};//end section_tab
 
 
 
-	/**
-	* SELECT_TAB_ACTIVE
-	* Recover last section_tab active from local storage and set as checked to activate
-	* and show the section tab conten
-	* Called on component html is rendered in edit mode
-	*/
-	this.select_tab_active = function() {
-
-		const self = this
-
-		const cookie_tab_active = get_localStorage('section_tab_active');
-		if (cookie_tab_active) {
-			// Previously set on cookie
-			const tab_active_element = document.getElementById(cookie_tab_active)
-			if (tab_active_element)
-				self.set_tab_active(tab_active_element)
-
-		}else{
-			// Fallback. Selects first tab input element and set as checked
-			const tab_active_element = document.querySelector('span.section_tab_label')
-				  tab_active_element.classList.add("section_tab_active");
-				  set_localStorage('section_tab_active', tab_active_element.id)
-				  self.set_tab_active(tab_active_element)
-		}
-	};//end select_tab_active
+/**
+* COMMON FUNCTIONS
+* extend component functions from component common
+*/
+// prototypes assign
+	section_tab.prototype.build		= common.prototype.build
+	section_tab.prototype.render	= common.prototype.render
+	section_tab.prototype.destroy	= common.prototype.destroy
+	section_tab.prototype.list		= render_section_tab.prototype.list
+	section_tab.prototype.edit		= render_section_tab.prototype.edit
 
 
 
-};//end class
+/**
+* INIT
+* @return bool true
+*/
+section_tab.prototype.init = function(options) {
+
+	const self = this
+
+	self.model			= options.model
+	self.tipo			= options.tipo
+	self.section_tipo	= options.section_tipo
+	self.section_id		= options.section_id
+	self.mode			= options.mode
+	self.lang			= options.lang
+
+	self.context		= options.context || null
+	self.parent			= options.parent
+	self.type			= options.type
+	self.events_tokens	= []
+	self.ar_instances	= []
+
+	self.node			= []
+
+	self.label			= self.context.label
+
+
+	return true
+};//end init
+
+
+
+/**
+* GET_PANELS_STATUS
+* Get local DDBB record if exists and return result object
+* @return object | undefined
+*/
+section_tab.prototype.get_panels_status = async function() {
+
+	const self = this
+
+	// unic id for current section_tab
+		// const uid = self.model + '_' + self.section_tipo + '_' +  self.tipo
+
+	// local_db_data. get value if exists
+		const current_data_manager	= new data_manager();
+		const panels_status = await current_data_manager.get_local_db_data('section_tab', 'context')
+			// console.log("----- section_tab panels_status:", uid, panels_status);
+
+		// UNDER CONSTRUCTION .... !!
+
+	return panels_status
+};//end get_panels_status
+
+
