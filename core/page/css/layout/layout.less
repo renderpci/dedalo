@@ -982,6 +982,7 @@
 		>.tab_label {
 			display: inline-block;
 			margin: 0;
+			margin-left: -1px;
 			font-weight: 600;
 			text-align: center;
 			color: #bbb;
@@ -1243,15 +1244,26 @@
 				>.content_data {
 					.flatpickr {
 						position: relative;
-						>a {
+						width: 7.75rem;
+						>a { // icon calendar
 							position: absolute;
-							right: 0;
-							top: 0;
-							opacity: 0.5;
+							right: 0.15rem;
+							top: 0.33rem;
+							opacity: 0.6;
 						}
 					}
 					.remove {
 						position: initial;
+						margin-left: 0.75rem;
+					}
+					.divisor {
+						padding-left: 0.5rem;
+						padding-right: 0.5rem;
+					}
+					input::placeholder {
+						// color: blue;
+						font-size: 0.86rem;
+						font-style: normal;
 					}
 				}
 				&.search {
@@ -1440,10 +1452,21 @@
 				}
 			}
 
-			// component_info
+			// component_iri
 			&.component_iri {
 				input.input_value {
 					flex: 1;
+				}
+			}
+
+			// component_number
+			&.component_number {
+
+				.button.remove {
+					position: absolute;
+					right: 0.5rem;
+					top: 0.5rem;
+					z-index: 1;
 				}
 			}
 
@@ -2172,7 +2195,7 @@
 				// flex: 1 0 calc(20% - 2em);
 				flex: 1 1 100%;
 				padding-bottom: 0;
-				padding-top: 0.75em;
+				padding-top: 0.5em;
 				// color: #7c7c7c;
 
 				letter-spacing: 0.5px;

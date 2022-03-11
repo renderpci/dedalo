@@ -336,6 +336,11 @@ export const service_autocomplete = function() {
 
 			// event input. changes the input value fire the search
 				search_input.addEventListener('input', async function(){
+					// check valid filters_selector
+					if (self.ar_search_section_tipo.length<1) {
+						alert("Please, select search section");
+						return
+					}
 					const api_response	= await self.autocomplete_search(this.value)
 					self.render_datalist(api_response)
 				});
@@ -360,6 +365,8 @@ export const service_autocomplete = function() {
 				element_type	: "div",
 				class_name		: "filters_container" // css_autocomplete_hi_search_field
 			})
+			// fix
+			self.filters_container = filters_container
 
 		// sections filter
 			const ar_sections			= self.ar_search_section_tipo // defined on init

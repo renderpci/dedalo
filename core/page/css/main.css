@@ -2776,6 +2776,7 @@ li .reset_input select {
 .section_tab > .tab_label {
   display: inline-block;
   margin: 0;
+  margin-left: -1px;
   font-weight: 600;
   text-align: center;
   color: #bbb;
@@ -3100,6 +3101,7 @@ li .reset_input select {
 .wrapper_component.edit_in_list.component_date > .content_data .flatpickr,
 .wrapper_component.player.component_date > .content_data .flatpickr {
   position: relative;
+  width: 7.75rem;
 }
 .wrapper_component.edit.component_date > .content_data .flatpickr > a,
 .wrapper_component.search.component_date > .content_data .flatpickr > a,
@@ -3107,9 +3109,9 @@ li .reset_input select {
 .wrapper_component.edit_in_list.component_date > .content_data .flatpickr > a,
 .wrapper_component.player.component_date > .content_data .flatpickr > a {
   position: absolute;
-  right: 0;
-  top: 0;
-  opacity: 0.5;
+  right: 0.15rem;
+  top: 0.33rem;
+  opacity: 0.6;
 }
 .wrapper_component.edit.component_date > .content_data .remove,
 .wrapper_component.search.component_date > .content_data .remove,
@@ -3117,6 +3119,23 @@ li .reset_input select {
 .wrapper_component.edit_in_list.component_date > .content_data .remove,
 .wrapper_component.player.component_date > .content_data .remove {
   position: initial;
+  margin-left: 0.75rem;
+}
+.wrapper_component.edit.component_date > .content_data .divisor,
+.wrapper_component.search.component_date > .content_data .divisor,
+.wrapper_component.tm.component_date > .content_data .divisor,
+.wrapper_component.edit_in_list.component_date > .content_data .divisor,
+.wrapper_component.player.component_date > .content_data .divisor {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+.wrapper_component.edit.component_date > .content_data input::placeholder,
+.wrapper_component.search.component_date > .content_data input::placeholder,
+.wrapper_component.tm.component_date > .content_data input::placeholder,
+.wrapper_component.edit_in_list.component_date > .content_data input::placeholder,
+.wrapper_component.player.component_date > .content_data input::placeholder {
+  font-size: 0.86rem;
+  font-style: normal;
 }
 .wrapper_component.edit.component_date.search .remove,
 .wrapper_component.search.component_date.search .remove,
@@ -3329,6 +3348,16 @@ li .reset_input select {
 .wrapper_component.edit_in_list.component_iri input.input_value,
 .wrapper_component.player.component_iri input.input_value {
   flex: 1;
+}
+.wrapper_component.edit.component_number .button.remove,
+.wrapper_component.search.component_number .button.remove,
+.wrapper_component.tm.component_number .button.remove,
+.wrapper_component.edit_in_list.component_number .button.remove,
+.wrapper_component.player.component_number .button.remove {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  z-index: 1;
 }
 .wrapper_component.edit.component_pdf > .content_data,
 .wrapper_component.search.component_pdf > .content_data,
@@ -4268,7 +4297,7 @@ li .reset_input select {
   padding: 1em;
   flex: 1 1 100%;
   padding-bottom: 0;
-  padding-top: 0.75em;
+  padding-top: 0.5em;
   letter-spacing: 0.5px;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -5659,6 +5688,9 @@ section {
   padding: 1rem;
   padding-top: 0;
 }
+.section_record.mini {
+  display: contents;
+}
 .hilite_row {
   background-color: #dedede42;
   display: block;
@@ -6665,6 +6697,7 @@ section {
 }
 .autocomplete_search_container {
   background-color: #f1f1f1;
+  color: #444444;
   border: 0px;
   border-bottom-left-radius: 5px;
   border-bottom-right-radius: 5px;
@@ -6673,8 +6706,8 @@ section {
   margin-left: 0px;
   position: absolute;
   top: 100%;
-  width: 100%;
-  z-index: 1;
+  width: calc(100% - 2rem);
+  z-index: 0;
 }
 .wrapper_component:not(.active) .autocomplete_search_container {
   display: none;
