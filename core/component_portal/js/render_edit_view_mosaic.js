@@ -222,6 +222,20 @@ const get_content_data = async function(self, ar_section_record) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
+	// css
+		const element_css	= self.context.css || {}
+		const legacy_selector_content_data = '.content_data'
+		if (element_css[legacy_selector_content_data]) {
+			// style
+				if (element_css[legacy_selector_content_data].style) {
+					// height from style
+					if (element_css[legacy_selector_content_data].style.height) {
+						content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
+					}
+				}
+		}
+
+
 	return content_data
 }//end get_content_data
 
@@ -306,7 +320,7 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 			full_columns_map.push({
 				id			: 'section_id',
 				label		: 'Id',
-				width 		: 'auto',
+				width		: 'auto',
 				callback	: render_column_id
 			})
 		}
@@ -330,7 +344,7 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 					full_columns_map.push({
 						id			: 'remove',
 						label		: '', // get_label.delete || 'Delete',
-						width 		: 'auto',
+						width		: 'auto',
 						callback	: render_column_remove
 					})
 				}
