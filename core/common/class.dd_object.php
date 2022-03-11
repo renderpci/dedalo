@@ -6,6 +6,8 @@
 */
 class dd_object {
 
+
+
 	// Format
 		# typo				: "ddo"  (ddo | sqo)
 		# type				: "component"  (section | component | grouper | button | tool ..)
@@ -14,18 +16,31 @@ class dd_object {
 		# parent			: 'oh2', // caller section / portal  tipo
 		# parent_grouper	: 'oh7', // structure parent
 		# lang				: 'lg-eng',
-		# label				: 'Title'
 		# mode				: "list",
 		# model				: 'component_input_text',
 		# properties		: {}
 		# permissions		: 1
+		# label				: 'Title'
+		# labels			: ['Title']
 		# translatable		: true
-		# search			: true
-		# pagination		: true
 		# tools				: [] // array of tools dd_objects (context)
 		# buttons			: [] // array of buttons dd_objects (context)
 		# css				: {}
-		# column			: 'term' (!) used ?
+		# target_sections	: [{'tipo':'dd125','label':'Projects']
+		# request_config	: [],
+		# ar_sections_tipo	: ['oh1']
+		# columns_map		: array
+		# view				: string like 'table'
+		# fixed_mode		: string like 'edit'
+		# section_id		: int like 1 // Used by tools
+		# name				: string like 'tool_lang' // Used by tools
+		# description		: string like 'Description of tool x' // Used by tools
+		# icon				: string like '/tools/tool_lang/img/icon.svg' // Used by tools
+		# show_in_inspector	: bool // Used by tools
+		# show_in_component	: bool // Used by tools
+		# config			: object // Used by tools
+
+
 
 	static $ar_type_allowed = [
 		'section',
@@ -107,6 +122,33 @@ class dd_object {
 	* SET  METHODDS
 	* Verify values and set property to current object
 	*/
+
+
+
+	/**
+	* SET_TYPO
+	*/
+	public function set_typo(string $value) {
+		if($value!=='ddo') {
+			debug_log(__METHOD__." Error. Fixed invalid typo ".to_string($value), logger::DEBUG);
+			$value = 'ddo';
+		}
+		$this->typo = $value;
+	}//end set_typo
+
+
+
+	/**
+	* SET_TYPE
+	* Only allow 'section','component','groupper','button'
+	*/
+	public function set_type(string $value) {
+		$ar_type_allowed = self::$ar_type_allowed;
+		if( !in_array($value, $ar_type_allowed) ) {
+			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
+		}
+		$this->type = $value;
+	}//end set_type
 
 
 
@@ -194,33 +236,6 @@ class dd_object {
 
 
 	/**
-	* SET_TYPO
-	*/
-	public function set_typo(string $value) {
-		if($value!=='ddo') {
-			debug_log(__METHOD__." Error. Fixed invalid typo ".to_string($value), logger::DEBUG);
-			$value = 'ddo';
-		}
-		$this->typo = $value;
-	}//end set_typo
-
-
-
-	/**
-	* SET_TYPE
-	* Only allow 'section','component','groupper','button'
-	*/
-	public function set_type(string $value) {
-		$ar_type_allowed = self::$ar_type_allowed;
-		if( !in_array($value, $ar_type_allowed) ) {
-			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
-		}
-		$this->type = $value;
-	}//end set_type
-
-
-
-	/**
 	* SET_PROPERTIES
 	* Note hint parameter 'object' is not supported bellow php 7.2
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
@@ -248,7 +263,7 @@ class dd_object {
 	public function set_label(string $value) {
 
 		$this->label = $value;
-	}
+	}//end set_label
 
 
 
@@ -260,7 +275,7 @@ class dd_object {
 	public function set_labels($value) {
 
 		$this->labels = $value;
-	}
+	}//end set_labels
 
 
 
@@ -339,16 +354,6 @@ class dd_object {
 
 		$this->ar_sections_tipo = $value;
 	}//end set_ar_sections_tipo
-
-
-
-	/**
-	* SET_CONFIG_TYPE
-	*/
-	public function set_config_type($value) {
-
-		$this->config_type = $value;
-	}//end set_config_type
 
 
 
