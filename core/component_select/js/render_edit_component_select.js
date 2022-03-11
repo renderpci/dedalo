@@ -100,8 +100,9 @@ const add_events = (self, wrapper) => {
 					})
 
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false,
+						remove_dialog	: false
 					})
 					.then((api_response)=>{
 						//self.selected_key = e.target.dataset.key
@@ -288,16 +289,14 @@ const get_input_element = (self) => {
 
 			const datalist_item = datalist[i]
 
-			const current_section_id = typeof datalist_item.section_id!=="undefined" ? datalist_item.section_id : null
-
-			const current_label = (SHOW_DEBUG===true)
-				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
-				: datalist_item.label
+			const current_section_id = typeof datalist_item.section_id!=='undefined'
+				? datalist_item.section_id
+				: null
 
 			const option = ui.create_dom_element({
 				element_type	: 'option',
 				value			: JSON.stringify(datalist_item.value),
-				inner_html		: current_label,
+				inner_html		: datalist_item.label,
 				parent			: select
 			})
 			// selected options set on match
@@ -307,7 +306,18 @@ const get_input_element = (self) => {
 				) {
 				option.selected = true
 			}
+
+			// developer_info
+				if (current_section_id) {
+					const developer_info = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'developer_info hide show_on_active',
+						text_content	: ` [${current_section_id}]`,
+						parent			: option
+					})
+				}
 		}
+
 
 	return li
 };//end get_input_element

@@ -3751,7 +3751,7 @@ class section extends common {
 				// valor as plain text
 					$valor = $current_component->get_valor();
 
-						dump($valor, ' valor +--------------/////////----------------------+ '.to_string());
+					// dump($valor, ' get_tm_ar_subdata valor +--------------/////////----------------------+ '.to_string());
 
 				// placeholder component for mixed component tipo
 
