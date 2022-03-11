@@ -27,7 +27,11 @@
 		}
 
 		// set add_label value based on former model (false for section_group_div)
-		$current_context->add_label = !(RecordObj_dd::get_real_model_name_by_tipo($this->tipo)==='section_group_div');
+		$real_model	= RecordObj_dd::get_real_model_name_by_tipo($tipo);
+		$no_label	= [
+			'section_group_div'
+		];
+		$current_context->add_label = !in_array($real_model, $no_label);
 
 		// add
 		$context[] = $current_context;

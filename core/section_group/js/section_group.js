@@ -16,7 +16,7 @@
 * SECTION_GROUP
 */
 export const section_group = function(){
-	
+
 	this.id				= null
 
 	// element properties declare
@@ -90,22 +90,22 @@ section_group.prototype.init = function(options) {
 * Get local DDBB record if exists and return result object
 * @return object | undefined
 */
-section_group.prototype.get_panels_status = async function() {
+	// section_group.prototype.get_panels_status = async function() {
 
-	const self = this
+	// 	const self = this
 
-	// unic id for current section_group
-		// const uid = self.model + '_' + self.section_tipo + '_' +  self.tipo
+	// 	// unic id for current section_group
+	// 		// const uid = self.model + '_' + self.section_tipo + '_' +  self.tipo
 
-	// local_db_data. get value if exists
-		const current_data_manager	= new data_manager();
-		const panels_status = await current_data_manager.get_local_db_data('section_group', 'context')
-			// console.log("----- section_group panels_status:", uid, panels_status);
+	// 	// local_db_data. get value if exists
+	// 		const current_data_manager	= new data_manager();
+	// 		const panels_status = await current_data_manager.get_local_db_data('section_group', 'context')
+	// 			// console.log("----- section_group panels_status:", uid, panels_status);
 
-		// UNDER CONSTRUCTION .... !!
+	// 		// UNDER CONSTRUCTION .... !!
 
-	return panels_status
-};//end get_panels_status
+	// 	return panels_status
+	// };//end get_panels_status
 
 
 
