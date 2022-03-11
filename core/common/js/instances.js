@@ -55,6 +55,7 @@ export const get_instance = async function(options){
 		const section_id		= options.section_id // string format
 
 	// options. optional vars (only mandatory for build the instance)
+		const direct_path		= options.direct_path
 		const mode				= options.mode  || 'list'
 		const lang				= options.lang  || page_globals.dedalo_data_lang
 		const model				= options.model || await ( async () => {
@@ -67,7 +68,7 @@ export const get_instance = async function(options){
 			if(SHOW_DEBUG===true) {
 				console.log("// [get_instance] element_context API response:", element_context_response);
 				console.trace();
-			}			
+			}
 			const current_model = element_context_response.result[0].model
 			if(typeof options.context==='undefined'){
 				// inject context to options
@@ -156,7 +157,9 @@ export const get_instance = async function(options){
 						const base_path	= model.indexOf('tool_')!==-1
 							? '../../../tools/'
 							: '../../'
-						const path		= base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
+						const path = direct_path
+							? direct_path
+							: base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
 
 					// import element mod file once (and wait until finish)
 						let current_element
@@ -167,7 +170,7 @@ export const get_instance = async function(options){
 
 							resolve(false)
 							return
-						}						
+						}
 
 					// check current_element
 						if (typeof current_element[model]!=="function") {
@@ -197,12 +200,12 @@ export const get_instance = async function(options){
 
 						// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
 
-					// return the new created instance						
+					// return the new created instance
 						resolve(instance_element)
 
 				}else{
 						// console.warn("returned already resolved instance from cache:", found_instance[0]);
-					// resolve the promise with the cache instance found						
+					// resolve the promise with the cache instance found
 						resolve(found_instance[0])
 				}
 			})
