@@ -415,7 +415,8 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 		// create div
 			ui.create_dom_element({
 				element_type	: 'div',
-				text_content	: ' <> ',
+				class_name		: 'divisor',
+				text_content	: '<>',
 				parent			: inputs_container
 			})
 

@@ -6,6 +6,7 @@
 
 	.autocomplete_search_container {
 		background-color: @service_bg_color;
+		color: #444444;
 		border: 0px;
 		border-bottom-left-radius: 5px;
 		border-bottom-right-radius: 5px;
@@ -16,8 +17,9 @@
 		position: absolute;
 		top: 100%;
 		// width: calc(100% + 1px); // ~"calc(100% + 21px)";
-		width: 100%;
-		z-index: 1;
+		// width: 100%;
+		width: calc(100% - 2rem);
+		z-index: 0;
 
 		// hide autocomplete_search_container when parent element .component_portal is not .active
 		.wrapper_component:not(.active) & {
