@@ -2770,6 +2770,9 @@ li .reset_input select {
   align-content: stretch;
   flex-wrap: wrap;
 }
+.section_tab {
+  width: 100%;
+}
 .section_tab > .tab_label {
   display: inline-block;
   margin: 0;
@@ -2785,8 +2788,8 @@ li .reset_input select {
   top: 1px;
   position: relative;
   padding: 0.5rem;
-  padding-left: 1.33rem;
-  padding-right: 1.33rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 .section_tab > .tab_label:before {
   margin-right: 10px;
