@@ -6,15 +6,26 @@
 */
 class component_section_id extends component_common {
 
-	# GET DATO
-	public function get_dato() {
-		return (int)$this->parent;
-	}
 
-	# GET DATO
-	public function get_valor() {
+
+	/**
+	* GET DATO
+	*/
+	public function get_dato() {
+
 		return (int)$this->parent;
-	}
+	}//end get_dato
+
+
+
+	/**
+	* GET_VALOR
+	*/
+	public function get_valor() {
+
+		return (int)$this->parent;
+	}//end get_valor
+
 
 
 	/**
@@ -24,6 +35,7 @@ class component_section_id extends component_common {
 	* @return object stdClass $search_comparison_operators
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=','>','<','>=','<=','BETWEEN','SEQUENCE') ) {
+
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators
 
@@ -73,9 +85,9 @@ class component_section_id extends component_common {
 				$separator='...';
 				if (strpos($search_value, $separator)!==false) {
 					// Transform "12...25" to "12 AND 25"
-					$ar_parts 	= explode($separator, $search_value);
-					$first_val  = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
-					$second_val = !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
+					$ar_parts	= explode($separator, $search_value);
+					$first_val	= !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
+					$second_val	= !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
 
 					$search_query = " a.section_id $comparison_operator $first_val AND $second_val ";
 				}else{
@@ -109,14 +121,14 @@ class component_section_id extends component_common {
 			$q = json_decode($q);
 		}
 
-    	# Always set fixed values
-		$query_object->type = 'number';
+		# Always set fixed values
+		$query_object->type		= 'number';
 
 		# Always set format to column
-		$query_object->format = 'column';
+		$query_object->format	= 'column';
 
-		$between_separator  = '...';
-		$sequence_separator = ',';
+		$between_separator		= '...';
+		$sequence_separator		= ',';
 
 		// Case is an array of values
 		if (is_array($q)) {
@@ -129,13 +141,13 @@ class component_section_id extends component_common {
 		$query_object->unaccent = false;
 
 
-        switch (true) {
-        	# BETWEEN
+		switch (true) {
+			# BETWEEN
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
-				$ar_parts 	= explode($between_separator, $q);
-				$first_val  = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
-				$second_val = !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
+				$ar_parts	= explode($between_separator, $q);
+				$first_val	= !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
+				$second_val	= !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
 
 				$query_object_one = clone $query_object;
 					$query_object_one->operator = '>=';
@@ -155,7 +167,7 @@ class component_section_id extends component_common {
 
 				$query_object = $new_query_object;
 				break;
-        	# SEQUENCE
+			# SEQUENCE
 			case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
 				$ar_parts	= explode($sequence_separator, $q);
@@ -190,28 +202,28 @@ class component_section_id extends component_common {
 				$operator = '>=';
 				$q_clean  = (int)str_replace($operator, '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
+				$query_object->q_parsed	= $q_clean;
 				break;
 			# SMALLER OR EQUAL THAN
 			case (substr($q, 0, 2)==='<='):
 				$operator = '<=';
 				$q_clean  = (int)str_replace($operator, '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
+				$query_object->q_parsed	= $q_clean;
 				break;
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
 				$q_clean  = (int)str_replace($operator, '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
+				$query_object->q_parsed	= $q_clean;
 				break;
 			# SMALLER THAN
 			case (substr($q, 0, 1)==='<'):
 				$operator = '<';
 				$q_clean  = (int)str_replace($operator, '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
+				$query_object->q_parsed	= $q_clean;
 				break;
 			// EQUAL DEFAULT
 			default:
@@ -224,7 +236,7 @@ class component_section_id extends component_common {
 		// debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 
-        return $query_object;
+		return $query_object;
 	}//end resolve_query_object_sql
 
 
@@ -237,13 +249,13 @@ class component_section_id extends component_common {
 	public function search_operators_info() {
 
 		$ar_operators = [
-			'...' 	=> 'entre',
-			',' 	=> 'secuencia',
-			'>=' 	=> 'mayor_o_igual_que',
+			'...'	=> 'entre',
+			','		=> 'secuencia',
+			'>='	=> 'mayor_o_igual_que',
 			'<='	=> 'menor_o_igual_que',
-			'>' 	=> 'mayor_que',
-			'<'		=> 'menor_que',
-			#'=' 	=> 'igual'
+			'>'		=> 'mayor_que',
+			'<'		=> 'menor_que'
+			#'='	=> 'igual'
 		];
 
 		return $ar_operators;
@@ -251,5 +263,4 @@ class component_section_id extends component_common {
 
 
 
-}
-?>
+}//end class

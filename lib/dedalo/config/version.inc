@@ -2665,7 +2665,10 @@
 	Queue build
 		Removed jquery unnecessary lib files
 		Removed nvd3 unnecessary lib files
-
+		Added box elements model detection in time_machine data to prevent errors in component construction
+		Fixed json encode error when get_filtered_relations param 'relations_data_string' is empty
+		Changed fallback no logged url in ontology pages to preserve v6 compatibility
+		Added new tool_administration feature 'delete_sections' to easy delete massive sections preserving the Time Machine version
 
 
 	[/HISTORY]
@@ -2697,7 +2700,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-02-2022T12:50:28');
+	define('DEDALO_BUILD'	, '08-03-2022T11:26:19');
 
 
 	/*

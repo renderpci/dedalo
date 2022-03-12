@@ -853,7 +853,7 @@ class section extends common {
 			# UPDATE RECORD : Update current matrix section record trigered by one component
 
 			$save_action = 'update';
-			
+
 			if ($this->save_modified===false) {
 				// section dato only
 					$section_dato = (object)$this->get_dato();
@@ -900,9 +900,9 @@ class section extends common {
 
 					// Create a counter if not exists
 						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-							
+
 							$counter_created = counter::consolidate_counter( $tipo, $matrix_table, $matrix_table_counter );
-							
+
 							// Re-check counter value
 							$current_id_counter = (int)counter::get_counter_value($tipo, $matrix_table_counter);
 						}
@@ -1047,7 +1047,7 @@ class section extends common {
 						# Counter update
 						if ($counter_created!==true) {
 							counter::update_counter($tipo, $matrix_table_counter, $current_id_counter);
-						}						
+						}
 					}
 				}
 
@@ -1179,9 +1179,10 @@ class section extends common {
 
 	/**
 	* DELETE (SECTION)
+	* 	Delete section with options
 	* @param section id
 	* @param delete_mode (data / record)
-	* Delete section with options
+	* @return bool
 	*/
 	public function Delete($delete_mode) {
 
@@ -1324,7 +1325,7 @@ class section extends common {
 		}
 
 		if (SHOW_DEBUG) {
-			debug_log(__METHOD__." Deleted section $this->section_id and their 'childrens'. delete_mode $delete_mode");
+			debug_log(__METHOD__." Deleted section $this->section_id and their 'children'. delete_mode $delete_mode", logger::DEBUG);
 		}
 
 
@@ -3681,9 +3682,9 @@ class section extends common {
 		$section_tipo	= $this->tipo;
 		$section_id		= $this->section_id;
 		$lang			= $this->lang;
-		
+
 		// ontology sync
-			// if (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true && 
+			// if (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true &&
 			// 	defined('ONTOLOGY_SECTION_TIPOS') && ONTOLOGY_SECTION_TIPOS['section_tipo']===$section_tipo &&
 			// 	$save_action==='update') {
 
@@ -3725,9 +3726,9 @@ class section extends common {
 			// 				return $result;
 			// 			})($term_id);
 
-			// 		// definition 
+			// 		// definition
 			// 			(function($term_id) use($section_id, $section_tipo, $lang){
-						
+
 			// 				// get value from component in current section
 			// 					$component_tipo = ONTOLOGY_SECTION_TIPOS['definition'];
 			// 					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -3750,7 +3751,7 @@ class section extends common {
 			// 			})($term_id);
 
 			// 		debug_log(__METHOD__." Updated descriptors_dd with values of term_id: $term_id ".to_string(), logger::DEBUG);
-			// 	}				
+			// 	}
 			// }//end ontology sync
 
 
@@ -3776,7 +3777,7 @@ class section extends common {
 			$component_tipo = $component->get_tipo();
 
 		// ontology sync. Syncronize this section values with equivalents in table 'matrix_descriptors_dd'. Only master server
-			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true && 
+			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true &&
 				defined('ONTOLOGY_SECTION_TIPOS') && ONTOLOGY_SECTION_TIPOS['section_tipo']===$section_tipo) {
 
 				$ar_update_tipos = [
@@ -3788,7 +3789,7 @@ class section extends common {
 
 					// term_id
 						$term_id = (function() use($section_id, $section_tipo){
-							
+
 							$component_tipo = ONTOLOGY_SECTION_TIPOS['term_id'];
 							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 							$component 		= component_common::get_instance($modelo_name,
@@ -3806,7 +3807,7 @@ class section extends common {
 					if (empty($term_id)) {
 						debug_log(__METHOD__." term_id value is mandatoy. Nothing is propagated to descriptors ".to_string($term_id), logger::ERROR);
 					}else{
-						
+
 						$dato_tipo = (function() use($component_tipo){
 							switch ($component_tipo) {
 								case ONTOLOGY_SECTION_TIPOS['term']:		return 'termino';	break;
@@ -3817,7 +3818,7 @@ class section extends common {
 						})();
 
 						if (!empty($dato_tipo)) {
-							
+
 							$value = $component->get_valor();
 
 							// set and save the value to descriptors dd

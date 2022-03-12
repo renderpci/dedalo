@@ -28,7 +28,7 @@ function make_backup($json_data) {
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
-			
+
 		$response->debug = $debug;
 	}
 
@@ -55,7 +55,7 @@ function force_unlock_all_components($json_data) {
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 
 		$response->debug = $debug;
 	}
@@ -79,7 +79,7 @@ function get_active_users($json_data) {
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 
 		$response->debug = $debug;
 	}
@@ -101,7 +101,7 @@ function build_structure_css($json_data) {
 	# Debug
 	if(SHOW_DEVELOPER===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 
 		$response->debug = $debug;
 	}
@@ -324,6 +324,55 @@ function renumerate_sections($json_data) {
 
 	return (object)$response;
 }//end renumerate_sections
+
+
+
+/**
+* DELETE_SECTIONS
+*/
+function delete_sections($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('section_tipo','section_id');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			// if ($name==='save') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	// section_id. Is an string separated by commas. Explode and trim
+		$section_id		= explode(',', $section_id);
+		$ar_section_id	= array_map(function($value){
+			return (int)trim($value);
+		}, $section_id);
+
+	$options = new stdClass();
+		$options->section_tipo	= $section_tipo;
+		$options->section_id	= $ar_section_id;
+	$response = (object)tool_administration::delete_sections( $options );
+
+	# Debug
+	if(SHOW_DEVELOPER===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end delete_sections
 
 
 
@@ -984,7 +1033,7 @@ function update_dedalo_code($json_data) {
 			$file_name		= 'dedalo5_code.zip';
 			$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
 			$put_contents	= file_put_contents($target_file, $contents);
-			if (!$put_contents) {			
+			if (!$put_contents) {
 				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
 				debug_log(__METHOD__." $response->msg", logger::ERROR);
 				return $response;
@@ -1004,12 +1053,12 @@ function update_dedalo_code($json_data) {
 			}
 			$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
 			$zip->close();
-			debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);		
+			debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);
 			$result->extract = [
 				"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
 			];
 
-		// rsync 
+		// rsync
 			$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
 				? DEDALO_SOURCE_VERSION_LOCAL_DIR .'/dedalo-master' // like 'dedalo-master'
 				: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo5_code' from 'dedalo5_code.zip'
@@ -1040,10 +1089,10 @@ function update_dedalo_code($json_data) {
 		// response ok
 			$response->result	= $result;
 			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
-	
-	
+
+
 	} catch (Exception $e) {
-		
+
 		$response->msg = $e->getMessage();
 	}
 

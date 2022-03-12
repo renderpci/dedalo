@@ -8,9 +8,9 @@ require_once( dirname(__FILE__) .'/config/config_ontology.php' );
 * LOGIN
 */
 $is_logged	= login::is_logged();
-	
+
 if($is_logged!==true) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
+	$url =  DEDALO_ROOT_WEB;
 	header("Location: $url");
 	exit();
 }
@@ -27,7 +27,7 @@ $terminoID	= safe_xss($_REQUEST['terminoID']);
 $tabla		= safe_xss($_REQUEST['tabla']);
 
 if( strlen($termino)>2 ) {
-	
+
 	$dd 	= new dd($modo='tesauro_list');
 	echo 	$dd->existeEsteTermino($termino,$terminoID);
 }

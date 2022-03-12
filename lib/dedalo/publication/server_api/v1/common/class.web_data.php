@@ -4644,7 +4644,7 @@ class web_data {
 				// Added 09-12-2021. Is the same as above but in bulk mode
 					foreach ([
 						'graves_category'			=> 'int',
-						'archeological_site_type'	=> 'int',
+						'archeological_site_type'	=> 'text_array',
 						'conservation'				=> 'int',
 						'marked'					=> 'int',
 						'dignified'					=> 'int',
