@@ -10,6 +10,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_elements_css_object} from '../../page/js/css.js'
 
 
 /**
@@ -1934,8 +1935,9 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 		// response_debug
 			const combi = {
-				'debug'				: response.debug,
-				'rqo_show_original'	: rqo_show_original
+				'debug'					: response.debug,
+				'rqo_show_original'		: rqo_show_original,
+				'elements_css_object'	: get_elements_css_object()
 			};
 			const response_debug_pre = ui.create_dom_element({
 				element_type	: 'pre',
