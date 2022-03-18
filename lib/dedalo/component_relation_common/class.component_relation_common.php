@@ -1196,6 +1196,28 @@ class component_relation_common extends component_common {
 	*/
 	public function get_diffusion_resolve_value($option_obj=null) {
 
+		$args_list = func_get_args();
+		if (count($args_list)>1) {
+
+			$dato = $this->get_dato();
+
+			$ar_value = [];
+			foreach ($args_list as $current_option_obj) {
+
+				$lang = $current_option_obj->lang; // $this->lang
+
+				$options = new stdClass();
+					$options->lang			= $lang;
+					$options->propiedades	= $current_option_obj;
+
+				$value = diffusion_sql::resolve_value($options, $dato);
+
+				$ar_value[] = $value;
+			}
+
+			return $ar_value;
+		}
+
 		// example $option_obj
 			// {
 			//     "process_dato_arguments": {
