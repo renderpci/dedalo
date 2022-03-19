@@ -490,37 +490,39 @@ class relation_list extends common {
 				$diffusion_value = $ar_values;
 				break;
 
-			case 'filtered_values':
-				$diffusion_value = $this->get_diffusion_dato();
+			case 'filtered_values': // inject each relation value (locator) to target component and request the processed value
 
-				$target_component_tipo	= $diffusion_properties->process_dato_arguments->target_component_tipo;
-				$output					= $diffusion_properties->process_dato_arguments->output ?? 'array';
-				$ar_value=[];
-				foreach ($diffusion_value as $curernt_locator) {
+				// get relations filtered dato (by section_tipo and component_tipo)
+					$diffusion_value = $this->get_diffusion_dato();
 
+				// params from properties
+					$target_component_tipo	= $diffusion_properties->process_dato_arguments->target_component_tipo;
+					$output					= $diffusion_properties->process_dato_arguments->output ?? 'array';
+					$separator				= $diffusion_properties->process_dato_arguments->separator ?? ' | ';
 
-					$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
-					$current_component	= component_common::get_instance(
-																	$modelo_name,
-																	$target_component_tipo,
-																	$this->section_id,
-																	'list',
-																	DEDALO_DATA_LANG,
-																	$this->section_tipo
-																	);
-					$current_component->set_dato($curernt_locator);
-					$ar_value[] = $current_component->get_valor();
-				}
-				if(isset($output)&& $output === 'string'){
-					$separator	= $diffusion_properties->process_dato_arguments->separator ?? ' | ';
-					$value = implode($separator, $ar_value);
-				}else{
-					$value = $ar_value;
-				}
+				// ar_value. Iterate locators and store component processed value
+					$ar_value = [];
+					foreach ($diffusion_value as $current_locator) {
 
-				$diffusion_value = $value;
+						$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+						$current_component	= component_common::get_instance(
+							$modelo_name,
+							$target_component_tipo,
+							$this->section_id,
+							'list',
+							DEDALO_DATA_LANG,
+							$this->section_tipo
+						);
+						$current_component->set_dato($current_locator); // force set dato
+						$ar_value[] = $current_component->get_valor();
+					}
 
-			break;
+				// diffusion_value as string or array (default array)
+					$diffusion_value = ($output==='string')
+						? implode($separator, $ar_value)
+						: $ar_value;
+				break;
+
 			case 'dato':
 			default:
 				// DES
