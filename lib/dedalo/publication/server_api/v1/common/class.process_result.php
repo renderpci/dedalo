@@ -13,11 +13,13 @@ abstract class process_result {
 	/**
 	* ADD_PARENTS_AND_CHILDREN_RECURSIVE
 	* Resolves the parents and children of the search result and merges them with the result data
+	* (used in MIB Catalog list)
 	* @return object $ar_data
 	*/
 	public static function add_parents_and_children_recursive($ar_data, $options, $sql_options) {
 
-		$columns = $options->columns;
+		// options
+			$columns = $options->columns;
 
 		// $ar_section_id = array_map(function($el){
 		// 	return $el['section_id'];
@@ -87,6 +89,77 @@ abstract class process_result {
 
 		return $response;
 	}//end add_parents_and_children_recursive
+
+
+
+	/**
+	* ADD_PARENTS_OR_CHILDREN
+	* 	Aux private method
+	* 	(!) requires a previous search
+	* 	Search all parents/children of given rows
+	*	Iterate all records data getting parents/children section_id. When are collected, search cloning previous search but
+	* 	replacing filter with a list of collected section_id
+	*
+	* @param array $ar_data
+	* 	Array of result (rows_data->result) from first search
+	* @param object options
+	* 	Default 'parents'
+	* 	Expected as format: {columns_name : ['parents']}
+	* @param object $sql_options
+	* 	Previous search options to use as base for the new search (columns, etc.)
+	*
+	* @return object $rows_data
+	*/
+	public static function add_parents_or_children($ar_data, $options, $sql_options) {
+
+		// options
+			$columns_name = $options->columns_name;
+
+		// ar_section_id
+			$ar_section_id = [];
+			foreach ($ar_data as $key => $row) {
+
+				foreach ((array)$columns_name as $column_name) {
+
+					if (isset($row[$column_name]) && !empty($row[$column_name])) {
+						$value = json_decode($row[$column_name]);
+						if (!empty($value)) {
+							foreach ((array)$value as $section_id) {
+								if (!in_array($section_id, $ar_section_id)) {
+									$ar_section_id[] = $section_id;
+								}
+							}
+						}
+					}
+				}
+			}//foreach ($ar_data as $key => $row)
+
+		// search
+			$sql_filter = 'section_id IN (' . implode(',', $ar_section_id). ')';
+
+			// clone source sql_options and overwrite specific params (preserves columns, etc.)
+			$sql_options = clone $sql_options;
+				$sql_options->process_result	= false; // avoid recursion
+				$sql_options->sql_filter		= $sql_filter;
+				$sql_options->count				= false;
+
+			$rows_data = web_data::get_rows_data($sql_options);
+
+		// final merged result (avoiding duplicates)
+			$new_ar_data = $ar_data;
+			foreach ($rows_data->result as $key => $value) {
+				if (!in_array($value, $new_ar_data)) {
+					$new_ar_data[] = $value;
+				}
+			}
+
+		// response
+			$response = new stdClass();
+				$response->ar_data = $new_ar_data;
+
+
+		return $response;
+	}//end add_parents_or_children
 
 
 
