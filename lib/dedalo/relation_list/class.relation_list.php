@@ -490,6 +490,37 @@ class relation_list extends common {
 				$diffusion_value = $ar_values;
 				break;
 
+			case 'filtered_values':
+				$diffusion_value = $this->get_diffusion_dato();
+
+				$target_component_tipo	= $diffusion_properties->process_dato_arguments->target_component_tipo;
+				$output					= $diffusion_properties->process_dato_arguments->output ?? 'array';
+				$ar_value=[];
+				foreach ($diffusion_value as $curernt_locator) {
+
+
+					$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+					$current_component	= component_common::get_instance(
+																	$modelo_name,
+																	$target_component_tipo,
+																	$this->section_id,
+																	'list',
+																	DEDALO_DATA_LANG,
+																	$this->section_tipo
+																	);
+					$current_component->set_dato($curernt_locator);
+					$ar_value[] = $current_component->get_valor();
+				}
+				if(isset($output)&& $output === 'string'){
+					$separator	= $diffusion_properties->process_dato_arguments->separator ?? ' | ';
+					$value = implode($separator, $ar_value);
+				}else{
+					$value = $ar_value;
+				}
+
+				$diffusion_value = $value;
+
+			break;
 			case 'dato':
 			default:
 				// DES

@@ -1312,10 +1312,12 @@ class component_portal extends component_relation_common {
 
 		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
 
+		$separator_fields	= $diffusion_properties->separator_fields ?? ', ';
 		switch ($data_to_be_used) {
 			
 			case 'valor_list':
-				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows='<br>', $separator_fields=', ' );
+				$separator_rows		= $diffusion_properties->separator_rows ?? '<br>';
+				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows, $separator_fields);
 				break;
 
 			case 'valor':
@@ -1366,8 +1368,8 @@ class component_portal extends component_relation_common {
 							$ar_resolved[] = $current_value_export;
 						}
 					}//end foreach( (array)$dato as $key => $current_locator)
-
-					$diffusion_value = implode(' | ', $ar_resolved);			
+					$separator_rows		= $diffusion_properties->separator_rows ?? ' | ';
+					$diffusion_value = implode($separator_rows, $ar_resolved);
 				}
 				break;
 

@@ -4162,6 +4162,20 @@ class diffusion_sql extends diffusion  {
 						}
 					break;
 
+
+				case 'ds':
+					foreach ((array)$value as $current_locator) {
+						if (isset($current_locator->ds)) {
+							foreach ($current_locator->ds as $key => $locator_ds) {
+								$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
+							}
+						}
+					}
+					if (!empty($ar_term_ds)) {
+						$ar_value[] = implode('|', $ar_term_ds);
+					}
+					break;
+
 				default:
 					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
 						if (true===self::empty_value($value) && isset($process_dato_arguments->empty_value)) {
