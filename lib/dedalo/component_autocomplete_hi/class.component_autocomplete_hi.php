@@ -597,7 +597,8 @@ class component_autocomplete_hi extends component_relation_common {
 	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) {
 
 		// separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
-			$separator = ' - ';
+			$separator			= $option_obj->divisor ?? ' - ';
+			$divisor_parents	= $option_obj->divisor_parents ?? ', ';
 
 		// load dato
 			$dato = $this->get_dato();
@@ -614,6 +615,7 @@ class component_autocomplete_hi extends component_relation_common {
 			
 			// properties options defined
 			foreach ($option_obj as $key => $value) {
+				if ($key==='divisor' || $key==='divisor_parents' ) continue;
 							
 				if ($key==='add_parents') {
 
@@ -625,7 +627,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 							// self term plus parents.
 							// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
-								$ar_diffusion_value[] = component_relation_common::get_locator_value($current_locator, $lang, $show_parents, false);
+								$ar_diffusion_value[] = component_relation_common::get_locator_value($current_locator, $lang, $show_parents, false, $divisor_parents);
 
 							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
