@@ -43,7 +43,7 @@ class component_autocomplete_hi extends component_relation_common {
 			if(!is_array($dato)) {
 				return "Sorry, type:" .gettype($dato). " not supported yet (Only array format)";
 			}
-		
+
 		// lang never must be DEDALO_DATA_NOLAN
 			if ($lang===DEDALO_DATA_NOLAN) {
 				$lang = DEDALO_DATA_LANG; // Force current lang as lang
@@ -52,14 +52,14 @@ class component_autocomplete_hi extends component_relation_common {
 		// properties
 			$propiedades 	= $this->get_propiedades();
 			$show_parents 	= (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
-		
+
 		// dato iterate	and resolve each locator
 			$ar_valor = array();
 			foreach ($dato as $key => $current_locator) {
 
 				// params: $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
 				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents);
-				
+
 				$current_locator_string 			= json_encode($current_locator);
 				$ar_valor[$current_locator_string]  = $current_valor;
 			}//end foreach ($dato as $key => $current_locator)
@@ -68,7 +68,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$valor = ($format==='array')
 				? $ar_valor
 				: implode($separator, $ar_valor);
-		
+
 
 		return $valor;
 	}//end get_valor
@@ -597,7 +597,7 @@ class component_autocomplete_hi extends component_relation_common {
 	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) {
 
 		// separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
-			$separator			= $option_obj->divisor ?? ' - ';
+			$separator			= $option_obj->divisor ?? $this->diffusion_properties->option_obj->divisor ?? ' - ';
 			$divisor_parents	= $option_obj->divisor_parents ?? ', ';
 
 		// load dato
@@ -607,16 +607,16 @@ class component_autocomplete_hi extends component_relation_common {
 			}
 
 		if (empty($option_obj)) {
-			
+
 			// default case
 			$diffusion_value = $this->get_valor($lang, 'string', $separator);
 
 		}else{
-			
+
 			// properties options defined
 			foreach ($option_obj as $key => $value) {
 				if ($key==='divisor' || $key==='divisor_parents' ) continue;
-							
+
 				if ($key==='add_parents') {
 
 					$show_parents = (bool)$value;
@@ -627,7 +627,14 @@ class component_autocomplete_hi extends component_relation_common {
 
 							// self term plus parents.
 							// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
-								$ar_diffusion_value[] = component_relation_common::get_locator_value($current_locator, $lang, $show_parents, false, $divisor_parents);
+								$ar_diffusion_value[] = component_relation_common::get_locator_value(
+									$current_locator, // locator
+									$lang, // lang
+									$show_parents, // show_parents
+									false, // ar_componets_related
+									$divisor_parents, // divisor
+									true // include_self
+								);
 
 							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
@@ -643,8 +650,8 @@ class component_autocomplete_hi extends component_relation_common {
 							// 	$ar_diffusion_value = array_merge($ar_diffusion_value, $ar_terms);
 							// }
 						}
-					
-					$diffusion_value = implode($separator, $ar_diffusion_value);				
+
+					$diffusion_value = implode($separator, $ar_diffusion_value);
 
 				}else if ($key==='custom_parents') {
 
@@ -658,7 +665,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
-							
+
 						// iterate parents
 							$stopped  = false;
 							$ar_terms = [];
@@ -675,7 +682,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 								// parent_end_by_model. Uses a model as last valid parent
 									if(isset($value->parent_end_by_model)){
-										$ar_tipo   = section::get_ar_children_tipo_by_modelo_name_in_section($parent_locator->section_tipo,['component_relation_model'],true, true, true, true);										
+										$ar_tipo   = section::get_ar_children_tipo_by_modelo_name_in_section($parent_locator->section_tipo,['component_relation_model'],true, true, true, true);
 										$component = component_common::get_instance('component_relation_model',
 																					 $ar_tipo[0],
 																					 $parent_locator->section_id,
@@ -700,7 +707,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 						// append whole or part of results when no empty
 							if (!empty($ar_terms)) {
-								
+
 								// parents_splice. Selects a portion of the complete parents array
 									if($stopped===false){
 										if(isset($value->parents_splice)){
@@ -709,7 +716,7 @@ class component_autocomplete_hi extends component_relation_common {
 												array_splice($ar_terms, $splice_values[0], $splice_values[1]);
 											}else{
 												array_splice($ar_terms, $splice_values[0]);
-											}											
+											}
 										}
 									}
 								// append terms
@@ -749,9 +756,9 @@ class component_autocomplete_hi extends component_relation_common {
 
 		// options parse
 			$options = new stdClass();
-				$options->locator 	= null;
-				$options->lang 		= DEDALO_DATA_LANG;
-				$options->type 		= 'municipality';
+				$options->locator	= null;
+				$options->lang		= DEDALO_DATA_LANG;
+				$options->type		= 'municipality';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// sort vars
@@ -773,8 +780,8 @@ class component_autocomplete_hi extends component_relation_common {
 			}else{
 
 				// section data of current locator
-					$section_tipo 	= $options->locator->section_tipo;
-					$section_id 	= $options->locator->section_id;
+					$section_tipo	= $options->locator->section_tipo;
+					$section_id		= $options->locator->section_id;
 
 				// political_map
 					$political_map 	= self::get_legacy_political_map($section_tipo);
@@ -913,10 +920,10 @@ class component_autocomplete_hi extends component_relation_common {
 	*/
 	public static function get_legacy_model( $locator, $lang=DEDALO_DATA_LANG ) {
 
-		$parent 		= $locator->section_id;
+		$parent			= $locator->section_id;
 		$section_tipo	= $locator->section_tipo;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO, true);
-		$component 		= component_common::get_instance($modelo_name,
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO, true);
+		$component		= component_common::get_instance($modelo_name,
 														 DEDALO_THESAURUS_RELATION_MODEL_TIPO,
 														 $parent,
 														 'list',
@@ -926,8 +933,8 @@ class component_autocomplete_hi extends component_relation_common {
 		$value = $component->get_valor($lang);
 
 		$model_obj = new stdClass();
-			$model_obj->name 	= $value;
-			$model_obj->locator = reset($dato);
+			$model_obj->name	= $value;
+			$model_obj->locator	= reset($dato);
 
 		return $model_obj;
 	}//end get_legacy_model
