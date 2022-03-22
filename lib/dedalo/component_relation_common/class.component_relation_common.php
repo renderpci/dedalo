@@ -150,14 +150,14 @@ class component_relation_common extends component_common {
 			if (is_object($dato)) {
 				$dato = [$dato];
 			}
-			
+
 			# Ensures is a real non-associative array (avoid json encode as object)
 			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 			# Verify all locators are well formed
 			$relation_type 		 = $this->relation_type;
 			$from_component_tipo = $this->tipo;
-	
+
 			foreach ((array)$dato as $key => $current_locator) {
 
 				if (!is_object($current_locator)) {
@@ -492,13 +492,13 @@ class component_relation_common extends component_common {
 				$relation_options->from_component_tipo 	= $tipo;
 				$relation_options->ar_locators 			= $current_dato;
 
-			$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);		
+			$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
 		}
 
 		// copy value
 			$propiedades = $this->get_propiedades();
 			if (isset($propiedades->copy_value)) {
-				
+
 				$valor	= $this->get_valor();
 				$value	= (is_string($valor))
 					? strip_tags($valor)
@@ -512,7 +512,7 @@ class component_relation_common extends component_common {
 																  'list',
 																  DEDALO_DATA_NOLAN,
 																  $section_tipo);
-				
+
 				$copy_component->set_dato($value);
 				$copy_component->Save();
 				debug_log(__METHOD__." Saved copy_value to component $current_model - $current_tipo - $section_tipo - value: ".to_string($value), logger::DEBUG);
@@ -621,7 +621,7 @@ class component_relation_common extends component_common {
 
 				$ar_values = [];
 				if ($include_self===true) {
-					$current_values = ts_object::get_term_by_locator( $locator, $lang, true );					
+					$current_values = ts_object::get_term_by_locator( $locator, $lang, true );
 					$ar_values[] = $current_values;
 				}
 
@@ -642,7 +642,7 @@ class component_relation_common extends component_common {
 					#	continue;
 					#}
 
-					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );					
+					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
 					if (!empty($current_value)) {
 						$ar_values[]  = $current_value;
 					}
@@ -836,7 +836,7 @@ class component_relation_common extends component_common {
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
 	public static function get_search_query($json_field, $search_tipo, $tipo_de_dato_search=null, $current_lang=null, $search_value='', $comparison_operator='=') {
-		
+
 		$search_query='';
 		if ( empty($search_value) ) {
 			return $search_query;
@@ -1159,15 +1159,15 @@ class component_relation_common extends component_common {
 
 		// old
 			// $diffusion_value = json_encode($dato);
-		
 
-		// new (2-9-2020). Remove non publicable values		
+
+		// new (2-9-2020). Remove non publicable values
 			if (empty($dato)) {
-				
+
 				$diffusion_value = null;
-			
+
 			}else{
-				
+
 				$diffusion_value = [];
 				foreach ((array)$dato as $current_locator) {
 
@@ -1182,7 +1182,7 @@ class component_relation_common extends component_common {
 				}
 				$diffusion_value = json_encode($diffusion_value);
 			}
-		
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value
@@ -1192,7 +1192,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_DIFFUSION_RESOLVE_VALUE
 	* Alias of static diffusion_sql::resolve_value
-	* @return 
+	* @return
 	*/
 	public function get_diffusion_resolve_value($option_obj=null) {
 
@@ -1230,7 +1230,7 @@ class component_relation_common extends component_common {
 		$dato = $this->get_dato();
 
 		$lang = $option_obj->lang; // $this->lang
-		
+
 		$options = new stdClass();
 			$options->lang			= $lang;
 			$options->propiedades	= $option_obj;
@@ -1247,7 +1247,7 @@ class component_relation_common extends component_common {
 	* @return string $diffusion_value
 	*/
 	public function get_diffusion_dato() {
-		
+
 		$dato = $this->get_dato();
 		if (is_array($dato)) {
 			$ar_id = array();
