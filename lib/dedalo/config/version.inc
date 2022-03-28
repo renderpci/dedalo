@@ -2669,6 +2669,8 @@
 		Fixed json encode error when get_filtered_relations param 'relations_data_string' is empty
 		Changed fallback no logged url in ontology pages to preserve v6 compatibility
 		Added new tool_administration feature 'delete_sections' to easy delete massive sections preserving the Time Machine version
+		Fixed error on normalize quotes in not string values (tool export raw get_valor_dedalo)
+
 
 
 	[/HISTORY]
@@ -2700,7 +2702,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-03-2022T11:26:19');
+	define('DEDALO_BUILD'	, '28-03-2022T10:04:24');
 
 
 	/*
