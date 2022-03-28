@@ -960,9 +960,16 @@ class tool_export extends tool_common {
 					$dato = $section->get_component_dato($tipo, $current_lang, $lang_fallback=false);
 					if (!empty($dato)) {
 
+						// Note that 'dato' normally is an object
+
 						// safe string to use as JSON data
-							$dato_clean = self::normalize_quotes($dato);
-							$dato_clean = stripslashes($dato_clean);
+							if (is_string($dato)) {
+								$dato_clean = self::normalize_quotes($dato);
+								$dato_clean = stripslashes($dato_clean);
+							}else{
+								$dato_clean = $dato;
+							}
+
 
 						$ar_valor[$current_lang] = $dato_clean;
 					}
