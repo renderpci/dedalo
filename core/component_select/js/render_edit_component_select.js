@@ -200,7 +200,7 @@ const get_buttons = (self) => {
 	// button edit (go to target section)
 		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
 
-			const target_sections			= self.context.target_sections
+			const target_sections			= self.context.target_sections || []
 			const target_sections_length	= target_sections.length
 			for (let i = 0; i < target_sections_length; i++) {
 
@@ -274,6 +274,16 @@ const get_input_element = (self) => {
 			element_type	: 'select',
 			parent			: li
 		})
+		select.addEventListener("change", function(){
+			const value = this.value
+				? JSON.parse(this.value)
+				: null
+			if (value) {
+				button_edit.classList.remove('hide')
+			}else{
+				button_edit.classList.add('hide')
+			}
+		})
 
 	// add empty option at begining of array
 		const empty_option = {
@@ -316,6 +326,55 @@ const get_input_element = (self) => {
 						parent			: option
 					})
 				}
+		}
+
+	// button_edit
+		const button_edit = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button edit show_on_active',
+			parent			: li
+		})
+		button_edit.addEventListener("click", function(e){
+			e.stopPropagation()
+			try {
+
+				if (!select.value) {
+					return false
+				}
+
+				const selected_locator = JSON.parse(select.value)
+				// target_section
+				const target_section_tipo	= selected_locator.section_tipo
+				const target_section_id		= selected_locator.section_id
+
+				// navigation
+					const user_navigation_options = {
+						source		: {
+							action			: 'search',
+							model			: 'section',
+							tipo			: target_section_tipo,
+							section_tipo	: target_section_tipo,
+							mode			: 'edit',
+							lang			: self.lang
+						},
+						sqo : {
+							section_tipo		: [{tipo : target_section_tipo}],
+							filter				: null,
+							limit				: 1,
+							filter_by_locators	: [{
+								section_tipo	: target_section_tipo,
+								section_id		: target_section_id
+							}]
+						}
+					}
+				event_manager.publish('user_navigation', user_navigation_options)
+			} catch (error) {
+				console.error(error)
+			}
+		})
+		// console.log("value_compare:", self.tipo, value_compare);
+		if (!value_compare) {
+			button_edit.classList.add('hide')
 		}
 
 
