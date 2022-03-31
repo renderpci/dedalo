@@ -311,10 +311,19 @@ class web_data {
 				break;
 
 			case 'group':
-				preg_match('/^[a-z| |`|,|_]+$/i', $value, $output_array);
-				if (empty($output_array[0])) {
-					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
-					return false;
+				if (strpos($value, 'CONCAT')===0) {
+					// added |\"|\[|\] to allow CONCAT sentences (28-03-2022)
+					preg_match('/^[\w|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/iu', $value, $output_array);
+					if (empty($output_array[0])) {
+						return false;
+					}
+				}else{
+
+					preg_match('/^[a-z| |`|,|_]+$/i', $value, $output_array);
+					if (empty($output_array[0])) {
+						debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
+						return false;
+					}
 				}
 				break;
 
