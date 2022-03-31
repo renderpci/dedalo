@@ -180,7 +180,7 @@ render_edit_section.prototype.edit = async function(options) {
 * @return DOM node content_data
 */
 const get_content_data = async function(self, ar_section_record) {
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const fragment = new DocumentFragment()
 

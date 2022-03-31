@@ -322,6 +322,7 @@ class component_portal extends component_relation_common {
 	}//end get_current_section_filter_data
 
 
+
 	/**
 	* UPDATE_DATO_VERSION
 	* @return object $response
@@ -396,7 +397,6 @@ class component_portal extends component_relation_common {
 
 
 
-
 	/**
 	* GET_VALOR
 	* @return
@@ -422,6 +422,7 @@ class component_portal extends component_relation_common {
 	}//end get_valor
 
 
+
 	/**
 	* GET_VALOR_EXPORT
 	* @return
@@ -442,6 +443,7 @@ class component_portal extends component_relation_common {
 
 		return $valor;
 	}//end get_valor_export
+
 
 
 	/**
