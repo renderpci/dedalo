@@ -155,7 +155,7 @@
 						}
 					}
 
-				// DATA
+				// data
 					$data = array_merge($data, $section_json->data);
 
 				// item sections value. Update in each iteration

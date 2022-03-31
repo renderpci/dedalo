@@ -386,7 +386,7 @@ const get_input_element_edit = (i, current_value, self) => {
 				// target_section
 					const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
 					const target_section_tipo = sqo.section_tipo[0].tipo
-					console.log("+++ sqo:",sqo);
+
 				// navigation
 					const user_navigation_options = {
 						source		: {
