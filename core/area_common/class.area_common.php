@@ -76,9 +76,20 @@ class area_common extends common  {
 	* @return string $tipo
 	*/
 	public function get_section_tipo() {
-		
+
 		return $this->tipo;
 	}//end get_section_tipo
+
+
+
+	/**
+	* GET SECTION ID
+	* Overwrites common method
+	*/
+	public function get_section_id() {
+
+		return null;
+	}//end get_section_id
 
 
 
