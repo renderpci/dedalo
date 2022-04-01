@@ -15,10 +15,11 @@
 	$context	= [];
 	$data		= [];
 
-	if($permissions>0){
-
+	// context
 		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
 		$context[]		= $this->context;
+
+	if($permissions>0) {
 
 		$dato 			= $this->get_dato() ?? [];
 		$row_locator 	= $this->row_locator;

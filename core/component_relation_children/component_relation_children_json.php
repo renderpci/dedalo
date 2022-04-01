@@ -40,14 +40,14 @@
 
 
 // data
-	$context = [];
-	$data = [];
+	$context	= [];
+	$data		= [];
 
-	if($permissions>0){
+	// Component structure context (tipo, relations, properties, etc.)
+		$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+		$context[] = $this->context;
 
-		// Component structure context (tipo, relations, properties, etc.)
-			$this->context = $this->get_structure_context($permissions, $add_rqo=true);
-			$context[] = $this->context;
+	if($permissions>0) {
 
 		$dato = $this->get_dato();
 
@@ -75,13 +75,13 @@
 				// $ar_subdata = $this->get_ar_subdata($value);
 
 			$subdatum = $this->get_subdatum($tipo, $value);
-					
+
 			$ar_subcontext	= $subdatum->context;
 			foreach ($ar_subcontext as $current_context) {
 				$context[] = $current_context;
-			}					
+			}
 
-			
+
 			$ar_subdata		= $subdatum->data;
 			// subdata add
 			if ($modo==='list') {
@@ -97,7 +97,6 @@
 					$data[] =$current_data;
 				}
 			}
-
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 

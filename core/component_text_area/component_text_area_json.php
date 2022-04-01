@@ -12,7 +12,7 @@
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
+	if($options->get_context===true) { //  && $permissions>0
 		switch ($options->context_type) {
 
 			case 'simple':
@@ -72,7 +72,7 @@
 
 
 				// dump($fallback_value, ' fallback_value ++ '.to_string($this->tipo));
-		
+
 		// data item
 		$item = $this->get_data_item($value);
 			$item->parent_tipo			= $this->get_tipo();

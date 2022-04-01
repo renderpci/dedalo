@@ -45,10 +45,11 @@
 	$context	= [];
 	$data		= [];
 
-	if($permissions>0){
-
+	// context
 		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
 		$context[]		= $this->context;
+
+	if($permissions>0) {
 
 		// get the data into DDBB
 		$dato 		= $this->get_dato();
@@ -78,12 +79,12 @@
 				// $ar_subdata = $this->get_ar_subdata($value);
 
 			$subdatum = $this->get_subdatum($tipo, $value);
-					
+
 			$ar_subcontext	= $subdatum->context;
 			foreach ($ar_subcontext as $current_context) {
 				$context[] = $current_context;
-			}					
-			
+			}
+
 			$ar_subdata		= $subdatum->data;
 
 			// subdata add

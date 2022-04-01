@@ -48,11 +48,12 @@
 	$context	= [];
 	$data		= [];
 
-	if($permissions>0){
 
-		// context get and fix
-			$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
-			$context[]		= $this->context;
+	// context get and fix
+		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
+		$context[]		= $this->context;
+
+	if($permissions>0){
 
 		// short vars
 			$section_id	= $this->get_section_id();
