@@ -113,8 +113,13 @@ abstract class filter {
 			$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT; // Default is Projects but it can be another
 
 		// section map
-			$ar_section_map = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($projects_section_tipo, 'section_map', 'children', true);
-			$section_map 	= reset($ar_section_map);
+			$ar_section_map = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$projects_section_tipo, // tipo
+				'section_map', // model name
+				'children', // relation_type
+				true // search_exact
+			);
+			$section_map = reset($ar_section_map); // expected 'dd267'
 
 		// projects_name_tipo. Get ts_map for locate name component (for future )
 			$RecordObj_dd = new RecordObj_dd($section_map);
@@ -122,6 +127,7 @@ abstract class filter {
 			if (!$properties) {
 				dump($properties, ' properties ++ '.to_string($section_map));
 				throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
+				// trigger_error("Error Processing Request. properties for section_map: $section_map is empty !");
 			}
 			$projects_name_tipo = $properties->thesaurus->term;
 
@@ -137,28 +143,30 @@ abstract class filter {
 				$filter = '';
 			}else{
 				// filter_master data builds filter ooptions
-				$component_filter_master = component_common::get_instance('component_filter_master',
-																		  DEDALO_FILTER_MASTER_TIPO,
-																		  $user_id,
-																		  'list',
-																		  DEDALO_DATA_NOLAN,
-																		  DEDALO_SECTION_USERS_TIPO);
+				$component_filter_master = component_common::get_instance(
+					'component_filter_master',
+					DEDALO_FILTER_MASTER_TIPO,
+					$user_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					DEDALO_SECTION_USERS_TIPO
+				);
 				$dato  = (array)$component_filter_master->get_dato();
 				$ar_id = array_map(function($locator){
 					return (int)$locator->section_id;
 				}, $dato);
 
 				$filter = '{
-			        "q": "'.json_encode($ar_id).'",
-			        "path": [
-			          {
-			            "section_tipo": "'.$projects_section_tipo.'",
-			            "component_tipo": "section_id",
-			            "modelo": "component_section_id",
-			            "name": "section_id"
-			          }
-			        ]
-			      }';
+					"q": "'.implode(',', $ar_id).'",
+					"path": [
+					  {
+					    "section_tipo": "'.$projects_section_tipo.'",
+					    "component_tipo": "section_id",
+					    "modelo": "component_section_id",
+					    "name": "section_id"
+					  }
+					]
+				}';
 			}//end if ($is_global_admin===false)
 
 		// search_query_object
@@ -198,7 +206,7 @@ abstract class filter {
 				  ]
 				}
 			');
-			#dump( json_encode($search_query_object), ' search_query_object ++ '.to_string());
+			// dump( json_encode($search_query_object), ' search_query_object ++ '.to_string());
 
 		$search = search::get_instance($search_query_object);
 		$result = $search->search();
