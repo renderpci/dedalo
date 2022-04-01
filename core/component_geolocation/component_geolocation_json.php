@@ -13,7 +13,7 @@
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
+	if($options->get_context===true) { //  && $permissions>0
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
@@ -21,8 +21,8 @@
 				break;
 
 			default:
-				$structure_context = $this->get_structure_context($permissions);				
-				
+				$structure_context = $this->get_structure_context($permissions);
+
 				// geo_provider add
 					$geo_provider = (isset($properties->geo_provider)) ? $properties->geo_provider : DEDALO_GEO_PROVIDER;
 					$structure_context->geo_provider = $geo_provider;

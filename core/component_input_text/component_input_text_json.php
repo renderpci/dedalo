@@ -14,7 +14,7 @@ if(SHOW_DEBUG===true) $start_time = start_time();
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
+	if($options->get_context===true) { //  && $permissions>0
 		$add_rqo = isset($properties->unique) ? true : false;
 		switch ($options->context_type) {
 

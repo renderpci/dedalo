@@ -4,21 +4,21 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
 
 
 
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
+	if($options->get_context===true) { //  && $permissions>0
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -31,10 +31,10 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-		
+
 		// Value
 		$value = $this->get_dato();
-			
+
 		// data item
 		$item  = $this->get_data_item($value);
 

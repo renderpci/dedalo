@@ -52,10 +52,13 @@
 	$context	= [];
 	$data		= [];
 
-	if($permissions>0){
 
+	// context
 		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
 		$context[]		= $this->context;
+
+
+	if($permissions>0) {
 
 		$dato = $this->get_dato();
 
@@ -79,11 +82,11 @@
 
 				$data[] = $item;
 
-			//used to check if the component has the request_config of the section_tipo 
+			//used to check if the component has the request_config of the section_tipo
 			$cache_request_config = [];
 
 			foreach ($value as $locator) {
-		
+
 				$current_section_tipo	= $locator->section_tipo;
 				$current_section_id		= $locator->section_id;
 
@@ -91,11 +94,11 @@
 
 				$section_json = $section->get_json();
 				$ar_subcontext	= $section_json->context;
-				
+
 				// the the different request_config to be used as configurated request_config of the component
 				foreach ($ar_subcontext as $current_context) {
 
-					if ($current_context->model ==='section' 
+					if ($current_context->model ==='section'
 						&& $current_context->tipo === $current_section_tipo
 						&& !in_array($current_section_tipo, $cache_request_config)) {
 						// get the section request config (we will use his request config)
@@ -107,8 +110,8 @@
 							});
 						$ddo_map = $section_request_config->show->ddo_map;
 						// change the ddo parent of the section to the component, only if the parent is the section_tipo
-						// is necesary don't change the ddo with deep dependence 
-						foreach ($ddo_map as $current_ddo) {						
+						// is necesary don't change the ddo with deep dependence
+						foreach ($ddo_map as $current_ddo) {
 							 $current_ddo->parent = ($current_ddo->parent === $current_section_tipo)
 								 ? $tipo
 								 : $current_ddo->parent;
@@ -125,22 +128,22 @@
 					}
 
 					$current_context->parent = $tipo;
-					
+
 					$context[] = $current_context;
-				}					
+				}
 
 				$ar_subdata		= $section_json->data;
 				foreach ($ar_subdata as $sub_value) {
 					$sub_value->parent = $tipo;
 					$data[] = $sub_value;
 				}
-			
+
 
 				// $context	= array_merge($context, $section_json->context);
 				// $data		= array_merge($data, $section_json->data);
 
 			}
-	
+
 			// if (!empty($ar_section_tipo)) {
 			// 	foreach ($ar_section_tipo as $current_section_tipo) {
 
@@ -167,8 +170,8 @@
 			// $ar_subcontext	= $subdatum->context;
 			// foreach ($ar_subcontext as $current_context) {
 			// 	$context[] = $current_context;
-			// }					
-			
+			// }
+
 			// $ar_subdata		= $subdatum->data;
 
 

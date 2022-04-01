@@ -13,7 +13,7 @@
 // context
 	$context = [];
 
-	if($options->get_context===true && $permissions>0){
+	if($options->get_context===true) { //  && $permissions>0
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
