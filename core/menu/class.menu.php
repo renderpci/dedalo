@@ -48,6 +48,7 @@ class menu extends common {
 		$is_global_admin	= security::is_global_admin($user_id);
 
 		if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
+
 			// get all areas of the current installation
 			$ar_areas = area::get_areas();
 
@@ -73,29 +74,30 @@ class menu extends common {
 				}
 			}
 
-			// foreach ($ar_permisions_areas as $item) {
-			// $ar_permisions_areas_length = sizeof($ar_permisions_areas);
-			// for ($i=0; $i < $ar_permisions_areas_length ; $i++) {
-			// 	$item		= $ar_permisions_areas[$i];
-			// 	$ar_areas[]	= ontology::tipo_to_json_item($item->tipo, [
-			// 		'tipo'			=> true,
-			// 		'tld'			=> false,
-			// 		'is_model'		=> false,
-			// 		'model'			=> true,
-			// 		'model_tipo'	=> false,
-			// 		'parent'		=> true,
-			// 		'order'			=> false,
-			// 		'translatable'	=> false,
-			// 		'properties'	=> true,
-			// 		'relations'		=> false,
-			// 		'descriptors'	=> false,
-			// 		'label'			=> true
-			// 	]);
-			// }
+			// DES
+				// foreach ($ar_permisions_areas as $item) {
+				// $ar_permisions_areas_length = sizeof($ar_permisions_areas);
+				// for ($i=0; $i < $ar_permisions_areas_length ; $i++) {
+				// 	$item		= $ar_permisions_areas[$i];
+				// 	$ar_areas[]	= ontology::tipo_to_json_item($item->tipo, [
+				// 		'tipo'			=> true,
+				// 		'tld'			=> false,
+				// 		'is_model'		=> false,
+				// 		'model'			=> true,
+				// 		'model_tipo'	=> false,
+				// 		'parent'		=> true,
+				// 		'order'			=> false,
+				// 		'translatable'	=> false,
+				// 		'properties'	=> true,
+				// 		'relations'		=> false,
+				// 		'descriptors'	=> false,
+				// 		'label'			=> true
+				// 	]);
+				// }
 		}
 
 		// section_tool case
-		// section_tool is a alias of the section that will be use to load the information to the specific tool
+		// section_tool is an alias of the section that will be use to load the information to the specific tool
 		// all process use the target_section_tipo, because it has the information inside the db and the instances need to be connected to these section_tipo
 		// menu replace the model and the tipo with the target section, and add the config for use to change the behavior of the real section.
 			$tree_datalist = [];
@@ -146,7 +148,7 @@ class menu extends common {
 				// add
 					$tree_datalist[] = $datalist_item;
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
-				// dump($tree_datalist, ' tree_datalist ++ '.to_string());
+			// dump($tree_datalist, ' tree_datalist ++ '.to_string());
 
 		return $tree_datalist;
 	}//end get_tree_datalist
@@ -155,7 +157,7 @@ class menu extends common {
 
 	/**
 	* GET_INFO_DATA
-	* get the global information of the current intalation.
+	* get the global information of the current installation.
 	* @return object $info_data
 	*/
 	public function get_info_data() {

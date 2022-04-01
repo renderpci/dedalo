@@ -24,7 +24,7 @@
 				$item_context = $this->get_structure_context(
 					$permissions,
 					false, // add_request_config
-					$fallback = function($dd_object) {
+					$callback = function($dd_object) {
 						// add target_sections to the context
 						$dd_object->set_target_sections(
 							array_map(function($tipo) {

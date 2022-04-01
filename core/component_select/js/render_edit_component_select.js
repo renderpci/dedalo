@@ -31,9 +31,6 @@ render_edit_component_select.prototype.edit = async function(options) {
 
 	const render_level = options.render_level || 'full'
 
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// content_data
 		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
@@ -259,12 +256,12 @@ const get_buttons = (self) => {
 */
 const get_input_element = (self) => {
 
-	const value		= self.data.value || []
-	const datalist	= self.data.datalist
-		? (JSON.parse(JSON.stringify(self.data.datalist)) || [])
-		: []
+	// short vars
+		const data		= self.data || {}
+		const value		= data.value || []
+		const datalist	= data.datalist || []
 
-	// create li
+	// li
 		const li = ui.create_dom_element({
 			element_type : 'li'
 		})

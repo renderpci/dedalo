@@ -93,7 +93,9 @@ class component_section_id extends component_common {
 	public static function resolve_query_object_sql($query_object) {
 
 		// reset array value
-		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		$query_object->q = is_array($query_object->q)
+			? reset($query_object->q)
+			: $query_object->q;
 
 		$q = $query_object->q;
 		// if (isset($query_object->type) && $query_object->type==='jsonb') {
