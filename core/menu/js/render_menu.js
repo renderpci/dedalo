@@ -193,6 +193,7 @@ render_menu.prototype.edit = async function() {
 			selected	: page_globals.dedalo_application_lang,
 			class_name	: 'reset_input dedalo_aplication_langs_selector'
 		})
+		dedalo_aplication_langs_selector.title = get_label.interface || 'Interface'
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
 	// data lang selector

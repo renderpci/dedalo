@@ -32,9 +32,6 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// fix non value scenarios
-		self.data.value = (self.data.value===null || self.data.value.length<1) ? [null] : self.data.value
-
 	// content_data
 		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
@@ -242,8 +239,8 @@ const add_events = function(self, wrapper) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const value				= self.data.value
-		const is_inside_tool	= self.is_inside_tool
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	const fragment = new DocumentFragment()
 
@@ -258,7 +255,7 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= value//(value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_input_element_edit(i, inputs_value[i], self, is_inside_tool)
+			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
 			inputs_container.appendChild(input_element_node)
 		}
 
@@ -344,11 +341,12 @@ const get_buttons = (self) => {
 */
 const get_input_element_edit = (i, current_value, self) => {
 
-	const mode					= self.mode
-	const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
-	const element_type			= (multi_line===true) ? 'textarea' :'input'
-	const is_inside_tool		= self.is_inside_tool
-	// const with_lang_versions	= self.context.properties.with_lang_versions || false
+	// short vars
+		const mode					= self.mode
+		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+		const element_type			= (multi_line===true) ? 'textarea' :'input'
+		const is_inside_tool		= self.is_inside_tool
+		// const with_lang_versions	= self.context.properties.with_lang_versions || false
 
 	// li
 		const li = ui.create_dom_element({
@@ -356,7 +354,7 @@ const get_input_element_edit = (i, current_value, self) => {
 		})
 
 	// input field
-		const input = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: element_type,
 			type			: 'text',
 			class_name		: 'input_value',
@@ -367,8 +365,9 @@ const get_input_element_edit = (i, current_value, self) => {
 		})
 
 	// button remove. Triggered by wrapper delegated events
-		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
-			const button_remove = ui.create_dom_element({
+		if((mode==='edit' || 'edit_in_list') && !is_inside_tool) {
+			// button_remove
+			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
 				dataset			: { key : i },

@@ -33,8 +33,8 @@
 	if($options->get_data===true && $permissions>0){
 
 		// value - this value will not be sent to the front end in any case
-		$value = [];		
-	
+		$value = [];
+
 		// data item
 		$item  = $this->get_data_item($value);
 

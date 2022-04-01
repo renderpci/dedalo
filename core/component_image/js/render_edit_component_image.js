@@ -64,7 +64,7 @@ const get_content_data_edit = function(self) {
 	// url
 		let url
 		const quality	= self.quality || self.context.quality
-		const datalist	= self.data.datalist
+		const datalist	= self.data.datalist || []
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		url = file_info
 			? file_info.url
@@ -257,10 +257,11 @@ const get_buttons = (self) => {
 const get_quality_selector = (self) => {
 
 	// short vars
-		const data		= self.data
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
 		const quality	= self.quality || self.context.quality
 
-		const fragment = new DocumentFragment()
+	const fragment = new DocumentFragment()
 
 	// create the quality selector
 		const quality_selector = ui.create_dom_element({
@@ -273,7 +274,7 @@ const get_quality_selector = (self) => {
 			event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
-		const quality_list		= data.datalist.filter(el => el.file_exist===true)
+		const quality_list		= datalist.filter(el => el.file_exist===true)
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
 			// create the node with the all qualities sended by server

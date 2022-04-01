@@ -4,17 +4,17 @@
 
 
 // component configuration vars
-	$modo				= $this->get_modo();
-	$permissions		= 2;
+	$modo			= $this->get_modo();
+	$permissions	= 2;
 
 // context
 	$context = [];
 
 	if($options->get_context===true){
 
-		// Component structure context (tipo, relations, properties, etc.)
+		// element structure context (tipo, relations, properties, etc.)
 			$structure_context = $this->get_structure_context($permissions, $add_rqo=false);
-				$structure_context->request_config = $this->get_rqo();
+				// $structure_context->request_config = $this->get_rqo();
 
 		$context[] = $structure_context;
 	}//end if($options->get_context===true)

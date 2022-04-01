@@ -212,11 +212,10 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data = function(self) {
 
-	// const value			= self.data.value
-	const datalist			= self.data.datalist
-	const datalist_length	= datalist.length
-	// const mode			= self.mode
-	// const is_inside_tool	= self.is_inside_tool
+	// short vars
+		const data				= self.data || {}
+		const datalist			= data.datalist || []
+		const datalist_length	= datalist.length
 
 	const fragment = new DocumentFragment()
 
