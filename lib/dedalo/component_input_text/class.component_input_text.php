@@ -229,12 +229,12 @@ class component_input_text extends component_common {
 				$valor .= ' ('.$add_value.')';
 			}
 		}
-		
+
 
 		if (empty($valor)) {
 			$valor = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 		}
-		
+
 
 		return to_string($valor);
 	}//end get_valor_export
@@ -653,7 +653,7 @@ class component_input_text extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
 				$query_object->unaccent = isset($query_object->unaccent) ? $query_object->unaccent : true;
 				break;
 			# LITERAL
