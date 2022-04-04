@@ -9,6 +9,7 @@
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
+	// import {set_element_css} from '../../page/js/css.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {
@@ -145,10 +146,24 @@ render_edit_view_mosaic.render = async function(self, options) {
 			Object.assign(
 				list_body.style,
 				{
-					"grid-template-columns": template_columns
+					"grid-template-columns" : template_columns
 				}
 			)
 			list_body.appendChild(content_data)
+			// set_element_css()
+			// css
+			// const element_css		= self.context.css || {}
+			// const legacy_selector	= '.list_body'
+			// if (element_css[legacy_selector]) {
+			// 	// style
+			// 	if (element_css[legacy_selector].style) {
+			// 		Object.assign(
+			// 			list_body.style,
+			// 			element_css[legacy_selector].style
+			// 		)
+			// 	}
+			// 	console.log("element_css[legacy_selector].style:",element_css[legacy_selector].style);
+			// }
 
 	// buttons
 		const buttons = get_buttons(self)
