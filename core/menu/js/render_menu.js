@@ -147,17 +147,19 @@ render_menu.prototype.edit = async function() {
 			})
 
 	// ontology link
-		const ontology_link = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'ontology',
-			parent			: fragment,
-			text_content	: 'Ontology'
-		})
-		ontology_link.addEventListener("click", ()=>{
-			const url = DEDALO_CORE_URL + '/ontology'
-			const win = window.open(url, '_blank');
-				  win.focus();
-		})
+		if (self.data && self.data.show_ontology===true) {
+			const ontology_link = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'ontology',
+				parent			: fragment,
+				text_content	: 'Ontology'
+			})
+			ontology_link.addEventListener("click", ()=>{
+				const url = DEDALO_CORE_URL + '/ontology'
+				const win = window.open(url, '_blank');
+					  win.focus();
+			})
+		}
 
 	// user name link (go to list)
 		const logged_user_name = ui.create_dom_element({
