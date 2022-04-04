@@ -4,9 +4,10 @@
 
 
 // imports
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {strip_tags} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'
 
@@ -118,6 +119,7 @@ export const ui = {
 				const model			= instance.model 	// like component_input-text
 				const type			= instance.type 	// like 'component'
 				const tipo			= instance.tipo 	// like 'rsc26'
+				const section_tipo	= instance.section_tipo 	// like 'rsc26'
 				const mode			= instance.mode 	// like 'edit'
 				const view			= instance.view || null
 				const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label

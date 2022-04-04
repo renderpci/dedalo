@@ -70,9 +70,11 @@ class security {
 	*/
 	public static function get_security_permissions(string $parent_tipo, string $tipo) {
 
-		if ((int)$_SESSION['dedalo']['auth']['user_id']===DEDALO_SUPERUSER) {
-			return 3;
-		}
+		// logged user id
+			$user_id = $_SESSION['dedalo']['auth']['user_id'];
+			if ((int)$user_id===DEDALO_SUPERUSER) {
+				return 3;
+			}
 
 		// Tools Register section 'dd1324'
 			if ($parent_tipo===DEDALO_REGISTER_TOOLS_SECTION_TIPO) {

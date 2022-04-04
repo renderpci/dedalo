@@ -4,9 +4,9 @@
 
 
 // configuration vars
-	$tipo				= $this->get_tipo();
-	$permissions		= common::get_permissions($tipo, $tipo);
-	$modo				= $this->get_modo();
+	$tipo			= $this->get_tipo();
+	$permissions	= common::get_permissions($tipo, $tipo);
+	$modo			= $this->get_modo();
 
 
 
@@ -14,13 +14,16 @@
 	$context = [];
 
 
-	if($options->get_context===true){
+	if($options->get_context===true) {
 
 		// set self from_parent
 			$this->from_parent = $tipo;
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions, $add_rqo=true);
+			$context[] = $this->get_structure_context(
+				$permissions,
+				true // add_rqo
+			);
 
 		// subcontext from element layout_map items
 			$ar_subcontext = $this->get_ar_widgets();

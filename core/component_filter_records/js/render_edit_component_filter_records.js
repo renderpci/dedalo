@@ -172,7 +172,7 @@ const get_content_data = function(self) {
 		// header
 			const header_li = ui.create_dom_element({
 				element_type	: 'li',
-				class_name		: 'header_li',
+				class_name		: 'header_row',
 				parent			: inputs_container
 			})
 			const header_tipo = ui.create_dom_element({
@@ -259,41 +259,42 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT
+* @param int i
+* 	Value array current key
+* @param object datalist_item
+* {"label":"label","tipo":"rsc23","permissions":2}
 * @return DOM node li
 */
-const get_input_element = (i, datalist_item, self) => {
-
-	// const datalist_value	= datalist_item.value
-	const label				= datalist_item.label
-	const tipo				= datalist_item.tipo
-
-	// value
-	const value  		 	 = self.data.value || []
-	const value_length   	 = value.length
-	const item 		  	 	 = value.find(item => item.tipo===tipo)
-	const input_value_string = typeof item!=="undefined" ? item.value.join(',') : ''
+const get_input_element = (i, datalist_item) => {
 
 	// create li
 		const li = ui.create_dom_element({
-			element_type	: 'li'
+			element_type	: 'li',
+			class_name		: 'body_row'
 		})
 
 	// tipo
-		const option_tipo = ui.create_dom_element({
+		const tipo	= datalist_item.tipo
+		ui.create_dom_element({
 			element_type	: 'span',
 			inner_html		: tipo,
 			parent			: li
 		})
 
 	// label
-		const option_label = ui.create_dom_element({
+		const label	= datalist_item.label
+		ui.create_dom_element({
 			element_type	: 'span',
 			inner_html		: label,
 			parent			: li
 		})
 
 	// input field
-		const input = ui.create_dom_element({
+		const data					= self.data || {}
+		const value					= data.value || []
+		const item					= value.find(item => item.tipo===tipo)
+		const input_value_string	= typeof item!=="undefined" ? item.value.join(',') : ''
+		ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',

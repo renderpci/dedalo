@@ -32,9 +32,6 @@ render_edit_component_filter.prototype.edit = async function(options={render_lev
 	// render_level
 		const render_level 	= options.render_level
 
-	const value		= self.data.value || []
-	const datalist	= self.data.datalist || []
-
 	// content_data
 		const content_data = get_content_data(self)
 		if (render_level==='content') {
@@ -52,6 +49,7 @@ render_edit_component_filter.prototype.edit = async function(options={render_lev
 
 	// events (delegated)
 		add_events(self, wrapper)
+
 
 	return wrapper
 };//end edit
