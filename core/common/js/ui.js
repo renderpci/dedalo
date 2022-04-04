@@ -219,7 +219,7 @@ export const ui = {
  				})
  				// CSS
 					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
+					const ar_css = ['wrapper_'+type, model, tipo, section_tipo+'_'+tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					if (mode==="tm") ar_css.push("edit")
@@ -227,44 +227,44 @@ export const ui = {
 
 				// legacy CSS
 					if (model!=='component_filter') {
-						const legacy_selector = '.wrap_component'
-						if (element_css[legacy_selector]) {
-							// mixin
-								if (element_css[legacy_selector].mixin){
-									// width from mixin
-									const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
-									if (found) { //  && found!=='.width_50'
-										// wrapper.style['flex-basis'] = found.substring(7) + '%'
-										// wrapper.style['--width'] = found.substring(7) + '%'
-										wrapper.style.setProperty('--component_width', found.substring(7) + '%');
-									}
-								}
-							// style
-								if (element_css[legacy_selector].style) {
-									// width from style
-									if (element_css[legacy_selector].style.width) {
-										// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
-										// wrapper.style['--width'] = element_css[legacy_selector].style.width
-										wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
-									}
-									// display none from style
-									if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
-										wrapper.classList.add('display_none')
-									}
-								}
-						}
-						const legacy_selector_content_data = '.content_data'
-						if (element_css[legacy_selector_content_data] && items.content_data) {
-							// style
-								if (element_css[legacy_selector_content_data].style) {
-									// height from style
-									if (element_css[legacy_selector_content_data].style.height) {
-										items.content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
-									}
-								}
-						}
-					}//end if (model!=='component_filter') {
-
+						// const legacy_selector = '.wrap_component'
+						// if (element_css[legacy_selector]) {
+						// 	// mixin
+						// 		if (element_css[legacy_selector].mixin){
+						// 			// width from mixin
+						// 			const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
+						// 			if (found) { //  && found!=='.width_50'
+						// 				// wrapper.style['flex-basis'] = found.substring(7) + '%'
+						// 				// wrapper.style['--width'] = found.substring(7) + '%'
+						// 				wrapper.style.setProperty('--component_width', found.substring(7) + '%');
+						// 			}
+						// 		}
+						// 	// style
+						// 		if (element_css[legacy_selector].style) {
+						// 			// width from style
+						// 			if (element_css[legacy_selector].style.width) {
+						// 				// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+						// 				// wrapper.style['--width'] = element_css[legacy_selector].style.width
+						// 				wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
+						// 			}
+						// 			// display none from style
+						// 			if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
+						// 				wrapper.classList.add('display_none')
+						// 			}
+						// 		}
+						// }
+						// const legacy_selector_content_data = '.content_data'
+						// if (element_css[legacy_selector_content_data] && items.content_data) {
+						// 	// style
+						// 		if (element_css[legacy_selector_content_data].style) {
+						// 			// height from style
+						// 			if (element_css[legacy_selector_content_data].style.height) {
+						// 				items.content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
+						// 			}
+						// 		}
+						// }
+						set_element_css(section_tipo+'_'+tipo, element_css)
+					}//end if (model!=='component_filter')
 
 				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
@@ -292,6 +292,34 @@ export const ui = {
 						}
 					})
 				}
+
+			// test css
+				// const my_css = {
+				//    '.cssinjs-btn': {
+				//       "color": "white",
+				//       "background": "black"
+				//     }
+				// }
+				// const toCssString = css => {
+				//   let result = ''
+				//   for (const selector in css) {
+				//     result += selector + ' {' // .cssinjs-btn {
+				//     for (const property in css[selector]) {
+				//       // color: white;
+				//       result += property + ': ' + css[selector][property] + ';'
+				//     }
+				//     result += '}'
+				//   }
+				//   return result
+				// }
+				// // Render styles.
+				// let style = document.querySelector("#el_id_del_style")
+				// if (!style) {
+				// 	style = document.createElement('style')
+				// 	style.id = 'el_id_del_style'
+				// 	document.head.appendChild(style)
+				// }
+				// style.textContent += toCssString(my_css) + '\n'
 
 
 			return wrapper
@@ -1864,16 +1892,16 @@ export const ui = {
 				case 'big' :
 					// hide contents to avoid double scrollbars
 						const content_data_page = document.querySelector(".content_data.page")
-							  content_data_page.classList.add("hide")
-						const menu_wrapper = document.querySelector(".content_data.page")
-							  menu_wrapper.classList.add("hide")
+							  // content_data_page.classList.add("hide")
+						// const menu_wrapper = document.querySelector(".menu_wrapper")
+							  // menu_wrapper.classList.add("hide")
 						const debug_div = document.getElementById("debug")
-							  if(debug_div) debug_div.classList.add("hide")
+							  // if(debug_div) debug_div.classList.add("hide")
 
 					// show hidden elements again on close
 						event_manager.subscribe('modal_close', () => {
 							content_data_page.classList.remove("hide")
-							menu_wrapper.classList.remove("hide")
+							// menu_wrapper.classList.remove("hide")
 							if(debug_div) debug_div.classList.remove("hide")
 
 							// scroll window to previous scroll position
@@ -2290,49 +2318,63 @@ export const ui = {
 			const label		= options.label
 
 		// strip label HTML tags
-			const label_node = document.createElement("div");
-			label_node.innerHTML = label;
-			const label_text = label_node.textContent || label_node.innerText || "";
+			const label_text = strip_tags(label);
 
-		const add_css_rule = function (selector, css) {
+		// const add_css_rule = function (selector, css) {
 
-			// create new styleSheet if not already exists
-			if (!window.css_style_sheet) {
-				const style = document.createElement("style");
-				style.type = 'text/css'
-				document.head.appendChild(style);
-				window.css_style_sheet = style.sheet;
-			}
+		// 	// css_style_sheet
+		// 		// create new styleSheet if not already exists
+		// 		// if (!window.css_style_sheet) {
+		// 		// 	const style = document.createElement("style");
+		// 		// 	style.type = 'text/css'
+		// 		// 	document.head.appendChild(style);
+		// 		// 	window.css_style_sheet = style.sheet;
+		// 		// }
+		// 		// const css_style_sheet	= window.css_style_sheet
+		// 		const css_style_sheet		= get_elements_style_sheet()
 
-			const css_style_sheet	= window.css_style_sheet
-			const rules				= css_style_sheet.rules
-			const rules_length		= rules.length
-			for (let i = rules_length - 1; i >= 0; i--) {
+		// 	const rules			= css_style_sheet.rules
+		// 	const rules_length	= rules.length
+		// 	for (let i = rules_length - 1; i >= 0; i--) {
 
-				const current_selector = rules[i].selectorText
-				if(current_selector===selector) {
-					// already exists
-					// console.warn("/// stop current_selector:",current_selector);
-					return false
-				}
-			}
+		// 		const current_selector = rules[i].selectorText
+		// 		if(current_selector===selector) {
+		// 			// already exists
+		// 			// console.warn("/// stop current_selector:",current_selector);
+		// 			return false
+		// 		}
+		// 	}
 
-			const propText = typeof css==='string'
-				? css
-				: Object.keys(css).map(function (p) {
-					return p + ':' + (p==='content' ? "'" + css[p] + "'" : css[p]);
-				  }).join(';');
-			css_style_sheet.insertRule(selector + '{' + propText + '}', css_style_sheet.cssRules.length);
+		// 	const propText = typeof css==='string'
+		// 		? css
+		// 		: Object.keys(css).map(function (p) {
+		// 			return p + ':' + (p==='content' ? "'" + css[p] + "'" : css[p]);
+		// 		  }).join(';');
+		// 	css_style_sheet.insertRule(selector + '{' + propText + '}', css_style_sheet.cssRules.length);
 
-			return true
-		};
+		// 	return true
+		// };
 
 		// const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
 		// if (width<960) {
 			// return add_css_rule(`#column_id_${column_id}::before`, {
-			return add_css_rule(`${selector}::before`, {
-				content	: label_text
-			});
+			// return add_css_rule(`${selector}::before`, {
+			// 	content	: label_text
+			// });
+
+			const css_object = {
+				[`${selector}::before`] : {
+					style : function() {
+						return {
+							selector : `${selector}::before`,
+							value : {
+								content : label_text
+							}
+						}
+					}
+				}
+			}
+			set_element_css(selector.replace('#',''), css_object)
 		// }
 	},//end make_column_responsive
 
