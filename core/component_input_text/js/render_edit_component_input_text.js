@@ -78,15 +78,15 @@ const add_events = function(self, wrapper) {
 		}
 
 	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, fn_add_element)
-		)
-		function fn_add_element(changed_data) {
-			//console.log("-------------- + event add_element changed_data:", changed_data);
-			const inputs_container = wrapper.querySelector('.inputs_container')
-			// add new dom input element
-			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
-		}
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('add_element_'+self.id, fn_add_element)
+		// )
+		// function fn_add_element(changed_data) {
+		// 	//console.log("-------------- + event add_element changed_data:", changed_data);
+		// 	// const inputs_container = wrapper.querySelector('.inputs_container')
+		// 	// add new dom input element
+		// 	const input_element = get_input_element_edit(changed_data.key, changed_data.value, self)
+		// }
 
 	// remove element, subscription to the events
 		//self.events_tokens.push(
@@ -298,16 +298,23 @@ const get_buttons = (self) => {
 
 				const changed_data = Object.freeze({
 					action	: 'insert',
-					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
+					key		: self.data.value.length,
 					value	: null
 				})
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: false
 				})
-				.then((save_response)=>{
+				.then(()=>{
 					// event to update the dom elements of the instance
-					event_manager.publish('add_element_'+self.id, changed_data)
+					// event_manager.publish('add_element_'+self.id, changed_data)
+					self.refresh()
+					.then(()=>{
+						const input_text = self.node[0].querySelector(`input[data-key="${changed_data.key}"]`)
+						if (input_text) {
+							input_text.focus()
+						}
+					})
 				})
 			})
 		}
