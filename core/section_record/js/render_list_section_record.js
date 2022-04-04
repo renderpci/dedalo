@@ -79,11 +79,21 @@ render_list_section_record.prototype.list = async function(options={}) {
 			// loop the instances for select the parent node
 				const ar_instances_length = ar_instances.length
 
+			// case zero (user don't have enough privileges cases)
+				if (ar_instances_length===0) {
+					// empty column
+					const column_node = render_empty_column_node(current_column, self)
+					fragment.appendChild(column_node)
+					continue;
+				}
+
 			// render all instances in parallel before create the columns nodes (to get the internal nodes)
 				const ar_promises = []
 				for (let k = 0; k < ar_instances_length; k++) {
 					const current_promise = new Promise(function(resolve, reject){
+
 						const current_instance = ar_instances[k]
+
 						// already rendered case
 						if (typeof current_instance.node[0]!=='undefined') {
 							resolve(true)
@@ -602,3 +612,31 @@ const render_column_node_callback = function(column_obj, self){
 }// end render_column_node_callback
 
 
+
+/**
+* RENDER_EMPTY_COLUMN_NODE
+* @param object column from the columns_map
+* @return DOM element column
+*/
+const render_empty_column_node = function(column_obj, self){
+
+	const column_id	= column_obj.id
+	const model		= 'empty'
+
+	const column_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'column column_' + column_id + ' ' + model,
+		id				: `col_${column_id}`
+	})
+	// column_node.id = column_id
+
+	// column_responsive mobile add-ons
+		if (self.caller.model==='section') {
+			ui.make_column_responsive({
+				selector	: `#col_${column_id}`,
+				label		: column_obj.label
+			})
+		}//end mobile add-ons
+
+	return column_node
+}// end render_empty_column_node
