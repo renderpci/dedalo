@@ -2464,6 +2464,26 @@ abstract class component_common extends common {
 		}else{
 
 			$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
+
+			// logged user id
+				$user_id = $_SESSION['dedalo']['auth']['user_id'];
+
+			// user section . Allow user edit self data (used by tool_user_admin)
+				if ($this->permissions<2 &&
+					$this->section_tipo===DEDALO_SECTION_USERS_TIPO &&
+					$this->section_id==$user_id) {
+
+					$allowed_self_edit = [
+						DEDALO_USER_EMAIL_TIPO,
+						DEDALO_FULL_USER_NAME_TIPO,
+						DEDALO_USER_PASSWORD_TIPO,
+						DEDALO_USER_IMAGE_TIPO
+					];
+					if (in_array($this->tipo, $allowed_self_edit)) {
+						return 2;
+					}
+					return 1;
+				}
 		}
 
 
