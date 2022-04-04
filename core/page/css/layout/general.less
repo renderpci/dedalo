@@ -1,32 +1,81 @@
+/**
+* general
+*
+* Common general styles used by components, page, services, section, etc.
+*
+* Included from main.less file
+*/
 
+
+// page general
+	html {
+		// font
+		// global_font. Defined in fonts.less
+		.global_font;
+		color: @color_grey_ultradark;
+		font-size: 1rem; // fallback base value
+		// font-size: 1vw;
+
+		//overflow-y: scroll;
+		//margin-left: calc(100vw - 100%);
+		// margin-right: calc(100vw - 100%);
+	}
+
+	b, strong {
+		font-weight: bold;
+	}
+
+	i, em {
+		font-style: italic;
+	}
+
+	danger {
+		color: @color_danger;
+		font-weight: bold;
+	}
+
+
+
+// #main
+	#main {
+		//transition: opacity 0.15s ; // linear
+		min-height: calc(100vh - 70px);
+		width: 100%;
+		//display: grid;
+	}
 
 
 // general styles
 	.mark {
 		font-style: italic;
 	}
+
 	[hidden] {
 		display: none;
 	}
-	.unselectable {
-		-webkit-user-select: none !important;
+
+	.unselectable, .text_unselectable {
 		-khtml-user-select: none !important;
 		-moz-user-select: none !important;
 		-o-user-select: none !important;
+		-webkit-user-select: none !important;
 		user-select: none !important;
 	}
+
 	.noevents {
-		-webkit-user-select: none !important;
 		-khtml-user-select: none !important;
 		-moz-user-select: none !important;
 		-o-user-select: none !important;
+		-webkit-user-select: none !important;
 		user-select: none !important;
 	}
+
 	// lock
 	.lock {
-		pointer-events: none;
 		opacity: 0.35;
+		pointer-events: none;
 	}
+
 	// label_top. Is used in section group and inspector labels
 	.label_top {
 		background-color: @color_grey_light;
@@ -38,19 +87,23 @@
 		font-size: 0.85em;
 		color: @color_grey_ultradark;
 	}
+
 	.no_margin {
 		margin: 0px !important;;
 	}
+
 	.invisible {
 		visibility: hidden;
 	}
+
 	// centered
 	.centered {
+		left: 50%;
 		position: fixed;
 		top: 50%;
-		left: 50%;
 		transform: translate(-50%, -50%);
 	}
+
 	// preload
 		// .preload {
 		// 	//background-image: url(../../themes/default/icons/preload.svg);
@@ -75,30 +128,33 @@
 		// 	}
 		// }
 	.blink {
-		animation: blink-animation 1s steps(5, start) infinite;
 		-webkit-animation: blink-animation 1s steps(5, start) infinite;
+		animation: blink-animation 1s steps(5, start) infinite;
 	}
+
 	@keyframes blink-animation {
 	  to {
 		visibility: hidden;
 	  }
 	}
+
 	@-webkit-keyframes blink-animation {
 	  to {
 		visibility: hidden;
 	  }
 	}
+
 	// spinner loading
 	.spinner {
+		display: block;
+		height: 70px;
+		left: 50%;
+		margin: -45px 0px 0px -45px;
 		@border_size: 5px;
 		@border_color: @color_orange_dedalo;
-		display: block;
 		position: absolute;
 		top: 50%;
-		left: 50%;
-		height: 70px;
 		width: 70px;
-		margin: -45px 0 0 -45px;
 		border: @border_size transparent solid; // rgba(0, 0, 0, 0.25)
 		border-top: @border_size @border_color solid;
 		border-right: @border_size @border_color solid;
@@ -107,26 +163,28 @@
 		-webkit-animation: spin3 1.25s infinite linear;
 		animation: spin3 1.25s infinite linear;
 	}
+
 	@-webkit-keyframes spin3 {
+
 		from {
 			-webkit-transform: rotate(0deg);
 			transform: rotate(0deg);
 		}
+
 		to {
 			-webkit-transform: rotate(359deg);
 			transform: rotate(359deg);
 		}
-		}
-		@keyframes spin3 {
+	}
+
+	@keyframes spin3 {
+
 		from {
 			-webkit-transform: rotate(0deg);
 			transform: rotate(0deg);
-			-webkit-transform: rotate(0deg);
-			transform: rotate(0deg);
 		}
+
 		to {
-			-webkit-transform: rotate(359deg);
-			transform: rotate(359deg);
 			-webkit-transform: rotate(359deg);
 			transform: rotate(359deg);
 		}
@@ -137,9 +195,9 @@
 // icon_arrow
 // Used in section groups, inspector blocks, area_development widgets...
 	.icon_arrow {
-		position: relative;
 		padding: 0.33rem;
 		padding-right: 1.33rem;
+		position: relative;
 
 		&:after {
 			.fn_add_mask('arrow_down.svg');
@@ -175,3 +233,332 @@
 		font-weight: bold;
 		margin-left: 1rem;
 	}
+
+
+// nowrap on flex
+	.nowrap {
+		flex-flow: nowrap !important;
+		flex-wrap: nowrap !important;
+	}
+
+
+
+// general definition of html input/form elements
+// If you need to build a variant, apply 'reset_input' class
+	input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
+
+		li & {
+			max-width: 100%;
+			outline: 1px solid @color_grey_medium; // #eeebeb;
+			outline-offset: 0;
+		}
+		font-size: 1em;
+		height: 2.0em;
+		width: 100%;
+		margin-right: 0.5em;
+
+		// padding: 0.5em;
+		//border-radius: 3px;
+		border: none;
+		outline: 1px solid @color_grey_medium; // #eeebeb;
+
+		transition: all 0.5s ease, padding 0s;
+		//transition: padding 0s;
+		opacity: 0.75;
+
+		padding: 0px;
+		padding-left: 0.5em;
+		padding-right: 0.5em;
+
+		// on focus inputs, adds a soft shadow and outline
+		&:focus {
+			.hilite;
+		}
+	}
+
+	select {
+		width: auto;
+		li & {
+			margin-right: 0.5em;
+		}
+	}
+
+	input[type='radio'] {
+		font-size: 1em;
+	}
+
+
+
+// .reset_input Restore default appearance of html input/form elements
+	.reset_input {
+		&,input[type="text"], &,input[type="number"], &,input[type="url"], &,input[type="password"], &,button[type="submit"], &,textarea, &,select, &.contenteditable {
+
+			li & {
+				width: unset;
+				outline: unset;
+				outline-offset: unset;
+			}
+			font-size: unset;
+			height: unset;
+			width: unset;
+			margin-right: unset;
+
+			border: unset;
+			outline: unset;
+
+			transition: unset;
+			//transition: padding 0s;
+			opacity: unset;
+
+			padding: unset;
+			padding-left: unset;
+			padding-right: unset;
+
+			// on focus inputs, adds a soft shadow and outline
+			&:focus {
+				// .hilite;
+				outline-offset: unset;
+				outline: unset;
+				box-shadow: unset; //rgba(26, 154, 245, .5);
+				opacity: unset;
+				z-index: unset;
+
+				&.input_value {
+					padding-right: unset;
+				}
+			}
+		}
+		&,select  {
+			li & {
+				margin-right: unset;
+			}
+		}
+		&,input[type="radio"] {
+			font-size: unset;
+		}
+	}//end .reset_input
+
+
+
+
+// error
+	.error {
+		background-color: red !important;
+		transition: background-color 0.3s ease;
+	}
+
+// success
+	.save_success {
+		//transition: background-color 0.3s ease;
+		//background-color: green !important;
+	//	animation: success_animation 1.7s ease-out;
+		position: relative;
+
+		&:before {
+			border-top: 3px solid @color_green_success;
+			content: ' '; // \a0
+			display: block;
+			//padding: 2px 0;
+			//line-height: 1px;
+			position: absolute;
+			left: 0px;
+			top: -3px;
+			z-index: 9;
+
+			animation: success_animation_line 2s ease-out;
+			// animation-name: success_animation_line;
+			// animation-duration: 2s;
+			// animation-iteration-count: 1;
+			// animation-timing-function: linear;
+			// animation-fill-mode: forwards;
+
+			width: 0px;
+			opacity: 0;
+		}
+	}
+
+	// @-webkit-keyframes success_animation_line {
+	// 	0%  { width: 1%;   opacity: 0.5; }
+	// 	22% { width: 100%; opacity: 1; }
+	// 	60% { width: 100%; opacity: 1; }
+	// 	100% { width: 100%; opacity: 0; }
+	// }
+	@keyframes success_animation_line {
+		0%  { width: 1%;   opacity: 0.5; }
+		22% { width: 100%; opacity: 1; }
+		60% { width: 100%; opacity: 1; }
+		100% { width: 100%; opacity: 0; }
+	}
+	// @keyframes success_animation {
+	// 	//0%   {background-color: green !important;}
+	// 	//50%  {background-color: grey;}
+	// 	//100% {background-color: #F3F3F3 !important;}
+	// 	from { background-color: green; }
+	// 	to { background-color: rgb(230, 230, 230); }
+	// }
+
+
+// loading (moved to inline page.phtml)
+	// .loading {
+	// 	opacity: 0.5;
+	// 	pointer-events: none; // avoid user click actions
+	// 	// animation: loading_fade_out 300ms ease-out;
+	// 	transition: opacity 0.25s
+	// }
+	// @keyframes loading_fade_out {
+	// 	0%  { opacity: 1; }
+	// 	100% { opacity: 0.5; }
+	// }
+// hide (moved to inline page.phtml)
+	// .hide {
+	// 	//display: none !important;
+	// 	visibility: hidden !important;
+	// 	opacity: 0 !important;
+	// 	// transition: visibility 0.25s, height 0.25s, opacity 0.25s linear;
+	// 	height: 0 !important;
+	// 	width: 0 !important;
+	// 	padding: 0!important;
+	// 	margin: 0!important;
+	// }
+// hidden
+	.hidden {
+		visibility: hidden;
+		//opacity: 0 !important;
+		//height: 0px !important;
+		//display: none !important;
+	}
+// display_none
+	.display_none {
+		display: none !important;
+	}
+// debug
+	.debug {
+		padding: 1em;
+
+		.debug_container {
+			background-color: #f1f2f3;
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
+			padding: 0px;
+			overflow: auto;
+			@media screen and (max-width: @width_break_point_0) {
+				display: block;
+				width: 100%;
+			}
+		}
+	}
+	.debug pre {
+		z-index: 0;
+		outline: 1px solid #cad0d4;
+		overflow-wrap: anywhere;
+	}
+	.debug .total_time {
+		position: fixed;
+		right: 2em;
+		top: 1em;
+	}
+	.developer_info {
+		font-size: 95%;
+		opacity: 0.5;
+	}
+
+// temporal debug css
+	section {
+		font-size: 1em;
+	}
+
+
+
+// component specific
+	.css_section_id99 {
+		border-right: 1px solid #ebebeb;
+		min-height: 1.2em;
+		padding-left: 10px;
+		padding-right: 10px;
+		background-color: rgba(129, 129, 129, 0.8);
+		color: #ffffff !important;
+		width: 10%;
+	}
+	.css_email_error {
+		background-color: red;
+	}
+	.css_email_error:hover {
+		background-color: orange;
+	}
+
+
+
+// no_records
+	.no_records {
+		color: #fd7600;
+		font-size: 1em;
+		padding: 1em;
+	}
+
+
+
+// tinymce in full screen
+	.mce-fullscreen {
+		z-index: 9999999 !important;
+	}
+
+
+// tool tip
+	.tooltip_toggle {
+		position: relative;
+
+		.hidden_tooltip {
+			opacity: 0;
+			visibility: hidden;
+			// display: none;
+		}
+
+		.tooltip {
+			transition: all 0.5s ease;
+			position: absolute;
+			top: calc(100% + 1em);//6.25em;
+			right: 1em;
+			z-index: 1;
+			background-color: rgba(0, 0, 0, 0.9);
+			color: #fff;
+			padding: 1em;
+			line-height: 1.5em;
+			border-radius: 5px;
+			font-size: .8em;
+			width: 100%;
+			max-width: 20em;
+			// display: block !important;
+
+			>.search_options_title_item {
+				display: grid;
+				grid-template-columns: 1fr 3fr;
+
+				>span:first-of-type {
+					text-align: center;
+					font-weight: bold;
+				}
+			}
+
+			&:after {
+				bottom: 100%;
+				left: 50%;
+				border: solid transparent;
+				content: " ";
+				height: 0;
+				width: 0;
+				position: absolute;
+				pointer-events: none;
+				//border-color: rgba(0, 0, 0, 0.8);
+				border-bottom-color: rgba(0, 0, 0, 0.8);
+				border-width: 10px;
+				margin-left: -10px;
+			}
+		}
+
+		&:hover .tooltip {
+			transition-delay: 1s; // delay show after hover component wrapper
+			visibility: visible;
+			opacity: 1;
+		}
+
+	}//end .tooltip_toggle

@@ -85,8 +85,8 @@ area_thesaurus.prototype.init = async function(options) {
 		const css_url = DEDALO_CORE_URL + "/ts_object/css/ts_object.css"
 		common.prototype.load_style(css_url)
 
-		const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
-		common.prototype.load_style(css_url2)
+		// const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
+		// common.prototype.load_style(css_url2)
 
 
 	// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons

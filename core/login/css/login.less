@@ -1,169 +1,117 @@
-/* CSS Document */
-
-
-.login_body {
-	background-image: url('../../themes/default/dedalo_icon_big.png');
-	background-repeat: no-repeat;
-	background-position: 0px top;
-	background-size: 527px 1024px ;/**/
-	height: 1024px;
-	position: absolute;
+/**
+* login
+*
+* Included from main.less file
+*/
+.login {
+	// background-color: #6beaf8;
+	position: fixed; /* or absolute */
+	height: 100%;
 	width: 100%;
-}
-/* WRAP DIV CONTAINER */
-.css_wrap_login {
-	color:#333;
-	width:auto;
-	display:none;
-	padding:25px;	
-	background-color: rgba(255,255,255,0.75);	
-	position: absolute;
-	/*left: 37%;
-	top: 20%;*/		
-	/*box-shadow: 1px 1px 8px #999999 inset;*/	
-	border:solid 1px #E6E6E6;
-	border-radius:8px;
-	width: 320px;
+	margin: -1em;
 
-	margin-left: auto;
-	margin-right: auto;
-	position: relative;
-	margin-top: 207px;
-	transition: all 0.25s ease-in-out;
-
-		@media screen and (max-width: 980px) {
-			margin-top: 35%;
-		}
-	}
-	.css_wrap_login .css_form {
-		text-align: center;
-	}
-	.maintenance_advice {
-		padding-bottom: 15px;
-		color: #F56500;
-		font-size: 1.6em;
-    	text-align: center;
-	}
-	.maintenance_mode_class {
-		opacity: 0.35;
-	}
-	/*-- LANG SELECTOR --*/
-	.css_wrap_login > .css_form > .dedalo_aplication_langs_selector {
-		margin-bottom: 19px;		
-		position: relative;		
-		font-size: 12px !important;
-		-webkit-appearance: none;
-		border: 1px;
-		border-style: solid;
-		border-color: #d2d2d2;
-		border-radius: 4px;
-		padding: 8px;
-		padding-right: 44px;
-		background-image: url('../../themes/default/select_2x.png');
+	// background image big Dédalo
+	&:before {
+		background-image: url('../../themes/default/dedalo_icon_big.png');
+		background-position: 0px top;
 		background-repeat: no-repeat;
-		background-position-x: 95%;
-		background-position-y: center;
-		background-size: 10px 6px;
+		background-size: 527px 1024px;
+		content: '';
+		position: absolute;
+		height: 100%;
 		width: 100%;
-		height: 35px;
-		-moz-appearance: none;
-		text-indent: 0.01px;
-		text-overflow: '';		
-	}
-	/*-- LABELS --*/
-	.css_wrap_login label {
-		min-width:93px !important;
-		padding-top:6px!important;
-		text-align: right !important;
-		letter-spacing:1px !important;
-	}
-	/*-- INPUTS --*/
-	.css_wrap_login #login_username,
-	.css_wrap_login #login_password {
-		width:100%; 
-		min-height:2.5em;
-		margin-bottom:5px;	
-		font-weight: lighter;
-		letter-spacing:1px;
-		box-shadow: none;
-		text-align: left;
-		padding-left: 10px;
-		font-size: 1.0em;
-	}
-	
-	/*-- BUTTON LOGIN --*/
-	.css_wrap_login .css_button_login {
-		margin: 0;
-		margin-top: 10px;
-		padding: 10px;
-		position: relative;
-		font-size: 1.31em;
-		width: 100%;
-	}	
-	.css_wrap_login .login_ajax_response {
-		display: block;
-		padding: 0px;
-		text-align: center;
-		min-height: 20px;
-		}		
-		.css_wrap_login .login_ajax_response .error, .css_wrap_login .login_ajax_response .ok {
-		    width: 100%;
-		    padding: 8px;
-		    margin: 0;
-		    white-space: pre-wrap;
-		}
-		.css_wrap_login .login_ajax_response .ok {
-			margin-top: 18px;
-			margin-bottom: 10px;
-			background-color: rgba(0, 204, 0, 0.69);
-
-			line-height: 1.5em;
-		    padding: 1.5em;
-		    font-weight: bold;
-		}
-	.building_backup {
-		background-color: #f7f7f7;
-		color: #999999;
-		padding: 6px;
-		margin: 2px;
-		border-radius: 3px;
-		display: block;
-	}
-	.dedalo_version {
-		color: #a1a1a1;
-		font-size: 0.9em;
+		z-index: -1;
+		//-webkit-transform: rotate(30deg);
+		transform: scaleX(-1);
 	}
 
+	>.content_data {
+		// center
+		// position: absolute;
+		// left: 50%;
+		// top: 32%;
+		// transform: translate(-50%);
+		.centered;
+		// top: 35%;
 
-	.set_pasw_input {
-		text-align: right;
-		padding-top: 15px;
-		padding-bottom: 10px;
-		width: 100%;
-		text-align: left;			
-	}
-	
-	div.set_button {
-		//padding-right: 20%;
-		padding-top: 30px;
+		// .component_base;
 
-		> input {
-			cursor: pointer;
+		background-color: rgba(243, 243, 243, 0.76);
+		max-width: 24em;
+		padding: 2em;
+		border-radius: 0.5em;
+		//padding-top: 1em;
+		//padding-bottom: 1em;
+
+		>.select_lang {
+			height: 2.5em;
 			width: 100%;
-			//height: 3.2em;
+			font-size: 1em;
+			background-color: @color_grey_untralight;
+			margin-bottom: 1em;
+
+			// remove browser apperance style
+			background: url('data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0Ljk1IDEwIj48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZjt9LmNscy0ye2ZpbGw6IzQ0NDt9PC9zdHlsZT48L2RlZnM+PHRpdGxlPmFycm93czwvdGl0bGU+PHJlY3QgY2xhc3M9ImNscy0xIiB3aWR0aD0iNC45NSIgaGVpZ2h0PSIxMCIvPjxwb2x5Z29uIGNsYXNzPSJjbHMtMiIgcG9pbnRzPSIxLjQxIDQuNjcgMi40OCAzLjE4IDMuNTQgNC42NyAxLjQxIDQuNjciLz48cG9seWdvbiBjbGFzcz0iY2xzLTIiIHBvaW50cz0iMy41NCA1LjMzIDIuNDggNi44MiAxLjQxIDUuMzMgMy41NCA1LjMzIi8+PC9zdmc+') no-repeat 95% 50%;
+			-moz-appearance: none;
+			-webkit-appearance: none;
+			appearance: none;
+			padding-left: 1em;
+
+			opacity: 0.7;
+			border: 1px solid #e0e0e0;
 		}
-	} 
-		
 
-	.css_wrap_login input[type="text"], 
-	.css_wrap_login input[type="password"] {
-		width: 100%;
-		padding: 5px;
+		>form {
+			display: flex;
+			flex-wrap: wrap;
+			margin-bottom: 1em;
+
+			>input, >button {
+				flex: 1 1 100%;
+				font-size: 1em;
+			}
+
+			>input {
+				margin-bottom: 1em;
+				&#username {
+				}
+			}
+
+			>#auth_submit {
+				height: 3em;
+
+				>.preload {
+					background-color: white;
+					min-height: 2em;
+					cursor: default;
+				}
+			}
+		}//end form
+
+		>.info {
+			display: grid;
+			grid-template-columns: 1.2fr 2fr;
+			font-size: 0.8em;
+			opacity: 0.6;
+			line-height: 1.3em;
+
+			>span {
+				padding: 0.20em;
+				line-height: 1.1em;
+
+				&.error {
+					padding-left: 0.5em;
+					color: white;
+				}
+			}
+		}
+
+		>.component_message {
+			position: relative;
+			top: 1em;
+			margin-bottom: 1.5em;
+			//font-size: 0.9em;
+			border-radius: 0.2em;
+		}
 	}
-
-
-	.autologin {
-		margin-top: 15px;
-	}
-
-
+}

@@ -1,66 +1,36 @@
-// Variables
-@common_css: "../../common/css";
+/**
+* component_filter_records
+*
+* Included from main.less file
+*/
+.component_filter_records {
 
-// Usage
-@import "@{common_css}/library.less"; 
+	&.edit {
+		>.content_data {
+			flex: 1 1 100%;
 
+			>.inputs_container {
 
-/* WRAP filter_RECORDs
----------------------------------------- */
-.css_wrap_filter_records {
-	border-bottom: 1px solid #E6E6E6;
-	}
-	.css_wrap_filter_records .content_data {
-		
-	}	
-	
+				>li {
+					display: grid;
+					grid-template-columns: 1fr 2fr 8fr;
+					outline: 1px solid @color_grey_light;
 
-	
-	.wrap_filter_records_values ul {
-		width: 100%;
-		background-color: #F8F8F8;
-		}
-		/* COMMON
-		---------------------------------------- */
-		.wrap_filter_records_values ul li span {
-			padding: 7px;
-		}
-		.wrap_filter_records_values ul li span.c_section_tipo {
-			display: inline-block;
-			width: 11%;
-			text-align: left;
-			padding-right: 10px;
-		}
-		.wrap_filter_records_values ul li span.c_label {
-			display: inline-block;
-			width: 27%;
-			text-align: left;
-			padding-right: 10px;
-		}
-		.wrap_filter_records_values ul li div {
-			width: 100%;
-			//background-color: #8CF2FC
-			border-bottom: 1px solid #E6E6E6;
-		}
-		/* HEAD
-		---------------------------------------- */
-		.wrap_filter_records_values ul li.head {
-			background-color: #7F7F7F;
-			color: #FCFCFC;
-		}
-		.wrap_filter_records_values ul li.head span {
-			font-weight: bold;
-		}
-		/* ROW
-		---------------------------------------- */
-		.wrap_filter_records_values ul li.row {
-			margin: 0;
-		}
-		.wrap_filter_records_values ul li.row input {
-			width: 61%;
-		}
-		.wrap_filter_records_values ul li.row span.c_label {
-			font-weight: bold;
-		}
+					&.header_row {
+						background-color: #5b5b5b;
+						color: #ffffff;
+						padding: 0.333rem;
+					}
 
+					&.body_row {
 
+					}
+
+					>span {
+						padding: 0.333rem;
+					}
+				}
+			}
+		}
+	}//end .edit
+}

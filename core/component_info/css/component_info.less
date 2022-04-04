@@ -1,41 +1,77 @@
-// Variables
-@common_css: "../../common/css";
-
-// Usage
-@import "@{common_css}/library.less"; 
-
-
-
-/* LIST
---------------------------------------- */
-/* pasado al list
-	.widgets_wrapper {
-		white-space: nowrap;
-		padding-right: 5px;
-		padding-left: 5px;
-		width: 180px !important;
-	}
-	.component_info_debug {
-		font-size: 90%;
-		word-wrap: break-word;		
-		white-space: nowrap;
-    	float: left;
-	}
+/**
+* component_info
+*
+* Included from main.less file
 */
+.component_info {
 
-/* EDIT
---------------------------------------- */
-	a.update_info {
-		float: right;
-		vertical-align: bottom;
-	}
+	>.content_data {
 
-	td.td_component_info > div {
-		overflow: visible !important;
-	}
+		>.inputs_container {
 
+			>li {
 
-	.widgets_wrapper {
-		white-space: inherit !important; 
-	}
+				>.wrapper_widget {
+					font-size: 0.78rem;
 
+					li {
+						padding: 0;
+
+						>div {
+							padding: 0.15em;
+							// background-color: #f0f0f0;
+							// border-right: 1px solid #c0c0c0;
+							flex: 1 1 100%;
+
+							&:last-of-type {
+							  border: none;
+							}
+
+							>.label, >.value {
+								padding: 0.25em;
+							}
+
+							>.label {
+								// font-weight: 400;
+								white-space: nowrap;
+								overflow: hidden;
+								text-overflow: ellipsis;
+							}
+							>.value {
+								padding-left: 0;
+							}
+						}
+					}
+
+					.values_container > li {
+
+						label {
+							// &.before
+							padding-right: 0.5em;
+						}
+						.value {
+
+						}
+					}
+
+					&.state {
+						li.state {
+							display: grid;
+							grid-template-columns: 1fr 1fr 1fr;
+
+							>div {
+								display: contents;
+
+								.detail {
+									display: none;
+								}
+							}
+						}
+					}
+				}
+			}
+		}//end .inputs_container
+
+	}//end >.content_data
+
+}
