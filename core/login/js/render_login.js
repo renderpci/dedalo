@@ -41,7 +41,7 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "wrapper_login"
+			class_name		: "login"
 		})
 		wrapper.appendChild(content_data)
 

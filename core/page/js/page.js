@@ -18,6 +18,7 @@
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
 	import {render_page} from './render_page.js'
+	// import {set_element_css} from './css.js'
 
 
 
@@ -86,10 +87,9 @@ page.prototype.init = async function(options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
 				// options
-					const source			= user_navigation_options.source
-					const sqo				= user_navigation_options.sqo || null
+					const source				= user_navigation_options.source
+					const sqo					= user_navigation_options.sqo || null
 					const event_in_history	= user_navigation_options.event_in_history || false
-
 
 				// check valid vars
 					if (!source) {
@@ -223,6 +223,46 @@ page.prototype.init = async function(options) {
 
 	// status update
 		self.status = 'initiated'
+
+	// test
+		// elements_css.rsc75 = {
+		// 	children : {
+		// 		height : '150px',
+		// 		width : '100%'
+		// 	}
+		// }
+		// elements_css.oh1_rsc75 = {
+		//        ".wrap_component": {
+		//            "style": {
+		//            	"width": "12%",
+		//                "@media screen and (min-width: 900px)" : {
+		//             	"width": "50%"
+		//             }
+		//         }
+		// 	},
+		//        ".content_data": {
+		//            "style": {
+		//                "width": "3620px"
+		//            }
+		//        }
+		//    }
+	// setTimeout(function(){
+		// elements_css.oh1_rsc75 = {
+		//     ".wrap_component": {
+		//         "width": "12%",
+		//            "height" : '150px',
+		//            "@media (max-width: 800px)" : {
+		//         	"width": "50%",
+		//             "height" : '120px'
+		//         }
+		//     },
+		//     ".content_data": {
+		//         "style": {
+		//             "width": "120px"
+		//         }
+		//     }
+		// }
+		// }, 5)
 
 
  	return true

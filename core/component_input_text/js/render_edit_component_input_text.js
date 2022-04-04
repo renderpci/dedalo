@@ -343,7 +343,9 @@ const get_input_element_edit = (i, current_value, self) => {
 
 	// short vars
 		const mode					= self.mode
-		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
+			? self.context.properties.multi_line
+			: false
 		const element_type			= (multi_line===true) ? 'textarea' :'input'
 		const is_inside_tool		= self.is_inside_tool
 		// const with_lang_versions	= self.context.properties.with_lang_versions || false

@@ -1334,13 +1334,13 @@ abstract class common {
 			$properties = $this->get_properties() ?? new stdClass();
 
 		// css
-			$css = new stdClass();
+			$css = $properties->css ?? null; // new stdClass();
 			if (isset($properties->css)) {
-				$css = $properties->css;
 				// remove from properties object
 				unset($properties->css);
 			}
 			// (!) new. Section overwrite css (virtual sections case)
+			// see sample at section 'rsc170'
 			if (strpos($model, 'component_')===0) {
 				$RecordObj_dd		= new RecordObj_dd($section_tipo);
 				$section_properties	= $RecordObj_dd->get_properties();
