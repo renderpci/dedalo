@@ -1,84 +1,74 @@
-// Variables
-@common_css: "../../common/css";
+/**
+* component_json
+*
+* Included from main.less file
+*/
+.component_json {
+	// background-color: #76fcc1 !important;
+	z-index: 1;
 
-// Usage
-@import "@{common_css}/library.less";
-
-
-// wrapper
-	.css_wrap_component_json {
-
+	&.edit {
 		>.content_data {
-			height: 100%;
+			// background-color: #70c6f8;
+			min-height: @media_min_height;
+			// max-height: @media_max_height;
 
-			>.editor_json {
+			// ul
+			>.inputs_container {
+				// background-color: #70c6f8;
+				// height: calc(100% - 0.95rem);
 				height: 100%;
-				padding-bottom: 25px;
+
+				>li {
+					// align-items: initial;
+
+					// button save
+					>.button_save {
+						display: none; // init hidden
+						position: absolute;
+						right: 0px;
+						top: 0px;
+						z-index: 1;
+						height: 36px;
+						// border: 1px solid #2e6cd0;
+						// background-color: #b7d2fe;
+						// color: #2e6cd0;
+
+						&:before {
+							background-color: #2e6cd0;
+						}
+						// padding-left: 1.7em;
+						// padding-right: 1.7em;
+						// background-color: #b7d2fd;
+						// border: 1px solid #3883fa;
+						// color: #3883fa;
+						// line-height: 28px;
+						// border-radius: 3px;
+						// cursor: pointer;
+						// &:active {
+						// 	background-color: #8FA3C4;
+						// 	color: #ffffff;
+						// }
+
+						&.warning {
+							display: flex;
+							background-color: #e8e0e1;
+							border: 1px solid darken(@color_danger, 5%);
+							color: @color_danger;
+
+							&:before {
+								background-color: @color_danger !important;
+							}
+						}
+					}
+
+					>.jsoneditor {
+						// height: 100%;
+						// height: inherit;
+						// height: calc(100% - @component_label_height);
+					}
+				}
 			}
 		}
-
-	}
-
-
-.json_key_label {
-	color:#aeaeae;
-	text-transform: capitalize;
+	}//end .edit
 }
-.css_input_text_json {
-	padding: 3px;
-	padding-left: 5px;
-	border: 1px solid #9E9E9E;
-	border-radius: 3px;	
-	box-shadow: inset 0 0 6px #999999;
-	width: 99.0%;
-	min-height:15em; 
-	resize:vertical;  /* none|horizontal|vertical|both */
-	}
-	.css_input_text_json:hover {
-		background-color: #F1F1F1;
-	}
-	.css_input_text_json:focus {		
-		box-shadow: 0 0 10px #CCC;		
-		min-height:50em; 
-		background-color: #F1F1F1;
-	}
-
-.editor_json {
-	//height:800px;
-	height: 92vh;
-	width:100%
-}
-.saveDocument {
-	position: absolute;
-	right: 6px;
-	top: 5px;
-	z-index: 1;
-	background-color: #f0f8ff;
-	padding: 4px;
-	padding-right: 4px;
-	padding-left: 4px;
-	padding-right: 4px;
-	padding-left: 4px;
-	padding-left: 12px;
-	padding-right: 12px;
-	border-radius: 2px;
-	cursor: pointer;
-}
-.jsoneditor-poweredBy {
-	display: none;
-}
-
-
-.css_wrap_component_json div.jsoneditor {
-	border: 1px solid #dddddd;
-}
-.css_wrap_component_json div.jsoneditor-menu {
-	background-color: @color_orange;
-	border: none;
-	z-index: 99999;
-}
-
-.jsoneditor-menu {
-	z-index: 99999;
-}
-

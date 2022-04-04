@@ -1,43 +1,21 @@
-// Vars
-@common_css: "../../common/css";
+/**
+* component_relation_model
+*
+* Included from main.less file
+*/
+.component_relation_model {
+	// background-color: #50f9af;
 
-// Usage
-@import "@{common_css}/library.less";
+	&.edit {
+		>.content_data {
 
-
-
-
-/* WRAP relation_model
----------------------------------------- */
-.css_wrap_relation_model {
-	//border-bottom: 1px solid #E6E6E6;
+			// button over each text input (right)
+			.button.remove {
+				position: absolute;
+				right: 0.5em;
+				top: 0.5em;
+				z-index: 1;
+			}
+		}
 	}
-	.css_wrap_relation_model .content_data {
-	}
-
-	
-	/* relation_model
-	---------------------------------------- */
-	.css_wrap_relation_model select.css_relation_model {
-		padding: 2px;
-		cursor: pointer;
-		margin: 0;
-		max-width: 99.9%;
-		}
-		.css_wrap_relation_model select.css_relation_model:hover {
-			/*
-			background-color: #F1F1F1;
-			-moz-transform: scale(1.05);
-			-webkit-transform: scale(1.05);
-			cursor: pointer;
-			*/
-		}
-		.css_wrap_relation_model select.css_relation_model:focus {
-		}
-		.css_wrap_relation_model select.css_relation_model:active {
-		}
-		
-	
-
-	
-
+}

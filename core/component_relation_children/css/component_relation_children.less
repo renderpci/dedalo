@@ -1,71 +1,15 @@
-// Vars
-@common_css: "../../common/css";
+/**
+* component_relation_children
+*
+* Included from main.less file
+*/
+.component_relation_children {
+	// background-color: #50f9af;
 
-// Usage
-@import "@{common_css}/library.less";
+	&.edit {
+		>.content_data {
 
 
-
-/* WRAP RELATION_children
----------------------------------------- */
-.css_wrap_relation_children {
-	//border-bottom: 1px solid #E6E6E6;
-	min-height: 80px !important;
-	}
-	.css_wrap_relation_children .content_data {
-		
-	}
-
-	
-
-	/* wrap_relation_children_values
-	---------------------------------------- */
-	.css_wrap_relation_children .content_data .wrap_relation_children_values {
-		display: inline-block;
 		}
-		
-			/* ADD BUTTON 
-			---------------------------------------- */
-			.css_wrap_relation_children .content_data .relation_children_add_button {
-				
-				/*
-				stroke: #a0e570;
-				fill: none;
-				stroke-width:21;
-				stroke-miterlimit:10;
-				background-color: #EEEEEE;
-				*/
-				opacity: 0.2;
-				position: absolute;
-				right: 0;
-				top: 0;
-			}
-			.css_wrap_relation_children .content_data .relation_children_add_from_tree_button {
-				opacity: 0.5;
-				position: absolute;
-				right: 20px;
-				top: 0;
-			}
-
-			
-		
-/* AUTOCOMPLETE
----------------------------------------- */
-
-
-/* SEARCH
----------------------------------------- */	
-	.css_relation_children_valor.in_search_mode {
-		clear: both;
-    	width: 100%;
-    	padding-top: 7px;
-	}	
-	.css_relation_children_button_delete {
-	    position: relative;
-	    top: 0;
-	    margin-right: 5px;
-	    background-position: -456px 0;
-	    opacity: .3;
 	}
-	
-
+}

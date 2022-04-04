@@ -1,210 +1,30 @@
+/**
+* page
+*
+* Included from main.less file
+* Notice that page has no mode like 'edit' or 'list'
+*/
+.page {
+	// background-color: #f4c593;
+	padding: 0px;
 
-
-// page general
-	html {
-		// font
-		// global_font. Defined in fonts.less
-		.global_font;
-		font-size: 1rem; // fallback base value
-		// font-size: 1vw;
-
-		color: @color_grey_ultradark;
-
-		//overflow-y: scroll;
-		//margin-left: calc(100vw - 100%);
-		// margin-right: calc(100vw - 100%);
-	}
-	b, strong {
-		font-weight: bold;
-	}
-	i, em {
-		font-style: italic;
-	}
-	danger {
-		color: @color_danger;
-		font-weight: bold;
-	}
-
-
-
-// #main
-	#main {
-		//transition: opacity 0.15s ; // linear
+	>.content_data {
+		display: table;
+		padding: 1em;
 		width: 100%;
-		//display: grid;
-		min-height: calc(100vh - 70px);
-	}
-
-
-
-// active. selected_wrap
-	.active {
-		// &.wrapper_component {
-		// 	//transition: background-color 0.3s ease;
-		// 	background-color: @color_grey_medium !important; // rgb(230, 230, 230)
-		// }
-	}
-// error
-	.error {
-		transition: background-color 0.3s ease;
-		background-color: red !important;
-	}
-// success
-	.save_success {
-		//transition: background-color 0.3s ease;
-		//background-color: green !important;
-	//	animation: success_animation 1.7s ease-out;
-		position: relative;
-
-		&:before {
-			content: " "; // \a0
-			display: block;
-			//padding: 2px 0;
-			//line-height: 1px;
-			border-top: 3px solid @color_green_success;
-			z-index: 9;
-			top: -3px;
-			left: 0;
-			position: absolute;
-
-			animation: success_animation_line 2s ease-out;
-			// animation-name: success_animation_line;
-			// animation-duration: 2s;
-			// animation-iteration-count: 1;
-			// animation-timing-function: linear;
-			// animation-fill-mode: forwards;
-
-			width: 0;
-			opacity: 0;
+		//padding-top: 2.1em;
+		// width: calc(100vw - 2em);
+		@media screen and (min-width: @width_break_point_0) {
+			overflow-x: auto;
+			overflow-y: hidden; // (!) important to prevent Chrome issues
 		}
 	}
-	// @-webkit-keyframes success_animation_line {
-	// 	0%  { width: 1%;   opacity: 0.5; }
-	// 	22% { width: 100%; opacity: 1; }
-	// 	60% { width: 100%; opacity: 1; }
-	// 	100% { width: 100%; opacity: 0; }
-	// }
-	@keyframes success_animation_line {
-		0%  { width: 1%;   opacity: 0.5; }
-		22% { width: 100%; opacity: 1; }
-		60% { width: 100%; opacity: 1; }
-		100% { width: 100%; opacity: 0; }
-	}
-	// @keyframes success_animation {
-	// 	//0%   {background-color: green !important;}
-	// 	//50%  {background-color: grey;}
-	// 	//100% {background-color: #F3F3F3 !important;}
-	// 	from { background-color: green; }
-	// 	to { background-color: rgb(230, 230, 230); }
-	// }
-
-
-// loading (moved to inline page.phtml)
-	// .loading {
-	// 	opacity: 0.5;
-	// 	pointer-events: none; // avoid user click actions
-	// 	// animation: loading_fade_out 300ms ease-out;
-	// 	transition: opacity 0.25s
-	// }
-	// @keyframes loading_fade_out {
-	// 	0%  { opacity: 1; }
-	// 	100% { opacity: 0.5; }
-	// }
-// hide (moved to inline page.phtml)
-	// .hide {
-	// 	//display: none !important;
-	// 	visibility: hidden !important;
-	// 	opacity: 0 !important;
-	// 	// transition: visibility 0.25s, height 0.25s, opacity 0.25s linear;
-	// 	height: 0 !important;
-	// 	width: 0 !important;
-	// 	padding: 0!important;
-	// 	margin: 0!important;
-	// }
-// hidden
-	.hidden {
-		visibility: hidden;
-		//opacity: 0 !important;
-		//height: 0px !important;
-		//display: none !important;
-	}
-// display_none
-	.display_none {
-		display: none !important;
-	}
-// debug
-	.debug {
-		padding: 1em;
-
-		.debug_container {
-			display: grid;
-			grid-template-columns: 1fr 1fr 1fr;
-			background-color: #f1f2f3;
-			padding: 0;
-			overflow: auto;
-			@media screen and (max-width: @width_break_point_0) {
-				display: block;
-				width: 100%;
-			}
-		}
-	}
-	.debug pre {
-		z-index: 0;
-		outline: 1px solid #cad0d4;
-		overflow-wrap: anywhere;
-	}
-	.debug .total_time {
-		position: fixed;
-		right:2em;
-		top:1em;
-	}
-	.developer_info {
-		opacity: 0.5;
-		font-size: 95%;
-	}
-// text_unselectable
-	.text_unselectable {
-		-webkit-user-select: none !important;
-		-khtml-user-select: none !important;
-		-moz-user-select: none !important;
-		-o-user-select: none !important;
-		user-select: none !important;
-	}
-
-// temporal debug css
-	section {
-		font-size: 1em;
-	}
+}
 
 
 
-// component specific
-	.css_section_id99 {
-		min-height: 1.2em;
-		border-right: 1px solid #ebebeb;
-		padding-left: 10px;
-		padding-right: 10px;
-		background-color: rgba(129,129,129,0.8);
-		color: #fff !important;
-		width: 10%;
-	}
-	.css_email_error { background-color:red;}
-	.css_email_error:hover { background-color:orange;}
 
 
 
-// no_records
-	.no_records {
-		padding: 1em;
-		font-size: 1em;
-		color: #fd7600;
-	}
-
-
-
-// tinymce in full screen
-	.mce-fullscreen {
-		z-index: 9999999 !important;
-	}
 
 

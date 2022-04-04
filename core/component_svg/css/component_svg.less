@@ -1,42 +1,43 @@
+/**
+* component_svg
+*
+* Included from main.less file
+*/
+.component_svg {
 
-// Vars
-@common_css: "../../common/css"; 
 
-// Usage
-@import "@{common_css}/library.less";
+	&.edit {
+		>.content_data {
+			// background-color: #b8d6f5;
+			// min-height: @media_min_height;
+			// max-height: @media_max_height;
+			height: @media_min_height;
 
+			// ul
+			>.inputs_container {
+				height: 100%;
+				width: 100%;
 
-/* WRAP DIV CONTAINER */
-.css_wrap_svg, .css_wrap_svg_tm {
+				>li {
+					justify-content: center;
 
-	}
-	.css_wrap_svg_tm .content_data {
-	}
+					// img
+					>.image.svg_element {
+						// background-color: #f5f5f5;
+						padding: 0;
+						// height: 100%;
+						// max-height: 100%;
+						// max-width: 100%;
 
-	// Global container
-	.svg_container {
-		min-height: 30px;
-		//background-color: #eeeeee;
-		}
-		// Div that contain svg element
-		.svg_player_div {
-			height: 100px;
-		}
-		// image with src: svg file
-		img.svg_element {
-			height: 100%;
-			width: auto;
-		}
+						height: 100%;
+						max-height: 100%;
+						max-width: 100%;
+						object-fit: contain;
+						object-position: center;
+					}
+				}
 
-		.upload_placeholder {
-			cursor: pointer;
-			opacity: 0.25;
 			}
-			.upload_placeholder:hover {
-				opacity: 1;
-			}
-
-
-	/* PRINT
-	------------------------------------------------------- */
-	
+		}
+	}//end .edit
+}

@@ -1,84 +1,54 @@
-// Variables
-@common_css: "../../common/css";
+/**
+* component_check_box
+*
+* Included from main.less file
+*/
+.component_check_box {
+	// background-color: #d2baf6;
 
-// Usage
-@import "@{common_css}/library.less"; 
-
-
-
-// check_box
-	.css_wrap_check_box {
-		line-height: 1.1em;
-		//background-color: #7AFF2F
-		
+	&.edit {
 		>.content_data {
-			line-height: 1.6em;
-			/*
-				-moz-column-count: 3;
-			 -webkit-column-count: 3;
-					 column-count: 3;
+			overflow: auto;
 
-			 -webkit-column-gap: 3em;
-	  			-moz-column-gap: 3em;
-	  				 column-gap: 3em;*/
-	  		display: flex;
-	  		padding-left: 17%;
+			>.inputs_container {
 
-	  		>ul {
-	  			
-	  			
-	  			>li {
-	  				display: flex;
-	  				align-items: flex-start;
+				>li {
+					display: flex;
+					align-items: center;
+					padding-bottom: 0.25rem;
 
-		  			input.css_check_box {
-						padding: 2px;
-						border: 1px solid #9E9E9E;
-						border-radius: 3px;
-						vertical-align: top;	
-						//box-shadow: inset 0 0 6px #999999 inset;
-
-						&:hover {
-							background-color: #F1F1F1;
-							cursor: pointer;
-						}
+					.show_on_active {
+						margin-left: 0.5rem;
 					}
-
-					.css_check_box_rotulo {
-						padding-left: 5px;
-						padding-right: 10px;
-						width: 95%;
-					}	
-				}	  			
-	  		}//end >ul
-
-	  		
-		}//end >.content_data
-
-	}//end .css_wrap_check_box
-
-
-		
-// Search context
-	.wrap_check_box_search .content_data {		
-		width: 100%;
-		padding: 4px;
-		//flex-grow: 1;
-		line-height: 1.7em;
-		padding-bottom: 15px;
-		padding-top: 0;
-
-		display: grid !important;
-    	grid-template-columns: 3.5em 1fr;
-
-		>ul {
-			width: 96%;
+				}
+			}
 		}
+	}//end .edit
 
-		.q_operator {
-			margin-right: 10px !important;
-			height: 1.7em;
-		}		
+
+	// view_tools
+	&.view_tools {
+
+		// ul
+		.inputs_container {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+
+			>li {
+				margin-left: 1.5rem;
+				line-height: 1rem;
+				border-bottom: 1px solid #eeeeee;
+				padding: 0.33rem;
+				align-items: center;
+
+				.tool_icon {
+					height: 1.33rem;
+					width: 1.33rem;
+					margin-right: 0.5rem;
+					margin-left: 0px;
+					vertical-align: text-bottom;
+				}
+			}
+		}
 	}
-
-
+}

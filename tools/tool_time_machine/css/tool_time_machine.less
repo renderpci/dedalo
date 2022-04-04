@@ -2,6 +2,10 @@
 
 
 
+@import '../../../core/page/css/layout/vars.less';
+
+
+
 // wrapper_tool
 .wrapper_tool.tool_time_machine {
 	display: flex;
@@ -47,6 +51,11 @@
 			padding-top: 0.5em;
 			padding-bottom: 0.5em;
 			overflow: hidden;
+			margin-top: -46px;
+			@media screen and (max-width: @width_break_point_0) {
+				margin-top: 0;
+			}
+
 
 			>* {
 
