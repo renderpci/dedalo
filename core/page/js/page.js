@@ -106,73 +106,82 @@ page.prototype.init = async function(options) {
 						: null
 					if (node) { node.classList.add('loading') }
 
-				// do the work
-				return new Promise(async function(resolve){
+				try {
 
-					// basic vars
-						// Only source is mandatory but if sqo is received, is placed in a new request_config
-						// to allow sections and components manage properly the offset and limit
-						const request_config	= [{
-							api_engine	: 'dedalo',
-							sqo			: sqo,
-						}]
-						source.request_config = request_config
+					// do the work
+					return new Promise(async function(resolve){
 
-					// check only if new source of page element is actually valid for instantiation
-					// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
-						const new_page_element_instance = await instantiate_page_element(self, source)
-						if (!new_page_element_instance) {
-							console.error("error on get new_page_element_instance:", new_page_element_instance);
-							// loading css remove
-							if (node) {setTimeout(()=> node.classList.remove('loading'), 150 )}
-							console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
-							return false
-						}
+						// basic vars
+							// Only source is mandatory but if sqo is received, is placed in a new request_config
+							// to allow sections and components manage properly the offset and limit
+							const request_config	= [{
+								api_engine	: 'dedalo',
+								sqo			: sqo,
+							}]
+							source.request_config = request_config
 
-					// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
-						const base_models		= ['menu']
-						const elements_to_stay	= self.context.filter( item => base_models.includes(item.model))
-						// add current source from options
-							elements_to_stay.push(source)
-						// fix new page context
-							self.context = elements_to_stay
-
-					// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
-						const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
-						for (let i = instances_to_stay.length - 1; i >= 0; i--) {
-							instances_to_stay[i].destroyable = false
-						}
-
-					// refresh page. Force to load new context elements data from DDBB
-						const refresh_result = await self.refresh()
-
-					// url history track
-						if(refresh_result===true && event_in_history!==true)  {
-
-							const current_tipo = (source.config && source.config.source_section_tipo)
-								? source.config.source_section_tipo
-								: source.tipo
-
-							// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
-							const title	= new_page_element_instance.id
-							const url	= "?t="+ current_tipo + '&m=' + source.mode
-
-							const new_user_navigation_options = Object.assign({
-								event_in_history : false
-							}, user_navigation_options);
-							const state = {
-								user_navigation_options : new_user_navigation_options
+						// check only if new source of page element is actually valid for instantiation
+						// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
+							const new_page_element_instance = await instantiate_page_element(self, source)
+							if (!new_page_element_instance) {
+								console.error("error on get new_page_element_instance:", new_page_element_instance);
+								// loading css remove
+								if (node) {setTimeout(()=> node.classList.remove('loading'), 150 )}
+								console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
+								return false
 							}
-							console.log("navigation history state:",state, title, url,history);
-							history.pushState(state, title, url)
-						}
 
+						// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
+							const base_models		= ['menu']
+							const elements_to_stay	= self.context.filter( item => base_models.includes(item.model))
+							// add current source from options
+								elements_to_stay.push(source)
+							// fix new page context
+								self.context = elements_to_stay
+
+						// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
+							const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+							for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+								instances_to_stay[i].destroyable = false
+							}
+
+						// refresh page. Force to load new context elements data from DDBB
+							const refresh_result = await self.refresh()
+
+						// url history track
+							if(refresh_result===true && event_in_history!==true)  {
+
+								const current_tipo = (source.config && source.config.source_section_tipo)
+									? source.config.source_section_tipo
+									: source.tipo
+
+								// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
+								const title	= new_page_element_instance.id
+								const url	= "?t="+ current_tipo + '&m=' + source.mode
+
+								const new_user_navigation_options = Object.assign({
+									event_in_history : false
+								}, user_navigation_options);
+								const state = {
+									user_navigation_options : new_user_navigation_options
+								}
+								console.log("navigation history state:",state, title, url,history);
+								history.pushState(state, title, url)
+							}
+
+						// loading css remove
+							if (node) { node.classList.remove('loading') }
+
+
+						resolve(new_page_element_instance.id)
+					})
+
+				} catch (error) {
 					// loading css remove
-						if (node) { node.classList.remove('loading') }
-
-
-					resolve(new_page_element_instance.id)
-				})
+					if (node) { node.classList.remove('loading') }
+					console.error(error)
+					return false
+				}
 			}//end fn_user_navigation
 
 
