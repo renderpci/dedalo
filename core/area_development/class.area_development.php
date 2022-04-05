@@ -418,21 +418,40 @@ class area_development extends area_common {
 
 
 		// php_user
-			$info = posix_getpwuid(posix_geteuid());
+			$info = (function(){
+				try {
+					if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
+						$info = posix_getpwuid(posix_geteuid());
+					}else{
+						$name			= get_current_user();
+						$current_user	= trim(shell_exec('whoami'));
+						$info = [
+							'name'			=> $name,
+							'current_user'	=> $current_user
+						];
+					}
+				} catch (Exception $e) {
+					error_log('Exception: '.$e->getMessage());
+				}
+				return $info;
+			})();
 			$item = new stdClass();
-				$item->id 		= 'php_user';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'PHP USER';
-				$item->info 	= null;
-				$item->body 	= 'PHP user '.$info['name'];
-				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
+				$item->id		= 'php_user';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'PHP USER';
+				$item->info		= null;
+				if (empty($info)) {
+					$item->body	= 'PHP user unavailable';
+				}else{
+					$item->body	= 'PHP user '. $info['name'];
+					$item->body	.= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
+				}
 			$ar_widgets[] = $item;
 
 
 		// unit test (alpha)
-			$info = posix_getpwuid(posix_geteuid());
 			$item = new stdClass();
 				$item->id		= 'unit_test';
 				$item->typo		= 'widget';
