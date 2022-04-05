@@ -36,10 +36,10 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 			return current_content_data
 		}
 
-	// wrapper.
+	// wrapper relation_list
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: 'wrapper_relation_list relation_list ' + self.model + ' ' + self.tipo + ' ' + self.mode
 		})
 		wrapper.appendChild(current_content_data)
 

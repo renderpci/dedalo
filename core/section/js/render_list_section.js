@@ -62,7 +62,7 @@ render_list_section.prototype.list = async function(options) {
 		if (self.filter && self.mode!=='tm') {
 			const filter_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'filter',
+				class_name		: 'search_container',
 				parent			: fragment
 			})
 			self.filter_container = filter_container
@@ -74,15 +74,15 @@ render_list_section.prototype.list = async function(options) {
 		}
 
 	// paginator container node
-		const paginator_div = ui.create_dom_element({
+		const paginator_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'paginator',
+			class_name		: 'paginator_container',
 			parent			: fragment
 		})
 		self.paginator.build()
 		.then(function(){
 			self.paginator.render().then(paginator_wrapper =>{
-				paginator_div.appendChild(paginator_wrapper)
+				paginator_container.appendChild(paginator_wrapper)
 			})
 		})
 

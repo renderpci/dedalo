@@ -66,7 +66,7 @@ render_inspector.prototype.edit = async function(options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'inspector',
-			class_name		: 'wrapper_inspector',
+			class_name		: 'wrapper_inspector inspector',
 		})
 
 	// add elements
@@ -140,7 +140,7 @@ const get_content_data = function(self) {
 	// paginator container
 		const paginator_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'paginator',
+			class_name		: 'paginator_container',
 			parent			: content_data
 		})
 		// fix pointer to node placeholder
@@ -643,14 +643,14 @@ export const update_project_container_body = function(self) {
 
 /**
 * RENDER_INDEXATION_LIST
-* @return DOM node relation_list_wrap
+* @return DOM node indexation_list_container
 */
 const render_indexation_list = function(self) {
 
 	// wrapper
-		const indexation_list_wrap = ui.create_dom_element({
+		const indexation_list_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'indexation_list'
+			class_name		: 'indexation_list_container'
 		})
 
 	// indexation_list_head
@@ -658,7 +658,7 @@ const render_indexation_list = function(self) {
 			element_type	: 'div',
 			class_name		: 'indexation_list_head icon_arrow',
 			inner_html		: get_label.indexaciones || 'Indexations',
-			parent			: indexation_list_wrap
+			parent			: indexation_list_container
 		})
 
 	// indexation_list_body
@@ -666,7 +666,7 @@ const render_indexation_list = function(self) {
 			element_type	: 'div',
 			class_name		: 'indexation_list_body hide',
 			inner_html		: 'Working here..',
-			parent			: indexation_list_wrap
+			parent			: indexation_list_container
 		})
 
 	// track collapse toggle state of content
@@ -686,21 +686,21 @@ const render_indexation_list = function(self) {
 		}
 
 
-	return indexation_list_wrap
+	return indexation_list_container
 };//end render_indexation_list
 
 
 
 /**
 * RENDER_RELATION_LIST
-* @return DOM node relation_list_wrap
+* @return DOM node relation_list_container
 */
 const render_relation_list = function(self) {
 
 	// wrapper
-		const relation_list_wrap = ui.create_dom_element({
+		const relation_list_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'relation_list'
+			class_name		: 'relation_list_container'
 		})
 
 	// relation_list_head
@@ -708,14 +708,14 @@ const render_relation_list = function(self) {
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
 			inner_html		: get_label.relaciones || "Relations",
-			parent			: relation_list_wrap
+			parent			: relation_list_container
 		})
 
 	// relation_list_body
 		const relation_list_body = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_body hide',
-			parent			: relation_list_wrap
+			parent			: relation_list_container
 		})
 
 	// relation_list events
@@ -763,11 +763,11 @@ const render_relation_list = function(self) {
 				})
 
 			await relation_list.build()
-			const relation_list_wrap = await relation_list.render()
+			const relation_list_container = await relation_list.render()
 			while (relation_list_body.firstChild) {
 				relation_list_body.removeChild(relation_list_body.firstChild)
 			}
-			relation_list_body.appendChild(relation_list_wrap)
+			relation_list_body.appendChild(relation_list_container)
 		}
 		function unload_relation_list() {
 			self.section_id = self.caller.section_id
@@ -779,7 +779,7 @@ const render_relation_list = function(self) {
 		}
 
 
-	return relation_list_wrap
+	return relation_list_container
 };//end render_relation_list
 
 

@@ -40,7 +40,7 @@ render_paginator_mini.prototype.mini = async function(options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper_paginator mini full_width css_wrap_rows_paginator text_unselectable'
+			class_name		: 'wrapper_paginator paginator mini full_width css_wrap_rows_paginator text_unselectable'
 		})
 
 	// content data. Added when total is ready

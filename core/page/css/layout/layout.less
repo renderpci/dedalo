@@ -637,8 +637,11 @@
 			}
 		}
 
-		>.paginator {
+		>.paginator_container {
 			min-height: 0.5rem;
+			display: grid;
+			margin: 0;
+			padding-left: 0.5em;
 		}
 
 		>.content_data {
@@ -2893,36 +2896,47 @@
 
 // widgets common
 	.wrapper_widget {
-		font-size: 0.78rem;
+		// font-size: 0.78rem;
 
-		li {
-			padding: 0;
+		// li {
+		// 	padding: 0;
 
-			>div {
-				padding: 0.15em;
-				// background-color: #f0f0f0;
-				// border-right: 1px solid #c0c0c0;
-				flex: 1 1 100%;
+		// 	>div {
+		// 		padding: 0.15em;
+		// 		// background-color: #f0f0f0;
+		// 		// border-right: 1px solid #c0c0c0;
+		// 		flex: 1 1 100%;
 
-				&:last-of-type {
-				  border: none;
-				}
+		// 		&:last-of-type {
+		// 		  border: none;
+		// 		}
 
-				>.label, >.value {
-					padding: 0.25em;
-				}
+		// 		>.label, >.value {
+		// 			padding: 0.25em;
+		// 		}
 
-				>.label {
-					// font-weight: 400;
-					white-space: nowrap;
-					overflow: hidden;
-					text-overflow: ellipsis;
-				}
-				>.value {
-					padding-left: 0;
-				}
-			}
-		}
+		// 		>.label {
+		// 			// font-weight: 400;
+		// 			white-space: nowrap;
+		// 			overflow: hidden;
+		// 			text-overflow: ellipsis;
+		// 		}
+		// 		>.value {
+		// 			padding-left: 0;
+		// 		}
+		// 	}
+		// }
 	}//end .wrapper_widget
 
 
+
+// label_top. It's used in section group and inspector labels
+	.label_top {
+		background-color: @color_grey_light;
+		position: relative;
+		padding: 0.33em;
+		padding-left: 0.5em;
+		cursor: pointer;
+		text-transform: uppercase;
+		color: @color_grey_ultradark;
+	}
