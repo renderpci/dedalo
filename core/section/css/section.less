@@ -35,11 +35,28 @@
 			width: 100%;
 		}
 
-		>.inspector {
+		>.inspector_container {
+			// @top_distance : 75px;
+			@inspector_width : 15em;
+			overflow: auto;
+			height: 100%;
+			width: @inspector_width;
+			background-color: @color_grey_untralight;
+			position: fixed;
+			// top: @top_distance;
+			left: calc(100vw - 16.4em);
+			outline: 1px solid @color_grey_light;
 
-		}
+			@media screen and (max-width: @width_break_point_0) {
+				display: contents;
+				width: 100%;
+				left: 0;
+				position: initial;
+				margin-bottom: 1rem;
+			}
+		}//end .inspector_container
 
-		>.filter {
+		>.search_container {
 			width: 100%;
 		}
 
@@ -110,7 +127,7 @@
 			}
 		}
 
-		>.filter {
+		>.search_container {
 			background-color: #b0feee;
 			width: 100%;
 		}
@@ -134,5 +151,4 @@
 		}
 
 	}//end &.list
-
 }

@@ -174,10 +174,10 @@ export const ui = {
 				if (instance.paginator) {
 					const paginator = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'paginator',
+						class_name		: 'paginator_container',
 						parent			: fragment
 					})
-					instance.paginator.render().then(paginator_wrapper =>{
+					instance.paginator.render().then(paginator_wrapper => {
 						paginator.appendChild(paginator_wrapper)
 					})
 				}

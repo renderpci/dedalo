@@ -287,7 +287,7 @@ render_menu.prototype.edit = async function() {
 
 	// menu_wrapper
 		const menu_wrapper = document.createElement("div")
-			  menu_wrapper.classList.add("menu_wrapper")
+			  menu_wrapper.classList.add('menu_wrapper','menu')
 			  menu_wrapper.appendChild(fragment)
 		// menu left band
 			if (page_globals.is_root===true) {

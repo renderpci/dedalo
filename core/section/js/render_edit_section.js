@@ -56,16 +56,16 @@ render_edit_section.prototype.edit = async function(options) {
 		// const current_buttons = get_buttons(self);
 
 	// inspector
-		const inspector_div = ui.create_dom_element({
+		const inspector_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'inspector',
+			class_name		: 'inspector_container',
 			parent			: fragment
 		})
 		self.inspector.build().then(()=>{
 			self.inspector.render().then(inspector_wrapper =>{
 
 				// inspector_wrapper append
-					inspector_div.appendChild(inspector_wrapper)
+					inspector_container.appendChild(inspector_wrapper)
 
 				// paginatior inside
 					self.paginator.build().then(()=>{
