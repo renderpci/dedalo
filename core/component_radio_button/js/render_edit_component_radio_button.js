@@ -197,7 +197,7 @@ const get_content_data_edit = function(self) {
 
 	// short vars
 		const datalist	= self.data.datalist
-		const mode		= self.mode
+		// const mode		= self.mode
 
 	const fragment = new DocumentFragment()
 
@@ -209,8 +209,8 @@ const get_content_data_edit = function(self) {
 		})
 
 	// inputs
-		const value				= (self.data.value.length<1) ? [null] : self.data.value
-		const value_compare		= value.length>0 ? value[0] : null
+		// const value				= (self.data.value.length<1) ? [null] : self.data.value
+		// const value_compare		= value.length>0 ? value[0] : null
 		const datalist_length	= datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			const input_element = get_input_element_edit(i, datalist[i], self)
@@ -228,8 +228,8 @@ const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-
 		content_data.appendChild(fragment)
+
 
 	return content_data
 };//end get_content_data_edit
@@ -319,8 +319,6 @@ const get_buttons = (self) => {
 */
 const get_input_element_edit = (i, current_value, self) => {
 
-	const input_id = self.id +"_"+ i + "_" + new Date().getUTCMilliseconds()
-
 	const value				= self.data.value || []
 	const value_length		= value.length
 	const datalist_item		= current_value
@@ -333,16 +331,25 @@ const get_input_element_edit = (i, current_value, self) => {
 			element_type	: 'li'
 		})
 
+	// label
+		// const label_string = (SHOW_DEBUG===true)
+		// 	? label + ' [' + section_id + ']'
+		// 	: label
+		const input_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: label,
+			parent			: li
+		})
+
 	// input checkbox
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',
-			id				: input_id,
 			name			: self.id,
 			dataset			: { key : i },
-			value			: JSON.stringify(datalist_value),
-			parent			: li
+			value			: JSON.stringify(datalist_value)
 		})
+		input_label.prepend(input)
 
 	// checked input set on match
 		for (let j = 0; j < value_length; j++) {
@@ -354,38 +361,37 @@ const get_input_element_edit = (i, current_value, self) => {
 			}
 		}
 
-	// label
-		// const label_string = (SHOW_DEBUG===true)
-		// 	? label + ' [' + section_id + ']'
-		// 	: label
-		const input_label = ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: label,
+	// show_on_active
+		const show_on_active = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'show_on_active',
 			parent			: li
 		})
-		input_label.setAttribute("for", input_id)
+
 
 	// developer_info
-		const developer_info = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'developer_info show_on_active',
+			class_name		: 'developer_info',
 			text_content	: `[${section_id}]`,
-			parent			: li
+			parent			: show_on_active
 		})
 
 
 	// button_edit
 		const button_edit = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button edit show_on_active',
-			parent			: li
+			class_name		: 'button edit',
+			parent			: show_on_active
 		})
 		button_edit.addEventListener("click", function(e){
 			e.stopPropagation()
 			try {
 				// target_section
-					const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
-					const target_section_tipo = sqo.section_tipo[0].tipo
+					const target_sections		= self.context.target_sections
+					const target_section_tipo	= target_sections && target_sections[0]
+						? target_sections[0].tipo
+						: null
 
 				// navigation
 					const user_navigation_options = {

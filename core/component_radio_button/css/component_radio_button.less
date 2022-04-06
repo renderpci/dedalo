@@ -9,14 +9,21 @@
 		>.content_data {
 
 			>.inputs_container {
+				flex-wrap: nowrap;
+				align-items: flex-start;
+				justify-content: space-between;
 
 				>li {
-					align-items: center;
-					display: flex;
-					padding-bottom: 0.25rem;
+					flex: 1 0 auto;
 
-					.show_on_active {
-						margin-left: 0.5rem;
+					>label {
+						width: 100%;
+						padding-top: 0.33rem;
+						padding-bottom: 0.33rem;
+					}
+
+					>.show_on_active {
+						// margin-left: 0.5rem;
 					}
 				}
 

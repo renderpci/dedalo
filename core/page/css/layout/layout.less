@@ -8,7 +8,6 @@
 
 
 
-
 // hilite (on focus)
 	.hilite(@outline_offset:0) {
 		outline-offset: @outline_offset;
@@ -21,6 +20,19 @@
 		&.input_value {
 			padding-right: 2em;
 		}
+	}
+
+
+
+// label_top. It's used in section group and inspector labels
+	.label_top {
+		background-color: @color_grey_light;
+		position: relative;
+		padding: 0.33em;
+		padding-left: 0.5em;
+		cursor: pointer;
+		text-transform: uppercase;
+		color: @color_grey_ultradark;
 	}
 
 
@@ -157,7 +169,7 @@
 
 
 
-// area
+// area common definitions
 	.wrapper_area {
 
 		>.label {
@@ -196,9 +208,7 @@
 					color: #ffffff;
 				}
 			}
-
 		}//end .buttons
-
 	}//end area
 
 
@@ -490,7 +500,6 @@
 		// 	}
 
 		// }//end list &.list
-
 	}//end .section_record.edit
 
 
@@ -537,11 +546,9 @@
 
 		// }//end &.edit
 
-
 		// &.list {
 
 		// }//end &.list
-
 	}//end .section_group
 
 
@@ -610,7 +617,7 @@
 
 
 
-// component
+// component common definitions
 	.wrapper_component {
 		position: relative;
 		margin: 0;
@@ -2201,7 +2208,6 @@
 					width: 3em;
 					text-align: center;
 				}
-
 			}
 
 			// &.inputs_container >li {
@@ -2213,7 +2219,7 @@
 				//padding-bottom: 0.25em;
 			}
 		}
-	}
+	}//end .inputs_container
 
 
 
@@ -2495,7 +2501,8 @@
 
 
 // component buttons show / hide PROPOSAL !
-	ul.inputs_container {
+	// ul
+	.inputs_container {
 		>li {
 			// default state of buttons here
 			.hidden_button {
@@ -2593,7 +2600,6 @@
 				border: 1px solid #dadada;
 			}
 		}
-
 	}
 
 
@@ -2930,13 +2936,3 @@
 
 
 
-// label_top. It's used in section group and inspector labels
-	.label_top {
-		background-color: @color_grey_light;
-		position: relative;
-		padding: 0.33em;
-		padding-left: 0.5em;
-		cursor: pointer;
-		text-transform: uppercase;
-		color: @color_grey_ultradark;
-	}

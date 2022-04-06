@@ -2435,6 +2435,15 @@ button.list:before {
 *
 * Included from main.less file
 */
+.label_top {
+  background-color: #f1f1f1;
+  position: relative;
+  padding: 0.33em;
+  padding-left: 0.5em;
+  cursor: pointer;
+  text-transform: uppercase;
+  color: #353535;
+}
 .dd_input {
   font-size: 1em;
   height: 2em;
@@ -3131,13 +3140,13 @@ dd-modal::part(header) {
   height: 100%;
   width: 100%;
 }
-ul.inputs_container > li .hidden_button {
+.inputs_container > li .hidden_button {
   display: none;
 }
-ul.inputs_container > li .hidden_button:active {
+.inputs_container > li .hidden_button:active {
   display: inline-block;
 }
-ul.inputs_container > li:focus-within .hidden_button {
+.inputs_container > li:focus-within .hidden_button {
   display: inline-block;
 }
 .jsoneditor > .jsoneditor-menu a.jsoneditor-poweredBy {
@@ -3396,15 +3405,6 @@ ul.inputs_container > li:focus-within .hidden_button {
 		  transition: all 0.75s ease;
 		}
 		*/
-.label_top {
-  background-color: #f1f1f1;
-  position: relative;
-  padding: 0.33em;
-  padding-left: 0.5em;
-  cursor: pointer;
-  text-transform: uppercase;
-  color: #353535;
-}
 /**
 * page
 *
@@ -7198,13 +7198,18 @@ ul.inputs_container > li:focus-within .hidden_button {
 *
 * Included from main.less file
 */
-.component_radio_button.edit > .content_data > .inputs_container > li {
-  align-items: center;
-  display: flex;
-  padding-bottom: 0.25rem;
+.component_radio_button.edit > .content_data > .inputs_container {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
 }
-.component_radio_button.edit > .content_data > .inputs_container > li .show_on_active {
-  margin-left: 0.5rem;
+.component_radio_button.edit > .content_data > .inputs_container > li {
+  flex: 1 0 auto;
+}
+.component_radio_button.edit > .content_data > .inputs_container > li > label {
+  width: 100%;
+  padding-top: 0.33rem;
+  padding-bottom: 0.33rem;
 }
 /**
 * component_relation_children
