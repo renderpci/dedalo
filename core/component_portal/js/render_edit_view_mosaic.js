@@ -5,13 +5,13 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {set_element_css} from '../../page/js/css.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {
 		render_column_id,
 		render_column_component_info,
@@ -44,7 +44,7 @@ render_edit_view_mosaic.render = async function(self, options) {
 		const render_level 	= options.render_level || 'full'
 
 	// untouched vars
-		const untouched_columns_map	= JSON.parse(JSON.stringify(self.columns_map))
+		const untouched_columns_map	= clone(self.columns_map)
 		const untouched_id_variant	= self.id_variant
 
 	// alt_list_body. Alternative table view node with all ddo in table mode

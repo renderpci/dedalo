@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
@@ -425,7 +426,7 @@ const build_id_column_DES = function(self) {
 							e.stopPropagation();
 
 							// tool_context (clone always to prevent modify original object)
-								const tool_context = JSON.parse( JSON.stringify(self.caller.config.tool_context) )
+								const tool_context = clone(self.caller.config.tool_context)
 
 							// parse ddo_map section_id
 								tool_context.tool_config.ddo_map.map(el => {

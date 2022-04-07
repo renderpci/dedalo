@@ -148,9 +148,7 @@ const get_content_data = function(self) {
 const get_input_element = (self) => {
 
 	const value		= self.data.value || []
-	const datalist	= self.data.datalist
-		? (JSON.parse(JSON.stringify(self.data.datalist)) || [])
-		: []
+	const datalist	= self.data.datalist || []
 
 	// create li
 		// const li = ui.create_dom_element({

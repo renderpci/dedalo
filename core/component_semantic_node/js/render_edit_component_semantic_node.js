@@ -106,8 +106,8 @@ const add_events = function(self, wrapper) {
 
 			// update
 				if (e.target.matches(element_type + '.input_value')) {
-					//console.log("++update e.target:",JSON.parse(JSON.stringify(e.target.dataset.key)));
-					//console.log("++update e.target value:",JSON.parse(JSON.stringify(e.target.value)));
+					//console.log("++update e.target:", clone(e.target.dataset.key));
+					//console.log("++update e.target value:", clone(e.target.value));
 
 					// is_unique check
 						// if (self.context.properties.unique) {

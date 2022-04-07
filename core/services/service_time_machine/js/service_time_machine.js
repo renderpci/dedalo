@@ -138,7 +138,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				const api_response = await current_data_manager.request({body:self.rqo})
 				if(SHOW_DEVELOPER===true) {
 
-					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, JSON.parse(JSON.stringify(api_response)), api_response.debug ? api_response.debug.exec_time : '']);
+					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, clone(api_response), api_response.debug ? api_response.debug.exec_time : '']);
 				}
 
 			// set the result to the datum
@@ -290,7 +290,7 @@ service_time_machine.prototype.build_context = function() {
 
 			// component show . From rqo_config_show
 			const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-				? JSON.parse( JSON.stringify(component.rqo_config.show.ddo_map) )
+				? clone(component.rqo_config.show.ddo_map)
 				: null
 			if (component_show) {
 				for (let i = 0; i < component_show.length; i++) {

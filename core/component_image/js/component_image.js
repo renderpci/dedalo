@@ -6,6 +6,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {vector_editor} from '../../component_image/js/vector_editor.js'
 	import {render_edit_component_image} from '../../component_image/js/render_edit_component_image.js'
@@ -331,7 +332,7 @@ component_image.prototype.delete_layer = function(layer) {
 
 	// update the data in the instance previous to save
 		const value =  typeof(self.data.value[0])!=='undefined'
-			? JSON.parse(JSON.stringify(self.data.value[0]))
+			? clone(self.data.value[0])
 			: {}
 
 		value.lib_data = self.ar_layer_loaded
@@ -359,19 +360,19 @@ component_image.prototype.update_draw_data = function() {
 
 	const self = this
 
-	const project 					= self.current_paper.project
+	const project					= self.current_paper.project
 	//remove the layer_ string in the name and parse to int
 	const layer_id					= project.activeLayer.data.layer_id
 
 	const current_layer				= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
-	current_layer.layer_data 		= project.activeLayer.exportJSON({asString:false})
+	current_layer.layer_data		= project.activeLayer.exportJSON({asString:false})
 
-	// current_layer.layer_color 		= project.activeLayer.selectedColor.toCSS()
-	current_layer.user_layer_name 	= project.activeLayer.data.user_layer_name
+	// current_layer.layer_color	= project.activeLayer.selectedColor.toCSS()
+	current_layer.user_layer_name	= project.activeLayer.data.user_layer_name
 
 	// update the data in the instance previous to save
 	const value =  typeof(self.data.value[0])!=='undefined'
-		? JSON.parse(JSON.stringify(self.data.value[0]))
+		? clone(self.data.value[0])
 		: {}
 	value.lib_data		= self.ar_layer_loaded
 	value.svg_file_data	= project.exportSVG({asString:true,embedImages:false})

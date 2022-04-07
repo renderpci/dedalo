@@ -218,7 +218,7 @@ component_common.prototype.build = async function(autoload=false){
 		// }
 
 	// set the server data to preserve the data that is saved in DDBB
-		self.db_data = JSON.parse(JSON.stringify(self.data))
+		self.db_data = clone(self.data)
 
 	// is_inside_tool
 		self.is_inside_tool = ui.inside_tool(self)
@@ -444,11 +444,11 @@ component_common.prototype.save = async function(changed_data) {
 			try {
 
 				// data. isolated cloned var
-				const data = JSON.parse(JSON.stringify(self.data))
+				const data = clone(self.data)
 				data.changed_data = changed_data
 
 				// context. isolated cloned var
-				const context = JSON.parse(JSON.stringify(self.context))
+				const context = clone(self.context)
 
 				// data_manager
 					const current_data_manager	= new data_manager()

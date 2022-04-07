@@ -137,7 +137,7 @@ component_json.prototype.save_sequence = async function(editor) {
 			// manual check valid value
 			let v = false
 			try {
-				v = JSON.parse(JSON.stringify(current_value))
+				v = clone(current_value)
 			}catch(e) {
 				console.warn("Error. JSON value is invalid!",);
 			}

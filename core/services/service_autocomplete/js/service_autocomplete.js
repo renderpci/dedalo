@@ -7,6 +7,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
+	import {clone} from '../../../common/js/utils/index.js'
 	import * as instances from '../../../common/js/instances.js'
 
 
@@ -44,7 +45,7 @@ export const service_autocomplete = function() {
 		// set properties
 			self.tipo					= self.caller.tipo
 			self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
-			self.request_config			= JSON.parse(JSON.stringify(self.caller.context.request_config))
+			self.request_config			= clone(self.caller.context.request_config)
 			self.sqo					= {}
 			self.dd_request				= self.request_config.find(el => el.api_engine==='dedalo')
 			self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
@@ -298,7 +299,7 @@ export const service_autocomplete = function() {
 			select.addEventListener('change',function(e){
 				const key = e.target.value
 
-				self.dd_request				= JSON.parse(JSON.stringify(self.request_config[key]))
+				self.dd_request				= clone(self.request_config[key])
 				self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
 				self.search_engine			= self.dd_request.api_engine //.find((current_item)=> current_item.typo==='search_engine').value
 				// console.log("self.ar_search_section_tipo", self.ar_search_section_tipo);
@@ -1019,7 +1020,7 @@ export const service_autocomplete = function() {
 
 		// search_query_object base stored in wrapper dataset
 			const original_rqo_search	= await self.caller.rqo_search
-			const rqo_search			= JSON.parse(JSON.stringify(original_rqo_search))
+			const rqo_search			= clone(original_rqo_search)
 			self.rqo_search				= rqo_search
 			self.sqo					= rqo_search.sqo
 
