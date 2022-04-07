@@ -9,39 +9,39 @@ class dd_utils_api {
 
 
 	/**
-	* GET_MENU
+	* GET_MENU (Moved to unified call to read->get-data !)
 	* @return object $response
 	*/
-	public static function get_menu($request_options=null) {
-		global $start_time;
+		// public static function get_menu($request_options=null) {
+		// 	global $start_time;
 
-		// session_write_close();
+		// 	// session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$menu = new menu();
+		// 	$menu = new menu();
 
-		// menu json
-			$get_json_options = new stdClass();
-				$get_json_options->get_context	= true;
-				$get_json_options->get_data		= true;
-			$menu_json = $menu->get_json($get_json_options);
+		// 	// menu json
+		// 		$get_json_options = new stdClass();
+		// 			$get_json_options->get_context	= true;
+		// 			$get_json_options->get_data		= true;
+		// 		$menu_json = $menu->get_json($get_json_options);
 
-		$response->msg 		= 'Ok. Request done';
-		$response->result 	= $menu_json;
+		// 	$response->msg		= 'Ok. Request done';
+		// 	$response->result	= $menu_json;
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
-				$response->debug = $debug;
-			}
+		// 	// Debug
+		// 		if(SHOW_DEBUG===true) {
+		// 			$debug = new stdClass();
+		// 				$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+		// 				$debug->request_options	= $request_options;
+		// 			$response->debug = $debug;
+		// 		}
 
-		return (object)$response;
-	}//end get_menu
+		// 	return (object)$response;
+		// }//end get_menu
 
 
 

@@ -108,11 +108,15 @@ menu.prototype.build = async function(autoload=true){
 		}else{
 
 			// rqo build
+				// const rqo = {
+				// 	action			: 'get_menu',
+				// 	dd_api			: 'dd_utils_api',
+				// 	source			: create_source(self, null),
+				// 	prevent_lock	: true
+				// }
 				const rqo = {
-					action			: 'get_menu',
-					dd_api			: 'dd_utils_api',
-					source			: create_source(self, null),
-					prevent_lock	: true
+					action	: 'read',
+					source	: create_source(self, 'get_data')
 				}
 
 			// load data. get context and data

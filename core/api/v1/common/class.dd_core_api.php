@@ -49,6 +49,16 @@ class dd_core_api {
 	* Builds the start page minimun context.
 	* Normally is a menu and a section (based on url vars)
 	* This function tells to page what must to be request based on url vars
+	* Sample expected $json_data:
+	* {
+	*	"action": "start",
+	*	"search_obj": {
+	*		"t": "oh1",
+	*		"m": "edit"
+	*	},
+	*	"menu": true,
+	*	"prevent_lock": true
+	* }
 	* @return array $result
 	*/
 	static function start($json_data) {
@@ -96,12 +106,11 @@ class dd_core_api {
 
 			}else{
 
-				// logged case
+				// already logged case
 
-				$initiator = $search_obj->initiator ?? false;
-
-				// menu. Get the mandatory menu element
-					if ($initiator===false) {
+				// menu. Add the menu element context when is required
+					$menu = $json_data->menu ?? false;
+					if ($menu===true) {
 
 						$menu = new menu();
 						$menu->set_lang(DEDALO_DATA_LANG);
@@ -110,45 +119,20 @@ class dd_core_api {
 							$context[] = $menu->get_structure_context();
 					}
 
-				// section/area/tool. Get the page element from get url vars
+				// section/area/section_tool. Get the page element from get url vars
 					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 					switch (true) {
-
-						case ($model==='section_tool'):
-
-							$section_tool_tipo = $tipo;
-
-							$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
-							$properties		= $RecordObj_dd->get_properties();
-
-							// overwrite (!)
-								$model	= 'section';
-								$tipo	= $properties->config->target_section_tipo ?? $tipo;
-								$config	= $properties->config ?? null;
-
-							// tool_context
-								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
-									? array_key_first(get_object_vars($properties->tool_config))
-									: false;
-								if ($tool_name) {
-									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
-									if (empty($ar_tool_object)) {
-										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
-									}else{
-										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
-										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
-										$config->tool_context = $tool_context;
-										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
-									}
-								}
-							// (!) note non break switch here. Continue with overwriten section tipo
 
 						case ($model==='section'):
 
 							$section = section::get_instance($section_id, $tipo, $mode);
 							$section->set_lang(DEDALO_DATA_LANG);
 
-							$current_context = $section->get_structure_context(1, true);
+							$current_context = $section->get_structure_context(
+								1, // permissions
+								true, // add_request_config
+								false // callback
+							);
 
 							// section_id given case. If is received section_id, we build a custom sqo with the proper filter
 							// and override default request_config sqo into the section context
@@ -182,6 +166,35 @@ class dd_core_api {
 								$context[] = $current_context;
 							break;
 
+						case ($model==='section_tool'):
+
+							$section_tool_tipo = $tipo;
+
+							$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
+							$properties		= $RecordObj_dd->get_properties();
+
+							// overwrite (!)
+								$model	= 'section';
+								$tipo	= $properties->config->target_section_tipo ?? $tipo;
+								$config	= $properties->config ?? null;
+
+							// tool_context
+								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
+									? array_key_first(get_object_vars($properties->tool_config))
+									: false;
+								if ($tool_name) {
+									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
+									if (empty($ar_tool_object)) {
+										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
+									}else{
+										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
+										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+										$config->tool_context = $tool_context;
+										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+									}
+								}
+							// (!) note non break switch here. Continue with overwriten section tipo
+
 						case ($model==='area_thesaurus'):
 
 							$area = area::get_instance($model, $tipo, $mode);
@@ -205,6 +218,10 @@ class dd_core_api {
 
 							// add to page context
 								$context[] = $current_context;
+							break;
+
+						case (strpos($model, 'tool_')===0):
+
 							break;
 
 						case (strpos($model, 'area')===0):
@@ -1370,6 +1387,12 @@ class dd_core_api {
 										$obj->hierarchy_terms = $ddo_source->hierarchy_terms;
 									}
 								$element->set_search_action($obj);
+
+						}else if (class_exists($model)) {
+
+							// case menu and similar generic elements
+
+							$element = new $model();
 
 						}else{
 
