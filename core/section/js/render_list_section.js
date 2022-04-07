@@ -6,6 +6,7 @@
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_ar_instances} from './section.js'
 
@@ -388,7 +389,7 @@ render_list_section.render_column_id = function(options){
 							e.stopPropagation();
 
 							// tool_context (clone always to prevent modify original object)
-								const tool_context = JSON.parse( JSON.stringify(self.config.tool_context) )
+								const tool_context = clone(self.config.tool_context)
 
 							// parse ddo_map section_id
 								tool_context.tool_config.ddo_map.map(el => {

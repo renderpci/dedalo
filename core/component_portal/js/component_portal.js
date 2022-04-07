@@ -192,8 +192,8 @@ component_portal.prototype.build = async function(autoload=false) {
 
 	// debug check
 		// if(SHOW_DEBUG===true) {
-		// 	// console.log("portal generate_rqo 1 self.rqo_config:", JSON.parse( JSON.stringify(self.rqo_config) ));
-		// 	// console.log("portal generate_rqo 1 self.rqo:", JSON.parse( JSON.stringify(self.rqo) ));
+		// 	// console.log("portal generate_rqo 1 self.rqo_config:", clone(self.rqo_config) );
+		// 	// console.log("portal generate_rqo 1 self.rqo:", clone(self.rqo) );
 		// 	const ar_used = []
 		// 	for(const element of self.datum.data) {
 
@@ -562,7 +562,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 		const full_data	= self.datum.data.find(el => el.tipo===self.tipo
 												  && el.section_tipo===self.section_tipo
 												  && el.section_id==self.section_id) || {}
-		self.data = JSON.parse(JSON.stringify(full_data))
+		self.data = clone(full_data)
 
 	// the portal will use the filtered data value to render it with the tag_id locators.
 		self.data.value = self.data.value

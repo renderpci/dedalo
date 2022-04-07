@@ -419,7 +419,7 @@ export const instantiate_page_element = function(self, ddo) {
 
 	// 		const var_uri = Object.entries(options).map(([key, val]) => `${key}=${val}`).join('&');
 
-	// 		const uri_options	= JSON.parse(JSON.stringify(options))
+	// 		const uri_options	= clone(options)
 	// 		const state 		= {options : uri_options}
 	// 		const title 		= ''
 	// 		const url 			= "?"+var_uri //window.location.href

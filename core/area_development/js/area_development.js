@@ -6,6 +6,7 @@
 // imports
 	import {common,load_data_debug} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_area_development, build_form} from './render_area_development.js'
 
@@ -77,7 +78,7 @@ area_development.prototype.build = async function(autoload=true) {
 		self.rqo.prevent_lock = true
 
 	// debug
-		const rqo_original = JSON.parse(JSON.stringify(self.rqo))
+		const rqo_original = clone(self.rqo)
 
 	// load from DDBB
 		if (autoload===true) {

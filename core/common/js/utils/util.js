@@ -7,9 +7,10 @@
 * CLONE
 * Exec a deep safe clone of object
 */
-export function clone(item){
+export function clone(item) {
 
-	return JSON.parse(JSON.stringify(item));
+	// return JSON.parse(JSON.stringify(item));
+	return structuredClone(item)
 }//end clone
 
 

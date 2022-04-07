@@ -4,6 +4,7 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
+	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
@@ -158,7 +159,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		// 	self.dd_request.show	= self.build_rqo('show', request_config, 'get_data')
 
 		// // debug
-		// 	const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
+		// 	const dd_request_show_original = clone(self.dd_request.show)
 
 		// // build_options. Add custom area build_options to source
 		// 	const source = self.dd_request.show.find(element => element.typo==='source')
@@ -179,7 +180,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
 				}
 				const api_response = await current_data_manager.request({body:self.rqo})
-					console.log("AREA_THESAURUS api_response:", self.id, api_response);
+					// console.log("AREA_THESAURUS api_response:", self.id, api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -188,7 +189,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				self.context	= self.datum.context.find(element => element.tipo===self.tipo)
 				self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
 				self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
-					console.log("self.widgets:",self.widgets);
 
 			// dd_request
 				// self.dd_request.show = self.build_rqo('show', self.context.request_config, 'get_data')
@@ -203,7 +203,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 			// rqo regenerate
 				await generate_rqo()
-				console.log("SECTION self.rqo after load:", JSON.parse( JSON.stringify(self.rqo) ) );
+				console.log("SECTION self.rqo after load:", clone(self.rqo));
 	}//end if (autoload===true)
 
 

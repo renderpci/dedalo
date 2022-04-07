@@ -1086,7 +1086,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 	const self = this
 
 	// clone rqo_config
-		rqo_config = JSON.parse(JSON.stringify(rqo_config))
+		rqo_config = clone(rqo_config)
 
 	// local_db_data. get value if exists
 		// const current_data_manager = new data_manager()
@@ -1310,7 +1310,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 						// Semantic node is outside the portal sqo (it has his own sqo) and need to be excluded, only when the caller it's a semantic node include it
 						if(current_path[j].model==='component_semantic_node' && (current_path[j].model !== self.model)){continue paths}
 						// create a copy of the current ddo, it ensure that the original path is not touched
-						const current_ddo = JSON.parse(JSON.stringify(current_path[j]))
+						const current_ddo = clone(current_path[j])
 						current_ddo.mode = 'list' // enable lang fallback value
 						if(Array.isArray(current_ddo.section_tipo)){
 							current_ddo.section_tipo = current_ddo.section_tipo[0]
@@ -1842,7 +1842,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 	// 							if(ddo){
 	// 								ddo.config_type = 'show'
-	// 								const select_ddo = JSON.parse(JSON.stringify(ddo))
+	// 								const select_ddo = clone(ddo)
 	// 								select_ddo.parent = sections[j]
 	// 								request_ddo.push(select_ddo)
 	// 							}

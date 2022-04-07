@@ -5,8 +5,8 @@
 
 // imports
 	//import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {render_list_section_record} from '../../section_record/js/render_list_section_record.js'
 	import {render_edit_section_record} from '../../section_record/js/render_edit_section_record.js'
 	import {render_mini_section_record} from '../../section_record/js/render_mini_section_record.js'
@@ -140,7 +140,7 @@ section_record.prototype.init = async function(options) {
 const add_instance = async (self, context, section_id, current_data, column_id) => {
 
 	// current_context
-		const current_context = JSON.parse( JSON.stringify(context) )
+		const current_context = clone(context)
 
 		// Fix context issues with parent value
 		// (!) Note that the API prevents more than one same component in context.
@@ -362,7 +362,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 									}
 
 							// new_context. clone the current_context to prevent changes in the original.
-								const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
+								const new_context = clone(current_context) //Object.freeze(current_context);
 								new_context.columns_map = (current_column.columns_map)
 									? current_column.columns_map
 									: false
@@ -411,7 +411,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 	// 		// console.log("section_tipo:",section_tipo);
 	// 		// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
-	// 		// console.log("_________________________________________________ ar_columns:",JSON.parse(JSON.stringify(ar_columns)));
+	// 		// console.log("_________________________________________________ ar_columns:", clone(ar_columns));
 
 	// 	// // valid_columns
 	// 	// 	// Get the columns that can be used with the current locator
@@ -487,7 +487,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 	// 				}
 
 	// 			// new_context. clone the current_context to prevent changes in it.
-	// 				const new_context = JSON.parse(JSON.stringify(current_context)) //Object.freeze(current_context);
+	// 				const new_context = clone(current_context) //Object.freeze(current_context);
 
 	// 				const column_id = caller_column_id
 	// 					? caller_column_id

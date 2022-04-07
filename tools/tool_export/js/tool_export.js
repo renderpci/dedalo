@@ -3,7 +3,7 @@
 
 
 // import
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {clone} from '../../../core/common/js/utils/index.js'
 	// import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
@@ -155,7 +155,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const ar_ddo_to_export	= options.ar_ddo_to_export
 
 	// sqo
-		const sqo = JSON.parse(JSON.stringify(self.sqo))
+		const sqo = clone(self.sqo)
 		sqo.limit	= 0
 		sqo.offset	= 0
 

@@ -97,8 +97,8 @@ const add_events = function(self, wrapper) {
 
 			// update
 			if (e.target.matches('input[type="text"].input_value')) {
-				//console.log("++update e.target:",JSON.parse(JSON.stringify(e.target.dataset.key)));
-				//console.log("++update e.target value:",JSON.parse(JSON.stringify(e.target.value)));
+				//console.log("++update e.target:", clone(e.target.dataset.key));
+				//console.log("++update e.target value:", clone(e.target.value));
 
 				const validated = self.verify_email(e.target.value)
 				ui.component.error(!validated, e.target)

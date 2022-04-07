@@ -288,7 +288,7 @@ export const delete_instance = async function(options) {
 
 		if (result===true) {
 			//root_instance = instances[index].root_instance
-			//console.log("deleted instance:", JSON.parse(JSON.stringify(instances[index])));
+			//console.log("deleted instance:", clone(instances[index]));
 			instances.splice(index, 1)
 			deleted++
 			//console.log(" ++++++++ [delete_instance] deleted:", index, options);

@@ -5,6 +5,7 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_geolocation} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
@@ -144,11 +145,11 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 
 	// update the current_value with the data from DDBB
 	// current_value will be update with different changes to create change_data to save
-		self.current_value[key] = JSON.parse(JSON.stringify(self.data.value[key]))
+		self.current_value[key] = clone(self.data.value[key])
 
 	// load all layers
 		self.ar_layer_loaded = typeof self.data.value[key].lib_data!=='undefined'
-			? JSON.parse(JSON.stringify(self.data.value[key].lib_data))
+			? clone(self.data.value[key].lib_data)
 			: []
 
 	// map_data
@@ -926,10 +927,12 @@ component_geolocation.prototype.update_draw_data = function() {
 	// current_layer.user_layer_name 	= current_layer.data.user_layer_name
 
 	// update the data in the instance previous to save
-		const value = typeof (self.data.value[0])!=='undefined'
-			? JSON.parse(JSON.stringify(self.data.value[0]))
-			: {}
+		// const value = typeof (self.data.value[0])!=='undefined'
+		// 	? clone(self.data.value[0])
+		// 	: {}
+
 		self.current_value[key].lib_data = self.ar_layer_loaded
+
 
 	return true
 };//end update_draw_data

@@ -257,7 +257,7 @@ section.prototype.build = async function(autoload=false) {
 					if (!api_response || !api_response.result) {
 						console.error("section build autoload api_response:",api_response);
 					}
-					const response	= JSON.parse(JSON.stringify(api_response))
+					const response	= clone(api_response)
 					const exec_time	= api_response.debug ? api_response.debug.exec_time : null
 					dd_console("SECTION api_response:", 'DEBUG', [self.id, response, exec_time]);
 				}
