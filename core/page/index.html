@@ -57,17 +57,23 @@
 				const rqo = { // rqo (request query object)
 					action			: 'start',
 					search_obj		: url_vars_to_object(location.search),
+					menu			: true,
 					prevent_lock	: true
 				}
 				const api_response = await data_manager.prototype.request({
 					body : rqo
 				})
-				console.log("+++ start api_response:",api_response);
+				console.log("+++ start api_rqo:", rqo);
+				console.log("+++ start api_response:", api_response);
 
 			// error case
 				if (api_response.result===false) {
-					main.innerHTML = api_response.msg;
-					main.classList.remove("loading","hide")
+					import('../page/js/render_page.js')
+					.then((render_page) => {
+						const wrapper_page = render_page.render_server_response_error(api_response.msg)
+						main.appendChild(wrapper_page)
+						main.classList.remove('loading','hide')
+					});
 					return
 				}
 
