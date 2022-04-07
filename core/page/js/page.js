@@ -287,7 +287,7 @@ page.prototype.build = async function() {
 	const self = this
 
 	// instances (like section). Instances are returned init and builded
-		await self.get_ar_instances()
+		// await self.get_ar_instances() // (!) processed directly from render to allow async
 
 	// status update
 		self.status = 'builded'
@@ -346,7 +346,7 @@ page.prototype.get_ar_instances = async function(){
 * @param object ddo (source)
 * @return promise current_instance_promise
 */
-const instantiate_page_element = function(self, ddo) {
+export const instantiate_page_element = function(self, ddo) {
 
 	const context		= ddo
 	const tipo			= ddo.tipo

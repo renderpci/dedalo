@@ -97,7 +97,7 @@ render_edit_section.prototype.edit = async function(options) {
 	// content_data
 		// css
 			const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
-			const content_data_css = ["content_data", self.type, ...content_data_structure_css]
+			const content_data_css = [...content_data_structure_css] // "content_data", self.type,
 			content_data.classList.add(...content_data_css)
 		// add to fragment
 			fragment.appendChild(content_data)
@@ -214,7 +214,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 	// content_data
 		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
+			  content_data.classList.add('content_data', self.mode) // ,"nowrap","full_width"
 			  content_data.appendChild(fragment)
 
 	// debug

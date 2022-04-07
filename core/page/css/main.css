@@ -3416,7 +3416,6 @@ dd-modal::part(header) {
 }
 .page > .content_data {
   display: table;
-  padding: 1em;
   width: 100%;
 }
 @media screen and (min-width: 1024px) {
@@ -3424,6 +3423,16 @@ dd-modal::part(header) {
     overflow-x: auto;
     overflow-y: hidden;
   }
+}
+.page > .content_data .placer {
+  min-height: 4.5rem;
+  padding: 0.5rem;
+}
+.page > .page_error_container {
+  padding: 4rem;
+}
+.page > .page_error_container > .icon_dedalo {
+  height: 7rem;
 }
 .list_body {
   display: grid;
@@ -5755,6 +5764,9 @@ dd-modal::part(header) {
 .area_thesaurus {
   font-family: 'Arial', sans-serif;
   font-size: 1em;
+  display: table;
+  width: 100%;
+  padding: 1rem;
   /* HIERARCHY_NAME like 'España'
 	------------------------------------------------ */
   /*
@@ -5989,9 +6001,10 @@ dd-modal::part(header) {
 .section {
   display: table;
   width: 100%;
+  padding: 1rem;
 }
 .section.edit {
-  width: calc(100vw - 18em);
+  width: calc(100vw - 16rem);
 }
 @media screen and (max-width: 1024px) {
   .section.edit {
@@ -6004,10 +6017,10 @@ dd-modal::part(header) {
 .section.edit > .inspector_container {
   overflow: auto;
   height: 100%;
-  width: 15em;
+  width: 15rem;
   background-color: #fcfcfc;
   position: fixed;
-  left: calc(100vw - 16.4em);
+  left: calc(100vw - 16.4rem);
   outline: 1px solid #f1f1f1;
 }
 @media screen and (max-width: 1024px) {
