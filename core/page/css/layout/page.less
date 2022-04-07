@@ -10,13 +10,26 @@
 
 	>.content_data {
 		display: table;
-		padding: 1em;
+		// padding: 1em;
 		width: 100%;
 		//padding-top: 2.1em;
 		// width: calc(100vw - 2em);
 		@media screen and (min-width: @width_break_point_0) {
 			overflow-x: auto;
 			overflow-y: hidden; // (!) important to prevent Chrome issues
+		}
+
+		.placer {
+			min-height: 4.5rem;
+			padding: 0.5rem;
+		}
+	}
+
+	>.page_error_container {
+		padding: 4rem;
+
+		>.icon_dedalo {
+			height: 7rem;
 		}
 	}
 }

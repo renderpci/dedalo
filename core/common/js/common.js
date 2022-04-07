@@ -578,7 +578,7 @@ export const create_source = function (self, action) {
 		action			: action,
 		model			: self.model,
 		tipo			: self.tipo,
-		section_tipo	: self.section_tipo,
+		section_tipo	: self.section_tipo || self.tipo,
 		section_id		: self.section_id,
 		mode			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
 		lang			: self.lang
