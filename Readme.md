@@ -5,10 +5,10 @@
 *Dédalo*
 
 **IMPORTANT: V6 ontology compatibility for V4 and V5**
-*Starting today, 21-05-2020, the ontology in V4 and V5 need to be update with a new column into the "jer_dd" table named "properties", for compatibility with the upcoming V6, this new column will not affect v4 or V5 normal function but the new exported ontologies files from master will include this column in copy files. If you don't add this column to jer_dd, Dédalo will can't import the new files and you will can lost the ontology data, although you can re-build jer_dd making the import process manually.
+*Starting at 21-05-2020, the ontology in V4 and V5 need to be update with a new column into the "jer_dd" table named "properties", for compatibility with the upcoming V6, this new column will not affect v4 or V5 normal function but the new exported ontologies files from master will include this column in copy files. If you don't add this column to jer_dd, Dédalo will can't import the new files and you will can lost the ontology data, although you can re-build jer_dd making the import process manually.
 Read the update V5.6.0*
 
-**ATENTION: New v6_developer branch is added, the v6 is in alpha state, the deverloper branch is freeze for new features and only update for bugs or errors**
+**ATENTION: New v6_developer branch is added, the v6 is in beta state, the deverloper branch is freeze for new features and only update for bugs or errors**
 
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 
 
@@ -29,7 +29,7 @@ entity, section, component, and tag. In other words, the locator can find, archi
 
 Dédalo is a real multilingual app (Dédalo can use any language) in the interface and the managed data, has a multi-thesaurus engine and manage multiple resources and resolutions for video, image, pdf, notation scores, etc. 
 
-Dédalo has a geo-reference for the cultural goods, interviews, etc. with points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
+Dédalo has a geo-reference for the cultural properties, interviews, etc. with points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
 
 Dédalo can handle and cut video in real time for find thematic parts of interviews or cultural goods (fragments of interviews / cultural goods), for 4k, HD 1080, 720, 404 resolutions.
 
@@ -37,7 +37,7 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 
 You can see Dédalo in action:
 
-<p><a href="https://dedalo.render.es/dedalo/lib/dedalo/main/?t=oh1" target="_blank">Dédalo demo</a></p>
+<p><a href="https://dedalo.render.es/" target="_blank">Dédalo demo</a></p>
 
 Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
@@ -59,7 +59,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 *Required for the OS*
 
 - PHP 7.4+
-- Apache 2.4.2+
+- Apache 2.4.6+
 - Postgres 10.1+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication).
 
@@ -89,20 +89,27 @@ un zip the file and move th libraries to:
 - tinymce 4.3.10
 - wexflow 1.2
 
-Some libraries like ffmpeg or ImageMagick need to be install direclly in the system (CentOs, Debian, MacOs X, etc)
+Some libraries like ffmpeg or ImageMagick need to be install directly in the system (Ubuntu, Debian, MacOs X, etc)
 
 SO libraries:
-- ffmpeg 2.6.1+
+- Ffmpeg 4.0+
+- Ffprobe 2.6.1+
 - qtfaststart 1.0
 - ImageMagick 6.9+
-- ffprobe 2.6.1+
 - NodeJS 5.10.1
-- Xpdf 4.00.01+
+- Xpdf command line tools 4.00.01+
 - wkhtmltopdf 0.12.1-08b0817
 
 
 **INSTALLATION**
 
+You can use our ready to use VM for develop:
+<p><a href="https://dedalo.dev/v5" target="_blank">Dedalo V5</a></p>
+
+Or follow the install video:
+<p><a href="https://dedalo.dev/v5_install" target="_blank">Dedalo V5 install video on CentOS</a></p>
+
+Or do it manually:
 1. Download Dédalo and copy to the httpdocs of web server
 2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
 3. Restore the plain sql file /install/db/dedalo4_install.pgsql (from zip version) to the postgres created DB. 
@@ -187,9 +194,9 @@ Dédalo have three main updates procedures:
 **SERVER SYSTEM**
 
 Dédalo in the server part is tested into the next Operating Systems:
-- Ubuntu Server 16.04+
+- Ubuntu Server 20.04+
 - Debian 9.0+
-- MacOsX 10.12+, 11.0+
+- MacOsX 11.0+
 - CentOS, Fedora and RedHat situation. We are stoping Dédalo testing into RedHat/CenOS/Fedora model due CentOS project focus was changed. The main OS will be Ubuntu to test Dédalo. RedHat/CentOS/Fedora will become to the category of "all other linux that we don't test it".
 <p><a href="https://blog.centos.org/2020/12/future-is-centos-stream/?utm_source=rss&utm_medium=rss&utm_campaign=future-is-centos-stream" target="_blank">CentOS blog</a></p>
 
@@ -199,17 +206,17 @@ Windows: is possible that Dédalo can run, but we NO TESTED.
 
 **USE**
 
-Dédalo version v4+, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...). 
+Dédalo version v4+, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, Edge (77+), ...).
 Firefox situation: From the 4.8 version of Dédalo is full compatible with Firefox, and can be used in production, but we need more feedback from the users, please comment your experience. 
 
 Browser	|	Version |	certificated
 --------- | --------- | ---------
-Chrome	|	70+ | YES - recomended
-Chrome	|	60+ | Deprecated (Please update as soon as posible)	 
-Chrome	|	0 to 60 | NO	 
-Safari	|	10+ | YES
-Safari	|	9 | Deprecated (Please update as soon as posible)
-Safari	|	0 to 8 | NO	
+Chrome	|	77+ | YES - recomended
+Chrome	|	75 to 77 | Deprecated (Please update as soon as posible)
+Chrome	|	0 to 74 | NO
+Safari	|	11+ | YES
+Safari	|	10 | Deprecated (Please update as soon as posible)
+Safari	|	0 to 9 | NO
 Firefox	|	60+ | YES
 Firefox	|	50 | Deprecated (Please update as soon as posible)
 Firefox	|	40-49 | NO
