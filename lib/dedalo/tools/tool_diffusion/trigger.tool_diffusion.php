@@ -160,7 +160,7 @@ function export_record($json_data) {
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if ($name==='level_value') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -168,7 +168,7 @@ function export_record($json_data) {
 		}
 
 	// fix levels on each call
-		$_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($level_value)
+		$_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = isset($level_value)
 			? $level_value
 			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
