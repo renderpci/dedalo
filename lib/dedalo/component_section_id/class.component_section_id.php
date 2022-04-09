@@ -27,7 +27,6 @@ class component_section_id extends component_common {
 	}//end get_valor
 
 
-
 	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
