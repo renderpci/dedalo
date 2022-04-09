@@ -1045,233 +1045,235 @@ class web_data {
 		* @param object $options
 		* @return object $response
 		*/
-			private static function exec_query($options) {
+		private static function exec_query($options) {
 
-				$start_time = microtime(1);
+			$start_time = microtime(1);
 
-				$response = new stdClass();
+			$response = new stdClass();
+				$response->result = false;
+				$response->msg    = "Error on get data (exec_query)";
+
+			// sort vars
+				$strQuery				= $options->strQuery;
+				$caller					= $options->caller;
+				$count					= $options->count;
+				$ar_fields				= $options->ar_fields;
+				$resolve_portal			= $options->resolve_portal;
+				$resolve_portals_custom = $options->resolve_portals_custom ?? false;
+				$portal_filter			= $options->portal_filter ?? false;
+				$table					= $options->table;
+				$apply_postprocess		= $options->apply_postprocess ?? false;
+				$map					= $options->map ?? false;
+				$process_result			= $options->process_result ?? false;
+				$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query
+				$lang					= $options->lang;
+				$db_name				= !empty($options->db_name) ? $options->db_name : null;
+
+			// safe strQuery query test
+				preg_match_all("/delete|update|insert|truncate|set names|user|mysql|localhost/i", $strQuery, $output_array);
+				if (!empty($output_array[0])) {
 					$response->result = false;
-					$response->msg    = "Error on get data (exec_query)";
+					$response->msg    = "Error on sql request. Ilegal option (exec_query)";
+					if(SHOW_DEBUG===true) {
+						$response->msg   .= " : $strQuery";
+						dump($output_array[0], ' output_array[0] ++ '.to_string());
+					}
+					return $response;
+				}
 
-				// sort vars
-					$strQuery				= $options->strQuery;
-					$caller					= $options->caller;
-					$count					= $options->count;
-					$ar_fields				= $options->ar_fields;
-					$resolve_portal			= $options->resolve_portal;
-					$resolve_portals_custom = $options->resolve_portals_custom ?? false;
-					$portal_filter			= $options->portal_filter ?? false;
-					$table					= $options->table;
-					$apply_postprocess		= $options->apply_postprocess ?? false;
-					$map					= $options->map ?? false;
-					$process_result			= $options->process_result ?? false;
-					$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query
-					$lang					= $options->lang;
-					$db_name				= !empty($options->db_name) ? $options->db_name : null;
+			// debug
+				if ($caller!=='portal_resolve') {
+					debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::DEBUG);
+				}
+				// if(SHOW_DEBUG===true) {
+				// 	error_log("strQuery:".PHP_EOL.$strQuery);
+				// }
 
-				// safe strQuery query test
-					preg_match_all("/delete|update|insert|truncate|set names|user|mysql|localhost/i", $strQuery, $output_array);
-					if (!empty($output_array[0])) {
-						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal option (exec_query)";
-						if(SHOW_DEBUG===true) {
-							$response->msg   .= " : $strQuery";
-							dump($output_array[0], ' output_array[0] ++ '.to_string());
-						}
-						return $response;
+			// prepare PDO
+				try {
+					$dbh = web_data::get_PDO_connection(
+						MYSQL_DEDALO_HOSTNAME_CONN,
+						MYSQL_DEDALO_USERNAME_CONN,
+						MYSQL_DEDALO_PASSWORD_CONN,
+						$db_name
+					);
+					$stmt	= $dbh->prepare($strQuery);
+					$stmt->setFetchMode(PDO::FETCH_ASSOC);
+					$result = $stmt->execute();
+
+					$dbh = null;
+				} catch (PDOException $e) {
+					// print "Error!: " . $e->getMessage() . "<br/>";
+					error_log(__METHOD__ ." ".PHP_EOL." ". $e->getMessage() );
+					// die();
+					$response->msg .= ' Check server log for details';
+					return $response;
+				}
+
+				if (!isset($result) || !$result) {
+					# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
+					$response->result = false;
+					$response->msg    = "Error on sql request (no result) ";
+					$msg = "Error processing request (no result)";
+					// use always silent errors to not alter json result object
+					error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
+					if(SHOW_DEBUG===true) {
+						$response->msg .= $msg .' - '. to_string($strQuery, $db_name);
+					}
+					return $response;
+				}
+
+			// count records
+				$total = ((bool)$count===true)
+					? (int)web_data::count_records($strQuery, $db_name)
+					: false;
+
+			// resolve_portals_custom like ‘{"audiovisual":"audiovisual","informant":"informant"}’
+				switch (true) {
+					case (is_string($resolve_portals_custom) && !empty($resolve_portals_custom)):
+						$resolve_portals_custom = json_decode($resolve_portals_custom);
+						break;
+					case (is_object($resolve_portals_custom) && !empty($resolve_portals_custom)):
+						// nothing to do
+						break;
+					default:
+						$resolve_portals_custom = false;
+						break;
+				}
+
+			// resolve_portal. publication_schema
+				// When options 'resolve_portal' is true, we create a virtual 'resolve_portals_custom' options
+				// from 'publication_schema' whith all portals
+				if ($resolve_portals_custom===false && $resolve_portal===true) {
+					$resolve_portals_custom = self::get_publication_schema($table);
+					// format resolve_portals_custom as object always
+					if (is_array($resolve_portals_custom)) {
+						$resolve_portals_custom = (object)$resolve_portals_custom;
+					}elseif (is_string($resolve_portals_custom)) {
+						$resolve_portals_custom = json_decode($resolve_portals_custom);
+					}
+				}
+
+			// rows iterate
+				$ar_data = [];
+				$i=0;  while ($row = $stmt->fetch()) {
+
+					if (empty($ar_fields) || $ar_fields==='*' || $ar_fields[0]==='*') {
+						$ar_fields = array_keys($row);
 					}
 
-				// debug
-					if ($caller!=='portal_resolve') {
-						debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::DEBUG);
-					}
-					// if(SHOW_DEBUG===true) {
-					// 	error_log("strQuery:".PHP_EOL.$strQuery);
-					// }
+					// table is added always as first column
+						$ar_data[$i]['table'] = $table;
 
-				// prepare PDO
-					try {
-						$dbh = web_data::get_PDO_connection(
-							MYSQL_DEDALO_HOSTNAME_CONN,
-							MYSQL_DEDALO_USERNAME_CONN,
-							MYSQL_DEDALO_PASSWORD_CONN,
-							$db_name
-						);
-						$stmt	= $dbh->prepare($strQuery);
-						$stmt->setFetchMode(PDO::FETCH_ASSOC);
-						$result = $stmt->execute();
+					foreach($ar_fields as $current_field) {
 
-						$dbh = null;
-					} catch (PDOException $e) {
-						// print "Error!: " . $e->getMessage() . "<br/>";
-						error_log(__METHOD__ ." ".PHP_EOL." ". $e->getMessage() );
-						die();
-					}
-
-					if (!isset($result) || !$result) {
-						# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
-						$response->result = false;
-						$response->msg    = "Error on sql request (no result) ";
-						$msg = "Error processing request (no result)";
-						// use always silent errors to not alter json result object
-						error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
-						if(SHOW_DEBUG===true) {
-							$response->msg .= $msg .' - '. to_string($strQuery, $db_name);
-						}
-						return $response;
-					}
-
-				// count records
-					$total = ((bool)$count===true)
-						? (int)web_data::count_records($strQuery, $db_name)
-						: false;
-
-				// resolve_portals_custom like ‘{"audiovisual":"audiovisual","informant":"informant"}’
-					switch (true) {
-						case (is_string($resolve_portals_custom) && !empty($resolve_portals_custom)):
-							$resolve_portals_custom = json_decode($resolve_portals_custom);
-							break;
-						case (is_object($resolve_portals_custom) && !empty($resolve_portals_custom)):
-							// nothing to do
-							break;
-						default:
-							$resolve_portals_custom = false;
-							break;
-					}
-
-				// resolve_portal. publication_schema
-					// When options 'resolve_portal' is true, we create a virtual 'resolve_portals_custom' options
-					// from 'publication_schema' whith all portals
-					if ($resolve_portals_custom===false && $resolve_portal===true) {
-						$resolve_portals_custom = self::get_publication_schema($table);
-						// format resolve_portals_custom as object always
-						if (is_array($resolve_portals_custom)) {
-							$resolve_portals_custom = (object)$resolve_portals_custom;
-						}elseif (is_string($resolve_portals_custom)) {
-							$resolve_portals_custom = json_decode($resolve_portals_custom);
-						}
-					}
-
-				// rows iterate
-					$ar_data = [];
-					$i=0;  while ($row = $stmt->fetch()) {
-
-						if (empty($ar_fields) || $ar_fields==='*' || $ar_fields[0]==='*') {
-							$ar_fields = array_keys($row);
+						if ($current_field==='id') {
+							// Skip mysql table id
+							# Replace id column for table name column
+							# If table is array, only first table is supported
+							// $ar_data[$i]['table'] = $table;
+							continue;
 						}
 
-						// table is added always as first column
-							$ar_data[$i]['table'] = $table;
+						# alias case (like  floor(YEAR(fecha_inicio)/10)*10 AS decade)
+						if (strpos($current_field, ' AS ')!==false) {
+							$ar_parts = explode(' AS ', $current_field);
+							$current_field = trim($ar_parts[1]);
+						}
 
-						foreach($ar_fields as $current_field) {
+						# field_data. postprocess_field if need
+						$field_data = ($apply_postprocess===true)
+							? self::postprocess_field($current_field, $row[$current_field])
+							: $row[$current_field] ?? null;
 
-							if ($current_field==='id') {
-								// Skip mysql table id
-								# Replace id column for table name column
-								# If table is array, only first table is supported
-								// $ar_data[$i]['table'] = $table;
-								continue;
+						# Default behaviour
+						$ar_data[$i][$current_field] = $field_data;
+
+						#  Portal resolve cases
+						if ($resolve_portals_custom!==false) {
+
+							if ( (property_exists($resolve_portals_custom, $current_field) )
+							  && $current_field!==$table // case field image into table image, por example
+							) {
+								// request options
+								$request_options = new stdClass();
+									$request_options->lang 			 = $lang;
+									$request_options->resolve_portal = $resolve_portal;
+									$request_options->portal_filter  = $portal_filter;
+									$request_options->map  			 = $map;
+
+								$ar_data[$i][$current_field] = self::portal_resolve($row,
+																					$current_field,
+																					$request_options,
+																					$resolve_portals_custom);
 							}
+						}//end if ($resolve_portals_custom!==false)
+					}
 
-							# alias case (like  floor(YEAR(fecha_inicio)/10)*10 AS decade)
-							if (strpos($current_field, ' AS ')!==false) {
-								$ar_parts = explode(' AS ', $current_field);
-								$current_field = trim($ar_parts[1]);
-							}
-
-							# field_data. postprocess_field if need
-							$field_data = ($apply_postprocess===true)
-								? self::postprocess_field($current_field, $row[$current_field])
-								: $row[$current_field] ?? null;
-
-							# Default behaviour
-							$ar_data[$i][$current_field] = $field_data;
-
-							#  Portal resolve cases
-							if ($resolve_portals_custom!==false) {
-
-								if ( (property_exists($resolve_portals_custom, $current_field) )
-								  && $current_field!==$table // case field image into table image, por example
-								) {
-									// request options
-									$request_options = new stdClass();
-										$request_options->lang 			 = $lang;
-										$request_options->resolve_portal = $resolve_portal;
-										$request_options->portal_filter  = $portal_filter;
-										$request_options->map  			 = $map;
-
-									$ar_data[$i][$current_field] = self::portal_resolve($row,
-																						$current_field,
-																						$request_options,
-																						$resolve_portals_custom);
-								}
-							}//end if ($resolve_portals_custom!==false)
-						}
-
-					$i++;};
+				$i++;};
 
 
-				// map. Format : [{"field":birthplace_id","function":"resolve_geolocation","output_field":"birthplace_obj"}]
-					if ($map!==false) {
-						# Exec defined map functions and add columns as request
-						foreach ($ar_data as $key => $row) {
-							foreach ($map as $map_obj) {
-								if ($map_obj->table===$table) {
-									$ar_data[$key][$map_obj->output_field] = map::{$map_obj->function}($row[$map_obj->field], $lang);
-								}
+			// map. Format : [{"field":birthplace_id","function":"resolve_geolocation","output_field":"birthplace_obj"}]
+				if ($map!==false) {
+					# Exec defined map functions and add columns as request
+					foreach ($ar_data as $key => $row) {
+						foreach ($map as $map_obj) {
+							if ($map_obj->table===$table) {
+								$ar_data[$key][$map_obj->output_field] = map::{$map_obj->function}($row[$map_obj->field], $lang);
 							}
 						}
-					}//end if ($map!==false)
+					}
+				}//end if ($map!==false)
 
-				// process_result. : function name, ar_data, process_result object, sql_options object, $total
-					// received format:
-					// {
-					//		fn 		: 'process_result::add_parents_and_children_recursive',
-					//		columns : [{name : "parents"}]
-					// }
-					if ($process_result!==false && !empty($ar_data)) {
-						$process_result = is_string($process_result) ? json_decode($process_result) : $process_result;
-						if (isset($process_result->fn)) {
-							$ar_call = explode('::', $process_result->fn);
-							if(true===method_exists($ar_call[0],$ar_call[1])) {
+			// process_result. : function name, ar_data, process_result object, sql_options object, $total
+				// received format:
+				// {
+				//		fn 		: 'process_result::add_parents_and_children_recursive',
+				//		columns : [{name : "parents"}]
+				// }
+				if ($process_result!==false && !empty($ar_data)) {
+					$process_result = is_string($process_result) ? json_decode($process_result) : $process_result;
+					if (isset($process_result->fn)) {
+						$ar_call = explode('::', $process_result->fn);
+						if(true===method_exists($ar_call[0],$ar_call[1])) {
 
-								// exec method in class 'process_result' like process_result::break_down_totals
-								$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+							// exec method in class 'process_result' like process_result::break_down_totals
+							$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
 
-								// overwrite ar_data (!)
-								$ar_data = $user_func_response->ar_data;
+							// overwrite ar_data (!)
+							$ar_data = $user_func_response->ar_data;
 
-							}else{
-								debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (1). ".to_string(), logger::ERROR);
-							}
 						}else{
-							debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (2). ".to_string(), logger::ERROR);
+							debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (1). ".to_string(), logger::ERROR);
 						}
+					}else{
+						debug_log(__METHOD__." Method received to process_result ('$process_result->fn') do not exists! Ignored process (2). ".to_string(), logger::ERROR);
 					}
+				}
 
-				// response Fixed properties
-					$response->result 	= $ar_data;
-					$response->total 	= $total ?? false;
-					$response->msg    	= "Ok exec_query done";
+			// response Fixed properties
+				$response->result 	= $ar_data;
+				$response->total 	= $total ?? false;
+				$response->msg    	= "Ok exec_query done";
 
-				// response debug properties
-					if(SHOW_DEBUG===true) {
-						$query_parts = explode(PHP_EOL, $strQuery);
-						$response->debug = (object)[
-							'count_query' 	=> $count_query ?? false,
-							'strQuery' 		=> implode(' ', $query_parts),
-							'time' 	 		=> round(microtime(1)-$start_time,3)
-						];
-					}
+			// response debug properties
+				if(SHOW_DEBUG===true) {
+					$query_parts = explode(PHP_EOL, $strQuery);
+					$response->debug = (object)[
+						'count_query' 	=> $count_query ?? false,
+						'strQuery' 		=> implode(' ', $query_parts),
+						'time' 	 		=> round(microtime(1)-$start_time,3)
+					];
+				}
 
-				// debug
-					if(SHOW_DEBUG===true) {
-						// error_log("++++++ query: " . implode(' ', $query_parts));;
-					}
+			// debug
+				if(SHOW_DEBUG===true) {
+					// error_log("++++++ query: " . implode(' ', $query_parts));;
+				}
 
 
-				return $response;
-			}//end exec_query
+			return $response;
+		}//end exec_query
 
 
 

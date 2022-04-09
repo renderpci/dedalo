@@ -2662,6 +2662,7 @@
 		Fixed web_data regex error in table name verification
 		Released version 5.8.5
 
+
 	Queue build
 		Removed jquery unnecessary lib files
 		Removed nvd3 unnecessary lib files
@@ -2670,6 +2671,9 @@
 		Changed fallback no logged url in ontology pages to preserve v6 compatibility
 		Added new tool_administration feature 'delete_sections' to easy delete massive sections preserving the Time Machine version
 		Fixed error on normalize quotes in not string values (tool export raw get_valor_dedalo)
+		Added support for check_safe_value -> group 'CONCAT' commands
+		Fixed error when component_input_text search's find only first value of their array value (Catalog Obulco case)
+		Fixed catch error on publication web_data where invalid SQL generated string was stop the execution. Now a error response is returned (besides an error log notification)
 
 
 
@@ -2702,7 +2706,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '28-03-2022T10:04:24');
+	define('DEDALO_BUILD'	, '09-04-2022T11:17:13');
 
 
 	/*
