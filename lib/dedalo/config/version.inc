@@ -2674,7 +2674,7 @@
 		Added support for check_safe_value -> group 'CONCAT' commands
 		Fixed error when component_input_text search's find only first value of their array value (Catalog Obulco case)
 		Fixed catch error on publication web_data where invalid SQL generated string was stop the execution. Now a error response is returned (besides an error log notification)
-
+		Add some resolution cases for diffusion RDF
 
 
 	[/HISTORY]
@@ -2706,7 +2706,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-04-2022T11:17:13');
+	define('DEDALO_BUILD'	, '09-04-2022T12:07:33');
 
 
 	/*
