@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -217,8 +217,8 @@ const get_content_data_edit = function(self) {
 			inputs_container.appendChild(input_element)
 		}
 
-	// buttons
-		const buttons_container = ui.create_dom_element({
+	// buttons_container
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons_container',
 			parent			: fragment

@@ -340,7 +340,7 @@ render_list_section.render_column_id = function(options){
 								// ( async () => {
 								// 	const iframe = ui.create_dom_element({
 								// 		element_type	: 'iframe',
-								// 		src 			: '../page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
+								// 		src 			: DEDALO_CORE_URL + '/page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
 								// 	})
 								// 	// modal container (header, body, footer, size)
 								// 		const header = ui.create_dom_element({

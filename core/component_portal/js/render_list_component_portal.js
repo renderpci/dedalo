@@ -89,22 +89,15 @@ render_list_component_portal.prototype.list = async function(options) {
 		// content_data append
 			list_body.appendChild(content_data)
 
-		// wrapper. ui build_edit returns component wrapper
-			// const _wrapper = ui.component.build_wrapper_edit(self, {
-			// 	// autoload	: false,
-			// 	// buttons		: buttons,
-			// 	list_body	: list_body
-			// 	// top		: top
-			// })
-			// _wrapper.classList.add("portal")
-
 		// wrapper
-			const wrapper = ui.create_dom_element({
-				element_type	: 'div',
-				id				: self.id,
-				//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-				class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' portal ' + self.mode
-			})
+			// const wrapper = ui.create_dom_element({
+			// 	element_type	: 'div',
+			// 	id				: self.id,
+			// 	//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
+			// 	class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' portal ' + self.mode
+			// })
+			const wrapper = ui.component.build_wrapper_list(self, {})
+			wrapper.classList.add('portal')
 			wrapper.appendChild(fragment)
 
 		// events
