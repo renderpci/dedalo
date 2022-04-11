@@ -46,7 +46,7 @@ class tool_import_files extends tool_common {
 			}
 
 		// tool import paths
-			$base_path = '/upload/temp/files/user_' . $user_id . $upload_dir_custom . '/';
+			$base_path = '/upload/import_files/temp/user_' . $user_id . $upload_dir_custom . '/';
 			define('TOOL_IMPORT_FILES_UPLOAD_DIR', DEDALO_MEDIA_PATH . $base_path);
 			define('TOOL_IMPORT_FILES_UPLOAD_URL', DEDALO_MEDIA_URL  . $base_path);
 
@@ -54,7 +54,7 @@ class tool_import_files extends tool_common {
 			$this->valid_extensions = array_merge(DEDALO_IMAGE_EXTENSIONS_SUPPORTED, DEDALO_PDF_EXTENSIONS_SUPPORTED);
 
 		// base_folder_path. Target folder exists and create test
-			$base_folder_path = DEDALO_MEDIA_PATH  .'/upload/temp/files/';
+			$base_folder_path = DEDALO_MEDIA_PATH  .'/upload/import_files/temp/';
 			if( !is_dir($base_folder_path) ) {
 				if(!mkdir($base_folder_path, 0775,true)) {
 					throw new Exception(" Error on read or create base_folder_path directory. Permission denied ");

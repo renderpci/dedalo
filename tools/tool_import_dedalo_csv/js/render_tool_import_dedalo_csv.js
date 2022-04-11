@@ -47,6 +47,8 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 		})
 
 	// tool_upload
+	// Used the tool_upload to get and render the button to upload the file,
+	// get functionality defined (drag, drop, create folder, etc..)
 		// file_uploader
 		const file_uploader = ui.create_dom_element({
 			element_type	: 'div',

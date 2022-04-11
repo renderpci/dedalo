@@ -144,6 +144,69 @@ class dd_utils_api {
 	}//end database_info
 
 
+	/**
+	* GET_SYSTEM_INFO
+	* @return object response
+	*/
+	public static function get_system_info($request_options=null) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// Returns a file size limit in bytes based on the PHP upload_max_filesize
+		// and post_max_size
+		function file_upload_max_size() {
+		  static $max_size = -1;
+
+		  if ($max_size < 0) {
+			// Start with post_max_size.
+			$post_max_size = parse_size(ini_get('post_max_size'));
+			if ($post_max_size > 0) {
+			  $max_size = $post_max_size;
+			}
+
+			// If upload_max_size is less, then reduce. Except if upload_max_size is
+			// zero, which indicates no limit.
+			$upload_max = parse_size(ini_get('upload_max_filesize'));
+			if ($upload_max > 0 && $upload_max < $max_size) {
+			  $max_size = $upload_max;
+			}
+		  }
+		  return $max_size;
+		}
+
+		function parse_size($size) {
+		  $unit = preg_replace('/[^bkmgtpezy]/i', '', $size); // Remove the non-unit characters from the size.
+		  $size = preg_replace('/[^0-9\.]/', '', $size); // Remove the non-numeric characters from the size.
+		  if ($unit) {
+			// Find the position of the unit in the ordered string which is the power of magnitude to multiply a kilobyte by.
+			return round($size * pow(1024, stripos('bkmgtpezy', $unit[0])));
+		  }
+		  else {
+			return round($size);
+		  }
+		}
+
+		$upload_tmp_dir = ini_get('upload_tmp_dir');
+
+		// system_info
+			$system_info = new stdClass();
+				$system_info->max_size_bytes 		= file_upload_max_size();
+				$system_info->sys_get_temp_dir 		= sys_get_temp_dir();
+				$system_info->upload_tmp_dir 		= $upload_tmp_dir;
+				$system_info->upload_tmp_perms 		= fileperms($upload_tmp_dir);
+				$system_info->session_cache_expire  = (int)ini_get('session.cache_expire');
+
+
+		// response
+			$response->result 	= $system_info;
+			$response->msg 		= 'OK. Request done';
+
+		return $response;
+	}//end get_system_info
+
+
 
 	/**
 	* MAKE_BACKUP
@@ -808,5 +871,297 @@ class dd_utils_api {
 	}//end tool_request
 
 
+
+	/**
+	* UPLOAD
+	* Manages given upload file
+	* Sample expected $json_data:
+	* {
+	*	"action": "upload",
+	* 	"fileToUpload": {
+	*        "name": "exported_plantillas-web_-1-dd477.csv",
+	*        "full_path": "exported_plantillas-web_-1-dd477.csv",
+	*        "type": "text/csv",
+	*        "tmp_name": "/private/var/tmp/phpQ02UUO",
+	*        "error": 0,
+	*        "size": 29892
+	*    }
+	*	"prevent_lock": true
+	* }
+	* @return object $response
+	*/
+	public static function upload($request_options) {
+		global $start_time;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. '.label::get_label('error_al_subir_el_archivo');
+
+		// debug
+			debug_log(__METHOD__." --> received request_options: ".to_string($request_options), logger::DEBUG);
+
+
+		// short vars
+			$fileToUpload		= $request_options->fileToUpload;	// Added from PHP input '$_FILES'
+			$resource_type_dir	= $request_options->resource_type_dir;
+
+		// check for upload issues
+		try {
+
+			// Undefined | Multiple Files | $_FILES Corruption Attack
+			// If this request falls under any of them, treat it invalid.
+				if (
+					!isset($fileToUpload['error']) ||
+					is_array($fileToUpload['error'])
+				) {
+					// throw new RuntimeException('Invalid parameters. (1)');
+					$msg = ' upload: Invalid parameters. (1)';
+					error_log($msg);
+					$response->msg .= $msg;
+					return $response;
+				}
+
+			// Check $fileToUpload['error'] value.
+				switch ($fileToUpload['error']) {
+					case UPLOAD_ERR_OK:
+						break;
+					case UPLOAD_ERR_NO_FILE:
+						// throw new RuntimeException('No file sent.');
+						$msg = ' upload: No file sent.';
+						error_log($msg);
+						$response->msg .= $msg;
+						return $response;
+						break;
+					case UPLOAD_ERR_INI_SIZE:
+					case UPLOAD_ERR_FORM_SIZE:
+						// throw new RuntimeException('Exceeded filesize limit.');
+						$msg = ' upload: Exceeded filesize limit.';
+						error_log($msg);
+						$response->msg .= $msg;
+						return $response;
+						break;
+					default:
+						// throw new RuntimeException('Unknown errors.');
+						$msg = ' upload: Unknown errors.';
+						error_log($msg);
+						$response->msg .= $msg;
+						return $response;
+						break;
+				}
+
+			// You should also check filesize here.
+				// if ($fileToUpload['size'] > 1000000) {
+				// 	throw new RuntimeException('Exceeded filesize limit.');
+				// }
+
+			// DO NOT TRUST $fileToUpload['mime'] VALUE !!
+			// Check MIME Type by yourself.
+				$finfo				= new finfo(FILEINFO_MIME_TYPE);
+				$file_mime			= $finfo->file($fileToUpload['tmp_name']); // ex. string 'text/plain'
+				$known_mime_types	= self::get_known_mime_types();
+				if (false === $ext = array_search(
+					$file_mime,
+					$known_mime_types,
+					true
+				)) {
+					// throw new RuntimeException('Invalid file format.');
+					// debug_log(__METHOD__." Warning. Accepted upload unknow file mime type: ".to_string($file_mime).' - name: '.to_string($fileToUpload['tmp_name']), logger::ERROR);
+					$msg = ' upload: Invalid file format. (mime)';
+					error_log($msg);
+					$response->msg .= $msg;
+					return $response;
+				}
+
+				// check for upload server errors
+					$uploaded_file_error		= $fileToUpload['error'];
+					$uploaded_file_error_text	= self::error_number_to_text($uploaded_file_error);
+					if ($uploaded_file_error!==0) {
+						$response->msg .= ' - '.$uploaded_file_error_text;
+						return $response;
+					}
+
+				// check file is available in temp dir
+					if(!file_exists($fileToUpload['tmp_name'])) {
+						debug_log(__METHOD__." Error on locate temporary file ".$fileToUpload['tmp_name'], logger::ERROR);
+						$response->msg .= "Uploaded file not found in temporary folder";
+						return $response;
+					}
+
+				// check extension
+					// if (!in_array($file_data->extension, $allowed_extensions)) {
+					// 	debug_log(__METHOD__." Error. Invalid file extension ".$file_data->extension, logger::ERROR);
+					// 	$response->msg .= "Error. Invalid file extension ".$file_data->extension;
+					// 	return $response;
+					// }
+
+
+			// manage uploaded file
+				$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type_dir;
+				if (!empty($dir)) {
+					// Check the target_dir, if it's not created will be make to be used.
+						# Target folder exists test
+						if( !is_dir($dir) ) {
+							if(!mkdir($dir, 0775,true)) {
+								$response->msg .= trim(" Error on read or create media DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH default directory. Permission denied ");
+								return $response;
+							}
+							debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
+						}
+					// move file to target path
+					$name			= basename($fileToUpload["tmp_name"]);
+					$target_path	= $dir . '/' . $name;
+					$moved			= move_uploaded_file($fileToUpload["tmp_name"], $target_path);
+
+				}
+				if (!isset($moved) || $moved!==true) {
+					debug_log(__METHOD__." Error on get/move to target_dir ". to_string($target_dir), logger::ERROR);
+					$response->msg .= "Uploaded file Error on get/move to target_dir. ".to_string($target_dir->value);
+					return $response;
+				}
+
+				// file_data. post file (sent across $_FILES)
+				// Example of received data:
+				// "name": "montaje3.jpg",
+				// "type": "image/jpeg",
+				// "tmp_name": "/private/var/tmp/php6nd4A2",
+				// "error": 0,
+				// "size": 132898
+				$file_data = new stdClass();
+					$file_data->name			= $fileToUpload['name'];
+					$file_data->type			= $fileToUpload['type'];
+					$file_data->tmp_name		= $target_path;
+					$file_data->error			= $fileToUpload['error'];
+					$file_data->size			= $fileToUpload['size'];
+					$file_data->extension		= strtolower(pathinfo($fileToUpload['name'], PATHINFO_EXTENSION));
+
+
+			// all is OK response
+				$response->result		= true;
+				$response->file_data	= $file_data ?? null;
+				$response->msg			= 'OK. '.label::get_label('fichero_subido_con_exito');
+
+			// debug
+				if(SHOW_DEBUG===true) {
+
+					$debug = new stdClass();
+						$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+						$debug->request_options	= $request_options;
+
+					$response->debug = $debug;
+				}
+
+
+		} catch (RuntimeException $e) {
+
+			$response->msg .= ' Request failed: '. $e->getMessage();
+		}
+			dump($response, ' response ++ '.to_string());
+
+
+		return $response;
+	}//end upload
+
+
+
+
+	// private methods ///////////////////////////////////
+
+
+
+	/**
+	* ERROR_NUMBER_TO_TEXT
+	* @param $f_error_number int
+	* @return $f_error_text strint
+	*/
+	private static function error_number_to_text($f_error_number) {
+
+		if( $f_error_number===0 ) {
+						# all is ok
+						$f_error_text = label::get_label('archivo_subido_con_exito');
+		}else{
+			switch($f_error_number) {
+						# Error by number
+				case 1 : $f_error_text = label::get_label('el_archivo_subido_excede_de_la_directiva');	break;
+				case 2 : $f_error_text = label::get_label('el_archivo_subido_excede_el_tamano_maximo');	break;
+				case 3 : $f_error_text = label::get_label('el_archivo_subido_fue_solo_parcialmente_cargado');	break;
+				case 4 : $f_error_text = label::get_label('ningun_archivo_fue_subido');	break;
+				case 6 : $f_error_text = label::get_label('carpeta_temporal_no_accesible');	break;
+				case 7 : $f_error_text = label::get_label('no_se_pudo_escribir_el_archivo_en_el_disco');	break;
+				case 8 : $f_error_text = label::get_label('una_extension_de_php_detuvo_la_carga_de_archivos');	break;
+			}
+		}
+
+		return $f_error_text;
+	}//end error_number_to_text
+
+
+
+	/**
+	* GET_KNOWN_MIME_TYPES
+	* @return array $mime_types
+	*/
+	private static function get_known_mime_types() {
+
+		$mime_types = array(
+
+			'txt'	=> 'text/plain',
+			'htm'	=> 'text/html',
+			'html'	=> 'text/html',
+			'php'	=> 'text/html',
+			'css'	=> 'text/css',
+			'csv'	=> 'text/csv',
+			'js'	=> 'application/javascript',
+			'json'	=> 'application/json',
+			'xml'	=> 'application/xml',
+			'swf'	=> 'application/x-shockwave-flash',
+			'flv'	=> 'video/x-flv',
+
+			// images
+			'png'	=> 'image/png',
+			'jpe'	=> 'image/jpeg',
+			'jpeg'	=> 'image/jpeg',
+			'jpg'	=> 'image/jpeg',
+			'gif'	=> 'image/gif',
+			'bmp'	=> 'image/bmp',
+			'ico'	=> 'image/vnd.microsoft.icon',
+			'tiff'	=> 'image/tiff',
+			'tif'	=> 'image/tiff',
+			'svg'	=> 'image/svg+xml',
+			'svgz'	=> 'image/svg+xml',
+
+			// archives
+			'zip'	=> 'application/zip',
+			'rar'	=> 'application/x-rar-compressed',
+			'exe'	=> 'application/x-msdownload',
+			'msi'	=> 'application/x-msdownload',
+			'cab'	=> 'application/vnd.ms-cab-compressed',
+
+			// audio/video
+			'mp3'	=> 'audio/mpeg',
+			'mp4'	=> 'video/mpeg',
+			'qt'	=> 'video/quicktime',
+			'mov'	=> 'video/quicktime',
+
+			// adobe
+			'pdf'	=> 'application/pdf',
+			'psd'	=> 'image/vnd.adobe.photoshop',
+			'ai'	=> 'application/postscript',
+			'eps'	=> 'application/postscript',
+			'ps'	=> 'application/postscript',
+
+			// ms office
+			'doc'	=> 'application/msword',
+			'rtf'	=> 'application/rtf',
+			'xls'	=> 'application/vnd.ms-excel',
+			'ppt'	=> 'application/vnd.ms-powerpoint',
+
+			// open office
+			'odt'	=> 'application/vnd.oasis.opendocument.text',
+			'ods'	=> 'application/vnd.oasis.opendocument.spreadsheet',
+		);
+
+		return $mime_types;
+	}//end get_known_mime_types
 
 }//end dd_utils_api

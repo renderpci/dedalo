@@ -32,6 +32,23 @@ $start_time=microtime(1);
 
 
 
+	// received files case
+		if (isset($_FILES)) {
+			if (!isset($rqo)) {
+				$rqo = new stdClass();
+					$rqo->action = 'upload';
+					$rqo->dd_api = 'dd_utils_api';
+			}
+			foreach($_POST as $key => $value) {
+				$rqo->{$key} = $value;
+			}
+			foreach($_FILES as $key => $value) {
+				$rqo->{$key} = $value;
+			}
+		}
+
+
+
 	// includes
 		// config dedalo
 		include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
