@@ -65,7 +65,7 @@ class component_media_common extends component_common {
 				// usual case
 
 				// move temporary file to final destination and name
-				if (false===move_uploaded_file($file_data->tmp_name, $full_file_path)) {
+				if (false===rename($file_data->tmp_name, $full_file_path)) {
 					$response->msg .= "Error on move temp file to: " . $full_file_path;
 					return $response;
 				}
