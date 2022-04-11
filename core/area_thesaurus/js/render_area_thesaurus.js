@@ -465,7 +465,7 @@ const print_response = (container, api_response) => {
 	container.classList.remove("preload")
 
 	return container
-};//end  print_response
+};//end print_response
 
 
 

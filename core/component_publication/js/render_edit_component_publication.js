@@ -25,12 +25,12 @@ export const render_edit_component_publication = function() {
 * Render node for use in edit mode
 * @return DOM node wrapper
 */
-render_edit_component_publication.prototype.edit = async function(options={render_level : 'full'}) {
+render_edit_component_publication.prototype.edit = async function(options) {
 
 	const self = this
 
 	// options
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data(self)
@@ -39,7 +39,9 @@ render_edit_component_publication.prototype.edit = async function(options={rende
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = self.mode==='edit_in_list'
+			? null
+			: get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -118,6 +120,7 @@ const add_events = function(self, wrapper) {
 			 	return true
 			}
 		})
+
 
 	return true
 };//end add_events

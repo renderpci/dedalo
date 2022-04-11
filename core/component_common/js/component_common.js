@@ -1024,7 +1024,11 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		}
 
 	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
-		const destroyed = self.destroy(true, true, false)
+		self.destroy(
+			true, // delete_self
+			true, // delete_dependences
+			false // remove_dom
+		)
 
 	// element. Create the instance options for build it. The instance is reflect of the context and section_id
 		const new_instance = await instances.get_instance({

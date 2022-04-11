@@ -57,6 +57,7 @@ render_section_group.prototype.edit = async function(options) {
 	// header (label)
 		if (self.context.add_label===false) {
 			wrapper.classList.add('no_margin')
+			// content_data.classList.add('is_group_div')
 		}else{
 
 			const component_label = ui.create_dom_element({

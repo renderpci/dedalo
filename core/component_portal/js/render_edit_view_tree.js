@@ -292,7 +292,7 @@ const get_buttons = (self) => {
 				( () => {
 
 					const iframe_url = (tipo) => {
-						return '../page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
+						return DEDALO_CORE_URL + '/page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
 					}
 
 					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
@@ -384,7 +384,7 @@ const get_buttons = (self) => {
 			// url vars
 				const url_vars = {
 					t				: 'dd100', // THESAURUS_TIPO
-					menu			: 'no',
+					menu			: false,
 					thesaurus_mode	: 'relation'
 				}
 
@@ -416,7 +416,7 @@ const get_buttons = (self) => {
 				url_vars.initiator = JSON.stringify(caller_id)
 			}
 
-			const url = '../page/?' + object_to_url_vars(url_vars)
+			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
 
 			// open window
 			if (!window.rel_window || window.rel_window.closed) {
@@ -485,7 +485,7 @@ const render_references = function(ar_references) {
 				})
 				button_link.addEventListener("click", function(e){
 					e.stopPropagation()
-					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
+					window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
 					// window.open(url,'ref_edit')
 				})
 			// label
@@ -496,6 +496,7 @@ const render_references = function(ar_references) {
 					parent			: li
 				})
 		}
+
 
 	return fragment
 }//end render_references

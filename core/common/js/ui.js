@@ -334,10 +334,11 @@ export const ui = {
 		*/
 		build_content_data : (instance, options={}) => {
 
-			const button_close 	= options.button_close
-			const type			= instance.type
-			const component_css	= instance.context.css || {}
-			const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
+			// options
+				const button_close	= options.button_close
+				const autoload		= typeof options.autoload!=="undefined" ? options.autoload : false
+				const type			= instance.type
+				const component_css	= instance.context.css || {}
 
 			const content_data = document.createElement("div")
 
@@ -347,7 +348,7 @@ export const ui = {
 				content_data.classList.add(...ar_css)
 
 			// button close
-				if(button_close !== null && instance.mode==='edit_in_list' && !instance.is_inside_tool){
+				if(button_close!==null && instance.mode==='edit_in_list' && !instance.is_inside_tool){
 					const button_close = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button close',
@@ -396,7 +397,7 @@ export const ui = {
 			const edit_in_list	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
 
 			// options
-				const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
+				const autoload		= typeof options.autoload!=="undefined" ? options.autoload : false
 				const value_string	= options.value_string
 
 			// wrapper
@@ -415,7 +416,7 @@ export const ui = {
  				}
 
  			// event dblclick change component mode
-	 			if(edit_in_list){
+	 			if(edit_in_list) {
 
 	 				wrapper.addEventListener("dblclick", function(e){
 						e.stopPropagation()
@@ -1844,7 +1845,7 @@ export const ui = {
 	* Insert wrapper into a modal box
 	* @return DOM element modal_container
 	*/
-	attach_to_modal : (header, body, footer, size="normal") => {
+	attach_to_modal : (header, body, footer, size='normal') => {
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0

@@ -255,7 +255,7 @@ export const get_buttons = (self) => {
 				( () => {
 
 					const iframe_url = (tipo) => {
-						return '../page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
+						return DEDALO_CORE_URL + '/page/?tipo=' + tipo + '&mode=list&menu=false&initiator=' + self.id
 					}
 
 					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
@@ -570,7 +570,7 @@ export const render_references = function(ar_references) {
 	// references label
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html 		: get_label.references,
+			inner_html		: get_label.references,
 			parent			: ul
 		})
 
@@ -592,7 +592,7 @@ export const render_references = function(ar_references) {
 				})
 				button_link.addEventListener("click", function(e){
 					e.stopPropagation()
-					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
+					window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
 					// window.open(url,'ref_edit')
 				})
 			// label
@@ -602,7 +602,8 @@ export const render_references = function(ar_references) {
 					inner_html		: reference.label,
 					parent			: li
 				})
-	}
+	}//end for
+
 
 	return fragment
 }//end render_references

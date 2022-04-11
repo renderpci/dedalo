@@ -1454,7 +1454,7 @@ export const ts_object = new function() {
 				section_tipo = wrap.dataset.section_tipo
 			}
 
-		const url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=no'
+		const url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=false'
 
 		const strWindowFeatures 	= "menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes";
 			//strWindowFeatures 	= null
@@ -1467,7 +1467,7 @@ export const ts_object = new function() {
 				"edit_window",
 				strWindowFeatures
 			);
-			ts_object.edit_window.addEventListener("beforeunload", function(e){
+			ts_object.edit_window.addEventListener("beforeunload", function(){
 				// Refresh element after close edit window
 				//console.log("Edit window is closed for record "+section_id +". Calling refresh_element section_tipo:"+section_tipo+" section_id:"+section_id);
 				ts_object.refresh_element(section_tipo, section_id)
@@ -1475,13 +1475,14 @@ export const ts_object = new function() {
 			});
 		}else{
 
-			const current_query = ts_object.edit_window.location.href.split("?")[1]
-			const new_query 	= url.split("?")[1]
+			const current_query	= ts_object.edit_window.location.href.split("?")[1]
+			const new_query		= url.split("?")[1]
 			if (current_query!==new_query) {
 				ts_object.edit_window.location.href = url
 			}
 			ts_object.edit_window.focus();
 		}
+
 
 		return true
 	};//end edit

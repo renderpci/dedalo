@@ -377,7 +377,7 @@ const build_id_column_DES = function(self) {
 								// ( async () => {
 								// 	const iframe = ui.create_dom_element({
 								// 		element_type	: 'iframe',
-								// 		src 			: '../page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
+								// 		src 			: DEDALO_CORE_URL + '/page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
 								// 	})
 								// 	// modal container (header, body, footer, size)
 								// 		const header = ui.create_dom_element({
@@ -541,7 +541,7 @@ const render_column_node = function(component_instance, self, ar_instances){
 
 	const column_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'column column_' + column_id + ' ' + model,
+		class_name		: 'column column_' + column_id + ' column_' + model,
 		id				: `col_${column_id}`
 	})
 	// column_node.id = column_id
