@@ -73,6 +73,9 @@ tool_upload.prototype.init = async function(options) {
 				const file_data = options.file_data
 
 			// process_file loading
+				while (self.process_file.firstChild) {
+					self.process_file.removeChild(self.process_file.firstChild);
+				}
 				const spinner = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: "spinner",
@@ -100,7 +103,8 @@ tool_upload.prototype.init = async function(options) {
 
 					// process_file remove info loading
 						spinner.remove()
-						process_file_info.remove()
+						// process_file_info.remove()
+						process_file_info.innerHTML = 'Processing file done.'
 
 					// caller update. (ussually media component like component_image)
 						self.caller.refresh()
