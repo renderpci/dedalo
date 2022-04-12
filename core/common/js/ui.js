@@ -1928,6 +1928,12 @@ export const ui = {
 			// 	console.log("history:",history, this);
 			// history.pushState(state, title, url)
 
+		// remove on close
+			modal_container.on_close = () => {
+				modal_container.remove()
+			}
+
+
 		return modal_container
 	},//end attach_to_modal
 
