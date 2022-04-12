@@ -1540,7 +1540,12 @@ class section extends common {
 
 				# EXCLUDE ELEMENTS
 				if ($ar_tipo_exclude_elements===false) {
-					$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($original_tipo, $modelo_name='exclude_elements', $relation_type='children', $search_exact);
+					$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$original_tipo, // tipo
+						$modelo_name='exclude_elements', // modelo_name
+						$relation_type='children', // relation_type
+						$search_exact // search_exact
+					);
 				}
 				if (!isset($ar_tipo_exclude_elements[0])) {
 					#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
