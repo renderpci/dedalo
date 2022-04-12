@@ -903,8 +903,8 @@ class dd_utils_api {
 
 
 		// short vars
-			$fileToUpload		= $request_options->fileToUpload;	// Added from PHP input '$_FILES'
-			$resource_type_dir	= $request_options->resource_type_dir;
+			$fileToUpload	= $request_options->fileToUpload;	// Added from PHP input '$_FILES'
+			$resource_type	= $request_options->resource_type;
 
 		// check for upload issues
 		try {
@@ -995,9 +995,13 @@ class dd_utils_api {
 					// 	return $response;
 					// }
 
-
 			// manage uploaded file
-				$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type_dir;
+				if (!defined('DEDALO_UPLOAD_TMP_DIR')) {
+					debug_log(__METHOD__." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constatnt 'DEDALO_UPLOAD_TMP_DIR' in config file. (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file') ".to_string(), logger::ERROR);
+				}
+				$dir = !defined('DEDALO_UPLOAD_TMP_DIR')
+					? DEDALO_MEDIA_PATH . '/import/file/' . $resource_type
+					: DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
 				if (!empty($dir)) {
 					// Check the target_dir, if it's not created will be make to be used.
 						# Target folder exists test
@@ -1056,7 +1060,7 @@ class dd_utils_api {
 
 			$response->msg .= ' Request failed: '. $e->getMessage();
 		}
-			dump($response, ' response ++ '.to_string());
+		// dump($response, ' response ++ '.to_string());
 
 
 		return $response;
