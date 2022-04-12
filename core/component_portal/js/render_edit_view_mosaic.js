@@ -288,21 +288,36 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 					// const event_id = 'mosaic_show_' + section_record_node.id + '_' + self.section_tipo + '_' + self.section_id
 					const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 					// console.log("// subscribe event_id:",event_id);
-					event_manager.subscribe(event_id, mosaic_show_alt)
-					function mosaic_show_alt() {
+					event_manager.subscribe(event_id, fn_mosaic_show_alt)
+					function fn_mosaic_show_alt() {
+
 						// hide all except the header
-						const ar_child_node	= section_record_node.parentNode.children;
-						const len			= ar_child_node.length
-						for (let i = len - 1; i >= 0; i--) {
-							const node = ar_child_node[i]
-							if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
-								continue
+							const ar_child_node	= section_record_node.parentNode.children;
+							const len			= ar_child_node.length
+							for (let i = len - 1; i >= 0; i--) {
+								const node = ar_child_node[i]
+								if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
+									continue
+								}
+								node.classList.add('display_none')
 							}
-							node.classList.add('display_none')
-						}
 						// show list
-						alt_list_body.classList.remove('display_none')
-						section_record_node.classList.remove('display_none')
+							alt_list_body.classList.remove('display_none')
+							section_record_node.classList.remove('display_none')
+
+						// modal way
+							const modal = ui.attach_to_modal(
+								ui.create_dom_element({
+									element_type	: 'div',
+									inner_html		: "Editing inline"
+								}), // header
+								alt_list_body, // body
+								null, // footer
+								'normal' // size
+							)
+							modal.on_close = () => {
+								// self.refresh()
+							}
 					}
 
 				// section record append

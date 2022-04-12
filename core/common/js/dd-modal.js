@@ -11,24 +11,24 @@ class DDModal extends HTMLElement {
 		this.attachShadow({ mode: 'open' });
 		this.shadowRoot.innerHTML = `
 		<style>
-			/* The Modal (background) */
-			.modal {
-				display: none;
-				position: fixed;
-				z-index: 2;
-				/*padding-top: 80px;*/
-				left: 0;
-				top: 0;
-				width: 100%;
-				height: 100%;
-				overflow: auto;
-				overflow-x: hidden;
-				background-color: rgba(0,0,0,0.4);
-				font-size: inherit;
-			}
-			.modal_show {
-				display: block;
-			}
+			/* The Modal (background overlay)  */
+				.modal {
+					font-size: inherit;
+					display: none;
+					position: fixed;
+					z-index: 2;
+					/*padding-top: 80px;*/
+					left: 0;
+					top: 0;
+					width: 100%;
+					height: 100%;
+					overflow: auto;
+					overflow-x: hidden;
+					background-color: rgba(0,0,0,0.4);
+				}
+				.modal_show {
+					display: block;
+				}
 
 			/* Modal Content */
 				.modal-content {
@@ -96,6 +96,7 @@ class DDModal extends HTMLElement {
 					text-decoration: none;
 					cursor: pointer;
 				}
+
 			/* modal header */
 				.modal-header {
 					/*padding: 1em;
@@ -107,13 +108,15 @@ class DDModal extends HTMLElement {
 					top: 0;
 					z-index: 2;
 				}
+
 			/* modal body */
 				.modal-body {
 					/*padding: 2px 16px;
 					margin: 20px 2px;
 					overflow: auto;*/
 				}
-			/* modal_big */
+
+			/* modal_big version */
 				.modal_big {
 					padding: 0;
 					z-index: 9999;
@@ -126,9 +129,9 @@ class DDModal extends HTMLElement {
 					width: calc(100vw - 16px);
 					min-height: 100vh;
 					*/
+					/*top: 1.5vh;*/
 					width: 97vw;
 					height: 97vh;
-					/*top: 1.5vh;*/
 					margin-top: 1.5vh;
 					overflow: auto;
 				}
@@ -141,7 +144,8 @@ class DDModal extends HTMLElement {
 					min-height: 100vh;
 					*/
 				}
-			/* modal mini */
+
+			/* modal mini version */
 				.mini {
 					position: fixed;
 					z-index: 9999;
@@ -184,6 +188,8 @@ class DDModal extends HTMLElement {
 				.mini .header {
 
 				}
+
+			/* (!) See layout.less -> dd-modal fore more styles of current element */
 		</style>
 		<div class="modal">
 			<div class="modal-content">
@@ -236,8 +242,8 @@ class DDModal extends HTMLElement {
 			const iframe = this.querySelector("iframe.fixed")
 			if (iframe) {
 				const header 	  = this.querySelector(".header")
-				const padding_top = header.offsetHeight + "px"
-				iframe.style.paddingTop = padding_top;
+				const padding_top = header.offsetHeight - 22
+				iframe.style.paddingTop = padding_top + 'px';
 			}
 	}
 	_hideModal(e) {
