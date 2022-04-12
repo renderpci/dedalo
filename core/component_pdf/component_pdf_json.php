@@ -29,6 +29,7 @@
 					$current_context->ar_quality				= $this->get_ar_quality(); // defined in config
 					$current_context->default_quality			= $this->get_default_quality();
 					$current_context->quality					= $this->get_quality(); // current instance quality
+					$current_context->resource_type				= 'pdf';
 
 				$context[] = $current_context;
 				break;

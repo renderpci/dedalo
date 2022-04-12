@@ -269,6 +269,9 @@ export const ui = {
 				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
+						if (mode.indexOf('edit')===-1) {
+							return
+						}
 						if (!wrapper.classList.contains('active')) {
 							event_manager.publish('active_component', instance)
 						}

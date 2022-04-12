@@ -524,21 +524,10 @@ component_common.prototype.save = async function(changed_data) {
 				// update datum (centralized update datum call)
 					await self.update_datum(result.data)
 
-				// // success. add save_success class to component wrappers (green line animation)
-				// 	self.node.map(item => {
-				// 		item.classList.add("save_success")
-				// 	})
-
-				// // remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
-				// 	setTimeout(()=>{
-				// 		self.node.map(item => {
-				// 			// item.classList.remove("save_success")
-				// 			// allow restart animation. Not set state pause before animation ends (2 secs)
-				// 			item.style.animationPlayState = "paused";
-				// 			item.style.webkitAnimationPlayState = "paused";
-				// 		})
-				// 	},2000)
-					ui.component.exec_save_successfully_animation(self)
+				// success. add save_success class to component wrappers (green line animation)
+					if (self.mode==='edit') {
+						ui.component.exec_save_successfully_animation(self)
+					}
 			}
 
 			// dispatch event save
@@ -1058,7 +1047,9 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		ui.update_dom_nodes(ar_node, node)
 
 	// active component at end
-		event_manager.publish('active_component', new_instance)
+		if (new_mode.indexOf('edit')!==-1) {
+			event_manager.publish('active_component', new_instance)
+		}
 
 
 	return true
