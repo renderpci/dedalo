@@ -34,7 +34,24 @@ export function dd_console(msg, level, items){
 	}else{
 		console[type]('%c' + msg, style);
 	}
-}//end clone
+}//end dd_console
+
+
+
+/**
+* JSON_parse_safely
+* Custom console log from Dédalo
+*/
+export function JSON_parse_safely(str, error_value=null) {
+	try {
+		return JSON.parse(str);
+	}
+	catch (e) {
+		console.error(e);
+		// Return a default object, or null based on use case.
+		return error_value
+	}
+}//end JSON_parse_safely
 
 
 
