@@ -46,19 +46,24 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
-	// tool_upload
-	// Used the tool_upload to get and render the button to upload the file,
-	// get functionality defined (drag, drop, create folder, etc..)
-		// file_uploader
-		const file_uploader = ui.create_dom_element({
+	// service_upload
+		// Use the service_upload to get and render the button to upload the file,
+		// get functionality defined (drag, drop, create folder, etc..)
+		// service_upload_container
+		const service_upload_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'file_uploader'
+			class_name		: 'service_upload_container'
 		})
-		wrapper.prepend(file_uploader)
-		self.tool_upload.render()
-		.then(function(tool_upload_node){
-			file_uploader.appendChild(tool_upload_node)
+		wrapper.prepend(service_upload_container)
+		// service_upload. Build and render
+		self.service_upload.build()
+		.then(function(){
+			self.service_upload.render()
+			.then(function(tool_upload_node){
+				service_upload_container.appendChild(tool_upload_node)
+			})
 		})
+
 
 	// modal container
 		const header = wrapper.querySelector('.tool_header') // is created by ui.tool.build_wrapper_edit
@@ -116,7 +121,7 @@ const get_content_data = async function(self) {
 			const import_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning import_button',
-				inner_html		: 'Import',
+				inner_html		: get_label.importar || 'Import',
 				parent			: submit_container
 			})
 			import_button.addEventListener('click', function(){
@@ -134,10 +139,14 @@ const get_content_data = async function(self) {
 				// array of file names
 					const files = selected_files.map(el => {
 						return {
-							file			: el.name,
-							section_tipo	: el.section_tipo
+							file			: el.name, // string like 'exported_oral-history_-1-oh1.csv'
+							section_tipo	: el.section_tipo, // string like 'oh1'
+							columns_info	: el.columns_info // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 						}
 					})
+					// console.log("selected_files:",selected_files);
+					// console.log("files:",files);
+
 				// time_machine_save
 					const time_machine_save = checkbox_time_machine_save.checked
 				// import
@@ -244,17 +253,28 @@ const render_file_info = function(self, item) {
 				parent			: section_tipo_label
 			})
 			item.section_tipo = section_tipo // assign to item
-			input_section_tipo.addEventListener("keyup", function(){
+			input_section_tipo.addEventListener('keyup', function(){
 				item.section_tipo = input_section_tipo.value // update item value
 				update_section_warn()
 			})
 			function update_section_warn() {
+
+				// clean columns_maper
+				while (columns_maper.firstChild) {
+					columns_maper.removeChild(columns_maper.firstChild);
+				}
+
 				const valid_section_tipo = validate_tipo(item.section_tipo)
 				if (!valid_section_tipo) {
 					section_warn.classList.remove('hide')
 					section_warn.innerHTML = 'Autodetected file section tipo "'+section_tipo+'" appears to be invalid.'
 				}else{
 					section_warn.classList.add('hide')
+					// render again columns_maper
+					render_columns_mapper(self, item)
+					.then(function(columns_list){
+						columns_maper.appendChild(columns_list)
+					})
 				}
 			}
 			// const section_warn = (!section_tipo)
@@ -285,11 +305,11 @@ const render_file_info = function(self, item) {
 			class_name		: 'warning error hide',
 			parent			: fragment
 		})
-		update_section_warn()
+		// update_section_warn()
 
 	// info
-		// console.log("item:",item);
-		const info_text = `Records: ${item.n_records} - Columns: ${item.n_columns} - Header:<br><span class="columns">` + item.file_info.join(', ') + '</span>'
+		// const info_text = `Records: ${item.n_records} - Columns: ${item.n_columns} - Header:<br><span class="columns">` + item.file_info.join(', ') + '</span>'
+		const info_text = `Records: ${item.n_records} - Columns: ${item.n_columns}`
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
@@ -331,12 +351,18 @@ const render_file_info = function(self, item) {
 			preview = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'preview hide',
-				// inner_html	: text,
 				inner_html		: text.replaceAll('<br>','\n'),
 				parent			: fragment
 			})
 			button_preview.classList.add('ok')
 		}
+
+	// columns_mapper
+		const columns_maper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'columns_mapper',
+			parent			: fragment
+		})
 
 	// item_wrapper
 		const item_wrapper = ui.create_dom_element({
@@ -345,8 +371,232 @@ const render_file_info = function(self, item) {
 		})
 		item_wrapper.appendChild(fragment)
 
+	// update_section_warn first time
+		update_section_warn()
+
 
 	return item_wrapper
 };//end render_file_info
 
 
+
+/**
+* RENDER_COLUMNS_MAPPER
+* @return DOM node item_wrapper
+*/
+const render_columns_mapper = async function(self, item) {
+
+	// short vars
+		const file_info					= item.file_info // array of columns name (first row of csv file)
+		const section_tipo				= item.section_tipo
+		const section_components_list	= await self.get_section_components_list(section_tipo)
+		const section_label				= section_components_list.label
+		const ar_components				= section_components_list.list
+		const columns_info				= item.columns_info
+		// console.log("section_components_list:",section_components_list);
+
+	const fragment = new DocumentFragment()
+
+	// no results case
+		if (!ar_components) {
+			return fragment
+		}
+
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'columns_header icon_arrow',
+			inner_html		: 'Columns mapper: <b>' + section_label + '</b>',
+			parent			: fragment
+		})
+
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'columns_body',
+			parent			: fragment
+		})
+
+	// columns names
+		// line
+			const line = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'columns_mapper_line names',
+				parent			: body
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Position',
+				parent			: line
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Name',
+				parent			: line
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Model',
+				parent			: line
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Label',
+				parent			: line
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Selected',
+				parent			: line
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Mapped to',
+				parent			: line
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Sample data',
+				parent			: line
+			})
+
+	// columns value
+		const file_info_length = file_info.length
+		for (let i = 0; i < file_info_length; i++) {
+
+			const column_name = file_info[i]
+
+			// line
+				const line = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'columns_mapper_line',
+					parent			: body
+				})
+
+			// original position
+				const position = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'position',
+					// text_content	: i,
+					parent			: line
+				})
+				position.textContent = i
+
+			// column_name (original in csv document)
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'column_name',
+					inner_html		: column_name,
+					parent			: line
+				})
+
+			// column_info detected model
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'column_info',
+					inner_html		: item.columns_info[i].model,
+					parent			: line
+				})
+
+			// column_info detected label
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'column_info',
+					inner_html		: item.columns_info[i].label,
+					parent			: line
+				})
+
+			// selected checkbox
+				const checkbox_file_selection = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					value			: i,
+					parent			: line
+				})
+				checkbox_file_selection.addEventListener('change', function(){
+					columns_info[i].checked = checkbox_file_selection.checked
+				})
+
+			// target component list selector
+				const target_select = ui.create_dom_element({
+					element_type	: 'select',
+					class_name		: 'column_select',
+					inner_html		: column_name,
+					parent			: line
+				})
+				// empty option
+				ui.create_dom_element({
+					element_type	: 'option',
+					value			: '',
+					parent			: target_select
+				})
+				const ar_components_lenght = ar_components.length
+				for (let k = 0; k < ar_components_lenght; k++) {
+
+					const option = ui.create_dom_element({
+						element_type	: 'option',
+						value			: ar_components[k].value,
+						inner_html		: ar_components[k].label + ' [' + ar_components[k].value + ' - '+ ar_components[k].model +']',
+						parent			: target_select
+					})
+					// selected options set on match
+					if ( ar_components[k].value===column_name ||
+						(column_name==='section_id' && ar_components[k].model==='component_section_id')) {
+						option.selected = true
+						// checkbox_file_selection update
+						checkbox_file_selection.checked = true
+
+						// update columns_info object
+						columns_info[i].checked	= true
+						columns_info[i].map_to	= ar_components[k].value
+					}
+				}
+				target_select.addEventListener("change", function(e){
+					// checkbox_file_selection update
+					if (e.target.value && e.target.value.length>0) {
+						checkbox_file_selection.checked = true
+					}else{
+						checkbox_file_selection.checked = false
+					}
+
+					// update columns_info object
+					columns_info[i].checked	= checkbox_file_selection.checked
+					columns_info[i].map_to	= e.target.value
+				})
+
+			// sample_data (search non empty values)
+				let sample_data = ''
+				const item_sample_data_length = item.sample_data.length
+				for (let j = 0; j < item_sample_data_length; j++) {
+					const sd = item.sample_data[j][i]
+					if (sd && sd.length>0) {
+						sample_data = sd
+						break;
+					}
+				}
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'sample_data',
+					inner_html		: sample_data,
+					parent			: line
+				})
+		}//end for (let i = 0; i < file_info_length; i++)
+
+	// collapse_toggle_track
+		ui.collapse_toggle_track({
+			header				: header,
+			content_data		: body,
+			collapsed_id		: 'collapsed_' + item.section_tipo,
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			header.classList.remove('up')
+		}
+		function expose() {
+			header.classList.add('up')
+		}
+
+
+	return fragment
+};//end render_columns_mapper
