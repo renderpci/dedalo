@@ -121,10 +121,25 @@
 								padding-bottom: 0.33rem;
 								background-color: #19a2b8;
 								color: white;
+								position: sticky;
+								top: 65px;
+								z-index: 1;
 							}
 
 							div:first-child {
 								padding-left: 0.5rem;
+							}
+
+							@media screen and (max-width: 1024px) {
+								display: block;
+								padding-top: 1rem;
+								padding-bottom: 1rem;
+								&.names {
+									padding: 0.33rem;
+								}
+								div:first-child {
+									padding-left: unset;
+								}
 							}
 						}
 					}
@@ -149,7 +164,6 @@
 				}
 			}
 		}
-
 	}//end content_data
 
 
