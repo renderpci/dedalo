@@ -8,6 +8,7 @@
 
 	&.edit {
 
+
 		// inside .section_record.edit context
 		.section_record.edit & {
 			//background-color: bisque;
@@ -32,23 +33,26 @@
 				.label_top; // defined in layout
 			}
 			>.content_data {
-				// flex base config
-				// .section_group_body_base;
-				margin: 0;
-				padding: 0;
-				// flex config
-				display: flex;
-				justify-content: flex-start;
-				align-items: stretch;
-				align-content: stretch;
-				flex-wrap: wrap;
-				// box-shadow: 1px 0px 0 @color_grey_medium;
+				/* FLEX MODEL
+					// flex base config
+					// .section_group_body_base;
+					margin: 0;
+					padding: 0;
+					// flex config
+					display: flex;
+					justify-content: flex-start;
+					align-items: stretch;
+					align-content: stretch;
+					flex-wrap: wrap;
+					// box-shadow: 1px 0px 0 @color_grey_medium;
+					*/
 
-				//>.wrapper_component:last-of-type {
-				////>.wrapper_component:nth-last-of-type(1) {
-				//	flex-grow: 0;
-				//	background-color: #FF0000 !important;
-				//}
+				// grid model test
+				background-color: #f4ece2;
+				display: grid;
+				grid-template-columns: repeat(10, 10%);
+				grid-template-rows: repeat(10, 10%);
+				grid-gap: 2px;
 			}
 		}
 
