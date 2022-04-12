@@ -619,6 +619,7 @@
 
 // component common definitions
 	.wrapper_component {
+		background-color: #c2fab9;
 		position: relative;
 		margin: 0;
 		padding: 0;
@@ -1934,7 +1935,7 @@
 				align-items: flex-start;
 				padding: 1em;
 				padding-top: 0.5em;
-				overflow: hidden;
+				// overflow: hidden;
 
 				.list & {
 					padding: 0;
@@ -2060,6 +2061,10 @@
 				padding-top: 0.25rem;
 			}
 
+			span.mini_modal {
+				background-color: #36fd14;
+			}
+
 			&.mini {
 				// padding: 0.5rem;
 				// font-size: 1rem;
@@ -2070,7 +2075,7 @@
 				width: 100%;
 
 				.close_modal {
-
+					color: black;
 				}
 				.label {
 					width: calc(100% - 1rem);
@@ -2080,10 +2085,9 @@
 					line-height: 1.2rem;
 					padding: 0.5rem;
 				}
-				.description {
+				select, .description {
 					display: none;
 				}
-
 				.wrapper_tool {
 					display: none;
 				}

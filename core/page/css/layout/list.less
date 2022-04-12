@@ -35,22 +35,27 @@
 		padding-top: 0;
 	}
 
+	// portal alt_list_body
 	.alt_list_body {
-		position: -webkit-sticky;
-		position: sticky;
-		display: grid;
-		box-shadow: 1px 1px 8px 0px rgb(38 38 38 / 45%);
-		z-index: 2;
-		left: 1rem;
-		top: 3.95rem;
-		// border: 1px solid #dbdbdb;
-		// border-radius: 3px;
-		overflow: hidden;
-		width: 100%;
+		// position: -webkit-sticky;
+		// position: sticky;
+		// display: grid;
+		// box-shadow: 1px 1px 8px 0px rgb(38 38 38 / 45%);
+		// z-index: 2;
+		// left: 1rem;
+		// top: 3.95rem;
+		// // border: 1px solid #dbdbdb;
+		// // border-radius: 3px;
+		// overflow: hidden;
+		// width: 100%;
 
-		position: absolute;
-		// top: 0;
-		left: 0;
+		// position: absolute;
+		// // top: 0;
+		// left: 0;
+
+		display: grid;
+		width: 100%;
+		// overflow: hidden;
 
 		>.header_wrapper_list {
 			display: contents;
@@ -272,7 +277,8 @@
 		position: relative;
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center;
+		align-items: center; // horizontal alignment
+		justify-content: center; // vertical alignment
 		background-color: @color_grey_untralight; // @color_grey_untralight
 		outline: 1px solid @color_grey_light;
 		height: inherit;
