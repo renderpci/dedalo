@@ -6,8 +6,10 @@
 // import needed modules
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
+	// import {service_upload} from '../../../core/services/service_upload/js/service_upload.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_dedalo_csv} from './render_tool_import_dedalo_csv.js' // self tool rendered (called from render common)
@@ -74,6 +76,20 @@ tool_import_dedalo_csv.prototype.init = async function(options) {
 		// self.langs	= page_globals.dedalo_projects_default_langs
 		// self.etc	= options.etc
 
+	// events
+		event_manager.subscribe('upload_file_' + self.id, fn_upload_manage)
+		function fn_upload_manage(options) {
+
+			// options
+				const file_data = options.file_data
+
+			// process uploaded file (move temp uploaded file to definitive location and name)
+				self.process_uploaded_file(file_data)
+				.then(function(){
+					self.refresh()
+				})
+		}
+
 
 	return common_init
 };//end init
@@ -92,19 +108,28 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	// set allowed_extensions
-		self.context.allowed_extensions	= ['csv']
-		self.context.target_dir			= {
-			type	: 'dedalo_config',
-			value	: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config
-		}
+		// self.context.allowed_extensions	= ['csv']
+		// self.context.target_dir			= {
+		// 	type	: 'dedalo_config',
+		// 	value	: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config
+		// }
 
 	// load files list from dir (defined in Dédalo config file constants DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
 		self.csv_files_list = await self.load_csv_files_list()
 
-	// tool_upload
-		self.tool_upload = await self.load_tool_upload()
+	// service_upload
+		// get instance and init
+		self.service_upload = await get_instance({
+			model				: 'service_upload',
+			mode				: 'mini',
+			allowed_extensions	: ['csv'],
+			caller				: self
+		})
+		// console.log("self.service_upload:",self.service_upload);
+
 		// store to destroy on close modal
-		self.ar_instances.push(self.tool_upload)
+		self.ar_instances.push(self.service_upload)
+
 
 	return common_build
 };//end build_custom
@@ -284,3 +309,105 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 };//end import_files
 
 
+
+/**
+* GET_SECTION_COMPONENTS_LIST
+* @param string section_tipo
+* @return promise
+*/
+tool_import_dedalo_csv.prototype.get_section_components_list = function(section_tipo) {
+
+	const self = this
+
+	// cache results
+		self.resolved_section_components_list = self.resolved_section_components_list || {}
+		if (self.resolved_section_components_list[section_tipo]) {
+			return self.resolved_section_components_list[section_tipo]
+		}
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'get_section_components_list')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			section_tipo : section_tipo
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				dd_console("-> get_section_components_list API response:",'DEBUG',response);
+
+				if (!response.result) {
+					resolve(false)
+					return
+				}
+
+				// chache result
+				self.resolved_section_components_list[section_tipo] = {
+					list	: response.result,
+					label	: response.label
+				}
+
+				resolve(self.resolved_section_components_list[section_tipo])
+			})
+		})
+};//end get_section_components_list
+
+
+
+/**
+* PROCESS_UPLOADED_FILE
+* Simply moves previously uploaded temp file to the definitive location and name
+* @param object file_data
+* Sample:
+* {
+*	error: 0
+*	extension: "tiff"
+*	name: "proclamacio.tiff"
+*	size: 184922784
+*	tmp_name: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
+*	type: "image/tiff"
+* }
+*/
+tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
+
+	const self = this
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'process_uploaded_file')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			file_data : file_data
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_utils_api',
+			action	: 'tool_request',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				dd_console("-> process_uploaded_file API response:",'DEBUG', response);
+
+				resolve(response)
+			})
+		})
+};

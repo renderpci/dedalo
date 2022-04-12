@@ -156,7 +156,10 @@ export const get_instance = async function(options){
 					// element file import path
 						const base_path	= model.indexOf('tool_')!==-1
 							? '../../../tools/'
-							: '../../'
+							: model.indexOf('service_')!==-1
+								? '../../services/'
+								: '../../'
+
 						const path = direct_path
 							? direct_path
 							: base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version

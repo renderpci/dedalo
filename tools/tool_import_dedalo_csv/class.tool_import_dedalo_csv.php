@@ -40,6 +40,15 @@ class tool_import_dedalo_csv extends tool_common {
 				$n_records	= count($ar_data)-1;
 				$n_columns	= count($file_info);
 
+				// columns_info
+					$columns_info = array_map(function($el){
+						return (object)[
+							'tipo'	=> $el,
+							'label'	=> RecordObj_dd::get_termino_by_tipo($el, DEDALO_APPLICATION_LANG, true),
+							'model'	=> RecordObj_dd::get_modelo_name_by_tipo($el, true)
+						];
+					}, $file_info);
+
 				// sample data of first n rows to verify is valid
 					$sample_data		= [];
 					$sample_data_errors	= [];
@@ -85,6 +94,7 @@ class tool_import_dedalo_csv extends tool_common {
 					'n_records'				=> $n_records,
 					'n_columns'				=> $n_columns,
 					'file_info'				=> $file_info,
+					'columns_info'			=> $columns_info,
 					'sample_data'			=> $sample_data,
 					'sample_data_errors'	=> $sample_data_errors
 				];
@@ -176,8 +186,9 @@ class tool_import_dedalo_csv extends tool_common {
 			$import_response=array();
 			foreach ((array)$files as $current_file_obj) {
 
-				$current_file = $current_file_obj->file;
-				$section_tipo = $current_file_obj->section_tipo;
+				$current_file	= $current_file_obj->file; // string like 'exported_oral-history_-1-oh1.csv'
+				$section_tipo	= $current_file_obj->section_tipo; // string like 'oh1'
+				$columns_info	= $current_file_obj->columns_info; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 
 				# FILE
 				$file = $dir . '/' . $current_file;
@@ -191,7 +202,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 				$ar_csv_data_final = array();
 				foreach ($ar_csv_data as $key => $value) {
-				 	$ar_csv_data_final[$key] = $value;
+					$ar_csv_data_final[$key] = $value;
 				}
 
 				// counter. Consolidate counter. Set counter value to last section_id in section
@@ -201,7 +212,8 @@ class tool_import_dedalo_csv extends tool_common {
 				$import_response[] = (object)tool_import_dedalo_csv::import_dedalo_csv_file(
 					$section_tipo,
 					$ar_csv_data_final,
-					$time_machine_save
+					$time_machine_save,
+					$columns_info
 				);
 			}
 			#dump($result, ' result ++ '.to_string()); exit();
@@ -235,7 +247,7 @@ class tool_import_dedalo_csv extends tool_common {
 	*
 	* @return object $response
 	*/
-	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data, $time_machine_save=true) {
+	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data, $time_machine_save=true, $columns_info) {
 		$start_time = start_time();
 
 		// Disable logging activity # !IMPORTANT
@@ -247,13 +259,16 @@ class tool_import_dedalo_csv extends tool_common {
 				$response->msg		= 'Error. Request failed';
 
 		// csv_map. The CSV file map is always the first row
-			$csv_map = $ar_csv_data[0];
+			// $csv_map = $ar_csv_data[0];
+			$csv_map = $columns_info;
+				// dump($csv_map, ' csv_map ++ '.to_string());
+				// die();
 
 		// Verify csv_map
 			$verify_csv_map = self::verify_csv_map($csv_map, $section_tipo);
 			if ($verify_csv_map!==true) {
 				$response->result	= false;
-				$response->msg		= 'Error. Current CSV file first row is invalid (1): '.$verify_csv_map;
+				$response->msg		= 'Error. Current CSV file first row (headers) is invalid (1): '.$verify_csv_map;
 				// Restore logging activity # !IMPORTANT
 					logger_backend_activity::$enable_log = true;
 				return $response;
@@ -266,9 +281,9 @@ class tool_import_dedalo_csv extends tool_common {
 		// Fixed private section tipos
 			$modified_section_tipos = section::get_modified_section_tipos();
 				$created_by_user	= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date		= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user	= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date		= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
+				$created_date		= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_date'; }); 	// array('tipo'=>'dd199', 'model'=>'component_date');
+				$modified_by_user	= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_by_user'; }); // array('tipo'=>'dd197', 'model'=>'component_select');
+				$modified_date		= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_date'; }); 	// array('tipo'=>'dd201', 'model'=>'component_date');
 
 				$created_by_user	= reset($created_by_user);
 				$created_date		= reset($created_date);
@@ -601,8 +616,29 @@ class tool_import_dedalo_csv extends tool_common {
 			// ];
 			$ar_section_info = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
 
-		$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false);
-		foreach ($csv_map as $key => $component_tipo) {
+		// ar_component_tipo
+			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$section_tipo, // section_tipo
+				['component_'], // ar_modelo_name
+				true, // from_cache
+				true, // resolve_virtual
+				true, // recursive
+				false // search_exact
+			);
+
+		foreach ($csv_map as $component_tipo) {
+		// foreach ($csv_map as $item) {
+
+			// sample item (from columns_info)
+				// {
+				// 	"tipo": "dd199",
+				// 	"label": "Creation date",
+				// 	"model": "component_date",
+				// 	"checked": true,
+				// 	"map_to": "dd199"
+				// }
+
+			// $component_tipo = $item->map_to;
 
 			if(	   $component_tipo==='section_id'
 				|| $component_tipo==='created_by_user'
@@ -770,6 +806,148 @@ class tool_import_dedalo_csv extends tool_common {
 		return (object)$result;
 	}//end build_date_from_value
 
+
+
+	/**
+	* GET_SECTION_COMPONENTS_LIST
+	* @param string $value
+	* @return object $date | null
+	*/
+	public static function get_section_components_list($options) {
+
+		// options
+			$section_tipo = $options->section_tipo;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
+
+		try {
+
+			// model safe
+				$model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);
+				if ($model!=='section') {
+					$response->msg .= ' Invalid model (expected section): '.$model;
+					return $response;
+				}
+
+			$components_list = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$section_tipo, // section_tipo
+				['component'], // ar_modelo_name_required
+				true, // from_cache
+				true, // resolve_virtual
+				true, // recursive
+				false, // search_exact
+				false // ar_tipo_exclude_elements (on false, look for 'exclude_elements' model in virtaul section and apply)
+			);
+			// dump($components_list, ' components_list ++ '.to_string($section_tipo));
+
+			if (!empty($components_list)) {
+
+				// section info components
+				$section_info_components = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
+				foreach ($section_info_components as $tipo) {
+					$components_list[] = $tipo;
+				}
+
+				$result = [];
+				foreach ($components_list as $tipo) {
+					$result[] = (object)[
+						'label' => RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
+						'value' => $tipo,
+						'model' => RecordObj_dd::get_modelo_name_by_tipo($tipo, true)
+					];
+				}
+
+				$response->result	= $result;
+				$response->label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+				$response->msg		= 'OK. Request done';
+			}
+
+		} catch (Exception $e) {
+			$response->msg .= ' ' . $e->getMessage();
+		}
+
+
+		return $response;
+	}//end get_section_components_list
+
+
+
+	/**
+	* PROCESS_UPLOADED_FILE
+	* Simply moves previously uploaded temp file to the definitive location and name
+	* It's called from tool_import_dedalo after event 'upload_file_' + id is published
+	* from 'tool_import_dedalo_csv.js' file
+	* @param object $options
+	* 	Object $options->file_data
+	* Sample:
+	* {
+	*	error: 0
+	*	extension: "tiff"
+	*	name: "proclamacio.tiff"
+	*	size: 184922784
+	*	tmp_name: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
+	*	type: "image/tiff"
+	* }
+	* @return object $response
+	*/
+	public static function process_uploaded_file($options) {
+		$start_time=microtime(1);
+
+		// response
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= 'Error. Request failed. '.__METHOD__.' ';
+
+		// options
+			$file_data = $options->file_data;
+
+		// paths
+			$source_file = $file_data->tmp_name;
+			$target_file = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH . '/' . $file_data->name;
+
+		// check source file file
+			if (!file_exists($source_file)) {
+				$response->msg .= ' Source file not found: ' . basename($source_file);
+				return $response;
+			}
+
+		// check target dir
+			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
+			if (!is_dir($dir)) {
+				if(!mkdir($dir, 0775,true)) {
+					$response->msg .= trim(" Error on read or create default directory. Permission denied ");
+					return $response;
+				}
+				debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
+			}
+
+		// move file
+			$moved = rename($source_file, $target_file);
+			if ($moved!==true) {
+				debug_log(__METHOD__.' Error on move source file to target_dir', logger::ERROR);
+				$response->msg .= ' Error on move source file to target_dir';
+				return $response;
+			}
+
+		// response ok
+			$response->result		= true;
+			$response->file_name	= $file_data->name;
+			$response->msg			= 'OK. Request done successfully';
+
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$response->debug = $debug;
+			}
+
+
+		return $response;
+	}//end process_uploaded_file
 
 
 

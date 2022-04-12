@@ -4,15 +4,18 @@
 
 
 // import
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {render_edit_tool_upload} from './render_edit_tool_upload.js'
-	import {render_mini_tool_upload} from './render_mini_tool_upload.js'
-	import {upload} from '../../../core/services/service_upload_files/js/service_upload_files.js'
+	import {render_tool_upload} from './render_tool_upload.js'
+	// import {render_mini_tool_upload} from './render_mini_tool_upload.js'
+	// import {service_upload} from '../../../core/services/service_upload/js/service_upload.js'
+
+
 
 /**
 * TOOL_UPLOAD
@@ -45,9 +48,9 @@ export const tool_upload = function () {
 	tool_upload.prototype.render	= common.prototype.render
 	tool_upload.prototype.destroy	= common.prototype.destroy
 	tool_upload.prototype.refresh	= common.prototype.refresh
-	tool_upload.prototype.edit		= render_edit_tool_upload.prototype.edit
-	tool_upload.prototype.list		= render_edit_tool_upload.prototype.edit
-	tool_upload.prototype.mini		= render_mini_tool_upload.prototype.mini
+	tool_upload.prototype.edit		= render_tool_upload.prototype.edit
+	tool_upload.prototype.list		= render_tool_upload.prototype.edit
+	tool_upload.prototype.mini		= render_tool_upload.prototype.edit
 
 
 
@@ -62,39 +65,46 @@ tool_upload.prototype.init = async function(options) {
 		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		// self.trigger_url = DEDALO_TOOLS_URL + "/tool_upload/trigger.tool_upload.php"
+		// self.context.allowed_extensions = self.
+
 
 	// events
-		event_manager.subscribe('upload_file_status_'+self.id, fn_update_file_status)
-		function fn_update_file_status(options) {
+		event_manager.subscribe('upload_file_' + self.id, fn_upload_manage)
+		function fn_upload_manage(options) {
 
-			// DOM node fixed on render
-				const progress_line	= self.progress_line
-				const progress_info	= self.progress_info
-				const response_msg	= self.response_msg
+			// options
+				const file_data = options.file_data
 
-			// check
-				if(!progress_line || !progress_info || !response_msg) {
-					console.error('fn_update_file_status: unable to get base nodes (progress and message)')
-					return
-				}
+			// process_file
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: "spinner",
+					parent			: self.process_file
+				})
+				const process_file_info = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: 'Processing file..',
+					class_name		: "info",
+					parent			: self.process_file
+				})
+				self.process_file.appendChild(spinner)
 
-			// progress
-				progress_line.value		= options.value // percentage line
-				progress_info.innerHTML	= options.msg // progress text info
+			self.preview_image.src = ''
 
-			// messages
-				if(options.value===false) {
-					response_msg.innerHTML = options.msg
-				}
-				else if(options.value===100) {
-					response_msg.innerHTML = 'Upload done. Processing file...'
-					const spinner = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'spinner',
-						parent			: response_msg
-					})
-				}
+			// process uploaded file (move temp uploaded file to definitive location and name)
+				self.process_uploaded_file(file_data)
+				.then(function(response){
+					console.log("-------- process_uploaded_file response:",response);
+					// preview image
+						if (response.preview_url) {
+							self.preview_image.src = response.preview_url
+						}
+					// update caller (ussually media component like component_image)
+						self.caller.refresh()
+					// process_file refresh
+						spinner.remove()
+						process_file_info.remove()
+				})
 		}
 
 
@@ -114,13 +124,24 @@ tool_upload.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	// fetch system info
-		const system_info = await get_system_info(self)
-		// set as tool properties
-			self.max_size_bytes			= system_info.max_size_bytes
-			self.sys_get_temp_dir		= system_info.sys_get_temp_dir
-			self.upload_tmp_dir			= system_info.upload_tmp_dir
-			self.upload_tmp_perms		= system_info.upload_tmp_perms
-			self.session_cache_expire	= system_info.session_cache_expire
+		// const system_info = await get_system_info(self)
+		// // set as tool properties
+		// 	self.max_size_bytes			= system_info.max_size_bytes
+		// 	self.sys_get_temp_dir		= system_info.sys_get_temp_dir
+		// 	self.upload_tmp_dir			= system_info.upload_tmp_dir
+		// 	self.upload_tmp_perms		= system_info.upload_tmp_perms
+		// 	self.session_cache_expire	= system_info.session_cache_expire
+
+
+	// service_upload
+		// get instance and init
+		self.service_upload = await get_instance({
+			model				: 'service_upload',
+			mode				: 'edit',
+			allowed_extensions	: self.caller.context.allowed_extensions,
+			caller				: self
+		})
+		// console.log("self.service_upload:",self.service_upload);
 
 
 	return common_build
@@ -132,29 +153,28 @@ tool_upload.prototype.build = async function(autoload=false) {
 * GET_SYSTEM_INFO
 * Call API to obtain useful system info
 */
-const get_system_info = async function(self) {
+	// const get_system_info = async function() {
 
+	// 	// rqo
+	// 		const rqo = {
+	// 			dd_api	: 'dd_utils_api',
+	// 			action	: 'get_system_info'
+	// 		}
 
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_utils_api',
-			action	: 'get_system_info'
-		}
+	// 	// call to the API, fetch data and get response
+	// 		return new Promise(function(resolve){
 
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
+	// 			const current_data_manager = new data_manager()
+	// 			current_data_manager.request({body : rqo})
+	// 			.then(function(response){
+	// 				dd_console("-> get_system_info API response:",'DEBUG',response);
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
-			.then(function(response){
-				dd_console("-> get_system_info API response:",'DEBUG',response);
+	// 				const result = response.result
 
-				const result = response.result
-
-				resolve(result)
-			})
-		})
-};//end get_system_info
+	// 				resolve(result)
+	// 			})
+	// 		})
+	// };//end get_system_info
 
 
 
@@ -333,36 +353,36 @@ const get_system_info = async function(self) {
 * calling caller component across process_uploaded_file tool method
 * @param object options
 */
-tool_upload.prototype.upload_file = async function(options) {
+	// tool_upload.prototype.upload_file = async function(options) {
 
-	const self = this
+	// 	const self = this
 
-	// options
-		const file = options.file
+	// 	// options
+	// 		const file = options.file
 
-	// short vars
-		const resource_type_dir		= self.caller.context.resource_type_dir || null
-		const allowed_extensions	= self.caller.context.allowed_extensions
+	// 	// short vars
+	// 		const resource_type			= self.caller.context.resource_type || null // like 'image'
+	// 		const allowed_extensions	= self.caller.context.allowed_extensions
 
-	// upload (using service upload)
-		const api_response = await upload({
-			id					: self.id, // id done by the caller, used to send the events of progress
-			file				: file, // object {name:'xxx.jpg',size:5456456}
-			resource_type_dir	: resource_type_dir, // string like 'image'
-			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
-			max_size_bytes		: self.max_size_bytes // int 352142
-		})
-		if (!api_response.result) {
-			console.log("Error on api_response:", api_response);
-			return false
-		}
+	// 	// upload (using service upload)
+	// 		const api_response = await upload({
+	// 			id					: self.id, // id done by the caller, used to send the events of progress
+	// 			file				: file, // object {name:'xxx.jpg',size:5456456}
+	// 			resource_type		: resource_type, // string like 'image'
+	// 			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
+	// 			max_size_bytes		: self.max_size_bytes // int 352142
+	// 		})
+	// 		if (!api_response.result) {
+	// 			console.log("Error on api_response:", api_response);
+	// 			return false
+	// 		}
 
-	// process upload file (return promise)
-		const result = await self.process_uploaded_file(api_response.file_data)
+	// 	// process upload file (return promise)
+	// 		const result = await self.process_uploaded_file(api_response.file_data)
 
 
-	return result
-};//end upload_file
+	// 	return result
+	// };//end upload_file
 
 
 
@@ -392,8 +412,9 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 			tipo			: self.caller.tipo,
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
-			quality			: self.caller.context.target_quality || self.caller.context.default_target_quality || null
-			// caller_type	: self.caller.context.type
+			caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on tool_upload class
+			quality			: self.caller.context.target_quality || self.caller.context.default_target_quality || null, // only for components
+			target_dir		: self.caller.context.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
 		}
 
 	// rqo
@@ -414,4 +435,4 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 				resolve(response)
 			})
 		})
-};
+};//end process_uploaded_file
