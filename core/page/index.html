@@ -42,7 +42,7 @@
 		// page instance
 		import {data_manager} from '../common/js/data_manager.js'
 		import {get_instance} from '../common/js/instances.js'
-		import {dd_console, url_vars_to_object} from '../common/js/utils/index.js'
+		import {dd_console, url_vars_to_object, JSON_parse_safely} from '../common/js/utils/index.js'
 		import {common} from '../common/js/common.js'
 		import '../common/js/dd-modal.js'
 		import {page} from '../page/js/page.js'
@@ -50,14 +50,25 @@
 		( async () => {
 
 			// main CSS add loading
-				const main = document.getElementById("main")
-					  main.classList.add("loading")
+				const main = document.getElementById('main')
+					  main.classList.add('loading')
+
+			// searchParams
+				const searchParams = new URLSearchParams(window.location.href);
+
+			// menu
+				const menu = searchParams.has('menu')
+					? JSON_parse_safely(
+						searchParams.get('menu'), // string from url
+						true // fallback on exception parsing string
+					  )
+					: true
 
 			// start bootstrap
 				const rqo = { // rqo (request query object)
 					action			: 'start',
 					search_obj		: url_vars_to_object(location.search),
-					menu			: true,
+					menu			: menu,
 					prevent_lock	: true
 				}
 				const api_response = await data_manager.prototype.request({
