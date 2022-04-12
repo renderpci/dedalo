@@ -64,9 +64,6 @@ tool_upload.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		// self.context.allowed_extensions = self.
-
 
 	// events
 		event_manager.subscribe('upload_file_' + self.id, fn_upload_manage)
@@ -75,7 +72,7 @@ tool_upload.prototype.init = async function(options) {
 			// options
 				const file_data = options.file_data
 
-			// process_file
+			// process_file loading
 				const spinner = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: "spinner",
@@ -89,21 +86,24 @@ tool_upload.prototype.init = async function(options) {
 				})
 				self.process_file.appendChild(spinner)
 
-			self.preview_image.src = ''
+			// reset preview_image
+				self.preview_image.src = ''
 
 			// process uploaded file (move temp uploaded file to definitive location and name)
 				self.process_uploaded_file(file_data)
-				.then(function(response){
-					console.log("-------- process_uploaded_file response:",response);
-					// preview image
+				.then(function(response) {
+
+					// preview image update
 						if (response.preview_url) {
 							self.preview_image.src = response.preview_url
 						}
-					// update caller (ussually media component like component_image)
-						self.caller.refresh()
-					// process_file refresh
+
+					// process_file remove info loading
 						spinner.remove()
 						process_file_info.remove()
+
+					// caller update. (ussually media component like component_image)
+						self.caller.refresh()
 				})
 		}
 

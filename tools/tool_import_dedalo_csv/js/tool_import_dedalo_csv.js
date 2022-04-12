@@ -121,7 +121,7 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 		// get instance and init
 		self.service_upload = await get_instance({
 			model				: 'service_upload',
-			mode				: 'mini',
+			mode				: 'edit',
 			allowed_extensions	: ['csv'],
 			caller				: self
 		})
