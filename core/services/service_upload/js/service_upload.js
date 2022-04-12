@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -8,10 +8,9 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	// // import {get_instance, delete_instance} from '../../../common/js/instances.js'
 	import {clone, dd_console} from '../../../common/js/utils/index.js'
-	import {ui} from '../../../common/js/ui.js'
-	import {common, create_source} from '../../../common/js/common.js'
+	// import {ui} from '../../../common/js/ui.js'
+	import {common} from '../../../common/js/common.js'
 	import {render_edit_service_upload} from './render_edit_service_upload.js'
-	import {render_mini_service_upload} from './render_mini_service_upload.js'
 
 
 
@@ -49,8 +48,6 @@ export const service_upload = function () {
 	service_upload.prototype.destroy	= common.prototype.destroy
 	service_upload.prototype.refresh	= common.prototype.refresh
 	service_upload.prototype.edit		= render_edit_service_upload.prototype.edit
-	service_upload.prototype.list		= render_edit_service_upload.prototype.edit
-	service_upload.prototype.mini		= render_mini_service_upload.prototype.mini
 
 
 
@@ -72,38 +69,30 @@ service_upload.prototype.init = async function(options) {
 		event_manager.subscribe('upload_file_status_'+self.id, fn_update_file_status)
 		function fn_update_file_status(options) {
 
+			// options
+				const msg	= options.msg
+				const value	= options.value
+
 			// DOM node fixed on render
-				const progress_line	= self.progress_line
 				const progress_info	= self.progress_info
+				const progress_line	= self.progress_line
 				const response_msg	= self.response_msg
 
-			// check
-				// if(!progress_line || !progress_info || !response_msg) {
-				// 	console.error('fn_update_file_status: unable to get base nodes (progress and message)')
-				// 	return
-				// }
-
 			// progress
-				if (progress_line) {
-					progress_line.value		= options.value // percentage line
-				}
 				if (progress_info) {
-					progress_info.innerHTML	= options.msg // progress text info
+					progress_info.innerHTML	= msg // progress text info
+				}
+				if (progress_line) {
+					progress_line.value = value // percentage line
 				}
 
 			// messages
 				if (response_msg) {
-					if(options.value===false) {
-						response_msg.innerHTML = options.msg
+					if(value===false) {
+						response_msg.innerHTML = msg
 					}
-					else if(options.value===100) {
-						response_msg.innerHTML = 'Upload done. Processing file...'
-						// spinner add
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner',
-							parent			: response_msg
-						})
+					else if(value===100) {
+						response_msg.innerHTML = 'Upload done.'
 					}
 				}
 		}
