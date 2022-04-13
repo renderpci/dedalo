@@ -315,12 +315,12 @@ export const file_selected = async function(self, file) {
 	// show filedrag again
 		self.filedrag.classList.remove('loading_file')
 
-	// on success actions
-		// if (response.result===true) {
-		// 	self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
-		// }else{
-		// 	self.response_msg.innerHTML = response.msg || 'Error on upload file'
-		// }
+	// on finish actions
+		if (response.result===true) {
+			self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
+		}else{
+			self.response_msg.innerHTML = response.msg || 'Error on upload file'
+		}
 
 
 	return response

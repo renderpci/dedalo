@@ -93,7 +93,7 @@ render_tool_upload.prototype.edit = async function (options) {
 
 
 	return wrapper
-};//end render_tool_upload
+};//end edit
 
 
 
@@ -135,6 +135,69 @@ export const get_content_data = function(self) {
 	return content_data
 };//end get_content_data
 
+
+
+/**
+* UPLOAD_DONE
+* Called on service_upload has finished of upload file using a event
+* @see event subscription at 'init' function
+* @param object options
+* @return promise
+*/
+render_tool_upload.prototype.upload_done = async function (options) {
+
+	const self = this
+
+	// options
+		const file_data = options.file_data
+
+	// process_file loading
+		while (self.process_file.firstChild) {
+			self.process_file.removeChild(self.process_file.firstChild);
+		}
+		const spinner = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: "spinner",
+			parent			: self.process_file
+		})
+		const process_file_info = ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: 'Processing file..',
+			class_name		: "info",
+			parent			: self.process_file
+		})
+		self.process_file.appendChild(spinner)
+
+	// reset preview_image
+		self.preview_image.src = ''
+
+	// process uploaded file (move temp uploaded file to definitive location and name)
+		self.process_uploaded_file(file_data)
+		.then(function(response) {
+
+			spinner.remove()
+
+			// process_file remove info loading
+			if (!response.result) {
+				// error case
+				process_file_info.innerHTML = response.msg || 'Error on processing file!'
+
+			}else{
+				// OK case
+				process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
+
+				// preview image update
+					if (response.preview_url) {
+						self.preview_image.src = response.preview_url
+					}
+
+				// caller update. (usually media component like component_image)
+					self.caller.refresh()
+			}
+		})
+
+	return true
+};//end upload_done
 
 
 /**

@@ -36,7 +36,7 @@ export const tool_upload = function () {
 	this.max_size_bytes	= null
 
 	return true
-};//end page
+};//end tool_upload
 
 
 
@@ -45,13 +45,13 @@ export const tool_upload = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_upload.prototype.render	= common.prototype.render
-	tool_upload.prototype.destroy	= common.prototype.destroy
-	tool_upload.prototype.refresh	= common.prototype.refresh
-	tool_upload.prototype.edit		= render_tool_upload.prototype.edit
-	tool_upload.prototype.list		= render_tool_upload.prototype.edit
-	tool_upload.prototype.mini		= render_tool_upload.prototype.edit
-
+	tool_upload.prototype.render		= common.prototype.render
+	tool_upload.prototype.destroy		= common.prototype.destroy
+	tool_upload.prototype.refresh		= common.prototype.refresh
+	tool_upload.prototype.edit			= render_tool_upload.prototype.edit
+	tool_upload.prototype.list			= render_tool_upload.prototype.edit
+	tool_upload.prototype.mini			= render_tool_upload.prototype.edit
+	tool_upload.prototype.upload_done	= render_tool_upload.prototype.upload_done
 
 
 /**
@@ -66,49 +66,11 @@ tool_upload.prototype.init = async function(options) {
 
 
 	// events
-		event_manager.subscribe('upload_file_' + self.id, fn_upload_manage)
+		self.events_tokens.push(
+			event_manager.subscribe('upload_file_done_' + self.id, fn_upload_manage)
+		)
 		function fn_upload_manage(options) {
-
-			// options
-				const file_data = options.file_data
-
-			// process_file loading
-				while (self.process_file.firstChild) {
-					self.process_file.removeChild(self.process_file.firstChild);
-				}
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: "spinner",
-					parent			: self.process_file
-				})
-				const process_file_info = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: 'Processing file..',
-					class_name		: "info",
-					parent			: self.process_file
-				})
-				self.process_file.appendChild(spinner)
-
-			// reset preview_image
-				self.preview_image.src = ''
-
-			// process uploaded file (move temp uploaded file to definitive location and name)
-				self.process_uploaded_file(file_data)
-				.then(function(response) {
-
-					// preview image update
-						if (response.preview_url) {
-							self.preview_image.src = response.preview_url
-						}
-
-					// process_file remove info loading
-						spinner.remove()
-						// process_file_info.remove()
-						process_file_info.innerHTML = 'Processing file done.'
-
-					// caller update. (ussually media component like component_image)
-						self.caller.refresh()
-				})
+			return self.upload_done(options)
 		}
 
 
@@ -142,10 +104,11 @@ tool_upload.prototype.build = async function(autoload=false) {
 		self.service_upload = await get_instance({
 			model				: 'service_upload',
 			mode				: 'edit',
-			allowed_extensions	: self.caller.context.allowed_extensions,
+			allowed_extensions	: self.caller.context.allowed_extensions, // like ['csv','jpg']
 			caller				: self
 		})
 		// console.log("self.service_upload:",self.service_upload);
+		self.ar_instances.push(self.service_upload)
 
 
 	return common_build

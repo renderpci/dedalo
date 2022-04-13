@@ -29,8 +29,41 @@ class component_media_common extends component_common {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// file info
-			$file_extension = strtolower(pathinfo($file_data->name, PATHINFO_EXTENSION));
+		// file_data sample
+			// {
+			// 	"name": "IMG_3007.jpg",
+			// 	"type": "image/jpeg",
+			// 	"tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
+			// 	"resource_type": "tool_upload",
+			// 	"tmp_name": "phpJIQq4e",
+			// 	"error": 0,
+			// 	"size": 22131522,
+			// 	"extension": "jpg"
+			// }
+
+		// short vars
+			$name			= $file_data->name; // string original file name like 'IMG_3007.jpg'
+			$resource_type	= $file_data->resource_type; // string upload caller name like 'tool_upload'
+			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
+
+		// source_file
+			if (!defined($tmp_dir)) {
+				$msg = 'constant is not defined!  tmp_dir: '.$tmp_dir;
+				debug_log(__METHOD__." $msg", logger::ERROR);
+				$response->msg .= $msg;
+				return $response;
+			}
+			$source_file = constant($tmp_dir) .'/'. $resource_type . '/' . $tmp_name;
+
+		// check source file file
+			if (!file_exists($source_file)) {
+				$response->msg .= ' Source file not found: ' . basename($source_file);
+				return $response;
+			}
+
+		// target file info
+			$file_extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_id		= $this->get_id();
 			$folder_path	= $this->get_target_dir();
 			$full_file_name = $file_id . '.' . $file_extension;
@@ -55,7 +88,7 @@ class component_media_common extends component_common {
 				// zip case. If the file is a .zip like in DVD case, create the folder and copy the VIDEO_TS and AUDIO_TS to the destination folder.
 
 				// unzip file and move elements to final destinations
-				$move_zip = self::move_zip_file($file_data->tmp_name, $folder_path, $file_id);
+				$move_zip = self::move_zip_file($source_file, $folder_path, $file_id);
 				if (false===$move_zip->result) {
 					$response->msg .= $move_zip->msg;
 					return $response;
@@ -65,8 +98,9 @@ class component_media_common extends component_common {
 				// usual case
 
 				// move temporary file to final destination and name
-				if (false===rename($file_data->tmp_name, $full_file_path)) {
-					$response->msg .= "Error on move temp file to: " . $full_file_path;
+				if (false===rename($source_file, $full_file_path)) {
+					debug_log(__METHOD__." Error on move temp file to: ".to_string($full_file_path), logger::ERROR);
+					$response->msg .= ' Error on move temp file '.basename($tmp_name).' to ' . basename($full_file_name);
 					return $response;
 				}
 			}
@@ -77,7 +111,7 @@ class component_media_common extends component_common {
 
 			// uploaded ready file info
 			$response->ready 	= (object)[
-				'original_file_name' => $file_data->name,
+				'original_file_name' => $name,
 				'full_file_name' 	 => $full_file_name,
 				'full_file_path' 	 => $full_file_path
 			];

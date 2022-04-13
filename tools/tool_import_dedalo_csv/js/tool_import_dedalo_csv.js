@@ -50,13 +50,14 @@ export const tool_import_dedalo_csv = function () {
 */
 // prototypes assign
 	// render : using common render entry point
-	tool_import_dedalo_csv.prototype.render		= common.prototype.render
-	// destroy: using common destroy method
-	tool_import_dedalo_csv.prototype.destroy	= common.prototype.destroy
-	// refresh: using common refresh method
-	tool_import_dedalo_csv.prototype.refresh	= common.prototype.refresh
+	tool_import_dedalo_csv.prototype.render			= common.prototype.render
+	// destroy										: using common destroy method
+	tool_import_dedalo_csv.prototype.destroy		= common.prototype.destroy
+	// refresh										: using common refresh method
+	tool_import_dedalo_csv.prototype.refresh		= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
-	tool_import_dedalo_csv.prototype.edit		= render_tool_import_dedalo_csv.prototype.edit
+	tool_import_dedalo_csv.prototype.edit			= render_tool_import_dedalo_csv.prototype.edit
+	tool_import_dedalo_csv.prototype.upload_done	= render_tool_import_dedalo_csv.prototype.upload_done
 
 
 
@@ -77,17 +78,11 @@ tool_import_dedalo_csv.prototype.init = async function(options) {
 		// self.etc	= options.etc
 
 	// events
-		event_manager.subscribe('upload_file_' + self.id, fn_upload_manage)
+		self.events_tokens.push(
+			event_manager.subscribe('upload_file_done_' + self.id, fn_upload_manage)
+		)
 		function fn_upload_manage(options) {
-
-			// options
-				const file_data = options.file_data
-
-			// process uploaded file (move temp uploaded file to definitive location and name)
-				self.process_uploaded_file(file_data)
-				.then(function(){
-					self.refresh()
-				})
+			return self.upload_done(options)
 		}
 
 
@@ -126,7 +121,6 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 			caller				: self
 		})
 		// console.log("self.service_upload:",self.service_upload);
-
 		// store to destroy on close modal
 		self.ar_instances.push(self.service_upload)
 
@@ -349,14 +343,19 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 				dd_console("-> get_section_components_list API response:",'DEBUG',response);
 
 				if (!response.result) {
-					resolve(false)
+					resolve({
+						list	: false,
+						label	: false,
+						msg		: response.msg
+					})
 					return
 				}
 
 				// chache result
 				self.resolved_section_components_list[section_tipo] = {
 					list	: response.result,
-					label	: response.label
+					label	: response.label,
+					msg		: response.msg
 				}
 
 				resolve(self.resolved_section_components_list[section_tipo])
@@ -379,6 +378,8 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 *	tmp_name: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
 *	type: "image/tiff"
 * }
+* @return promise
+* 	object response
 */
 tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 
