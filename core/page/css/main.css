@@ -5640,6 +5640,18 @@ dd-modal::part(header) {
   justify-self: center;
 }
 /**
+* area
+*
+* Included from main.less file
+*/
+.wrapper_area.area {
+  background-color: pink;
+  display: table;
+  width: 100%;
+  padding: 1rem;
+  min-height: 80vh;
+}
+/**
 * area_development
 *
 * Included from main.less file
@@ -5817,7 +5829,6 @@ dd-modal::part(header) {
   margin-top: 0.5em;
   width: 100%;
   max-width: 100%;
-  overflow: auto;
   padding: 0;
   margin: 0;
   border: none;

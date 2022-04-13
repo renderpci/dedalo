@@ -990,7 +990,8 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'wrapper_' + type + ' area ' + model + ' ' + tipo + ' ' + mode
+					// class_name		: 'wrapper_' + type + ' ' + model + ' area' + ' ' + tipo + ' ' + mode
+					class_name		: `wrapper_${type} ${model} ${tipo} ${mode}`
  				})
  				wrapper.appendChild(fragment)
 

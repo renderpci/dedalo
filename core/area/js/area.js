@@ -9,14 +9,14 @@
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {render_area_development, build_form} from './render_area_development.js'
+	import {render_area} from './render_area.js'
 
 
 
 /**
-* AREA_DEVELOPMENT
+* AREA
 */
-export const area_development = function() {
+export const area = function() {
 
 	this.id
 
@@ -38,7 +38,7 @@ export const area_development = function() {
 
 
 	return true
-};//end area_development
+};//end area
 
 
 
@@ -47,14 +47,14 @@ export const area_development = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	area_development.prototype.init				= area_common.prototype.init
-	// area_development.prototype.build			= area_common.prototype.build
-	// area_development.prototype.render		= common.prototype.render
-	area_development.prototype.refresh			= common.prototype.refresh
-	area_development.prototype.destroy			= common.prototype.destroy
-	area_development.prototype.build_rqo_show	= common.prototype.build_rqo_show
-	area_development.prototype.edit				= render_area_development.prototype.edit
-	area_development.prototype.list				= render_area_development.prototype.list
+	area.prototype.init				= area_common.prototype.init
+	// area.prototype.build			= area_common.prototype.build
+	// area.prototype.render		= common.prototype.render
+	area.prototype.refresh			= common.prototype.refresh
+	area.prototype.destroy			= common.prototype.destroy
+	area.prototype.build_rqo_show	= common.prototype.build_rqo_show
+	area.prototype.edit				= render_area.prototype.edit
+	area.prototype.list				= render_area.prototype.list
 
 
 
@@ -63,7 +63,7 @@ export const area_development = function() {
 * @return promise
 *	bool true
 */
-area_development.prototype.build = async function(autoload=true) {
+area.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
@@ -129,7 +129,7 @@ area_development.prototype.build = async function(autoload=true) {
 * @return promise
 *	node first DOM node stored in instance 'node' array
 */
-area_development.prototype.render = async function(options={}) {
+area.prototype.render = async function(options={}) {
 
 	const self = this
 
@@ -149,7 +149,7 @@ area_development.prototype.render = async function(options={}) {
 /**
 * INIT_JSON_EDITOR
 */
-area_development.prototype.init_json_editor = async function(widget_object) {
+area.prototype.init_json_editor = async function(widget_object) {
 
 	const self = this
 
@@ -230,127 +230,3 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 };//end init_json_editor
 
 
-
-/**
-* INIT_JSON_EDITOR_API
-*/
-area_development.prototype.init_json_editor_api = async function(widget_object) {
-
-	const self = this
-
-	// short vars
-		const editor_id			= widget_object.editor_id
-		const trigger			= widget_object.trigger
-		const body_response		= widget_object.body_response
-		const print_response	= widget_object.print_response
-
-
-	// load dependences js/css
-	const js_promise = load_json_editor_files().then(()=>{
-
-		// dom elements
-			const widget_container = document.getElementById(widget_object.id) // "dedalo_api_test_environment"
-
-		// button submit
-			const button_submit = widget_container.querySelector("#submit_api")
-			button_submit.addEventListener("click",async function(e){
-
-				const editor_text = editor.getText()
-				if (editor_text.length<3) {
-					return false
-				}
-
-				const rqo = JSON.parse(editor_text)
-				if (!rqo) {
-					console.warn("Invalid editor text", rqo);
-					return false
-				}
-
-				// data_manager
-				const api_response = await data_manager.prototype.request({
-					body : rqo
-				})
-				console.log("/// json_editor_api api_response:",api_response);
-
-				print_response(body_response, api_response)
-
-				return api_response
-			})
-
-		// text area hiden
-			const editor_text_area = document.getElementById(editor_id)
-				  // Hide real data container
-				  editor_text_area.style.display = "none"
-
-		// result container
-			const result_div = document.getElementById("convert_search_object_to_sql_query_response")
-
-		// json editor
-			const container	= document.getElementById(editor_id + '_container')
-			const options	= {
-				mode	: 'code',
-				modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-				onError	: function (err) {
-					alert(err.toString());
-				},
-				onChange: async function () {
-					const editor_text = editor.getText()
-					if (editor_text.length<3) return
-
-					// check is json valid and store
-					const body_options = JSON.parse(editor_text)
-					if (body_options) {
-						window.localStorage.setItem('json_editor_api', editor_text);
-					}
-				}
-			}
-			// localStorage.removeItem('json_editor_api');
-			const sample_data	= [{"typo":"source","type":"component","action":"get_data","model":"component_input_text","tipo":"test159","section_tipo":"test65","section_id":"1","mode":"edit","lang":"lg-eng"}]
-			const saved_value	= localStorage.getItem('json_editor_api')
-			const editor_value	= JSON.parse(saved_value) || sample_data
-			const editor		= new JSONEditor(container, options, editor_value)
-
-		return editor
-	})
-
-
-	return js_promise
-};//end init_json_editor_api
-
-
-
-/**
-* LOAD_JSON_EDITOR_FILES
-*/
-const load_json_editor_files = function() {
-
-	// load dependences js/css
-	const load_promises = []
-
-	const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
-	load_promises.push( common.prototype.load_style(lib_css_file) )
-
-	// const lib_js_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.js'
-	// load_promises.push( common.prototype.load_script(lib_js_file) )
-	const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
-	load_promises.push( load_promise )
-
-	const load_all = Promise.all(load_promises).then(async function(response){
-		//console.log("JSONEditor:",response);
-	})
-
-	return load_all
-};//end load_json_editor_files
-
-
-
-/**
-* INIT_FORM
-* @return DOM node form
-*/
-area_development.prototype.init_form = async function(widget_object) {
-
-	build_form(widget_object)
-
-	return true
-};//end init_form
