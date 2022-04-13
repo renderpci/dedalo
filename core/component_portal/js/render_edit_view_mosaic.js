@@ -288,7 +288,11 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 					// const event_id = 'mosaic_show_' + section_record_node.id + '_' + self.section_tipo + '_' + self.section_id
 					const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 					// console.log("// subscribe event_id:",event_id);
-					event_manager.subscribe(event_id, fn_mosaic_show_alt)
+					const found = event_manager.events.find(el => el.event_name===event_id)
+					if (!found) {
+						const token = event_manager.subscribe(event_id, fn_mosaic_show_alt)
+						self.events_tokens.push(token)
+					}
 					function fn_mosaic_show_alt() {
 
 						// hide all except the header
