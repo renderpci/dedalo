@@ -434,16 +434,17 @@ export const load_tool = async (options) => {
 			}
 
 		// tool context additional properties
-			tool_context.lang	= caller.lang
-			tool_context.type	= 'tool'
+			tool_context.lang		= caller.lang
+			tool_context.type		= 'tool'
+			tool_context.id_variant	= caller.id_base // prevent instance id collisions
 
 	// instance options
-		const intance_options = Object.assign({
+		const instance_options = Object.assign({
 			caller : caller // add caller to tool_context (only to refresh it on close the tool)
 		}, tool_context)
 
 	// instance load / recover
-		const tool_instance = await get_instance(intance_options)
+		const tool_instance = await get_instance(instance_options)
 
 
 	// stop if already loaded (toggle tool)
