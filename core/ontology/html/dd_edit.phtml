@@ -44,7 +44,7 @@
 	print js::build_tag('js/dd_common.js', null);
 	print js::build_tag('js/dd_edit.js', 'defer');
 	print js::build_tag('js/app_utils.js', 'defer');
-// Aditional css / js	
+// Aditional css / js
 	print js::build_tag('jsoneditor/dist/jsoneditor.min.js', 'defer');
 ?>
 </head>
@@ -70,8 +70,8 @@
 							<td align="center" valign="top">
 								<?php echo $es_descriptor_title ?><br>
 								<select name="esdescriptor" id="esdescriptor" onChange="verificarDescriptor(this.value)" title="<?php echo $cambiar_tipo_title ?>">
-								 <option value="si" <?php if (!(strcmp('si', $esdescriptor))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
-								 <option value="no" <?php if (!(strcmp('no', $esdescriptor))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
+								 <option value="si" <?php if (!empty($esdescriptor) && !(strcmp('si', $esdescriptor))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
+								 <option value="no" <?php if (!empty($esdescriptor) &&!(strcmp('no', $esdescriptor))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
 								</select>
 							</td>
 
@@ -97,8 +97,8 @@
 							<td align="center" nowrap="nowrap" valign="top">
 								<?php if(!empty($traducible_title)) echo ucfirst($traducible_title) ?><br>
 								<select name="traducible" id="traducible">
-									<option value="si" <?php if (!(strcmp('si', $traducible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
-									<option value="no" <?php if (!(strcmp('no', $traducible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
+									<option value="si" <?php if (!empty($traducible) && !(strcmp('si', $traducible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
+									<option value="no" <?php if (!empty($traducible) && !(strcmp('no', $traducible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
 								</select>
 							</td>
 
@@ -106,8 +106,8 @@
 							<td align="center" nowrap="nowrap" valign="top">
 								<?php echo "Visible"; echo " [$visible]";?><br>
 								<select name="visible" id="visible">
-									<option value="si" <?php if (!(strcmp('si', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
-									<option value="no" <?php if (!(strcmp('no', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
+									<option value="si" <?php if (!empty($visible) && !(strcmp('si', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
+									<option value="no" <?php if (!empty($visible) && !(strcmp('no', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
 								</select>
 							</td>
 
@@ -127,7 +127,7 @@
 										window_docu = window.open(url, 'docu');
 										window_docu.focus()
 									})
-								</script>								
+								</script>
 							</td>
 
 							</tr>
@@ -197,9 +197,9 @@
 							</div>
 						</div>
 					</td>
-				</tr>		
+				</tr>
 
-			
+
 			<!-- V5 Propiedades -->
 				<tr>
 					<td class="td_header" onClick="simpleToogleTBODY('propiedades_group',this)" style="cursor:pointer">
@@ -237,7 +237,7 @@
 						</td>
 					</tr>
 				</tbody>
-			
+
 
 			<!-- V6 properties-->
 				<tr>
@@ -257,7 +257,7 @@
 								<script>
 								// let properties_editor
 								window.addEventListener('DOMContentLoaded', (event) => {
-									
+
 									const properties_dato		= <?php echo json_encode($properties) ?>;
 									const properties_options	= {
 										mode	: 'code',
