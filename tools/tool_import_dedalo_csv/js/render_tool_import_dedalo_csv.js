@@ -89,6 +89,14 @@ const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// process_file
+		const process_file = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'process_file',
+			parent			: fragment
+		})
+		self.process_file = process_file
+
 	// user_msg_container
 		const user_msg_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -393,12 +401,18 @@ const render_columns_mapper = async function(self, item) {
 		const section_label				= section_components_list.label
 		const ar_components				= section_components_list.list
 		const columns_info				= item.columns_info
-		// console.log("section_components_list:",section_components_list);
 
 	const fragment = new DocumentFragment()
 
 	// no results case
 		if (!ar_components) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: '',
+				inner_html		: section_components_list.msg,
+				parent			: fragment
+			})
+
 			return fragment
 		}
 
@@ -600,3 +614,62 @@ const render_columns_mapper = async function(self, item) {
 
 	return fragment
 };//end render_columns_mapper
+
+
+
+/**
+* UPLOAD_DONE
+* Called on service_upload has finished of upload file using a event
+* @see event subscription at 'init' function
+* @param object options
+* @return promise
+*/
+render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
+
+	const self = this
+
+	// options
+		const file_data = options.file_data
+
+	// process_file loading
+		while (self.process_file.firstChild) {
+			self.process_file.removeChild(self.process_file.firstChild);
+		}
+		const spinner = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: "spinner",
+			parent			: self.process_file
+		})
+		const process_file_info = ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: 'Processing file..',
+			class_name		: "info",
+			parent			: self.process_file
+		})
+		self.process_file.appendChild(spinner)
+
+	// process uploaded file (move temp uploaded file to definitive location and name)
+		self.process_uploaded_file(file_data)
+		.then(function(response) {
+
+			spinner.remove()
+
+			// process_file remove info loading
+			if (!response.result) {
+				// error case
+				process_file_info.innerHTML = response.msg || 'Error on processing file!'
+
+			}else{
+				// OK case
+				process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
+
+				// self update (forces update list of files)
+					self.refresh()
+			}
+		})
+
+
+	return true
+};//end upload_done
+
+

@@ -901,10 +901,9 @@ class dd_utils_api {
 		// debug
 			debug_log(__METHOD__." --> received request_options: ".to_string($request_options), logger::DEBUG);
 
-
 		// short vars
 			$fileToUpload	= $request_options->fileToUpload;	// Added from PHP input '$_FILES'
-			$resource_type	= $request_options->resource_type;
+			$resource_type	= $request_options->resource_type; // like 'tool_upload'
 
 		// check for upload issues
 		try {
@@ -998,10 +997,10 @@ class dd_utils_api {
 			// manage uploaded file
 				if (!defined('DEDALO_UPLOAD_TMP_DIR')) {
 					debug_log(__METHOD__." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constatnt 'DEDALO_UPLOAD_TMP_DIR' in config file. (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file') ".to_string(), logger::ERROR);
+					$response->msg .= " Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!";
+					return $response;
 				}
-				$dir = !defined('DEDALO_UPLOAD_TMP_DIR')
-					? DEDALO_MEDIA_PATH . '/import/file/' . $resource_type
-					: DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
+				$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
 				if (!empty($dir)) {
 					// Check the target_dir, if it's not created will be make to be used.
 						# Target folder exists test
@@ -1016,7 +1015,6 @@ class dd_utils_api {
 					$name			= basename($fileToUpload["tmp_name"]);
 					$target_path	= $dir . '/' . $name;
 					$moved			= move_uploaded_file($fileToUpload["tmp_name"], $target_path);
-
 				}
 				if (!isset($moved) || $moved!==true) {
 					debug_log(__METHOD__." Error on get/move to target_dir ". to_string($target_dir), logger::ERROR);
@@ -1032,12 +1030,16 @@ class dd_utils_api {
 				// "error": 0,
 				// "size": 132898
 				$file_data = new stdClass();
-					$file_data->name			= $fileToUpload['name'];
-					$file_data->type			= $fileToUpload['type'];
-					$file_data->tmp_name		= $target_path;
-					$file_data->error			= $fileToUpload['error'];
-					$file_data->size			= $fileToUpload['size'];
+					$file_data->name			= $fileToUpload['name']; // like 'My Picture 1.jpg'
+					$file_data->type			= $fileToUpload['type']; // like 'image\/jpeg'
+					// $file_data->tmp_name		= $target_path;
+					$file_data->tmp_dir			= 'DEDALO_UPLOAD_TMP_DIR'; // like DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
+					$file_data->resource_type	= $resource_type; // like 'tool_upload'
+					$file_data->tmp_name		= $name; // like 'phpv75h2K'
+					$file_data->error			= $fileToUpload['error']; // like 0
+					$file_data->size			= $fileToUpload['size']; // like 878860 (bytes)
 					$file_data->extension		= strtolower(pathinfo($fileToUpload['name'], PATHINFO_EXTENSION));
+						// dump($file_data, ' file_data ++++++++++++++++++++++++++++++++++++++ '.to_string());
 
 
 			// all is OK response

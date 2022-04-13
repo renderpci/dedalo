@@ -66,7 +66,9 @@ service_upload.prototype.init = async function(options) {
 		self.allowed_extensions	= options.allowed_extensions || []
 
 	// events
-		event_manager.subscribe('upload_file_status_'+self.id, fn_update_file_status)
+		self.events_tokens.push(
+			event_manager.subscribe('upload_file_status_'+self.id, fn_update_file_status)
+		)
 		function fn_update_file_status(options) {
 
 			// options
@@ -352,12 +354,10 @@ service_upload.prototype.upload_file = async function(options) {
 			}
 		}
 
-	// process upload file (return promise)
-		// const result = await self.process_uploaded_file(api_response.file_data)
-
 	// event
-		event_manager.publish('upload_file_' + self.caller.id, {
+		event_manager.publish('upload_file_done_' + self.caller.id, {
 			file_data : api_response.file_data
+			// api_response : api_response
 		})
 
 

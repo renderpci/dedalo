@@ -904,15 +904,41 @@ class tool_import_dedalo_csv extends tool_common {
 		// options
 			$file_data = $options->file_data;
 
-		// paths
-			$source_file = $file_data->tmp_name;
-			$target_file = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH . '/' . $file_data->name;
+		// file_data sample
+			// {
+			// 	"name": "IMG_3007.jpg",
+			// 	"type": "image/jpeg",
+			// 	"tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
+			// 	"resource_type": "tool_upload",
+			// 	"tmp_name": "phpJIQq4e",
+			// 	"error": 0,
+			// 	"size": 22131522,
+			// 	"extension": "jpg"
+			// }
+
+		// short vars
+			$name			= $file_data->name; // string original file name like 'IMG_3007.jpg'
+			$resource_type	= $file_data->resource_type; // string upload caller name like 'tool_upload'
+			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
+
+		// source_file
+			if (!defined($tmp_dir)) {
+				$msg = 'constant is not defined!  tmp_dir: '.$tmp_dir;
+				debug_log(__METHOD__." $msg", logger::ERROR);
+				$response->msg .= $msg;
+				return $response;
+			}
+			$source_file = constant($tmp_dir) .'/'. $resource_type . '/' . $tmp_name;
 
 		// check source file file
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
 				return $response;
 			}
+
+		// target_file
+			$target_file = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH . '/' . $name;
 
 		// check target dir
 			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
@@ -934,7 +960,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// response ok
 			$response->result		= true;
-			$response->file_name	= $file_data->name;
+			$response->file_name	= $name;
 			$response->msg			= 'OK. Request done successfully';
 
 
