@@ -2522,7 +2522,6 @@ input:-moz-placeholder {
   color: #ffffff;
 }
 .wrapper_component {
-  background-color: #c2fab9;
   position: relative;
   margin: 0;
   padding: 0;
@@ -6316,11 +6315,9 @@ dd-modal::part(header) {
 					flex-wrap: wrap;
 					// box-shadow: 1px 0px 0 @color_grey_medium;
 					*/
-  background-color: #f4ece2;
   display: grid;
   grid-template-columns: repeat(10, 10%);
-  grid-template-rows: repeat(10, 10%);
-  grid-gap: 2px;
+  align-content: stretch;
 }
 /**
 * section_tab
@@ -7354,7 +7351,6 @@ dd-modal::part(header) {
 * Included from main.less file
 */
 .component_radio_button.edit > .content_data > .inputs_container {
-  flex-wrap: nowrap;
   align-items: flex-start;
   justify-content: space-between;
 }
@@ -7365,6 +7361,7 @@ dd-modal::part(header) {
   width: 100%;
   padding-top: 0.33rem;
   padding-bottom: 0.33rem;
+  padding-right: 0.5rem;
 }
 /**
 * component_relation_children

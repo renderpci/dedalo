@@ -158,42 +158,47 @@ const get_value_element = (i, data, values_container, self) => {
 		}// end for (let o = 0; o < output.length; o++)
 
 		self.events_tokens.push(
-			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
-				// get all detail nodes 'situation' and 'state' in DOM
-				const detail_nodes	= ar_nodes //.filter(node => node.type === 'detail')
-				const node_length	= detail_nodes.length
-
-				for (let o = node_length - 1; o >= 0; o--) {
-					const node = detail_nodes[o]
-					// find if the node has new data
-					const new_data = changed_data.find(item => item.id === node.id
-															&& item.column === node.column
-															&& item.lang === node.lang
-															&& item.key === i
-															&& item.type === node.type
-														)
-
-					// set the new value
-					if(new_data){
-						node.node_value.innerHTML = new_data.value +'%'
-						if(node.type==='detail'){
-							const datalist_item = (new_data.locator)
-								? self.datalist.find(item => item.value.section_tipo === new_data.locator.section_tipo
-														&& item.value.section_id === new_data.locator.section_id)
-								: {label: ''}
-
-							node.node_label_list.innerHTML = datalist_item.label
-						}
-
-					}else{
-						node.node_value.innerHTML = '0%'
-						if(node.type==='detail'){
-							node.node_label_list.innerHTML = ''
-						}
-					}// end if(new_data){
-				}// end for (let o = node_length - 1; o >= 0; o--)
-			})// end event_manager.subscribe('update_widget_value_'
+			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		)
+		function fn_update_widget_value(changed_data) {
+
+			// get all detail nodes 'situation' and 'state' in DOM
+			const detail_nodes	= ar_nodes //.filter(node => node.type === 'detail')
+			const node_length	= detail_nodes.length
+
+			for (let o = node_length - 1; o >= 0; o--) {
+				const node = detail_nodes[o]
+				// find if the node has new data
+				const new_data = changed_data.find(item => item.id === node.id
+														&& item.column === node.column
+														&& item.lang === node.lang
+														&& item.key === i
+														&& item.type === node.type
+													)
+
+				// set the new value
+				if(new_data){
+					node.node_value.innerHTML = new_data.value +'%'
+					if(node.type==='detail'){
+						const datalist_item = (new_data.locator)
+							? self.datalist.find(item => item.value.section_tipo === new_data.locator.section_tipo
+													&& item.value.section_id === new_data.locator.section_id)
+							: {label: ''}
+
+						node.node_label_list.innerHTML = datalist_item.label
+					}
+
+				}else{
+					node.node_value.innerHTML = '0%'
+					if(node.type==='detail'){
+						node.node_label_list.innerHTML = ''
+					}
+				}// end if(new_data){
+			}// end for (let o = node_length - 1; o >= 0; o--)
+
+			return true
+		}//end fn_update_widget_value
+
 
 	return container
 }//end get_value_element
