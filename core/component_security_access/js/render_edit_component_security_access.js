@@ -672,20 +672,21 @@ const get_buttons = (self) => {
 			}
 		})
 		self.events_tokens.push(
-			event_manager.subscribe('show_save_button_'+self.id, function(){
-				button_save.classList.remove('hide')
-				const label = self.node[0].querySelector('.label')
-				if (label && !label.querySelector('.warning_label_text')) {
-					// warning_label_text
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'warning_label_text blink',
-						inner_html		: get_label.sin_salvar || 'Unsaved changes!',
-						parent			: label
-					})
-				}
-			})
+			event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
 		)
+		function fn_show_save_button() {
+			button_save.classList.remove('hide')
+			const label = self.node[0].querySelector('.label')
+			if (label && !label.querySelector('.warning_label_text')) {
+				// warning_label_text
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'warning_label_text blink',
+					inner_html		: get_label.sin_salvar || 'Unsaved changes!',
+					parent			: label
+				})
+			}
+		}
 
 
 	return buttons_container

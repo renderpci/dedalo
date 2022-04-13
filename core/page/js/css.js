@@ -35,7 +35,7 @@ const root_css = {};
 * @return bool
 */
 export const set_element_css = function(key, value) {
-	return false
+	// return false
 
 	if (root_css[key]!==undefined) {
 		// already exits

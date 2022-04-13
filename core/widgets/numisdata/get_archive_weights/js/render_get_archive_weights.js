@@ -247,28 +247,28 @@ const get_value_element = (i, data, values_container, self) => {
 
 				// value
 				const min_diameter_value = ui.create_dom_element({
-					element_type: 'span',
-					class_name	: 'value',
-					inner_html 	: data.find(item => item.id === 'min_diameter').value,
-					parent 		: get_archive_diameter
+					element_type	: 'span',
+					class_name		: 'value',
+					inner_html		: data.find(item => item.id === 'min_diameter').value,
+					parent			: get_archive_diameter
 				})
 
 
 			//total_elements_diameter
 				// label
 				const total_diameter_label = ui.create_dom_element({
-					element_type: 'span',
-					class_name	: 'label',
-					inner_html 	: ' | n: ',
-					parent 		: get_archive_diameter
+					element_type	: 'span',
+					class_name		: 'label',
+					inner_html		: ' | n: ',
+					parent			: get_archive_diameter
 				})
 
 				// value
 				const total_diameter_value = ui.create_dom_element({
-					element_type: 'span',
-					class_name	: 'value',
-					inner_html 	: data.find(item => item.id === 'total_elements_diameter').value,
-					parent 		: get_archive_diameter
+					element_type	: 'span',
+					class_name		: 'value',
+					inner_html		: data.find(item => item.id === 'total_elements_diameter').value,
+					parent			: get_archive_diameter
 				})
 
 
@@ -277,19 +277,23 @@ const get_value_element = (i, data, values_container, self) => {
 		// than the components that changed our value
 		// the user don't see the info and the imput componets at same time
 		self.events_tokens.push(
-			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
-
-				media_weight_value.innerHTML 	= changed_data.find(item => item.id === 'media_weight').value
-				max_weight_value.innerHTML 		= changed_data.find(item => item.id === 'max_weight').value
-				min_weight_value.innerHTML 		= changed_data.find(item => item.id === 'min_weight').value
-				total_weight_value.innerHTML 	= changed_data.find(item => item.id === 'total_elements_weights').value
-
-				media_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'media_diameter').value
-				max_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'max_diameter').value
-				min_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'min_diameter').value
-				total_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'total_elements_diameter').value
-			})
+			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		)
+		function fn_update_widget_value(changed_data) {
+
+			media_weight_value.innerHTML	= changed_data.find(item => item.id==='media_weight').value
+			max_weight_value.innerHTML		= changed_data.find(item => item.id==='max_weight').value
+			min_weight_value.innerHTML		= changed_data.find(item => item.id==='min_weight').value
+			total_weight_value.innerHTML	= changed_data.find(item => item.id==='total_elements_weights').value
+
+			media_diameter_value.innerHTML	= changed_data.find(item => item.id==='media_diameter').value
+			max_diameter_value.innerHTML	= changed_data.find(item => item.id==='max_diameter').value
+			min_diameter_value.innerHTML	= changed_data.find(item => item.id==='min_diameter').value
+			total_diameter_value.innerHTML	= changed_data.find(item => item.id==='total_elements_diameter').value
+
+			return true
+		}
+
 
 	return li
 }//end get_value_element

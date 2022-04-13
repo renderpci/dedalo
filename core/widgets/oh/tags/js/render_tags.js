@@ -157,22 +157,24 @@ const get_value_element = (i, data, values_container, self) => {
 
 	// update the values when the observable was changed
 		self.events_tokens.push(
-			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
-
-				function get_value_from_data(id) {
-					const found = changed_data.find(el => el.id===id)
-					const value = found
-						? found.value
-						: ''
-					return value;
-				}
-
-				// update reactive items value
-				for (let i = 0; i < reactive_items.length; i++) {
-					reactive_items[i].value.innerHTML = get_value_from_data(reactive_items[i].id)
-				}
-			})
+			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		)
+		function fn_update_widget_value(changed_data) {
+			function get_value_from_data(id) {
+				const found = changed_data.find(el => el.id===id)
+				const value = found
+					? found.value
+					: ''
+				return value;
+			}
+
+			// update reactive items value
+			for (let i = 0; i < reactive_items.length; i++) {
+				reactive_items[i].value.innerHTML = get_value_from_data(reactive_items[i].id)
+			}
+			return true
+		}
+
 
 
 	return li
