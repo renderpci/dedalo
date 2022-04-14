@@ -10,7 +10,7 @@
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {set_element_css} from '../../page/js/css.js'
+	import {set_element_css} from '../../page/js/css.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {
 		render_column_id,
@@ -141,14 +141,23 @@ render_edit_view_mosaic.render = async function(self, options) {
 				element_type	: 'div',
 				class_name		: 'list_body'
 			})
-			const items				= ui.flat_column_items(columns_map);
-			const template_columns	= items.join(' ')
-			Object.assign(
-				list_body.style,
-				{
-					"grid-template-columns" : template_columns
-				}
-			)
+			// const items				= ui.flat_column_items(columns_map);
+			// const template_columns	= items.join(' ')
+			// Object.assign(
+			// 	list_body.style,
+			// 	{
+			// 		"grid-template-columns" : template_columns
+			// 	}
+			// )
+			// const element_css = {
+			// 	".wrapper_component .list_body" : {
+			// 		"grid-template-columns" : template_columns,
+			// 		"color" : "red"
+			// 	}
+			// }
+			// console.log("element_css:",element_css);
+			// set_element_css(self.section_tipo+'_'+self.tipo, element_css)
+
 			list_body.appendChild(content_data)
 			// set_element_css()
 			// css
@@ -181,7 +190,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 		wrapper.classList.add('portal', 'view_'+self.context.view)
 		// alt_list_body add
 		// wrapper.appendChild( await alt_list_body )
-
 
 	// events
 		add_events(self, wrapper)
