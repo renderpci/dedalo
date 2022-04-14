@@ -264,7 +264,8 @@ component_portal.prototype.build = async function(autoload=false) {
 					// create new one
 					self.paginator = new paginator()
 					self.paginator.init({
-						caller : self
+						caller	: self,
+						mode	: 'micro'
 					})
 					await self.paginator.build()
 
