@@ -414,7 +414,7 @@ abstract class process_result {
 	* @return object $response
 	* 	array ar_data (parsed rows)
 	*/
-	public function resolve_indexation_fragments($ar_data, $options, $sql_options) {
+	public static function resolve_indexation_fragments($ar_data, $options, $sql_options) {
 
 		// options
 			$column			= $options->column;
