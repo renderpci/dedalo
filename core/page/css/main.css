@@ -2752,6 +2752,16 @@ input:-moz-placeholder {
   min-height: calc(100% + 2px);
   box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
 }
+.section_record .wrapper_component > .buttons_container.left,
+.wrapper_tool .wrapper_component > .buttons_container.left,
+.search_group .wrapper_component > .buttons_container.left,
+.project_container .wrapper_component > .buttons_container.left {
+  left: -2rem;
+  box-shadow: -2px 0 5px 0 rgba(38, 38, 38, 0.3);
+  border-radius: unset;
+  border-top-left-radius: 0.25em;
+  border-bottom-left-radius: 0.25em;
+}
 .section_record .wrapper_component > .buttons_container .buttons_fold,
 .wrapper_tool .wrapper_component > .buttons_container .buttons_fold,
 .search_group .wrapper_component > .buttons_container .buttons_fold,
@@ -4047,16 +4057,16 @@ dd-modal::part(header) {
 }
 .paginator > .content_data > .nav_buttons > .btn {
   height: 100%;
-  margin-right: 0.35em !important;
-  margin-left: 0 !important;
+  margin-right: 0.35em;
+  margin-left: 0;
 }
 .paginator > .content_data > .nav_buttons > .btn.unactive {
   pointer-events: none;
-  opacity: 0.4 !important;
+  opacity: 0.4;
 }
 .paginator > .content_data > .nav_buttons > .btn.unactive:hover {
   opacity: 0.4;
-  cursor: default !important;
+  cursor: default;
 }
 .paginator > .content_data > .paginator_info > .page_info {
   padding-left: 0.25em;
@@ -4085,6 +4095,22 @@ dd-modal::part(header) {
 .paginator.mini > .content_data > .nav_buttons > .btn {
   mask-size: contain;
   -webkit-mask-size: contain;
+}
+.paginator.micro > .content_data {
+  font-size: 0.8rem;
+}
+.paginator.micro > .content_data > .nav_buttons {
+  height: 0.8rem;
+  padding: 0;
+}
+.paginator.micro > .content_data > .nav_buttons > .btn {
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  margin: 0;
+  width: 1.2rem;
+}
+.paginator.micro > .content_data > .paginator_info {
+  min-width: 2.6rem;
 }
 /**
 * search
@@ -6316,7 +6342,6 @@ dd-modal::part(header) {
 					// box-shadow: 1px 0px 0 @color_grey_medium;
 					*/
   display: grid;
-  grid-template-columns: repeat(10, 10%);
   align-content: stretch;
 }
 /**
@@ -7261,13 +7286,23 @@ dd-modal::part(header) {
   background-color: unset;
   line-height: 0.5em;
 }
+.component_portal.view_mosaic > .paginator_container,
+.portal.view_mosaic > .paginator_container {
+  right: 0;
+  top: 0;
+  width: auto;
+  position: absolute;
+  padding-right: 0.5rem;
+}
 .component_portal.view_mosaic > .list_body,
 .portal.view_mosaic > .list_body {
-  display: flex;
-  flex-wrap: wrap;
+  width: 100%;
+  display: grid;
 }
 .component_portal.view_mosaic > .list_body > .content_data > .section_record,
 .portal.view_mosaic > .list_body > .content_data > .section_record {
+  height: 100%;
+  overflow-y: hidden;
   display: flex;
   flex: 0 0 auto;
 }
