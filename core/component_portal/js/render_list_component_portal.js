@@ -8,6 +8,7 @@
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
+	import {set_element_css} from '../../page/js/css.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {view_autocomplete} from './view_autocomplete.js'
 	// import {flat_column_items} from '../../common/js/common.js'
@@ -74,12 +75,18 @@ render_list_component_portal.prototype.list = async function(options) {
 			// like 1fr 1fr 1fr 3fr 1fr
 			const items				= ui.flat_column_items(columns_map)
 			const template_columns	= `${items.join(' ')}`
-			Object.assign(
-				list_body.style,
-				{
-					"grid-template-columns": template_columns
+			// Object.assign(
+			// 	list_body.style,
+			// 	{
+			// 		"grid-template-columns": template_columns
+			// 	}
+			// )
+			const css_object = {
+				'.list_body' : {
+					'grid-template-columns': template_columns
 				}
-			)
+			}
+			set_element_css(self.section_tipo+'_'+self.tipo, css_object)
 
 		// header
 			// const list_header_node = build_header(columns_map, ar_section_record, self)
