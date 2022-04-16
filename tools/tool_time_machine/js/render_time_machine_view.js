@@ -7,6 +7,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {get_ar_instances} from '../../../core/section/js/section.js'
+	import {set_element_css} from '../../page/js/css.js'
 
 
 
@@ -67,12 +68,20 @@ export const render_time_machine_view = async function(self, options) {
 		// like 1fr 1fr 1fr 3fr 1fr
 		const items				= ui.flat_column_items(columns_map)
 		const template_columns	= items.join(' ')
-		Object.assign(
-			list_body.style,
-			{
-				"grid-template-columns": template_columns
+		// Object.assign(
+		// 	list_body.style,
+		// 	{
+		// 		"grid-template-columns": template_columns
+		// 	}
+		// )
+		const css_object = {
+			'.list_body' : {
+				'grid-template-columns': template_columns
 			}
-		)
+		}
+		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+
+
 		// fix last list_body (for pagination selection)
 		// self.node_body = list_body
 
