@@ -50,7 +50,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 			if (data.ts_search) {
 
-				// event_manager.when_in_dom(current_content_data, function(){
+				// event_manager.when_in_dom(content_data, function(){
 				// 	ts_object.parse_search_result(data.ts_search.result, null, false)
 				// })
 
@@ -61,7 +61,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 				// 		ts_object.parse_search_result(data.ts_search.result, null, false)
 				// 	}
 				// }, { threshold: [0] });
-				// observer.observe(current_content_data);
+				// observer.observe(content_data);
 
 				// event_manager.subscribe('render_'+self.id, exec_search)
 				// function exec_search() {
@@ -70,13 +70,13 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 				ts_object.parse_search_result(data.ts_search.result, null, false)
 				// prevent to recreate content_data again
-				const current_content_data = self.node[0].querySelector('.content_data.area')
-				return current_content_data
+				const content_data = self.node[0].querySelector('.content_data.area')
+				return content_data
 
 			}else{
 
-				const current_content_data = get_content_data(self)
-				return current_content_data
+				const content_data = get_content_data(self)
+				return content_data
 			}
 		}//end if (render_level==='content')
 
@@ -104,14 +104,14 @@ render_area_thesaurus.prototype.list = async function(options) {
 		}
 
 	// content_data
-		const current_content_data = get_content_data(self)
-		fragment.appendChild(current_content_data)
+		const content_data = get_content_data(self)
+		// fragment.appendChild(content_data)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
-			// content_data : current_content_data
+			content_data : content_data
 		})
-		wrapper.appendChild(fragment)
+		wrapper.prepend(fragment)
 
 	// change the mode of the thesaurus
 	// when the user do click publish the tipo to go and set the mode in list
@@ -156,9 +156,9 @@ render_area_thesaurus.prototype.edit = async function(options={render_level:'ful
 	// const render_level = options.render_level
 
 	// // content_data
-	// 	const current_content_data = await content_data(self)
+	// 	const content_data = await content_data(self)
 	// 	if (render_level==='content') {
-	// 		return current_content_data
+	// 		return content_data
 	// 	}
 
 	// // buttons
@@ -166,7 +166,7 @@ render_area_thesaurus.prototype.edit = async function(options={render_level:'ful
 
 	// // wrapper. ui build_edit returns component wrapper
 	// 	const wrapper =	ui.area.build_wrapper_edit(self, {
-	// 		content_data : current_content_data,
+	// 		content_data : content_data,
 	// 		//buttons 	 : current_buttons
 	// 	})
 

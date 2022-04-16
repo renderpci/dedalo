@@ -8,6 +8,7 @@
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
+	import {set_element_css} from '../../page/js/css.js'
 
 
 
@@ -34,9 +35,9 @@ render_area.prototype.edit = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = get_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -44,9 +45,38 @@ render_area.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 			//buttons 	 : current_buttons
 		})
+
+	// css v6
+		if (self.context.css) {
+			set_element_css(self.section_tipo+'_'+self.tipo, self.context.css)
+			// add_class
+				// sample
+				// "add_class": {
+				// "wrapper": [
+				// 	"bg_warning"
+				// ]
+				// }
+				if (self.context.css.add_class) {
+
+					for(const selector in self.context.css.add_class) {
+						const values = self.context.css.add_class[selector]
+						const element = selector==='wrapper'
+							? wrapper
+							: selector==='content_data'
+								? content_data
+								: null
+
+						if (element) {
+							element.classList.add(values)
+						}else{
+							console.warn("Invalid css class selector was ignored:", selector);
+						}
+					}
+				}
+		}
 
 
 	return wrapper

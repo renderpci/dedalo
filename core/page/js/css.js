@@ -106,6 +106,10 @@ const update_style_sheet = async function(key, value) {
 	// add all
 		for(const selector in value) {
 
+			if (selector==='add_class') {
+				continue;
+			}
+
 			// mixin. Compatibility with v5 mixin 'width'
 				// if (value[selector].mixin) {
 				// 	// width from mixin

@@ -7,6 +7,7 @@
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {set_element_css} from '../../page/js/css.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_ar_instances} from './section.js'
 
@@ -48,9 +49,6 @@ render_edit_section.prototype.edit = async function(options) {
 		}
 
 	const fragment = new DocumentFragment()
-
-	// css
-		const element_css = self.context.css || {}
 
 	// buttons
 		// const current_buttons = get_buttons(self);
@@ -94,80 +92,46 @@ render_edit_section.prototype.edit = async function(options) {
 			// })
 		}
 
-	// content_data
-		// css
-			const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
-			const content_data_css = [...content_data_structure_css] // "content_data", self.type,
-			content_data.classList.add(...content_data_css)
-		// add to fragment
-			fragment.appendChild(content_data)
+	// content_data add to fragment
+		fragment.appendChild(content_data)
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
-			id				: self.id,
-			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: `${'wrapper_'+self.type} ${self.model} ${self.section_tipo}_${self.tipo} ${self.tipo} ${self.mode}`,
+			id				: self.id
 		})
-		// css
-			const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-			const wrapper_css = ['wrapper_'+self.type, self.model, self.tipo, self.mode, ...wrapper_structure_css]
-			wrapper.classList.add(...wrapper_css)
 		// append fragment
 		wrapper.appendChild(fragment)
 
+	// css v6
+		if (self.context.css) {
+			set_element_css(self.section_tipo+'_'+self.tipo, self.context.css)
+			// add_class
+				// sample
+				// "add_class": {
+				// "wrapper": [
+				// 	"bg_warning"
+				// ]
+				// }
+				if (self.context.css.add_class) {
 
-	// CSS INJECT
-		// function create_new_CSS_style_sheet() {
-		// 	// Create the <style> tag
-		// 	let style = document.createElement("style");
+					for(const selector in self.context.css.add_class) {
+						const values = self.context.css.add_class[selector]
+						const element = selector==='wrapper'
+							? wrapper
+							: selector==='content_data'
+								? content_data
+								: null
 
-		// 	// Add a media (and/or media query)
-		// 	// style.setAttribute("media", "screen")
-		// 	// style.setAttribute("media", "only screen and (max-width : 1024px)")
-
-		// 	// Add the <style> element to the page
-		// 	document.head.appendChild(style);
-
-		// 	return style.sheet;
-		// }//end create_new_CSS_sheet
-		// const CSS_style_sheet = create_new_CSS_style_sheet()
-
-		// // inject css from structure
-		// 	const section_context 	= self.context.filter(element => element.tipo===self.section_tipo)[0]
-		// 	const section_css 	  	= section_context.css
-		// 	const css_selector 		= '#test_container>section.' + self.model + '.' + self.tipo + '.' + self.mode
-		// 	let css_properties 		= JSON.stringify(section_css).replace(/,/g, ";")
-		// 		css_properties 		= css_properties.replace(/"/g, "")
-
-		// 	//CSS_style_sheet.insertRule( '.'+css_selector+'{display: grid;grid-template-columns: 60px repeat('+columns_length+', 1fr);}');
-		// 	//CSS_style_sheet.insertRule(css_selector+"{width:50px !important}");
-		// 	CSS_style_sheet.insertRule(css_selector+css_properties);
-
-		// 	// ejemplo de conversión:
-		// 		var cssjson = {
-		// 	        "selector-1":{
-		// 	            "property-1":"value-1",
-		// 	            "property-n":"value-n"
-		// 	        }
-		// 	    }
-
-		// 	    var styleStr = "";
-		// 	    for(var i in cssjson){
-		// 	        styleStr += i + " {\n"
-		// 	        for(var j in cssjson[i]){
-		// 	            styleStr += "\t" + j + ":" + cssjson[i][j] + ";\n"
-		// 	        }
-		// 	        styleStr += "}\n"
-		// 	    }
-		// 	// ejemplo de asignación directa de css
-		// 		Object.assign(
-		// 			document.querySelector('.my-element').style,
-		// 		  {
-		// 		    position: 'relative',
-		// 		    color: 'blue',
-		// 		    background: 'pink'
-		// 		  }
-		// 		)
+						if (element) {
+							element.classList.add(values)
+						}else{
+							console.warn("Invalid css class selector was ignored:", selector);
+						}
+					}
+				}
+		}
 
 
 	return wrapper
