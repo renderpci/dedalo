@@ -252,7 +252,7 @@ const get_content_data_edit = function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value	= value//(value.length<1) ? [''] : value
+		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element_edit(i, inputs_value[i], self)

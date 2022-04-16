@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {set_element_css} from '../../page/js/css.js'
 	import {get_ar_instances} from './section.js'
 
 
@@ -93,18 +94,26 @@ render_list_section.prototype.list = async function(options) {
 			class_name		: 'list_body',
 			parent			: fragment
 		})
+		// fix last list_body (for pagination selection)
+		self.node_body = list_body
+
 		// flat columns create a sequence of grid widths taking care of sub-column space
 		// like 1fr 1fr 1fr 3fr 1fr
 		const items				= ui.flat_column_items(columns_map)
 		const template_columns	= items.join(' ')
-		Object.assign(
-			list_body.style,
-			{
-				"grid-template-columns": template_columns
+		// Object.assign(
+		// 	list_body.style,
+		// 	{
+		// 		"grid-template-columns": template_columns
+		// 	}
+		// )
+		const css_object = {
+			'.list_body' : {
+				'grid-template-columns': template_columns
 			}
-		)
-		// fix last list_body (for pagination selection)
-		self.node_body = list_body
+		}
+		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+
 
 	// list_header_node. Create and append if ar_instances is not empty
 		if (self.ar_instances.length>0) {
