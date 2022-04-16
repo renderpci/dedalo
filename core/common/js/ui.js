@@ -263,7 +263,9 @@ export const ui = {
 						// 			}
 						// 		}
 						// }
-						set_element_css(section_tipo+'_'+tipo, element_css)
+						if (instance.context.css) {
+							set_element_css(section_tipo+'_'+tipo, element_css)
+						}
 					}//end if (model!=='component_filter')
 
 				// event click . Activate component on event
@@ -661,6 +663,10 @@ export const ui = {
 									&& el_rect.right > inspector_rect.left-20
 									) {
 									el.classList.add('inside')
+									// const buttons_container = el.querySelector(':scope > .buttons_container')
+									// if (buttons_container) {
+									// 	buttons_container.classList.add('left')
+									// }
 								}
 							}
 						}
@@ -2373,14 +2379,24 @@ export const ui = {
 			// 	content	: label_text
 			// });
 
+			// const css_object = {
+			// 	[`${selector}::before`] : {
+			// 		style : function() {
+			// 			return {
+			// 				selector : `${selector}::before`,
+			// 				value : {
+			// 					content : label_text
+			// 				}
+			// 			}
+			// 		}
+			// 	}
+			// }
 			const css_object = {
-				[`${selector}::before`] : {
-					style : function() {
-						return {
-							selector : `${selector}::before`,
-							value : {
-								content : label_text
-							}
+				[`${selector}::before`] : function() {
+					return {
+						selector : `${selector}::before`,
+						value : {
+							content : label_text
 						}
 					}
 				}

@@ -619,7 +619,7 @@
 
 // component common definitions
 	.wrapper_component {
-		background-color: #c2fab9;
+		// background-color: #c2fab9;
 		position: relative;
 		margin: 0;
 		padding: 0;
@@ -637,6 +637,8 @@
 		flex: 1 1 auto;
 		height: var(--component_height);  // 08-09-2021 var defined in :root (vars.less);
 		align-content: flex-start; // maintain items flow from top to bottom
+		// grid-column: 1 / span 10; // default width is 100% (10 columns of 10)
+
 
 		&.fullscreen {
 			.buttons_fold {
@@ -1899,6 +1901,14 @@
 				top: -1px;
 				min-height: calc(100% + 2px);
 				box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
+
+				&.left {
+					left: -2rem;
+					box-shadow: -2px 0 5px 0 rgb(38 38 38 / 30%);
+					border-radius: unset;
+					border-top-left-radius: 0.25em;
+					border-bottom-left-radius: 0.25em;
+				}
 
 				.buttons_fold {
 					position: -webkit-sticky;

@@ -7,6 +7,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {set_element_css} from '../../page/js/css.js'
 
 
 
@@ -108,29 +109,35 @@ const get_wrapper = function(self) {
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
-			element_type : 'div'
+			element_type : 'div',
+			class_name : `${'wrapper_'+self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode}`
 		})
+
 	// CSS
-		const element_css = self.context.css || {}
-		const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-		const ar_css = ['wrapper_'+self.type, self.model, self.tipo, self.mode, ...wrapper_structure_css]
-		wrapper.classList.add(...ar_css)
+		// const ar_css = ['wrapper_'+self.type, self.model, self.tipo, self.section_tipo+'_'+self.tipo, self.mode]
+		// wrapper.classList.add(...ar_css)
+
 	// legacy CSS
-		const legacy_selector = '.wrap_section_group_div'
-		if (element_css[legacy_selector]) {
-			// style
-				if (element_css[legacy_selector].style) {
-					// width from style
-					if (element_css[legacy_selector].style.width) {
-						// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
-						// wrapper.style['--width'] = element_css[legacy_selector].style.width
-						wrapper.style.setProperty('width', element_css[legacy_selector].style.width);
-					}
-					// display none from style
-					if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
-						wrapper.classList.add('display_none')
-					}
-				}
+		// const legacy_selector = '.wrap_section_group_div'
+		// if (element_css[legacy_selector]) {
+		// 	// style
+		// 		if (element_css[legacy_selector].style) {
+		// 			// width from style
+		// 			if (element_css[legacy_selector].style.width) {
+		// 				// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+		// 				// wrapper.style['--width'] = element_css[legacy_selector].style.width
+		// 				wrapper.style.setProperty('width', element_css[legacy_selector].style.width);
+		// 			}
+		// 			// display none from style
+		// 			if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
+		// 				wrapper.classList.add('display_none')
+		// 			}
+		// 		}
+		// }
+
+	// css new way v6
+		if (self.context.css) {
+			set_element_css(self.section_tipo+'_'+self.tipo, self.context.css)
 		}
 
 

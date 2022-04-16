@@ -720,8 +720,7 @@ const render_relation_list = function(self) {
 
 	// relation_list events
 		self.events_tokens.push(
-			event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator),
-			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
+			event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
 		)
 		function fn_relation_list_paginator(relation_list) {
 			relation_list_body.classList.add('loading')
@@ -730,6 +729,9 @@ const render_relation_list = function(self) {
 				relation_list_body.classList.remove('loading')
 			})
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
+		)
 		function fn_updated_section() {
 			// triggered after section pagination, it forces relation list update
 			const is_open = !relation_list_body.classList.contains('hide')

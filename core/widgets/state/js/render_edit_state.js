@@ -339,7 +339,7 @@ const get_value_element = (i, data, values_container, self) => {
 		}// end for (let o = 0; o < output.length; o++)
 
 		self.events_tokens.push(
-			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)// end event_manager.subscribe('update_widget_value_'
+			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		)
 		function fn_update_widget_value(changed_data) {
 

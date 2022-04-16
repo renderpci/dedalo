@@ -1,4 +1,5 @@
-// JavaScript Document
+/*global page_globals, SHOW_DEBUG*/
+/*eslint no-undef: "error"*/
 
 /******** DOM READY ****************/
 $(function() {
@@ -8,7 +9,6 @@ $(function() {
 	opcionesND();
 
 	$('#termino_'+id).focus();
-
 });
 
 
@@ -88,7 +88,7 @@ function edit_ts(formObj, e) {
 			}
 		}
 
-	formObj.classList.add('loading')
+	formObj.classList.add("loading")
 
 	// request to trigger using JSON format
 		data_manager.request({
@@ -101,7 +101,7 @@ function edit_ts(formObj, e) {
 		.then(function(response){
 			console.log('---- edit_ts response ',response)
 
-			formObj.classList.remove('loading')
+			formObj.classList.remove("loading")
 
 			if (response.result!==true) {
 				// error case
@@ -139,7 +139,7 @@ function edit_ts(formObj, e) {
 			}
 		})
 		.catch((error) => {
-			formObj.classList.remove('loading')
+			formObj.classList.remove("loading")
 			console.error('Error:', error);
 		});
 
@@ -721,16 +721,16 @@ const build_download_data_link = function(options) {
 	const data = new Blob([JSON.stringify(obj_to_save, null, 2)], {
 			type: mime_type,
 		name: 'file.json'
-	})		
-	
+	})
+
 	// Build href from data
 	const href = URL.createObjectURL(data)
 
 	// link_obj
 	const link_obj = document.createElement("a")
 		link_obj.href 	   = href
-		link_obj.download  = file_name	
-	
+		link_obj.download  = file_name
+
 
 	return link_obj
 }//end build_download_data_link

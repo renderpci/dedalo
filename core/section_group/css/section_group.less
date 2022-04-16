@@ -7,7 +7,7 @@
 	// background-color: #50f9af;
 
 	&.edit {
-
+		// grid-column: 1 / span 10;
 
 		// inside .section_record.edit context
 		.section_record.edit & {
@@ -48,11 +48,12 @@
 					*/
 
 				// grid model test
-				background-color: #f4ece2;
+				// background-color: #f4ece2;
 				display: grid;
-				grid-template-columns: repeat(10, 10%);
-				grid-template-rows: repeat(10, 10%);
-				grid-gap: 2px;
+				// grid-template-columns: repeat(10, 10%);
+				// grid-template-rows: repeat(10, auto);
+				// grid-gap: 2px;
+				align-content: stretch;
 			}
 		}
 
