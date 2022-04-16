@@ -9,6 +9,7 @@
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
+	import {set_element_css} from '../../page/js/css.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {
@@ -84,12 +85,19 @@ render_edit_view_table.render = async function(self, options) {
 
 		const items				= ui.flat_column_items(columns_map);
 		const template_columns	= items.join(' ')
-		Object.assign(
-			list_body.style,
-			{
-				"grid-template-columns": template_columns
+		// Object.assign(
+		// 	list_body.style,
+		// 	{
+		// 		"grid-template-columns": template_columns
+		// 	}
+		// )
+		const css_object = {
+			'.list_body' : {
+				'grid-template-columns': template_columns
 			}
-		)
+		}
+		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+
 		list_body.appendChild(list_header_node)
 		list_body.appendChild(content_data)
 
