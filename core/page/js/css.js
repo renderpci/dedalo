@@ -35,13 +35,12 @@ const root_css = {};
 * @return bool
 */
 export const set_element_css = function(key, value) {
-	// return false
 
-	if (root_css[key]!==undefined) {
-		// already exits
-		// console.log("Ignored key (set_element_css):", key);
-		return false
-	}
+	// already exits check
+		// if (root_css[key]!==undefined) {
+		// 	// console.log("Ignored key (set_element_css):", key);
+		// 	return false
+		// }
 
 	if (!value || Object.keys(value).length===0) {
 		// empty object
@@ -50,13 +49,14 @@ export const set_element_css = function(key, value) {
 
 	// set root_css property
 	update_style_sheet(key, value)
-	.then(function(result){
-		if (result===true) {
-			// update proxy var value
-			root_css[key] = value;
-		}
-		// console.log("root_css:",root_css);
-	})
+
+	// .then(function(result){
+	// 	if (result===true) {
+	// 		// update proxy var value
+	// 		root_css[key] = value;
+	// 	}
+	// 	// console.log("root_css:",root_css);
+	// })
 
 	return true
 }//end set_element_css
