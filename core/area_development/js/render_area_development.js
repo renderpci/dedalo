@@ -34,9 +34,9 @@ render_area_development.prototype.edit = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = get_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -44,7 +44,7 @@ render_area_development.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
-			content_data : current_content_data,
+			content_data : content_data,
 			//buttons 	 : current_buttons
 		})
 

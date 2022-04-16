@@ -936,12 +936,13 @@ export const ui = {
 				//console.log("[ui.build_wrapper_edit] instance:",instance)
 			}
 
-			const id	= instance.id || 'id is not set'
-			const model	= instance.model 	// like component_input-text
-			const type	= instance.type 	// like 'component'
-			const tipo	= instance.tipo 	// like 'rsc26'
-			const mode	= instance.mode 	// like 'edit'
-			const label	= instance.label 	// instance.context.label
+			const model			= instance.model 	// like component_input-text
+			const type			= instance.type 	// like 'component'
+			const tipo			= instance.tipo 	// like 'rsc26'
+			const section_tipo	= instance.section_tipo 	// like 'rsc26'
+			const mode			= instance.mode 	// like 'edit'
+			const label			= instance.label 	// instance.context.label
+			const content_data	= items.content_data || null
 
 			const fragment = new DocumentFragment()
 
@@ -987,9 +988,8 @@ export const ui = {
 				// }
 
 			// content_data
-				if (items.content_data) {
-					const content_data = items.content_data
-					content_data.classList.add("content_data", type)
+				if (content_data) {
+					// content_data.classList.add("content_data", type)
 					fragment.appendChild(content_data)
 				}
 
@@ -997,9 +997,38 @@ export const ui = {
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
 					// class_name		: 'wrapper_' + type + ' ' + model + ' area' + ' ' + tipo + ' ' + mode
-					class_name		: `wrapper_${type} ${model} ${tipo} ${mode}`
+					class_name		: `${'wrapper_'+type} ${model} ${tipo} ${section_tipo+'_'+tipo} ${mode}`
  				})
  				wrapper.appendChild(fragment)
+
+ 			// css new way v6
+				if (instance.context.css) {
+					set_element_css(section_tipo+'_'+tipo, instance.context.css)
+					// add_class
+						// sample
+						// "add_class": {
+						// "wrapper": [
+						// 	"bg_warning"
+						// ]
+						// }
+						if (instance.context.css.add_class) {
+
+							for(const selector in instance.context.css.add_class) {
+								const values = instance.context.css.add_class[selector]
+								const element = selector==='wrapper'
+									? wrapper
+									: selector==='content_data'
+										? content_data
+										: null
+
+								if (element) {
+									element.classList.add(values)
+								}else{
+									console.warn("Invalid css class selector was ignored:", selector);
+								}
+							}
+						}
+				}
 
 
 			return wrapper

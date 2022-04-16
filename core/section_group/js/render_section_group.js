@@ -113,28 +113,6 @@ const get_wrapper = function(self) {
 			class_name : `${'wrapper_'+self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode}`
 		})
 
-	// CSS
-		// const ar_css = ['wrapper_'+self.type, self.model, self.tipo, self.section_tipo+'_'+self.tipo, self.mode]
-		// wrapper.classList.add(...ar_css)
-
-	// legacy CSS
-		// const legacy_selector = '.wrap_section_group_div'
-		// if (element_css[legacy_selector]) {
-		// 	// style
-		// 		if (element_css[legacy_selector].style) {
-		// 			// width from style
-		// 			if (element_css[legacy_selector].style.width) {
-		// 				// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
-		// 				// wrapper.style['--width'] = element_css[legacy_selector].style.width
-		// 				wrapper.style.setProperty('width', element_css[legacy_selector].style.width);
-		// 			}
-		// 			// display none from style
-		// 			if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
-		// 				wrapper.classList.add('display_none')
-		// 			}
-		// 		}
-		// }
-
 	// css new way v6
 		if (self.context.css) {
 			set_element_css(self.section_tipo+'_'+self.tipo, self.context.css)
