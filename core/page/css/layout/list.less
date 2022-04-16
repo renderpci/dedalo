@@ -279,7 +279,7 @@
 		flex-wrap: wrap;
 		align-items: center; // horizontal alignment
 		justify-content: center; // vertical alignment
-		background-color: @color_grey_untralight; // @color_grey_untralight
+		// background-color: @color_grey_untralight; // @color_grey_untralight
 		outline: 1px solid @color_grey_light;
 		height: inherit;
 		// min-height: 3rem;
@@ -333,6 +333,11 @@
 	.wrapper_section.list {
 		.column {
 			min-height: 3rem;
+
+			&.column_section_id {
+				min-width: 70px;
+				font-size: 1.2rem;
+			}
 		}
 	}
 
