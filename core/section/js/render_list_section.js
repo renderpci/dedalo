@@ -112,7 +112,7 @@ render_list_section.prototype.list = async function(options) {
 				'grid-template-columns': template_columns
 			}
 		}
-		set_element_css(self.tipo, css_object)
+		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
 
 
 	// list_header_node. Create and append if ar_instances is not empty
@@ -129,7 +129,8 @@ render_list_section.prototype.list = async function(options) {
 			element_type	: 'section',
 			id				: self.id,
 			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} list`
 		})
 		wrapper.appendChild(fragment)
 

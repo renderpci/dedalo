@@ -7,7 +7,7 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_ar_instances} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {set_element_css} from '../../page/js/css.js'
+	import {set_element_css} from '../../../core/page/js/css.js'
 
 
 
@@ -101,7 +101,8 @@ export const render_time_machine_list_view = async function(self, options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
 			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode}`
 		})
 		wrapper.appendChild(fragment)
 
