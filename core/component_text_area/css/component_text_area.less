@@ -12,16 +12,15 @@
 		>.content_data {
 			// background-color: #7df780;
 			display: grid;
+			min-height: @media_min_height;
 
 			// ul
 			>.inputs_container {
-				// height: 100%;
-
-				min-height: @media_min_height;
-				max-height: @media_max_height;
-				height: calc(100% - @component_label_height);
-				margin-bottom: -1.85rem;
-
+				height: 100%;
+				// min-height: @media_min_height;
+				// max-height: @media_max_height;
+				// height: calc(100% - @component_label_height);
+				// margin-bottom: -1.85rem;
 
 				>li {
 					z-index: inherit;

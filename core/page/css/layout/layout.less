@@ -1762,6 +1762,7 @@
 			color: @color_orange_dedalo;
 			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 			overflow: initial; // !important
+			z-index: auto;
 
 			.show_on_active {
 				display: block;
@@ -2540,6 +2541,22 @@
 
 // json_editor
 	.jsoneditor {
+		resize: vertical;
+		overflow: hidden;
+
+		// thematize
+		&.jsoneditor-mode-code {
+			border: thin solid #c0c0c0;
+		}
+
+		.ace-jsoneditor .ace_marker-layer .ace_active-line {
+			background-color: #f2f2f2;
+		}
+
+		>.jsoneditor-menu {
+			background-color: #949494;
+    		border-bottom: 1px solid #838383;
+    	}
 
 		>.jsoneditor-menu a.jsoneditor-poweredBy {
 			top: unset;
@@ -2950,3 +2967,12 @@
 
 
 
+.bg_warning {
+	// background-color: @color_orange_dedalo ;
+	background-color: #ffe9e9;
+	border: 1px dashed #ef9b9b;
+	// overflow: auto;
+	background-image: url('../../themes/default/dedalo_logo.svg');
+	background-size: 5rem;
+	background-repeat: space;
+}
