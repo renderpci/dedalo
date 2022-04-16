@@ -83,7 +83,7 @@ export const render_time_machine_list_view = async function(self, options) {
 				'grid-template-columns': template_columns
 			}
 		}
-		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+		set_element_css(self.section_tipo+'_'+self.tipo+'.'+self.tipo, css_object)
 
 		// fix last list_body (for pagination selection)
 		// self.node_body = list_body
