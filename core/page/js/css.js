@@ -96,8 +96,8 @@ const update_style_sheet = async function(key, value) {
 
 	// already exits case
 		if (root_css[key]!==undefined) {
-			console.log("Ignored key:", key);
-			return false
+			console.log("Duplicated key:", key, value);
+			// return false
 		}
 
 	// style_sheet
@@ -162,7 +162,7 @@ const update_style_sheet = async function(key, value) {
 
 				// const full_selector = `.${key}${selector}` // like .oh1_rsc75.wrap_component
 
-				console.log("full_selector:", full_selector, json_css_values);
+				// console.log("full_selector:", full_selector, json_css_values);
 
 				// insert rule
 				insert_rule(full_selector, json_css_values, css_style_sheet, false)
