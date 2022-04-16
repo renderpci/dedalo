@@ -92,11 +92,11 @@ render_edit_view_table.render = async function(self, options) {
 		// 	}
 		// )
 		const css_object = {
-			'.list_body' : {
-				'grid-template-columns': template_columns
+			".list_body" : {
+				"grid-template-columns" : template_columns
 			}
 		}
-		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+		set_element_css(self.section_tipo+'_'+self.tipo+'.'+self.tipo, css_object)
 
 		list_body.appendChild(list_header_node)
 		list_body.appendChild(content_data)

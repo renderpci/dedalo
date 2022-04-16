@@ -37,10 +37,10 @@ const root_css = {};
 export const set_element_css = function(key, value) {
 
 	// already exits check
-		// if (root_css[key]!==undefined) {
-		// 	// console.log("Ignored key (set_element_css):", key);
-		// 	return false
-		// }
+		if (root_css[key]!==undefined) {
+			console.log("Ignored key (set_element_css):", key, value);
+			return false
+		}
 
 	if (!value || Object.keys(value).length===0) {
 		// empty object
@@ -60,16 +60,6 @@ export const set_element_css = function(key, value) {
 
 	return true
 }//end set_element_css
-
-
-
-/**
-* GET_ELEMENTS_CSS_OBJECT
-* @return object root_css
-*/
-export const get_elements_css_object = function() {
-	return root_css
-}//end get_elements_css_object
 
 
 
@@ -95,10 +85,10 @@ export const get_elements_css_object = function() {
 const update_style_sheet = async function(key, value) {
 
 	// already exits case
-		if (root_css[key]!==undefined) {
-			console.log("Duplicated key:", key, value);
-			// return false
-		}
+		// if (root_css[key]!==undefined) {
+		// 	console.log("Duplicated key (ignored):", key, value);
+		// 	return false
+		// }
 
 	// style_sheet
 		const css_style_sheet = get_elements_style_sheet()
@@ -179,6 +169,21 @@ const update_style_sheet = async function(key, value) {
 
 
 
+/**
+* INSERT_RULE
+* Execute a statndard 'insertRule' order with given values
+*
+* @param string selector
+* 	like: '.rsc170_rsc20.wrapper_component'
+* @param object json_css_values
+* 	like:
+* @param HTML stylesheet css_style_sheet
+* 	Virtual css file stylesheet
+* @param boolean skip_insert
+* 	Used to control deep recursive resolutions
+*
+* @return object root_css
+*/
 const insert_rule = function(selector, json_css_values, css_style_sheet, skip_insert) {
 
 	// console.log("Object.keys(json_css_values):",Object.keys(json_css_values));
@@ -247,6 +252,17 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 
 	return index
 }//end insert_rule
+
+
+
+/**
+* GET_ELEMENTS_CSS_OBJECT
+* @return object root_css
+*/
+export const get_elements_css_object = function() {
+
+	return root_css
+}//end get_elements_css_object
 
 
 
