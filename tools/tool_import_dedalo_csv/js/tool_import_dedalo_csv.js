@@ -180,37 +180,37 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 
 
 
-/**
-* LOAD_TOOL_UPLOAD
-* @return instance tool_upload
-*/
-tool_import_dedalo_csv.prototype.load_tool_upload = async function() {
+// /**
+// * LOAD_TOOL_UPLOAD
+// * @return instance tool_upload
+// */
+// tool_import_dedalo_csv.prototype.load_tool_upload = async function() {
 
-	const self = this
+// 	const self = this
 
-	// intance_options
-		const intance_options = {
-			caller			: self,
-			mode			: 'mini',
-			model			: 'tool_upload',
-			label			: 'Tool upload',
-			type			: 'tool',
-			section_tipo	: self.caller.tipo,
-			context			: self.context,
-			tool_config		: {
-				ddo_map : []
-			}
-		}
+// 	// intance_options
+// 		const intance_options = {
+// 			caller			: self,
+// 			mode			: 'mini',
+// 			model			: 'tool_upload',
+// 			label			: 'Tool upload',
+// 			type			: 'tool',
+// 			section_tipo	: self.caller.tipo,
+// 			context			: self.context,
+// 			tool_config		: {
+// 				ddo_map : []
+// 			}
+// 		}
 
-	// instance load / recover
-		const tool_instance = await get_instance(intance_options)
+// 	// instance load / recover
+// 		const tool_instance = await get_instance(intance_options)
 
-	// build
-		await tool_instance.build(true)
+// 	// build
+// 		await tool_instance.build(true)
 
 
-	return tool_instance
-};//end load_tool_upload
+// 	return tool_instance
+// };//end load_tool_upload
 
 
 
