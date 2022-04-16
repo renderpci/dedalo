@@ -112,7 +112,7 @@ render_list_section.prototype.list = async function(options) {
 				'grid-template-columns': template_columns
 			}
 		}
-		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+		set_element_css(self.section_tipo+'_'+self.tipo+'.'+self.tipo, css_object)
 
 
 	// list_header_node. Create and append if ar_instances is not empty

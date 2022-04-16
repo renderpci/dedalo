@@ -86,7 +86,7 @@ render_list_component_portal.prototype.list = async function(options) {
 					'grid-template-columns': template_columns
 				}
 			}
-			set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+			set_element_css(self.section_tipo+'_'+self.tipo+'.'+self.tipo, css_object)
 
 		// header
 			// const list_header_node = build_header(columns_map, ar_section_record, self)
