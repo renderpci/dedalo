@@ -335,6 +335,50 @@
 		background-color: red !important;
 		transition: background-color 0.3s ease;
 	}
+	.alert{
+		height: min-content;
+		margin-right: 0.25em;
+		padding-bottom: 0.275rem;
+		padding-left: 1rem;
+		padding-right: 1rem;
+		padding-top: 0.275rem;
+		width: max-content;
+		text-align: center;
+		vertical-align: middle;
+		-webkit-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+		background-color: transparent;
+		border: 1px solid transparent;
+		// padding: .375rem .75rem;
+		font-size: 1rem;
+		font-weight: 400;
+		line-height: 1.5;
+		border-radius: 0.25rem;
+		transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		&.danger {
+			background-color: @color_danger;
+			border-color: @color_danger;
+			color: #ffffff;
+			&:before {
+				background-color: #ffffff !important;
+			}
+		}
+		&.success {
+			background-color: @color_success;
+			border-color: @color_success;
+			color: #ffffff;
+			&:before {
+				background-color: #ffffff !important;
+			}
+		}
+	}
 
 
 

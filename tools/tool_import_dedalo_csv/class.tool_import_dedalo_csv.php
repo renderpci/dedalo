@@ -40,8 +40,8 @@ class tool_import_dedalo_csv extends tool_common {
 				$n_records	= count($ar_data)-1;
 				$n_columns	= count($file_info);
 
-				// columns_info
-					$columns_info = array_map(function($el){
+				// ar_columns_map
+					$ar_columns_map = array_map(function($el){
 						return (object)[
 							'tipo'	=> $el,
 							'label'	=> RecordObj_dd::get_termino_by_tipo($el, DEDALO_APPLICATION_LANG, true),
@@ -94,7 +94,7 @@ class tool_import_dedalo_csv extends tool_common {
 					'n_records'				=> $n_records,
 					'n_columns'				=> $n_columns,
 					'file_info'				=> $file_info,
-					'columns_info'			=> $columns_info,
+					'ar_columns_map'		=> $ar_columns_map,
 					'sample_data'			=> $sample_data,
 					'sample_data_errors'	=> $sample_data_errors
 				];
@@ -166,11 +166,6 @@ class tool_import_dedalo_csv extends tool_common {
 		// Ignore user close browser
 			ignore_user_abort(true);
 
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
 		// options
 			$options = new stdClass();
 				$options->files				= null;
@@ -183,45 +178,51 @@ class tool_import_dedalo_csv extends tool_common {
 			$dir				= DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
 
 		// import each file
-			$import_response=array();
+			$import_response=[];
 			foreach ((array)$files as $current_file_obj) {
+
+
 
 				$current_file	= $current_file_obj->file; // string like 'exported_oral-history_-1-oh1.csv'
 				$section_tipo	= $current_file_obj->section_tipo; // string like 'oh1'
-				$columns_info	= $current_file_obj->columns_info; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
+				$ar_columns_map	= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 
 				# FILE
 				$file = $dir . '/' . $current_file;
 				if (!file_exists($file)) {
-					$response->msg = "Error. File not found: ".$file;
-					return $response;
+					$current_file_response = new stdClass();
+						$current_file_response->result			= false;
+						$current_file_response->msg				= "Error. File not found: ".$file;
+						$current_file_response->file			= $current_file;
+						$current_file_response->section_tipo	= $section_tipo;
+					$import_response[] = $current_file_response;
+					continue;
 				}
 				$ar_csv_data = tool_common::read_csv_file_as_array($file, $skip_header=false, ';');
 					#dump($ar_csv_data, ' $ar_csv_data ++ '.to_string($file)); die();
 					#debug_log(__METHOD__." ar_csv_data ".to_string($ar_csv_data), logger::DEBUG);
 
-				$ar_csv_data_final = array();
-				foreach ($ar_csv_data as $key => $value) {
-					$ar_csv_data_final[$key] = $value;
-				}
-
 				// counter. Consolidate counter. Set counter value to last section_id in section
 				counter::consolidate_counter( $section_tipo, common::get_matrix_table_from_tipo($section_tipo) );
 
 				// import exec
-				$import_response[] = (object)tool_import_dedalo_csv::import_dedalo_csv_file(
+				$current_file_response = (object)tool_import_dedalo_csv::import_dedalo_csv_file(
 					$section_tipo,
-					$ar_csv_data_final,
+					$ar_csv_data,
 					$time_machine_save,
-					$columns_info
+					$ar_columns_map
 				);
+				$current_file_response->file			= $current_file;
+				$current_file_response->section_tipo	= $section_tipo;
+
+				$import_response[] = $current_file_response;
 			}
 			#dump($result, ' result ++ '.to_string()); exit();
 
 		// response
-			$response->result			= !empty($import_response) ? true : false;
-			$response->msg				= !empty($import_response) ? 'Import success' : 'Import failed';
-			$response->import_response	= $import_response;
+			$response = new stdClass();
+				$response->result	= $import_response;
+				$response->msg		= 'Request done';
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -244,10 +245,11 @@ class tool_import_dedalo_csv extends tool_common {
 	* @param string $section_tipo
 	* @param array $ar_csv_data
 	* @param bool $time_machine_save
+	* @param object $ar_columns_map
 	*
 	* @return object $response
 	*/
-	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data, $time_machine_save=true, $columns_info) {
+	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data, $time_machine_save, $ar_columns_map) {
 		$start_time = start_time();
 
 		// Disable logging activity # !IMPORTANT
@@ -260,23 +262,24 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// csv_map. The CSV file map is always the first row
 			// $csv_map = $ar_csv_data[0];
-			$csv_map = $columns_info;
+			$csv_map = $ar_columns_map;
 				// dump($csv_map, ' csv_map ++ '.to_string());
 				// die();
 
 		// Verify csv_map
 			$verify_csv_map = self::verify_csv_map($csv_map, $section_tipo);
-			if ($verify_csv_map!==true) {
+			if ($verify_csv_map->result!==true) {
 				$response->result	= false;
-				$response->msg		= 'Error. Current CSV file first row (headers) is invalid (1): '.$verify_csv_map;
+				$response->msg		= 'Error. Current CSV file first row (headers) is invalid (1): '.$verify_csv_map->msg;
 				// Restore logging activity # !IMPORTANT
 					logger_backend_activity::$enable_log = true;
 				return $response;
 			}
 
 		// section_id key column
-			$section_id_key = (int)array_search('section_id', $csv_map);
-				#dump($section_id_key, ' section_id_key ++ '.to_string($csv_map)); die();
+			// $section_id_key = (int)array_search('section_id', $csv_map);
+			$columns		= array_column($csv_map, 'model');
+			$section_id_key	= array_search('component_section_id', $columns);
 
 		// Fixed private section tipos
 			$modified_section_tipos = section::get_modified_section_tipos();
@@ -300,13 +303,15 @@ class tool_import_dedalo_csv extends tool_common {
 			# });
 			# dump($ar_csv_data, ' ar_csv_data ++ '.to_string()); die();
 		$counter = 0;
+		$csv_head_row = $ar_csv_data[0];
 		foreach ((array)$ar_csv_data as $rkey => $row) {
 			$row_start_time = start_time();
 
-			if($rkey===0) continue; // Skip first row (used for csv_map)
 
-			// section_id
-				$section_id = !empty($row[$section_id_key]) ? $row[$section_id_key] : null;
+			if($rkey===0) continue; // Skip first row, the header row
+
+			// section_id (cast to int the section_id of the row)
+				$section_id = !empty($row[$section_id_key]) ? (int)$row[$section_id_key] : null;
 				if (empty($section_id)) {
 					debug_log(__METHOD__." ERROR on get section_id . SKIPPED record (section_tipo:$section_tipo - rkey:$rkey) ".to_string($section_id), logger::ERROR);
 					continue;
@@ -320,10 +325,16 @@ class tool_import_dedalo_csv extends tool_common {
 			# Iterate fields/columns
 			foreach ($row as $key => $value) {
 
-				if ($csv_map[$key]==='section_id') continue; # Skip section_id value column
+				$column_map = $csv_map[$key];
+				$current_csv_head_column = $csv_head_row[$key];
+
+				if($column_map->model === 'section_id' || $column_map->model === 'component_section_id') continue; # Skip section_id value column
+				if(!isset($column_map->checked) || $column_map->checked=== false || !isset($column_map->map_to)) continue;
+				// check if the column_map is correct with the current column in the csv file (match needed)
+				if($current_csv_head_column !== $column_map->tipo) continue;
 
 				# created_by_userID
-				if ($csv_map[$key]==='created_by_user' || $csv_map[$key]===$created_by_user['tipo']) {
+				if ($column_map->model==='created_by_user' || $column_map->map_to===$created_by_user['tipo']) {
 
 					$user_locator = self::build_user_locator($value, $created_by_user['tipo']);
 
@@ -347,7 +358,7 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 					continue;
 				# created_date
-				}elseif ($csv_map[$key]==='created_date' || $csv_map[$key]===$created_date['tipo']) {
+				}elseif ($column_map->model==='created_date' || $column_map->map_to===$created_date['tipo']) {
 
 					$current_date = self::build_date_from_value($value);
 
@@ -377,7 +388,7 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 					continue;
 				# modified_by_user
-				}elseif ($csv_map[$key]==='modified_by_user' || $csv_map[$key]===$modified_by_user['tipo']) {
+				}elseif ($column_map->model==='modified_by_user' || $column_map->map_to===$modified_by_user['tipo']) {
 
 					$user_locator 	 = self::build_user_locator($value, $modified_by_user['tipo']);
 						#dump($user_locator, ' user_locator ++ '.to_string());
@@ -404,7 +415,7 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 					continue;
 				# modified_date
-				}elseif ($csv_map[$key]==='modified_date' || $csv_map[$key]===$modified_date['tipo']) {
+				}elseif ($column_map->model==='modified_date' || $column_map->map_to===$modified_date['tipo']) {
 
 					$current_date 	= self::build_date_from_value($value);
 
@@ -438,7 +449,7 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 				// component_tipo. Target component is always the CSV map element with current key
-					$component_tipo	= $csv_map[$key];
+					$component_tipo	= $column_map->map_to;
 					if (empty($component_tipo)) {
 						debug_log(__METHOD__." !!!!!!!! ignored empty component_tipo on csv_map key: $key - csv_map: ".to_string($csv_map), logger::ERROR);
 						continue;
@@ -603,6 +614,11 @@ class tool_import_dedalo_csv extends tool_common {
 	*/
 	public static function verify_csv_map($csv_map, $section_tipo) {
 
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
+
 		// ar_section_info
 			// $ar_section_info = [
 			// 	'dd200',
@@ -617,7 +633,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$ar_section_info = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 		// ar_component_tipo
-			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_possible_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
 				$section_tipo, // section_tipo
 				['component_'], // ar_modelo_name
 				true, // from_cache
@@ -625,11 +641,20 @@ class tool_import_dedalo_csv extends tool_common {
 				true, // recursive
 				false // search_exact
 			);
+		// check if the csv_map has any "map_to" it's necessary to create any component to mach with the csv columns.
+			$map_to = array_column($csv_map, 'map_to');
+			$non_empty = array_filter($map_to);
+			if(empty($non_empty)) return $response;
 
-		foreach ($csv_map as $component_tipo) {
-		// foreach ($csv_map as $item) {
 
-			// sample item (from columns_info)
+		foreach ($csv_map as $column_map) {
+			// if the column don't has the checked property or the checked is false or the map_to property is missing the column will not processed
+			// this situation is not a error and go ahead with the other columns
+			if(!isset($column_map->checked) || $column_map->checked ===false || empty($column_map->map_to) ){
+				continue;
+			}
+
+			// sample item (from ar_columns_map)
 				// {
 				// 	"tipo": "dd199",
 				// 	"label": "Creation date",
@@ -638,7 +663,7 @@ class tool_import_dedalo_csv extends tool_common {
 				// 	"map_to": "dd199"
 				// }
 
-			// $component_tipo = $item->map_to;
+			$component_tipo = $column_map->map_to;
 
 			if(	   $component_tipo==='section_id'
 				|| $component_tipo==='created_by_user'
@@ -648,13 +673,20 @@ class tool_import_dedalo_csv extends tool_common {
 				|| in_array($component_tipo, $ar_section_info)
 			) continue;
 
-			if (!in_array($component_tipo, $ar_component_tipo)) {
+			if (!in_array($component_tipo, $ar_possible_component_tipo)) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				return "Sorry, component tipo: $component_tipo (model: $modelo_name) not found in section: $section_tipo";
+				// return "Sorry, component tipo: $component_tipo (model: $modelo_name) not found in section: $section_tipo";
+
+				$response->result = false;
+				$response->msg	= "Sorry, component tipo: $component_tipo (model: $modelo_name) not found in section: $section_tipo";
+				return $respose;
 			}
+
+			$response->result = true;
 		}
 
-		return true;
+
+		return $response;
 	}//end verify_csv_map
 
 
