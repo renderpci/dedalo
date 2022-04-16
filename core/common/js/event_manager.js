@@ -21,13 +21,20 @@ const event_manager_class = function(){
 
 
 
-	this.events = []
-	this.last_token = -1
+	this.events		= []
+	this.last_token	= -1
 
 
 
 	/**
 	* SUBSCRIBE
+	* Add received event to the events list array
+	* @param string event_name
+	* 	Like: 'active_component'
+	* @param function callback
+	* 	Like: 'fn_active_component'
+	* @return string token
+	* 	custom string incrmental like: 'event_270'
 	*/
 	this.subscribe = function(event_name, callback) {
 
@@ -44,6 +51,13 @@ const event_manager_class = function(){
 		// add the event to the global events of the page
 			this.events.push(new_event)
 
+		// duplicates check debug
+			// const lookup = this.events.reduce((a, e) => {
+			// 	a[e.event_name] = ++a[e.event_name] || 0;
+			// 	return a;
+			// }, {});
+			// console.log('subscribe duplicates:', this.events.filter(e => lookup[e.event_name]));
+
 		// return the token to save into the events_tokens properties inside the caller instance
 			return token
 	};//end subscribe
@@ -52,6 +66,10 @@ const event_manager_class = function(){
 
 	/**
 	* UNSUBSCRIBE
+	* @param string event_token
+	* 	custom string incrmental like: 'event_270'
+	* @return array new_events_list
+	* 	A new array without the removed event
 	*/
 	this.unsubscribe = function(event_token) {
 
@@ -66,12 +84,11 @@ const event_manager_class = function(){
 			// }
 
 		// find the event in the global events and remove it
-			const result = self.events.map( (current_event, key, events) => {
+			const new_events_list = self.events.map( (current_event, key, events) => {
 				(current_event.token === event_token) ? events.splice(key, 1) : null
 			})
 
-		// return the new array without the events
-			return result
+		return new_events_list
 	};//end unsubscribe
 
 
@@ -79,12 +96,16 @@ const event_manager_class = function(){
 	/**
 	* PUBLISH
 	* when the publish event is fired it need propagated to the subscribers events
+	* @param string event_name
+	* 	Like: 'active_component'
+	* @param object data
+	* 	object container to pass data ta to the target callback
 	*/
 	this.publish = function(event_name, data={}) {
-		//if(SHOW_DEBUG===true) {
-			//console.log("[publish] event_name:",event_name)
-			//console.log("[publish] data:",data)
-		//}
+		// if(SHOW_DEBUG===true) {
+		// 	console.log("[publish] event_name:",event_name)
+		// 	console.log("[publish] data:",data)
+		// }
 
 		// find the events that has the same event_name for exec
 		const current_events = this.events.filter(current_event => current_event.event_name===event_name)
@@ -100,7 +121,13 @@ const event_manager_class = function(){
 
 	/**
 	* GET_EVENTS
-	* @return
+	* @return array this.events
+	* 	list of registered events (objects) as
+	* [{
+	* 	callback: ƒ fn_active_component(actived_component)
+	*	event_name: "active_component"
+	*	token: "event_270"
+	* }]
 	*/
 	this.get_events = function() {
 
@@ -113,6 +140,9 @@ const event_manager_class = function(){
 	* WHEN_IN_DOM
 	* Exec a callback when node element is placed in the DOM (then is possible to know their size, etc.)
 	* Useful to render leaflet maps and so forth
+	* @param DOM node 'node'
+	* @param function callback
+	*
 	* @return mutation observer
 	*/
 	this.when_in_dom = function(node, callback) {

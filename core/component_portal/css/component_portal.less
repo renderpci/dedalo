@@ -80,13 +80,27 @@
 	}
 
 	&.view_mosaic {
+
+		>.paginator_container {
+			right: 0;
+			top: 0;
+			width: auto;
+			position: absolute;
+			padding-right: 0.5rem;
+		}
+
 		// change list_body from grid to flex
 		>.list_body {
-			display: flex;
-			flex-wrap: wrap;
+			// display: flex;
+			// flex-wrap: wrap;
+			width: 100%;
+			display: grid;
+
 			// section_record is affected by component properties CSS (normally width and height)
 			>.content_data > .section_record {
-				// height: 160px;
+				height: 100%;
+				overflow-y: hidden;
+				// max-height: 18rem;
 				// width: 25%;
 				display: flex;
 				// overflow: hidden;

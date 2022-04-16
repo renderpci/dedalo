@@ -8,6 +8,7 @@
 	import {common} from '../../common/js/common.js'
 	import {render_paginator} from './render_paginator.js'
 	import {render_paginator_mini} from './render_paginator_mini.js'
+	import {render_paginator_micro} from './render_paginator_micro.js'
 
 
 /**
@@ -56,6 +57,7 @@ export const paginator = function() {
 	paginator.prototype.edit_in_list	= render_paginator.prototype.edit
 	paginator.prototype.list			= render_paginator.prototype.edit // same as edit
 	paginator.prototype.mini			= render_paginator_mini.prototype.mini
+	paginator.prototype.micro			= render_paginator_micro.prototype.micro
 	paginator.prototype.render			= common.prototype.render
 	paginator.prototype.refresh			= common.prototype.refresh
 
@@ -76,7 +78,7 @@ paginator.prototype.init = function(options) {
 
 	// set vars
 		self.model			= 'paginator'
-		self.mode			= options.caller.mode
+		self.mode			= options.mode || options.caller.mode
 		self.caller			= options.caller
 		self.events_tokens	= []
 		self.node			= []
@@ -250,9 +252,9 @@ paginator.prototype.paginate = async function(offset) {
 		}
 
 	// preserve caller wrapper height to prevent blink
-	if(self.caller.node){
-		self.caller.node[0].style.minHeight = self.caller.node[0].offsetHeight + 'px'
-	}
+		// if(self.caller.node){
+		// 	self.caller.node[0].style.minHeight = self.caller.node[0].offsetHeight + 'px'
+		// }
 
 	// set the new offset to the current paginator
 		// self.offset = offset

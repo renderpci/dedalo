@@ -202,11 +202,11 @@
 
 			<!-- V5 Propiedades -->
 				<tr>
-					<td class="td_header" onClick="simpleToogleTBODY('propiedades_group',this)" style="cursor:pointer">
+					<td class="td_header" id="propiedades_group_button" onClick="simpleToogleTBODY('propiedades_group',this)" style="cursor:pointer">
 						V5 Propiedades <div class="flecha_open_tboby"></div>
 					</td>
 				</tr>
-				<tbody id="propiedades_group" class="<?php echo MAIN_PROPERTIES_COLUMN==='propiedades' ? '' : 'hide'; ?>">
+				<tbody id="propiedades_group" class="hide">
 					<tr>
 						<td>
 							<div class="wraper_propiedades">
@@ -231,6 +231,13 @@
 										if (propiedades_dato) {
 											propiedades_editor.set( JSON.parse(propiedades_dato) )
 										}
+
+									// status (opened/closed)
+										const status = localStorage.getItem('propiedades_group')
+										if (status) {
+											const propiedades_group_button = document.getElementById('propiedades_group_button')
+											propiedades_group_button.click()
+										}
 								})
 								</script>
 							</div><!-- /div_wraper -->
@@ -241,11 +248,11 @@
 
 			<!-- V6 properties-->
 				<tr>
-					<td class="td_header" onClick="simpleToogleTBODY('properties_group',this)" style="cursor:pointer">
-						V6 Properties <div class="flecha_close_tboby"></div>
+					<td class="td_header" id="properties_group_button" onClick="simpleToogleTBODY('properties_group',this)" style="cursor:pointer">
+						V6 Properties <div class="flecha_open_tboby"></div>
 					</td>
 				</tr>
-				<tbody id="properties_group" class="<?php echo MAIN_PROPERTIES_COLUMN==='properties' ? '' : 'hide'; ?>">
+				<tbody id="properties_group" class="hide">
 					<tr>
 						<td>
 							<div class="wraper_propiedades">
@@ -277,7 +284,14 @@
 
 										setTimeout(function(){
 											document.getElementById('wrapGeneral').classList.remove('hidden')
-										}, 150)
+										}, 100)
+
+									// status (opened/closed)
+										const status = localStorage.getItem('properties_group')
+										if (status) {
+											const propiedades_group_button = document.getElementById('properties_group_button')
+											propiedades_group_button.click()
+										}
 								})
 								</script>
 							</div>
