@@ -55,18 +55,25 @@ abstract class RecordDataBoundObject {
 	private function get_connection() {
 
 		if (defined('ONTOLOGY_DB')) {
-			$conn = DBi::_getConnection(
-				$host=ONTOLOGY_DB->DEDALO_HOSTNAME_CONN,
-				$user=ONTOLOGY_DB->DEDALO_USERNAME_CONN,
-				$password=ONTOLOGY_DB->DEDALO_PASSWORD_CONN,
-				$database=ONTOLOGY_DB->DEDALO_DATABASE_CONN,
-				$port=ONTOLOGY_DB->DEDALO_DB_PORT_CONN,
-				$socket=ONTOLOGY_DB->DEDALO_SOCKET_CONN
+
+			static $ontology_pg_conn;
+
+			if(isset($ontology_pg_conn)) {
+				return($ontology_pg_conn);
+			}
+
+			$ontology_pg_conn = DBi::_getNewConnection(
+				$host=ONTOLOGY_DB['DEDALO_HOSTNAME_CONN'],
+				$user=ONTOLOGY_DB['DEDALO_USERNAME_CONN'],
+				$password=ONTOLOGY_DB['DEDALO_PASSWORD_CONN'],
+				$database=ONTOLOGY_DB['DEDALO_DATABASE_CONN'],
+				$port=ONTOLOGY_DB['DEDALO_DB_PORT_CONN'],
+				$socket=ONTOLOGY_DB['DEDALO_SOCKET_CONN']
 			);
-			return $conn;
+			return $ontology_pg_conn;
 		}
 
-		$conn = DBi::_getConnection(
+		return DBi::_getConnection(
 			$host=DEDALO_HOSTNAME_CONN,
 			$user=DEDALO_USERNAME_CONN,
 			$password=DEDALO_PASSWORD_CONN,
@@ -74,8 +81,6 @@ abstract class RecordDataBoundObject {
 			$port=DEDALO_DB_PORT_CONN,
 			$socket=DEDALO_SOCKET_CONN
 		);
-
-		return $conn;
 	}//end get_connection
 
 
