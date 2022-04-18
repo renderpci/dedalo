@@ -23,8 +23,8 @@
 			&.paginator_first_icon {
 				.fn_build_button('forward.svg', black, 1, 2em);
 				transform: scaleX(-1);
-				mask-size: 80%;
-				-webkit-mask-size: 80%;
+				mask-size: 70%;
+				-webkit-mask-size: 70%;
 				mask-repeat: no-repeat;
 				-webkit-mask-repeat: no-repeat;
 			}
@@ -40,8 +40,8 @@
 
 			&.paginator_last_icon {
 				.fn_build_button('forward.svg', black, 1, 2em);
-				mask-size: 80%;
-				-webkit-mask-size: 80%;
+				mask-size: 70%;
+				-webkit-mask-size: 70%;
 				mask-repeat: no-repeat;
 				-webkit-mask-repeat: no-repeat;
 			}
@@ -52,13 +52,17 @@
 			display: flex;
 			vertical-align: bottom;
 			font-size: small;
-			height: 2rem;
+			height: 1.5rem;
 
 			>.btn {
 				height: 100%;
-				margin-right: 0.35em;
-				margin-left: 0;
+				margin-right: 0px;
+				margin-left: 0px;
 				// user-select: none;
+
+				&.paginator_first_icon, &.paginator_last_icon {
+					// height: 1.2rem;
+				}
 
 				// unactive
 				&.unactive {
