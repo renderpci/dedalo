@@ -399,6 +399,7 @@ export const ui = {
 			const model			= instance.model 	// like component_input-text
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
+			const section_tipo	= instance.section_tipo 	// like 'oh1'
 			const edit_in_list	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
 
 			// options
@@ -408,7 +409,7 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: `wrapper_${type} ${model} ${tipo} list` //  + mode
+					class_name		: `wrapper_${type} ${model} ${tipo} ${section_tipo+'_'+tipo} list` //  + mode
  				})
 
  			// span value. Add span if value_string is received
