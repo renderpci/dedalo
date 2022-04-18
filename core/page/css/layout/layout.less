@@ -1758,11 +1758,12 @@
 		&.active {
 			// box-shadow: 3px 5px 8px 1px #c6c6c6;
 			z-index: 1;
-			outline: 1px solid @color_orange_dedalo;
+			// outline: thin solid @color_orange_dedalo;
+			box-shadow: -1px 1px 0px @color_orange_dedalo, inset -1px 1px 0px @color_orange_dedalo;
 			color: @color_orange_dedalo;
 			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 			overflow: initial; // !important
-			z-index: auto;
+			// z-index: auto;
 
 			.show_on_active {
 				display: block;
@@ -1792,9 +1793,9 @@
 			}
 
 			&.inside {
-				>.buttons_container {
-					left: calc(100% - 1.5rem);
-				}
+				// >.buttons_container {
+				// 	left: calc(100% - 1.5rem);
+				// }
 			}
 
 		}//end &.active
@@ -1886,39 +1887,48 @@
 				background-color: @color_orange_dedalo;
 				display: none;
 				flex: 0 1 1em;
-				padding: 0; // 0.15em;
-				padding-top: 0.5em;
+				// padding: 0; // 0.15em;
+				// padding-top: 0.5em;
 				position: absolute;
-				top: 0;
-				width: 2em;
-				min-height: 100%;
-				left: 100%;
+				// top: 0;
+				// width: 2em;
+				// min-height: 100%;
+				// left: 100%;
 				z-index: 1;
-				box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
+				// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
+				// border-top-right-radius: 0.25em;
+				// border-bottom-right-radius: 0.25em;
+
+				// background: linear-gradient(90deg, rgba(251,148,44,1) 0%, rgba(247,138,28,1) 100%);
+				// top: -1px;
+				// min-height: calc(100% + 2px);
+				// box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
+
+				right: 0px;
+				width: auto;
+				padding: 0.5rem;
+				padding-bottom: 0px;
+				top: -1.95rem;
+				border-top-left-radius: 0.25em;
 				border-top-right-radius: 0.25em;
-				border-bottom-right-radius: 0.25em;
 
-				background: linear-gradient(90deg, rgba(251,148,44,1) 0%, rgba(247,138,28,1) 100%);
-				top: -1px;
-				min-height: calc(100% + 2px);
-				box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
 
-				&.left {
-					left: -2rem;
-					box-shadow: -2px 0 5px 0 rgb(38 38 38 / 30%);
-					border-radius: unset;
-					border-top-left-radius: 0.25em;
-					border-bottom-left-radius: 0.25em;
-				}
+				// &.left {
+				// 	left: -2rem;
+				// 	box-shadow: -2px 0 5px 0 rgb(38 38 38 / 30%);
+				// 	border-radius: unset;
+				// 	border-top-left-radius: 0.25em;
+				// 	border-bottom-left-radius: 0.25em;
+				// }
 
 				.buttons_fold {
-					position: -webkit-sticky;
-					position: sticky;
-					margin: 0;
-					top: 68px;
-					@media screen and (max-width: @width_break_point_1) {
-						top: 0.5rem;
-					}
+					// position: -webkit-sticky;
+					// position: sticky;
+					// margin: 0;
+					// top: 68px;
+					// @media screen and (max-width: @width_break_point_1) {
+					// 	top: 0.5rem;
+					// }
 				}
 
 				// buttons inside
