@@ -436,7 +436,7 @@ component_common.prototype.save = async function(changed_data) {
 	// remove previous success/error css class if exists
 		self.node.map(item => {
 			item.classList.remove('error','save_success')
-			item.classList.add('loading')
+			// item.classList.add('loading')
 		})
 
 	// send_data
@@ -495,9 +495,9 @@ component_common.prototype.save = async function(changed_data) {
 	// check result for errors
 		save_promise.then(async function(response){
 
-			self.node.map(item => {
-				item.classList.remove('loading')
-			})
+			// self.node.map(item => {
+			// 	item.classList.remove('loading')
+			// })
 
 			// result expected is current section_id. False is returned if a problem found
 			const result = response.result
