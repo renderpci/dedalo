@@ -680,14 +680,16 @@ render_search.prototype.build_search_component = async function(parent_div, path
 			parent			: search_component,
 			class_name		: "button close"
 		})
-		search_component_button_close.addEventListener("click",function(e){
+		search_component_button_close.addEventListener("click", function(){
 			// remove search box and content (component) from dom
 			search_component.parentNode.removeChild(search_component)
 			// delete the instance from search ar_instances
 			const delete_instance_index = self.ar_instances.findIndex( instance => instance.id===component_instance.id )
 			self.ar_instances.splice(delete_instance_index, 1)
 			// destroy component instance
-			component_instance.destroy(true);
+			component_instance.destroy(
+				true // delete_self
+			)
 			// Set as changed
 			self.update_state({state:'changed'})
 		})
