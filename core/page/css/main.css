@@ -6231,32 +6231,14 @@ dd-modal::part(header) {
 .section.list > .buttons > button {
   margin-bottom: 0.25rem;
 }
-.section.list > .buttons > .button {
-  background-color: #f78a1c;
-  color: #ffffff;
-  display: inherit;
-  width: auto;
-  height: auto;
-  padding: 1em;
-  padding-top: 0;
-  padding-bottom: 0;
-  border-radius: 0.25em;
-  margin: 0.25em;
-}
-.section.list > .buttons > .button > .button {
+.section.list > .buttons > button > .button {
   margin-left: 0;
-}
-.section.list > .buttons > .button:hover {
-  color: #000000;
-}
-.section.list > .buttons > .button:active {
-  color: #ffffff;
 }
 .section.list > .search_container {
   background-color: #b0feee;
   width: 100%;
 }
-.section.list > .paginator {
+.section.list > .paginator_container {
   min-height: 2.8rem;
 }
 .section.list > .list_body > .content_data {
