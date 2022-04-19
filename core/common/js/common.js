@@ -335,7 +335,12 @@ common.prototype.refresh = async function(options={}) {
 	// destroy dependencies only
 		if (self.status==='rendered') {
 			// destroy params: (delete_self=true, delete_dependencies=false, remove_dom=false)
-			const destroyed = await self.destroy(false, true)
+			const destroyed = await self.destroy(
+				false, // delete_self
+				true, // delete_dependencies
+				false // remove_dom
+			)
+
 		}else{
 			console.warn("/// destroyed fail (expected status 'rendered') with actual status:", self.model, self.status);
 			return false
@@ -442,7 +447,11 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 						// destroy instance
 							if (typeof destroyed_elements[0].destroy==='function') {
-								destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+								destroyed_elements[0].destroy(
+									true, // delete_self
+									true, // delete_dependencies
+									false // remove_dom
+								) // No wait here, only launch destroy order
 							}else{
 								console.warn("Ignored destroyed_elements[0] without property 'destroy':", self, destroyed_elements[0]);
 								console.warn("self.ar_instances:",self.ar_instances);
@@ -471,7 +480,11 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 				// delete paginator
 					if(self.paginator){
-						self.paginator.destroy(true, true, false)
+						self.paginator.destroy(
+							true, // delete_self
+							true, // delete_dependencies
+							false // remove_dom
+						)
 						delete self.paginator
 					}
 
@@ -481,7 +494,11 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 						for (let i = services_length - 1; i >= 0; i--) {
 							console.log("removed services:", i, services_length);
 							if (typeof self.services[i].destroy==='function') {
-								self.services[i].destroy(true, true, false)
+								self.services[i].destroy(
+									true, // delete_self
+									true, // delete_dependencies
+									false // remove_dom
+								)
 							}
 							delete self.services[i]
 						}
@@ -489,13 +506,21 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 				// self.inspector destroy if exists
 					if (self.inspector) {
-						self.inspector.destroy(true, true, false)
+						self.inspector.destroy(
+							true, // delete_self
+							true, // delete_dependencies
+							false // remove_dom
+						)
 						delete self.inspector
 					}
 
 				// self.filter destroy if exists
 					if (self.filter) {
-						self.filter.destroy(true, true, false)
+						self.filter.destroy(
+							true, // delete_self
+							true, // delete_dependencies
+							false // remove_dom
+						)
 						delete self.filter
 					}
 
