@@ -244,11 +244,10 @@ render_list_section.render_column_id = function(options){
 	const fragment = new DocumentFragment()
 
 	// section_id
-		ui.create_dom_element({
+		const section_id_node = ui.create_dom_element({
 			element_type	: 'span',
 			text_content	: section_id,
 			class_name		: 'section_id',
-			parent			: fragment
 		})
 
 	// buttons
@@ -256,6 +255,7 @@ render_list_section.render_column_id = function(options){
 
 			case (self.initiator && self.initiator.indexOf('component_')!==-1):
 
+				fragment.appendChild(section_id_node)
 				// component portal caller (link)
 					const link_button = ui.create_dom_element({
 						element_type	: 'span',
@@ -367,6 +367,7 @@ render_list_section.render_column_id = function(options){
 				break
 
 			case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
+				fragment.appendChild(section_id_node)
 				// button time machine preview (eye)
 					const edit_button_tm = ui.create_dom_element({
 						element_type	: 'span',
@@ -386,7 +387,7 @@ render_list_section.render_column_id = function(options){
 				break
 
 			case (self.config && self.config.source_model==='section_tool'):
-
+				fragment.appendChild(section_id_node)
 				// edit button (pen)
 					if (self.permissions>1) {
 						const edit_button = ui.create_dom_element({
@@ -423,12 +424,18 @@ render_list_section.render_column_id = function(options){
 
 				// edit button (pen)
 					if (self.permissions>1) {
-						const edit_button = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button edit',
+						const button_edit = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'button_edit',
 							parent			: fragment
 						})
-						edit_button.addEventListener("click", function(){
+						button_edit.appendChild(section_id_node)
+							const edit_icon = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button edit icon',
+								parent			: button_edit
+							})
+						button_edit.addEventListener("click", function(){
 							const user_navigation_rqo = {
 								caller_id	: self.id,
 								source		: {
@@ -456,10 +463,15 @@ render_list_section.render_column_id = function(options){
 						: null
 					if (button_delete) {
 						const delete_button = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button remove',
+							element_type	: 'button',
+							class_name		: 'button_delete',
 							parent			: fragment
 						})
+							const delete_icon = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button delete icon',
+								parent			: delete_button
+							})
 						delete_button.addEventListener("click", function(){
 							delete_record(this, options)
 						})
