@@ -168,8 +168,13 @@ common.prototype.render = async function (options={}) {
 			case 'rendered':
 				// if render mode is equal than current already rendered node, return node 0
 				if (self.render_level===render_level) {
-					console.warn(`Render unexpected status. Returning already rendered node 0. Expected status is 'builded' current is:`, clone(self.status), render_level, self.model, self.id);
-					return self.node[0]
+					if (self.node[0]) {
+						console.warn(`Render unexpected status. Returning already rendered node 0. Expected status is 'builded' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
+						return self.node[0]
+					}else{
+						console.warn(`Render unexpected status. Node already rendered node not found but status is rendered:`, self.node, self.id);
+					}
+					// return self.node[0]
 				}
 				break;
 
@@ -208,35 +213,43 @@ common.prototype.render = async function (options={}) {
 			render_level : render_level
 		})
 
+
 	// status update
 		self.status = 'rendered'
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
-
+			// console.warn("///////////////////// render_level:",render_level, self.id);
 			// render_level
 			switch(render_level) {
 
 				case 'content':
 					// replace content_data node in each element dom node
 
-					// bool_select_list_body. Check if DOM structure contains list_body (sections and portals in table mode)
-						const wrapper_children		= self.node[0] ? self.node[0].children : [];
-						const bool_select_list_body	= [...wrapper_children].find(el => el.classList.contains('list_body'))
+					// dom_select_list_body. Check if DOM structure contains list_body (sections and portals in table mode)
+						// const wrapper_children		= self.node[0] ? self.node[0].children : [];
+						// const dom_select_list_body	= await [...wrapper_children].find(el => el.classList.contains('list_body'))
+						// console.log("---- dom_select_list_body:",dom_select_list_body);
 
 					// replace each instance node
 						const nodes_length = self.node.length
 						for (let i = nodes_length - 1; i >= 0; i--) {
+						// for (let i = 0; i < nodes_length; i++) {
 
 							const wrapper = self.node[i]
+							// console.log("result_node wrapper:", i, wrapper, wrapper);
+
+							const wrapper_children		= wrapper ? wrapper.children : [];
+							const dom_select_list_body	= await [...wrapper_children].find(el => el.classList.contains('list_body'))
 
 							// old content_data node
-								const old_content_data_node = await bool_select_list_body
-									? wrapper.querySelector(":scope >.list_body >.content_data")
+								const old_content_data_node = typeof dom_select_list_body!=='undefined'
+									// ? wrapper.querySelector(":scope >.list_body >.content_data")
+									? dom_select_list_body.querySelector(":scope >.content_data")
 									: wrapper.querySelector(":scope >.content_data")
 								// warning if not found
-									if (typeof old_content_data_node==="undefined" || !old_content_data_node) {
-										console.warn("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
+									if (typeof old_content_data_node==='undefined' || !old_content_data_node) {
+										console.error("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
 									}
 								// console.log("typeof old_content_data_node:",typeof old_content_data_node, old_content_data_node);
 								// console.log("-----------------old_node:", old_content_data_node, self.model);
@@ -247,11 +260,11 @@ common.prototype.render = async function (options={}) {
 								// component node like text_area in a time machine refresh scenario
 								const new_content_data_node = (i===0)
 									? node // use already calculated node
-									: await self[render_mode]({render_level : render_level});
+									: await self[render_mode]({render_level : render_level}); // content
 
 							// replace child from parent wrapper
-								const base_container = await bool_select_list_body
-									? wrapper.querySelector(":scope >.list_body")
+								const base_container = typeof dom_select_list_body!=='undefined'
+									? dom_select_list_body // wrapper.querySelector(":scope >.list_body")
 									: wrapper
 
 								if (!base_container.contains( old_content_data_node )) {
@@ -437,13 +450,20 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 				// remove instances from self ar_instances
 					for (let i = ar_instances_length - 1; i >= 0; i--) {
 
+						// prevent destroy non destroyable instances (menu, etc.)
+							const current_instance = self.ar_instances[i]
+							if(typeof current_instance.destroyable!=='undefined' && current_instance.destroyable===false){
+								continue;
+							}
+
 						// remove from current element array of instances
 							const destroyed_elements = self.ar_instances.splice(i, 1)
 
 						// prevent destroy non destroyable instances (menu, etc.)
-							if(destroyed_elements[0] && destroyed_elements[0].destroyable===false){
-								continue;
-							}
+							// if(destroyed_elements[0] && destroyed_elements[0].destroyable===false){
+							// 	continue;
+							// }
+
 
 						// destroy instance
 							if (typeof destroyed_elements[0].destroy==='function') {

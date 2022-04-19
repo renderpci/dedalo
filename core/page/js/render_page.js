@@ -7,6 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {instantiate_page_element} from './page.js'
+	import {clone} from '../../common/js/utils/index.js'
 
 
 
@@ -128,16 +129,25 @@ const get_content_data = async function(self) {
 
 				const current_ddo = self.context[i]
 
-				// placer
-					const placer = ui.create_dom_element({
+				// menu case. Prevent to render again on refresh page
+					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_ddo.model)
+					if (non_destroyable_instance) {
+						content_data.appendChild(non_destroyable_instance.node[0])
+						continue;
+					}
+
+				// container
+					const container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'placer ' + current_ddo.model,
+						class_name		: 'container ' + current_ddo.model,
 						// inner_html	: 'Loading '+ current_ddo.model,
 						parent			: content_data
 					})
 
 				instantiate_page_element(self, current_ddo)
-				.then(function(current_instance){
+				.then(function(current_instance) {
+
+					self.ar_instances.push(current_instance)
 
 					// build (load data)
 					const autoload = true // current_instance.status==="initiated" // avoid reload menu data
@@ -146,7 +156,7 @@ const get_content_data = async function(self) {
 						// resolve(current_instance)
 						current_instance.render()
 						.then(function(node){
-							placer.replaceWith(node);
+							container.replaceWith(node);
 						})
 					})
 				})
@@ -170,19 +180,19 @@ const get_content_data = async function(self) {
 * RENDER_MENU
 * @return DOM node render_menu
 */
-const render_menu = async function(self) {
+	// const render_menu = async function(self) {
 
-	const menu_instance = self.ar_instances.find( instance => instance.model==='menu' )
-	if(menu_instance){
+	// 	const menu_instance = self.ar_instances.find( instance => instance.model==='menu' )
+	// 	if(menu_instance){
 
-		const menu_item = menu_instance.render({
-			render_level : 'full'
-		})
-		return menu_item
-	}
+	// 		const menu_item = menu_instance.render({
+	// 			render_level : 'full'
+	// 		})
+	// 		return menu_item
+	// 	}
 
-	return null
-};//end render_menu
+	// 	return null
+	// };//end render_menu
 
 
 
