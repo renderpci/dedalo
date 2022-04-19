@@ -38,7 +38,7 @@ export const set_element_css = function(key, value) {
 
 	// already exits check
 		if (root_css[key]!==undefined) {
-			console.log("Ignored key (set_element_css):", key, value);
+			// console.log("Ignored key (set_element_css):", key, value);
 			return false
 		}
 
