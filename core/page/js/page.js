@@ -87,8 +87,8 @@ page.prototype.init = async function(options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
 				// options
-					const source				= user_navigation_options.source
-					const sqo					= user_navigation_options.sqo || null
+					const source			= user_navigation_options.source
+					const sqo				= user_navigation_options.sqo || null
 					const event_in_history	= user_navigation_options.event_in_history || false
 
 				// check valid vars
@@ -120,9 +120,10 @@ page.prototype.init = async function(options) {
 							}]
 							source.request_config = request_config
 
+						const new_page_element_instance = await instantiate_page_element(self, source)
+
 						// check only if new source of page element is actually valid for instantiation
 						// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
-							const new_page_element_instance = await instantiate_page_element(self, source)
 							if (!new_page_element_instance) {
 								console.error("error on get new_page_element_instance:", new_page_element_instance);
 								// loading css remove
@@ -381,7 +382,6 @@ export const instantiate_page_element = function(self, ddo) {
 
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
-
 
 	return instance_promise
 };//end instantiate_page_element
