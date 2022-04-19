@@ -87,8 +87,8 @@ page.prototype.init = async function(options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
 				// options
-					const source				= user_navigation_options.source
-					const sqo					= user_navigation_options.sqo || null
+					const source			= user_navigation_options.source
+					const sqo				= user_navigation_options.sqo || null
 					const event_in_history	= user_navigation_options.event_in_history || false
 
 				// check valid vars
@@ -116,13 +116,27 @@ page.prototype.init = async function(options) {
 							// to allow sections and components manage properly the offset and limit
 							const request_config	= [{
 								api_engine	: 'dedalo',
-								sqo			: sqo,
+								sqo			: sqo
 							}]
 							source.request_config = request_config
 
+						// destroy previous page instances
+							// await self.ar_instances.map(async function(el){
+							// 	if (el.model!=='menu') {
+							// 		// console.log("destroying el:", el);
+							// 		await el.destroy(
+							// 			true, // delete_self
+							// 			true, // delete_dependencies
+							// 			true // remove_dom
+							// 		)
+							// 	}
+							// })
+
+						// new_page_element_instance. Like 'section'
+							const new_page_element_instance = await instantiate_page_element(self, source)
+
 						// check only if new source of page element is actually valid for instantiation
 						// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
-							const new_page_element_instance = await instantiate_page_element(self, source)
 							if (!new_page_element_instance) {
 								console.error("error on get new_page_element_instance:", new_page_element_instance);
 								// loading css remove
@@ -303,40 +317,40 @@ page.prototype.build = async function() {
 * @return promise array self.ar_instances
 * 	Array of instance objects (like menu, section, area..)
 */
-page.prototype.get_ar_instances = async function(){
+	// page.prototype.get_ar_instances = async function(){
 
-	const self = this
+	// 	const self = this
 
-	// instances
-		const ar_promises = []
+	// 	// instances
+	// 		const ar_promises = []
 
-		const context_length = self.context.length
-		for (let i = 0; i < context_length; i++) {
+	// 		const context_length = self.context.length
+	// 		for (let i = 0; i < context_length; i++) {
 
-			const current_ddo = self.context[i]
-			ar_promises.push( new Promise(function(resolve){
+	// 			const current_ddo = self.context[i]
+	// 			ar_promises.push( new Promise(function(resolve){
 
-				instantiate_page_element(self, current_ddo)
-				.then(function(current_instance){
+	// 				instantiate_page_element(self, current_ddo)
+	// 				.then(function(current_instance){
 
-					// build (load data)
-					const autoload = current_instance.status==="initiated" // avoid reload menu data
-					current_instance.build(autoload)
-					.then(function(){
-						resolve(current_instance)
-					})
-				})
-			}))
-		}//end for (let i = 0; i < elements_length; i++)
+	// 					// build (load data)
+	// 					const autoload = current_instance.status==="initiated" // avoid reload menu data
+	// 					current_instance.build(autoload)
+	// 					.then(function(){
+	// 						resolve(current_instance)
+	// 					})
+	// 				})
+	// 			}))
+	// 		}//end for (let i = 0; i < elements_length; i++)
 
-	// set on finish
-		await Promise.all(ar_promises).then((ar_instances) => {
-			self.ar_instances = ar_instances
-		})
-		console.log("page self.ar_instances:",self.ar_instances);
+	// 	// set on finish
+	// 		await Promise.all(ar_promises).then((ar_instances) => {
+	// 			self.ar_instances = ar_instances
+	// 		})
+	// 		console.log("page self.ar_instances:",self.ar_instances);
 
-	return self.ar_instances
-};//end get_ar_instances
+	// 	return self.ar_instances
+	// };//end get_ar_instances
 
 
 

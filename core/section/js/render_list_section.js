@@ -135,6 +135,7 @@ render_list_section.prototype.list = async function(options) {
 		wrapper.appendChild(fragment)
 
 
+
 	return wrapper
 };//end list
 
@@ -443,6 +444,7 @@ render_list_section.render_column_id = function(options){
 									model			: 'section',
 									tipo			: section_tipo,
 									section_tipo	: section_tipo,
+									section_id		: section_id,
 									mode			: 'edit',
 									lang			: self.lang
 								},
