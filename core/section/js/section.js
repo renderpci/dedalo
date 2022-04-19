@@ -21,7 +21,7 @@
 
 /**
 * SECTION
-* 
+*
 */
 export const section = function() {
 
@@ -411,11 +411,12 @@ section.prototype.build = async function(autoload=false) {
 				caller	: self,
 				mode	: self.mode
 			})
-			// self.paginator.build()
 
 			// event paginator_goto_
-				// fn_paginator_goto
-				const fn_paginator_goto = async function(offset) {
+				self.events_tokens.push(
+					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+				)
+				async function fn_paginator_goto(offset) {
 					// loading
 						// const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
 						// const node		= self.node && self.node[0]
@@ -437,9 +438,6 @@ section.prototype.build = async function(autoload=false) {
 						// if (node) node.classList.remove('loading')
 						self.node_body.classList.remove('loading')
 				}
-				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
-				)
 		}//end if (!self.paginator)
 
 	// inspector
