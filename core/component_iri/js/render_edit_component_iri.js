@@ -64,14 +64,14 @@ render_edit_component_iri.prototype.edit = async function(options) {
 const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
-		)
-		function update_value (changed_data) {
-			// change the value of the current dom element
-			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"][type="'+changed_data.type+'"]')
-		    changed_node.value = (changed_data.type==='text') ? changed_data.value.title : changed_data.value.iri
-		}
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('update_value_'+self.id, update_value)
+		// )
+		// function update_value (changed_data) {
+		// 	// change the value of the current dom element
+		// 	const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"][type="'+changed_data.type+'"]')
+		// 	changed_node.value = (changed_data.type==='text') ? changed_data.value.title : changed_data.value.iri
+		// }
 
 	// add element, subscription to the events
 		self.events_tokens.push(
