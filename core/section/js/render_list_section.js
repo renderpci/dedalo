@@ -425,38 +425,41 @@ render_list_section.render_column_id = function(options){
 
 				// edit button (pen)
 					if (self.permissions>1) {
-						const button_edit = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'button_edit',
-							parent			: fragment
-						})
-						button_edit.appendChild(section_id_node)
-							const edit_icon = ui.create_dom_element({
+						// button_edit
+							const button_edit = ui.create_dom_element({
+								element_type	: 'button',
+								class_name		: 'button_edit',
+								parent			: fragment
+							})
+							button_edit.appendChild(section_id_node)
+							button_edit.addEventListener("click", function(){
+								const user_navigation_rqo = {
+									caller_id	: self.id,
+									source		: {
+										action			: 'search',
+										model			: 'section',
+										tipo			: section_tipo,
+										section_tipo	: section_tipo,
+										section_id		: section_id,
+										mode			: 'edit',
+										lang			: self.lang
+									},
+									sqo : {
+										section_tipo	: [{tipo : section_tipo}],
+										limit			: 1,
+										offset			: offset,
+										filter			: self.rqo.sqo.filter || null
+									}
+								}
+								event_manager.publish('user_navigation', user_navigation_rqo)
+							})
+
+						// edit_icon
+							ui.create_dom_element({
 								element_type	: 'span',
 								class_name		: 'button edit icon',
 								parent			: button_edit
 							})
-						button_edit.addEventListener("click", function(){
-							const user_navigation_rqo = {
-								caller_id	: self.id,
-								source		: {
-									action			: 'search',
-									model			: 'section',
-									tipo			: section_tipo,
-									section_tipo	: section_tipo,
-									section_id		: section_id,
-									mode			: 'edit',
-									lang			: self.lang
-								},
-								sqo : {
-									section_tipo	: [{tipo : section_tipo}],
-									limit			: 1,
-									offset			: offset,
-									filter			: self.rqo.sqo.filter || null
-								}
-							}
-							event_manager.publish('user_navigation', user_navigation_rqo)
-						})
 					}
 
 				// remove button
@@ -464,19 +467,21 @@ render_list_section.render_column_id = function(options){
 						? self.context.buttons.find(el => el.model==='button_delete')
 						: null
 					if (button_delete) {
-						const delete_button = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'button_delete',
-							parent			: fragment
-						})
-							const delete_icon = ui.create_dom_element({
+						// delete_button
+							const delete_button = ui.create_dom_element({
+								element_type	: 'button',
+								class_name		: 'button_delete',
+								parent			: fragment
+							})
+							delete_button.addEventListener("click", function(){
+								delete_record(this, options)
+							})
+						// delete_icon
+							ui.create_dom_element({
 								element_type	: 'span',
 								class_name		: 'button delete icon',
 								parent			: delete_button
 							})
-						delete_button.addEventListener("click", function(){
-							delete_record(this, options)
-						})
 					}
 				break;
 		}
