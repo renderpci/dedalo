@@ -254,8 +254,10 @@ component_portal.prototype.build = async function(autoload=false) {
 				if (self.data.pagination && !self.total) {
 					self.total			= self.data.pagination.total
 					self.rqo.sqo.offset	= self.data.pagination.offset
-					// set value
-					current_data_manager.set_local_db_data(self.rqo, 'rqo')
+
+					// set_local_db_data updated rqo
+						// const rqo = self.rqo
+						// current_data_manager.set_local_db_data(rqo, 'rqo')
 				}
 
 			// paginator
@@ -276,8 +278,9 @@ component_portal.prototype.build = async function(autoload=false) {
 
 						self.rqo.sqo.offset = offset
 
-						// set value
-						current_data_manager.set_local_db_data(self.rqo, 'rqo')
+						// set_local_db_data updated rqo
+							// const rqo = self.rqo
+							// current_data_manager.set_local_db_data(rqo, 'rqo')
 
 						self.refresh()
 					}//end fn_paginator_goto
@@ -528,9 +531,10 @@ component_portal.prototype.update_pagination_values = function(action) {
 				}
 		}
 
-	// set value
-		const current_data_manager = new data_manager()
-		current_data_manager.set_local_db_data(self.rqo, 'rqo')
+	// set_local_db_data updated rqo
+		// const current_data_manager = new data_manager()
+		// const rqo = self.rqo
+		// current_data_manager.set_local_db_data(rqo, 'rqo')
 
 
 	return true

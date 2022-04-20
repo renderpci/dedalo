@@ -1161,7 +1161,9 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 					}
 
 				if (to_save===true) {
-					current_data_manager.set_local_db_data(saved_rqo, 'rqo') // save updated object
+					// set_local_db_data updated rqo
+						const rqo = saved_rqo
+						current_data_manager.set_local_db_data(rqo, 'rqo')
 				}
 			}
 
@@ -1258,7 +1260,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		}
 
 
-	// local_db_data save
+	// set_local_db_data updated rqo
 		// current_data_manager.set_local_db_data(rqo, 'rqo')
 
 
