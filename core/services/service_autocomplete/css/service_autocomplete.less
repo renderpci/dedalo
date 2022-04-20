@@ -1,7 +1,8 @@
 // included in main.less
 
 
-	@service_bg_color : @color_grey_light;
+	// @service_bg_color : @color_grey_light;
+	@service_bg_color : @color_orange_dedalo;
 	// @service_bg_color : #f900ef;
 
 	.autocomplete_search_container {
@@ -10,15 +11,16 @@
 		border-bottom-left-radius: 5px;
 		border-bottom-right-radius: 5px;
 		// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
-		box-shadow: 4px 4px 5px 0px rgb(38 38 38 / 30%);
+		// box-shadow: 4px 4px 5px 0px rgb(38 38 38 / 30%);
+		box-shadow: -1px 1px 0 @color_orange_dedalo, inset -1px 1px 0 @color_orange_dedalo; // orange
 		color: #444444;
-		left: -1px;
+		left: 0px;
 		margin-left: 0px;
 		position: absolute;
 		top: 100%;
 		// width: calc(100% + 1px); // ~"calc(100% + 21px)";
-		// width: 100%;
-		width: calc(100% - 2rem);
+		width: 100%;
+		// width: calc(100% - 2rem);
 		min-width: 20rem;
 		z-index: 0;
 
@@ -49,7 +51,7 @@
 			}
 
 			>.filters_container {
-				margin-bottom: 0.25em;
+				// margin-bottom: 0.25em;
 			}
 
 			// filter_node. Box of checkboxes with all available sections
@@ -120,6 +122,11 @@
 			position: absolute;
 			right: 0px;
 			top: 0px;
+			background-color: white;
+		}
+
+		>.autocomplete_data {
+			background-color: @color_grey_light;
 		}
 
 		>input.autocomplete_input {
@@ -129,6 +136,7 @@
 			background-size: auto 60%;
 			margin: 0.5em;
 			width: calc(100% - 3.25em);
+			outline: 1px solid #ffffff;
 		}
 
 		>span.visible {
@@ -148,11 +156,13 @@
 				}
 
 				&.selected {
-					background-color: darken(@service_bg_color, 7%);
+					// background-color: darken(@service_bg_color, 7%);
+					background-color: #d7d7d7;
 				}
 
 				&:active {
 					background-color: darken(@service_bg_color, 14%);
+					// background-color: #d7d7d7;
 				}
 
 				>span {
