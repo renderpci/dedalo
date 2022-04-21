@@ -112,7 +112,8 @@ render_list_section.prototype.list = async function(options) {
 				'grid-template-columns': template_columns
 			}
 		}
-		set_element_css(self.section_tipo+'_'+self.tipo, css_object)
+		const selector = `${self.section_tipo}_${self.tipo}.list`
+		set_element_css(selector, css_object)
 
 
 	// list_header_node. Create and append if ar_instances is not empty
@@ -440,7 +441,7 @@ render_list_section.render_column_id = function(options){
 										model			: 'section',
 										tipo			: section_tipo,
 										section_tipo	: section_tipo,
-										section_id		: section_id,
+										// section_id	: section_id, // (!) enabling affect local db stored rqo's
 										mode			: 'edit',
 										lang			: self.lang
 									},
