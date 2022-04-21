@@ -106,7 +106,8 @@ render_edit_section.prototype.edit = async function(options) {
 
 	// css v6
 		if (self.context.css) {
-			set_element_css(self.section_tipo+'_'+self.tipo, self.context.css)
+			const selector = `${self.section_tipo}_${self.tipo}.edit`
+			set_element_css(selector, self.context.css)
 			// add_class
 				// sample
 				// "add_class": {
