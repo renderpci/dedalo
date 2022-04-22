@@ -443,6 +443,10 @@ abstract class process_result {
 
 						$response = web_data::get_fragment_from_index_locator($current_options);
 
+						if (empty($response->result)) {
+							error_log('empty get_fragment_from_index_locator response: '.json_encode($response, JSON_PRETTY_PRINT));
+						}
+
 						return $response->result;
 					}, $locators);
 
