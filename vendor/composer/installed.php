@@ -5,7 +5,7 @@
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'reference' => '8d29fa26602a2b328f9eea2253366a2d54d78f43',
+        'reference' => 'edbf7195399c45d1369830e5217c5873e154e678',
         'name' => 'dedalo/composer_libs',
         'dev' => true,
     ),
@@ -25,7 +25,7 @@
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
-            'reference' => '8d29fa26602a2b328f9eea2253366a2d54d78f43',
+            'reference' => 'edbf7195399c45d1369830e5217c5873e154e678',
             'dev_requirement' => false,
         ),
         'easyrdf/easyrdf' => array(
