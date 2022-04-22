@@ -2675,6 +2675,12 @@
 		Fixed error when component_input_text search's find only first value of their array value (Catalog Obulco case)
 		Fixed catch error on publication web_data where invalid SQL generated string was stop the execution. Now a error response is returned (besides an error log notification)
 		Add some resolution cases for diffusion RDF
+		Fixed Ontology dd_edit small issues
+		Fixed error where method process_result->resolve_indexation_fragments was not mandatory static
+		Fixed rows_activity error on some wrong value context
+		Re-added maxmind-db files
+		Added resolve_indexation_fragments error control log when result is empty
+		Fixed diffusion value issues with empty values on PHP 8.1
 
 
 	[/HISTORY]
@@ -2706,7 +2712,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-04-2022T09:53:02');
+	define('DEDALO_BUILD'	, '22-04-2022T19:55:52');
 
 
 	/*
