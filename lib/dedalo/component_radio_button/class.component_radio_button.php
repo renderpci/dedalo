@@ -5,7 +5,7 @@
 *
 */
 class component_radio_button extends component_relation_common {
-	
+
 
 	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 
@@ -33,30 +33,30 @@ class component_radio_button extends component_relation_common {
 				}
 				return null;
 			}
-		}	
+		}
 
 		switch ($this->modo) {
 
-			case 'diffusion': 
-				
+			case 'diffusion':
+
 				$object_si = new stdClass();
 					$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
 					$object_si->section_tipo = (string)"dd64";
-				
+
 				if ($dato[0]===$object_si) {
 					$valor = 'si';
 				}else{
 					$valor = 'no';
 				}
 				break;
-			
+
 			default:
-				
+
 				# Always run list of values
-				$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual		
+				$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual
 				$valor = '';
 				foreach ($ar_list_of_values->result as $key => $item) {
-					
+
 					$locator = $item->value;
 
 					if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
@@ -64,9 +64,9 @@ class component_radio_button extends component_relation_common {
 						break;
 					}
 				}
-				break;				
+				break;
 		}#end switch
-		
+
 
 		return $valor;
 	}//end get_valor
@@ -81,7 +81,7 @@ class component_radio_button extends component_relation_common {
 	public function get_valor_lang(){
 
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
+
 		#dump($relacionados,'$relacionados');
 		if(empty($relacionados)){
 			return $this->lang;
@@ -124,13 +124,13 @@ class component_radio_button extends component_relation_common {
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
-		
+
 		# Use already query calculated values for speed
 		$ar_records   = (array)json_handler::decode($value);
 		$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 
-		return  $component->get_valor($lang);		
+		return  $component->get_valor($lang);
 	}//end render_list_value */
 
 
@@ -150,7 +150,7 @@ class component_radio_button extends component_relation_common {
 	public function get_valor_list_html_to_save() {
 		$result = $this->get_dato_unchanged();
 
-		return $result;		
+		return $result;
 	}//end get_valor_list_html_to_save
 
 
@@ -161,7 +161,7 @@ class component_radio_button extends component_relation_common {
 	* @return bool
 	*/
 	public static function get_order_by_locator() {
-		
+
 		return true;
 	}//end get_order_by_locator
 
@@ -177,15 +177,18 @@ class component_radio_button extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-	
+
 		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = strip_tags($diffusion_value);
+
+		// strip_tags
+			if (!empty($diffusion_value)) {
+				$diffusion_value = strip_tags($diffusion_value);
+			}
+
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
 
 
 
-
-}//end class
-?>
+}//end class component_radio_button

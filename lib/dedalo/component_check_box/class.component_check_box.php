@@ -23,7 +23,7 @@ class component_check_box extends component_relation_common {
 		if (empty($dato)) {
 			return null;
 		}
-		
+
 		# Test dato format (b4 changed to object)
 		foreach ($dato as $key => $value) {
 			if (!is_object($value)) {
@@ -34,11 +34,11 @@ class component_check_box extends component_relation_common {
 				return null;
 			}
 		}
-		
-		$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual		
+
+		$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual
 		$ar_values = [];
 		foreach ($ar_list_of_values->result as $key => $item) {
-			
+
 			$locator = $item->value;
 
 			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
@@ -48,7 +48,7 @@ class component_check_box extends component_relation_common {
 		# Set value
 		$valor = implode(', ', $ar_values);
 
-		return $valor;		
+		return $valor;
 	}//end get_valor
 
 
@@ -61,7 +61,7 @@ class component_check_box extends component_relation_common {
 	public function get_valor_lang(){
 
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
+
 		#dump($relacionados,'$relacionados');
 		if(empty($relacionados)){
 			return $this->lang;
@@ -103,17 +103,17 @@ class component_check_box extends component_relation_common {
 	* @return string $list_value
 	*//*
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
+
 		$component = component_common::get_instance(__CLASS__,
 													$tipo,
 													$parent,
 													'list',
 													DEDALO_DATA_NOLAN,
 													$section_tipo);
-		
+
 		$ar_val = json_decode($value);
 		$component->set_dato($ar_val);
-	
+
 		return $component->get_valor();
 	}#end render_list_value */
 
@@ -134,7 +134,7 @@ class component_check_box extends component_relation_common {
 	public function get_valor_list_html_to_save() {
 		$result = $this->get_dato_unchanged();
 
-		return $result;		
+		return $result;
 	}//end get_valor_list_html_to_save
 
 
@@ -149,24 +149,28 @@ class component_check_box extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-	
-		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = strip_tags($diffusion_value);
+
+		$diffusion_value = $this->get_valor($lang) ?? '';
+		if (!empty($diffusion_value)) {
+			$diffusion_value = strip_tags($diffusion_value);
+		}
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
 
 
 
-	public function get_dataframe_value($type){
+	/**
+	* GET_DATAFRAME_VALUE
+	* @param string $type
+	*/
+	public function get_dataframe_value($type) {
 
-		$dataframe_value = RecordObj_dd::get_termino_by_tipo($type,DEDALO_APPLICATION_LANG, true);
+		$dataframe_value = RecordObj_dd::get_termino_by_tipo($type, DEDALO_APPLICATION_LANG, true);
 
 		return $dataframe_value;
-
-	}
-
+	}//end get_dataframe_value
 
 
-}
-?>
+
+}//end component_check_box

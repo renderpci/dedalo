@@ -735,8 +735,10 @@ class component_input_text extends component_common {
 		}
 
 
-		# strip_tags all values (remove untranslate mark elements)
-		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
+		// strip_tags all values (remove untranslate mark elements)
+			if (!empty($diffusion_value)) {
+				$diffusion_value = preg_replace("/<\/?mark>/", '', $diffusion_value);
+			}
 
 
 		return (string)$diffusion_value;

@@ -108,7 +108,7 @@ class component_text_area extends component_common {
 	* GET DATO
 	*/
 	public function get_dato() {
-		
+
 		$dato = parent::get_dato();
 
 		# Compatibility old dedalo3 installations
@@ -131,7 +131,7 @@ class component_text_area extends component_common {
 	/**
 	* SET_DATO
 	*/
-	public function set_dato($dato) {		
+	public function set_dato($dato) {
 
 		# Change &nbsp; for space . Optimizes chars time calculations
 		#$dato = str_replace('&nbsp;', " ", $dato);
@@ -1558,7 +1558,10 @@ class component_text_area extends component_common {
 		$diffusion_value = $this->get_dato();  # Important: use raw text (!)
 
 		// Decode entities
-			$diffusion_value = html_entity_decode($diffusion_value);
+			if (!empty($diffusion_value)) {
+				$diffusion_value = html_entity_decode($diffusion_value);
+			}
+
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
@@ -2348,7 +2351,7 @@ class component_text_area extends component_common {
 	    	}
 	    }//end foreach ((array)$result as $key => $value)
 
-		
+
 		return $ar_elements;
 	}//end build_geolocation_data
 
@@ -2398,7 +2401,7 @@ class component_text_area extends component_common {
 					// 	$new_query_json->$logical_operator = [$query_object, $clone];
 					// # override
 					// $query_object = $new_query_json ;
-				
+
 				$operator = 'IS NULL';
 				$q_clean  = '';
 				$query_object->operator	= $operator;
@@ -2466,7 +2469,7 @@ class component_text_area extends component_common {
 				# override
 				$query_object = $new_query_json;
 				break;
-			
+
 			# IS NOT NULL
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
@@ -2501,12 +2504,12 @@ class component_text_area extends component_common {
 						$clone->operator	= '!=';
 						$clone->q_parsed	= '\'\'';
 						$clone->lang		= $lang;
-					$new_query_json->$logical_operator[] = $clone;					
+					$new_query_json->$logical_operator[] = $clone;
 
 				# override
 				$query_object = $new_query_json ;
 				break;
-			
+
 			# IS DIFFERENT
 			case (strpos($q, '!=')===0):
 				$operator = '!=';
