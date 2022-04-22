@@ -1,37 +1,37 @@
 <?php
-	
-	# VISUALIZADOR HTML	
 
-	
-	#print '<!-- ROWS ACTIVITY [$id] -->';		
-	
+	# VISUALIZADOR HTML
+
+
+	#print '<!-- ROWS ACTIVITY [$id] -->';
+
 
 	# CONTENIDO (INPUT)
-	$html_contenido  = '<tr>';	
-	
+	$html_contenido  = '<tr>';
+
 	switch(true) {
-			
+
 		case ($permissions===0) :
 				$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 				break;
-		
+
 		case ($permissions>=1):
 
 				/*
-				if( !is_array($ar_valor) || count($ar_valor)==0 ) {						
+				if( !is_array($ar_valor) || count($ar_valor)==0 ) {
 					$html_contenido .= "<td class=\"section_list_td_border\">";
 					#$html_contenido .= "No records found.. ";
 					$html_contenido .= "</td>";
 					break;
 				}*/
-					
+
 				# TD ID
 				$title=null;
 				if(SHOW_DEBUG===true) $title .= "table id: $id ";
-				$html_contenido .= '<td class="section_list_td_border section_list_td_row">';					
-											
+				$html_contenido .= '<td class="section_list_td_border section_list_td_row">';
+
 					# ID TEXT
-					$html_contenido .= $section_id.' ';								
+					$html_contenido .= $section_id.' ';
 
 					if(SHOW_DEBUG===true) {
 						#$html_contenido .= '<br>'.$section_id.' ';
@@ -40,12 +40,12 @@
 
 				$html_contenido .= '</td>';
 
-				
+
 
 				# TD DATOS
 				# dump($ar_valor, ' $ar_valor ++ '.to_string());
 				foreach($ar_valor as $component_tipo => $valor) {
-					
+
 					$td_aditional_class = 'td_'.$component_tipo;
 
 					$html_contenido .= '<td class="section_list_td_border section_list_td_row '.$td_aditional_class.'">';
@@ -61,10 +61,10 @@
 					static $_COMPONENT_PROYECTOS= array('tipo'=>'dd550','modelo_name'=>'component_filter');
 					static $_COMPONENT_DATOS 	= array('tipo'=>'dd551','modelo_name'=>'component_input_text');
 					*/
-					
+
 					#$html_contenido .= $current_component;
 					switch ($component_tipo) {
-						
+
 						# IP TD
 						case (logger_backend_activity::$_COMPONENT_IP['tipo']):
 							#$html_contenido .= $valor;
@@ -75,7 +75,7 @@
 							}
 							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
 							break;
-						
+
 						# WHO TD
 						case (logger_backend_activity::$_COMPONENT_QUIEN['tipo']):
 							$html_contenido .= $valor;
@@ -90,7 +90,7 @@
 							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
 							*/
 							break;
-						
+
 						# WHAT TD
 						case (logger_backend_activity::$_COMPONENT_QUE['tipo']):
 							#$html_contenido .= $valor;
@@ -100,8 +100,8 @@
 								$ar_component_resolved[$component_tipo][$valor] = RecordObj_dd::get_termino_by_tipo($valor, DEDALO_DATA_LANG,$section_tipo);
 
 								# When 'what' is edition, add section_tipo and section_id for easy read
-								# dump( $ar_valor[logger_backend_activity::$_COMPONENT_QUE['tipo']] , ' $ar_valor[logger_backend_activity::$_COMPONENT_DATOS[tipo]]  ++ ');								
-								if ($ar_valor[logger_backend_activity::$_COMPONENT_QUE['tipo']]=='dd694') {									
+								# dump( $ar_valor[logger_backend_activity::$_COMPONENT_QUE['tipo']] , ' $ar_valor[logger_backend_activity::$_COMPONENT_DATOS[tipo]]  ++ ');
+								if ($ar_valor[logger_backend_activity::$_COMPONENT_QUE['tipo']]=='dd694') {
 									$current_datos = json_decode($ar_valor[logger_backend_activity::$_COMPONENT_DATOS['tipo']]);
 										#dump($current_datos, ' current_datos ++ '.to_string());
 									if(isset($current_datos->tipo) && isset($current_datos->id)) {
@@ -113,7 +113,7 @@
 							}
 							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
 							break;
-						
+
 						# WHERE TD
 						case (logger_backend_activity::$_COMPONENT_DONDE['tipo']):
 							#$html_contenido .= $valor;
@@ -121,11 +121,11 @@
 								#$component = component_common::get_instance('component_input_text',$component_tipo,null,'list');
 								#$valor_final = $component->get_dato(); 	dump($valor_final," valor_final");
 								#$ar_component_resolved[$component_tipo][$valor] = $component->get_html();
-								$ar_component_resolved[$component_tipo][$valor] = RecordObj_dd::get_termino_by_tipo($valor, DEDALO_DATA_LANG);																
+								$ar_component_resolved[$component_tipo][$valor] = RecordObj_dd::get_termino_by_tipo($valor, DEDALO_DATA_LANG);
 							}
 							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
 							break;
-						
+
 						# WHEN TD
 						case (logger_backend_activity::$_COMPONENT_CUANDO['tipo']):
 							#$date = dd_date::get_date_with_format( $valor, $format="d-m-Y H:i:s" );	//Y-m-d H:i:s
@@ -147,25 +147,24 @@
 							if (array_key_exists('msg', $ar_dato_valors)) {
 								$ar_dato_valors = array('msg' => $ar_dato_valors['msg']) + $ar_dato_valors;
 							}
-							
+
 
 							$html_contenido .='<div class="datos_activity" onclick="toogle_height(this,\'1.2em\')">';
 							foreach ($ar_dato_valors as $datos_key => $datos_value) {
-								$html_contenido .= "$datos_key: $datos_value<br>";
-								#echo "$key - $value<br>";
+								$html_contenido .= $datos_key .':'. to_string($datos_value).'<br>';
 							}
-							$html_contenido .='</div>';							
+							$html_contenido .='</div>';
 							break;
-						
+
 						# PROJECTS TD
 						case (logger_backend_activity::$_COMPONENT_PROYECTOS['tipo']):
 							$html_contenido .='<div class="datos_activity" onclick="toogle_height(this,\'1.2em\')">';
 							$html_contenido .= $valor;
 							$html_contenido .='</div>';
-							/*					
-							$dato = (object)json_handler::decode($valor);						
+							/*
+							$dato = (object)json_handler::decode($valor);
 								#dump($valor,"valor");
-							if (!isset($ar_component_resolved[$component_tipo][$valor])) {								
+							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
 								$component = component_common::get_instance('component_filter',$component_tipo,null,'list',DEDALO_DATA_LANG,$section_tipo);
 								$component->set_dato($dato);
 								$ar_component_resolved[$component_tipo][$valor] = $component->get_html();
@@ -173,21 +172,21 @@
 							}
 							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
 							*/
-							break;					
-						default:
-							$html_contenido .= $valor ; 
 							break;
-					}					
+						default:
+							$html_contenido .= $valor ;
+							break;
+					}
 					$html_contenido .= '</td>';
 				}
 
 
-					
+
 	}
 	$html_contenido .= '</tr>';
-	
+
 	# PRINT HTML
 	print $html_contenido;
-	
+
 
 ?>
