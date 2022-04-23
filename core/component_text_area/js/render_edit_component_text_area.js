@@ -347,8 +347,8 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 			// editor_config
 				const editor_config = {
-					plugins			: ["paste","image","print","searchreplace","code","fullscreen","noneditable"],
-					toolbar			: "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save",
+					plugins			: ['paste','image','print','searchreplace','code','noneditable'], // ,'fullscreen'
+					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | button_geo button_save', // fullscreen
 					custom_buttons	: get_custom_buttons(self, i, current_service),
 					custom_events	: get_custom_events(self, i, current_service)
 				}
