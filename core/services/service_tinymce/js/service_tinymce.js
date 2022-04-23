@@ -474,6 +474,4 @@ export const service_tinymce = function() {
 
 
 
-};//end service_tinymce
-
-
+}//end service_tinymce
