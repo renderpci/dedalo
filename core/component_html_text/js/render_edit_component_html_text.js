@@ -278,13 +278,13 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			const editor_config = {
 				plugins : [
 					"advlist autolink lists link image charmap print preview hr anchor pagebreak",
-					"searchreplace wordcount visualblocks visualchars code fullscreen",
+					"searchreplace wordcount visualblocks visualchars code",
 					"insertdatetime nonbreaking save table contextmenu directionality",
-					"emoticons template paste textcolor table"
+					"emoticons template paste textcolor table" // fullscreen
 				],
 				toolbar : [
 					"bold italic undo redo searchreplace | cut copy paste pastetext | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist outdent indent table",
-					"link image | fontsizeselect | print preview fullscreen | code | button_upload"
+					"link image | fontsizeselect | print preview | code | button_upload" // fullscreen
 				],
 				custom_buttons	: get_custom_buttons(self, i, current_service),
 				custom_events	: get_custom_events(self, i, current_service)
