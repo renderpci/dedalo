@@ -387,5 +387,3 @@ const get_input_element_edit = (i, current_value, self) => {
 
 	return li
 }//end input_element
-
-
