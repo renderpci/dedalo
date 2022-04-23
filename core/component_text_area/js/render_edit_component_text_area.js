@@ -320,7 +320,8 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 	// q operator (search only)
 		if(mode==='search'){
 			const q_operator = self.data.q_operator
-			const input_q_operator = ui.create_dom_element({
+			// input_q_operator
+			ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				value			: q_operator,

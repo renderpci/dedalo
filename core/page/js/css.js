@@ -1,4 +1,4 @@
-/*global get_label, SHOW_DEBUG */
+/* global, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -38,7 +38,7 @@ export const set_element_css = function(key, value) {
 
 	// already exits check
 		if (root_css[key]!==undefined) {
-			// console.log("Ignored key (set_element_css):", key, value);
+			// console.log("Ignored existing key (set_element_css):", key, value);
 			return false
 		}
 
