@@ -108,7 +108,7 @@ component_info.prototype.get_widgets = async function(){
 			}
 
 			// import widget js file
-				const widget_path = "../../widgets" + path  + "/js/" + widget_name + ".js"
+				const widget_path = DEDALO_CORE_URL + '/widgets' + path  + '/js/' + widget_name + '.js'
 
 			// sequential mode
 				// // import
