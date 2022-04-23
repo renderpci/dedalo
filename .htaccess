@@ -2,7 +2,6 @@
 
 # Directories are final path only, not between.
 <FilesMatch "(\.(inc|sh|txt|tpl|backup|composer\.(json|lock))$|^#.*#$|\.php(~|\.sw[op]|\.orig\.save)$|deleted|backup|config)">
-
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -11,6 +10,15 @@
   </IfModule>
 </FilesMatch>
 
+# Brower caching FileETag control
+<filesMatch ".(js|css)$">
+  # Set FileETag looking MTime and size to allow detect changes on js and css files
+  # @see https://stackoverflow.com/questions/37264399/how-to-configure-etag-with-browser-caching
+  FileETag MTime Size
+  # Remgove ETag optional way
+  # Header unset ETag
+  # FileETag none
+</filesMatch>
 
 # Deny paths final and between
 #RewriteEngine On
