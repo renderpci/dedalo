@@ -5,6 +5,7 @@
 */
 // variables
 @import '../../page/css/layout/vars.less';
+@import '../../page/css/layout/buttons.less';
 @menu_heigth: 2em;
 @menu_bg_color_active: #ffa43d;
 @menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
@@ -35,7 +36,7 @@
 	font-size: 1rem;
 	color: #ffffff;
 	line-height: 1.2em;
-	z-index: 2;
+	z-index: 3;
 
 	&:before {
 		content : ' ';
@@ -369,7 +370,7 @@
 			margin-right: 1em;
 			padding-top: 1px;
 
-			.unselectable;
+			user-select: none;
 
 			&:hover {
 				opacity: 1;
