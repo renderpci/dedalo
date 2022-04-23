@@ -249,7 +249,7 @@ data_manager.prototype.get_local_db = async function() {
 * @param object data
 * @param string table
 * Calling sample:
-* 	current_data_manager.set_local_db_data(self.rqo, 'rqo')
+* 	current_data_manager.set_local_db_data(rqo, 'rqo')
 * @return promise
 */
 data_manager.prototype.set_local_db_data = async function(data, table) {

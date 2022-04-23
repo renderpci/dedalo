@@ -49,9 +49,9 @@ export const service_tinymce = function() {
 
 		// editor options
 			const toolbar = editor_config.toolbar
-				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save"
+				|| 'bold italic underline undo redo searchreplace pastetext code | button_geo button_save' // fullscreen
 			const plugins = editor_config.plugins
-				|| ["paste","image","print","searchreplace","code","fullscreen","noneditable"] // "wordcount"
+				|| ['paste', 'image', 'print', 'searchreplace', 'code', 'noneditable'] // 'wordcount'  'fullscreen'
 
 		// dd-tiny dom element (cusmtomHTML element)
 			const dd_tinny = document.createElement('dd-tiny');

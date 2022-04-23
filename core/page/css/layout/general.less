@@ -135,15 +135,16 @@
 
 	// spinner loading
 	.spinner {
+		@diameter : 45px;
 		display: block;
-		height: 70px;
+		height: @diameter;
 		left: 50%;
 		margin: -45px 0px 0px -45px;
-		@border_size: 5px;
+		@border_size: 4px;
 		@border_color: @color_orange_dedalo;
 		position: absolute;
 		top: 50%;
-		width: 70px;
+		width: @diameter;
 		border: @border_size transparent solid; // rgba(0, 0, 0, 0.25)
 		border-top: @border_size @border_color solid;
 		border-right: @border_size @border_color solid;
@@ -151,6 +152,7 @@
 		border-radius: 50%;
 		-webkit-animation: spin3 1.25s infinite linear;
 		animation: spin3 1.25s infinite linear;
+		overflow: hidden;
 	}
 
 	@-webkit-keyframes spin3 {

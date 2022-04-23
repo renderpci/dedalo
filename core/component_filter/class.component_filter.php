@@ -357,8 +357,8 @@ class component_filter extends component_relation_common {
 		$start_time=microtime(1);
 
 		// ar_projects. Projects authorized to the current user
-			$user_id 	 = navigator::get_user_id();
-			$ar_projects = filter::get_user_authorized_projects($user_id, $this->tipo);
+			$user_id		= navigator::get_user_id();
+			$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		// ar_projects_parsed
 			$ar_projects_parsed 	= [];
@@ -368,12 +368,12 @@ class component_filter extends component_relation_common {
 				if (empty($project_item->typology)) {
 
 					$project = new stdClass();
-						$project->type 	 		= 'project';
-						$project->label 		= $project_item->label;
-						$project->section_tipo 	= $project_item->locator->section_tipo;
-						$project->section_id 	= $project_item->locator->section_id;
-						$project->value 		= $project_item->locator;
-						$project->parent 		= null;
+						$project->type			= 'project';
+						$project->label			= $project_item->label;
+						$project->section_tipo	= $project_item->locator->section_tipo;
+						$project->section_id	= $project_item->locator->section_id;
+						$project->value			= $project_item->locator;
+						$project->parent		= null;
 
 					$ar_projects_parsed[] = $project;
 
@@ -382,12 +382,12 @@ class component_filter extends component_relation_common {
 					foreach ((array)$project_item->typology as $typology_locator) {
 
 						$project = new stdClass();
-							$project->type 	 		= 'project';
-							$project->label 		= $project_item->label;
-							$project->section_tipo 	= $project_item->locator->section_tipo;
-							$project->section_id 	= $project_item->locator->section_id;
-							$project->value 		= $project_item->locator;
-							$project->parent 		= $typology_locator;
+							$project->type			= 'project';
+							$project->label			= $project_item->label;
+							$project->section_tipo	= $project_item->locator->section_tipo;
+							$project->section_id	= $project_item->locator->section_id;
+							$project->value			= $project_item->locator;
+							$project->parent		= $typology_locator;
 
 						$ar_projects_parsed[] = $project;
 
@@ -399,7 +399,7 @@ class component_filter extends component_relation_common {
 				}
 			}
 			#$ar_projects_parsed = array_unique($ar_projects_parsed, SORT_REGULAR);
-			#dump($ar_projects_parsed, ' ar_projects_parsed ++ '.to_string());
+			// dump($ar_projects_parsed, ' ar_projects_parsed ++ '.to_string());
 
 		// typology section records search
 			$typology_section_tipo = 'dd1318';
@@ -414,7 +414,6 @@ class component_filter extends component_relation_common {
 			');
 			$current_search = search::get_instance($sqo);
 			$search_result  = $current_search->search();
-
 		// typology groupers
 			$ar_groupers = [];
 			foreach ($search_result->ar_records as $row) {
@@ -456,8 +455,8 @@ class component_filter extends component_relation_common {
 
 		$ar_groupers = [];
 
-		$name_tipo 	 = 'dd1320';
-		$parent_tipo = 'dd169';
+		$name_tipo		= 'dd1320';
+		$parent_tipo	= 'dd169';
 
 		// section. inject alrady calculated data to the section to avoid reconect to database
 			$section = section::get_instance($section_id, $section_tipo);
@@ -465,18 +464,23 @@ class component_filter extends component_relation_common {
 			$section->set_bl_loaded_matrix_data(true);
 
 		// name
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
-															 $name_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$name_value = $component->get_valor();
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$name_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			// $name_value = $component->get_valor();
+			$name_value = component_common::extract_component_value_fallback(
+				$component
+			);
 
 		// parent
-			$model_parent 		= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo,true);
-			$parent_component 	= component_common::get_instance($model_parent,
+			$model_parent		= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo,true);
+			$parent_component	= component_common::get_instance($model_parent,
 															 $parent_tipo,
 															 $section_id,
 															 'list',
@@ -486,11 +490,11 @@ class component_filter extends component_relation_common {
 
 		// item grouper obj
 			$grouper = new stdClass();
-				$grouper->type 			= 'typology';
-				$grouper->label 		= $name_value;
-				$grouper->section_tipo 	= $section_tipo;
-				$grouper->section_id 	= $section_id;
-				$grouper->parent 		= !empty($parent_dato) ? reset($parent_dato) : null;
+				$grouper->type			= 'typology';
+				$grouper->label			= $name_value;
+				$grouper->section_tipo	= $section_tipo;
+				$grouper->section_id	= $section_id;
+				$grouper->parent		= !empty($parent_dato) ? reset($parent_dato) : null;
 
 		$ar_groupers[] = $grouper;
 

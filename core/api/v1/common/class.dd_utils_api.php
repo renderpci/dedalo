@@ -959,14 +959,14 @@ class dd_utils_api {
 				$finfo				= new finfo(FILEINFO_MIME_TYPE);
 				$file_mime			= $finfo->file($fileToUpload['tmp_name']); // ex. string 'text/plain'
 				$known_mime_types	= self::get_known_mime_types();
-				if (false === $ext = array_search(
+				if (false===array_search(
 					$file_mime,
 					$known_mime_types,
 					true
 				)) {
 					// throw new RuntimeException('Invalid file format.');
 					// debug_log(__METHOD__." Warning. Accepted upload unknow file mime type: ".to_string($file_mime).' - name: '.to_string($fileToUpload['tmp_name']), logger::ERROR);
-					$msg = ' upload: Invalid file format. (mime)';
+					$msg = ' upload: Invalid file format. (mime: '.$file_mime.')';
 					error_log($msg);
 					$response->msg .= $msg;
 					return $response;
@@ -1145,7 +1145,7 @@ class dd_utils_api {
 
 			// audio/video
 			'mp3'	=> 'audio/mpeg',
-			'mp4'	=> 'video/mpeg',
+			'mp4'	=> 'video/mp4',
 			'qt'	=> 'video/quicktime',
 			'mov'	=> 'video/quicktime',
 

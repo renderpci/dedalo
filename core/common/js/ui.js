@@ -264,7 +264,8 @@ export const ui = {
 						// 		}
 						// }
 						if (instance.context.css) {
-							set_element_css(section_tipo+'_'+tipo, element_css)
+							const selector = `${section_tipo}_${tipo}.${tipo}.edit`
+							set_element_css(selector, element_css)
 						}
 					}//end if (model!=='component_filter')
 
@@ -1004,7 +1005,8 @@ export const ui = {
 
  			// css new way v6
 				if (instance.context.css) {
-					set_element_css(section_tipo+'_'+tipo, instance.context.css)
+					const selector = `${section_tipo}_${tipo}.edit`
+					set_element_css(selector, instance.context.css)
 					// add_class
 						// sample
 						// "add_class": {
@@ -1033,7 +1035,7 @@ export const ui = {
 
 
 			return wrapper
-		}//end  build_wrapper_edit
+		}//end build_wrapper_edit
 
 
 
