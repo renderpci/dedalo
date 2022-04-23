@@ -76,7 +76,7 @@
 	// direct list_body from component in edit mode
 	.wrapper_component.edit >.list_body {
 		padding: 1rem;
-		padding-top: 0;
+		padding-top: 0.5rem;
 	}
 
 
@@ -263,8 +263,6 @@
 					&:first-of-type {
 						// padding-left: 0;
 					}
-
-
 				}
 			}
 		}
@@ -277,8 +275,8 @@
 		position: relative;
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center; // horizontal alignment
-		justify-content: center; // vertical alignment
+		align-items: flex-start; // horizontal alignment
+		justify-content: flex-start; // vertical alignment
 		// background-color: @color_grey_untralight; // @color_grey_untralight
 		outline: 1px solid @color_grey_light;
 		height: inherit;

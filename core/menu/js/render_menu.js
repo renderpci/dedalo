@@ -214,8 +214,8 @@ render_menu.prototype.edit = async function() {
 		})
 		fragment.appendChild(dedalo_data_langs_selector)
 
-	// spacer
-		const menu_spacer = ui.create_dom_element({
+	// menu_spacer
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'menu_spacer',
 			parent			: fragment
@@ -259,13 +259,27 @@ render_menu.prototype.edit = async function() {
 
 				// navigate browser from edit to list
 				if (current_instance.mode==='edit'){
-					event_manager.publish('user_navigation', {
-						source : {
-							tipo	: current_instance.tipo,
-							model	: current_instance.model,
-							mode	: 'list'
+
+					// event_manager.publish('user_navigation', {
+					// 	source : {
+					// 		tipo	: current_instance.tipo,
+					// 		model	: current_instance.model,
+					// 		mode	: 'list'
+					// 	}
+					// })
+
+					const user_navigation_rqo = {
+						caller_id	: self.id,
+						source		: {
+							action			: 'search',
+							model			: current_instance.model, // section
+							tipo			: current_instance.tipo,
+							section_tipo	: current_instance.section_tipo,
+							mode			: 'list',
+							lang			: current_instance.lang
 						}
-					})
+					}
+					event_manager.publish('user_navigation', user_navigation_rqo)
 				}
 				self.menu_active = false
 			})

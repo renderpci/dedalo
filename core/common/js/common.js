@@ -1133,39 +1133,43 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 	// clone rqo_config
 		rqo_config = clone(rqo_config)
 
-	// local_db_data. get value if exists
-		// const current_data_manager = new data_manager()
-		// const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
-		// if(saved_rqo){
+	// local_db_data. get value if exists.
+	// Allow, for example, to return to the last paginated list preserving the user's
+	// navigation offset
+		const current_data_manager = new data_manager()
+		const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
+		if(saved_rqo){
 
-		// 	if (rqo_config.sqo) {
+			if (rqo_config.sqo) {
 
-		// 		let to_save = false
+				let to_save = false
 
-		// 		saved_rqo.sqo = saved_rqo.sqo || {}
+				saved_rqo.sqo = saved_rqo.sqo || {}
 
-		// 		// update saved offset if is different from received config
-		// 			if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
-		// 				saved_rqo.sqo.filter = rqo_config.sqo.filter
-		// 				to_save = true
-		// 				console.warn("updated filter in saved_rqo:", saved_rqo);
-		// 			}
+				// update saved offset if is different from received config
+					if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
+						saved_rqo.sqo.filter = rqo_config.sqo.filter
+						to_save = true
+						console.warn("updated filter in saved_rqo:", saved_rqo);
+					}
 
-		// 		// update saved offset if is different from received config
-		// 			if (typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {
-		// 				saved_rqo.sqo.offset = rqo_config.sqo.offset
-		// 				to_save = true
-		// 				console.warn("updated offset in saved_rqo:", saved_rqo);
-		// 			}
+				// update saved offset if is different from received config
+					if (typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {
+						saved_rqo.sqo.offset = rqo_config.sqo.offset
+						to_save = true
+						console.warn("updated offset in saved_rqo:", saved_rqo);
+					}
 
-		// 		if (to_save===true) {
-		// 			current_data_manager.set_local_db_data(saved_rqo, 'rqo') // save updated object
-		// 		}
-		// 	}
+				if (to_save===true) {
+					// set_local_db_data updated rqo
+						const rqo = saved_rqo
+						current_data_manager.set_local_db_data(rqo, 'rqo')
+				}
+			}
 
-		// 	console.warn("returning saved_rqo:", saved_rqo);
-		// 	return saved_rqo
-		// }
+			console.warn("returning saved_rqo:", saved_rqo);
+			return saved_rqo
+		}
 
 	// source. build new one with source of the instance caller (self)
 		const source = create_source(self, action)
@@ -1256,7 +1260,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		}
 
 
-	// local_db_data save
+	// set_local_db_data updated rqo
 		// current_data_manager.set_local_db_data(rqo, 'rqo')
 
 

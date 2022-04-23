@@ -950,26 +950,29 @@ class component_av extends component_media_common {
 	public function process_uploaded_file($file_data) {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// vars
-			$original_file_name = $file_data->original_file_name; 	// kike "my video785.mp4"
-			$full_file_name 	= $file_data->full_file_name;		// like "test175_test65_1.mp4"
-			$full_file_path 	= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
+		// short vars
+			$original_file_name	= $file_data->original_file_name;	// kike "my video785.mp4"
+			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.mp4"
+			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
 
 			// extension
-			$file_ext 	= pathinfo($original_file_name, PATHINFO_EXTENSION);
-			if (empty($file_ext)) {
-				throw new Exception("Error Processing Request. File extension is unknow", 1);
-			}
+				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
+				if (empty($file_ext)) {
+					// throw new Exception("Error Processing Request. File extension is unknow", 1);
+					$msg = ' Error Processing Request. File extension is unknow';
+					debug_log(__METHOD__.$msg, logger::ERROR);
+					$response->msg .= $msg;
+					return $response;
+				}
 			// video_id (without extension, like 'test81_test65_2')
-			$video_id = $this->get_video_id();
+				$video_id = $this->get_video_id();
 			// quality default in upload is 'original' (!)
-			$quality  = $this->get_quality();
+				$quality  = $this->get_quality();
 
 			$AVObj = new AVObj($video_id, $quality);
-
 
 		try {
 
@@ -1018,8 +1021,8 @@ class component_av extends component_media_common {
 				// posterframe. Create posterframe of current video if not exists
 					$PosterFrameObj = new PosterFrameObj($video_id);
 					if(Ffmpeg::get_ffmpeg_installed_path() && !$PosterFrameObj->get_file_exists()) {
-						$timecode 	= '00:00:05';
-						$Ffmpeg 	= new Ffmpeg();
+						$timecode	= '00:00:05';
+						$Ffmpeg		= new Ffmpeg();
 						$Ffmpeg->create_posterframe($AVObj, $timecode);
 					}else{
 						debug_log(__METHOD__." WARNING: Ignored creation of posterframe. File already exists", logger::WARNING);
@@ -1063,23 +1066,23 @@ class component_av extends component_media_common {
 					$current_section_id  = $this->get_parent();
 					$target_section_tipo = $this->get_section_tipo();
 
-					$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
-					$component_target_filename 	= component_common::get_instance(
-																		$modelo_name_target_filename,
-																		$properties->target_filename,
-																		$current_section_id,
-																		'edit',
-																		DEDALO_DATA_NOLAN,
-																		$target_section_tipo
-																		);
+					$modelo_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename, true);
+					$component_target_filename		= component_common::get_instance(
+						$modelo_name_target_filename, // model
+						$properties->target_filename, // tipo
+						$current_section_id, // seciton_id
+						'edit', // mode
+						DEDALO_DATA_NOLAN, // lang
+						$target_section_tipo // section_tipo
+					);
 					$component_target_filename->set_dato($original_file_name);
 					$component_target_filename->Save();
 					debug_log(__METHOD__." Saved original filename: ".to_string($original_file_name), logger::DEBUG);
 				}
 
 			// all is ok
-				$response->result 	= true;
-				$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+				$response->result	= true;
+				$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 
 		} catch (Exception $e) {
 			$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";
