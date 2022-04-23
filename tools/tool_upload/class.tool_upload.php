@@ -47,7 +47,7 @@ class tool_upload { // extends tool_common
 			$tipo			= $options->tipo ?? null;
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id ?? null;
-			$caller_type	= $options->caller_type;
+			$caller_type	= $options->caller_type; // string as 'component'
 			$quality		= $options->quality ?? null;
 			$target_dir		= $options->target_dir ?? null;
 
@@ -63,7 +63,7 @@ class tool_upload { // extends tool_common
 							$tipo,
 							$section_id,
 							'edit',
-							DEDALO_DATA_LANG,
+							DEDALO_DATA_NOLAN,
 							$section_tipo
 						);
 
@@ -80,7 +80,7 @@ class tool_upload { // extends tool_common
 					// post processing file (add_file returns final renamed file with path info)
 						$process_file = $component->process_uploaded_file($add_file->ready);
 						if ($process_file->result===false) {
-							$response->msg .= 'Errors occurred on processing file: '.$process_file->msg;
+							$response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
 							return $response;
 						}
 
@@ -90,7 +90,7 @@ class tool_upload { // extends tool_common
 
 					// response ok
 						$response->result		= true;
-						$response->msg			= 'OK. Request done successfully';
+						$response->msg			= 'OK. File processed successfully';
 						$response->preview_url	= $preview_url;
 
 					break;

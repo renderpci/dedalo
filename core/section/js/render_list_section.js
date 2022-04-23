@@ -257,11 +257,10 @@ render_list_section.render_column_id = function(options){
 
 			case (self.initiator && self.initiator.indexOf('component_')!==-1):
 
-				fragment.appendChild(section_id_node)
-				// component portal caller (link)
+				// button link. component portal caller (link)
 					const link_button = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button link',
+						element_type	: 'button',
+						class_name		: 'button_link',
 						parent			: fragment
 					})
 					link_button.addEventListener("click", function(){
@@ -271,15 +270,21 @@ render_list_section.render_column_id = function(options){
 							section_id		: section_id
 						})
 					})
-
-				// button edit (pen)
-					if (permissions>1) {
-						const edit_button = ui.create_dom_element({
+					// link_icon
+						ui.create_dom_element({
 							element_type	: 'span',
-							class_name		: 'button edit',
+							class_name		: 'button link icon',
+							parent			: link_button
+						})
+
+				if (permissions>1) {
+					// button_edit
+						const button_edit = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'button_edit',
 							parent			: fragment
 						})
-						edit_button.addEventListener("click", async function(){
+						button_edit.addEventListener("click", async function(){
 							// navigate link
 								// const user_navigation_options = {
 								// 	tipo		: section_tipo,
@@ -365,18 +370,26 @@ render_list_section.render_column_id = function(options){
 								// 	}
 								// })()
 						})
-					}
+						button_edit.appendChild(section_id_node)
+
+					// edit_icon
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button edit icon',
+							parent			: button_edit
+						})
+				}
 				break
 
 			case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
-				fragment.appendChild(section_id_node)
+
 				// button time machine preview (eye)
-					const edit_button_tm = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button eye',
+					const button_edit = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'button_edit',
 						parent			: fragment
 					})
-					edit_button_tm.addEventListener("click", function(){
+					button_edit.addEventListener("click", function(){
 						// publish event
 						event_manager.publish('tm_edit_record', {
 							tipo		: section_tipo,
@@ -386,6 +399,14 @@ render_list_section.render_column_id = function(options){
 							mode		: 'tm'
 						})
 					})
+					button_edit.appendChild(section_id_node)
+
+					// eye_icon
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button eye icon',
+							parent			: button_edit
+						})
 				break
 
 			case (self.config && self.config.source_model==='section_tool'):
@@ -432,7 +453,6 @@ render_list_section.render_column_id = function(options){
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
-							button_edit.appendChild(section_id_node)
 							button_edit.addEventListener("click", function(){
 								const user_navigation_rqo = {
 									caller_id	: self.id,
@@ -454,6 +474,7 @@ render_list_section.render_column_id = function(options){
 								}
 								event_manager.publish('user_navigation', user_navigation_rqo)
 							})
+							button_edit.appendChild(section_id_node)
 
 						// edit_icon
 							ui.create_dom_element({
