@@ -392,7 +392,7 @@ export const ui = {
 		*/
 		build_wrapper_list : (instance, options={}) => {
 			if(SHOW_DEBUG===true) {
-				//console.log("[ui.build_wrapper_list] instance:",instance)
+				// console.log("[ui.build_wrapper_list] instance:",instance)
 			}
 
 			// const id			= instance.id || 'id is not set'
@@ -401,7 +401,13 @@ export const ui = {
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
 			const section_tipo	= instance.section_tipo 	// like 'oh1'
-			const edit_in_list	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
+			const edit_in_list	= (
+					instance.section_tipo==='dd542' // dd542-> activity section
+				|| 	instance.caller.id_variant.indexOf('tool_')===0 // inside tool like tool_time_machime
+				)
+				? false
+				: true
+				// console.log("instance.caller:",instance.caller.id_variant);
 
 			// options
 				const autoload		= typeof options.autoload!=="undefined" ? options.autoload : false
