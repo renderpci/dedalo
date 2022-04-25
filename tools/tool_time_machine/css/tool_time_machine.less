@@ -25,8 +25,10 @@
 		.current_component_container, .preview_component_container {
 			// flex: 1 1 50%;
 			position: relative;
-			display: grid;
-			grid-template-rows: 1fr auto;
+
+			// display: grid;
+			// grid-template-rows: 1fr auto;
+			display: block;
 
 			.time_label {
 				padding: 0.5em;
@@ -83,7 +85,7 @@
 			}
 		}//end .tool_bar
 
-		// time_machine container
+		// time_machine container (list)
 		.wrapper_tm {
 			// background-color: #A7FF82;
 			// flex: 1 1 100%;
@@ -91,14 +93,11 @@
 			overflow: auto;
 			grid-column-start: 1;
 			grid-column-end: 3;
-		}
+		}//end .wrapper_tm
 
 		// header section list
 		.header_wrapper_list {
 			top: 0;
 		}
 	}//end >.content_data
-
-
-
 }//end wrapper_tool

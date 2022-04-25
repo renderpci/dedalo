@@ -79,7 +79,7 @@ export const render_time_machine_view = async function(self, options) {
 				'grid-template-columns': template_columns
 			}
 		}
-		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.edit`
+		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.tm`
 		set_element_css(selector, css_object)
 
 		// fix last list_body (for pagination selection)
@@ -99,7 +99,7 @@ export const render_time_machine_view = async function(self, options) {
 			element_type	: 'section',
 			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
 			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode}`
+			class_name		: `wrapper_${self.type} ${self.model} ${self.section_tipo+'_'+self.tipo} ${self.tipo} ${self.mode}`
 		})
 		wrapper.appendChild(fragment)
 
@@ -204,21 +204,13 @@ const render_column_id = function(options){
 
 	const fragment = new DocumentFragment()
 
-	// section_id
-		ui.create_dom_element({
-			element_type	: 'span',
-			text_content	: section_id,
-			class_name		: 'section_id',
+	// button_view
+		const button_view = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_view',
 			parent			: fragment
 		})
-
-	// button time machine preview (eye)
-		const edit_button_tm = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button eye',
-			parent			: fragment
-		})
-		edit_button_tm.addEventListener("click", function(){
+		button_view.addEventListener("click", function(){
 			// publish event
 			event_manager.publish('tm_edit_record', {
 				tipo		: section_tipo,
@@ -228,6 +220,22 @@ const render_column_id = function(options){
 				mode		: 'tm'
 			})
 		})
+
+	// section_id
+		ui.create_dom_element({
+			element_type	: 'span',
+			text_content	: section_id,
+			class_name		: 'section_id',
+			parent			: button_view
+		})
+
+	// icon eye ime machine preview (eye)
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button eye icon',
+			parent			: button_view
+		})
+
 
 	return fragment
 };// end render_column_id()
