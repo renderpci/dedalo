@@ -435,7 +435,12 @@ component_common.prototype.save = async function(changed_data) {
 
 	// remove previous success/error css class if exists
 		self.node.map(item => {
-			item.classList.remove('error','save_success')
+			if (item.classList.contains("error")) {
+				item.classList.remove("error")
+			}
+			if (item.classList.contains("save_success")) {
+				item.classList.remove("save_success")
+			}
 			// item.classList.add('loading')
 		})
 
