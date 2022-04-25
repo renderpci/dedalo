@@ -794,11 +794,16 @@ export const ui = {
 								// allow restart animation. Not set state pause before animation ends (2 secs)
 								item.style.animationPlayState = "paused";
 								item.style.webkitAnimationPlayState = "paused";
+
+								// remove animation style
+								if (item.classList.contains("save_success")) {
+									item.classList.remove("save_success")
+								}
 							})
 
 							resolve(true)
-						},2000)
-				},50)
+						}, 2000)
+				}, 25)
 			})
 		}//end exec_save_successfully_animation
 
