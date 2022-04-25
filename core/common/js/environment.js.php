@@ -163,7 +163,7 @@ session_write_close();
 	header('Content-type: application/javascript; charset=utf-8');
 	// cache optional
 		$seconds_to_cache = 3600;
-		$ts = gmdate("D, d M Y H:i:s", time() + $seconds_to_cache) . " GMT";
+		$ts = gmdate("D, d M Y H:i:s", time() + $seconds_to_cache) . ' GMT';
 		header("Expires: $ts");
 		header("Pragma: cache");
 		header("Cache-Control: max-age=$seconds_to_cache");
@@ -176,9 +176,9 @@ const page_globals=<?php
 ?>;
 const <?php // plain_vars
 echo implode(',', array_map(function ($v, $k) {
-	return sprintf("%s=%s", $k, json_encode($v, JSON_UNESCAPED_SLASHES));
+	return sprintf('%s=%s', $k, json_encode($v, JSON_UNESCAPED_SLASHES));
 }, $plain_vars, array_keys($plain_vars))) .';'. PHP_EOL;
 // Lang labels
 include dirname(__FILE__) . '/lang/'.DEDALO_APPLICATION_LANG.'.js';
 // json_elements_data array
-echo ';'.PHP_EOL.js::get_json_elements_data();
+// echo ';'.PHP_EOL.js::get_json_elements_data();
