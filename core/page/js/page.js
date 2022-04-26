@@ -19,6 +19,7 @@
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
 	import {render_page} from './render_page.js'
 	// import {set_element_css} from './css.js'
+	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -235,13 +236,26 @@ page.prototype.init = async function(options) {
 		// 	return null
 		// })//end beforeunload
 
-
 	// window messages
 		// window.addEventListener("message", receiveMessage, false);
 		// function receiveMessage(event) {
 		// 	console.log("message event:",event);
 		// 	alert("Mensaje recibido !");
 		// }
+
+	// key events
+		document.addEventListener("keydown", function(evt){
+
+			// ESC
+				if (evt.key==='Escape') {
+
+					// unactive user actived component
+						if (ui.component.component_active) {
+							ui.component.inactive(ui.component.component_active)
+							ui.component.component_active = null
+						}
+				}
+		})
 
 
 	// status update
