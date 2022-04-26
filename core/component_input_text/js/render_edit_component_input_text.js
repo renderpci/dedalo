@@ -353,7 +353,7 @@ const get_input_element_edit = (i, current_value, self) => {
 		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
-		const element_type			= (multi_line===true) ? 'textarea' :'input'
+		const element_type			= (multi_line===true) ? 'textarea' : 'input'
 		const is_inside_tool		= self.is_inside_tool
 		// const with_lang_versions	= self.context.properties.with_lang_versions || false
 
@@ -384,8 +384,14 @@ const get_input_element_edit = (i, current_value, self) => {
 			})
 		}
 
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	inner_html		: '** 9',
+		// 	parent			: li
+		// })
+
+
+
 
 	return li
 }//end input_element
-
-

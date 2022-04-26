@@ -149,61 +149,62 @@
 			//flex-wrap: wrap;
 			width: 100%;
 
-			.column_section_id {
-				display: flex;
-				flex-direction: column;
-				justify-content: flex-start;
-				background-color: #f6f6f6;
+			// (!) moved to list.less to allow shared use (time machine list, etc.)
+			// .column_section_id {
+			// 	display: flex;
+			// 	flex-direction: column;
+			// 	justify-content: flex-start;
+			// 	background-color: #f6f6f6;
 
-				>button {
-					display: flex;
-					width: 100%;
-					margin: 0;
-					padding: 0.5em;
-					border-radius: 0;
+			// 	>button {
+			// 		display: flex;
+			// 		width: 100%;
+			// 		margin: 0;
+			// 		padding: 0.5em;
+			// 		border-radius: 0;
 
-					// justify-content
-					justify-content: flex-end;
-					&.button_edit {
-						justify-content: space-between;
-						// justify-content: flex-end;
-					}
-					&.button_delete {
-						// justify-content: flex-end;
-					}
+			// 		// justify-content
+			// 		justify-content: flex-end;
+			// 		&.button_edit {
+			// 			justify-content: space-between;
+			// 			// justify-content: flex-end;
+			// 		}
+			// 		&.button_delete {
+			// 			// justify-content: flex-end;
+			// 		}
 
-					>.section_id {
-						font-size: 1.25rem;
-						padding-right: 3px;
-						padding-left: 2px;
-					}
-					>.icon {
-						height: 1.4rem;
-						width: 1.3rem;
-						margin-right: -2px;
-					}
+			// 		>.section_id {
+			// 			font-size: 1.25rem;
+			// 			padding-right: 3px;
+			// 			padding-left: 2px;
+			// 		}
+			// 		>.icon {
+			// 			height: 1.4rem;
+			// 			width: 1.3rem;
+			// 			margin-right: -2px;
+			// 		}
 
-					&:hover {
-						z-index: 99999;
+			// 		&:hover {
+			// 			z-index: 99999;
 
-						// background-color
-						background-color: @color_orange_dedalo;
-						&.button_edit {
-							background-color: @color_green_success;
-						}
-						&.button_delete {
-							background-color: @color_danger;
-						}
+			// 			// background-color
+			// 			background-color: @color_orange_dedalo;
+			// 			&.button_edit {
+			// 				background-color: @color_green_success;
+			// 			}
+			// 			&.button_delete {
+			// 				background-color: @color_danger;
+			// 			}
 
-						>.section_id {
-							color: #ffffff;
-						}
-						>.icon {
-							background-color: #ffffff;
-						}
-					}
-				}
-			}//end .column_section_id
+			// 			>.section_id {
+			// 				color: #ffffff;
+			// 			}
+			// 			>.icon {
+			// 				background-color: #ffffff;
+			// 			}
+			// 		}
+			// 	}
+			// }//end .column_section_id
 
 			//&:before {
 			//	content: "Section list";
