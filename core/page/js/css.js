@@ -274,10 +274,15 @@ export const get_elements_css_object = function() {
 export const get_elements_style_sheet = function() {
 
 	if (!window.elements_style_sheet) {
-		const style = document.createElement("style");
-		style.type	= 'text/css'
+
+		const style = document.createElement('style');
+		// style.type	= 'text/css'
 		style.id	= 'elements_style_sheet'
+
+		// Append <style> element to <head>
 		document.head.appendChild(style);
+
+		// Grab style element's sheet
 		window.elements_style_sheet = style.sheet;
 	}
 

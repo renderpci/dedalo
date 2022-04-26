@@ -233,12 +233,12 @@ const rebuild_columns_map = async function(self) {
 render_list_section.render_column_id = function(options){
 
 	// options
-		const self				= options.caller
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		const offset			= options.offset
-		const matrix_id			= options.matrix_id
-		const modification_date	= options.modification_date
+		const self					= options.caller
+		const section_id			= options.section_id
+		const section_tipo			= options.section_tipo
+		const offset				= options.offset
+		// const matrix_id			= options.matrix_id
+		// const modification_date	= options.modification_date
 
 	// permissions
 		const permissions = self.permissions
@@ -260,7 +260,7 @@ render_list_section.render_column_id = function(options){
 				// button link. component portal caller (link)
 					const link_button = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'button_link',
+						class_name		: 'link_button',
 						parent			: fragment
 					})
 					link_button.addEventListener("click", function(){
@@ -381,33 +381,31 @@ render_list_section.render_column_id = function(options){
 				}
 				break
 
-			case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
-
-				// button time machine preview (eye)
-					const button_edit = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'button_edit',
-						parent			: fragment
-					})
-					button_edit.addEventListener("click", function(){
-						// publish event
-						event_manager.publish('tm_edit_record', {
-							tipo		: section_tipo,
-							section_id	: section_id,
-							matrix_id	: matrix_id,
-							date		: modification_date || null,
-							mode		: 'tm'
-						})
-					})
-					button_edit.appendChild(section_id_node)
-
-					// eye_icon
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button eye icon',
-							parent			: button_edit
-						})
-				break
+			// case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
+			// 	// button time machine preview (eye)
+			// 		const button_edit = ui.create_dom_element({
+			// 			element_type	: 'button',
+			// 			class_name		: 'button_edit',
+			// 			parent			: fragment
+			// 		})
+			// 		button_edit.addEventListener("click", function(){
+			// 			// publish event
+			// 			event_manager.publish('tm_edit_record', {
+			// 				tipo		: section_tipo,
+			// 				section_id	: section_id,
+			// 				matrix_id	: matrix_id,
+			// 				date		: modification_date || null,
+			// 				mode		: 'tm'
+			// 			})
+			// 		})
+			// 		button_edit.appendChild(section_id_node)
+			// 		// eye_icon
+			// 			ui.create_dom_element({
+			// 				element_type	: 'span',
+			// 				class_name		: 'button eye icon',
+			// 				parent			: button_edit
+			// 			})
+			// 	break
 
 			case (self.config && self.config.source_model==='section_tool'):
 				fragment.appendChild(section_id_node)
