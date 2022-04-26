@@ -79,43 +79,55 @@ export const render_column_id = function(options){
 
 	const fragment = new DocumentFragment()
 
+	// button link. component portal caller (link)
+		const edit_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'edit_button',
+			parent			: fragment
+		})
+		edit_button.addEventListener("click", function(){
+			// user_navigation event
+				const user_navigation_rqo = {
+					caller_id	: self.id,
+					source		: {
+						action			: 'search',
+						model			: 'section',
+						tipo			: section_tipo,
+						section_tipo	: section_tipo,
+						mode			: 'edit',
+						lang			: self.lang
+					},
+					sqo : {
+						section_tipo		: [{tipo : section_tipo}],
+						filter				: null,
+						limit				: 1,
+						filter_by_locators	: [{
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+						}]
+					}
+				}
+				event_manager.publish('user_navigation', user_navigation_rqo)
+
+			// edit_button_click event. Subscribed to close current modal if exists (mosaic view case)
+				event_manager.publish('edit_button_click', this)
+		})
+
 	// section_id
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'section_id',
 			text_content	: section_id,
-			parent			: fragment
+			parent			: edit_button
 		})
 
-	// edit_button
-		const edit_button = ui.create_dom_element({
+	// edit icon
+		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button edit',
-			parent			: fragment
+			class_name		: 'button edit icon',
+			parent			: edit_button
 		})
-		edit_button.addEventListener("click", function(){
-			const user_navigation_rqo = {
-				caller_id	: self.id,
-				source		: {
-					action			: 'search',
-					model			: 'section',
-					tipo			: section_tipo,
-					section_tipo	: section_tipo,
-					mode			: 'edit',
-					lang			: self.lang
-				},
-				sqo : {
-					section_tipo		: [{tipo : section_tipo}],
-					filter				: null,
-					limit				: 1,
-					filter_by_locators	: [{
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-					}]
-				}
-			}
-			event_manager.publish('user_navigation', user_navigation_rqo)
-		})
+
 
 	return fragment
 }//end render_column_id
@@ -173,16 +185,108 @@ export const render_column_remove = function(options) {
 
 	const fragment = new DocumentFragment()
 
-	// remove icon
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button remove',
-			dataset			: {
-				key				: row_key,
-				paginated_key	: paginated_key
-			},
+	// // remove icon
+	// 	ui.create_dom_element({
+	// 		element_type	: 'span',
+	// 		class_name		: 'button remove',
+	// 		dataset			: {
+	// 			key				: row_key,
+	// 			paginated_key	: paginated_key
+	// 		},
+	// 		parent			: fragment
+	// 	})
+
+	// button_remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_remove',
 			parent			: fragment
 		})
+		button_remove.addEventListener("click", function(e){
+			e.stopPropagation()
+
+			// label
+				const children = this.parentNode.parentNode.parentNode.children
+				const ar_label = []
+				for (let i = 0; i < children.length; i++) {
+					if(children[i].textContent.length>0) {
+						ar_label.push(children[i].textContent)
+					}
+				}
+				const label = ar_label.join(', ')
+
+			// changed_data
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: paginated_key,
+					value	: null
+				})
+
+			// remove_dialog. User must to confirm the remove action to continue
+			// On true, data pagination offset is changed
+				const remove_dialog = function() {
+
+					const msg = SHOW_DEBUG
+						? `Sure to remove value: \n${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
+						: `Sure to remove value: \n${label} ?}`
+
+					if( !confirm(msg) ) {
+						return false
+					}
+
+					// data pagination offset. Check and update self data to allow save API request return the proper paginated data
+						const key = parseInt(row_key)
+						if (key===0 && self.data.pagination.offset>0) {
+							const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+							// set before exec API request on Save
+							self.data.pagination.offset = next_offset>0
+								? next_offset
+								: 0
+						}
+
+					return true
+				}
+
+			// change_value (implies saves too)
+				const changed = self.change_value({
+					changed_data	: changed_data,
+					label			: label,
+					refresh			: false,
+					remove_dialog	: remove_dialog
+				})
+				changed.then(async (response)=>{
+
+					// the user has selected cancel from delete dialog
+						if (response===false) {
+							return
+						}
+
+					// update pagination offset
+						self.update_pagination_values('remove')
+
+					// refresh
+						await self.refresh({
+							build_autoload : false
+						})
+
+					// check if the caller has active a tag_id
+						if(self.active_tag){
+							// filter component data by tag_id and re-render content
+							self.filter_data_by_tag_id(self.active_tag)
+						}
+
+					// event to update the DOM elements of the instance
+						event_manager.publish('remove_element_'+self.id, row_key)
+				})
+		})
+
+	// remove_icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button remove icon',
+			parent			: button_remove
+		})
+
 
 	return fragment
 }// end render_column_remove()
@@ -408,7 +512,7 @@ export const add_events = function(self, wrapper) {
 
 	// click delegated
 		wrapper.addEventListener("click", function(e){
-			// e.stopPropagation()
+			e.stopPropagation()
 
 			// ignore click on paginator
 				// if (e.target.closest('.paginator')) {
@@ -416,87 +520,87 @@ export const add_events = function(self, wrapper) {
 				// }
 
 			// remove row
-				if (e.target.matches('.button.remove')) {
-					e.preventDefault()
-					e.stopPropagation()
+				// if (e.target.matches('.button.remove')) {
+				// 	e.preventDefault()
+				// 	e.stopPropagation()
 
-					// label
-						const children = e.target.parentNode.parentNode.children
-						const ar_label = []
-						for (let i = 0; i < children.length; i++) {
-							if(children[i].textContent.length>0) {
-								ar_label.push(children[i].textContent)
-							}
-						}
-						const label = ar_label.join(', ')
+				// 	// label
+				// 		const children = e.target.parentNode.parentNode.children
+				// 		const ar_label = []
+				// 		for (let i = 0; i < children.length; i++) {
+				// 			if(children[i].textContent.length>0) {
+				// 				ar_label.push(children[i].textContent)
+				// 			}
+				// 		}
+				// 		const label = ar_label.join(', ')
 
-					// changed_data
-						const changed_data = Object.freeze({
-							action	: 'remove',
-							// key	: JSON.parse(e.target.dataset.key),
-							key		: JSON.parse(e.target.dataset.paginated_key),
-							value	: null
-						})
+				// 	// changed_data
+				// 		const changed_data = Object.freeze({
+				// 			action	: 'remove',
+				// 			// key	: JSON.parse(e.target.dataset.key),
+				// 			key		: JSON.parse(e.target.dataset.paginated_key),
+				// 			value	: null
+				// 		})
 
-					// remove_dialog. User must to confirm the remove action to continue
-					// On true, data pagination offset is changed
-						const remove_dialog = function() {
+				// 	// remove_dialog. User must to confirm the remove action to continue
+				// 	// On true, data pagination offset is changed
+				// 		const remove_dialog = function() {
 
-							const msg = SHOW_DEBUG
-								? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
-								: `Sure to remove value: ${label} ?}`
+				// 			const msg = SHOW_DEBUG
+				// 				? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
+				// 				: `Sure to remove value: ${label} ?}`
 
-							if( !confirm(msg) ) {
-								return false
-							}
+				// 			if( !confirm(msg) ) {
+				// 				return false
+				// 			}
 
-							// data pagination offset. Check and update self data to allow save API request return the proper paginated data
-								const key = parseInt(e.target.dataset.key)
-								if (key===0 && self.data.pagination.offset>0) {
-									const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
-									// set before exec API request on Save
-									self.data.pagination.offset = next_offset>0
-										? next_offset
-										: 0
-								}
+				// 			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
+				// 				const key = parseInt(e.target.dataset.key)
+				// 				if (key===0 && self.data.pagination.offset>0) {
+				// 					const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+				// 					// set before exec API request on Save
+				// 					self.data.pagination.offset = next_offset>0
+				// 						? next_offset
+				// 						: 0
+				// 				}
 
-							return true
-						}
+				// 			return true
+				// 		}
 
-					// change_value (implies saves too)
-						const changed = self.change_value({
-							changed_data	: changed_data,
-							label			: label,
-							refresh			: false,
-							remove_dialog	: remove_dialog
-						})
-						changed.then(async (response)=>{
+				// 	// change_value (implies saves too)
+				// 		const changed = self.change_value({
+				// 			changed_data	: changed_data,
+				// 			label			: label,
+				// 			refresh			: false,
+				// 			remove_dialog	: remove_dialog
+				// 		})
+				// 		changed.then(async (response)=>{
 
-							// the user has selected cancel from delete dialog
-								if (response===false) {
-									return
-								}
+				// 			// the user has selected cancel from delete dialog
+				// 				if (response===false) {
+				// 					return
+				// 				}
 
-							// update pagination offset
-								self.update_pagination_values('remove')
+				// 			// update pagination offset
+				// 				self.update_pagination_values('remove')
 
-							// refresh
-								await self.refresh({
-									build_autoload : false
-								})
+				// 			// refresh
+				// 				await self.refresh({
+				// 					build_autoload : false
+				// 				})
 
-							// check if the caller has active a tag_id
-								if(self.active_tag){
-									// filter component data by tag_id and re-render content
-									self.filter_data_by_tag_id(self.active_tag)
-								}
+				// 			// check if the caller has active a tag_id
+				// 				if(self.active_tag){
+				// 					// filter component data by tag_id and re-render content
+				// 					self.filter_data_by_tag_id(self.active_tag)
+				// 				}
 
-							// event to update the DOM elements of the instance
-								event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-						})
+				// 			// event to update the DOM elements of the instance
+				// 				event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+				// 		})
 
-					return true
-				}//end if (e.target.matches('.button.remove')) {
+				// 	return true
+				// }//end if (e.target.matches('.button.remove')) {
 
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active!==undefined && self.autocomplete_active===false){

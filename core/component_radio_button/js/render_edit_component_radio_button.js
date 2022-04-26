@@ -1,4 +1,4 @@
-/*global, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -379,45 +379,45 @@ const get_input_element_edit = (i, current_value, self) => {
 
 
 	// button_edit
-		const button_edit = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button edit',
-			parent			: show_on_active
-		})
-		button_edit.addEventListener("click", function(e){
-			e.stopPropagation()
-			try {
-				// target_section
-					const target_sections		= self.context.target_sections
-					const target_section_tipo	= target_sections && target_sections[0]
-						? target_sections[0].tipo
-						: null
+		// const button_edit = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button edit',
+		// 	parent			: show_on_active
+		// })
+		// button_edit.addEventListener("click", function(e){
+		// 	e.stopPropagation()
+		// 	try {
+		// 		// target_section
+		// 			const target_sections		= self.context.target_sections
+		// 			const target_section_tipo	= target_sections && target_sections[0]
+		// 				? target_sections[0].tipo
+		// 				: null
 
-				// navigation
-					const user_navigation_options = {
-						source		: {
-							action			: 'search',
-							model			: 'section',
-							tipo			: target_section_tipo,
-							section_tipo	: target_section_tipo,
-							mode			: 'edit',
-							lang			: self.lang
-						},
-						sqo : {
-							section_tipo		: [{tipo : target_section_tipo}],
-							filter				: null,
-							limit				: 1,
-							filter_by_locators	: [{
-								section_tipo	: target_section_tipo,
-								section_id		: section_id
-							}]
-						}
-					}
-				event_manager.publish('user_navigation', user_navigation_options)
-			} catch (error) {
-				console.error(error)
-			}
-		})
+		// 		// navigation
+		// 			const user_navigation_options = {
+		// 				source		: {
+		// 					action			: 'search',
+		// 					model			: 'section',
+		// 					tipo			: target_section_tipo,
+		// 					section_tipo	: target_section_tipo,
+		// 					mode			: 'edit',
+		// 					lang			: self.lang
+		// 				},
+		// 				sqo : {
+		// 					section_tipo		: [{tipo : target_section_tipo}],
+		// 					filter				: null,
+		// 					limit				: 1,
+		// 					filter_by_locators	: [{
+		// 						section_tipo	: target_section_tipo,
+		// 						section_id		: section_id
+		// 					}]
+		// 				}
+		// 			}
+		// 		event_manager.publish('user_navigation', user_navigation_options)
+		// 	} catch (error) {
+		// 		console.error(error)
+		// 	}
+		// })
 
 
 	return li
