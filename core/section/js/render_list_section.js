@@ -248,8 +248,8 @@ render_list_section.render_column_id = function(options){
 	// section_id
 		const section_id_node = ui.create_dom_element({
 			element_type	: 'span',
-			text_content	: section_id,
 			class_name		: 'section_id',
+			text_content	: section_id
 		})
 
 	// buttons
@@ -257,7 +257,7 @@ render_list_section.render_column_id = function(options){
 
 			case (self.initiator && self.initiator.indexOf('component_')!==-1):
 
-				// button link. component portal caller (link)
+				// link_button. component portal caller (link)
 					const link_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'link_button',
