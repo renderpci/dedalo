@@ -100,6 +100,10 @@ export const ui = {
 
 
 
+		component_active : null,
+
+
+
 		/**
 		* BUILD_WRAPPER_EDIT
 		* Component wrapper unified builder
@@ -403,7 +407,7 @@ export const ui = {
 			const section_tipo	= instance.section_tipo 	// like 'oh1'
 			const edit_in_list	= (
 					instance.section_tipo==='dd542' // dd542-> activity section
-				|| 	instance.caller.id_variant.indexOf('tool_')===0 // inside tool like tool_time_machime
+				|| 	(instance.caller && instance.caller.id_variant && instance.caller.id_variant.indexOf('tool_')===0) // inside tool like tool_time_machime
 				)
 				? false
 				: true
@@ -679,8 +683,48 @@ export const ui = {
 							}
 						}
 
+						ui.component.component_active = component
+
 					return true
 				}
+
+			// old way
+				// // not match cases. Remove wrapper css active if exists
+				// 	component.node.map(function(item_node) {
+				// 		item_node.classList.remove("active")
+				// 	})
+
+				// // service autocomplete remove if active
+				// 	if(component.autocomplete_active===true){
+				// 		component.autocomplete.destroy()
+				// 		component.autocomplete_active = false
+				// 		component.autocomplete = null
+				// 	}
+
+			// inactive by function
+				ui.component.inactive(component)
+
+
+
+			return false
+		},//end active
+
+
+
+		/**
+		* INACTIVE
+		* Set component state as inactive by callback event
+		* @see util.events event_manage.publish
+		*
+		* @param object component
+		*	Full component instance
+		* @param string id
+		*	ID of clicked component
+		* @return async promise
+		*	Note that this function return always a promise to allow the caller
+		*	continue applying another custom actions
+		*/
+		inactive : (component) => {
 
 			// not match cases. Remove wrapper css active if exists
 				component.node.map(function(item_node) {

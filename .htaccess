@@ -11,13 +11,22 @@
 </FilesMatch>
 
 # Brower caching FileETag control
-<filesMatch ".(js|css)$">
+<FilesMatch ".+\.(js|css)$">
   # Set FileETag looking MTime and size to allow detect changes on js and css files
-  # @see https://stackoverflow.com/questions/37264399/how-to-configure-etag-with-browser-caching
-  FileETag MTime Size
+  # @see https://stackoverflow.com/questions/13215213/how-do-i-configure-etags
+  FileETag All
+  # FileETag INode,
+  # FileETag MTime,
+  # FileETag Size,
+  # FileETag INode MTime,
+  # FileETag INode Size or
+  # FileETag MTime Size may also be set.
+  # FileETag All
   # Remgove ETag optional way
   # Header unset ETag
   # FileETag none
+  # Header set Cache-Control "public, must-revalidate, max-age=3600"
+  # Header unset ETag
 </filesMatch>
 
 # Deny paths final and between
