@@ -17,9 +17,14 @@
 			padding-right: 0.5rem;
 		}
 
+		>.list_body {
+			min-height: @content_data_min_height;
+		}
+
 		>.content_data {
 			// flex-wrap: wrap !important;
 			overflow-x: auto;
+			min-height: @content_data_min_height;
 
 			.view_line& {
 				// background-color: #f0c2fe !important;

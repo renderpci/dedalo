@@ -10,7 +10,7 @@
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	import {set_element_css} from '../../page/js/css.js'
+	// import {set_element_css} from '../../page/js/css.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {
 		render_column_id,
@@ -84,7 +84,7 @@ render_edit_view_mosaic.render = async function(self, options) {
 				const alt_ar_section_record		= await self.get_ar_instances({mode:'list'})
 				// store to allow destroy later
 				self.ar_instances.push(...alt_ar_section_record)
-				const alternative_table_view	= await get_alternative_table_view(self, alt_ar_section_record, alt_list_body)
+				const alternative_table_view	= await render_alternative_table_view(self, alt_ar_section_record, alt_list_body)
 				alt_list_body.appendChild(alternative_table_view)
 
 			// alt_list_body columns
@@ -265,7 +265,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 /**
-* GET_ALTERNATIVE_TABLE_VIEW
+* RENDER_ALTERNATIVE_TABLE_VIEW
 * Render all received section records and place it into a DocumentFragment
 *
 * @param instance self
@@ -274,7 +274,7 @@ const get_content_data = async function(self, ar_section_record) {
 *
 * @return DocumentFragment
 */
-const get_alternative_table_view = async function(self, ar_section_record, alt_list_body) {
+const render_alternative_table_view = async function(self, ar_section_record, alt_list_body) {
 
 	// build_values
 		const fragment = new DocumentFragment()
@@ -330,6 +330,14 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 							modal.on_close = () => {
 								// self.refresh()
 							}
+
+						// user click edit button action close the modal box
+							const token = event_manager.subscribe('edit_button_click', fn_edit_button_click)
+							self.events_tokens.push(token)
+							function fn_edit_button_click() {
+								event_manager.unsubscribe('edit_button_click')
+								modal.close()
+							}
 					}
 
 				// section record append
@@ -344,7 +352,7 @@ const get_alternative_table_view = async function(self, ar_section_record, alt_l
 		}
 
 	return fragment
-}//end get_alternative_table_view
+}//end render_alternative_table_view
 
 
 

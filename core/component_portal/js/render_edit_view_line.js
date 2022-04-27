@@ -283,8 +283,8 @@ render_edit_view_line.render_column_id = function(options){
 
 	// edit_button
 		const edit_button = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button edit',
+			element_type	: 'button',
+			class_name		: 'edit_button',
 			parent			: fragment
 		})
 		edit_button.addEventListener("click", function(){
@@ -310,6 +310,14 @@ render_edit_view_line.render_column_id = function(options){
 			}
 			event_manager.publish('user_navigation', user_navigation_rqo)
 		})
+
+	// edit icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button edit icon',
+			parent			: edit_button
+		})
+
 
 	return fragment
 }//end render_column_id

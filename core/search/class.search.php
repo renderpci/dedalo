@@ -273,7 +273,7 @@ class search {
 				}
 
 				# Add property
-				$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
+				$row->{$field_name} = ($field_name==='datos' || $field_name==='dato') && !empty($field_value)
 					? json_decode($field_value)
 					: $field_value;
 			}
