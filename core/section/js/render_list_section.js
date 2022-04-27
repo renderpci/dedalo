@@ -411,10 +411,16 @@ render_list_section.render_column_id = function(options){
 				fragment.appendChild(section_id_node)
 				// edit button (pen)
 					if (self.permissions>1) {
+						// const edit_button = ui.create_dom_element({
+						// 	element_type	: 'div',
+						// 	class_name		: '',
+						// 	inner_html 		: ' ' + self.config.tool_context.label,
+						// 	parent			: fragment
+						// })
 						const edit_button = ui.create_dom_element({
-							element_type	: 'div',
+							element_type	: 'img',
 							class_name		: '',
-							inner_html 		: ' ' + self.config.tool_context.label,
+							src 			: self.config.tool_context.icon,
 							parent			: fragment
 						})
 						edit_button.addEventListener("click", function(e){

@@ -122,6 +122,37 @@ class dd_core_api {
 				// section/area/section_tool. Get the page element from get url vars
 					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 					switch (true) {
+						// Section_tool is depended of section, the order of the cases are important, section_tool need to be first, before section,
+						// because section_tool depend of the section process and the case only add the config from properties.
+						case ($model==='section_tool'):
+
+							$section_tool_tipo = $tipo;
+
+							$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
+							$properties		= $RecordObj_dd->get_properties();
+
+							// overwrite (!)
+								$model	= 'section';
+								$tipo	= $properties->config->target_section_tipo ?? $tipo;
+								$config	= $properties->config ?? null;
+
+							// tool_context
+								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
+									? array_key_first(get_object_vars($properties->tool_config))
+									: false;
+								if ($tool_name) {
+									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
+									if (empty($ar_tool_object)) {
+										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
+									}else{
+										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
+										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+										$config->tool_context = $tool_context;
+										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
+									}
+								}
+							// (!) note non break switch here. It will continue with section normally.
+							// section_tool don't load the section by itself.
 
 						case ($model==='section'):
 
@@ -133,6 +164,11 @@ class dd_core_api {
 								true, // add_request_config
 								false // callback
 							);
+							// section_tool config
+							// the config is used by section_tool to set the tool to open, if is set inject the config into the context.
+							if (isset($config)) {
+								$current_context->config = $config;
+							}
 
 							// section_id given case. If is received section_id, we build a custom sqo with the proper filter
 							// and override default request_config sqo into the section context
@@ -165,35 +201,6 @@ class dd_core_api {
 							// add to page context
 								$context[] = $current_context;
 							break;
-
-						case ($model==='section_tool'):
-
-							$section_tool_tipo = $tipo;
-
-							$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
-							$properties		= $RecordObj_dd->get_properties();
-
-							// overwrite (!)
-								$model	= 'section';
-								$tipo	= $properties->config->target_section_tipo ?? $tipo;
-								$config	= $properties->config ?? null;
-
-							// tool_context
-								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
-									? array_key_first(get_object_vars($properties->tool_config))
-									: false;
-								if ($tool_name) {
-									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
-									if (empty($ar_tool_object)) {
-										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
-									}else{
-										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
-										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
-										$config->tool_context = $tool_context;
-										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
-									}
-								}
-							// (!) note non break switch here. Continue with overwriten section tipo
 
 						case ($model==='area_thesaurus'):
 
