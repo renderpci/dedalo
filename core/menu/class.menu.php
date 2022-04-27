@@ -106,6 +106,13 @@ class menu extends common {
 
 				$current_area = $ar_areas[$i];
 
+				$datalist_item = (object)[
+					'tipo'		=> $current_area->tipo,
+					'model'		=> $current_area->model,
+					'parent'	=> $current_area->parent,
+					'label'		=> $current_area->label
+				];
+
 				// section_tool case
 					if($current_area->model==='section_tool'){
 
@@ -129,21 +136,16 @@ class menu extends common {
 									$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
 
 									// overwrite current_area (!)
-									$current_area->model	= 'section';
-									$current_area->tipo		= $properties->config->target_section_tipo ?? $current_area->tipo;
-									$current_area->config	= $properties->config ?? new StdClass();
-									$current_area->config->tool_context = $tool_context;
+									$datalist_item->model	= 'section';
+									$datalist_item->tipo	= $properties->config->target_section_tipo ?? $current_area->tipo;
+									$datalist_item->config	= $properties->config ?? new StdClass();
+									$datalist_item->config->tool_context = $tool_context;
 									// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
 								}
 							}
 					}//end if($current_area->model==='section_tool'){
 
-				$datalist_item = (object)[
-					'tipo'		=> $current_area->tipo,
-					'model'		=> $current_area->model,
-					'parent'	=> $current_area->parent,
-					'label'		=> $current_area->label
-				];
+
 
 				// add
 					$tree_datalist[] = $datalist_item;
