@@ -1,7 +1,6 @@
 /*global get_label, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
-// text edit view
 
 
 // imports
