@@ -2681,6 +2681,8 @@
 		Re-added maxmind-db files
 		Added resolve_indexation_fragments error control log when result is empty
 		Fixed diffusion value issues with empty values on PHP 8.1
+		Added method get_value_code to component_select_lang class. (used from diffusion to conver locator value to lang code like 'lg-cat')
+		Added subtitles optional get value 'advice_text'
 
 
 	[/HISTORY]
@@ -2712,7 +2714,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-04-2022T19:55:52');
+	define('DEDALO_BUILD'	, '28-04-2022T14:52:21');
 
 
 	/*
