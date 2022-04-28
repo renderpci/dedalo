@@ -140,7 +140,6 @@ class menu extends common {
 									$datalist_item->tipo	= $properties->config->target_section_tipo ?? $current_area->tipo;
 									$datalist_item->config	= $properties->config ?? new StdClass();
 									$datalist_item->config->tool_context = $tool_context;
-									// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
 								}
 							}
 					}//end if($current_area->model==='section_tool'){
