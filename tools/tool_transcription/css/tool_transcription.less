@@ -1,8 +1,21 @@
 // Vars
-@common_css: "../../../common/css";
+@import '../../../core/page/css/layout/vars.less';
 
-// Usage
-@import "@{common_css}/library.less";
+@color_trascription : #FD9445;
+
+
+// column_id (section_tool list)
+	.column_section_id > .button_edit.list_tool_transcription {
+
+		&:hover{
+			background-color: #f78a1c;
+		}
+		>.icon{
+			-webkit-mask-image: url(../img/icon.svg);
+			mask-image: url(../img/icon.svg);
+		}
+	}
+
 
 
 .tool_transcription_icon {
@@ -29,6 +42,7 @@
 		//background-color: #99E85F;
 		overflow: hidden;
 	}
+
 
 
 /* HEADER
