@@ -185,6 +185,11 @@ section.prototype.init = async function(options) {
 			toggle_search_panel(self.filter)
 		}
 
+	// load additional files as css used by section_tool in self.config
+		if(self.config && self.config.source_model==='section_tool'){
+			self.load_section_tool_files()
+		}
+
 
 	// status update
 		self.status = 'initiated'
@@ -630,6 +635,35 @@ export const get_ar_instances = async function(self){
 	return ar_instances
 };//end get_ar_instances
 
+
+
+/**
+* LOAD_SECTION_TOOL_FILES
+* @return promise
+*/
+section.prototype.load_section_tool_files = function() {
+
+	const self = this
+
+	// load dependences js/css
+		const load_promises = []
+
+		// css file load
+			const lib_css_file = self.config.tool_context && self.config.tool_context.css
+				? self.config.tool_context.css
+				: ''
+			load_promises.push( common.prototype.load_style(lib_css_file) )
+
+		// // js module import
+		// 	const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
+		// 	load_promises.push( load_promise )
+		// 	//self.JSONEditor = JSONEditor
+
+	const js_promise = Promise.all(load_promises)
+
+
+	return js_promise
+};//end load_section_tool_files
 
 
 /**
