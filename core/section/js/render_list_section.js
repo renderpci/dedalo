@@ -408,22 +408,22 @@ render_list_section.render_column_id = function(options){
 			// 	break
 
 			case (self.config && self.config.source_model==='section_tool'):
-				fragment.appendChild(section_id_node)
+
 				// edit button (pen)
 					if (self.permissions>1) {
-						// const edit_button = ui.create_dom_element({
+						// const text_edit_button = ui.create_dom_element({
 						// 	element_type	: 'div',
-						// 	class_name		: '',
+						// 	class_name		: 'self.config.tool_context.name',
 						// 	inner_html 		: ' ' + self.config.tool_context.label,
 						// 	parent			: fragment
 						// })
-						const edit_button = ui.create_dom_element({
-							element_type	: 'img',
-							class_name		: '',
-							src 			: self.config.tool_context.icon,
+
+						const button_edit = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'button_edit list_'+ self.config.tool_context.name,
 							parent			: fragment
 						})
-						edit_button.addEventListener("click", function(e){
+						button_edit.addEventListener("click", function(e){
 							e.stopPropagation();
 
 							// tool_context (clone always to prevent modify original object)
@@ -444,6 +444,21 @@ render_list_section.render_column_id = function(options){
 								caller			: self
 							})
 						})
+						button_edit.appendChild(section_id_node)
+
+							// const tool_icon = ui.create_dom_element({
+							// 	element_type	: 'img',
+							// 	class_name		: self.config.tool_context.name,
+							// 	src 			: self.config.tool_context.icon,
+							// 	parent			: button_edit
+							// })
+
+						// edit_icon
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button edit icon',
+								parent			: button_edit
+							})
 					}
 				break;
 
