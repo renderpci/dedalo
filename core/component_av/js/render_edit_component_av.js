@@ -181,7 +181,7 @@ const get_content_data_edit = function(self) {
 				// }
 		}
 
-	// observers. Renders video node only when is vissible
+	// observers. Renders video node only when is visible
 		if (video_url) {
 			// observer. Set video node only when it is in DOM (to save browser resources)
 			const observer = new IntersectionObserver(function(entries) {
