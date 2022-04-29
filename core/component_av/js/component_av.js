@@ -12,7 +12,10 @@
 	import {render_list_component_av} from '../../component_av/js/render_list_component_av.js'
 	import {render_mini_component_av} from '../../component_av/js/render_mini_component_av.js'
 	import {render_player_component_av} from '../../component_av/js/render_player_component_av.js'
-
+	// Note about event_manager
+	// the component_av is configured by properties in the ontology,
+	// it has subscribed to some events that comes defined in properties as: key_up_f2, key_up_esc, click_tag_tc
+	// the events need to be linked to specific text_area and it's defined in ontology.
 
 
 export const component_av = function(){
@@ -125,7 +128,7 @@ component_av.prototype.go_to_time = function(options) {
 /**
 * PLAY_PAUSE
 */
-component_av.prototype.play_pause = function() {
+component_av.prototype.play_pause = function(rewind_seconds = 0) {
 
 	const self = this
 
@@ -138,11 +141,25 @@ component_av.prototype.play_pause = function() {
 		self.video.play();
 	} else {
 		self.video.pause();
+		if(rewind_seconds > 0){
+			self.rewind(rewind_seconds)
+		}
 	}
 
 	return self.video.paused
 };//end play_pause
 
+
+/*
+* REWIND
+*/
+component_av.prototype.rewind =function(seconds){
+
+	const self = this
+	self.video.currentTime = parseFloat(self.video.currentTime - seconds);
+
+	return self.video.currentTime
+}// end rewind
 
 
 /**
@@ -253,4 +270,27 @@ component_av.prototype.time_to_tc = function(time) {
 	return tc
 };//end time_to_tc
 
+
+
+/**
+* SET_PLAYBACK_RATE
+* set the video playback to specific speed rate
+*/
+component_av.prototype.set_playback_rate = function(rate) {
+
+	const self = this
+
+	if (!self.video) {
+		dd_console("Ignored rate call. No self.video is set", 'warning', [self.tipo, self.id]);
+		return false
+	}
+
+	// Format number as float, precission 1
+	rate = parseFloat(rate)
+	rate = rate.toPrecision(1)
+
+	self.video.playbackRate = rate;
+
+	return rate
+};//end  set_playback_rate
 
