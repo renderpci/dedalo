@@ -116,7 +116,7 @@ class dd_error {
 	/**
 	* WRAP_ERROR
 	*/
-	public static function wrap_error($string_error, $show_option=true, $span_error_class=null) {
+	public static function wrap_error($string_error, $show_option=true, $span_error_class=null) : string {
 
 		$html = '';
 		$html .= '<!DOCTYPE html>';
@@ -143,7 +143,6 @@ class dd_error {
 		$html .= '</html>';
 
 		return $html;
-
 	}//end wrap_error
 
 

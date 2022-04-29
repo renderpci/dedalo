@@ -40,7 +40,7 @@ class menu extends common {
 	* $data->datalist = [{ontology_items}]
 	* @return array $ar_areas
 	*/
-	public function get_tree_datalist() {
+	public function get_tree_datalist() : array {
 
 		$ar_areas = [];
 
@@ -161,7 +161,7 @@ class menu extends common {
 	* get the global information of the current installation.
 	* @return object $info_data
 	*/
-	public function get_info_data() {
+	public function get_info_data() : object {
 
 		$jit_enabled = opcache_get_status()['jit']['enabled'] ?? false;
 
@@ -186,7 +186,7 @@ class menu extends common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=1, $add_rqo=false, $fallback=false) {
+	public function get_structure_context($permissions=1, $add_rqo=false, $fallback=false) : object {
 
 		// short vars
 			$tipo	= $this->get_tipo();

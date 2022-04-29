@@ -189,7 +189,7 @@ class component_semantic_node extends component_relation_common {
 	* 	Catch get_tools call to prevent load tools sections
 	* @return array $tools
 	*/
-	public function get_tools() {
+	public function get_tools() : array {
 
 		return [];
 	}//end get_tools
@@ -200,7 +200,7 @@ class component_semantic_node extends component_relation_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object ) : object {
 		# Always set fixed values
 		$query_object->type 	= 'jsonb';
 		$query_object->unaccent = false;

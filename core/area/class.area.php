@@ -21,8 +21,9 @@ class area extends area_common  {
 	* and get all tipos of every one mixed in one full ontology json array
 	* Used in menu and security access
 	* @see menu, component_security_access
+	* @return array $areas
 	*/
-	public static function get_areas() {
+	public static function get_areas() : array {
 
 		// gc_disable();
 
@@ -120,7 +121,7 @@ class area extends area_common  {
 	*	array recursive of thesaurus structure children filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
-	protected static function get_ar_children_areas_recursive($terminoID) {
+	protected static function get_ar_children_areas_recursive($terminoID) : array {
 
 		$ar_children_areas_recursive	= [];
 		$RecordObj_dd					= new RecordObj_dd($terminoID);
@@ -160,7 +161,7 @@ class area extends area_common  {
 	* AREA_TO_REMOVE
 	* @return bool
 	*/
-	public static function get_config_areas() {
+	public static function get_config_areas() : object {
 
 		if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
 			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empy values as default ".to_string(), logger::ERROR);

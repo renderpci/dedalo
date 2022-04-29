@@ -21,7 +21,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 	# CONSTRUCT
 	# Normalmente llega: id=NULL, $terminoID, $lang
-	function __construct($matrix_table='matrix_descriptors_dd', $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false) {
+	function __construct(string $matrix_table='matrix_descriptors_dd', $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false) {
 
 		if ($lang==='lg-vlca') {
 			$lang='lg-cat';
@@ -118,7 +118,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	* If current dato is untranslated, method decorator 'unTranslated' is apply
 	* @return $dato String
 	*/
-	function get_dato($raw=false) {
+	function get_dato(bool $raw=false) : string {
 
 		if ($raw) {
 			return $this->dato;
@@ -140,9 +140,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	* SET DATO OVERWRITE PARENT JSON SET DATO
 	* @param $dato String
 	*/
-	function set_dato($dato, $raw=false) {
+	function set_dato($dato, bool $raw=false) {
 
- 		if ($raw) {
+ 		if ($raw===true) {
 			$this->dato = $dato;
 			$this->arModifiedRelations['dato'] = 1;
 			return ;
@@ -159,7 +159,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 	# TRANSLATIONS OF CURRENT
-	public function get_ar_translations_of_current() {
+	public function get_ar_translations_of_current() : array {
 
 		$tipo				= $this->get_tipo();
 		$parent				= $this->get_parent();
@@ -192,7 +192,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 	# TERMINO EXISTS VERIFY
-	public static function termino_exists($dato,$tipo) {
+	public static function termino_exists($dato, string $tipo) : bool {
 
 		$arguments=array();
 		$arguments['dato']	= $dato;
@@ -208,7 +208,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 	# DELETE ALL DESCRIPTORS BY TIPO (PARENT)
-	public static function delete_all_descriptors_by_tipo($tipo) {
+	public static function delete_all_descriptors_by_tipo(string $tipo) : bool {
 
 		$ar_id = self::get_all_descriptors_by_tipo( $tipo );
 
@@ -225,7 +225,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 	# GET_ALL_DESCRIPTORS_BY_TIPO
-	public static function get_all_descriptors_by_tipo($tipo) {
+	public static function get_all_descriptors_by_tipo(string $tipo) : array {
 
 		# Buscamos TODOS los descriptres cuyo parent es este tipo
 		# Devuelve un array de id's
@@ -239,7 +239,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 	# GET_ALL_DESCRIPTORS_LANGS_BY_TIPO
-	public static function get_all_descriptors_langs_by_tipo($tipo) {
+	public static function get_all_descriptors_langs_by_tipo(string $tipo) : array {
 
 		# Buscamos TODOS los descriptres cuyo parent es este tipo
 		# Devuelve un array de lang

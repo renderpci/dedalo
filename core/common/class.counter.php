@@ -9,13 +9,13 @@ abstract class counter {
 
 
 	/**
-	* GET_COUNTER_VALUE 
+	* GET_COUNTER_VALUE
 	* COUNTER (STORED IN MATRIX_COUNTER TABLE)
-	* @param string $tipo Like dd561 
+	* @param string $tipo Like dd561
 	* @param string $matrix_table Like matrix_counter (default)
 	* @return int $counter_number
 	*/
-	public static function get_counter_value($tipo, $matrix_table='matrix_counter') {
+	public static function get_counter_value(string $tipo, string $matrix_table='matrix_counter') : int {
 
 		$counter_number = 0; # Default (when no counter exists in db)
 
@@ -23,7 +23,7 @@ abstract class counter {
 		if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			return 0;
 		}
-		
+
 		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$matrix_table.'" WHERE tipo = $1 LIMIT 1';
 		$result	  	= pg_query_params(DBi::_getConnection(), $strQuery, array($tipo));
 		if (!$result) {
@@ -37,7 +37,7 @@ abstract class counter {
 				debug_log(__METHOD__." counter not found in db ($matrix_table). Value $counter_number is returned instead (".str_replace(array('$1'), array($tipo), $strQuery).") ".to_string(), logger::DEBUG);
 			}
 		}
-		
+
 		return (int)$counter_number;
 	}//end get_counter_value
 
@@ -51,13 +51,13 @@ abstract class counter {
 	* @return int $counter_dato_updated
 	* NOTA : HACERLO DIRECTO SQL, PASANDO DE LOS COMPONENTES Y DEMÁS ZARANDAJAS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	*/
-	public static function update_counter($tipo, $matrix_table='matrix_counter', $current_value=false) {
+	public static function update_counter(string $tipo, string $matrix_table='matrix_counter', $current_value=false) : int {
 
 		# ACTIVITY_SECTION DON'T USE COUNTERS
 		if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			return (int)0;
-		}		
-		
+		}
+
 		if ($current_value===false) {
 			$current_value = (int)counter::get_counter_value($tipo, $matrix_table);
 		}
@@ -87,7 +87,7 @@ abstract class counter {
 					trigger_error("VARS: dato:$dato, tipo:$tipo");
 				}
 			}
-		}			
+		}
 		if (!$result) {
 			throw new Exception("Error Processing Request. DB error on update counter", 1);
 		}
@@ -106,8 +106,8 @@ abstract class counter {
 	* @param string $counter_matrix_table default matrix_counter
 	* @return bool true if update/create counter, false if not
 	*/
-	public static function consolidate_counter( $section_tipo, $matrix_table, $counter_matrix_table='matrix_counter' ) {
-		
+	public static function consolidate_counter( string $section_tipo, string $matrix_table, string $counter_matrix_table='matrix_counter' ) : bool {
+
 		# BIGGER_SECTION_ID . Search bigger section_tipo existent
 		$strQuery = 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
 		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
@@ -121,15 +121,15 @@ abstract class counter {
 
 		#
 		# UPDATE COUNTER WITH BIGGEST VALUE
-		$bigger_section_id = (int)$bigger_section_id; # update_counter set current value + 1. For this we pass current -1 to consolidate counter	
+		$bigger_section_id = (int)$bigger_section_id; # update_counter set current value + 1. For this we pass current -1 to consolidate counter
 		if ($bigger_section_id<0) {
 			$bigger_section_id=0;
 		}
-		
+
 		#
-		# TEST IF COUNTER EXISTS BEFORE SET	
+		# TEST IF COUNTER EXISTS BEFORE SET
 		$counter_created = false;
-		# When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value				
+		# When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value
 		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$counter_matrix_table.'" WHERE tipo = $1 LIMIT 1';
 		$result	  	= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
 		if(!$result) throw new Exception("Error Processing Request. DB error on get counter value", 1);
@@ -140,19 +140,19 @@ abstract class counter {
 			$counter_created = true;
 		}
 
-		# $counter_number = pg_fetch_result($result, 0, 0);			
+		# $counter_number = pg_fetch_result($result, 0, 0);
 		# COUNTER EXISTS. But value is different than bigger_section_id
 		if($bigger_section_id>0) {
-			# update_counter with bigger_section_id value 			
+			# update_counter with bigger_section_id value
 			$strQuery = 'UPDATE "'.$counter_matrix_table.'" SET dato = $1 WHERE tipo = $2';
 			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $bigger_section_id, $section_tipo ));
 			if(!$result)throw new Exception("Error Processing Request. DB error on update counter value", 1);
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Consolidated counter with value: dato:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
-			}			
-		}					
+			}
+		}
 		#debug_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table] ".to_string(), logger::DEBUG);
-		
+
 		return true;
 	}//end consolidate_counter
 
@@ -162,8 +162,8 @@ abstract class counter {
 	* DELETE_COUNTER
 	* @return bool
 	*/
-	private static function delete_counter($tipo, $matrix_table='matrix_counter') {
-		
+	private static function delete_counter(string $tipo, string $matrix_table='matrix_counter') : bool {
+
 		$strQuery = 'DELETE FROM "'.$matrix_table.'" WHERE tipo = $1';
 		$result	  = pg_query_params(DBi::_getConnection(), $strQuery, array($tipo));
 		if(!$result)throw new Exception("Error Processing Request. DB error on delete counter $tipo", 1);
@@ -177,10 +177,10 @@ abstract class counter {
 	* CHECK_counters
 	* @return stdClass object $response
 	*/
-	public static function check_counters() {
+	public static function check_counters() : object {
 
 		$start_time=microtime(1);
-		
+
 		$response = new stdClass();
 			$response->result 	= true;
 			$response->msg 	 	= '';
@@ -198,7 +198,7 @@ abstract class counter {
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$start_time=microtime(1);
-				
+
 			$section_tipo 		= $rows['tipo'];
 			$counter_section_id = (int)$rows['dato'];
 
@@ -213,14 +213,14 @@ abstract class counter {
 			$sql2 	 = 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
 			$result2 = JSON_RecordObj_matrix::search_free($sql2);
 
-			
+
 
 			if (pg_num_rows($result2) === 0) {
 				$last_section_id = 0;	// Skip empty tables
 			}else{
 				$last_section_id = (int)pg_fetch_result($result2, 0, 'section_id');
 			}
-			
+
 			$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 			$response->msg .= "<hr><b>-- $section_tipo $section_name</b> - counter: $counter_section_id - last_section_id: $last_section_id ";
 			if ($last_section_id!=$counter_section_id) {
@@ -230,7 +230,7 @@ abstract class counter {
 				}else{
 					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">DELETE FROM \"matrix_counter\"  WHERE tipo = '$section_tipo'; </span></h5>";
 				}
-			
+
 				#$response->msg .= "<br><b>   WARNING: last_section_id != counter_section_id [$last_section_id != $counter_section_id]</b>";
 				#$response->msg .= "<br>FIX AUTOMATIC TO $last_section_id start</pre>";
 				/*
@@ -248,7 +248,7 @@ abstract class counter {
 
 			#$t = exec_time_unit($start_time,'ms');
 			#debug_log(__METHOD__." sql2: $sql2  - $t ms".to_string(), logger::DEBUG);
-			
+
 			$i++;
 		}//end while ($rows = pg_fetch_assoc($result)) {
 
@@ -262,4 +262,3 @@ abstract class counter {
 
 
 }//end class counter
-?>

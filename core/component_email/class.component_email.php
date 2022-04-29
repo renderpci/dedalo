@@ -5,7 +5,7 @@
 *
 */
 class component_email extends component_common {
-	
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
@@ -16,7 +16,7 @@ class component_email extends component_common {
 	public function get_dato() {
 
 		$dato = parent::get_dato();
-		
+
 		return (array)$dato;
 	}//end get_dato
 
@@ -28,12 +28,12 @@ class component_email extends component_common {
 	public function set_dato($dato) {
 
 		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {			
-				$safe_dato[] = component_email::clean_email($value);		
+		foreach ((array)$dato as $key => $value) {
+				$safe_dato[] = component_email::clean_email($value);
 		}
 		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );		
+		parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
@@ -46,7 +46,7 @@ class component_email extends component_common {
 
 		# Opcionalmente se podría validar mediante aquí el dato.. aunque ya se ha hecho en javascript
 		$email = $this->get_dato();
-		foreach ((array)$email as $key => $value) {		
+		foreach ((array)$email as $key => $value) {
 			if (!empty($value) && false===component_email::is_valid_email($value)) {
 				debug_log(__METHOD__." No data is saved. Invalid email ".to_string($value), logger::ERROR);
 				return false;
@@ -65,7 +65,7 @@ class component_email extends component_common {
 	*/
 	public static function is_valid_email( $email ) {
 
-		return filter_var($email, FILTER_VALIDATE_EMAIL) 
+		return filter_var($email, FILTER_VALIDATE_EMAIL)
         	&& preg_match('/@.+\./', $email);
 	}//end is_valid_email
 
@@ -76,13 +76,13 @@ class component_email extends component_common {
 	* @return string $email
 	*/
 	public static function clean_email($email) {
-		
+
 		$email = trim($email);
 
 		if (!empty($email)) {
 			$email = preg_replace('=((<CR>|<LF>|0x0A/%0A|0x0D/%0D|\\n|\\r|\'|\")\S).*=i', null, $email);
 		}
-		
+
 
 		return $email;
 	}//end clean_email
@@ -93,21 +93,21 @@ class component_email extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object
-	*	Edited/parsed version of received object 
+	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object ) : object {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
-					
+
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-			
+
 		#$q = $query_object->q;
 		#if (isset($query_object->type) && $query_object->type==='jsonb') {
 		#	$q = json_decode($q);
-		#}	
+		#}
 
 		# Always set fixed values
 		$query_object->type = 'string';
-		
+
 		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
@@ -154,7 +154,7 @@ class component_email extends component_common {
 					$clone = clone($query_object);
 						$clone->operator = 'IS NULL';
 						$clone->lang 	 = $lang;
-					$new_query_json->$logical_operator[] = $clone;			
+					$new_query_json->$logical_operator[] = $clone;
 
 				# override
 				$query_object = $new_query_json ;
@@ -173,7 +173,7 @@ class component_email extends component_common {
 
 				// langs check
 					$ar_query_object = [];
-					
+
 						#$clone = clone($query_object);
 						#	$clone->operator = '!=';
 						#	$clone->q_parsed = '\'[]\'';
@@ -185,16 +185,16 @@ class component_email extends component_common {
 							$clone->q_parsed = '\'\'';
 							$clone->lang 	 = DEDALO_DATA_NOLAN;
 						$ar_query_object[] = $clone;
-					
+
 
 					$logical_operator ='$or';
 					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $ar_query_object;				
+						$langs_query_json->$logical_operator = $ar_query_object;
 
 				# override
 				$query_object = [$new_query_json, $langs_query_json];
 				break;
-			# IS DIFFERENT			
+			# IS DIFFERENT
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
@@ -250,17 +250,17 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
 				break;
-			# DEFAULT CONTAIN 
+			# DEFAULT CONTAIN
 			default:
 				$operator = '~*';
-				$q_clean  = str_replace('+', '', $q);				
+				$q_clean  = str_replace('+', '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
-				break;			
+				break;
 		}//end switch (true) {
 		#dump($query_object, ' query_object ++ '.to_string());
-	   
+
 
 		return $query_object;
 	}//end resolve_query_object_sql
@@ -273,10 +273,10 @@ class component_email extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null	
+			'!*' 	 => 'campo_vacio', // null
 			'=' 	 => 'similar_a',
 			'!=' 	 => 'distinto_de',
 			'-' 	 => 'no_contiene',

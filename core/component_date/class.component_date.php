@@ -281,7 +281,7 @@ class component_date extends component_common {
 					$value_start = '';
 					if(isset($current_dato->start)) {
 						$dd_date = new dd_date($current_dato->start);
-						
+
 						if(isset($current_dato->start->day)) {
 							$value_start = $dd_date->get_dd_timestamp("Y-m-d");
 						}else{
@@ -769,8 +769,7 @@ class component_date extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($request_query_object) {
-			dump($request_query_object, ' request_query_object ++ '.to_string());
+	public static function resolve_query_object_sql( object $request_query_object) : object {
 
 		// query_object clone
 		$query_object = clone $request_query_object;

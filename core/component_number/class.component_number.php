@@ -220,7 +220,7 @@ class component_number extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object) : object {
 
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
