@@ -750,15 +750,15 @@ const get_custom_events = (self, i, service) => {
 		custom_events.KeyUp = (evt, options) => {
 			// use the observe property into ontology of the components to suscribe to this events
 
-			switch(evt.keyCode ){
-				// 'esc' code: 27
-				case  27:
-					event_manager.publish('key_up_esc' +'_'+ self.id_base, evt.keyCode)
+			switch( evt.code ){
+				// 'Escape'
+				case  self.av_play_pause_code:
+					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.av_rewind_seconds)
 					break;
-				// 'f2' code: 113
-				case 113:
+				// 'F2'
+				case self.av_insert_tc_code:
 					// publish event and receive susbscriptors responses
-					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
+					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
 
 					// debug
