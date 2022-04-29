@@ -40,6 +40,10 @@ export const component_text_area = function(){
 		this.events_tokens	= []
 		// this.services	= []
 
+		this.av_play_pause_code	= 'Escape' 	// ESC
+		this.av_insert_tc_code	= 'F2'	// F2
+		this.av_rewind_seconds 	= 3
+
 	return true
 };//end component_text_area
 
