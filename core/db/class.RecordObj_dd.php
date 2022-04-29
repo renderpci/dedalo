@@ -95,7 +95,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		return ('terminoID');
 	}
 	# DEFINERELATIONMAP : array of pairs db field name, obj property name like fieldName => propertyName
-	protected function defineRelationMap() {
+	protected function defineRelationMap() : array {
 		return [
 			# db field name		# property name
 			//'id'			=> 'ID',
@@ -120,7 +120,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_PREFIX_FROM_TIPO
 	* @return string Like 'dd' or 'murapa'
 	*/
-	public static function get_prefix_from_tipo($tipo) {
+	public static function get_prefix_from_tipo(string $tipo) : string {
 
 		preg_match("/\D+/", $tipo, $output_array);
 		if (empty($output_array[0])) {
@@ -142,7 +142,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* PREFIX_COMPARE
 	* Verify 2 received terms have the same prefix
 	*/
-	public static function prefix_compare($terminoID, $terminoID2) {
+	public static function prefix_compare(string $terminoID, string $terminoID2) : bool {
 
 		$prefijo	= RecordObj_dd::get_prefix_from_tipo($terminoID);
 		$prefijo2	= RecordObj_dd::get_prefix_from_tipo($terminoID2);
@@ -153,11 +153,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 			return false;
 		}
-		if ($prefijo===$prefijo2) {
-			return true;
-		}else{
-			return false;
-		}
+
+		$result = ($prefijo===$prefijo2);
+
+		return $result;
 	}//end prefix_compare
 
 
@@ -169,7 +168,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param bool $json_decode
 	* @return object / string parent::$properties
 	*/
-	public function get_propiedades($json_decode=false) {
+	public function get_propiedades(bool $json_decode=false) {
 
 		$propiedades = parent::get_propiedades();
 		if (is_null($propiedades)) {
@@ -267,7 +266,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* Actualiza el contador para el tld dado (ej. 'dd').
 	* El 'current_value' es opcional. Si no se recibe se calcula
 	*/
-	protected static function update_counter($tld, $current_value=false) {
+	protected static function update_counter(string $tld, $current_value=false) {
 
 		if ($current_value===false) {
 			$current_value = self::get_counter_value($tld);
@@ -294,7 +293,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*
 	* @return int $counter_value
 	*/
-	protected static function get_counter_value($tld) {
+	protected static function get_counter_value(string $tld) : int {
 
 		$strQuery		= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
 		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
@@ -316,7 +315,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_DESCRIPTOR_DATO_BY_TIPO
 	* GET TERMINO DATO BY TIPO ('termino','def','obs') STATIC VERSION
 	*/
-	public static function get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback=false) {
+	public static function get_descriptor_dato_by_tipo(string $terminoID, string $lang=null, string $tipo, bool $fallback=false) {
 
 		# Verify : En casos como por ejemplo, al resolver el modelo de un término relacionado que no tiene modelo asignado, el terminoID estará vacío.
 		# Esto no es un error pero debemos evitar resolverlo.
@@ -344,7 +343,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		return $dato;
 	}
 	# GET_TERMINO_BY_TIPO STATIC VERSION
-	public static function get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true) {
+	public static function get_termino_by_tipo(string $terminoID, string $lang=null, bool $from_cache=false, bool $fallback=true) : string {
 		#$from_cache=false;
 
 		static $termino_by_tipo;
@@ -379,7 +378,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* Alias of $this->get_termino_by_tipo($modelo_tipo)
 	* @return string $model
 	*/
-	public function get_modelo_name() {
+	public function get_modelo_name() : string {
 
 		// forced models in v6 (while we are using structure v5)
 			if ($this->terminoID===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
@@ -400,7 +399,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 				return 'component_check_box';
 			}
 
-		$model = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
+		$modelo_tipo = $this->get_modelo();
+		if (empty($modelo_tipo)) {
+			return '';
+		}
+
+		$model = $this->get_termino_by_tipo($modelo_tipo, 'lg-spa', true, false);
 
 		// replace obsolete models on the fly
 			if ($model==='component_input_text_large') {
@@ -431,7 +435,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	# GET MODELO NAME BY TIPO (STATIC)
-	public static function get_modelo_name_by_tipo($tipo, $from_cache=false) {
+	public static function get_modelo_name_by_tipo(string $tipo, bool $from_cache=false) : string {
 		#$from_cache=false;
 
 		static $modelo_name_by_tipo;
@@ -459,7 +463,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_REAL_MODEL_NAME_BY_TIPO
 	* Temporal function to manage transitional models
 	*/
-	public static function get_real_model_name_by_tipo($tipo) {
+	public static function get_real_model_name_by_tipo(string $tipo) : string {
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$model_name		= $RecordObj_dd->get_real_model_name();
@@ -472,7 +476,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_REAL_MODEL_NAME_BY_TIPO
 	* Temporal function to manage transitional models
 	*/
-	public function get_real_model_name() {
+	public function get_real_model_name() : string {
 
 		$model_name = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
 
@@ -482,16 +486,21 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	# GET LANG BY TIPO (STATIC)
-	public static function get_lang_by_tipo($tipo, $from_cache=false) {
+	public static function get_lang_by_tipo(string $tipo, bool $from_cache=false) : string {
+
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$lang 		  = $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+
 		return $lang;
-	}
+	}//end get_lang_by_tipo
 
 
 
-	# GET AR TERMINO ID BY MODELO NAME (STATIC)
-	public static function get_ar_terminoID_by_modelo_name($modelo_name, $prefijo='dd') {
+	/**
+	*  GET AR TERMINO ID BY MODELO NAME (STATIC)
+	* @return array $ar_result
+	*/
+	public static function get_ar_terminoID_by_modelo_name(string $modelo_name, string $prefijo='dd') : array {
 
 		# STATIC CACHE
 			static $ar_terminoID_by_modelo_name;
@@ -563,13 +572,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	# MODELOS ARRAY
 	# Se usa en  el selector de tesauro edit para asignar modelo
-	public function get_ar_all_modelos() {
+	public function get_ar_all_modelos() : array {
 
 		# STATIC CACHE
 		static $ar_all_modelos_data;
 		if(isset($this->terminoID) && isset($ar_all_modelos_data[$this->terminoID])) return $ar_all_modelos_data[$this->terminoID];
 
-		$ar_all_modelos = array();
+		$ar_all_modelos = [];
 
 		# SEARCH
 		$arguments=array();
@@ -592,7 +601,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_AR_ALL_TERMINOID_OF_MODELO_TIPO
 	*/
-	public static function get_ar_all_terminoID_of_modelo_tipo($modelo_tipo) {
+	public static function get_ar_all_terminoID_of_modelo_tipo(string $modelo_tipo) : array {
 
 		# SEARCH
 		$arguments=array();
@@ -615,7 +624,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* Get array of terms (terminoID) with parent = $this->terminoID
 	* @return array
 	*/
-	public function get_ar_childrens_of_this($esdescriptor='si', $esmodelo=null, $order_by='norden') {
+	public function get_ar_childrens_of_this(string $esdescriptor='si', $esmodelo=null, string $order_by='norden') : array {
 
 		# COMPROBACIÓN
 		if(empty($this->terminoID))	return false;
@@ -660,7 +669,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_AR_CHILDRENS
 	*/
-	public static function get_ar_childrens($tipo, $order_by='norden') {
+	public static function get_ar_childrens(string $tipo, string $order_by='norden') : array {
 
 		# STATIC CACHE
 		static $get_ar_childrens_data;
@@ -694,7 +703,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	# CHILDRENS RECURSIVE ARRAY
 	# SACA TODOS LOS HIJOS DEL TERMINO ACTUAL RECURSIVAMENTE
-	public function get_ar_recursive_childrens_of_this( $terminoID, $is_recursion=0 ) {
+	public function get_ar_recursive_childrens_of_this( string $terminoID, int $is_recursion=0 ) : array {
 
 		# IMPORTANTE: NO HACER CACHE DE ESTE MÉTODO (AFECTA A COMPONENT_FILTER_MASTER)
 
@@ -725,7 +734,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens($terminoID, $is_recursion=false, $ar_exclude_models=false, $order_by=null) {
+	public static function get_ar_recursive_childrens( string $terminoID, $is_recursion=false, $ar_exclude_models=false, $order_by=null ) : array {
 
 		$ar_resolved=array();
 
@@ -765,9 +774,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens_with_exclude($terminoID, $is_recursion=false, $ar_exclude=array()) {
+	public static function get_ar_recursive_childrens_with_exclude(string $terminoID, bool $is_recursion=false, array $ar_exclude=array()) : array {
 
-		$ar_resolved=array();
+		$ar_resolved = [];
 		/*
 		static $ar_resolved;
 		if (!isset($ar_resolved)) {
@@ -800,7 +809,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	# GET PARENTS ARRAY
-	public function get_ar_parents_of_this($ksort=true) {
+	public function get_ar_parents_of_this(bool $ksort=true) : array {
 
 		# STATIC CACHE
 		static $ar_parents_of_this_data;
@@ -841,7 +850,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	# GET SIBLINGS ARRAY [HERMANOS]
-	public function get_ar_siblings_of_this() {
+	public function get_ar_siblings_of_this() : array {
 
 		# STATIC CACHE
 		static $ar_siblings_of_this_data;
@@ -849,7 +858,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return $ar_siblings_of_this_data[$this->terminoID];
 		}
 
-		$ar_siblings_of_this		= array();
+		$ar_siblings_of_this = array();
 
 		$arguments["parent"]		= $this->get_parent();
 		$arguments["esdescriptor"]	= 'si';
@@ -868,7 +877,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	# NUMERO DE HIJOS DESCRIPTORES
-	public function get_n_hijos_descriptores() {
+	public function get_n_hijos_descriptores() : int {
 
 		# STATIC CACHE
 		static $get_n_hijos_descriptores_data;
@@ -885,11 +894,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$get_n_hijos_descriptores_data[$this->terminoID] = $n_hijos_descriptores;
 
-		return $n_hijos_descriptores;
+		return (int)$n_hijos_descriptores;
 	}
 
 	# NUMERO DE HIJOS
-	public function get_n_hijos() {
+	public function get_n_hijos() : int {
 
 		# STATIC CACHE
 		static $get_n_hijos_data;
@@ -898,12 +907,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$arguments["parent"]	= $this->terminoID;
 		$ar_id					= $this->search($arguments);
 
-		$n_hijos				= count($ar_id);
+		$n_hijos = count($ar_id);
 
 		# STORE CACHE DATA
 		$get_n_hijos_data[$this->terminoID] = $n_hijos;
 
-		return $n_hijos;
+		return (int)$n_hijos;
 	}//end get_n_hijos
 
 
@@ -983,7 +992,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* JSON_VERSION
 	* En modo 'simple' devuelve sólo un array de 'terminoID'
 	*/
-	public static function get_ar_terminos_relacionados($terminoID, $cache=false, $simple=false) {
+	public static function get_ar_terminos_relacionados(string $terminoID, bool $cache=false, bool $simple=false) : array {
 
 		#if(SHOW_DEBUG===true) $start_time = start_time();
 		# NO HACER CACHE EN ESTE MÉTODO
@@ -1049,7 +1058,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string $relation_type like 'termino_relacionado'
 	* @return array $result
 	*/
-	public static function get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=false) {
+	public static function get_ar_terminoID_by_modelo_name_and_relation(string $tipo, string $modelo_name, string $relation_type, bool $search_exact=false) : array {
 
 		$result	= array();
 
@@ -1235,7 +1244,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_TRANSLATABLE
 	* @return bool
 	*/
-	public static function get_translatable($tipo) {
+	public static function get_translatable(string $tipo) : bool {
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$translatable = $RecordObj_dd->get_traducible();
@@ -1246,5 +1255,3 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 }//end RecordObj_dd
-
-

@@ -17,7 +17,7 @@ abstract class filter {
 	* @param array $ar_area_tipo
 	* @return array $ar_profile_id
 	*/
-	public static function get_profiles_for_areas($ar_area_tipo) {
+	public static function get_profiles_for_areas($ar_area_tipo) : array {
 
 		// short vars
 			$tipo = DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
@@ -100,7 +100,7 @@ abstract class filter {
 	* Works like ar_list_of_values but filtered by user authorized projects
 	* @return array $ar_projects
 	*/
-	public static function get_user_authorized_projects( $user_id, $from_component_tipo ) {
+	public static function get_user_authorized_projects( $user_id, $from_component_tipo ) : array {
 		$start_time=microtime(1);
 
 		// cache
@@ -255,7 +255,7 @@ abstract class filter {
 	* In process.... (need specific component for manage)
 	* @return string $sql_filtro
 	*/
-	public static function get_filter_user_records_by_id( $user_id ) {
+	public static function get_filter_user_records_by_id( $user_id ) : array {
 
 		$filter_user_records_by_id = array();
 

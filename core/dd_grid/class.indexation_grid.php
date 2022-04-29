@@ -39,7 +39,7 @@ class indexation_grid {
 	* BUILD_INDEXATION_GRID
 	* @return array $ar_indexation_grid
 	*/
-	public function build_indexation_grid() {
+	public function build_indexation_grid() : array {
 
 		$ar_indexation_grid = [];
 
@@ -160,7 +160,7 @@ class indexation_grid {
 	*
 	* @return object $value
 	*/
-	public function get_value($ar_ddo, $locator) {
+	public function get_value(array $ar_ddo, object $locator) : object {
 
 		// top properties add
 			$locator->section_top_tipo	= $locator->section_top_tipo ?? $locator->section_tipo;

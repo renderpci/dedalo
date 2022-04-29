@@ -15,7 +15,7 @@ class search_related extends search {
 	*	default false
 	* @return string $sql_query
 	*/
-	public function parse_search_query_object( $full_count=false ) {
+	public function parse_search_query_object( $full_count=false ) : string {
 
 		$ar_tables_to_search = common::get_matrix_tables_with_relations();
 

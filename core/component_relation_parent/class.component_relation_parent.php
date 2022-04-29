@@ -743,7 +743,7 @@ class component_relation_parent extends component_relation_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object ) : object {
 
 		$q = $query_object->q;
 

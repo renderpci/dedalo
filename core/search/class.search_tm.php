@@ -16,7 +16,7 @@ class search_tm extends search {
 	* BUILD_FULL_COUNT_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
-	public function build_full_count_sql_query_select() {
+	public function build_full_count_sql_query_select() : string {
 
 		// matrix_time_machine specific
 		$sql_query_select = 'count('.$this->main_section_tipo_alias.'.section_id) as full_count';
@@ -30,7 +30,7 @@ class search_tm extends search {
 	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
 	* @return string $string_query
 	*/
-	public function build_sql_filter_by_locators_order() {
+	public function build_sql_filter_by_locators_order() : string {
 
 		$string_query = 'ORDER BY id DESC';
 
@@ -43,7 +43,7 @@ class search_tm extends search {
 	* BUILD_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
-	public function build_sql_query_select($full_count=false) {
+	public function build_sql_query_select($full_count=false) : string {
 
 		if ($full_count===true) {
 			return $this->build_full_count_sql_query_select();

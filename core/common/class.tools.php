@@ -37,7 +37,7 @@ abstract class tools extends common {
 
 		return $html;
 	}//end prepare_content
-	
+
 
 
 	# STRIP TAGS FOR TEMPLATES
@@ -110,7 +110,7 @@ abstract class tools extends common {
 				);
 				$cleanhtml = str_replace(array(' <','> '), array('<','>'), $cleanhtml);
 				return $cleanhtml;
-	
+
 
 		//Set wanted indentation
 		#$indent = "    ";
@@ -198,7 +198,7 @@ abstract class tools extends common {
 	}
 
 	# TRUNCATE
-	public static function truncate_text($string, $limit, $break=" ", $pad="...") {
+	public static function truncate_text($string, $limit, $break=" ", $pad="...") : string {
 
 	  # return with no change if string is shorter than $limit
 	  if(strlen($string) <= $limit) return $string;
@@ -209,7 +209,7 @@ abstract class tools extends common {
 	  }
 
 	  return $string . $pad;
-	}
+	}//end truncate_text
 
 
 
@@ -253,7 +253,7 @@ abstract class tools extends common {
 	*/
 	public static function get_request_time() {
 		return $_SERVER['REQUEST_TIME_FLOAT'];
-		
+
 		if (isset($_SERVER['REQUEST_TIME_FLOAT'])) {
 			$request_time = $_SERVER['REQUEST_TIME'];
 		}else{
@@ -345,11 +345,11 @@ abstract class tools extends common {
 
 		return $bc_path;
 	}
-	
+
 
 
 	static function get_id_path($id) {
-		
+
 		# PATH
 		$id_path='';
 		if (isset($_GET['id_path'])) {
@@ -360,14 +360,14 @@ abstract class tools extends common {
 		}
 
 
-		if (!empty($id)) {			
-			$id_path .= ','.$id;						
+		if (!empty($id)) {
+			$id_path .= ','.$id;
 		}
 
-		
+
 		return $id_path;
 	}//end get_id_path
-	
+
 
 
 }//end class tools

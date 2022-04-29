@@ -59,19 +59,19 @@ class locator extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data 
+	* @param object $data
 	*	optional . Default is null
 	*/
 	public function __construct( $data=null ) {
 
-		if (is_null($data)) return;
+		if (is_null($data)) return false;
 
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
 			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
 			return false;
 		}
-		foreach ($data as $key => $value) {			
+		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
 			$this->$method($value);
 		}
@@ -122,7 +122,7 @@ class locator extends stdClass {
 		}
 
 		$this->section_id = (string)$value;
-	}	
+	}
 	/**
 	* SET_SECTION_TIPO
 	*/
@@ -190,10 +190,10 @@ class locator extends stdClass {
 	}
 	/**
 	* SET_TYPE_REL
-	* Only defined relation direction 
+	* Only defined relation direction
 	*/
 	public function set_type_rel($value) {
-		# No verification is made now		
+		# No verification is made now
 		$this->type_rel = (string)$value;
 	}
 	/**
@@ -207,14 +207,14 @@ class locator extends stdClass {
 	}
 	/**
 	* SET_FROM_KEY
-	* @return 
+	* @return
 	*/
 	public function set_from_key($value) {
 		if(int($value)<0) {
 			throw new Exception("Error Processing Request. Invalid from_key: $value", 1);
 		}
 		$this->type = (int)$value;
-		
+
 	}//end set_from_key
 	/**
 	* SET_TIPO
@@ -239,11 +239,11 @@ class locator extends stdClass {
 
 	/**
 	* GET_FLAT
-	* Compound a chained plain flat locator string for use as media componet name, etc..	
+	* Compound a chained plain flat locator string for use as media componet name, etc..
 	* @return string $name Like 'dd42_dd207_1'
 	*/
-	public function get_flat( ) {
-		
+	public function get_flat() : string {
+
 		if ( empty($this->get_component_tipo() ) ) {
 			throw new Exception("Error Processing Request. empty component_tipo", 1);
 		}
@@ -253,7 +253,7 @@ class locator extends stdClass {
 		if ( empty($this->get_section_id() ) ) {
 			throw new Exception("Error Processing Request. empty section_id", 1);
 		}
-		
+
 		$name = $this->component_tipo . locator::DELIMITER . $this->section_tipo . locator::DELIMITER . $this->section_id;
 
 		/*
@@ -296,7 +296,7 @@ class locator extends stdClass {
 		}else{
 			$term_id = $locator->section_tipo . '_' . $locator->section_id;
 		}
-		
+
 
 		return $term_id;
 	}//end get_term_id_from_locator
@@ -324,7 +324,7 @@ class locator extends stdClass {
 		}else{
 			$section_id = (int)$locator->section_id;
 		}
-		
+
 
 		return $section_id;
 	}//end get_section_id_from_locator
@@ -333,7 +333,7 @@ class locator extends stdClass {
 
 	/**
 	* GET_STD_CLASS
-	* @return stdClass 
+	* @return stdClass
 	*/
 	public static function get_std_class( $locator ) {
 
@@ -355,10 +355,10 @@ class locator extends stdClass {
 	* Gets a lang like 'lg-spa' and it converts to lang locator like {"section_tipo":"lg-spa","section_id":17344}
 	* @return object $locator
 	*/
-	public static function lang_to_locator( $lang ) {
-		
+	public static function lang_to_locator( string $lang ) : object {
+
 		$section_tipo = DEDALO_LANGS_SECTION_TIPO;	//$lang;
-		
+
 		switch ($lang) {
 			case 'lg-spa':	$section_id = 17344;	break;
 			case 'lg-eng':	$section_id = 5101;		break;
@@ -387,7 +387,7 @@ class locator extends stdClass {
 	* COMPARE_LOCATORS
 	* @return bool $equal
 	*/
-	public static function compare_locators( $locator1, $locator2, $ar_properties=[], $ar_exclude_properties=['dataframe','ds'] ) {
+	public static function compare_locators( object $locator1, object $locator2, $ar_properties=[], $ar_exclude_properties=['dataframe','ds'] ) : bool {
 
 		if (!is_object($locator1) || !is_object($locator2)) {
 			return false;
@@ -407,11 +407,11 @@ class locator extends stdClass {
 			}
 
 			$ar_properties = array_unique($ar_properties);
-		}	
-		
+		}
+
 
 		$equal = true;
-		
+
 		foreach ((array)$ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
 
 			#if (!is_object($locator1) || !is_object($locator2)) {
@@ -425,7 +425,7 @@ class locator extends stdClass {
 
 			# Test property exists in all locators
 			#if (!property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
-			if ($property_exists_in_l1===false && $property_exists_in_l2===false) {	
+			if ($property_exists_in_l1===false && $property_exists_in_l2===false) {
 				# Skip not existing properties
 				#debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::DEBUG);
 				continue;
@@ -436,27 +436,27 @@ class locator extends stdClass {
 			if ($property_exists_in_l1===true && $property_exists_in_l2===false) {
 				#debug_log(__METHOD__." Property $current_property exists in locator1 but not exits in locator2 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
 				$equal = false;
-				break; 
+				break;
 			}
 			#if (property_exists($locator2, $current_property) && !property_exists($locator1, $current_property)) {
-			if ($property_exists_in_l2===true && $property_exists_in_l1===false) {	
+			if ($property_exists_in_l2===true && $property_exists_in_l1===false) {
 				#debug_log(__METHOD__." Property $current_property exists in locator2 but not exits in locator1 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
 				$equal = false;
-				break; 
-			}			
+				break;
+			}
 
 			# Compare verified existing properties
 			if ($current_property==='section_id') {
-				if( $locator1->$current_property != $locator2->$current_property ) {				
+				if( $locator1->$current_property != $locator2->$current_property ) {
 					$equal = false;
-					break; 
+					break;
 				}
 			}else{
-				if( $locator1->$current_property !== $locator2->$current_property ) {				
+				if( $locator1->$current_property !== $locator2->$current_property ) {
 					$equal = false;
-					break; 
+					break;
 				}
-			}			
+			}
 		}
 
 		return (bool)$equal;
@@ -468,9 +468,9 @@ class locator extends stdClass {
 	* IN_ARRAY_LOCATOR
 	* @return bool $founded
 	*/
-	public static function in_array_locator( $locator, $ar_locator, $ar_properties=array() ) {
+	public static function in_array_locator( object $locator, $ar_locator, $ar_properties=array() ) : bool {
 		$founded = false;
-	
+
 		foreach ((array)$ar_locator as $current_locator) {
 			$founded = self::compare_locators( $locator, $current_locator, $ar_properties );
 			if($founded===true) break;
@@ -482,7 +482,7 @@ class locator extends stdClass {
 		#			return self::compare_locators( $locator, $current_locator, $ar_properties );
 		#		}
 		#); return $ar;
-	
+
 
 		return $founded;
 	}//end in_array_locator
@@ -512,9 +512,9 @@ class locator extends stdClass {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
-	*/	
+	*/
 	final public function __call($strFunction, $arArguments) {
-		
+
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -545,7 +545,7 @@ class locator extends stdClass {
 
 		#
 		# ONLY FOR DEBUG !!
-		if(SHOW_DEBUG===true) {		
+		if(SHOW_DEBUG===true) {
 			if (!isset($this->section_tipo)) {
 				dump($this, ' this');
 				#dump(debug_backtrace(), 'debug_backtrace()');
@@ -553,13 +553,13 @@ class locator extends stdClass {
 			}
 			if (!isset($this->section_id)) {
 				dump($this, ' this');
-				throw new Exception("Error Processing Request. locator section_id is mandatory", 1);		
+				throw new Exception("Error Processing Request. locator section_id is mandatory", 1);
 			}
 		}else{
 			if (!isset($this->section_tipo) || !isset($this->section_id)) {
 				error_log("ERROR: wrong locator format detected. Please fix this ASAP : ".to_string($this));
 			}
-		}		
+		}
 	}//end __destruct
 
 

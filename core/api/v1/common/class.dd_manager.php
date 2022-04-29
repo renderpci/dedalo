@@ -26,7 +26,7 @@ class dd_manager {
 	* MANAGE_REQUEST
 	* @return mixed array|object
 	*/
-	public function manage_request( $rqo ) {
+	public function manage_request( object $rqo ) : object {
 		$api_manager_start_time=microtime(1);
 
 		// debug
