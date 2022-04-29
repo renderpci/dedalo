@@ -70,7 +70,7 @@ abstract class JSON_RecordDataBoundObject {
 
 	#
 	# LOAD
-	public function Load() {
+	public function Load() : bool {
 
 		# DEBUG INFO SHOWED IN FOOTER
 		if(SHOW_DEBUG===true) {
@@ -419,7 +419,7 @@ abstract class JSON_RecordDataBoundObject {
 	* Buscador genérico . Necesita array key-value con campo,valor
 	* TIPO $arguments['parent'] = 14 ...
 	*/
-	public function search($ar_arguments=NULL, $matrix_table=NULL) {
+	public function search($ar_arguments=NULL, $matrix_table=NULL) : array {
 
 		#$use_cache = $this->use_cache; # Default use class value
 		$use_cache = false; # Experimental (cache true for search)
@@ -601,7 +601,7 @@ abstract class JSON_RecordDataBoundObject {
 	* BUILD_PG_FILTER
 	*/
 	public static function build_pg_filter($modo, $datos, $tipo, $lang, $value) {
-		
+
 		if (empty($datos)) {
 			$datos = 'datos';
 		}
@@ -671,7 +671,7 @@ abstract class JSON_RecordDataBoundObject {
 	public static function build_pg_select($modo, $datos='datos', $tipo=null, $key='dato', $lang=DEDALO_DATA_LANG) {
 
 		if (empty($tipo)) {
-			throw new Exception("Error Processing Request. tipo is mandatory !", 1);			
+			throw new Exception("Error Processing Request. tipo is mandatory !", 1);
 		}
 
 		switch ($modo) {

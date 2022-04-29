@@ -1914,12 +1914,12 @@ class component_text_area extends component_common {
 			$dato = $component->get_valor();
 
 			switch ($key) {
-				
+
 				case 'name':
 					$label->initials	.= mb_substr($dato,0,3);
 					$label->full_name	.= $dato;
 					break;
-				
+
 				case 'surname':
 					if (!empty($dato)) {
 						$ar_parts = explode(' ', $dato);
@@ -1933,11 +1933,11 @@ class component_text_area extends component_common {
 					}
 					break;
 
-				default:					
+				default:
 					break;
 			}
 		}
-		
+
 
 		return (object)$label;
 	}//end get_tag_person_label
@@ -2219,7 +2219,7 @@ class component_text_area extends component_common {
 					$layer_data = array();
 					if(!empty($geo_data->features)){
 						foreach ((array)$geo_data->features as $key => $feature) {
-							
+
 							$lon	= isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
 							$lat	= isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
 
@@ -2251,7 +2251,7 @@ class component_text_area extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object ) : object {
 
 		# Always set fixed values
 		$query_object->type = 'string';
@@ -2279,7 +2279,7 @@ class component_text_area extends component_common {
 					// 	$new_query_json->$logical_operator = [$query_object, $clone];
 					// # override
 					// $query_object = $new_query_json ;
-					
+
 				$operator	= 'IS NULL';
 				$q_clean	= '';
 
@@ -2458,7 +2458,7 @@ class component_text_area extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* 
+	*
 	*/
 	public static function update_dato_version($request_options) {
 
@@ -2643,9 +2643,9 @@ class component_text_area extends component_common {
 					return $response;
 				}
 				break;
-			
+
 			default:
-				
+
 				break;
 		}
 	}//end update_dato_version

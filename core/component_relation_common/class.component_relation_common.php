@@ -192,8 +192,9 @@ class component_relation_common extends component_common {
 	/**
 	* LOAD MATRIX DATA
 	* Get data once from matrix about parent, dato
+	* @return bool
 	*/
-	protected function load_component_dato() {
+	protected function load_component_dato() : bool {
 
 		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
 			return null;
@@ -491,7 +492,7 @@ class component_relation_common extends component_common {
 	* @return array $dato
 	*	$dato is always an array of locators or an empty array
 	*/
-	public function get_all_data() {
+	public function get_all_data() : array {
 
 		$my_section = $this->get_my_section();
 		$relations  = $my_section->get_relations();
@@ -520,7 +521,7 @@ class component_relation_common extends component_common {
 	* Get the component dato locators with no other property than section_tipo and section_id
 	* @return array $dato_generic
 	*/
-	public function get_dato_generic() {
+	public function get_dato_generic() : array {
 
 		# Dato without from_component_tipo property
 		$dato_generic = [];
@@ -688,7 +689,7 @@ class component_relation_common extends component_common {
 	* If the component need change this langs (selects, radio buttons...) overwrite this function
 	* @return string $lang
 	*/
-	public function get_valor_lang() {
+	public function get_valor_lang() : string {
 
 		$related = (array)$this->RecordObj_dd->get_relaciones();
 		if(empty($related)){
@@ -733,12 +734,12 @@ class component_relation_common extends component_common {
 
 	/**
 	* LOAD_COMPONENT_DATAFRAME
-	* @return
+	* @return bool
 	*/
-	public function load_component_dataframe() {
+	public function load_component_dataframe() : bool{
 
 		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
-			return null;
+			return false;
 		}
 
 		if (empty($this->section_tipo)) {
@@ -774,7 +775,7 @@ class component_relation_common extends component_common {
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
 	* @return bool
 	*/
-	public function add_locator_to_dato( $locator ) {
+	public function add_locator_to_dato( object $locator ) : bool {
 
 		if(empty($locator)) return false;
 
@@ -831,7 +832,7 @@ class component_relation_common extends component_common {
 	* @param array $ar_properties
 	* @return bool
 	*/
-	public function remove_locator_from_dato( $locator, $ar_properties=[] ) {
+	public function remove_locator_from_dato( object $locator, array $ar_properties=[] ) : bool {
 
 		if (empty($locator)) {
 			return false;
@@ -1087,7 +1088,7 @@ class component_relation_common extends component_common {
 	* 	Is array of locators. Default is bool false
 	* @return object $response
 	*/
-	public static function remove_parent_references($section_tipo, $section_id, $filter=false) {
+	public static function remove_parent_references(string $section_tipo, $section_id, bool $filter=false) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1118,15 +1119,17 @@ class component_relation_common extends component_common {
 
 
 			# Target section data
-			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
-			$modo 					= 'edit';
-			$lang					= DEDALO_DATA_NOLAN;
-			$component_relation_children = component_common::get_instance($modelo_name,
-																		  $current_component_tipo,
-																		  $current_section_id,
-																		  $modo,
-																		  $lang,
-																		  $current_section_tipo);
+			$modelo_name					= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
+			$modo							= 'edit';
+			$lang							= DEDALO_DATA_NOLAN;
+			$component_relation_children	= component_common::get_instance(
+				$modelo_name,
+				$current_component_tipo,
+				$current_section_id,
+				$modo,
+				$lang,
+				$current_section_tipo
+			);
 
 			# NOTE: remove_me_as_your_child deletes current section references from component_relation_children and section->relations container
 			# $removed = (bool)$component_relation_children->remove_child_and_save($child_locator);
@@ -1154,9 +1157,9 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_SELECT_QUERY2
-	* @return
+	* @return object
 	*/
-	public static function get_select_query2( $select_object ) {
+	public static function get_select_query2( object $select_object ) : object {
 		/*
 		[path] => Array
 			(
@@ -1195,7 +1198,7 @@ class component_relation_common extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object ) : object {
 		# Always set fixed values
 		$query_object->type 	= 'jsonb';
 		$query_object->unaccent = false;

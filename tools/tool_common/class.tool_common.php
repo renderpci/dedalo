@@ -38,7 +38,7 @@ class tool_common {
 	* @return array $json
 	*	Array of objects with data and context (configurable)
 	*/
-	public function get_json($request_options=false) {
+	public function get_json($request_options=false) : object {
 
 		// options parse
 			$options = new stdClass();
@@ -67,7 +67,7 @@ class tool_common {
 	* @param object $tool_config (from properties)
 	* @return object $tool_simple_context
 	*/
-	public function get_context() {
+	public function get_context() : object {
 
 		$component_tipo				= tools_register::$simple_tool_obj_component_tipo;
 
@@ -149,7 +149,7 @@ class tool_common {
 	* @param object $tool_config (from properties)
 	* @return object $tool_simple_context
 	*/
-	public static function create_tool_simple_context($tool_object, $tool_config=null, $tipo=null, $section_tipo=null) {
+	public static function create_tool_simple_context($tool_object, $tool_config=null, $tipo=null, $section_tipo=null) : object {
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){

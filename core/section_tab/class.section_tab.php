@@ -45,7 +45,7 @@ class section_tab extends common {
 	* 	Catch get_tools call to prevent load tools sections
 	* @return array $tools
 	*/
-	public function get_tools() {
+	public function get_tools() : array {
 
 		return [];
 	}//end get_tools

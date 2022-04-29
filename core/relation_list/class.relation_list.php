@@ -13,6 +13,8 @@ class relation_list extends common {
 	protected $sqo;
 	protected $count;
 
+
+
 	/**
 	* CONSTRUCT
 	*
@@ -24,7 +26,9 @@ class relation_list extends common {
 		$this->section_tipo = $section_tipo;
 		$this->mode 		= $mode;
 
+		return true;
 	}//end __construct
+
 
 
 	/**
@@ -59,15 +63,15 @@ class relation_list extends common {
 
 	/**
 	* GET_RELATION_LIST_OBJ
-	*
+	* @retutn object $json
 	*/
-	public function get_relation_list_obj($ar_inverse_references){
+	public function get_relation_list_obj(array $ar_inverse_references) : object {
 
-		$json 			= new stdClass;
-		$ar_context 	= [];
-		$ar_data		= [];
+		$json		= new stdClass;
+		$ar_context	= [];
+		$ar_data	= [];
 
-		$sections_related 		= [];
+		$sections_related		= [];
 		$ar_relation_components	= [];
 		# loop the locators that call to the section
 		foreach ((array)$ar_inverse_references as $current_record) {
@@ -125,10 +129,8 @@ class relation_list extends common {
 			}// end if (!in_array($current_section_tipo, $sections_related )
 
 			# 2 get ar_data
-			if (isset($ar_relation_components[$current_section_tipo])) {
-				$ar_components 	= $ar_relation_components[$current_section_tipo];
-			}else{
-				$ar_components 	= null;
+			$ar_components = $ar_relation_components[$current_section_tipo] ?? [];
+			if (empty($ar_components)) {
 				debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
 			}
 			$ar_data_result = $this->get_ar_data($current_record, $ar_components);
@@ -146,9 +148,11 @@ class relation_list extends common {
 
 	/**
 	* GET_DATA
-	*
+	* @param object $current_record
+	* @param array $ar_components
+	* @return array $data
 	*/
-	public function get_ar_data($current_record, $ar_components){
+	public function get_ar_data(object $current_record, array $ar_components) : array {
 
 		$data = [];
 
@@ -171,7 +175,7 @@ class relation_list extends common {
 
 		$data[] = $current_id;
 
-		if(isset($ar_components)){
+		if(!empty($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
 					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
@@ -203,9 +207,9 @@ class relation_list extends common {
 
 	/**
 	* GET_JSON
-	*
+	* @return object $json
 	*/
-	public function get_json($request_options=false){
+	public function get_json($request_options=false) : object {
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
@@ -223,4 +227,3 @@ class relation_list extends common {
 
 
 }//relation_list
-

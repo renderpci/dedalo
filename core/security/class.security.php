@@ -68,7 +68,7 @@ class security {
 	* @param string $tipo
 	* 	tipo of element (usually component)
 	*/
-	public static function get_security_permissions(string $parent_tipo, string $tipo) {
+	public static function get_security_permissions(string $parent_tipo, string $tipo) : int {
 
 		// logged user id
 			$user_id = $_SESSION['dedalo']['auth']['user_id'];
@@ -91,7 +91,7 @@ class security {
 
 			$permissions = $found->value ?? 0;
 
-		return $permissions;
+		return (int)$permissions;
 	}//end get_security_permissions
 
 
@@ -104,7 +104,7 @@ class security {
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
 	*/
-	private static function get_permissions_table() {
+	private static function get_permissions_table() : array {
 
 		static $permissions_table;
 
@@ -153,7 +153,7 @@ class security {
 	*	Array of all element=>level like array([dd12] => 2,[dd93] => 2,..)
 	*	Include areas and components permissions
 	*/
-	private static function get_ar_permissions_in_matrix_for_current_user() {
+	private static function get_ar_permissions_in_matrix_for_current_user() : array {
 
 		// get reliable component (assigned profile checked)
 			$component_security_access = security::get_user_security_access();
@@ -210,7 +210,7 @@ class security {
 	* @param int $user_id
 	* @return object $locator
 	*/
-	public static function get_user_profile($user_id) {
+	public static function get_user_profile($user_id) : object {
 
 		// user profile
 			$component_profile_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
@@ -243,7 +243,7 @@ class security {
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
 	*/
-	public static function get_permissions_table_of_specific_user( $user_id ) {
+	public static function get_permissions_table_of_specific_user( $user_id ) : array {
 
 		$permissions_table = security::get_ar_permissions_in_matrix_for_current_user( $user_id );
 
@@ -276,7 +276,7 @@ class security {
 	* Returns the user authorized areas
 	* @return array $area_permissions
 	*/
-	public static function get_ar_authorized_areas_for_user() {
+	public static function get_ar_authorized_areas_for_user() : array {
 
 		// cached permissions_table
 			$full_permissions_table = security::get_permissions_table();
@@ -309,7 +309,7 @@ class security {
 	*	User id · int · can be the current logged user or not.
 	* @return bool
 	*/
-	public static function is_global_admin($user_id) {
+	public static function is_global_admin($user_id) : bool {
 
 		$user_id = (int)$user_id;
 
@@ -366,7 +366,7 @@ class security {
 	* Allow current user access to created default sections
 	* @return bool
 	*/
-	private static function set_section_permissions( $request_options ) {
+	private static function set_section_permissions( $request_options ) : bool {
 
 		$options = new stdClass();
 			$options->section_tipo	= null;

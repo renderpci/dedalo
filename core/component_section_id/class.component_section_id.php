@@ -78,7 +78,7 @@ class component_section_id extends component_common {
 	* Catch get_tools call to prevent load tools sections
 	* @return array $tools
 	*/
-	public function get_tools() {
+	public function get_tools() : array {
 
 		return [];
 	}//end get_tools
@@ -90,7 +90,7 @@ class component_section_id extends component_common {
 	* @param object $query_object
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object) : object {
 
 		// reset array value
 		$query_object->q = is_array($query_object->q)

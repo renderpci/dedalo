@@ -282,7 +282,7 @@ class component_iri extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object) : object {
         #debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;

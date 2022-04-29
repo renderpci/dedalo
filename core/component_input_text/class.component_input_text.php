@@ -11,7 +11,7 @@ class component_input_text extends component_common {
 	/**
 	* GET DATO
 	*/
-	public function get_dato() {
+	public function get_dato() : array {
 
 		$dato = parent::get_dato();
 
@@ -75,7 +75,7 @@ class component_input_text extends component_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_rows		= $ddo->separator_rows ?? null;
@@ -125,7 +125,7 @@ class component_input_text extends component_common {
 	* If index var is received, return dato element corresponding to this index if exists
 	* @return string $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
+	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) : string {
 
 		$valor ='';
 
@@ -272,7 +272,7 @@ class component_input_text extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object) : object {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		// if (isset($query_object->type) && $query_object->type==='jsonb') {
@@ -493,7 +493,7 @@ class component_input_text extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'*'			=> 'no_vacio', // not null

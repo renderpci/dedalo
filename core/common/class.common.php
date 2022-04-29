@@ -171,7 +171,7 @@ abstract class common {
 	* @param string $tipo
 	* @return int $permissions
 	*/
-	public static function get_permissions( $parent_tipo=null, $tipo=null ) {
+	public static function get_permissions( $parent_tipo=null, $tipo=null ) : int {
 
 		// no logged case
 			if(login::is_logged()!==true) {
@@ -208,7 +208,7 @@ abstract class common {
 	* @return string $model
 	* 	Is the self class name like 'component_autocomplete'
 	*/
-	public function get_model() {
+	public function get_model() : string {
 
 		return get_called_class();
 	}//end get_model
@@ -279,9 +279,9 @@ abstract class common {
 	/**
 	* GET MATRIX_TABLE FROM TIPO
 	* @param string $tipo
-	* @return string $matrix_table
+	* @return string|bool $matrix_table
 	*/
-	public static function get_matrix_table_from_tipo($tipo) {
+	public static function get_matrix_table_from_tipo(string $tipo) {
 
 		if (empty($tipo)) {
 			trigger_error("Error Processing Request. tipo is empty");
@@ -383,7 +383,7 @@ abstract class common {
 	* Note: Currently tables are static. make a connection to db to do dynamic ASAP
 	* @return array $ar_tables
 	*/
-	public static function get_matrix_tables_with_relations() {
+	public static function get_matrix_tables_with_relations() : array {
 
 		static $ar_tables;
 
@@ -457,7 +457,7 @@ abstract class common {
 	* When isset lang, valor and dato are cleaned
 	* and $this->bl_loaded_matrix_data is reset to force load from database again
 	*/
-	public function set_lang($lang) {
+	public function set_lang(string $lang) {
 
 		#if($lang!==DEDALO_DATA_LANG) {
 
@@ -491,7 +491,7 @@ abstract class common {
 	* GET_MAIN_LANG
 	* @return string $main_lang
 	*/
-	public static function get_main_lang( $section_tipo, $section_id=null ) {
+	public static function get_main_lang( string $section_tipo, $section_id=null ) : string {
 		#dump($section_tipo, ' section_tipo ++ '.to_string());
 		# Always fixed lang of languages as English
 		if ($section_tipo==='lg1') {
@@ -569,7 +569,7 @@ abstract class common {
 	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
 	*/
-	public static function notify_load_lib_element_tipo($modelo_name, $modo) {
+	public static function notify_load_lib_element_tipo(string $modelo_name, string $modo) : bool {
 
 		#if ($modo!=='edit') {
 		#	return false;
@@ -634,7 +634,7 @@ abstract class common {
 	/**
 	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
 	*/
-	public static function get_page_query_string($remove_optional_vars=true) {
+	public static function get_page_query_string($remove_optional_vars=true) : string {
 
 		$queryString = $_SERVER['QUERY_STRING']; # like max=10
 		$queryString = safe_xss($queryString);
@@ -715,7 +715,7 @@ abstract class common {
 	* @return array $ar_all_langs
 	*	like (lg-eng=>locator,lg-spa=>locator) or resolved (lg-eng => English, lg-spa => Spanish)
 	*/
-	public static function get_ar_all_langs() {
+	public static function get_ar_all_langs() : array {
 
 		$ar_all_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
 
@@ -730,11 +730,11 @@ abstract class common {
 	*	Default DEDALO_DATA_LANG
 	* @return array $ar_all_langs_resolved
 	*/
-	public static function get_ar_all_langs_resolved( $lang=DEDALO_DATA_LANG ) {
+	public static function get_ar_all_langs_resolved( string $lang=DEDALO_DATA_LANG ) : array {
 
 		$ar_all_langs = common::get_ar_all_langs();
 
-		$ar_all_langs_resolved=array();
+		$ar_all_langs_resolved = [];
 		foreach ((array)$ar_all_langs as $current_lang) {
 
 			$lang_name = lang::get_name_from_code( $current_lang, $lang );
@@ -765,7 +765,7 @@ abstract class common {
 	* SET_properties
 	* @return bool
 	*/
-	public function set_properties($value) {
+	public function set_properties($value) : bool{
 		if (is_string($value)) {
 			$properties = json_decode($value);
 		}else{
@@ -799,7 +799,8 @@ abstract class common {
 	* GET_AR_RELATED_COMPONENT_TIPO
 	* @return array $ar_related_component_tipo
 	*/
-	public function get_ar_related_component_tipo() {
+	public function get_ar_related_component_tipo() : array {
+
 		$ar_related_component_tipo=array();
 		#dump($this, ' this ++ '.to_string());
 		$relaciones = $this->RecordObj_dd->get_relaciones();
@@ -819,7 +820,7 @@ abstract class common {
 	* GET_AR_RELATED_BY_MODEL
 	* @return array $ar_related_by_model
 	*/
-	public static function get_ar_related_by_model($modelo_name, $tipo, $strict=true) {
+	public static function get_ar_related_by_model(string $modelo_name, string $tipo, $strict=true) : array {
 
 		static $ar_related_by_model_data;
 		$uid = $modelo_name.'_'.$tipo;
@@ -863,7 +864,7 @@ abstract class common {
 	* Search in structure and return an array of tipos
 	* @return array $allowed_relations
 	*/
-	public static function get_allowed_relation_types() {
+	public static function get_allowed_relation_types() : array {
 
 		# For speed, we use constants now
 		$ar_allowed = array(DEDALO_RELATION_TYPE_CHILDREN_TIPO,
@@ -894,9 +895,9 @@ abstract class common {
 	/**
 	* TRIGGER_MANAGER
 	* @param php://input
-	* @return object $response
+	* @return bool
 	*/
-	public static function trigger_manager($request_options=false) {
+	public static function trigger_manager($request_options=false) : bool {
 
 		// options parse
 			$options = new stdClass();
@@ -1027,7 +1028,7 @@ abstract class common {
 	* @return object $cookie_properties
 	* Calculate safe cookie properties to use on set/delete http cookies
 	*/
-	public static function get_cookie_properties() {
+	public static function get_cookie_properties() : object {
 
 		# Cookie properties
 		$domain 	= $_SERVER['SERVER_NAME'];
@@ -1049,7 +1050,7 @@ abstract class common {
 	* GET_CLIENT_IP
 	* @return string $ipaddress
 	*/
-	public static function get_client_ip() {
+	public static function get_client_ip() : string {
 
 		$ipaddress = '';
 		if (isset($_SERVER['HTTP_CLIENT_IP']))
@@ -1076,7 +1077,7 @@ abstract class common {
 	* TRUNCATE_TEXT
 	* Multibyte truncate or trim text
 	*/
-	public static function truncate_text($string, $limit, $break=" ", $pad='...') {
+	public static function truncate_text(string $string, $limit, $break=" ", $pad='...') : string {
 
 		// returns with no change if string is shorter than $limit
 			$str_len = mb_strlen($string, '8bit');
@@ -1102,7 +1103,7 @@ abstract class common {
 	* TRUNCATE_HTML
 	* Thanks to Søren Løvborg (printTruncated)
 	*/
-	public static function truncate_html($maxLength, $html, $isUtf8=true) {
+	public static function truncate_html($maxLength, $html, $isUtf8=true) : string {
 
 		$full_text = '';
 
@@ -1199,9 +1200,9 @@ abstract class common {
 	* Simply group context and data into a ¡n object and encode as JSON string
 	* @param object $context
 	* @param object $data
-	* @return string $result
+	* @return object $result
 	*/
-	public static function build_element_json_output($context, $data=[]) {
+	public static function build_element_json_output($context, $data=[]) : object {
 
 		$element = new stdClass();
 			$element->context = $context;
@@ -1223,10 +1224,10 @@ abstract class common {
 	* GET_JSON
 	* @param object $request_options
 	* 	Optional. Default is false
-	* @return array $json
+	* @return object $json
 	*	Array of objects with data and context (configurable)
 	*/
-	public function get_json($request_options=false) {
+	public function get_json($request_options=false) : object {
 
 		// Debug
 			if(SHOW_DEBUG===true) $start_time = start_time();
@@ -1304,7 +1305,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=0, $add_request_config=false, $callback=false) {
+	public function get_structure_context($permissions=0, $add_request_config=false, $callback=false) : object {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		// short vars
@@ -1549,7 +1550,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT_simple
 	* @return object $dd_object
 	*/
-	public function get_structure_context_simple($permissions=0, $add_request_config=false) {
+	public function get_structure_context_simple($permissions=0, $add_request_config=false) : object {
 
 		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
 
@@ -1583,7 +1584,7 @@ abstract class common {
 	* @return object
 	* 	Object with two properties: context, data
 	*/
-	public function get_subdatum($from_parent=null, $ar_locators=[]) {
+	public function get_subdatum($from_parent=null, $ar_locators=[]) : object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1872,7 +1873,7 @@ abstract class common {
 	* BUILD_COMPONENT_SUBDATA
 	* @return object $element_json
 	*/
-	public function build_component_subdata($model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model, $custom_dato='no_value') {
+	public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_dato='no_value') : object {
 
 		// components
 			$current_component  = component_common::get_instance($model,
@@ -2140,9 +2141,9 @@ abstract class common {
 	* 	@param string $section_id
 	*		optional default null
 	*
-	* @return object $request_config
+	* @return array $ar_request_config
 	*/
-	public static function get_ar_request_config($request_options) {
+	public static function get_ar_request_config( object $request_options ) : array {
 
 		$options = new stdClass();
 			$options->tipo			= null;
@@ -2731,7 +2732,7 @@ abstract class common {
 	* GET_RECORDS_MODE
 	* @return string $records_mode
 	*/
-	public function get_records_mode() {
+	public function get_records_mode() : string {
 
 		$model			= get_called_class();
 		$properties		= $this->get_properties();
@@ -2751,7 +2752,7 @@ abstract class common {
 	* GET_SOURCE
 	* @return object | json
 	*/
-	public function get_source() {
+	public function get_source() : object {
 
 		$source = new request_query_object();
 			// $source->set_typo('source');
@@ -2771,7 +2772,7 @@ abstract class common {
 	* GET_DDINFO_PARENTS
 	* @return object $dd_info
 	*/
-	public static function get_ddinfo_parents($locator, $source_component_tipo) {
+	public static function get_ddinfo_parents($locator, $source_component_tipo) : object {
 
 		$section_id 	= $locator->section_id;
 		$section_tipo 	= $locator->section_tipo;
@@ -2797,8 +2798,7 @@ abstract class common {
 	* Generic builder for search_query_object (override when need)
 	* @return object $query_object
 	*/
-	public static function build_search_query_object( $request_options ) {
-
+	public static function build_search_query_object( object $request_options ) : object {
 		$start_time=microtime(1);
 
 		$options = new stdClass();
@@ -3029,7 +3029,7 @@ abstract class common {
 	*
 	* @return object | json
 	*/
-	public function get_request_query_object() {
+	public function get_request_query_object() : object {
 
 		// rqo. from request_config
 			$records_mode	= $this->get_modo();
@@ -3073,7 +3073,7 @@ abstract class common {
 	* @param mixed $value
 	* @return object $item
 	*/
-	public function get_data_item($value) {
+	public function get_data_item($value) : object {
 
 		$item = new stdClass();
 			$item->section_id			= $this->get_section_id();
@@ -3093,7 +3093,7 @@ abstract class common {
 	* Used to resolve component lang before construct it
 	* @return lang code like 'lg-spa'
 	*/
-	public static function get_element_lang($tipo, $data_lang=DEDALO_DATA_LANG) {
+	public static function get_element_lang(string $tipo, string $data_lang=DEDALO_DATA_LANG) : string {
 
 		$translatable 	= RecordObj_dd::get_translatable($tipo);
 		$lang 			= ($translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
@@ -3110,7 +3110,7 @@ abstract class common {
 	* @param array $request_options
 	* @return array $context
 	*/
-	public static function get_section_elements_context($request_options) {
+	public static function get_section_elements_context(object $request_options) : array {
 		$start_time=microtime(1);
 
 		$options = new stdClass();
@@ -3295,7 +3295,7 @@ abstract class common {
 	* GET_TOOLS
 	* @return array $tools
 	*/
-	public function get_tools() {
+	public function get_tools() : array {
 
 		// cache
 			// $cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
@@ -3396,12 +3396,12 @@ abstract class common {
 	* @return array $ar_button_ddo
 	* 	Array of dd_object
 	*/
-	public function get_buttons_context() {
+	public function get_buttons_context() : array {
 
 		// model validation (only areas and section are allowed)
 			$model = get_called_class();
 			if ($model!=='section' && strpos($model, 'area')===false) {
-				return null;
+				return []; // null;
 			}
 
 		$ar_button_ddo = [];
@@ -3478,7 +3478,7 @@ abstract class common {
 	/**
 	* GET_COLUMNS_MAP
 	* Columns_map define the order and how the section or component will build the columns in list, the columns maps was defined in the properties.
-	* @return
+	* @return object|null
 	*/
 	public function get_columns_map() {
 
@@ -3511,7 +3511,9 @@ abstract class common {
 					$properties		= $RecordObj_dd->get_properties();
 					break;
 			}
+
 		$columns_map = $properties->source->columns_map ?? false;
+
 
 		return $columns_map;
 	}//end get_columns_map
@@ -3524,7 +3526,7 @@ abstract class common {
 	* get the path in inverse format, the last in the chain will be the first object [0]
 	* @return array ar_inverted_paths the the specific paths, with inverse path format.
 	*/
-	public function get_ar_inverted_paths($full_ddo_map){
+	public function get_ar_inverted_paths(array $full_ddo_map) : array {
 
 		// get the parents for the column, creating the inverse path
 		// (from the last component to the main parent, the column will be with the data of the first item of the column)
@@ -3582,7 +3584,7 @@ abstract class common {
 	* GET_VIEW
 	* @return string $view
 	*/
-	public function get_view() {
+	public function get_view() : string {
 
 		// properties defined case
 			$properties = $this->get_properties();
@@ -3611,5 +3613,5 @@ abstract class common {
 	}//end get_view
 
 
-}//end class common
 
+}//end class common
