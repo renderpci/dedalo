@@ -174,19 +174,17 @@ const get_av_control_buttons =  (self) =>{
 			// text_content	: get_label.play || 'Play',
 			parent			: fragment
 		})
+		//listen the av state
+		self.video.addEventListener('pause', async () =>{
+			av_play_button.classList.remove('pause')
+			av_play_button.classList.add('play')
+		})
+		self.video.addEventListener('play', async () =>{
+			av_play_button.classList.remove('play')
+			av_play_button.classList.add('pause')
+		})
+		// change the state of the av
 		av_play_button.addEventListener("mouseup", () =>{
-			// const playing = self.play_pause();
-			// av_play_button.textContent = (!playing)
-			// 	? get_label.pause || 'Pause'
-			// 	: get_label.play  || 'Play'
-			if(!self.video.paused) {
-				av_play_button.classList.remove('pause')
-				av_play_button.classList.add('play')
-			}else{
-				av_play_button.classList.remove('play')
-				av_play_button.classList.add('pause')
-			}
-			// toggle play/pause
 			self.play_pause();
 		})
 
