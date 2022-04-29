@@ -18,9 +18,9 @@ abstract class backup {
 	/**
 	* INIT_BACKUP_SECUENCE
 	* Make backup (compresed mysql dump) of current dedalo DB before login
-	* @return $db_name." ($file_bk_size)";
+	* @return object $response
 	*/
-	public static function init_backup_secuence($user_id, $username, $skip_backup_time_range=false) {
+	public static function init_backup_secuence($user_id, $username, $skip_backup_time_range=false) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -191,7 +191,7 @@ abstract class backup {
 
 
 		return (object)$response;
-	}#end init_backup_secuence
+	}//end init_backup_secuence
 
 
 
@@ -200,7 +200,7 @@ abstract class backup {
 	* Get all tables (unfiltered) from current database
 	* @return array $tableList
 	*/
-	public static function get_tables() {
+	public static function get_tables() : array {
 
 		$strQuery 	= "
 		SELECT *
@@ -235,7 +235,8 @@ abstract class backup {
 	* Copy is made using psql daemon
 	* @return string $res
 	*/
-	public static function copy_to_file($table, $path_file, $tld) {
+	public static function copy_to_file(string $table, string $path_file, string $tld) : string {
+
 		$res='';
 
 		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
@@ -275,7 +276,8 @@ abstract class backup {
 	* Copy is made using psql daemon
 	* @return string $res
 	*/
-	public static function copy_from_file($table, $path_file, $tld) {
+	public static function copy_from_file(string $table, string $path_file, string $tld) : string {
+
 		$res='';
 
 		if (!file_exists($path_file)) {
@@ -354,7 +356,7 @@ abstract class backup {
 	* @param bool $exclude_tables default true
 	* @return string $res_html table of results
 	*/
-	public static function export_structure($db_name=null, $exclude_tables=true) {
+	public static function export_structure(string $db_name=null, bool $exclude_tables=true) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -486,7 +488,7 @@ abstract class backup {
 	* Extras tlds are saved in its respective dir inside 'extras' folder
 	* @return object $response
 	*/
-	public static function save_dedalo_str_tables_data() {
+	public static function save_dedalo_str_tables_data() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -618,7 +620,7 @@ abstract class backup {
 	* @param string db_name default 'dedalo4_development_str.custom'
 	* @return string $res_html table of results
 	*/
-	public static function import_structure($db_name='dedalo4_development_str.custom', $check_server=true, $dedalo_prefix_tipos=null) {
+	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, $dedalo_prefix_tipos=null) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -767,7 +769,7 @@ abstract class backup {
 	* @return array $ar_response with array of generated messages on run method
 	* NOTE: Sequences and list of values are NOT loaded, only str tables without sequences
 	*/
-	public static function load_dedalo_str_tables_data_from_files() {
+	public static function load_dedalo_str_tables_data_from_files() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1021,11 +1023,11 @@ abstract class backup {
 	* Set sequence value as last table id row
 	* @return array $ar_response
 	*/
-	public static function consolide_sequence($table) {
+	public static function consolide_sequence(string $table) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		$msg='';
 
@@ -1044,11 +1046,11 @@ abstract class backup {
 				if(SHOW_DEBUG===true) {
 					$msg .= " with value $last_id <br> -> [$strQuery]";
 				}
-				$response->result 	= true;
-				$response->msg 		= $msg;
+				$response->result	= true;
+				$response->msg		= $msg;
 			}else{
-				$response->result 	= false;
-				$response->msg 		= "Error on consolidate sequence: $sequence_name - table: $table";
+				$response->result	= false;
+				$response->msg		= "Error on consolidate sequence: $sequence_name - table: $table";
 			}
 
 		return (object)$response;
@@ -1101,7 +1103,7 @@ abstract class backup {
 	* Test pgpass file existence and permissions
 	* If pgpass if not correctly configurated, die current script showing a error
 	*/
-	public static function db_system_config_verify() {
+	public static function db_system_config_verify() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1157,7 +1159,7 @@ abstract class backup {
 	* @return array $ar_files
 	*	Array of objects
 	*/
-	public static function collect_all_str_files($DEDALO_PREFIX_TIPOS=null) {
+	public static function collect_all_str_files($DEDALO_PREFIX_TIPOS=null) : array {
 
 		static $ar_files;
 
@@ -1302,7 +1304,7 @@ abstract class backup {
 	* 	error: mixed error info from CURL if exists. Else false
 	* 	result: mixed data received from server
 	*/
-	public static function curl_request($options) {
+	public static function curl_request(object $options) : object {
 
 		// options
 			$url			= $options->url; // mandatory
@@ -1399,7 +1401,7 @@ abstract class backup {
 	* DOWNLOAD_REMOTE_STRUCTURE_FILE
 	* @return bool
 	*/
-	public static function download_remote_structure_file($obj, $target_dir) {
+	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
 		$start_time=microtime(1);
 
 		$data = array(
@@ -1455,7 +1457,7 @@ abstract class backup {
 	* CHECK_REMOTE_SERVER
 	* @return object $response
 	*/
-	public static function check_remote_server() {
+	public static function check_remote_server() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1503,7 +1505,7 @@ abstract class backup {
 	* MAKE_BACKUP
 	* @return object $response
 	*/
-	public static function make_backup() {
+	public static function make_backup() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1524,7 +1526,7 @@ abstract class backup {
 	* OPTIMIZE_TABLES
 	* Exec VACUUM ANALYZE command on every received table
 	* @param array $tables
-	* @return string $res
+	* @return string|null $res
 	*/
 	public static function optimize_tables($tables) {
 
@@ -1553,7 +1555,7 @@ abstract class backup {
 				debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command: ' . to_string($command), logger::WARNING);
 
 
-		return (string)$res;
+		return $res;
 	}//end optimize_tables
 
 
@@ -1566,7 +1568,7 @@ abstract class backup {
 	*	array of strings like ['dd','rsc'...]
 	* @return object $response
 	*/
-	public static function structure_to_json($ar_tld) {
+	public static function structure_to_json(array $ar_tld) : array {
 
 		$ar_data = [];
 		foreach ($ar_tld as $tld) {
@@ -1616,7 +1618,7 @@ abstract class backup {
 	* @return array $tld_data
 	*	array of objects
 	*/
-	public static function get_jer_dd_tld_data($tld) {
+	public static function get_jer_dd_tld_data(string $tld) : array {
 
 		$tld_data = [];
 
@@ -1649,7 +1651,7 @@ abstract class backup {
 	* @return array $tld_data
 	*	array of objects
 	*/
-	public static function get_matrix_descriptors_tld_data($tld) {
+	public static function get_matrix_descriptors_tld_data(string $tld) : array {
 
 		$tld_data = [];
 
@@ -1672,7 +1674,7 @@ abstract class backup {
 	*  data is a vertical array of objects from parsed JSON file 'structure.json'
 	* @return object $response
 	*/
-	public static function import_structure_json_data($data, $ar_tld=[]) {
+	public static function import_structure_json_data(array $data, array $ar_tld=[]) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;

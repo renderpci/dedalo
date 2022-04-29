@@ -217,7 +217,7 @@ class tool_common {
 	* 	If defined, is used as filter list for tool names
 	* @return array $registered_tools
 	*/
-	public static function get_client_registered_tools($ar_tools=null) {
+	public static function get_client_registered_tools(array $ar_tools=null) : array {
 
 		$registered_tools = [];
 
@@ -315,7 +315,7 @@ class tool_common {
 	* Get all tools and filter them matching tool_name given
 	* @return object | null
 	*/
-	public static function get_config(string $tool_name) {
+	public static function get_config(string $tool_name) : object {
 
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool();
@@ -336,7 +336,7 @@ class tool_common {
 	* Read files from directory and return all files array filtered by extension
 	* @return array $ar_data
 	*/
-	public static function read_files($dir, $valid_extensions=['csv']) {
+	public static function read_files(string $dir, array $valid_extensions=['csv']) : array {
 
 		$ar_data = array();
 
@@ -399,7 +399,7 @@ class tool_common {
 	*
 	* @return array $csv_array | bool false
 	*/
-	public static function read_csv_file_as_array($file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"') {
+	public static function read_csv_file_as_array(string $file, bool $skip_header=false, string $csv_delimiter=';', string $enclosure='"', string $escape='"') : array {
 
 		// file do not exists cases
 			if(!file_exists($file)) {
@@ -440,7 +440,7 @@ class tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function call_component_method($request_options) {
+	public static function call_component_method(object $request_options) : object {
 
 		// Working here... (!)
 

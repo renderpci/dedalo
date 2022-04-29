@@ -1026,7 +1026,13 @@ class section extends common {
 					# DEFAULT PROJECT FOR CREATE STANDAR SECTIONS
 					# Cuando se crea un registro de sección, se auto asigna el proyecto por defecto (definido en config DEDALO_DEFAULT_PROJECT)
 					# cuando la sección tiene definido un 'component_filter'
-					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter', $from_cache=true, $resolve_virtual=false, true);
+					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section(
+						$section_real_tipo,
+						['component_filter'],
+						$from_cache=true,
+						$resolve_virtual=false,
+						true
+					);
 					if (empty($ar_tipo_component_filter[0])) {
 
 						if(SHOW_DEBUG===true) {
@@ -1067,7 +1073,13 @@ class section extends common {
 
 
 				// component state defaults set. Set default values on component_state when is present
-					$ar_component_state = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_state', $from_cache=true, $resolve_virtual=false, true);
+					$ar_component_state = section::get_ar_children_tipo_by_modelo_name_in_section(
+						$section_real_tipo,
+						['component_state'],
+						$from_cache=true,
+						$resolve_virtual=false,
+						true
+					);
 					if (isset($ar_component_state[0])) {
 							$component_state = component_common::get_instance('component_state',
 																			  $ar_component_state[0],
@@ -1698,8 +1710,14 @@ class section extends common {
 	*/
 	public static function get_portal_tipo_from_component(string $section_tipo, string $component_tipo_inside_portal) {
 
-		#$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_portal');
-		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_portal'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section(
+			$section_tipo,
+			['component_portal'],
+			$from_cache=true,
+			$resolve_virtual=true,
+			$recursive=true,
+			$search_exact=true
+		);
 		if (empty($ar_portals)) return false;
 		foreach ($ar_portals as $current_portal_tipo) {
 			# portal related terms
@@ -1722,8 +1740,8 @@ class section extends common {
 	* @return string $portal_tipo / bool false
 	*/
 	public static function get_portal_tipo_from_component_in_search_list(string $section_tipo, string $component_tipo_inside_portal) {
-		#$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_portal');
-		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_portal'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+
+		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_portal'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 		if (empty($ar_portals)) return false;
 		foreach ($ar_portals as $current_portal_tipo) {
 

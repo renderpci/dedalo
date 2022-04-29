@@ -1489,7 +1489,7 @@ function show_msg($msg, $type='ERROR') {
 * when Dédalo program change (for update), the data and the program is un-sync before admin run the update
 * @return array $current_version
 */
-function get_current_version_in_db() {
+function get_current_version_in_db() : array {
 
 	static $current_version;
 
@@ -1535,7 +1535,7 @@ function get_current_version_in_db() {
 * Download the Dédalo files and run the update procedure.
 * @return array $current_version
 */
-function get_dedalo_version() {
+function get_dedalo_version() : array {
 
 	$current_version = array();
 
@@ -1554,7 +1554,7 @@ function get_dedalo_version() {
 * CHECK_BASIC_SYSTEM
 * @return object $response
 */
-function check_basic_system() {
+function check_basic_system() : object {
 
 	$response = new stdClass();
 		$response->result 	= false;

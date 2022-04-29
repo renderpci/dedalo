@@ -457,7 +457,7 @@ class component_svg extends component_media_common {
 	*
 	* @return object $response
 	*/
-	public function delete_file($quality) {
+	public function delete_file(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

@@ -45,7 +45,7 @@ class component_relation_common extends component_common {
 	* Array of components model name that using locators in dato and extends component_relation_common
 	* @return array
 	*/
-	public static function get_components_with_relations() {
+	public static function get_components_with_relations() : array {
 
 		$components_with_relations = [
 			'component_autocomplete',
@@ -177,7 +177,7 @@ class component_relation_common extends component_common {
 	* @return array $dato
 	*	$dato is always an array of locators or an empty array
 	*/
-	public function get_dato_full() {
+	public function get_dato_full()  {
 
 		// load. Load matrix data and set this->dato
 			$this->load_component_dato();
@@ -197,7 +197,8 @@ class component_relation_common extends component_common {
 	protected function load_component_dato() : bool {
 
 		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
-			return null;
+			// return null;
+			return false;
 		}
 
 		if( $this->bl_loaded_matrix_data!==true ) {
@@ -237,17 +238,16 @@ class component_relation_common extends component_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
-
+	public function get_value(string $lang=DEDALO_DATA_LANG, $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
-			$class_list 		= $ddo->class_list ?? null;
+			$class_list			= $ddo->class_list ?? null;
 
-
-		$value = new dd_grid_cell_object();
+		// value object (dd_grid_cell_object)
+			$value = new dd_grid_cell_object();
 
 		$data = $this->get_dato();
 
@@ -546,7 +546,7 @@ class component_relation_common extends component_common {
 	* (!) Default is the component dato, but overwrite it if component need it
 	* @return array $dato_with_references
 	*/
-	public function get_dato_with_references() {
+	public function get_dato_with_references() : array {
 
 		$dato_with_references = $this->get_dato();
 
@@ -736,7 +736,7 @@ class component_relation_common extends component_common {
 	* LOAD_COMPONENT_DATAFRAME
 	* @return bool
 	*/
-	public function load_component_dataframe() : bool{
+	public function load_component_dataframe() : bool {
 
 		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
 			return false;
@@ -1635,7 +1635,7 @@ class component_relation_common extends component_common {
 	* @param array $filter_by_list
 	* @return array $filter_fields_data
 	*/
-	public static function get_filter_list_data($filter_by_list) {
+	public static function get_filter_list_data(array $filter_by_list) : array {
 
 		$filter_list_data = [];
 		foreach ((array)$filter_by_list as $current_obj_value) {
@@ -1674,7 +1674,7 @@ class component_relation_common extends component_common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values($tipo, $section_tipo, $properties, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
+	public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list') : array {
 
 		// Search
 			if (isset($properties->stats_look_at)) {
@@ -1777,7 +1777,7 @@ class component_relation_common extends component_common {
 	* @return array $filter_custom
 	* @see get_request_config
 	*/
-	public static function get_hierarchy_terms_filter($ar_terms) {
+	public static function get_hierarchy_terms_filter(array $ar_terms) : array {
 
 		$filter = [];
 
@@ -1815,7 +1815,7 @@ class component_relation_common extends component_common {
 	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
 	* @return array $hierarchy_sections_from_types
 	*/
-	public static function get_hierarchy_sections_from_types( $hierarchy_types ) {
+	public static function get_hierarchy_sections_from_types( array $hierarchy_types ) : array {
 
 		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
 		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
@@ -1911,7 +1911,7 @@ class component_relation_common extends component_common {
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo($ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) {
+	public static function get_request_config_section_tipo($ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) : array {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
@@ -2001,6 +2001,7 @@ class component_relation_common extends component_common {
 			}
 		}
 		$ar_section_tipo = array_unique($ar_section_tipo);
+
 		return $ar_section_tipo;
 	}//end get_request_config_section_tipo
 
@@ -2010,7 +2011,7 @@ class component_relation_common extends component_common {
 	* GET_FIXED_FILTER
 	* @return array $ar_fixed_filter
 	*/
-	public static function get_fixed_filter($ar_fixed, $section_tipo, $section_id) {
+	public static function get_fixed_filter($ar_fixed, string $section_tipo, $section_id) : array {
 
 		$ar_fixed_filter = [];
 

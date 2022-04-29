@@ -278,7 +278,7 @@ class update {
 			#
 			# SECTION COMPONENTS
 			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
-			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, [$modelo_name], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 			if (empty($ar_component_tipo)) {
 				# Skip empty components sections
 				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $modelo_name) ".to_string(), logger::WARNING);

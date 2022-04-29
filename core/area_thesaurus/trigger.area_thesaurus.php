@@ -8,9 +8,9 @@ common::trigger_manager();
 
 /**
 * SEARCH_THESAURUS
-* @return array $result
+* @return object $response
 */
-function search_thesaurus($json_data) {
+function search_thesaurus(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -66,7 +66,3 @@ function search_thesaurus($json_data) {
 
 	return (object)$response;
 }//end search_thesaurus
-
-
-
-?>

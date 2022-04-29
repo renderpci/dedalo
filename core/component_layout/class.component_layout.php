@@ -221,7 +221,7 @@ class component_layout extends component_common {
 					# Usamos el default definido en estructura
 					# SECTION LIST
 					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos
-					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_to_list, 'section_list');
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_to_list, ['section_list']);
 						#if(SHOW_DEBUG===true) dump($ar_section_list,"ar_section_list ar section list para $current_section_to_list");
 
 					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
@@ -263,7 +263,7 @@ class component_layout extends component_common {
 					# Usamos el default definido en estructura
 					# RELATION LIST
 					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos
-					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_list');
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['relation_list']);
 						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 
 					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
@@ -295,7 +295,7 @@ class component_layout extends component_common {
 					# Usamos el default definido en estructura
 					# RELATION LIST
 					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos
-					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_list');
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['relation_list']);
 						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 
 					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
@@ -327,7 +327,7 @@ class component_layout extends component_common {
 					# Usamos el default definido en estructura
 					# RELATION REVERSE LIST
 					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos
-					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_reverse_list');
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['relation_reverse_list']);
 						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 
 					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
@@ -359,7 +359,7 @@ class component_layout extends component_common {
 				// 	# Usamos el default definido en estructura
 				// 	# SEARCH LIST
 				// 	# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos
-				// 	$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'search_list');
+				// 	$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['search_list']);
 				// 		#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 				//
 				// 	if(!empty($ar_search_list)) foreach ($ar_search_list as $search_list_tipo) {

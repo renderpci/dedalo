@@ -1060,7 +1060,7 @@ class component_image extends component_media_common {
 	* Is triggered wen section tha contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
-	public function remove_component_media_files( $ar_quality=[] ) {
+	public function remove_component_media_files(array $ar_quality=[]) : bool {
 
 		$date=date("Y-m-d_Hi");
 
@@ -1336,7 +1336,7 @@ class component_image extends component_media_common {
 	*	Data from trigger upload file
 	* @return object $response
 	*/
-	public function process_uploaded_file($file_data) {
+	public function process_uploaded_file(object $file_data) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1752,7 +1752,7 @@ class component_image extends component_media_common {
 	*
 	* @return object $response
 	*/
-	public function delete_file($quality) {
+	public function delete_file(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

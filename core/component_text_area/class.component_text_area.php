@@ -2258,7 +2258,7 @@ class component_text_area extends component_common {
 
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-		$q = pg_escape_string(stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		switch (true) {
 			# IS NULL

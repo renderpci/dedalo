@@ -113,7 +113,7 @@ class component_geolocation extends component_common {
 			foreach ($valor as $key => $value) {
 
 				if(is_array($value)) $value = print_r($value,true);
-				$string .= "$key : $value".$separator;
+				$string .= "$key : ". to_string($value) . $separator;
 			}
 			$string = substr($string, 0,-4);
 			return $string;

@@ -84,7 +84,7 @@ class dd_utils_api {
 	* DEDALO_VERSION
 	* @return object $response
 	*/
-	public static function dedalo_version($request_options=null) : object {
+	public static function dedalo_version(object $request_options=null) : object {
 		global $start_time;
 
 		session_write_close();
@@ -117,7 +117,7 @@ class dd_utils_api {
 	* DATABASE_INFO
 	* @return object $response
 	*/
-	public static function database_info($request_options=null) : object {
+	public static function database_info(object $request_options=null) : object {
 		global $start_time;
 
 		session_write_close();
@@ -148,7 +148,7 @@ class dd_utils_api {
 	* GET_SYSTEM_INFO
 	* @return object response
 	*/
-	public static function get_system_info($request_options=null) : object {
+	public static function get_system_info(object $request_options=null) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -212,7 +212,7 @@ class dd_utils_api {
 	* MAKE_BACKUP
 	* @return object $response
 	*/
-	public static function make_backup($request_options=null) : object {
+	public static function make_backup(object $request_options=null) : object {
 		global $start_time;
 
 		// ssession_write_close();
@@ -242,7 +242,7 @@ class dd_utils_api {
 	* UPDATE_STRUCTURE
 	* @return object $response
 	*/
-	public static function update_structure($request_options=null) : object {
+	public static function update_structure(object $request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -376,7 +376,7 @@ class dd_utils_api {
 	* STRUCTURE_TO_JSON
 	* @return object $response
 	*/
-	public static function structure_to_json($request_options=null) : object {
+	public static function structure_to_json(object $request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -433,7 +433,7 @@ class dd_utils_api {
 	* IMPORT_STRUCTURE_FROM_JSON
 	* @return object $response
 	*/
-	public static function import_structure_from_json($request_options=null) : object {
+	public static function import_structure_from_json(object $request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -481,7 +481,7 @@ class dd_utils_api {
 	* REGISTER_TOOLS
 	* @return object $response
 	*/
-	public static function register_tools($request_options=null) : object {
+	public static function register_tools(object $request_options=null) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -509,7 +509,7 @@ class dd_utils_api {
 	* BUILD_STRUCTURE_CSS
 	* @return object $response
 	*/
-	public static function build_structure_css($request_options=null) : object {
+	public static function build_structure_css(object $request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -539,7 +539,7 @@ class dd_utils_api {
 	* UPDATE_VERSION
 	* @return object $response
 	*/
-	public static function update_version($request_options=null) : object {
+	public static function update_version(object $request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -571,7 +571,7 @@ class dd_utils_api {
 	* CONVERT_SEARCH_OBJECT_TO_SQL_QUERY
 	* @return object $response
 	*/
-	public static function convert_search_object_to_sql_query($request_options=null) : object {
+	public static function convert_search_object_to_sql_query(object $request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -627,7 +627,7 @@ class dd_utils_api {
 	* CHANGE_LANG
 	* @return object $response
 	*/
-	public static function change_lang($request_options) : object {
+	public static function change_lang(object $request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -706,7 +706,7 @@ class dd_utils_api {
 	* QUIT
 	* @return object $response
 	*/
-	public static function quit($request_options) : object {
+	public static function quit(object $request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -763,7 +763,7 @@ class dd_utils_api {
 	* REGENERATE_RELATIONS
 	* @return object $response
 	*/
-	public static function regenerate_relations($request_options) : object {
+	public static function regenerate_relations(object $request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();

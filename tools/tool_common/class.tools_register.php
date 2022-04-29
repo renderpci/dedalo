@@ -29,7 +29,7 @@ class tools_register {
 	* @return array $info_file_processed
 	*	Array of objects
 	*/
-	public static function import_tools() {
+	public static function import_tools() : array {
 
 		$info_file_processed = [];
 
@@ -212,7 +212,7 @@ class tools_register {
 	* @param string $tool_name
 	* @return object $tool_full_data | null
 	*/
-	public static function get_tool_by_name($tool_name, $section_tipo) {
+	public static function get_tool_by_name(string $tool_name, string $section_tipo) {
 
 		// search by tool name
 			$sqo = json_decode('{
@@ -265,7 +265,7 @@ class tools_register {
 	* @return object $tool_object
 	*	Simple and human readable json object to use with components, sections, areas..
 	*/
-	public static function create_simple_tool_object($section_tipo, $section_id) {
+	public static function create_simple_tool_object(string $section_tipo, $section_id) : object {
 
 		$tool_object = new stdClass();
 
@@ -529,7 +529,7 @@ class tools_register {
 	* RENUMERATE_TERM_ID
 	* @return object $ontology
 	*/
-	public static function renumerate_term_id($ontology, &$counter) {
+	public static function renumerate_term_id(array $ontology, &$counter) : array {
 
 		foreach ($ontology as $item) {
 
@@ -562,7 +562,7 @@ class tools_register {
 	* CREATE_TOOL_CONFIG
 	* @return bool true
 	*/
-	public static function create_tool_config($tool_name) {
+	public static function create_tool_config(string $tool_name) : bool {
 
 		// section
 			$section_tools_config_tipo	= self::$section_tools_config_tipo; // 'dd996';
@@ -685,7 +685,7 @@ class tools_register {
 	* GET_ALL_CONFIG_TOOL
 	* @return array $ar_config
 	*/
-	public static function get_all_config_tool() {
+	public static function get_all_config_tool() : array {
 
 		$sqo_config_tool_active = json_decode('{
 			"section_tipo": "dd996",
@@ -744,7 +744,7 @@ class tools_register {
 	* GET_ALL_CONFIG_TOOL_CLIENT
 	* @return array $ar_client_config
 	*/
-	public static function get_all_config_tool_client() {
+	public static function get_all_config_tool_client() : array {
 
 		static $cache_ar_client_config;
 		if (isset($cache_ar_client_config)) {
