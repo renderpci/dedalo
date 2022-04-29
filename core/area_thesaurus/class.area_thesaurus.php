@@ -68,6 +68,9 @@ class area_thesaurus extends area_common {
 
 			// typology data
 			$typology_data = $this->get_typology_data($row->section_id);
+			if (empty($typology_data)) {
+				continue; // Skip
+			}
 			# Skip filtered types when defined
 			if (!empty($hierarchy_types_filter) && !in_array($typology_data->section_id, $hierarchy_types_filter)) {
 				continue; // Skip
@@ -191,9 +194,9 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_TYPOLOGY_DATA
-	* @return object $locator
+	* @return object|null $locator
 	*/
-	public function get_typology_data( $section_id ) : object {
+	public function get_typology_data( $section_id ) {
 
 		$tipo			= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // 'hierarchy9' component_select
 		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // hierarchy1
@@ -208,7 +211,7 @@ class area_thesaurus extends area_common {
 		);
 
 		$dato		= $component->get_dato();
-		$locator	= reset($dato);
+		$locator	= reset($dato) ?? null;
 
 		return $locator;
 	}//end get_typology_data
