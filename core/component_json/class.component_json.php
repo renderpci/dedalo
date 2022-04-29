@@ -223,7 +223,7 @@ class component_json extends component_common {
 	* PROCESS_UPLOADED_FILE
 	* @return object $response
 	*/
-	public function process_uploaded_file($file_data) {
+	public function process_uploaded_file(object $file_data) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;

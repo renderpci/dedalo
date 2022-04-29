@@ -214,7 +214,7 @@ class component_filter extends component_relation_common {
 	* component filter return a array of values
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+	public function get_value(string $lang=DEDALO_DATA_LANG, $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
@@ -784,7 +784,7 @@ class component_filter extends component_relation_common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values($tipo, $section_tipo, $properties, $lang=DEDALO_DATA_LANG, $selector='dato') {
+	public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='dato') : array {
 
 		// Search
 			if (isset($properties->stats_look_at)) {

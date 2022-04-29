@@ -61,7 +61,7 @@ class login extends common {
 	* Get post vars and search received user/password in db
 	* @return 'ok' / Error text
 	*/
-	public static function Login( $request_options ) {
+	public static function Login( $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -274,7 +274,7 @@ class login extends common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function Login_SAML($request_options) {
+	public static function Login_SAML($request_options) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -439,14 +439,16 @@ class login extends common {
 	* @param int $section_id (is user section id)
 	* @return string $full_username
 	*/
-	public static function get_username($section_id) {
+	public static function get_username($section_id) : string {
 
-		$component = component_common::get_instance('component_input_text',
-													DEDALO_USER_NAME_TIPO,
-													$section_id,
-													'list',
-													DEDALO_DATA_NOLAN,
-													DEDALO_SECTION_USERS_TIPO);
+		$component = component_common::get_instance(
+			'component_input_text',
+			DEDALO_USER_NAME_TIPO,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
 		$username = $component->get_valor();
 
 		return $username;
@@ -459,14 +461,16 @@ class login extends common {
 	* @param int $section_id (is user section id)
 	* @return string $full_username
 	*/
-	public static function get_full_username($section_id) {
+	public static function get_full_username($section_id) : string {
 
-		$component = component_common::get_instance('component_input_text',
-													DEDALO_FULL_USER_NAME_TIPO,
-													$section_id,
-													'list',
-													DEDALO_DATA_NOLAN,
-													DEDALO_SECTION_USERS_TIPO);
+		$component = component_common::get_instance(
+			'component_input_text',
+			DEDALO_FULL_USER_NAME_TIPO,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
 		$full_username = $component->get_valor();
 
 		return $full_username;
@@ -479,7 +483,7 @@ class login extends common {
 	* @param int $section_id
 	* @return bool
 	*/
-	public static function active_account_check($section_id) {
+	public static function active_account_check($section_id) : bool {
 
 		$active_account = false; // Default false
 
@@ -508,7 +512,7 @@ class login extends common {
 	* @param int $section_id
 	* @return bool
 	*/
-	public static function user_have_profile_check($section_id) {
+	public static function user_have_profile_check($section_id) : bool {
 
 		$user_have_profile = false; // Default false
 
@@ -536,7 +540,7 @@ class login extends common {
 	* @param int $section_id
 	* @return bool
 	*/
-	public static function user_have_projects_check($section_id) {
+	public static function user_have_projects_check($section_id) : bool {
 
 		$user_have_projects = false; // Default false
 
@@ -552,6 +556,7 @@ class login extends common {
 			$user_have_projects = true;
 		}
 
+
 		return (bool)$user_have_projects;
 	}//end user_have_projects_check
 
@@ -565,7 +570,7 @@ class login extends common {
 	*		options->auth_code Mandatory
 	* @return object $response
 	*/
-	public static function rest_login( stdClass $options ) {
+	public static function rest_login( stdClass $options ) : object {
 		global $rest_config;
 		#unset($_SESSION['dedalo']);
 
@@ -626,9 +631,9 @@ class login extends common {
 			$activity_datos
 			);
 
-
 		$response->logged 	= true;
 		$response->msg 		= 'Logged successfully';
+
 		return $response;
 	}//end rest_login
 
@@ -639,9 +644,9 @@ class login extends common {
 	* Init login sequence when all is OK
 	* @param int $user_id
 	* @param string $username
-	* @return bool
+	* @return object $response
 	*/
-	private static function init_user_login_sequence($user_id, $username, $full_username, $init_test=true, $login_type='default') {
+	private static function init_user_login_sequence($user_id, $username, $full_username, $init_test=true, $login_type='default') : object {
 		$start_time=microtime(1);
 
 		$response = new stdClass();
@@ -946,7 +951,7 @@ class login extends common {
 	* @see login::verify_login
 	* @return bool (true/false)
 	*/
-	public static function is_logged() {
+	public static function is_logged() : bool {
 
 		return self::verify_login();
 	}//end is_logged
@@ -958,7 +963,7 @@ class login extends common {
 	* Check that the user is authenticated
 	* @return bool (true/false)
 	*/
-	private static function verify_login() {
+	private static function verify_login() : bool {
 		#global $maintenance_mode;
 		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
 
@@ -1098,21 +1103,23 @@ class login extends common {
 	/**
 	* LOGIN ACTIVITY REPORT
 	*/
-	public static function login_activity_report($msg, $projects=NULL, $login_label='LOG IN', $activity_datos=NULL) {
+	public static function login_activity_report(string $msg, $projects=NULL, $login_label='LOG IN', $activity_datos=NULL) {
 
 		$datos = array("msg" => $msg);
 
-		if(!empty($activity_datos) && is_array($activity_datos))
-			$datos = array_merge($datos, $activity_datos);
+		// append activity_datos if exists
+			if(!empty($activity_datos) && is_array($activity_datos)) {
+				$datos = array_merge($datos, $activity_datos);
+			}
 
-		# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-		logger::$obj['activity']->log_message(
-			$login_label,
-			logger::INFO,
-			self::get_login_tipo(),
-			null,
-			$datos
-		);
+		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				$login_label,
+				logger::INFO,
+				self::get_login_tipo(),
+				null,
+				$datos
+			);
 	}//end login_activity_report
 
 
@@ -1123,14 +1130,16 @@ class login extends common {
 	* If is fefault password returns true, else false
 	* @return bool true/false
 	*/
-	public function test_su_default_password() {
+	public function test_su_default_password() : bool {
 
-		$component = component_common::get_instance('component_password',
-													 DEDALO_USER_PASSWORD_TIPO,
-													 -1,
-													 'edit',
-													 DEDALO_DATA_NOLAN,
-													 DEDALO_SECTION_USERS_TIPO);
+		$component = component_common::get_instance(
+			'component_password',
+			DEDALO_USER_PASSWORD_TIPO,
+			-1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
 		$dato = $component->get_dato();
 
 		if ($dato==='') {
@@ -1149,7 +1158,7 @@ class login extends common {
 	*	Normally current logged user id
 	* @return bool
 	*/
-	public static function is_developer($user_id) {
+	public static function is_developer($user_id) : bool {
 
 		$is_developer = false;
 

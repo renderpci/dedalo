@@ -2827,7 +2827,7 @@ abstract class component_common extends common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values($tipo, $section_tipo, $properties, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
+	public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list') : array {
 
 		if (isset($properties->valor_arguments)) {
 			$selector = 'dato';

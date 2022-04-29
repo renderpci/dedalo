@@ -5,7 +5,7 @@
 *
 */
 class component_relation_struct extends component_relation_common {
-	
+
 
 
 	// relation_type defaults
@@ -16,7 +16,7 @@ class component_relation_struct extends component_relation_common {
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id');
 
 
-	
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
@@ -27,9 +27,9 @@ class component_relation_struct extends component_relation_common {
 		$dato = $this->get_dato();
 		if (empty($dato)) {
 			return null;
-		}	
+		}
 
-		$ar_valor = [];	
+		$ar_valor = [];
 		foreach ((array)$dato as $key => $current_locator) {
 			$ar_valor[] = self::get_locator_value( $current_locator, $lang );
 		}
@@ -42,7 +42,7 @@ class component_relation_struct extends component_relation_common {
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
 		}
-		
+
 
 		return (string)$valor;
 	}//end get_valor
@@ -67,7 +67,7 @@ class component_relation_struct extends component_relation_common {
 		# Verify exists locator from_component_tipo
 		if (!property_exists($locator,'from_component_tipo')) {
 			$locator->from_component_tipo = $this->tipo;
-		}		
+		}
 
 		if ($locator->type!=$this->relation_type) {
 			debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
@@ -78,7 +78,7 @@ class component_relation_struct extends component_relation_common {
 		if (!$add_locator = $this->add_locator_to_dato($locator)) {
 			return false;
 		}
-		
+
 		return true;
 	}//end add_locator
 
@@ -114,11 +114,11 @@ class component_relation_struct extends component_relation_common {
 			'from_component_tipo'
 		];
 
-		# Add current locator to component dato		
+		# Add current locator to component dato
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator, $ar_properties)) {
 			return false;
 		}
-		
+
 		return true;
 	}//end remove_locator
 
@@ -130,16 +130,16 @@ class component_relation_struct extends component_relation_common {
 	* @return array $ar_indexations
 	*/
 	public static function get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang=DEDALO_DATA_LANG, $type=DEDALO_RELATION_TYPE_STRUCT_TIPO) {
-		
+
 		if ($type!==DEDALO_RELATION_TYPE_STRUCT_TIPO) {
-			throw new Exception("Error Processing Request. Received type ($type) must be: ".DEDALO_RELATION_TYPE_STRUCT_TIPO, 1);			
+			throw new Exception("Error Processing Request. Received type ($type) must be: ".DEDALO_RELATION_TYPE_STRUCT_TIPO, 1);
 		}
 
 		$ar_indexations = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang, $type);
 
 
 		return (array)$ar_indexations;
-	}//end get_indexations_from_tag	
+	}//end get_indexations_from_tag
 
 
 
@@ -162,7 +162,7 @@ class component_relation_struct extends component_relation_common {
 
 		# get_indexations_search: $options
 		$result = component_relation_index::get_indexations_search($options);
-	
+
 		/*
 		$ar_filter=array();
 		foreach ($options->fields as $key => $value) {
@@ -173,12 +173,12 @@ class component_relation_struct extends component_relation_common {
 		}
 		$compare = '{'. implode(",", $ar_filter). '}';
 
-		// Iterate tables and make union search		
+		// Iterate tables and make union search
 		$ar_query=array();
 		foreach ((array)$options->ar_tables as $table) {
-			$query  = " SELECT section_tipo, section_id, datos#>'{relations}' AS relations 
-						FROM \"$table\" 
-						WHERE datos#>'{relations}' @> '[$compare]'::jsonb 
+			$query  = " SELECT section_tipo, section_id, datos#>'{relations}' AS relations
+						FROM \"$table\"
+						WHERE datos#>'{relations}' @> '[$compare]'::jsonb
 						";
 			$ar_query[] = $query;
 		}
@@ -191,7 +191,7 @@ class component_relation_struct extends component_relation_common {
 
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 		*/
-		
+
 
 		return $result;
 	}//end get_indexations_search
@@ -203,14 +203,14 @@ class component_relation_struct extends component_relation_common {
 	* @return array $ar_indexations
 	*//* DEPRECATED !
 	public static function get_indexations_for_locator( $locator ) {
-		
+
 		$ar_indexations = array();
 
 		$options = new stdClass();
 			$options->fields = new stdClass();
 			$options->fields->section_tipo 	= $locator->section_tipo;
-			$options->fields->section_id 	= $locator->section_id;			
-			$options->fields->type 			= DEDALO_RELATION_TYPE_STRUCT_TIPO;			
+			$options->fields->section_id 	= $locator->section_id;
+			$options->fields->type 			= DEDALO_RELATION_TYPE_STRUCT_TIPO;
 			$options->ar_tables 			= array('matrix_hierarchy');
 
 		$result = component_relation_struct::get_indexations_search( $options );
@@ -219,17 +219,17 @@ class component_relation_struct extends component_relation_common {
 
 			$current_section_id   	= $rows['section_id'];
 			$current_section_tipo 	= $rows['section_tipo'];
-			
+
 			#$relations 				= json_decode($rows['relations']);
 			#	#dump($relations, ' $relations **** ++ '.to_string($locator->section_tipo."-".$locator->section_id));
 			#$relation_index_locator = component_relation_struct::get_locator_from_ar_relations($relations, $locator->section_tipo, $locator->section_id, $options->fields->type, $tag_id=false);
 			#	#dump($relation_index_locator, ' $relation_index_locator **** ++ '.to_string($locator->section_tipo."-".$locator->section_id." -- $current_section_tipo-$current_section_id"));
-			
+
 			$pseudo_locator = new locator();
 				$pseudo_locator->set_section_tipo($current_section_tipo);
 				$pseudo_locator->set_section_id($current_section_id);
 
-			
+
 			$locator_json = json_encode($pseudo_locator);
 			$ar_indexations[$locator_json] = 1;
 				#dump($locator_json, ' locator_json ++ '.to_string());
@@ -251,7 +251,7 @@ class component_relation_struct extends component_relation_common {
 	public static function get_locator_from_ar_relations($relations, $section_tipo, $section_id, $type, $tag_id=false) {
 
 		$result = component_relation_index::get_locator_from_ar_relations($relations, $section_tipo, $section_id, $type, $tag_id);
-		
+
 		return $result;
 	}//end get_locator_from_ar_relations
 
@@ -262,13 +262,13 @@ class component_relation_struct extends component_relation_common {
 	* @return array $ar_deleted
 	*/
 	public static function delete_tag_indexations($component_tipo, $section_tipo, $section_id, $tag_id, $lang) {
-		
-		$ar_indexations = self::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);		
+
+		$ar_indexations = self::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
 		debug_log(__METHOD__." Founded ar_indexations total: ".count($ar_indexations).' : '.to_string($ar_indexations), logger::DEBUG);
-		
+
 		$ar_deleted=array();
 		foreach ((array)$ar_indexations as $key => $index_obj) {
-			
+
 			$current_section_tipo 	= $index_obj->section_tipo;
 			$current_section_id 	= $index_obj->section_id;
 			$current_component_tipo	= $index_obj->locator->from_component_tipo;
@@ -283,7 +283,7 @@ class component_relation_struct extends component_relation_common {
 			$component->remove_locator( $index_obj->locator );
 			$component->Save();
 			debug_log(__METHOD__." removed locator from component_relation_struct ($current_component_tipo, $current_section_tipo, $current_section_id) ".to_string($index_obj->locator), logger::DEBUG);
-		
+
 			$ar_deleted[] = array('component_tipo'=>$current_component_tipo,
 								  'section_tipo'=>$current_section_tipo,
 								  'section_id'=>$current_section_id,
@@ -293,14 +293,14 @@ class component_relation_struct extends component_relation_common {
 		return (array)$ar_deleted;
 	}//end delete_tag_indexations
 
-	
+
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
-	*//* DEPRECATED 
+	*//* DEPRECATED
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}#end build_search_comparison_operators
@@ -310,7 +310,7 @@ class component_relation_struct extends component_relation_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -329,7 +329,7 @@ class component_relation_struct extends component_relation_common {
 			return $search_query;
 		}
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-		
+
 		switch (true) {
 			case $comparison_operator==='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
@@ -338,7 +338,7 @@ class component_relation_struct extends component_relation_common {
 				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
-		
+
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
@@ -351,11 +351,11 @@ class component_relation_struct extends component_relation_common {
 
 	/**
 	* GET_COMPONENT_RELATION_STRUCT_FROM_SECTION_TIPO
-	* @return 
+	* @return
 	*//*
 	public static function get_component_relation_struct_from_section_tipo($section_tipo) {
-		
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_relation_struct'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_relation_struct'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 	}//end get_component_relation_struct_from_section_tipo
 	*/
 
@@ -367,7 +367,7 @@ class component_relation_struct extends component_relation_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
 			'=' 	 => 'vacio'
@@ -376,6 +376,6 @@ class component_relation_struct extends component_relation_common {
 		return $ar_operators;
 	}//end search_operators_info
 
-	
+
 
 }//end component_relation_struct

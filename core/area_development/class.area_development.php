@@ -37,7 +37,7 @@ class area_development extends area_common {
 	* @return array $data_items
 	*	Array of objects
 	*/
-	public function get_ar_widgets() {
+	public function get_ar_widgets() : array {
 
 		$ar_widgets = [];
 
@@ -530,7 +530,7 @@ class area_development extends area_common {
 	* GENERATE_RELATIONS_TABLE_DATA
 	* @return object
 	*/
-	public static function generate_relations_table_data($tables='*') {
+	public static function generate_relations_table_data($tables='*') : object {
 
 		$response = new stdClass();
 			$response->result 	= false;

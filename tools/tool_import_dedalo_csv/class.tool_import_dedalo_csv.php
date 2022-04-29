@@ -925,7 +925,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* }
 	* @return object $response
 	*/
-	public static function process_uploaded_file($options) {
+	public static function process_uploaded_file(object $options) : object {
 		$start_time=microtime(1);
 
 		// response

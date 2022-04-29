@@ -101,7 +101,7 @@ class ts_object extends Accessors {
 			$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
 			return $RecordObj_dd->get_properties();
 		})($ar_children);
-		
+
 		// Fallback to real section when in virtual
 		if (empty($ar_properties)) {
 			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
@@ -115,7 +115,7 @@ class ts_object extends Accessors {
 				# relation map defined in properties
 				$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
 				$ar_properties	= $RecordObj_dd->get_properties();
-			}			
+			}
 		}//end if (!isset($ar_children[0]))
 
 
@@ -125,7 +125,7 @@ class ts_object extends Accessors {
 
 			// DES
 				// # SUBSTITUTION : When is set $this->options->model as true, we substitute structure properties link_children with link_children_model
-				// # for look children in other hierarchy component children				
+				// # for look children in other hierarchy component children
 				// if (isset($this->options->model) && $this->options->model===true) {
 				// 	foreach ($ar_elements as $key => $value_obj) {
 				// 		if ($value_obj->type==='link_children') {
@@ -135,7 +135,7 @@ class ts_object extends Accessors {
 				// 		}
 				// 	}
 				// }
-				
+
 				// [
 				//   {
 				//     "tipo": "hierarchy5",
@@ -149,8 +149,8 @@ class ts_object extends Accessors {
 				//     "tipo": "hierarchy59",
 				//     "type": "link_children_model"
 				//   }
-				// ]				
-				
+				// ]
+
 				// if (isset($this->options->model) && $this->options->model===true) {
 
 				// 	$element_children = new stdClass();
@@ -177,7 +177,7 @@ class ts_object extends Accessors {
 				// }else{
 				// 	$ar_elements = $ar_properties;
 				// }
-				// debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);				
+				// debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 
 			foreach ($ar_properties as $key => $value_obj) {
 
@@ -406,7 +406,7 @@ class ts_object extends Accessors {
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 
 		foreach ((array)$ar_children as $key => $current_locator) {
-			
+
 			$section_map = section::get_section_map( $current_locator->section_tipo );
 			if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
 				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
@@ -695,7 +695,7 @@ class ts_object extends Accessors {
 					$tipo = DEDALO_THESAURUS_BUTTON_NEW_TIPO;
 					$permissions = common::get_permissions($this->section_tipo,$tipo);
 				}else{
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
 					# dump($ar_children, ' ar_children ++ '.to_string());
 					if (isset($ar_children[0])) {
 						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
@@ -712,7 +712,7 @@ class ts_object extends Accessors {
 					$tipo = DEDALO_THESAURUS_BUTTON_DELETE_TIPO;
 					$permissions = common::get_permissions($this->section_tipo,$tipo);
 				}else{
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
 					# dump($ar_children, ' ar_children ++ '.to_string());
 					if (isset($ar_children[0])) {
 						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
@@ -722,7 +722,14 @@ class ts_object extends Accessors {
 				}
 				break;
 			default:
-				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$this->section_tipo,
+					[$element_name], // ar_model_name
+					$from_cache=true,
+					$resolve_virtual=true,
+					$recursive=true,
+					$search_exact=true
+				);
 				# dump($ar_children, ' ar_children ++ '.to_string());
 				if (isset($ar_children[0])) {
 					$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);

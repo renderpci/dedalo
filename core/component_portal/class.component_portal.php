@@ -114,7 +114,7 @@ class component_portal extends component_relation_common {
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
-	public function regenerate_component() {
+	public function regenerate_component() : bool {
 
 		# Custom properties external dato
 		$properties = $this->get_properties();
@@ -140,7 +140,7 @@ class component_portal extends component_relation_common {
 	* Add the new record section id to current component data (as locator) and save it
 	* @return object $response
 	*/
-	public function add_new_element( $request_options ) {
+	public function add_new_element( object $request_options ) : object {
 
 		$options = new stdClass();
 			$options->target_section_tipo 	= null;
@@ -229,7 +229,7 @@ class component_portal extends component_relation_common {
 	* REMOVE_ELEMENT
 	* @return object $response
 	*/
-	public function remove_element( $request_options ) {
+	public function remove_element( object $request_options ) : object {
 
 		$options = new stdClass();
 			$options->locator 		= null;
@@ -281,7 +281,7 @@ class component_portal extends component_relation_common {
 	* Search component filter in current section and get the component data
 	* @return array $component_filter_dato
 	*/
-	public function get_current_section_filter_data() {
+	public function get_current_section_filter_data() : array {
 
 		$section_id		= $this->get_section_id();
 		$section_tipo	= $this->get_section_tipo();
@@ -297,8 +297,8 @@ class component_portal extends component_relation_common {
 
 		}else{
 			// $section		= section::get_instance($section_id, $section_tipo);
-			$search_model	= 'component_filter';
-			$ar_children_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $search_model, true, true);
+			$ar_search_model	= ['component_filter'];
+			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_search_model, true, true);
 
 			if (empty($ar_children_tipo[0])) {
 				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);

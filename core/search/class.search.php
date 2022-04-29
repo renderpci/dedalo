@@ -239,7 +239,7 @@ class search {
 	* Exec a SQL query search against the database
 	* @return object $records_data
 	*/
-	public function search() {
+	public function search() : object {
 		$start_time=microtime(1);
 
 		# Converts json search_query_object to sql query string
@@ -251,7 +251,9 @@ class search {
 		$result	= JSON_RecordObj_matrix::search_free($sql_query);
 		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute search_free non resource query: ".PHP_EOL."<hr> $sql_query");
-			return null;
+			$records_data = new stdClass();
+				$records_data->ar_records = [];
+			return $records_data;
 		}
 
 		$ar_relations_cache_solved = [];
@@ -521,7 +523,7 @@ class search {
 	* Recursive
 	* @return array $new_ar_query_object
 	*/
-	public static function conform_search_query_object($op, $ar_value) {
+	public static function conform_search_query_object(string $op, array $ar_value) : object {
 
 		$new_ar_query_object = new stdClass();
 			$new_ar_query_object->$op = [];
@@ -2124,9 +2126,9 @@ class search {
 
 	/**
 	* GET_TABLE_ALIAS_FROM_PATH
-	* @return
+	* @return string $table_alias
 	*/
-	public function get_table_alias_from_path($path) {
+	public function get_table_alias_from_path(array $path) : string {
 
 		$total	= count($path);
 		$ar_key = [];
@@ -2178,7 +2180,7 @@ class search {
 	* Used in component common and section to build components path for select
 	* @return array $path
 	*/
-	public static function get_query_path($tipo, $section_tipo, $resolve_related=true, $related_tipo=false) {
+	public static function get_query_path(string $tipo, string $section_tipo, bool $resolve_related=true, bool $related_tipo=false) : array {
 
 		$path = [];
 
@@ -2299,7 +2301,7 @@ class search {
 	* Implode all ar_sql_joins in a string
 	* @return string $sql_joins
 	*/
-	public function get_sql_joins() {
+	public function get_sql_joins() : string {
 
 		$sql_joins = '';
 
@@ -2320,7 +2322,7 @@ class search {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset=false, $count=false ) {
+	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset=false, $count=false ) : array {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
 
 		# compare
@@ -2428,48 +2430,48 @@ class search {
 	*	Like 1
 	* @return array $result_table
 	*/
-	// public static function get_inverse_relations_from_relations_table__UNUSED($section_tipo, $section_id) {
+		// public static function get_inverse_relations_from_relations_table__UNUSED($section_tipo, $section_id) {
 
-	// 	$target_section_tipo = (string)$section_tipo;
-	// 	$target_section_id 	 = (int)$section_id;
+		// 	$target_section_tipo = (string)$section_tipo;
+		// 	$target_section_id 	 = (int)$section_id;
 
-	// 	# sql_query
-	// 		$sql_query  = '';
-	// 		# SELECT
-	// 		#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
-	// 		$sql_query .= PHP_EOL . 'SELECT section_id, section_tipo, from_component_tipo';
-	// 		# FROM
-	// 		$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
-	// 		# WHERE
-	// 		$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . (int)$target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
-	// 		# END
-	// 		$sql_query .= ';' . PHP_EOL;
+		// 	# sql_query
+		// 		$sql_query  = '';
+		// 		# SELECT
+		// 		#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
+		// 		$sql_query .= PHP_EOL . 'SELECT section_id, section_tipo, from_component_tipo';
+		// 		# FROM
+		// 		$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
+		// 		# WHERE
+		// 		$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . (int)$target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
+		// 		# END
+		// 		$sql_query .= ';' . PHP_EOL;
 
-	// 		if(SHOW_DEBUG===true) {
-	// 			#debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
-	// 		}
+		// 		if(SHOW_DEBUG===true) {
+		// 			#debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
+		// 		}
 
-	// 	$result	= JSON_RecordObj_matrix::search_free($sql_query);
-	// 	if (!is_resource($result)) {
-	// 		trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $sql_query");
-	// 		return null;
-	// 	}
+		// 	$result	= JSON_RecordObj_matrix::search_free($sql_query);
+		// 	if (!is_resource($result)) {
+		// 		trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $sql_query");
+		// 		return null;
+		// 	}
 
-	// 	# 1 Build a temporal table with array of records found in query
-	// 	$result_table=array();
-	// 	while ($rows = pg_fetch_assoc($result)) {
+		// 	# 1 Build a temporal table with array of records found in query
+		// 	$result_table=array();
+		// 	while ($rows = pg_fetch_assoc($result)) {
 
-	// 		$locator = new locator();
-	// 			$locator->set_section_tipo($rows['section_tipo']);
-	// 			$locator->set_section_id($rows['section_id']);
-	// 			$locator->set_from_component_tipo($rows['from_component_tipo']);
+		// 		$locator = new locator();
+		// 			$locator->set_section_tipo($rows['section_tipo']);
+		// 			$locator->set_section_id($rows['section_id']);
+		// 			$locator->set_from_component_tipo($rows['from_component_tipo']);
 
-	// 		$result_table[] = $locator;
-	// 	}
+		// 		$result_table[] = $locator;
+		// 	}
 
 
-	// 	return $result_table;
-	// }//end get_inverse_relations_from_relations_table
+		// 	return $result_table;
+		// }//end get_inverse_relations_from_relations_table
 
 
 
@@ -2483,46 +2485,46 @@ class search {
 	*	Like 1
 	* @return bool
 	*/
-	// public static function have_inverse_relations($section_tipo, $section_id) {
+		// public static function have_inverse_relations($section_tipo, $section_id) {
 
-	// 	static $have_inverse_relations_resolved = array();
-	// 	if (isset($have_inverse_relations_resolved[$section_tipo.'_'.$section_id])) {
-	// 		return $have_inverse_relations_resolved[$section_tipo.'_'.$section_id];
-	// 	}
+		// 	static $have_inverse_relations_resolved = array();
+		// 	if (isset($have_inverse_relations_resolved[$section_tipo.'_'.$section_id])) {
+		// 		return $have_inverse_relations_resolved[$section_tipo.'_'.$section_id];
+		// 	}
 
-	// 	$have_inverse_relations = false;
+		// 	$have_inverse_relations = false;
 
-	// 	$target_section_tipo = (string)$section_tipo;
-	// 	$target_section_id 	 = (int)$section_id;
+		// 	$target_section_tipo = (string)$section_tipo;
+		// 	$target_section_id 	 = (int)$section_id;
 
-	// 	# sql_query
-	// 		$sql_query  = '';
-	// 		# SELECT
-	// 		#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
-	// 		$sql_query .= PHP_EOL . 'SELECT section_id';
-	// 		# FROM
-	// 		$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
-	// 		# WHERE
-	// 		$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . $target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
-	// 		# LIMIT
-	// 		$sql_query .= PHP_EOL . 'LIMIT 1';
-	// 		# END
-	// 		$sql_query .= ';';
+		// 	# sql_query
+		// 		$sql_query  = '';
+		// 		# SELECT
+		// 		#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON (section_id,section_tipo) section_id, section_tipo, from_component_tipo';
+		// 		$sql_query .= PHP_EOL . 'SELECT section_id';
+		// 		# FROM
+		// 		$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
+		// 		# WHERE
+		// 		$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . $target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
+		// 		# LIMIT
+		// 		$sql_query .= PHP_EOL . 'LIMIT 1';
+		// 		# END
+		// 		$sql_query .= ';';
 
-	// 		debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
+		// 		debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
 
-	// 	$result		= JSON_RecordObj_matrix::search_free($sql_query);
-	// 	$num_rows 	= pg_num_rows($result);
+		// 	$result		= JSON_RecordObj_matrix::search_free($sql_query);
+		// 	$num_rows 	= pg_num_rows($result);
 
-	// 	if ($num_rows>0) {
-	// 		$have_inverse_relations = true;
-	// 	}
+		// 	if ($num_rows>0) {
+		// 		$have_inverse_relations = true;
+		// 	}
 
-	// 	# Store for runtime cache
-	// 	$have_inverse_relations_resolved[$section_tipo.'_'.$section_id] = $have_inverse_relations;
+		// 	# Store for runtime cache
+		// 	$have_inverse_relations_resolved[$section_tipo.'_'.$section_id] = $have_inverse_relations;
 
-	// 	return (bool)$have_inverse_relations;
-	// }//end have_inverse_relations
+		// 	return (bool)$have_inverse_relations;
+		// }//end have_inverse_relations
 
 
 
@@ -2531,7 +2533,7 @@ class search {
 	* Get complete component relation dato and generate rows into relations table for fast LEFT JOIN
 	* @return object $response
 	*/
-	public static function propagate_component_dato_to_relations_table( $request_options ) {
+	public static function propagate_component_dato_to_relations_table( object $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -2670,7 +2672,7 @@ class search {
 	* Used to build list of user presets in filter
 	* @return array $component_presets
 	*/
-	public static function filter_get_user_presets($user_id=null, $target_section_tipo=null, $section_tipo='dd623') {
+	public static function filter_get_user_presets($user_id=null, $target_section_tipo=null, $section_tipo='dd623') : array {
 
 		#$section_tipo 		 			= 'dd623'; // Presets list dd623 or dd655 (temp)
 		$name_component_tipo 			= 'dd624'; // Name field
@@ -2901,7 +2903,7 @@ class search {
 	* Temporal method to obtain search select paths to build a search_json_object
 	* @return array $path
 	*/
-	public static function get_search_select_from_section($section_obj, $layout_map=false) {
+	public static function get_search_select_from_section($section_obj, $layout_map=false) : array {
 
 		$select = [];
 
@@ -2943,7 +2945,7 @@ class search {
 	*	Array of operator => label like: ... => between
 	* @return string $search_options_title
 	*/
-	public static function search_options_title( array $search_operators_info ) {
+	public static function search_options_title( array $search_operators_info ) : string {
 
 		$search_options_title = '';
 
@@ -2982,7 +2984,7 @@ class search {
 	*	ORDER BY count
 	* @return array $ar_result
 	*/
-	public static function search_count($request_options) {
+	public static function search_count(object $request_options) : array {
 
 		# (!) Hecha para usar en estadísticas actividad pero no implementada todavía ! [2018-12-14]
 
@@ -3012,7 +3014,8 @@ class search {
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
 		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-			return null;
+			// return null;
+			return [];
 		}
 		$ar_result = [];
 		while ($rows = pg_fetch_assoc($result)) {
@@ -3047,7 +3050,7 @@ class search {
 	*  ],
 	* @return array $data
 	*/
-	public static function get_data_with_path($path, $ar_locator) {
+	public static function get_data_with_path(array $path, array $ar_locator) : array {
 
 		$data = [];
 		foreach ($path as $path_item) {
@@ -3074,7 +3077,7 @@ class search {
 	* RESOLVE_PATH_LEVEL
 	* @return array $result
 	*/
-	public static function resolve_path_level($path_item, $ar_locator) {
+	public static function resolve_path_level($path_item, array $ar_locator) : array {
 
 		$result = [];
 		foreach ($ar_locator as $locator) {

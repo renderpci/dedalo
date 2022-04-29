@@ -25,7 +25,7 @@ class area_common extends common  {
 	* Singleton pattern
 	* @returns array array of section objects by key
 	*/
-	public static function get_instance($model=null, $tipo=null, $modo='list') {
+	public static function get_instance(string $model=null, string $tipo=null, string $modo='list') : object {
 
 		if (empty($model)) {
 			throw new Exception("Error: on construct area : model is mandatory", 1);
@@ -45,7 +45,7 @@ class area_common extends common  {
 	/**
 	* __CONSTRUCT
 	*/
-	private function __construct($tipo, $modo='list') {
+	private function __construct(string $tipo, $modo='list') {
 
 		$this->define_tipo($tipo);
 		$this->define_lang(DEDALO_DATA_LANG);
@@ -75,7 +75,7 @@ class area_common extends common  {
 	* request_config
 	* @return string $tipo
 	*/
-	public function get_section_tipo() {
+	public function get_section_tipo() : string {
 
 		return $this->tipo;
 	}//end get_section_tipo

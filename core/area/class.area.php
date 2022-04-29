@@ -202,7 +202,7 @@ class area extends area_common  {
 	* @param callable $callback Function must return boolean value indicating whether to remove the node.
 	* @return array
 	*/
-	public static function walk_recursive_remove(array $array, callable $callback) {
+	public static function walk_recursive_remove(array $array, callable $callback) : array {
 
 		$user_id = (int)$_SESSION['dedalo']['auth']['user_id'];
 
@@ -237,7 +237,7 @@ class area extends area_common  {
 	*	bool(true) default true. Case 'false', current tipo is omited as parent in results
 	* @see menu
 	*/
-	public function get_ar_ts_children_areas($include_main_tipo=true) {
+	public function get_ar_ts_children_areas(bool $include_main_tipo=true) : array {
 
 		$terminoID = $this->get_tipo();
 		if(empty($terminoID)) throw new Exception("Error Processing Request: terminoID is empty !", 1);
@@ -272,7 +272,7 @@ class area extends area_common  {
 	*	array recursive of thesaurus structure children filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
-	protected function get_ar_ts_children_areas_recursive($terminoID) {
+	protected function get_ar_ts_children_areas_recursive(string $terminoID) : array {
 
 		$ar_ts_children_areas_recursive	= array();
 

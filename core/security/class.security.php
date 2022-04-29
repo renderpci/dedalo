@@ -405,12 +405,12 @@ class security {
 			# Components inside section
 			$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
 			$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section(
-				$real_section,
-				$ar_modelo_name_required=array('component','button','section_group'),
-				$from_cache=true,
-				$resolve_virtual=false,
-				$recursive=true,
-				$search_exact=false
+				$real_section, // section_tipo
+				['component','button','section_group'], // ar_modelo_name_required
+				true, // from_cache
+				false, // resolve_virtual
+				true, // recursive
+				false // search_exact
 			);
 
 			foreach ($ar_children as $children_tipo) {

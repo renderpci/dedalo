@@ -269,7 +269,7 @@ class dd_core_api {
 	* CREATE
 	* @return array $result
 	*/
-	static function create(object $json_data) {
+	static function create(object $json_data) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -570,9 +570,9 @@ class dd_core_api {
 	* DELETE
 	* @return array $result
 	*/
-	function delete($json_data) {
+		// function delete($json_data) {
 
-	}//end delete
+		// }//end delete
 
 
 
@@ -917,14 +917,15 @@ class dd_core_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
+		// json_data
+			$ar_section_tipo	= (array)$json_data->ar_section_tipo;
+			$context_type		= $json_data->context_type;
 
-		$ar_section_tipo	= (array)$json_data->ar_section_tipo;
-		$context_type		= $json_data->context_type;
-
-		$filter_components = common::get_section_elements_context([
-			'ar_section_tipo'	=> $ar_section_tipo,
-			'context_type'		=> $context_type
-		]);
+		// filtered_components
+			$filtered_components = common::get_section_elements_context((object)[
+				'ar_section_tipo'	=> $ar_section_tipo,
+				'context_type'		=> $context_type
+			]);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -932,8 +933,9 @@ class dd_core_api {
 					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 			}
 
-		$response->result	= $filter_components;
-		$response->msg		= 'Ok. Request done';
+		// response
+			$response->result	= $filtered_components;
+			$response->msg		= 'OK. Request done';
 
 
 		// Debug

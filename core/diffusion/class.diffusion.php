@@ -943,13 +943,15 @@ abstract class diffusion  {
 		}
 
 		// Locate component_publication in current section
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$section_tipo,
-																				'component_publication',
-																				$from_cache=true,
-																				$resolve_virtual=true,
-																				$recursive=true,
-																				$search_exact=true,
-																				$ar_tipo_exclude_elements=false);
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$section_tipo,
+			['component_publication'],
+			$from_cache=true,
+			$resolve_virtual=true,
+			$recursive=true,
+			$search_exact=true,
+			$ar_tipo_exclude_elements=false
+		);
 		// Check list of values cases (returns is_publicable true by default)
 		if (empty($ar_children)) {
 			return true;

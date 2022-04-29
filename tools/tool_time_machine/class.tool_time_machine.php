@@ -27,7 +27,7 @@ class tool_time_machine { // extends tool_common
 	* @param $lang
 	* @param $matrix_id
 	*/
-	public static function apply_value($request_options) {
+	public static function apply_value(object $request_options) : object {
 		global $start_time;
 
 		#debug_log(__METHOD__." TOP_TIPO: ".TOP_TIPO." - TOP_ID: ".TOP_ID.to_string(), logger::DEBUG);

@@ -290,15 +290,20 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VIDEO_PATH
+	* @param string $quality
+	* @return string $video_path
 	*/
-	public function get_video_path($quality=false) {
+	public function get_video_path($quality=false) : string {
 
 		if($quality===false) {
-		$quality 	= $this->get_quality();
+			$quality = $this->get_quality();
 		}
-		$video_id 	= $this->get_video_id();
 
-		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. $this->get_extension();
+		$video_id = $this->get_video_id();
+
+		$video_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. $this->get_extension();
+
+		return $video_path;
 	}//end get_video_path
 
 
@@ -307,7 +312,7 @@ class component_av extends component_media_common {
 	* GET_PATH
 	* Alias of get_video_path
 	*/
-	public function get_path($quality=false) {
+	public function get_path($quality=false) : string {
 
 		return $this->get_video_path($quality);
 	}//end get_path
@@ -318,9 +323,11 @@ class component_av extends component_media_common {
 	* GET_POSTERFRAME_FILE_NAME
 	*  like 'rsc35_rsc167_1.jpg'
 	*/
-	public function get_posterframe_file_name() {
+	public function get_posterframe_file_name() : string {
 
-		return $this->get_id() .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		$posterframe_file_name = $this->get_id() .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+
+		return $posterframe_file_name;
 	}//end get_posterframe_file_name
 
 
@@ -328,21 +335,24 @@ class component_av extends component_media_common {
 	/**
 	* GET_POSTERFRAME_PATH
 	*/
-	public function get_posterframe_path() {
+	public function get_posterframe_path() : string {
 
-		$file_name = $this->get_posterframe_file_name();
-		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
+		$file_name			= $this->get_posterframe_file_name();
+		$posterframe_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
+
+		return $posterframe_path;
 	}//end get_posterframe_path
 
 
 
 	/**
 	* GET_POSTERFRAME_URL
+	* @return string $posterframe_url
 	*/
-	public function get_posterframe_url($test_file=true, $absolute=false, $avoid_cache=false) {
+	public function get_posterframe_url(bool $test_file=true, bool $absolute=false, bool $avoid_cache=false) : string {
 
-		$video_id 	= $this->get_video_id();
-		$file_name = $this->get_posterframe_file_name();
+		$video_id	= $this->get_video_id();
+		$file_name	= $this->get_posterframe_file_name();
 
 		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
 
@@ -371,17 +381,24 @@ class component_av extends component_media_common {
 	/**
 	* GET_SUBTITLES_PATH
 	*/
-	public function get_subtitles_path( $lang=DEDALO_DATA_LANG ) {
-		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+	public function get_subtitles_path( string $lang=DEDALO_DATA_LANG ) : string  {
+
+		$subtitles_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+
+		return $subtitles_path;
 	}//end get_subtitles_path
 
 
 
 	/**
 	* GET_SUBTITLES_URL
+	* @return string $subtitles_url
 	*/
-	public function get_subtitles_url( $lang=DEDALO_DATA_LANG ) {
-		return DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+	public function get_subtitles_url( string $lang=DEDALO_DATA_LANG ) : string {
+
+		$subtitles_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+
+		return $subtitles_url;
 	}//end get_subtitles_url
 
 
@@ -394,7 +411,7 @@ class component_av extends component_media_common {
 	* @param string $quality
 	* @return bool | string (file path)
 	*/
-	public function get_original_file_path($quality) {
+	public function get_original_file_path(string $quality) {
 
 		$result = false;
 		$initial_quality = $this->get_quality();
@@ -524,7 +541,7 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_DURATION_SECONDS
-	* @return int $duration_seconds OR string $timecode
+	* @return int|string $duration_seconds OR string $timecode
 	*/
 	public function get_duration_seconds($format=null) {
 
@@ -577,7 +594,7 @@ class component_av extends component_media_common {
 	* GET_SOURCE_QUALITY_TO_BUILD
 	* Iterate array DEDALO_AV_AR_QUALITY (Order by quality big to small)
 	*/
-	public function get_source_quality_to_build($target_quality) {
+	public function get_source_quality_to_build(string $target_quality) {
 
 		$ar_quality_source_valid = array();
 		$ar_quality 			 = unserialize(DEDALO_AV_AR_QUALITY);
@@ -606,7 +623,7 @@ class component_av extends component_media_common {
 	* @param array $ar_quality optional
 	* @return array $ar_all_files_by_quality
 	*/
-	public function get_ar_all_files_by_quality( $ar_quality=false ) {
+	public function get_ar_all_files_by_quality( $ar_quality=false ) : array {
 
 		if (!$ar_quality) {
 			$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
@@ -628,7 +645,7 @@ class component_av extends component_media_common {
 	* Is triggered wen section that contains media elements is deleted
 	* @see section:remove_section_media_files
 	*/
-	public function remove_component_media_files($ar_quality=[], $remove_posterframe=true) {
+	public function remove_component_media_files(array $ar_quality=[], bool $remove_posterframe=true) : bool {
 
 		$date=date("Y-m-d_Hi");
 
@@ -706,7 +723,7 @@ class component_av extends component_media_common {
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
 	*/
-	public function restore_component_media_files() {
+	public function restore_component_media_files() : bool {
 
 		#
 		# AV restore
@@ -784,7 +801,7 @@ class component_av extends component_media_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value( $lang=null ) : string {
 
 		$diffusion_value = $this->get_url(DEDALO_AV_QUALITY_DEFAULT);
 
@@ -800,7 +817,7 @@ class component_av extends component_media_common {
 	* If not quality is received, default will be used (404 normally)
 	* @return bool
 	*/
-	public function file_exist($quality=false) {
+	public function file_exist($quality=false) : bool {
 
 		$video_path  = $this->get_video_path($quality);
 		$file_exists = file_exists($video_path);
@@ -814,7 +831,7 @@ class component_av extends component_media_common {
 	* GET_ALLOWED_EXTENSIONS
 	* @return array $allowed_extensions
 	*/
-	public function get_allowed_extensions() {
+	public function get_allowed_extensions() : array {
 
 		$allowed_extensions = is_array(DEDALO_AV_EXTENSIONS_SUPPORTED)
 			? DEDALO_AV_EXTENSIONS_SUPPORTED
@@ -827,9 +844,9 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return array $original_quality
+	* @return string $original_quality
 	*/
-	public function get_original_quality() {
+	public function get_original_quality() : string {
 
 		$original_quality = defined('DEDALO_AV_QUALITY_ORIGINAL')
 			? DEDALO_AV_QUALITY_ORIGINAL
@@ -845,7 +862,7 @@ class component_av extends component_media_common {
 	* Used to move zip files like compressed dvd
 	* @return object $response
 	*/
-	public static function move_zip_file($tmp_name, $folder_path, $file_id) {
+	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_id) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -925,7 +942,7 @@ class component_av extends component_media_common {
 	* GET_PREVIEW_URL
 	* @return string $url
 	*/
-	public function get_preview_url() {
+	public function get_preview_url() : string {
 
 		// $preview_url = $this->get_posterframe_url($test_file=true, $absolute=false, $avoid_cache=false);
 		$preview_url = $this->get_posterframe_url($test_file=false, $absolute=false, $avoid_cache=true);
@@ -947,7 +964,7 @@ class component_av extends component_media_common {
 	* }
 	* @return object $response
 	*/
-	public function process_uploaded_file($file_data) {
+	public function process_uploaded_file(object $file_data) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1119,7 +1136,7 @@ class component_av extends component_media_common {
 	* Get the list of defined av qualities in Dédalo config
 	* @return array $ar_quality
 	*/
-	public function get_ar_quality() {
+	public function get_ar_quality() : array {
 
 		$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
 
@@ -1132,7 +1149,7 @@ class component_av extends component_media_common {
 	* GET_EXTENSION
 	* @return string DEDALO_AV_EXTENSION from config
 	*/
-	public function get_extension() {
+	public function get_extension() : string {
 
 		return DEDALO_AV_EXTENSION;
 	}//end get_extension
@@ -1146,7 +1163,7 @@ class component_av extends component_media_common {
 	*
 	* @return object $response
 	*/
-	public function delete_file($quality) {
+	public function delete_file(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1262,7 +1279,7 @@ class component_av extends component_media_common {
 	* @param string $quality
 	* @return object $response
 	*/
-	public function build_version($quality) {
+	public function build_version(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1314,7 +1331,7 @@ class component_av extends component_media_common {
 	* @param string $quality
 	* @return object $response
 	*/
-	public function conform_headers($quality) {
+	public function conform_headers(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1393,7 +1410,7 @@ class component_av extends component_media_common {
 	* 	Remove the file 'posterframe' from the disk
 	* @return bool
 	*/
-	public function delete_posterframe() {
+	public function delete_posterframe() : bool {
 
 		$name	= $this->get_id();
 		$file	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe/' . $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;

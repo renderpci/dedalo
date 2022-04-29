@@ -12,7 +12,7 @@ common::trigger_manager();
 * EXPORT_STR
 * Export db (export_structure)
 */
-function export_str($json_data) {
+function export_str($json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -32,7 +32,7 @@ function export_str($json_data) {
 	}
 
 
-	
+
 	# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
 	$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
 	if ($res_export_structure2->result===false) {
@@ -48,11 +48,11 @@ function export_str($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end export_str
 
@@ -61,7 +61,7 @@ function export_str($json_data) {
 /**
 * IMPORT_STR
 * Import db (import_structure)
-*//* NO USAR . USAR LA DE TOOL ADMINISTRATION 
+*//* NO USAR . USAR LA DE TOOL ADMINISTRATION
 function import_str($json_data) {
 	global $start_time;
 
@@ -78,7 +78,7 @@ function import_str($json_data) {
 	$html .= '<br>';
 	if ($exp->code!=0) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.'] Sorry. Next step import_structure stopped ('.$exp->code.')';
-		return $response;		
+		return $response;
 	}
 
 	$res = backup::import_structure();
@@ -89,7 +89,7 @@ function import_str($json_data) {
 	# Delete session permissions table (force to recalculate)
 	unset($_SESSION['dedalo']['auth']['permissions_table']);
 
-	$html .= $res;	
+	$html .= $res;
 	#echo wrap_html($html, false);
 
 	$response->result 	= $html;
@@ -103,13 +103,13 @@ function import_str($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end import_str */
 
 
 
-# BACKUP DB 
+# BACKUP DB
 /* REMOVED
 function backup() {
 
@@ -128,7 +128,3 @@ function load_str_data() {
 	$html = implode('<hr>', $res);
 	echo wrap_pre($html);
 }//end load_str_data */
-
-
-
-?>

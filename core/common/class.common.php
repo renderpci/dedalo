@@ -2526,11 +2526,11 @@ abstract class common {
 					case 'related_list':
 						if ($model==='section') {
 							// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
-							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=true);
+							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, ['relation_list'], $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=true);
 
 							// If not found children, try resolving real section
 							if (empty($ar_terms)) {
-								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'relation_list', $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, ['relation_list'], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
 							}// end if (empty($ar_terms))
 
 							if(isset($ar_terms[0])) {
@@ -3195,7 +3195,15 @@ abstract class common {
 
 			$context = array_merge($context, $item_context);
 
-			$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_include_elements, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
+			$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$section_tipo, // section_tipo
+				$ar_include_elements, // ar_include_elements
+				true, // from_cache
+				true, // resolve_virtual
+				true, // recursive
+				false, // search_exact
+				$ar_tipo_exclude_elements // exclude_elements
+			);
 
 			// Add common section info elements
 				foreach ($section_info_elements as $current_section_info_el) {

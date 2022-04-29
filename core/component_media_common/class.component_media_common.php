@@ -127,7 +127,7 @@ class component_media_common extends component_common {
 	* Overwrite this method on each component that's needed it, for example 'component_av'
 	* @return object $response
 	*/
-	public static function move_zip_file($tmp_name, $folder_path, $file_id) {
+	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_id) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -207,7 +207,7 @@ class component_media_common extends component_common {
 	* Dummy method. Overwrite it when need
 	* @return object $response
 	*/
-	public function process_uploaded_file($file_data) {
+	public function process_uploaded_file(object $file_data) : object {
 
 		$response = new stdClass();
 			$response->result 	= true;
@@ -291,7 +291,7 @@ class component_media_common extends component_common {
 	*
 	* @return object $response
 	*/
-	public function delete_file($quality) {
+	public function delete_file(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -320,7 +320,7 @@ class component_media_common extends component_common {
 	* Is triggered wen section tha contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
-	public function remove_component_media_files( $ar_quality=[] ) {
+	public function remove_component_media_files(array $ar_quality=[]) : bool {
 
 		$date=date("Y-m-d_Hi");
 

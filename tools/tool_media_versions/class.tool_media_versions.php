@@ -19,7 +19,7 @@ class tool_media_versions extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function get_files_info($request_options) {
+	public static function get_files_info(object $request_options) : object {
 
 		// options
 			$options = new stdClass();
@@ -65,7 +65,7 @@ class tool_media_versions extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function delete_file($request_options) {
+	public static function delete_file(object $request_options) : object {
 
 		// options
 			$options = new stdClass();
