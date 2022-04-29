@@ -175,7 +175,7 @@ class component_relation_related extends component_relation_common {
 	* return the full dato of the component, the real dato with the calculated references
 	* @return
 	*/
-	public function get_dato_with_references() {
+	public function get_dato_with_references() : array {
 
 		$dato 		= $this->get_dato();
 		$references = $this->get_calculated_references(true);
@@ -396,7 +396,7 @@ class component_relation_related extends component_relation_common {
 		$search_query_object = new search_query_object();
 			$search_query_object->set_id('temp');
 			$search_query_object->set_section_tipo([$this->section_tipo]);
-			$search_query_object->set_filter($filter);	
+			$search_query_object->set_filter($filter);
 			$search_query_object->set_limit(0);
 			$search_query_object->set_offset(0);
 			$search_query_object->set_full_count(false);
