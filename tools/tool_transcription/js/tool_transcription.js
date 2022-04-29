@@ -32,7 +32,7 @@ export const tool_transcription = function () {
 	this.target_lang				= null
 	this.langs						= null
 	this.caller						= null
-	this.media_component				= null // component av that will be transcribed (it could be the caller)
+	this.media_component			= null // component av that will be transcribed (it could be the caller)
 	this.transcription_component	= null // component text area where we are working into the tool
 	this.related_sections_list		= null // datum of related_sections_list (to obtaim list of top_section_tipo/id)
 
