@@ -31,7 +31,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	/**
 	* CONSTRUCT
 	*/
-	public function __construct($matrix_table=null, $id=NULL, $parent=NULL, $tipo=NULL, $lang=NULL) {
+	public function __construct(string $matrix_table=null, $id=NULL, $parent=NULL, $tipo=NULL, $lang=NULL) {
 
 		if(empty($matrix_table)) {
 			if(SHOW_DEBUG===true)
@@ -70,7 +70,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		return ('id');
 	}
 	# array of pairs db field name, obj property name like fieldName => propertyName
-	protected function defineRelationMap() {
+	protected function defineRelationMap() : array {
 		return (array(
 			# db fieldn ame			# property name
 			"id" 					=> "ID",
@@ -86,7 +86,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	/**
 	* CHANGE TABLE . Set another matrix table (default is 'matrix')
 	*/
-	public function set_matrix_table($table_name) {
+	public function set_matrix_table(string $table_name) {
 		throw new Exception("Error Processing Request. Current function is deprecated. Use __construct(table, ...)", 1);
 
 		#dump($table_name,"called table_name: $table_name");
@@ -190,7 +190,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	* Test data before save to avoid write malformed matrix data
 	* @return bool
 	*/
-	private function test_can_save() {
+	private function test_can_save() : bool {
 
 		# CURRENT OBJ TEST COPY
 		if (!empty($this->ID) ) {

@@ -40,7 +40,7 @@ class dd_utils_api {
 		// 			$response->debug = $debug;
 		// 		}
 
-		// 	return (object)$response;
+		// 	return $response;
 		// }//end get_menu
 
 
@@ -75,7 +75,7 @@ class dd_utils_api {
 		// 			$response->debug = $debug;
 		// 		}
 
-		// 	return (object)$response;
+		// 	return $response;
 		// }//end get_login
 
 
@@ -84,7 +84,7 @@ class dd_utils_api {
 	* DEDALO_VERSION
 	* @return object $response
 	*/
-	public static function dedalo_version($request_options=null) {
+	public static function dedalo_version($request_options=null) : object {
 		global $start_time;
 
 		session_write_close();
@@ -108,7 +108,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end dedalo_version
 
 
@@ -117,7 +117,7 @@ class dd_utils_api {
 	* DATABASE_INFO
 	* @return object $response
 	*/
-	public static function database_info($request_options=null) {
+	public static function database_info($request_options=null) : object {
 		global $start_time;
 
 		session_write_close();
@@ -140,7 +140,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end database_info
 
 
@@ -148,7 +148,7 @@ class dd_utils_api {
 	* GET_SYSTEM_INFO
 	* @return object response
 	*/
-	public static function get_system_info($request_options=null) {
+	public static function get_system_info($request_options=null) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -212,7 +212,7 @@ class dd_utils_api {
 	* MAKE_BACKUP
 	* @return object $response
 	*/
-	public static function make_backup($request_options=null) {
+	public static function make_backup($request_options=null) : object {
 		global $start_time;
 
 		// ssession_write_close();
@@ -233,7 +233,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end make_backup
 
 
@@ -242,7 +242,7 @@ class dd_utils_api {
 	* UPDATE_STRUCTURE
 	* @return object $response
 	*/
-	public static function update_structure($request_options=null) {
+	public static function update_structure($request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -283,7 +283,7 @@ class dd_utils_api {
 			}else{
 				$response->msg		.= $remote_server_response->msg;
 				$response->result	= false;
-				return (object)$response;
+				return $response;
 			}
 		}
 
@@ -367,7 +367,7 @@ class dd_utils_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end update_structure
 
 
@@ -376,7 +376,7 @@ class dd_utils_api {
 	* STRUCTURE_TO_JSON
 	* @return object $response
 	*/
-	public static function structure_to_json($request_options=null) {
+	public static function structure_to_json($request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -424,7 +424,7 @@ class dd_utils_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end structure_to_json
 
 
@@ -433,7 +433,7 @@ class dd_utils_api {
 	* IMPORT_STRUCTURE_FROM_JSON
 	* @return object $response
 	*/
-	public static function import_structure_from_json($request_options=null) {
+	public static function import_structure_from_json($request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -472,7 +472,7 @@ class dd_utils_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end import_structure_from_json
 
 
@@ -481,7 +481,7 @@ class dd_utils_api {
 	* REGISTER_TOOLS
 	* @return object $response
 	*/
-	public static function register_tools($request_options=null) {
+	public static function register_tools($request_options=null) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -500,7 +500,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end register_tools
 
 
@@ -509,7 +509,7 @@ class dd_utils_api {
 	* BUILD_STRUCTURE_CSS
 	* @return object $response
 	*/
-	public static function build_structure_css($request_options=null) {
+	public static function build_structure_css($request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -530,7 +530,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end build_structure_css
 
 
@@ -539,7 +539,7 @@ class dd_utils_api {
 	* UPDATE_VERSION
 	* @return object $response
 	*/
-	public static function update_version($request_options=null) {
+	public static function update_version($request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -562,7 +562,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end update_version
 
 
@@ -571,7 +571,7 @@ class dd_utils_api {
 	* CONVERT_SEARCH_OBJECT_TO_SQL_QUERY
 	* @return object $response
 	*/
-	public static function convert_search_object_to_sql_query($request_options=null) {
+	public static function convert_search_object_to_sql_query($request_options=null) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -618,7 +618,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end convert_search_object_to_sql_query
 
 
@@ -627,7 +627,7 @@ class dd_utils_api {
 	* CHANGE_LANG
 	* @return object $response
 	*/
-	public static function change_lang($request_options) {
+	public static function change_lang($request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -665,7 +665,8 @@ class dd_utils_api {
 
 		debug_log(__METHOD__." response ".to_string($response), logger::DEBUG);
 
-		return (object)$response;
+
+		return $response;
 	}//end change_lang
 
 
@@ -674,7 +675,7 @@ class dd_utils_api {
 	* LOGIN
 	* @return object $response
 	*/
-	public static function login($request_options) {
+	public static function login(object $request_options) : object {
 		global $start_time;
 
 		$options = new stdClass();
@@ -696,7 +697,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end login
 
 
@@ -705,7 +706,7 @@ class dd_utils_api {
 	* QUIT
 	* @return object $response
 	*/
-	public static function quit($request_options) {
+	public static function quit($request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -739,7 +740,7 @@ class dd_utils_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end quit
 
 
@@ -762,7 +763,7 @@ class dd_utils_api {
 	* REGENERATE_RELATIONS
 	* @return object $response
 	*/
-	public static function regenerate_relations($request_options) {
+	public static function regenerate_relations($request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -792,7 +793,7 @@ class dd_utils_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end regenerate_relations
 
 
@@ -821,7 +822,7 @@ class dd_utils_api {
 	* }
 	* @return object response { result: mixed, msg: string }
 	*/
-	public static function tool_request($request_options) {
+	public static function tool_request(object $request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -867,7 +868,7 @@ class dd_utils_api {
 			$response = $fn_result;
 
 
-		return (object)$response;
+		return $response;
 	}//end tool_request
 
 
@@ -890,7 +891,7 @@ class dd_utils_api {
 	* }
 	* @return object $response
 	*/
-	public static function upload($request_options) {
+	public static function upload(object $request_options) : object {
 		global $start_time;
 
 		// response
@@ -1077,10 +1078,10 @@ class dd_utils_api {
 
 	/**
 	* ERROR_NUMBER_TO_TEXT
-	* @param $f_error_number int
-	* @return $f_error_text strint
+	* @param int $f_error_number
+	* @return string $f_error_text
 	*/
-	private static function error_number_to_text($f_error_number) {
+	private static function error_number_to_text(int $f_error_number) : string {
 
 		if( $f_error_number===0 ) {
 						# all is ok
@@ -1107,7 +1108,7 @@ class dd_utils_api {
 	* GET_KNOWN_MIME_TYPES
 	* @return array $mime_types
 	*/
-	private static function get_known_mime_types() {
+	private static function get_known_mime_types() : array {
 
 		$mime_types = array(
 
@@ -1169,5 +1170,7 @@ class dd_utils_api {
 
 		return $mime_types;
 	}//end get_known_mime_types
+
+
 
 }//end dd_utils_api

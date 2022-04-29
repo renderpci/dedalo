@@ -68,7 +68,7 @@ class class_loader {
 	* Include the file of given class resolving more common paths
 	* @param string $className
 	*/
-	private static function loader($className) {
+	private static function loader(string $className) : bool {
 
 		switch (true) {
 
@@ -107,9 +107,10 @@ class class_loader {
 
 	/**
 	* TEST_PHP_VERSION_SUPPORTED
-	# Test if PHP version is supported
+	* Test if PHP version is supported
+	* @return bool
 	*/
-	static private function test_php_version_supported() {
+	static private function test_php_version_supported() : bool {
 
 		static $php_version_supported;
 

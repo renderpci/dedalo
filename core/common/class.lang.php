@@ -1,7 +1,7 @@
 <?php
 /**
 * LANG CLASS
-* To manage dedalo lang resolutions 
+* To manage dedalo lang resolutions
 * Complements thesaurus langs
 */
 class lang {
@@ -12,7 +12,7 @@ class lang {
 	public static $langs_matrix_table = 'matrix_langs';
 
 
- 
+
 	/**
 	* RESOLVE
 	* Resolve request lag tld in requested language
@@ -24,7 +24,7 @@ class lang {
 	*	like 'lg-eng'. Default is current dedalo data lang
 	* @return string $name
 	*/
-	private static function resolve( $lang_tld, $lang=DEDALO_DATA_LANG ) {
+	private static function resolve( string $lang_tld, $lang=DEDALO_DATA_LANG ) : object {
 
 		$name = null;
 
@@ -36,7 +36,7 @@ class lang {
 		if (isset($resolve_response[$lang_tld])) {
 			return $resolve_response[$lang_tld];
 		}
-		
+
 		$tipo 	 	 = DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
 		$table 		 = lang::$langs_matrix_table;
 		$term_tipo	 = DEDALO_THESAURUS_TERM_TIPO;
@@ -47,7 +47,7 @@ class lang {
 		$strQuery .= PHP_EOL . 'FROM "'.$table.'"';
 		$strQuery .= PHP_EOL . 'WHERE';
 		$strQuery .= PHP_EOL . 'datos#>\'{components, '.$tipo.', dato, lg-nolan}\' ? \''.$lang_tld.'\';';
-	
+
 		$response = new stdClass();
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 					while ($rows = pg_fetch_assoc($result)) {
@@ -68,10 +68,10 @@ class lang {
 
 
 	/**
-	* GET_section_ID_FROM_CODE
-	* @return 
+	* GET_SECTION_ID_FROM_CODE
+	* @return int $section_id
 	*/
-	public static function get_section_id_from_code( $code ) {
+	public static function get_section_id_from_code( string $code ) : int {
 
 		$result 	 = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
 		$section_id  = $result->section_id;
@@ -83,10 +83,10 @@ class lang {
 
 	/**
 	* GET_LANG_LOCATOR_FROM_CODE
-	* @return 
+	* @return obejct $locator
 	*/
-	public static function get_lang_locator_from_code( $code ) {
-		
+	public static function get_lang_locator_from_code( string $code ) : object {
+
 		$result 	 = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
 		if (!isset($result->section_id)) {
 			# Temporal cath error for import v4.0.15 to v4.5.0
@@ -94,7 +94,7 @@ class lang {
 			# Remove this catch in next versions
 			switch ($lang) {
 				case 'lg-eng':	$section_id = 5101;		break;
-				case 'lg-spa':	$section_id = 17344;	break;				
+				case 'lg-spa':	$section_id = 17344;	break;
 				case 'lg-cat':	$section_id = 3032;		break;
 				case 'lg-ell':	$section_id = 5037;		break;
 				case 'lg-deu':	$section_id = 4253;		break;
@@ -103,7 +103,7 @@ class lang {
 				case 'lg-eus':	$section_id = 5223;		break;
 				case 'lg-por':	$section_id = 14895;	break;
 				case 'lg-ara':	$section_id = 841;		break;
-				case 'lg-rus':	$section_id = 15862;	break;				
+				case 'lg-rus':	$section_id = 15862;	break;
 				case 'lg-ita':	$section_id = 7466;		break;
 				default:
 					break;
@@ -111,11 +111,11 @@ class lang {
 		}else{
 			# Normal case
 			$section_id  = $result->section_id;
-		}		
+		}
 
 		$locator = new locator();
 			$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);
-			$locator->set_section_id($section_id);		
+			$locator->set_section_id($section_id);
 
 		return (object)$locator;
 	}//end get_lang_locator_from_code
@@ -124,9 +124,9 @@ class lang {
 
 	/**
 	* GET_NAME_FROM_CODE
-	* @return string $name 
+	* @return string $name
 	*/
-	public static function get_name_from_code( $code, $lang=DEDALO_DATA_LANG, $from_cache=true ) {
+	public static function get_name_from_code( string $code, $lang=DEDALO_DATA_LANG, $from_cache=true ) : string {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
@@ -148,8 +148,8 @@ class lang {
 
 		# NOT FOUNDED NAME
 		if(!isset($result->names)) {
-			if(SHOW_DEBUG===true) {			
-				#dump($result, ' result ++ '.to_string($code));				
+			if(SHOW_DEBUG===true) {
+				#dump($result, ' result ++ '.to_string($code));
 			}
 			return null;
 		}
@@ -180,9 +180,9 @@ class lang {
 		if($from_cache===true){
 			$_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid] = $name;
 		}
-		
 
-		return (string)$name;		
+
+		return (string)$name;
 	}//end get_name_from_code
 
 
@@ -191,7 +191,7 @@ class lang {
 	* GET_LANG_NAME_BY_LOCATOR
 	* @return string $lang_name
 	*/
-	public static function get_lang_name_by_locator($locator, $lang=DEDALO_APPLICATION_LANG, $from_cache=false) {
+	public static function get_lang_name_by_locator($locator, $lang=DEDALO_APPLICATION_LANG, $from_cache=false) : string {
 		$lang_name = ts_object::get_term_by_locator( $locator, $lang, $from_cache );
 
 		return $lang_name;
@@ -215,7 +215,7 @@ class lang {
 
 		$section_tipo = DEDALO_LANGS_SECTION_TIPO;
 
-			# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)		
+			# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
 			$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);
 			if ($section_modelo_name!=='section') {
 
@@ -239,12 +239,12 @@ class lang {
 					Your desired code could be '$code' for $locator->section_tipo - $locator->section_id<br>
 					But, please review your langs section ($section_tipo) data before continue working to avoid critical errors.<br>
 					<a href=\"../?t=$section_tipo\">Go to langs section</a><br> Locator: ".to_string($locator), 1);
-				
+
 			}
 
 		$tipo 			 = DEDALO_THESAURUS_CODE_TIPO;
 		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-		$parent 		 = $locator->section_id;				
+		$parent 		 = $locator->section_id;
 		$component 		 = component_common::get_instance($modelo_name,
 														  $tipo,
 														  $parent,
@@ -256,7 +256,7 @@ class lang {
 		if ($add_prefix===true) {
 			$code = 'lg-'.$code;
 		}
-		
+
 
 		return (string)$code;
 	}//end get_code_from_locator
@@ -265,12 +265,12 @@ class lang {
 
 	/**
 	* GET_LANG_CODE_FROM_ALPHA2
-	* @return 
+	* @return string $lang_code
 	*/
-	public static function get_lang_code_from_alpha2($lang_apha2) {	
+	public static function get_lang_code_from_alpha2( string $lang_apha2 ) : string {
 
 		$lang_code = null;
-		
+
 		switch ($lang_apha2) {
 			#case 'es' 	: $code = 'lg-spa';	break;
 			#case 'en' 	: $code = 'lg-eng';	break;
@@ -282,7 +282,7 @@ class lang {
 			#case 'ar' 	: $code = 'lg-ara';	break;
 			#case 'ru'	: $code = 'lg-rus';	break;
 			#case 'el' 	: $code = 'lg-ell';	break;
-			#case 'de' 	: $code = 'lg-deu';	break;		
+			#case 'de' 	: $code = 'lg-deu';	break;
 
 			case "aa" 	: $code = "lg-aar"; break;
 			case "ab" 	: $code = "lg-abk"; break;
@@ -475,7 +475,7 @@ class lang {
 		}
 		if (isset($code)) {
 			$lang_code = $code;
-		}	
+		}
 
 		return $lang_code;
 	}//end get_lang_code_from_alpha2
@@ -487,8 +487,8 @@ class lang {
 	* @return string $alpha2
 	*	Like 'en' from lg-eng
 	*/
-	public static function get_alpha2_from_code( $lang_code ) {
-		
+	public static function get_alpha2_from_code( string $lang_code ) {
+
 		$alpha2 = null;
 
 		switch ($lang_code) {
@@ -710,20 +710,20 @@ class lang {
 	* @return string $locale
 	*	Like 'en-EN' from lg-eng
 	*/
-	public static function get_locale_from_code( $lang_code ) {
-		
+	public static function get_locale_from_code( string $lang_code ) : string {
+
 		switch ($lang_code) {
 			case 'lg-eng':	$locale='en-US'; 	break;
 			case 'lg-spa':	$locale='es-ES'; 	break;
 			case 'lg-cat':	$locale='ca'; 		break;
-			
+
 			default:
 				$alpha2 = lang::get_alpha2_from_code($lang_code);
 				$locale = $alpha2 ; //. '-'. strtoupper($alpha2);
 				break;
 		}
-		
-		
+
+
 		return $locale;
 	}//end get_locale_from_code
 
@@ -734,7 +734,7 @@ class lang {
 	* @return string $strQuery
 	*//*
 	private static function build_resolve_query($lang_tld, $lang) {
-		
+
 		$tipo 	 	 = lang::$tld_tipo;
 		$table 		 = lang::$langs_matrix_table;
 

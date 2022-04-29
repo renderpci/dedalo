@@ -148,7 +148,7 @@ class component_html_text extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql($query_object) {
+	public static function resolve_query_object_sql( object $query_object) : object {
 
     	# Always set fixed values
 		$query_object->type = 'string';

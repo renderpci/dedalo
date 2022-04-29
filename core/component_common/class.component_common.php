@@ -89,7 +89,7 @@ abstract class component_common extends common {
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
-	* @returns array array of component objects by key
+	* @return array array of component objects by key
 	*/
 	public static function get_instance($component_name=null, $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
 		$start_time=microtime(1);
@@ -444,7 +444,7 @@ abstract class component_common extends common {
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool true
 	*/
-	private function set_dato_default() {
+	private function set_dato_default() : bool {
 
 		# properties is object or null
 		$properties = $this->get_properties();
@@ -598,8 +598,9 @@ abstract class component_common extends common {
 	/**
 	* LOAD MATRIX DATA
 	* Get data once from matrix about section_id, dato
+	* @return bool
 	*/
-	protected function load_component_dato() {
+	protected function load_component_dato() : bool {
 
 		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
 			return false;
@@ -637,7 +638,7 @@ abstract class component_common extends common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+	public function get_value(string $lang=DEDALO_DATA_LANG, $ddo=null) {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
@@ -2578,7 +2579,7 @@ abstract class component_common extends common {
 	* @param object $select_object
 	* @return object $select_object
 	*/
-	public static function get_select_query2($select_object) {
+	public static function get_select_query2( object $select_object ) : object {
 
 		// ref
 			// [path] => Array
@@ -2644,9 +2645,9 @@ abstract class component_common extends common {
 	/**
 	* SPLIT_QUERY
 	* @param object $query_object
-	* @return array $ar_query_object
+	* @return object $ar_query_object
 	*/
-	public static function split_query($query_object) {
+	public static function split_query( object $query_object) : object {
 
 		$search_value = $query_object->q;
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
@@ -2753,7 +2754,7 @@ abstract class component_common extends common {
 	* Removes first and last quotes (single or doubles) respecting existing operators
 	* @return string $string
 	*/
-	public static function remove_first_and_last_quotes($string) {
+	public static function remove_first_and_last_quotes(string $string) : string {
 
 		$first_2char 	= mb_substr($string, 0, 2);
 		$ar_operators 	= ['!=','>=','<='];
@@ -2798,7 +2799,7 @@ abstract class component_common extends common {
 	* GET_MY_SECTION
 	* @return object $section
 	*/
-	public function get_my_section() {
+	public function get_my_section() : object {
 
 		$section = section::get_instance($this->section_id, $this->section_tipo);
 
@@ -2812,7 +2813,7 @@ abstract class component_common extends common {
 	* @return $data
 	* get the data of the component for do a calculation
 	*/
-	public function get_calculation_data($options = null){
+	public function get_calculation_data($options=null) {
 
 		$data = $this->get_valor();
 
@@ -2911,7 +2912,7 @@ abstract class component_common extends common {
 	* @param mixed $value
 	* @return object $item
 	*/
-	public function get_data_item($value) {
+	public function get_data_item($value) : object {
 
 		$item = new stdClass();
 			$item->section_id			= $this->get_section_id();
@@ -3045,7 +3046,7 @@ abstract class component_common extends common {
 	* It slices the component array of locators to allocate pagination options
 	* @return arrray $dato_paginated
 	*/
-	public function get_dato_paginated($custom_limit=null) {
+	public function get_dato_paginated($custom_limit=null) : array {
 
 		// dato full
 			$dato = $this->get_dato();
@@ -3094,7 +3095,7 @@ abstract class component_common extends common {
 	* GET_STRUCTURE_BUTTONS
 	* @return
 	*/
-	public function get_structure_buttons($permissions=null) {
+	public function get_structure_buttons($permissions=null) : array {
 
 
 		return [];

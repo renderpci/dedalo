@@ -10,7 +10,7 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTION
-	* @return resource $pg_conn
+	* @return resource $pg_conn (object in PHP >=8.1)
 	*/
 	public static function _getConnection(
 		$host=DEDALO_HOSTNAME_CONN,

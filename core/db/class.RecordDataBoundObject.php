@@ -101,7 +101,7 @@ abstract class RecordDataBoundObject {
 
 
 	# SET_DATO : SET DATO UNIFICADO (JSON)
-	public function set_dato($dato, $raw=false) {
+	public function set_dato($dato, bool $raw=false) {
 
 		# Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
@@ -446,7 +446,7 @@ abstract class RecordDataBoundObject {
 	* TIPO $arguments['parent'] = 14 ...
 	* @return array $ar_records
 	*/
-	public function search($ar_arguments=NULL, $matrix_table=NULL) {
+	public function search($ar_arguments=NULL, $matrix_table=NULL) : array {
 
 		# DEBUG INFO SHOWED IN FOOTER
 		if(SHOW_DEBUG===true) $start_time = start_time();

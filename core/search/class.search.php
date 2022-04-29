@@ -78,7 +78,7 @@ class search {
 	* GET_INSTANCE
 	* @return class instance
 	*/
-	public static function get_instance($search_query_object) {
+	public static function get_instance(object $search_query_object) : object {
 
 		# Accepted objects json encoded too
 		if (is_string($search_query_object)) {
@@ -103,7 +103,10 @@ class search {
 				break;
 		}
 
-		return new $search_class($search_query_object);
+		$instance = new $search_class($search_query_object);
+
+
+		return $instance;
 	}//end get_instance
 
 
@@ -121,7 +124,7 @@ class search {
 	/**
 	* SET_UP
 	*/
-	public function set_up($search_query_object) {
+	public function set_up(object $search_query_object) : bool {
 
 		// # Accepted objects json encoded too
 		// if (is_string($search_query_object)) {
@@ -367,7 +370,7 @@ class search {
 	* Count the rows of the sqo
 	* @return object $records_data
 	*/
-	public function count() {
+	public function count() : object {
 
 		$start_time=microtime(1);
 
@@ -411,7 +414,7 @@ class search {
 	* @return string $filtered_relations
 	* json encoded array
 	*/
-	public static function get_filtered_relations($relations_data, $component_tipo) {
+	public static function get_filtered_relations($relations_data, $component_tipo) : array {
 
 		$filtered_relations = [];
 
@@ -586,7 +589,7 @@ class search {
 	*	default false
 	* @return string $sql_query
 	*/
-	public function parse_search_query_object( $full_count=false ) {
+	public function parse_search_query_object( $full_count=false ) : string {
 		#$start_time=microtime(1);
 		#dump($this->search_query_object->filter, ' this->search_query_object->filter 1 ++ '.to_string());
 		#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
@@ -949,7 +952,7 @@ class search {
 	* @param string $sql_query
 	* @return string $sql_query
 	*/
-	public function build_union_query($sql_query) {
+	public function build_union_query($sql_query) : string {
 
 		// calculate tables
 			$this->ar_matrix_tables = [];
@@ -985,7 +988,7 @@ class search {
 	* BUILD_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
-	public function build_sql_query_select($full_count=false) {
+	public function build_sql_query_select($full_count=false) : string {
 
 		if ($full_count===true) {
 			return $this->build_full_count_sql_query_select();
@@ -1118,7 +1121,7 @@ class search {
 	* Create the sql code for filter records by user projects
 	* @return string $sql_projects_filter
 	*/
-	public function build_sql_projects_filter() {
+	public function build_sql_projects_filter() : string {
 
 		$sql_projects_filter = '';
 
@@ -1367,7 +1370,7 @@ class search {
 	* BUILD_SQL_QUERY_ORDER_DEFaULT
 	* @return string $sql_query_order_default
 	*/
-	public function build_sql_query_order_default() {
+	public function build_sql_query_order_default() : string {
 
 		if (isset($this->sql_query_order_default)) {
 			return $this->sql_query_order_default;
@@ -1389,7 +1392,7 @@ class search {
 	* BUILD_SQL_QUERY_ORDER
 	* @return string $sql_query_order
 	*/
-	public function build_sql_query_order() {
+	public function build_sql_query_order() : string {
 
 		$sql_query_order = '';
 
@@ -1478,7 +1481,7 @@ class search {
 	* BUILD_MAIN_FROM_SQL
 	* @return string $main_from_sql
 	*/
-	public function build_main_from_sql() {
+	public function build_main_from_sql() : string {
 
 		$main_from_sql = $this->matrix_table .' AS '. $this->main_section_tipo_alias;
 
@@ -1494,7 +1497,7 @@ class search {
 	* BUILD_MAIN_WHERE_SQL
 	* @return string $main_where_sql
 	*/
-	public function build_main_where_sql() {
+	public function build_main_where_sql() : string {
 
 		# section_tipo is always and array
 		$ar_section_tipo   = $this->ar_section_tipo;
@@ -1532,7 +1535,7 @@ class search {
 	* BUILD_SQL_FILTER
 	* @return string $filter_query
 	*/
-	public function build_sql_filter() {
+	public function build_sql_filter() : string {
 
 		$filter_query  = '';
 
@@ -1562,7 +1565,7 @@ class search {
 	* BUILD_SQL_FILTER_BY_LOCATORS
 	* @return string $sql_filter
 	*/
-	public function build_sql_filter_by_locators() {
+	public function build_sql_filter_by_locators() : string {
 
 		if (empty($this->filter_by_locators)) {
 			return '';
@@ -1626,7 +1629,7 @@ class search {
 	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
 	* @return string $string_query
 	*/
-	public function build_sql_filter_by_locators_order() {
+	public function build_sql_filter_by_locators_order() : string {
 
 		$ar_values = [];
 		foreach ($this->filter_by_locators as $key => $current_locator) {
@@ -1652,7 +1655,7 @@ class search {
 	* @param array $ar_value
 	* @return string $string_query
 	*/
-	public function filter_parser($op, $ar_value) {
+	public function filter_parser($op, $ar_value) : string {
 
 		$string_query = '';
 
@@ -1740,7 +1743,7 @@ class search {
 	* BUILD_FULL_COUNT_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
-	public function build_full_count_sql_query_select() {
+	public function build_full_count_sql_query_select() : string {
 
 		$sql_query_select = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
 
@@ -1751,15 +1754,15 @@ class search {
 
 	/**
 	* BUILD_SQL_JOIN
-	* @return bool true
 	* Builds one table join based on requested path
+	* @return bool true
 	*/
-	public function build_sql_join($path) {
+	public function build_sql_join($path) : bool {
 
-		$rel_table   		= self::$relations_table;
-		$ar_key_join 		= [];
-		$base_key 			= '';
-		$total_paths 		= count($path);
+		$rel_table		= self::$relations_table;
+		$ar_key_join	= [];
+		$base_key		= '';
+		$total_paths	= count($path);
 
 		foreach ($path as $key => $step_object) {
 
@@ -1827,7 +1830,7 @@ class search {
 	* TRIM_TIPO
 	* @return string $trimmed_tipo
 	*/
-	public static function trim_tipo($tipo, $max=2) {
+	public static function trim_tipo(string $tipo, $max=2) : string {
 
 		// empty case
 			if (empty($tipo)) {

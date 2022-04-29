@@ -61,7 +61,7 @@ class dd_core_api {
 	* }
 	* @return array $result
 	*/
-	static function start($json_data) {
+	static function start(object $json_data) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -81,7 +81,7 @@ class dd_core_api {
 				$section_id	= $locator->section_id ?? null;
 				$mode		= $locator->mode ?? 'list';
 			}else{
-				$tipo		= $search_obj->t	?? $search_obj->tipo		?? $default_section_tipo; //MAIN_FALLBACK_SECTION;
+				$tipo		= $search_obj->t	?? $search_obj->tipo		?? $default_section_tipo; // MAIN_FALLBACK_SECTION;
 				$section_id	= $search_obj->id	?? $search_obj->section_id	?? null;
 				$mode		= $search_obj->m	?? $search_obj->mode		?? 'list';
 			}
@@ -119,11 +119,11 @@ class dd_core_api {
 							$context[] = $menu->get_structure_context();
 					}
 
-				// section/area/section_tool. Get the page element from get url vars
+				// section/area/section_tool. Get the page element from get URL vars
 					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 					switch (true) {
 						// Section_tool is depended of section, the order of the cases are important, section_tool need to be first, before section,
-						// because section_tool depend of the section process and the case only add the config from properties.
+						// because section_tool depends of the section process and this case only add the config from properties.
 						case ($model==='section_tool'):
 
 							$section_tool_tipo = $tipo;
@@ -260,7 +260,7 @@ class dd_core_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end start
 
 
@@ -269,7 +269,7 @@ class dd_core_api {
 	* CREATE
 	* @return array $result
 	*/
-	static function create($json_data) {
+	static function create(object $json_data) {
 		global $start_time;
 
 		$response = new stdClass();
@@ -312,7 +312,7 @@ class dd_core_api {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+		return $response;
 	}//end create
 
 
@@ -325,7 +325,7 @@ class dd_core_api {
 	*	array $result->context
 	*	array $result->data
 	*/
-	static function read($rqo) {
+	static function read(object $rqo) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -361,7 +361,7 @@ class dd_core_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end read
 
 
@@ -370,7 +370,7 @@ class dd_core_api {
 	* SAVE
 	* @return object $response
 	*/
-	static function save($json_data) {
+	static function save(object $json_data) : object {
 		global $start_time;
 
 		// create the default save response
@@ -482,7 +482,7 @@ class dd_core_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end save
 
 
@@ -492,7 +492,7 @@ class dd_core_api {
 	* Used by component_portal to add created target section to current component with project values inheritance
 	* @return object $response
 	*/
-	static function add_new_element($json_data) {
+	static function add_new_element(object $json_data) : object {
 		global $start_time;
 
 		// create the default response
@@ -500,7 +500,7 @@ class dd_core_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// json_data. get the context and data sended
+		// json_data. get the context and data sent
 			$source					= $json_data->source;
 			$target_section_tipo	= $json_data->target_section_tipo;
 
@@ -561,7 +561,7 @@ class dd_core_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end add_new_element
 
 
@@ -581,7 +581,7 @@ class dd_core_api {
 	* @param object $json_data
 	* @return object $response
 	*/
-	static function count($json_data) {
+	static function count(object $json_data) : object {
 		global $start_time;
 
 		session_write_close();
@@ -618,7 +618,7 @@ class dd_core_api {
 		$response->result	= $result;
 		$response->msg		= 'Ok. Request done';
 
-		return (object)$response;
+		return $response;
 	}//end count
 
 
@@ -629,7 +629,7 @@ class dd_core_api {
 	* @param object $json_data
 	* @return object $response
 	*/
-	public static function get_element_context($json_data){
+	public static function get_element_context(object $json_data) : object {
 		global $start_time;
 
 		session_write_close();
@@ -719,7 +719,7 @@ class dd_core_api {
 			$response->msg		= 'Ok. Request done';
 
 
-		return (object)$response;
+		return $response;
 	}//end get_element_context
 
 
@@ -891,7 +891,7 @@ class dd_core_api {
 		// 	$response->msg 	  	= 'Ok. Request done';
 		//
 		//
-		// 	return (object)$response;
+		// 	return $response;
 		// }//end get_page_element
 		//
 
@@ -908,7 +908,7 @@ class dd_core_api {
 	*	array $json_data->ar_section_tipo
 	* @return object $response
 	*/
-	static function get_section_elements_context($json_data){
+	static function get_section_elements_context(object $json_data) : object {
 		global $start_time;
 
 		session_write_close();
@@ -946,7 +946,7 @@ class dd_core_api {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end get_section_elements_context
 
 
@@ -955,7 +955,7 @@ class dd_core_api {
 	* FILTER_GET_EDITING_PRESET
 	* @return object $response
 	*/
-	static function filter_get_editing_preset($json_data){
+	static function filter_get_editing_preset(object $json_data) : object {
 		global $start_time;
 
 		session_write_close();
@@ -978,7 +978,7 @@ class dd_core_api {
 		$response->result	= $editing_preset;
 		$response->msg		= 'Ok. Request done';
 
-		return (object)$response;
+		return $response;
 	}//end filter_get_editing_preset
 
 
@@ -987,7 +987,7 @@ class dd_core_api {
 	* FILTER_SET_EDITING_PRESET
 	* @return object $response
 	*/
-	static function filter_set_editing_preset($json_data){
+	static function filter_set_editing_preset(object $json_data) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -1007,9 +1007,9 @@ class dd_core_api {
 			}
 
 		$response->result	= $save_temp_preset;
-		$response->msg		= 'Ok. Request done';
+		$response->msg		= 'OK. Request done';
 
-		return (object)$response;
+		return $response;
 	}//end filter_set_editing_preset
 
 
@@ -1018,7 +1018,7 @@ class dd_core_api {
 	* FILTER_GET_USER_PRESETS
 	* @return object $response
 	*/
-	static function filter_get_user_presets($json_data){
+	static function filter_get_user_presets(object $json_data) : object {
 		global $start_time;
 
 		session_write_close();
@@ -1039,9 +1039,9 @@ class dd_core_api {
 			}
 
 		$response->result	= $filter_components;
-		$response->msg		= 'Ok. Request done';
+		$response->msg		= 'OK. Request done';
 
-		return (object)$response;
+		return $response;
 	}//end filter_get_user_presets
 
 
@@ -1052,7 +1052,7 @@ class dd_core_api {
 	* @param object $json_data
 	* @return object $response
 	*/
-	static function ontology_get_children_recursive($json_data){
+	static function ontology_get_children_recursive(object $json_data) : object {
 		global $start_time;
 
 		// session_write_close();
@@ -1072,9 +1072,9 @@ class dd_core_api {
 			}
 
 		$response->result	= $children;
-		$response->msg		= 'Ok. Request done';
+		$response->msg		= 'OK. Request done';
 
-		return (object)$response;
+		return $response;
 	}//end ontology_get_areas
 
 
@@ -1088,7 +1088,7 @@ class dd_core_api {
 	* @see class.request_query_object.php
 	* @return object $result
 	*/
-	private static function build_json_rows($rqo) {
+	private static function build_json_rows(object $rqo) : object {
 		$start_time=microtime(1);
 
 		// default result
@@ -1517,7 +1517,7 @@ class dd_core_api {
 	* @param array $data
 	* @return array $clean_data
 	*/
-	private static function smart_remove_data_duplicates($data) {
+	private static function smart_remove_data_duplicates(array $data) : array {
 
 		$clean_data = [];
 		foreach ($data as $key => $value_obj) {
@@ -1554,7 +1554,7 @@ class dd_core_api {
 	* @param array $data
 	* @return array $clean_data
 	*/
-	private static function smart_remove_context_duplicates($context) {
+	private static function smart_remove_context_duplicates(array $context) : array {
 
 		$clean_context = [];
 		foreach ($context as $key => $value_obj) {
@@ -1590,7 +1590,7 @@ class dd_core_api {
 	* @see class.request_query_object.php
 	* @return dd_grid object $result
 	*/
-	public static function get_indexation_grid($rqo){
+	public static function get_indexation_grid(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1625,13 +1625,12 @@ class dd_core_api {
 
 
 
-
 	/**
 	* GET_RELATION_LIST
 	* @see class.request_query_object.php
 	* @return dd_grid object $result
 	*/
-	public static function get_relation_list($rqo){
+	public static function get_relation_list(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

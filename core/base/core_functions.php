@@ -16,7 +16,7 @@
 *	Only print (formated as <pre>code</pre>) the info and value or dumped var
 */
 #function dump($val, $var_name=NULL, $expected=NULL, $print=false){
-function dump($val, $var_name=NULL, $arguments=array()){
+function dump($val, $var_name=NULL, $arguments=array()) : string {
 
 	$html = '';
 
@@ -120,7 +120,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 /**
 * WRAP_PRE
 */
-function wrap_pre($string, $add_header_html=true) {
+function wrap_pre($string, $add_header_html=true) : string {
 	$html='';
 	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
 	if ($add_header_html) {
