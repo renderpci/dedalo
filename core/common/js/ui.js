@@ -1132,10 +1132,10 @@ export const ui = {
 						parent			: fragment
 					})
 
-					// left_container
-						const left_container = ui.create_dom_element({
+					// tool_name_container
+						const tool_name_container = ui.create_dom_element({
 							element_type	: 'div',
-							class_name		: 'left_container',
+							class_name		: 'tool_name_container',
 							parent			: tool_header
 						})
 
@@ -1146,7 +1146,7 @@ export const ui = {
 								element_type	: 'div',
 								class_name		: 'label',
 								inner_html		: label,
-								parent			: left_container
+								parent			: tool_name_container
 							})
 
 							// icon (optional)
@@ -1170,7 +1170,7 @@ export const ui = {
 								element_type	: 'div',
 								class_name		: 'description',
 								inner_html		: description,
-								parent			: left_container
+								parent			: tool_name_container
 							})
 						}
 
