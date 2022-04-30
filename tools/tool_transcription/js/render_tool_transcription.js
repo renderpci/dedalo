@@ -44,10 +44,9 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 			content_data : content_data
 		})
 
-
 	// modal container
-		const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
+		// const header = wrapper.querySelector('.tool_header')
+		const modal  = ui.attach_to_modal(wrapper.tool_header, wrapper, null, 'big')
 		modal.on_close = () => {
 			self.destroy(true, true, true)
 			// refresh source component text area
@@ -56,12 +55,9 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 				}
 		}
 
-	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
-		const related_list_node = render_related_list(self)
-		const tansctiption_options_nodes = render_tansctiption_options(self)
-		header.appendChild(related_list_node)
-
-	console.log("related_list_node:",related_list_node);
+		// transcription_options are the buttons to get access to other tools (buttons in the header)
+		const tanscription_options = await render_tanscription_options(self, content_data)
+		wrapper.tool_buttons_container.appendChild(tanscription_options)
 
 	return wrapper
 };//end render_tool_transcription
@@ -307,7 +303,9 @@ const get_content_data_edit = async function(self) {
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
 		content_data.appendChild(fragment)
-
+		// save the pointers of the content_data nodes, to used by the buttons to access to the components
+		content_data.left_container		= left_container
+		content_data.right_container	= right_container
 
 	return content_data
 };//end get_content_data_edit
@@ -386,12 +384,16 @@ const render_related_list = function(self){
 };//end render_related_list
 
 /**
-* RENDER_TANSCTIPTION_OPTIONS
-* This is used to build a optional buttons for the header
+* RENDER_TANSCRIPTION_OPTIONS
+* This is used to build a optional buttons inside the header
 */
-const render_tansctiption_options = function (self) {
+const render_tanscription_options = async function (self, content_data) {
 
 	const fragment = new DocumentFragment()
+
+	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
+		const related_list_node = render_related_list(self)
+		fragment.appendChild(related_list_node)
 
 	// lang selector
 		const lang_container = ui.create_dom_element({
@@ -405,7 +407,7 @@ const render_tansctiption_options = function (self) {
 				inner_html 		: get_label.idioma || 'Language',
 				parent 			: lang_container
 			})
-
+			// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
 			const lang_selector = ui.build_select_lang({
 				id			: "index_lang_selector",
 				selected	: self.lang,
@@ -416,24 +418,62 @@ const render_tansctiption_options = function (self) {
 
 					component.render().then(function(node){
 						// remove previous nodes
-						while (left_container.lastChild && left_container.lastChild.id!==lang_selector.id) {
-							left_container.removeChild(left_container.lastChild)
+						while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+							content_data.left_container.removeChild(content_data.left_container.lastChild)
 						}
 						// add the new one
-						left_container.appendChild(node)
+						content_data.left_container.appendChild(node)
 					})
 				}
 			})
 			lang_container.appendChild(lang_selector)
 
-		// Button tool transcription print html
-		const register_tools = self.get_client_registered_tools()
+		// external tools
+		const ar_register_tools	= await self.get_user_tools(['tool_time_machine', 'tool_tr_print'])
+		const tool_tr_print		= ar_register_tools.find(el => el.name === 'tool_tr_print')
+		const tool_tm			= ar_register_tools.find(el => el.name === 'tool_time_machine')
 
-			console.log("register_tools----------------:",register_tools);
-		const print_tr_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'lang_selector',
-			parent			: fragment
-		})
+		// Button tool transcription print
+			if(tool_tr_print){
+				const tool_tr_print_button = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tool_button tool_tr_print',
+					parent			: fragment
+				})
+					const tool_tr_print_icon = ui.create_dom_element({
+						element_type	: 'img',
+						class_name 		: 'icon',
+						src				: tool_tr_print.icon,
+						parent 			: tool_tr_print_button
+					})
+					const tool_tr_print_label = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'label',
+						text_content 	: tool_tr_print.label || 'Tool tm',
+						parent 			: tool_tr_print_button
+					})
+			}
+
+		// Button tool time machine
+			if(tool_tm){
+				const tool_tm_button = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tool_button tool_tm_button',
+					parent			: fragment
+				})
+					const tool_tm_icon = ui.create_dom_element({
+						element_type	: 'img',
+						class_name 		: 'icon',
+						src				: tool_tm.icon,
+						parent 			: tool_tm_button
+					})
+					const tool_tm_label = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'label',
+						text_content 	: tool_tm.label || 'Tool tm',
+						parent 			: tool_tm_button
+					})
+			}
+
 	return fragment
-}// end render_tansctiption_options
+}// end render_tanscription_options
