@@ -119,7 +119,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -164,7 +164,7 @@ tool_diffusion.prototype.update_cache = function(ar_component_tipo) {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}

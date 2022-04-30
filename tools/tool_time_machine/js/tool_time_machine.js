@@ -201,7 +201,7 @@ tool_time_machine.prototype.apply_value = function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}

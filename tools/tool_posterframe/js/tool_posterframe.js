@@ -137,7 +137,7 @@ tool_posterframe.prototype.create_posterframe = function(current_time) {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -185,7 +185,7 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -228,7 +228,7 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -278,7 +278,7 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}

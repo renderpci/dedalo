@@ -159,7 +159,7 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}

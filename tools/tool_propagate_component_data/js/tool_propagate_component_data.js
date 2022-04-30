@@ -135,7 +135,7 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}

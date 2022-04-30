@@ -641,7 +641,7 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -688,7 +688,7 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 
 	// 	// // rqo
 	// 	// 	const rqo = {
-	// 	// 		dd_api	: 'dd_utils_api',
+	// 	// 		dd_api	: 'dd_tools_api',
 	// 	// 		action	: 'tool_request',
 	// 	// 		source	: source
 	// 	// 	}

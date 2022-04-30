@@ -147,7 +147,7 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -233,7 +233,7 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -284,7 +284,7 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -329,7 +329,7 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -395,7 +395,7 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
