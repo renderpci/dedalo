@@ -1077,7 +1077,7 @@ class dd_core_api {
 		$response->msg		= 'OK. Request done';
 
 		return $response;
-	}//end ontology_get_areas
+	}//end ontology_get_children_recursive
 
 
 
