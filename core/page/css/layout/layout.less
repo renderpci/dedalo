@@ -2062,11 +2062,15 @@
 		z-index: unset;
 
 		.header {
+			display: flex;
 			padding: 1rem;
 			background-color: @color_orange_dedalo;
 			color: white;
 			font-weight: normal;
 			z-index: 2;
+			.tool_name_container{
+				margin-right : 1em;
+			}
 
 			&.label, >div.label, >span.label {
 				font-size: 1.4em;
