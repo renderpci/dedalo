@@ -1124,40 +1124,54 @@ export const ui = {
 						parent			: fragment
 					})
 
-				// label
-					if (label!==null) {
-						// default
-						const component_label = ui.create_dom_element({
+					// left_container
+						const left_container = ui.create_dom_element({
 							element_type	: 'div',
-							class_name		: 'label',
-							inner_html		: label,
+							class_name		: 'left_container',
 							parent			: tool_header
 						})
 
-						// icon (optional)
-						if (context.icon) {
-							const icon = ui.create_dom_element({
-								element_type	: 'span',
-								class_name		: 'button white', // gear
-								style : {
-									"-webkit-mask"	: "url('" +context.icon +"')",
-									"mask"			: "url('" +context.icon +"')"
-								}
+						// label
+						if (label!==null) {
+							// default
+							const component_label = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'label',
+								inner_html		: label,
+								parent			: left_container
 							})
-							component_label.prepend(icon)
-						}
-					}
 
-				// description
-					if (description!==null) {
-						// component_description
+							// icon (optional)
+							if (context.icon) {
+								const icon = ui.create_dom_element({
+									element_type	: 'span',
+									class_name		: 'button white', // gear
+									style : {
+										"-webkit-mask"	: "url('" +context.icon +"')",
+										"mask"			: "url('" +context.icon +"')"
+									}
+								})
+								component_label.prepend(icon)
+							}
+						}
+
+						// description
+						if (description!==null) {
+							// component_description
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'description',
+								inner_html		: description,
+								parent			: left_container
+							})
+						}
+
+					// tool_buttons_container
 						ui.create_dom_element({
 							element_type	: 'div',
-							class_name		: 'description',
-							inner_html		: description,
+							class_name		: 'tool_buttons_container',
 							parent			: tool_header
 						})
-					}
 			}//end if (mode!=='mini')
 
 			// buttons
