@@ -512,38 +512,45 @@ class tool_common {
 		// all unfiltered tools
 			$registered_tools = tool_common::get_client_registered_tools();
 
-		// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
-			$security_tools_dato = (function() use($user_id) {
+		if ($user_id==DEDALO_SUPERUSER) {
 
-				$user_profile = security::get_user_profile($user_id);
-				if (empty($user_profile)) {
-					return $user_tools; // empty array
-				}
-				$user_profile_id		= (int)$user_profile->section_id;
-				$security_tools_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
-				$component	= component_common::get_instance(
-					$security_tools_model,
-					DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
-					$user_profile_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					DEDALO_SECTION_PROFILES_TIPO
-				);
-				// dato
-				return $component->get_dato();
-			})();
+			$user_tools = $registered_tools;
+
+		}else{
+
+			// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
+				$security_tools_dato = (function() use($user_id) {
+
+					$user_profile = security::get_user_profile($user_id);
+					if (empty($user_profile)) {
+						return $user_tools; // empty array
+					}
+					$user_profile_id		= (int)$user_profile->section_id;
+					$security_tools_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
+					$component	= component_common::get_instance(
+						$security_tools_model,
+						DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
+						$user_profile_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						DEDALO_SECTION_PROFILES_TIPO
+					);
+					// dato
+					return $component->get_dato();
+				})();
 
 			// allowed tools
 				$ar_allowed_id = array_map(function($el){
 					return $el->section_id;
 				}, $security_tools_dato);
 
-		// filter user authorized tools
-			foreach ($registered_tools as $tool) {
-				if(in_array($tool->section_id, $ar_allowed_id)) {
-					$user_tools[] = $tool;
+			// filter user authorized tools
+				foreach ($registered_tools as $tool) {
+					if(in_array($tool->section_id, $ar_allowed_id)) {
+						$user_tools[] = $tool;
+					}
 				}
-			}
+		}
 
 
 		return $user_tools;
