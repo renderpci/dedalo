@@ -1114,11 +1114,19 @@ export const ui = {
 			const description	= context.description || ''
 			const name			= instance.constructor.name
 
+			const wrapper = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'wrapper_' + type + ' ' + model + ' ' + mode
+			})
+
 			const fragment = new DocumentFragment()
+
+			let tool_header
+			let tool_buttons_container
 
 			if (mode!=='mini') {
 				// header
-					const tool_header = ui.create_dom_element({
+					tool_header = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tool_header ' + name,
 						parent			: fragment
@@ -1167,7 +1175,7 @@ export const ui = {
 						}
 
 					// tool_buttons_container
-						ui.create_dom_element({
+						tool_buttons_container = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'tool_buttons_container',
 							parent			: tool_header
@@ -1195,11 +1203,11 @@ export const ui = {
 				}
 
 			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'wrapper_' + type + ' ' + model + ' ' + mode
- 				})
  				wrapper.appendChild(fragment)
+
+ 			// pointers
+				wrapper.tool_header				= tool_header || null
+				wrapper.tool_buttons_container	= tool_buttons_container || null
 
 
 			return wrapper
