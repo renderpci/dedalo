@@ -3301,6 +3301,7 @@ abstract class common {
 
 	/**
 	* GET_TOOLS
+	* Get component tools filtered by user permissions
 	* @return array $tools
 	*/
 	public function get_tools() : array {
@@ -3311,84 +3312,58 @@ abstract class common {
 			// 	return $_SESSION['dedalo']['tools'][$cache_key];
 			// }
 
-		$registered_tools	= tool_common::get_client_registered_tools();
-		$model				= get_class($this);
-		$tipo				= $this->tipo;
-		$is_component		= strpos($model, 'component_')===0;
-		$translatable		= $this->traducible;
-		$properties			= $this->get_properties();
-		$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
-
-		// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
-			$security_tools_dato = (function(){
-				$user_id_logged				= navigator::get_user_id();
-				// $profile_allowed_tools	= tools_register::get_profile_allowed_tools($user_id_logged);
-				$user_profile = security::get_user_profile($user_id_logged);
-				if (empty($user_profile)) {
-					return [];
-				}
-				$user_profile_id		= (int)$user_profile->section_id;
-				$security_tools_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,true);
-				$component	= component_common::get_instance(
-					$security_tools_model,
-					DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
-					$user_profile_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					DEDALO_SECTION_PROFILES_TIPO
-				);
-				// dato
-				return $component->get_dato();
-			})();
-			$ar_allowed_id = array_map(function($el){
-				return $el->section_id;
-			}, $security_tools_dato);
-
-
 		$tools = [];
-		foreach ($registered_tools as $tool) {
 
-			// tool permissions check}
-				if (!in_array($tool->section_id, $ar_allowed_id) && navigator::get_user_id()!=DEDALO_SUPERUSER) {
-					continue;
-				}
+		// user_tools
+			$user_id	= (int)navigator::get_user_id();
+			$user_tools	= tool_common::get_user_tools($user_id);
 
-			$affected_tipos  = isset($tool->affected_tipos)  ? (array)$tool->affected_tipos : [];
-			$affected_models = isset($tool->affected_models) ? (array)$tool->affected_models : [];
-			$requirement_translatable = isset($tool->requirement_translatable) ? (bool)$tool->requirement_translatable : false;
+		// short vars
+			$model				= get_class($this);
+			$tipo				= $this->tipo;
+			$is_component		= strpos($model, 'component_')===0;
+			$translatable		= $this->traducible;
+			$properties			= $this->get_properties();
+			$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
+		// component tools
+			foreach ($user_tools as $tool) {
 
-			$in_properties = $properties->tool_config->{$tool->name} ?? null;
+				$affected_tipos  = isset($tool->affected_tipos)  ? (array)$tool->affected_tipos : [];
+				$affected_models = isset($tool->affected_models) ? (array)$tool->affected_models : [];
+				$requirement_translatable = isset($tool->requirement_translatable) ? (bool)$tool->requirement_translatable : false;
 
-			if( 	in_array($model, $affected_models)
-				||  in_array($tipo,  $affected_tipos)
-				||  ($is_component===true && in_array('all_components', $affected_models))
-				|| 	!is_null($in_properties)
-			  ) {
+				$in_properties = $properties->tool_config->{$tool->name} ?? null;
 
-				// affected_tipos specific restriction like tool_indexation (only 'rsc36')
-					if (!empty($affected_tipos[0])) {
-						if(!in_array($tipo, $affected_tipos)) {
-							continue;
+				if( 	in_array($model, $affected_models)
+					||  in_array($tipo,  $affected_tipos)
+					||  ($is_component===true && in_array('all_components', $affected_models))
+					|| 	!is_null($in_properties)
+				  ) {
+
+					// affected_tipos specific restriction like tool_indexation (only 'rsc36')
+						if (!empty($affected_tipos[0])) {
+							if(!in_array($tipo, $affected_tipos)) {
+								continue;
+							}
 						}
-					}
 
-				if ($requirement_translatable===true) {
+					if ($requirement_translatable===true) {
 
-					$is_translatable = ($is_component===true)
-						? (($translatable==='no' && $with_lang_versions!==true) ? false : true)
-						: false;
+						$is_translatable = ($is_component===true)
+							? (($translatable==='no' && $with_lang_versions!==true) ? false : true)
+							: false;
 
-					if ($requirement_translatable===$is_translatable) {
+						if ($requirement_translatable===$is_translatable) {
+							$tools[] = $tool;
+						}
+
+					}else{
+
 						$tools[] = $tool;
 					}
-
-				}else{
-
-					$tools[] = $tool;
 				}
-			}
-		}//end foreach ($registered_tools as $tool)
+			}//end foreach ($registered_tools as $tool)
 
 		// cache
 			// $_SESSION['dedalo']['tools'][$cache_key] = $tools;
