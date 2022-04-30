@@ -1104,10 +1104,10 @@ export const ui = {
 
 		build_wrapper_edit : (instance, items={})=>{
 
-			const id			= instance.id || 'id is not set'
+			// const id			= instance.id || 'id is not set'
 			const model			= instance.model 	// like component_input_text
 			const type			= instance.type 	// like 'component'
-			const tipo			= instance.tipo 	// like 'rsc26'
+			// const tipo		= instance.tipo 	// like 'rsc26'
 			const mode			= instance.mode 	// like 'edit'
 			const context		= instance.context || {}
 			const label			= context.label || ''
@@ -1183,17 +1183,17 @@ export const ui = {
 			}//end if (mode!=='mini')
 
 			// buttons
-				if (items.buttons) {
-					const buttons = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'buttons',
-						parent			: fragment
-					})
-					const items_buttons_length = items.buttons.length
-					for (let i = 0; i < items_buttons_length; i++) {
-						buttons.appendChild(items.buttons[i])
-					}
-				}
+				// if (items.buttons) {
+				// 	const buttons = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'buttons',
+				// 		parent			: fragment
+				// 	})
+				// 	const items_buttons_length = items.buttons.length
+				// 	for (let i = 0; i < items_buttons_length; i++) {
+				// 		buttons.appendChild(items.buttons[i])
+				// 	}
+				// }
 
 			// content_data
 				if (items.content_data) {
