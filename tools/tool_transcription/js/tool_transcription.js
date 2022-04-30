@@ -193,18 +193,23 @@ tool_transcription.prototype.load_related_sections_list = async function() {
 };//end load_related_sections_list
 
 
+/**
+* GET_USER_TOOLS
+* Get the tools that user has access
+* @param array ar_requested_tools | ['tool_time_machine']
+* @return Promise with array of the tool_simple_context of the tools requested if the user has access to it.
+*/
+tool_transcription.prototype.get_user_tools = async function(ar_requested_tools){
 
-tool_transcription.prototype.get_client_registered_tools = async function(){
-
-	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
-		const source = create_source(self, 'get_client_registered_tools')
+	// source. Note that second argument is the name of the function is the action that not has utility here
+		const source = create_source(self, 'user_tools')
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'client_registered_tools',
-			source	: source
+			dd_api				: 'dd_tools_api',
+			action				: 'user_tools',
+			source				: source,
+			ar_requested_tools	: ar_requested_tools
 		}
 
 	// call to the API, fetch data and get response
@@ -220,4 +225,5 @@ tool_transcription.prototype.get_client_registered_tools = async function(){
 				resolve(result)
 			})
 		})
-}
+}// end get_user_tools
+
