@@ -7,7 +7,7 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_transcription} from './render_tool_transcription.js'
@@ -193,3 +193,31 @@ tool_transcription.prototype.load_related_sections_list = async function() {
 };//end load_related_sections_list
 
 
+
+tool_transcription.prototype.get_client_registered_tools = async function(){
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'get_client_registered_tools')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'client_registered_tools',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				dd_console("-> get_diffusion_info API response:",'DEBUG',response);
+
+				const result = response.result // array of objects
+
+				resolve(result)
+			})
+		})
+}
