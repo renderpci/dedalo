@@ -8,24 +8,51 @@ class dd_tools_api {
 
 
 	/**
-	* CLIENT_REGISTERED_TOOLS
-	* @return
+	* USER_TOOLS
+	* Get user authorized tools filtered by custom list (optional)
+	* @param object $request_options
+	* @return object $response
 	*/
-	public static function client_registered_tools(object $request_options) : object {
+	public static function user_tools(object $request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
 
-		$ar_requested_tools = $request_options->ar_requested_tools ?? null;
-		$register_tools = tool_common::get_client_registered_tools($ar_requested_tools);
+		// list of requested tools
+			$ar_requested_tools	= $request_options->ar_requested_tools ?? null;
 
-		$response->result	= $register_tools;
-		$response->msg		= 'Ok. Request done: '.__METHOD__;
+		// all user authorized tools
+			$user_id	= (int)navigator::get_user_id();
+			$user_tools	= tool_common::get_user_tools($user_id);
+
+		$result = [];
+		foreach ($user_tools as $tool) {
+
+			if(!empty($ar_requested_tools) && !in_array($tool->name, $ar_requested_tools)) {
+				continue;
+			}
+
+			$simple_tool_object = tool_common::create_tool_simple_context($tool);
+
+			$result[] = $simple_tool_object;
+		}
+
+		// response
+			$response->result	= $result;
+			$response->msg		= 'Ok. Request done: '.__METHOD__;
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options	= $request_options;
+				$response->debug = $debug;
+			}
 
 		return $response;
-	}//end client_registered_tools
+	}//end user_tools
 
 
 
