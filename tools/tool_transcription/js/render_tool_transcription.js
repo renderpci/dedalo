@@ -58,6 +58,7 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
+		const tansctiption_options_nodes = render_tansctiption_options(self)
 		header.appendChild(related_list_node)
 
 	console.log("related_list_node:",related_list_node);
@@ -75,34 +76,12 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-
 	// left_container
 		const left_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'left_container',
 			parent			: fragment
 		})
-
-		// lang selector
-			const lang_selector = ui.build_select_lang({
-				id			: "index_lang_selector",
-				selected	: self.lang,
-				class_name	: 'dd_input',
-				action		: async function(e){
-					// create new one
-					const component = await self.get_component(e.target.value)
-
-					component.render().then(function(node){
-						// remove previous nodeS
-						while (left_container.lastChild && left_container.lastChild.id!==lang_selector.id) {
-							left_container.removeChild(left_container.lastChild)
-						}
-						// add the new one
-						left_container.appendChild(node)
-					})
-				}
-			})
-			left_container.appendChild(lang_selector)
 
 		// component_text_area. render another node of component caller and append to container
 			const component_text_area = self.transcription_component || await self.get_component(self.lang)
@@ -231,10 +210,10 @@ const get_content_data_edit = async function(self) {
 					av_rewind_secs_input.value				= secs_val
 					component_text_area.av_rewind_seconds	= secs_val
 
-					av_rewind_secs_input.addEventListener('keyup', function(event){
+					av_rewind_secs_input.addEventListener('change', function(event){
 						// if the key pressed is not a number use the default
-						const value = parseInt(event.key)
-							? parseInt(event.key)
+						const value = parseInt(event.target.value)
+							? parseInt(event.target.value)
 							: 3
 						// set the cookie of the key
 						localStorage.setItem('av_rewind_secs', value);
@@ -278,6 +257,51 @@ const get_content_data_edit = async function(self) {
 						tag_insert_key_input.value				= keyborard_key
 						component_text_area.av_insert_tc_code	= keyborard_code
 					})
+
+		// Subtitles
+			const subtitles = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'subtitles',
+				parent 			: right_container
+			})
+			// Button generate the subtitles
+				const button_build_subtitles = ui.create_dom_element({
+					element_type	: 'button',
+					class_name 		: 'light btn_subtitles',
+					inner_html 		: get_label.build_subtitles || 'Build subtitles',
+					parent 			: subtitles
+				})
+			// input characters per line
+				const input_characters_per_line = ui.create_dom_element({
+						element_type	: 'input',
+						type 			: 'text',
+						parent 			: subtitles
+				})
+				const label_characters_per_line = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'label',
+						inner_html		: get_label.characters_per_line || 'Characters per line',
+						parent			: subtitles
+				})
+				// get the cookie of the key
+				const subtitles_characters_value = localStorage.getItem('subtitles_characters_per_line')
+				const chatacters_val  = subtitles_characters_value ? subtitles_characters_value : 90; // Default 90 sec
+
+				// Set value from cookie or default
+				input_characters_per_line.value				= chatacters_val
+				// component_text_area.av_rewind_seconds	= chatacters_val
+
+				input_characters_per_line.addEventListener('change', function(event){
+					// if the key pressed is not a number use the default
+					const value = parseInt(event.target.value)
+						? parseInt(event.target.value)
+						: 90
+					// set the cookie of the key
+					localStorage.setItem('subtitles_characters_per_line', value);
+					input_characters_per_line.value				= value
+					// component_text_area.av_rewind_seconds	= value
+				})
+
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -360,3 +384,56 @@ const render_related_list = function(self){
 
 	return fragment
 };//end render_related_list
+
+/**
+* RENDER_TANSCTIPTION_OPTIONS
+* This is used to build a optional buttons for the header
+*/
+const render_tansctiption_options = function (self) {
+
+	const fragment = new DocumentFragment()
+
+	// lang selector
+		const lang_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'lang_selector',
+			parent			: fragment
+		})
+			const lang_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'lang_label',
+				inner_html 		: get_label.idioma || 'Language',
+				parent 			: lang_container
+			})
+
+			const lang_selector = ui.build_select_lang({
+				id			: "index_lang_selector",
+				selected	: self.lang,
+				class_name	: 'dd_input',
+				action		: async function(e){
+					// create new one
+					const component = await self.get_component(e.target.value)
+
+					component.render().then(function(node){
+						// remove previous nodes
+						while (left_container.lastChild && left_container.lastChild.id!==lang_selector.id) {
+							left_container.removeChild(left_container.lastChild)
+						}
+						// add the new one
+						left_container.appendChild(node)
+					})
+				}
+			})
+			lang_container.appendChild(lang_selector)
+
+		// Button tool transcription print html
+		const register_tools = self.get_client_registered_tools()
+
+			console.log("register_tools----------------:",register_tools);
+		const print_tr_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'lang_selector',
+			parent			: fragment
+		})
+	return fragment
+}// end render_tansctiption_options
