@@ -120,7 +120,7 @@ tool_update_cache.prototype.get_component_list = function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
@@ -165,7 +165,7 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}

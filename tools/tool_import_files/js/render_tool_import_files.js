@@ -437,7 +437,7 @@ const get_content_data_edit = async function(self) {
 			// process the images in the server (uploaded previously)
 			// rqo
 				const rqo = {
-					dd_api	: 'dd_utils_api',
+					dd_api	: 'dd_tools_api',
 					action	: 'tool_request',
 					source	: source
 				}
@@ -857,7 +857,7 @@ const create_template = async function(self) {
 
 				// rqo
 					const rqo = {
-						dd_api	: 'dd_utils_api',
+						dd_api	: 'dd_tools_api',
 						action	: 'tool_request',
 						source	: source
 					}
@@ -969,7 +969,7 @@ const create_template = async function(self) {
 
 		// rqo
 			const rqo = {
-				dd_api	: 'dd_utils_api',
+				dd_api	: 'dd_tools_api',
 				action	: 'tool_request',
 				source	: source
 			}

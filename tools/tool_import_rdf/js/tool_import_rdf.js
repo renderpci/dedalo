@@ -155,7 +155,7 @@ tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_value
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
+			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source
 		}
