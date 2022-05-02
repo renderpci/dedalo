@@ -6,7 +6,7 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
@@ -227,3 +227,26 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 		})
 }// end get_user_tools
 
+/**
+* BUILD_SUBTITLES
+*/
+tool_transcription.prototype.build_subtitles = async function() {
+
+	const component_text_area = self.transcription_component || await self.get_component(self.lang)
+
+	// get instance and init
+		self.service_subtitles = await get_instance({
+			model				: 'service_subtitles',
+			mode				: 'edit',
+			caller				: self,
+			component_text_area : component_text_area
+		})
+
+	self.ar_instances.push(self.service_subtitles)
+
+	self.service_subtitles.build()
+		.then(function(){
+
+		})
+
+}// end build_subtitles
