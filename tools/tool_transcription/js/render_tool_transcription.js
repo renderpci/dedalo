@@ -59,24 +59,13 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 		}
 
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
-		const related_list_node = render_related_list(self)
-		const tansctiption_options_nodes = render_tansctiption_options(self)
-		wrapper.header.appendChild(related_list_node)
+		// const related_list_node = render_related_list(self)
+		// wrapper.header.appendChild(related_list_node)
 
-	console.log("related_list_node:",related_list_node);
-		// const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(wrapper.tool_header, wrapper, null, 'big')
-		modal.on_close = () => {
-			self.destroy(true, true, true)
-			// refresh source component text area
-				if (self.transcription_component) {
-					self.transcription_component.refresh()
-				}
-		}
-
-		// transcription_options are the buttons to get access to other tools (buttons in the header)
+	// transcription_options are the buttons to get access to other tools (buttons in the header)
 		const tanscription_options = await render_tanscription_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
+
 
 	return wrapper
 };//end render_tool_transcription
