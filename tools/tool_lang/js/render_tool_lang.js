@@ -39,52 +39,52 @@ render_tool_lang.prototype.edit = async function(options) {
 			return content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
+	// wrapper. UI build_edit returns component wrapper
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
 
-	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: wrapper
-	// 	})
+	// buttons container
+		// 	const buttons_container = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name 		: 'buttons_container',
+		// 		parent 			: wrapper
+		// 	})
 
-	// 	// automatic_translation
-	// 		const automatic_translation_container = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name 		: 'automatic_translation_container',
-	// 			parent 			: buttons_container
-	// 		})
-	// 		// button
-	// 		const button_automatic_translation = document.createElement('button');
-	// 			  button_automatic_translation.type = 'button'
-	// 			  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-	// 			  automatic_translation_container.appendChild(button_automatic_translation)
-	// 			  button_automatic_translation.addEventListener("click", (e) => {
+		// 	// automatic_translation
+		// 		const automatic_translation_container = ui.create_dom_element({
+		// 			element_type	: 'div',
+		// 			class_name 		: 'automatic_translation_container',
+		// 			parent 			: buttons_container
+		// 		})
+		// 		// button
+		// 		const button_automatic_translation = document.createElement('button');
+		// 			  button_automatic_translation.type = 'button'
+		// 			  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
+		// 			  automatic_translation_container.appendChild(button_automatic_translation)
+		// 			  button_automatic_translation.addEventListener("click", (e) => {
 
-	// 			  	const translator  = translator_engine_select.value
-	// 			  	const source_lang = wrapper.querySelector('.source_lang').value	// source_select_lang.value
-	// 			  	const target_lang = wrapper.querySelector('.target_lang').value // target_select_lang.value
-	// 			  	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
-	// 			  })
+		// 			  	const translator  = translator_engine_select.value
+		// 			  	const source_lang = wrapper.querySelector('.source_lang').value	// source_select_lang.value
+		// 			  	const target_lang = wrapper.querySelector('.target_lang').value // target_select_lang.value
+		// 			  	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
+		// 			  })
 
-	// 		// select
-	// 		const translator_engine_select = ui.create_dom_element({
-	// 			element_type	: 'select',
-	// 			parent 			: automatic_translation_container
-	// 		})
-	// 		const translator_engine = self.simple_tool_object.properties.translator_engine
-	// 		for (let i = 0; i < translator_engine.length; i++) {
-	// 			const translator = translator_engine[i]
-	// 			ui.create_dom_element({
-	// 				element_type	: 'option',
-	// 				value 			: JSON.stringify(translator),
-	// 				text_content 	: translator.label,
-	// 				parent 			: translator_engine_select
-	// 			})
-	// 		}
+		// 		// select
+		// 		const translator_engine_select = ui.create_dom_element({
+		// 			element_type	: 'select',
+		// 			parent 			: automatic_translation_container
+		// 		})
+		// 		const translator_engine = self.simple_tool_object.properties.translator_engine
+		// 		for (let i = 0; i < translator_engine.length; i++) {
+		// 			const translator = translator_engine[i]
+		// 			ui.create_dom_element({
+		// 				element_type	: 'option',
+		// 				value 			: JSON.stringify(translator),
+		// 				text_content 	: translator.label,
+		// 				parent 			: translator_engine_select
+		// 			})
+		// 		}
 
 	// tool_container
 		//const tool_container = document.getElementById('tool_container')
@@ -101,10 +101,12 @@ render_tool_lang.prototype.edit = async function(options) {
 		//}
 
 	// modal container
-		const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(header, wrapper, null)
-		modal.on_close = () => {
-			self.destroy(true, true, true)
+		if (!window.opener) {
+			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+			const modal		= ui.attach_to_modal(header, wrapper, null)
+			modal.on_close	= () => {
+				self.destroy(true, true, true)
+			}
 		}
 
 
@@ -121,6 +123,15 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// main_component unavailable case
+		if (!self.main_component) {
+			const content_data = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'content_data ' + self.type,
+				inner_html		: 'Error loosed caller. main_component is not available. Please, try to reopen this tool again.'
+			})
+			return content_data
+		}
 
 	// components container
 		const components_container = ui.create_dom_element({
