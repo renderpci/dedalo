@@ -4,9 +4,10 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
+	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
@@ -72,6 +73,20 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// activity alert
+		const activity_info_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_body',
+			parent			: fragment
+		})
+		self.events_tokens.push(
+			event_manager.subscribe('save', fn_saved)
+		)
+		function fn_saved(options){
+			const node_info = render_node_info(options)
+			activity_info_body.prepend(node_info)
+		}
+
 	// left_container
 		const left_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -81,6 +96,7 @@ const get_content_data_edit = async function(self) {
 
 		// component_text_area. render another node of component caller and append to container
 			const component_text_area = self.transcription_component || await self.get_component(self.lang)
+			component_text_area.custom_toolbar = 'button_note button_person'
 			component_text_area.render()
 			.then(function(node){
 				left_container.appendChild(node)
@@ -267,6 +283,7 @@ const get_content_data_edit = async function(self) {
 					inner_html 		: get_label.build_subtitles || 'Build subtitles',
 					parent 			: subtitles
 				})
+
 			// input characters per line
 				const input_characters_per_line = ui.create_dom_element({
 						element_type	: 'input',
@@ -415,7 +432,7 @@ const render_tanscription_options = async function (self, content_data) {
 				action		: async function(e){
 					// create new one
 					const component = await self.get_component(e.target.value)
-
+					self.lang = e.target.value
 					component.render().then(function(node){
 						// remove previous nodes
 						while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
