@@ -1,146 +1,142 @@
 /**
-* tool_posterframe
-* Write here specific tool styles
+* TOOL_POSTERFRAME
+*
+* Loaded on tool init
 */
 
-
-
+// imports
 @import '../../../core/page/css/layout/vars.less';
 
 
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-.wrapper_tool.tool_posterframe {
-	padding: 1rem;
+	.wrapper_tool.tool_posterframe {
 
-	>div {
-		max-width: calc(720px + 2rem);
-		margin-left: auto;
-		margin-right: auto;
-	}
-
-	// av component container
-	>.main_component_container {
-		// background-color: @color_grey_medium;
-		background-color: #fafafa;
-		min-width: 720px;
-		// height: 404px;
-		// display: table;
-		height: 500px;
-		// display: block;
-
-		@media screen and (max-width: @width_break_point_1) {
-			min-width: unset;
-			height: unset;
+		>div {
+			max-width: calc(720px + 2rem);
+			margin-left: auto;
+			margin-right: auto;
 		}
 
-		>img {
-			display: block;
-			padding: 1rem;
-			padding-top: 2rem;
-			padding-bottom: 1rem;
-		}
-
-
-		.wrapper_component.component_av {
+		// av component container
+		>.main_component_container {
+			// background-color: @color_grey_medium;
+			background-color: #fafafa;
+			min-width: 720px;
 			// height: 404px;
+			// display: table;
+			height: 500px;
+			// display: block;
 
-			.content_data {
-				justify-content: center;
+			@media screen and (max-width: @width_break_point_1) {
+				min-width: unset;
+				height: unset;
 			}
 
-			video {
-				max-height: 404px;
+			>img {
+				display: block;
+				padding: 1rem;
+				padding-top: 2rem;
+				padding-bottom: 1rem;
+			}
+
+
+			.wrapper_component.component_av {
+				// height: 404px;
+
+				.content_data {
+					justify-content: center;
+				}
+
+				video {
+					max-height: 404px;
+				}
 			}
 		}
-	}
 
-	>.content_data {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		// display: grid;
-		// grid-template-rows: 1fr 1fr;
-
+		>.content_data {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			// display: grid;
+			// grid-template-rows: 1fr 1fr;
 
 
-		// buttons and preview container
-		>.buttons_container {
-			width: 100%;
-			// max-width: calc(720px + 2rem);
-			// margin-left: auto;
-			// margin-right: auto;
 
-			>.buttons_wrapper {
-				background-color: #fafafa;
-				display: flex;
-				flex-wrap: wrap;
-				margin: 1rem;
-				margin-top: 1.5rem;
-				color: #aaa;
+			// buttons and preview container
+			>.buttons_container {
 				width: 100%;
 				// max-width: calc(720px + 2rem);
-				margin-left: auto;
-				margin-right: auto;
+				// margin-left: auto;
+				// margin-right: auto;
 
-				.identifying_image_block {
-					// background-color: #dff4b6;
-					flex: 1 1 auto;
+				>.buttons_wrapper {
+					background-color: #fafafa;
 					display: flex;
 					flex-wrap: wrap;
-					justify-content: space-evenly;
-					align-items: center;
-					padding: 1rem;
-					width: 35%;
+					margin: 1rem;
+					margin-top: 1.5rem;
+					color: #aaa;
+					width: 100%;
+					// max-width: calc(720px + 2rem);
+					margin-left: auto;
+					margin-right: auto;
 
-					button.create_identifying_image {
+					.identifying_image_block {
+						// background-color: #dff4b6;
+						flex: 1 1 auto;
+						display: flex;
+						flex-wrap: wrap;
+						justify-content: space-evenly;
+						align-items: center;
+						padding: 1rem;
+						width: 35%;
 
+						button.create_identifying_image {
+
+						}
+
+						select.identifying_image_selector {
+
+						}
+					}//end .identifying_image_block
+
+					.manage_posterframe_block {
+						// background-color: #f2dab4;
+						flex: 1 1 auto;
+						display: flex;
+						flex-wrap: wrap;
+						justify-content: space-evenly;
+						align-items: center;
+						padding: 1rem;
+						width: 31%;
+						border-left: 1px solid #eeeeee;
+
+						button.create_posterframe {
+
+						}
+
+						button.delete_posterframe {
+
+						}
 					}
 
-					select.identifying_image_selector {
-
-					}
-				}//end .identifying_image_block
-
-				.manage_posterframe_block {
-					// background-color: #f2dab4;
-					flex: 1 1 auto;
-					display: flex;
-					flex-wrap: wrap;
-					justify-content: space-evenly;
-					align-items: center;
-					padding: 1rem;
-					width: 31%;
-					border-left: 1px solid #eeeeee;
-
-					button.create_posterframe {
-
-					}
-
-					button.delete_posterframe {
-
+					img.image_posterframe {
+						// background-color: #e8caf2;
+						flex: 1 1 auto;
+						object-fit: contain;
+						width: 13rem;
+						height: auto;
+						display: block;
 					}
 				}
 
-				img.image_posterframe {
-					// background-color: #e8caf2;
-					flex: 1 1 auto;
-					object-fit: contain;
-					width: 13rem;
-					height: auto;
-					display: block;
-				}
-			}
-
-		}//end .buttons_container
+			}//end .buttons_container
 
 
-	}//end content_data
-
-
-
-}//end wrapper_tool
+		}//end content_data
+	}//end wrapper_tool
 
 
 

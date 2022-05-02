@@ -1,30 +1,40 @@
-// tool_upload
+/**
+* TOOL_UPLOAD
+*
+* Loaded on tool init
+*/
 
 
 
-// wrapper_tool
-.tool_upload {
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+	.wrapper_tool.tool_upload {
 
-	>.service_upload_container {
-	}
+		>.service_upload_container {
 
-	>.content_data {
-		padding: 1rem;
-		position: relative;
+		}
 
-		>.process_file {
+		>.content_data {
+			padding: 1rem;
 			position: relative;
-			min-height: 3rem;
-		}
 
-		>img.preview_image {
-			height: 120px;
-			object-fit: contain;
-			object-position: center;
-		}
+			>.process_file {
+				position: relative;
+				min-height: 3rem;
+			}
 
-	}//end content_data
+			>img.preview_image {
+				height: 120px;
+				object-fit: contain;
+				object-position: center;
+			}
+
+		}//end content_data
+	}//end .wrapper_tool
 
 
 
-}//end .wrapper_tool.tool_upload
+// modal header tool modification
+	.tool_header.tool_update_cache {
+		// background-color: #62866a;
+	}

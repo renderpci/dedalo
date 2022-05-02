@@ -1,36 +1,43 @@
-// tool_lang_multi
+/**
+* TOOL_LANG_MULTI
+*
+* Loaded on tool init
+*/
 
 
 
 // wrapper_tool
-.wrapper_tool.tool_lang_multi {
-	padding: 1rem;
+	.wrapper_tool.tool_lang_multi {
 
-	// content_data
-	>.content_data {
-		padding-right: 1em;
-	}
-
-	// components_container
-	.components_container {
-		display: grid;
-	    grid-template-columns: 1fr 1fr;
-	    grid-gap: 1em;
-	    //background-color: #D6F737;
-
-	    .target_component_container {
-
-		    &.source {
-	    		border-bottom: 1px solid #f78a1c;
-			}
-
-		    .target_component_title  {
-		    	padding: 0.5em;
-		    	padding-left: 0;
-		    }
+		// content_data
+		>.content_data {
+			padding-right: 1em;
 		}
-	}//end components_container
+
+		// components_container
+		.components_container {
+			display: grid;
+		    grid-template-columns: 1fr 1fr;
+		    grid-gap: 1em;
+		    //background-color: #D6F737;
+
+		    .target_component_container {
+
+			    &.source {
+		    		border-bottom: 1px solid #f78a1c;
+				}
+
+			    .target_component_title  {
+			    	padding: 0.5em;
+			    	padding-left: 0;
+			    }
+			}
+		}//end components_container
+	}//end wrapper_tool
 
 
 
-}//end wrapper_tool
+// modal header tool modification
+	.tool_header.tool_lang_multi {
+		// background-color: #47ff08;
+	}

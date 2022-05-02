@@ -1,103 +1,99 @@
-// tool_export
+/**
+* TOOL_EXPORT
+*
+* Loaded on tool init
+*/
 
 
 
 // wrapper
-.wrapper_tool.tool_export {
-	// background-color: #505c95;
-	padding: 1rem;
-	display: flex;
-	// width: 100%;
-	// height: calc(100vh - 20%);
+	.wrapper_tool.tool_export {
 
-	>.content_data {
-		background-color: #faf6f7;
-		width: 100%;
-		min-height: 90vh;
-			display: grid;
-		grid-template-columns: auto auto 200px;
+		>.content_data {
+			background-color: #faf6f7;
+			width: 100%;
+			min-height: 90vh;
+				display: grid;
+			grid-template-columns: auto auto 200px;
 
-		h1 {
-			margin-bottom: 1em;
-			font-size: 1.2em;
-		}
+			h1 {
+				margin-bottom: 1em;
+				font-size: 1.2em;
+			}
 
-		// components_list_container. List of available section components to drag (at left)
-			>.components_list_container {
+			// components_list_container. List of available section components to drag (at left)
+				>.components_list_container {
 
-			}//end components_list_container
+				}//end components_list_container
 
-		// export_components_container. User dragged component list (at right)
-			>.export_components_container {
-				background-color: #ffffff;
-				padding: 1em;
-				padding-top: 0;
-				border-left: 1px solid #bbbbbb;
-				border-right: 1px solid #bbb;
+			// export_components_container. User dragged component list (at right)
+				>.export_components_container {
+					background-color: #ffffff;
+					padding: 1em;
+					padding-top: 0;
+					border-left: 1px solid #bbbbbb;
+					border-right: 1px solid #bbb;
 
-				>h1.list_title {
+					>h1.list_title {
 
-				}
+					}
 
-				>.export_component {
-					display: flex;
-					justify-content: space-between;
-					background-color: #faf9f9;
-					align-items: center;
-					margin-bottom: 1px;
-					list-style: none;
-					padding-left: 0.5em;
+					>.export_component {
+						display: flex;
+						justify-content: space-between;
+						background-color: #faf9f9;
+						align-items: center;
+						margin-bottom: 1px;
+						list-style: none;
+						padding-left: 0.5em;
 
-					&:hover {
-						background-color: #b0c8f0;
-						color: white !important;
-
-						>.button {
+						&:hover {
+							background-color: #b0c8f0;
 							color: white !important;
+
+							>.button {
+								color: white !important;
+							}
 						}
 					}
 				}
-			}
 
-		// export_buttons_config. Mode selector and export button (at right)
-			>.export_buttons_config {
-				padding: 1em;
-				padding-top: 0;
+			// export_buttons_config. Mode selector and export button (at right)
+				>.export_buttons_config {
+					padding: 1em;
+					padding-top: 0;
 
-				h1 {
+					h1 {
 
+					}
 				}
-			}
 
-		// export_buttons_options. Download buttons for CSV, excel, HTML etc.
-			>.export_buttons_options {
-				grid-column-start: 1;
-				grid-column-end: 4;
-				margin-top: 1em;
-			}
+			// export_buttons_options. Download buttons for CSV, excel, HTML etc.
+				>.export_buttons_options {
+					grid-column-start: 1;
+					grid-column-end: 4;
+					margin-top: 1em;
+				}
 
-		// export_data. Grid / table of result record values to save
-			>.export_data {
-				grid-column-start: 1;
-				grid-column-end: 4;
-				margin-top: 1em;
-				min-height: 40vh;
-			}
-	}
+			// export_data. Grid / table of result record values to save
+				>.export_data {
+					grid-column-start: 1;
+					grid-column-end: 4;
+					margin-top: 1em;
+					min-height: 40vh;
+				}
+		}
 
-	// select style
-	.select_style {
-		width: fit-content;
-		height: 2em;
-		font-size: 0.80em;
-	}
-
-
-}//end .wrapper_tool.tool_export
+		// select style
+		.select_style {
+			width: fit-content;
+			height: 2em;
+			font-size: 0.80em;
+		}
+	}//end .wrapper_tool.tool_export
 
 
 // header tool_export modal modification
-.tool_header.tool_export {
-	background-color: #7152a5;
-}
-
+	.tool_header.tool_export {
+		background-color: #7152a5;
+	}
