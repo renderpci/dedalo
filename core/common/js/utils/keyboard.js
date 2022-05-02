@@ -1,3 +1,7 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*eslint no-undef: "error"*/
+
+
 export const keyboard_codes ={
 	Backspace		: 'Backspace',
 	Tab				: 'Tab',
