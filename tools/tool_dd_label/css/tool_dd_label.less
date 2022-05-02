@@ -1,70 +1,68 @@
 /**
-* tool_dd_label
-* Write here specific tool styles
+* TOOL_DD_LABEL
+*
+* Loaded on tool init
 */
 
-
-
+// imports
 @import '../../../core/page/css/layout/vars.less';
 
-
+// local vars
 @bg_color : #0336a8;
 
 
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-.wrapper_tool.tool_dd_label {
-	padding: 1rem;
+	.wrapper_tool.tool_dd_label {
 
-	>.content_data {
+		>.content_data {
 
-		>.label_matix{
-			display: grid;
+			>.label_matix{
+				display: grid;
 
-			>li {
-				display: contents;
+				>li {
+					display: contents;
 
-				>* {
-					align-items: center;
-					justify-items: center;
-					word-break: break-word;
-					padding: 0.25rem;
-				}
+					>* {
+						align-items: center;
+						justify-items: center;
+						word-break: break-word;
+						padding: 0.25rem;
+					}
 
-				&.label_header{
-					>.label{
-						padding: 0.6em;
-						text-align: center;
-						background-color: @bg_color;
-						color: #fff;
-						font-weight: 400;
-						z-index: 2;
-						border-right: 1px solid #ffffff;
+					&.label_header{
+						>.label{
+							padding: 0.6em;
+							text-align: center;
+							background-color: @bg_color;
+							color: #fff;
+							font-weight: 400;
+							z-index: 2;
+							border-right: 1px solid #ffffff;
 
-						&.name {
-							background-color: #818181;
+							&.name {
+								background-color: #818181;
+							}
 						}
 					}
-				}
 
-				&.row{
-					// system info
-					>.label {
-						&[contentEditable=true]:empty:not(:focus):before{
-						    content:attr(data-placeholder);
-							color: #aaa;
+					&.row{
+						// system info
+						>.label {
+							&[contentEditable=true]:empty:not(:focus):before{
+							    content:attr(data-placeholder);
+								color: #aaa;
+							}
+							// height:20px;
+							border:1px solid gray;
 						}
-						// height:20px;
-						border:1px solid gray;
 					}
 				}
 			}
-		}
 
-	}//end content_data
-
-}//end .wrapper_tool.tool_dd_label
+		}//end content_data
+	}//end .wrapper_tool.tool_dd_label
 
 
 // modal header tool modification

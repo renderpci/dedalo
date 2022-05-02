@@ -1,103 +1,107 @@
 /**
-* tool_time_machine
+* TOOL_TIME_MACHINE
 *
-*
+* Loaded on tool init
 */
+
+// imports
 @import '../../../core/page/css/layout/vars.less';
 
 
 
 // wrapper_tool
-.wrapper_tool.tool_time_machine {
-	display: flex;
-	width: 100%;
-	height: 100%;
-	padding: 1em;
+	.wrapper_tool.tool_time_machine {
 
-	>.content_data {
-		width: 100%;
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		// grid-template-rows: auto 2em 1fr;
-		grid-template-rows: auto auto auto;
+		>.content_data {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			// grid-template-rows: auto 2em 1fr;
+			grid-template-rows: auto auto auto;
 
-		// component containers
-		.current_component_container, .preview_component_container {
-			// flex: 1 1 50%;
-			position: relative;
+			// component containers
+			.current_component_container, .preview_component_container {
+				// flex: 1 1 50%;
+				position: relative;
 
-			// display: grid;
-			// grid-template-rows: 1fr auto;
-			display: block;
+				// display: grid;
+				// grid-template-rows: 1fr auto;
+				display: block;
 
-			.time_label {
-				padding: 0.5em;
-				width: 100%;
-				text-align: center;
-			}
-		}
-
-		.current_component_container {
-			// background-color: #FAF55D;
-			margin-right: 0.5em;
-		}
-
-		.preview_component_container {
-			// background-color: #8AF9FA;
-			margin-left: 0.5em;
-		}
-
-		.tool_bar {
-			// background-color: #f0f0f0;
-			grid-column-start: 1;
-			grid-column-end: 3;
-			// padding-top: 0.5em;
-			padding-bottom: 0.5em;
-			overflow: hidden;
-			// margin-top: -46px;
-			@media screen and (max-width: @width_break_point_0) {
-				margin-top: 0;
+				.time_label {
+					padding: 0.5em;
+					width: 100%;
+					text-align: center;
+				}
 			}
 
-
-			>* {
-
+			.current_component_container {
+				// background-color: #FAF55D;
+				margin-right: 0.5em;
 			}
 
-			label {
-				text-transform: capitalize;
-				padding: 0.5em;
-				height: 2em;
+			.preview_component_container {
+				// background-color: #8AF9FA;
+				margin-left: 0.5em;
 			}
 
-			select {
-				padding: 0.5em;
-				height: 2em;
+			.tool_bar {
+				// background-color: #f0f0f0;
+				grid-column-start: 1;
+				grid-column-end: 3;
+				// padding-top: 0.5em;
+				padding-bottom: 0.5em;
+				overflow: hidden;
+				// margin-top: -46px;
+				@media screen and (max-width: @width_break_point_0) {
+					margin-top: 0;
+				}
+
+
+				>* {
+
+				}
+
+				label {
+					text-transform: capitalize;
+					padding: 0.5em;
+					height: 2em;
+				}
+
+				select {
+					padding: 0.5em;
+					height: 2em;
+				}
+
+				.button_apply {
+					// background-color: #ff9800;
+					// color: white;
+					// padding: 0.15em;
+					// padding-left: 1em;
+					// padding-right: 1em;
+					float: right;
+				}
+			}//end .tool_bar
+
+			// time_machine container (list)
+			.wrapper_tm {
+				// background-color: #A7FF82;
+				// flex: 1 1 100%;
+				height: 100%;
+				overflow: auto;
+				grid-column-start: 1;
+				grid-column-end: 3;
+			}//end .wrapper_tm
+
+			// header section list
+			.header_wrapper_list {
+				top: 0;
 			}
+		}//end >.content_data
+	}//end wrapper_tool
 
-			.button_apply {
-				// background-color: #ff9800;
-				// color: white;
-				// padding: 0.15em;
-				// padding-left: 1em;
-				// padding-right: 1em;
-				float: right;
-			}
-		}//end .tool_bar
 
-		// time_machine container (list)
-		.wrapper_tm {
-			// background-color: #A7FF82;
-			// flex: 1 1 100%;
-			height: 100%;
-			overflow: auto;
-			grid-column-start: 1;
-			grid-column-end: 3;
-		}//end .wrapper_tm
 
-		// header section list
-		.header_wrapper_list {
-			top: 0;
-		}
-	}//end >.content_data
-}//end wrapper_tool
+// modal header tool modification
+	.tool_header.tool_time_machine {
+		// background-color: #36a6c1;
+	}

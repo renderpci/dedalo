@@ -43,19 +43,20 @@ render_tool_dd_label.prototype.edit = async function (options={render_level:'ful
 		})
 
 	// modal container
-		const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
-		// const modal  = ui.attach_to_modal(header, wrapper, null)
-		modal.on_close = async () => {
+		if (!window.opener) {
+			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+			const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
+			modal.on_close	= async () => {
 
-			// save caller data and refresh it
-			const editor = self.caller.editors[0]
-			self.caller.save_sequence(editor)
-			.then(function(){
-				self.caller.refresh()
-			})
+				// save caller data and refresh it
+				const editor = self.caller.editors[0]
+				self.caller.save_sequence(editor)
+				.then(function(){
+					self.caller.refresh()
+				})
 
-			self.destroy(true, true, true)
+				self.destroy(true, true, true)
+			}
 		}
 
 	// events

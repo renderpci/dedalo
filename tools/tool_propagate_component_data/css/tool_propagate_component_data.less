@@ -1,77 +1,72 @@
 /**
-* tool_propagate_component_data
-* Write here specific tool styles
+* TOOL_PROPAGATE_COMPONENT_DATA
+*
+* Loaded on tool init
 */
 
-
-
+// imports
 @import '../../../core/page/css/layout/vars.less';
 
 
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-.wrapper_tool.tool_propagate_component_data {
-	padding: 1rem;
+	.wrapper_tool.tool_propagate_component_data {
 
+		>.content_data {
 
-	>.content_data {
+			>.section_info {
+				display: flex;
+				justify-content: space-between;
 
-		>.section_info {
-			display: flex;
-			justify-content: space-between;
-
-			.section_name {
-				font-size: 1.5rem;
-				padding: 1rem;
-			}
-			.section_tipo {
-				font-size: 1.5rem;
-				padding: 1rem;
-				color: #959595;
-				font-weight: 200;
-			}
-		}
-
-		>.components_list_container {
-			display: block;
-			width: 100%;
-			border: none;
-
-			.wrapper_component {
-				width: 100% !important;
-
-				>.buttons_container {
-					display: none !important;
+				.section_name {
+					font-size: 1.5rem;
+					padding: 1rem;
+				}
+				.section_tipo {
+					font-size: 1.5rem;
+					padding: 1rem;
+					color: #959595;
+					font-weight: 200;
 				}
 			}
-		}
 
+			>.components_list_container {
+				display: block;
+				width: 100%;
+				border: none;
 
-		>.buttons_container {
-			display: block;
-			padding: 1rem;
+				.wrapper_component {
+					width: 100% !important;
 
-			.info_text {
-				padding-bottom: 1rem;
+					>.buttons_container {
+						display: none !important;
+					}
+				}
 			}
 
-			.response_text {
-				padding-bottom: 1rem;
-				color: #7f7f7f;
-				font-weight: 300;
+
+			>.buttons_container {
+				display: block;
+				padding: 1rem;
+
+				.info_text {
+					padding-bottom: 1rem;
+				}
+
+				.response_text {
+					padding-bottom: 1rem;
+					color: #7f7f7f;
+					font-weight: 300;
+				}
+
+				.button_apply {
+
+				}
 			}
 
-			.button_apply {
-
-			}
-		}
-
-	}//end content_data
-
-
-
-}//end wrapper_tool
+		}//end content_data
+	}//end wrapper_tool
 
 
 

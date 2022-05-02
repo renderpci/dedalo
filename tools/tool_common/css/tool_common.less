@@ -1,0 +1,85 @@
+/**
+* TOOL_COMMON
+*
+*
+* Included from main.less file
+*/
+
+
+// wrapper_tool
+	.wrapper_tool {
+		// background-color: #F5EBB5;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-wrap: wrap;
+
+		>.tool_header {
+			padding: 1em;
+			// moded outside. see bellow
+
+			// button close (only outside modal)
+			>.button.close {
+				position: absolute;
+				display: block;
+				right: 0.5rem;
+				top: 0.5rem;
+				cursor: pointer;
+				width: 1.4rem;
+				height: 1.4rem;
+
+				&:hover {
+					background-color: #000000 !important;
+				}
+				&:active {
+					background-color: #ffffff !important;
+				}
+			}
+		}
+
+		>.content_data {
+			// background-color: #B7F9BB;
+			width: 100%;
+			padding: 1em;
+
+			// >* {
+				//padding: 1em;
+			// }
+		}
+	}//end .wrapper_tool
+
+
+
+// tool_header
+// (!) Note that is defined outside wrapper_tool to be compatible with modal and new tab window
+	.tool_header {
+		background-color: @color_orange_dedalo;
+		color: #ffffff;
+		width: 100%;
+
+		>.tool_name_container {
+			>.label {
+				font-size: 1.2rem;
+				>.button {
+					vertical-align: bottom;
+				}
+			}
+
+			>.description {
+				font-weight: 200;
+				margin-top: 0.25rem;
+			}
+		}
+
+		>.tool_buttons_container {
+			background-color: #BAF1F6;
+		}
+
+		// inside modal case
+		&.header {
+			// background-color: #bf55eb !important;
+			>.button.close {
+				display: none;
+			}
+		}
+	}//end .tool_header

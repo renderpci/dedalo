@@ -68,12 +68,14 @@ render_tool_posterframe.prototype.edit = async function(options) {
 		wrapper.appendChild(content_data)
 
 	// modal container
-		const header = wrapper.querySelector('.tool_header') // is created by ui.tool.build_wrapper_edit
-		const modal  = ui.attach_to_modal(header, wrapper, null)
-		modal.on_close = () => {
-			self.caller.refresh()
-			// when closing the modal, common destroy is called to remove tool and elements instances
-			self.destroy(true, true, true)
+		if (!window.opener) {
+			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+			const modal		= ui.attach_to_modal(header, wrapper, null)
+			modal.on_close	= () => {
+				self.caller.refresh()
+				// when closing the modal, common destroy is called to remove tool and elements instances
+				self.destroy(true, true, true)
+			}
 		}
 
 
