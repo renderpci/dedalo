@@ -45,20 +45,28 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 			content_data : content_data
 		})
 
+
 	// modal container
-		// const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(wrapper.tool_header, wrapper, null, 'big')
-		modal.on_close = () => {
-			self.destroy(true, true, true)
-			// refresh source component text area
-				if (self.transcription_component) {
-					self.transcription_component.refresh()
-				}
+		if (!window.opener) {
+			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+			const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
+			modal.on_close	= () => {
+				self.destroy(true, true, true)
+				// refresh source component text area
+					if (self.transcription_component) {
+						self.transcription_component.refresh()
+					}
+			}
 		}
 
-		// transcription_options are the buttons to get access to other tools (buttons in the header)
+	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
+		// const related_list_node = render_related_list(self)
+		// wrapper.header.appendChild(related_list_node)
+
+	// transcription_options are the buttons to get access to other tools (buttons in the header)
 		const tanscription_options = await render_tanscription_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
+
 
 	return wrapper
 };//end render_tool_transcription
