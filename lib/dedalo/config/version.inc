@@ -2035,7 +2035,7 @@
 
 
 	Valencia 25-01-2021 5.7.33
-		Added specific render_list_value to component_html_text to strip tags value (avoid problems with unclosed tags in list)
+		Added specific render_list_value to component_html_text to strip tags value (avoid problems with not closed tags in list)
 		Updated Dédalo publication api docu 1.0.12 => 1.0.13
 		Clean controllers code
 
@@ -2235,7 +2235,7 @@
 		Fixed component text area people labels
 		Fixed issues with json encoding in difusion_sql. Added JSON_UNESCAPED_UNICODE to all json codifications
 		Added view the signature into the pdfjs worker
-		Redorder ontology data with tld directories
+		Reorder ontology data with tld directories
 
 
 	Valencia 25-02-2021 5.7.73
@@ -2266,7 +2266,7 @@
 		Added lib htmLawed
 		Added lib tcpdf
 		Updated .gitignore file to apped some libraries (htmLawed,tcpdf)
-		Fixed verification duplicities in component_autocomplete and component_relation_common
+		Fixed verification duplicates in component_autocomplete and component_relation_common
 		Added section trigger error message info when section is not saved
 		Fixed error on free_node when find_word_in_text give error on word position not found
 		Increased download structure timeout from 5 to 60 secs in CURLOPT_TIMEOUT to allow manage large data like matrix_dd
@@ -2346,7 +2346,7 @@
 		Added img html tag as allowed tag in publication server json/index.php filter (case numisdata legends)
 		27-04-2021
 		Removed publication API json/index strip_tags directive to avoid issues with sql queries containing <=
-		Added publication API sql_options->sql_filter sanitizacion filter
+		Added publication API sql_options->sql_filter sanitation filter
 		Added publication API char '+' to allowed chars in field name (necessary for complex queries)
 		01-05-2021
 		Fixed Ontoly lang change error
@@ -2496,7 +2496,7 @@
 		Remove the debugger limitation to show header in the tool_tr_print
 		Add some field to the header in tool_tr_print
 		Remove the debugger limitation in tool_tr_transcript
-		Change the css of the informat in tool_tr_print
+		Change the css of the informant in tool_tr_print
 		Changed error management of DDBB connection from die() to throw new Exception()
 		Added RecordObject_dd::save_term_and_descriptor current lang descriptors record too when is distinct from default structure lang (issues on auto create structure elements from hierarchies)
 		Add class backup method to optimize tables. Used after import structure to prevent issues with PostgreSQL index
@@ -2531,8 +2531,8 @@
 
 	Valencia 21-11-2021 5.8.4
 		22-11-2021
-		Added IS EXACTLY EQUAL == operator to component_input_text to allow saerchches with @> operator (case Ontologies term_id dd1475)
-		Added component_json read only mode controled by properties
+		Added IS EXACTLY EQUAL == operator to component_input_text to allow searches with @> operator (case Ontologies term_id dd1475)
+		Added component_json read only mode controlled by properties
 		Updated dd_tipos with new json_item tipo (ONTOLOGY_SECTION_TIPOS)
 		Fixed window.opener refresh issue on dd_edit.js
 		Added Ontology functionality (update_json_ontology_items) to save every change in structure data to the new created JSON Ontology Item field
@@ -2681,8 +2681,9 @@
 		Re-added maxmind-db files
 		Added resolve_indexation_fragments error control log when result is empty
 		Fixed diffusion value issues with empty values on PHP 8.1
-		Added method get_value_code to component_select_lang class. (used from diffusion to conver locator value to lang code like 'lg-cat')
+		Added method get_value_code to component_select_lang class. (used from diffusion to convert locator value to lang code like 'lg-cat')
 		Added subtitles optional get value 'advice_text'
+		Fixed section bug when section cached and same section not cached are managed as different sections overwriting data on save. Now, get_my_section method is used when is available in components
 
 
 	[/HISTORY]
@@ -2714,7 +2715,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '28-04-2022T14:52:21');
+	define('DEDALO_BUILD'	, '03-05-2022T14:30:12');
 
 
 	/*
