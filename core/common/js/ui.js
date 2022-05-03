@@ -1,10 +1,10 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise */
+/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {strip_tags} from '../../common/js/utils/index.js'
+	import {strip_tags, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {set_element_css} from '../../page/js/css.js'
@@ -884,7 +884,7 @@ export const ui = {
 			// 	const main_context 	= instance.context
 			// 	const element_css 	= main_context.css || {}
 
-	 	// 		const fragment = new DocumentFragment()
+	 	// const fragment = new DocumentFragment()
 
 			// 	// label
 			// 		if (label===null || items.label===null) {
@@ -957,20 +957,18 @@ export const ui = {
 			// 				fragment.appendChild(content_data)
 			// 		}
 
-
 			// 	// wrapper
 			// 		const wrapper = ui.create_dom_element({
 			// 			element_type	: 'div',
 			// 			class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
-	 	// 			})
-	 	// 			// css
-		 // 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+			// 			})
+			// 			// css
+			// 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 			// 			const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
 			// 			wrapper.classList.add(...ar_css)
 
-	 	// 			// append fragment
-	 	// 				wrapper.appendChild(fragment)
-
+			// 		// append fragment
+			// 			wrapper.appendChild(fragment)
 
 
 			// 	return wrapper
@@ -1194,6 +1192,8 @@ export const ui = {
 				// 		buttons.appendChild(items.buttons[i])
 				// 	}
 				// }
+
+
 
 			// content_data
 				if (items.content_data) {

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -60,6 +60,8 @@ tool_common.prototype.init = async function(options) {
 		self.ar_instances		= []
 		self.events_tokens		= []
 		self.get_tool_label		= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
+
+
 
 
 	// set status

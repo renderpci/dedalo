@@ -1883,8 +1883,8 @@ class component_relation_common extends component_common {
 		');
 
 
-		$search = search::get_instance($search_query_object);
-		$result = $search->search();
+		$search	= search::get_instance($search_query_object);
+		$result	= $search->search();
 
 		// iterate rows
 			$hierarchy_sections_from_types = [];
@@ -1895,8 +1895,8 @@ class component_relation_common extends component_common {
 					continue;
 				}
 
-				$target_dato 		 = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
-				$target_section_tipo = reset($target_dato);
+				$target_dato			= $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
+				$target_section_tipo	= reset($target_dato);
 
 				$hierarchy_sections_from_types[] = $target_section_tipo;
 			}
@@ -1911,7 +1911,7 @@ class component_relation_common extends component_common {
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo($ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) : array {
+	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) : array {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
@@ -1958,8 +1958,8 @@ class component_relation_common extends component_common {
 
 							$dato = $sections->get_dato();
 
-							$model_name 	 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-							$current_lang		=  common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
+							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
 						// data
 							foreach ($dato as $current_record) {
@@ -1972,12 +1972,14 @@ class component_relation_common extends component_common {
 									$section->set_dato($datos);
 									$section->set_bl_loaded_matrix_data(true);
 								}
-								$component = component_common::get_instance($model_name,
-																				  $current_component_tipo,
-																				  $current_record->section_id,
-																				  $modo='list',
-																				  $current_lang,// $lang=DEDALO_DATA_LANG,
-																				  $current_record->section_tipo);
+								$component = component_common::get_instance(
+									$model_name,
+									$current_component_tipo,
+									$current_record->section_id,
+									$modo='list',
+									$current_lang,// $lang=DEDALO_DATA_LANG,
+									$current_record->section_tipo
+								);
 
 								$component_dato = $component->get_dato();
 

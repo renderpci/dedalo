@@ -76,24 +76,24 @@ class tools_register {
 						? $new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}
 						: null;
 
-				if(!empty($current_ontology)){
+					if(!empty($current_ontology)){
 
-					if (isset($current_ontology[1])) {
-						debug_log(__METHOD__." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)".to_string(), logger::ERROR);
-						continue;
+						if (isset($current_ontology[1])) {
+							debug_log(__METHOD__." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)".to_string(), logger::ERROR);
+							continue;
+						}
+
+						$new_ontology = tools_register::renumerate_term_id($current_ontology, $counter);
+
+						$ar_ontologies[] = $new_ontology;
+
+						// update ontology
+						$new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'} = $new_ontology;
+
+					}else{
+
+						// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
 					}
-
-					$new_ontology = tools_register::renumerate_term_id($current_ontology, $counter);
-
-					$ar_ontologies[] = $new_ontology;
-
-					// update ontology
-					$new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'} = $new_ontology;
-
-				}else{
-
-					// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
-				}
 
 				// add info_objects_parsed
 					$info_objects_parsed[] = $new_info_object;
@@ -265,7 +265,7 @@ class tools_register {
 	* @return object $tool_object
 	*	Simple and human readable json object to use with components, sections, areas..
 	*/
-	public static function create_simple_tool_object(string $section_tipo, $section_id) : object {
+	public static function create_simple_tool_object(string $section_tipo, int $section_id) : object {
 
 		$tool_object = new stdClass();
 
