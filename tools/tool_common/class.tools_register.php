@@ -153,10 +153,15 @@ class tools_register {
 								$current_section_id, // null if not found existing by name
 								self::$section_tools_tipo, // dd1324
 								'edit',
-								false // cache
+								true // cache (!) it's important set true to prevent re-create later when a component saves)
 							);
-							$section->set_dato($current_tool_section_data);
-							$created_section_id = $section->Save();
+
+							// change section data
+								$current_tool_section_data->section_tipo = self::$section_tools_tipo; // Set dd1324 instead 'dd1340'
+
+							// section save
+								$section->set_dato($current_tool_section_data);
+								$created_section_id = $section->Save();
 
 						// info_file_processed. Added info
 							$info_file_processed_item = array_find($info_file_processed, function($el) use($tool_name){
@@ -182,7 +187,8 @@ class tools_register {
 								$created_section_id,
 								'list',
 								DEDALO_DATA_NOLAN,
-								tools_register	::$section_tools_tipo
+								self::$section_tools_tipo,
+								true // cache
 							);
 							$component->set_dato([$tool_object]);
 							$component->Save();

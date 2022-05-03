@@ -100,9 +100,10 @@ class component_svg extends component_media_common {
 	*/
 	public function get_initial_media_path() {
 
-		$component_tipo = $this->tipo;
-		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$properties 	= $parent_section->get_properties();
+		$component_tipo		= $this->tipo;
+		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
+		$parent_section		= $this->get_my_section();
+		$properties			= $parent_section->get_properties();
 			#dump($properties," properties component_tipo:$component_tipo");
 			#dump($properties->initial_media_path->$component_tipo," ");
 

@@ -142,9 +142,11 @@ class component_pdf extends component_media_common {
 	*
 	*/
 	public function get_initial_media_path() {
-		$component_tipo = $this->tipo;
-		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$properties 	= $parent_section->get_properties();
+
+		$component_tipo		= $this->tipo;
+		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
+		$parent_section		= $this->get_my_section();
+		$properties			= $parent_section->get_properties();
 
 		if (isset($properties->initial_media_path->$component_tipo)) {
 			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
