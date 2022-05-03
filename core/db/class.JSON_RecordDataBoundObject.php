@@ -29,7 +29,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 	# __CONSTRUCT
-	public function __construct($id=NULL) {
+	public function __construct($id=null) {
 
 		$this->strTableName 		= $this->defineTableName();
 		$this->strPrimaryKeyName	= $this->definePrimaryKeyName();

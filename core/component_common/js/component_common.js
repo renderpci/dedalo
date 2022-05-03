@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common, set_context_vars, create_source} from '../../common/js/common.js'
+	import {set_context_vars, create_source} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
 

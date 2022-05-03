@@ -5,6 +5,7 @@
 include(DEDALO_CORE_PATH . '/base/class.Error.php');
 include(DEDALO_CORE_PATH . '/db/class.DBi.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
+include(DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
 include(DEDALO_CORE_PATH . '/db/class.JSON_RecordObj_matrix.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php');

@@ -91,7 +91,7 @@ abstract class component_common extends common {
 	* Singleton pattern
 	* @return array array of component objects by key
 	*/
-	public static function get_instance($component_name=null, $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
+	public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
 		$start_time=microtime(1);
 
 		// tipo check. Is mandatory
@@ -521,9 +521,10 @@ abstract class component_common extends common {
 	*/
 	protected function get_dato() {
 
-		if(isset($this->dato_resolved)) {
-			return $this->dato_resolved;
-		}
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
 
 		// time machine mode case
 			if ($this->modo==='tm') {
@@ -542,24 +543,24 @@ abstract class component_common extends common {
 			}
 
 		/*
-		#
-		# IS TEMP CASE
-		# Sometimes we need use component as temporal element without save real data to database. Is this case
-		# data is saved to session as temporal data
-		if (isset($this->is_temp) && $this->is_temp===true) {
-			$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
-			if (isset($_SESSION['dedalo']['component_temp_data'][$temp_data_uid])) {
-				$this->dato = $_SESSION['dedalo']['component_temp_data'][$temp_data_uid];
+			#
+			# IS TEMP CASE
+			# Sometimes we need use component as temporal element without save real data to database. Is this case
+			# data is saved to session as temporal data
+			if (isset($this->is_temp) && $this->is_temp===true) {
+				$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
+				if (isset($_SESSION['dedalo']['component_temp_data'][$temp_data_uid])) {
+					$this->dato = $_SESSION['dedalo']['component_temp_data'][$temp_data_uid];
+				}else{
+					$this->dato = null;
+				}
+
 			}else{
-				$this->dato = null;
+
+				# MATRIX DATA : Load matrix data
+				$this->load_component_dato();
 			}
-
-		}else{
-
-			# MATRIX DATA : Load matrix data
-			$this->load_component_dato();
-		}
-		*/
+			*/
 
 		# MATRIX DATA : Load matrix data
 		$this->load_component_dato();
@@ -815,10 +816,10 @@ abstract class component_common extends common {
 
 		# MAIN VARS
 		$section_tipo	= $this->get_section_tipo();
-		$section_id 	= $this->get_section_id();
-		$tipo 			= $this->get_tipo();
-		$lang 			= $this->get_lang();
-		$modo 			= $this->get_modo();
+		$section_id		= $this->get_section_id();
+		$tipo			= $this->get_tipo();
+		$modo			= $this->get_modo();
+		$lang			= $this->get_lang();
 		if (empty($lang)) {
 			$lang = DEDALO_DATA_LANG;
 		}
@@ -859,7 +860,6 @@ abstract class component_common extends common {
 
 			return $new_component->Save();
 		}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
-
 
 
 		# PARENT : Verify section_id

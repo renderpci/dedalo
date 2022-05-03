@@ -155,6 +155,7 @@ class component_pdf extends component_media_common {
 		}else{
 			$this->initial_media_path = false;
 		}
+
 		return $this->initial_media_path;
 	}//end get_initial_media_path
 

@@ -20,7 +20,7 @@ abstract class common {
 	// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 	protected $bl_loaded_structure_data;
 	//bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
-	protected $bl_loaded_matrix_data;
+	protected $bl_loaded_matrix_data = false;
 
 	// TABLE  matrix_table
 	// public $matrix_table;

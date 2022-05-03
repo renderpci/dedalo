@@ -32,7 +32,7 @@ class section extends common {
 
 		public $ar_all_project_langs;
 
-		public $show_inspector = true;			# default show: true
+		public $show_inspector = true;	# default show: true
 
 		public $section_virtual = false;
 		public $section_real_tipo;
@@ -51,7 +51,7 @@ class section extends common {
 		# static cache for section instances
 		static $ar_section_instances;
 
-		public $save_modified; # Default is true
+		public $save_modified = true; # Default is true
 
 		public $layout_map;
 
@@ -81,9 +81,9 @@ class section extends common {
 	* Singleton pattern
 	* @return object
 	*/
-	public static function get_instance($section_id=null, $tipo=false, $modo='edit', $cache=true) : object {
+	public static function get_instance($section_id=null, string $tipo=null, string $modo='edit', bool $cache=true) : object {
 
-		if ($tipo===false) {
+		if (empty($tipo)) {
 			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
 		}
 
@@ -268,12 +268,10 @@ class section extends common {
 	* Fix section relations and components to prevent save issues
 	* @return bool true
 	*/
-	public function set_dato($dato) : bool {
+	public function set_dato($dato) {
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
-		parent::set_dato($dato);
-
-		return true;
+		return parent::set_dato($dato);
 	}//end set_dato
 
 
@@ -283,7 +281,7 @@ class section extends common {
 	* Extrae del contenedor de la sección, el dato específico de cada componente en el idioma requerido
 	* will be deprecated with the get_all_component_data (08-2017)
 	*/
-	public function get_component_dato($component_tipo, $lang, $lang_fallback=false) {
+	public function get_component_dato(string $component_tipo, string $lang, bool $lang_fallback=false) {
 
 		$all_component_data = $this->get_all_component_data($component_tipo);
 
@@ -489,7 +487,6 @@ class section extends common {
 					// $component_global_dato->dataframe	= new stdClass();
 		}
 
-
 		# DATO OBJ
 			if (!isset($component_global_dato->dato->{$component_lang})) {
 				$component_global_dato->dato->{$component_lang} = new stdClass();
@@ -631,7 +628,6 @@ class section extends common {
 					}
 				}
 			}
-
 		}//end if (!empty($component_dato))
 
 
@@ -682,7 +678,7 @@ class section extends common {
 	* SAVE
 	* Create a new section or update section record in matrix
 	*/
-	public function Save( $save_options=null ) {
+	public function Save( object $save_options=null ) {
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
@@ -708,10 +704,10 @@ class section extends common {
 
 		// save_options overwrite defaults
 			if ($save_options!==null) {
-				if (!is_object($save_options)) {
-					trigger_error("Error: save_options is not an object : ".print_r($save_options,true));
-					return false;
-				}
+				// if (!is_object($save_options)) {
+				// 	trigger_error("Error: save_options is not an object : ".print_r($save_options,true));
+				// 	return false;
+				// }
 				# Options overwrite sql_options defaults
 				foreach ((object)$save_options as $key => $value) {
 					# Si la propiedad recibida en el array options existe en sql_options, la sobreescribimos
@@ -721,7 +717,6 @@ class section extends common {
 
 		// tipo. Current section tipo
 			$tipo = $this->get_tipo();
-
 
 			# If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
 			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
@@ -739,7 +734,7 @@ class section extends common {
 				: $this->get_section_real_tipo();
 
 		// user id. Current logged user id
-			$user_id  = navigator::get_user_id();
+			$user_id  = (int)navigator::get_user_id();
 
 		// date now
 			$date_now = component_date::get_timestamp_now_for_db();
@@ -824,7 +819,6 @@ class section extends common {
 					# section_id. Fix section_id (Non return point, next calls to Save will be updates)
 					$this->section_id = (int)$section_id_counter;
 				}
-
 
 			##
 			# SECTION JSON DATA
@@ -912,7 +906,6 @@ class section extends common {
 						$this->dato = $section_dato;
 
 
-
 					// Set as loaded
 						$this->bl_loaded_matrix_data = true;
 
@@ -975,18 +968,19 @@ class section extends common {
 						'NEW',
 						logger::INFO,
 						$this->tipo,
-						NULL,
-						array(	"msg"			=> "Created section record",
-								"section_id"	=> $this->section_id,
-								"section_tipo"	=> $this->tipo,
-								"tipo"			=> $this->tipo,
-								"table"			=> $matrix_table
-								// "is_portal"	=> intval($options->is_portal),
-								// "top_id"		=> $top_id,
-								// "top_tipo"	=> TOP_TIPO,
-								// "tm_id"		=> 'desactivo',#$time_machine_last_id,
-								// "counter"	=> counter::get_counter_value($this->tipo, $matrix_table_counter),
-								)
+						null,
+						array(
+							'msg'			=> 'Created section record',
+							'section_id'	=> $this->section_id,
+							'section_tipo'	=> $this->tipo,
+							'tipo'			=> $this->tipo,
+							'table'			=> $matrix_table
+							// "is_portal"	=> intval($options->is_portal),
+							// "top_id"		=> $top_id,
+							// "top_tipo"	=> TOP_TIPO,
+							// "tm_id"		=> 'desactivo',#$time_machine_last_id,
+							// "counter"	=> counter::get_counter_value($this->tipo, $matrix_table_counter),
+						)
 					);
 
 				##
@@ -997,13 +991,15 @@ class section extends common {
 					# AUTO AUTHORIZE THIS PROYECT FOR CURRENT USER
 					# Si esta sección recien creada es un proyecto, se agrega este proyecto como autorizado al usuario que lo creó
 					# Usuario logeado actualmente
-						$component_filter_master	= component_common::get_instance('component_filter_master',
-																					 DEDALO_FILTER_MASTER_TIPO,
-																					 $user_id,
-																					 'edit',
-																					 DEDALO_DATA_NOLAN,
-																					 DEDALO_SECTION_USERS_TIPO);
-						$dato_filter_master 		= $component_filter_master->get_dato();
+						$component_filter_master = component_common::get_instance(
+							'component_filter_master',
+							DEDALO_FILTER_MASTER_TIPO,
+							$user_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							DEDALO_SECTION_USERS_TIPO
+						);
+						$dato_filter_master = $component_filter_master->get_dato();
 
 						$filter_master_locator = new locator();
 							$filter_master_locator->set_section_id($this->section_id);
@@ -1029,9 +1025,9 @@ class section extends common {
 					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section(
 						$section_real_tipo,
 						['component_filter'],
-						$from_cache=true,
-						$resolve_virtual=false,
-						true
+						true, // from_cache
+						false, // resolve_virtual
+						true // cache
 					);
 					if (empty($ar_tipo_component_filter[0])) {
 
@@ -1044,13 +1040,14 @@ class section extends common {
 
 						if (!empty($options->component_filter_dato)) {
 							// set the component_filter with the dato sended by the caller (portals)
-							$component_filter 	= component_common::get_instance('component_filter',
-															 $ar_tipo_component_filter[0],
-															 $this->section_id,
-															 'list', // Important 'list' to avoid auto save default value !!
-															 DEDALO_DATA_NOLAN,
-															 $tipo
-															);
+							$component_filter 	= component_common::get_instance(
+								'component_filter',
+								$ar_tipo_component_filter[0],
+								$this->section_id,
+								'list', // Important 'list' to avoid auto save default value !!
+								DEDALO_DATA_NOLAN,
+								$tipo
+							);
 							$component_filter->set_dato($options->component_filter_dato);
 							$component_filter->Save();
 
@@ -1058,16 +1055,17 @@ class section extends common {
 							# When component_filter is called in edit mode, the component check if dato is empty and if is,
 							# add default user project and save it
 							// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
-							$component_filter 	= component_common::get_instance('component_filter',
-																				 $ar_tipo_component_filter[0],
-																				 $this->section_id,
-																				 'edit', // Important edit !! # Already saves default project when load in edit mode
-																				 DEDALO_DATA_NOLAN,
-																				 $tipo);
+							$component_filter = component_common::get_instance(
+								'component_filter',
+								$ar_tipo_component_filter[0],
+								$this->section_id,
+								'edit', // Important edit !! # Already saves default project when load in edit mode
+								DEDALO_DATA_NOLAN,
+								$tipo
+							);
 							// note that section is auto-saved here
 						}
 					}//end if (empty($ar_tipo_component_filter[0]))
-
 
 				}//end if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO)
 
@@ -1092,14 +1090,14 @@ class section extends common {
 					}//end if (isset($ar_component_state[0]))
 
 			}//end if($this->tipo!==DEDALO_ACTIVITY_SECTION_TIPO)
-
 		}//end if ($this->id >= 1)
 
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 			}
+
 
 		return $this->section_id;
 	}//end Save
@@ -3347,11 +3345,14 @@ class section extends common {
 	* UPDATE_MODIFIED_SECTION_DATA
 	* @return bool
 	*/
-	public function update_modified_section_data($ar_options) : bool {
+	public function update_modified_section_data(object $options) : bool {
 
 		if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			return false;
 		}
+
+		// options
+			$mode = $options->mode;
 
 		// Fixed private tipos
 			$modified_section_tipos = section::get_modified_section_tipos();
@@ -3375,18 +3376,20 @@ class section extends common {
 				$date_now->start = $dd_date;
 
 
-		switch ($ar_options['mode']) {
+		switch ($mode) {
 
 			case 'new_record': // new record
 
 				// Created by user
-					$created_by_user= reset($created_by_user);
-					$component 		= component_common::get_instance($created_by_user['model'],
-																	 $created_by_user['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$created_by_user	= reset($created_by_user);
+					$component			= component_common::get_instance(
+						$created_by_user['model'],
+						$created_by_user['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($user_locator);
 					#$dato = $component->get_dato();
 					#$this->add_relation( reset($dato) );
@@ -3396,12 +3399,14 @@ class section extends common {
 
 				// Creation date
 					$created_date 	= reset($created_date);
-					$component 		= component_common::get_instance($created_date['model'],
-																	 $created_date['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$component 		= component_common::get_instance(
+						$created_date['model'],
+						$created_date['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($date_now);
 					#$component->save_to_database = false; // Avoid exec db real save
 					#$component->Save(); // Only updates section data
@@ -3413,26 +3418,30 @@ class section extends common {
 			case 'update_record': // update_record (record already exists)
 
 				// Modified by user
-					$modified_by_user= reset($modified_by_user);
-					$component 		= component_common::get_instance($modified_by_user['model'],
-																	 $modified_by_user['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$modified_by_user	= reset($modified_by_user);
+					$component			= component_common::get_instance(
+						$modified_by_user['model'],
+						$modified_by_user['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($user_locator);
 					#$component->save_to_database = false; // Avoid exec db real save
 					#$component->Save(); // Only updates section data
 					$this->set_component_relation_dato($component);
 
 				// Modification date
-					$modified_date 	= reset($modified_date);
-					$component 		= component_common::get_instance($modified_date['model'],
-																	 $modified_date['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$modified_date	= reset($modified_date);
+					$component		= component_common::get_instance(
+						$modified_date['model'],
+						$modified_date['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($date_now);
 					#$component->save_to_database = false; // Avoid exec db real save
 					#$component->Save(); // Only updates section data
@@ -3870,7 +3879,7 @@ class section extends common {
 	* Executed on component save (when save script is complete)
 	* @return bool
 	*/
-	public function post_save_component_processes($options) : bool {
+	public function post_save_component_processes(object $options) : bool {
 
 		// options
 			$component = $options->component;

@@ -240,7 +240,7 @@ class time_machine_list extends common {
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		return $json;

@@ -386,7 +386,7 @@ const get_input_element_edit = (i, current_value, self) => {
 
 		// ui.create_dom_element({
 		// 	element_type	: 'span',
-		// 	inner_html		: '** 9',
+		// 	inner_html		: '* 18',
 		// 	parent			: li
 		// })
 

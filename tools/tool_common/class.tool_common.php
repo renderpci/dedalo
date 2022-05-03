@@ -72,12 +72,14 @@ class tool_common {
 		$component_tipo				= tools_register::$simple_tool_obj_component_tipo;
 
 		$model						= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$simple_tool_component		= component_common::get_instance($model,
-														 $component_tipo,
-														 $this->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $this->section_tipo);
+		$simple_tool_component		= component_common::get_instance(
+			$model,
+			$component_tipo,
+			$this->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$this->section_tipo
+		);
 		$simple_tool_obj_dato	= $simple_tool_component->get_dato();
 		$tool_object			= reset($simple_tool_obj_dato);
 
