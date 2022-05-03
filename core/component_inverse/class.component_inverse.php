@@ -15,7 +15,8 @@ class component_inverse extends component_common {
 	*/
 	public function get_dato() {
 
-		$section = section::get_instance($this->parent, $this->section_tipo);
+		// $section	= section::get_instance($this->parent, $this->section_tipo);
+		$section	= $this->get_my_section();
 
 		$ar_locators = $section->get_inverse_locators();
 

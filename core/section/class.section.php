@@ -357,13 +357,17 @@ class section extends common {
 		##		throw new Exception("Error Processing Request. Section Dato is not object", 1);
 		##	}
 
+		// set self section_obj to component. (!) Important to prevent cached and not cahed versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
+
 		#
 		# COMPONENT_GLOBAL_DATO : Extrae la parte del componente desde el objeto global de la sección
-		$component_tipo 		= $component_obj->get_tipo();
-		$component_lang 		= $component_obj->get_lang();
-		##$component_valor_lang 	= $component_obj->get_valor_lang();
-		##$component_modelo_name 	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		##$component_traducible 	= $component_obj->get_traducible();
+			$component_tipo				= $component_obj->get_tipo();
+			$component_lang				= $component_obj->get_lang();
+			##$component_valor_lang		= $component_obj->get_valor_lang();
+			##$component_modelo_name	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			##$component_traducible		= $component_obj->get_traducible();
 
 		if (empty($component_tipo)) {
 			throw new Exception("Error Processing Request: component_tipo is empty", 1);
@@ -438,24 +442,23 @@ class section extends common {
 	*/
 	public function set_component_direct_dato( object $component_obj ) : object {
 
-		// section dato
-			$dato = $this->get_dato();
-			if (!is_object($dato)) {
-				$dato = $this->dato = new stdClass();
-				#if(SHOW_DEBUG===true) {
-				#	dump($dato,"section dato");
-				#	dump($this,"section object");
-				#	dump($component_obj, ' component_obj ++ '.to_string());;
-				#}
-				#throw new Exception("Error Processing Request. Section Dato is not object", 1);
-			}
+		// set self section_obj to component. (!) Important to prevent cached and not cahed versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
 
-		// component sort vars
+		// component short vars
 			$component_tipo 		= $component_obj->get_tipo();
 			$component_lang 		= $component_obj->get_lang();
 			$component_valor_lang 	= $component_obj->get_valor_lang();
 			$component_modelo_name 	= get_class($component_obj);
 			$component_traducible 	= $component_obj->get_traducible();
+
+		// section dato
+			$dato = $this->get_dato();
+			if (!is_object($dato)) {
+				// $dato = $this->dato = new stdClass();
+				throw new Exception("Error Processing Request. Section Dato is not as expected type (object). type: ".gettype($dato), 1);
+			}
 
 		# SELECT COMPONENT IN SECTION DATO
 		if (isset($dato->components->{$component_tipo})) {
@@ -515,7 +518,8 @@ class section extends common {
 
 		#
 		# DATO : Actualizamos el dato en el idioma actual
-			$component_global_dato->dato->{$component_lang} = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+				$component_global_dato->dato->{$component_lang} = $component_dato;
 
 		#
 		# VALOR : Actualizamos el valor en el idioma actual
@@ -590,10 +594,15 @@ class section extends common {
 	*/
 	public function set_component_relation_dato( object $component_obj ) : object {
 
-		$component_tipo			= $component_obj->get_tipo();
-		$component_dato			= $component_obj->get_dato_full();
-		$relation_type			= $component_obj->get_relation_type();
-		$from_component_tipo	= $component_tipo;
+		// set self section_obj to component. (!) Important to prevent cached and not cahed versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
+
+		// component short vars
+			$component_tipo			= $component_obj->get_tipo();
+			$component_dato			= $component_obj->get_dato_full();
+			$relation_type			= $component_obj->get_relation_type();
+			$from_component_tipo	= $component_tipo;
 
 		# Remove all previous locators of current component tipo
 		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
@@ -758,10 +767,10 @@ class section extends common {
 			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtal section don't have table defined
 
 
-		if ($this->section_id=='-1') {
+		if ($this->section_id=='-1' || (int)$this->section_id<1) {
 			# Nothing to save/create
 
-		}elseif ($this->section_id >= 1 && $options->forced_create_record===false) { # UPDATE RECORD
+		}elseif ((int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
 
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record trigered by one component
@@ -772,24 +781,30 @@ class section extends common {
 
 			}else{
 				// update_modified_section_data . Resolve and add modification date and user to current section dato
-					$this->update_modified_section_data(array(
+					$this->update_modified_section_data((object)[
 						'mode' => 'update_record'
-					));
+					]);
 
 				// section dato
 					$section_dato = (object)$this->get_dato();
 
 				// dato add modification info
 					# Section modified by userID
-					$section_dato->modified_by_userID 	= (int)$user_id;
+					$section_dato->modified_by_userID	= (int)$user_id;
 					# Section modified date
-					$section_dato->modified_date 		= (string)$date_now;	# Format 2012-11-05 19:50:44
+					$section_dato->modified_date		= (string)$date_now;	# Format 2012-11-05 19:50:44
 			}
 
 			# Save section dato
 				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
 				$JSON_RecordObj_matrix->set_datos($section_dato);
-				$saved 					= $JSON_RecordObj_matrix->Save( $options );
+				$saved_id_matrix		= $JSON_RecordObj_matrix->Save( $options );
+				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
+					trigger_error("Error on trying save->update record. Nothing is saved!");
+					if(SHOW_DEBUG===true) {
+						throw new Exception("Error Processing Request. Returned id_matrix on save (update) section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
+					}
+				}
 
 		}else{ # NEW RECORD
 
@@ -880,9 +895,9 @@ class section extends common {
 						// }
 
 					// Update modified section data . Resolve and add creation date and user to current section dato
-						$this->update_modified_section_data(array(
+						$this->update_modified_section_data((object)[
 							'mode' => 'new_record'
-						));
+						]);
 
 					// Components container
 						if (!empty($options->main_components_obj)) {
@@ -926,10 +941,10 @@ class section extends common {
 					#$JSON_RecordObj_matrix->set_section_id($this->section_id);
 					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
-					if ($saved_id_matrix < 1 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+					if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 						trigger_error("Error on trying save->insert record. Nothing is saved!");
 						if(SHOW_DEBUG===true) {
-							throw new Exception("Error Processing Request. Returned section_id on save section is mandatory. Received section_id: $this->section_id ", 1);
+							throw new Exception("Error Processing Request. Returned id_matrix on save section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
 						}
 					}
 

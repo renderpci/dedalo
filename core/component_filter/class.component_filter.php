@@ -178,9 +178,11 @@ class component_filter extends component_relation_common {
 	*/
 	public function propagate_filter() {
 
-		$section_id 			= $this->get_parent();
-		$section_tipo 			= $this->get_section_tipo();
-		$section 				= section::get_instance($section_id, $section_tipo);
+		$section_id		= $this->get_parent();
+		$section_tipo	= $this->get_section_tipo();
+		// $section		= section::get_instance($section_id, $section_tipo);
+		$section		= $this->get_my_section();
+
 		$component_dato_filter  = $this->get_dato();
 
 		$dato_filter =[];

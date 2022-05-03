@@ -738,17 +738,11 @@ class component_relation_common extends component_common {
 	*/
 	public function load_component_dataframe() : bool {
 
-		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
-			return false;
-		}
-
-		if (empty($this->section_tipo)) {
-			if(SHOW_DEBUG===true) {
-				$msg = " Error Processing Request. section tipo not found for component $this->tipo";
-				#throw new Exception("$msg", 1);
-				debug_log(__METHOD__.$msg);
+		// check vars
+			if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+				return false;
 			}
-		}
+
 		$dato = $this->get_dato();
 
 		$this->dataframe = [];
@@ -950,8 +944,9 @@ class component_relation_common extends component_common {
 			}
 
 		// section : Preparamos la sección que será la que se encargue de salvar el dato del componente
-			$section 	= section::get_instance($parent, $section_tipo);
-			$section_id = $section->save_component_dato($this, 'relation');
+			// $section	= section::get_instance($parent, $section_tipo);
+			$section	= $this->get_my_section();
+			$section_id	= $section->save_component_dato($this, 'relation');
 
 
 		// activity
