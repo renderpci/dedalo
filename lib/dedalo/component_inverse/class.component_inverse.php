@@ -5,7 +5,7 @@
 *
 */
 class component_inverse extends component_common {
-	
+
 
 
 	/**
@@ -15,14 +15,15 @@ class component_inverse extends component_common {
 	*/
 	public function get_dato() {
 
-		$section = section::get_instance($this->parent, $this->section_tipo);
+		// $section = section::get_instance($this->parent, $this->section_tipo);
+		$section = $this->get_my_section();
 		$dato 	 = $section->get_inverse_locators();
 
 		return (array)$dato;
 	}//end get_dato
 
 
-	
+
 	/**
 	* GET_VALOR
 	* @return string $valor
@@ -51,7 +52,7 @@ class component_inverse extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
+
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
@@ -59,7 +60,7 @@ class component_inverse extends component_common {
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
-		
+
 		# Use already query calculated values for speed
 		$ar_records   = (array)json_handler::decode($value);
 		$component->set_dato($ar_records);
@@ -79,7 +80,7 @@ class component_inverse extends component_common {
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
-		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
+		# When is received 'valor', set as dato to avoid trigger get_dato against DB
 		# Received 'valor' is a json string (array of locators) from previous database search
 		if (!is_null($valor)) {
 			$dato = json_decode($valor);
@@ -87,8 +88,8 @@ class component_inverse extends component_common {
 		}else{
 			$dato = $this->get_dato();
 		}
-		
-			
+
+
 		$inverse_show = $this->get_propiedades()->inverse_show;
 
 		$ar_lines = [];
@@ -135,20 +136,20 @@ class component_inverse extends component_common {
 					$label = RecordObj_dd::get_termino_by_tipo($component_tipo, $lang);
 					$line .= $label;
 				}
-			}			
-			
+			}
+
 			$ar_lines[] = $line;
 		}
 		$lines = implode(PHP_EOL, $ar_lines);
-		
-		
+
+
 		return $lines;
 	}//end get_valor_export
 
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
@@ -161,7 +162,7 @@ class component_inverse extends component_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -175,7 +176,7 @@ class component_inverse extends component_common {
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
 	public static function get_search_query($json_field, $search_tipo, $tipo_de_dato_search=null, $current_lang=null, $search_value='', $comparison_operator='=') {
-		
+
 		debug_log(__METHOD__." DISABLED OPTION !!! ".to_string(), logger::ERROR);
 	}//end get_search_query
 
@@ -187,13 +188,13 @@ class component_inverse extends component_common {
 	*/
 	public function get_inverse_value($locator) {
 
-		$tipo = $this->get_tipo();			
-		
+		$tipo = $this->get_tipo();
+
 		$ar_look_section_tipo = common::get_ar_related_by_model('section', $tipo);
 		if (!isset($ar_look_section_tipo[0])) {
 			return null;
 		}
-		$look_section_tipo = $ar_look_section_tipo[0];		
+		$look_section_tipo = $ar_look_section_tipo[0];
 		if ($locator->from_section_tipo!==$look_section_tipo) {
 			//debug_log(__METHOD__." Ignored section tipo ".to_string(), logger::DEBUG);
 			return null;
@@ -202,10 +203,10 @@ class component_inverse extends component_common {
 		$ar_value=array();
 		$ar_related = $this->RecordObj_dd->get_relaciones();
 		foreach ($ar_related as $key => $value) {
-			#dump($value, ' value ++ '.to_string()); 
+			#dump($value, ' value ++ '.to_string());
 			$current_tipo = reset($value);
 			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			if ($modelo_name!=='section') {			
+			if ($modelo_name!=='section') {
 				# Components
 				$component = component_common::get_instance( $modelo_name,
 															 $current_tipo,
@@ -222,12 +223,12 @@ class component_inverse extends component_common {
 		#dump($ar_value, ' $ar_value ++ '.$look_section_tipo.' -- '.to_string($locator));
 		$inverse_value = implode('/ ',$ar_value);
 
-		
-		return (string)$inverse_value;	
+
+		return (string)$inverse_value;
 	}//end get_inverse_value
 
-	
-	
-	
+
+
+
 }//end class component_inverse
 ?>

@@ -5,10 +5,10 @@
 require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.PdfObj.php');
 
 class component_pdf extends component_common {
-	
+
 
 	# file name formated as 'tipo'-'order_id' like dd732-1
-	public $pdf_id ; 
+	public $pdf_id ;
 	public $pdf_url ;
 	public $quality ;
 
@@ -17,12 +17,12 @@ class component_pdf extends component_common {
 
 	public $initial_media_path;	# A optional file path to files to conform path as /media/images/my_initial_media_path/<1.5MB/..
 
-	public $PdfObj ; # Instance of PdfObj with current data 
+	public $PdfObj ; # Instance of PdfObj with current data
 
-	
+
 	# COMPONENT_PDF COSNTRUCT
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
-		
+
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
@@ -43,7 +43,7 @@ class component_pdf extends component_common {
 			$locator = new locator();
 				$locator->set_component_tipo($this->tipo);
 				$locator->set_section_tipo($this->section_tipo);
-				$locator->set_section_id($this->parent);			
+				$locator->set_section_id($this->parent);
 			# END DEFAULT DATO
 			######################################################################################################
 
@@ -51,7 +51,7 @@ class component_pdf extends component_common {
 			$this->set_dato($locator);
 			$need_save=true;
 		}//end if(empty($dato->counter) && $this->parent>0)
-		
+
 
 			#
 			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
@@ -77,14 +77,14 @@ class component_pdf extends component_common {
 				$total=round(microtime(true)-$start_time,3);
 				$name = RecordObj_dd::get_termino_by_tipo($this->tipo,true);
 				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
-			}		
+			}
 		}//end if ($need_save)
-		
+
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 		*/
-		
+
 		return true;
 	}//end __construct
 
@@ -97,7 +97,7 @@ class component_pdf extends component_common {
 	* @return int $section_id
 	*/
 	public function Save() {
-		
+
 		$section_id = $this->get_parent();
 
 		return (int)$section_id;
@@ -124,7 +124,7 @@ class component_pdf extends component_common {
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
-			$dato 		= trim($component->get_valor(0));			
+			$dato 		= trim($component->get_valor(0));
 
 			# Add / at begin if not exits
 			if ( substr($dato, 0, 1) != '/' ) {
@@ -137,7 +137,7 @@ class component_pdf extends component_common {
 			}
 
 			$ar_aditional_path[$this->pdf_id] = $dato;
-			
+
 			if(isset($propiedades->max_items_folder) && empty($dato)) {
 
 				$max_items_folder  = $propiedades->max_items_folder;
@@ -163,9 +163,10 @@ class component_pdf extends component_common {
 	*
 	*/
 	public function get_initial_media_path() {
-		$component_tipo = $this->tipo;
-		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$propiedades 	= $parent_section->get_propiedades();
+		$component_tipo		= $this->tipo;
+		// $parent_section	= section::get_instance($this->parent,$this->section_tipo);
+		$parent_section		= $this->get_my_section();
+		$propiedades		= $parent_section->get_propiedades();
 
 		if (isset($propiedades->initial_media_path->$component_tipo)) {
 			$this->initial_media_path = $propiedades->initial_media_path->$component_tipo;
@@ -191,10 +192,10 @@ class component_pdf extends component_common {
 
 	# SET_DATO
 	public function set_dato($dato) {
-		
+
 		parent::set_dato( (object)$dato );
 	}//end set_dato
-	
+
 
 
 	/**
@@ -203,10 +204,10 @@ class component_pdf extends component_common {
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	*/
 	public function get_valor() {
-		
+
 		return $this->valor = $this->get_pdf_id() ;
 	}//end get_valor
-	
+
 
 
 	/**
@@ -217,13 +218,13 @@ class component_pdf extends component_common {
 	public function get_pdf_id() {
 
 		if(isset($this->pdf_id)) return $this->pdf_id;
-		
+
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
 			if(SHOW_DEBUG===true) {
 				trigger_error(__METHOD__." Component dato (parent:$this->parent,section_tipo:$this->section_tipo) is empty for: ".to_string($dato));
 			}
-			return 0;	
+			return 0;
 		}
 		$locator  = new locator($dato);
 		$pdf_id	  = $locator->get_flat();
@@ -232,19 +233,19 @@ class component_pdf extends component_common {
 		if ($this->traducible==='si') {
 		$pdf_id .= '_'.DEDALO_DATA_LANG;
 		}
-		
+
 
 		return $this->pdf_id = $pdf_id;
 	}//end get_pdf_id
 
 
-	
+
 	/**
 	* GET QUALITY
 	*/
 	public function get_quality() {
 		if(!isset($this->quality))	return DEDALO_PDF_QUALITY_DEFAULT;
-		
+
 		return $this->quality;
 	}//end get_quality
 
@@ -254,20 +255,20 @@ class component_pdf extends component_common {
 	* UPLOAD NEEDED
 	*/
 	public function get_target_filename() {
-		
+
 		return $this->pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 	}//end get_target_filename
 	public function get_target_dir() {
-		
+
 		#return DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();
 	}//end get_target_dir
-	
+
 
 
 	# OVERRIDE COMPONENT_COMMON METHOD
 	public function get_ar_tools_obj() {
-		
+
 		# Remove common tools (time machine and lang)
 		#unset($this->ar_tools_name);
 		$this->ar_tools_name = array();
@@ -275,7 +276,7 @@ class component_pdf extends component_common {
 		# Add tool_image_versions
 		$this->ar_tools_name[] = 'tool_pdf_versions';
 		$this->ar_tools_name[] = 'tool_transcription';
-		
+
 		return parent::get_ar_tools_obj();
 	}//end get_ar_tools_obj
 
@@ -289,7 +290,7 @@ class component_pdf extends component_common {
 		if(!$quality)
 		$quality 	= DEDALO_PDF_QUALITY_DEFAULT;
 		$pdf_id 	= $this->get_pdf_id();
-		
+
 		#$file 		= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $quality .'/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 		#if(!file_exists($file)) $pdf_id = '0';
 
@@ -303,7 +304,7 @@ class component_pdf extends component_common {
 		$pdf_id 	= $this->get_pdf_id();
 
 		if (!isset($this->PdfObj)) {
-			throw new Exception("Error Processing Request (get_pdf_url)", 1);			
+			throw new Exception("Error Processing Request (get_pdf_url)", 1);
 		}
 
 		$PdfObj = (object)$this->PdfObj;
@@ -312,12 +313,12 @@ class component_pdf extends component_common {
 		# FILE EXISTS TEST : If not, show '0' dedalo image logo
 		$file 		= $PdfObj->get_local_full_path();
 		#if(!file_exists($file)) $pdf_id = '0';
-	
+
 		return $PdfObj->get_media_path() . $pdf_id .'.'. $PdfObj->get_extension();
 	}//end get_pdf_url
 
 
-	
+
 	/**
 	* GET_PDF_PATH complete absolute file path like '/Users/myuser/works/Dedalo/pdf/standar/dd152-1.pdf'
 	* @param string $quality default false
@@ -326,21 +327,21 @@ class component_pdf extends component_common {
 	public function get_pdf_path($quality=false) {
 		/*
 		if(!$quality) {
-		$quality 	= $this->get_quality();	
+		$quality 	= $this->get_quality();
 		}
-		
+
 		$pdf_id 	= $this->get_pdf_id();
 		$pdf_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $quality . '/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 
 		return $pdf_path;
 		*/
 		if(!$quality) {
-		$quality = $this->get_quality();	
-		}		
+		$quality = $this->get_quality();
+		}
 
 		$PdfObj = $this->PdfObj;
 		$PdfObj->set_quality($quality);
-			
+
 		return $PdfObj->get_local_full_path();
 	}//end get_pdf_path
 
@@ -351,7 +352,7 @@ class component_pdf extends component_common {
 	* Alias of $ImageObj->get_size()
 	*/
 	public function get_pdf_size($quality=false) {
-		
+
 		if(!$quality)
 		$quality 	= $this->get_quality();
 		$pdf_id 	= $this->get_pdf_id();
@@ -370,7 +371,7 @@ class component_pdf extends component_common {
 		$quality 	= $this->get_quality();
 		$pdf_id 	= $this->get_pdf_id();
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
-		
+
 		return $PdfObj->get_file_exists();
 	}//end get_file_exists
 
@@ -388,13 +389,13 @@ class component_pdf extends component_common {
 
 		#
 		# PDF remove
-		$ar_quality = (array)unserialize(DEDALO_PDF_AR_QUALITY);		
+		$ar_quality = (array)unserialize(DEDALO_PDF_AR_QUALITY);
 		foreach ($ar_quality as $current_quality) {
 			# media_path
 			$media_path = $this->get_pdf_path($current_quality);
-			
+
 			if (!file_exists($media_path)) continue; # Skip
-			
+
 			# move / rename file
 			#$folder_path_del 	= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $current_quality . '/deleted';
 			$folder_path_del 	= $this->get_target_dir()  . 'deleted';
@@ -406,15 +407,15 @@ class component_pdf extends component_common {
 			}
 
 			$pdf_id 			= $this->get_pdf_id();
-			$media_path_moved 	= $folder_path_del . "/$pdf_id" . '_deleted_' . $date . '.' . DEDALO_PDF_EXTENSION;			
+			$media_path_moved 	= $folder_path_del . "/$pdf_id" . '_deleted_' . $date . '.' . DEDALO_PDF_EXTENSION;
 			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 
 			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-				error_log($msg);				
+				error_log($msg);
 			}
 		}//end foreach
-		
+
 
 		return true;
 	}//end remove_component_media_files
@@ -437,17 +438,17 @@ class component_pdf extends component_common {
 			# media_path
 			$media_path = $this->get_target_dir().'/deleted';
 			$pdf_id 	= $this->get_pdf_id();
-			
+
 			$file_pattern 	= $media_path.'/'.$pdf_id.'_*.'.DEDALO_PDF_EXTENSION;
 			$ar_files 		= glob($file_pattern);
-			
+
 			if (empty($ar_files)) {
 				error_log("No files to restore were found for pdf_id:$pdf_id. Nothing was restored (1)");
 				continue; // Skip
 			}
 			natsort($ar_files);	# sort the files from newest to oldest
 			$last_file_path = end($ar_files);
-			$new_file_path 	= $this->get_pdf_path($current_quality);		
+			$new_file_path 	= $this->get_pdf_path($current_quality);
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
 			if(SHOW_DEBUG===true) {
@@ -482,7 +483,7 @@ class component_pdf extends component_common {
 		if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
 			define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
 		}
-		
+
 		$file_name  = $this->get_pdf_id();
 		$thumb_path = DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
@@ -496,7 +497,7 @@ class component_pdf extends component_common {
 			}
 			return $url;
 		}
-		
+
 		#
 		# THUMB NOT EXISTS: GENERATE FROM PDF
 		$path = $this->get_pdf_path();
@@ -511,7 +512,7 @@ class component_pdf extends component_common {
 			#$flags 		= '-debug all';
 			#$flags 		= " -scale 200x200 -background white -flatten ";
 			$command 	= MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
-			
+
 			exec($command.' 2>&1', $output, $result);
 
 			if ($result===0) {
@@ -529,7 +530,7 @@ class component_pdf extends component_common {
 			}
 		}
 
-		return $url;		
+		return $url;
 	}//end get_pdf_thumb
 
 
@@ -550,8 +551,8 @@ class component_pdf extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
-		#if (empty($value)) {	
+
+		#if (empty($value)) {
 			$modelo_name = 'component_pdf';
 			$component 	 = component_common::get_instance($modelo_name,
 														  $tipo,
@@ -585,7 +586,7 @@ class component_pdf extends component_common {
 
 			return (string)$diffusion_value;
 		}
-		
+
 		return null;
 	}//end get_diffusion_value
 
@@ -597,7 +598,7 @@ class component_pdf extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
-		
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
@@ -606,7 +607,7 @@ class component_pdf extends component_common {
 
 		$force_create 	= false;
 		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg';
-	
+
 		$valor 			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
 
 		return $valor;
@@ -623,7 +624,7 @@ class component_pdf extends component_common {
 		$modelo_name = 'component_text_area';
 		$related_component_text_area_tipo = common::get_ar_related_by_model($modelo_name, $this->tipo);
 
-		return $related_component_text_area_tipo;		
+		return $related_component_text_area_tipo;
 	}//end get_related_component_text_area_tipo
 
 

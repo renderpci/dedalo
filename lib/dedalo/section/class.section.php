@@ -431,6 +431,10 @@ class section extends common {
 		##		throw new Exception("Error Processing Request. Section Dato is not object", 1);
 		##	}
 
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
+
 		#
 		# COMPONENT_GLOBAL_DATO : Extrae la parte del componente desde el objeto global de la sección
 		$component_tipo 		= $component_obj->get_tipo();
@@ -512,6 +516,10 @@ class section extends common {
 	* @return
 	*/
 	public function set_component_direct_dato( $component_obj ) {
+
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
 
 		$dato = $this->get_dato();
 
@@ -672,6 +680,10 @@ class section extends common {
 	* @return object $this->dato
 	*/
 	public function set_component_relation_dato( $component_obj ) {
+
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
 
 		$component_tipo			= $component_obj->get_tipo();
 		$component_dato			= $component_obj->get_dato();

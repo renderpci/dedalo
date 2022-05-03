@@ -139,9 +139,10 @@ class component_image extends component_common {
 	* GET_INITIAL_MEDIA_PATH
 	*/
 	public function get_initial_media_path() {
-		$component_tipo = $this->tipo;
-		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$propiedades 	= $parent_section->get_propiedades();
+		$component_tipo		= $this->tipo;
+		// $parent_section	= section::get_instance($this->parent,$this->section_tipo);
+		$parent_section		= $this->get_my_section();
+		$propiedades		= $parent_section->get_propiedades();
 			#dump($propiedades," propiedades component_tipo:$component_tipo");
 			#dump($propiedades->initial_media_path->$component_tipo," ");
 

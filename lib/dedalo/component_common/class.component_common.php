@@ -463,7 +463,8 @@ abstract class component_common extends common {
 	*/
 	public function get_dato_full() {
 
-		$section = section::get_instance($this->parent, $this->section_tipo);
+		// $section = section::get_instance($this->parent, $this->section_tipo);
+		$section = $this->get_my_section();
 
 		$all_component_data = $section->get_all_component_data($this->tipo);
 
@@ -508,7 +509,8 @@ abstract class component_common extends common {
 						debug_log(__METHOD__.$msg);
 					}
 				}
-				$section = section::get_instance($this->parent, $this->section_tipo);
+				// $section = section::get_instance($this->parent, $this->section_tipo);
+				$section = $this->get_my_section();
 
 			# Fix dato
 			# El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.
@@ -750,8 +752,9 @@ abstract class component_common extends common {
 
 
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
-		$section 	= section::get_instance($parent, $section_tipo);
-		$section_id = $section->save_component_dato($this, 'direct');
+		// $section	= section::get_instance($parent, $section_tipo);
+		$section	= $this->get_my_section();
+		$section_id	= $section->save_component_dato($this, 'direct');
 
 		if(SHOW_DEBUG===true) {
 			#$section->get_dato();
@@ -1000,7 +1003,7 @@ abstract class component_common extends common {
 
 			if ( $tool_name==='tool_add_component_data' && !in_array(get_called_class(), component_relation_common::get_components_with_relations()) ) {
 				continue; // Skip. Only suitable for component_relation_common (portals, autocomplete, etc...)
-			}	
+			}
 
 			$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
 
@@ -2598,9 +2601,10 @@ abstract class component_common extends common {
 				throw new Exception("Error Processing Request", 1);
 			}
 		}
-		$section_tipo 	= $this->section_tipo;
-		$section 		= section::get_instance($this->parent,$section_tipo);
-		$section_dato 	= $section->get_dato();
+		$section_tipo	= $this->section_tipo;
+		// $section		= section::get_instance($this->parent,$section_tipo);
+		$section		= $this->get_my_section();
+		$section_dato	= $section->get_dato();
 
 		if (isset($section_dato->components->$tipo->dato)) {
 			$component_dato_full = $section_dato->components->$tipo->dato;
@@ -3845,7 +3849,8 @@ abstract class component_common extends common {
 					debug_log(__METHOD__.$msg);
 				}
 			}
-			$section = section::get_instance($this->parent, $this->section_tipo);
+			// $section = section::get_instance($this->parent, $this->section_tipo);
+			$section = $this->get_my_section();
 
 			# Fix dataframe
 			$component_data 	= $section->get_all_component_data($this->tipo);
@@ -4148,9 +4153,9 @@ abstract class component_common extends common {
 				: 'valor_list';
 
 			if (isset($end_path->lang) && $end_path->lang==='all') {
-	      		
+
 	      		$select_object->component_path = ['components',$component_tipo,$selector];
-	      	
+
 	      	}else{
 
 		      	if (isset($end_path->lang)) {
@@ -4161,7 +4166,7 @@ abstract class component_common extends common {
 					$default_lang = ($traducible!=='si')
 						? DEDALO_DATA_NOLAN
 						: DEDALO_DATA_LANG;
-					
+
 					$lang = $default_lang;
 				}
 
@@ -4598,11 +4603,19 @@ abstract class component_common extends common {
 
 	/**
 	* GET_MY_SECTION
-	* @return
+	* Creates or get from memory the component section object
+	* @return object $this->section_obj
 	*/
-	public function get_my_section() {
+	public function get_my_section() : object {
 
-		return section::get_instance($this->parent, $this->section_tipo);
+		if (isset($this->section_obj)) {
+			return $this->section_obj;
+		}
+
+		$this->section_obj = section::get_instance($this->parent, $this->section_tipo, true);
+
+
+		return $this->section_obj;
 	}//end get_my_section
 
 

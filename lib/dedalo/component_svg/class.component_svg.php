@@ -15,7 +15,7 @@ class component_svg extends component_common {
 	*/
 	public function get_valor() {
 
-		return $this->valor = $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;	
+		return $this->valor = $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
 	}//end get_valor
 
 
@@ -26,16 +26,16 @@ class component_svg extends component_common {
 	* @return string $valor_export
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
-			
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
-		
+
 		$valor = $this->get_url(true);
-		
-		
+
+
 		return $valor;
 	}//end get_valor_export
 
@@ -51,7 +51,7 @@ class component_svg extends component_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value($lang=null) {
-		
+
 		$diffusion_value = $this->get_url($absolute=false, $test_file=true, $default_add=false);
 
 		if (empty($diffusion_value)) {
@@ -59,7 +59,7 @@ class component_svg extends component_common {
 		}
 
 		return (string)$diffusion_value;
-	}//end get_diffusion_value	
+	}//end get_diffusion_value
 
 
 
@@ -76,7 +76,7 @@ class component_svg extends component_common {
 		# Default value
 		$svg_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 
-		
+
 		# CASE REFERENCED NAME : If isset propiedades "svg_id" overwrite name with field ddx content
 		$propiedades = $this->get_propiedades();
 		if (isset($propiedades->svg_id)) {
@@ -97,7 +97,7 @@ class component_svg extends component_common {
 
 		# Fix value
 		$this->svg_id = $svg_id;
-		
+
 
 		return $svg_id;
 	}//end get_svg_id
@@ -110,9 +110,10 @@ class component_svg extends component_common {
 	public function get_initial_media_path() {
 
 		$component_tipo = $this->tipo;
-		$parent_section = section::get_instance($this->parent,$this->section_tipo);
+		// $parent_section = section::get_instance($this->parent,$this->section_tipo);
+		$parent_section = $this->get_my_section();
 		$propiedades 	= $parent_section->get_propiedades();
-			#dump($propiedades," propiedades component_tipo:$component_tipo"); 
+			#dump($propiedades," propiedades component_tipo:$component_tipo");
 			#dump($propiedades->initial_media_path->$component_tipo," ");
 
 		if (isset($propiedades->initial_media_path->$component_tipo)) {
@@ -144,9 +145,9 @@ class component_svg extends component_common {
 		$parent 		= $this->get_parent();
 		$section_tipo 	= $this->get_section_tipo();
 
-		$propiedades = $this->get_propiedades();		
-		if (isset($propiedades->aditional_path) && !empty($parent) ) {			
-			
+		$propiedades = $this->get_propiedades();
+		if (isset($propiedades->aditional_path) && !empty($parent) ) {
+
 			$component_tipo 	= $propiedades->aditional_path;
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 			= component_common::get_instance($component_modelo,
@@ -155,7 +156,7 @@ class component_svg extends component_common {
 																 'edit',
 																 DEDALO_DATA_NOLAN,
 																 $section_tipo);
-			$dato = trim($component->get_valor(0));			
+			$dato = trim($component->get_valor(0));
 
 			# Add / at begin if not exits
 			if ( substr($dato, 0, 1)!=='/' ) {
@@ -178,7 +179,7 @@ class component_svg extends component_common {
 
 				$aditional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
-				# Final dato must be an array to saved into component_input_text 
+				# Final dato must be an array to saved into component_input_text
 				$final_dato = array( $aditional_path );
 				$component->set_dato( $final_dato );
 				$component->Save();
@@ -193,7 +194,7 @@ class component_svg extends component_common {
 
 		}//end if (isset($propiedades->aditional_path) && !empty($parent) )
 
-		# Fix 
+		# Fix
 		$this->aditional_path = $aditional_path;
 
 		return $aditional_path;
@@ -206,7 +207,7 @@ class component_svg extends component_common {
 	* @return string $file_name
 	*/
 	public function get_file_name() {
-		
+
 		$file_name = $this->tipo .'_'. $this->section_tipo .'_'. $this->parent;
 
 		return $file_name;
@@ -221,7 +222,7 @@ class component_svg extends component_common {
 	public function get_file_path() {
 
 		$aditional_path = $this->get_aditional_path();
-		
+
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
 		$file_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
 
@@ -237,7 +238,7 @@ class component_svg extends component_common {
 	public function get_target_dir() {
 
 		$aditional_path = $this->get_aditional_path();
-	
+
 		$target_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER . $aditional_path;
 
 		return $target_dir;
@@ -266,7 +267,7 @@ class component_svg extends component_common {
 	public function get_url($absolute=false, $test_file=true, $default_add=false) {
 
 		$aditional_path = $this->get_aditional_path();
-		
+
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
 		$url 		= DEDALO_MEDIA_BASE_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
 
@@ -304,7 +305,7 @@ class component_svg extends component_common {
 			}
 			return null;
 		}
-		
+
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
 		$component		= component_common::get_instance($modelo_name,
 														 $locator->component_tipo,
@@ -313,7 +314,7 @@ class component_svg extends component_common {
 														 DEDALO_DATA_NOLAN,
 														 $locator->section_tipo);
 		$url = $component->get_url();
-	
+
 		return $url;
 	}//end get_url_from_locator
 
@@ -322,9 +323,9 @@ class component_svg extends component_common {
 	/**
 	* GET_AR_TOOLS_OBJ
 	* Override component_common method
-	*/	
+	*/
 	public function get_ar_tools_obj() {
-		
+
 		# Remove common tools (time machine and lang)
 		#unset($this->ar_tools_name);
 		$this->ar_tools_name = array();
@@ -334,7 +335,7 @@ class component_svg extends component_common {
 
 		# Add tool_image_versions
 		$this->ar_tools_name[] = 'tool_upload';
-		
+
 		return parent::get_ar_tools_obj();
 	}//end get_ar_tools_obj
 
@@ -358,9 +359,9 @@ class component_svg extends component_common {
 	* In time machine mode (list_tm) image is always calculated
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+
 		#if ( (empty($value) && $modo==='portal_list') || $modo==='list_tm' || $modo==='portal_list_view_mosaic' || $modo==='edit' || $modo==='edit_in_list') {
-			
+
 			$component	= component_common::get_instance(__CLASS__,
 														 $tipo,
 														 $parent,

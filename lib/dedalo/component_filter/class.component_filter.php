@@ -3,9 +3,9 @@
 * CLASS COMPONENT FILTER
 
 1 - Get the section_id of the user
-2 - With the user 
+2 - With the user
 1 - Despejamos el section_id de usuario
-2 - Con el despejamos el component_filter_master 
+2 - Con el despejamos el component_filter_master
 3 - Averiguamos si es admin mediante component-security-administrator (valor 1)
 4 -  Si es usuario cogemos los datos del component_filter_master y su relación (tipo) para resolver la etiqueta
 5 - Generamos los checkbox de selección con las secciones obtenidas y con la etiqueta despejada del tipo (dd156)
@@ -32,8 +32,8 @@ class component_filter extends component_relation_common {
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
-	
-	
+
+
 	/**
 	* __CONSTRUCT
 	* Component constructor
@@ -63,10 +63,10 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DATO
-	* @return 
+	* @return
 	*/
 	public function set_dato( $dato ) {
-		
+
 		# For safe compatibility backwards
 		$dato = self::convert_dato_pre_490( $dato, $this->tipo );
 
@@ -81,7 +81,7 @@ class component_filter extends component_relation_common {
 	* @see component_filter_master->get_dato() for maintain unyfied format of projetcs
 	*/
 	public function get_dato() {
-		
+
 		# Select the correct update from file updates
 		$current_version = (array)tool_administration::get_current_version_in_db();
 		if($current_version[0] <= 4 && $current_version[1] <= 8) {
@@ -89,20 +89,21 @@ class component_filter extends component_relation_common {
 			if(isset($this->dato_resolved)) {
 				return $this->dato_resolved;
 			}
-				
-			$ar_path 	= ['components', $this->tipo, 'dato', DEDALO_DATA_NOLAN];
-			$section 	= section::get_instance($this->parent, $this->section_tipo);			
-			$dato 		= $section->get_dato_in_path($ar_path);
-			
+
+			$ar_path	= ['components', $this->tipo, 'dato', DEDALO_DATA_NOLAN];
+			// $section	= section::get_instance($this->parent, $this->section_tipo);
+			$section	= $this->get_my_section();
+			$dato		= $section->get_dato_in_path($ar_path);
+
 			$this->dato = $dato; // Old dato format (<4.9)
 			$this->bl_loaded_matrix_data = true;
 
 			#return (array)$dato; // Stop and returns old dato !
 		}else{
-			
+
 			// Call to parent class component_relation_common
 			$dato = parent::get_dato();
-		}		
+		}
 
 		return (array)$dato;
 	}//end get_dato
@@ -125,7 +126,7 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DEFAULT_DATO_FOR_USER
-	* @return array $default_dato 
+	* @return array $default_dato
 	*/
 	protected function set_default_dato_for_user($user_id) {
 
@@ -214,20 +215,20 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SAVE OVERRIDE
-	* Overwrite component_common method 
+	* Overwrite component_common method
 	*/
 	public function Save() {
-	
+
 		# Salvamos normalmente pero guardamos el resultado
 		$parent_save_result = parent::Save();
 
-		# 
+		#
 		# ACTIVITY CASE Logger only
-		if( $this->tipo === logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) return $parent_save_result; 
-		
+		if( $this->tipo === logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) return $parent_save_result;
+
 		#
 		# PORTAL CASE
-		# Si la sección a que pertenece este componente tiene portal, propagaremos los cambios a todos los recursos 
+		# Si la sección a que pertenece este componente tiene portal, propagaremos los cambios a todos los recursos
 		# existentes en el portal de esta sección (si los hay)
 		if ($this->propagate_filter) {
 			$this->propagate_filter();
@@ -238,18 +239,19 @@ class component_filter extends component_relation_common {
 	}//end Save
 
 
-	
+
 	/**
 	* PROPAGATE_FILTER
 	* Propagate all current filter dato (triggered when save) to component_filters of children portals (recursive)
 	*/
 	public function propagate_filter() {
 
-		$section_id 			= $this->get_parent();		
-		$section_tipo 			= $this->get_section_tipo();
-		$section 				= section::get_instance($section_id, $section_tipo);
-		$component_dato_filter  = $this->get_dato();
-	
+		$section_id				= $this->get_parent();
+		$section_tipo			= $this->get_section_tipo();
+		// $section				= section::get_instance($section_id, $section_tipo);
+		$section				= $this->get_my_section();
+		$component_dato_filter	= $this->get_dato();
+
 		$dato_filter =[];
 		foreach ((array)$component_dato_filter as $current_locator) {
 			if (isset($current_locator->section_tipo) && isset($current_locator->section_id)) {
@@ -259,7 +261,7 @@ class component_filter extends component_relation_common {
 				$dato_filter = [$locator];
 			}else{
 				debug_log(__METHOD__." IGNORED INVALID LOCATOR ($section_tipo, $section_id) ".to_string($current_locator), logger::ERROR);
-			}			
+			}
 		}
 
 		$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section('component_portal');
@@ -268,30 +270,30 @@ class component_filter extends component_relation_common {
 			if (!empty($component_portal->dato)) {
 				$component_portal->propagate_filter($dato_filter);
 					#dump($component_portal,'$component_portal propagando filtro....');
-			}			
+			}
 		}
 
 		return true;
 	}//end propagate_filter
 
 
-	
+
 	/**
 	* GET VALOR
 	* Devuelve los valores del array 'dato' separados por '<br>'
 	* @return string $html | array $ar_final
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='html' ) {
-		
+
 		$ar_proyectos_for_current_section = self::get_ar_projects_for_current_section();
-		
+
 		$dato 		= $this->get_dato();
-		$ar_final 	= array();		
+		$ar_final 	= array();
 		foreach ((array)$ar_proyectos_for_current_section as $key => $row) {
-			if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']				
+			if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
 				$ar_final[] = $row;
 			}
-		}//end foreach ($ar_proyectos_for_current_section as $section_id => $name) 
+		}//end foreach ($ar_proyectos_for_current_section as $section_id => $name)
 
 		$ar_label = [];
 		foreach ($ar_final as $row) {
@@ -322,7 +324,7 @@ class component_filter extends component_relation_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
-		
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
@@ -330,7 +332,7 @@ class component_filter extends component_relation_common {
 		}
 
 		$valor_export = $this->get_valor($lang, 'html');
-	
+
 
 		return $valor_export;
 	}//end get_valor_export
@@ -343,7 +345,7 @@ class component_filter extends component_relation_common {
 	* @return array $ar_projects
 	*/
 	public function get_ar_projects_for_current_section() {
-	
+
 		# User loged now
 		$user_id 	 = navigator::get_user_id();
 		$ar_projects = filter::get_user_authorized_projects($user_id, $this->tipo);
@@ -359,7 +361,7 @@ class component_filter extends component_relation_common {
 	public static function get_stats_value( $tipo, $ar_value ) {
 
 		if(!isset($stats_value)) static $stats_value;
-	
+
 		if( !is_array($ar_value) ) $ar_value = array('' => 1 );
 
 		foreach ($ar_value as $key => $value) {
@@ -367,7 +369,7 @@ class component_filter extends component_relation_common {
 			if(!isset($stats_value[$tipo][$key])) $stats_value[$tipo][$key] = 0;
 			$stats_value[$tipo][$key] = $stats_value[$tipo][$key] + 1;
 		}
-		
+
 		return $stats_value[$tipo];
 	}//end get_stats_value
 
@@ -378,10 +380,10 @@ class component_filter extends component_relation_common {
 	*/
 	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
 
-		$caller_component = get_called_class();	
-		
-		#dump($current_stats_value ,'$current_stats_value ');		
-		
+		$caller_component = get_called_class();
+
+		#dump($current_stats_value ,'$current_stats_value ');
+
 		$current_component = component_common::get_instance($caller_component,$tipo,NULL,'stats');
 
 		# DATO : Component filter está pensado para albergar un arary de proyectos en formato
@@ -396,7 +398,7 @@ class component_filter extends component_relation_common {
 		# AR FINAL : Formateamos el array final de salida resuelto
 		foreach ($current_stats_value as $key => $value) {
 			if(isset($valor[$key]))
-				$ar_final[$valor[$key]] = $value;			
+				$ar_final[$valor[$key]] = $value;
 		}
 
 		$label 		= RecordObj_dd::get_termino_by_tipo( $tipo, null, true ).':'.$stats_model;
@@ -413,12 +415,12 @@ class component_filter extends component_relation_common {
 	*/
 	public static function get_stats_value_resolved_activity( $value ) {
 
-		$caller_component = get_called_class();	
-		
+		$caller_component = get_called_class();
+
 		#dump($current_stats_value ,'$current_stats_value ');
 
-		$proyectos_tipo = logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ;		
-		
+		$proyectos_tipo = logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ;
+
 		$current_component = component_common::get_instance($caller_component,$proyectos_tipo,NULL,'stats');
 
 		# DATO : Component filter está pensado para albergar un arary de proyectos en formato
@@ -432,7 +434,7 @@ class component_filter extends component_relation_common {
 			#dump($valor,'valor');
 
 		$valor = $ar_valor[$value];
-		
+
 		return $valor;
 	}//end get_stats_value_resolved_activity
 
@@ -446,7 +448,7 @@ class component_filter extends component_relation_common {
 	public function get_valor_lang(){
 
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
+
 		if(empty($relacionados)){
 			return $this->lang;
 		}
@@ -465,13 +467,13 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		
+
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators
 
@@ -542,7 +544,7 @@ class component_filter extends component_relation_common {
 						debug_log(__METHOD__." No project found in $options->section_tipo - $options->tipo - $options->section_id ".to_string(), logger::DEBUG);
 						$response = new stdClass();
 						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 						return $response;
 					}
 				break;
@@ -556,7 +558,7 @@ class component_filter extends component_relation_common {
 	* @return array $new dato
 	*/
 	public static function convert_dato_pre_490( $dato, $from_component_tipo ) {
-		
+
 		if (!empty($dato) && $dato!='[]') {
 			// Old format is received case
 
@@ -578,12 +580,12 @@ class component_filter extends component_relation_common {
 							$filter_locator->set_section_id((int)$key);
 							$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 							$filter_locator->set_from_component_tipo($from_component_tipo);
-					}					
+					}
 				}
 				# Add to clean array
 				if ($filter_locator!==false) {
 					$ar_locators[] = $filter_locator;
-				}				
+				}
 			}
 			# Replace old formatted value with new formatted array of locators
 			$new_dato = $ar_locators;
@@ -595,10 +597,10 @@ class component_filter extends component_relation_common {
 	}//end convert_dato_pre_490
 
 
-	
+
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -612,19 +614,19 @@ class component_filter extends component_relation_common {
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search=null, $current_lang=null, $search_value='', $comparison_operator='=') {
-		
+
 		if ( empty($search_value) ) {
 			return null;
 		}
-		
+
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-		
+
 		if (is_array($search_value)) {
 			$current_search_value = implode("','", $search_value);
 		}else{
 			$current_search_value = $search_value;
 		}
-		
+
 		#$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,$current_lang}' ?| array['$current_search_value'] ";
 		switch (true) {
 			case $comparison_operator==='=':
@@ -633,7 +635,7 @@ class component_filter extends component_relation_common {
 			case $comparison_operator==='!=':
 				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_search_value]'::jsonb)=FALSE ";
 				break;
-		}		
+		}
 
 		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
@@ -673,9 +675,9 @@ class component_filter extends component_relation_common {
 					$component->set_dato($ar_val);
 				}
 			}
-		
+
 		$valor = $component->get_valor();
-		
+
 		return $valor;
 	}//end render_list_value
 
@@ -717,8 +719,8 @@ class component_filter extends component_relation_common {
 
 		# Save component data
 		$this->Save();
-			
-		
+
+
 		return true;
 	}//end regenerate_component
 
@@ -735,16 +737,16 @@ class component_filter extends component_relation_common {
 	public function get_diffusion_value( $lang=DEDALO_DATA_LANG ) {
 
 		$dato = $this->get_dato();
-	
+
 		$ar_label = [];
 		foreach ((array)$dato as $key => $locator) {
 			$label = ts_object::get_term_by_locator( $locator, $lang, true );
 			$label = strip_tags(trim($label));
 			if (!empty($label)) {
 				$ar_label[] = $label;
-			}			
+			}
 		}
-		
+
 		$diffusion_value = !empty($ar_label)
 			? implode(' | ', $ar_label)
 			: null;
@@ -767,7 +769,7 @@ class component_filter extends component_relation_common {
 			$related_tipo		= isset($propiedades->stats_look_at)
 				? reset($propiedades->stats_look_at)
 				: ($end_path->component_tipo ?? false);
-			
+
 			$search_query_object = '{
 			  "section_tipo": "'.$section_tipo.'",
 			  "allow_sub_select_by_id": false,
@@ -804,7 +806,7 @@ class component_filter extends component_relation_common {
 					$ar_clean[$uid]->value = $label;
 			}//end foreach ($result->ar_records as $row)
 
-		
+
 		return $ar_clean;
 	}//end parse_stats_values
 

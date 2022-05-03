@@ -470,8 +470,9 @@ class component_relation_common extends component_common {
 			}
 
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
-			$section 	= section::get_instance($parent, $section_tipo);
-			$section_id = $section->save_component_dato($this, 'relation');
+			// $section	= section::get_instance($parent, $section_tipo);
+			$section	= $this->get_my_section();
+			$section_id	= $section->save_component_dato($this, 'relation');
 
 		if(SHOW_DEBUG===true) {
 			#debug_log(__METHOD__." section saved from relation common: ($section_id) ".json_encode($section), logger::DEBUG);;

@@ -495,7 +495,7 @@ class component_portal extends component_relation_common {
 			$options->section_target_tipo 	= null;
 			$options->top_tipo 				= TOP_TIPO;
 			$options->top_id 				= TOP_ID;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}		
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -665,7 +665,8 @@ class component_portal extends component_relation_common {
 
 		$section_id		= $this->get_parent();
 		$section_tipo	= $this->get_section_tipo();
-		$section 		= section::get_instance($section_id, $section_tipo);
+		// $section		= section::get_instance($section_id, $section_tipo);
+		$section		= $this->get_my_section();
 
 		# 1.1 PROYECTOS DE PROYECTOS : Portales de la sección proyectos
 		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
@@ -981,7 +982,7 @@ class component_portal extends component_relation_common {
 	# [valor] => Array
     #    (
     #        [58] => Array
-    #            (   
+    #            (
     #				 [dd72] => Javier
     #                [dd77] => Gómez López
     #            )
@@ -1314,7 +1315,7 @@ class component_portal extends component_relation_common {
 
 		$separator_fields	= $diffusion_properties->separator_fields ?? ', ';
 		switch ($data_to_be_used) {
-			
+
 			case 'valor_list':
 				$separator_rows		= $diffusion_properties->separator_rows ?? '<br>';
 				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows, $separator_fields);
@@ -1373,7 +1374,7 @@ class component_portal extends component_relation_common {
 				}
 				break;
 
-			case 'dato_full':				
+			case 'dato_full':
 				$dato = $this->get_dato();
 				if (empty($dato)) {
 					$diffusion_value = null;
@@ -1392,7 +1393,7 @@ class component_portal extends component_relation_common {
 					}
 				}
 				break;
-			
+
 			case 'dato':
 			default:
 				$dato = $this->get_dato();

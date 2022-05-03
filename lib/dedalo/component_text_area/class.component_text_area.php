@@ -1943,7 +1943,8 @@ class component_text_area extends component_common {
 
 		$ar_tag_references = array();
 
-		$section = section::get_instance($this->parent, $this->section_tipo);
+		// $section = section::get_instance($this->parent, $this->section_tipo);
+		$section = $this->get_my_section();
 		$my_inverse_locators = $section->get_inverse_locators();
 
 		// Calculate all references to this resource of section tipo $section_tipo (like 'oh1')
