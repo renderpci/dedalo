@@ -159,43 +159,43 @@ const get_input_element_edit = (i, current_value, self) => {
 		})
 
 	// button_edit
-		const button_edit = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button edit show_on_active',
-			parent			: li
-		})
-		button_edit.addEventListener("click", function(e){
-			e.stopPropagation()
-			try {
-				// target_section
-					const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
-					const target_section_tipo = sqo.section_tipo[0].tipo
-					console.log("+++ sqo:",sqo);
-				// navigation
-					const user_navigation_options = {
-						source		: {
-							action			: 'search',
-							model			: 'section',
-							tipo			: target_section_tipo,
-							section_tipo	: target_section_tipo,
-							mode			: 'edit',
-							lang			: self.lang
-						},
-						sqo : {
-							section_tipo		: [{tipo : target_section_tipo}],
-							filter				: null,
-							limit				: 1,
-							filter_by_locators	: [{
-								section_tipo	: target_section_tipo,
-								section_id		: section_id
-							}]
-						}
-					}
-				event_manager.publish('user_navigation', user_navigation_options)
-			} catch (error) {
-				console.error(error)
-			}
-		})
+		// const button_edit = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button edit show_on_active',
+		// 	parent			: li
+		// })
+		// button_edit.addEventListener("click", function(e){
+		// 	e.stopPropagation()
+		// 	try {
+		// 		// target_section
+		// 			const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
+		// 			const target_section_tipo = sqo.section_tipo[0].tipo
+		// 			console.log("+++ sqo:",sqo);
+		// 		// navigation
+		// 			const user_navigation_options = {
+		// 				source		: {
+		// 					action			: 'search',
+		// 					model			: 'section',
+		// 					tipo			: target_section_tipo,
+		// 					section_tipo	: target_section_tipo,
+		// 					mode			: 'edit',
+		// 					lang			: self.lang
+		// 				},
+		// 				sqo : {
+		// 					section_tipo		: [{tipo : target_section_tipo}],
+		// 					filter				: null,
+		// 					limit				: 1,
+		// 					filter_by_locators	: [{
+		// 						section_tipo	: target_section_tipo,
+		// 						section_id		: section_id
+		// 					}]
+		// 				}
+		// 			}
+		// 		event_manager.publish('user_navigation', user_navigation_options)
+		// 	} catch (error) {
+		// 		console.error(error)
+		// 	}
+		// })
 
 
 

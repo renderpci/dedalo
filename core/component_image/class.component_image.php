@@ -37,7 +37,7 @@ class component_image extends component_media_common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		// lang. Force always DEDALO_DATA_NOLAN
@@ -94,7 +94,7 @@ class component_image extends component_media_common {
 
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		return true;
@@ -131,9 +131,11 @@ class component_image extends component_media_common {
 	* GET_INITIAL_MEDIA_PATH
 	*/
 	public function get_initial_media_path() {
-		$component_tipo = $this->tipo;
-		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$properties 	= $parent_section->get_properties();
+
+		$component_tipo		= $this->tipo;
+		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
+		$parent_section		= $this->get_my_section();
+		$properties			= $parent_section->get_properties();
 			#dump($properties," properties component_tipo:$component_tipo");
 			#dump($properties->initial_media_path->$component_tipo," ");
 

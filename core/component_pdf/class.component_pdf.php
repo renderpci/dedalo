@@ -26,7 +26,7 @@ class component_pdf extends component_media_common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		# Creamos el componente normalmente
@@ -142,9 +142,11 @@ class component_pdf extends component_media_common {
 	*
 	*/
 	public function get_initial_media_path() {
-		$component_tipo = $this->tipo;
-		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$properties 	= $parent_section->get_properties();
+
+		$component_tipo		= $this->tipo;
+		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
+		$parent_section		= $this->get_my_section();
+		$properties			= $parent_section->get_properties();
 
 		if (isset($properties->initial_media_path->$component_tipo)) {
 			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
@@ -155,6 +157,7 @@ class component_pdf extends component_media_common {
 		}else{
 			$this->initial_media_path = false;
 		}
+
 		return $this->initial_media_path;
 	}//end get_initial_media_path
 

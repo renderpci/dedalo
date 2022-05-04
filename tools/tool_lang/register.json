@@ -45,6 +45,12 @@
         },
         {
             "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "hierarchy13",
+            "from_component_tipo": "dd1580"
+        },
+        {
+            "type": "dd151",
             "section_id": "-1",
             "section_tipo": "dd128",
             "from_component_tipo": "dd197"
@@ -73,13 +79,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 2,
-                            "hour": 13,
-                            "time": 64994187666,
+                            "day": 3,
+                            "hour": 21,
+                            "time": 64999660819,
                             "year": 2022,
-                            "month": 3,
-                            "minute": 1,
-                            "second": 6
+                            "month": 5,
+                            "minute": 20,
+                            "second": 19
                         }
                     }
                 ]
@@ -157,7 +163,7 @@
         "dd1327": {
             "dato": {
                 "lg-nolan": [
-                    "2.0.0"
+                    "2.0.1"
                 ]
             }
         },
@@ -234,13 +240,7 @@
             "dato": {
                 "lg-nolan": [
                     {
-                        "property_test": [
-                            {
-                                "key": "mykey",
-                                "name": "myName",
-                                "label": "myLabel2"
-                            }
-                        ]
+                        "view": "tab"
                     }
                 ]
             }
@@ -266,7 +266,7 @@
     "section_id": 1,
     "created_date": "2019-11-05 16:06:56",
     "section_tipo": "dd1340",
-    "modified_date": "2022-03-02 13:01:06",
+    "modified_date": "2022-05-03 21:20:19",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",

@@ -32,7 +32,7 @@ class section extends common {
 
 		public $ar_all_project_langs;
 
-		public $show_inspector = true;			# default show: true
+		public $show_inspector = true;	# default show: true
 
 		public $section_virtual = false;
 		public $section_real_tipo;
@@ -51,7 +51,7 @@ class section extends common {
 		# static cache for section instances
 		static $ar_section_instances;
 
-		public $save_modified; # Default is true
+		public $save_modified = true; # Default is true
 
 		public $layout_map;
 
@@ -81,9 +81,9 @@ class section extends common {
 	* Singleton pattern
 	* @return object
 	*/
-	public static function get_instance($section_id=null, $tipo=false, $modo='edit', $cache=true) : object {
+	public static function get_instance($section_id=null, string $tipo=null, string $modo='edit', bool $cache=true) : object {
 
-		if ($tipo===false) {
+		if (empty($tipo)) {
 			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
 		}
 
@@ -200,7 +200,7 @@ class section extends common {
 				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
 			}
 
-		// save_handler. If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
+		// save_handler. If section_id have a temporal string the save handier will be 'session' the section will save into the menory NOT to database
 			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
 				$this->save_handler = 'session';
 			}
@@ -268,12 +268,10 @@ class section extends common {
 	* Fix section relations and components to prevent save issues
 	* @return bool true
 	*/
-	public function set_dato($dato) : bool {
+	public function set_dato($dato) {
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
-		parent::set_dato($dato);
-
-		return true;
+		return parent::set_dato($dato);
 	}//end set_dato
 
 
@@ -283,7 +281,7 @@ class section extends common {
 	* Extrae del contenedor de la sección, el dato específico de cada componente en el idioma requerido
 	* will be deprecated with the get_all_component_data (08-2017)
 	*/
-	public function get_component_dato($component_tipo, $lang, $lang_fallback=false) {
+	public function get_component_dato(string $component_tipo, string $lang, bool $lang_fallback=false) {
 
 		$all_component_data = $this->get_all_component_data($component_tipo);
 
@@ -359,13 +357,17 @@ class section extends common {
 		##		throw new Exception("Error Processing Request. Section Dato is not object", 1);
 		##	}
 
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
+
 		#
 		# COMPONENT_GLOBAL_DATO : Extrae la parte del componente desde el objeto global de la sección
-		$component_tipo 		= $component_obj->get_tipo();
-		$component_lang 		= $component_obj->get_lang();
-		##$component_valor_lang 	= $component_obj->get_valor_lang();
-		##$component_modelo_name 	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		##$component_traducible 	= $component_obj->get_traducible();
+			$component_tipo				= $component_obj->get_tipo();
+			$component_lang				= $component_obj->get_lang();
+			##$component_valor_lang		= $component_obj->get_valor_lang();
+			##$component_modelo_name	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			##$component_traducible		= $component_obj->get_traducible();
 
 		if (empty($component_tipo)) {
 			throw new Exception("Error Processing Request: component_tipo is empty", 1);
@@ -440,24 +442,23 @@ class section extends common {
 	*/
 	public function set_component_direct_dato( object $component_obj ) : object {
 
-		// section dato
-			$dato = $this->get_dato();
-			if (!is_object($dato)) {
-				$dato = $this->dato = new stdClass();
-				#if(SHOW_DEBUG===true) {
-				#	dump($dato,"section dato");
-				#	dump($this,"section object");
-				#	dump($component_obj, ' component_obj ++ '.to_string());;
-				#}
-				#throw new Exception("Error Processing Request. Section Dato is not object", 1);
-			}
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
 
-		// component sort vars
+		// component short vars
 			$component_tipo 		= $component_obj->get_tipo();
 			$component_lang 		= $component_obj->get_lang();
 			$component_valor_lang 	= $component_obj->get_valor_lang();
 			$component_modelo_name 	= get_class($component_obj);
 			$component_traducible 	= $component_obj->get_traducible();
+
+		// section dato
+			$dato = $this->get_dato();
+			if (!is_object($dato)) {
+				// $dato = $this->dato = new stdClass();
+				throw new Exception("Error Processing Request. Section Dato is not as expected type (object). type: ".gettype($dato), 1);
+			}
 
 		# SELECT COMPONENT IN SECTION DATO
 		if (isset($dato->components->{$component_tipo})) {
@@ -489,7 +490,6 @@ class section extends common {
 					// $component_global_dato->dataframe	= new stdClass();
 		}
 
-
 		# DATO OBJ
 			if (!isset($component_global_dato->dato->{$component_lang})) {
 				$component_global_dato->dato->{$component_lang} = new stdClass();
@@ -518,7 +518,8 @@ class section extends common {
 
 		#
 		# DATO : Actualizamos el dato en el idioma actual
-			$component_global_dato->dato->{$component_lang} = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+				$component_global_dato->dato->{$component_lang} = $component_dato;
 
 		#
 		# VALOR : Actualizamos el valor en el idioma actual
@@ -593,10 +594,15 @@ class section extends common {
 	*/
 	public function set_component_relation_dato( object $component_obj ) : object {
 
-		$component_tipo			= $component_obj->get_tipo();
-		$component_dato			= $component_obj->get_dato_full();
-		$relation_type			= $component_obj->get_relation_type();
-		$from_component_tipo	= $component_tipo;
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+		// current section conflicts (and for speed)
+			$component_obj->set_section_obj($this);
+
+		// component short vars
+			$component_tipo			= $component_obj->get_tipo();
+			$component_dato			= $component_obj->get_dato_full();
+			$relation_type			= $component_obj->get_relation_type();
+			$from_component_tipo	= $component_tipo;
 
 		# Remove all previous locators of current component tipo
 		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
@@ -631,7 +637,6 @@ class section extends common {
 					}
 				}
 			}
-
 		}//end if (!empty($component_dato))
 
 
@@ -682,10 +687,10 @@ class section extends common {
 	* SAVE
 	* Create a new section or update section record in matrix
 	*/
-	public function Save( $save_options=null ) {
+	public function Save( object $save_options=null ) {
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		// Options default
@@ -708,10 +713,10 @@ class section extends common {
 
 		// save_options overwrite defaults
 			if ($save_options!==null) {
-				if (!is_object($save_options)) {
-					trigger_error("Error: save_options is not an object : ".print_r($save_options,true));
-					return false;
-				}
+				// if (!is_object($save_options)) {
+				// 	trigger_error("Error: save_options is not an object : ".print_r($save_options,true));
+				// 	return false;
+				// }
 				# Options overwrite sql_options defaults
 				foreach ((object)$save_options as $key => $value) {
 					# Si la propiedad recibida en el array options existe en sql_options, la sobreescribimos
@@ -721,7 +726,6 @@ class section extends common {
 
 		// tipo. Current section tipo
 			$tipo = $this->get_tipo();
-
 
 			# If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
 			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
@@ -739,7 +743,7 @@ class section extends common {
 				: $this->get_section_real_tipo();
 
 		// user id. Current logged user id
-			$user_id  = navigator::get_user_id();
+			$user_id  = (int)navigator::get_user_id();
 
 		// date now
 			$date_now = component_date::get_timestamp_now_for_db();
@@ -763,10 +767,10 @@ class section extends common {
 			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtal section don't have table defined
 
 
-		if ($this->section_id=='-1') {
+		if ($this->section_id=='-1' || (int)$this->section_id<1) {
 			# Nothing to save/create
 
-		}elseif ($this->section_id >= 1 && $options->forced_create_record===false) { # UPDATE RECORD
+		}elseif ((int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
 
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record trigered by one component
@@ -777,24 +781,30 @@ class section extends common {
 
 			}else{
 				// update_modified_section_data . Resolve and add modification date and user to current section dato
-					$this->update_modified_section_data(array(
+					$this->update_modified_section_data((object)[
 						'mode' => 'update_record'
-					));
+					]);
 
 				// section dato
 					$section_dato = (object)$this->get_dato();
 
 				// dato add modification info
 					# Section modified by userID
-					$section_dato->modified_by_userID 	= (int)$user_id;
+					$section_dato->modified_by_userID	= (int)$user_id;
 					# Section modified date
-					$section_dato->modified_date 		= (string)$date_now;	# Format 2012-11-05 19:50:44
+					$section_dato->modified_date		= (string)$date_now;	# Format 2012-11-05 19:50:44
 			}
 
 			# Save section dato
 				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
 				$JSON_RecordObj_matrix->set_datos($section_dato);
-				$saved 					= $JSON_RecordObj_matrix->Save( $options );
+				$saved_id_matrix		= $JSON_RecordObj_matrix->Save( $options );
+				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
+					trigger_error("Error on trying save->update record. Nothing is saved!");
+					if(SHOW_DEBUG===true) {
+						throw new Exception("Error Processing Request. Returned id_matrix on save (update) section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
+					}
+				}
 
 		}else{ # NEW RECORD
 
@@ -824,7 +834,6 @@ class section extends common {
 					# section_id. Fix section_id (Non return point, next calls to Save will be updates)
 					$this->section_id = (int)$section_id_counter;
 				}
-
 
 			##
 			# SECTION JSON DATA
@@ -886,9 +895,9 @@ class section extends common {
 						// }
 
 					// Update modified section data . Resolve and add creation date and user to current section dato
-						$this->update_modified_section_data(array(
+						$this->update_modified_section_data((object)[
 							'mode' => 'new_record'
-						));
+						]);
 
 					// Components container
 						if (!empty($options->main_components_obj)) {
@@ -912,7 +921,6 @@ class section extends common {
 						$this->dato = $section_dato;
 
 
-
 					// Set as loaded
 						$this->bl_loaded_matrix_data = true;
 
@@ -933,10 +941,10 @@ class section extends common {
 					#$JSON_RecordObj_matrix->set_section_id($this->section_id);
 					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
-					if ($saved_id_matrix < 1 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+					if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 						trigger_error("Error on trying save->insert record. Nothing is saved!");
 						if(SHOW_DEBUG===true) {
-							throw new Exception("Error Processing Request. Returned section_id on save section is mandatory. Received section_id: $this->section_id ", 1);
+							throw new Exception("Error Processing Request. Returned id_matrix on save section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
 						}
 					}
 
@@ -975,18 +983,19 @@ class section extends common {
 						'NEW',
 						logger::INFO,
 						$this->tipo,
-						NULL,
-						array(	"msg"			=> "Created section record",
-								"section_id"	=> $this->section_id,
-								"section_tipo"	=> $this->tipo,
-								"tipo"			=> $this->tipo,
-								"table"			=> $matrix_table
-								// "is_portal"	=> intval($options->is_portal),
-								// "top_id"		=> $top_id,
-								// "top_tipo"	=> TOP_TIPO,
-								// "tm_id"		=> 'desactivo',#$time_machine_last_id,
-								// "counter"	=> counter::get_counter_value($this->tipo, $matrix_table_counter),
-								)
+						null,
+						array(
+							'msg'			=> 'Created section record',
+							'section_id'	=> $this->section_id,
+							'section_tipo'	=> $this->tipo,
+							'tipo'			=> $this->tipo,
+							'table'			=> $matrix_table
+							// "is_portal"	=> intval($options->is_portal),
+							// "top_id"		=> $top_id,
+							// "top_tipo"	=> TOP_TIPO,
+							// "tm_id"		=> 'desactivo',#$time_machine_last_id,
+							// "counter"	=> counter::get_counter_value($this->tipo, $matrix_table_counter),
+						)
 					);
 
 				##
@@ -997,13 +1006,15 @@ class section extends common {
 					# AUTO AUTHORIZE THIS PROYECT FOR CURRENT USER
 					# Si esta sección recien creada es un proyecto, se agrega este proyecto como autorizado al usuario que lo creó
 					# Usuario logeado actualmente
-						$component_filter_master	= component_common::get_instance('component_filter_master',
-																					 DEDALO_FILTER_MASTER_TIPO,
-																					 $user_id,
-																					 'edit',
-																					 DEDALO_DATA_NOLAN,
-																					 DEDALO_SECTION_USERS_TIPO);
-						$dato_filter_master 		= $component_filter_master->get_dato();
+						$component_filter_master = component_common::get_instance(
+							'component_filter_master',
+							DEDALO_FILTER_MASTER_TIPO,
+							$user_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							DEDALO_SECTION_USERS_TIPO
+						);
+						$dato_filter_master = $component_filter_master->get_dato();
 
 						$filter_master_locator = new locator();
 							$filter_master_locator->set_section_id($this->section_id);
@@ -1029,9 +1040,9 @@ class section extends common {
 					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section(
 						$section_real_tipo,
 						['component_filter'],
-						$from_cache=true,
-						$resolve_virtual=false,
-						true
+						true, // from_cache
+						false, // resolve_virtual
+						true // cache
 					);
 					if (empty($ar_tipo_component_filter[0])) {
 
@@ -1044,13 +1055,14 @@ class section extends common {
 
 						if (!empty($options->component_filter_dato)) {
 							// set the component_filter with the dato sended by the caller (portals)
-							$component_filter 	= component_common::get_instance('component_filter',
-															 $ar_tipo_component_filter[0],
-															 $this->section_id,
-															 'list', // Important 'list' to avoid auto save default value !!
-															 DEDALO_DATA_NOLAN,
-															 $tipo
-															);
+							$component_filter 	= component_common::get_instance(
+								'component_filter',
+								$ar_tipo_component_filter[0],
+								$this->section_id,
+								'list', // Important 'list' to avoid auto save default value !!
+								DEDALO_DATA_NOLAN,
+								$tipo
+							);
 							$component_filter->set_dato($options->component_filter_dato);
 							$component_filter->Save();
 
@@ -1058,16 +1070,17 @@ class section extends common {
 							# When component_filter is called in edit mode, the component check if dato is empty and if is,
 							# add default user project and save it
 							// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
-							$component_filter 	= component_common::get_instance('component_filter',
-																				 $ar_tipo_component_filter[0],
-																				 $this->section_id,
-																				 'edit', // Important edit !! # Already saves default project when load in edit mode
-																				 DEDALO_DATA_NOLAN,
-																				 $tipo);
+							$component_filter = component_common::get_instance(
+								'component_filter',
+								$ar_tipo_component_filter[0],
+								$this->section_id,
+								'edit', // Important edit !! # Already saves default project when load in edit mode
+								DEDALO_DATA_NOLAN,
+								$tipo
+							);
 							// note that section is auto-saved here
 						}
 					}//end if (empty($ar_tipo_component_filter[0]))
-
 
 				}//end if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO)
 
@@ -1092,14 +1105,14 @@ class section extends common {
 					}//end if (isset($ar_component_state[0]))
 
 			}//end if($this->tipo!==DEDALO_ACTIVITY_SECTION_TIPO)
-
 		}//end if ($this->id >= 1)
 
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 			}
+
 
 		return $this->section_id;
 	}//end Save
@@ -1391,7 +1404,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		$parent  = intval($this->get_section_id());
@@ -1420,7 +1433,7 @@ class section extends common {
 		if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
 
 			if(SHOW_DEBUG===true) {
-				global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 				#debug_log(__METHOD__." Returned '$modelo_name_required' for tipo:$this->tipo FROM STATIC CACHE");
 			}
 			return $ar_children_objects_by_modelo_name_in_section[$uid];
@@ -1496,7 +1509,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__,' - modelo_name_required:'.$modelo_name_required ." - ar_section_obj count:". count($ar_section_obj) );
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 			#debug_log( __METHOD__." get_ar_children_objects_by_modelo_name_in_section: ".json_encode($modelo_name_required).' '. exec_time($start_time,'ms') );
 		}
 
@@ -1512,7 +1525,7 @@ class section extends common {
 	* @param bool $from_cache
 	*	default true
 	* @param bool $resolve_virtual
-	*	Force resolve section if is virtal section. default false
+	*	Force resolve section if is virtual section. default false
 	*	Name of desired filtered model array. You can use partial name like 'component_' (string position search is made it)
 	* @return array $section_ar_children_tipo
 	*/
@@ -1520,10 +1533,10 @@ class section extends common {
 		string $section_tipo,
 		array $ar_modelo_name_required,
 		bool $from_cache=true,
-		bool $resolve_virtual=false,
+		bool $resolve_virtual=false, # (!) keep default resolve_virtual=false
 		bool $recursive=true,
 		bool $search_exact=false,
-		$ar_tipo_exclude_elements=false) : array { # Nota: mantener default resolve_virtual=false !
+		$ar_tipo_exclude_elements=false) : array {
 
 		# AR_MODELO_NAME_REQUIRED cast 'ar_modelo_name_required' to array
 		$ar_modelo_name_required = (array)$ar_modelo_name_required;
@@ -1538,15 +1551,11 @@ class section extends common {
 			}
 		}
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$section_tipo.'_'.$cache_uid.'_'.microtime(1)]=microtime(1);
-		}
-
-		$ar_terminos_relacionados_to_exclude=array();
+		$ar_terminos_relacionados_to_exclude = [];
 
 		#
 		# RESOLVE_VIRTUAL : Resolve virtual section to real
-		if($resolve_virtual) {
+		if(true===$resolve_virtual) {
 
 			# ORIGINAL TIPO : always keeps the original type (current)
 			$original_tipo = $section_tipo;
@@ -1580,7 +1589,7 @@ class section extends common {
 					foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-						if($modelo_name === 'section_group'){
+						if($modelo_name==='section_group') {
 							$ar_recursive_childrens 			 = (array)self::get_ar_recursive_childrens($component_tipo);
 							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
 						}
@@ -1591,8 +1600,8 @@ class section extends common {
 			}#end if($section_real_tipo!=$original_tipo) {
 		}//end if($resolve_virtual)
 
-		$tipo 						= $section_tipo;
-		$section_ar_children_tipo 	= array();
+		$tipo						= $section_tipo;
+		$section_ar_children_tipo	= array();
 
 
 		# OBTENEMOS LOS ELEMENTOS HIJOS DE ESTA SECCIÓN
@@ -1609,7 +1618,7 @@ class section extends common {
 
 			switch (true) {
 				// Components are searched recursively
-				case (strpos($ar_modelo_name_required[0], 'component')!==false && $recursive!=false):
+				case (strpos($ar_modelo_name_required[0], 'component')!==false && $recursive!==false):
 					$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
@@ -1631,7 +1640,7 @@ class section extends common {
 				#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
 				$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
 			}
-		*/
+			*/
 
 		if( empty($ar_recursive_childrens) ) {
 			#throw new Exception(__METHOD__." ar_recursive_childrens is empty! This section don't have: '$modelo_name_required' ");
@@ -1639,7 +1648,7 @@ class section extends common {
 			return $section_ar_children_tipo; # return empty array
 		}
 
-		# UNSET the exclude elements of the virtual section to the origianl section
+		# UNSET the exclude elements of the virtual section to the original section
 		if($resolve_virtual) {
 			$ar_recursive_childrens = array_diff($ar_recursive_childrens,$ar_terminos_relacionados_to_exclude);
 		}
@@ -1661,7 +1670,7 @@ class section extends common {
 				# COMPONENT_FILTER : Si buscamos 'component_filter', sólo devolveremos el primero, dado que pueden haber secciones anidadas
 				if($ar_modelo_name_required[0]==='component_filter' && count($ar_recursive_childrens)>1) {
 					if(SHOW_DEBUG===true) {
-						#debug_log(__METHOD__." Breaked loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_childrens). " " .to_string($ar_modelo_name_required));
+						#debug_log(__METHOD__." Broken loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_childrens). " " .to_string($ar_modelo_name_required));
 						#throw new Exception("Error Processing Request", 1);
 					}
 					continue;
@@ -1673,9 +1682,6 @@ class section extends common {
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
 		$_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$cache_uid.'_'.microtime(1)]=microtime(1);
-		}
 
 		return $section_ar_children_tipo;
 	}//end get_ar_children_tipo_by_modelo_name_in_section
@@ -1684,14 +1690,14 @@ class section extends common {
 
 	/**
 	* GET_AR_RECURSIVE_CHILDRENS : private alias of RecordObj_dd::get_ar_recursive_childrens
-	* Note th use of $ar_exclude_models to exclude not desired section elements, like auxiliar sections in ich
+	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary sections in ich
 	*/
 	public static function get_ar_recursive_childrens(string $tipo) : array {
 		#$RecordObj_dd			= new RecordObj_dd($tipo);
 		#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
 
 		# AR_EXCLUDE_MODELS
-		# Current elements and childrens are not considerated part of section and must be excluded in children results
+		# Current elements and children are not considerate part of section and must be excluded in children results
 		$ar_exclude_models = array('box elements','area');
 
 		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens($tipo, false, $ar_exclude_models, 'norden');
@@ -3347,11 +3353,14 @@ class section extends common {
 	* UPDATE_MODIFIED_SECTION_DATA
 	* @return bool
 	*/
-	public function update_modified_section_data($ar_options) : bool {
+	public function update_modified_section_data(object $options) : bool {
 
 		if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			return false;
 		}
+
+		// options
+			$mode = $options->mode;
 
 		// Fixed private tipos
 			$modified_section_tipos = section::get_modified_section_tipos();
@@ -3375,18 +3384,20 @@ class section extends common {
 				$date_now->start = $dd_date;
 
 
-		switch ($ar_options['mode']) {
+		switch ($mode) {
 
 			case 'new_record': // new record
 
 				// Created by user
-					$created_by_user= reset($created_by_user);
-					$component 		= component_common::get_instance($created_by_user['model'],
-																	 $created_by_user['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$created_by_user	= reset($created_by_user);
+					$component			= component_common::get_instance(
+						$created_by_user['model'],
+						$created_by_user['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($user_locator);
 					#$dato = $component->get_dato();
 					#$this->add_relation( reset($dato) );
@@ -3396,12 +3407,14 @@ class section extends common {
 
 				// Creation date
 					$created_date 	= reset($created_date);
-					$component 		= component_common::get_instance($created_date['model'],
-																	 $created_date['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$component 		= component_common::get_instance(
+						$created_date['model'],
+						$created_date['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($date_now);
 					#$component->save_to_database = false; // Avoid exec db real save
 					#$component->Save(); // Only updates section data
@@ -3413,26 +3426,30 @@ class section extends common {
 			case 'update_record': // update_record (record already exists)
 
 				// Modified by user
-					$modified_by_user= reset($modified_by_user);
-					$component 		= component_common::get_instance($modified_by_user['model'],
-																	 $modified_by_user['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$modified_by_user	= reset($modified_by_user);
+					$component			= component_common::get_instance(
+						$modified_by_user['model'],
+						$modified_by_user['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($user_locator);
 					#$component->save_to_database = false; // Avoid exec db real save
 					#$component->Save(); // Only updates section data
 					$this->set_component_relation_dato($component);
 
 				// Modification date
-					$modified_date 	= reset($modified_date);
-					$component 		= component_common::get_instance($modified_date['model'],
-																	 $modified_date['tipo'],
-																	 $this->section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
+					$modified_date	= reset($modified_date);
+					$component		= component_common::get_instance(
+						$modified_date['model'],
+						$modified_date['tipo'],
+						$this->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$this->tipo // section_tipo
+					);
 					$component->set_dato($date_now);
 					#$component->save_to_database = false; // Avoid exec db real save
 					#$component->Save(); // Only updates section data
@@ -3870,7 +3887,7 @@ class section extends common {
 	* Executed on component save (when save script is complete)
 	* @return bool
 	*/
-	public function post_save_component_processes($options) : bool {
+	public function post_save_component_processes(object $options) : bool {
 
 		// options
 			$component = $options->component;

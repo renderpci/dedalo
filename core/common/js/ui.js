@@ -1,10 +1,10 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise */
+/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {strip_tags} from '../../common/js/utils/index.js'
+	import {strip_tags, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {set_element_css} from '../../page/js/css.js'
@@ -884,7 +884,7 @@ export const ui = {
 			// 	const main_context 	= instance.context
 			// 	const element_css 	= main_context.css || {}
 
-	 	// 		const fragment = new DocumentFragment()
+	 	// const fragment = new DocumentFragment()
 
 			// 	// label
 			// 		if (label===null || items.label===null) {
@@ -957,20 +957,18 @@ export const ui = {
 			// 				fragment.appendChild(content_data)
 			// 		}
 
-
 			// 	// wrapper
 			// 		const wrapper = ui.create_dom_element({
 			// 			element_type	: 'div',
 			// 			class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
-	 	// 			})
-	 	// 			// css
-		 // 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+			// 			})
+			// 			// css
+			// 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 			// 			const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
 			// 			wrapper.classList.add(...ar_css)
 
-	 	// 			// append fragment
-	 	// 				wrapper.appendChild(fragment)
-
+			// 		// append fragment
+			// 			wrapper.appendChild(fragment)
 
 
 			// 	return wrapper
@@ -1121,68 +1119,79 @@ export const ui = {
 
 			const fragment = new DocumentFragment()
 
-			let tool_header
-			let tool_buttons_container
-
 			if (mode!=='mini') {
 				// header
-					tool_header = ui.create_dom_element({
+					const tool_header = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tool_header ' + name,
 						parent			: fragment
 					})
+					// pointer
+					wrapper.tool_header = tool_header
 
-					// tool_name_container
-						const tool_name_container = ui.create_dom_element({
+				// tool_name_container
+					const tool_name_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'tool_name_container',
+						parent			: tool_header
+					})
+
+					// label
+					if (label!==null) {
+						// default
+						const component_label = ui.create_dom_element({
 							element_type	: 'div',
-							class_name		: 'tool_name_container',
-							parent			: tool_header
+							class_name		: 'label',
+							inner_html		: label,
+							parent			: tool_name_container
 						})
 
-						// label
-						if (label!==null) {
-							// default
-							const component_label = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'label',
-								inner_html		: label,
-								parent			: tool_name_container
+						// icon (optional)
+						if (context.icon) {
+							const icon = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button white', // gear
+								style : {
+									"-webkit-mask"	: "url('" +context.icon +"')",
+									"mask"			: "url('" +context.icon +"')"
+								}
 							})
-
-							// icon (optional)
-							if (context.icon) {
-								const icon = ui.create_dom_element({
-									element_type	: 'span',
-									class_name		: 'button white', // gear
-									style : {
-										"-webkit-mask"	: "url('" +context.icon +"')",
-										"mask"			: "url('" +context.icon +"')"
-									}
-								})
-								component_label.prepend(icon)
-							}
+							component_label.prepend(icon)
 						}
+					}
 
-						// description
-						if (description!==null) {
-							// component_description
-							ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'description',
-								inner_html		: description,
-								parent			: tool_name_container
-							})
-						}
-
-					// tool_buttons_container
-						tool_buttons_container = ui.create_dom_element({
+					// description
+					if (description!==null) {
+						// component_description
+						ui.create_dom_element({
 							element_type	: 'div',
-							class_name		: 'tool_buttons_container',
-							parent			: tool_header
+							class_name		: 'description',
+							inner_html		: description,
+							parent			: tool_name_container
 						})
+					}
+
+				// tool_buttons_container
+					const tool_buttons_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'tool_buttons_container',
+						parent			: tool_header
+					})
+					// pointer
+					wrapper.tool_buttons_container = tool_buttons_container
+
+				// button_close (hidden inside modal)
+					const button_close = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button close white',
+						parent			: tool_header
+					})
+					button_close.addEventListener("click", function(e){
+						window.close();
+					})
 			}//end if (mode!=='mini')
 
-			// buttons
+			// buttons (not used anymore)
 				// if (items.buttons) {
 				// 	const buttons = ui.create_dom_element({
 				// 		element_type	: 'div',
@@ -1195,6 +1204,8 @@ export const ui = {
 				// 	}
 				// }
 
+
+
 			// content_data
 				if (items.content_data) {
 					const content_data = items.content_data
@@ -1205,15 +1216,9 @@ export const ui = {
 			// wrapper
  				wrapper.appendChild(fragment)
 
- 			// pointers
-				wrapper.tool_header				= tool_header || null
-				wrapper.tool_buttons_container	= tool_buttons_container || null
-
 
 			return wrapper
 		},//end build_wrapper_edit
-
-
 
 
 
@@ -1267,7 +1272,6 @@ export const ui = {
 
 
 
-
 		/**
 		* BUILD_COMPONENT_TOOL_BUTTON
 		* Generate button element for open the target tool
@@ -1307,12 +1311,38 @@ export const ui = {
 				function publish_load_tool(e) {
 					e.stopPropagation();
 
-					//common.prototype.load_tool(self, tool_context)
-					event_manager.publish('load_tool', {
+					const load_tool_options = {
 						tool_context	: tool_context,
 						caller			: self
-					})
+					}
+					console.log("publish_load_tool load_tool_options:", load_tool_options);
+
+					// new window tab way
+						// // fix current instance as caller in
+						// 	window.callers = window.callers || {}
+						// 	window.callers[self.id]	= self
+
+						// // open tab
+						// 	const url_search = object_to_url_vars({
+						// 		tool		: tool_context.name,
+						// 		menu		: false,
+						// 		caller_id	: self.id
+						// 	})
+						// 	const url	= DEDALO_CORE_URL + '/page/?' + url_search
+						// 	const w		= window.open(url, 'tool_tab', 'popup')
+						// 	w.focus();
+
+						// // close tab actions (onbeforeunload)
+						// 	// w.onbeforeunload = function (event) {
+						// 	// 	event.preventDefault();
+						// 	// 	self.refresh()
+						// 	// 	console.log("_______________________________self:",self);
+						// 	// };
+
+					event_manager.publish('load_tool', load_tool_options)
 				}
+
+
 			return tool_button
 		}//build_component_tool_button
 

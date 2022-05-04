@@ -114,7 +114,7 @@ class logger_backend_activity extends logger_backend {
 		// DEBUG : Time
 			if(SHOW_DEBUG===true) {
 				$start_time = start_time();
-				global$TIMER;$TIMER[get_called_class().'_IN_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[get_called_class().'_IN_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
 			}
 
 
@@ -153,7 +153,7 @@ class logger_backend_activity extends logger_backend {
 					$message 	= str_replace("\n", ' ', $message);
 					$message 	= trim($message);
 
-					
+
 					if (isset(self::$what[$message])) {
 						$what_section_id = self::$what[$message];
 					}
@@ -176,11 +176,11 @@ class logger_backend_activity extends logger_backend {
 					$component_tipo = self::$_COMPONENT_DONDE['tipo'];
 					$component_obj  = self::build_component_activity_object($tipo_donde);
 					$main_components_obj->$component_tipo = $component_obj;
-				
+
 
 				# WHEN (Time. timestamp formated) #############################################################
 					$current_time		= component_date::get_date_now();
-					
+
 					$time = new stdClass();
 						$time->start 	= $current_time;
 					$component_tipo = self::$_COMPONENT_CUANDO['tipo'];
@@ -269,7 +269,7 @@ class logger_backend_activity extends logger_backend {
 
 					if(SHOW_DEBUG===true) {
 						#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, 'logger_backend_activity '.$id_section);
-						$TIMER[get_called_class().'_OUT_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
+						// $TIMER[get_called_class().'_OUT_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
 					}
 
 		return $id_section;

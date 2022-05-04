@@ -738,17 +738,11 @@ class component_relation_common extends component_common {
 	*/
 	public function load_component_dataframe() : bool {
 
-		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
-			return false;
-		}
-
-		if (empty($this->section_tipo)) {
-			if(SHOW_DEBUG===true) {
-				$msg = " Error Processing Request. section tipo not found for component $this->tipo";
-				#throw new Exception("$msg", 1);
-				debug_log(__METHOD__.$msg);
+		// check vars
+			if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+				return false;
 			}
-		}
+
 		$dato = $this->get_dato();
 
 		$this->dataframe = [];
@@ -950,8 +944,9 @@ class component_relation_common extends component_common {
 			}
 
 		// section : Preparamos la sección que será la que se encargue de salvar el dato del componente
-			$section 	= section::get_instance($parent, $section_tipo);
-			$section_id = $section->save_component_dato($this, 'relation');
+			// $section	= section::get_instance($parent, $section_tipo);
+			$section	= $this->get_my_section();
+			$section_id	= $section->save_component_dato($this, 'relation');
 
 
 		// activity
@@ -1883,8 +1878,8 @@ class component_relation_common extends component_common {
 		');
 
 
-		$search = search::get_instance($search_query_object);
-		$result = $search->search();
+		$search	= search::get_instance($search_query_object);
+		$result	= $search->search();
 
 		// iterate rows
 			$hierarchy_sections_from_types = [];
@@ -1895,8 +1890,8 @@ class component_relation_common extends component_common {
 					continue;
 				}
 
-				$target_dato 		 = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
-				$target_section_tipo = reset($target_dato);
+				$target_dato			= $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
+				$target_section_tipo	= reset($target_dato);
 
 				$hierarchy_sections_from_types[] = $target_section_tipo;
 			}
@@ -1911,7 +1906,7 @@ class component_relation_common extends component_common {
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo($ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) : array {
+	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) : array {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
@@ -1958,8 +1953,8 @@ class component_relation_common extends component_common {
 
 							$dato = $sections->get_dato();
 
-							$model_name 	 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-							$current_lang		=  common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
+							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
 						// data
 							foreach ($dato as $current_record) {
@@ -1972,12 +1967,14 @@ class component_relation_common extends component_common {
 									$section->set_dato($datos);
 									$section->set_bl_loaded_matrix_data(true);
 								}
-								$component = component_common::get_instance($model_name,
-																				  $current_component_tipo,
-																				  $current_record->section_id,
-																				  $modo='list',
-																				  $current_lang,// $lang=DEDALO_DATA_LANG,
-																				  $current_record->section_tipo);
+								$component = component_common::get_instance(
+									$model_name,
+									$current_component_tipo,
+									$current_record->section_id,
+									$modo='list',
+									$current_lang,// $lang=DEDALO_DATA_LANG,
+									$current_record->section_tipo
+								);
 
 								$component_dato = $component->get_dato();
 
