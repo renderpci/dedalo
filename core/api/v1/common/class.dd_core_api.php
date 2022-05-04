@@ -1672,5 +1672,79 @@ class dd_core_api {
 	}//end get_relation_list
 
 
+	/**
+	* SERVICE_REQUEST
+	* Call to service method given and return and object with the response
+	*
+	* Class file of current service must be exists in path: DEDALO_SERVICES_PATH / my_service / class.service.php
+	* Method must be static and accept a only one object argument
+	* Method must return an object like { result: mixed, msg: string }
+	*
+	* @param object $request_options
+	* sample:
+	* {
+	* 	action: "service_request"
+	* 	dd_api: "dd_core_api"
+	* 	source: {typo: "source", action: "build_subtitles_text", model: "subtitles", arguments: {
+	*   	sourceText: "rsc860"
+	*		maxCharLine: 90
+	*		type: "srt"
+	*		tc_in_secs: 10
+	*		tc_out_secs: 35
+	*   }}
+	* }
+	* @return object response { result: mixed, msg: string }
+	*/
+	public static function service_request(object $request_options) : object {
+		global $start_time;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+
+		// short vars
+			$source			= $request_options->source;
+			$service_name	= $source->model;
+			$service_method	= $source->action;
+			$arguments		= $source->arguments ?? new stdClass();
+
+		// load services class file
+			$class_file = DEDALO_CORE_PATH . '/services/' .$service_name. '/class.' . $service_name .'.php';
+			if (!file_exists($class_file)) {
+				$response->msg = 'Error. services class_file do not exists. Create a new one in format class.my_service_name.php ';
+				if(SHOW_DEBUG===true) {
+					$response->msg .= '. file: '.$class_file;
+				}
+				return $response;
+			}
+			require $class_file;
+
+		// method (static)
+			if (!method_exists($service_name, $service_method)) {
+				$response->msg = 'Error. services method \''.$service_method.'\' do not exists ';
+				return $response;
+			}
+			try {
+
+				$fn_result = call_user_func(array($service_name, $service_method), $arguments);
+
+			} catch (Exception $e) { // For PHP 5
+
+				trigger_error($e->getMessage());
+
+				$fn_result = new stdClass();
+					$fn_result->result	= false;
+					$fn_result->msg		= 'Error. Request failed on call_user_func service_method: '.$service_method;
+
+			}
+
+			$response = $fn_result;
+
+
+		return $response;
+	}//end service_request
+
+
+
 
 }//end dd_core_api
