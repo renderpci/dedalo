@@ -71,16 +71,25 @@ class dd_core_api {
 		// options
 			$search_obj = $json_data->search_obj ?? new StdClass(); // url vars
 
-		// bootstrap context
-
 		// page mode and tipo
 			$default_section_tipo = MAIN_FALLBACK_SECTION; // 'test38';
-			if (isset($search_obj->locator)) {
+			if (isset($search_obj->tool)) {
+
+				// tool case
+				$tool_name = $search_obj->tool;
+
+
+			}else if (isset($search_obj->locator)) {
+
+				// locator case
 				$locator	= json_decode($search_obj->locator);
 				$tipo		= $locator->section_tipo ?? $default_section_tipo;
 				$section_id	= $locator->section_id ?? null;
 				$mode		= $locator->mode ?? 'list';
+
 			}else{
+
+				// default case
 				$tipo		= $search_obj->t	?? $search_obj->tipo		?? $default_section_tipo; // MAIN_FALLBACK_SECTION;
 				$section_id	= $search_obj->id	?? $search_obj->section_id	?? null;
 				$mode		= $search_obj->m	?? $search_obj->mode		?? 'list';
@@ -88,7 +97,7 @@ class dd_core_api {
 
 		// context
 			$context = [];
-			if (login::is_logged()!==true) {
+			if (true!==login::is_logged()) {
 
 				// not logged case
 
@@ -120,7 +129,7 @@ class dd_core_api {
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
-					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model = $tool_name ?? RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 					switch (true) {
 						// Section_tool is depended of section, the order of the cases are important, section_tool need to be first, before section,
 						// because section_tool depends of the section process and this case only add the config from properties.
@@ -229,6 +238,29 @@ class dd_core_api {
 
 						case (strpos($model, 'tool_')===0):
 
+							// resolve tool from name
+							// $registered_tools = tool_common::get_client_registered_tools();
+							$user_id			= (int)navigator::get_user_id();
+							$registered_tools	= tool_common::get_user_tools($user_id);
+							$tool_found = array_find($registered_tools, function($el) use($model){
+								return $el->name===$model;
+							});
+							if (empty($tool_found)) {
+								debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+							}else{
+								$section_tipo	= $tool_found->section_tipo;
+								$section_id		= $tool_found->section_id;
+
+								$element = new tool_common($section_id, $section_tipo);
+								// element JSON
+								$get_json_options = new stdClass();
+									$get_json_options->get_context	= true;
+									$get_json_options->get_data		= false;
+								$element_json = $element->get_json($get_json_options);
+
+								// context add
+								$context[] = $element_json->context;
+							}
 							break;
 
 						case (strpos($model, 'area')===0):

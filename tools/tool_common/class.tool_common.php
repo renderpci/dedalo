@@ -171,12 +171,13 @@ class tool_common {
 				$tool_simple_context->name					= $tool_object->name;
 				$tool_simple_context->mode					= 'edit';
 				$tool_simple_context->label					= $tool_label;
-				// $tool_simple_context->tool_labels			= $tool_object->labels;
-				// $tool_simple_context->description			= $description;
+				// $tool_simple_context->tool_labels		= $tool_object->labels;
+				// $tool_simple_context->description		= $description;
 				$tool_simple_context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
 				$tool_simple_context->css					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/css/' .$tool_object->name. '.css';
 				// $tool_simple_context->show_in_inspector	= $tool_object->show_in_inspector;
 				$tool_simple_context->show_in_component		= $tool_object->show_in_component;
+				$tool_simple_context->properties			= $tool_object->properties;
 				// $tool_simple_context->config				= $tool_object->config;
 
 		// tool_config add

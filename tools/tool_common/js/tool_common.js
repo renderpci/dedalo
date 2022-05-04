@@ -8,7 +8,8 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
-	import {clone, dd_console, printf} from '../../../core/common/js/utils/index.js'
+	import {ui} from '../../../core/common/js/ui.js'
+	import {clone, dd_console, printf, object_to_url_vars} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -50,9 +51,44 @@ tool_common.prototype.init = async function(options) {
 		// self.label			= options.label
 		// self.tool_labels	= options.tool_labels
 		// self.description	= options.description
-		self.tool_config	= options.tool_config
-		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
+
 		self.caller			= options.caller // optional, only for refresh on tool exit
+		// caller fallback to window.opener.callers
+			if (!self.caller) {
+				// searchParams
+					const searchParams = new URLSearchParams(window.location.href)
+				// caller_id
+					const caller_id = searchParams.has('caller_id')
+						? searchParams.get('caller_id') // string from url
+						: null
+				if (caller_id) {
+					if (window.opener.callers && window.opener.callers[caller_id]) {
+						self.caller = window.opener.callers[caller_id]
+						console.warn("//////////// assigned self.caller from opener by caller_id:", self.caller);
+					}
+				}
+			}
+			if (!self.caller) {
+				console.warn(`Warning. Empty caller !`, self)
+			}
+
+		self.tool_config	= options.tool_config
+		// tool_config fallback create a new one on the fly
+			if (!self.tool_config && self.caller) {
+				self.tool_config = {
+					ddo_map : [{
+						tipo			: self.caller.tipo,
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
+						model			: self.caller.model,
+						mode			: 'edit',
+						role			: 'main_component'
+					}]
+				}
+			}
+
+		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
+
 
 		// set vars
 		self.node				= []
@@ -94,7 +130,9 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 			: async function() {
 				// default loads all elements inside ddo_map
 				const ar_promises		= []
-				const ddo_map			= self.tool_config.ddo_map || []
+				const ddo_map			= self.tool_config && self.tool_config.ddo_map
+					? self.tool_config.ddo_map
+					: []
 				const ddo_map_length	= ddo_map.length
 				for (let i = 0; i < ddo_map_length; i++) {
 
@@ -402,98 +440,219 @@ tool_common.prototype.load_component = async function(options) {
 * @return tool instance | bool false
 */
 export const load_tool = async (options) => {
-	dd_console(`load tool [tool_common] options`, 'DEBUG', options)
 
 	// options
 		const caller		= options.caller
 		const tool_context	= clone(options.tool_context) // (!) full clone here to avoid circular references
 
+	// target render
+		const view = tool_context.properties && tool_context.properties.view
+			? tool_context.properties.view
+			: null
 
-		// tool_config. If is received, parse section_id. Else create a new one on the fly
-		// to preserve the format of tool_context.tool_config ddo_map
-			if (!tool_context.tool_config) {
+		if (view) {
 
-				// create a new one on the fly
-				tool_context.tool_config = {
-					ddo_map : [{
-						tipo			: caller.tipo,
-						section_tipo	: caller.section_tipo,
-						section_id		: caller.section_id,
-						model			: caller.model,
-						mode			: 'edit',
-						role			: 'main_component'
-					}]
+			// window modes
+
+			return view_window({
+				view	: view, // string like 'tab' | 'popup'
+				caller	: caller, // object like component_input_text instance
+				name	: tool_context.name // string like 'tool_lang'
+			})
+
+		}else{
+
+			// modal default mode
+
+			// tool_config. If is received, parse section_id. Else create a new one on the fly
+				// to preserve the format of tool_context.tool_config ddo_map
+				if (!tool_context.tool_config) {
+
+					// create a new one on the fly
+					tool_context.tool_config = {
+						ddo_map : [{
+							tipo			: caller.tipo,
+							section_tipo	: caller.section_tipo,
+							section_id		: caller.section_id,
+							model			: caller.model,
+							mode			: 'edit',
+							role			: 'main_component'
+						}]
+					}
+
+				}else{
+
+					// parse ddo_map section_id
+					tool_context.tool_config.ddo_map.map(el => {
+						if (el.section_id==='self' && el.section_tipo === caller.section_tipo) {
+							el.section_id = caller.section_id
+						}
+					})
 				}
 
-			}else{
+			// tool context additional properties
+				tool_context.lang		= caller.lang
+				tool_context.type		= 'tool'
+				tool_context.id_variant	= caller.id_base // prevent instance id collisions
 
-				// parse ddo_map section_id
-				tool_context.tool_config.ddo_map.map(el => {
-					if (el.section_id==='self' && el.section_tipo === caller.section_tipo) {
-						el.section_id = caller.section_id
+			// instance options
+				const instance_options = Object.assign({
+					caller : caller // add caller to tool_context (only to refresh it on close the tool)
+				}, tool_context)
+
+			// instance load / recover
+				const tool_instance = await get_instance(instance_options)
+
+			// stop if already loaded (toggle tool)
+				if (tool_instance.status && tool_instance.status!=='initied') {
+					return false
+				}
+
+			// build
+				await tool_instance.build(true)
+
+			// render tool (don't wait here)
+				tool_instance.render()
+				.then(function(wrapper){
+
+					const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+					const modal		= ui.attach_to_modal(header, wrapper, null)
+					modal.on_close	= () => {
+						tool_instance.destroy(true, true, true)
+						// caller.refresh()
 					}
+
+					// pointer from wrapper to modal
+					wrapper.modal = modal
 				})
-			}
-
-		// tool context additional properties
-			tool_context.lang		= caller.lang
-			tool_context.type		= 'tool'
-			tool_context.id_variant	= caller.id_base // prevent instance id collisions
-
-	// instance options
-		const instance_options = Object.assign({
-			caller : caller // add caller to tool_context (only to refresh it on close the tool)
-		}, tool_context)
-
-	// instance load / recover
-		const tool_instance = await get_instance(instance_options)
 
 
-	// stop if already loaded (toggle tool)
-		if (tool_instance.status && tool_instance.status!=='initied') {
-			return false
+			return tool_instance
+		}
+};//end load_tool
+
+
+
+/**
+* VIEW_WINDOW
+* @return
+*/
+const view_window = function(options) {
+
+	// options
+		const view		= options.view
+		// const view 		= 'popup'
+		const caller	= options.caller
+		const name		= options.name
+
+	// tool_window
+		if (view==='tab' || view==='popup') {
+
+			// url
+				const url_search = object_to_url_vars({
+					tool		: name,
+					menu		: false,
+					caller_id	: caller.id
+				})
+				const url = DEDALO_CORE_URL + '/page/?' + url_search
+
+			// fix current instance as caller in
+				window.callers = window.callers || {}
+				window.callers[caller.id] = caller
+
+			// window options
+				const window_options = view==='popup'
+					? 'popup'
+					: null
+
+			// tool_window
+				const tool_window = window.open(url, 'tool_tab', window_options) // new tab
+				tool_window.focus();
+
+			// close tab tool_window actions (pagehide)
+			// page lifecycle events: 'pageshow', 'focus', 'blur', 'visibilitychange', 'resume', 'pagehide'
+			// @see https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event
+				// tool_window.addEventListener('load', () => {
+				// 	console.log("attaching event tool_window pagehide");
+
+				// 	// tool_window.sessionStorage.setItem('reloaded', 'yes');
+				// 	// console.log("tool_window.sessionStorage.getItem('reloaded') 1:",tool_window.sessionStorage.getItem('reloaded'));
+
+				// 	tool_window.addEventListener(
+				// 		'pagehide',
+				// 		(event) => {
+				// 			console.log("===== triggered pagehide event:",event);
+				// 			// console.log("tool_window.visibilityState:",tool_window.visibilityState);
+				// 			// console.log("tool_window.document:",tool_window.document);
+				// 			// console.log("tool_window.document.visibilityState:",tool_window.document.visibilityState);
+				// 			// console.log("event.persisted:",event.persisted);
+
+				// 			// setTimeout(function(){
+				// 			// 	console.log("tool_window.sessionStorage.getItem('reloaded') 2:",tool_window.sessionStorage.getItem('reloaded'));
+				// 			// }, 1)
+
+
+				// 			// if (event.persisted) {
+				// 			// 	// If the event's persisted property is `true` the page is about
+				// 			// 	// to enter the Back-Forward Cache, which is also in the frozen state.
+				// 			// 	console.log("frozen");
+				// 			// }else{
+				// 			// 	// If the event's persisted property is not `true` the page is
+				// 			// 	// about to be unloaded.
+				// 			// 	// console.log("terminated");
+
+				// 			// 	// On tool_window.document.visibilityState change to 'hidden', trigger actions
+				// 			// 	if (tool_window.document.visibilityState==='hidden') {
+
+				// 			// 	}
+				// 			// }
+
+				// 			/*
+				// 			// remove window.callers pointer
+				// 			delete window.callers[caller.id]
+				// 			// refresh caller
+				// 			caller.refresh()
+				// 			*/
+
+				// 		},{capture: true}
+				// 	);//end pagehide event
+
+				// },{capture: true})//end load event
+
+			// focus event trigger on current window
+				window.addEventListener('focus', fn_onfocus, true);
+				function fn_onfocus() {
+					// remove window.callers pointer
+					delete window.callers[caller.id]
+					// refresh caller
+					caller.refresh()
+					// close opened window if is open
+					if (tool_window) {
+						tool_window.close()
+					}
+					// console.log("window.callers:",window.callers);
+					// (!) remove listener after focus
+					window.removeEventListener('focus', fn_onfocus, true);
+				}
+
+		}else{
+
+			// same page
+
+			// url
+				const url_search = object_to_url_vars({
+					tool		: name,
+					menu		: false,
+					// caller_id	: caller.id
+				})
+				const url = DEDALO_CORE_URL + '/page/?' + url_search
+
+			window.location = url;
 		}
 
-	// build
-		await tool_instance.build(true)
 
-	// render tool (don't wait here)
-		tool_instance.render()
-
-
-	return tool_instance
-
-
-	// // options
-	// 	const caller		= options.caller
-	// 	const tool_object	= options.tool_object
-
-	// // instance load / recover
-	// 	const tool_instance = await get_instance({
-	// 		model 			: tool_object.name,
-	// 		tipo 			: caller.tipo,
-	// 		section_tipo 	: caller.section_tipo,
-	// 		section_id 		: caller.section_id,
-	// 		mode 			: caller.mode,
-	// 		lang 			: page_globals.dedalo_data_lang,
-	// 		caller 			: caller,
-	// 		tool_object		: tool_object
-	// 	})
-
-	// // stop if already loaded (toggle tool)
-	// 	if (tool_instance.status && tool_instance.status!=='initied') {
-	// 		return false
-	// 	}
-
-	// // build
-	// 	await tool_instance.build(true)
-
-	// // render tool (don't wait here)
-	// 	tool_instance.render()
-
-
-	// return tool_instance
-};//end load_tool
+	return true
+}//end view_window
 
 
 
