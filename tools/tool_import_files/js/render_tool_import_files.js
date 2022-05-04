@@ -47,20 +47,20 @@ render_tool_import_files.prototype.edit = async function(options) {
 		})
 
 	// modal tool container
-		if (!window.opener) {
-			const header					= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-			self.tool_container				= ui.attach_to_modal(header, wrapper, null, 'big')
-			self.tool_container.on_close	= () => {
-				self.caller.refresh()
-				// set the images in the dropzone instance, that were uploaded and stay in the server, to ADDED status, to prevent delete them in the server when the tool close
-				const files = self.active_dropzone.files
-				for (let i = files.length - 1; i >= 0; i--) {
-					files[i].status = Dropzone.ADDED
-				}
-				self.active_dropzone.destroy()
-				self.destroy(true, true, true)
-			}
-		}
+		// if (!window.opener) {
+		// 	const header					= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+		// 	self.tool_container				= ui.attach_to_modal(header, wrapper, null, 'big')
+		// 	self.tool_container.on_close	= () => {
+		// 		self.caller.refresh()
+		// 		// set the images in the dropzone instance, that were uploaded and stay in the server, to ADDED status, to prevent delete them in the server when the tool close
+		// 		const files = self.active_dropzone.files
+		// 		for (let i = files.length - 1; i >= 0; i--) {
+		// 			files[i].status = Dropzone.ADDED
+		// 		}
+		// 		self.active_dropzone.destroy()
+		// 		self.destroy(true, true, true)
+		// 	}
+		// }
 
 
 	return wrapper
