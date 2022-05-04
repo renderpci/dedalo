@@ -1028,7 +1028,7 @@ class dd_core_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$user_id		= navigator::get_user_id();
+		$user_id		= (int)navigator::get_user_id();
 		$section_tipo	= $json_data->section_tipo;
 		$filter_obj		= $json_data->filter_obj;
 
