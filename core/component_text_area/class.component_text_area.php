@@ -1710,11 +1710,11 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_TAGS_PERSON
-	* Get available tags for insert in text area. Intervieved, informants, etc..
+	* GET_TAGS_PERSONS
+	* Get available tags for insert in text area. Interviewed, informants, etc..
 	* @return array $ar_tags_inspector
 	*/
-	public function get_tags_person($top_tipo=TOP_TIPO) {
+	public function get_tags_persons($top_tipo=TOP_TIPO) {
 
 		$tags_person = array();
 
@@ -1770,7 +1770,7 @@ class component_text_area extends component_common {
 			$current_section_id 	= $obj_value->section_id;
 			$current_component_tipo = $obj_value->component_tipo;
 			$current_state 			= $obj_value->state;
-			$current_tag_id 		= !empty($obj_value->tag_id) ? $obj_value->tag_id : "1";
+			$current_tag_id 		= !empty($obj_value->tag_id) ? $obj_value->tag_id : 1;
 
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 			$component 		= component_common::get_instance($modelo_name,
@@ -1824,7 +1824,7 @@ class component_text_area extends component_common {
 		}
 
 		return (array)$tags_person;
-	}//end get_tags_person
+	}//end get_tags_persons
 
 
 
