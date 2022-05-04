@@ -1,5 +1,4 @@
 <?php
-include(DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
 /**
 * JSON_RECORDOBJ_MATRIX
 *
@@ -28,7 +27,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	/**
 	* CONSTRUCT
 	*/
-	public function __construct($matrix_table=NULL, $section_id=NULL, $section_tipo=NULL) {
+	public function __construct(string $matrix_table=null, int $section_id=null, string $section_tipo=null) {
 
 		#dump($section_id,"__construct JSON_RecordObj_matrix , matrix_table: $matrix_table");
 
@@ -60,9 +59,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		if ( !empty($section_id) ) {
 			# Ignore other vars
 			//parent::__construct($section_id, $section_tipo);
-			parent::__construct(NULL);
+			parent::__construct(null);
 		}else{
-			parent::__construct(NULL);
+			parent::__construct(null);
 		}
 
 		return true;
@@ -92,6 +91,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	public function get_ID() {
 		return parent::get_ID();
 	}
+
 
 
 	/**
@@ -129,13 +129,13 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* Call RecordDataBounceObject->Save() and RecordObj_time_machine->Save()
 	* @return int $id
 	*/
-	public function Save( $save_options=null ) {
+	public function Save( object $save_options=null ) {
 
 		if( $this->test_can_save()!==true ) {
 			$msg = " Error (test_can_save). No matrix data is saved! ";
 			trigger_error($msg, E_USER_ERROR);
 			debug_log(__METHOD__." $msg - matrix_table: $this->matrix_table - $this->section_tipo - $this->section_id - save_options: ".to_string($save_options), logger::ERROR);
-			return $msg;
+			return false;
 		}
 
 		# MATRIX SAVE (with parent RecordDataBoundObject)
@@ -161,25 +161,24 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* @param object $save_options
 	* @return int $id_matrix
 	*/
-	protected function save_time_machine( $save_options ) {
+	protected function save_time_machine( object $save_options ) : int {
 
 		// options
 			$time_machine_tipo = $save_options->time_machine_tipo ?? null;
 			$time_machine_lang = $save_options->time_machine_lang ?? null;
 			$time_machine_data = $save_options->time_machine_data ?? null;
 
-		/*
-		if (empty($save_options->time_machine_data)) {
-			#dump($save_options,"save_time_machine save_options");
-			#trigger_error("Warning: Nothing to save in  time machine: time_machine_data is empty");
-			if(SHOW_DEBUG===true) {
-				#error_log("DEBUG INFO: ".__METHOD__ . " Empty save_options->time_machine_data. No time machine saved data. section_tipo:$this->section_tipo, section_id:$this->section_id");
-				#dump($save_options->time_machine_data, ' save_options->time_machine_data ++ '.to_string());
-				debug_log(__METHOD__." Empty save_options->time_machine_data. nothing is saved in TM  ".to_string(), logger::DEBUG);
-			}
-			return false;
-		}
-		*/
+		// DES
+			// if (empty($save_options->time_machine_data)) {
+			// 	#dump($save_options,"save_time_machine save_options");
+			// 	#trigger_error("Warning: Nothing to save in  time machine: time_machine_data is empty");
+			// 	if(SHOW_DEBUG===true) {
+			// 		#error_log("DEBUG INFO: ".__METHOD__ . " Empty save_options->time_machine_data. No time machine saved data. section_tipo:$this->section_tipo, section_id:$this->section_id");
+			// 		#dump($save_options->time_machine_data, ' save_options->time_machine_data ++ '.to_string());
+			// 		debug_log(__METHOD__." Empty save_options->time_machine_data. nothing is saved in TM  ".to_string(), logger::DEBUG);
+			// 	}
+			// 	return false;
+			// }
 
 		$RecordObj_time_machine = new RecordObj_time_machine(null);
 
@@ -195,7 +194,6 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			// "userID"			=> "userID", 	# integer
 			// "state"			=> "state",		# string char 32
 			// "dato"			=> "dato",		# jsonb format
-
 
 		// configure time machine object
 			# id_matrix

@@ -47,17 +47,17 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 
 
 	// modal container
-		if (!window.opener) {
-			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-			const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
-			modal.on_close	= () => {
-				self.destroy(true, true, true)
-				// refresh source component text area
-					if (self.transcription_component) {
-						self.transcription_component.refresh()
-					}
-			}
-		}
+		// if (!window.opener) {
+		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+		// 	const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
+		// 	modal.on_close	= () => {
+		// 		self.destroy(true, true, true)
+		// 		// refresh source component text area
+		// 			if (self.transcription_component) {
+		// 				self.transcription_component.refresh()
+		// 			}
+		// 	}
+		// }
 
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		// const related_list_node = render_related_list(self)

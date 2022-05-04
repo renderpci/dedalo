@@ -91,7 +91,7 @@ abstract class component_common extends common {
 	* Singleton pattern
 	* @return array array of component objects by key
 	*/
-	public static function get_instance($component_name=null, $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
+	public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
 		$start_time=microtime(1);
 
 		// tipo check. Is mandatory
@@ -521,9 +521,10 @@ abstract class component_common extends common {
 	*/
 	protected function get_dato() {
 
-		if(isset($this->dato_resolved)) {
-			return $this->dato_resolved;
-		}
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
 
 		// time machine mode case
 			if ($this->modo==='tm') {
@@ -542,24 +543,24 @@ abstract class component_common extends common {
 			}
 
 		/*
-		#
-		# IS TEMP CASE
-		# Sometimes we need use component as temporal element without save real data to database. Is this case
-		# data is saved to session as temporal data
-		if (isset($this->is_temp) && $this->is_temp===true) {
-			$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
-			if (isset($_SESSION['dedalo']['component_temp_data'][$temp_data_uid])) {
-				$this->dato = $_SESSION['dedalo']['component_temp_data'][$temp_data_uid];
+			#
+			# IS TEMP CASE
+			# Sometimes we need use component as temporal element without save real data to database. Is this case
+			# data is saved to session as temporal data
+			if (isset($this->is_temp) && $this->is_temp===true) {
+				$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
+				if (isset($_SESSION['dedalo']['component_temp_data'][$temp_data_uid])) {
+					$this->dato = $_SESSION['dedalo']['component_temp_data'][$temp_data_uid];
+				}else{
+					$this->dato = null;
+				}
+
 			}else{
-				$this->dato = null;
+
+				# MATRIX DATA : Load matrix data
+				$this->load_component_dato();
 			}
-
-		}else{
-
-			# MATRIX DATA : Load matrix data
-			$this->load_component_dato();
-		}
-		*/
+			*/
 
 		# MATRIX DATA : Load matrix data
 		$this->load_component_dato();
@@ -575,7 +576,7 @@ abstract class component_common extends common {
 	*/
 	public function get_dato_full() {
 
-		$section = section::get_instance($this->section_id, $this->section_tipo);
+		$section = $this->get_my_section();
 
 		$all_component_data = $section->get_all_component_data($this->tipo);
 
@@ -595,31 +596,35 @@ abstract class component_common extends common {
 	}//end get_dato_unchanged
 
 
+
 	/**
-	* LOAD MATRIX DATA
+	* LOAD_COMPONENT_DATO
 	* Get data once from matrix about section_id, dato
 	* @return bool
 	*/
 	protected function load_component_dato() : bool {
 
-		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
-			return false;
-		}
-
-		if($this->bl_loaded_matrix_data!==true) {
-
+		// check vars
+			if(empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+				return false;
+			}
 			if (empty($this->section_tipo)) {
 				debug_log(__METHOD__." Error Processing Request. section tipo not found for component $this->tipo ".to_string(), logger::ERROR);
 				return false;
 			}
 
+		if($this->bl_loaded_matrix_data!==true) {
+
 			// section create
-				$section = section::get_instance($this->section_id, $this->section_tipo);
+				// $section = section::get_instance($this->section_id, $this->section_tipo);
+				$section = $this->get_my_section();
 
 			// fix dato
-				// El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.
-				// $lang_fallback = ($this->modo==='list') ? true : false;
-				$this->dato = $section->get_component_dato($this->tipo, $this->lang, $lang_fallback=false);
+				$this->dato = $section->get_component_dato(
+					$this->tipo, // component_tipo
+					$this->lang, // lang
+					false // lang_fallback
+				);
 
 			// Set as loaded
 				$this->bl_loaded_matrix_data = true;
@@ -765,7 +770,7 @@ abstract class component_common extends common {
 		if(SHOW_DEBUG===true) {
 			$this->start_time= microtime(1);
 			$start_time 	 = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
 
 
@@ -789,7 +794,7 @@ abstract class component_common extends common {
 
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 			$total=round(microtime(1)-$this->start_time,3)*1000;
 			if ($total>0.080) {
 				#dump($total, ' total ++ '.$this->tipo .' '. $component_name );
@@ -815,10 +820,10 @@ abstract class component_common extends common {
 
 		# MAIN VARS
 		$section_tipo	= $this->get_section_tipo();
-		$section_id 	= $this->get_section_id();
-		$tipo 			= $this->get_tipo();
-		$lang 			= $this->get_lang();
-		$modo 			= $this->get_modo();
+		$section_id		= $this->get_section_id();
+		$tipo			= $this->get_tipo();
+		$modo			= $this->get_modo();
+		$lang			= $this->get_lang();
 		if (empty($lang)) {
 			$lang = DEDALO_DATA_LANG;
 		}
@@ -861,7 +866,6 @@ abstract class component_common extends common {
 		}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
 
 
-
 		# PARENT : Verify section_id
 		if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 
@@ -899,8 +903,9 @@ abstract class component_common extends common {
 
 
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
-		$section 	= section::get_instance($section_id, $section_tipo);
-		$section_id = $section->save_component_dato($this, 'direct');
+		// $section	= section::get_instance($section_id, $section_tipo);
+		$section	= $this->get_my_section();
+		$section_id	= $section->save_component_dato($this, 'direct');
 
 		if(SHOW_DEBUG===true) {
 			#$section->get_dato();
@@ -1804,9 +1809,10 @@ abstract class component_common extends common {
 				throw new Exception("Error Processing Request", 1);
 			}
 		}
-		$section_tipo 	= $this->section_tipo;
-		$section 		= section::get_instance($this->section_id, $section_tipo);
-		$section_dato 	= $section->get_dato();
+		// $section_tipo	= $this->section_tipo;
+		// $section			= section::get_instance($this->section_id, $section_tipo);
+		$section			= $this->get_my_section();
+		$section_dato		= $section->get_dato();
 
 		if (isset($section_dato->components->$tipo->dato)) {
 			$component_dato_full = $section_dato->components->$tipo->dato;
@@ -2403,36 +2409,25 @@ abstract class component_common extends common {
 	* dataframe for time 		- dd559	-	DEDALO_DATAFRAME_TYPE_TIME
 	* dataframe for space 		- dd560	-	DEDALO_DATAFRAME_TYPE_SPACE
 	* the locator can has the "from_key" that reference to the key of the dato array that this dataframe affect or will be apply, search, etc
+	* @return bool
 	*/
-	public function load_component_dataframe() {
+	public function load_component_dataframe() : bool {
 
-		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
-			return null;
-		}
-
-		#if( $this->bl_loaded_matrix_data!==true ) {
-
-			if (empty($this->section_tipo)) {
-				if(SHOW_DEBUG===true) {
-					$msg = " Error Processing Request. section tipo not found for component $this->tipo";
-					#throw new Exception("$msg", 1);
-					debug_log(__METHOD__.$msg);
-				}
-			}
-			$section = section::get_instance($this->section_id, $this->section_tipo);
-
-			# Fix dataframe
-			$component_data 	= $section->get_all_component_data($this->tipo);
-			if (isset($component_data->dataframe)) {
-				$this->dataframe 	= (array)$component_data->dataframe;
-			}else{
-				$this->dataframe 	= array();
+		// check vars
+			if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+				return false;
 			}
 
+		// component dato_full includes dataframe
+			$dato_full = $this->get_dato_full();
 
-			# Set as loaded
-			$this->bl_loaded_matrix_data = true;
-		#}
+		// set dataframe if exists or default empty array
+			$this->dataframe	= isset($dato_full->dataframe)
+				? (array)$component_data->dataframe
+				: [];
+
+
+		return true;
 	}//end load_component_dataframe
 
 
@@ -2797,13 +2792,19 @@ abstract class component_common extends common {
 
 	/**
 	* GET_MY_SECTION
-	* @return object $section
+	* Creates or get from memory the component section object
+	* @return object $this->section_obj
 	*/
 	public function get_my_section() : object {
 
-		$section = section::get_instance($this->section_id, $this->section_tipo);
+		if (isset($this->section_obj)) {
+			return $this->section_obj;
+		}
 
-		return $section;
+		$this->section_obj = section::get_instance($this->section_id, $this->section_tipo, true);
+
+
+		return $this->section_obj;
 	}//end get_my_section
 
 
@@ -2970,7 +2971,7 @@ abstract class component_common extends common {
 
 			case 'remove':
 				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
-				$this->observable_dato = (get_called_class() === 'component_relation_related')
+				$this->observable_dato = (get_called_class()==='component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;
 
@@ -2982,7 +2983,8 @@ abstract class component_common extends common {
 
 					case ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)):
 						// propagate to other data langs
-						$section = section::get_instance($this->get_section_id(), $this->get_section_tipo());
+						// $section = section::get_instance($this->get_section_id(), $this->get_section_tipo());
+						$section = $this->get_my_section();
 
 						// deactivate save option
 						$this->save_to_database = false;

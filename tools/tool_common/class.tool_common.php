@@ -72,12 +72,14 @@ class tool_common {
 		$component_tipo				= tools_register::$simple_tool_obj_component_tipo;
 
 		$model						= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$simple_tool_component		= component_common::get_instance($model,
-														 $component_tipo,
-														 $this->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $this->section_tipo);
+		$simple_tool_component		= component_common::get_instance(
+			$model,
+			$component_tipo,
+			$this->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$this->section_tipo
+		);
 		$simple_tool_obj_dato	= $simple_tool_component->get_dato();
 		$tool_object			= reset($simple_tool_obj_dato);
 
@@ -169,12 +171,13 @@ class tool_common {
 				$tool_simple_context->name					= $tool_object->name;
 				$tool_simple_context->mode					= 'edit';
 				$tool_simple_context->label					= $tool_label;
-				// $tool_simple_context->tool_labels			= $tool_object->labels;
-				// $tool_simple_context->description			= $description;
+				// $tool_simple_context->tool_labels		= $tool_object->labels;
+				// $tool_simple_context->description		= $description;
 				$tool_simple_context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
 				$tool_simple_context->css					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/css/' .$tool_object->name. '.css';
 				// $tool_simple_context->show_in_inspector	= $tool_object->show_in_inspector;
 				$tool_simple_context->show_in_component		= $tool_object->show_in_component;
+				$tool_simple_context->properties			= $tool_object->properties;
 				// $tool_simple_context->config				= $tool_object->config;
 
 		// tool_config add

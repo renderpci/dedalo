@@ -44,22 +44,22 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		})
 
 	// modal container
-		if (!window.opener) {
-			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-			const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
-			modal.on_close	= async () => {
-				// tool destroy
-					await self.destroy(true, true, true)
-				// refresh source component text area
-					if (self.caller) {
-						self.caller.refresh()
-					}
-			}
-		}
+		// if (!window.opener) {
+		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+		// 	const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
+		// 	modal.on_close	= async () => {
+		// 		// tool destroy
+		// 			await self.destroy(true, true, true)
+		// 		// refresh source component text area
+		// 			if (self.caller) {
+		// 				self.caller.refresh()
+		// 			}
+		// 	}
+		// }
 
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
-		header.appendChild(related_list_node)
+		wrapper.header.appendChild(related_list_node)
 
 	// get_tag_info. Fires build tag info panel nodes at begin
 		get_tag_info(self)

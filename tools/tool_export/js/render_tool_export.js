@@ -47,18 +47,18 @@ render_tool_export.prototype.edit = async function (options={render_level:'full'
 		})
 
 	// tool_container container
-		if (!window.opener) {
-			const header			= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-			const tool_container	= ui.attach_to_modal(header, wrapper, null, 'big')
-			tool_container.on_close	= async () => {
-				// tool destroy
-					await self.destroy(true, true, true)
-				// refresh source component text area
-					if (self.caller) {
-						self.caller.refresh()
-					}
-			}
-		}
+		// if (!window.opener) {
+		// 	const header			= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+		// 	const tool_container	= ui.attach_to_modal(header, wrapper, null, 'big')
+		// 	tool_container.on_close	= async () => {
+		// 		// tool destroy
+		// 			await self.destroy(true, true, true)
+		// 		// refresh source component text area
+		// 			if (self.caller) {
+		// 				self.caller.refresh()
+		// 			}
+		// 	}
+		// }
 
 	return wrapper
 };//end render_tool_export

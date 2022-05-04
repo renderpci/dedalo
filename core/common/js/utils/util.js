@@ -157,7 +157,7 @@ export function object_to_url_vars( vars_obj ) {
 	const pairs = []
 	for (const key in vars_obj) {
 		const current_value = vars_obj[key]
-		pairs.push( key+'='+current_value )
+		pairs.push( key+'='+ encodeURIComponent(current_value) )
 	}
 
 	const url_vars = pairs.join("&")
