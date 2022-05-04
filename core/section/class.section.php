@@ -200,7 +200,7 @@ class section extends common {
 				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
 			}
 
-		// save_handler. If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
+		// save_handler. If section_id have a temporal string the save handier will be 'session' the section will save into the menory NOT to database
 			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
 				$this->save_handler = 'session';
 			}
@@ -357,7 +357,7 @@ class section extends common {
 		##		throw new Exception("Error Processing Request. Section Dato is not object", 1);
 		##	}
 
-		// set self section_obj to component. (!) Important to prevent cached and not cahed versions of
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
 		// current section conflicts (and for speed)
 			$component_obj->set_section_obj($this);
 
@@ -442,7 +442,7 @@ class section extends common {
 	*/
 	public function set_component_direct_dato( object $component_obj ) : object {
 
-		// set self section_obj to component. (!) Important to prevent cached and not cahed versions of
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
 		// current section conflicts (and for speed)
 			$component_obj->set_section_obj($this);
 
@@ -594,7 +594,7 @@ class section extends common {
 	*/
 	public function set_component_relation_dato( object $component_obj ) : object {
 
-		// set self section_obj to component. (!) Important to prevent cached and not cahed versions of
+		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
 		// current section conflicts (and for speed)
 			$component_obj->set_section_obj($this);
 
@@ -690,7 +690,7 @@ class section extends common {
 	public function Save( object $save_options=null ) {
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		// Options default
@@ -1404,7 +1404,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		$parent  = intval($this->get_section_id());
@@ -1433,7 +1433,7 @@ class section extends common {
 		if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
 
 			if(SHOW_DEBUG===true) {
-				global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 				#debug_log(__METHOD__." Returned '$modelo_name_required' for tipo:$this->tipo FROM STATIC CACHE");
 			}
 			return $ar_children_objects_by_modelo_name_in_section[$uid];
@@ -1509,7 +1509,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__,' - modelo_name_required:'.$modelo_name_required ." - ar_section_obj count:". count($ar_section_obj) );
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 			#debug_log( __METHOD__." get_ar_children_objects_by_modelo_name_in_section: ".json_encode($modelo_name_required).' '. exec_time($start_time,'ms') );
 		}
 
@@ -1525,7 +1525,7 @@ class section extends common {
 	* @param bool $from_cache
 	*	default true
 	* @param bool $resolve_virtual
-	*	Force resolve section if is virtal section. default false
+	*	Force resolve section if is virtual section. default false
 	*	Name of desired filtered model array. You can use partial name like 'component_' (string position search is made it)
 	* @return array $section_ar_children_tipo
 	*/
@@ -1533,10 +1533,10 @@ class section extends common {
 		string $section_tipo,
 		array $ar_modelo_name_required,
 		bool $from_cache=true,
-		bool $resolve_virtual=false,
+		bool $resolve_virtual=false, # (!) keep default resolve_virtual=false
 		bool $recursive=true,
 		bool $search_exact=false,
-		$ar_tipo_exclude_elements=false) : array { # Nota: mantener default resolve_virtual=false !
+		$ar_tipo_exclude_elements=false) : array {
 
 		# AR_MODELO_NAME_REQUIRED cast 'ar_modelo_name_required' to array
 		$ar_modelo_name_required = (array)$ar_modelo_name_required;
@@ -1551,15 +1551,11 @@ class section extends common {
 			}
 		}
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$section_tipo.'_'.$cache_uid.'_'.microtime(1)]=microtime(1);
-		}
-
-		$ar_terminos_relacionados_to_exclude=array();
+		$ar_terminos_relacionados_to_exclude = [];
 
 		#
 		# RESOLVE_VIRTUAL : Resolve virtual section to real
-		if($resolve_virtual) {
+		if(true===$resolve_virtual) {
 
 			# ORIGINAL TIPO : always keeps the original type (current)
 			$original_tipo = $section_tipo;
@@ -1593,7 +1589,7 @@ class section extends common {
 					foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-						if($modelo_name === 'section_group'){
+						if($modelo_name==='section_group') {
 							$ar_recursive_childrens 			 = (array)self::get_ar_recursive_childrens($component_tipo);
 							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
 						}
@@ -1604,8 +1600,8 @@ class section extends common {
 			}#end if($section_real_tipo!=$original_tipo) {
 		}//end if($resolve_virtual)
 
-		$tipo 						= $section_tipo;
-		$section_ar_children_tipo 	= array();
+		$tipo						= $section_tipo;
+		$section_ar_children_tipo	= array();
 
 
 		# OBTENEMOS LOS ELEMENTOS HIJOS DE ESTA SECCIÓN
@@ -1622,7 +1618,7 @@ class section extends common {
 
 			switch (true) {
 				// Components are searched recursively
-				case (strpos($ar_modelo_name_required[0], 'component')!==false && $recursive!=false):
+				case (strpos($ar_modelo_name_required[0], 'component')!==false && $recursive!==false):
 					$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
@@ -1644,7 +1640,7 @@ class section extends common {
 				#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
 				$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
 			}
-		*/
+			*/
 
 		if( empty($ar_recursive_childrens) ) {
 			#throw new Exception(__METHOD__." ar_recursive_childrens is empty! This section don't have: '$modelo_name_required' ");
@@ -1652,7 +1648,7 @@ class section extends common {
 			return $section_ar_children_tipo; # return empty array
 		}
 
-		# UNSET the exclude elements of the virtual section to the origianl section
+		# UNSET the exclude elements of the virtual section to the original section
 		if($resolve_virtual) {
 			$ar_recursive_childrens = array_diff($ar_recursive_childrens,$ar_terminos_relacionados_to_exclude);
 		}
@@ -1674,7 +1670,7 @@ class section extends common {
 				# COMPONENT_FILTER : Si buscamos 'component_filter', sólo devolveremos el primero, dado que pueden haber secciones anidadas
 				if($ar_modelo_name_required[0]==='component_filter' && count($ar_recursive_childrens)>1) {
 					if(SHOW_DEBUG===true) {
-						#debug_log(__METHOD__." Breaked loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_childrens). " " .to_string($ar_modelo_name_required));
+						#debug_log(__METHOD__." Broken loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_childrens). " " .to_string($ar_modelo_name_required));
 						#throw new Exception("Error Processing Request", 1);
 					}
 					continue;
@@ -1686,9 +1682,6 @@ class section extends common {
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
 		$_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$cache_uid.'_'.microtime(1)]=microtime(1);
-		}
 
 		return $section_ar_children_tipo;
 	}//end get_ar_children_tipo_by_modelo_name_in_section
@@ -1697,14 +1690,14 @@ class section extends common {
 
 	/**
 	* GET_AR_RECURSIVE_CHILDRENS : private alias of RecordObj_dd::get_ar_recursive_childrens
-	* Note th use of $ar_exclude_models to exclude not desired section elements, like auxiliar sections in ich
+	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary sections in ich
 	*/
 	public static function get_ar_recursive_childrens(string $tipo) : array {
 		#$RecordObj_dd			= new RecordObj_dd($tipo);
 		#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
 
 		# AR_EXCLUDE_MODELS
-		# Current elements and childrens are not considerated part of section and must be excluded in children results
+		# Current elements and children are not considerate part of section and must be excluded in children results
 		$ar_exclude_models = array('box elements','area');
 
 		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens($tipo, false, $ar_exclude_models, 'norden');

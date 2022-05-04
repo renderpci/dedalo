@@ -37,7 +37,7 @@ class component_image extends component_media_common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		// lang. Force always DEDALO_DATA_NOLAN
@@ -94,7 +94,7 @@ class component_image extends component_media_common {
 
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		return true;

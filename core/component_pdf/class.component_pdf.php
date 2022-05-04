@@ -26,7 +26,7 @@ class component_pdf extends component_media_common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		# Creamos el componente normalmente

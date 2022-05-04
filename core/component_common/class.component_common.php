@@ -770,7 +770,7 @@ abstract class component_common extends common {
 		if(SHOW_DEBUG===true) {
 			$this->start_time= microtime(1);
 			$start_time 	 = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
 
 
@@ -794,7 +794,7 @@ abstract class component_common extends common {
 
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 			$total=round(microtime(1)-$this->start_time,3)*1000;
 			if ($total>0.080) {
 				#dump($total, ' total ++ '.$this->tipo .' '. $component_name );
@@ -2971,7 +2971,7 @@ abstract class component_common extends common {
 
 			case 'remove':
 				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
-				$this->observable_dato = (get_called_class() === 'component_relation_related')
+				$this->observable_dato = (get_called_class()==='component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;
 

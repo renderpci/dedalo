@@ -66,7 +66,7 @@ abstract class diffusion  {
 
 		if(SHOW_DEBUG) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' [element '.$class_name.']', "html");
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.microtime(1)]=microtime(1);
 		}
 
 		return $html;
