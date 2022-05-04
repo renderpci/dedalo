@@ -43,13 +43,13 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 		})
 
 	// modal container
-		if (!window.opener) {
-			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-			const modal		= ui.attach_to_modal(header, wrapper, null)
-			modal.on_close	= () => {
-				self.destroy(true, true, true)
-			}
-		}
+		// if (!window.opener) {
+		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
+		// 	modal.on_close	= () => {
+		// 		self.destroy(true, true, true)
+		// 	}
+		// }
 
 
 	return wrapper
