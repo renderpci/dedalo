@@ -173,7 +173,7 @@ abstract class label {
 		$terminoID = null;
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);
 		}
 
 		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
@@ -198,7 +198,7 @@ abstract class label {
 		}
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
 			debug_log(__METHOD__." Total  ".exec_time_unit($start_time,'ms').' ms');
 		}

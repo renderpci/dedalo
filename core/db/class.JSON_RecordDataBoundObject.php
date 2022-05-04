@@ -376,38 +376,33 @@ abstract class JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				$start_time = start_time();
 				if (isset(debug_backtrace()[1]['function'])) {
-					$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n".$strQuery;
+					$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n" . $strQuery;
 				}
 			}
 
 		// $result = pg_query(DBi::_getConnection(), $strQuery);
 
-		# With prepared statement
-		$stmtname  = ""; //md5($strQuery); //'search_free_stmt';
-		$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
-		if ($statement===false) {
-			if(SHOW_DEBUG===true) {
+		# exec With prepared statement
+			$stmtname  = ''; //md5($strQuery); //'search_free_stmt';
+			$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
+			if ($statement===false) {
 				debug_log(__METHOD__." Error when pg_prepare statement for strQuery: ".to_string($strQuery), logger::ERROR);
 				return false;
 			}
-		}
 
-		if ($wait===false) {
-			pg_send_execute(DBi::_getConnection(), $stmtname, array());
-			$result = pg_get_result(DBi::_getConnection());
-		}else{
-			$result = pg_execute(DBi::_getConnection(), $stmtname, array());
-		}
-		#dump($result, " result ".to_string());
-		if($result===false) {
-			echo "<span class=\"error\">Error: sorry an error ocurred on search record.</span>";
-			if(SHOW_DEBUG===true) {
-				dump(pg_last_error()," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
-				throw new Exception("Error Processing SEARCH_FREE Request. pg_last_error: ". pg_last_error(), 1);;
+			if ($wait===false) {
+				pg_send_execute(DBi::_getConnection(), $stmtname, array());
+				$result = pg_get_result(DBi::_getConnection());
+			}else{
+				$result = pg_execute(DBi::_getConnection(), $stmtname, array());
 			}
-		}
-		#dump($result, 'result', array());
-		#error_log(__METHOD__." --> Called search search_free: $strQuery");
+			if($result===false) {
+				if(SHOW_DEBUG===true) {
+					dump(pg_last_error()," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
+				}
+				trigger_error("Error Processing SEARCH_FREE Request. pg_last_error: ". pg_last_error());
+				return false;
+			}
 
 		// Reference extract records
 			// while ($rows = pg_fetch_assoc($result)) {
@@ -448,6 +443,7 @@ abstract class JSON_RecordDataBoundObject {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		$ar_records = array();
+
 		# TABLE . Optionally change table temporally for search
 		if (!empty($matrix_table)) {
 			$this->strTableName = $matrix_table;
@@ -463,65 +459,60 @@ abstract class JSON_RecordDataBoundObject {
 
 				# SI $key ES 'strPrimaryKeyName', LO USAREMOS COMO strPrimaryKeyName A BUSCAR
 				case ($key==='strPrimaryKeyName'):
-						// # If is json selection, strPrimaryKeyName is literal as 'selection'
-						// if ( strpos($value, '->') ) {
-						// 	$strPrimaryKeyName = $value;
-						// }
-						// # Else (default) is a column key and we use '"column_name"'
-						// else{
-						// 	$strPrimaryKeyName = '"'.$value.'"';
-						// }
-						$strPrimaryKeyName = (strpos($value, '->')!==false)
-							? $value // If is json selection, strPrimaryKeyName is literal as 'selection'
-							: '"'.$value.'"'; // Else (default) is a column key and we use '"column_name"'
-						break;
+					// # If is json selection, strPrimaryKeyName is literal as 'selection'
+					// if ( strpos($value, '->') ) {
+					// 	$strPrimaryKeyName = $value;
+					// }
+					// # Else (default) is a column key and we use '"column_name"'
+					// else{
+					// 	$strPrimaryKeyName = '"'.$value.'"';
+					// }
+					$strPrimaryKeyName = (strpos($value, '->')!==false)
+						? $value // If is json selection, strPrimaryKeyName is literal as 'selection'
+						: '"'.$value.'"'; // Else (default) is a column key and we use '"column_name"'
+					break;
+
 				# LIMIT
 				case ($key==='sql_limit'):
-
-						$strQuery_limit = "LIMIT $value ";
-						break;
+					$strQuery_limit = "LIMIT $value ";
+					break;
 
 				# NOT
 				case (strpos($key,':!=')!==false):
-
-						$campo = substr($key, 0, strpos($key,':!='));
-						$strQuery .= "AND $campo != '{$value}' ";
-						break;
+					$campo = substr($key, 0, strpos($key,':!='));
+					$strQuery .= "AND $campo != '{$value}' ";
+					break;
 
 				# SI $key ES 'sql_code', INTERPRETAMOS $value LITERALMENTE, COMO SQL
 				case ($key==='sql_code'):
-
-						$strQuery .= $value.' ';
-						break;
+					$strQuery .= $value.' ';
+					break;
 
 				# OR (formato lang:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
 				case (strpos($key,':or')!==false):
-
-						$campo = substr($key, 0, strpos($key,':or'));
-						$strQuery_temp ='';
-						foreach ($value as $value_string) {
-							$strQuery_temp .= "$campo = '$value_string' OR ";
-						}
-						$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
-						break;
+					$campo = substr($key, 0, strpos($key,':or'));
+					$strQuery_temp ='';
+					foreach ($value as $value_string) {
+						$strQuery_temp .= "$campo = '$value_string' OR ";
+					}
+					$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
+					break;
 
 				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
 				default :
-
-						if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)
-							$strQuery 	.= "AND $key = $value ";
-						}else{
-							if(SHOW_DEBUG===true) {
-								if( !is_string($value) ) {
-									dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());
-									dump($value, ' value ++ '.to_string());
-								}
+					if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)
+						$strQuery 	.= "AND $key = $value ";
+					}else{
+						if(SHOW_DEBUG===true) {
+							if( !is_string($value) ) {
+								dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());
+								dump($value, ' value ++ '.to_string());
 							}
-							$value = pg_escape_string(DBi::_getConnection(), $value);
-							$strQuery 	.= "AND $key = '$value' ";
 						}
-						break;
-
+						$value = pg_escape_string(DBi::_getConnection(), $value);
+						$strQuery .= "AND $key = '$value' ";
+					}
+					break;
 			}#end switch(true)
 		}#end foreach($ar_arguments as $key => $value)
 
@@ -529,11 +520,11 @@ abstract class JSON_RecordDataBoundObject {
 		#if(strpos(strtolower($strQuery), 'update')!=='false' || strpos(strtolower($strQuery), 'delete')!=='false') die("SQL Security Error ". strtolower($strQuery) );
 
 		# Verify query format
-		if(strpos($strQuery, 'AND')===0) {
-			$strQuery = substr($strQuery, 4);
-		}else if( strpos($strQuery, ' AND')===0 ) {
-			$strQuery = substr($strQuery, 5);
-		}
+			if(strpos($strQuery, 'AND')===0) {
+				$strQuery = substr($strQuery, 4);
+			}else if( strpos($strQuery, ' AND')===0 ) {
+				$strQuery = substr($strQuery, 5);
+			}
 
 		if(SHOW_DEBUG===true) {
 			$strQuery = "\n-- search : ".debug_backtrace()[1]['function']."\n".$strQuery;

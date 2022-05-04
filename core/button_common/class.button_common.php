@@ -5,7 +5,7 @@
 *
 */
 class button_common extends common {
-	
+
 	protected $tipo ;
 	protected $modelo ;
 	protected $label ;
@@ -15,21 +15,21 @@ class button_common extends common {
 	protected $section_tipo ;
 
 	public $context_tipo; //dependiendo de quien realice la llamada (area, seccion...) enviará su tipo, independiente de modelo, el tipo será el contexto de la llamada (dd12, dd323...)
-	
+
 	function __construct($tipo, $target, $section_tipo) {
-		
+
 		$this->tipo 		= $tipo;
 		$this->target 		= $target;
 		$this->section_tipo = $section_tipo;
 
 		$this->define_id(NULL);
-		$this->define_lang(DEDALO_APPLICATION_LANG);	
+		$this->define_lang(DEDALO_APPLICATION_LANG);
 		$this->define_modo(navigator::get_selected('modo'));
 
 		parent::load_structure_data();
 
 		# Target is normally a int section id matrix
-		if(!empty($target) && !is_int($target)) throw new Exception("Error creating delete button (target $target is not valid int id matrix)", 1);		
+		if(!empty($target) && !is_int($target)) throw new Exception("Error creating delete button (target $target is not valid int id matrix)", 1);
 	}
 
 	# define id
@@ -50,21 +50,21 @@ class button_common extends common {
 	public function get_html() {
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
-				
+
 		ob_start();
 		include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() . '.php' );
-		$html =  ob_get_clean();		
+		$html =  ob_get_clean();
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
-		
+
 		return $html;
 	}//end get_html
 
-	
+
 
 }//end button_common
 ?>
