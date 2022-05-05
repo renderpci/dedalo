@@ -65,7 +65,9 @@ tool_transcription.prototype.init = async function(options) {
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.langs			= page_globals.dedalo_projects_default_langs
-		self.source_lang	= options.caller.lang
+		self.source_lang	= self.caller && self.caller.lang
+			? self.caller.lang
+			: null
 		self.target_lang	= null
 
 
@@ -84,6 +86,7 @@ tool_transcription.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
+
 	// media_component. fix media_component for convenience
 		const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="media_component")
 		self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
@@ -92,11 +95,11 @@ tool_transcription.prototype.build = async function(autoload=false) {
 		const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
 		self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
 
-
 	// related_sections_list. load_related_sections_list. Get the relation list.
 	// This is used to build a select element to allow
 	// user select the top_section_tipo and top_section_id of current indexation
 		self.related_sections_list = await self.load_related_sections_list()
+
 
 	return common_build
 };//end build_custom
