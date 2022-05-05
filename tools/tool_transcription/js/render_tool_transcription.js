@@ -408,11 +408,14 @@ const render_related_list = function(self){
 	return fragment
 };//end render_related_list
 
+
+
 /**
 * RENDER_TANSCRIPTION_OPTIONS
 * This is used to build a optional buttons inside the header
+* @return DOM node fragment
 */
-const render_tanscription_options = async function (self, content_data) {
+const render_tanscription_options = async function(self, content_data) {
 
 	const fragment = new DocumentFragment()
 
@@ -426,79 +429,80 @@ const render_tanscription_options = async function (self, content_data) {
 			class_name		: 'lang_selector',
 			parent			: fragment
 		})
-			const lang_label = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'lang_label',
-				inner_html 		: get_label.idioma || 'Language',
-				parent 			: lang_container
-			})
-			// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
-			const lang_selector = ui.build_select_lang({
-				id			: "index_lang_selector",
-				selected	: self.lang,
-				class_name	: 'dd_input',
-				action		: async function(e){
-					// create new one
-					const component = await self.get_component(e.target.value)
-					self.lang = e.target.value
-					component.render().then(function(node){
-						// remove previous nodes
-						while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
-							content_data.left_container.removeChild(content_data.left_container.lastChild)
-						}
-						// add the new one
-						content_data.left_container.appendChild(node)
-					})
-				}
-			})
-			lang_container.appendChild(lang_selector)
+		const lang_label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'lang_label',
+			inner_html 		: get_label.idioma || 'Language',
+			parent 			: lang_container
+		})
+		// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
+		const lang_selector = ui.build_select_lang({
+			id			: "index_lang_selector",
+			selected	: self.lang,
+			class_name	: 'dd_input',
+			action		: async function(e){
+				// create new one
+				const component = await self.get_component(e.target.value)
+				self.lang = e.target.value
+				component.render().then(function(node){
+					// remove previous nodes
+					while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+						content_data.left_container.removeChild(content_data.left_container.lastChild)
+					}
+					// add the new one
+					content_data.left_container.appendChild(node)
+				})
+			}
+		})
+		lang_container.appendChild(lang_selector)
 
-		// external tools
+	// external tools
 		const ar_register_tools	= await self.get_user_tools(['tool_time_machine', 'tool_tr_print'])
 		const tool_tr_print		= ar_register_tools.find(el => el.name === 'tool_tr_print')
 		const tool_tm			= ar_register_tools.find(el => el.name === 'tool_time_machine')
 
-		// Button tool transcription print
-			if(tool_tr_print){
-				const tool_tr_print_button = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_button tool_tr_print',
-					parent			: fragment
+	// Button tool transcription print
+		if(tool_tr_print){
+			const tool_tr_print_button = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tool_button tool_tr_print',
+				parent			: fragment
+			})
+				const tool_tr_print_icon = ui.create_dom_element({
+					element_type	: 'img',
+					class_name		: 'icon',
+					src				: tool_tr_print.icon,
+					parent			: tool_tr_print_button
 				})
-					const tool_tr_print_icon = ui.create_dom_element({
-						element_type	: 'img',
-						class_name 		: 'icon',
-						src				: tool_tr_print.icon,
-						parent 			: tool_tr_print_button
-					})
-					const tool_tr_print_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name 		: 'label',
-						text_content 	: tool_tr_print.label || 'Tool tm',
-						parent 			: tool_tr_print_button
-					})
-			}
+				const tool_tr_print_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					text_content	: tool_tr_print.label || 'Tool tm',
+					parent			: tool_tr_print_button
+				})
+		}
 
-		// Button tool time machine
-			if(tool_tm){
-				const tool_tm_button = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_button tool_tm_button',
-					parent			: fragment
+	// Button tool time machine
+		if(tool_tm){
+			const tool_tm_button = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tool_button tool_tm_button',
+				parent			: fragment
+			})
+				const tool_tm_icon = ui.create_dom_element({
+					element_type	: 'img',
+					class_name		: 'icon',
+					src				: tool_tm.icon,
+					parent			: tool_tm_button
 				})
-					const tool_tm_icon = ui.create_dom_element({
-						element_type	: 'img',
-						class_name 		: 'icon',
-						src				: tool_tm.icon,
-						parent 			: tool_tm_button
-					})
-					const tool_tm_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name 		: 'label',
-						text_content 	: tool_tm.label || 'Tool tm',
-						parent 			: tool_tm_button
-					})
-			}
+				const tool_tm_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					text_content	: tool_tm.label || 'Tool tm',
+					parent			: tool_tm_button
+				})
+		}
+
 
 	return fragment
-}// end render_tanscription_options
+};//end render_tanscription_options
