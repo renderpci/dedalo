@@ -46,6 +46,16 @@
 				//padding: 1em;
 			// }
 		}
+
+		>.content_data.content_data_error.tool_error {
+			display: block;
+			background-color: #ffffff;
+			color: @color_danger;
+			>.icon {
+				vertical-align: bottom;
+				margin-right: 0.75rem;
+			}
+		}
 	}//end .wrapper_tool
 
 
@@ -56,8 +66,10 @@
 		background-color: @color_orange_dedalo;
 		color: #ffffff;
 		width: 100%;
+		display: flex;
 
 		>.tool_name_container {
+			padding-right: 1rem;
 			>.label {
 				font-size: 1.2rem;
 				>.button {
@@ -72,7 +84,8 @@
 		}
 
 		>.tool_buttons_container {
-			background-color: #BAF1F6;
+			// background-color: #BAF1F6;
+			padding: 0;
 		}
 
 		// inside modal case
