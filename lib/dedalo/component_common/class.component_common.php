@@ -4205,6 +4205,7 @@ abstract class component_common extends common {
 
 		# JSON CASE
 		if ($json_value = json_decode($search_value)) {
+
 			if (is_array($json_value) && count($json_value)>1) {
 				$group = new stdClass();
 					$name = $operator_between;
@@ -4225,9 +4226,8 @@ abstract class component_common extends common {
 		# STRING CASE
 		}else{
 
-
 			$model = end($query_object->path)->modelo;
-			if ($model==='component_json' || $q_operator === '==' || strpos($query_object->q, '==')==0 ) {
+			if ($model==='component_json' || $q_operator === '==' || (!empty($query_object->q) && strpos($query_object->q, '==')===0) ) {
 				// component json case
 
 				// $query_object->q	= str_replace('"', '\"', $search_value);
