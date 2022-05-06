@@ -127,7 +127,7 @@ abstract class common {
 
 
 	# ACCESSORS
-	final public function __call($strFunction, $arArguments) {
+	final public function __call(string $strFunction, array $arArguments) {
 
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
@@ -143,26 +143,29 @@ abstract class common {
 		return(false);
 	}
 	# SET
-	final protected function SetAccessor($strMember, $strNewValue) {
+	final protected function SetAccessor(string $strMember, $strNewValue) {
 
 		if(property_exists($this, $strMember)) {
+			// fix value
 			$this->$strMember = $strNewValue;
+
+			return true;
 		}else{
-			return(false);
+
+			return false;
 		}
 	}
 	# GET
-	final protected function GetAccessor($strMember) {
+	final protected function GetAccessor(string $strMember) {
 
 		if(property_exists($this, $strMember)) {
-			$strRetVal = $this->$strMember;
-			# stripslashes text values
-			#if(is_string($strRetVal)) $strRetVal = stripslashes($strRetVal);
-			return($strRetVal);
+
+			return $this->$strMember;
 		}else{
-			return(false);
+
+			return false;
 		}
-	}
+	}//end GetAccessor
 
 
 
@@ -171,7 +174,7 @@ abstract class common {
 	* @param string $tipo
 	* @return int $permissions
 	*/
-	public static function get_permissions( $parent_tipo=null, $tipo=null ) : int {
+	public static function get_permissions( string $parent_tipo=null, string $tipo=null ) : int {
 
 		// no logged case
 			if(login::is_logged()!==true) {

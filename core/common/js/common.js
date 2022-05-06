@@ -1063,41 +1063,6 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 
 /**
-* LOAD_TOOL
-* @param tool_object options
-* @param self instance_caller
-* @return object tool
-*/
-	// common.prototype.load_tool = async function(self, tool_object){
-
-	// 	const tool_instance = await get_instance({
-	// 		model 			: tool_object.name,
-	// 		tipo 			: self.tipo,
-	// 		section_tipo 	: self.section_tipo,
-	// 		section_id 		: self.section_id,
-	// 		mode 			: self.mode,
-	// 		lang 			: self.lang,
-	// 		caller 			: self,
-	// 		tool_object		: tool_object
-	// 	})
-
-	// 	// destroy if already loaded (toggle tool)
-	// 		if (tool_instance.status && tool_instance.status!=='init') {
-
-	// 			tool_instance.destroy(true, true, true)
-
-	// 			return false
-	// 		}
-
-	// 	await tool_instance.build(true)
-	// 	tool_instance.render()
-
-	// 	return tool_instance
-	// }//end load_tool
-
-
-
-/**
 * BUILD_RQO
 */
 	// common.prototype.build_rqo_DES = async function(dd_request_type, request_config, action){

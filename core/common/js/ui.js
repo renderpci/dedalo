@@ -1255,8 +1255,8 @@ export const ui = {
 
 
 			// Events
-				tool_button.addEventListener('mousedown', publish_load_tool)
-				function publish_load_tool(e) {
+				tool_button.addEventListener('mousedown', fn_publish_load_tool)
+				function fn_publish_load_tool(e) {
 					e.stopPropagation();
 
 					//common.prototype.load_tool(self, tool_context)
@@ -1306,16 +1306,15 @@ export const ui = {
 				// })
 
 			// Events
-				tool_button.addEventListener('click', publish_load_tool)
-
-				function publish_load_tool(e) {
+				tool_button.addEventListener('click', fn_publish_load_tool)
+				function fn_publish_load_tool(e) {
 					e.stopPropagation();
 
 					const load_tool_options = {
 						tool_context	: tool_context,
 						caller			: self
 					}
-					console.log("publish_load_tool load_tool_options:", load_tool_options);
+					console.log("fn_publish_load_tool load_tool_options:", load_tool_options);
 
 					// new window tab way
 						// // fix current instance as caller in

@@ -814,126 +814,113 @@ abstract class component_common extends common {
 	* Save component data in matrix using parent section
 	* Verify all necessary vars to save and call section 'save_component_dato($this)'
 	* @see section->save_component_dato($this)
-	* @return int $section_matrix_id
+	* @return bool|int $section_matrix_id
 	*/
 	public function Save() {
 
-		# MAIN VARS
-		$section_tipo	= $this->get_section_tipo();
-		$section_id		= $this->get_section_id();
-		$tipo			= $this->get_tipo();
-		$modo			= $this->get_modo();
-		$lang			= $this->get_lang();
-		if (empty($lang)) {
-			$lang = DEDALO_DATA_LANG;
-		}
-		/* Innecesario ???
-		# Si sabemos que el elemento no es traducible, fijamos su 'lang' en 'lg-nolan' (DEDALO_DATA_NOLAN)
-		if ($this->traducible=='no') {
-			$lang = DEDALO_DATA_NOLAN;
-		}
-		*/
+		// short vars
+			$section_tipo	= $this->get_section_tipo();
+			$section_id		= $this->get_section_id();
+			$tipo			= $this->get_tipo();
+			$modo			= $this->get_modo();
+			$lang			= $this->get_lang();
+			if (empty($lang)) {
+				$lang = DEDALO_DATA_LANG;
+			}
+			// Innecesario ???
+				// Si sabemos que el elemento no es traducible, fijamos su 'lang' en 'lg-nolan' (DEDALO_DATA_NOLAN)
+				// if ($this->traducible=='no') {
+				// 	$lang = DEDALO_DATA_NOLAN;
+				// }
 
-		#
-		# DATAFRAME MODE
-		if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
+		// dataframe mode. Save caller and stop
+			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
 
-			#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
+				#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
 
-			$new_tipo 			= $this->caller_dataset->component_tipo;
-			$new_section_tipo 	= $this->caller_dataset->section_tipo;
-			$new_section_id 	= $this->caller_dataset->section_id;
-			$new_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
-			$new_component 		= component_common::get_instance( $new_modelo_name,
-																  $new_tipo,
-																  $new_section_id,
-																  'edit',
-																  $lang,
-																  $new_section_tipo);
+				$new_tipo 			= $this->caller_dataset->component_tipo;
+				$new_section_tipo 	= $this->caller_dataset->section_tipo;
+				$new_section_id 	= $this->caller_dataset->section_id;
+				$new_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+				$new_component 		= component_common::get_instance( $new_modelo_name,
+																	  $new_tipo,
+																	  $new_section_id,
+																	  'edit',
+																	  $lang,
+																	  $new_section_tipo);
 
-			# Force load current db dato to avoid loose it
-			$new_component->get_dato();
+				# Force load current db dato to avoid loose it
+				$new_component->get_dato();
 
-			# Set dataframe data
-			$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
+				# Set dataframe data
+				$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
 
-			if (isset($this->save_to_database) && $this->save_to_database===false) {
-				debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->section_id : $new_section_id ".to_string(), logger::WARNING);
-				#$new_component->save_to_database = false;
+				if (isset($this->save_to_database) && $this->save_to_database===false) {
+					debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->section_id : $new_section_id ".to_string(), logger::WARNING);
+					#$new_component->save_to_database = false;
+				}
+
+				return $new_component->Save();
+			}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
+
+		// Verify component minimum vars before save
+			if( empty($section_id) || empty($tipo) || empty($lang) ) {
+				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
+				return false;
 			}
 
-			return $new_component->Save();
-		}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
+		// section_id validate
+			// if ( abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+			// 	if(SHOW_DEBUG===true) {
+			// 		dump($this, "this section_tipo:$section_tipo - section_id:$section_id - tipo:$tipo - lang:$lang");
+			// 	}
+			// 	trigger_error('Error Processing component save. Inconsistency detected: component trying to save without section_id: '. $section_id);
+			// 	return false;
+			// }
 
+		// dato
+			$dato = $this->dato;
 
-		# PARENT : Verify section_id
-		if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-
-			if(SHOW_DEBUG===true) {
-				dump($this, "this section_tipo:$section_tipo - section_id:$section_id - tipo:$tipo - lang:$lang");
-				throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without section_id ($section_id) ", 1);;
+		// is temp case
+		// Sometimes we need use component as temporal element without save real data to database. Is this case
+		// data is saved to session as temporal data
+			/*
+			if (isset($this->is_temp) && $this->is_temp===true) {
+				$temp_data_uid = $tipo.'_'.$section_id.'_'.$lang.'_'.$section_tipo;
+				$_SESSION['dedalo']['component_temp_data'][$temp_data_uid] = $dato ;
+				if(SHOW_DEBUG===true) {
+					debug_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
+				}
+				return false;
 			}
-			die("Error. Save component data is stopped. Inconsistency detected. Contact with your administrator ASAP");
-		}
-
-		# Verify component minimum vars before save
-		if( empty($section_id) || empty($tipo) || empty($lang) ) {
-			throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang", 1);
-		}
+			*/
 
 
-		# DATO
-		$dato = $this->dato;
+		// section save. The section will be the responsible to save the component data
+			$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
+			$section			= $this->get_my_section();
+			$section_id			= $section->save_component_dato($this, 'direct', $save_to_database);
 
-
-		#
-		# IS TEMP CASE
-		# Sometimes we need use component as temporal element without save real data to database. Is this case
-		# data is saved to session as temporal data
-		/*
-		if (isset($this->is_temp) && $this->is_temp===true) {
-			$temp_data_uid = $tipo.'_'.$section_id.'_'.$lang.'_'.$section_tipo;
-			$_SESSION['dedalo']['component_temp_data'][$temp_data_uid] = $dato ;
-			if(SHOW_DEBUG===true) {
-				debug_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
-			}
-			return false;
-		}
-		*/
-
-
-		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
-		// $section	= section::get_instance($section_id, $section_tipo);
-		$section	= $this->get_my_section();
-		$section_id	= $section->save_component_dato($this, 'direct');
-
-		if(SHOW_DEBUG===true) {
-			#$section->get_dato();
-			#debug_log(__METHOD__." Saved component common section: ".json_encode($section), logger::DEBUG);;
-		}
-
-		#
-		# OPTIONAL STOP THE SAVE PROCESS TO DELAY DDBB ACCESS
-		if (isset($this->save_to_database) && $this->save_to_database===false) {
-			# Stop here (remember make a real section save later!)
-			# No component time machine data will be saved when section saves later
-			return $section_id;
-		}
-
-
-		# ID : Check valid id returned
+		// ID : Check valid id returned
 		// if (abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
-		if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-			throw new Exception("Save: received id ($section_id) not valid!", 1);
-		}
+			if ( empty($section_id) || (abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
+				trigger_error("Error on component Save: received id ($section_id) is not valid!");
+				return false;
+			}
 
+		// save_to_database. Optional stop the save process to delay ddbb access
+			if ($save_to_database===false) {
+				# Stop here (remember make a real section save later!)
+				# No component time machine data will be saved when section saves later
+				return $section_id;
+			}
 
-		# ACTIVITY
-		$this->save_activity();
+		// activity
+			$this->save_activity();
 
-		# Observers
-		// the observers will be need to be notified for re-calculate your own dato with the new component dato
-		$this->propagate_to_observers();
+		// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
+			$this->propagate_to_observers();
+
 
 
 		return (int)$section_id;
@@ -2988,6 +2975,7 @@ abstract class component_common extends common {
 
 						// deactivate save option
 						$this->save_to_database = false;
+						$save_to_database = $this->save_to_database; // default is true
 
 						$ar_langs = $this->get_component_ar_langs();
 						foreach ($ar_langs as $current_lang) {
@@ -3001,7 +2989,7 @@ abstract class component_common extends common {
 							$this->set_dato($dato);
 
 							// send to section for fix data (avoid save each lang)
-							$section->save_component_dato($this);
+							$section->save_component_dato($this, 'direct', $save_to_database);
 						}
 
 						// reactivate save option

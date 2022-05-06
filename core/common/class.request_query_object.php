@@ -12,10 +12,10 @@
 		sqo		: search query object active width DDBB
 		show	: layout_map and sqo_config
 			(it will create the search and choose, when these objects are not sended)
-		search	: layout_map and sqo_config 
+		search	: layout_map and sqo_config
 			(it modify the show and it will create the choose, when these object is not sended)
 		choose	: layout_map 			(it modify search)
-		
+
 		// info about
 			Mandatory	: dd_api, action, source
 			Optional	: sqo, show, search, choose
@@ -26,7 +26,7 @@
 	// DD_REQUEST format
 		[
 			{
-				
+
 				"dd_api"		: string // the API class to use,
 				"action"		: string // the API method to use
 				"source"		: {
@@ -34,11 +34,11 @@
 					"model"			: string // model of the ddo
 					"tipo"			: string // tipo of the ddo
 					"section_tipo"	: string // section_tipo of the ddo
-					"section_id"	: string || int || null // section_id of the ddo 
+					"section_id"	: string || int || null // section_id of the ddo
 					"mode"			: string (edit || list || search || ...), mode of the ddo
 					"lang"			: string // lang of the ddo
 					"value"			: array (optional) [{locator}] || ["text"] || [""] // value of the component to resolve, used by portal in search mode
-				},			
+				},
 				"sqo"			: {
 					// all sqo definition in search_query_object class
 				}
@@ -187,7 +187,7 @@ class request_query_object {
 			// public $choose;
 
 
-	
+
 	/**
 	* __CONSTRUCT
 	* @param object $data
@@ -211,7 +211,7 @@ class request_query_object {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-		
+
 		return true;
 	}//end __construct
 
@@ -221,7 +221,7 @@ class request_query_object {
 	* SET_DD_API
 	*/
 	public function set_dd_api(string $value) {
-		
+
 		$this->dd_api = $value;
 	}//end set_dd_api
 
@@ -231,7 +231,7 @@ class request_query_object {
 	* SET_ACTION
 	*/
 	public function set_action(string $value) {
-		
+
 		$this->action = $value;
 	}//end set_action
 
@@ -290,9 +290,9 @@ class request_query_object {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
-	*/	
+	*/
 	final public function __call($strFunction, $arArguments) {
-		
+
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -306,7 +306,7 @@ class request_query_object {
 		}
 		return(false);
 	}
-	private function GetAccessor($variable) {
+	private function GetAccessor(string $variable) {
 		if(property_exists($this, $variable)) {
 			return (string)$this->$variable;
 		}else{
