@@ -129,7 +129,17 @@ component_json.prototype.save_sequence = async function(editor) {
 
 	let validated = true
 
-	const current_value = editor.get()
+	const current_value = (()=>{
+		try {
+			return editor.get()
+		} catch (error) {
+			validated = false
+			editor.focus()
+			console.warn(error)
+		}
+
+		return null
+	})();
 
 	// check json format and validate
 		if (validated!==true) {
