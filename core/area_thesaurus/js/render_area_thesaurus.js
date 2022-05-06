@@ -75,7 +75,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 			}else{
 
-				const content_data = get_content_data(self)
+				const content_data = render_content_data(self)
 				return content_data
 			}
 		}//end if (render_level==='content')
@@ -104,7 +104,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 		}
 
 	// content_data
-		const content_data = get_content_data(self)
+		const content_data = render_content_data(self)
 		// fragment.appendChild(content_data)
 
 	// wrapper. ui build_edit returns component wrapper
@@ -149,38 +149,38 @@ render_area_thesaurus.prototype.list = async function(options) {
 * Render node for use in edit
 * @return DOM node
 */
-render_area_thesaurus.prototype.edit = async function(options={render_level:'full'}) {
+	// render_area_thesaurus.prototype.edit = async function(options={render_level:'full'}) {
 
-	const self = this
+	// 	const self = this
 
-	// const render_level = options.render_level
+	// 	// const render_level = options.render_level
 
-	// // content_data
-	// 	const content_data = await content_data(self)
-	// 	if (render_level==='content') {
-	// 		return content_data
-	// 	}
+	// 	// // content_data
+	// 	// 	const content_data = await content_data(self)
+	// 	// 	if (render_level==='content') {
+	// 	// 		return content_data
+	// 	// 	}
 
-	// // buttons
-	// 	//const current_buttons = buttons(self);
+	// 	// // buttons
+	// 	// 	//const current_buttons = buttons(self);
 
-	// // wrapper. ui build_edit returns component wrapper
-	// 	const wrapper =	ui.area.build_wrapper_edit(self, {
-	// 		content_data : content_data,
-	// 		//buttons 	 : current_buttons
-	// 	})
+	// 	// // wrapper. ui build_edit returns component wrapper
+	// 	// 	const wrapper =	ui.area.build_wrapper_edit(self, {
+	// 	// 		content_data : content_data,
+	// 	// 		//buttons 	 : current_buttons
+	// 	// 	})
 
 
-	return wrapper
-};//end edit
+	// 	return wrapper
+	// };//end edit
 
 
 
 /**
-* GET_CONTENT_DATA
+* RENDER_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = function(self) {
+const render_content_data = function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -313,7 +313,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+};//end render_content_data
 
 
 

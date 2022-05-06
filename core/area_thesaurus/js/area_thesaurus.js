@@ -66,7 +66,7 @@ export const area_thesaurus = function() {
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
 	area_thesaurus.prototype.destroy		= common.prototype.destroy
 	area_thesaurus.prototype.build_rqo_show	= common.prototype.build_rqo_show
-	area_thesaurus.prototype.edit			= render_area_thesaurus.prototype.edit
+	area_thesaurus.prototype.edit			= render_area_thesaurus.prototype.list
 	area_thesaurus.prototype.list			= render_area_thesaurus.prototype.list
 
 
@@ -285,9 +285,12 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 	const self = this
 
-	const sections_selector_data = self.data.find(item => item.tipo===self.tipo).value
+	const sections_selector_data	= self.data.find(item => item.tipo===self.tipo)
+	const sections_selector_value	= sections_selector_data
+		? sections_selector_data.value
+		: null
 
-	return sections_selector_data
+	return sections_selector_value
 };//end get_sections_selector_data
 
 

@@ -2,7 +2,7 @@
 /**
 * SEARCH QUERY OBJECT (SQO)
 * Defines object with normalized properties and checks.
-* SQO or Search Query Object definition is based on 
+* SQO or Search Query Object definition is based on
 * Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
 *
 * 	// FORMAT
@@ -417,7 +417,7 @@ class search_query_object {
 		}
 		return(false);
 	}
-	private function GetAccessor($variable) {
+	private function GetAccessor(string $variable) {
 		if(property_exists($this, $variable)) {
 			return (string)$this->$variable;
 		}else{

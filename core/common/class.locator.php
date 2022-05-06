@@ -528,7 +528,7 @@ class locator extends stdClass {
 		}
 		return(false);
 	}
-	private function GetAccessor($variable) {
+	private function GetAccessor(string $variable) {
 		if(property_exists($this, $variable)) {
 			return (string)$this->$variable;
 		}else{

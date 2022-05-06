@@ -125,7 +125,7 @@ class request_config_object {
 		// $choose; // object. config of elements to show in choose mode
 
 
-	
+
 	/**
 	* __CONSTRUCT
 	* @param object $data
@@ -146,7 +146,7 @@ class request_config_object {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-		
+
 		return true;
 	}//end __construct
 
@@ -156,7 +156,7 @@ class request_config_object {
 	* SET_API_ENGINE
 	*/
 	public function set_api_engine(string $value) {
-		
+
 		$this->api_engine = $value;
 	}//end set_api_engine
 
@@ -205,9 +205,9 @@ class request_config_object {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
-	*/	
+	*/
 	final public function __call($strFunction, $arArguments) {
-		
+
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -221,7 +221,7 @@ class request_config_object {
 		}
 		return(false);
 	}
-	private function GetAccessor($variable) {
+	private function GetAccessor(string $variable) {
 		if(property_exists($this, $variable)) {
 			return (string)$this->$variable;
 		}else{

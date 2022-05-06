@@ -721,17 +721,21 @@ component_common.prototype.update_data_value = function(changed_data){
 		// const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
 		// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
 	}
-	const action		= changed_data.action
-	const data_key		= changed_data.key || null
-	const changed_value	= changed_data.value
 
-	// if action is set_data the value is changed as is, bulk insert or update the data of the component.
-	if(action==='set_data'){
-		self.data.value = changed_value || []
-		return true
-	}
+	// changed_data
+		const action		= changed_data.action
+		const data_key		= typeof changed_data.key!=='undefined'
+			? changed_data.key // (!) allowed int 0 or bool false
+			: null
+		const changed_value	= changed_data.value
 
-	// when the data_key is false the value is propagated to all items in the array
+	// set_data. if action is set_data the value is changed as is, bulk insert or update the data of the component.
+		if(action==='set_data'){
+			self.data.value = changed_value || []
+			return true
+		}
+
+	// data.value. When the data_key is false the value is propagated to all items in the array
 		if (data_key===false && changed_value===null) {
 			self.data.value = []
 		}else{
