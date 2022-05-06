@@ -2684,6 +2684,9 @@
 		Added method get_value_code to component_select_lang class. (used from diffusion to convert locator value to lang code like 'lg-cat')
 		Added subtitles optional get value 'advice_text'
 		Fixed section bug when section cached and same section not cached are managed as different sections overwriting data on save. Now, get_my_section method is used when is available in components
+		Fixed component_common->split_query check error when try to check $query_object->q strpos
+		Added diffusion database_alias option to overwrite 'table' and 'table_alias' from original (numisdata catalog case for example)
+
 
 
 	[/HISTORY]
@@ -2715,7 +2718,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-05-2022T14:30:12');
+	define('DEDALO_BUILD'	, '06-05-2022T05:52:52');
 
 
 	/*
