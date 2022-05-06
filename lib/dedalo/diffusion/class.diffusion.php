@@ -455,27 +455,27 @@ abstract class diffusion  {
 
 					# Database of current diffusion element
 					$ar_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='children', $search_exact=true);
-					
+
 					$diffusion_database_tipo = !empty($ar_children)
 						? reset($ar_children)
 						: null;
-					
+
 					// database_alias case try
 						if (empty($diffusion_database_tipo)) {
 							$ar_children			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database_alias', $relation_type='children', $search_exact=true);
 							$database_alias_tipo	= reset($ar_children);
 							$ar_real_database_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', false);
-							
+
 							$diffusion_database_tipo = reset($ar_real_database_tipo);
 							$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($database_alias_tipo, DEDALO_STRUCTURE_LANG, true, false);
 							// dump($ar_real_database_tipo, ' ar_real_database_tipo ++ diffusion_database_name: '.to_string($diffusion_database_name));
-							
+
 							// overwrite element_tipo (!)
 							// $element_tipo = $diffusion_database_tipo;
 
 						}else{
 							$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
-						}					
+						}
 
 					$data = new stdClass();
 						$data->element_tipo		= $element_tipo;
@@ -825,7 +825,7 @@ abstract class diffusion  {
 
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
 		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
-			
+
 		# Add childrens from table alias too
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
@@ -1331,4 +1331,77 @@ abstract class diffusion  {
 
 
 
-}//end class
+	/**
+	* PARSE_DATABASE_ALIAS_TABLES
+	*
+	* @param array $ar_table_tipo
+	* 	Current list of tables tipo resolved from target database element
+	* @param string $database_alias_tipo
+	* 	Tipo of current database alias
+	* @return array $ar_table_tipo_edit
+	* 	Modified version of the original table list
+	*/
+	public static function parse_database_alias_tables(array $ar_table_tipo, string $database_alias_tipo) : array {
+
+		// original_ar_table_tipo. Source possible additional tables
+			$original_ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$database_alias_tipo, // Original database_alias element
+				'table', // modelo_name
+				'children_recursive', // relation_type
+				false // search_exact (allow 'table' and 'table_alias')
+			);
+			// dump($original_ar_table_tipo, ' original_ar_table_tipo ++ '.to_string());
+			if (empty($original_ar_table_tipo)) {
+				// nothing to parse or add. Stop here
+				return $ar_table_tipo;
+			}
+
+		$ar_table_tipo_edit	= $ar_table_tipo; // start coping source table
+		$replaced_list		= []; // for debug only
+		foreach ($original_ar_table_tipo as $key => $current_table_tipo) {
+			$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			if ($current_model==='table') {
+				// add
+				$ar_table_tipo[] = $current_table_tipo;
+			}
+			else if($current_model==='table_alias') {
+				// find related terms
+				$current_ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$current_table_tipo, // Original database
+					'table', // modelo_name
+					'termino_relacionado', // relation_type
+					true // search_exact (allow only 'table')
+				);
+				if (isset($current_ar_table_tipo[0])) {
+
+					// replace it if was found
+					$value			= $current_ar_table_tipo[0];
+					$replacement	= $current_table_tipo;
+
+					$found_key = array_search($value, $ar_table_tipo_edit);
+					if (false!==$found_key) {
+						// debug only
+						$replaced_list[] = (object)[
+							'from' => $value,
+							'from_model' => RecordObj_dd::get_modelo_name_by_tipo($value,true),
+							'from_label' => RecordObj_dd::get_termino_by_tipo($value),
+							'to' => $replacement,
+							'to_model' => RecordObj_dd::get_modelo_name_by_tipo($replacement,true),
+							'to_label' => RecordObj_dd::get_termino_by_tipo($replacement),
+						];
+						$ar_table_tipo_edit[$found_key] = $replacement;
+					}
+				}
+			}
+		}//end foreach ($original_ar_table_tipo as $key => $current_table_tipo)
+		// dump($ar_table_tipo, ' ar_table_tipo ++ '.to_string($database_alias_tipo));
+		// dump($ar_table_tipo_edit, ' FINAL ar_table_tipo_edit ++++++++++++++++++++++++++++ '.to_string());
+		debug_log(__METHOD__." Replaced some tables in database list: ".PHP_EOL.json_encode($replaced_list, JSON_PRETTY_PRINT), logger::WARNING);
+
+
+		return $ar_table_tipo_edit;
+	}//end parse_database_alias_tables
+
+
+
+}//end class diffusion

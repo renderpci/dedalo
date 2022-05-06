@@ -2518,19 +2518,28 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-
 		#
 		# TABLES
 		# Search inside current entity_domain and iterate all tables resolving alias and store target sections of every table
-		$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo_tables, // Note that can be different to diffusion_element_tipo
-																				   $modelo_name='table',
-																				   $relation_type='children_recursive', // children_recursive
-																				   $search_exact=false);
-			#dump($ar_terminoID, ' ar_terminoID ++ '.to_string($diffusion_element_tipo_tables));
+			$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$diffusion_element_tipo_tables, // database tipo. Note that can be different to diffusion_element_tipo
+				'table', // modelo_name
+				'children_recursive', // relation_type
+				false // search_exact (allow 'table' and 'table_alias')
+			);
 
-		$diffusion_element = self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
+			// database_alias case
+				$database_alias_tipo = $diffusion_element_tipo;
+				if ($diffusion_element_tipo_tables!==$database_alias_tipo) {
+
+					// replace current tables list with modified parsed version
+					$ar_table_tipo = diffusion::parse_database_alias_tables($ar_table_tipo, $database_alias_tipo);
+				}
+
+
+		// diffusion_element
+			$diffusion_element = self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
 			#dump($diffusion_element, ' diffusion_element ++ '.to_string());
-
 
 		#
 		# DATABASE_NAME . Diffusion domain web_default case
@@ -2545,7 +2554,7 @@ class diffusion_sql extends diffusion  {
 		# DATABASE_TIPO
 		$database_tipo = $diffusion_element->database_tipo;
 
-		foreach ($ar_terminoID as $current_table_tipo) {
+		foreach ($ar_table_tipo as $current_table_tipo) {
 
 			# Calculate database once
 			#if (!isset($database)) {
@@ -2652,7 +2661,7 @@ class diffusion_sql extends diffusion  {
 					#continue;
 					break;
 			}
-		}//end foreach ($ar_terminoID as $current_table_tipo)
+		}//end foreach ($ar_table_tipo as $current_table_tipo)
 		#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
 		#error_log( $diffusion_element_tipo );
 
@@ -4329,8 +4338,23 @@ class diffusion_sql extends diffusion  {
 			}
 
 		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
-		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($reference_root_element, 'table', 'children_recursive', false);
-		foreach ($tables as $current_table_tipo) {
+		$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$reference_root_element, // database tipo
+			'table', // modelo_name
+			'children_recursive', // relation_type
+			false // search_exact (allow 'table' and 'table_alias')
+		);
+
+		// database_alias case
+			$database_alias_tipo = $diffusion_element_tipo;
+			if ($reference_root_element!==$database_alias_tipo) {
+
+				// replace current tables list with modified parsed version
+				$ar_table_tipo = diffusion::parse_database_alias_tables($ar_table_tipo, $database_alias_tipo);
+			}
+
+
+		foreach ($ar_table_tipo as $current_table_tipo) {
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
 			switch ($modelo_name) {
