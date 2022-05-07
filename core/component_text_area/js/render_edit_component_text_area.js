@@ -481,14 +481,7 @@ const get_custom_buttons = (self, i, text_editor) => {
 				onclick	: function(evt) {
 					// alert("Adding person !");
 					// component_text_area.load_tags_person() //ed, evt, text_area_component
-
-
-					const persons_overlay = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'persons_overlay',
-						parent			: fragment,
-						text_node		: data_tag.type
-					})
+					event_manager.publish('click_button_person_'+ self.id_base, {caller: self, text_editor: text_editor})
 				}
 			}
 		})
@@ -770,7 +763,7 @@ const get_custom_events = (self, i, text_editor) => {
 			switch( evt.code ){
 				// 'Escape'
 				case  self.context.av_player.av_play_pause_code:
-					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.av_rewind_seconds)
+					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.av_player.av_rewind_seconds)
 					break;
 				// 'F2'
 				case self.context.av_player.av_insert_tc_code:
@@ -1071,6 +1064,97 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 
 	return
 };//end render_page_selector
+
+
+/**
+* RENDER_PERSONS_SELECTOR
+* @return
+*/
+const render_persons_selector = function(self, data_tag, tag_id, text_editor){
+
+	const fragment = new DocumentFragment()
+
+	const ar_persons = self.context.tags_persons
+
+	const container = ui.create_dom_element({
+		element_type	: 'div',
+		parent			: fragment
+	})
+
+		const label = ui.create_dom_element({
+			element_type	: 'span',
+			text_node		: get_label.persons || 'Persons',
+			class_name 		: 'label',
+			parent			: container
+		})
+
+		const body_title = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: label,
+			parent			: body
+		})
+
+		const body_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'body_title',
+			parent			: body
+		})
+
+		const error_input = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: '',
+			parent			: body
+		})
+
+
+	const footer = ui.create_dom_element({
+		element_type	: 'span'
+	})
+
+	const user_option_cancelar = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'user_option ',
+		inner_html		: get_label.cancelar || 'Cancel',
+		parent			: footer
+	})
+
+	const user_option_ok = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'user_option',
+		inner_html		: get_label.insertar_etiqueta || 'Insert label',
+		parent			: footer
+	})
+
+	const page_selector = ui.attach_to_modal( header, body, footer)
+
+	user_option_ok.addEventListener("click", (e) =>{
+		e.preventDefault()
+		const user_value = body_input.value
+		if(user_value === null) {
+			page_selector.renove()
+		}
+		if(user_value > page_out || user_value < page_in){
+			error_input.textContent = get_label.value_out_of_range || 'Value out of range'
+			return
+		}
+		const data		= body_input.value - (offset -1)
+		data_tag.label	= body_input.value
+		data_tag.data	= "["+data+"]"
+		const tag		= build_node_tag(data_tag, tag_id)
+		text_editor.set_content(tag.outerHTML)
+		page_selector.remove()
+	})
+
+	user_option_cancelar.addEventListener("click", (e) =>{
+		page_selector.remove()
+	})
+
+	return
+};//end render_persons_selector
+
 
 
 

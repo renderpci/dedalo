@@ -1708,33 +1708,65 @@ class component_text_area extends component_common {
 	}//end get_descriptors
 
 
+	/**
+	* GET_AR_RELATED_SECTIONS
+	* get the ar_related_section object to use for persons tags
+	* @return
+	*/
+	public function get_ar_related_sections() {
+
+		$current_locator	= new locator();
+			$current_locator->section_tipo	= $this->section_tipo;
+			$current_locator->section_id	= $this->section_id;
+
+		$sqo = new search_query_object();
+			$sqo->section_tipo			= ['all'];
+			$sqo->mode					= 'related';
+			$sqo->full_count			= false;
+			$sqo->filter_by_locators	= [$current_locator];
+
+		// sections
+		$related_sections = sections::get_instance(null, $sqo, $this->tipo, 'related', $this->lang);
+		$inverse_sections	= $related_sections->get_dato();
+
+		$ar_related_section = [];
+		foreach ($inverse_sections as $current_section) {
+			$related_locator = new locator();
+				$related_locator->section_id	= $current_section->section_id;
+				$related_locator->section_tipo	= $current_section->section_tipo;
+			$ar_related_section[] = $related_locator;
+		}
+
+		return $ar_related_section;
+	}//end get_ar_related_sections
 
 	/**
 	* GET_TAGS_PERSONS
 	* Get available tags for insert in text area. Interviewed, informants, etc..
 	* @return array $ar_tags_inspector
 	*/
-	public function get_tags_persons($top_tipo=TOP_TIPO) {
+	public function get_tags_persons($related_section_tipo=TOP_TIPO, $ar_related_sections=[]) {
 
 		$tags_persons = array();
 
-		$section_id 		= $this->get_parent();
+		$section_id 		= $this->get_section_id();
 		$section_tipo		= $this->get_section_tipo();
-		$section_top_tipo 	= $top_tipo;
 
 		$properties = $this->get_properties();
 		if (!isset($properties->tags_persons)) {
-			debug_log(__METHOD__." Warning: empty properties for tags_persons [properties->tags_persons] (section_top_tipo: $section_top_tipo) ".to_string($properties), logger::WARNING);
+			debug_log(__METHOD__." Warning: empty properties for tags_persons [properties->tags_persons] (related_section_tipo: $related_section_tipo) ".to_string($properties), logger::WARNING);
 			return $tags_persons;
 		}
-		elseif (!isset($properties->tags_persons->$section_top_tipo)) {
-			debug_log(__METHOD__." Warning: bad top_tipo for tags_persons (section_top_tipo: $section_top_tipo) ".to_string($properties), logger::WARNING);
+		elseif (!isset($properties->tags_persons->$related_section_tipo)) {
+			debug_log(__METHOD__." Warning: bad top_tipo for tags_persons (related_section_tipo: $related_section_tipo) ".to_string($properties), logger::WARNING);
 			return $tags_persons;
 		}
 
 		# Resolve obj value
-		$ar_objects = array();
-		foreach ((array)$properties->tags_persons->$section_top_tipo as $key => $obj_value) {
+		$ar_objects = [];
+		foreach ((array)$properties->tags_persons->$related_section_tipo as $key => $obj_value) {
+			// set parent to the section_tipo, the $key of the properties {"oh1":"component_tipo": "oh24",...}
+				$obj_value->parent = $related_section_tipo;
 
 			if ($obj_value->section_tipo===$this->section_tipo) {
 
@@ -1744,18 +1776,19 @@ class component_text_area extends component_common {
 				$ar_objects[] = $obj_value;
 
 			}else{
-
 				# Recalculate indirectly
 				# ar_references is an array of section_id
-				$ar_references = $this->get_ar_tag_references($obj_value->section_tipo, $obj_value->component_tipo);
+				$ar_references = array_filter($ar_related_sections, function($element)use ($related_section_tipo){
+					return $element->section_tipo === $related_section_tipo;
+				}); //$this->get_ar_tag_references($obj_value->section_tipo, $obj_value->component_tipo);
 				if (empty($ar_references)) {
 					debug_log(__METHOD__." Error on calculate section_id from inverse locators $this->section_tipo - $this->parent ".to_string(), logger::ERROR);
 					continue;
 				}
-				foreach ($ar_references as $reference_section_id) {
+				foreach ($ar_references as $reference_locator) {
 
 					$new_obj_value = clone $obj_value;
-						$new_obj_value->section_id = $reference_section_id;
+						$new_obj_value->section_id = $reference_locator->section_id;
 
 					# Add from reference
 					$ar_objects[] = $new_obj_value;
@@ -1763,8 +1796,8 @@ class component_text_area extends component_common {
 			}
 		}
 
-		$resolved=array();
-		foreach ((array)$ar_objects as $key => $obj_value) {
+		$resolved = [];
+		foreach ($ar_objects as $key => $obj_value) {
 
 			$current_section_tipo 	= $obj_value->section_tipo;
 			$current_section_id 	= $obj_value->section_id;
@@ -1807,6 +1840,8 @@ class component_text_area extends component_common {
 													'data'=>$data_locator
 												));
 				$element = new stdClass();
+					$element->parent			= $obj_value->parent;
+					$element->parent_section_id	= $obj_value->section_id;
 					$element->tag 		= $tag_person;
 					#$element->tag_image = TR::addTagImgOnTheFly($element->tag);
 					$element->role 		= $label->role;  // RecordObj_dd::get_termino_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
@@ -1833,7 +1868,7 @@ class component_text_area extends component_common {
 	* Resolves portal and other elements that are not in this section (inverse locator)
 	* @return array $ar_tag_references
 	*/
-	public function get_ar_tag_references($section_tipo, $component_tipo) {
+	public function DEPRECATED_get_ar_tag_references($section_tipo, $component_tipo) {
 
 		$ar_tag_references = array();
 
