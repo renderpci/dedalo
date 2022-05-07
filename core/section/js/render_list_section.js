@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {get_ar_instances} from './section.js'
 
@@ -426,23 +427,24 @@ render_list_section.render_column_id = function(options){
 						button_edit.addEventListener("click", function(e){
 							e.stopPropagation();
 
-							// tool_context (clone always to prevent modify original object)
-								const tool_context = clone(self.config.tool_context)
+							// tool_context
+								const tool_context = self.config.tool_context
 
-							// parse ddo_map section_id
-								tool_context.tool_config.ddo_map.map(el => {
-									if (el.section_id==='self') {
-										el.section_id = section_id
-									}
+							// section_id_selected (!) Important to allow parse 'self' values
+								self.section_id_selected = section_id
+
+							// parse ddo_map section_id. (!) Unnecessary. To be done at tool_common init
+								// tool_context.tool_config.ddo_map.map(el => {
+								// 	if (el.section_id==='self') {
+								// 		el.section_id = section_id
+								// 	}
+								// })
+
+							// open_tool (tool_common)
+								open_tool({
+									tool_context	: tool_context,
+									caller			: self
 								})
-
-							// lang set
-								tool_context.lang = self.lang
-
-							event_manager.publish('load_tool', {
-								tool_context	: tool_context,
-								caller			: self
-							})
 						})
 						button_edit.appendChild(section_id_node)
 
@@ -590,12 +592,6 @@ const get_buttons = function(self) {
 					switch(current_button.model){
 						case 'button_new':
 							event_manager.publish('new_section_' + self.id)
-							break;
-						// case 'button_import':
-						// 	event_manager.publish('load_tool', {
-						// 		tool_context	: current_button.tools[0],
-						// 		caller			: self
-						// 	})
 							break;
 						default:
 							event_manager.publish('click_' + current_button.model)

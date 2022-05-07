@@ -48,7 +48,7 @@ export const tool_media_versions = function () {
 */
 // prototypes assign
 	// render : using common render entry point
-	tool_media_versions.prototype.render	= common.prototype.render
+	tool_media_versions.prototype.render	= tool_common.prototype.render
 	// destroy : using common destroy method
 	tool_media_versions.prototype.destroy	= common.prototype.destroy
 	// refresh: using common refresh method

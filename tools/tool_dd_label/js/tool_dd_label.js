@@ -39,7 +39,7 @@ export const tool_dd_label = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_dd_label.prototype.render	= common.prototype.render
+	tool_dd_label.prototype.render	= tool_common.prototype.render
 	tool_dd_label.prototype.destroy	= common.prototype.destroy
 	tool_dd_label.prototype.refresh	= common.prototype.refresh
 	tool_dd_label.prototype.build	= tool_common.prototype.build

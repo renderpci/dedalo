@@ -7,6 +7,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {bytes_format} from '../../../core/common/js/utils/index.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -406,21 +407,26 @@ const get_line_file_upload = function(ar_quality, self) {
 				class_name		: 'button upload',
 				parent			: file_info_node
 			})
-			button_file_upload.addEventListener("click", function(){
+			button_file_upload.addEventListener("click", function(e){
+				e.stopPropagation()
+
 				// open tool_upload
 					// tool context minimum
 						const tool_context = {
 							model	: 'tool_upload',
 							name	: 'tool_upload',
-							mode	: 'edit',
-							label	: 'Upload file'
+							mode	: 'edit'
 						}
+
+					const caller = self.main_component
+
 					// update caller context quality
-						self.main_component.context.target_quality = quality
-					// event publish
-						event_manager.publish('load_tool', {
+						caller.context.target_quality = quality
+
+					// open_tool (tool_common)
+						open_tool({
 							tool_context	: tool_context,
-							caller			: self.main_component
+							caller			: caller
 						})
 
 				// event on refresh caller

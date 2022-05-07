@@ -72,13 +72,21 @@ render_tool_upload.prototype.edit = async function (options) {
 			element_type	: 'div',
 			class_name		: 'service_upload_container'
 		})
-		wrapper.prepend(service_upload_container)
+		wrapper.tool_header.after(service_upload_container)
+		// content_data.appendChild(service_upload_container)
+		// spinner
+		const spinner = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: "spinner",
+			parent			: service_upload_container
+		})
 		// service_upload. Build and render
 		self.service_upload.build()
 		.then(function(){
 			self.service_upload.render()
 			.then(function(tool_upload_node){
 				service_upload_container.appendChild(tool_upload_node)
+				spinner.remove()
 			})
 		})
 

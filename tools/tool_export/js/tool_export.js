@@ -48,7 +48,7 @@ export const tool_export = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_export.prototype.render						= common.prototype.render
+	tool_export.prototype.render						= tool_common.prototype.render
 	tool_export.prototype.destroy						= common.prototype.destroy
 	tool_export.prototype.edit							= render_tool_export.prototype.edit
 	tool_export.prototype.build_export_component		= render_tool_export.prototype.build_export_component

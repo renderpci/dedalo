@@ -48,7 +48,7 @@ export const tool_indexation = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_indexation.prototype.render	= common.prototype.render
+	tool_indexation.prototype.render	= tool_common.prototype.render
 	tool_indexation.prototype.destroy	= common.prototype.destroy
 	tool_indexation.prototype.refresh	= common.prototype.refresh
 	tool_indexation.prototype.edit		= render_tool_indexation.prototype.edit
@@ -77,13 +77,21 @@ tool_indexation.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
+	// self.tool_config check
+		if (!self.tool_config) {
+			self.error = "Invalid self.tool_config"
+			console.warn(self.error, 'options:', options);
+			return false
+		}
+
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.langs	= page_globals.dedalo_projects_default_langs
 
 	// id_base from transcription_component. Needed to set event subscriptions on init
-		const transcription_component_ddo = options.tool_config.ddo_map.find(el => el.role==='transcription_component')
+		const transcription_component_ddo = self.tool_config.ddo_map.find(el => el.role==='transcription_component')
 		if (!transcription_component_ddo) {
-			console.warn("Invalid transcription_component_ddo:", options );
+			self.error = "Invalid transcription_component_ddo:"
+			console.warn(self.error, 'options:', options);
 			return false
 		}
 		const id_base = transcription_component_ddo.section_tipo +'_'+ transcription_component_ddo.section_id +'_'+ transcription_component_ddo.tipo
@@ -188,6 +196,8 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload)
 
+		console.log("self.tool_config.ddo_map:",self.tool_config.ddo_map);
+		console.log("self.ar_instances:",self.ar_instances);
 
 	// transcription_component. fix transcription_component for convenience
 		const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
@@ -199,7 +209,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 	// media_component. fix media_component for convenience
 		const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="media_component")
-		self.media_component			= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+		self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
 
 	// area_thesaurus. fix area_thesaurus for convenience
 		const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==="area_thesaurus")

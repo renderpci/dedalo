@@ -64,12 +64,11 @@ class DDModal extends HTMLElement {
 			/* Mini Button */
 				.mini_modal {
 					color: white;
-					float: right;
-					font-size: 1.75em;
+					font-size: 1.75rem;
 					font-weight: bold;
-					position: relative;
-	    			top: 0.25em;
-	    			right: 2.25em;
+					position: absolute;
+	    			top: 0.1rem;
+	    			right: 2.75rem;
 	    			z-index: 3;
 				}
 				.mini_modal:hover,
@@ -82,12 +81,11 @@ class DDModal extends HTMLElement {
 			/* The Close Button */
 				.close_modal {
 					color: white;
-					float: right;
-					font-size: 1.75em;
+					font-size: 1.75rem;
 					font-weight: bold;
-					position: relative;
-					top: 0.25em;
-					right: 0.5em;
+					position: absolute;
+					top: 0.5rem;
+					right: 0.75rem;
 					z-index: 3;
 				}
 				.close_modal:hover,

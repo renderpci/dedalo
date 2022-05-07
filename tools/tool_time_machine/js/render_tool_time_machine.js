@@ -157,7 +157,23 @@ const content_data_edit = async function(self) {
 				inner_html		: get_label.aplicar_y_salvar || 'Apply and save',
 				parent			: tool_bar
 			})
-			self.button_apply.addEventListener("click", self.apply_value.bind(self))
+			self.button_apply.addEventListener("click", function(){
+				// const response = self.apply_value.bind(self)
+				self.apply_value(self)
+				.then(function(response){
+					if (response.result===true) {
+						// success case
+						if (window.opener) {
+							// close this window when was opened from another
+							window.close()
+						}
+					}else{
+						// error case
+						console.warn("response:",response);
+						alert(response.msg || 'Error. Unknow error on apply tm value');
+					}
+				})
+			})
 
 	// section container
 		// const section_container = ui.create_dom_element({

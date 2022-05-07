@@ -14,7 +14,7 @@
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {common} from '../../common/js/common.js'
-	import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
+	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
 	import {render_page} from './render_page.js'
@@ -219,9 +219,9 @@ page.prototype.init = async function(options) {
 		// load_tool
 		// The event is fired by the tool button created with method ui.build_tool_button.
 		// When the user triggers the click event, a publish 'load_tool' is made
-			self.events_tokens.push(
-				event_manager.subscribe('load_tool', load_tool) // fire tool_common.load_tool function
-			)
+			// self.events_tokens.push(
+			// 	event_manager.subscribe('load_tool', load_tool) // fire tool_common.load_tool function
+			// )
 
 	// beforeunload (event)
 		// window.addEventListener("beforeunload", function (event) {

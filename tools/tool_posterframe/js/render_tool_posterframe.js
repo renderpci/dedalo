@@ -41,31 +41,36 @@ render_tool_posterframe.prototype.edit = async function(options) {
 		}
 
 	// wrapper. ui build_edit returns a standard built tool wrapper
-		const wrapper = ui.tool.build_wrapper_edit(self, {})
+		const wrapper = ui.tool.build_wrapper_edit(self, {
+			content_data : content_data
+		})
 
 	// main_component_container
 		const main_component_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'main_component_container',
-			parent			: wrapper
+			// parent		: wrapper
 		})
-		// temporal image to show while main_component is rebuilt and rendered
-		const main_component_image = ui.create_dom_element({
-			element_type	: 'img',
-			src				: self.main_component.data.posterframe_url,
+		wrapper.tool_header.after(main_component_container)
+		// spinner
+		const spinner = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: "spinner",
 			parent			: main_component_container
 		})
 		// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
 		self.main_component.mode = 'player'
 		self.main_component.build(true)
 		.then(async function(){
-			const component_node = await self.main_component.render()
-			main_component_image.remove()
-			main_component_container.appendChild(component_node)
-		})
+			setTimeout(function(){
+				self.main_component.render()
+				.then(function(component_node){
+					main_component_container.appendChild(component_node)
+					spinner.remove()
+				})
+			}, 10)
 
-	// content data add
-		wrapper.appendChild(content_data)
+		})
 
 	// modal container
 		// if (!window.opener) {

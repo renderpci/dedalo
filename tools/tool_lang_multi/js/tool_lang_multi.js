@@ -43,7 +43,7 @@ export const tool_lang_multi = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_lang_multi.prototype.render	= common.prototype.render
+	tool_lang_multi.prototype.render	= tool_common.prototype.render
 	tool_lang_multi.prototype.destroy	= common.prototype.destroy
 	tool_lang_multi.prototype.refresh	= common.prototype.refresh
 	tool_lang_multi.prototype.edit		= render_tool_lang_multi.prototype.edit

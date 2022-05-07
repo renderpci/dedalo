@@ -7,6 +7,7 @@
 	import {strip_tags, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'
@@ -1255,16 +1256,15 @@ export const ui = {
 
 
 			// Events
-				tool_button.addEventListener('mousedown', fn_publish_load_tool)
-				function fn_publish_load_tool(e) {
-					e.stopPropagation();
+				tool_button.addEventListener('mousedown', function(e){
+					e.stopPropagation()
 
-					//common.prototype.load_tool(self, tool_context)
-					event_manager.publish('load_tool', {
-						tool_context	: tool_context,
-						caller			: self
-					})
-				}
+					// open_tool (tool_common)
+						open_tool({
+							tool_context	: tool_context,
+							caller			: self
+						})
+				})
 
 
 			return tool_button
@@ -1306,40 +1306,15 @@ export const ui = {
 				// })
 
 			// Events
-				tool_button.addEventListener('click', fn_publish_load_tool)
-				function fn_publish_load_tool(e) {
+				tool_button.addEventListener('click', function(e){
 					e.stopPropagation();
 
-					const load_tool_options = {
-						tool_context	: tool_context,
-						caller			: self
-					}
-					console.log("fn_publish_load_tool load_tool_options:", load_tool_options);
-
-					// new window tab way
-						// // fix current instance as caller in
-						// 	window.callers = window.callers || {}
-						// 	window.callers[self.id]	= self
-
-						// // open tab
-						// 	const url_search = object_to_url_vars({
-						// 		tool		: tool_context.name,
-						// 		menu		: false,
-						// 		caller_id	: self.id
-						// 	})
-						// 	const url	= DEDALO_CORE_URL + '/page/?' + url_search
-						// 	const w		= window.open(url, 'tool_tab', 'popup')
-						// 	w.focus();
-
-						// // close tab actions (onbeforeunload)
-						// 	// w.onbeforeunload = function (event) {
-						// 	// 	event.preventDefault();
-						// 	// 	self.refresh()
-						// 	// 	console.log("_______________________________self:",self);
-						// 	// };
-
-					event_manager.publish('load_tool', load_tool_options)
-				}
+					// open_tool (tool_common)
+						open_tool({
+							tool_context	: tool_context,
+							caller			: self
+						})
+				})
 
 
 			return tool_button

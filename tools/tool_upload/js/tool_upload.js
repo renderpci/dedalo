@@ -45,7 +45,7 @@ export const tool_upload = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_upload.prototype.render		= common.prototype.render
+	tool_upload.prototype.render		= tool_common.prototype.render
 	tool_upload.prototype.destroy		= common.prototype.destroy
 	tool_upload.prototype.refresh		= common.prototype.refresh
 	tool_upload.prototype.edit			= render_tool_upload.prototype.edit
