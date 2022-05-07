@@ -1716,25 +1716,25 @@ class component_text_area extends component_common {
 	*/
 	public function get_tags_persons($top_tipo=TOP_TIPO) {
 
-		$tags_person = array();
+		$tags_persons = array();
 
 		$section_id 		= $this->get_parent();
 		$section_tipo		= $this->get_section_tipo();
 		$section_top_tipo 	= $top_tipo;
 
 		$properties = $this->get_properties();
-		if (!isset($properties->tags_person)) {
-			debug_log(__METHOD__." Warning: empty properties for tags_persons [properties->tags_person] (section_top_tipo: $section_top_tipo) ".to_string($properties), logger::WARNING);
-			return $tags_person;
+		if (!isset($properties->tags_persons)) {
+			debug_log(__METHOD__." Warning: empty properties for tags_persons [properties->tags_persons] (section_top_tipo: $section_top_tipo) ".to_string($properties), logger::WARNING);
+			return $tags_persons;
 		}
-		elseif (!isset($properties->tags_person->$section_top_tipo)) {
+		elseif (!isset($properties->tags_persons->$section_top_tipo)) {
 			debug_log(__METHOD__." Warning: bad top_tipo for tags_persons (section_top_tipo: $section_top_tipo) ".to_string($properties), logger::WARNING);
-			return $tags_person;
+			return $tags_persons;
 		}
 
 		# Resolve obj value
 		$ar_objects = array();
-		foreach ((array)$properties->tags_person->$section_top_tipo as $key => $obj_value) {
+		foreach ((array)$properties->tags_persons->$section_top_tipo as $key => $obj_value) {
 
 			if ($obj_value->section_tipo===$this->section_tipo) {
 
@@ -1817,13 +1817,13 @@ class component_text_area extends component_common {
 					$element->label 	= $label->initials;
 					$element->data 		= $data_locator;
 
-				$tags_person[] = $element;
+				$tags_persons[] = $element;
 
 				$resolved[] = $lkey;
 			}
 		}
 
-		return (array)$tags_person;
+		return (array)$tags_persons;
 	}//end get_tags_persons
 
 
