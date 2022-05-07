@@ -43,7 +43,7 @@
 * SEARCH
 */
 export const search = function() {
-	
+
 	this.id_variant	= null
 	this.model		= 'search'
 
@@ -60,7 +60,7 @@ export const search = function() {
 	// lifecycle
 	search.prototype.refresh						= common.prototype.refresh
 	search.prototype.destroy						= common.prototype.destroy
-	// render	
+	// render
 	search.prototype.render							= common.prototype.render
 	search.prototype.list							= render_search.prototype.list
 	search.prototype.edit							= render_search.prototype.list
@@ -113,7 +113,7 @@ search.prototype.init = async function(options) {
 		self.limit					= self.sqo.limit || (self.caller.mode==='edit' ? 1 : 10)
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
-		
+
 
 	// sections_selector_data
 		self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined"
@@ -250,7 +250,7 @@ search.prototype.build = async function(){
 
 	// user_presets. load user preset data
 		ar_promises.push( new Promise(async function(resolve){
-			
+
 			const user_presets = await current_data_manager.request({
 				body : {
 					action				: "filter_get_user_presets",
@@ -634,7 +634,7 @@ search.prototype.get_component_instance = async function(options) {
 	// add instance
 		self.ar_instances.push(component_instance)
 
-	
+
 	return component_instance
 };//end get_component_instance
 
@@ -1096,7 +1096,7 @@ search.prototype.track_show_panel = async function(options) {
 	// update value
 		value[name] = {
 			is_open : (action==='open')
-		}		
+		}
 
 	// local_db_data save
 		current_data_manager.set_local_db_data({
@@ -1121,7 +1121,7 @@ search.prototype.get_panels_status = async function() {
 	// local_db_data. get value if exists
 		const current_data_manager	= new data_manager();
 		const panels_status = await current_data_manager.get_local_db_data(self.id, 'context')
-			
+
 	return panels_status
 };//end get_panels_status
 
@@ -1138,16 +1138,16 @@ search.prototype.get_panels_status = async function() {
 
 	// 	const section_tipo = self.section_tipo // search.prototype.section_tipo
 
-		
+
 
 	// 	// // Read cookie to auto open search_panel
 	// 	// const cookie_obj 	= JSON.parse( read_cookie("search") || '{"'+section_tipo+'":{}}' )
 	// 	// const cookie_track 	= (cookie_obj[section_tipo]) ? cookie_obj[section_tipo][name] : false
-		
+
 	// 	// local_db_data. get value if exists
 	// 		const current_data_manager	= new data_manager();
 	// 		const saved_search_state = await current_data_manager.get_local_db_data(self.id, 'context')
-			
+
 	// 		const cookie_track = saved_search_state
 	// 			? ((saved_search_state.value[name] && saved_search_state.value[name].is_open) || false)
 	// 			: false
