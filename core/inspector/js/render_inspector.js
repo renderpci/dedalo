@@ -228,24 +228,22 @@ const get_content_data = function(self) {
 			})
 			data_link.addEventListener("click", (e)=>{
 				e.preventDefault()
-				// window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
-				window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id )
+				window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.caller.section_id )
 			})
 		// tool register files.	dd1340
-			const section_tipo = self.caller.tipo
-			if (section_tipo==="dd1340") {
+			if (self.section_tipo==='dd1340') {
 				const register_download = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'warning download register_download',
-					text_content	: "Download register file",
+					text_content	: 'Download register file',
 					parent			: buttons_bottom_container
 				})
 				register_download.addEventListener("click", (e)=>{
 					e.preventDefault()
-					const url		= DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id
-					const file_name	= "register.json"
+					const url		= DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.caller.section_id
+					const file_name	= 'register.json'
 					// download_url (import from data_manager) temporal link create and click
-					if (confirm(`Donwload file: ${file_name} ?`)) {
+					if (confirm(`Donwload file: ${file_name} ${self.caller.section_id} ?`)) {
 						download_url(url, file_name)
 					}
 				})

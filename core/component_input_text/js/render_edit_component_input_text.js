@@ -270,6 +270,61 @@ const get_content_data_edit = function(self) {
 
 
 /**
+* INPUT_ELEMENT
+* @return DOM node li
+*/
+const get_input_element_edit = (i, current_value, self) => {
+
+	// short vars
+		const mode					= self.mode
+		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
+			? self.context.properties.multi_line
+			: false
+		const element_type			= (multi_line===true) ? 'textarea' : 'input'
+		const is_inside_tool		= self.is_inside_tool
+		// const with_lang_versions	= self.context.properties.with_lang_versions || false
+
+	// li
+		const li = ui.create_dom_element({
+			element_type : 'li'
+		})
+
+	// input field
+		ui.create_dom_element({
+			element_type	: element_type,
+			type			: 'text',
+			class_name		: 'input_value',
+			dataset			: { key : i },
+			value			: current_value,
+			parent			: li,
+			placeholder 	: (current_value) ? '' : self.data.fallback_value[i]
+		})
+
+	// button remove. Triggered by wrapper delegated events
+		if((mode==='edit' || 'edit_in_list') && !is_inside_tool) {
+			// button_remove
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button remove hidden_button',
+				dataset			: { key : i },
+				parent			: li
+			})
+		}
+
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	inner_html		: '* 18',
+		// 	parent			: li
+		// })
+
+
+
+	return li
+}//end input_element
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
 * @return DOM node buttons_container
@@ -339,59 +394,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* INPUT_ELEMENT
-* @return DOM node li
-*/
-const get_input_element_edit = (i, current_value, self) => {
-
-	// short vars
-		const mode					= self.mode
-		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
-			? self.context.properties.multi_line
-			: false
-		const element_type			= (multi_line===true) ? 'textarea' : 'input'
-		const is_inside_tool		= self.is_inside_tool
-		// const with_lang_versions	= self.context.properties.with_lang_versions || false
-
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
-		})
-
-	// input field
-		ui.create_dom_element({
-			element_type	: element_type,
-			type			: 'text',
-			class_name		: 'input_value',
-			dataset			: { key : i },
-			value			: current_value,
-			parent			: li,
-			placeholder 	: (current_value) ? '' : self.data.fallback_value[i]
-		})
-
-	// button remove. Triggered by wrapper delegated events
-		if((mode==='edit' || 'edit_in_list') && !is_inside_tool) {
-			// button_remove
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button remove hidden_button',
-				dataset			: { key : i },
-				parent			: li
-			})
-		}
-
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	inner_html		: '* 18',
-		// 	parent			: li
-		// })
-
-
-
-
-	return li
-}//end input_element

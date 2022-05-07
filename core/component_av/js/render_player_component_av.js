@@ -48,8 +48,10 @@ render_player_component_av.prototype.player = async function(options) {
 		})
 
 	// av_control_buttons
-		const av_control_buttons = get_av_control_buttons(self)
-		wrapper.appendChild(av_control_buttons)
+		if (self.video) {
+			const av_control_buttons = get_av_control_buttons(self)
+			wrapper.appendChild(av_control_buttons)
+		}
 
 	// add events
 		//add_events(self, wrapper)
