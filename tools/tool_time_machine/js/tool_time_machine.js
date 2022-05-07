@@ -51,8 +51,8 @@ export const tool_time_machine = function () {
 * extend component functions from component common
 */
 // prototypes assign
+	tool_time_machine.prototype.render	= tool_common.prototype.render
 	tool_time_machine.prototype.refresh	= common.prototype.refresh
-	tool_time_machine.prototype.render	= common.prototype.render
 	tool_time_machine.prototype.destroy	= common.prototype.destroy
 	tool_time_machine.prototype.edit	= render_tool_time_machine.prototype.edit
 
@@ -62,7 +62,7 @@ export const tool_time_machine = function () {
 * INIT
 */
 tool_time_machine.prototype.init = async function(options) {
-	// console.log("tool_time_machine INIT options:",options);
+	console.log("tool_time_machine INIT options:",options);
 
 	const self = this
 
@@ -71,6 +71,9 @@ tool_time_machine.prototype.init = async function(options) {
 
 	// fix dedalo_projects_langs
 		self.langs = page_globals.dedalo_projects_default_langs
+
+	// fix lang from caller
+		self.lang = self.caller.lang
 
 	// events subscribe. User click over list record eye icon (preview)
 		self.events_tokens.push(
@@ -214,13 +217,13 @@ tool_time_machine.prototype.apply_value = function() {
 			.then(function(response){
 				dd_console("-> apply_value API response:",'DEBUG',response);
 
-				// reload source component on finish close
-					if (self.caller) {
-						self.caller.refresh()
-					}
+				// // reload source component on finish close
+				// 	if (self.caller) {
+				// 		self.caller.refresh()
+				// 	}
 
-				// close tool modal (implies destroy current tool instance)
-					self.modal_container.close()
+				// // close tool modal (implies destroy current tool instance)
+				// 	self.modal_container.close()
 
 				resolve(response)
 			})

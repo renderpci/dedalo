@@ -59,7 +59,8 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
-		wrapper.header.appendChild(related_list_node)
+		wrapper.tool_buttons_container.appendChild(related_list_node)
+
 
 	// get_tag_info. Fires build tag info panel nodes at begin
 		get_tag_info(self)

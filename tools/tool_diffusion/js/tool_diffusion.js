@@ -47,13 +47,13 @@ export const tool_diffusion = function () {
 */
 // prototypes assign
 	// render : using common render entry point
-	tool_diffusion.prototype.render	= common.prototype.render
+	tool_diffusion.prototype.render		= tool_common.prototype.render
 	// destroy							: using common destroy method
 	tool_diffusion.prototype.destroy	= common.prototype.destroy
 	// refresh							: using common refresh method
 	tool_diffusion.prototype.refresh	= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
-	tool_diffusion.prototype.edit	= render_tool_diffusion.prototype.edit
+	tool_diffusion.prototype.edit		= render_tool_diffusion.prototype.edit
 
 
 
@@ -69,7 +69,6 @@ tool_diffusion.prototype.init = async function(options) {
 		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-
 
 
 	return common_init

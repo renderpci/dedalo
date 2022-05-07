@@ -86,7 +86,6 @@ const get_content_data_edit = async function(self) {
 
 	// filter processor options of the files, it could be defined in the preferences or could be the caller
 		const ar_file_processor = self.tool_config.file_processor || null
-
 		if(ar_file_processor){
 			// options process
 				const select_process = ui.create_dom_element({
@@ -176,56 +175,55 @@ const get_content_data_edit = async function(self) {
 				? ''
 				: ' hide'
 
-		//tool_configuration_options
+		// tool_configuration_options
 			const tool_configuration_options = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'tool_configuration_options'+class_name_configuration,
-				parent 			: fragment
+				class_name		: 'tool_configuration_options'+class_name_configuration,
+				parent			: fragment
 			})
 
 			//name_control_field
 				const name_control_field = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'name_control_field',
-					parent 			: tool_configuration_options
+					class_name		: 'name_control_field',
+					parent			: tool_configuration_options
 				})
 					//check_box
 					const control_field_check_box = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'checkbox',
-							class_name 		: 'ios-toggle',
-							parent 			: name_control_field
-						})
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'ios-toggle',
+						parent			: name_control_field
+					})
 					control_field_check_box.addEventListener('change', function(e) {
 						set_import_mode(self, this.checked)
 					})
 
 					const label_field_check_box = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'checkbox-label',
-							inner_html		: get_label.name_to_field || 'Name indicates field',
-							parent			: name_control_field
-						})
+						element_type	: 'span',
+						class_name		: 'checkbox-label',
+						inner_html		: get_label.name_to_field || 'Name indicates field',
+						parent			: name_control_field
+					})
 
-
-					// options check_box
+					// info_options_select
 						const info_options = ui.create_dom_element({
 							element_type	: 'select',
-							class_name 		: 'info_options_select',
-							parent 			: name_control_field
+							class_name		: 'info_options_select',
+							parent			: name_control_field
 						})
-
 						for (let i = 0; i < option_components.length; i++) {
-							const option = option_components[i]
 
-							const map_name = option.map_name ? option.map_name + ' = ' : ''
+							const option	= option_components[i]
+							const map_name	= option.map_name ? option.map_name + ' = ' : ''
 
-								const option_node = ui.create_dom_element({
-									element_type	: 'option',
-									inner_html		: map_name + option.label,
-									parent			: info_options
-								})
-						}// end for
+							// option_node
+							ui.create_dom_element({
+								element_type	: 'option',
+								inner_html		: map_name + option.label,
+								parent			: info_options
+							})
+						}//end for (let i = 0; i < option_components.length; i++)
 
 
 
@@ -291,8 +289,8 @@ const get_content_data_edit = async function(self) {
 	// components container
 		const drop_zone = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'drop_zone',
-			parent 			: fragment
+			class_name		: 'drop_zone',
+			parent			: fragment
 		})
 
 
@@ -399,7 +397,7 @@ const get_content_data_edit = async function(self) {
 			inner_html		: 'OK',
 			parent			: fragment
 		})
-		button_process_import.addEventListener('click', function(e){
+		button_process_import.addEventListener('click', function(){
 			// get the options from the every file uploaded
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
@@ -427,9 +425,9 @@ const get_content_data_edit = async function(self) {
 				const source = create_source(self, 'import_files')
 				// add the necessary arguments used in the given function
 				source.arguments = {
-					tipo 					: self.caller.tipo,
-					section_tipo 			: self.caller.section_tipo,
-					section_id 				: self.caller.section_id,
+					tipo					: self.caller.tipo,
+					section_tipo			: self.caller.section_tipo,
+					section_id				: self.caller.section_id,
 					tool_config				: self.tool_config,
 					files_data				: self.files_data,
 					components_temp_data	: components_temp_data,

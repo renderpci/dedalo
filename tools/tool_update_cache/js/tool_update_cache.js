@@ -48,7 +48,7 @@ export const tool_update_cache = function () {
 */
 // prototypes assign
 	// render : using common render entry point
-	tool_update_cache.prototype.render	= common.prototype.render
+	tool_update_cache.prototype.render	= tool_common.prototype.render
 	// destroy							: using common destroy method
 	tool_update_cache.prototype.destroy	= common.prototype.destroy
 	// refresh							: using common refresh method

@@ -528,7 +528,7 @@ const get_buttons = function(self) {
 							event_manager.publish('new_section_' + self.id)
 							break;
 						case 'button_import':
-							event_manager.publish('load_tool', {
+							tool_common.open_tool({
 								tool_context	: current_button.tools[0],
 								caller			: self
 							})

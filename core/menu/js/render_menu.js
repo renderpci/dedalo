@@ -8,6 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {quit} from '../../login/js/login.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import {instances} from '../../common/js/instances.js'
 
 
@@ -169,21 +170,23 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment
 		})
 		if (username!=='root') {
-			logged_user_name.addEventListener("click", fn_load_user_admin_tool)
-			function fn_load_user_admin_tool(e) {
+			logged_user_name.addEventListener("click", function(e){
 				e.stopPropagation();
 
-				// open tool_user_admin
-				event_manager.publish('load_tool', {
-					tool_context	: {
+				// tool_context (minimun created on the fly)
+					const tool_context = {
 						model		: 'tool_user_admin',
 						tool_config	: {
 							ddo_map : []
 						}
-					},
-					caller			: self
-				})
-			}
+					}
+
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_context,
+						caller			: self
+					})
+			})
 		}
 
 	// application lang selector

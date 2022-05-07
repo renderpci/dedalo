@@ -44,10 +44,11 @@ export const tool_lang = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_lang.prototype.render	= common.prototype.render
-	tool_lang.prototype.destroy	= common.prototype.destroy
-	tool_lang.prototype.refresh	= common.prototype.refresh
-	tool_lang.prototype.edit	= render_tool_lang.prototype.edit
+	// tool_lang.prototype.render	= common.prototype.render
+	tool_lang.prototype.render		= tool_common.prototype.render
+	tool_lang.prototype.destroy		= common.prototype.destroy
+	tool_lang.prototype.refresh		= common.prototype.refresh
+	tool_lang.prototype.edit		= render_tool_lang.prototype.edit
 
 
 
@@ -63,7 +64,9 @@ tool_lang.prototype.init = async function(options) {
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.langs			= page_globals.dedalo_projects_default_langs
-		self.source_lang	= options.caller.lang
+		self.source_lang	= self.caller && self.caller.lang
+			? self.caller.lang
+			: null
 		self.target_lang	= null
 
 
@@ -80,12 +83,15 @@ tool_lang.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	// main_component. fix main_component for convenience
-		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
-		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+		const main_component_ddo = self.tool_config.ddo_map.find(el => el.role==="main_component")
+		if (main_component_ddo) {
+			self.main_component = self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+		}
 
 
 	return common_build

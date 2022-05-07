@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_tool_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -108,7 +108,7 @@ const get_content_data = async function(self) {
 			const page_in_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_in',
-				inner_html		: self.get_label('page_in'),
+				inner_html		: self.get_tool_label('page_in'),
 				parent			: page_range
 			})
 			const page_in = ui.create_dom_element({
@@ -126,7 +126,7 @@ const get_content_data = async function(self) {
 			const page_out_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_in',
-				inner_html		: self.get_label('page_out'),
+				inner_html		: self.get_tool_label('page_out'),
 				parent			: page_range
 			})
 			const page_out = ui.create_dom_element({
@@ -145,7 +145,7 @@ const get_content_data = async function(self) {
 			const method_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_in',
-				inner_html		: self.get_label('proces_method'),
+				inner_html		: self.get_tool_label('proces_method'),
 				parent			: page_range
 			})
 				// ul
@@ -196,7 +196,7 @@ const get_content_data = async function(self) {
 		const button_submit = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning',
-			inner_html		: self.get_label('do_process'),
+			inner_html		: self.get_tool_label('do_process'),
 			parent			: page_range
 		})
 		button_submit.addEventListener('mouseup', async ()=>{

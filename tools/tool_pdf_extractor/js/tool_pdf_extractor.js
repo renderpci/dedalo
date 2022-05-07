@@ -38,7 +38,7 @@ export const tool_pdf_extractor = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_pdf_extractor.prototype.render		= common.prototype.render
+	tool_pdf_extractor.prototype.render		= tool_common.prototype.render
 	tool_pdf_extractor.prototype.destroy	= common.prototype.destroy
 	tool_pdf_extractor.prototype.refresh	= common.prototype.refresh
 	tool_pdf_extractor.prototype.edit		= render_tool_pdf_extractor.prototype.edit

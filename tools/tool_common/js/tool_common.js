@@ -10,6 +10,7 @@
 	import {common} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {clone, dd_console, printf, object_to_url_vars} from '../../../core/common/js/utils/index.js'
+	import {render_error} from './render_tool_common.js'
 
 
 
@@ -48,12 +49,14 @@ tool_common.prototype.init = async function(options) {
 		self.section_id		= options.section_id
 		self.lang			= options.lang
 		self.mode			= options.mode || 'edit'
-		// self.label			= options.label
+		// self.label		= options.label
 		// self.tool_labels	= options.tool_labels
 		// self.description	= options.description
+		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
 
-		self.caller			= options.caller // optional, only for refresh on tool exit
-		// caller fallback to window.opener.callers
+		// caller. Could be direct assigned (modal) or by URL caller_id (new window)
+			self.caller = options.caller // optional, only for refresh on tool exit
+			// caller fallback to window.opener.callers variable
 			if (!self.caller) {
 				// searchParams
 					const searchParams = new URLSearchParams(window.location.href)
@@ -62,42 +65,84 @@ tool_common.prototype.init = async function(options) {
 						? searchParams.get('caller_id') // string from url
 						: null
 				if (caller_id) {
-					if (window.opener.callers && window.opener.callers[caller_id]) {
+					if (window.opener && window.opener.callers && window.opener.callers[caller_id]) {
 						self.caller = window.opener.callers[caller_id]
 						console.warn("//////////// assigned self.caller from opener by caller_id:", self.caller);
 					}
 				}
 			}
 			if (!self.caller) {
-				console.warn(`Warning. Empty caller !`, self)
+				self.error = `Warning. Empty caller !`
+				console.warn(self.error, self)
+				// return false
 			}
+			console.log("self.caller:",self.caller);
 
-		self.tool_config	= options.tool_config
-		// tool_config fallback create a new one on the fly
+		// tool_config. Contains the needed ddo_map
+			self.tool_config = options.tool_config
+			// tool_config fallback. Check caller config o create a new one on the fly
 			if (!self.tool_config && self.caller) {
-				self.tool_config = {
-					ddo_map : [{
-						tipo			: self.caller.tipo,
-						section_tipo	: self.caller.section_tipo,
-						section_id		: self.caller.section_id,
-						model			: self.caller.model,
-						mode			: 'edit',
-						role			: 'main_component'
-					}]
+
+				if (self.caller.config && self.caller.config.tool_context) {
+
+					// section_tool case
+
+					// from caller config (transcription case for example)
+						self.tool_config = clone(self.caller.config.tool_context.tool_config)
+						console.log("section_tool case self.caller.config -> self.tool_config:",self.tool_config);
+
+						// console.log("self.caller:",self.caller);
+						// console.log("self.tool_config.ddo_map:",self.tool_config.ddo_map);
+
+				}else if (self.caller.tools) {
+
+					// component case
+
+					const tool_found = self.caller.tools.find(el => el.model===self.model)
+
+					console.log("component case tool_found:",tool_found);
+					console.log("component case self.caller.tools:",self.caller.tools);
+					console.log("component case tool_found:",tool_found);
+
+					self.tool_config = tool_found.tool_config
+
 				}
+
+				// final fallback
+					if (!self.tool_config) {
+
+						// fallback
+							self.tool_config = {
+								ddo_map : [{
+									tipo			: self.caller.tipo,
+									section_tipo	: self.caller.section_tipo,
+									section_id		: self.caller.section_id,
+									model			: self.caller.model,
+									mode			: 'edit',
+									role			: 'main_component'
+								}]
+							}
+							console.log("fallback case self.tool_config:", self.tool_config);
+					}
 			}
-
-		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
-
-
-		// set vars
-		self.node				= []
-		self.type				= 'tool'
-		self.ar_instances		= []
-		self.events_tokens		= []
-		self.get_tool_label		= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
+			// parse ddo_map section_id
+				if (self.tool_config && self.tool_config.ddo_map) {
+					self.tool_config.ddo_map.map(el => {
+						if (el.section_id==='self' && el.section_tipo===self.caller.section_tipo) {
+							el.section_id = self.caller.section_id || self.caller.section_id_selected
+						}
+					})
+				}
 
 
+			console.log("self.tool_config parsed:",self.tool_config);
+
+	// set some common vars
+		self.node			= []
+		self.type			= 'tool'
+		self.ar_instances	= []
+		self.events_tokens	= []
+		self.get_tool_label	= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 
 	// set status
@@ -179,7 +224,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 						// init and build instance
 							get_instance(element_options) // load and init
 							.then(function(element_instance){
-								const load_data = el.model.indexOf('component')!==-1
+								const load_data = true // el.model.indexOf('component')!==-1 || el.model==='area_thesaurus'
 								element_instance.build( load_data ) // build, loading data
 								.then(function(){
 									resolve(element_instance)
@@ -267,6 +312,34 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 
 
+/**
+* RENDER
+* This method is an alias of common.render to allow catch and manage start tool errors
+* Note that if is defined self.error (because a error was written in init or build phases)
+* the tool common error will be used instead tool render
+* @param object options
+*	render_level : level of deep that is rendered (full | content)
+* @return promise
+*	node first DOM node stored in instance 'node' array
+*/
+tool_common.prototype.render = async function(options={}) {
+
+	const self = this
+
+	// call the generic common render or render tool generic error
+		const result = typeof self.error!=='undefined'
+			? render_error(this, options)
+			: common.prototype.render.call(this, options);
+
+
+	return result
+};//end render
+
+
+
+/**
+* LOAD_DEFAULT_DDO_MAP ---> (!) NO USADA EN NINGÚN SITIO !
+*/
 const load_default_ddo_map = async function() {
 
 	const self = this
@@ -335,7 +408,7 @@ const load_default_ddo_map = async function() {
 	})
 
 	return true
-}//end if (load_ddo_map===true)
+}//end load_default_ddo_map
 
 
 
@@ -426,250 +499,282 @@ tool_common.prototype.load_component = async function(options) {
 
 
 /**
-* LOAD_TOOL
+* OPEN_TOOL
 * Init, build and render the tool requested.
 * Called by page observe event (init)
 * To load tool, don't call directly, publish a event as
-*	event_manager.publish('load_tool', {
+*	event_manager.publish('open_tool', {
 *		tool_context : tool_context,
 * 		caller 		 : self
 *	})
 * The event is fired by the tool button created with method ui.build_tool_button.
-* When the user triggers the click event, a publish 'load_tool' is made
+* When the user triggers the click event, a publish 'open_tool' is made
 * @param object options*
 * @return tool instance | bool false
 */
-export const load_tool = async (options) => {
+export const open_tool = async (options) => {
+	console.warn("------ open_tool call options:",options);
 
 	// options
 		const caller		= options.caller
 		const tool_context	= clone(options.tool_context) // (!) full clone here to avoid circular references
 
-	// target render
-		const view = tool_context.properties && tool_context.properties.view
-			? tool_context.properties.view
+	// open_as. Mode of tool visualization: modal, tab, popup
+		const open_as = tool_context.properties && tool_context.properties.open_as
+			? tool_context.properties.open_as
+			: 'modal'
+
+	// windowFeatures. Features to pass to the tool visualizer
+	// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
+		const windowFeatures = tool_context.properties && tool_context.properties.windowFeatures
+			? tool_context.properties.windowFeatures
 			: null
 
-		if (view) {
-
-			// window modes
-
-			return view_window({
-				view	: view, // string like 'tab' | 'popup'
-				caller	: caller, // object like component_input_text instance
-				name	: tool_context.name // string like 'tool_lang'
-			})
-
-		}else{
-
-			// modal default mode
-
-			// tool_config. If is received, parse section_id. Else create a new one on the fly
-				// to preserve the format of tool_context.tool_config ddo_map
-				if (!tool_context.tool_config) {
-
-					// create a new one on the fly
-					tool_context.tool_config = {
-						ddo_map : [{
-							tipo			: caller.tipo,
-							section_tipo	: caller.section_tipo,
-							section_id		: caller.section_id,
-							model			: caller.model,
-							mode			: 'edit',
-							role			: 'main_component'
-						}]
-					}
-
-				}else{
-
-					// parse ddo_map section_id
-					tool_context.tool_config.ddo_map.map(el => {
-						if (el.section_id==='self' && el.section_tipo === caller.section_tipo) {
-							el.section_id = caller.section_id
-						}
-					})
-				}
-
-			// tool context additional properties
-				tool_context.lang		= caller.lang
-				tool_context.type		= 'tool'
-				tool_context.id_variant	= caller.id_base // prevent instance id collisions
-
-			// instance options
-				const instance_options = Object.assign({
-					caller : caller // add caller to tool_context (only to refresh it on close the tool)
-				}, tool_context)
-
-			// instance load / recover
-				const tool_instance = await get_instance(instance_options)
-
-			// stop if already loaded (toggle tool)
-				if (tool_instance.status && tool_instance.status!=='initied') {
-					return false
-				}
-
-			// build
-				await tool_instance.build(true)
-
-			// render tool (don't wait here)
-				tool_instance.render()
-				.then(function(wrapper){
-
-					const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-					const modal		= ui.attach_to_modal(header, wrapper, null)
-					modal.on_close	= () => {
-						tool_instance.destroy(true, true, true)
-						// caller.refresh()
-					}
-
-					// pointer from wrapper to modal
-					wrapper.modal = modal
+	// open tool visualization
+		switch (open_as) {
+			case 'window':
+				// window modes
+				return view_window({
+					tool_context	: tool_context, // object
+					caller			: caller, // object like component_input_text instance
+					open_as			: open_as, // string like 'tab' | 'popup'
+					windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
 				})
+				break;
 
-
-			return tool_instance
+			case 'modal':
+			default:
+				// modal mode (default)
+				return view_modal({
+					tool_context	: tool_context, // object
+					caller			: caller, // object like component_input_text instance
+					open_as			: open_as, // string like 'tab' | 'popup'
+					windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
+				})
+				break;
 		}
-};//end load_tool
+
+
+	return true
+};//end open_tool
+
+
+
+/**
+* VIEW_MODAL
+* @param object options
+* @return promise
+* 	Resolve: object tool_instance
+*/
+const view_modal = async function(options) {
+
+	// options
+		const tool_context	= options.tool_context
+		const caller		= options.caller
+
+	// (!) Moved yo tool_common init unified parse
+	// tool_config. If is received, parse section_id. Else create a new one on the fly
+		// to preserve the format of tool_context.tool_config ddo_map
+		// if (!tool_context.tool_config) {
+		// 	// create a new one on the fly
+		// 	tool_context.tool_config = {
+		// 		ddo_map : [{
+		// 			tipo			: caller.tipo,
+		// 			section_tipo	: caller.section_tipo,
+		// 			section_id		: caller.section_id,
+		// 			model			: caller.model,
+		// 			mode			: 'edit',
+		// 			role			: 'main_component'
+		// 		}]
+		// 	}
+		// }else{
+		// if (tool_context.tool_config) {
+
+		// 	// parse ddo_map section_id
+		// 	tool_context.tool_config.ddo_map.map(el => {
+		// 		if (el.section_id==='self' && el.section_tipo===caller.section_tipo) {
+		// 			el.section_id = caller.section_id
+		// 		}
+		// 	})
+		// }
+
+	// tool context additional properties
+		tool_context.lang		= caller.lang
+		tool_context.type		= 'tool'
+		tool_context.id_variant	= caller.id_base // prevent instance id collisions
+
+	// instance options
+		const instance_options = Object.assign({
+			caller : caller // add caller to tool_context (only to refresh it on close the tool)
+		}, tool_context)
+
+	// instance load / recover
+		const tool_instance = await get_instance(instance_options)
+
+	// stop if already loaded (toggle tool)
+		if (tool_instance.status && tool_instance.status!=='initied') {
+			return false
+		}
+
+	// build
+		await tool_instance.build(true)
+
+	// render tool (don't wait here)
+		tool_instance.render()
+		.then(function(wrapper){
+
+			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
+			const modal		= ui.attach_to_modal(header, wrapper, null)
+			modal.on_close	= () => {
+				caller.refresh()
+				tool_instance.destroy(true, true, true)
+			}
+
+			// pointer from wrapper to modal
+			wrapper.modal = modal
+		})
+
+
+	return tool_instance
+}//end view_modal
 
 
 
 /**
 * VIEW_WINDOW
-* @return
+* @param object options
+* @return promise
+* 	Resolve: object tool_window
 */
-const view_window = function(options) {
+const view_window = async function(options) {
 
 	// options
-		const view		= options.view
-		// const view 		= 'popup'
-		const caller	= options.caller
-		const name		= options.name
+		const tool_context		= options.tool_context
+		const caller			= options.caller
+		const open_as			= options.open_as
+		const windowFeatures	= options.windowFeatures || null
 
-	// tool_window
-		if (view==='tab' || view==='popup') {
+		// windowFeatures sample:
+			// {
+			// 	left	: 'return screen.width -760',
+			// 	top		: 0,
+			// 	width	: 760,
+			// 	height	: 500
+			// }
 
-			// url
-				const url_search = object_to_url_vars({
-					tool		: name,
-					menu		: false,
-					caller_id	: caller.id
-				})
-				const url = DEDALO_CORE_URL + '/page/?' + url_search
+	// short vars
+		const name = tool_context.name
 
-			// fix current instance as caller in
-				window.callers = window.callers || {}
-				window.callers[caller.id] = caller
+	// fix current instance as caller in global window to be accessible from new window
+		window.callers = window.callers || {}
+		window.callers[caller.id] = caller
 
-			// window options
-				const window_options = view==='popup'
-					? 'popup'
-					: null
+	// URL
+		const url_search = object_to_url_vars({
+			tool		: name,
+			menu		: false,
+			caller_id	: caller.id
+		})
+		const url = DEDALO_CORE_URL + '/page/?' + url_search
 
-			// tool_window
-				const tool_window = window.open(url, 'tool_tab', window_options) // new tab
-				tool_window.focus();
+	// features
+		const parsed_windowFeatures = typeof windowFeatures==='string'
+			? windowFeatures // string case as 'left=100,top=100,width=320,height=320'
+			: (()=>{ // object case as {"left":"return screen.width -760","top":0,"width":760,"height":500}
 
-			// close tab tool_window actions (pagehide)
-			// page lifecycle events: 'pageshow', 'focus', 'blur', 'visibilitychange', 'resume', 'pagehide'
-			// @see https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event
-				// tool_window.addEventListener('load', () => {
-				// 	console.log("attaching event tool_window pagehide");
+				const parsed_pairs = []
+				for(const key in windowFeatures) {
 
-				// 	// tool_window.sessionStorage.setItem('reloaded', 'yes');
-				// 	// console.log("tool_window.sessionStorage.getItem('reloaded') 1:",tool_window.sessionStorage.getItem('reloaded'));
+					// value could be a Function as string like 'return screen.width -500'
+					// @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
+					const value = typeof windowFeatures[key]==='string' && windowFeatures[key].indexOf('return')===0
+						? Function(windowFeatures[key])() // parse and auto exec the created Function
+						: windowFeatures[key]
 
-				// 	tool_window.addEventListener(
-				// 		'pagehide',
-				// 		(event) => {
-				// 			console.log("===== triggered pagehide event:",event);
-				// 			// console.log("tool_window.visibilityState:",tool_window.visibilityState);
-				// 			// console.log("tool_window.document:",tool_window.document);
-				// 			// console.log("tool_window.document.visibilityState:",tool_window.document.visibilityState);
-				// 			// console.log("event.persisted:",event.persisted);
+					const pair = `${key}=${value}`
 
-				// 			// setTimeout(function(){
-				// 			// 	console.log("tool_window.sessionStorage.getItem('reloaded') 2:",tool_window.sessionStorage.getItem('reloaded'));
-				// 			// }, 1)
-
-
-				// 			// if (event.persisted) {
-				// 			// 	// If the event's persisted property is `true` the page is about
-				// 			// 	// to enter the Back-Forward Cache, which is also in the frozen state.
-				// 			// 	console.log("frozen");
-				// 			// }else{
-				// 			// 	// If the event's persisted property is not `true` the page is
-				// 			// 	// about to be unloaded.
-				// 			// 	// console.log("terminated");
-
-				// 			// 	// On tool_window.document.visibilityState change to 'hidden', trigger actions
-				// 			// 	if (tool_window.document.visibilityState==='hidden') {
-
-				// 			// 	}
-				// 			// }
-
-				// 			/*
-				// 			// remove window.callers pointer
-				// 			delete window.callers[caller.id]
-				// 			// refresh caller
-				// 			caller.refresh()
-				// 			*/
-
-				// 		},{capture: true}
-				// 	);//end pagehide event
-
-				// },{capture: true})//end load event
-
-			// focus event trigger on current window
-				window.addEventListener('focus', fn_onfocus, true);
-				function fn_onfocus() {
-					// remove window.callers pointer
-					delete window.callers[caller.id]
-					// refresh caller
-					caller.refresh()
-					// close opened window if is open
-					if (tool_window) {
-						tool_window.close()
-					}
-					// console.log("window.callers:",window.callers);
-					// (!) remove listener after focus
-					window.removeEventListener('focus', fn_onfocus, true);
+					parsed_pairs.push(pair)
 				}
 
-		}else{
+				const parsed_string = parsed_pairs.join(',')
 
-			// same page
+				return parsed_string
+			  })()
 
-			// url
-				const url_search = object_to_url_vars({
-					tool		: name,
-					menu		: false,
-					// caller_id	: caller.id
-				})
-				const url = DEDALO_CORE_URL + '/page/?' + url_search
+	// tool_window
+		const window_name	= `tool_${name}_${open_as}`
+		const tool_window	= window.open(url, window_name, parsed_windowFeatures)
+		tool_window.focus();
 
-			window.location = url;
+	// close tab tool_window actions (pagehide)
+		// page lifecycle events: 'pageshow', 'focus', 'blur', 'visibilitychange', 'resume', 'pagehide'
+		// @see https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event
+		// tool_window.addEventListener('load', () => {
+		// 	console.log("attaching event tool_window pagehide");
+
+		// 	// tool_window.sessionStorage.setItem('reloaded', 'yes');
+		// 	// console.log("tool_window.sessionStorage.getItem('reloaded') 1:",tool_window.sessionStorage.getItem('reloaded'));
+
+		// 	tool_window.addEventListener(
+		// 		'pagehide',
+		// 		(event) => {
+		// 			console.log("===== triggered pagehide event:",event);
+		// 			// console.log("tool_window.visibilityState:",tool_window.visibilityState);
+		// 			// console.log("tool_window.document:",tool_window.document);
+		// 			// console.log("tool_window.document.visibilityState:",tool_window.document.visibilityState);
+		// 			// console.log("event.persisted:",event.persisted);
+
+		// 			// setTimeout(function(){
+		// 			// 	console.log("tool_window.sessionStorage.getItem('reloaded') 2:",tool_window.sessionStorage.getItem('reloaded'));
+		// 			// }, 1)
+
+
+		// 			// if (event.persisted) {
+		// 			// 	// If the event's persisted property is `true` the page is about
+		// 			// 	// to enter the Back-Forward Cache, which is also in the frozen state.
+		// 			// 	console.log("frozen");
+		// 			// }else{
+		// 			// 	// If the event's persisted property is not `true` the page is
+		// 			// 	// about to be unloaded.
+		// 			// 	// console.log("terminated");
+
+		// 			// 	// On tool_window.document.visibilityState change to 'hidden', trigger actions
+		// 			// 	if (tool_window.document.visibilityState==='hidden') {
+
+		// 			// 	}
+		// 			// }
+
+		// 			/*
+		// 			// remove window.callers pointer
+		// 			delete window.callers[caller.id]
+		// 			// refresh caller
+		// 			caller.refresh()
+		// 			*/
+
+		// 		},{capture: true}
+		// 	);//end pagehide event
+
+		// },{capture: true})//end load event
+
+	// focus event trigger on current window
+		window.addEventListener('focus', fn_onfocus, true);
+		function fn_onfocus() {
+			// remove window.callers pointer
+			// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
+			// refresh caller
+			caller.refresh()
+			// close opened window if is open
+			if (tool_window) {
+				// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
+			}
+			// (!) remove listener after focus
+			window.removeEventListener('focus', fn_onfocus, true);
 		}
 
 
-	return true
+	return tool_window
 }//end view_window
 
-
-
-
-/**
-* OPEN_TOOL
-* Open the tool requested. Create the necessary elements
-* to load a tool from basic options (called from 'grid_indexation')
-* @param tool_object options
-*
-* @return tool instance | bool false
-*/
-export const open_tool = async (options) => {
-	console.log("open_tool options:",options);
-
-	alert("Called Open Tool");
-};//end open_tool
 
 
 /**

@@ -49,7 +49,7 @@ export const tool_import_files = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_import_files.prototype.render	= common.prototype.render
+	tool_import_files.prototype.render	= tool_common.prototype.render
 	tool_import_files.prototype.destroy	= common.prototype.destroy
 	tool_import_files.prototype.refresh	= common.prototype.refresh
 	tool_import_files.prototype.edit	= render_tool_import_files.prototype.edit
@@ -71,9 +71,9 @@ tool_import_files.prototype.init = async function(options) {
 		self.key_dir = self.caller.tipo + '_' + self.caller.section_tipo
 		await upload_manager_init()
 
+
 	return common_init
 };//end init
-
 
 
 
@@ -152,17 +152,3 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 	return common_build
 };//end build
-
-
-
-/**
-* PROCESS_FILES
-* Process the files uploaded to the server
-*
-* @return promise bool
-*/
-tool_import_files.prototype.process_files = function(){
-
-}//end process_files
-
-

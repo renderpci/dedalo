@@ -6,7 +6,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
-
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 /**
@@ -197,9 +197,13 @@ const get_value_element = (i, data, values_container, self) => {
 
 		indexation_value.addEventListener("click", e => {
 			e.stopPropagation();
-			// event_manager
-				event_manager.publish('load_tool', {
-					tool_context : data_indexation.tool_context
+
+			const tool_context = data_indexation.tool_context
+
+			// open_tool (tool_common)
+				open_tool({
+					tool_context	: tool_context,
+					caller			: self
 				})
 		})
 
@@ -218,10 +222,14 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 		translation_value.addEventListener("click", e => {
-			event.stopPropagation();
-			// event_manager
-				event_manager.publish('load_tool', {
-					tool_context : data_translation.tool_context
+			e.stopPropagation();
+
+			const tool_context = data_translation.tool_context
+
+			// open_tool (tool_common)
+				open_tool({
+					tool_context	: tool_context,
+					caller			: self
 				})
 		})
 

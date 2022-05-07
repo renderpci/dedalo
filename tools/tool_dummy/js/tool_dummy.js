@@ -46,7 +46,7 @@ export const tool_dummy = function () {
 */
 // prototypes assign
 	// render : using common render entry point
-	tool_dummy.prototype.render		= common.prototype.render
+	tool_dummy.prototype.render		= tool_common.prototype.render
 	// destroy: using common destroy method
 	tool_dummy.prototype.destroy	= common.prototype.destroy
 	// refresh: using common refresh method

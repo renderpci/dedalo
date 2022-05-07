@@ -9,6 +9,7 @@
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -427,21 +428,27 @@ const build_id_column_DES = function(self) {
 
 							// tool_context (clone always to prevent modify original object)
 								const tool_context = clone(self.caller.config.tool_context)
-
-							// parse ddo_map section_id
-								tool_context.tool_config.ddo_map.map(el => {
-									if (el.section_id==='self') {
-										el.section_id = self.section_id
-									}
-								})
-
-							// lang set
+								// lang set
 								tool_context.lang = self.lang
 
-							event_manager.publish('load_tool', {
-								tool_context	: tool_context,
-								caller			: self.caller
-							})
+							// caller
+								const caller = self.caller
+
+							// section_id_selected (!) Important to allow parse 'self' values
+								caller.section_id_selected = self.section_id
+
+							// parse ddo_map section_id (!) Unnecessary. To be done at tool_common init
+								// tool_context.tool_config.ddo_map.map(el => {
+								// 	if (el.section_id==='self') {
+								// 		el.section_id = self.section_id
+								// 	}
+								// })
+
+							// open_tool (tool_common)
+								open_tool({
+									tool_context	: tool_context,
+									caller			: caller
+								})
 						})
 					}
 				break;

@@ -48,7 +48,7 @@ export const tool_propagate_component_data = function () {
 */
 // prototypes assign
 	// render : using common render entry point
-	tool_propagate_component_data.prototype.render	= common.prototype.render
+	tool_propagate_component_data.prototype.render	= tool_common.prototype.render
 	// destroy							: using common destroy method
 	tool_propagate_component_data.prototype.destroy	= common.prototype.destroy
 	// refresh							: using common refresh method
@@ -70,7 +70,6 @@ tool_propagate_component_data.prototype.init = async function(options) {
 		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-
 
 
 	return common_init
