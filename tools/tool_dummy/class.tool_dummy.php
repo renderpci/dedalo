@@ -20,7 +20,7 @@ class tool_dummy extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function my_custom_static_method($request_options) {
+	public static function my_custom_static_method(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

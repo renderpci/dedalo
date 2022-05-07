@@ -20,7 +20,7 @@ ignore_user_abort(true);
 * Get JSON data of all children of current element
 * @return object $response
 */
-function get_children_data($json_data) {
+function get_children_data(object $json_data) : object {
 	global $start_time;
 
 	session_write_close();
@@ -124,7 +124,7 @@ function get_children_data($json_data) {
 * ADD_CHILD
 * @return object $response
 */
-function add_child($json_data) {
+function add_child(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -238,7 +238,7 @@ function add_child($json_data) {
 * ADD_CHILD_FROM_HIERARCHY
 * @return object $response
 */
-function add_child_from_hierarchy($json_data) {
+function add_child_from_hierarchy(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -344,7 +344,7 @@ function add_child_from_hierarchy($json_data) {
 * Removes current thesaurus element an all references in parents
 * @return object $response
 */
-function delete($json_data) {
+function delete(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -422,7 +422,7 @@ function delete($json_data) {
 * Updates element
 * @return object $response
 */
-function update_parent_data($json_data) {
+function update_parent_data(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -544,7 +544,7 @@ function update_parent_data($json_data) {
 * SAVE_ORDER
 * @return object $response
 */
-function save_order($json_data) {
+function save_order(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();

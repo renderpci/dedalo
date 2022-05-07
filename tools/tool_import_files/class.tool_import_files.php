@@ -15,7 +15,7 @@ class tool_import_files extends tool_common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($component_obj=null, $modo='button') {
+	public function __construct(object $component_obj=null, string $modo='button') {
 
 		# Fix modo
 		$this->modo = $modo;
@@ -31,7 +31,7 @@ class tool_import_files extends tool_common {
 	/**
 	* SET_UP
 	*/
-	public function set_up($key_dir=null) {
+	public function set_up(string $key_dir=null) : bool {
 
 		# VERIFY USER IS LOGGED
 			if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -87,7 +87,7 @@ class tool_import_files extends tool_common {
 	* FIND_ALL_FILES
 	* Read dir (must be accessible)
 	*/
-	public function find_all_files($dir) {
+	public function find_all_files(string $dir) : array {
 
 		#$dir = str_replace('//', '/', $dir);
 
@@ -133,7 +133,7 @@ class tool_import_files extends tool_common {
 	* SET_COMPONENT
 	* @return bool
 	*/
-	public function set_component($component_obj) {
+	public function set_component(object $component_obj) {
 		# Fix current component/section
 		$this->component_obj = $component_obj;
 
@@ -153,7 +153,7 @@ class tool_import_files extends tool_common {
 	* @return array $ar_data
 	* 	Associative array with all extracted data
 	*/
-	public static function get_file_data($dir, $file) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/"
+	public static function get_file_data(string $dir, string $file) : array {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/"
 
 		$ar_data = array();
 
@@ -212,7 +212,7 @@ class tool_import_files extends tool_common {
 	* @param string tipo $target_component
 	* @return (bool)
 	*/
-	public static function set_media_file($media_file, $target_section_tipo, $current_section_id, $target_component_tipo) {
+	public static function set_media_file($media_file, string $target_section_tipo, int $current_section_id, string $target_component_tipo) : bool {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
 
@@ -220,12 +220,14 @@ class tool_import_files extends tool_common {
 			case 'component_image':
 
 				// component_image (Is autosaved with defaults on create)
-					$component 	 = component_common::get_instance($model,
-																	$target_component_tipo,
-																	$current_section_id,
-																	'list',
-																	DEDALO_DATA_LANG,
-																	$target_section_tipo);
+					$component = component_common::get_instance(
+						$model,
+						$target_component_tipo,
+						$current_section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$target_section_tipo
+					);
 				// get_image_id
 					$image_id		= $component->get_image_id();
 					$image_path		= $component->get_image_path();
@@ -314,9 +316,9 @@ class tool_import_files extends tool_common {
 
 	/**
 	* GET_MEDIA_FILE_DATE
-	* @return object dd_date $dd_date
+	* @return object|null dd_date $dd_date
 	*/
-	public static function get_media_file_date($media_file, $model) {
+	public static function get_media_file_date(string $media_file, string $model) {
 
 		$dd_date			= null;
 		$source_full_path	= $media_file['file_path'];
@@ -377,7 +379,7 @@ class tool_import_files extends tool_common {
 	* FILE_PROCESSOR
 	* @return object $response
 	*/
-	public static function file_processor($request_options) {
+	public static function file_processor(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -441,7 +443,7 @@ class tool_import_files extends tool_common {
 	* IMPORT_FILES
 	* Process previously uploaded images
 	*/
-	public static function import_files($request_options) {
+	public static function import_files(object $request_options) : object {
 		global $start_time;
 
 		$response = new stdClass();
@@ -460,13 +462,13 @@ class tool_import_files extends tool_common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// vars
-			$tipo					= $options->tipo;
-			$section_tipo			= $options->section_tipo;
-			$section_id				= $options->section_id;
-			$tool_config			= $options->tool_config;
-			$files_data				= $options->files_data;
-			$components_temp_data	= $options->components_temp_data;
-			$key_dir				= $options->key_dir;
+			$tipo						= $options->tipo;
+			$section_tipo				= $options->section_tipo;
+			$section_id					= $options->section_id;
+			$files_data					= $options->files_data;
+			$components_temp_data		= $options->components_temp_data;
+			$key_dir					= $options->key_dir;
+			$tool_config				= $options->tool_config;
 
 		// tool_import_files setup
 			$tool_import_files = new tool_import_files();
@@ -481,7 +483,7 @@ class tool_import_files extends tool_common {
 
 		// target component info
 			$target_ddo_component = array_find($ar_ddo_map, function($item){
-				return $item->role === 'target_component';
+				return $item->role==='target_component';
 			});
 			$target_component_tipo	= $target_ddo_component->tipo;
 			$target_component_model	= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
@@ -805,7 +807,7 @@ class tool_import_files extends tool_common {
 	* 		size : informative file size in bytes like 6528743 (from original file, not from the thumb)
 	* 	}]
 	*/
-	public static function list_uploaded_files($request_options) {
+	public static function list_uploaded_files(object $request_options) : object {
 
 		// unlock session
 			session_write_close();
@@ -867,7 +869,7 @@ class tool_import_files extends tool_common {
 	* 	reponse->result
 	* 	Returns false if file do not exists or the unlink call do not return true
 	*/
-	public static function delete_uploaded_file($request_options) {
+	public static function delete_uploaded_file(object $request_options) : object {
 
 		// unlock session
 			session_write_close();

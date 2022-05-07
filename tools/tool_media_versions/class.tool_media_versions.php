@@ -104,7 +104,7 @@ class tool_media_versions extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function build_version($request_options) {
+	public static function build_version(object $request_options) : object {
 
 		// options
 			$options = new stdClass();
@@ -143,7 +143,7 @@ class tool_media_versions extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function conform_headers($request_options) {
+	public static function conform_headers(object $request_options) : object {
 
 		// options
 			$options = new stdClass();
@@ -182,7 +182,7 @@ class tool_media_versions extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function rotate($request_options) {
+	public static function rotate(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

@@ -171,7 +171,7 @@ class dd_core_api {
 							$current_context = $section->get_structure_context(
 								1, // permissions
 								true, // add_request_config
-								false // callback
+								null // callback
 							);
 							// section_tool config
 							// the config is used by section_tool to set the tool to open, if is set inject the config into the context.

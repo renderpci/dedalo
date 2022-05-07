@@ -12,7 +12,7 @@ class data_check {
 	* CHECK_SEQUENCES
 	* @return stdClass object $response
 	*/
-	public function check_sequences() {
+	public function check_sequences() : object {
 
 		$response = new stdClass();
 			$response->result 	= true;

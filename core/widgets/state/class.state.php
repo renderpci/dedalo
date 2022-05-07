@@ -6,11 +6,13 @@
 */
 class state extends widget_common {
 
+
+
 	/**
-	* get_dato
-	* @return
+	* GET_DATO
+	* @return array $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
@@ -66,7 +68,7 @@ class state extends widget_common {
 						$source_dato = $source_component->get_dato();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
 						$locator = reset($source_dato);
-						
+
 						$ar_locator = array_merge($ar_locator, $source_dato);
 					}
 					break;
@@ -220,18 +222,20 @@ class state extends widget_common {
 
 
 	/**
-	* get_label
+	* GET_LABEL
 	* @return string
 	*/
-	public function get_label(object $locator, $component_tipo) {
+	public function get_label(object $locator, string $component_tipo) : string {
 
-		$modelo_name 	  	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$component_portal 	= component_common::get_instance($modelo_name,
-														   $component_tipo,
-														   $locator->section_id,
-														   'list',
-														   DEDALO_DATA_LANG,
-														   $locator->section_tipo);
+		$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+		$component_portal	= component_common::get_instance(
+			$modelo_name,
+			$component_tipo,
+			$locator->section_id,
+			'list',
+			DEDALO_DATA_LANG,
+			$locator->section_tipo
+		);
 
 		$label = $component_portal->get_valor();
 
@@ -239,35 +243,39 @@ class state extends widget_common {
 	}//end get_label
 
 
+
 	/**
-	* get_value
+	* GET_VALUE
 	* @return int
 	*/
-	public function get_value($locator, $component_tipo) {
+	public function get_value(object $locator, string $component_tipo) {
 
-		$modelo_name 	  	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$component_portal 	= component_common::get_instance($modelo_name,
-														   $component_tipo,
-														   $locator->section_id,
-														   'list',
-														   DEDALO_DATA_NOLAN,
-														   $locator->section_tipo);
+		$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component_portal	= component_common::get_instance(
+			$modelo_name,
+			$component_tipo,
+			$locator->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$locator->section_tipo
+		);
 
-		$dato = $component_portal->get_dato();
-		$value = reset($dato);
+		$dato	= $component_portal->get_dato();
+		$value	= reset($dato);
 
 		return $value;
 	}//end get_value
 
 
+
 	/**
-	* get_data_list
+	* GET_DATA_LIST
 	* @return array objects
 	*/
-	public function get_data_list() {
+	public function get_data_list() : array {
 
-		$ipo 			= $this->ipo;
-		$data_list = [];
+		$ipo		= $this->ipo;
+		$data_list	= [];
 
 		// every state has a ipo that come from structure (input, process , output), state don't use process.
 		foreach ($ipo as $key => $current_ipo) {
@@ -303,7 +311,11 @@ class state extends widget_common {
 				$data_list = array_merge($data_list, $list);
 			}
 		}
+
+
 		return $data_list;
 	}//end get_data_list
+
+
 
 }//end state

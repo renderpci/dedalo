@@ -18,7 +18,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* Read requested dir and return all files of request extension found
 	* @return object $response
 	*/
-	public static function get_csv_files($request_options) {
+	public static function get_csv_files(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -120,7 +120,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function delete_csv_file($request_options) {
+	public static function delete_csv_file(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -160,7 +160,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function import_files($request_options) {
+	public static function import_files(object $request_options) : object {
 		$start_time = start_time();
 
 		// Ignore user close browser
@@ -245,11 +245,11 @@ class tool_import_dedalo_csv extends tool_common {
 	* @param string $section_tipo
 	* @param array $ar_csv_data
 	* @param bool $time_machine_save
-	* @param object $ar_columns_map
+	* @param array $ar_columns_map
 	*
 	* @return object $response
 	*/
-	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data, $time_machine_save, $ar_columns_map) {
+	public static function import_dedalo_csv_file(string $section_tipo, array $ar_csv_data, bool $time_machine_save, array $ar_columns_map) : object {
 		$start_time = start_time();
 
 		// Disable logging activity # !IMPORTANT
@@ -612,7 +612,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* VERIFY_CSV_MAP
 	* @return mixed true|string
 	*/
-	public static function verify_csv_map($csv_map, $section_tipo) {
+	public static function verify_csv_map(array $csv_map, string $section_tipo) : object {
 
 		// response
 			$response = new stdClass();
@@ -697,13 +697,15 @@ class tool_import_dedalo_csv extends tool_common {
 	* @param string $from_component_tipo
 	* Create a safe locator from CSV value.
 	* Value can be a int like 2 or an complete locator like {"type": "dd151","section_id": "2","section_tipo": "dd128","from_component_tipo": "dd197"}
-	* @return object $locator | null
+	* @return object|null $locator
 	*/
-	public static function build_user_locator($value, $from_component_tipo) {
+	public static function build_user_locator(string $value, string $from_component_tipo) {
 
 		$value = trim($value);
 
-		if (empty($value)) return null;
+		if (empty($value)) {
+			return null;
+		}
 
 		// try to JSON decode (null on not decode)
 			$value_json = json_decode($value);
@@ -746,9 +748,9 @@ class tool_import_dedalo_csv extends tool_common {
 	/**
 	* BUILD_DATE_FROM_VALUE
 	* @param string $value
-	* @return object $date | null
+	* @return object|null $date
 	*/
-	public static function build_date_from_value($value) {
+	public static function build_date_from_value(string $value) {
 
 		$value = trim($value);
 
@@ -843,9 +845,9 @@ class tool_import_dedalo_csv extends tool_common {
 	/**
 	* GET_SECTION_COMPONENTS_LIST
 	* @param string $value
-	* @return object $date | null
+	* @return object $response
 	*/
-	public static function get_section_components_list($options) {
+	public static function get_section_components_list(object $options) : object {
 
 		// options
 			$section_tipo = $options->section_tipo;
@@ -1009,6 +1011,4 @@ class tool_import_dedalo_csv extends tool_common {
 
 
 
-}//end class
-
-
+}//end class tool_import_dedalo_csv

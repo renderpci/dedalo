@@ -60,7 +60,7 @@ class update {
 	* UPDATE_VERSION
 	* @return object $response
 	*/
-	public static function update_version() {
+	public static function update_version() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -154,7 +154,7 @@ class update {
 	* @param string $SQL_update
 	* @return object $response
 	*/
-	public static function SQL_update($SQL_update) {
+	public static function SQL_update(string $SQL_update) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -187,9 +187,9 @@ class update {
 	* @param string $modelo_name
 	* @param array $current_version
 	* @param array $update_version
-	* @return array $total_update
+	* @return bool
 	*/
-	public static function components_update($modelo_name, $current_version, $update_version) {
+	public static function components_update(string $modelo_name, array $current_version, array $update_version) : bool {
 
 		# Existing db tables
 		# Gets array of all db tables
@@ -404,7 +404,7 @@ class update {
 	* @param object $script_obj
 	* @return object $response
 	*/
-	public static function run_scripts( $script_obj ) {
+	public static function run_scripts( object $script_obj ) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -435,7 +435,7 @@ class update {
 	* UPDATE_DEDALO_DATA_VERSION
 	* @return bool true
 	*/
-	public static function update_dedalo_data_version($version_to_update) {
+	public static function update_dedalo_data_version($version_to_update) : bool {
 
 		$values = new stdClass();
 			$values->dedalo_version = $version_to_update;

@@ -17,7 +17,7 @@ class tool_common {
 	* __CONSTRUCT
 	* @return bool true
 	*/
-	public function __construct($section_id, $section_tipo) {
+	public function __construct($section_id, string $section_tipo) {
 
 		// set tool name as class name
 		$this->name = get_called_class();
@@ -38,13 +38,13 @@ class tool_common {
 	* @return array $json
 	*	Array of objects with data and context (configurable)
 	*/
-	public function get_json($request_options=false) : object {
+	public function get_json(object $request_options=null) : object {
 
 		// options parse
 			$options = new stdClass();
 				$options->get_context	= true;
 				$options->get_data		= true;
-				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+				if($request_options!==null) foreach($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// new way
 			$json = new stdClass();
@@ -151,7 +151,7 @@ class tool_common {
 	* @param object $tool_config (from properties)
 	* @return object $tool_simple_context
 	*/
-	public static function create_tool_simple_context($tool_object, $tool_config=null, $tipo=null, $section_tipo=null) : object {
+	public static function create_tool_simple_context(object $tool_object, object $tool_config=null, string $tipo=null, string $section_tipo=null) : object {
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){

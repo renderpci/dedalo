@@ -22,7 +22,7 @@ abstract class backup {
 	* Make backup (compressed MySQL dump) of current dedalo DB before login
 	* @return object $response
 	*/
-	public static function init_backup_secuence($user_id, $username, $skip_backup_time_range=false) : object {
+	public static function init_backup_secuence(int $user_id, string $username, bool $skip_backup_time_range=false) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -620,7 +620,7 @@ abstract class backup {
 	* @param string db_name default 'dedalo4_development_str.custom'
 	* @return string $res_html table of results
 	*/
-	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, $dedalo_prefix_tipos=null) : object {
+	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, array $dedalo_prefix_tipos=null) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1159,7 +1159,7 @@ abstract class backup {
 	* @return array $ar_files
 	*	Array of objects
 	*/
-	public static function collect_all_str_files($DEDALO_PREFIX_TIPOS=null) : array {
+	public static function collect_all_str_files(array $DEDALO_PREFIX_TIPOS=null) : array {
 
 		static $ar_files;
 
@@ -1526,11 +1526,9 @@ abstract class backup {
 	* OPTIMIZE_TABLES
 	* Exec VACUUM ANALYZE command on every received table
 	* @param array $tables
-	* @return string|null $res
+	* @return string|bool|null $res
 	*/
-	public static function optimize_tables($tables) {
-
- 		$tables = is_array($tables) ? $tables : [$tables];
+	public static function optimize_tables(array $tables) {
 
 		// $command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
 		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';

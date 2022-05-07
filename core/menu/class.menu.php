@@ -16,7 +16,7 @@ class menu extends common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($modo='edit') {
+	public function __construct(string $modo='edit') {
 
 		$id					= null;
 		$tipo				= $this->tipo;
@@ -186,7 +186,7 @@ class menu extends common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=1, $add_rqo=false, $fallback=false) : object {
+	public function get_structure_context(int $permissions=1, bool $add_rqo=false, callable $callback=null) : object {
 
 		// short vars
 			$tipo	= $this->get_tipo();

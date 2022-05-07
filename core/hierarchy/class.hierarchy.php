@@ -16,7 +16,7 @@ class hierarchy {
 	* GET_DEFAULT_SECTION_TIPO_TERM
 	* @return
 	*/
-	public static function get_default_section_tipo_term($tld) {
+	public static function get_default_section_tipo_term(string $tld) : string {
 
 		return strtolower($tld) . '1';
 	}//end get_default_section_tipo_term
@@ -27,7 +27,7 @@ class hierarchy {
 	* GET_DEFAULT_SECTION_TIPO_MODEL
 	* @return
 	*/
-	public static function get_default_section_tipo_model($tld) {
+	public static function get_default_section_tipo_model(string $tld) : string {
 		return strtolower($tld) . '2';
 	}//end get_default_section_tipo_model
 
@@ -38,7 +38,7 @@ class hierarchy {
 	* Note that virtual sections not contains components, only a exclude elements term
 	* @return
 	*/
-	public static function generate_virtual_section( $request_options ) {
+	public static function generate_virtual_section( object $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -396,7 +396,7 @@ class hierarchy {
 	* CREATE_ROOT_TERMS
 	* @return bool
 	*/
-	protected static function create_root_terms( $request_options ) {
+	protected static function create_root_terms( object $request_options ) : bool {
 
 		$options = new stdClass();
 			$options->section_tipo 	= null;
@@ -450,7 +450,7 @@ class hierarchy {
 	* Creates new structure term with request params. If term already exists, return false
 	* @return object $response
 	*/
-	public static function create_term( $request_options ) {
+	public static function create_term( object $request_options ) : object {
 
 		$options = new stdClass();
 			$options->terminoID 	= '';
@@ -513,9 +513,9 @@ class hierarchy {
 
 	/**
 	* UPDATE_FROM_4_0_TO_4_1
-	* @return
+	* @return object $response
 	*/
-	public static function update_jerarquia_from_4_0_to_4_1() {
+	public static function update_jerarquia_from_4_0_to_4_1() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -626,7 +626,7 @@ class hierarchy {
 	* ROW_TO_JSON_OBJ
 	* @return
 	*/
-	private static function row_to_json_obj($tipo, $parent, $dato=null, $lang='lg-spa', $section_tipo=null) {
+	private static function row_to_json_obj(string $tipo, $parent, $dato=null, string $lang='lg-spa', string $section_tipo=null) {
 
 		if(empty($dato)){
 			return false;
@@ -664,9 +664,9 @@ class hierarchy {
 
 	/**
 	* UPDATE_JER_ES_FROM_4_0_TO_4_1
-	* @return
+	* @return object
 	*/
-	public static function update_jer_from_4_0_to_4_1($tld, $modelo) {
+	public static function update_jer_from_4_0_to_4_1(string $tld, string $modelo) : object {
 
 		# Disable logging activity and time machine # !IMPORTANT
 		logger_backend_activity::$enable_log = false;
@@ -844,21 +844,21 @@ class hierarchy {
 		}//end if(strpos($terminoID, 'lg-')===0)
 
 		if(empty($dato_modelo)) {
-			
+
 			$loc_modelo = null;
-		
+
 		}else{
 
 			$modelo_id = substr($dato_modelo, 2);
 
 			$loc_modelo = new locator();
-				$loc_modelo->set_section_tipo($tld.'2');				
+				$loc_modelo->set_section_tipo($tld.'2');
 				$loc_modelo->set_section_id($modelo_id);
 				$loc_modelo->set_type(DEDALO_RELATION_TYPE_MODEL_TIPO);
 				$loc_modelo->set_from_component_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO);
-		}	
-		
-		// ["ts2","pt234","fr37028"]		
+		}
+
+		// ["ts2","pt234","fr37028"]
 		$relaciones	= json_decode($relaciones);
 		$relacion = array();
 		if(!empty($relaciones) && is_array($relaciones)){
@@ -1065,15 +1065,15 @@ class hierarchy {
 
 	/**
 	* GET_LG_ID_FROM_TERMINOID
-	* @return
+	* @return int
 	*/
-	private static function get_lg_id_from_terminoID( $termino_id ) {
+	private static function get_lg_id_from_terminoID( string $termino_id ) : int {
 
 		# SOURCE TABLE DATA
 		$strQuery = "SELECT id FROM \"jer_lg\" WHERE \"terminoID\" = '$termino_id' ";
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
-			$id = $rows['id'];
+			$id = (int)$rows['id'];
 			return $id;
 		}
 		return 1;
@@ -1088,7 +1088,7 @@ class hierarchy {
 	* Speed here is very important because this method is basic for thesaurus sections defined in hierarchies
 	* @return string $main_lang
 	*/
-	public static function get_main_lang($section_tipo) {
+	public static function get_main_lang(string $section_tipo) : string {
 
 		static $ar_main_lang;
 
@@ -1183,7 +1183,7 @@ class hierarchy {
 	* Return array of current active hierarchies
 	* @return array $active_hierarchies
 	*/
-	public static function get_active_hierarchies( $ar_type=null ) {
+	public static function get_active_hierarchies( array $ar_type=null ) : array {
 
 		# Filter by active (Radio button active) hierarchy4
 		#$active_value 	= "(a.datos#>'{components,hierarchy4,dato,lg-nolan}' @> '[{\"section_id\":\"1\",\"section_tipo\":\"dd64\"}]'::jsonb)";
@@ -1264,7 +1264,7 @@ class hierarchy {
 	*			    [2] => ts1
 	* @return array $all_tables
 	*/
-	public static function get_all_tables( $ar_section_tipo ) {
+	public static function get_all_tables( array $ar_section_tipo ) : array {
 
 		$all_tables = array();
 		foreach ((array)$ar_section_tipo as $section_tipo) {
@@ -1284,7 +1284,7 @@ class hierarchy {
 	* Returns array of thesaurus term by map
 	* @return array $all_term_tipo_by_map
 	*/
-	public static function get_all_term_tipo_by_map( $ar_section_tipo ) {
+	public static function get_all_term_tipo_by_map( array $ar_section_tipo ) : array {
 
 		$all_term_tipo_by_map=array();
 		foreach ((array)$ar_section_tipo as $section_tipo) {
@@ -1311,7 +1311,7 @@ class hierarchy {
 	* For example, search for term tipo, childrens element tipo, etc..
 	* @return string|null $element_tipo
 	*/
-	public static function get_element_tipo_from_section_map( $section_tipo, $type ) {
+	public static function get_element_tipo_from_section_map( string $section_tipo, string $type ) {
 
 		$element_tipo = null;
 
@@ -1429,7 +1429,7 @@ class hierarchy {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function update_target_section( $request_options ) {
+	public static function update_target_section( $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1504,7 +1504,7 @@ class hierarchy {
 	* SET_LANG_HIERARCHY
 	* @return
 	*/
-	public static function set_lang_hierarchy() {
+	public static function set_lang_hierarchy() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1578,7 +1578,7 @@ class hierarchy {
 	* GET_HIERARCHY_TYPE_FROM_SECTION_TIPO
 	* @return int $hierarchy_type
 	*/
-	public static function get_hierarchy_type_from_section_tipo($section_tipo) {
+	public static function get_hierarchy_type_from_section_tipo(string $section_tipo) {
 
 		$hierarchy_type = null;
 
@@ -1640,9 +1640,9 @@ class hierarchy {
 	*	Source section_tipo
 	* @param $hierarchy_component_tipo
 	*	Target component tipo where search section_tipo
-	* @return int $section_id | null
+	* @return int|null $section_id
 	*/
-	public static function get_hierarchy_section($section_tipo, $hierarchy_component_tipo) {
+	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_component_tipo,true);
 
@@ -1680,4 +1680,3 @@ class hierarchy {
 
 
 }//end class hierarchy
-?>

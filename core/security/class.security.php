@@ -208,9 +208,9 @@ class security {
 	* GET_USER_PROFILE
 	* Resolve user profile id by user_id
 	* @param int $user_id
-	* @return object $locator
+	* @return object|false $locator
 	*/
-	public static function get_user_profile($user_id) : object {
+	public static function get_user_profile(int $user_id) {
 
 		// user profile
 			$component_profile_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
@@ -243,7 +243,7 @@ class security {
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
 	*/
-	public static function get_permissions_table_of_specific_user( $user_id ) : array {
+	public static function get_permissions_table_of_specific_user( int $user_id ) : array {
 
 		$permissions_table = security::get_ar_permissions_in_matrix_for_current_user( $user_id );
 
@@ -309,7 +309,7 @@ class security {
 	*	User id · int · can be the current logged user or not.
 	* @return bool
 	*/
-	public static function is_global_admin($user_id) : bool {
+	public static function is_global_admin(int $user_id) : bool {
 
 		$user_id = (int)$user_id;
 
@@ -366,7 +366,7 @@ class security {
 	* Allow current user access to created default sections
 	* @return bool
 	*/
-	private static function set_section_permissions( $request_options ) : bool {
+	private static function set_section_permissions( object $request_options ) : bool {
 
 		$options = new stdClass();
 			$options->section_tipo	= null;

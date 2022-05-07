@@ -114,7 +114,7 @@ class search {
 	/**
 	* __CONSTRUCT
 	*/
-	private function __construct($search_query_object) {
+	private function __construct(object $search_query_object) {
 		# Set up class minim vars
 		$this->set_up($search_query_object);
 	}//end __construct
@@ -441,7 +441,7 @@ class search {
 	* Iterate all filter and select elements and communicate with components to rebuild the search_query_object
 	* Not return anything, only modifies the class var $this->search_query_object
 	*/
-	public function pre_parse_search_query_object() {
+	public function pre_parse_search_query_object() : bool {
 
 		#$start_time=microtime(1);
 		#dump($this->search_query_object, 'preparsed $this->search_query_object 1 ++ '.to_string());
@@ -502,7 +502,7 @@ class search {
 	* Call to component to parse select query (add component path)
 	* @return object $select_object
 	*/
-	public static function component_parser_select( $select_object ) {
+	public static function component_parser_select( object $select_object ) {
 
 		$path				= $select_object->path;
 		$component_tipo 	= end($path)->component_tipo;
@@ -591,7 +591,7 @@ class search {
 	*	default false
 	* @return string $sql_query
 	*/
-	public function parse_search_query_object( $full_count=false ) : string {
+	public function parse_search_query_object( bool $full_count=false ) : string {
 		#$start_time=microtime(1);
 		#dump($this->search_query_object->filter, ' this->search_query_object->filter 1 ++ '.to_string());
 		#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
@@ -954,7 +954,7 @@ class search {
 	* @param string $sql_query
 	* @return string $sql_query
 	*/
-	public function build_union_query($sql_query) : string {
+	public function build_union_query(string $sql_query) : string {
 
 		// calculate tables
 			$this->ar_matrix_tables = [];
@@ -990,7 +990,7 @@ class search {
 	* BUILD_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
-	public function build_sql_query_select($full_count=false) : string {
+	public function build_sql_query_select(bool $full_count=false) : string {
 
 		if ($full_count===true) {
 			return $this->build_full_count_sql_query_select();
@@ -1657,7 +1657,7 @@ class search {
 	* @param array $ar_value
 	* @return string $string_query
 	*/
-	public function filter_parser($op, $ar_value) : string {
+	public function filter_parser(string $op, array $ar_value) : string {
 
 		$string_query = '';
 
@@ -1759,7 +1759,7 @@ class search {
 	* Builds one table join based on requested path
 	* @return bool true
 	*/
-	public function build_sql_join($path) : bool {
+	public function build_sql_join(array $path) : bool {
 
 		$rel_table		= self::$relations_table;
 		$ar_key_join	= [];
@@ -1832,7 +1832,7 @@ class search {
 	* TRIM_TIPO
 	* @return string $trimmed_tipo
 	*/
-	public static function trim_tipo(string $tipo, $max=2) : string {
+	public static function trim_tipo(string $tipo, int $max=2) : string {
 
 		// empty case
 			if (empty($tipo)) {
@@ -1867,9 +1867,10 @@ class search {
 
 	/**
 	* GET_SQL_WHERE
+	* @param object $search_object
 	* @return string $sql_where
 	*/
-	public function get_sql_where($search_object) {
+	public function get_sql_where(object $search_object) : string {
 		#dump($search_object, ' search_object ++ '.to_string());
 		//oh1_oh24_rsc197_rsc86.datos#>'{relations}' @> '[{"section_id":"2","section_tipo":"dd861","from_component_tipo":"rsc93"}]'::jsonb
 		//unaccent(oh1_oh24_rsc197_rsc453.datos#>>'{components, rsc85, dato}') ~* unaccent('.*\[".*ana.*')
@@ -2061,7 +2062,7 @@ class search {
 	* Recursive
 	* @return string $sql_where
 	*/
-	public static function resolve_array_elements( $array_elements, $component_tipo ) {
+	public static function resolve_array_elements( array $array_elements, string $component_tipo ) : string {
 
 		$sql_where = '';
 		#debug_log(__METHOD__." ****** array_elements ".to_string($array_elements), logger::DEBUG);
@@ -2111,7 +2112,7 @@ class search {
 	* IS_SEARCH_OPERATOR
 	* @return bool
 	*/
-	public static function is_search_operator($search_object) {
+	public static function is_search_operator(object $search_object) : bool {
 
 		foreach ($search_object as $key => $value) {
 			if (strpos($key, '$')!==false) {
@@ -2322,7 +2323,7 @@ class search {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset=false, $count=false ) : array {
+	public static function calculate_inverse_locators( object $reference_locator, $limit=false, $offset=false, bool $count=false ) : array {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
 
 		# compare
@@ -2356,11 +2357,11 @@ class search {
 		$strQuery .= implode(' UNION ALL ', $ar_query);
 		// Set order to maintain results stable
 
-		if($count === false){
+		if($count===false) {
 			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
-			if($limit !== false){
+			if($limit!==false){
 				$strQuery .= PHP_EOL . 'LIMIT '.$limit;
-				if($offset !== false){
+				if($offset!==false){
 					$strQuery .= PHP_EOL . 'OFFSET '.$offset;
 				}
 			}
@@ -2378,7 +2379,7 @@ class search {
 			return null;
 		}
 		$ar_inverse_locators = array();
-		if($count === false){
+		if($count===false) {
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
 
@@ -2672,7 +2673,7 @@ class search {
 	* Used to build list of user presets in filter
 	* @return array $component_presets
 	*/
-	public static function filter_get_user_presets($user_id=null, $target_section_tipo=null, $section_tipo='dd623') : array {
+	public static function filter_get_user_presets(int $user_id=null, string $target_section_tipo=null, string $section_tipo='dd623') : array {
 
 		#$section_tipo 		 			= 'dd623'; // Presets list dd623 or dd655 (temp)
 		$name_component_tipo 			= 'dd624'; // Name field
@@ -2776,7 +2777,7 @@ class search {
 	* Find requested preset section_id (in presets list or temp presets)
 	* @return object | null
 	*/
-	public static function get_preset($user_id, $target_section_tipo, $preset_section_tipo) {
+	public static function get_preset(int $user_id, string $target_section_tipo, string $preset_section_tipo) {
 
 		$preset_obj = null;
 
@@ -2792,23 +2793,23 @@ class search {
 		$filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
 
 		// Find existing preset
-		$strQuery  = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
-		$strQuery .= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
-		$strQuery .= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
-		$strQuery .= 'LIMIT 1;';
-		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+		$strQuery	 = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
+		$strQuery	.= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
+		$strQuery	.= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
+		$strQuery	.= 'LIMIT 1;';
+		$result		 = JSON_RecordObj_matrix::search_free($strQuery);
 		if ($result===false) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-			return null;
+			return $preset_obj; // is null
 		}
 		while ($rows = pg_fetch_assoc($result)) {
 
-			$section_id  = $rows['section_id'];
-			$json_filter = json_decode($rows['json_filter']);
+			$section_id		= $rows['section_id'];
+			$json_filter	= json_decode($rows['json_filter']);
 
 			$preset_obj = new stdClass();
-				$preset_obj->section_id  = (int)$section_id;
-				$preset_obj->json_filter = is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
+				$preset_obj->section_id		= (int)$section_id;
+				$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
 			break; // Only one expected
 		}
 		#debug_log(__METHOD__." preset_id: $preset_id ".PHP_EOL.to_string($strQuery), logger::DEBUG);
@@ -2824,7 +2825,7 @@ class search {
 	* Saves filter in section list (dd655) a private list for temporal data
 	* @return bool
 	*/
-	public static function save_temp_preset($user_id, $target_section_tipo, $filter_object) {
+	public static function save_temp_preset(int $user_id, string $target_section_tipo, object $filter_object) : array {
 
 		$section_tipo	= DEDALO_TEMP_PRESET_SECTION_TIPO; // 'dd655'; // presets temp
 		$matrix_table	= 'matrix_list';
@@ -2835,6 +2836,7 @@ class search {
 			# Create new section if not exists
 			$section	= section::get_instance(null, $section_tipo);
 			$preset_id	= $section->Save();
+				dump($preset_id, ' preset_id ++ '.to_string($section_tipo));
 		}else{
 			#$section	= section::get_instance($preset_id, $section_tipo);
 			$preset_id	= $preset_obj->section_id;
@@ -2903,7 +2905,7 @@ class search {
 	* Temporal method to obtain search select paths to build a search_json_object
 	* @return array $path
 	*/
-	public static function get_search_select_from_section($section_obj, $layout_map=false) : array {
+	public static function get_search_select_from_section(object $section_obj, array $layout_map=null) : array {
 
 		$select = [];
 
@@ -2912,7 +2914,7 @@ class search {
 		// ar_components_tipo
 			if (empty($layout_map)) {
 				// we obtain target components from section layout map
-					$layout_map = component_layout::get_layout_map_from_section( $section_obj );
+				$layout_map = component_layout::get_layout_map_from_section( $section_obj );
 			}
 
 		$ar_values = reset($layout_map);
@@ -3077,7 +3079,7 @@ class search {
 	* RESOLVE_PATH_LEVEL
 	* @return array $result
 	*/
-	public static function resolve_path_level($path_item, array $ar_locator) : array {
+	public static function resolve_path_level(object $path_item, array $ar_locator) : array {
 
 		$result = [];
 		foreach ($ar_locator as $locator) {

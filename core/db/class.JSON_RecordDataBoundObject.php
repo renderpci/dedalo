@@ -29,7 +29,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 	# __CONSTRUCT
-	public function __construct($id=null) {
+	public function __construct(int $id=null) {
 
 		$this->strTableName 		= $this->defineTableName();
 		$this->strPrimaryKeyName	= $this->definePrimaryKeyName();
@@ -430,8 +430,11 @@ abstract class JSON_RecordDataBoundObject {
 
 	/**
 	* SEARCH
-	* Buscador genérico . Necesita array key-value con campo,valor
-	* TIPO $arguments['parent'] = 14 ...
+	* Generic search engine. You need array key-value with field,value
+	* Sample: $arguments['parent'] = 14 ...
+	* @param array $ar_arguments
+	* @param string $matrix_table
+	* @return array $ar_records
 	*/
 	public function search(array $ar_arguments=null, string $matrix_table=null) : array {
 
@@ -514,7 +517,7 @@ abstract class JSON_RecordDataBoundObject {
 					}
 					break;
 			}#end switch(true)
-		}#end foreach($ar_arguments as $key => $value)
+		}//end foreach($ar_arguments as $key => $value)
 
 		# Seguridad
 		#if(strpos(strtolower($strQuery), 'update')!=='false' || strpos(strtolower($strQuery), 'delete')!=='false') die("SQL Security Error ". strtolower($strQuery) );
@@ -542,13 +545,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 		# CACHE_MANAGER : Using external cache manager (like redis)
-		if( $use_cache===true && $this->use_cache_manager===true) { //  && cache::exists($strQuery)
-
-			$ar_records	= unserialize(cache::get($strQuery));
-			#$ar_records	= json_handler::decode(cache::get($strQuery));
-
-		# CACHE RUN-IN
-		}else if ( $use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery]) ) {
+		if ( $use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery]) ) {
 
 			$ar_records	= $ar_RecordDataObject_query_search_cache[$strQuery];
 
@@ -567,7 +564,6 @@ abstract class JSON_RecordDataBoundObject {
 				dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
 				throw new Exception("Error Processing Request", 1);
 			}
-
 			while ($rows = pg_fetch_assoc($result)) {
 				$ar_records[] = $rows['key'];
 			}
@@ -580,11 +576,8 @@ abstract class JSON_RecordDataBoundObject {
 			# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
 			# the next results are 0 and duplicate records are built in matrix)
-			$n_records = sizeof($ar_records);
-			if( $use_cache===true && $this->use_cache_manager===true && $n_records>0) {
-				# CACHE_MANAGER
-				cache::set($strQuery, serialize($ar_records));
-			}else if( $use_cache===true && $n_records>0 ) {
+			$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
+			if( $use_cache===true && $n_records>0 ) {
 				# CACHE RUN-IN
 				$ar_RecordDataObject_query_search_cache[$strQuery] = $ar_records;
 			}
@@ -593,12 +586,10 @@ abstract class JSON_RecordDataBoundObject {
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time,'ms');
 					#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
-					$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
 					if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".$n_records);
 					#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.microtime(1)]=microtime(1);
 				}
 		}
-		#pg_close(DBi::_getConnection());
 
 
 		return $ar_records;
@@ -608,91 +599,93 @@ abstract class JSON_RecordDataBoundObject {
 
 	/**
 	* BUILD_PG_FILTER
+	* (!) Not used
 	*/
-	public static function build_pg_filter($modo, $datos, $tipo, $lang, $value) {
+		// public static function build_pg_filter(string $modo, string $datos, string $tipo, string $lang, $value) : string {
 
-		if (empty($datos)) {
-			$datos = 'datos';
-		}
+		// 	if (empty($datos)) {
+		// 		$datos = 'datos';
+		// 	}
 
-		switch ($modo) {
-			case 'gin':
-				# ref: datos @>'{"components":{"rsc24":{"dato":{"lg-nolan":"114"}}}}'
-				$value = pg_escape_string(DBi::_getConnection(), stripslashes($value));
-				#$value = pg_escape_literal(stripslashes($value));
-				return "$datos @>'{\"components\":{\"$tipo\":{\"dato\":{\"$lang\":\"$value\"}}}}'::jsonb ";
-				break;
+		// 	switch ($modo) {
+		// 		case 'gin':
+		// 			# ref: datos @>'{"components":{"rsc24":{"dato":{"lg-nolan":"114"}}}}'
+		// 			$value = pg_escape_string(DBi::_getConnection(), stripslashes($value));
+		// 			#$value = pg_escape_literal(stripslashes($value));
+		// 			return "$datos @>'{\"components\":{\"$tipo\":{\"dato\":{\"$lang\":\"$value\"}}}}'::jsonb ";
+		// 			break;
 
-			case 'btree':
-				$type = gettype($value);
-				if(SHOW_DEBUG===true) {
-					#dump($type," type for ".print_r($value,true));
-				}
-				switch ($type ) {
-					case 'array':
-						foreach ($value as $key => $ar_value) {
-							if(SHOW_DEBUG===true) {
-								#dump($value," value"); dump($key," key"); dump($ar_value," ar_value");
-							}
-							$ar_id_matrix[] = key($ar_value);
-						}
-						$ar_values_string='';
-						$end_value = end($ar_id_matrix);
-						foreach ($ar_id_matrix as $id_matrix){
-							$ar_values_string .= "'{$id_matrix}'";
-							if ($id_matrix !== $end_value) $ar_values_string .= ',';
-						}
-						return "$datos #>'{components,$tipo,dato,$lang}' ?| array[$ar_values_string] ";
-						break;
+		// 		case 'btree':
+		// 			$type = gettype($value);
+		// 			if(SHOW_DEBUG===true) {
+		// 				#dump($type," type for ".print_r($value,true));
+		// 			}
+		// 			switch ($type ) {
+		// 				case 'array':
+		// 					foreach ($value as $key => $ar_value) {
+		// 						if(SHOW_DEBUG===true) {
+		// 							#dump($value," value"); dump($key," key"); dump($ar_value," ar_value");
+		// 						}
+		// 						$ar_id_matrix[] = key($ar_value);
+		// 					}
+		// 					$ar_values_string='';
+		// 					$end_value = end($ar_id_matrix);
+		// 					foreach ($ar_id_matrix as $id_matrix){
+		// 						$ar_values_string .= "'{$id_matrix}'";
+		// 						if ($id_matrix !== $end_value) $ar_values_string .= ',';
+		// 					}
+		// 					return "$datos #>'{components,$tipo,dato,$lang}' ?| array[$ar_values_string] ";
+		// 					break;
 
-					case 'object':
-						#$key = key($value);
-						#$ar_values_string = "'$key'";
-						$ar_values_string='';
-						$keys = array_keys((array)$value);
-						$end_value = end($keys);
-						foreach ($keys as $current_value) {
-							$ar_values_string .= "'$current_value'";
-							if ($current_value !== $end_value) {
-								$ar_values_string .=',';
-							}
-						}
-						#dump($ar_values_string, ' ar_values_string');
-						return "$datos #>'{components,$tipo,dato,$lang}' ?| array[$ar_values_string] ";
-						#$value = json_encode($value);
-						#return  "$datos #>'{components,$tipo,dato,$lang}' @> '[$value]'::jsonb ";
-						break;
+		// 				case 'object':
+		// 					#$key = key($value);
+		// 					#$ar_values_string = "'$key'";
+		// 					$ar_values_string='';
+		// 					$keys = array_keys((array)$value);
+		// 					$end_value = end($keys);
+		// 					foreach ($keys as $current_value) {
+		// 						$ar_values_string .= "'$current_value'";
+		// 						if ($current_value !== $end_value) {
+		// 							$ar_values_string .=',';
+		// 						}
+		// 					}
+		// 					#dump($ar_values_string, ' ar_values_string');
+		// 					return "$datos #>'{components,$tipo,dato,$lang}' ?| array[$ar_values_string] ";
+		// 					#$value = json_encode($value);
+		// 					#return  "$datos #>'{components,$tipo,dato,$lang}' @> '[$value]'::jsonb ";
+		// 					break;
 
-					default:
-						# ref: datos #>> '{components,rsc24,dato,lg-nolan}' = '114'
-						return "$datos #>>'{components,$tipo,dato,$lang}'='$value'";
-						break;
-				}
-				break;
-		}
-	}//end build_pg_filter
+		// 				default:
+		// 					# ref: datos #>> '{components,rsc24,dato,lg-nolan}' = '114'
+		// 					return "$datos #>>'{components,$tipo,dato,$lang}'='$value'";
+		// 					break;
+		// 			}
+		// 			break;
+		// 	}
+		// }//end build_pg_filter
 
 
 
 	/**
 	* BUILD_PG_SELECT
+	* (!) Not used
 	*/
-	public static function build_pg_select($modo, $datos='datos', $tipo=null, $key='dato', $lang=DEDALO_DATA_LANG) {
+		// public static function build_pg_select($modo, $datos='datos', $tipo=null, $key='dato', $lang=DEDALO_DATA_LANG) {
 
-		if (empty($tipo)) {
-			throw new Exception("Error Processing Request. tipo is mandatory !", 1);
-		}
+		// 	if (empty($tipo)) {
+		// 		throw new Exception("Error Processing Request. tipo is mandatory !", 1);
+		// 	}
 
-		switch ($modo) {
-			case 'gin':
-				throw new Exception("Error Processing Request. Sorry not implemented...", 1);
-				break;
-			case 'btree':
-				# ref: datos#>>'{components, $terminoID_valor, dato, $lang}' as $terminoID_valor
-				return "$datos #>>'{components,$tipo,$key,$lang}' AS $tipo";
-				break;
-		}
-	}//end build_pg_select
+		// 	switch ($modo) {
+		// 		case 'gin':
+		// 			throw new Exception("Error Processing Request. Sorry not implemented...", 1);
+		// 			break;
+		// 		case 'btree':
+		// 			# ref: datos#>>'{components, $terminoID_valor, dato, $lang}' as $terminoID_valor
+		// 			return "$datos #>>'{components,$tipo,$key,$lang}' AS $tipo";
+		// 			break;
+		// 	}
+		// }//end build_pg_select
 
 
 
@@ -735,7 +728,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 	# ACCESSORS CALL
-	final public function __call($strFunction, $arArguments) {
+	final public function __call(string $strFunction, array $arArguments) {
 		#echo "call ok $strFunction - $arArguments";
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
@@ -746,7 +739,7 @@ abstract class JSON_RecordDataBoundObject {
 		return(false);
 	}
 	# ACCESSORS SET
-	private function SetAccessor($strMember, $strNewValue) {
+	private function SetAccessor(string $strMember, $strNewValue) {
 
 		if(property_exists($this, $strMember)) {
 
@@ -780,19 +773,18 @@ abstract class JSON_RecordDataBoundObject {
 		}
 	}
 	# ACCESSORS GET
-	private function GetAccessor($strMember) {
+	private function GetAccessor(string $strMember) {
 
 		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
 		if(property_exists($this, $strMember)) {
-			#eval(' $strRetVal = $this->' . $strMember .';');
-			$strRetVal = $this->$strMember;
 
-			#if(is_string($strRetVal)) $strRetVal = stripslashes($strRetVal);
-			return($strRetVal);
+			return $this->$strMember;
+
 		}else{
-			return(false);
+
+			return false;
 		}
 	}//end GetAccessor
 

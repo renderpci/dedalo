@@ -622,12 +622,17 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_AR_CHILDRENS_OF_THIS
 	* Get array of terms (terminoID) with parent = $this->terminoID
+	* @param string|null $esdescriptor
+	* @param string|null $esmodelo
+	* @param string|null $order_by
 	* @return array
 	*/
-	public function get_ar_childrens_of_this(string $esdescriptor='si', $esmodelo=null, string $order_by='norden') : array {
+	public function get_ar_childrens_of_this($esdescriptor='si', string $esmodelo=null, $order_by='norden') : array {
 
 		# COMPROBACIÓN
-		if(empty($this->terminoID))	return false;
+		if(empty($this->terminoID))	{
+			return false;
+		}
 		#if(empty($this->prefijo)) 	return false;
 
 		# STATIC CACHE
@@ -710,7 +715,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# creamos una instancia independiente de RecordObj_dd y sacamos los hijos directos
 		// $ar_childrens_of_this	= array();	# reset value every cycle
 		$RecordObj_dd				= new RecordObj_dd($terminoID);
-		$ar_childrens_of_this		= (array)$RecordObj_dd->get_ar_childrens_of_this(null, null, null);	# $esdescriptor='si', $esmodelo=NULL, $order_by='norden'
+		$ar_childrens_of_this		= (array)$RecordObj_dd->get_ar_childrens_of_this(
+			null, // esdescriptor
+			null, // esmodelo
+			null // order_by
+		);	# $esdescriptor='si', $esmodelo=NULL, $order_by='norden'
 		$ar_childrens_of_this_size	= sizeof($ar_childrens_of_this);
 
 		// foreach($ar_childrens_of_this as $children_terminoID) {
@@ -734,7 +743,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens( string $terminoID, $is_recursion=false, $ar_exclude_models=false, $order_by=null ) : array {
+	public static function get_ar_recursive_childrens( string $terminoID, bool $is_recursion=false, array $ar_exclude_models=null, string $order_by=null ) : array {
 
 		$ar_resolved=array();
 
@@ -744,7 +753,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		$RecordObj_dd		= new RecordObj_dd($terminoID);
-		$ar_childrens		= (array)$RecordObj_dd->get_ar_childrens_of_this('si',null, $order_by);
+		$ar_childrens		= (array)$RecordObj_dd->get_ar_childrens_of_this(
+			'si', // string esdescriptor
+			null, // string esmodelo
+			$order_by // string order_by
+		);
 		$ar_childrens_size	= sizeof($ar_childrens);
 
 		// foreach($ar_childrens as $current_terminoID) {
@@ -753,8 +766,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$current_terminoID = $ar_childrens[$i];
 
 			# Exclude models optional
-			if ($ar_exclude_models!==false) {
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID,true);
+			if (!empty($ar_exclude_models)) {
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID, true);
 				if (in_array($modelo_name, $ar_exclude_models)) {
 					#debug_log(__METHOD__." Skiped model '$modelo_name' ".to_string($current_terminoID), logger::DEBUG);
 					continue;	// Skip current modelo and children
@@ -791,7 +804,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		#$ar_childrens  = (array)RecordObj_dd::get_ar_childrens($terminoID);
 		$RecordObj_dd 	= new RecordObj_dd($terminoID);
-		$ar_childrens 	= (array)$RecordObj_dd->get_ar_childrens_of_this('si',null,null);
+		$ar_childrens 	= (array)$RecordObj_dd->get_ar_childrens_of_this('si', null, null);
 
 		foreach($ar_childrens as $current_terminoID) {
 

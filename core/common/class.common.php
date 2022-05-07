@@ -591,7 +591,7 @@ abstract class common {
 	/**
 	* SETVAR
 	*/
-	public static function setVar($name, $default=false) {
+	public static function setVar(string $name, $default=false) {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVar]: Name 'name' is invalid", 1);
 
@@ -615,7 +615,7 @@ abstract class common {
 	* @param string $name
 	* @param onject $data_obj
 	*/
-	public static function setVarData($name, $data_obj, $default=false) {
+	public static function setVarData(string $name, $data_obj, $default=false) {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVarData]: Name 'name' is invalid", 1);
 
@@ -637,12 +637,14 @@ abstract class common {
 	/**
 	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
 	*/
-	public static function get_page_query_string($remove_optional_vars=true) : string {
+	public static function get_page_query_string(bool $remove_optional_vars=true) : string {
 
 		$queryString = $_SERVER['QUERY_STRING']; # like max=10
 		$queryString = safe_xss($queryString);
 
-		if($remove_optional_vars === false) return $queryString;
+		if($remove_optional_vars===false) {
+			return $queryString;
+		}
 
 		$qs 				= false ;
 		$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
@@ -768,7 +770,7 @@ abstract class common {
 	* SET_properties
 	* @return bool
 	*/
-	public function set_properties($value) : bool{
+	public function set_properties($value) : bool {
 		if (is_string($value)) {
 			$properties = json_decode($value);
 		}else{
@@ -1079,8 +1081,9 @@ abstract class common {
 	/**
 	* TRUNCATE_TEXT
 	* Multibyte truncate or trim text
+	* @return string $final_string
 	*/
-	public static function truncate_text(string $string, $limit, $break=" ", $pad='...') : string {
+	public static function truncate_text(string $string, int $limit, string $break=" ", string $pad='...') : string {
 
 		// returns with no change if string is shorter than $limit
 			$str_len = mb_strlen($string, '8bit');
@@ -1106,7 +1109,7 @@ abstract class common {
 	* TRUNCATE_HTML
 	* Thanks to Søren Løvborg (printTruncated)
 	*/
-	public static function truncate_html($maxLength, $html, $isUtf8=true) : string {
+	public static function truncate_html(int $maxLength, string $html, bool $isUtf8=true) : string {
 
 		$full_text = '';
 
@@ -1230,7 +1233,7 @@ abstract class common {
 	* @return object $json
 	*	Array of objects with data and context (configurable)
 	*/
-	public function get_json($request_options=false) : object {
+	public function get_json(object $request_options=null) : object {
 
 		// Debug
 			if(SHOW_DEBUG===true) $start_time = start_time();
@@ -1241,7 +1244,7 @@ abstract class common {
 				$options->context_type			= 'default';
 				$options->get_data				= true;
 				$options->get_request_config	= false;
-				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+				if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$called_model = get_class($this); // get_called_class(); // static::class
 			$called_tipo  = $this->get_tipo();
@@ -1308,7 +1311,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=0, $add_request_config=false, $callback=false) : object {
+	public function get_structure_context(int $permissions=0, bool $add_request_config=false, callable $callback=null) : object {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		// short vars
@@ -1520,7 +1523,7 @@ abstract class common {
 				}
 
 		// callback
-			if ($callback!==false) {
+			if ($callback!==null) {
 				$callback($dd_object);
 			}
 
@@ -1553,7 +1556,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT_simple
 	* @return object $dd_object
 	*/
-	public function get_structure_context_simple($permissions=0, $add_request_config=false) : object {
+	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : object {
 
 		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
 
