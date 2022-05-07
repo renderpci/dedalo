@@ -13,23 +13,44 @@
 	$context = [];
 
 	if($options->get_context===true) { //  && $permissions>0
+
 		switch ($options->context_type) {
 
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$this->context	= $this->get_structure_context_simple($permissions);
-				$context[]		=$this->context;
 				break;
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
 				$this->context	= $this->get_structure_context($permissions);
-				$context[]		=$this->context;
+
 
 				// add buttons
 				//	$context = array_merge($context, $this->get_structure_buttons($permissions));
 				break;
 		}
+		// TAGS FOR PERSONS
+		// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
+			$properties = $this->get_properties();
+			if(isset($properties->tags_persons)){
+				$tags_persons_config = $properties->tags_persons;
+				$this->context->tags_persons = new stdClass();
+				foreach ($tags_persons_config as $key => $value) {
+					$this->context->tags_persons->$key = $this->get_tags_persons($key);
+				}
+			}
+		// Notes
+		// Add the section_tipo for the annotations
+			$this->context->notes_section_tipo = DEDALO_NOTES_SECTION_TIPO;
+
+		// Av Player
+			$this->context->av_player = new stdClass();
+			$this->context->av_player->av_play_pause_code	= 'Escape'; 	// ESC
+			$this->context->av_player->av_insert_tc_code	= 'F2';	// F2
+			$this->context->av_player->av_rewind_seconds 	= 3;
+
+		$context[]		= $this->context;
 	}//end if($options->get_context===true)
 
 

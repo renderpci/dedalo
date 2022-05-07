@@ -36,13 +36,11 @@ export const component_text_area = function(){
 		this.id				= null
 
 		this.tag			= null // user selected tag DOM element (set on event click_tag_index_)
-		this.service		= [] // array. current active service (service_tinymce) for current node
+		this.text_editor	= [] // array. current active text_editor (service_tinymce) for current node
 		this.events_tokens	= []
 		// this.services	= []
 
-		this.av_play_pause_code	= 'Escape' 	// ESC
-		this.av_insert_tc_code	= 'F2'	// F2
-		this.av_rewind_seconds 	= 3
+		this.custom_toolbar = '' // add buttons to the text_area toolbar, options: button_person button_note button_geo button_reference
 
 	return true
 };//end component_text_area
@@ -95,27 +93,27 @@ component_text_area.prototype.init = async function(options) {
 
 				// options
 					const key		= options.key
-					const service	= options.service
+					const text_editor	= options.text_editor
 
 				// create the HTML fragment inside the editor adding in/out tags. Returns new created tag_index_id
-					const tag_id = self.create_fragment(key, service)
+					const tag_id = self.create_fragment(key, text_editor)
 					if (tag_id) {
 
 						// save modified content
-							const value = service.get_value()
+							const value = text_editor.get_value()
 							self.save_value(key, value)
 							.then((response)=>{
 								if (response) {
 									// select the new tag image in DOM
 									const image_node_selector	= `img.index[data-tag_id=${tag_id}]`
-									const image_node			= service.dom_select(image_node_selector)[0]
+									const image_node			= text_editor.dom_select(image_node_selector)[0]
 									if (image_node) {
 										image_node.click()
 									}
 								}
 							})
 					}else{
-						console.error(`Error on create_fragment. tag_id is empty. key: ${key}, service:`,service);
+						console.error(`Error on create_fragment. tag_id is empty. key: ${key}, text_editor:`,text_editor);
 					}//end if (created!==false)
 
 				return true
@@ -128,7 +126,7 @@ component_text_area.prototype.init = async function(options) {
 
 				// options
 					const tag		= options.tag // DOM tag element
-					const service	= options.service
+					const text_editor	= options.text_editor
 
 				// fix selected tag element
 					self.tag = tag
@@ -147,7 +145,7 @@ component_text_area.prototype.init = async function(options) {
 					const caller	= options.caller
 
 				const key					= 0; // key (only one editor is available but component could support multiple)
-				const current_service		= self.service[key]
+				const current_text_editor		= self.text_editor[key]
 				const inputs_container		= self.node[key].querySelector('.inputs_container'); // (first ul)
 				const component_container	= inputs_container.querySelector('li'); // li (first li)
 				const button				= component_container.querySelector(".create_fragment") // could exists or not
@@ -157,7 +155,7 @@ component_text_area.prototype.init = async function(options) {
 						button.remove()
 					}
 				}else{
-					const last_tag_id	= self.get_last_tag_id(key, 'index', current_service)
+					const last_tag_id	= self.get_last_tag_id(key, 'index', current_text_editor)
 					const label			= (get_label.create_fragment || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 					if (!button) {
 						const create_button = function(selection) {
@@ -172,7 +170,7 @@ component_text_area.prototype.init = async function(options) {
 									event_manager.publish('create_fragment_'+ self.id, {
 										caller	: self,
 										key		: key,
-										service	: current_service
+										text_editor	: current_text_editor
 									})
 								})
 
@@ -189,7 +187,7 @@ component_text_area.prototype.init = async function(options) {
 
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
-
+	console.log("self------//////////-----*************:",self);
 	return common_init
 };//end  init
 
@@ -538,9 +536,9 @@ component_text_area.prototype.update_tag = async function(options) {
 	// editor
 		// image tags selection from DOM
 			const key = 0
-			const image_tag_nodes = self.service[key].dom_select(selection_pattern)
+			const image_tag_nodes = self.text_editor[key].dom_select(selection_pattern)
 			if (!image_tag_nodes.length) {
-				alert("[component_text_area.update_tag] Error on DOM select (service) tag to update_tag tag_id:" +tag_id + " type:" + type)
+				alert("[component_text_area.update_tag] Error on DOM select (text_editor) tag to update_tag tag_id:" +tag_id + " type:" + type)
 				return false;
 			}
 
@@ -548,9 +546,9 @@ component_text_area.prototype.update_tag = async function(options) {
 			update_tag_state(image_tag_nodes, new_data_obj)
 
 		// save and refresh
-			self.service[key].set_dirty(true) // Force dirty state
+			self.text_editor[key].set_dirty(true) // Force dirty state
 			if (save===true) {
-				await self.service[key].save()
+				await self.text_editor[key].save()
 				self.refresh()
 			}
 
@@ -608,7 +606,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 /**
 * GET_LAST_TAG_ID
-* Calculates all current service editor tags id of given type (ex. 'reference') and get last used id
+* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
 * @param ed
 *	Text editor instance (tinyMCE)
 * @param tag_type
@@ -616,26 +614,26 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 * 
 * @return int tag_id
 */
-component_text_area.prototype.get_last_tag_id = function(key, tag_type, service) {
+component_text_area.prototype.get_last_tag_id = function(key, tag_type, text_editor) {
 
 	const self = this
 
 	// default value zero
 		const ar_id_final = [0];
 
-	// service check
-		if (!service) {
-			console.error(`Error on get service. Empty service:`, service);
+	// text_editor check
+		if (!text_editor) {
+			console.error(`Error on get text_editor. Empty text_editor:`, text_editor);
 			return false
 		}
 
 	// container . editor_content_data is a DOM node <body> from editor
-		const container = service.get_editor_content_data()
+		const container = text_editor.get_editor_content_data()
 		if (!container) {
 			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
-			console.warn(`current service:`, service);
-			console.warn(`current service.editor:`, service.editor);
-			console.warn(`current service.editor.getBody():`, service.editor.getBody());
+			console.warn(`current text_editor:`, text_editor);
+			console.warn(`current text_editor.editor:`, text_editor.editor);
+			console.warn(`current text_editor.editor.getBody():`, text_editor.editor.getBody());
 			return false
 		}
 
@@ -724,25 +722,25 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type, service)
 * Create the images (with the tags) at the beginning and end of the selected text
 * @return bool false | int tag_id
 */
-component_text_area.prototype.create_fragment = function(key, service) {
+component_text_area.prototype.create_fragment = function(key, text_editor) {
 
 	const self = this
 
-	// service check
-		if (!service) {
-			console.error("-> [component_text_area.create_fragment] service not received! key:", key);
+	// text_editor check
+		if (!text_editor) {
+			console.error("-> [component_text_area.create_fragment] text_editor not received! key:", key);
 			return false
 		}
 
 	// selection text
-		const selection_raw = service.get_selection();
+		const selection_raw = text_editor.get_selection();
 		if (!selection_raw || selection_raw.length<1) {
 			console.warn("Ignored empty selection:", selection_raw, key);
 			return false
 		}
 
 	// last_tag_id. Find last image of type index and returns id or 0
-		const last_tag_index_id = self.get_last_tag_id(key, 'index', service)
+		const last_tag_index_id = self.get_last_tag_id(key, 'index', text_editor)
 
 	// create new string wrapping selection with new tags
 		// tag state. Default is 'n' (normal)
@@ -766,11 +764,427 @@ component_text_area.prototype.create_fragment = function(key, service) {
 			}, tag_id)
 
 		// wrap_selection_with_tags. Prepend and apped tag image node to current editor text selection
-			const range_clon = service.wrap_selection_with_tags(image_in, image_out)
+			const range_clon = text_editor.wrap_selection_with_tags(image_in, image_out)
 
 	return (range_clon)
 		? tag_id
 		: false
 };//end create_fragment
+
+
+
+
+
+/*	NOTES
+----------------------------------------------------------------------------------------- */
+
+
+
+	/**
+	* CREATE_NEW_NOTE
+	* Build a new annotation when user clicks on text editor button
+	*
+	* @return
+	*/
+	component_text_area.prototype.create_new_note = function(key, text_editor) {
+
+		const self = this
+
+		// Select text editor
+		//var ed 		 	= tinyMCE.activeEditor
+		const tag_type 	= 'note'
+		const last_tag_id = self.get_last_tag_id(key, tag_type, text_editor)
+		const note_number = parseInt(last_tag_id) + 1
+
+		const trigger_vars = {
+			mode 		 	: 'create_new_note',
+			note_number		: note_number,
+		}
+		//console.log(trigger_vars); return;
+
+		let js_promise 	 = common.get_json_data(component_text_area.url_trigger, trigger_vars).then(function(response) {
+			if(SHOW_DEBUG===true) {
+				console.log("[component_text_area.create_new_note] response", response);
+			}
+
+			if (response===null) {
+				alert("Error on create annotation tag")
+			}else{
+
+				let label = note_number
+				let state = 'a'
+				let data  = JSON.stringify(response.result)
+					data  = replaceAll('"', '\'', data); // Format data Important !!
+
+				// IMG : Create and insert image in text
+				//var img_html = component_text_area.build_note_img(label, state, data)
+				let img = component_text_area.build_dom_element_from_data(tag_type, note_number, state, label, data)
+
+				if (component_text_area.is_tiny(ed)===false) {
+					// Insert html on editor
+					let selection = document.getSelection()
+						//console.log(selection)
+					let rg = selection.getRangeAt( 0 )
+						//console.log(rg)
+						// Set collapse false to go to end of range
+						rg.collapse(false);
+						// Insert node
+						rg.insertNode(img)
+
+					tool_structuration.update_titles_on_save=false
+
+					component_text_area.set_reload_on_save(false)
+					component_text_area.set_content_is_changed(true)
+
+					var component_obj = ed
+
+				}else{
+					let img_html 	= img.outerHTML
+
+					ed.selection.collapse()
+
+					// Insert html on editor
+					ed.selection.setContent( img_html, {format:'raw'} )
+
+					// Set editor as modified and save
+					ed.setDirty(true)
+					ed.save(); // updates this instance's textarea
+
+					var component_obj = text_area_component
+				}
+
+				let text_area_wrapper = component_common.get_wrapper_from_element(component_obj)
+
+				// Fix data in global class
+				// Fix selected_tag_data
+				component_text_area.selected_tag_data = {
+					type 			: tag_type,
+					tag_id 			: note_number,
+					component_tipo 	: text_area_wrapper.dataset.tipo,
+					lang 			: text_area_wrapper.dataset.lang
+				}
+				if(SHOW_DEBUG===true) {
+					console.log("[component_text_area.create_new_note] Fixed class var selected_tag_data:",component_text_area.selected_tag_data);
+				}
+
+
+				// Save text area
+				var js_promise_save = component_text_area.Save( component_obj, null, ed )
+				if (js_promise_save) {
+					js_promise_save.then(function(response){
+
+						setTimeout(function(){
+							// On finish save, select created tag (the last) and trigger click action
+							if (component_text_area.is_tiny(ed)===false) {
+								var last_tag_obj = component_text_area.get_last_element(ed, 'note')
+								if (last_tag_obj) {
+
+									// Fix var
+									component_text_area.tag_obj = last_tag_obj
+
+									// Click event of section tag
+									img.addEventListener("click", function(evt_click){
+										// Show note info
+										component_text_area.show_note_info( ed, evt_click, component_obj )
+									},false)
+
+									img.click()
+								}
+							}else{
+								var last_tag_obj = component_text_area.get_last_element(ed, 'note')
+								if (last_tag_obj) {
+									// Select image in text editor
+									ed.selection.select(last_tag_obj).click(); //select the inserted element // .scrollIntoView(false)
+									// Trigger exec click on selected tag
+									//last_tag_obj.click();
+								}
+							}
+						},150)
+					});
+				}
+			}
+		})
+
+		return js_promise
+	}//end create_new_note
+
+
+
+	/**
+	* SHOW_NOTE_INFO
+	* @return promise js_promise
+	*/
+	component_text_area.prototype.show_note_info = function( ed, evt, text_area_component ) {
+
+		//console.log("[component_text_area.show_note_info] ed, evt, text_area_component", ed, evt, text_area_component);
+
+		let tag_obj 	 = evt.target
+		let tag 		 = evt.target.id
+		let locator 	 = component_text_area.get_data_locator_from_tag( tag_obj )
+		let section_tipo = locator.section_tipo
+		let section_id 	 = locator.section_id
+		let tag_id 		 = tag_obj.dataset.tag_id
+
+
+		if(SHOW_DEBUG===true) {
+			//console.log("[component_text_area.show_note_info] selected_tag_editor", component_text_area.selected_tag_editor);
+			//console.log("component_text_area.tag_obj",component_text_area.tag_obj);
+			//console.warn("[component_text_area.show_note_info]component_text_area.selected_tag_data",component_text_area.selected_tag_data);
+		}
+
+		const trigger_vars = {
+				mode			: 'show_note_info',
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				lang			: text_area_component.dataset.lang
+			}
+			//console.log("[component_text_area.show_note_info] trigger_vars ",trigger_vars); //return
+
+		let js_promise 	 = common.get_json_data(component_text_area.url_trigger, trigger_vars).then(function(response) {
+			if(SHOW_DEBUG===true) {
+				console.log("[component_text_area.show_note_info] response", response);
+			}
+
+			if (response===null) {
+				alert("Error on show_note_info. See server log for details")
+			}else{
+
+				//$('#div_note_wrapper').remove()
+
+				// Build note_dialog
+				let note_dialog = component_text_area.build_note_dialog({
+						wrapper_id 		 	: "div_note_wrapper",
+						evt 	  			: evt,
+						response  		 	: response,
+						tag_id 				: tag_id,
+						ed 				 	: ed,
+						text_area_component : text_area_component
+				})
+				document.body.appendChild(note_dialog)
+				exec_scripts_inside(note_dialog)
+
+
+				// Open dialog Bootstrap modal
+				$(note_dialog).modal({
+					show 	  : true,
+					keyboard  : true,
+					cssClass  : 'modal'
+				}).on('shown.bs.modal', function (e) {
+					// Focus text area field
+					if (component_text_area.is_tiny(ed)===true) {
+						tinymce.execCommand('mceFocus',false,ed.id);
+					}else{
+						if(SHOW_DEBUG===true) {
+							console.log("[component_text_area.show_note_info] not is tiny");
+						}
+					}
+
+					/*
+					// UID for init object tracking (not add lang never here!)
+					var div_note_wrapper  		= document.getElementById('div_note_wrapper')
+					var text_area_note_wrapper 	= div_note_wrapper.querySelector('.css_wrap_text_area')
+						init_uid = text_area_note_wrapper.dataset.section_tipo +"_"+ text_area_note_wrapper.dataset.parent +"_"+ text_area_note_wrapper.dataset.tipo
+						*/
+				}).on('hidden.bs.modal', function (e) {
+
+					// Update lock_components state (BLUR)
+					if(typeof lock_components!='undefined') {
+						// Unlock all components of current section on close note dialog
+						lock_components.delete_user_section_locks({
+							section_id   : section_id,
+							section_tipo : section_tipo
+						})
+					}
+
+					// Removes modal element from DOM on close
+					$(this).remove()
+					/*
+					// Delete init property to force reinit on new click over note
+					delete component_text_area.inited[init_uid]
+					if(SHOW_DEBUG===true) {
+						console.log("[component_text_area.show_note_info] Deleted property inited:", init_uid);
+					}*/
+				})
+			}
+		})
+
+		return js_promise
+	}//end show_note_info
+
+
+
+	/**
+	* BUILD_NOTE_DIALOG
+	* @return DOM object
+	*/
+	component_text_area.prototype.build_note_dialog = function( options ) {
+
+		let wrapper_id = options.wrapper_id
+		let older_div_note_wrapper = document.getElementById(wrapper_id)
+			if (older_div_note_wrapper) {
+				older_div_note_wrapper.parentNode.removeChild(older_div_note_wrapper)
+			}
+		// note wrapper
+		let div_note_wrapper = document.createElement("div")
+			div_note_wrapper.id = wrapper_id
+
+
+		let header = document.createElement("div")
+			// h4 <h4 class="modal-title">Modal title</h4>
+			let h4 = document.createElement("h4")
+				h4.classList.add('modal-title')
+				// Add
+				h4.appendChild( document.createTextNode("Note " + options.tag_id + " - Created by user "+options.response.created_by_user_name) )
+				header.appendChild(h4)
+
+
+		let body = document.createElement("div")
+			// component_text element
+			let component_text = document.createElement("div")
+				component_text.innerHTML = options.response.component_text_html
+				body = component_text
+				//exec_scripts_inside(component_text)
+
+		let footer = document.createElement("div")
+
+			// Button delete <button type="button" class="btn btn-warning">Warning</button>
+			let button_delete = document.createElement("button")
+				button_delete.classList.add("btn","btn-warning","btn-sm","button_delete_note")
+				button_delete.dataset.dismiss = "modal"
+				button_delete.addEventListener('click', function(e) {
+
+					if (!options.evt.target) {
+						// New tag case. Select last tag
+						var current_tag_obj = component_text_area.get_last_element(options.ed, 'note')
+					}else{
+						// Normal selection case
+						var current_tag_obj = options.evt.target
+					}
+
+					// Fix current tag_obj
+					component_text_area.tag_obj = current_tag_obj
+
+					// Inject options tag_obj
+					options.tag_obj = current_tag_obj
+
+					component_text_area.delete_note(this, options)
+				})
+				button_delete.appendChild( document.createTextNode(get_label.borrar) )
+				// Add
+				footer.appendChild(button_delete)
+
+			// created_date
+			let created_date = document.createElement("div")
+				created_date.classList.add('created_date')
+				created_date.appendChild( document.createTextNode("Created date "+options.response.created_date) )
+				// Add
+				footer.appendChild(created_date)
+
+			// Button ok <button type="button" class="btn btn-warning">OK</button>
+			let button_ok = document.createElement("button")
+				button_ok.classList.add("btn","btn-success","btn-sm","button_ok_note")
+				button_ok.dataset.dismiss = "modal"
+				button_ok.addEventListener('click', function(e) {
+					//let ed = tinyMCE.activeEditor
+					let ed = options.ed
+					if (component_text_area.is_tiny(ed)) {
+						ed.save()
+					}
+				})
+				button_ok.appendChild( document.createTextNode("  OK  ") )
+				// Add
+				footer.appendChild(button_ok)
+
+
+		// modal dialog
+		let modal_dialog = common.build_modal_dialog({
+			id 		: wrapper_id,
+			header 	: header,
+			footer  : footer,
+			body 	: body
+		})
+
+		div_note_wrapper.appendChild(modal_dialog)
+
+
+		return modal_dialog
+	}//end build_note_dialog
+
+
+
+	/**
+	* DELETE_NOTE
+	* @return
+	*/
+	component_text_area.prototype.delete_note = function( button_obj, options ) {
+
+		if (!confirm(get_label.borrar + " " +get_label.etiqueta+ " " +options.tag_id+" ?")) {
+			return false;
+		}
+		if(SHOW_DEBUG===true) {
+			//console.log(options); return;
+		}
+
+		// Editor where is the note tag (note is NOT the current tinymce.activeEditor)
+		var ed 			 = options.ed
+		var text_area_obj= options.text_area_component
+		var tag_obj 	 = options.tag_obj
+		var locator		 = component_text_area.get_data_locator_from_tag( tag_obj )
+
+		var trigger_vars = {
+			mode			: 'delete_note',
+			section_tipo	: locator.section_tipo,
+			section_id		: locator.section_id,
+			lang			: this.lang,
+		}
+		//console.log(trigger_vars); return;
+		//console.log(tag_obj); return;
+
+		var js_promise 	 = common.get_json_data(component_text_area.url_trigger, trigger_vars).then(function(response) {
+			if(SHOW_DEBUG===true) console.log("[component_text_area.delete_note] response:", response);
+
+			if (response===null) {
+				alert("Error on delete_note")
+			}else{
+
+				if (component_text_area.is_tiny(ed)===true) {
+					// CASE TINYMCE
+
+					// Remove image in editor
+					var image_note = ed.selection.getNode()
+					if (image_note && image_note.nodeName==='IMG') {
+						// Image is already selected
+					}else{
+						// Image is created and deleted. Locate last image note
+						image_note = component_text_area.get_last_element(ed,'note');
+					}
+
+					if (image_note && image_note.nodeName==='IMG') {
+						// Remove img
+						ed.dom.remove(image_note)
+
+						// Set editor as modified and save
+						ed.setDirty(true)
+						ed.save(); // updates this instance's textarea
+						component_text_area.Save( text_area_obj, null, ed )
+					}
+				}else{
+					// CASE PREVIEW TEXT EDITOR (STRUCTURATION)
+
+					// Remove tag from DOM
+					tag_obj.remove()
+
+					// Config save to avoid update toc titles
+					tool_structuration.update_titles_on_save=false
+
+					// Save
+					tool_structuration.save_structuration_text()
+				}//end if (component_text_area.is_tiny(ed)===true)
+			}
+		})
+
+		return js_promise
+	}//end delete_note
+
 
 
