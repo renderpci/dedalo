@@ -14,7 +14,7 @@ class tags extends widget_common {
 	* @return array $dato
 	* 	Array of objects
 	*/
-	public function get_dato() {
+	public function get_dato() : array {
 
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
@@ -28,7 +28,7 @@ class tags extends widget_common {
 			$input	= $current_ipo->input;
 			$output	= $current_ipo->output;
 			$source	= $input->source;
-			
+
 			$transcription_source = array_find($source, function($item){
 				return ($item->var_name==='transcription');
 			});
@@ -243,15 +243,15 @@ class tags extends widget_common {
 
 			// final data object, get the output map to create it.
 				foreach ($output as $data_map) {
-					
+
 					$current_id = $data_map->id;
-					
+
 					$current_data = new stdClass();
 						$current_data->widget	= get_class($this);
 						$current_data->key		= $ipo_key;
 						$current_data->id		= $current_id;
 						$current_data->value	= $$current_id ?? null;
-					
+
 					$dato[] = $current_data;
 				}
 			}

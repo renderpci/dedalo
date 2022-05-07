@@ -338,10 +338,10 @@ class section extends common {
 	* Reconstruye el objeto global de la sección (de momento no se puede salvar sólo una parte del objeto json en postgresql)
 	* procesa los datos indirectos del componente (valor y valor_list) y guarda el nuevo objeto global reemplazando el anterior
 	*/
-	public function save_component_dato(object $component_obj, string $component_data_type='direct') {
+	public function save_component_dato(object $component_obj, string $component_data_type, bool $save_to_database) {
 
 		# La sección es necesaria antes de gestionar el dato del componente. Si no existe, la crearemos previamente
-		if (abs(intval($this->get_section_id()))<1  && strpos($this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
+		if (abs(intval($this->get_section_id()))<1  && strpos((string)$this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
 			$section_id = $this->Save();
 			trigger_error("Se ha creado una sección ($section_id) disparada por el salvado del componente ".$component_obj->get_tipo());
 			if(SHOW_DEBUG===true) {
@@ -392,7 +392,8 @@ class section extends common {
 
 		#
 		# OPTIONAL STOP THE SAVE PROCESS TO DELAY DDBB ACCESS
-		if (isset($component_obj->save_to_database) && $component_obj->save_to_database===false) {
+		// if (isset($component_obj->save_to_database) && $component_obj->save_to_database===false) {
+		if($save_to_database===false) {
 			# Stop here (remember make a real section save later!)
 			# No component time machine data will be saved when section saves later
 			#debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
@@ -685,41 +686,33 @@ class section extends common {
 
 	/**
 	* SAVE
-	* Create a new section or update section record in matrix
+	* Create or update a section record in matrix
+	* @param object $save_options
+	* @return mixed
 	*/
 	public function Save( object $save_options=null ) {
 
-		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-		// Options default
+		// options
 			$options = new stdClass();
-				$options->main_components_obj 	= false;
-				$options->main_relations 		= false;
-				$options->new_record			= false;
-				$options->forced_create_record	= false;
-				$options->component_filter_dato = false;
-				// $options->is_portal			= false;
-				// $options->portal_tipo		= false;
-				// $options->top_tipo			= TOP_TIPO;
-				// $options->top_id				= TOP_ID;
+				$options->main_components_obj		= false;
+				$options->main_relations			= false;
+				$options->new_record				= false;
+				$options->forced_create_record		= false;
+				$options->component_filter_dato		= false;
+				// $options->is_portal				= false;
+				// $options->portal_tipo			= false;
+				// $options->top_tipo				= TOP_TIPO;
+				// $options->top_id					= TOP_ID;
 
 				# Time machine options (overwrite when save component)
 				$options->time_machine_data			= false;
 				$options->time_machine_lang			= false;
 				$options->time_machine_tipo			= false;
-				$options->time_machine_section_id 	= (int)$this->section_id; // always
+				$options->time_machine_section_id	= (int)$this->section_id; // always
 
-		// save_options overwrite defaults
-			if ($save_options!==null) {
-				// if (!is_object($save_options)) {
-				// 	trigger_error("Error: save_options is not an object : ".print_r($save_options,true));
-				// 	return false;
-				// }
-				# Options overwrite sql_options defaults
+			// save_options overwrite defaults
+			if (!empty($save_options)) {
 				foreach ((object)$save_options as $key => $value) {
-					# Si la propiedad recibida en el array options existe en sql_options, la sobreescribimos
 					if (property_exists($options, $key)) { $options->$key = $value; }
 				}
 			}
@@ -727,7 +720,7 @@ class section extends common {
 		// tipo. Current section tipo
 			$tipo = $this->get_tipo();
 
-			# If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
+			# If the section virtual have the section_tipo "real" in properties, change the tipo of the section to the real
 			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
 				$tipo = $this->get_section_real_tipo();
 			}
@@ -767,10 +760,7 @@ class section extends common {
 			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtal section don't have table defined
 
 
-		if ($this->section_id=='-1' || (int)$this->section_id<1) {
-			# Nothing to save/create
-
-		}elseif ((int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
+		if (!empty($this->section_id) && (int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
 
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record trigered by one component
@@ -811,6 +801,12 @@ class section extends common {
 			################################################################################
 			# NEW RECORD . Create and save matrix section record in correct table
 
+			// prevent to save non authorized/valid section_id
+				if ($this->section_id=='-1') {
+					trigger_error('Trying to save invalid section_id: '.$this->section_id);
+					return false;
+				}
+
 			##
 			# COUNTER : Counter table. Default is ¡matrix_counter¡
 			# Preparamos el id del contador en función de la tabla sobre la que estamos trabajando (matrix, matrix_dd, etc.)
@@ -819,17 +815,17 @@ class section extends common {
 				if ($options->forced_create_record===false) {
 
 					// Use normal incremental counter
-					$matrix_table_counter 	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
-					$current_id_counter 	= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+					$matrix_table_counter	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
+					$current_id_counter		= (int)counter::get_counter_value($tipo, $matrix_table_counter);
 
 					// Create a counter if not exists
 						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-							$consolidate_counter 	= counter::consolidate_counter( $tipo, $matrix_table, $matrix_table_counter );
+							$consolidate_counter = counter::consolidate_counter( $tipo, $matrix_table, $matrix_table_counter );
 							// Re-check counter value
-							$current_id_counter 	= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+							$current_id_counter = (int)counter::get_counter_value($tipo, $matrix_table_counter);
 						}
 
-					$section_id_counter 	= $current_id_counter+1;
+					$section_id_counter = $current_id_counter+1;
 
 					# section_id. Fix section_id (Non return point, next calls to Save will be updates)
 					$this->section_id = (int)$section_id_counter;
@@ -1087,21 +1083,23 @@ class section extends common {
 
 				// component state defaults set. Set default values on component_state when is present
 					$ar_component_state = section::get_ar_children_tipo_by_modelo_name_in_section(
-						$section_real_tipo,
-						['component_state'],
-						$from_cache=true,
-						$resolve_virtual=false,
-						true
+						$section_real_tipo, // section_tipo
+						['component_state'], // ar_modelo_name_required
+						true, // from_cache
+						false, // resolve_virtual
+						true // recursive
 					);
 					if (isset($ar_component_state[0])) {
-							$component_state = component_common::get_instance('component_state',
-																			  $ar_component_state[0],
-																			  $this->section_id,
-																			  'edit',
-																			  DEDALO_DATA_NOLAN,
-																			  $tipo);
-							// (!) Note that set_defaults saves too. Here, current section is saved again if component_state is founded
-							$component_state->set_defaults();
+						$component_state = component_common::get_instance(
+							'component_state',
+							$ar_component_state[0],
+							$this->section_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							$tipo
+						);
+						// (!) Note that set_defaults saves too. Here, current section is saved again if component_state is founded
+						$component_state->set_defaults();
 					}//end if (isset($ar_component_state[0]))
 
 			}//end if($this->tipo!==DEDALO_ACTIVITY_SECTION_TIPO)
@@ -1447,7 +1445,7 @@ class section extends common {
 				$ar_recursive_childrens = (array)RecordObj_dd::get_ar_childrens($tipo);
 				break;
 			default:
-				$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
+				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
 		}
 		if(SHOW_DEBUG===true) {
 			#dump($ar_recursive_childrens, 'ar_recursive_childrens tipo:'.$tipo." - modelo_name_required:$modelo_name_required", array()); dump($this," ");
@@ -1590,7 +1588,7 @@ class section extends common {
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 						if($modelo_name==='section_group') {
-							$ar_recursive_childrens 			 = (array)self::get_ar_recursive_childrens($component_tipo);
+							$ar_recursive_childrens 			 = (array)section::get_ar_recursive_children($component_tipo);
 							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
 						}
 
@@ -1607,8 +1605,8 @@ class section extends common {
 		# OBTENEMOS LOS ELEMENTOS HIJOS DE ESTA SECCIÓN
 		if (count($ar_modelo_name_required)>1) {
 
-			if ($recursive) { // Default is recursive
-				$ar_recursive_childrens = (array)self::get_ar_recursive_childrens( $tipo );
+			if (true===$recursive) { // Default is recursive
+				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
 			}else{
 				$RecordObj_dd			= new RecordObj_dd($tipo);
 				$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this();
@@ -1619,7 +1617,7 @@ class section extends common {
 			switch (true) {
 				// Components are searched recursively
 				case (strpos($ar_modelo_name_required[0], 'component')!==false && $recursive!==false):
-					$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
+					$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
@@ -1638,7 +1636,7 @@ class section extends common {
 			}else{
 				#$RecordObj_dd			= new RecordObj_dd($tipo);
 				#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
-				$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
+				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
 			}
 			*/
 
@@ -1689,21 +1687,29 @@ class section extends common {
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDRENS : private alias of RecordObj_dd::get_ar_recursive_childrens
+	* GET_AR_RECURSIVE_CHILDREN : private alias of RecordObj_dd::get_ar_recursive_childrens
 	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary sections in ich
+	* @param string $tipo
+	* @return array $ar_recursive_children
 	*/
-	public static function get_ar_recursive_childrens(string $tipo) : array {
-		#$RecordObj_dd			= new RecordObj_dd($tipo);
-		#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
+	public static function get_ar_recursive_children(string $tipo) : array {
 
 		# AR_EXCLUDE_MODELS
 		# Current elements and children are not considerate part of section and must be excluded in children results
-		$ar_exclude_models = array('box elements','area');
+		$ar_exclude_models = [
+			'box elements',
+			'area'
+		];
 
-		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens($tipo, false, $ar_exclude_models, 'norden');
+		$ar_recursive_children = RecordObj_dd::get_ar_recursive_childrens(
+			$tipo, // string tipo
+			false, // bool is recursion
+			$ar_exclude_models, // array ar_exclude_models
+			'norden' // string order
+		);
 
-		return (array)$ar_recursive_childrens;
-	}//end get_ar_recursive_childrens
+		return (array)$ar_recursive_children;
+	}//end get_ar_recursive_children
 
 
 

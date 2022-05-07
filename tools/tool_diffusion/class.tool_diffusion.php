@@ -20,7 +20,7 @@ class tool_diffusion extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function update_cache($request_options) {
+	public static function update_cache(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -112,7 +112,7 @@ class tool_diffusion extends tool_common {
 	* @return object $response
 	* 	->result = array of objects
 	*/
-	public static function get_diffusion_info($request_options) {
+	public static function get_diffusion_info(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -190,7 +190,7 @@ class tool_diffusion extends tool_common {
 	* Note: For better control, sections are TR of diffusion_elements. This correspondence always must exists in diffusion map
 	* @return bool true/false
 	*/
-	public static function have_section_diffusion($section_tipo, $ar_diffusion_map_elements=null) {
+	public static function have_section_diffusion(string $section_tipo, array $ar_diffusion_map_elements=null) : bool {
 
 		$have_section_diffusion = false;
 
@@ -220,7 +220,7 @@ class tool_diffusion extends tool_common {
 	* @param string $diffusion_element_tipo
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $class_name) {
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) {
 
 		if(SHOW_DEVELOPER!==true) {
 			if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {

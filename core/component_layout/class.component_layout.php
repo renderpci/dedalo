@@ -102,7 +102,7 @@ class component_layout extends component_common {
 	* @param bool $from_cache default false
 	* @return array $layout_map
 	*/
-	public static function get_layout_map_from_section(section $section_obj, $from_cache=false) {
+	public static function get_layout_map_from_section(section $section_obj, bool $from_cache=false) {
 		$layout_map = array();
 
 		# layout map can be injected in section vars 'layout_map'

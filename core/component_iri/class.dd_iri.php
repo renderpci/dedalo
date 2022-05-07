@@ -3,7 +3,7 @@
 * CLASS DD_IRI
 
 	Format:
-	*[ 
+	*[
 	*	{
 	*    "iri": "http://www.render.es/dedalo",
 	*    "title": "dedalo"
@@ -32,7 +32,7 @@ class dd_iri extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data 
+	* @param object $data
 	*	optional . Default is null
 	*/
 	public function __construct( $data=null ) {
@@ -99,7 +99,7 @@ class dd_iri extends stdClass {
 		$path 		= isset($url_parts->path) ? $url_parts->path :null;//optional
 		$query 		= isset($url_parts->query) ? $url_parts->query :null;//optional
 		$fragment 	= isset($url_parts->fragment) ? $url_parts->fragment :null;//optional
-		
+
 		if(empty($scheme) || empty($host)){
 			throw new Exception("Error Processing Request. Invalid url_parts: ".to_string($url_parts), 1);
 		}
@@ -120,7 +120,7 @@ class dd_iri extends stdClass {
 		if (!empty($port)) {
 			$url .= ':'.(string)$port;
 		}
-		
+
 		if (!empty($path)) {
 			$url .= '/'.(string)$path;
 		}
@@ -131,17 +131,17 @@ class dd_iri extends stdClass {
 			$url .= '#'.(string)$fragment;
 		}
 
-		$this->iri = $url;		
+		$this->iri = $url;
 	}#end set_iri_from_url_parts
-	
+
 
 
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
-	*/	
+	*/
 	public function __call($strFunction, $arArguments) {
-		
+
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -155,9 +155,9 @@ class dd_iri extends stdClass {
 		}
 		return(false);
 	}
-	private function GetAccessor($variable) {
+	private function GetAccessor(string $variable) {
 		if(property_exists($this, $variable)) {
-			return (string)$this->$variable;			
+			return (string)$this->$variable;
 		}else{
 			return false;
 		}

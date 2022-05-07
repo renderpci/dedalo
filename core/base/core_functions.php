@@ -16,7 +16,7 @@
 *	Only print (formated as <pre>code</pre>) the info and value or dumped var
 */
 #function dump($val, $var_name=NULL, $expected=NULL, $print=false){
-function dump($val, $var_name=NULL, $arguments=array()) : string {
+function dump($val, string $var_name=null, array $arguments=array()) : string {
 
 	$html = '';
 
@@ -120,7 +120,7 @@ function dump($val, $var_name=NULL, $arguments=array()) : string {
 /**
 * WRAP_PRE
 */
-function wrap_pre($string, $add_header_html=true) : string {
+function wrap_pre(string $string, bool $add_header_html=true) : string {
 	$html='';
 	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
 	if ($add_header_html) {
@@ -228,7 +228,7 @@ function debug_log($info, $level=logger::DEBUG) {
 
 
 # CURL GET URL
-function file_get_contents_curl($url) {
+function file_get_contents_curl(string $url) {
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_HEADER, 0);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -288,8 +288,8 @@ function exec_time_unit($start, $unit='ms', $round=3) {
 
 
 # TO_STRING
-function to_string($var=null) {
-	if ($var===null) return $var;
+function to_string($var=null) : string {
+	if ($var===null) return '';
 
 	if (is_string($var) && (strpos($var, '{')===0 || strpos($var, '[')===0)) {
 		$var = json_decode($var);
@@ -324,7 +324,7 @@ function to_string($var=null) {
 
 # GET_LAST_MODIFICATION_DATE : Get last modified file date in all Dedalo files
 # This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret));
-function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=array('/acc/','/backups/')) {
+function get_last_modification_date(string $path, array $allowedExtensions=null, array $ar_exclude=array('/acc/','/backups/')) {
 
 	// Only take into account those files whose extensions you want to show.
 	if (empty($allowedExtensions)) {
@@ -366,7 +366,7 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 * @param string $path
 * @return string $last_modified_file
 */
-function get_last_modified_file($path, $allowed_extensions) {
+function get_last_modified_file(string $path, array $allowed_extensions) {
 
 	// First we set up the iterator
 		$iterator 			= new RecursiveDirectoryIterator($path);
@@ -406,7 +406,7 @@ function get_last_modified_file($path, $allowed_extensions) {
 
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
-function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
+function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) : string {
 
 	if (!function_exists('openssl_encrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
 
@@ -419,7 +419,7 @@ function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 
 	return $output;
 }//end dedalo_encrypt_openssl
-function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
+function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) : string {
 
 	if (!function_exists('openssl_decrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
 
@@ -454,7 +454,7 @@ function is_serialized($str) {
 * @return string
 *	Return current crypt mode to use looking current Dédalo version
 */
-function encryption_mode() {
+function encryption_mode() : string {
 
 	# Overwrites calculated mode. Useful for clean install
 	if (defined('ENCRYPTION_MODE')) {
@@ -492,7 +492,7 @@ function encryption_mode() {
 *   The path to the parent of the first occurrence of the key, represented as an array where entries are consecutive keys.
 * by http://thereisamoduleforthat.com/content/dealing-deep-arrays-php
 */
-function array_key_path($needle, $haystack, $forbidden = array(), $path = array()) {
+function array_key_path(string $needle, array $haystack, array $forbidden=array(), array $path=array()) {
   foreach ($haystack as $key => $val) {
 	if (in_array($key, $forbidden)) {
 	  continue;
@@ -663,7 +663,7 @@ function sanitize_query($strQuery) {
 * FIX_CONFIG4_VAR
 * Fija una variable config4 en cascada, según disponibilidad y por order de prevalencia (REQUEST,SESSION,DEFAULT)
 */
-function fix_cascade_config4_var($var_name, $var_default_value) {
+function fix_cascade_config4_var(string $var_name, $var_default_value) {
 
 	switch (true) {
 		# REQUEST (GET/POST)
@@ -979,15 +979,15 @@ function get_http_response_code($theURL) {
 /**
 * DD_MEMORY_USAGE
 */
-function dd_memory_usage() {
+function dd_memory_usage() : string {
 	$mem_usage = memory_get_usage(true);
 	$total='';
 	if ($mem_usage < 1024)
 		$total .= $mem_usage." BYTES";
 	elseif ($mem_usage < 1048576)
-		$total .= round($mem_usage/1024,2)." KB";
+		$total .= round($mem_usage/1024,2).' KB';
 	else
-		$total .= round($mem_usage/1048576,2)." MB";
+		$total .= round($mem_usage/1048576,2).' MB';
 
 	return $total;
 }//end dd_memory_usage
@@ -998,7 +998,7 @@ function dd_memory_usage() {
 * APP_LANG_TO_TLD2
 * Use only for fast application lang tld resolve
 */
-function app_lang_to_tld2($lang) {
+function app_lang_to_tld2(string $lang) : string {
 
 	switch ($lang) {
 		case 'lg-spa':
@@ -1189,9 +1189,10 @@ function safe_sql_query($sql_query) {
  * @param int $probability The probability, in int percentage, that the garbage
  *        collection routine will be triggered right now.
  * @param string $cookie_path The base path for the cookie.
+ * @return bool
  */
 $sessiondb = null;
-function session_start_manager($request_options) {
+function session_start_manager(array $request_options) : bool {
 	global $sessiondb;
 	#if (session_status()===PHP_SESSION_ACTIVE) return false;
 
@@ -1358,7 +1359,7 @@ function session_start_manager($request_options) {
 * Remove extra malicious code
 * @return string $table
 */
-function safe_table( $table ) {
+function safe_table( string $table ) {
 
 	preg_match("/^[a-zA-Z_]+$/", $table, $output_array);
 	if (empty($output_array[0])) {
@@ -1375,7 +1376,7 @@ function safe_table( $table ) {
 * Remove extra malicious code
 * @return string $lang
 */
-function safe_lang( $lang ) {
+function safe_lang( string $lang ) {
 
 	preg_match("/^lg-[a-z]{2,8}$/", $lang, $output_array);
 	if (empty($output_array[0])) {
@@ -1392,7 +1393,7 @@ function safe_lang( $lang ) {
 * Remove extra malicious code
 * @return string $tipo
 */
-function safe_tipo( $tipo ) {
+function safe_tipo( string $tipo ) {
 
 	preg_match("/^[a-z]+[0-9]+$/", $tipo, $output_array);
 	if (empty($output_array[0])) {
@@ -1432,7 +1433,7 @@ function safe_section_id( $section_id ) {
 * FORMAT_SIZE_UNITS
 * Format bytes to more human readable unit like KG, MB, GB
 */
-function format_size_units($bytes) {
+function format_size_units(int $bytes) : string {
 	if ($bytes >= 1073741824) {
 		$bytes = number_format($bytes / 1073741824, 2) . ' GB';
 	}elseif ($bytes >= 1048576) {
@@ -1452,7 +1453,7 @@ function format_size_units($bytes) {
 
 
 
-function encodeURIComponent($str) {
+function encodeURIComponent(string $str) : string {
 	$revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
 
 	return strtr(rawurlencode($str), $revert);

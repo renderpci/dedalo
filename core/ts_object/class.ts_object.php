@@ -31,7 +31,7 @@ class ts_object extends Accessors {
 	* @param string $modo
 	*	Default 'edit'
 	*/
-	public function __construct( $section_id, $section_tipo, $options=null, $modo='edit' ) {
+	public function __construct( $section_id, string $section_tipo, object $options=null, string $modo='edit' ) {
 
 		$this->section_id   = $section_id;
 		$this->section_tipo = $section_tipo;
@@ -76,9 +76,9 @@ class ts_object extends Accessors {
 	/**
 	* GET_AR_ELEMENTS
 	* Get elements from section_list_thesaurus -> properties
-	* @return array ar_elements
+	* @return array $ar_elements
 	*/
-	public static function get_ar_elements( $section_tipo, $model=false ) {
+	public static function get_ar_elements( string $section_tipo, ?bool $model=false ) : array {
 
 		$ar_elements = array();
 
@@ -209,7 +209,7 @@ class ts_object extends Accessors {
 	* GET_CHILDREN_DATA
 	* @return object $children_data
 	*/
-	public function get_children_data() {
+	public function get_children_data() : object {
 
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
@@ -399,9 +399,11 @@ class ts_object extends Accessors {
 	* HAVE_CHILDREN_OF_TYPE
 	* @return bool
 	*/
-	public function have_children_of_type( $ar_children, $type ) {
+	public function have_children_of_type( array $ar_children, string $type ) : bool {
 
-		if (empty($ar_children)) return false;
+		if (empty($ar_children)) {
+			return false;
+		}
 
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 
@@ -439,7 +441,7 @@ class ts_object extends Accessors {
 	* IS_INDEXABLE
 	* @return bool
 	*/
-	public static function is_indexable($section_tipo, $section_id) {
+	public static function is_indexable( string $section_tipo, $section_id ) : bool {
 
 		if (strpos($section_tipo, 'hierarchy')===0) {
 			# Root hierarchies are always false
@@ -522,8 +524,9 @@ class ts_object extends Accessors {
 	/**
 	* SET_TERM_AS_ND
 	* Modifies received array data on term to set as ND (no descriptor)
+	* @return array $ar_elements
 	*/
-	public static function set_term_as_nd( &$ar_elements ) {
+	public static function set_term_as_nd( array &$ar_elements ) : array {
 
 		foreach ($ar_elements as $key => $obj_value) {
 
@@ -551,7 +554,7 @@ class ts_object extends Accessors {
 	* @return mixed bool|string $valor
 	*	Default is bool false
 	*/
-	public static function get_term_by_locator( $locator, $lang=DEDALO_DATA_LANG, $from_cache=false ) {
+	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) {
 
 		if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
 			if(SHOW_DEBUG===true) {
@@ -669,7 +672,7 @@ class ts_object extends Accessors {
 	* GET_COMPONENT_ORDER_TIPO
 	* @return string|null $element_tipo
 	*/
-	public static function get_component_order_tipo( $section_tipo ) {
+	public static function get_component_order_tipo( string $section_tipo ) {
 
 		# Calculated way
 		$element_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'order' );
@@ -684,7 +687,7 @@ class ts_object extends Accessors {
 	* GET_PERMISSIONS_ELEMENT
 	* @return int $permissions
 	*/
-	public function get_permissions_element( $element_name ) {
+	public function get_permissions_element( string $element_name ) : int {
 
 		switch ($element_name) {
 			case 'button_new':

@@ -129,7 +129,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* Call RecordDataBounceObject->Save() and RecordObj_time_machine->Save()
 	* @return int $id
 	*/
-	public function Save( object $save_options=null ) {
+	public function Save( object $save_options=null ) : int {
 
 		if( $this->test_can_save()!==true ) {
 			$msg = " Error (test_can_save). No matrix data is saved! ";
@@ -223,6 +223,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		$RecordObj_time_machine->Save(); //  $save_options
 
 		$id_matrix = $RecordObj_time_machine->get_ID();
+
 
 		return $id_matrix;
 	}//end save_time_machine

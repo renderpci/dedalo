@@ -22,7 +22,7 @@ class tool_export { // extends tool_common
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($section_tipo, $model, $data_format='standard',  $ar_ddo_map=[], $sqo=null) {
+	public function __construct(string $section_tipo, string $model, string $data_format='standard', array $ar_ddo_map=[], object $sqo=null) {
 
 		// Fix mode
 		$this->mode = 'tool_export';
@@ -55,7 +55,7 @@ class tool_export { // extends tool_common
 	* @see class.request_query_object.php
 	* @return dd_grid object $result
 	*/
-	public static function get_export_grid($arguments){
+	public static function get_export_grid(object $arguments) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -91,9 +91,9 @@ class tool_export { // extends tool_common
 
 	/**
 	* BUILD_EXPORT_GRID
-	* @return
+	* @return array
 	*/
-	public function build_export_grid() {
+	public function build_export_grid() : array {
 
 		$ar_ddo_map	= $this->ar_ddo_map;
 		$records	= $this->get_records();
@@ -216,15 +216,17 @@ class tool_export { // extends tool_common
 		$section_grid_values[] = $section_grid_row;
 		$section_grid_values = array_merge($section_grid_values, $ar_row_values);
 
+
 		return $section_grid_values;
 	}//end build_export_grid
 
 
+
 	/**
 	* GET_RECORDS
-	* @return array|null
+	* @return array
 	*/
-	public function get_records() {
+	public function get_records() : array {
 
 		if (!empty($this->ar_records)) {
 			return $this->ar_records;
@@ -250,7 +252,6 @@ class tool_export { // extends tool_common
 	 			// sections
 				$sections = sections::get_instance(null, $sqo, $section_tipo);
 				$this->ar_records = $sections->get_dato();
-
 				break;
 		}
 
@@ -267,7 +268,7 @@ class tool_export { // extends tool_common
 	*
 	* @return object $value
 	*/
-	public function get_value($ar_ddo, $locator) {
+	public function get_value(array $ar_ddo, object $locator) {
 
 		$ar_cells		= [];
 		$ar_row_count	= [];

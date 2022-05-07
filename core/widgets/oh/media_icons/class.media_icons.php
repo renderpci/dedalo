@@ -6,11 +6,13 @@
 */
 class media_icons extends widget_common {
 
+
+
 	/**
-	* get_dato
-	* @return
+	* GET_DATO
+	* @return array $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
@@ -156,4 +158,7 @@ class media_icons extends widget_common {
 
 		return $dato;
 	}//end get_dato
+
+
+
 }//end media_icons

@@ -31,12 +31,15 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	/**
 	* CONSTRUCT
 	*/
-	public function __construct(string $matrix_table=null, $id=NULL, $parent=NULL, $tipo=NULL, $lang=NULL) {
+	public function __construct(string $matrix_table=null, int $id=null, string $parent=null, string $tipo=null, string $lang=null) {
 
 		if(empty($matrix_table)) {
-			if(SHOW_DEBUG===true)
-				dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
-			throw new Exception("Error Processing Request. Matrix wrong name ", 1);
+			if(SHOW_DEBUG===true) {
+				dump($matrix_table, "id:$id - parent:$parent - tipo:$tipo - lang:$lang");
+			}
+			// throw new Exception("Error Processing Request. Matrix wrong name ", 1);
+			trigger_error(__METHOD__." Error Processing Request. matrix_table is mandatory ");
+			return false;
 		}
 
 		# TABLE SET ALWAYS BEFORE CONSTRUCT RECORDATABOUNDOBJECT
@@ -44,16 +47,18 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 
 		if ($id>0) {
+
 			# Ignore other vars
 			parent::__construct($id);
 
 		}else{
 
 			# Set know vars
-			if($parent)	$this->set_parent($parent) ;
-			if($tipo)	$this->set_tipo($tipo) ;
-			if($lang)	$this->set_lang($lang) ; #DEDALO_DATA_LANG
-			parent::__construct(NULL);
+			if(!empty($parent))	$this->set_parent($parent) ;
+			if(!empty($tipo))	$this->set_tipo($tipo) ;
+			if(!empty($lang))	$this->set_lang($lang) ; # DEDALO_DATA_LANG
+
+			parent::__construct(null);
 		}
 
 		return true;
@@ -71,15 +76,15 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	}
 	# array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() : array {
-		return (array(
-			# db fieldn ame			# property name
-			"id" 					=> "ID",
-			"parent" 				=> "parent",
-			"dato" 					=> "dato",
-			"tipo" 					=> "tipo",
-			"lang" 					=> "lang"
-			));
-	}
+		# db fieldname => # property name
+		return [
+			'id'		=> 'ID',
+			'parent'	=> 'parent',
+			'dato'		=> 'dato',
+			'tipo'		=> 'tipo',
+			'lang'		=> 'lang'
+		];
+	}//end defineRelationMap
 
 
 
@@ -113,13 +118,15 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 	/**
 	* GET_ID
+	* @return int|null $ID
 	*/
 	public function get_ID() {
 
-		if($this->ID===NULL) return $this->calculate_ID();
-		#if(parent::get_ID()==NULL) return $this->calculate_ID();
+		$ID = ($this->ID===null)
+			? $this->calculate_ID()
+			: parent::get_ID();
 
-		return parent::get_ID();
+		return $ID;
 	}//end get_ID
 
 
@@ -136,13 +143,16 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# RECORDOBJ_MATRIX : IMPORTANT ! Set use cache to false
 		#$this->use_cache = false;
 
-		if($this->ID !== null) return $this->ID;
+		if($this->ID!==null) {
+			return (int)$this->ID;
+		}
 
 		$id = null;
 
 		$parent = $this->get_parent();
-		if (strlen($parent)===0)
+		if (strlen($parent)===0) {
 			$parent = intval(0);
+		}
 		$tipo 	= $this->get_tipo();
 		$lang 	= $this->get_lang();
 
@@ -156,17 +166,17 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		# PARENT (optional)
 		if(!empty($parent))
-		$arguments['parent']	= $parent;
+		$arguments['parent'] = $parent;
 
 		# TIPO
-		$arguments['tipo']		= $tipo;
+		$arguments['tipo'] = $tipo;
 
 		# LANG (optional)
 		if(!empty($lang))
-		$arguments['lang']		= $lang;
+		$arguments['lang'] = $lang;
 
 		# SEARCH IN MATRIX
-		$ar_id					= $this->search($arguments, $matrix_table);
+			$ar_id = $this->search($arguments, $matrix_table);
 			#dump($arguments,"called calculate_ID result in $this->matrix_table:".print_r($ar_id,true));
 
 		if( !empty($ar_id[0]) && $ar_id[0]>0 ) {
@@ -326,32 +336,29 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 	/**
 	* SAVE TIME MACHINE
+	* @return int $id
 	*/
 	protected function save_time_machine() {
 
-		#if(SHOW_DEBUG===true) {
-		#	trigger_error("save_time_machine en ".__METHOD__ ." triggered");
-		#}
+		if(true!==self::test_can_save()) {
+			trigger_error(__METHOD__.' Error. No tm data is saved! (test_can_save returns false)');
+			return false;
+		}
 
-		return; # DESACTIVA DE MOMENTO
+		// dato. Get actual dato (!) Important: get dato before call RecordObj_time_machine
+			$dato = $this->dato;
 
+		// user_id
+			$user_id = (int)navigator::get_user_id();
 
-		if(!self::test_can_save()===true) exit("Error. No tm data is saved!");
-
-		# Get actual dato (Important: get dato before call RecordObj_time_machine)
-		$dato = $this->dato;
-			#dump($obj,'$obj '.$dato);
-
-		$RecordObj_time_machine = new RecordObj_time_machine();
-
-		$RecordObj_time_machine->set_id_matrix($this->get_ID());
-		$RecordObj_time_machine->set_parent($this->get_parent());
-		$RecordObj_time_machine->set_tipo($this->get_tipo());
-		$RecordObj_time_machine->set_lang($this->get_lang());
-		$RecordObj_time_machine->set_userID(navigator::get_user_id());
-
-		# Set dato RAW
-		$RecordObj_time_machine->set_dato($dato, true);
+		// RecordObj_time_machine
+			$RecordObj_time_machine = new RecordObj_time_machine();
+				$RecordObj_time_machine->set_dato($dato, true); // Set dato RAW
+				$RecordObj_time_machine->set_id_matrix($this->get_ID());
+				$RecordObj_time_machine->set_parent($this->get_parent());
+				$RecordObj_time_machine->set_tipo($this->get_tipo());
+				$RecordObj_time_machine->set_lang($this->get_lang());
+				$RecordObj_time_machine->set_userID($user_id);
 
 		/*
 		# dato EN PRUEBAS LA CODIFICACIÓN JSON... VERIFICAR CON VARIOS TIPOS DE CONTENIDO
@@ -364,16 +371,19 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		#$dato	= gzcompress($dato, 9);	#die($dato_compressed);
 		$RecordObj_time_machine->set_dato($dato);
 		*/
-
 			#dump($this,'$this->dato en save_time_machine');
 			#dump($this->get_dato(true),'$this->get_dato(true)');
 			#dump($RecordObj_time_machine->dato,'$RecordObj_time_machine->dato');
 			#dump($RecordObj_time_machine->get_dato(true),'$RecordObj_time_machine->get_dato(true)');
 
-		# Save obj
-		$RecordObj_time_machine->Save();
+		// Save obj
+			$RecordObj_time_machine->Save();
 
-		return $RecordObj_time_machine->get_ID();
+		// id. Get auto assigned matrix id after save object
+			$id = $RecordObj_time_machine->get_ID();
+
+
+		return $id;
 	}//end save_time_machine
 
 
@@ -403,6 +413,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		return $dato;
 	}//end get_dato
 	*/
+
 
 
 	/* NOT USED !
@@ -510,5 +521,3 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 
 }//end class RecordObj_matrix
-
-

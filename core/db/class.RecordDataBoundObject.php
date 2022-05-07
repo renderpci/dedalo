@@ -766,7 +766,7 @@ abstract class RecordDataBoundObject {
 
 
 	# ACCESSORS CALL
-	final public function __call($strFunction, $arArguments) {
+	final public function __call(string $strFunction, array $arArguments) {
 		#echo "call OK $strFunction - $arArguments";
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
@@ -777,7 +777,7 @@ abstract class RecordDataBoundObject {
 		return(false);
 	}//end __call
 	# ACCESSORS SET
-	private function SetAccessor($strMember, $strNewValue) {
+	private function SetAccessor(string $strMember, $strNewValue) {
 
 		if(property_exists($this, $strMember)) {
 
@@ -811,7 +811,7 @@ abstract class RecordDataBoundObject {
 		}
 	}//end SetAccessor
 	# ACCESSORS GET
-	private function GetAccessor($strMember) {
+	private function GetAccessor(string $strMember) {
 
 		if($this->blIsLoaded != true) {
 			$this->Load();

@@ -46,7 +46,9 @@
 				$value	= component_common::extract_component_dato_fallback($this, DEDALO_DATA_LANG, DEDALO_DATA_LANG_DEFAULT);
 				$total	= count($value)>0 ? count($value) : 1;
 				foreach ($value as $key => $current_value) {
-					$value[$key] = common::truncate_html( ceil(200/$total), $current_value, true);
+					$value[$key] = !empty($current_value)
+						? common::truncate_html( ceil(200/$total), $current_value, true)
+						: '';
 				}
 				// check value fallback
 				if (!empty($dato) && (empty($value[0]) && $value[0]!=='')) {
@@ -60,7 +62,9 @@
 				$fallback_value	= (empty($value) || isset($value[0]) && empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">') || !isset($patata))
 					? (function(){
 						$dato_fallback	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-						$value			= common::truncate_html(700, $dato_fallback[0], true); // $maxLength, $html, $isUtf8=true
+						$value			= !empty($dato_fallback[0])
+							? common::truncate_html(700, $dato_fallback[0], true) // $maxLength, $html, $isUtf8=true
+							: '';
 						if (!empty($value) && strlen($value)<strlen($dato_fallback[0])) {
 							$value .= ' ...';
 						}

@@ -877,18 +877,18 @@ class component_relation_common extends component_common {
 	* Save component data in matrix using parent section
 	* Verify all necessary vars to save and call section 'save_component_dato($this)'
 	* @see section->save_component_dato($this)
-	* @return int $section_matrix_id
+	* @return bool|int $section_matrix_id
 	*/
 	public function Save() {
 
 		// short vars
 			$section_tipo	= $this->get_section_tipo();
-			$parent 		= $this->get_parent();
-			$tipo 			= $this->get_tipo();
-			$lang 			= DEDALO_DATA_LANG;
-			$modo 			= $this->get_modo();
+			$section_id		= $this->get_section_id();
+			$tipo			= $this->get_tipo();
+			$modo			= $this->get_modo();
+			$lang			= DEDALO_DATA_LANG;
 
-		// dataframe mode
+		// dataframe mode. Save caller and stop
 			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
 
 				#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
@@ -925,51 +925,57 @@ class component_relation_common extends component_common {
 				return $new_component->Save();
 			}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
 
-
-		// save_to_database. Verify component main vars
-			if (!isset($this->save_to_database) || $this->save_to_database!==false) {
-				// parent : Verify parent
-					if( abs((int)$parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
-						if(SHOW_DEBUG===true) {
-							dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
-							throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);
-						}
-						die("Error. Save component data is stopped. Inconsistency detected. Contact with your administrator ASAP");
-					}
-
-				// Verify component minumun vars before save
-					if( (empty($parent) || empty($tipo) || empty($lang)) ) {
-						throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, parent:$parent, tipo,$tipo, lang,$lang", 1);
-					}
+		// Verify component minimum vars before save
+			if( empty($section_id) || empty($tipo) || empty($lang) ) {
+				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
+				return false;
 			}
 
-		// section : Preparamos la sección que será la que se encargue de salvar el dato del componente
-			// $section	= section::get_instance($parent, $section_tipo);
-			$section	= $this->get_my_section();
-			$section_id	= $section->save_component_dato($this, 'relation');
+		// save_to_database. Verify component main vars
+			// if (!isset($this->save_to_database) || $this->save_to_database!==false) {
+			// 	// section_id validate
+			// 		if ( abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+			// 			if(SHOW_DEBUG===true) {
+			// 				dump($this, "this section_tipo:$section_tipo - section_id:$section_id - tipo:$tipo - lang:$lang");
+			// 			}
+			// 			trigger_error('Error Processing component save. Inconsistency detected: component trying to save without section_id: '. $section_id);
+			// 			return false;
+			// 		}
+			// }
 
+		// section save. The section will be the responsible to save the component data
+			$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
+			$section			= $this->get_my_section();
+			$section_id			= $section->save_component_dato($this, 'relation', $save_to_database);
 
-		// activity
-			$this->save_activity();
-
-
-		// relations table links
-			if ($this->save_to_database_relations!==false) {
+		// relations table links update (default is true)
+			if ($this->save_to_database_relations===true) {
 
 				$current_dato = $this->get_dato_full();
 
 				$relation_options = new stdClass();
-					$relation_options->section_tipo 		= $section_tipo;
-					$relation_options->section_id 			= $parent;
-					$relation_options->from_component_tipo 	= $tipo;
-					$relation_options->ar_locators 			= $current_dato;
+					$relation_options->section_tipo			= $section_tipo;
+					$relation_options->section_id			= $section_id;
+					$relation_options->from_component_tipo	= $tipo;
+					$relation_options->ar_locators			= $current_dato;
 
 				$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
 			}
 
-		# Observers
-		// the observers will be need to be notified for re-calculate your own dato with the new component dato
+		// save_to_database. Optional stop the save process to delay ddbb access
+			if ($save_to_database===false) {
+				# Stop here (remember make a real section save later!)
+				# No component time machine data will be saved when section saves later
+				return $section_id;
+			}
+
+		// activity
+			$this->save_activity();
+
+		// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
 			$this->propagate_to_observers();
+
+
 
 		return (int)$section_id;
 	}//end Save

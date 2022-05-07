@@ -1,9 +1,7 @@
 <?php
-
-
-
 /**
 * WIDGET_COMMON
+*
 */
 class widget_common {
 
@@ -21,7 +19,7 @@ class widget_common {
 	* Protected constructor to prevent creating a new instance of the
 	* *widget* via the `new` operator from outside of this class.
 	*/
-	protected function __construct($options) {
+	protected function __construct(object $options) {
 
 		$this->section_tipo	= $options->section_tipo;
 		$this->section_id	= $options->section_id;
@@ -38,7 +36,8 @@ class widget_common {
 	* GET_INSTANCE
 	* Returns the *widget* instance of this class.
 	*
-	* @return widget The *widget* instance.
+	* @return object $instance
+	* The "widget" instance.
 	* $options = {
 	*		widget_name 	: string, with the class name
 	*		path			: string, with the path to the class of the widget,
@@ -48,7 +47,7 @@ class widget_common {
 	* 		lang			: string
 	* }
 	*/
-	public static function get_instance($options) {
+	public static function get_instance(object $options) : object {
 
 		$widget_name = $options->widget_name;
 		$path = $options->path;
