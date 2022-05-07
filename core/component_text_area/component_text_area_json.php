@@ -36,8 +36,10 @@
 			if(isset($properties->tags_persons)){
 				$tags_persons_config = $properties->tags_persons;
 				$this->context->tags_persons = new stdClass();
-				foreach ($tags_persons_config as $key => $value) {
-					$this->context->tags_persons->$key = $this->get_tags_persons($key);
+				$ar_related_sections = $this->get_ar_related_sections();
+				$this->context->ar_related_sections = $ar_related_sections;
+				foreach ($tags_persons_config as $related_section_tipo => $value) {
+					$this->context->tags_persons->$related_section_tipo = $this->get_tags_persons($related_section_tipo, $ar_related_sections);
 				}
 			}
 		// Notes

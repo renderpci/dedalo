@@ -228,7 +228,7 @@ const get_content_data_edit = async function(self) {
 
 					// Set value from cookie or default
 					av_rewind_secs_input.value				= secs_val
-					component_text_area.av_rewind_seconds	= secs_val
+					component_text_area.context.av_player.av_rewind_seconds	= secs_val
 
 					av_rewind_secs_input.addEventListener('change', function(event){
 						// if the key pressed is not a number use the default
@@ -238,7 +238,7 @@ const get_content_data_edit = async function(self) {
 						// set the cookie of the key
 						localStorage.setItem('av_rewind_secs', value);
 						av_rewind_secs_input.value				= value
-						component_text_area.av_rewind_seconds	= value
+						component_text_area.context.av_player.av_rewind_seconds	= value
 					})
 
 				// tag key is used to get the tc from av and insert the tag in the text_area
@@ -343,7 +343,7 @@ const get_content_data_edit = async function(self) {
 */
 const render_related_list = function(self){
 
-	const datum		= self.related_sections_list
+	const datum		= self.relation_list
 	const context	= datum.context
 	const data		= datum.data
 
