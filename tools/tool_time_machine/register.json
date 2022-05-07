@@ -79,13 +79,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 4,
+                            "day": 7,
                             "hour": 11,
-                            "time": 64999712725,
+                            "time": 64999971822,
                             "year": 2022,
                             "month": 5,
-                            "minute": 45,
-                            "second": 25
+                            "minute": 43,
+                            "second": 42
                         }
                     }
                 ]
@@ -93,7 +93,9 @@
         },
         "dd612": {
             "dato": {
-                "lg-eng": "Dédalo store every user change in a custom table 'matrix_time_machine'.<br>This tool allow users access and recover this versions"
+                "lg-eng": [
+                    "Dédalo store every user change in a custom table 'matrix_time_machine'.<br>This tool allow users access and recover this versions"
+                ]
             }
         },
         "dd799": {
@@ -132,7 +134,8 @@
             "dato": {
                 "lg-nolan": [
                     {
-                        "view": "popup"
+                        "open_as": "window",
+                        "windowFeatures": null
                     }
                 ]
             }
@@ -164,7 +167,7 @@
     "section_id": 2,
     "created_date": "2019-12-02 12:44:58",
     "section_tipo": "dd1340",
-    "modified_date": "2022-05-04 11:45:25",
+    "modified_date": "2022-05-07 11:43:42",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",

@@ -79,13 +79,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 3,
-                            "hour": 21,
-                            "time": 64999660819,
+                            "day": 7,
+                            "hour": 11,
+                            "time": 64999971788,
                             "year": 2022,
                             "month": 5,
-                            "minute": 20,
-                            "second": 19
+                            "minute": 43,
+                            "second": 8
                         }
                     }
                 ]
@@ -240,14 +240,17 @@
             "dato": {
                 "lg-nolan": [
                     {
-                        "view": "tab"
+                        "open_as": "modal",
+                        "windowFeatures": null
                     }
                 ]
             }
         },
         "dd1350": {
             "dato": {
-                "lg-nolan": []
+                "lg-nolan": [
+                    null
+                ]
             }
         },
         "dd1353": {
@@ -261,12 +264,20 @@
                     "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators, <br>must be defined in Dédalo tools config file:<br><br> \/config\/tools\/config_tool_lang.json<br><br> as:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.render.es\/babel_engine\/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');<br><br>\/\/ example of ontology (dd1334)<br>{<br> \"tld\": \"tool_dev\",<br> \"tipo\": \"tool_dev1\",<br> \"model\": \"section_tool\",<br> \"order\": 1,<br> \"parent\": \"oh80\",<br> \"is_model\": \"no\",<br> \"relations\": null,<br> \"model_tipo\": \"dd125\",<br> \"properties\": {<br> \"context\": {<br> \"top_tipo\": \"oh1\",<br> \"target_tool\": \"tool_transcription\",<br> \"context_name\": \"section_tool\",<br> \"tool_section_tipo\": \"tool_dev1\",<br> \"target_section_tipo\": \"rsc167\",<br> \"target_component_tipo\": \"rsc35\"<br> }<br> },<br> \"descriptors\": [<br> {<br> \"lang\": \"lg-ita\",<br> \"type\": \"term\",<br> \"value\": \"Trascrizioni interviste\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"term\",<br> \"value\": \"Transcription\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"term\",<br> \"value\": \"Transcripción entrevistas\"<br> },<br> {<br> \"lang\": \"lg-cat\",<br> \"type\": \"term\",<br> \"value\": \"Transcripció d'entrevistes\"<br> },<br> {<br> \"lang\": \"lg-ell\",<br> \"type\": \"term\",<br> \"value\": \"Μεταγραφή συνεντεύξεις\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"des\",<br> \"value\": \"Tool for translate the content to other langs\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"des\",<br> \"value\": \"Herramienta de traducción de contenido a otras lenguas\"<br> }<br> ],<br> \"translatable\": false<br>}<br>"
                 ]
             }
+        },
+        "dd1372": {
+            "inf": "Etiquetas [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    null
+                ]
+            }
         }
     },
     "section_id": 1,
     "created_date": "2019-11-05 16:06:56",
     "section_tipo": "dd1340",
-    "modified_date": "2022-05-03 21:20:19",
+    "modified_date": "2022-05-07 11:43:08",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",
