@@ -34,7 +34,7 @@ export const tool_transcription = function () {
 	this.caller						= null
 	this.media_component			= null // component av that will be transcribed (it could be the caller)
 	this.transcription_component	= null // component text area where we are working into the tool
-	this.related_sections_list		= null // datum of related_sections_list (to obtaim list of top_section_tipo/id)
+	this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
 
 	return true
 };//end page
@@ -95,10 +95,10 @@ tool_transcription.prototype.build = async function(autoload=false) {
 		const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
 		self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
 
-	// related_sections_list. load_related_sections_list. Get the relation list.
+	// relation_list. load_relation_list. Get the relation list.
 	// This is used to build a select element to allow
 	// user select the top_section_tipo and top_section_id of current indexation
-		self.related_sections_list = await self.load_related_sections_list()
+		self.relation_list = await self.load_relation_list()
 
 
 	return common_build
@@ -148,11 +148,11 @@ tool_transcription.prototype.get_component = async function(lang) {
 
 
 /**
-* LOAD_RELATED_SECTIONS_LIST
+* LOAD_RELATion_LIST
 * Get the list of related sections with the actual resource
 * @return object datum
 */
-tool_transcription.prototype.load_related_sections_list = async function() {
+tool_transcription.prototype.load_relation_list = async function() {
 
 	const self = this
 
@@ -193,7 +193,7 @@ tool_transcription.prototype.load_related_sections_list = async function() {
 	const datum = api_response.result
 
 	return datum
-};//end load_related_sections_list
+};//end load_relation_list
 
 
 /**
