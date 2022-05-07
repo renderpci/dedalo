@@ -1,10 +1,10 @@
 <?php
 /**
 * SUBTITLES
-* Construye un texto formateado para subtítulos estándar a aprtir de una trancripción con códigos de tiempo.
-* Esta clase es genérica y debe servir también para las partes públicas.
-* Cuando se use fuera de Dédalo, copiar este fichero y llamar a 'build_subtitles_text' desde la clase solicitante.
-* Para poder aprovechar las mejoras y corrección de errores del desarrollo de Dédalo, llevar control de versión de esta clase
+* Constructs text formatted for standard subtitles from a time-coded transcript.
+* This class is generic and should also work for public parts.
+* When used outside of Dédalo, copy this file and call 'build_subtitles_text' from the requesting class.
+* In order to take advantage of the improvements and bug fixes of Dédalo development, take version control of this class
 */
 abstract class subtitles {
 
@@ -23,14 +23,18 @@ abstract class subtitles {
 	/**
 	* BUILD_SUBTITLES_TEXT
 	* @param object $request_options
-	* @return string | false $srt
+	* @return string | false $srt
 	*/
-	public static function build_subtitles_text( $request_options ) {
+	public static function build_subtitles_text( object $request_options ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		$options = new stdClass();
 			$options->sourceText  					= null;		# clean text fragment without <p>, [TC], [INDEX] tags
 			$options->sourceText_unrestricted  		= null;
-			$options->total_ms 						= null;		# total of miliseconds (tcout-tcin)
+			$options->total_ms 						= null;		# total of milliseconds (tcout-tcin)
 			$options->maxCharLine 					= 144;		# max number of char for subtitle line. Default 144			
 			$options->type 							= 'srt';	# File type: srt or xml
 			$options->show_debug    				= false;	# Default false
@@ -107,7 +111,7 @@ abstract class subtitles {
 					$text_final = $text;
 
 				#
-				# 2 LINES : Si el text es mas largo de 1 linea (la mitad de $maxCharLine) lo fragmentamos en 2 lineas separadas por un retorno de carro '\n'
+				# 2 LINES : If the text is longer than 1 line (half of $maxCharLine) we break it into 2 lines separated by a carriage return '\n'
 					$text_line_lenght = subtitles::text_lenght($text);
 					if( $text_line_lenght > ($maxCharLine/2)  ) {
 
@@ -120,8 +124,8 @@ abstract class subtitles {
 
 				#
 				# TC_OUT
-				# Normalmente, la línea siguiente (en el array de líneas) será un tag tc de tipo [TC_00:01:08_TC]
-				# Si no lo fuera (la última línea por ejemplo), lo suplantaremos son un cálculo fijo				
+				# Normally, the next line (in the line array) will be a tc tag of type [TC_00:01:08_TC]
+				# If it wasn't (the last line for example), we'll override it without a fixed calculation
 					if (!empty($ar_lines[$key+1]['tcin'])) {
 
 						$tcout 	= $ar_lines[$key+1]['tcin'];
@@ -145,7 +149,7 @@ abstract class subtitles {
 				#
 				# LINE				
 					# ADVICE_TEXT_SUBTITLES_TITLE
-					# Añadimos un rótulo previo al primero, desde tc 0 hasta el comienzo del primer fragmento
+					# We add a label before the first, from tc 0 to the beginning of the first fragment
 					if ($i===1 && !empty($options->advice_text_subtitles_title)) {
 						$srt .= "$i\n";
 						$srt .= "00:00:00.000 --> $tcin\n";
@@ -170,8 +174,11 @@ abstract class subtitles {
 			# ENCODING
 			#$srt = mb_convert_encoding($srt, 'UTF-8', 'auto');	
 			
+			// response
+			$response->result	= (string)$srt;
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
-			return (string)$srt;
+			return $response;
 	}//end build_subtitles_text
 
 
@@ -367,7 +374,7 @@ abstract class subtitles {
 		#$reference_text = utf8_decode($text);			
 
 		$i=0; do{
-			# Primera linea			
+			# First line
 
 			$current_line = mb_substr( $text, $refPos, $maxCharLine );
 			
@@ -408,14 +415,13 @@ abstract class subtitles {
 				#dump($current_line_cut, "current_line_cut $refPos, $spacePos");	
 
 			#
-			# NEGRITAS E ITALICAS
+			# Bold & italics
 				#dump($current_line_cut, '$siguiente_linea_add_b', array());
 
-				#añadimos negritas e italicas al principio de un párrafo que tiene continuidad en las negritas o italicas, el parrafo anterior no acaba y transpasaomos la etiqueta
-				$current_line_cut	= $siguiente_linea_add_b .=$current_line_cut;
+				#add bold and italics at the beginning of a paragraph that has continuity in bold or italics, the previous paragraph does not end and we transfer the label				$current_line_cut	= $siguiente_linea_add_b .=$current_line_cut;
 				$current_line_cut	= $siguiente_linea_add_i .=$current_line_cut;
 
-				#comprobamos si las negritas tienen contiuidad en más de una línea
+				# check if the bold has continuity in more than one line
 				$numero_br = str_replace('<b>', '<b>', $current_line_cut, $br_in);
 				$numero_br = str_replace('</b>', '</b>', $current_line_cut, $br_out);					
 
@@ -428,20 +434,20 @@ abstract class subtitles {
 				}
 				
 			
-				#comprobamos si las italicas tienen contiuidad en más de una línea
+				# check if the italics have continuity in more than one line
 				$numero_br = str_replace('<i>', '<i>', $current_line_cut, $br_in);
 				$numero_br = str_replace('</i>', '</i>', $current_line_cut, $br_out);
 
 				if ($br_in>$br_out){
-					//echo "necesita un br $br_in $br_out";
+					//echo "need a br $br_in $br_out";
 					$current_line_cut .= '</i>';
 					$siguiente_linea_add_i = '<i>';
 				}else{
 					$siguiente_linea_add_i = '';
 				}			
 			
-			# PROVISIONAL : El formateo de negritas y itálicas falla en ocasiones. Para asegurarnos de que no haya errores de forma en html revisamos 
-			# el resultado final de la línea para depurar el número y posicionamiento de las etiquetas
+			# PROVISIONAL : Bold and italic formatting sometimes fails. To make sure there are no form errors in html we check
+			# the final result of the line to debug the number and positioning of the labels
 			#if(SHOW_DEBUG) {
 				$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'b');
 				$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'i');
@@ -571,6 +577,8 @@ abstract class subtitles {
 		$string = str_replace('</strong>', '</b>', $string);
 		$string = str_replace('<em>', '<i>', $string);
 		$string = str_replace('</em>', '</i>', $string);
+		// $string = str_replace('<u>', '<u>', $string); # to implemented! now is a style with span
+		// $string = str_replace('</u>', '</u>', $string);
 		$string = str_replace(['&nbsp;'], [' '], $string);
 		
 		$options = new stdClass();
@@ -672,4 +680,3 @@ abstract class subtitles {
 
 
 }//end subtitles
-?>
