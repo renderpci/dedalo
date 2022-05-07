@@ -13,33 +13,42 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_posterframe {
 
-		>div {
-			max-width: calc(720px + 2rem);
-			margin-left: auto;
-			margin-right: auto;
-		}
+		// >div {
+		// 	max-width: calc(720px + 2rem);
+		// 	margin-left: auto;
+		// 	margin-right: auto;
+		// }
 
 		// av component container
 		>.main_component_container {
+			position: relative;
+			display: grid;
 			// background-color: @color_grey_medium;
-			background-color: #fafafa;
+			// background-color: #fafafa;
 			min-width: 720px;
 			// height: 404px;
 			// display: table;
-			height: 500px;
+			min-height: 483px;
 			// display: block;
+			padding: 0;
+			margin: 0;
+			margin-left: auto;
+			margin-right: auto;
+			margin-top: 1rem;
+
 
 			@media screen and (max-width: @width_break_point_1) {
 				min-width: unset;
 				height: unset;
 			}
 
-			>img {
-				display: block;
-				padding: 1rem;
-				padding-top: 2rem;
-				padding-bottom: 1rem;
-			}
+			// >img {
+			// 	display: block;
+			// 	padding: 1rem;
+			// 	padding-top: 2rem;
+			// 	// padding-bottom: 1rem;
+			// 	height: inherit;
+			// }
 
 
 			.wrapper_component.component_av {
@@ -59,6 +68,7 @@
 			display: flex;
 			flex-wrap: wrap;
 			justify-content: center;
+			padding: 0;
 			// display: grid;
 			// grid-template-rows: 1fr 1fr;
 

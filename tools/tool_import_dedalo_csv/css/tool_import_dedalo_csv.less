@@ -10,11 +10,18 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_import_dedalo_csv {
 
-		.file_uploader {
-			margin-bottom: 1rem;
+		>.service_upload_container {
+			// margin-bottom: 1rem;
+			width: 100%;
+			min-height: 138px;
+			position: relative;
 
-			.content_data {
-				padding: 0;
+			>.spinner {
+				top: 67%;
+			}
+
+			>.content_data {
+				padding: 1rem;
 			}
 		}
 
@@ -126,7 +133,8 @@
 									background-color: #19a2b8;
 									color: white;
 									position: sticky;
-									top: 65px;
+									// top: 65px;
+									top: 0;
 									z-index: 1;
 								}
 
