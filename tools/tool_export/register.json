@@ -75,13 +75,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 20,
-                            "hour": 10,
-                            "time": 64976983350,
-                            "year": 2021,
-                            "month": 8,
-                            "minute": 2,
-                            "second": 30
+                            "day": 7,
+                            "hour": 13,
+                            "time": 64999979192,
+                            "year": 2022,
+                            "month": 5,
+                            "minute": 46,
+                            "second": 32
                         }
                     }
                 ]
@@ -129,12 +129,31 @@
                     "6.0.0"
                 ]
             }
+        },
+        "dd1335": {
+            "inf": "Propiedades [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "open_as": "window",
+                        "windowFeatures": null
+                    }
+                ]
+            }
+        },
+        "dd1350": {
+            "inf": "Afecta a tipos: [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    null
+                ]
+            }
         }
     },
     "section_id": 6,
     "created_date": "2021-08-20 09:46:30",
     "section_tipo": "dd1340",
-    "modified_date": "2021-08-20 10:02:30",
+    "modified_date": "2022-05-07 13:46:32",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd73",
