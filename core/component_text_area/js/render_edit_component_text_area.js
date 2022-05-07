@@ -340,33 +340,33 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// 	parent 		 	: li
 		// })
 
-	// init_current_service
-		const init_current_service = function() {
+	// init_current_text_editor
+		const init_current_text_editor = function() {
 
 			// service_tinymce
-				const current_service = new service_tinymce()
+				const current_text_editor = new service_tinymce()
 
 			// editor_config
 				const editor_config = {
 					plugins			: ['paste','image','print','searchreplace','code','noneditable'], // ,'fullscreen'
-					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | button_geo button_save', // fullscreen
-					custom_buttons	: get_custom_buttons(self, i, current_service),
-					custom_events	: get_custom_events(self, i, current_service)
+					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+self.custom_toolbar+' button_save', // fullscreen
+					custom_buttons	: get_custom_buttons(self, i, current_text_editor),
+					custom_events	: get_custom_events(self, i, current_text_editor)
 				}
 
 			// init editor
-				current_service.init(self, li, {
+				current_text_editor.init(self, li, {
 					value			: value,
 					key				: i,
 					editor_config	: editor_config
 				})
 				.then(function(initied){
-					// fix current_service
-					self.service[i] = current_service
+					// fix current_text_editor
+					self.text_editor[i] = current_text_editor
 				})
 
-			return current_service
-		}//end init_current_service
+			return current_text_editor
+		}//end init_current_text_editor
 
 	// observer. init the editor when container node is in DOM
 		const observer = new IntersectionObserver(function(entries) {
@@ -375,7 +375,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
 				observer.disconnect();
 
-				init_current_service()
+				init_current_text_editor()
 
 				// observer.unobserve(entry.target);
 			}
@@ -404,7 +404,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 				// 		const component_container	= li
 				// 		const button				= component_container.querySelector(".create_fragment")
-				// 		const last_tag_id			= self.get_last_tag_id(i, 'index', current_service)
+				// 		const last_tag_id			= self.get_last_tag_id(i, 'index', current_text_editor)
 				// 		const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 
 				// 		const create_button = function(selection) {
@@ -421,7 +421,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 				// 					event_manager.publish('create_fragment_'+ self.id, {
 				// 						caller	: self,
 				// 						key		: i,
-				// 						service	: current_service
+				// 						text_editor	: current_text_editor
 				// 					})
 				// 				})
 
@@ -465,7 +465,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 *	self data element from array of values
 * @return array custom_buttons
 */
-const get_custom_buttons = (self, i, service) => {
+const get_custom_buttons = (self, i, text_editor) => {
 
 	// custom_buttons
 	const custom_buttons = []
@@ -479,8 +479,9 @@ const get_custom_buttons = (self, i, service) => {
 				tooltip	: 'Add person',
 				image	: '../themes/default/icons/person.svg',
 				onclick	: function(evt) {
-					alert("Adding person !");
+					// alert("Adding person !");
 					// component_text_area.load_tags_person() //ed, evt, text_area_component
+					event_manager.publish('click_button_person_'+ self.id_base, {caller: self, text_editor: text_editor})
 				}
 			}
 		})
@@ -505,8 +506,15 @@ const get_custom_buttons = (self, i, service) => {
 				tooltip	: 'Add note',
 				image	: '../themes/default/icons/note.svg',
 				onclick	: function(evt) {
-					alert("Adding note !");
-					// component_text_area.create_new_note(ed, evt, text_area_component)
+
+					event_manager.publish('click_button_note_'+ self.id_base, {tag: 'note', caller: self, text_editor: text_editor})
+					const tag_type 	= 'note'
+					const last_tag_id = self.get_last_tag_id(i, tag_type, text_editor)
+					const note_number = parseInt(last_tag_id) + 1
+
+					// 		const tag = build_node_tag(data_tag, tag_id)
+					// 		text_editor.set_content(tag.outerHTML)
+					component_text_area.create_new_note(ed, evt, text_area_component)
 				}
 			}
 		})
@@ -575,8 +583,8 @@ const get_custom_buttons = (self, i, service) => {
 				tooltip	: save_label,
 				icon	: false,
 				onclick	: function(evt) {
-					// save. service save function calls current component save_value()
-					service.save()
+					// save. text_editor save function calls current component save_value()
+					text_editor.save()
 				}
 			}
 		})
@@ -592,11 +600,11 @@ const get_custom_buttons = (self, i, service) => {
 * @param instance self
 * @param int i
 *	self data element from array of values
-* @param function service
-*	select and return current service
+* @param function text_editor
+*	select and return current text_editor
 * @return object custom_events
 */
-const get_custom_events = (self, i, service) => {
+const get_custom_events = (self, i, text_editor) => {
 
 	const custom_events = {}
 
@@ -608,8 +616,8 @@ const get_custom_events = (self, i, service) => {
 
 	// blur
 		custom_events.blur = (evt, options) => {
-			// save. service save function calls current component save_value()
-			service.save()
+			// save. text_editor save function calls current component save_value()
+			text_editor.save()
 		};//end blur
 
 	// click
@@ -622,7 +630,7 @@ const get_custom_events = (self, i, service) => {
 
 					case 'tc':
 						// Video go to timecode by tc tag
-						event_manager.publish('click_tag_tc_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_tc_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						break;
 
 					case 'index':
@@ -630,7 +638,7 @@ const get_custom_events = (self, i, service) => {
 						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
 						// 'self.id' for specific uses like tool indexation
 						// console.log("PUBLISH self.id:",self.id, self.id_base);
-						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						// event_manager.publish('click_tag_index_'+ self.id, {tag:tag_obj, caller: self})
 						// des
 							// const tipo			= text_area_component.dataset.tipo
@@ -670,7 +678,7 @@ const get_custom_events = (self, i, service) => {
 
 					case 'draw' :
 						// Load draw editor
-						event_manager.publish('click_tag_draw_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_draw_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						// des
 							// switch(page_globals.modo) {
 
@@ -695,12 +703,12 @@ const get_custom_events = (self, i, service) => {
 
 					case 'geo' :
 						// subscribed by component_geolocation from properties like 'numisdata264'
-						event_manager.publish('click_tag_geo_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_geo_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						break;
 
 					case 'page':
 						// PDF go to the specific page
-						event_manager.publish('click_tag_pdf_'+ self.id_base, {tag: tag_obj, caller: self, service: service})
+						event_manager.publish('click_tag_pdf_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						break;
 
 					case 'person':
@@ -710,7 +718,9 @@ const get_custom_events = (self, i, service) => {
 
 					case 'note':
 						// Show note info
-						component_text_area.show_note_info( ed, evt, text_area_component )
+						event_manager.publish('click_tag_note_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
+
+						// component_text_area.show_note_info( ed, evt, text_area_component )
 						break;
 
 					case 'reference':
@@ -752,11 +762,11 @@ const get_custom_events = (self, i, service) => {
 
 			switch( evt.code ){
 				// 'Escape'
-				case  self.av_play_pause_code:
-					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.av_rewind_seconds)
+				case  self.context.av_player.av_play_pause_code:
+					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.av_player.av_rewind_seconds)
 					break;
 				// 'F2'
-				case self.av_insert_tc_code:
+				case self.context.av_player.av_insert_tc_code:
 					// publish event and receive susbscriptors responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -766,27 +776,27 @@ const get_custom_events = (self, i, service) => {
 							console.log("[render_edit_component_text_area.get_custom_events] susbscriptors_responses (key_up_f2):", susbscriptors_responses);
 						}
 
-					// service. get editor and content data
-						const editor_content_data = service.get_editor_content_data()
+					// text_editor. get editor and content data
+						const editor_content_data = text_editor.get_editor_content_data()
 
 					// iterate susbscriptors responses
 						for (let i = 0; i < susbscriptors_responses_length; i++) {
 							const data_tag 	= susbscriptors_responses[i]
 							const tag_id 	= (!data_tag.tag_id)
-								? self.get_last_tag_id(editor_content_data, data_tag.type, service) + 1
+								? self.get_last_tag_id(editor_content_data, data_tag.type, text_editor) + 1
 								: data_tag.tag_id;
 
 							switch(data_tag.type) {
 								case ('draw'):
 								case ('geo'):
-									render_layer_selector(self, data_tag, tag_id, service)
+									render_layer_selector(self, data_tag, tag_id, text_editor)
 									break;
 								case ('page'):
-									render_page_selector(self, data_tag, tag_id, service)
+									render_page_selector(self, data_tag, tag_id, text_editor)
 									break;
 								default:
 									const tag = build_node_tag(data_tag, tag_id)
-									service.set_content(tag.outerHTML)
+									text_editor.set_content(tag.outerHTML)
 							}// end switch
 						}
 					break;
@@ -862,7 +872,7 @@ export const build_node_tag = function(data_tag, tag_id) {
 * Used from component_image
 * @return DOM node fragment
 */
-const render_layer_selector = function(self, data_tag, tag_id, service){
+const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 
 	const ar_layers = data_tag.layers
 
@@ -878,7 +888,7 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 
 		data_tag.data = "["+data_tag.last_layer_id+"]"
 		const tag 	= build_node_tag(data_tag, tag_id)
-		service.set_content(tag.outerHTML)
+		text_editor.set_content(tag.outerHTML)
 		layer_selector.remove()
 	})
 
@@ -918,7 +928,7 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 
 				data_tag.data = "["+layer.layer_id+"]"
 				const tag = build_node_tag(data_tag, tag_id)
-				service.set_content(tag.outerHTML)
+				text_editor.set_content(tag.outerHTML)
 				layer_selector.remove()
 			})
 
@@ -968,7 +978,7 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 * RENDER_PAGE_SELECTOR
 * @return
 */
-const render_page_selector = function(self, data_tag, tag_id, service){
+const render_page_selector = function(self, data_tag, tag_id, text_editor){
 
 	const total_pages	= data_tag.total_pages
 	const offset		= data_tag.offset
@@ -1044,7 +1054,7 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 		data_tag.label	= body_input.value
 		data_tag.data	= "["+data+"]"
 		const tag		= build_node_tag(data_tag, tag_id)
-		service.set_content(tag.outerHTML)
+		text_editor.set_content(tag.outerHTML)
 		page_selector.remove()
 	})
 
@@ -1054,6 +1064,97 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 
 	return
 };//end render_page_selector
+
+
+/**
+* RENDER_PERSONS_SELECTOR
+* @return
+*/
+const render_persons_selector = function(self, data_tag, tag_id, text_editor){
+
+	const fragment = new DocumentFragment()
+
+	const ar_persons = self.context.tags_persons
+
+	const container = ui.create_dom_element({
+		element_type	: 'div',
+		parent			: fragment
+	})
+
+		const label = ui.create_dom_element({
+			element_type	: 'span',
+			text_node		: get_label.persons || 'Persons',
+			class_name 		: 'label',
+			parent			: container
+		})
+
+		const body_title = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: label,
+			parent			: body
+		})
+
+		const body_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'body_title',
+			parent			: body
+		})
+
+		const error_input = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: '',
+			parent			: body
+		})
+
+
+	const footer = ui.create_dom_element({
+		element_type	: 'span'
+	})
+
+	const user_option_cancelar = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'user_option ',
+		inner_html		: get_label.cancelar || 'Cancel',
+		parent			: footer
+	})
+
+	const user_option_ok = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'user_option',
+		inner_html		: get_label.insertar_etiqueta || 'Insert label',
+		parent			: footer
+	})
+
+	const page_selector = ui.attach_to_modal( header, body, footer)
+
+	user_option_ok.addEventListener("click", (e) =>{
+		e.preventDefault()
+		const user_value = body_input.value
+		if(user_value === null) {
+			page_selector.renove()
+		}
+		if(user_value > page_out || user_value < page_in){
+			error_input.textContent = get_label.value_out_of_range || 'Value out of range'
+			return
+		}
+		const data		= body_input.value - (offset -1)
+		data_tag.label	= body_input.value
+		data_tag.data	= "["+data+"]"
+		const tag		= build_node_tag(data_tag, tag_id)
+		text_editor.set_content(tag.outerHTML)
+		page_selector.remove()
+	})
+
+	user_option_cancelar.addEventListener("click", (e) =>{
+		page_selector.remove()
+	})
+
+	return
+};//end render_persons_selector
+
 
 
 

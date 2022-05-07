@@ -185,19 +185,19 @@ const get_content_data_edit = async function(self) {
 					// get the cookie of the key
 					const av_playpause_key_value = localStorage.getItem('av_playpause_key')
 
-					const av_playpause_keyboard_code		= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
+					const av_playpause_keyboard_code						= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
 					// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
-					const av_playpause_keyboard_key			= keyboard_codes[av_playpause_keyboard_code]
-					component_text_area.av_play_pause_code	= av_playpause_keyboard_code
-					playpause_key_input.value				= av_playpause_keyboard_key
+					const av_playpause_keyboard_key							= keyboard_codes[av_playpause_keyboard_code]
+					component_text_area.context.av_player.av_play_pause_code	= av_playpause_keyboard_code
+					playpause_key_input.value								= av_playpause_keyboard_key
 
 					playpause_key_input.addEventListener('keyup', function(event){
 						const keyborard_code					= event.code
 						const keyborard_key						= event.key
 						// set the cookie of the key
 						localStorage.setItem('av_playpause_key', keyborard_code);
-						playpause_key_input.value				= keyborard_key
-						component_text_area.av_play_pause_code	= keyborard_code
+						playpause_key_input.value								= keyborard_key
+						component_text_area.context.av_player.av_play_pause_code	= keyborard_code
 					})
 				// rewind value is the time that the av rewind when is paused by the play/pause key
 				// it change the text_area default rewind time to the user has specify
@@ -228,7 +228,7 @@ const get_content_data_edit = async function(self) {
 
 					// Set value from cookie or default
 					av_rewind_secs_input.value				= secs_val
-					component_text_area.av_rewind_seconds	= secs_val
+					component_text_area.context.av_player.av_rewind_seconds	= secs_val
 
 					av_rewind_secs_input.addEventListener('change', function(event){
 						// if the key pressed is not a number use the default
@@ -238,7 +238,7 @@ const get_content_data_edit = async function(self) {
 						// set the cookie of the key
 						localStorage.setItem('av_rewind_secs', value);
 						av_rewind_secs_input.value				= value
-						component_text_area.av_rewind_seconds	= value
+						component_text_area.context.av_player.av_rewind_seconds	= value
 					})
 
 				// tag key is used to get the tc from av and insert the tag in the text_area
@@ -267,7 +267,7 @@ const get_content_data_edit = async function(self) {
 					// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
 					const tag_insert_keyboard_key			= keyboard_codes[tag_insert_keyboard_code]
 					tag_insert_key_input.value				= tag_insert_keyboard_key
-					component_text_area.av_insert_tc_code	= tag_insert_keyboard_code
+					component_text_area.context.av_player.av_insert_tc_code	= tag_insert_keyboard_code
 
 					tag_insert_key_input.addEventListener('keyup', function(event){
 						const keyborard_code					= event.code
@@ -275,7 +275,7 @@ const get_content_data_edit = async function(self) {
 						// set the cookie of the key
 						localStorage.setItem('tag_insert_key', keyborard_code);
 						tag_insert_key_input.value				= keyborard_key
-						component_text_area.av_insert_tc_code	= keyborard_code
+						component_text_area.context.av_player.av_insert_tc_code	= keyborard_code
 					})
 
 		// Subtitles
@@ -343,7 +343,7 @@ const get_content_data_edit = async function(self) {
 */
 const render_related_list = function(self){
 
-	const datum		= self.related_sections_list
+	const datum		= self.relation_list
 	const context	= datum.context
 	const data		= datum.data
 
