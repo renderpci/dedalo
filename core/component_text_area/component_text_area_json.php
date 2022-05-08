@@ -14,6 +14,7 @@
 
 	if($options->get_context===true) { //  && $permissions>0
 
+
 		switch ($options->context_type) {
 
 			case 'simple':
@@ -30,18 +31,28 @@
 				//	$context = array_merge($context, $this->get_structure_buttons($permissions));
 				break;
 		}
+		$this->context->toolbar_buttons = [];
+
 		// TAGS FOR PERSONS
 		// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
 			$properties = $this->get_properties();
 			if(isset($properties->tags_persons)){
+				$this->context->toolbar_buttons[] = 'button_person button_note';
 				$tags_persons_config = $properties->tags_persons;
-				$this->context->tags_persons = new stdClass();
+				$this->context->tags_persons = [];
 				$ar_related_sections = $this->get_ar_related_sections();
 				$this->context->ar_related_sections = $ar_related_sections;
 				foreach ($tags_persons_config as $related_section_tipo => $value) {
-					$this->context->tags_persons->$related_section_tipo = $this->get_tags_persons($related_section_tipo, $ar_related_sections);
+					$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
+					$this->context->tags_persons = array_merge($this->context->tags_persons, $ar_tags_persons);
 				}
 			}
+		//geo
+			$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $modelo_name='component_geolocation', $relation_type='termino_relacionado');
+			if(!empty($related_component_geolocation)){
+				$this->context->toolbar_buttons[] = 'button_geo button_note';
+			}
+
 		// Notes
 		// Add the section_tipo for the annotations
 			$this->context->notes_section_tipo = DEDALO_NOTES_SECTION_TIPO;
