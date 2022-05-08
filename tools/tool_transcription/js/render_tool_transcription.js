@@ -45,27 +45,12 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 			content_data : content_data
 		})
 
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
-		// 	modal.on_close	= () => {
-		// 		self.destroy(true, true, true)
-		// 		// refresh source component text area
-		// 			if (self.transcription_component) {
-		// 				self.transcription_component.refresh()
-		// 			}
-		// 	}
-		// }
-
-	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
-		// const related_list_node = render_related_list(self)
-		// wrapper.header.appendChild(related_list_node)
-
 	// transcription_options are the buttons to get access to other tools (buttons in the header)
 		const tanscription_options = await render_tanscription_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
+	// render_activity_info are the information of the activity as "Save"
+		const activity_info = render_activity_info(self)
+		wrapper.activity_info_container.appendChild(activity_info)
 
 
 	return wrapper
@@ -81,20 +66,6 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// activity alert
-		const activity_info_body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'activity_info_body',
-			parent			: fragment
-		})
-		self.events_tokens.push(
-			event_manager.subscribe('save', fn_saved)
-		)
-		function fn_saved(options){
-			const node_info = render_node_info(options)
-			activity_info_body.prepend(node_info)
-		}
-
 	// left_container
 		const left_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -104,7 +75,6 @@ const get_content_data_edit = async function(self) {
 
 		// component_text_area. render another node of component caller and append to container
 			const component_text_area = self.transcription_component || await self.get_component(self.lang)
-			component_text_area.custom_toolbar = 'button_note button_person'
 			component_text_area.render()
 			.then(function(node){
 				left_container.appendChild(node)
@@ -362,6 +332,9 @@ const render_related_list = function(self){
 
 	// select -> options
 		const sections		= data.find(el => el.typo==='sections')
+		if(!sections){
+			return fragment
+		}
 		const value			= sections.value
 		const value_length	= value.length
 		for (let i = 0; i < value_length; i++) {
@@ -503,6 +476,32 @@ const render_tanscription_options = async function(self, content_data) {
 				})
 		}
 
-
 	return fragment
 };//end render_tanscription_options
+
+
+/**
+* RENDER_ACTIVITY_INFO
+* This is used to build a optional buttons inside the header
+* @return DOM node fragment
+*/
+const render_activity_info = function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// activity alert
+		const activity_info_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_body',
+			parent			: fragment
+		})
+		self.events_tokens.push(
+			event_manager.subscribe('save', fn_saved)
+		)
+		function fn_saved(options){
+			const node_info = render_node_info(options)
+			activity_info_body.prepend(node_info)
+		}
+
+	return fragment
+}

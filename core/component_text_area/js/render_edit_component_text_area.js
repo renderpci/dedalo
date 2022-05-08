@@ -349,8 +349,8 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			// editor_config
 				const editor_config = {
 					plugins			: ['paste','image','print','searchreplace','code','noneditable'], // ,'fullscreen'
-					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+self.custom_toolbar+' button_save', // fullscreen
-					custom_buttons	: get_custom_buttons(self, i, current_text_editor),
+					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+self.context.toolbar_buttons.join(' ')+' | button_save', // fullscreen
+					custom_buttons	: get_custom_buttons(self, current_text_editor, i),
 					custom_events	: get_custom_events(self, i, current_text_editor)
 				}
 
@@ -382,6 +382,10 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		}, { threshold: [0] });
 		observer.observe(li);
 
+	// persons
+		const node_persons_list = render_persons_list(self, init_current_text_editor, i)
+		li.appendChild(node_persons_list)
+
 	// add button create fragment (Only when caller is a tool_indexation instance)
 		if (self.caller && self.caller.constructor.name==="tool_indexation") {
 
@@ -404,7 +408,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 				// 		const component_container	= li
 				// 		const button				= component_container.querySelector(".create_fragment")
-				// 		const last_tag_id			= self.get_last_tag_id(i, 'index', current_text_editor)
+				// 		const last_tag_id			= self.get_last_tag_id('index', current_text_editor)
 				// 		const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 
 				// 		const create_button = function(selection) {
@@ -465,7 +469,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 *	self data element from array of values
 * @return array custom_buttons
 */
-const get_custom_buttons = (self, i, text_editor) => {
+const get_custom_buttons = (self, text_editor, i) => {
 
 	// custom_buttons
 	const custom_buttons = []
@@ -476,12 +480,13 @@ const get_custom_buttons = (self, i, text_editor) => {
 		custom_buttons.push({
 			name	: "button_person",
 			options	: {
-				tooltip	: 'Add person',
+				tooltip	: 'Show persons list',
 				image	: '../themes/default/icons/person.svg',
 				onclick	: function(evt) {
-					// alert("Adding person !");
-					// component_text_area.load_tags_person() //ed, evt, text_area_component
-					event_manager.publish('click_button_person_'+ self.id_base, {caller: self, text_editor: text_editor})
+					event_manager.publish('toggle_persons_list_'+ self.id_base + '_' + i, {
+						caller		: self,
+						text_editor	: text_editor
+					})
 				}
 			}
 		})
@@ -493,8 +498,10 @@ const get_custom_buttons = (self, i, text_editor) => {
 				tooltip	: 'Add georef',
 				image	: '../themes/default/icons/geo.svg',
 				onclick	: function(evt) {
-					alert("Adding georef !");
-					// component_text_area.load_tags_geo(ed, evt, text_area_component) //ed, evt, text_area_component
+					event_manager.publish('create_geo_tag_'+ self.id_base, {
+						caller		: self,
+						text_editor	: text_editor
+					})
 				}
 			}
 		})
@@ -506,15 +513,10 @@ const get_custom_buttons = (self, i, text_editor) => {
 				tooltip	: 'Add note',
 				image	: '../themes/default/icons/note.svg',
 				onclick	: function(evt) {
-
-					event_manager.publish('click_button_note_'+ self.id_base, {tag: 'note', caller: self, text_editor: text_editor})
-					const tag_type 	= 'note'
-					const last_tag_id = self.get_last_tag_id(i, tag_type, text_editor)
-					const note_number = parseInt(last_tag_id) + 1
-
-					// 		const tag = build_node_tag(data_tag, tag_id)
-					// 		text_editor.set_content(tag.outerHTML)
-					component_text_area.create_new_note(ed, evt, text_area_component)
+					event_manager.publish('create_note_tag_'+ self.id_base, {
+						caller		: self,
+						text_editor	: text_editor
+					})
 				}
 			}
 		})
@@ -783,7 +785,7 @@ const get_custom_events = (self, i, text_editor) => {
 						for (let i = 0; i < susbscriptors_responses_length; i++) {
 							const data_tag 	= susbscriptors_responses[i]
 							const tag_id 	= (!data_tag.tag_id)
-								? self.get_last_tag_id(editor_content_data, data_tag.type, text_editor) + 1
+								? self.get_last_tag_id(data_tag.type, text_editor) + 1
 								: data_tag.tag_id;
 
 							switch(data_tag.type) {
@@ -1067,19 +1069,31 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 
 
 /**
-* RENDER_PERSONS_SELECTOR
+* RENDER_PERSONS_LIST
 * @return
 */
-const render_persons_selector = function(self, data_tag, tag_id, text_editor){
+const render_persons_list = function(self, text_editor, i){
 
 	const fragment = new DocumentFragment()
-
 	const ar_persons = self.context.tags_persons
 
+	console.log("ar_persons:",ar_persons);
 	const container = ui.create_dom_element({
 		element_type	: 'div',
+		class_name 		: 'hide',
 		parent			: fragment
 	})
+		console.log("(!ar_persons):",(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'), ar_persons);
+	if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'){
+		return fragment
+	}
+
+	// toggle_persons_list_ . User click over the button 'button_person'
+	self.events_tokens.push(
+		event_manager.subscribe('toggle_persons_list_' + self.id_base +'_'+i, ()=>{
+			container.classList.toggle('hide')
+		})
+	)
 
 		const label = ui.create_dom_element({
 			element_type	: 'span',
@@ -1092,21 +1106,21 @@ const render_persons_selector = function(self, data_tag, tag_id, text_editor){
 			element_type	: 'span',
 			class_name		: 'body_title',
 			text_node		: label,
-			parent			: body
+			parent			: container
 		})
 
 		const body_input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'body_title',
-			parent			: body
+			parent			: container
 		})
 
 		const error_input = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'body_title',
 			text_node		: '',
-			parent			: body
+			parent			: container
 		})
 
 
@@ -1128,32 +1142,32 @@ const render_persons_selector = function(self, data_tag, tag_id, text_editor){
 		parent			: footer
 	})
 
-	const page_selector = ui.attach_to_modal( header, body, footer)
+	// const page_selector = ui.attach_to_modal( header, body, footer)
 
-	user_option_ok.addEventListener("click", (e) =>{
-		e.preventDefault()
-		const user_value = body_input.value
-		if(user_value === null) {
-			page_selector.renove()
-		}
-		if(user_value > page_out || user_value < page_in){
-			error_input.textContent = get_label.value_out_of_range || 'Value out of range'
-			return
-		}
-		const data		= body_input.value - (offset -1)
-		data_tag.label	= body_input.value
-		data_tag.data	= "["+data+"]"
-		const tag		= build_node_tag(data_tag, tag_id)
-		text_editor.set_content(tag.outerHTML)
-		page_selector.remove()
-	})
+	// user_option_ok.addEventListener("click", (e) =>{
+	// 	e.preventDefault()
+	// 	const user_value = body_input.value
+	// 	if(user_value === null) {
+	// 		page_selector.renove()
+	// 	}
+	// 	if(user_value > page_out || user_value < page_in){
+	// 		error_input.textContent = get_label.value_out_of_range || 'Value out of range'
+	// 		return
+	// 	}
+	// 	const data		= body_input.value - (offset -1)
+	// 	data_tag.label	= body_input.value
+	// 	data_tag.data	= "["+data+"]"
+	// 	const tag		= build_node_tag(data_tag, tag_id)
+	// 	text_editor.set_content(tag.outerHTML)
+	// 	page_selector.remove()
+	// })
 
-	user_option_cancelar.addEventListener("click", (e) =>{
-		page_selector.remove()
-	})
+	// user_option_cancelar.addEventListener("click", (e) =>{
+	// 	page_selector.remove()
+	// })
 
-	return
-};//end render_persons_selector
+	return fragment
+};//end render_persons_list
 
 
 

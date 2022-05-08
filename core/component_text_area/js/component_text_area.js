@@ -40,8 +40,6 @@ export const component_text_area = function(){
 		this.events_tokens	= []
 		// this.services	= []
 
-		this.custom_toolbar = '' // add buttons to the text_area toolbar, options: button_person button_note button_geo button_reference
-
 	return true
 };//end component_text_area
 
@@ -118,6 +116,7 @@ component_text_area.prototype.init = async function(options) {
 
 				return true
 			}//end fn_create_fragment
+
 		// click_tag_index_. User click over image index tag
 			self.events_tokens.push(
 				event_manager.subscribe('click_tag_index_' + self.id_base, fn_click_tag_index)
@@ -125,7 +124,7 @@ component_text_area.prototype.init = async function(options) {
 			function fn_click_tag_index(options) {
 
 				// options
-					const tag		= options.tag // DOM tag element
+					const tag			= options.tag // DOM tag element
 					const text_editor	= options.text_editor
 
 				// fix selected tag element
@@ -133,6 +132,7 @@ component_text_area.prototype.init = async function(options) {
 
 				return true
 			}//end fn_create_fragment
+
 		// text_selection
 			self.events_tokens.push(
 				event_manager.subscribe('text_selection_'+ self.id, fn_show_button_create_fragment)
@@ -155,7 +155,7 @@ component_text_area.prototype.init = async function(options) {
 						button.remove()
 					}
 				}else{
-					const last_tag_id	= self.get_last_tag_id(key, 'index', current_text_editor)
+					const last_tag_id	= self.get_last_tag_id('index', current_text_editor)
 					const label			= (get_label.create_fragment || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 					if (!button) {
 						const create_button = function(selection) {
@@ -185,9 +185,19 @@ component_text_area.prototype.init = async function(options) {
 				return true
 			}//end fn_show_button_create_fragment
 
+		// create_note_tag_
+			self.events_tokens.push(
+				event_manager.subscribe('create_note_tag_'+ self.id_base, self.create_note_tag)
+			)
+
+		// create_geo_tag_
+			self.events_tokens.push(
+				event_manager.subscribe('create_geo_tag_'+ self.id_base, self.create_geo_tag)
+			)
+
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
-	console.log("self------//////////-----*************:",self);
+
 	return common_init
 };//end  init
 
@@ -614,7 +624,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 * 
 * @return int tag_id
 */
-component_text_area.prototype.get_last_tag_id = function(key, tag_type, text_editor) {
+component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) {
 
 	const self = this
 
@@ -740,7 +750,7 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 		}
 
 	// last_tag_id. Find last image of type index and returns id or 0
-		const last_tag_index_id = self.get_last_tag_id(key, 'index', text_editor)
+		const last_tag_index_id = self.get_last_tag_id('index', text_editor)
 
 	// create new string wrapping selection with new tags
 		// tag state. Default is 'n' (normal)
@@ -772,10 +782,11 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 };//end create_fragment
 
 
+/*	Persons
+----------------------------------------------------------------------------------------- */
 
 
-
-/*	NOTES
+/*	Notes
 ----------------------------------------------------------------------------------------- */
 
 
@@ -786,14 +797,18 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 	*
 	* @return
 	*/
-	component_text_area.prototype.create_new_note = function(key, text_editor) {
+	component_text_area.prototype.create_note_tag = function(options) {
 
 		const self = this
+		// get the text_editor sent by the event (button_note event)
+		const text_editor = options.text_editor
 
+			console.log("text_editor:---------------",text_editor);
+			return
 		// Select text editor
 		//var ed 		 	= tinyMCE.activeEditor
 		const tag_type 	= 'note'
-		const last_tag_id = self.get_last_tag_id(key, tag_type, text_editor)
+		const last_tag_id = self.get_last_tag_id(tag_type, text_editor)
 		const note_number = parseInt(last_tag_id) + 1
 
 		const trigger_vars = {
@@ -1187,4 +1202,20 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 	}//end delete_note
 
 
+/*	Geo location
+----------------------------------------------------------------------------------------- */
 
+/**
+	* CREATE_NEW_NOTE
+	* Build a new annotation when user clicks on text editor button
+	*
+	* @return
+	*/
+	component_text_area.prototype.create_geo_tag = function(options) {
+
+		const self = this
+		// get the text_editor sent by the event (button_note event)
+		const text_editor = options.text_editor
+
+			console.log("text_editor:---------------",text_editor);
+	}

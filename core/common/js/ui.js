@@ -1181,6 +1181,15 @@ export const ui = {
 					// pointer
 					wrapper.tool_buttons_container = tool_buttons_container
 
+				// activity_info_container
+					const activity_info_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'activity_info_container',
+						parent			: tool_header
+					})
+					// pointer
+					wrapper.activity_info_container = activity_info_container
+
 				// button_close (hidden inside modal)
 					const button_close = ui.create_dom_element({
 						element_type	: 'span',
