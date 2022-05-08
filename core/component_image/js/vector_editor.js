@@ -707,18 +707,19 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 	// vector editor tools
 		const buttons = []
 
+			// layer_selector_container
+				const layer_selector_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'layer_selector_container',
+					parent			: buttons_container
+				})
+
 			// layer selector
 				const layer_selector_button = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button open_layer_selector',
 					parent			: buttons_container,
 				})
-
-				const layer_selector_container = ui.create_dom_element({
-					element_type	: 'div',
-					parent 			: buttons_container,
-				})
-
 				layer_selector_button.addEventListener("mouseup", () =>{
 					// clean
 						while (layer_selector_container.firstChild) {
