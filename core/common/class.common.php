@@ -146,25 +146,21 @@ abstract class common {
 	final protected function SetAccessor(string $strMember, $strNewValue) {
 
 		if(property_exists($this, $strMember)) {
+
 			// fix value
 			$this->$strMember = $strNewValue;
 
 			return true;
 		}else{
-
 			return false;
 		}
 	}
 	# GET
 	final protected function GetAccessor(string $strMember) {
 
-		if(property_exists($this, $strMember)) {
-
-			return $this->$strMember;
-		}else{
-
-			return false;
-		}
+		return property_exists($this, $strMember)
+			? $this->$strMember
+			: false;
 	}//end GetAccessor
 
 

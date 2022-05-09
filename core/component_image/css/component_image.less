@@ -84,168 +84,186 @@
 			}
 		}//end .content_data
 
+
 		>.buttons_container {
-			// vector_editor
-				.vector_editor {
-					.fn_add_mask('vector_editor.svg');
-				}
-				// tool buttons container
-				.vector_editor_tools {
 
-					>.button {
-						background-color: #ffffff;
-					}
-
-					.layer_selector {
-						float: right;
-						width: 11em;
-						background-color: @color_orange_dedalo;
-						position: absolute;
-						right: 2em;
-						top: 0;
-						padding: 0;
-						text-align: right;
-
-						>.button {
-							margin: 0.5em;
-							float: none;
-							display: inline-block;
-							&.add {
-								float: left;
-							}
-						}
-
-						>ul.layer_ul {
-							text-align: left;
-							clear: both;
-							max-height: 200px;
-								overflow: auto;
-
-							// border: 0.5px solid #777;
-
-							>li {
-								display: grid;
-								grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
-								height: 30px;
-								align-items: center;
-								border-bottom: 1px solid #777;
-								border-left: 1px solid #777;
-								border-right: 1px solid #777;
-								cursor: pointer;
-								background-color: #ffffff;
-
-								&:hover {
-									background-color: @color_orange_dedalo;
-									color: #ffffff;
-									&.raster_layer{
-										background-color: #ffffff;
-										color: initial;
-									}
-								}
-								&:active {
-									background-color: @color_orange_dedalo;
-									color: #000;
-								}
-								&.active{
-									background-color: @color_grey_medium;
-									color: #000;
-									font-weight: bold;
-									user-select: none;
-								}
-
-								.layer_icon {
-									// .fn_build_button('eye.svg', black, 1);
-									background-color: black;
-									justify-self: center;
-									opacity: 0.2;
-									&:hover {
-										opacity: 0.5 !important;
-									}
-									&.active{
-										// background-color: unset !important;
-										opacity: 1;
-									}
-								}
-								.layer_id {
-
-								}
-								.user_layer_name {
-
-
-								}
-								.layer_delete {
-									// .fn_build_button('trash_light.svg', black, 1);
-									background-color: black;
-									justify-self: center;
-								}
-
-								.layer_color {
-									width: 12px;
-									height: 12px;
-									border-radius: 12px;
-								}
-
-							}
-							>li:first-child {
-								border-top: 0.5px solid #777;
-							}
-						}
-					}//end layer_selector
-
-					.open_layer_selector {
-						text-align: center;
-						border-radius: 2px;
-						width: calc(100% - 0.6em);
-						margin-left: 0.3em;
-						height: 1.25em;
-						line-height: 1.25em;
-						&.vector_tool_active {
-							background-color: #FFFFFF;
-						}
-					}
-					.pointer {
-						.fn_add_mask('pointer.svg');
-					}
-					.pointer_alt {
-						.fn_add_mask('pointer_alt.svg');
-					}
-					.transform {
-						.fn_add_mask('pointer.svg');
-					}
-					.rectangle {
-						.fn_add_mask('rectangle.svg');
-					}
-					.circle {
-						.fn_add_mask('circle.svg');
-					}
-					.vector {
-						.fn_add_mask('vector.svg');
-					}
-					.zoom {
-						.fn_add_mask('find.svg');
-					}
-					.move {
-						.fn_add_mask('hand.svg');
-					}
-					.save {
-						// .fn_build_button('save.svg', black, 1);
-						// background-color: #000000;
-					}
-					.button_color_picker {
-						// .fn_build_button('rectangle.svg', black, 1);
-						border: 0.5px solid #3F3F3F;
-					}
-					.color_wheel_contaniner{
-						float: right;
-					}
-
-					.vector_tool_active {
-						opacity: 1;
-						background-color: black;
-					}
-				}//end vector-editor_tools
+			// button vector_editor
+			.vector_editor {
+				.fn_add_mask('vector_editor.svg');
+			}
 		}//end .buttons_container
 
 	}//end .edit
+}//end .component_image
 
-}
+
+.vector_editor_tools {
+	background-color: @color_orange_dedalo;
+	width: 2.25rem;
+	text-align: center;
+	position: absolute;
+	right: 0;
+
+	>.button {
+		background-color: #ffffff;
+
+		&.open_layer_selector {
+			text-align: center;
+			border-radius: 2px;
+			width: calc(100% - 4px);
+			height: 1.6rem;
+			line-height: 1.25em;
+			margin: 2px!important;
+			display: block;
+			line-height: 1.5rem;
+
+			&.vector_tool_active {
+				// background-color: #FFFFFF !important;
+				// opacity: 1;
+				// background-color: black;
+			}
+		}
+
+		&.pointer {
+			.fn_add_mask('pointer.svg');
+		}
+		&.pointer_alt {
+			.fn_add_mask('pointer_alt.svg');
+		}
+		&.transform {
+			.fn_add_mask('pointer.svg');
+		}
+		&.rectangle {
+			.fn_add_mask('rectangle.svg');
+		}
+		&.circle {
+			.fn_add_mask('circle.svg');
+		}
+		&.vector {
+			.fn_add_mask('vector.svg');
+		}
+		&.zoom {
+			.fn_add_mask('find.svg');
+		}
+		&.move {
+			.fn_add_mask('hand.svg');
+		}
+		&.save {
+			// .fn_build_button('save.svg', black, 1);
+			// background-color: #000000;
+		}
+		&.button_color_picker {
+			// .fn_build_button('rectangle.svg', black, 1);
+			border: 0.5px solid #3F3F3F;
+		}
+
+		&.vector_tool_active {
+			opacity: 1;
+			background-color: #000000 !important;
+		}
+	}//end buttons
+
+
+	>.layer_selector_container {
+		display: block;
+		position: absolute;
+		top: 0px;
+
+		>.layer_selector {
+			width: 11em;
+			background-color: @color_orange_dedalo;
+			position: absolute;
+			right: 0;
+			top: 27px;
+			padding: 0;
+			text-align: right;
+
+			>.button {
+				margin: 0.5em;
+				float: none;
+				display: inline-block;
+				&.add {
+					float: left;
+				}
+			}
+
+			>ul.layer_ul {
+				text-align: left;
+				clear: both;
+				max-height: 200px;
+				overflow: auto;
+				// border: 0.5px solid #777;
+
+				>li {
+					display: grid;
+					grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
+					height: 30px;
+					align-items: center;
+					border-bottom: 1px solid #777;
+					border-left: 1px solid #777;
+					border-right: 1px solid #777;
+					cursor: pointer;
+					background-color: #ffffff;
+
+					&:hover {
+						background-color: @color_orange_dedalo;
+						color: #ffffff;
+						&.raster_layer{
+							background-color: #ffffff;
+							color: initial;
+						}
+					}
+					&:active {
+						background-color: @color_orange_dedalo;
+						color: #000;
+					}
+					&.active{
+						background-color: @color_grey_medium;
+						color: #000;
+						font-weight: bold;
+						user-select: none;
+					}
+
+					.layer_icon {
+						// .fn_build_button('eye.svg', black, 1);
+						background-color: black;
+						justify-self: center;
+						opacity: 0.2;
+						&:hover {
+							opacity: 0.5 !important;
+						}
+						&.active{
+							// background-color: unset !important;
+							opacity: 1;
+						}
+					}
+					.layer_id {
+
+					}
+					.user_layer_name {
+
+					}
+					.layer_delete {
+						// .fn_build_button('trash_light.svg', black, 1);
+						background-color: black;
+						justify-self: center;
+					}
+					.layer_color {
+						width: 12px;
+						height: 12px;
+						border-radius: 12px;
+					}
+				}
+				>li:first-child {
+					border-top: 0.5px solid #777;
+				}
+			}
+		}//end layer_selector
+	}
+
+	>.color_wheel_contaniner {
+		display: block;
+		position: absolute;
+		right: 0;
+	}
+}//end vector-editor_tools

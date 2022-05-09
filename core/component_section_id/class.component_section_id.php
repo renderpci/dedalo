@@ -46,7 +46,7 @@ class component_section_id extends component_common {
 	* The relation components will separate the locator in rows
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_NOLAN, $ddo=null) {
+	public function get_value(string $lang=DEDALO_DATA_NOLAN, object $ddo=null) {
 
 		if(isset($this->column_obj)){
 			$column_obj = $this->column_obj;
@@ -90,7 +90,7 @@ class component_section_id extends component_common {
 	* @param object $query_object
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql( object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object {
 
 		// reset array value
 		$query_object->q = is_array($query_object->q)
@@ -228,7 +228,7 @@ class component_section_id extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'...'	=> 'entre',

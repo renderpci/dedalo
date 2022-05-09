@@ -22,7 +22,7 @@ class component_select extends component_relation_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {
+	public function get_valor(string $lang=DEDALO_DATA_LANG) {
 
 		$dato = $this->get_dato();
 

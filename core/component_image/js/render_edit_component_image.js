@@ -226,7 +226,7 @@ const get_buttons = (self) => {
 
 	// svg editor tools
 		const vector_editor_tools = ui.create_dom_element({
-			element_type	: 'span',
+			element_type	: 'div',
 			class_name		: 'vector_editor_tools hide',
 			parent			: fragment
 		})
@@ -234,15 +234,15 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
+		buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
-		})
-		buttons_fold.appendChild(fragment)
+		// const buttons_fold = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'buttons_fold',
+		// 	parent			: buttons_container
+		// })
+		// buttons_fold.appendChild(fragment)
 
 
 	return buttons_container

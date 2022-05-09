@@ -4,7 +4,7 @@ class Accessors {
 
 
 	# ACCESSORS
-	public function __call(string $strFunction, array $arArguments) {
+	final public function __call(string $strFunction, array $arArguments) {
 
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
@@ -26,23 +26,7 @@ class Accessors {
 
 			// fix property value
 			$this->$strMember = $strNewValue;
-			/*
-			if(is_numeric($strNewValue)) {
-				#eval(' $this->' . $strMember .'=' . $strNewValue . ';');
-				$this->$strMember = $strNewValue;
-			}elseif(is_string($strNewValue)) {
-				# stripslashes and addslashes text values
-				#$strNewValue = stripslashes($strNewValue);
-				#$strNewValue = addslashes($strNewValue);
-				$this->$strMember = $strNewValue;
-			}elseif(is_object($strNewValue)) {
-				#dump($strNewValue);
-				#trigger_error("Error trying set var $this->$strMember to no string/numeric value var_export($strNewValue,false); ");
-				##die();
-			}else{
-				$this->$strMember = $strNewValue;
-			}
-			*/
+
 			return true;
 		}else{
 			return false;
@@ -51,13 +35,9 @@ class Accessors {
 	# GET
 	private function GetAccessor(string $strMember) {
 
-		if(property_exists($this, $strMember)) {
-
-			return $this->$strMember;
-
-		}else{
-			return false;
-		}
+		return property_exists($this, $strMember)
+			? $this->$strMember
+			: false;
 	}//end GetAccessor
 
 

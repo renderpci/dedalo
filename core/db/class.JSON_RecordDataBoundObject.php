@@ -729,47 +729,27 @@ abstract class JSON_RecordDataBoundObject {
 
 	# ACCESSORS CALL
 	final public function __call(string $strFunction, array $arArguments) {
-		#echo "call ok $strFunction - $arArguments";
+
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
 		switch($strMethodType) {
 			case 'set_' : return($this->SetAccessor($strMethodMember, $arArguments[0]));	break;
 			case 'get_' : return($this->GetAccessor($strMethodMember));						break;
 		}
-		return(false);
+		return false;
 	}
 	# ACCESSORS SET
 	private function SetAccessor(string $strMember, $strNewValue) {
 
 		if(property_exists($this, $strMember)) {
 
-			if(is_null($strNewValue)) {
-				$this->$strMember = $strNewValue;
-
-			}elseif(is_numeric($strNewValue)) {
-				#eval(' $this->' . $strMember .'=' . $strNewValue . ';');
-				$this->$strMember = $strNewValue;
-
-			}elseif(is_string($strNewValue)) {
-				/*
-				# stripslashes and addslashes text values
-				if(is_string($strNewValue)) {
-					$strNewValue = stripslashes($strNewValue);
-					$strNewValue = stripslashes($strNewValue);
-					$strNewValue = addslashes($strNewValue);
-				}
-				*/
-				#eval(' $this->' . $strMember .'="' . $strNewValue . '";');
-				$this->$strMember = "$strNewValue";
-
-			}else{
-				$this->$strMember = $strNewValue;
-			}
+			$this->$strMember = $strNewValue;
 
 			$this->arModifiedRelations[$strMember] = 1;
 
+			return true;
 		}else{
-			return(false);
+			return false;
 		}
 	}
 	# ACCESSORS GET
@@ -778,18 +758,12 @@ abstract class JSON_RecordDataBoundObject {
 		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
-		if(property_exists($this, $strMember)) {
 
-			return $this->$strMember;
-
-		}else{
-
-			return false;
-		}
+		return property_exists($this, $strMember)
+			? $this->$strMember
+			: false;
 	}//end GetAccessor
 
 
 
 }//end class JSON_RecordDataBoundObject
-
-
