@@ -55,7 +55,7 @@ class ts_object extends Accessors {
 	* GET_HTML
 	* @return string $html
 	*/
-	public function get_html() {
+	public function get_html() : string {
 
 		#if(SHOW_DEBUG===true) $start_time = start_time();
 
@@ -672,7 +672,7 @@ class ts_object extends Accessors {
 	* GET_COMPONENT_ORDER_TIPO
 	* @return string|null $element_tipo
 	*/
-	public static function get_component_order_tipo( string $section_tipo ) {
+	public static function get_component_order_tipo( string $section_tipo ) : ?string {
 
 		# Calculated way
 		$element_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'order' );

@@ -451,40 +451,47 @@ class component_iri extends component_common {
 	}//end resolve_query_object_sql
 
 
+
 	/**
 	* GET_DIFFUSION_VALUE
 	* If index var is received, return dato element corresponding to this index if exists
-	* @return string $valor
+	* @return string|null $valor
 	*/
-	public function get_diffusion_value( $lang=DEDALO_DATA_LANG ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato = $this->get_dato();
+		if (!empty($dato)) {
 
-		$ar_values = [];
-		foreach ($dato as $key => $value) {
-			if(empty($value)) continue;
+			$ar_values = [];
+			foreach ($dato as $key => $value) {
+				if(empty($value)) continue;
 
-			$ar_parts = [];
-			if (!empty($value->title)) {
-				$ar_parts[] = $value->title;
+				$ar_parts = [];
+				if (!empty($value->title)) {
+					$ar_parts[] = $value->title;
+				}
+				if (!empty($value->iri)) {
+					$ar_parts[] = $value->iri;
+				}
+				$ar_values[] = implode(', ', $ar_parts);
 			}
-			if (!empty($value->iri)) {
-				$ar_parts[] = $value->iri;
-			}
-			$ar_values[] = implode(', ', $ar_parts);
+
+			$diffusion_value = implode(' | ', $ar_values);
+		}else{
+			$diffusion_value = null;
 		}
-
-		$diffusion_value = implode(' | ', $ar_values);
 
 		return $diffusion_value;
 	}//end get_diffusion_value
+
+
 
 	/**
 	* SEARCH_OPERATORS_INFO
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null

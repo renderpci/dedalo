@@ -143,7 +143,7 @@ abstract class common {
 		return(false);
 	}
 	# SET
-	final protected function SetAccessor(string $strMember, $strNewValue) {
+	final protected function SetAccessor(string $strMember, $strNewValue) : bool {
 
 		if(property_exists($this, $strMember)) {
 
@@ -217,7 +217,7 @@ abstract class common {
 	/**
 	* SET_PERMISSIONS
 	*/
-	public function set_permissions( $number ) {
+	public function set_permissions( $number ) : int {
 		$this->permissions = (int)$number;
 	}//end set_permissions
 

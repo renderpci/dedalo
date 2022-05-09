@@ -1913,16 +1913,18 @@ abstract class component_common extends common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		# Default behaviour is get value
 		$diffusion_value = $this->get_valor( $lang );
 
 		# strip_tags all values (remove untranslate mark elements)
-		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
+		$diffusion_value = !empty($diffusion_value)
+			? preg_replace("/<\/?mark>/", "", $diffusion_value)
+			: null;
 
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 
