@@ -332,6 +332,7 @@ const render_related_list = function(self){
 
 	// select -> options
 		const sections		= data.find(el => el.typo==='sections')
+		//if the section is not called by other sections (related sections) return empty node
 		if(!sections){
 			return fragment
 		}
