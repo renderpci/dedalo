@@ -1077,13 +1077,16 @@ const render_persons_list = function(self, text_editor, i){
 	const fragment = new DocumentFragment()
 	const ar_persons = self.context.tags_persons
 
-	console.log("ar_persons:",ar_persons);
 	const container = ui.create_dom_element({
 		element_type	: 'div',
 		class_name 		: 'hide',
 		parent			: fragment
 	})
-		console.log("(!ar_persons):",(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'), ar_persons);
+	console.log("(!ar_persons):",ar_persons);
+	// console.log("self.context.ar_related_sections:",self.context.related_sections);
+
+	console.log("(!ar_related_sections_json):",self.context.related_sections_json);
+
 	if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'){
 		return fragment
 	}

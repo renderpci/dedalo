@@ -1713,7 +1713,9 @@ class component_text_area extends component_common {
 	* get the ar_related_section object to use for persons tags
 	* @return
 	*/
-	public function get_ar_related_sections() {
+	public function get_related_sections() {
+
+		$related_section = new stdClass;
 
 		$current_locator	= new locator();
 			$current_locator->section_tipo	= $this->section_tipo;
@@ -1726,18 +1728,22 @@ class component_text_area extends component_common {
 			$sqo->filter_by_locators	= [$current_locator];
 
 		// sections
-		$related_sections = sections::get_instance(null, $sqo, $this->tipo, 'related', $this->lang);
-		$inverse_sections	= $related_sections->get_dato();
+		$related_sections = sections::get_instance(null, $sqo, $this->tipo, 'related_list', $this->lang);
+		// if($get_json){
+			$related_section	= $related_sections->get_json();
+		// }else{
+		// 	$inverse_sections	= $related_sections->get_dato();
 
-		$ar_related_section = [];
-		foreach ($inverse_sections as $current_section) {
-			$related_locator = new locator();
-				$related_locator->section_id	= $current_section->section_id;
-				$related_locator->section_tipo	= $current_section->section_tipo;
-			$ar_related_section[] = $related_locator;
-		}
+		// 	$related_section->data = [];
+		// 	foreach ($inverse_sections as $current_section) {
+		// 		$related_locator = new locator();
+		// 			$related_locator->section_id	= $current_section->section_id;
+		// 			$related_locator->section_tipo	= $current_section->section_tipo;
+		// 		$related_section->data[] = $related_locator;
+		// 	}
+		// }
 
-		return $ar_related_section;
+		return $related_section;
 	}//end get_ar_related_sections
 
 	/**
@@ -1778,7 +1784,7 @@ class component_text_area extends component_common {
 			}else{
 				# Recalculate indirectly
 				# ar_references is an array of section_id
-				$ar_references = array_filter($ar_related_sections, function($element)use ($related_section_tipo){
+				$ar_references = array_filter($ar_related_sections, function($element) use($related_section_tipo){
 					return $element->section_tipo === $related_section_tipo;
 				}); //$this->get_ar_tag_references($obj_value->section_tipo, $obj_value->component_tipo);
 				if (empty($ar_references)) {
