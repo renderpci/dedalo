@@ -1246,16 +1246,16 @@ class component_image extends component_media_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT);
 
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 
@@ -1265,7 +1265,7 @@ class component_image extends component_media_common {
 	* If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
 	* Used in tool_upload postprocessing file
 	*/
-	public static function build_standard_image_format($uploaded_file_path) {
+	public static function build_standard_image_format(string $uploaded_file_path) : string {
 
 		$f_extension = strtolower(pathinfo($uploaded_file_path, PATHINFO_EXTENSION));
 		if ($f_extension!==DEDALO_IMAGE_EXTENSION) {

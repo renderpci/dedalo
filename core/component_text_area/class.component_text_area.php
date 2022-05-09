@@ -1602,23 +1602,26 @@ class component_text_area extends component_common {
 	}//end get_diffusion_obj
 
 
+
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value($lang=null) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$diffusion_value = $this->get_dato();  # Important: use raw text (!)
+		$dato = $this->get_dato();  # Important: use raw text (!)
 
 		// Decode entities
-			$diffusion_value = html_entity_decode($diffusion_value);
+			$diffusion_value = isset($dato[0]) && !empty($dato[0])
+				? html_entity_decode($dato[0])
+				: null;
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

@@ -1204,7 +1204,7 @@ class login extends common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context(int $permissions=1, bool $add_rqo=false, callable $callback=null) : object {
+	public function get_structure_context(int $permissions=1, bool $add_request_config=false, callable $callback=null) : object {
 
 		// short vars
 			$model			= 'login';
