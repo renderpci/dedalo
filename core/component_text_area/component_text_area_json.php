@@ -31,37 +31,53 @@
 				//	$context = array_merge($context, $this->get_structure_buttons($permissions));
 				break;
 		}
-		$this->context->toolbar_buttons = [];
 
-		// TAGS FOR PERSONS
-		// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
-			$properties = $this->get_properties();
-			if(isset($properties->tags_persons)){
-				$this->context->toolbar_buttons[] = 'button_person button_note';
-				$tags_persons_config = $properties->tags_persons;
-				$this->context->tags_persons = [];
-				$ar_related_sections = $this->get_ar_related_sections();
-				$this->context->ar_related_sections = $ar_related_sections;
-				foreach ($tags_persons_config as $related_section_tipo => $value) {
-					$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
-					$this->context->tags_persons = array_merge($this->context->tags_persons, $ar_tags_persons);
-				}
-			}
-		//geo
-			$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $modelo_name='component_geolocation', $relation_type='termino_relacionado');
-			if(!empty($related_component_geolocation)){
-				$this->context->toolbar_buttons[] = 'button_geo button_note';
-			}
+		switch ($modo) {
+			case 'edit':
+				$this->context->toolbar_buttons = [];
 
-		// Notes
-		// Add the section_tipo for the annotations
-			$this->context->notes_section_tipo = DEDALO_NOTES_SECTION_TIPO;
+				// TAGS FOR PERSONS
+				// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
+					$properties = $this->get_properties();
+					if(isset($properties->tags_persons)){
+						$this->context->toolbar_buttons[] = 'button_person button_note';
+						$tags_persons_config = $properties->tags_persons;
+						$this->context->tags_persons = [];
 
-		// Av Player
-			$this->context->av_player = new stdClass();
-			$this->context->av_player->av_play_pause_code	= 'Escape'; 	// ESC
-			$this->context->av_player->av_insert_tc_code	= 'F2';	// F2
-			$this->context->av_player->av_rewind_seconds 	= 3;
+						$related_sections_json = $this->get_related_sections();
+							$this->context->related_sections_json = $related_sections_json;
+
+						$obj_data_sections = array_find($related_sections_json->data, function($element){
+							return $element->typo === 'sections';
+						});
+						$ar_related_sections = $obj_data_sections->value ?? [];
+						foreach ($tags_persons_config as $related_section_tipo => $value) {
+							$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
+							$this->context->tags_persons = array_merge($this->context->tags_persons, $ar_tags_persons);
+						}
+					}
+				//geo
+					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $modelo_name='component_geolocation', $relation_type='termino_relacionado');
+					if(!empty($related_component_geolocation)){
+						$this->context->toolbar_buttons[] = 'button_geo button_note';
+					}
+
+				// Notes
+				// Add the section_tipo for the annotations
+					$this->context->notes_section_tipo = DEDALO_NOTES_SECTION_TIPO;
+
+				// Av Player
+					$this->context->av_player = new stdClass();
+					$this->context->av_player->av_play_pause_code	= 'Escape'; 	// ESC
+					$this->context->av_player->av_insert_tc_code	= 'F2';	// F2
+					$this->context->av_player->av_rewind_seconds 	= 3;
+				break;
+
+			default:
+				break;
+		}
+
+
 
 		$context[]		= $this->context;
 	}//end if($options->get_context===true)

@@ -171,7 +171,7 @@ tool_transcription.prototype.load_relation_list = async function() {
 	const sqo = {
 		section_tipo		: ['all'],
 		mode				: 'related',
-		limit				: 1,
+		// limit				: 1,
 		offset				: 0,
 		full_count			: false,
 		filter_by_locators	: [{
@@ -191,7 +191,7 @@ tool_transcription.prototype.load_relation_list = async function() {
 		const api_response			= await current_data_manager.request({body:rqo})
 
 	const datum = api_response.result
-
+	console.log("datum:-------------------------------------",datum);
 	return datum
 };//end load_relation_list
 
