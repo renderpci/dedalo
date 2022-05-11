@@ -46,7 +46,7 @@ export const tool_transcription = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_transcription.prototype.render		= common.prototype.render
+	tool_transcription.prototype.render		= tool_common.prototype.render
 	tool_transcription.prototype.destroy	= common.prototype.destroy
 	tool_transcription.prototype.refresh	= common.prototype.refresh
 	tool_transcription.prototype.edit		= render_tool_transcription.prototype.edit
@@ -86,19 +86,25 @@ tool_transcription.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
+	try {
 
-	// media_component. fix media_component for convenience
-		const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="media_component")
-		self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+		// media_component. fix media_component for convenience
+			const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="media_component")
+			self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
 
-	// transcription_component. fix transcription_component for convenience
-		const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
-		self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
+		// transcription_component. fix transcription_component for convenience
+			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
+			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
 
-	// relation_list. load_relation_list. Get the relation list.
-	// This is used to build a select element to allow
-	// user select the top_section_tipo and top_section_id of current indexation
-		self.relation_list = await self.load_relation_list()
+		// relation_list. load_relation_list. Get the relation list.
+		// This is used to build a select element to allow
+		// user select the top_section_tipo and top_section_id of current indexation
+			self.relation_list = await self.load_relation_list()
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build
