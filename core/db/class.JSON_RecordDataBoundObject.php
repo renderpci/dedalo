@@ -525,7 +525,8 @@ abstract class JSON_RecordDataBoundObject {
 				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
 				default :
 					if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)
-						$strQuery .= 'AND "'.$key.'"='.$value.' ';
+						// $strQuery .= 'AND "'.$key.'"='.$value.' ';
+						$strQuery .= 'AND '.$key.'='.$value.' ';
 					}else{
 						if(SHOW_DEBUG===true) {
 							if( !is_string($value) ) {
@@ -534,7 +535,8 @@ abstract class JSON_RecordDataBoundObject {
 							}
 						}
 						$value = pg_escape_string(DBi::_getConnection(), $value);
-						$strQuery .= 'AND "'.$key.'"=\''.$value.'\' ';
+						// $strQuery .= 'AND "'.$key.'"=\''.$value.'\' ';
+						$strQuery .= 'AND '.$key.'=\''.$value.'\' ';
 					}
 					break;
 			}#end switch(true)
@@ -555,7 +557,7 @@ abstract class JSON_RecordDataBoundObject {
 		}
 
 		$strQuery = 'SELECT '.$strPrimaryKeyName.' AS key FROM "'.$this->strTableName.'" WHERE '. $strQuery .' '. $strQuery_limit;
-			#dump($strQuery,'strQuery');
+			// error_log('---- $strQuery:'.$strQuery);
 			#debug_log(__METHOD__." $strQuery ".to_string($strQuery), logger::DEBUG);
 
 		# CACHE : Static var
