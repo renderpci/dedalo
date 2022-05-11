@@ -2477,7 +2477,7 @@ class component_text_area extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'*'			=> 'no_vacio', // not null
@@ -2500,7 +2500,7 @@ class component_text_area extends component_common {
 	* UPDATE_DATO_VERSION
 	*
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) {
 
 		$options = new stdClass();
 			$options->update_version	= null;
