@@ -1727,13 +1727,12 @@ class component_text_area extends component_common {
 			$sqo->full_count			= false;
 			$sqo->filter_by_locators	= [$current_locator];
 
-		// sections
+		// sections. Get the related_list of the related sections it include some information component to identify the related section.
 		$related_sections = sections::get_instance(null, $sqo, $this->tipo, 'related_list', $this->lang);
-		// if($get_json){
-			$related_section	= $related_sections->get_json();
-		// }else{
-		// 	$inverse_sections	= $related_sections->get_dato();
+		$related_section	= $related_sections->get_json();
 
+		// optional version with only data... deactivate to get the related_list with more information about the related sections than locator
+		// 	$inverse_sections	= $related_sections->get_dato();
 		// 	$related_section->data = [];
 		// 	foreach ($inverse_sections as $current_section) {
 		// 		$related_locator = new locator();
@@ -1741,7 +1740,7 @@ class component_text_area extends component_common {
 		// 			$related_locator->section_tipo	= $current_section->section_tipo;
 		// 		$related_section->data[] = $related_locator;
 		// 	}
-		// }
+
 
 		return $related_section;
 	}//end get_ar_related_sections
