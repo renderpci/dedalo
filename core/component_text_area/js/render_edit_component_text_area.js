@@ -51,8 +51,8 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// add events
@@ -306,13 +306,14 @@ const get_buttons = (self) => {
 * GET_INPUT_ELEMENT
 * @return DOM element li
 */
-const get_input_element = (i, current_value, self, is_inside_tool) => {
+const get_input_element = (i, current_value, self) => {
 
 	const mode = self.mode
-	// value is a raw html without parse into nodes (txt format)
-	const value = self.tags_to_html(current_value)
 
-		// li container
+	// value is a raw html without parse into nodes (txt format)
+		const value = self.tags_to_html(current_value)
+
+	// li container
 		const li = ui.create_dom_element({
 			element_type : 'li'
 		})
@@ -754,20 +755,21 @@ const get_custom_events = (self, i, text_editor) => {
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
 			// user text selection event
-				const selection = options.selection
-				event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
+			const selection = options.selection
+			event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
 		};//end MouseUp
 
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
 			// use the observe property into ontology of the components to suscribe to this events
-	console.log("evt.code:",evt.code);
+			console.log("evt.code:",evt.code);
 			switch( true ){
 
 				// 'Escape'
 				case  evt.code === self.context.av_player.av_play_pause_code:
 					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.av_player.av_rewind_seconds)
 					break;
+
 				// 'F2'
 				case evt.code === self.context.av_player.av_insert_tc_code:
 					// publish event and receive susbscriptors responses
@@ -802,13 +804,13 @@ const get_custom_events = (self, i, text_editor) => {
 									text_editor.set_content(tag.outerHTML)
 							}// end switch
 						}
-					break;
+						break;
 					case evt.ctrlKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
 
-						const number = evt.code.match(/\d+/g);
+						const number	= evt.code.match(/\d+/g);
 						const person	= self.context.tags_persons[number[0]]
 
-					break;
+						break;
 			}
 		};//end KeyUp
 
@@ -1071,47 +1073,54 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 		page_selector.remove()
 	})
 
+
 	return
 };//end render_page_selector
 
 
+
 /**
 * RENDER_PERSONS_LIST
-* @return
+* @return DOM node fragment
 */
 const render_persons_list = function(self, text_editor, i){
 
-	const fragment		= new DocumentFragment()
-	const ar_persons	= self.context.tags_persons
+	// short vars
+		const ar_persons	= self.context.tags_persons
+		const datum			= self.context.related_sections
+		const context		= datum.context
+		const data			= datum.data
+		console.log("(!ar_persons):",ar_persons);
 
-	const container = ui.create_dom_element({
-		element_type	: 'div',
-		class_name 		: 'hide',
-		parent			: fragment
-	})
 
-	const label_container = ui.create_dom_element({
+	const fragment = new DocumentFragment()
+
+	// persons_list_container
+		const persons_list_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'persons_list_container hide',
+			parent			: fragment
+		})
+
+	// label
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name 		: 'label',
 			text_node 		: get_label.persons || 'Persons',
-			parent			: container
+			parent			: persons_list_container
 		})
-	console.log("(!ar_persons):",ar_persons);
 
-	// if ar_persons is empty stop and return the fragment
-	if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'){
-		return fragment
-	}
 
-	const datum		= self.context.related_sections
-	const context	= datum.context
-	const data		= datum.data
+	// if ar_persons is empty, stop and return the fragment
+		if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'){
+			return fragment
+		}
 
-	const sections	= data.find(el => el.typo==='sections')
-
-	if(!sections){
-		return fragment
-	}
+	// person sections
+		const sections	= data.find(el => el.typo==='sections')
+		if(!sections){
+			return fragment
+		}
 
 	const value			= sections.value
 	const value_length	= value.length
@@ -1120,10 +1129,10 @@ const render_persons_list = function(self, text_editor, i){
 	for (let i = 0; i < value_length; i++) {
 
 		const section_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'section_container',
-				parent			: container
-			})
+			element_type	: 'div',
+			class_name 		: 'section_container',
+			parent			: persons_list_container
+		})
 
 		const current_locator = {
 			section_top_tipo	: value[i].section_tipo,
@@ -1193,18 +1202,17 @@ const render_persons_list = function(self, text_editor, i){
 				self.insert_person_image(ed, current_person.tag_id, current_person.state, current_person.label, current_person.data, evt)
 
 				// Close persons selector
-				container.classList.toggle('hide')
+				persons_list_container.classList.toggle('hide')
 			});
-		}
-
-	}//end for
+		}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
+	}//end for (let i = 0; i < value_length; i++)
 
 	// toggle_persons_list_ . User click over the button 'button_person'
-	self.events_tokens.push(
-		event_manager.subscribe('toggle_persons_list_' + self.id_base +'_'+i, ()=>{
-			container.classList.toggle('hide')
-		})
-	)
+		self.events_tokens.push(
+			event_manager.subscribe('toggle_persons_list_' + self.id_base +'_'+i, ()=>{
+				persons_list_container.classList.toggle('hide')
+			})
+		)
 
 
 
