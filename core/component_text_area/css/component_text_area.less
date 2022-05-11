@@ -118,30 +118,39 @@
 						line-height: 1.4rem;
 						border: 1px solid #f78a1c;
 
-						.section_container {
-							margin-bottom: 0.5rem;
-
-							>.label {
-								font-weight: bold;
-							}
-						}
-
 						>.label {
 							font-weight: bold;
 							margin-bottom: 0.5rem;
 							display: block;
-							font-size: 1.3rem;
+							font-size: 1.5rem;
 							border-bottom: 1px solid #c8c8c8ee;
 							padding-bottom: 0.5rem;
 						}
 
-						img.person {
-							height: 1.2rem;
-						}
-					}
-				}
-			}
-		}
+						.section_container {
+							border-bottom: 1px solid #e4e4e4;
+							line-height: 2rem;
+
+							>.label {
+								font-weight: bold;
+								font-size: 1.15rem;
+							}
+
+							>.person_container {
+								padding-left: 1rem;
+								display: flex;
+								align-items: center;
+
+								>img.person  {
+									height: 1.2rem;
+									margin-right: 0.5rem;
+								}
+							}
+						}//end .section_container
+					}//end .persons_list_container
+				}//end >li
+			}//end >.inputs_container
+		}//end >.content_data
 	}//end .edit
 
 	&.list {

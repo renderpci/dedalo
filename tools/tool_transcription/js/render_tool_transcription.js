@@ -48,6 +48,7 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 	// transcription_options are the buttons to get access to other tools (buttons in the header)
 		const tanscription_options = await render_tanscription_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
+
 	// render_activity_info are the information of the activity as "Save"
 		const activity_info = render_activity_info(self)
 		wrapper.activity_info_container.appendChild(activity_info)
@@ -73,226 +74,231 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-		// component_text_area. render another node of component caller and append to container
-			const component_text_area = self.transcription_component || await self.get_component(self.lang)
-			component_text_area.render()
-			.then(function(node){
-				left_container.appendChild(node)
-			})
+	// component_text_area. render another node of component caller and append to container
+		const component_text_area = self.transcription_component || await self.get_component(self.lang)
+		component_text_area.render()
+		.then(function(node){
+			left_container.appendChild(node)
+		})
 
-	// component right_container
+	// right_container
 		const right_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'right_container',
 			parent 			: fragment
 		})
-		self.media_component.mode = 'player'
-		const media_component_node = await self.media_component.render();
 
+	// media_component
+		self.media_component.mode = 'player'
+		await self.media_component.build(true)
+		const media_component_node = await self.media_component.render();
 		right_container.appendChild(media_component_node)
 
-		// Slider for control audiovisual speed
-			const slider_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'slider_container',
-				parent 			: right_container
+	// slider for control audiovisual speed
+		const slider_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'slider_container',
+			parent 			: right_container
+		})
+		const slider_label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'slider_label',
+			inner_html 		: get_label.play_speed || 'Play speed',
+			parent 			: slider_container
+		})
+		const slider = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'slider',
+			parent 			: slider_container
+		})
+			const output = ui.create_dom_element({
+				element_type	: 'output',
+				class_name		: 'speed_range_value',
+				parent			: slider,
+				value 			: 1
 			})
-			const slider_label = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'slider_label',
-				inner_html 		: get_label.play_speed || 'Play speed',
-				parent 			: slider_container
-			})
-			const slider = ui.create_dom_element({
-				element_type	: 'div',
+			const range = ui.create_dom_element({
+				element_type	: 'input',
 				class_name 		: 'slider',
-				parent 			: slider_container
+				type 			: 'range',
+				parent 			: slider
 			})
-				const output = ui.create_dom_element({
-					element_type	: 'output',
-					class_name		: 'speed_range_value',
-					parent			: slider,
-					value 			: 1
+			range.value = output.value
+			range.min = 0
+			range.max = 2
+			range.step = 0.1
+			range.addEventListener('change', function(){
+				output.value = range.value
+				self.media_component.set_playback_rate(range.value)
+			})
+
+	// Inputs options for keyboard control and rewind controls
+		const transcription_keys = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'transcription_keys',
+			parent 			: right_container
+		})
+		// play / pause key used to stop and rewind the video, it change the text_area default key to the users specify
+			const playpause_key = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'playpause_key',
+				parent 			: transcription_keys
+			})
+				const playpause_key_label = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'label',
+					inner_html		: get_label.play_pause_key || 'Play/pause key',
+					parent			: playpause_key
 				})
-				const range = ui.create_dom_element({
+				const playpause_key_input = ui.create_dom_element({
 					element_type	: 'input',
-					class_name 		: 'slider',
-					type 			: 'range',
-					parent 			: slider
-				})
-				range.value = output.value
-				range.min = 0
-				range.max = 2
-				range.step = 0.1
-				range.addEventListener('change', function(){
-					output.value = range.value
-					self.media_component.set_playback_rate(range.value)
-				})
-
-		// Inputs options for keyboard control and rewind controls
-			const transcription_keys = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'transcription_keys',
-				parent 			: right_container
-			})
-			// play / pause key used to stop and rewind the video, it change the text_area default key to the users specify
-				const playpause_key = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'playpause_key',
-					parent 			: transcription_keys
-				})
-					const playpause_key_label = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'label',
-						inner_html		: get_label.play_pause_key || 'Play/pause key',
-						parent			: playpause_key
-					})
-					const playpause_key_input = ui.create_dom_element({
-						element_type	: 'input',
-						type 			: 'text',
-						parent 			: playpause_key
-					})
-					// get the cookie of the key
-					const av_playpause_key_value = localStorage.getItem('av_playpause_key')
-
-					const av_playpause_keyboard_code						= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
-					// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
-					const av_playpause_keyboard_key							= keyboard_codes[av_playpause_keyboard_code]
-					component_text_area.context.av_player.av_play_pause_code	= av_playpause_keyboard_code
-					playpause_key_input.value								= av_playpause_keyboard_key
-
-					playpause_key_input.addEventListener('keyup', function(event){
-						const keyborard_code					= event.code
-						const keyborard_key						= event.key
-						// set the cookie of the key
-						localStorage.setItem('av_playpause_key', keyborard_code);
-						playpause_key_input.value								= keyborard_key
-						component_text_area.context.av_player.av_play_pause_code	= keyborard_code
-					})
-				// rewind value is the time that the av rewind when is paused by the play/pause key
-				// it change the text_area default rewind time to the user has specify
-				const av_rewind_secs = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'av_rewind_secs',
-					parent 			: transcription_keys
-				})
-					const av_rewind_secs_label = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'label',
-						inner_html		: get_label.auto_rewind || 'Auto-rewind',
-						parent			: av_rewind_secs
-					})
-					const av_rewind_secs_input = ui.create_dom_element({
-						element_type	: 'input',
-						type 			: 'text',
-						parent 			: av_rewind_secs
-					})
-					const av_rewind_secs_name = ui.create_dom_element({
-						element_type	: 'span',
-						parent 			: av_rewind_secs,
-						inner_html		: get_label.seconds_abbr || 'sec/s.'
-					})
-					// get the cookie of the key
-					const av_rewind_secs_value = localStorage.getItem('av_rewind_secs')
-					const secs_val  = av_rewind_secs_value ? av_rewind_secs_value : 3; // Default 3 sec
-
-					// Set value from cookie or default
-					av_rewind_secs_input.value				= secs_val
-					component_text_area.context.av_player.av_rewind_seconds	= secs_val
-
-					av_rewind_secs_input.addEventListener('change', function(event){
-						// if the key pressed is not a number use the default
-						const value = parseInt(event.target.value)
-							? parseInt(event.target.value)
-							: 3
-						// set the cookie of the key
-						localStorage.setItem('av_rewind_secs', value);
-						av_rewind_secs_input.value				= value
-						component_text_area.context.av_player.av_rewind_seconds	= value
-					})
-
-				// tag key is used to get the tc from av and insert the tag in the text_area
-				// the user could change the default key "f2" to other key
-				// it change the text_area default key to the users specify
-				const tag_insert_key = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'tag_insert_key',
-					parent 			: transcription_keys
-				})
-					const tag_insert_key_label = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'label',
-						inner_html		: get_label.insert_tag || 'Insert tag',
-						parent			: tag_insert_key
-					})
-					const tag_insert_key_input = ui.create_dom_element({
-						element_type	: 'input',
-						type 			: 'text',
-						parent 			: tag_insert_key
-					})
-					// get the cookie of the key
-					const tag_insert_key_value = localStorage.getItem('tag_insert_key')
-
-					const tag_insert_keyboard_code			= tag_insert_key_value ? tag_insert_key_value : 'F2' // Default 'F2'
-					// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
-					const tag_insert_keyboard_key			= keyboard_codes[tag_insert_keyboard_code]
-					tag_insert_key_input.value				= tag_insert_keyboard_key
-					component_text_area.context.av_player.av_insert_tc_code	= tag_insert_keyboard_code
-
-					tag_insert_key_input.addEventListener('keyup', function(event){
-						const keyborard_code					= event.code
-						const keyborard_key						= event.key
-						// set the cookie of the key
-						localStorage.setItem('tag_insert_key', keyborard_code);
-						tag_insert_key_input.value				= keyborard_key
-						component_text_area.context.av_player.av_insert_tc_code	= keyborard_code
-					})
-
-		// Subtitles
-			const subtitles = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'subtitles',
-				parent 			: right_container
-			})
-			// Button generate the subtitles
-				const button_build_subtitles = ui.create_dom_element({
-					element_type	: 'button',
-					class_name 		: 'light btn_subtitles',
-					inner_html 		: get_label.build_subtitles || 'Build subtitles',
-					parent 			: subtitles
-				})
-
-			// input characters per line
-				const input_characters_per_line = ui.create_dom_element({
-						element_type	: 'input',
-						type 			: 'text',
-						parent 			: subtitles
-				})
-				const label_characters_per_line = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label',
-						inner_html		: get_label.characters_per_line || 'Characters per line',
-						parent			: subtitles
+					type 			: 'text',
+					parent 			: playpause_key
 				})
 				// get the cookie of the key
-				const subtitles_characters_value = localStorage.getItem('subtitles_characters_per_line')
-				const chatacters_val  = subtitles_characters_value ? subtitles_characters_value : 90; // Default 90 sec
+				const av_playpause_key_value = localStorage.getItem('av_playpause_key')
+
+				const av_playpause_keyboard_code						= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
+				// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
+				const av_playpause_keyboard_key							= keyboard_codes[av_playpause_keyboard_code]
+				component_text_area.context.av_player.av_play_pause_code	= av_playpause_keyboard_code
+				playpause_key_input.value								= av_playpause_keyboard_key
+
+				playpause_key_input.addEventListener('keyup', function(event){
+					const keyborard_code					= event.code
+					const keyborard_key						= event.key
+					// set the cookie of the key
+					localStorage.setItem('av_playpause_key', keyborard_code);
+					playpause_key_input.value								= keyborard_key
+					component_text_area.context.av_player.av_play_pause_code	= keyborard_code
+				})
+			// rewind value is the time that the av rewind when is paused by the play/pause key
+			// it change the text_area default rewind time to the user has specify
+			const av_rewind_secs = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'av_rewind_secs',
+				parent 			: transcription_keys
+			})
+				const av_rewind_secs_label = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'label',
+					inner_html		: get_label.auto_rewind || 'Auto-rewind',
+					parent			: av_rewind_secs
+				})
+				const av_rewind_secs_input = ui.create_dom_element({
+					element_type	: 'input',
+					type 			: 'text',
+					parent 			: av_rewind_secs
+				})
+				const av_rewind_secs_name = ui.create_dom_element({
+					element_type	: 'span',
+					parent 			: av_rewind_secs,
+					inner_html		: get_label.seconds_abbr || 'sec/s.'
+				})
+				// get the cookie of the key
+				const av_rewind_secs_value = localStorage.getItem('av_rewind_secs')
+				const secs_val  = av_rewind_secs_value ? av_rewind_secs_value : 3; // Default 3 sec
 
 				// Set value from cookie or default
-				input_characters_per_line.value				= chatacters_val
-				// component_text_area.av_rewind_seconds	= chatacters_val
+				av_rewind_secs_input.value				= secs_val
+				component_text_area.context.av_player.av_rewind_seconds	= secs_val
 
-				input_characters_per_line.addEventListener('change', function(event){
+				av_rewind_secs_input.addEventListener('change', function(event){
 					// if the key pressed is not a number use the default
 					const value = parseInt(event.target.value)
 						? parseInt(event.target.value)
-						: 90
+						: 3
 					// set the cookie of the key
-					localStorage.setItem('subtitles_characters_per_line', value);
-					input_characters_per_line.value				= value
-					// component_text_area.av_rewind_seconds	= value
+					localStorage.setItem('av_rewind_secs', value);
+					av_rewind_secs_input.value				= value
+					component_text_area.context.av_player.av_rewind_seconds	= value
 				})
 
+			// tag key is used to get the tc from av and insert the tag in the text_area
+			// the user could change the default key "f2" to other key
+			// it change the text_area default key to the users specify
+			const tag_insert_key = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'tag_insert_key',
+				parent 			: transcription_keys
+			})
+				const tag_insert_key_label = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'label',
+					inner_html		: get_label.insert_tag || 'Insert tag',
+					parent			: tag_insert_key
+				})
+				const tag_insert_key_input = ui.create_dom_element({
+					element_type	: 'input',
+					type 			: 'text',
+					parent 			: tag_insert_key
+				})
+				// get the cookie of the key
+				const tag_insert_key_value = localStorage.getItem('tag_insert_key')
+
+				const tag_insert_keyboard_code			= tag_insert_key_value ? tag_insert_key_value : 'F2' // Default 'F2'
+				// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
+				const tag_insert_keyboard_key			= keyboard_codes[tag_insert_keyboard_code]
+				tag_insert_key_input.value				= tag_insert_keyboard_key
+				component_text_area.context.av_player.av_insert_tc_code	= tag_insert_keyboard_code
+
+				tag_insert_key_input.addEventListener('keyup', function(event){
+					const keyborard_code					= event.code
+					const keyborard_key						= event.key
+					// set the cookie of the key
+					localStorage.setItem('tag_insert_key', keyborard_code);
+					tag_insert_key_input.value				= keyborard_key
+					component_text_area.context.av_player.av_insert_tc_code	= keyborard_code
+				})
+
+	// subtitles_block
+		const subtitles_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'subtitles_block',
+			parent 			: right_container
+		})
+
+		// button_build_subtitles
+			ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light btn_subtitles',
+				inner_html		: get_label.build_subtitles || 'Build subtitles',
+				parent			: subtitles_block
+			})
+
+		// input characters per line
+			const input_characters_per_line = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'text',
+				parent			: subtitles_block
+			})
+
+		// label_characters_per_line
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				inner_html		: get_label.characters_per_line || 'Characters per line',
+				parent			: subtitles_block
+			})
+
+		// get the cookie of the key
+			const subtitles_characters_value = localStorage.getItem('subtitles_characters_per_line')
+			const chatacters_val  = subtitles_characters_value ? subtitles_characters_value : 90; // Default 90 sec
+
+			// Set value from cookie or default
+			input_characters_per_line.value				= chatacters_val
+			// component_text_area.av_rewind_seconds	= chatacters_val
+
+			input_characters_per_line.addEventListener('change', function(event){
+				// if the key pressed is not a number use the default
+				const value = parseInt(event.target.value)
+					? parseInt(event.target.value)
+					: 90
+				// set the cookie of the key
+				localStorage.setItem('subtitles_characters_per_line', value);
+				input_characters_per_line.value				= value
+				// component_text_area.av_rewind_seconds	= value
+			})
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -301,6 +307,7 @@ const get_content_data_edit = async function(self) {
 		// save the pointers of the content_data nodes, to used by the buttons to access to the components
 		content_data.left_container		= left_container
 		content_data.right_container	= right_container
+
 
 	return content_data
 };//end get_content_data_edit

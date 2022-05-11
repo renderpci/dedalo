@@ -29,69 +29,78 @@
 // wrapper_tool
 	.wrapper_tool.tool_transcription {
 
-	&.tool_header >.tool_buttons_container{
-		display: flex;
-		align-items: flex-end;
+		&.tool_header >.tool_buttons_container {
+			display: flex;
+			align-items: flex-end;
 
-		.tool_button{
-			background-color: #fde2c6;
-			border-color: #e9ecef;
-			color: #212529;
-			// width: 12em;
-			padding: 0.5em;
-			cursor: pointer;
-			border-radius: 0.25rem;
-			display: inline-flex;
-			align-items: center;
-			justify-content: space-evenly;
-			height: 2em;
-			margin-left: 2em;
-			>.icon{
-				width: 1.2em;
+			.tool_button{
+				background-color: #fde2c6;
+				border-color: #e9ecef;
+				color: #212529;
+				// width: 12em;
+				padding: 0.5em;
+				cursor: pointer;
+				border-radius: 0.25rem;
+				display: inline-flex;
+				align-items: center;
+				justify-content: space-evenly;
+				height: 2em;
+				margin-left: 2em;
+				>.icon{
+					width: 1.2em;
+				}
 			}
 		}
-	}
-	>.content_data{
-		display: inline-flex;
-		width: 100%;
-		height: 100%;
-		// grid-template-columns: repeat(2, 1fr);
-		.left_container{
-			flex-grow: 2;
 
+		>.content_data {
+			display: grid;
+			grid-template-columns: 50% 50%;
+			column-gap: 1rem;
+			width: calc(100% - 1rem);
+			@media screen and (max-width: @width_break_point_0) {
+				display: block;
 			}
-			.right_container{
 
-				/* control av buttons
-				------------------------------------------------------ */
-				.av_control_buttons{
-					text-align: center;
-					.smpte{
-						color: #fd7f26;
-						padding: 0;
-						margin-left: 1em;
-						margin-right: 1em;
-						font-family: Verdana,Geneva,sans-serif;
-						font-size: 22px;
-						height: 1em;
-						display: inline-block;
-						vertical-align: baseline;
-						text-shadow: 1px 2px 2px #b9b9b9;
-						position: relative;
-						top: 3px;
-						padding-right: 5px;
-						padding-left: 3px;
+
+			.left_container{
+				>.wrapper_component >.content_data {
+					min-height: 88vh;
+					// background-color: #fbf082;
+					@media screen and (max-width: @width_break_point_0) {
+						min-height: 50vh;
 					}
 				}
+			}
+			.right_container {
+				>.wrapper_component >.content_data {
+					// min-height: 88vh;
+					// background-color: #9bffb4;
+				}
 
-				/* Slider
-				------------------------------------------------------ */
+				.av_control_buttons{
+					text-align: center;
+
+					// .smpte {
+					// 	color: #fd7f26;
+					// 	padding: 0;
+					// 	margin-left: 1rem;
+					// 	margin-right: 1rem;
+					// 	font-family: Verdana, Geneva, sans-serif;
+					// 	font-size: 1.65rem;
+					// 	width: auto;
+					// 	height: 1em;
+					// 	display: inline-block;
+					// 	vertical-align: baseline;
+					// 	text-shadow: 1px 2px 2px #b9b9b9;
+					// }
+				}
+
 				.slider_container {
-					/*display: flex;*/
+					// display: flex;
 					margin: 1em;
 					// padding-left: 10%;
 					// padding-right: 10%;
-				  text-alignt: center;
+					text-alignt: center;
 
 					.slider_label{
 						font-size: 14px;
@@ -143,13 +152,14 @@
 							top: -30px;
 						}
 					}
-				}
-				/* input for keyboard control
-				------------------------------------------------------ */
-				.transcription_keys{
+				}//end slider_container
+
+				.transcription_keys {
 					display: flex;
-	    			justify-content: space-around;
-	    			span{
+					justify-content: space-around;
+					padding: 0.5rem;
+
+	    			span {
 	    				text-align: center;
 	    			}
 	    			span label {
@@ -169,31 +179,33 @@
 					// 	text-transform: uppercase;
 					// }
 				}
-				/* Subtitles
-				------------------------------------------------------ */
-				.subtitles{
-					border-top: 1px solid #b1b1b1;
+
+				.subtitles_block {
+					border-top: 1px solid @color_grey_light; // #f2f2f2;
 					display: flex;
 					align-items: center;
 					justify-content: center;
+					padding: 0.5rem;
 
-					>.btn_subtitles{
-						width: 12em;
-						margin: 1em;
+					>.btn_subtitles {
+						width: 12rem;
+						margin: 1rem;
 						&:hover{
 
 						}
 					}
-					input{
-						margin: 1em;
-						width: 6em;
+					>input{
+						margin: 1rem;
+						width: 6rem;
 						text-align: center;
 						padding: 4px;
 					}
-				}
-			}
-		}
+					>.label {
 
+					}
+				}//end .subtitles
+			}
+		}//end .content_data
 	}//end .wrapper_tool
 
 
@@ -224,6 +236,7 @@
 				}
 			}
 		}
+
 		>.activity_info_container{
 			.activity_info_body{
 				width: 15em;
@@ -267,7 +280,7 @@
 				}
 			}
 		}
-	}
+	}//end .tool_header.tool_transcription
 
 
 
@@ -280,6 +293,7 @@
 	    background-position-y: 3px !important;
 	    background-position-x: 6px !important;
 	}
+
 
 
 /* PAGE
