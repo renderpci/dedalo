@@ -77,16 +77,18 @@ class component_radio_button extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = strip_tags($diffusion_value);
+		$diffusion_value = !empty($diffusion_value)
+			? strip_tags($diffusion_value)
+			: null;
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

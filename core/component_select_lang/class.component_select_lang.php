@@ -256,14 +256,15 @@ class component_select_lang extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$valor = $this->get_valor( $lang ); # Importante!: Pasar lang como parámetro para indicar en la resolución del get_ar_list_of_values el lenguaje deseado
-		$valor = preg_replace("/<\/?mark>/", "", $valor); # Remove untranslated string tags
-		$diffusion_value = $valor;
 
+		$diffusion_value = !empty($valor)
+			? preg_replace("/<\/?mark>/", '', $valor) # Remove untranslated string tags
+			: null;
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

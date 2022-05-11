@@ -562,16 +562,16 @@ class component_pdf extends component_media_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT);
 
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

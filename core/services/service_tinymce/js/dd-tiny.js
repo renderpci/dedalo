@@ -28,12 +28,12 @@ class DDTiny extends HTMLElement {
 
 		// options params
 			const value = self.options.value || ''
-	
+
 		// textarea base element
 			const textarea = document.createElement('textarea')
 				  textarea.insertAdjacentHTML('afterbegin', value);
 				  self.appendChild(textarea)
-		
+
 		// event_manager.when_in_dom(self.options.container, function(){
 		// 	console.log("DOM ready:",self.options.container);
 		// });
@@ -100,7 +100,7 @@ class DDTiny extends HTMLElement {
 					// update dd-tiny element id with new editor id
 					self.id = editor.id
 				}
-			})		
+			})
 
 	}
 }

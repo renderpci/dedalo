@@ -801,7 +801,7 @@ class component_av extends component_media_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) : string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = $this->get_url(DEDALO_AV_QUALITY_DEFAULT);
 

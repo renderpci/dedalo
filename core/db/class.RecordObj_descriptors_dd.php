@@ -16,8 +16,10 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 	# TABLE  matrix_table
-	public static $descriptors_matrix_table = 'matrix_descriptors_dd';
-	public static $descriptors_mainLang 	= 'lg-spa';
+	public static $descriptors_matrix_table	= 'matrix_descriptors_dd';
+	public static $descriptors_mainLang		= 'lg-spa';
+
+
 
 	# CONSTRUCT
 	# Normalmente llega: id=NULL, $terminoID, $lang
@@ -27,23 +29,25 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			$lang='lg-cat';
 		}
 
-		if(SHOW_DEBUG===true) {
-			if(empty($matrix_table) || $matrix_table!='matrix_descriptors_dd') {
-				dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
-				dump(debug_backtrace(),"Error: Only matrix_descriptors_dd is accepted by now ");
-				throw new Exception("Error Processing Request. Matrix wrong name ", 1);
+		// debug
+			if(SHOW_DEBUG===true) {
+				if(empty($matrix_table) || $matrix_table!='matrix_descriptors_dd') {
+					dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
+					dump(debug_backtrace(),"Error: Only matrix_descriptors_dd is accepted by now ");
+					throw new Exception("Error Processing Request. Matrix wrong name ", 1);
+				}
+				#if ( !empty($parent) && !(bool)verify_dedalo_prefix_tipos($parent)) {
+				#	throw new Exception("Error Processing Request. parent wrong tipo '$parent' ", 1);
+				#}
+				if ($fallback!==false) {
+					#trigger_error("Fallback is true for $parent ");
+				}
 			}
-			#if ( !empty($parent) && !(bool)verify_dedalo_prefix_tipos($parent)) {
-			#	throw new Exception("Error Processing Request. parent wrong tipo '$parent' ", 1);
-			#}
-			if ($fallback!==false) {
-				#trigger_error("Fallback is true for $parent ");
-			}
-		}
 
-		$this->unTranslated	= false;
-		$this->matrix_table = self::$descriptors_matrix_table;
-		$this->mainLang 	= self::$descriptors_mainLang;
+		// fix vars
+			$this->unTranslated	= false;
+			$this->matrix_table	= self::$descriptors_matrix_table;
+			$this->mainLang		= self::$descriptors_mainLang;
 
 		if ($id>0) {
 
@@ -53,33 +57,34 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			parent::__construct(self::$descriptors_matrix_table, $id, NULL, NULL, NULL);		#echo " $id, $parent, $tipo, $lang, $this <hr>";
 
 		}else{
+
 			#dump("","matrix_table:self::$descriptors_matrix_table, id:$id, parent:$parent, lang:$lang, tipo:$tipo, fallback:$fallback");
 			# SI NO RECIBE ID PERO RECIBE LANG, VERIFICA QUE EXISTE EL REGISTRO Y SI NO LO ENCUENTRA,
 			# PASA EL LENGUAJE PRINCIPAL DE LA JERARQUÍA PARA QUE SE USE EL DATO DEL REGISTRO PRINCIPAL EN SU LUGAR.
 			# AÑADE EL ESTILO PITUFO (unTranslated=TRUE)
 			if($fallback===true && empty($id) && (!empty($lang)) ) {
 
-				$arguments=array();
-				$arguments['parent']	= $parent;
-				$arguments['tipo']		= $tipo;
-				$arguments['lang']		= $lang;
-				$arguments['sql_limit']	= 1;
-				$RecordObj_matrix 		= new RecordObj_matrix(self::$descriptors_matrix_table);	#($id, $parent, $tipo, $lang)
-				$ar_id					= $RecordObj_matrix->search($arguments);
-					#dump($ar_id," AR_ID - arguments:".print_r($arguments,true));
+				$arguments = [
+					'parent'	=> $parent,
+					'tipo'		=> $tipo,
+					'lang'		=> $lang
+				];
+				// $arguments['sql_limit']	= 1; // remoevd to optimize sql cache
+				// string $matrix_table=null, int $id=null, string $parent=null, string $tipo=null, string $lang=null
+				$RecordObj_matrix	= new RecordObj_matrix(self::$descriptors_matrix_table);
+				$ar_id				= $RecordObj_matrix->search($arguments);
 
 				if(empty($ar_id[0])) {
 					$lang	= self::$descriptors_mainLang;
 					$this->unTranslated	= true;
 				}else{
-					$id 	= $ar_id[0];	# ya que tenemos el id, lo usamos para agilizar el siguiente paso.
+					$id	= $ar_id[0];	# ya que tenemos el id, lo usamos para agilizar el siguiente paso.
 				}
 			}
 
 			# LANG . SI NO TENEMOS LANG, USAMOS EL LANG PRINCIPAL DE SU JERARQUIA
 			if(empty($lang)) {
-				$lang	= self::$descriptors_mainLang;
-				#dump($lang, ' lang from empty '.$parent);
+				$lang = self::$descriptors_mainLang;
 			}
 
 			# CONSTRUCT . parent construct formato: ($id=NULL, $parent=false, $tipo=false, $lang=DEDALO_DATA_LANG, $this='matrix')
@@ -170,7 +175,6 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		$arguments['parent']	= $parent;
 		$arguments['tipo']		= $tipo;
 		$ar_id					= (array)$this->search($arguments);
-			#dump($parent,'parent ',self::$descriptors_matrix_table);
 
 		if(count($ar_id)===0) return false;
 
@@ -183,8 +187,6 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 				$ar_translations[$id] = $current_lang;
 			}
 		}
-		#dump($ar_translations,'$ar_translations '.$lang );
-		#return array();
 
 		return $ar_translations;
 	}//end get_ar_translations_of_current

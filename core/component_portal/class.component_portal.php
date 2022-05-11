@@ -448,12 +448,12 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* @return
+	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value( $lang=DEDALO_DATA_LANG, $option_obj=null ) {
+	// public function get_diffusion_value( $lang=DEDALO_DATA_LANG, $option_obj=null ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
-
 		if ($real_model==='component_portal') {
 			return 'unavailable';
 		}
@@ -464,7 +464,8 @@ class component_portal extends component_relation_common {
 		// $_get_diffusion_value = Closure::bind($_get_diffusion_value, $this);
 		$valor =  Closure::bind($_get_diffusion_value, $this)( $lang=DEDALO_DATA_LANG, $option_obj=null );
 
-		return $valor;
+		$diffusion_value = $valor;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

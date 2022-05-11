@@ -516,11 +516,11 @@ class component_input_text extends component_common {
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffsuion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		# Default behavior is get value
 		$diffusion_value = $this->get_valor( $lang );
@@ -533,10 +533,12 @@ class component_input_text extends component_common {
 		}
 
 		# strip_tags all values (remove untranslated mark elements)
-		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
+		$diffusion_value = !empty($diffusion_value)
+			? preg_replace("/<\/?mark>/", '', $diffusion_value)
+			: null;
 
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

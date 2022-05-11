@@ -44,10 +44,10 @@
 						$tags_persons_config = $properties->tags_persons;
 						$this->context->tags_persons = [];
 
-						$related_sections_json = $this->get_related_sections();
-							$this->context->related_sections_json = $related_sections_json;
+						$related_sections = $this->get_related_sections();
+							$this->context->related_sections = $related_sections;
 
-						$obj_data_sections = array_find($related_sections_json->data, function($element){
+						$obj_data_sections = array_find($related_sections->data, function($element){
 							return $element->typo === 'sections';
 						});
 						$ar_related_sections = $obj_data_sections->value ?? [];

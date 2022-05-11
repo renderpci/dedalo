@@ -758,7 +758,7 @@ class component_filter extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=DEDALO_DATA_LANG ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato = $this->get_dato();
 

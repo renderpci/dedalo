@@ -20,9 +20,9 @@ class component_select extends component_relation_common {
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
-	* @return string | null $valor
+	* @return string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG) {
+	public function get_valor(string $lang=DEDALO_DATA_LANG) : ?string {
 
 		$dato = $this->get_dato();
 
@@ -68,37 +68,45 @@ class component_select extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = strip_tags($diffusion_value);
 
-		return (string)$diffusion_value;
+		$diffusion_value = !empty($diffusion_value)
+			? strip_tags($diffusion_value)
+			: null;
+
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 
 
 	/**
 	* GET_DIFFUSION_DATO
-	* @return
+	* @return array|null $diffusion_value
 	*/
-	public function get_diffusion_dato() {
+	public function get_diffusion_dato() : ?array {
 
-			$dato = $this->get_dato();
-			if (is_array($dato)) {
-				$ar_id =array();
-				foreach ($dato as $current_locator) {
-					$ar_id[] = $current_locator->section_id;
-				}
-				$final_dato = $ar_id;
+		$dato = $this->get_dato();
+
+		if (is_array($dato)) {
+
+			$final_dato = [];
+			foreach ($dato as $current_locator) {
+				$final_dato[] = $current_locator->section_id;
 			}
 			$diffusion_value = json_encode($final_dato);
 
-		return (string)$diffusion_value;
+		}else{
+
+			$diffusion_value = null;
+		}
+
+		return $diffusion_value;
 	}//end get_diffusion_dato
 
 
