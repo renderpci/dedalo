@@ -2503,7 +2503,7 @@ class component_text_area extends component_common {
 	* UPDATE_DATO_VERSION
 	*
 	*/
-	public static function update_dato_version(object $request_options) {
+	public static function update_dato_version($request_options) {
 
 		$options = new stdClass();
 			$options->update_version	= null;
