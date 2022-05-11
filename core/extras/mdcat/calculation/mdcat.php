@@ -14,7 +14,7 @@
     * @return array $period
     *   Array of objects
     */
-    function calculate_period($request_options) {
+    function calculate_period($request_options) : array {
 
         $params = is_string($request_options)
             ? json_decode($request_options)
@@ -152,7 +152,7 @@
     * calculate_import_major
     * @return
     */
-    function calculate_import_major($options) {
+    function calculate_import_major(object $options) : int {
 
         $data = $options->data;
         $total_days = $data->total_days;
@@ -188,9 +188,9 @@
 
     /**
     * calculate_import_minor
-    * @return
+    * @return int
     */
-    function calculate_import_minor($options) {
+    function calculate_import_minor(object $options) : int {
 
         $data = $options->data;
         $total_days = $data->total_days;
@@ -223,7 +223,7 @@
     }//end calculate_import_minor
 
 
-    function to_euros($request_options){
+    function to_euros($request_options) : array {
 
         $options = is_string($request_options)
             ? json_decode($request_options)
@@ -233,7 +233,7 @@
         $opt    = $options->options;
 
 		$numero = $data->numero;
-        error_log('------ to_euros numero: '.json_encode($options));
+        // error_log('------ to_euros numero: '.json_encode($options));
 
         $total = $numero / 166.386;
 
@@ -241,5 +241,6 @@
             'id' => 'total',
             'value' => $total,
         ];
+
 		return $result;
 	}

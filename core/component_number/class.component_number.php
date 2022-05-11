@@ -49,7 +49,7 @@ class component_number extends component_common {
 	/**
 	* GET_VALOR
 	* Returns int or float number as string formatted
-	* @return string $valor
+	* @return string|null $valor
 	*/
 	public function get_valor($index='all') {
 
@@ -77,7 +77,7 @@ class component_number extends component_common {
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
 		}
 
-		return (string)$valor;
+		return $valor;
 	}//end get_valor
 
 
@@ -207,12 +207,11 @@ class component_number extends component_common {
 		}//end if (!empty($dato))
 
 
-		$string_value = str_replace(',', '.', $string_value);
+		$string_value = str_replace(',', '.', (string)$string_value);
 
 
 		return (string)$string_value;
 	}//end number_to_string
-
 
 
 
@@ -345,7 +344,7 @@ class component_number extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'...' 	=> 'entre',
