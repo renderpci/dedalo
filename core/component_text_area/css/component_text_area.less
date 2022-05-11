@@ -110,13 +110,24 @@
 						position: absolute;
 						top: 30px;
 						left: 0;
-						background-color: rgb(240 240 240 / 95%);
+						background-color: rgb(240 240 240 / 70%);
 						z-index: 1;
 						padding: 1.2rem;
-						width: 100%;
+						width: calc(100% + 2px);
 						height: calc(100% - 30px);
 						line-height: 1.4rem;
 						border: 1px solid #f78a1c;
+						-webkit-backdrop-filter: blur(30px);
+						backdrop-filter: blur(30px);
+						overflow: auto;
+
+						>.button.close {
+							top: 0;
+							background-color: #4f4f4f;
+							margin: 0;
+							position: sticky;
+							float: right;
+						}
 
 						>.label {
 							font-weight: bold;
