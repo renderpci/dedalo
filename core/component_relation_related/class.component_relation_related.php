@@ -460,11 +460,11 @@ class component_relation_related extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null, $type=false ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = null;
 
@@ -493,7 +493,6 @@ class component_relation_related extends component_relation_common {
 				}
 				$diffusion_value .= implode($separator, $ar_references);
 			}
-
 
 		}else{
 
@@ -543,7 +542,7 @@ class component_relation_related extends component_relation_common {
 		}
 
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

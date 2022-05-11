@@ -15,7 +15,7 @@ abstract class JSON_RecordDataBoundObject {
 	protected $blIsLoaded;
 	public $arModifiedRelations;
 
-	public $use_cache;
+	public $use_cache = false;
 	public $use_cache_manager = false;
 
 	#protected static $ar_RecordDataObject_query;
@@ -41,7 +41,8 @@ abstract class JSON_RecordDataBoundObject {
 		}
 		$this->arModifiedRelations	= array();
 
-		$this->use_cache = false;
+
+		return true;
 	}//end __construct
 
 
@@ -111,7 +112,8 @@ abstract class JSON_RecordDataBoundObject {
 		static $ar_JSON_RecordDataObject_load_query_cache;
 
 		# CACHE RUN-IN
-		if( $this->use_cache===true && isset($ar_JSON_RecordDataObject_load_query_cache[$strQuery]) ) {	// USING CACHE RUN-IN
+		$use_cache = $this->use_cache;
+		if($use_cache===true && isset($ar_JSON_RecordDataObject_load_query_cache[$strQuery])) {	// USING CACHE RUN-IN
 
 			$dato = $ar_JSON_RecordDataObject_load_query_cache[$strQuery];
 
@@ -122,37 +124,54 @@ abstract class JSON_RecordDataBoundObject {
 				// $result = pg_query(DBi::_getConnection(), $strQuery);	#or die("Cannot execute query: $strQuery\n". pg_last_error());
 				// # $result  = pg_query_params(DBi::_getConnection(), $strQuery, array( $this->section_id, $this->section_tipo ));
 
-			// With prepared statement
-				$stmtname  = ''; //md5($strQuery); //'search_free_stmt';
-				$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
-				if ($statement===false) {
-					trigger_error(__METHOD__.' Error: Error when pg_prepare statemnt for strQuery');
-					if(SHOW_DEBUG===true) {
-						debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
-					}
-					return false;
-				}
-				$result = pg_execute(DBi::_getConnection(), $stmtname, array());
+			// pg_query
+				$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error());
 				if ($result===false) {
+					trigger_error("Error Processing Request Load");
 					if(SHOW_DEBUG===true) {
-						// throw new Exception("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery", 1);
-						trigger_error("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery");
-					}else{
-						trigger_error("Error Processing Request Load");
+						throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error()." <hr>$strQuery", 1);
 					}
-					return false;
 				}
+
+			// With prepared statement
+				// $stmtname  = ''; //md5($strQuery); //'search_free_stmt';
+				// $statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
+				// if ($statement===false) {
+				// 	trigger_error(__METHOD__.' Error: Error when pg_prepare statemnt for strQuery');
+				// 	if(SHOW_DEBUG===true) {
+				// 		debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
+				// 	}
+				// 	return false;
+				// }
+				// $result = pg_execute(DBi::_getConnection(), $stmtname, array());
+				// if ($result===false) {
+				// 	if(SHOW_DEBUG===true) {
+				// 		// throw new Exception("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery", 1);
+				// 		trigger_error("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery");
+				// 	}else{
+				// 		trigger_error("Error Processing Request Load");
+				// 	}
+				// 	return false;
+				// }
 
 			$arRow = pg_fetch_assoc($result);
+			if($arRow===false)	{
+				if(SHOW_DEBUG===true) {
+					#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
+					#throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
+				}
+				trigger_error('Error Processing Request. $strQuery: ' .PHP_EOL. $strQuery);
+				return false;
+			}
 
-			$dato  = isset($arRow['datos'])
-				? json_handler::decode($arRow['datos'])
-				: null;
+			// dato
+				$dato  = isset($arRow['datos'])
+					? json_handler::decode($arRow['datos'])
+					: null;
 
-
-			# cache results. Note: Avoid use cache in long imports (memory overloads)
-				if( $this->use_cache===true ) {
-					# cache run-in
+			// cache results. Note: Avoid use cache in long imports (memory overloads)
+				if($use_cache===true) {
+					// store value
 					$ar_JSON_RecordDataObject_load_query_cache[$strQuery] = $dato;
 				}
 
@@ -368,7 +387,8 @@ abstract class JSON_RecordDataBoundObject {
 	* Perform a simple free sql query and exec in db return result resource
 	* @param string $strQuery Full SQL query like "SELECT id FROM table WHERE id>0"
 	* @param bool $wait to set syc/async exec. Default us true
-	* @return resource $result Database resource from exec query
+	* @return resource (PHP<8) OR object (PHP>=8) | false $result
+	* 	Database resource/object from exec query
 	*/
 	public static function search_free(string $strQuery, bool $wait=true) {
 
@@ -382,7 +402,7 @@ abstract class JSON_RecordDataBoundObject {
 
 		// $result = pg_query(DBi::_getConnection(), $strQuery);
 
-		# exec With prepared statement
+		// exec With prepared statement
 			$stmtname  = ''; //md5($strQuery); //'search_free_stmt';
 			$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
 			if ($statement===false) {
@@ -391,11 +411,15 @@ abstract class JSON_RecordDataBoundObject {
 			}
 
 			if ($wait===false) {
+				// async case
 				pg_send_execute(DBi::_getConnection(), $stmtname, array());
 				$result = pg_get_result(DBi::_getConnection());
 			}else{
+				// default sync case
 				$result = pg_execute(DBi::_getConnection(), $stmtname, array());
 			}
+
+		// check result
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump(pg_last_error()," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
@@ -438,10 +462,6 @@ abstract class JSON_RecordDataBoundObject {
 	*/
 	public function search(array $ar_arguments=null, string $matrix_table=null) : array {
 
-		#$use_cache = $this->use_cache; # Default use class value
-		$use_cache = false; # Experimental (cache true for search)
-
-
 		# DEBUG INFO SHOWED IN FOOTER
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
@@ -477,13 +497,13 @@ abstract class JSON_RecordDataBoundObject {
 
 				# LIMIT
 				case ($key==='sql_limit'):
-					$strQuery_limit = "LIMIT $value ";
+					$strQuery_limit = 'LIMIT '.(int)$value.''; // (!) no space at end
 					break;
 
 				# NOT
 				case (strpos($key,':!=')!==false):
 					$campo = substr($key, 0, strpos($key,':!='));
-					$strQuery .= "AND $campo != '{$value}' ";
+					$strQuery .= 'AND "'.$campo.'" != \''.$value.'\' ';
 					break;
 
 				# SI $key ES 'sql_code', INTERPRETAMOS $value LITERALMENTE, COMO SQL
@@ -496,7 +516,8 @@ abstract class JSON_RecordDataBoundObject {
 					$campo = substr($key, 0, strpos($key,':or'));
 					$strQuery_temp ='';
 					foreach ($value as $value_string) {
-						$strQuery_temp .= "$campo = '$value_string' OR ";
+						// $strQuery_temp .= "$campo = '$value_string' OR ";
+						$strQuery_temp .= '"'.$campo.'" = \''.$value_string.'\' OR ';
 					}
 					$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
 					break;
@@ -504,7 +525,8 @@ abstract class JSON_RecordDataBoundObject {
 				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
 				default :
 					if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)
-						$strQuery 	.= "AND $key = $value ";
+						// $strQuery .= 'AND "'.$key.'"='.$value.' ';
+						$strQuery .= 'AND '.$key.'='.$value.' ';
 					}else{
 						if(SHOW_DEBUG===true) {
 							if( !is_string($value) ) {
@@ -513,7 +535,8 @@ abstract class JSON_RecordDataBoundObject {
 							}
 						}
 						$value = pg_escape_string(DBi::_getConnection(), $value);
-						$strQuery .= "AND $key = '$value' ";
+						// $strQuery .= 'AND "'.$key.'"=\''.$value.'\' ';
+						$strQuery .= 'AND '.$key.'=\''.$value.'\' ';
 					}
 					break;
 			}#end switch(true)
@@ -522,7 +545,7 @@ abstract class JSON_RecordDataBoundObject {
 		# Seguridad
 		#if(strpos(strtolower($strQuery), 'update')!=='false' || strpos(strtolower($strQuery), 'delete')!=='false') die("SQL Security Error ". strtolower($strQuery) );
 
-		# Verify query format
+		// Verify query format
 			if(strpos($strQuery, 'AND')===0) {
 				$strQuery = substr($strQuery, 4);
 			}else if( strpos($strQuery, ' AND')===0 ) {
@@ -534,18 +557,20 @@ abstract class JSON_RecordDataBoundObject {
 		}
 
 		$strQuery = 'SELECT '.$strPrimaryKeyName.' AS key FROM "'.$this->strTableName.'" WHERE '. $strQuery .' '. $strQuery_limit;
-			#dump($strQuery,'strQuery');
+			// error_log('---- $strQuery:'.$strQuery);
 			#debug_log(__METHOD__." $strQuery ".to_string($strQuery), logger::DEBUG);
-
 
 		# CACHE : Static var
 		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTARÁ CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
 		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
 		static $ar_RecordDataObject_query_search_cache;
 
-
 		# CACHE_MANAGER : Using external cache manager (like redis)
-		if ( $use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery]) ) {
+		// $use_cache = false; # Experimental (cache true for search)
+		$use_cache = $this->use_cache; # Default use class value
+		if ($use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery])) {
+
+			# DATA IS IN CACHE . Return value form memory
 
 			$ar_records	= $ar_RecordDataObject_query_search_cache[$strQuery];
 
@@ -556,19 +581,23 @@ abstract class JSON_RecordDataBoundObject {
 				error_log(__METHOD__." --> Used cache run-in for query: $strQuery");
 			}
 
-		# DATA IS NOT IN CACHE . Searching real data in DB
 		}else{
 
+			# DATA IS NOT IN CACHE . Searching real data in DB
+
 			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
-			if (!$result) {
-				dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
-				throw new Exception("Error Processing Request", 1);
+			if ($result===false) {
+				if(SHOW_DEBUG===true) {
+					dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
+					throw new Exception("Error Processing Request . ".pg_last_error(), 1);
+				}else{
+					trigger_error("Error on DB query");
+				}
+				return [];
 			}
 			while ($rows = pg_fetch_assoc($result)) {
 				$ar_records[] = $rows['key'];
 			}
-			#dump($ar_records, 'ar_records', array('strQuery'=>$strQuery));
-
 
 			# CACHE
 			# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
@@ -577,7 +606,7 @@ abstract class JSON_RecordDataBoundObject {
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
 			# the next results are 0 and duplicate records are built in matrix)
 			$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
-			if( $use_cache===true && $n_records>0 ) {
+			if($use_cache===true && $n_records>0) {
 				# CACHE RUN-IN
 				$ar_RecordDataObject_query_search_cache[$strQuery] = $ar_records;
 			}

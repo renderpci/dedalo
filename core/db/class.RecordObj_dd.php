@@ -33,8 +33,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct($terminoID=null, $prefijo=false) {
-		#	dump($terminoID, ' terminoID ++ '.to_string());
+	function __construct(string $terminoID=null, $prefijo=false) {
+
 		if( !empty($terminoID) ) {
 			# CASO GENERAL
 

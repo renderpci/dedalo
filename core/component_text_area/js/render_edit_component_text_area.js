@@ -761,14 +761,15 @@ const get_custom_events = (self, i, text_editor) => {
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
 			// use the observe property into ontology of the components to suscribe to this events
+	console.log("evt.code:",evt.code);
+			switch( true ){
 
-			switch( evt.code ){
 				// 'Escape'
-				case  self.context.av_player.av_play_pause_code:
+				case  evt.code === self.context.av_player.av_play_pause_code:
 					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.av_player.av_rewind_seconds)
 					break;
 				// 'F2'
-				case self.context.av_player.av_insert_tc_code:
+				case evt.code === self.context.av_player.av_insert_tc_code:
 					// publish event and receive susbscriptors responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -801,6 +802,12 @@ const get_custom_events = (self, i, text_editor) => {
 									text_editor.set_content(tag.outerHTML)
 							}// end switch
 						}
+					break;
+					case evt.ctrlKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
+
+						const number = evt.code.match(/\d+/g);
+						const person	= self.context.tags_persons[number[0]]
+
 					break;
 			}
 		};//end KeyUp
@@ -1074,22 +1081,123 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 */
 const render_persons_list = function(self, text_editor, i){
 
-	const fragment = new DocumentFragment()
-	const ar_persons = self.context.tags_persons
+	const fragment		= new DocumentFragment()
+	const ar_persons	= self.context.tags_persons
 
 	const container = ui.create_dom_element({
 		element_type	: 'div',
 		class_name 		: 'hide',
 		parent			: fragment
 	})
+
+	const label_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'label',
+			text_node 		: get_label.persons || 'Persons',
+			parent			: container
+		})
 	console.log("(!ar_persons):",ar_persons);
-	// console.log("self.context.ar_related_sections:",self.context.related_sections);
 
-	console.log("(!ar_related_sections_json):",self.context.related_sections_json);
-
+	// if ar_persons is empty stop and return the fragment
 	if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'){
 		return fragment
 	}
+
+	const datum		= self.context.related_sections
+	const context	= datum.context
+	const data		= datum.data
+
+	const sections	= data.find(el => el.typo==='sections')
+
+	if(!sections){
+		return fragment
+	}
+
+	const value			= sections.value
+	const value_length	= value.length
+	let k = 0;
+
+	for (let i = 0; i < value_length; i++) {
+
+		const section_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'section_container',
+				parent			: container
+			})
+
+		const current_locator = {
+			section_top_tipo	: value[i].section_tipo,
+			section_top_id		: value[i].section_id
+		}
+
+		const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
+		const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+
+		// ar_component_value
+			const ar_component_value = []
+			for (let j = 0; j < ar_component_data.length; j++) {
+				const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
+				ar_component_value.push(current_value)
+			}
+
+		// label
+			const label = 	section_label + ' | ' +
+							current_locator.section_top_id +' | ' +
+							ar_component_value.join(' | ')
+
+		// label DOM element
+			const section_label_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'label',
+				inner_html		: label,
+				parent			: section_container
+			})
+
+		const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
+		for (let j = 0; j < ar_persons_for_this_section.length; j++) {
+
+			const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
+
+			const person_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'person_container',
+				parent			: section_container
+			})
+				const person_keyboard = ui.create_dom_element({
+					element_type	: 'span',
+					text_node		: 'control ctrl+'+ k++,
+					class_name 		: 'label person_keyboard',
+					parent			: person_container
+				})
+				const html_tag = self.tags_to_html(current_person.tag)
+				person_container.insertAdjacentHTML('afterbegin', html_tag)
+
+				const person_name = ui.create_dom_element({
+					element_type	: 'span',
+					text_node		: current_person.full_name || '',
+					class_name 		: 'label person_name',
+					parent			: person_container
+				})
+
+				const person_role = ui.create_dom_element({
+					element_type	: 'span',
+					text_node		: '('+current_person.role + ')',
+					class_name 		: 'label person_role',
+					parent			: person_container
+				})
+
+			person_container.addEventListener("mousedown", function (evt) {
+				evt.preventDefault()
+				evt.stopPropagation()
+
+				self.insert_person_image(ed, current_person.tag_id, current_person.state, current_person.label, current_person.data, evt)
+
+				// Close persons selector
+				container.classList.toggle('hide')
+			});
+		}
+
+	}//end for
 
 	// toggle_persons_list_ . User click over the button 'button_person'
 	self.events_tokens.push(
@@ -1098,76 +1206,7 @@ const render_persons_list = function(self, text_editor, i){
 		})
 	)
 
-		const label = ui.create_dom_element({
-			element_type	: 'span',
-			text_node		: get_label.persons || 'Persons',
-			class_name 		: 'label',
-			parent			: container
-		})
 
-		const body_title = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'body_title',
-			text_node		: label,
-			parent			: container
-		})
-
-		const body_input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'body_title',
-			parent			: container
-		})
-
-		const error_input = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'body_title',
-			text_node		: '',
-			parent			: container
-		})
-
-
-	const footer = ui.create_dom_element({
-		element_type	: 'span'
-	})
-
-	const user_option_cancelar = ui.create_dom_element({
-		element_type	: 'button',
-		class_name		: 'user_option ',
-		inner_html		: get_label.cancelar || 'Cancel',
-		parent			: footer
-	})
-
-	const user_option_ok = ui.create_dom_element({
-		element_type	: 'button',
-		class_name		: 'user_option',
-		inner_html		: get_label.insertar_etiqueta || 'Insert label',
-		parent			: footer
-	})
-
-	// const page_selector = ui.attach_to_modal( header, body, footer)
-
-	// user_option_ok.addEventListener("click", (e) =>{
-	// 	e.preventDefault()
-	// 	const user_value = body_input.value
-	// 	if(user_value === null) {
-	// 		page_selector.renove()
-	// 	}
-	// 	if(user_value > page_out || user_value < page_in){
-	// 		error_input.textContent = get_label.value_out_of_range || 'Value out of range'
-	// 		return
-	// 	}
-	// 	const data		= body_input.value - (offset -1)
-	// 	data_tag.label	= body_input.value
-	// 	data_tag.data	= "["+data+"]"
-	// 	const tag		= build_node_tag(data_tag, tag_id)
-	// 	text_editor.set_content(tag.outerHTML)
-	// 	page_selector.remove()
-	// })
-
-	// user_option_cancelar.addEventListener("click", (e) =>{
-	// 	page_selector.remove()
-	// })
 
 	return fragment
 };//end render_persons_list

@@ -45,7 +45,7 @@ class area_common extends common  {
 	/**
 	* __CONSTRUCT
 	*/
-	private function __construct(string $tipo, $modo='list') {
+	private function __construct(string $tipo, string $modo='list') {
 
 		$this->define_tipo($tipo);
 		$this->define_lang(DEDALO_DATA_LANG);
@@ -61,11 +61,11 @@ class area_common extends common  {
 
 
 	# define tipo
-	protected function define_tipo($tipo) {	$this->tipo = $tipo ; }
+	protected function define_tipo(string $tipo) {	$this->tipo = $tipo ; }
 	# define lang
-	protected function define_lang($lang) {	$this->lang = $lang ; }
+	protected function define_lang(string $lang) {	$this->lang = $lang ; }
 	# define modo
-	protected function define_modo($modo) {	$this->modo = $modo ; }
+	protected function define_modo(string $modo) {	$this->modo = $modo ; }
 
 
 

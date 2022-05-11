@@ -287,6 +287,27 @@ function exec_time_unit($start, $unit='ms', $round=3) {
 
 
 
+/**
+* START_HRTIME
+*/
+function start_hrtime() {
+	return hrtime(true); // nanoseconds
+}
+
+
+
+/**
+* EXEC_START_HRTIME_UNIT
+* @return string $total
+* Time expresed in ms as '0,633262 ms'
+*/
+function exec_start_hrtime_unit($start) {
+	return (hrtime(true) - $start)/1e+6 ;//. ' ms';
+}
+
+
+
+
 # TO_STRING
 function to_string($var=null) : string {
 	if ($var===null) return '';

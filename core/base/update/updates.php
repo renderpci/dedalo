@@ -67,6 +67,13 @@ $updates->$v = new stdClass();
 				REINDEX TABLE public.matrix_dd;
 			");
 
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS \"matrix_descriptors_dd_dato_tipo_lang\" ON \"matrix_descriptors_dd\" (\"dato\", \"tipo\", \"lang\");
+				REINDEX TABLE public.matrix_descriptors_dd;
+			");
+
+
+
 		// vacuum table
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				VACUUM FULL VERBOSE ANALYZE public.matrix_dd;

@@ -143,7 +143,7 @@ abstract class common {
 		return(false);
 	}
 	# SET
-	final protected function SetAccessor(string $strMember, $strNewValue) {
+	final protected function SetAccessor(string $strMember, $strNewValue) : bool {
 
 		if(property_exists($this, $strMember)) {
 
@@ -217,7 +217,7 @@ abstract class common {
 	/**
 	* SET_PERMISSIONS
 	*/
-	public function set_permissions( $number ) {
+	public function set_permissions( $number ) : int {
 		$this->permissions = (int)$number;
 	}//end set_permissions
 
@@ -3309,10 +3309,14 @@ abstract class common {
 	public function get_tools() : array {
 
 		// cache
-			// $cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
-			// if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
-			// 	return $_SESSION['dedalo']['tools'][$cache_key];
+			$cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
+			// static $cache_get_tools;
+			// if (isset($cache_get_tools[$cache_key])) {
+			// 	return $cache_get_tools[$cache_key];
 			// }
+			if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
+				return $_SESSION['dedalo']['tools'][$cache_key];
+			}
 
 		$tools = [];
 
@@ -3337,10 +3341,10 @@ abstract class common {
 
 				$in_properties = $properties->tool_config->{$tool->name} ?? null;
 
-				if( 	in_array($model, $affected_models)
-					||  in_array($tipo,  $affected_tipos)
-					||  ($is_component===true && in_array('all_components', $affected_models))
-					|| 	!is_null($in_properties)
+				if(		in_array($model, $affected_models)
+					||	in_array($tipo,  $affected_tipos)
+					||	($is_component===true && in_array('all_components', $affected_models))
+					||	!is_null($in_properties)
 				  ) {
 
 					// affected_tipos specific restriction like tool_indexation (only 'rsc36')
@@ -3368,7 +3372,9 @@ abstract class common {
 			}//end foreach ($registered_tools as $tool)
 
 		// cache
-			// $_SESSION['dedalo']['tools'][$cache_key] = $tools;
+			// $cache_get_tools[$cache_key] = $tools;
+			$_SESSION['dedalo']['tools'][$cache_key] = $tools;
+
 
 
 		return $tools;

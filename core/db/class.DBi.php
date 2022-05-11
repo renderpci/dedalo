@@ -40,8 +40,10 @@ abstract class DBi {
 		}
 
 		// Connecting, selecting database
-		$pg_conn = pg_connect($str_connect)
-			or die('Could not connect to database (52): ' .pg_last_error());
+		$pg_conn = pg_connect($str_connect);
+		if($pg_conn===false) {
+			throw new Exception("Error. Could not connect to database (52)", 1);
+		}
 
 		return $pg_conn;
 	}//end _getConnection
@@ -75,8 +77,10 @@ abstract class DBi {
 		}
 
 		// Connecting, selecting database
-		$pg_conn = pg_connect($str_connect)
-			or die('Could not connect to database (52-2): ' .pg_last_error());
+		$pg_conn = pg_connect($str_connect);
+		if($pg_conn===false) {
+			throw new Exception("Error. Could not connect to database (52-2)", 1);
+		}
 
 		return $pg_conn;
 	}//end _getNewConnection

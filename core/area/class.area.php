@@ -121,7 +121,7 @@ class area extends area_common  {
 	*	array recursive of thesaurus structure children filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
-	protected static function get_ar_children_areas_recursive($terminoID) : array {
+	protected static function get_ar_children_areas_recursive(string $terminoID) : array {
 
 		$ar_children_areas_recursive	= [];
 		$RecordObj_dd					= new RecordObj_dd($terminoID);

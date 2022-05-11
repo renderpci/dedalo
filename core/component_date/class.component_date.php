@@ -1465,20 +1465,20 @@ class component_date extends component_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$diffusion_value = '';
-		$ar_dato 		 = $this->get_dato();
+		// ar_dato
+			$ar_dato = $this->get_dato();
+			if(empty($ar_dato)){
+				return null;
+			}
 
-		if(empty($ar_dato)){
-			return null;
-		}
-
-		$date_mode 		 = $this->get_date_mode();
+		$diffusion_value	= '';
+		$date_mode			= $this->get_date_mode();
 		$ar_diffusion_values = array();
 		foreach ($ar_dato as $dato) {
 			switch ($date_mode) {
@@ -1519,21 +1519,21 @@ class component_date extends component_common {
 					break;
 
 				case 'date':
-				/*
-					$dd_date 	= new dd_date($dato);
-					if(isset($dato->day)) {
+					/*
+						$dd_date 	= new dd_date($dato);
+						if(isset($dato->day)) {
 
-							$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
-					}else{
-							$timestamp = $dd_date->get_dd_timestamp("Y-m");
-						if(isset($dato->month)) {
-							}else{
-									$timestamp = $dd_date->get_dd_timestamp("Y");
-								}
-						}
+								$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
+						}else{
+								$timestamp = $dd_date->get_dd_timestamp("Y-m");
+							if(isset($dato->month)) {
+								}else{
+										$timestamp = $dd_date->get_dd_timestamp("Y");
+									}
+							}
 
-					$ar_diffusion_values[] = $timestamp;
-					break;*/
+						$ar_diffusion_values[] = $timestamp;
+						break;*/
 
 				default:
 					$current_date = reset($dato);
