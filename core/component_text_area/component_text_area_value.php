@@ -38,39 +38,38 @@
 	// data
 		switch ($format_columns) {
 			case 'pdf':
-				// section_id
-						$cell_id = new dd_grid_cell_object();
-							$cell_id->set_type('column');
-							$cell_id->set_cell_type('text');
-							$cell_id->set_value([$section_id]); // array value
-				// tag_id
-						$cell_tag_id = new dd_grid_cell_object();
-							$cell_tag_id->set_type('column');
-							$cell_tag_id->set_cell_type('text');
-							$cell_tag_id->set_value([$tag_id]); // array value
-				// text_fragment
-						$cell_text_fragment = new dd_grid_cell_object();
-							$cell_text_fragment->set_type('column');
-							$cell_text_fragment->set_cell_type('text');
-							$cell_text_fragment->set_value([$text_fragment]); // array value
 
+				// section_id
+					$cell_id = new dd_grid_cell_object();
+						$cell_id->set_type('column');
+						$cell_id->set_cell_type('text');
+						$cell_id->set_value([$section_id]); // array value
+				// tag_id
+					$cell_tag_id = new dd_grid_cell_object();
+						$cell_tag_id->set_type('column');
+						$cell_tag_id->set_cell_type('text');
+						$cell_tag_id->set_value([$tag_id]); // array value
+				// text_fragment
+					$cell_text_fragment = new dd_grid_cell_object();
+						$cell_text_fragment->set_type('column');
+						$cell_text_fragment->set_cell_type('text');
+						$cell_text_fragment->set_value([$text_fragment]); // array value
 				// data
 					$data = [
 						$cell_id,
 						$cell_tag_id,
 						$cell_text_fragment,
 					];
-
 				break;
 
 			case 'av':
 			default:
 
 				// tc
-					$tag_in_pos  	= $fragment_info[1];
-					$tag_out_pos 	= $fragment_info[2];
-					$tc_in 		 	= OptimizeTC::optimize_tcIN($full_raw_text, false, $tag_in_pos, $in_margin=0);
-					$tc_out 	 	= OptimizeTC::optimize_tcOUT($full_raw_text, false, $tag_out_pos, $in_margin=100);
+					$tag_in_pos		= $fragment_info[1];
+					$tag_out_pos	= $fragment_info[2];
+					$tc_in			= OptimizeTC::optimize_tcIN($full_raw_text, false, $tag_in_pos, $in_margin=0);
+					$tc_out			= OptimizeTC::optimize_tcOUT($full_raw_text, false, $tag_out_pos, $in_margin=100);
 
 					$tcin_secs		= OptimizeTC::TC2seg($tc_in);
 					$tcout_secs		= OptimizeTC::TC2seg($tc_out);

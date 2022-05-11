@@ -34,30 +34,43 @@
 
 		switch ($modo) {
 			case 'edit':
-				$this->context->toolbar_buttons = [];
+				// toolbar_buttons base
+					$this->context->toolbar_buttons = [];
 
-				// TAGS FOR PERSONS
+				// person. tags for persons
 				// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
 					$properties = $this->get_properties();
-					if(isset($properties->tags_persons)){
-						$this->context->toolbar_buttons[] = 'button_person button_note';
-						$tags_persons_config = $properties->tags_persons;
-						$this->context->tags_persons = [];
+					if(isset($properties->tags_persons)) {
 
-						$related_sections = $this->get_related_sections();
+						// related_sections add
+							$related_sections = $this->get_related_sections();
 							$this->context->related_sections = $related_sections;
 
-						$obj_data_sections = array_find($related_sections->data, function($element){
-							return $element->typo === 'sections';
-						});
-						$ar_related_sections = $obj_data_sections->value ?? [];
-						foreach ($tags_persons_config as $related_section_tipo => $value) {
-							$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
-							$this->context->tags_persons = array_merge($this->context->tags_persons, $ar_tags_persons);
-						}
+						// toolbar_buttons add
+							$this->context->toolbar_buttons[] = 'button_person button_note';
+
+						// tags_persons
+							$this->context->tags_persons = [];
+							// related_sections
+							$obj_data_sections = array_find($related_sections->data, function($el){
+								return $el->typo==='sections';
+							});
+							$ar_related_sections = $obj_data_sections->value ?? [];
+							// tags_persons_config
+							$tags_persons_config = $properties->tags_persons;
+							foreach ($tags_persons_config as $related_section_tipo => $current_value) {
+								$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
+								$this->context->tags_persons = array_merge($this->context->tags_persons, $ar_tags_persons);
+							}
 					}
-				//geo
-					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $modelo_name='component_geolocation', $relation_type='termino_relacionado');
+
+				// geo
+					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$this->tipo, // tipo
+						'component_geolocation', // model name
+						'termino_relacionado', // relation_type
+						true // search_exact
+					);
 					if(!empty($related_component_geolocation)){
 						$this->context->toolbar_buttons[] = 'button_geo button_note';
 					}
@@ -67,10 +80,11 @@
 					$this->context->notes_section_tipo = DEDALO_NOTES_SECTION_TIPO;
 
 				// Av Player
-					$this->context->av_player = new stdClass();
-					$this->context->av_player->av_play_pause_code	= 'Escape'; 	// ESC
-					$this->context->av_player->av_insert_tc_code	= 'F2';	// F2
-					$this->context->av_player->av_rewind_seconds 	= 3;
+					$this->context->av_player = (object)[
+						'av_play_pause_code'	=> 'Escape', // ESC
+						'av_insert_tc_code'		=> 'F2', // F2
+						'av_rewind_seconds'		=> 3
+					];
 				break;
 
 			default:

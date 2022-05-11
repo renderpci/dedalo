@@ -1086,12 +1086,8 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 const render_persons_list = function(self, text_editor, i){
 
 	// short vars
-		const ar_persons	= self.context.tags_persons
-		const datum			= self.context.related_sections
-		const context		= datum.context
-		const data			= datum.data
-		console.log("(!ar_persons):",ar_persons);
-
+		const ar_persons = self.context.tags_persons
+			console.log(`(!ar_persons) ${self.tipo}:`, ar_persons);
 
 	const fragment = new DocumentFragment()
 
@@ -1102,6 +1098,17 @@ const render_persons_list = function(self, text_editor, i){
 			parent			: fragment
 		})
 
+	// button_close
+		const button_close = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button icon close',
+			parent			: persons_list_container
+		})
+		button_close.addEventListener("click", function(e){
+			e.stopPropagation()
+			persons_list_container.classList.toggle('hide')
+		})
+
 	// label
 		ui.create_dom_element({
 			element_type	: 'span',
@@ -1110,102 +1117,105 @@ const render_persons_list = function(self, text_editor, i){
 			parent			: persons_list_container
 		})
 
-
 	// if ar_persons is empty, stop and return the fragment
 		if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'){
 			return fragment
 		}
 
 	// person sections
+		const datum		= self.context.related_sections || {}
+		const context	= datum.context
+		const data		= datum.data
 		const sections	= data.find(el => el.typo==='sections')
 		if(!sections){
 			return fragment
 		}
 
-	const value			= sections.value
-	const value_length	= value.length
-	let k = 0;
+	// sections loop
+		const value			= sections.value
+		const value_length	= value.length
+		let k = 0;
+		for (let i = 0; i < value_length; i++) {
 
-	for (let i = 0; i < value_length; i++) {
+			const section_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'section_container',
+				parent			: persons_list_container
+			})
 
-		const section_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'section_container',
-			parent			: persons_list_container
-		})
-
-		const current_locator = {
-			section_top_tipo	: value[i].section_tipo,
-			section_top_id		: value[i].section_id
-		}
-
-		const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
-		const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
-
-		// ar_component_value
-			const ar_component_value = []
-			for (let j = 0; j < ar_component_data.length; j++) {
-				const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
-				ar_component_value.push(current_value)
+			const current_locator = {
+				section_top_tipo	: value[i].section_tipo,
+				section_top_id		: value[i].section_id
 			}
 
-		// label
-			const label = 	section_label + ' | ' +
-							current_locator.section_top_id +' | ' +
-							ar_component_value.join(' | ')
+			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
+			const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
 
-		// label DOM element
-			const section_label_node = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'label',
-				inner_html		: label,
-				parent			: section_container
-			})
+			// ar_component_value
+				const ar_component_value = []
+				for (let j = 0; j < ar_component_data.length; j++) {
+					const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
+					ar_component_value.push(current_value)
+				}
 
-		const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
-		for (let j = 0; j < ar_persons_for_this_section.length; j++) {
+			// label
+				const label = 	section_label + ' | ' +
+								current_locator.section_top_id +' | ' +
+								ar_component_value.join(' | ')
 
-			const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
-
-			const person_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'person_container',
-				parent			: section_container
-			})
-				const person_keyboard = ui.create_dom_element({
+			// label DOM element
+				const section_label_node = ui.create_dom_element({
 					element_type	: 'span',
-					text_node		: 'control ctrl+'+ k++,
-					class_name 		: 'label person_keyboard',
-					parent			: person_container
-				})
-				const html_tag = self.tags_to_html(current_person.tag)
-				person_container.insertAdjacentHTML('afterbegin', html_tag)
-
-				const person_name = ui.create_dom_element({
-					element_type	: 'span',
-					text_node		: current_person.full_name || '',
-					class_name 		: 'label person_name',
-					parent			: person_container
+					class_name 		: 'label',
+					inner_html		: label,
+					parent			: section_container
 				})
 
-				const person_role = ui.create_dom_element({
-					element_type	: 'span',
-					text_node		: '('+current_person.role + ')',
-					class_name 		: 'label person_role',
-					parent			: person_container
+			const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
+			for (let j = 0; j < ar_persons_for_this_section.length; j++) {
+
+				const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
+
+				const person_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'person_container',
+					parent			: section_container
 				})
+					const person_keyboard = ui.create_dom_element({
+						element_type	: 'span',
+						text_node		: 'control ctrl+'+ k++,
+						class_name 		: 'label person_keyboard',
+						parent			: person_container
+					})
+					const html_tag = self.tags_to_html(current_person.tag)
+					person_container.insertAdjacentHTML('afterbegin', html_tag)
 
-			person_container.addEventListener("mousedown", function (evt) {
-				evt.preventDefault()
-				evt.stopPropagation()
+					const person_name = ui.create_dom_element({
+						element_type	: 'span',
+						text_node		: current_person.full_name || '',
+						class_name 		: 'label person_name',
+						parent			: person_container
+					})
 
-				self.insert_person_image(ed, current_person.tag_id, current_person.state, current_person.label, current_person.data, evt)
+					const person_role = ui.create_dom_element({
+						element_type	: 'span',
+						text_node		: '('+current_person.role + ')',
+						class_name 		: 'label person_role',
+						parent			: person_container
+					})
 
-				// Close persons selector
-				persons_list_container.classList.toggle('hide')
-			});
-		}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
-	}//end for (let i = 0; i < value_length; i++)
+				person_container.addEventListener("mousedown", function (evt) {
+					evt.preventDefault()
+					evt.stopPropagation()
+
+					self.insert_person_image(ed, current_person.tag_id, current_person.state, current_person.label, current_person.data, evt)
+
+					// Close persons selector
+					persons_list_container.classList.toggle('hide')
+				});
+			}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
+		}//end for (let i = 0; i < value_length; i++)
+
 
 	// toggle_persons_list_ . User click over the button 'button_person'
 		self.events_tokens.push(
