@@ -375,10 +375,9 @@ class dd_core_api {
 		// build rows (context & data)
 			$json_rows = self::build_json_rows($rqo);
 
-		$result = $json_rows;
-
-		$response->result	= $result;
-		$response->msg		= 'Ok. Request done';
+		// response success
+			$response->result	= $json_rows;
+			$response->msg		= 'OK. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
