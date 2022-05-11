@@ -78,7 +78,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		return ('id');
 	}
 	# array of pairs db field name, obj property name like fieldName => propertyName
-	protected function defineRelationMap() {
+	protected function defineRelationMap() : array {
 		return (array(
 			# db fieldn ame		# property name
 			"id"			=> "ID",

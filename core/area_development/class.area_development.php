@@ -560,14 +560,14 @@ class area_development extends area_common {
 				// truncate relations table data
 				$strQuery 	= "TRUNCATE \"relations\";";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if (!$result) {
+				if ($result===false) {
 					$response->msg = $response->msg[0].' - Unable to truncate table relations!';
 					return $response;
 				}
 				// restart table sequence
 				$strQuery 	= "ALTER SEQUENCE relations_id_seq RESTART WITH 1;";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if (!$result) {
+				if ($result===false) {
 					$response->msg = $response->msg[0].' - Unable to alter SEQUENCE relations_id_seq!';
 					return $response;
 				}
@@ -581,7 +581,7 @@ class area_development extends area_common {
 			// last id in current table
 				$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if (!$result) {
+				if ($result===false) {
 					$response->msg[] ='Table \''.$table.'\' not found!';
 					$response->msg 	 = implode('<br>', $response->msg);
 					return $response;
@@ -602,7 +602,7 @@ class area_development extends area_common {
 
 				$strQuery 	= "SELECT section_id, section_tipo, datos FROM $table WHERE id = $i";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if(!$result) {
+				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
 					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 					continue;
