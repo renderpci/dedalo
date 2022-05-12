@@ -117,11 +117,11 @@ abstract class component_common extends common {
 					$component_name = $model_name;
 			}
 			if (strpos($component_name, 'component_')!==0) {
+				trigger_error(__METHOD__." Error Processing Request. Illegal component: '$component_name' ");
 				if(SHOW_DEBUG===true) {
-					// $bt = debug_backtrace();
-					// dump($bt, ' bt ++ '.to_string($tipo));
+					$bt = debug_backtrace();
+					dump($bt, ' bt ++ '.to_string($tipo));
 					// throw new Exception("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__, 1);
-					trigger_error("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__);
 				}
 				return null;
 			}
@@ -791,6 +791,10 @@ abstract class component_common extends common {
 		}
 		include ( DEDALO_CORE_PATH .'/'. $component_name .'/'. $component_name .'.php' );
 		$html = ob_get_clean();
+
+		// debug
+			$bt = debug_backtrace();
+			dump($bt, ' bt +++++++++++++++++++++++++++++ '.to_string($component_name));
 
 
 		if(SHOW_DEBUG===true) {

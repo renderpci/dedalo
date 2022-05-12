@@ -52,8 +52,8 @@ abstract class JSON_RecordDataBoundObject {
 		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
-		#if(!isset($this->dato)) return NULL;
-		return $this->dato;
+		// if(!isset($this->dato)) return null;
+		return $this->dato ?? null;
 	}//end get_dato
 
 
@@ -72,7 +72,7 @@ abstract class JSON_RecordDataBoundObject {
 	/**
 	* LOAD
 	* Load a record from database corresponding to actual section_id and section_tipo
-	* Fix obtained data to prevent to connect to database again
+	* @return bool
 	*/
 	public function Load() : bool {
 
@@ -117,8 +117,9 @@ abstract class JSON_RecordDataBoundObject {
 
 			$dato = $ar_JSON_RecordDataObject_load_query_cache[$strQuery];
 
-		# WITHOUT QUERY CACHE
 		}else{
+
+			// DEFAULT. GET DB DATA
 
 			// Synchronous query
 				// $result = pg_query(DBi::_getConnection(), $strQuery);	#or die("Cannot execute query: $strQuery\n". pg_last_error());
@@ -154,18 +155,21 @@ abstract class JSON_RecordDataBoundObject {
 				// 	return false;
 				// }
 
-			$arRow = pg_fetch_assoc($result);
-			if($arRow===false)	{
-				if(SHOW_DEBUG===true) {
-					#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
-					#throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
-				}
-				trigger_error('Error Processing Request. $strQuery: ' .PHP_EOL. $strQuery);
-				return false;
-			}
+			// arRow. Note that pg_fetch_assoc could return 'false' when query return empty value. This is not an error.
+				$arRow = pg_fetch_assoc($result);
+				// if($arRow===false)	{
+				// 	if(SHOW_DEBUG===true) {
+				// 		#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
+				// 		#throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
+				// 		dump($result, ' result ++ '.to_string());
+				// 		dump($arRow, ' arRow ++ '.to_string());
+				// 	}
+				// 	trigger_error('Warning Processing Request. pg_fetch_assoc arRow is false. $strQuery:' .PHP_EOL. $strQuery);
+				// 	// return false;
+				// }
 
 			// dato
-				$dato  = isset($arRow['datos'])
+				$dato = isset($arRow['datos'])
 					? json_handler::decode($arRow['datos'])
 					: null;
 

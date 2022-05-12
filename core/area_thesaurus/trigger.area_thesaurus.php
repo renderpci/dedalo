@@ -47,22 +47,23 @@ function search_thesaurus(object $json_data) : object {
 			  ]
 			');
 		}
-		#dump( json_encode($search_options, JSON_PRETTY_PRINT), ' search_options ++ '.to_string()); die();
 
-	$area_thesaurus = new area_thesaurus(DEDALO_TESAURO_TIPO);
-	$response 		= $area_thesaurus->search_thesaurus( $search_options );
-		#dump( json_encode((array)$response), ' $response ++ '.to_string()); die();
+	// response
+		$area_thesaurus	= new area_thesaurus(DEDALO_TESAURO_TIPO);
+		$response		= $area_thesaurus->search_thesaurus( $search_options );
+			#dump( json_encode((array)$response), ' $response ++ '.to_string()); die();
 
 	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
 
-		$response->debug = $debug;
-	}
+			$response->debug = $debug;
+		}
 
-	return (object)$response;
+
+	return $response;
 }//end search_thesaurus

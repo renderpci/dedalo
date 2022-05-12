@@ -44,7 +44,11 @@
 		// hierarchy_sections - get the hierarchy configuration nodes to build the root terms
 			$hierarchy_sections_filter	= $search_action->hierarchy_sections ?? null;
 			$terms_are_model			= $this->build_options->terms_are_model ?? false;
-			$hierarchy_sections			= $this->get_hierarchy_sections(null, $hierarchy_sections_filter, $terms_are_model); // $this->get_data_items();
+			$hierarchy_sections			= $this->get_hierarchy_sections(
+				null, // hierarchy_types_filter
+				$hierarchy_sections_filter, // hierarchy_sections_filter
+				$terms_are_model // terms_are_model bool
+			); // $this->get_data_items();
 
 		// typologies
 			$ar_tipologies_section_id = [];
@@ -71,7 +75,7 @@
 
 		// hierarchy_terms
 			$hierarchy_terms = $search_action->hierarchy_terms ?? null;
-			if($hierarchy_terms){
+			if(!empty($hierarchy_terms)) {
 				$sqo	= $this->get_hierarchy_terms_sqo($hierarchy_terms);
 				$result	= $this->search_thesaurus( $sqo );
 				$item->ts_search = $result;

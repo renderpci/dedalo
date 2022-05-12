@@ -217,7 +217,7 @@ abstract class common {
 	/**
 	* SET_PERMISSIONS
 	*/
-	public function set_permissions( $number ) : int {
+	public function set_permissions( int $number ) {
 		$this->permissions = (int)$number;
 	}//end set_permissions
 
@@ -278,32 +278,31 @@ abstract class common {
 	/**
 	* GET MATRIX_TABLE FROM TIPO
 	* @param string $tipo
-	* @return string|bool $matrix_table
+	* @return string $matrix_table
 	*/
-	public static function get_matrix_table_from_tipo(string $tipo) {
+	public static function get_matrix_table_from_tipo(string $tipo) : ?string {
 
 		if (empty($tipo)) {
 			trigger_error("Error Processing Request. tipo is empty");
-			return false;
+			return null;
 		}elseif ($tipo==='matrix') {
 			trigger_error("Error Processing Request. tipo is invalid (tipo:$tipo)");
-			return false;
+			return null;
 		}
 
-		static $matrix_table_from_tipo;
+		// cache
+			static $matrix_table_from_tipo;
+			if(isset($matrix_table_from_tipo[$tipo])) {
+				return $matrix_table_from_tipo[$tipo];
+			}
 
-		if(isset($matrix_table_from_tipo[$tipo])) {
-			return($matrix_table_from_tipo[$tipo]);
-		}
+		// matrix_table. Default value
+			$matrix_table = 'matrix';
 
-		#if(SHOW_DEBUG===true) $start_time = start_time();
-
-		# Default value:
-		$matrix_table = 'matrix';
-
-		$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+		// model
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			if (empty($modelo_name)) {
-				debug_log(__METHOD__." Current tipo ($tipo) modelo name is empty. Default table 'matrix' was used.".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Current tipo ($tipo) modelo name is empty. Default table 'matrix' was used.".to_string(), logger::ERROR);
 			}
 
 		if ($modelo_name==='section') {
@@ -346,33 +345,31 @@ abstract class common {
 			}//end switch
 
 		}else{
+
 			if(SHOW_DEBUG===true) {
 				dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
 			}
 			throw new Exception("Error Processing Request. Don't use non section tipo ($tipo - $modelo_name) to calculate matrix_table. Use always section_tipo", 1);
 
-			/*
-			# COMPONENT CASE
-			# Heredamos la tabla de la sección parent (si la hay)
-			$ar_parent_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name='section', $relation_type='parent');
-			if (isset($ar_parent_section[0])) {
-				$parent_section_tipo = $ar_parent_section[0];
-				$ar_related = common::get_ar_related_by_model('matrix_table', $parent_section_tipo);
-				if ( isset($ar_related[0]) ) {
-					# Set custom matrix table
-					$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
-				}
-			}
-			*/
+
+			// # COMPONENT CASE
+			// # Heredamos la tabla de la sección parent (si la hay)
+			// $ar_parent_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name='section', $relation_type='parent');
+			// if (isset($ar_parent_section[0])) {
+			// 	$parent_section_tipo = $ar_parent_section[0];
+			// 	$ar_related = common::get_ar_related_by_model('matrix_table', $parent_section_tipo);
+			// 	if ( isset($ar_related[0]) ) {
+			// 		# Set custom matrix table
+			// 		$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
+			// 	}
+			// }
 		}
-		#dump($matrix_table,'$matrix_table for tipo: '.$tipo);
 
-		# Cache
-		$matrix_table_from_tipo[$tipo] = $matrix_table;
+		// cache
+			$matrix_table_from_tipo[$tipo] = $matrix_table;
 
-		#if(SHOW_DEBUG===true) $GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__, 'logger_backend_activity '.$tipo);
 
-		return (string)$matrix_table;
+		return $matrix_table;
 	}//end get_matrix_table_from_tipo
 
 
@@ -749,13 +746,19 @@ abstract class common {
 
 	/**
 	* GET_properties : Alias of $this->RecordObj_dd->get_properties() but json decoded
+	* @return object|array|null $properties
 	*/
 	public function get_properties() {
 
-		if(isset($this->properties)) return $this->properties;
+		$properties = isset($this->properties)
+			? $this->properties // already fixed
+			: $this->RecordObj_dd->get_properties(); // already parsed
 
-		# Read string from database str
-		$properties = $this->RecordObj_dd->get_properties();
+		if ($properties===false) {
+			// dump($this, ' this setting properties false as null ++ '.to_string($this->tipo));
+			$properties = null;
+		}
+
 
 		return $properties;
 	}//end get_properties
@@ -767,14 +770,13 @@ abstract class common {
 	* @return bool
 	*/
 	public function set_properties($value) : bool {
-		if (is_string($value)) {
-			$properties = json_decode($value);
-		}else{
-			$properties = $value;
-		}
 
-		# Fix properties obj
-		$this->properties = (object)$properties;
+		$properties = (is_string($value))
+			? json_decode($value)
+			: $value;
+
+		# Fix properties object|null
+		$this->properties = $properties;
 
 		return true;
 	}//end set_properties
@@ -898,14 +900,14 @@ abstract class common {
 	* @param php://input
 	* @return bool
 	*/
-	public static function trigger_manager($request_options=false) : bool {
+	public static function trigger_manager(object $request_options=null) : bool {
 
 		// options parse
 			$options = new stdClass();
-				$options->test_login 		= true;
-				$options->source 	 		= 'php://input';
-				$options->set_json_header 	= true;
-				if($request_options!==false) {
+				$options->test_login		= true;
+				$options->source			= 'php://input';
+				$options->set_json_header	= true;
+				if(!empty($request_options)) {
 					foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 				}
 
@@ -1200,11 +1202,11 @@ abstract class common {
 	/**
 	* BUILD_ELEMENT_JSON_OUTPUT
 	* Simply group context and data into a ¡n object and encode as JSON string
-	* @param object $context
-	* @param object $data
+	* @param array $context
+	* @param array $data
 	* @return object $result
 	*/
-	public static function build_element_json_output($context, $data=[]) : object {
+	public static function build_element_json_output(array $context, array $data=[]) : object {
 
 		$element = new stdClass();
 			$element->context = $context;
@@ -1231,8 +1233,12 @@ abstract class common {
 	*/
 	public function get_json(object $request_options=null) : object {
 
+		$json_cache = false; // experimental. Set false in production (!)
+
 		// Debug
-			if(SHOW_DEBUG===true) $start_time = start_time();
+			if(SHOW_DEBUG===true) {
+				$start_hrtime = start_hrtime();
+			}
 
 		// options parse
 			$options = new stdClass();
@@ -1246,19 +1252,29 @@ abstract class common {
 			$called_tipo  = $this->get_tipo();
 
 		// cache context
-			// static $resolved_get_json = [];
-			// $resolved_get_json_key = $called_model .'_'. $called_tipo .'_'. ($this->section_tipo ?? '') .'_'. $this->modo .'_'. (int)$options->context_type . '_'. (int)$options->get_request_config;
-			// if ($options->get_data===false && isset($resolved_get_json[$resolved_get_json_key])) {
-			// 	debug_log(__METHOD__." Returned resolved json with key: ".to_string($resolved_get_json_key), logger::DEBUG);
-			// 	$json = $resolved_get_json[$resolved_get_json_key];
-			// 	return $json;
-			// }
-			// dump($options, ' options ++ '.to_string($called_model) .' - '.$resolved_get_json_key);
+			static $resolved_get_json = [];
+			if ($json_cache===true) {
+				$key_beats = [
+					$called_model,
+					$called_tipo,
+					$this->section_id ?? '',
+					($this->section_tipo ?? ''),
+					$this->modo,
+					$options->context_type,
+					(int)$options->get_request_config,
+					(int)$options->get_context,
+					(int)$options->get_data
+				];
+				$cache_key = implode('_', $key_beats);
+				if (isset($resolved_get_json[$cache_key])) {
+					debug_log(__METHOD__." ////////////////////////////////////// Returned resolved json with key: ".to_string($cache_key), logger::DEBUG);
+					return $resolved_get_json[$cache_key];
+				}
+			}
 
 		// old way
 			// path. Class name is called class (ex. component_input_text), not this class (common)
 				$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
-					// dump($resolved_get_json_key, ' show path ++ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH '.$called_model .' - '. $called_tipo.' - '. ($options->get_context===true ? 'context' : '' ) . ' ' .($options->get_data===true ? 'data' : '' ) );
 
 			// controller include
 				$json = include( $path );
@@ -1274,7 +1290,8 @@ abstract class common {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				$exec_time = exec_time_unit($start_time,'ms')." ms";
+				// $exec_time = exec_time_unit($start_time,'ms').' ms';
+				$exec_time = exec_hrtime_unit($start_hrtime).' ms';
 				#$element = json_decode($json);
 				#	$element->debug = new stdClass();
 				#	$element->debug->exec_time = $exec_time;
@@ -1292,10 +1309,15 @@ abstract class common {
 						#$bt = debug_backtrace()[0];
 						#	dump($json->data, ' json->data ++ '.to_string($bt));
 					}
+				// error_log('--- get_json $exec_time '.$called_model.' - '.$called_tipo.' : '.$exec_time);
+				// error_log('------------------- get_structure_context -------- '. $called_tipo .' - '. $exec_time .' ms ---- '. $called_model);
+				error_log('------------------- get_json --------------------- '. $called_tipo .' - '. $exec_time .' ---- '. $called_model.' - '.($this->section_tipo ?? $this->tipo ?? '').'.'.($this->section_id ?? ''));
 			}
 
-		// cache context
-			// if ($options->get_data===false) $resolved_get_json[$resolved_get_json_key] = $json;
+		// cache
+			if ($json_cache===true) {
+				$resolved_get_json[$cache_key] = $json;
+			}
 
 
 		return $json;
@@ -1308,7 +1330,11 @@ abstract class common {
 	* @return object $dd_object
 	*/
 	public function get_structure_context(int $permissions=0, bool $add_request_config=false, callable $callback=null) : object {
-		if(SHOW_DEBUG===true) $start_time = start_time();
+
+		if(SHOW_DEBUG===true) {
+			// $start_hrtime = start_hrtime();
+			$start_time=microtime(1);
+		}
 
 		// short vars
 			$model			= get_class($this);
@@ -1517,6 +1543,7 @@ abstract class common {
 					$dd_object->relation_list		= $this->get_relation_list();
 					$dd_object->time_machine_list	= $this->get_time_machine_list();
 				}
+				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_hrtime_unit($start_hrtime) );
 
 		// callback
 			if ($callback!==null) {
@@ -1525,7 +1552,6 @@ abstract class common {
 
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
-
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -1539,7 +1565,9 @@ abstract class common {
 					? sprintf("\033[31m%s\033[0m", $time)
 					: $time;
 				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
-				error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				// error_log('+++++++++++++++++++++++++++++++++++ Time C : '.exec_hrtime_unit($start_hrtime) );
+				// error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+
 			}
 
 
@@ -1586,7 +1614,7 @@ abstract class common {
 	* @return object
 	* 	Object with two properties: context, data
 	*/
-	public function get_subdatum($from_parent=null, $ar_locators=[]) : object {
+	public function get_subdatum(string $from_parent=null, array $ar_locators=[]) : object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1622,7 +1650,7 @@ abstract class common {
 
 		// children_resursive function, used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
 			if (!function_exists('get_children_recursive')) {
-				function get_children_recursive($ar_ddo, $dd_object) {
+				function get_children_recursive(array $ar_ddo, object $dd_object) : array {
 					$ar_children = [];
 
 					foreach ($ar_ddo as $ddo) {
@@ -1851,9 +1879,11 @@ abstract class common {
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 			}//end foreach($ar_locators as $current_locator)
 
-		$subdatum = new stdClass();
-			$subdatum->context	= $ar_subcontext;
-			$subdatum->data		= $ar_subdata;
+
+		// subdatum
+			$subdatum = new stdClass();
+				$subdatum->context	= $ar_subcontext;
+				$subdatum->data		= $ar_subdata;
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1865,6 +1895,7 @@ abstract class common {
 				$log = "------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
 				error_log($log);
 			}
+
 
 		return $subdatum;
 	}//end get_subdatum
@@ -1938,16 +1969,16 @@ abstract class common {
 
 
 	/**
-	* BUILD_RERQUEST_CONFIG
+	* BUILD_REQUEST_CONFIG
 	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
 	* The search_query_object_context (request_config) have at least:
 	* one sqo, that define the search with filter, offset, limit, etc, the select option is not used (it will use the ddo)
 	* one ddo for the searched section (source ddo)
 	* one ddo for the component searched.
 	* 	is possible create more than one ddo for different components.
-	* @return array | json
+	* @return array $request_config
 	*/
-	public function build_request_config() {
+	public function build_request_config() : array {
 
 		if (isset($this->request_config)) {
 			return $this->request_config;
@@ -2122,7 +2153,7 @@ abstract class common {
 
 
 		return $request_config;
-	}//end build_rqo
+	}//end build_request_config
 
 
 

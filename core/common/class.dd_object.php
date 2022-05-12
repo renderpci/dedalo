@@ -63,7 +63,7 @@ class dd_object {
 	* @param object $data
 	*	optional . Default is null
 	*/
-	public function __construct( $data=null ) {
+	public function __construct( object $data=null ) {
 
 		if (is_null($data)) return;
 
@@ -167,7 +167,7 @@ class dd_object {
 	/**
 	* SET_SECTION_TIPO
 	*/
-	public function set_section_tipo($value) {
+	public function set_section_tipo(string $value) {
 		if (!isset($this->model)) {
 			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
@@ -240,7 +240,7 @@ class dd_object {
 	* Note hint parameter 'object' is not supported bellow php 7.2
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
 	*/
-	public function set_properties($value) {
+	public function set_properties(?object $value) {
 
 		$this->properties = $value;
 	}//end set_properties
@@ -270,9 +270,9 @@ class dd_object {
 	/**
 	* SET_LABELS
 	* Used by tools
-	* @param array | null $value
+	* @param object|null $value
 	*/
-	public function set_labels($value) {
+	public function set_labels(?object $value) {
 
 		$this->labels = $value;
 	}//end set_labels
@@ -291,8 +291,9 @@ class dd_object {
 
 	/**
 	* SET_TOOLS
+	* @param array|null $value
 	*/
-	public function set_tools($value) {
+	public function set_tools(?array $value) {
 
 		if(!is_null($value) && !is_array($value)){
 			throw new Exception("Error Processing Request, Tools only had allowed array or null values. ".gettype($value). " is received" , 1);
@@ -305,8 +306,9 @@ class dd_object {
 
 	/**
 	* SET_BUTTONS
+	* @param array|null $value
 	*/
-	public function set_buttons($value) {
+	public function set_buttons(?array $value) {
 
 		if(!is_null($value) && !is_array($value)){
 			throw new Exception("Error Processing Request, Buttons only had allowed array or null values. ".gettype($value). " is received" , 1);
@@ -330,7 +332,7 @@ class dd_object {
 	/**
 	* SET_TARGET_SECTIONS
 	*/
-	public function set_target_sections($value) {
+	public function set_target_sections(array $value) {
 
 		$this->target_sections = $value;
 	}//end set_target_sections
@@ -340,7 +342,7 @@ class dd_object {
 	/**
 	* SET_REQUEST_CONFIG
 	*/
-	public function set_request_config($value) {
+	public function set_request_config(?array $value) {
 
 		$this->request_config = $value;
 	}//end set_request_config
@@ -350,7 +352,7 @@ class dd_object {
 	/**
 	* SET_AR_SECTIONS_TIPO
 	*/
-	public function set_ar_sections_tipo($value) {
+	public function set_ar_sections_tipo(array $value) {
 
 		$this->ar_sections_tipo = $value;
 	}//end set_ar_sections_tipo
@@ -370,7 +372,7 @@ class dd_object {
 	/**
 	* SET_VIEW
 	*/
-	public function set_view($value) {
+	public function set_view(string $value) {
 
 		$this->view = $value;
 	}//end set_view
@@ -380,7 +382,7 @@ class dd_object {
 	/**
 	* SET_FIXED_MODE
 	*/
-	public function set_fixed_mode($value) {
+	public function set_fixed_mode(string $value) {
 
 		$this->fixed_mode = $value;
 	}//end set_fixed_mode
@@ -401,7 +403,7 @@ class dd_object {
 	* SET_NAME
 	* Used by tools
 	*/
-	public function set_name($value) {
+	public function set_name(string $value) {
 
 		$this->name = $value;
 	}//end set_name
@@ -411,7 +413,7 @@ class dd_object {
 	* SET_DESCRIPTION
 	* Used by tools
 	*/
-	public function set_description($value) {
+	public function set_description(string $value) {
 
 		$this->description = $value;
 	}//end set_description
@@ -422,7 +424,7 @@ class dd_object {
 	* SET_ICON
 	* Used by tools
 	*/
-	public function set_icon($value) {
+	public function set_icon(string $value) {
 
 		$this->icon = $value;
 	}//end set_icon
@@ -432,7 +434,7 @@ class dd_object {
 	* SET_show_in_inspector
 	* Used by tools
 	*/
-	public function set_show_in_inspector($value) {
+	public function set_show_in_inspector(bool $value) {
 
 		$this->show_in_inspector = $value;
 	}//end set_show_in_inspector
@@ -443,7 +445,7 @@ class dd_object {
 	* SET_show_in_component
 	* Used by tools
 	*/
-	public function set_show_in_component($value) {
+	public function set_show_in_component(bool $value) {
 
 		$this->show_in_component = $value;
 	}//end set_show_in_component
@@ -454,7 +456,7 @@ class dd_object {
 	* SET_config
 	* Used by tools
 	*/
-	public function set_config($value) {
+	public function set_config(?object $value) {
 
 		$this->config = $value;
 	}//end set_config
@@ -465,11 +467,11 @@ class dd_object {
 	* COMPARE_DDO
 	* @return bool $equal
 	*/
-	public static function compare_ddo($ddo1, $ddo2, $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) {
+	public static function compare_ddo(object $ddo1, object $ddo2, array $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) : bool {
 
-		if (!is_object($ddo1) || !is_object($ddo2)) {
-			return false;
-		}
+		// if (!is_object($ddo1) || !is_object($ddo2)) {
+		// 	return false;
+		// }
 
 		if (empty($ar_properties)){
 			foreach ($ddo1 as $property => $value) {
@@ -546,7 +548,7 @@ class dd_object {
 	* IN_ARRAY_DDO
 	* @return bool $founded
 	*/
-	public static function in_array_ddo($ddo, $ar_ddo, $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) {
+	public static function in_array_ddo(object $ddo, array $ar_ddo, array $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) : bool {
 		$founded = false;
 
 		foreach ((array)$ar_ddo as $current_ddo) {

@@ -17,7 +17,7 @@ abstract class filter {
 	* @param array $ar_area_tipo
 	* @return array $ar_profile_id
 	*/
-	public static function get_profiles_for_areas($ar_area_tipo) : array {
+	public static function get_profiles_for_areas(array $ar_area_tipo) : array {
 
 		// short vars
 			$tipo = DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
@@ -25,7 +25,7 @@ abstract class filter {
 
 		// sql_filter
 			$ar_filter = [];
-			foreach ((array)$ar_area_tipo as $area_tipo) {
+			foreach ($ar_area_tipo as $area_tipo) {
 
 				// Reference:
 				// {
@@ -57,7 +57,7 @@ abstract class filter {
 			}
 
 
-		return (array)$ar_profile_id;
+		return $ar_profile_id;
 	}//end get_profiles_for_areas
 
 
@@ -66,13 +66,15 @@ abstract class filter {
 	* GET_USER_PROJECTS
 	* Revisada 19-08-2014
 	* Como tarda poco, unos 0.008 secs, no hacemos cache del dato
+	* @return array|null $dato
 	*/
-	public static function get_user_projects( $user_id ) {
+	public static function get_user_projects( int $user_id ) : ?array {
 
-		static $user_projects_cache;
-		if (isset($user_projects_cache[$user_id])) {
-			return $user_projects_cache[$user_id];
-		}
+		// cache
+			static $user_projects_cache;
+			if (isset($user_projects_cache[$user_id])) {
+				return $user_projects_cache[$user_id];
+			}
 
 		$dato = null;
 		if ( !empty($user_id) || abs($user_id)>0 ) {
@@ -87,6 +89,7 @@ abstract class filter {
 			$dato = (array)$component_filter_master->get_dato();
 		}
 
+		// cache
 		$user_projects_cache[$user_id] = $dato;
 
 		return $dato;
@@ -100,7 +103,7 @@ abstract class filter {
 	* Works like ar_list_of_values but filtered by user authorized projects
 	* @return array $ar_projects
 	*/
-	public static function get_user_authorized_projects( $user_id, $from_component_tipo ) : array {
+	public static function get_user_authorized_projects( int $user_id, string $from_component_tipo ) : array {
 		$start_time=microtime(1);
 
 		// cache
@@ -255,7 +258,7 @@ abstract class filter {
 	* In process.... (need specific component for manage)
 	* @return string $sql_filtro
 	*/
-	public static function get_filter_user_records_by_id( $user_id ) : array {
+	public static function get_filter_user_records_by_id( int $user_id ) : array {
 
 		$filter_user_records_by_id = array();
 
@@ -272,9 +275,8 @@ abstract class filter {
 			$filter_user_records_by_id = $component->get_dato();
 		}
 
-		return (array)$filter_user_records_by_id;
+		return $filter_user_records_by_id;
 	}//end get_filter_user_records_by_id
-
 
 
 

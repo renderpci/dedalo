@@ -37,7 +37,7 @@ class component_filter extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	function __construct( $tipo=false, $parent=null, $modo='list', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		# Build component normally
 		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
@@ -110,7 +110,7 @@ class component_filter extends component_relation_common {
 	* GET_DEFAULT_DATO_FOR_USER
 	* @return array $default_dato
 	*/
-	public function get_default_dato_for_user($user_id) {
+	public function get_default_dato_for_user(int $user_id) : array {
 
 		$is_global_admin = security::is_global_admin($user_id);
 		if ($is_global_admin===true) {
@@ -353,9 +353,9 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_DATALIST
 	* Works like ar_list_of_values but filtered by user authorized projects
-	* @return array $ar_projects
+	* @return array $ar_datalist
 	*/
-	public function get_datalist() {
+	public function get_datalist() : array {
 		$start_time=microtime(1);
 
 		// ar_projects. Projects authorized to the current user
@@ -453,7 +453,7 @@ class component_filter extends component_relation_common {
 	*	Recursive
 	* @return array $ar_groupers
 	*/
-	public function get_project_groupers($section_tipo, $section_id, $datos) {
+	public function get_project_groupers(string $section_tipo, $section_id, $datos) : array {
 
 		$ar_groupers = [];
 
@@ -482,12 +482,14 @@ class component_filter extends component_relation_common {
 
 		// parent
 			$model_parent		= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo,true);
-			$parent_component	= component_common::get_instance($model_parent,
-															 $parent_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+			$parent_component	= component_common::get_instance(
+				$model_parent,
+				$parent_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$parent_dato = $parent_component->get_dato();
 
 		// item grouper obj
@@ -504,6 +506,7 @@ class component_filter extends component_relation_common {
 		 	$parent = reset($parent_dato);
 			$ar_groupers = array_merge($ar_groupers, $this->get_project_groupers($parent->section_tipo, $parent->section_id, $datos));
 		}
+
 
 		return $ar_groupers;
 	}//end get_project_groupers
@@ -533,7 +536,7 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_STATS_VALUE_RESOLVED
 	*/
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) {
+	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) : array {
 
 		$caller_component = get_called_class();
 
@@ -870,7 +873,7 @@ class component_filter extends component_relation_common {
 	* @return array ar_target_section_tipo
 	* 	Array of string like ['dd153']
 	*/
-	public function get_ar_target_section_tipo() {
+	public function get_ar_target_section_tipo() : array {
 
 		return [DEDALO_SECTION_PROJECTS_TIPO];
 	}//end get_ar_target_section_tipo

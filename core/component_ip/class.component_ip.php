@@ -1,6 +1,6 @@
 <?php
 # GeoIp2 load by composer
-require_once DEDALO_ROOT . '/autoload.php';
+// require_once DEDALO_ROOT . '/autoload.php';
 #use GeoIp2\Database\Reader;
 
 
