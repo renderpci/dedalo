@@ -1118,7 +1118,7 @@ const render_persons_list = function(self, text_editor, i){
 		})
 
 	// if ar_persons is empty, stop and return the fragment
-		if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)=== 'undefined'){
+		if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)==='undefined') {
 			return fragment
 		}
 
