@@ -23,11 +23,11 @@ class component_media_common extends component_common {
 	* }
 	* @return object $response
 	*/
-	public function add_file($file_data) {
+	public function add_file(object $file_data) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// file_data sample
 			// {
@@ -63,11 +63,11 @@ class component_media_common extends component_common {
 			}
 
 		// target file info
-			$file_extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_id		= $this->get_id();
 			$folder_path	= $this->get_target_dir();
-			$full_file_name = $file_id . '.' . $file_extension;
-			$full_file_path = $folder_path .'/'. $full_file_name;
+			$full_file_name	= $file_id . '.' . $file_extension;
+			$full_file_path	= $folder_path .'/'. $full_file_name;
 
 		// validate extension
 			if (!$this->valid_file_extension($file_extension)) {
@@ -106,14 +106,14 @@ class component_media_common extends component_common {
 			}
 
 		// all is ok
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+			$response->result	= true;
+			$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 
 			// uploaded ready file info
-			$response->ready 	= (object)[
-				'original_file_name' => $name,
-				'full_file_name' 	 => $full_file_name,
-				'full_file_path' 	 => $full_file_path
+			$response->ready = (object)[
+				'original_file_name'	=> $name,
+				'full_file_name'		=> $full_file_name,
+				'full_file_path'		=> $full_file_path
 			];
 
 
@@ -130,8 +130,8 @@ class component_media_common extends component_common {
 	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_id) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.']. This component don\'t have ZIP files options enable. '.get_called_class();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']. This component don\'t have ZIP files options enable. '.get_called_class();
 
 
 		return $response;
@@ -143,12 +143,13 @@ class component_media_common extends component_common {
 	* RENAME_OLD_FILES
 	* @param $file_id string as 'test175_test65_3'
 	* @param $folder_path string
+	* @return object $reponse
 	*/
-	protected function rename_old_files($file_id, $folder_path) {
+	protected function rename_old_files(string $file_id, string $folder_path) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 
 		// deleted dir. Verify / create the dir "deleted"
 		if(!file_exists($folder_path . "/deleted")) {
@@ -178,8 +179,8 @@ class component_media_common extends component_common {
 			rename($folder_path.'/'.$file_id , $file_to_move_renamed);
 		}
 
-		$response->result 	= true;
-		$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+		$response->result	= true;
+		$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
 
 		return $response;
@@ -191,7 +192,7 @@ class component_media_common extends component_common {
 	* VALID_FILE_EXTENSION
 	* @return bool
 	*/
-	public function valid_file_extension($file_extension) {
+	public function valid_file_extension(string $file_extension) : bool {
 
 		$allowed_extensions = $this->get_allowed_extensions();
 
@@ -210,8 +211,8 @@ class component_media_common extends component_common {
 	public function process_uploaded_file(object $file_data) : object {
 
 		$response = new stdClass();
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done';
+			$response->result	= true;
+			$response->msg		= 'Ok. Request done';
 
 		return $response;
 	}//end process_uploaded_file
@@ -224,7 +225,7 @@ class component_media_common extends component_common {
 	* Used as 'datalist' in component data API response
 	* @return array $files_info
 	*/
-	public function get_files_info() {
+	public function get_files_info(): array {
 
 		$ar_quality = $this->get_ar_quality();
 
@@ -274,8 +275,9 @@ class component_media_common extends component_common {
 	/**
 	* GET_QUALITY
 	* 	Takes quality from fixed value or fallback to default config value
+	* @return string $quality
 	*/
-	public function get_quality() {
+	public function get_quality() : string {
 
 		$quality = $this->quality ?? $this->get_default_quality();
 

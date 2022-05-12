@@ -32,6 +32,7 @@ include(DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'); # new 27-0
 include(DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'); # new 28-07-2021
 #include(DEDALO_CORE_PATH . '/common/class.relation.php');
 include(DEDALO_CORE_PATH . '/component_common/class.component_common.php');
+include(DEDALO_CORE_PATH . '/component_media_common/class.component_media_common.php');
 include(DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_common.php');
 include(DEDALO_CORE_PATH . '/search/class.search.php');
 include(DEDALO_CORE_PATH . '/search/class.search_tm.php');
@@ -44,6 +45,50 @@ include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
 include(DEDALO_SHARED_PATH . '/class.TR.php');
 include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
 include(DEDALO_SHARED_PATH . '/class.subtitles.php');
+
+// components json
+	// $ar_components = [
+	// 	'component_av',
+	// 	'component_check_box',
+	// 	'component_date',
+	// 	'component_email',
+	// 	'component_external',
+	// 	'component_filter',
+	// 	'component_filter_master',
+	// 	'component_filter_records',
+	// 	'component_geolocation',
+	// 	'component_html_file',
+	// 	'component_image',
+	// 	'component_info',
+	// 	'component_input_text',
+	// 	'component_inverse',
+	// 	'component_ip',
+	// 	'component_iri',
+	// 	'component_json',
+	// 	'component_number',
+	// 	'component_password',
+	// 	'component_pdf',
+	// 	'component_portal',
+	// 	'component_publication',
+	// 	'component_radio_button',
+	// 	'component_relation_children',
+	// 	'component_relation_index',
+	// 	'component_relation_model',
+	// 	'component_relation_parent',
+	// 	'component_relation_related',
+	// 	'component_score',
+	// 	'component_section_id',
+	// 	'component_security_access',
+	// 	'component_select',
+	// 	'component_select_lang',
+	// 	'component_semantic_node',
+	// 	'component_svg',
+	// 	'component_text_area'
+	// ];
+	// foreach ($ar_components as $model) {
+	// 	include(DEDALO_CORE_PATH .'/'. $model .'/class.'. $model .'.php');
+	// }
+
 
 
 /**

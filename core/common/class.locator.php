@@ -62,7 +62,7 @@ class locator extends stdClass {
 	* @param object $data
 	*	optional . Default is null
 	*/
-	public function __construct( $data=null ) {
+	public function __construct( object $data=null ) {
 
 		if (is_null($data)) return false;
 
@@ -126,29 +126,29 @@ class locator extends stdClass {
 	/**
 	* SET_SECTION_TIPO
 	*/
-	public function set_section_tipo($value) {
+	public function set_section_tipo(string $value) {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
 		}
-		$this->section_tipo = (string)$value;
+		$this->section_tipo = $value;
 	}
 	/**
 	* SET_COMPONENT_TIPO
 	*/
-	public function set_component_tipo($value) {
+	public function set_component_tipo(string $value) {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid component_tipo: $value", 1);
 		}
-		$this->component_tipo = (string)$value;
+		$this->component_tipo = $value;
 	}
 	/**
 	* SET_FROM_COMPONENT_TIPO
 	*/
-	public function set_from_component_tipo($value) {
+	public function set_from_component_tipo(string $value) {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid from_component_tipo: $value", 1);
 		}
-		$this->from_component_tipo = (string)$value;
+		$this->from_component_tipo = $value;
 	}
 	/**
 	* SET_TAG_ID
@@ -162,77 +162,76 @@ class locator extends stdClass {
 	/**
 	* SET_TAG_COMPONENT_TIPO
 	*/
-	public function set_tag_component_tipo($value) {
+	public function set_tag_component_tipo(string $value) {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid component_tipo: $value", 1);
 		}
-		$this->tag_component_tipo = (string)$value;
+		$this->tag_component_tipo = $value;
 	}
 	/**
 	* SET_STATE
 	*/
-	public function set_state($value) {
-		if(!is_object($value)) {
-			throw new Exception("Error Processing Request. Invalid state: $value", 1);
-		}
-		$this->state = (object)$value;
+	public function set_state(object $value) {
+		// if(!is_object($value)) {
+		// 	throw new Exception("Error Processing Request. Invalid state: $value", 1);
+		// }
+		$this->state = $value;
 	}
 	/**
 	* SET_TYPE
 	* Only defined relation types (structure) ar allowed
 	*/
-	public function set_type($value) {
+	public function set_type(string $value) {
 		$ar_allowed = common::get_allowed_relation_types();
 		if( !in_array($value, $ar_allowed) ) {
 			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_allowed), 1);
 		}
-		$this->type = (string)$value;
+		$this->type = $value;
 	}
 	/**
 	* SET_TYPE_REL
 	* Only defined relation direction
 	*/
-	public function set_type_rel($value) {
+	public function set_type_rel(string $value) {
 		# No verification is made now
-		$this->type_rel = (string)$value;
+		$this->type_rel = $value;
 	}
 	/**
 	* SET_SEMANTIC
 	*/
-	public function set_ds($value) {
+	public function set_ds(array $value) {
 		if(!is_array($value)) {
 			throw new Exception("Error Processing Request. Invalid dedalo semantic ds:". to_string($value), 1);
 		}
-		$this->ds = (array)$value;
+		$this->ds = $value;
 	}
 	/**
 	* SET_FROM_KEY
 	* @return
 	*/
-	public function set_from_key($value) {
+	public function set_from_key(int $value) {
 		if(int($value)<0) {
 			throw new Exception("Error Processing Request. Invalid from_key: $value", 1);
 		}
-		$this->type = (int)$value;
-
+		$this->type = $value;
 	}//end set_from_key
 	/**
 	* SET_TIPO
 	*/
-	public function set_tipo($value) {
+	public function set_tipo(string $value) {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_top_tipo: $value", 1);
 		}
-		$this->tipo = (string)$value;
+		$this->tipo = $value;
 	}// end set_tipo
 	/**
 	* SET_LANG
 	*/
-	public function set_lang($value) {
+	public function set_lang(string $value) {
 		if(strpos($value, 'lg-')!==0) {
 			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
 		}
-		$this->lang = (string)$value;
+		$this->lang = $value;
 	}//end set_lang
 
 
@@ -379,7 +378,7 @@ class locator extends stdClass {
 			$locator->set_section_id($section_id);
 
 		return $locator;
-	}#end lang_to_lang_locator
+	}//end lang_to_lang_locator
 
 
 
@@ -387,7 +386,7 @@ class locator extends stdClass {
 	* COMPARE_LOCATORS
 	* @return bool $equal
 	*/
-	public static function compare_locators( object $locator1, object $locator2, $ar_properties=[], $ar_exclude_properties=['dataframe','ds'] ) : bool {
+	public static function compare_locators( object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=['dataframe','ds'] ) : bool {
 
 		if (!is_object($locator1) || !is_object($locator2)) {
 			return false;
@@ -468,7 +467,7 @@ class locator extends stdClass {
 	* IN_ARRAY_LOCATOR
 	* @return bool $founded
 	*/
-	public static function in_array_locator( object $locator, $ar_locator, $ar_properties=array() ) : bool {
+	public static function in_array_locator( object $locator, array $ar_locator, array $ar_properties=[] ) : bool {
 		$founded = false;
 
 		foreach ((array)$ar_locator as $current_locator) {
@@ -493,7 +492,7 @@ class locator extends stdClass {
 	* GET_KEY_IN_ARRAY_LOCATOR
 	* @return mixed bool | int $key_founded
 	*/
-	public static function get_key_in_array_locator( $locator, $ar_locator, $ar_properties=array('section_id','section_tipo') ) {
+	public static function get_key_in_array_locator( object $locator, array $ar_locator, array $ar_properties=array('section_id','section_tipo') ) : bool {
 		$key_founded = false;
 
 		foreach ((array)$ar_locator as $key => $current_locator) {
@@ -513,7 +512,7 @@ class locator extends stdClass {
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/
-	final public function __call($strFunction, $arArguments) {
+	final public function __call(string $strFunction, $arArguments) {
 
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
@@ -535,6 +534,7 @@ class locator extends stdClass {
 			return false;
 		}
 	}
+
 
 
 	/**
@@ -564,4 +564,4 @@ class locator extends stdClass {
 
 
 
-}//end class
+}//end class locator

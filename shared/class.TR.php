@@ -22,7 +22,7 @@ abstract class TR {
 	* GET_MARK_PATTERN
 	* Get unified patterns for marks
 	*/
-	public static function get_mark_pattern($mark, $standalone=true, $id=false, $data=false, $state=false) {
+	public static function get_mark_pattern(string $mark, bool $standalone=true, $id=false, $data=false, $state=false) : string {
 
 		switch($mark) {
 
@@ -228,7 +228,7 @@ abstract class TR {
 	* ADDTAGIMGONTHEFLY
 	* Convert Dédalo tags like index, tc, etc. to images
 	*/
-	public static function addTagImgOnTheFly($text, $request_options=null) {
+	public static function addTagImgOnTheFly(string $text, object $request_options=null) {
 
 		#$hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
 
@@ -238,14 +238,14 @@ abstract class TR {
 		}
 
 		$options = new stdClass();
-			$options->hilite 			= false;
-			$options->indexEditable 	= false;
-			$options->tcEditable 		= false;
-			$options->svgEditable 		= false;
-			$options->geoEditable 		= false;
-			$options->pageEditable 		= false;
-			$options->personEditable 	= false;
-			$options->noteEditable 		= false;
+			$options->hilite			= false;
+			$options->indexEditable		= false;
+			$options->tcEditable		= false;
+			$options->svgEditable		= false;
+			$options->geoEditable		= false;
+			$options->pageEditable		= false;
+			$options->personEditable	= false;
+			$options->noteEditable		= false;
 			$options->struct_as_labels	= false;
 			$options->tag_url			= '../../component_text_area/tag';
 			$options->force_tr_tags_cdn	= false;
@@ -261,7 +261,7 @@ abstract class TR {
 				? '</span>'
 				: '';
 
-		// tag_URL. url path to php script thats render image		
+		// tag_URL. url path to php script thats render image
 			$tag_url = (defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false)
 				? TR_TAGS_CDN . '/?id='
 				: $options->tag_url . '/?id='; //'?'
@@ -391,7 +391,7 @@ abstract class TR {
 	* Set an array of tags to preserve in translation and wrap it into appertium notrans tags
 	* @return string
 	*/
-	public static function addBabelTagsOnTheFly($text) {
+	public static function addBabelTagsOnTheFly(string $text) : string {
 
 		$ar_tags = array('indexIn',
 						 'indexOut',
@@ -425,7 +425,7 @@ abstract class TR {
 	* DELETEMARKS
 	* clean text to translate
 	*/
-	public static function deleteMarks($string, $request_options=null) {
+	public static function deleteMarks(string $string, object $request_options=null) {
 
 		# Temporal (for catch old calls only)
 		if (is_bool($request_options)) {
@@ -520,7 +520,7 @@ abstract class TR {
 	* @see component_text_area::change_tag_state()
 	* @return string $tag
 	*/
-	public static function build_tag($type, $state, $id, $label, $data) {
+	public static function build_tag(string $type, string $state, $id, string $label, string $data) : string {
 
 		# Safe data for json
 		if(!is_string($data)) $data = json_encode($data);
@@ -557,7 +557,7 @@ abstract class TR {
 	* MATCH_PATTERN_INDEX_FROM_TAG
 	* Using pattern like: \[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]
 	*/
-	public static function match_pattern_index_from_tag( $tag, $type='index' ) {
+	public static function match_pattern_index_from_tag( string $tag, string $type='index' ) : string {
 
 		$pattern = TR::get_mark_pattern($mark=$type, $standalone=false);
 		if(preg_match_all("/$pattern/", $tag, $matches, PREG_PATTERN_ORDER)) {
@@ -571,7 +571,7 @@ abstract class TR {
 
 
 	# TAG2TYPE
-	public static function tag2type($tag) {
+	public static function tag2type(string $tag) {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
 		$type 			= $match_pattern[1][0];
@@ -579,7 +579,7 @@ abstract class TR {
 		return $type;
 	}
 	# TAG2STATE
-	public static function tag2state($tag) {
+	public static function tag2state(string $tag) {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
 		$state 			= $match_pattern[2][0];
@@ -587,7 +587,7 @@ abstract class TR {
 		return $state;
 	}
 	# TAG2VALUE. Convert tag to value
-	public static function tag2value($tag) {
+	public static function tag2value(string $tag) {
 
 		$match_pattern	= TR::match_pattern_index_from_tag($tag);
 		$value			= isset($match_pattern[3][0]) ? (int)$match_pattern[3][0] : null;
@@ -595,7 +595,7 @@ abstract class TR {
 		return $value;
 	}
 	# CONVERT tag to label
-	public static function tag2label($tag) {
+	public static function tag2label(string $tag) {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
 		$value 			= $match_pattern[5][0];
@@ -610,7 +610,7 @@ abstract class TR {
 	* @return object | null
 	*	Try to parse json data as object. If not is possible parse, return null
 	*/
-	public static function tag2data($tag, $type='index') {
+	public static function tag2data(string $tag, string $type='index') {
 
 		$match_pattern	= TR::match_pattern_index_from_tag($tag, $type);
 		$string			= $match_pattern[6][0];
@@ -627,7 +627,7 @@ abstract class TR {
 	* CONVERTDIV2BR
 	* CONVERT DIVS (div) TO <br />
 	*/
-	private static function convertDiv2br($text) {
+	private static function convertDiv2br(string $text) {
 
 		$text = str_replace('<div>','', $text);
 		$text = str_replace('</div>',"<br>\n", $text);
@@ -642,7 +642,7 @@ abstract class TR {
 	* Create a usable in text editor image from tag
 	* @return string
 	*/
-	public static function create_text_editor_image_from_tag( $tag, $type ) {
+	public static function create_text_editor_image_from_tag( string $tag, string $type ) : string {
 
 		switch ($type) {
 			case 'index':
@@ -652,6 +652,7 @@ abstract class TR {
 				$img = "<img id=\"$tag\" src=\"../../component_text_area/tag/?id=$tag\" class=\"tc\" data-mce-src=\"../../component_text_area/tag/?id=$tag\">";
 				break;
 			default:
+				$img = '';
 				trigger_error("Sorry. Type ($type) is not defined");
 				break;
 		}
@@ -662,7 +663,7 @@ abstract class TR {
 
 
 	# ELIMINATE PARAGRPHAS (p) AND CONVERT TO <br />
-	public static function convertParagraph2br($string) {
+	public static function convertParagraph2br(string $string) : string {
 
 		# develop control
 		$today 		= date("d-m-Y H:m:s");
@@ -783,7 +784,7 @@ abstract class TR {
 	# Limpieza del POST del formulario de TR transcripción
 	# Temporalmente habilitamos la función de formateo de TC's para Gerard
 	#
-	public static function limpiezaPOSTtr($string) {
+	public static function limpiezaPOSTtr(string $string) : string {
 
 		# strip slashes (need for text received from tinyMCE)
 		$string	= trim(stripslashes($string));
@@ -829,7 +830,7 @@ abstract class TR {
 
 
 	# cleanTexGarbage V2
-	public static function cleanTexGarbageV2_DEPRECATED($string) {
+	public static function cleanTexGarbageV2_DEPRECATED(string $string) {
 
 		$string = str_replace('<p><span class=\"hilite\"> </span></p>', '', $string);
 		$string = str_replace('<p><span class="hilite"> </span></p>', '', $string);
@@ -1023,7 +1024,7 @@ abstract class TR {
 	/**
 	* trInfo
 	* Info de los TC e Indexaciones de un texto (transcripción)
-	*/	
+	*/
 	public static function trInfo($texto) {
 
 		$fragmentoFull	= $texto ;
@@ -1128,7 +1129,7 @@ abstract class TR {
 	* GET_TAGS_OF_TYPE_IN_TEXT
 	* @return array $ar_tags_of_type
 	*/
-	public static function get_tags_of_type_in_text($raw_text, $ar_tag_types) {
+	public static function get_tags_of_type_in_text(string $raw_text, array $ar_tag_types) : array {
 
 		$ar_tags_of_type = array();
 

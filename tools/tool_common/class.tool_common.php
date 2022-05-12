@@ -94,7 +94,9 @@ class tool_common {
 			})->value[0] ?? reset($tool_object->description)->value[0];
 
 		// labels
-			$labels = $tool_object->labels ?? null;
+			$labels = empty($tool_object->labels)
+				? null
+				: $labels; // object
 
 		// context
 			// $context = new stdClass();

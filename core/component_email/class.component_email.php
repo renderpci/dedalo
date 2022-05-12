@@ -6,8 +6,11 @@
 */
 class component_email extends component_common {
 
+
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
+
 
 
 	/**
@@ -29,7 +32,9 @@ class component_email extends component_common {
 
 		$safe_dato=array();
 		foreach ((array)$dato as $key => $value) {
-				$safe_dato[] = component_email::clean_email($value);
+			$safe_dato[] = empty($value)
+				? $value
+				: component_email::clean_email($value);
 		}
 		$dato = $safe_dato;
 
@@ -63,7 +68,7 @@ class component_email extends component_common {
 	* IS_VALID_EMAIL
 	* @return bool
 	*/
-	public static function is_valid_email( $email ) {
+	public static function is_valid_email( string $email ) : bool {
 
 		return filter_var($email, FILTER_VALIDATE_EMAIL)
         	&& preg_match('/@.+\./', $email);
@@ -73,16 +78,13 @@ class component_email extends component_common {
 
 	/**
 	* CLEAN_EMAIL
-	* @return string $email
+	* @return string|null $email
 	*/
-	public static function clean_email($email) {
-
-		$email = trim($email);
+	public static function clean_email(string $email) : string {
 
 		if (!empty($email)) {
-			$email = preg_replace('=((<CR>|<LF>|0x0A/%0A|0x0D/%0D|\\n|\\r|\'|\")\S).*=i', null, $email);
+			$email = trim( preg_replace('=((<CR>|<LF>|0x0A/%0A|0x0D/%0D|\\n|\\r|\'|\")\S).*=i', '', $email) );
 		}
-
 
 		return $email;
 	}//end clean_email
@@ -272,7 +274,7 @@ class component_email extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
@@ -289,5 +291,6 @@ class component_email extends component_common {
 		return $ar_operators;
 	}//end search_operators_info
 
-}
-?>
+
+
+}//end class email

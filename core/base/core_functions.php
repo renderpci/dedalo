@@ -297,11 +297,11 @@ function start_hrtime() {
 
 
 /**
-* EXEC_START_HRTIME_UNIT
+* EXEC_HRTIME_UNIT
 * @return string $total
 * Time expresed in ms as '0,633262 ms'
 */
-function exec_start_hrtime_unit($start) {
+function exec_hrtime_unit($start) {
 	return (hrtime(true) - $start)/1e+6 ;//. ' ms';
 }
 
