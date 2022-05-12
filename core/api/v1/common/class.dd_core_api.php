@@ -337,12 +337,10 @@ class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-					foreach($vars as $name) {
-						$debug->{$name} = $$name;
-					}
-
+					$debug->json_data	= $json_data;
 				$response->debug = $debug;
 			}
+
 
 		return $response;
 	}//end create

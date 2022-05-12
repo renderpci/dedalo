@@ -223,7 +223,7 @@ const get_content_data = async function(self, ar_section_record) {
 					// button alt view (table)
 						const button_alt = ui.create_dom_element({
 							element_type	: 'span',
-							class_name		: 'button info',
+							class_name		: 'button info with_bg',
 							parent			: section_record_node
 						})
 						// event publish

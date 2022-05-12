@@ -204,8 +204,8 @@ const get_content_data_edit = function(self) {
 		})
 
 	// build values
-		const inputs_value = value //(value.length<1) ? [''] : value
-		const value_length = inputs_value.length
+		const inputs_value = value
+		const value_length = inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const input_element = get_input_element_edit(i, inputs_value[i], self)
 			inputs_container.appendChild(input_element)
