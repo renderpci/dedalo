@@ -54,6 +54,7 @@
 		// flex-wrap: wrap;
 		// margin-right: 0.5em;
 		// outline: 1px solid #EAEAEA;
+		align-items: baseline;
 
 		>.column {
 			// see list.less
@@ -67,9 +68,16 @@
 		.view_mosaic & {
 			// background-color: #31ff1d;
 
+
+
+
 			>.column {
 				// see list.less
 				width: 100%;
+
+				&.column_component_portal {
+
+				}
 
 				>.wrapper_component {
 					height: inherit;
@@ -85,8 +93,9 @@
 				width: 1.5rem;
 				background-color: white;
 				margin: 0.33rem;
+				z-index: 1;
+				opacity: 1;
 
-				opacity: 0;
 				/* smartphones, touchscreens */
 				@media (hover: none) and (pointer: coarse) {
 					opacity: 1;
