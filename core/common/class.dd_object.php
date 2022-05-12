@@ -239,8 +239,9 @@ class dd_object {
 	* SET_PROPERTIES
 	* Note hint parameter 'object' is not supported bellow php 7.2
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
+	* @param object|array|null
 	*/
-	public function set_properties(?object $value) {
+	public function set_properties($value) {
 
 		$this->properties = $value;
 	}//end set_properties
@@ -270,9 +271,9 @@ class dd_object {
 	/**
 	* SET_LABELS
 	* Used by tools
-	* @param object|null $value
+	* @param array|null $value
 	*/
-	public function set_labels(?object $value) {
+	public function set_labels(?array $value) {
 
 		$this->labels = $value;
 	}//end set_labels

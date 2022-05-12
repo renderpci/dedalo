@@ -93,10 +93,15 @@ class tool_common {
 				return $el->lang===DEDALO_DATA_LANG;
 			})->value[0] ?? reset($tool_object->description)->value[0];
 
-		// labels
-			$labels = empty($tool_object->labels)
+		// labels. take care of empty objects like '{}'
+			$labels = empty($tool_object->labels) || empty((array)$tool_object->labels)
 				? null
-				: $labels; // object
+				: $tool_object->labels; // array
+
+		// properties
+			$properties = empty($tool_object->properties)
+				? null
+				: $tool_object->properties; // object|array
 
 		// context
 			// $context = new stdClass();
@@ -123,7 +128,7 @@ class tool_common {
 				// 'lang'			=> $lang,
 				'mode'				=> 'edit',
 				// 'translatable'	=> $translatable,
-				'properties'		=> $tool_object->properties ?? null,
+				'properties'		=> $properties,
 				// 'css'			=> $css,
 				// 'permissions'	=> $permissions,
 				// 'tools'			=> $tools,
@@ -320,7 +325,7 @@ class tool_common {
 	* Get all tools and filter them matching tool_name given
 	* @return object | null
 	*/
-	public static function get_config(string $tool_name) : object {
+	public static function get_config(string $tool_name) : ?object {
 
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool();
