@@ -90,15 +90,15 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	// search filter node
 		if (self.filter) {
-			const filter_container = ui.create_dom_element({
+			const search_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'filter',
+				class_name		: 'search_container',
 				parent			: fragment
 			})
-			self.filter_container = filter_container
+			self.search_container = search_container
 			// self.filter.build().then(()=>{
 			// 	self.filter.render().then(filter_wrapper =>{
-			// 		filter_container.appendChild(filter_wrapper)
+			// 		search_container.appendChild(filter_wrapper)
 			// 	})
 			// })
 		}

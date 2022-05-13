@@ -6,9 +6,9 @@
 // imports
 	import {render_components_list} from '../../common/js/render_common.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/cookie.js'
-	// import {create_cookie, read_cookie, erase_cookie} from '../../common/js/utils/utils/index.js'
+	import {create_cookie, read_cookie} from '../../common/js/utils/cookie.js'
 
 
 
@@ -114,7 +114,7 @@ render_search.prototype.render_base = function() {
 	// search_global_container . Main search div
 		const search_global_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'search_global_container hide',
+			class_name		: 'search_global_container hide', // hide
 			parent			: fragment
 		})
 		// set
@@ -1001,50 +1001,37 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	*/
 	export const toggle_search_panel = (self) => {
 
-		const section_tipo 				= self.section_tipo
-		const search_global_container 	= self.search_global_container
+		console.log("toggle_search_panel self:",self);
+		console.log("self.search_global_container:",self.search_global_container);
+
+		// short vars
+			const search_global_container	= self.search_global_container
+			const status_id					= 'open_search_panel'
+			const status_table				= 'status'
+
 
 		if (search_global_container.classList.contains("hide")) {
 
+			self.search_panel_is_open = true
+
 			search_global_container.classList.remove("hide")
 
-			// Set search panel as opened
-				// self.track_show_panel({
-				// 	name	: "search_panel",
-				// 	action	: "open"
-				// })
-
-			// Thesaurus mode case
-			// if (self.mode==="thesaurus") {
-			// 	const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
-			// 		//wrapper_sections_selector.style.display = "block"
-			// 		wrapper_sections_selector.classList.remove("hide")
-			// }
-
-			self.search_panel_is_open = true
+			data_manager.prototype.set_local_db_data({
+				id		: status_id,
+				value	: true
+			}, status_table)
 
 		}else{
 
+			self.search_panel_is_open = false
+
 			search_global_container.classList.add("hide")
 
-			// Set search panel as closed
-				// self.track_show_panel({
-				// 	name 			: "search_panel",
-				// 	action 			: "close",
-				// 	section_tipo 	: section_tipo
-				// })
-
-			// Thesaurus mode case
-			// if (self.mode==="thesaurus") {
-			// 	const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
-			// 		//wrapper_sections_selector.style.display = "none"
-			// 		wrapper_sections_selector.classList.add("hide")
-			// }
-
-			self.search_panel_is_open = false
+			data_manager.prototype.delete_local_db_data(status_id, status_table)
 		}
 
-		return false;
+
+		return true;
 	};//end toggle_search_panel
 
 
