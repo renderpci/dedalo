@@ -238,19 +238,18 @@ const get_content_data = async function(self) {
 			parent 			: info
 		})
 
-
-
-	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: components_container
-	// 	})
+	// buttons container
+		// 	const buttons_container = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name 		: 'buttons_container',
+		// 		parent 			: components_container
+		// 	})
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
-			  content_data.appendChild(fragment)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div'
+		})
+		content_data.appendChild(fragment)
 
 
 	return content_data

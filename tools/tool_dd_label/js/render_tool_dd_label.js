@@ -117,14 +117,13 @@ const get_content_data = async function(self) {
 			class_name		: 'label_matix',
 			parent			: fragment
 		})
-	label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr);`
-	// grid-template-rows: repeat(${ar_names.length+1}, 1fr);
+		label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr);`
+		// grid-template-rows: repeat(${ar_names.length+1}, 1fr);
 
 
 	// header
-	const header = await get_rows(self, ar_langs, true, 'name')
-
-	label_matix.appendChild(header)
+		const header = await get_rows(self, ar_langs, true, 'name')
+		label_matix.appendChild(header)
 
 	// labels
 		const ar_names_length = ar_names.length
@@ -135,9 +134,10 @@ const get_content_data = async function(self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
-			  content_data.appendChild(fragment)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div'
+		})
+		content_data.appendChild(fragment)
 
 
 	return content_data

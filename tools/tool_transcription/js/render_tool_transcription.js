@@ -301,8 +301,9 @@ const get_content_data_edit = async function(self) {
 			})
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div'
+		})
 		content_data.appendChild(fragment)
 		// save the pointers of the content_data nodes, to used by the buttons to access to the components
 		content_data.left_container		= left_container
