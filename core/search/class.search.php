@@ -416,7 +416,7 @@ class search {
 	* @return string $filtered_relations
 	* json encoded array
 	*/
-	public static function get_filtered_relations($relations_data, $component_tipo) : array {
+	public static function get_filtered_relations(array $relations_data, string $component_tipo) : array {
 
 		$filtered_relations = [];
 
@@ -2323,7 +2323,7 @@ class search {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators( object $reference_locator, $limit=false, $offset=false, bool $count=false ) : array {
+	public static function calculate_inverse_locators( object $reference_locator, int $limit=null, int $offset=null, bool $count=false ) : array {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
 
 		# compare
@@ -2359,9 +2359,9 @@ class search {
 
 		if($count===false) {
 			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
-			if($limit!==false){
+			if($limit!==null){
 				$strQuery .= PHP_EOL . 'LIMIT '.$limit;
-				if($offset!==false){
+				if($offset!==null){
 					$strQuery .= PHP_EOL . 'OFFSET '.$offset;
 				}
 			}
@@ -3073,6 +3073,7 @@ class search {
 
 		return $data;
 	}//end get_data_with_path
+
 
 
 	/**
