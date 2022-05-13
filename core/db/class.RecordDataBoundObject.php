@@ -14,7 +14,7 @@ abstract class RecordDataBoundObject {
 	protected $blIsLoaded;
 	public $arModifiedRelations;
 
-	public $use_cache = true;
+	public $use_cache = true; // default is true (for structure only)
 	public $use_cache_manager = false;
 
 	#protected static $db_connection;
@@ -28,9 +28,12 @@ abstract class RecordDataBoundObject {
 	abstract protected function definePrimaryKeyName();
 
 
-
-	# __CONSTRUCT
-	public function __construct($id=NULL) {
+	/**
+	* __CONSTRUCT
+	* @param string $id
+	*	Like 'dd73'
+	*/
+	public function __construct( ?string $id=null ) {
 
 		$this->strTableName			= $this->defineTableName();
 		$this->strPrimaryKeyName	= $this->definePrimaryKeyName();
@@ -49,7 +52,7 @@ abstract class RecordDataBoundObject {
 
 	/**
 	* GET_CONNECTION
-	* @return pg database connection
+	* @return resource|object pg database connection
 	*/
 	private function get_connection() {
 
@@ -112,7 +115,7 @@ abstract class RecordDataBoundObject {
 
 	/**
 	* LOAD
-	*
+	* Get one row from database based on current section_tipo and section_id
 	* @return bool true
 	*/
 	public function Load() : bool {
@@ -200,9 +203,9 @@ abstract class RecordDataBoundObject {
 			if($arRow===false)	{
 				if(SHOW_DEBUG===true) {
 					#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
-					#throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
+					// throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
 				}
-				trigger_error('Error Processing Request. $strQuery: ' .PHP_EOL. $strQuery);
+				trigger_error('WARNING: No result on Load arRow. $strQuery: ' .PHP_EOL. $strQuery);
 				return false;
 			}
 
