@@ -2805,7 +2805,7 @@ abstract class common {
 	* GET_DDINFO_PARENTS
 	* @return object $dd_info
 	*/
-	public static function get_ddinfo_parents($locator, $source_component_tipo) : object {
+	public static function get_ddinfo_parents(object $locator, string $source_component_tipo) : object {
 
 		$section_id 	= $locator->section_id;
 		$section_tipo 	= $locator->section_tipo;

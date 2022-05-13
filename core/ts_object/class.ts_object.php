@@ -215,7 +215,6 @@ class ts_object {
 	* @return object $children_data
 	*/
 	public function get_children_data() : object {
-
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		# Global object
@@ -231,9 +230,10 @@ class ts_object {
 			$children_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
 			$children_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
 
-			$children_data->ar_elements 	= array();
+			$children_data->ar_elements = array();
 
-		$model = isset($this->options->model) ? $this->options->model : null;
+		// model
+			$model = $this->options->model ?? null; // options are fixed on construct the class
 
 		# elements
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
@@ -385,14 +385,14 @@ class ts_object {
 
 			# Add
 			$children_data->ar_elements[] = $element_obj;
-
-		}
+		}//end foreach ($ar_elements as $k_element_tipo => $current_object)
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total = round( (microtime(1)-$start_time), 3 );
+				// $total = round( (microtime(1)-$start_time), 3 );
 				#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-				$children_data->total_time = $total;
+				// $children_data->total_time = $total;
+				// error_log('********************* get_children_data total:'. exec_time_unit($start_time,'ms'));
 			}
 
 

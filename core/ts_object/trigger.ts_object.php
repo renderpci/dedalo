@@ -55,12 +55,14 @@ function get_children_data(object $json_data) : object {
 		$modelo_name					= 'component_relation_children';
 		$modo							= 'list_thesaurus';
 		$lang							= DEDALO_DATA_NOLAN;
-		$component_relation_children	= component_common::get_instance($modelo_name,
-																		 $tipo,
-																		 $section_id,
-																		 $modo,
-																		 $lang,
-																		 $section_tipo);
+		$component_relation_children	= component_common::get_instance(
+			$modelo_name,
+			$tipo,
+			$section_id,
+			$modo,
+			$lang,
+			$section_tipo
+		);
 		$dato		= $component_relation_children->get_dato();
 		$children	= $dato;
 	}
@@ -101,22 +103,23 @@ function get_children_data(object $json_data) : object {
 	// debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 				foreach($vars as $name) {
 					$debug->{$name} = $$name;
 				}
 			$response->debug = $debug;
 
 			// end line info
-				$text			= 'TRIGGER TS_OBJECT REQUEST '.$section_tipo.'_'.$section_id.' END IN '. $debug->exec_time;
+				$text			= 'TRIGGER TS_OBJECT REQUEST '.$section_tipo.'_'.$section_id.' END';
 				$text_lenght	= strlen($text) +1;
 				$nchars			= 200;
 				$line			= $text .' '. str_repeat("<", $nchars - $text_lenght);
-				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
+				debug_log(__METHOD__ . ' '.$debug->exec_time.PHP_EOL . $line, logger::DEBUG);
 		}
 
+
 	return (object)$response;
-}//end get_ar_children_data_real
+}//end get_ar_children_data
 
 
 
