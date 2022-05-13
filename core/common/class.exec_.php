@@ -11,15 +11,15 @@ class exec_ {
 	/**
 	* EXEC COMMAND
 	*/
-	public static function exec_command($command, $to='2>&1') {
-		
+	public static function exec_command(string $command, string $to='2>&1') {
+
 		$output = NULL;
 
 		try {
 
-			# Scape command for security			
+			# Scape command for security
 			$command = escapeshellcmd($command) . ' '.$to;
-			
+
 
 			# Exec command and get output
 			$output  = shell_exec( $command );
@@ -31,49 +31,49 @@ class exec_ {
 
 
 			if( !$output )
-				throw new Exception("Error processing media command", 1);				
-			
+				throw new Exception("Error processing media command", 1);
+
 		}catch(Exception $e){
-			
-			return ('Exception: '. $e->getMessage(). "\n");		
+
+			return ('Exception: '. $e->getMessage(). "\n");
 		}
 		return true ;
 	}//end exec_command
 
 
-	
+
 	/**
 	* EXEC SH FILE
 	*/
-	public static function exec_sh_file($file) {
+	public static function exec_sh_file(string $file) {
 
-		try {			
+		try {
 			#exec("sh $file > /dev/null &", $output); # funciona!!! <<<<
 			#exec("sh $file > /dev/null 2>&1 & echo $!", $output); # return pid
 
-			$response = exec("sh $file > /dev/null 2>&1 & echo $!", $output); 
-			
+			$response = exec("sh $file > /dev/null 2>&1 & echo $!", $output);
+
 			if ( !$response )
 				throw new Exception("Error Processing media file", 1);
 
 			if(!empty($output[0]))
 				return intval($output[0]);
-			
+
 		}catch(Exception $e){
-			
-			return ('Exception: '. $e->getMessage(). "\n");		
+
+			return ('Exception: '. $e->getMessage(). "\n");
 		}
 
 	}//end exec_sh_file
-	
 
-	
+
+
 	/**
 	* GETCOMMANDPATH
 	*/
-	private static function getCommandPath($command='') {
-		// note: security vulnerability... 
-		// should validate that $command doesn't 
+	private static function getCommandPath(string $command='') {
+		// note: security vulnerability...
+		// should validate that $command doesn't
 		// contain anything bad
 		$path = `which $command`;
 		if ($path != null) {
@@ -82,8 +82,9 @@ class exec_ {
 		} else {
 			return false;
 		}
-	
+
 	}//end getCommandPath
+
 
 
 	/**
@@ -93,15 +94,15 @@ class exec_ {
 	 *  @return array   exit_status  :  exit status of the executed command
 	 *                  output       :  console output of the executed command
 	 */
-	public static function live_execute_command($cmd, $live=false) {
-		
-		if($live) while (@ ob_end_flush()); // end all output buffers if any			
-	    
+	public static function live_execute_command(string $cmd, bool $live=false) : array {
+
+		if($live) while (@ ob_end_flush()); // end all output buffers if any
+
 	    $proc = popen("$cmd 2>&1 ; echo Exit status : $?", 'r');
-		
+
 		$live_output 	 = "";
 	    $complete_output = "";
-	   
+
 	    while (!feof($proc))
 	    {
 	        $live_output     = fread($proc, 4096);
@@ -109,22 +110,22 @@ class exec_ {
 	        if ($live) {
 	        	echo nl2br( $live_output );
 	        	@ flush();
-	        }	        
+	        }
 	    }
-	    pclose($proc);    	    
+	    pclose($proc);
 
 	    // get exit status
 	    preg_match('/[0-9]+$/', $complete_output, $matches);
 
 	    // return exit status and intended output
 	    return array (
-	                    'exit_status'  => $matches[0],
-	                    'output'       => str_replace("Exit status : " . $matches[0], '', nl2br( trim($complete_output) ))
-	                 );
-	}//end live_execute_command	
-	
-					
-	
+			'exit_status'	=> $matches[0],
+			'output'		=> str_replace("Exit status : " . $matches[0], '', nl2br( trim($complete_output) ))
+         );
+	}//end live_execute_command
+
+
+
 }//end class exec_
 
 
@@ -179,5 +180,3 @@ class Process{
 }//end class Process
 
 
-
-?>

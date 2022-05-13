@@ -198,7 +198,7 @@ abstract class tools extends common {
 	}
 
 	# TRUNCATE
-	public static function truncate_text($string, $limit, $break=" ", $pad="...") : string {
+	public static function truncate_text(string $string, int $limit, string $break=" ", string $pad="...") : string {
 
 	  # return with no change if string is shorter than $limit
 	  if(strlen($string) <= $limit) return $string;
@@ -216,7 +216,7 @@ abstract class tools extends common {
 	/**
 	* ECHO MEMORY USAGE FORMATED
 	*/
-	public static function get_memory_usage($mode='pid') {
+	public static function get_memory_usage(string $mode='pid') : string {
 
 		if($mode==='pid') {
 			$pid = getmypid();
@@ -278,7 +278,7 @@ abstract class tools extends common {
 	}
 
 
-	static function convert_d4_to_d3_lang($lang) {
+	static function convert_d4_to_d3_lang(string $lang) : string {
 
 		#$lang = preg_replace("/lg-/", "", $lang);
 
@@ -325,7 +325,7 @@ abstract class tools extends common {
 	* GET_BC_PATH
 	* Get breadcrumb path . Path is dragged along url (var is base64 encoded)
 	*/
-	static function get_bc_path() {
+	static function get_bc_path() : string {
 		global $tipo;
 
 		#
@@ -348,7 +348,7 @@ abstract class tools extends common {
 
 
 
-	static function get_id_path($id) {
+	static function get_id_path($id) : string {
 
 		# PATH
 		$id_path='';

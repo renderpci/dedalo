@@ -1442,7 +1442,7 @@ abstract class backup {
 			$fist_line	= str_replace(['\n','\N','\r','\t','  '], ' ', $fist_line);
 			$fist_line	= preg_replace('/\s+/', ' ', $fist_line);
 			$total		= exec_time_unit($start_time,'ms')." ms";
-			debug_log(__METHOD__." Get remote and write str data type:$obj->type - name:$obj->name in ms: $total \n".substr($fist_line, 0, 250), logger::DEBUG);
+			debug_log(__METHOD__.PHP_EOL."Get remote and write str data type: $obj->type - name: $obj->name in: $total \n".substr($fist_line, 0, 250), logger::DEBUG);
 			// Clean memory footprint
 			unset($fist_line); strtok('', '');
 		}

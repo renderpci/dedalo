@@ -3534,7 +3534,7 @@ abstract class common {
 					break;
 			}
 
-		$columns_map = $properties->source->columns_map ?? false;
+		$columns_map = $properties->source->columns_map ?? null;
 
 
 		return $columns_map;

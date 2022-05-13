@@ -78,15 +78,15 @@ class search_query_object {
 	* @param object $data
 	*	optional . Default is null
 	*/
-	public function __construct( $data=null ) {
+	public function __construct( object $data=null ) {
 
 		if (is_null($data)) return;
 
 		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return false;
-		}
+			// if (!is_object($data)) {
+			// 	trigger_error("wrong data format. Object expected. Given: ".gettype($data));
+			// 	return false;
+			// }
 
 		// set all properties
 			foreach ($data as $key => $value) {
@@ -206,7 +206,7 @@ class search_query_object {
 
 	/**
 	* SET_LIMIT
-	* @param int $value like 10
+	* @param int|string $value like 10
 	* @return bool true
 	*/
 	public function set_limit($value) {
@@ -228,8 +228,10 @@ class search_query_object {
 	* @param int $value like 0
 	* @return bool true
 	*/
-	public function set_offset($value) {
-		if(empty($value)) return false;
+	public function set_offset(int $value) {
+
+		// if(empty($value)) return false;
+
 		$this->offset = (int)$value;
 
 		return true;
@@ -241,7 +243,7 @@ class search_query_object {
 	* SET_FULL_COUNT
 	* Note that if the request is made it using 'true' value, the sqo->full_count value
 	* will be modified with the result of the records count
-	* @param bool | int
+	* @param bool|int $value
 	* @return bool
 	*/
 	public function set_full_count($value) {
@@ -402,7 +404,7 @@ class search_query_object {
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/
-	final public function __call($strFunction, $arArguments) {
+	final public function __call(string $strFunction, $arArguments) {
 
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);

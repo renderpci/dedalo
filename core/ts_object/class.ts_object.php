@@ -4,7 +4,7 @@
 * Manage tesaurus hierarchycal elements. Every element is a section used as thesaurus term
 *
 */
-class ts_object extends Accessors {
+class ts_object {
 
 
 	# int (mandatory)
@@ -751,6 +751,45 @@ class ts_object extends Accessors {
 
 		return (int)$permissions;
 	}//end get_permissions_element
+
+
+
+	# ACCESSORS
+	final public function __call(string $strFunction, array $arArguments) {
+
+		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember 	= substr($strFunction, 4);
+		switch($strMethodType) {
+			case 'set_' :
+				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
+				return($this->SetAccessor($strMethodMember, $arArguments[0]));
+				break;
+			case 'get_' :
+				return($this->GetAccessor($strMethodMember));
+				break;
+		}
+		return(false);
+	}
+	# SET
+	final protected function SetAccessor(string $strMember, $strNewValue) : bool {
+
+		if(property_exists($this, $strMember)) {
+
+			// fix value
+			$this->$strMember = $strNewValue;
+
+			return true;
+		}else{
+			return false;
+		}
+	}
+	# GET
+	final protected function GetAccessor(string $strMember) {
+
+		return property_exists($this, $strMember)
+			? $this->$strMember
+			: false;
+	}//end GetAccessor
 
 
 

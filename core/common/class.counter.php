@@ -106,7 +106,7 @@ abstract class counter {
 	* @param string $counter_matrix_table default matrix_counter
 	* @return bool true if update/create counter, false if not
 	*/
-	public static function consolidate_counter( string $section_tipo, string $matrix_table, string $counter_matrix_table='matrix_counter' ) : bool {
+	public static function consolidate_counter(string $section_tipo, string $matrix_table, string $counter_matrix_table='matrix_counter') : bool {
 
 		# BIGGER_SECTION_ID . Search bigger section_tipo existent
 		$strQuery = 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';

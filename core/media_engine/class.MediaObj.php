@@ -1,13 +1,8 @@
 <?php
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
-require_once(DEDALO_CORE_PATH . '/common/class.Accessors.php');
-
-
-
 /**
 * MediaObj Class
 */
-abstract class MediaObj extends Accessors {
+abstract class MediaObj {
 
 	# GENERAL VARS
 	protected $name ;				# reelID
@@ -129,6 +124,45 @@ abstract class MediaObj extends Accessors {
 
 		return round($size_kb / 1024) . ' MB' ;
 	}//end get_size
+
+
+
+	# ACCESSORS
+	final public function __call(string $strFunction, array $arArguments) {
+
+		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember 	= substr($strFunction, 4);
+		switch($strMethodType) {
+			case 'set_' :
+				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
+				return($this->SetAccessor($strMethodMember, $arArguments[0]));
+				break;
+			case 'get_' :
+				return($this->GetAccessor($strMethodMember));
+				break;
+		}
+		return(false);
+	}
+	# SET
+	final protected function SetAccessor(string $strMember, $strNewValue) : bool {
+
+		if(property_exists($this, $strMember)) {
+
+			// fix value
+			$this->$strMember = $strNewValue;
+
+			return true;
+		}else{
+			return false;
+		}
+	}
+	# GET
+	final protected function GetAccessor(string $strMember) {
+
+		return property_exists($this, $strMember)
+			? $this->$strMember
+			: false;
+	}//end GetAccessor
 
 
 

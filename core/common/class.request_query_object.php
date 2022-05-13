@@ -193,15 +193,15 @@ class request_query_object {
 	* @param object $data
 	*	optional . Default is null
 	*/
-	public function __construct( $data=null ) {
+	public function __construct( object $data=null ) {
 
 		if (is_null($data)) return;
 
 		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return false;
-		}
+			// if (!is_object($data)) {
+			// 	trigger_error("wrong data format. Object expected. Given: ".gettype($data));
+			// 	return false;
+			// }
 
 		// default always is 'dedalo'
 		$this->set_api_engine = 'dedalo';
@@ -291,7 +291,7 @@ class request_query_object {
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/
-	final public function __call($strFunction, $arArguments) {
+	final public function __call(string $strFunction, $arArguments) {
 
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
