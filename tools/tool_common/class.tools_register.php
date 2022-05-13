@@ -291,7 +291,6 @@ class tools_register {
 			$value 	= reset($dato);
 			$tool_object->name = $value;
 
-
 		// label
 			$component_tipo = self::$tipo_tool_label; // 'dd799';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -339,31 +338,19 @@ class tools_register {
 			$value 	= reset($dato);
 			$tool_object->dd_version = $value;
 
-		// affected components (models)
-			$component_tipo = self::$tipo_affeted_models; // 'dd1330';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component_lang = RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 $component_lang,
-															 $section_tipo);
-			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array');
-			$tool_object->affected_models = $value;
-
 		// description
-			$component_tipo = 'dd612';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-
-			$dato 			= $component->get_dato_full();
-			$value 			= [];
+			$component_tipo	= 'dd612';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato			= $component->get_dato_full();
+			$value			= [];
 			if (!empty($dato)) {
 				foreach ($dato as $curent_lang => $current_value) {
 					$value[] = (object)[
@@ -374,18 +361,35 @@ class tools_register {
 			}
 			$tool_object->description = $value;
 
-		// affected tipos (components)
-			$component_tipo = 'dd1350';
+		// affected components (models)
+			$component_tipo = self::$tipo_affeted_models; // 'dd1330';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_lang = RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 $component_lang,
+															 $section_tipo);
+			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array'); // array|null
+			$tool_object->affected_models = $value;
+
+		// affected tipos (components)
+			$component_tipo	= 'dd1350';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance($model,
 															 $component_tipo,
 															 $section_id,
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$dato 			= (array)$component->get_dato();
-			$value 			= reset($dato);
-			$tool_object->affected_tipos = $value;
+			$dato			= (array)$component->get_dato();
+			$value			= $dato[0] ?? null;
+			// empty object case check
+			if (empty((array)$value)) {
+				$value = null;
+			}
+			$tool_object->affected_tipos = $value; // array
 
 		// show in inspector
 			$component_tipo = 'dd1331';
@@ -402,7 +406,7 @@ class tools_register {
 				? reset($dato)->section_id
 				: null;
 			$value 			= $dato_ref == '1' ? true : false;
-			$tool_object->show_in_inspector = $value;
+			$tool_object->show_in_inspector = $value; // bool
 
 		// show in component
 			$component_tipo = 'dd1332';
@@ -437,32 +441,38 @@ class tools_register {
 			$tool_object->requirement_translatable = $value;
 
 		// ontology
-			$component_tipo = self::$tipo_ontology; // 'dd1334';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
+			$component_tipo	= self::$tipo_ontology; // 'dd1334';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance($model,
 															 $component_tipo,
 															 $section_id,
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$dato 			= (array)$component->get_dato();
-			$value 			= reset($dato);
+			$dato			= (array)$component->get_dato();
+			$value			= $dato[0] ?? null;
+			// empty object case check
+			if (empty((array)$value)) {
+				$value = null;
+			}
 			$tool_object->ontology = $value;
 
-
 		// properties
-			$component_tipo = self::$tipo_properties; // 'dd1335';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
+			$component_tipo	= self::$tipo_properties; // 'dd1335';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance($model,
 															 $component_tipo,
 															 $section_id,
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$dato 			= (array)$component->get_dato();
-			$value 			= reset($dato);
+			$dato			= (array)$component->get_dato();
+			$value			= $dato[0] ?? null;
+			// empty object case check
+			if (empty((array)$value)) {
+				$value = null;
+			}
 			$tool_object->properties = $value;
-
 
 		// labels
 			$component_tipo = 'dd1372';
@@ -473,9 +483,14 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$dato 			= (array)$component->get_dato();
-			$value 			= reset($dato);
+			$dato			= (array)$component->get_dato();
+			$value			= $dato[0] ?? null;
+			// empty object case check
+			if (empty((array)$value)) {
+				$value = null;
+			}
 			$tool_object->labels = $value;
+
 
 		return $tool_object;
 	}//end create_simple_tool_object

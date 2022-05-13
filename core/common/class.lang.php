@@ -126,7 +126,7 @@ class lang {
 	* GET_NAME_FROM_CODE
 	* @return string $name
 	*/
-	public static function get_name_from_code( string $code, $lang=DEDALO_DATA_LANG, $from_cache=true ) : string {
+	public static function get_name_from_code( string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true ) : string {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
@@ -191,7 +191,7 @@ class lang {
 	* GET_LANG_NAME_BY_LOCATOR
 	* @return string $lang_name
 	*/
-	public static function get_lang_name_by_locator($locator, $lang=DEDALO_APPLICATION_LANG, $from_cache=false) : string {
+	public static function get_lang_name_by_locator(object $locator, string $lang=DEDALO_APPLICATION_LANG, bool $from_cache=false) : string {
 		$lang_name = ts_object::get_term_by_locator( $locator, $lang, $from_cache );
 
 		return $lang_name;
@@ -201,9 +201,9 @@ class lang {
 
 	/**
 	* GET_CODE_FROM_LOCATOR
-	* @return string $code
+	* @return string|null $code
 	*/
-	public static function get_code_from_locator($locator, $add_prefix=true) {
+	public static function get_code_from_locator(object $locator, bool $add_prefix=true) : ?string {
 
 		if (!isset($locator->section_id)) {
 			if(SHOW_DEBUG===true) {
@@ -484,10 +484,10 @@ class lang {
 
 	/**
 	* GET_ALPHA2_FROM_CODE
-	* @return string $alpha2
+	* @return string|null $alpha2
 	*	Like 'en' from lg-eng
 	*/
-	public static function get_alpha2_from_code( string $lang_code ) {
+	public static function get_alpha2_from_code( string $lang_code ) : ?string {
 
 		$alpha2 = null;
 
@@ -732,22 +732,21 @@ class lang {
 	/**
 	* BUILD_RESOLVE_QUERY
 	* @return string $strQuery
-	*//*
-	private static function build_resolve_query($lang_tld, $lang) {
-
-		$tipo 	 	 = lang::$tld_tipo;
-		$table 		 = lang::$langs_matrix_table;
-
-		$strQuery  = '';
-		$strQuery .= "SELECT";
-		$strQuery .= "\n id, section_id, section_tipo, datos#>>'{components, $tipo, dato, $lang}' AS name";
-		$strQuery .= "\n FROM \"$table\"";
-		$strQuery .= "\n WHERE";
-		$strQuery .= "\n datos#>>'{components, $tipo, dato, lg-nolan}' = '$lang_tld';";
-
-		return $strQuery;
-	}//end build_resolve_query
 	*/
+		// private static function build_resolve_query($lang_tld, $lang) {
+
+		// 	$tipo 	 	 = lang::$tld_tipo;
+		// 	$table 		 = lang::$langs_matrix_table;
+
+		// 	$strQuery  = '';
+		// 	$strQuery .= "SELECT";
+		// 	$strQuery .= "\n id, section_id, section_tipo, datos#>>'{components, $tipo, dato, $lang}' AS name";
+		// 	$strQuery .= "\n FROM \"$table\"";
+		// 	$strQuery .= "\n WHERE";
+		// 	$strQuery .= "\n datos#>>'{components, $tipo, dato, lg-nolan}' = '$lang_tld';";
+
+		// 	return $strQuery;
+		// }//end build_resolve_query
 
 
 

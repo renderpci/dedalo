@@ -322,8 +322,9 @@ class dd_object {
 
 	/**
 	* SET_CSS
+	* @param object|null $value
 	*/
-	public function set_css($value) {
+	public function set_css(?object $value) {
 
 		$this->css = $value;
 	}//end set_css
@@ -363,7 +364,7 @@ class dd_object {
 	/**
 	* SET_COLUMNS_MAP
 	*/
-	public function set_columns_map($value) {
+	public function set_columns_map(?array $value) {
 
 		$this->columns_map = $value;
 	}//end set_columns_map
@@ -393,11 +394,13 @@ class dd_object {
 	/**
 	* SET_SECTION_ID
 	* Used by tools
+	* @param int|null $value
 	*/
-	public function set_section_id($value) {
+	public function set_section_id(?int $value) {
 
 		$this->section_id = $value;
 	}//end set_section_id
+
 
 
 	/**
@@ -408,6 +411,7 @@ class dd_object {
 
 		$this->name = $value;
 	}//end set_name
+
 
 
 	/**

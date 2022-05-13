@@ -38,15 +38,15 @@ class ddo_map_object {
 	* @param object $data
 	*	optional . Default is null
 	*/
-	public function __construct( $data=null ) {
+	public function __construct( object $data=null ) {
 
 		if (is_null($data)) return;
 
 		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return false;
-		}
+			// if (!is_object($data)) {
+			// 	trigger_error("wrong data format. Object expected. Given: ".gettype($data));
+			// 	return false;
+			// }
 
 		// set all properties
 			foreach ($data as $key => $value) {

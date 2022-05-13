@@ -1,10 +1,9 @@
 <?php
-require_once(DEDALO_CORE_PATH . '/common/class.Accessors.php');
 /**
 * NAVIGATOR CLASS
 *
 */
-class navigator extends Accessors {
+class navigator {
 
 	static $ar_vars;
 	static $selected_root;		# by tipo like 'dd12'
@@ -190,6 +189,45 @@ class navigator extends Accessors {
 
 		return 	$html;
 	}//end show_vars
+
+
+
+	# ACCESSORS
+	final public function __call(string $strFunction, array $arArguments) {
+
+		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember 	= substr($strFunction, 4);
+		switch($strMethodType) {
+			case 'set_' :
+				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
+				return($this->SetAccessor($strMethodMember, $arArguments[0]));
+				break;
+			case 'get_' :
+				return($this->GetAccessor($strMethodMember));
+				break;
+		}
+		return(false);
+	}
+	# SET
+	final protected function SetAccessor(string $strMember, $strNewValue) : bool {
+
+		if(property_exists($this, $strMember)) {
+
+			// fix value
+			$this->$strMember = $strNewValue;
+
+			return true;
+		}else{
+			return false;
+		}
+	}
+	# GET
+	final protected function GetAccessor(string $strMember) {
+
+		return property_exists($this, $strMember)
+			? $this->$strMember
+			: false;
+	}//end GetAccessor
 
 
 
