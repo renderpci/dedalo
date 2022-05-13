@@ -65,6 +65,51 @@
 
 
 
+// column_remove
+	.column_remove {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+		background-color: #f6f6f6;
+		padding: 0;
+
+		>button {
+			display: flex;
+			width: 100%;
+			margin: 0;
+			padding: 0.5em;
+			padding-top: 0.75rem;
+			padding-bottom: 0.75rem;
+			border-radius: 0;
+			justify-content: flex-end;
+
+			&.button_remove {
+				justify-content: space-between;
+				// justify-content: flex-end;
+				@media screen and (max-width: @width_break_point_0) {
+					justify-content: flex-start;
+				}
+			}
+
+			>.icon {
+				height: 1.4rem;
+				width: 1.3rem;
+				// margin-right: -2px;
+			}
+
+			&:hover {
+				z-index: 99999;
+				background-color: @color_danger;
+
+				>.icon {
+					background-color: #ffffff;
+				}
+			}
+		}
+	}//end .column_remove
+
+
+
 // list_body. Used in sections and portals in list mode
 	.list_body {
 		display: grid;
@@ -363,6 +408,7 @@
 				padding: 0.5em;
 				padding-top: 0.25em;
 				padding-bottom: 0.25em;
+				padding-left: 0.25em;
 				background-color: @color_grey_light;
 				color: @color_grey_dark;
 			}
