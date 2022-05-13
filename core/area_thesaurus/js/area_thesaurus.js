@@ -9,6 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {search} from '../../search/js/search.js'
+	import {ui} from '../../common/js/ui.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_thesaurus} from './render_area_thesaurus.js'
 
@@ -89,19 +90,49 @@ area_thesaurus.prototype.init = async function(options) {
 		// const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
 		// common.prototype.load_style(css_url2)
 
-
-	// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
+	// events subscription
+		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
 		self.events_tokens.push(
 			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
 		)
-		async function fn_toggle_search_panel() {
-			if (self.filter_container.children.length===0) {
+		async function fn_toggle_search_panel(el) {
+			if (self.search_container.children.length===0) {
 				await self.filter.build()
 				const filter_wrapper = await self.filter.render()
-				await self.filter_container.appendChild(filter_wrapper)
+				await self.search_container.appendChild(filter_wrapper)
 			}
-			toggle_search_panel(self.filter)
+			toggle_search_panel(self.filter, el)
 		}
+
+		// render event
+		self.events_tokens.push(
+			event_manager.subscribe('render_'+self.id, fn_render)
+		)
+		function fn_render() {
+			// open_search_panel. local DDBB table status
+				const status_id			= 'open_search_panel'
+				const collapsed_table	= 'status'
+				data_manager.prototype.get_local_db_data(status_id, collapsed_table, true)
+				.then(async function(ui_status){
+					// (!) Note that ui_status only exists when element is open
+					const is_open = typeof ui_status==='undefined' || ui_status.value===false
+						? false
+						: true
+					if (is_open===true && self.search_container.children.length===0) {
+						const spinner = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'spinner',
+							parent			: self.search_container
+						})
+						await self.filter.build()
+						const filter_wrapper = await self.filter.render()
+						await self.search_container.appendChild(filter_wrapper)
+						toggle_search_panel(self.filter)
+						spinner.remove()
+					}
+				})
+		}
+
 
 	return common_init
 };//end init

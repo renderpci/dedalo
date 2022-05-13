@@ -177,13 +177,43 @@ section.prototype.init = async function(options) {
 			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
 		)
 		async function fn_toggle_search_panel() {
-			if (self.filter_container.children.length===0) {
+			if (self.search_container.children.length===0) {
 				await self.filter.build()
 				const filter_wrapper = await self.filter.render()
-				await self.filter_container.appendChild(filter_wrapper)
+				await self.search_container.appendChild(filter_wrapper)
 			}
 			toggle_search_panel(self.filter)
 		}
+
+		// render event
+		self.events_tokens.push(
+			event_manager.subscribe('render_'+self.id, fn_render)
+		)
+		function fn_render() {
+			// open_search_panel. local DDBB table status
+				const status_id			= 'open_search_panel'
+				const collapsed_table	= 'status'
+				data_manager.prototype.get_local_db_data(status_id, collapsed_table, true)
+				.then(async function(ui_status){
+					// (!) Note that ui_status only exists when element is open
+					const is_open = typeof ui_status==='undefined' || ui_status.value===false
+						? false
+						: true
+					if (is_open===true && self.search_container.children.length===0) {
+						const spinner = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'spinner',
+							parent			: self.search_container
+						})
+						await self.filter.build()
+						const filter_wrapper = await self.filter.render()
+						await self.search_container.appendChild(filter_wrapper)
+						toggle_search_panel(self.filter)
+						spinner.remove()
+					}
+				})
+		}
+
 
 	// load additional files as css used by section_tool in self.config
 		if(self.config && self.config.source_model==='section_tool'){

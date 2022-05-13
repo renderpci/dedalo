@@ -76,18 +76,18 @@ render_edit_section.prototype.edit = async function(options) {
 
 	// search filter
 		if (self.filter) {
-			const filter_container = ui.create_dom_element({
+			const search_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'filter',
+				class_name		: 'search_container',
 				parent			: fragment
 			})
-			self.filter_container = filter_container
+			self.search_container = search_container
 			// if (self.filter.search_panel_is_open===true) {
 			// 	event_manager.publish('toggle_search_panel')
 			// }
 			// self.filter.build().then(()=>{
 			// 	self.filter.render().then(filter_wrapper =>{
-			// 		filter_container.appendChild(filter_wrapper)
+			// 		search_container.appendChild(filter_wrapper)
 			// 	})
 			// })
 		}
