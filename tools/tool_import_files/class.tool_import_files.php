@@ -316,9 +316,12 @@ class tool_import_files extends tool_common {
 
 	/**
 	* GET_MEDIA_FILE_DATE
+	*
+	* @param array $media_file
+	* 	Assoc array with file info like file_path
 	* @return object|null dd_date $dd_date
 	*/
-	public static function get_media_file_date(string $media_file, string $model) {
+	public static function get_media_file_date(array $media_file, string $model) {
 
 		$dd_date			= null;
 		$source_full_path	= $media_file['file_path'];
@@ -461,13 +464,20 @@ class tool_import_files extends tool_common {
 				$options->key_dir				= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		// vars
+		// short vars
+			// tipo. string component tipo like 'oh17'
 			$tipo						= $options->tipo;
+			// section_tipo. string current section tipo like 'oh1'
 			$section_tipo				= $options->section_tipo;
+			// section_id. int current section id like '5'
 			$section_id					= $options->section_id;
-			$files_data					= $options->files_data;
-			$components_temp_data		= $options->components_temp_data;
+			 // key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
 			$key_dir					= $options->key_dir;
+			// files data. array of objects like: '[{"name":"_290000_rsc29_rsc170_290437.jpg","previewTemplate":{},"previewElement":{},"size":734061,"component_option":""}]'
+			$files_data					= $options->files_data;
+			// components_temp_data. array of objects like: '[{"section_id":"tmp","section_tipo":"rsc170","tipo":"rsc23","lang":"lg-eng","from_component_tipo":"rsc23","value":[],"parent_tipo":"rsc23","parent_section_id":"tmp","fallback_value":[null],"debug":{"exec_time":"0.740 ms"},"debug_model":"component_input_text","debug_label":"Title","debug_mode":"edit"}]'
+			$components_temp_data		= $options->components_temp_data;
+			// tool_config. object like: '{"ddo_map":[{"role":"target_component","tipo":"rsc29","section_id":"self","section_tipo":"rsc170","model":"component_image","label":"Image"}],"import_file_name_mode":null}'
 			$tool_config				= $options->tool_config;
 
 		// tool_import_files setup
@@ -476,7 +486,7 @@ class tool_import_files extends tool_common {
 
 		// import_mode
 			$import_mode			= $tool_config->import_mode ?? 'default';
-			$import_file_name_mode	= $tool_config->import_file_name_mode;
+			$import_file_name_mode	= $tool_config->import_file_name_mode ?? null;
 
 		// ddo_map
 			$ar_ddo_map = $tool_config->ddo_map;
@@ -489,7 +499,7 @@ class tool_import_files extends tool_common {
 			$target_component_model	= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
 
 		// file_processor_properties
-			$file_processor_properties = $tool_config->file_processor;
+			$file_processor_properties = $tool_config->file_processor ?? null;
 
 		// user_id
 			$user_id = navigator::get_user_id();
@@ -505,7 +515,7 @@ class tool_import_files extends tool_common {
 			foreach ((array)$files_data as $value_obj) {
 
 				$current_file_name				= $value_obj->name;
-				$current_file_processor			= $value_obj->file_processor; # Note that var $current_file_processor is only the current element processor selection
+				$current_file_processor			= $value_obj->file_processor ?? null; # Note that var $current_file_processor is only the current element processor selection
 				$current_component_option_tipo	= $value_obj->component_option;
 
 				// Check file exists
@@ -747,7 +757,7 @@ class tool_import_files extends tool_common {
 				// ar_processed. Add as processed
 					$processed_info = new stdClass();
 						$processed_info->file_name				= $value_obj->name;
-						$processed_info->file_processor			= $value_obj->file_processor;
+						$processed_info->file_processor			= $value_obj->file_processor ?? null;
 						$processed_info->target_component_tipo	= $target_component_tipo;
 						$processed_info->section_id				= $section_id;
 						$processed_info->file_data				= $file_data;
