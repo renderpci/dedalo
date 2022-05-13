@@ -212,10 +212,10 @@ const get_content_data_edit = async function(self) {
 				buttons_container.appendChild(automatic_tranlation_node)
 			}//end if (translator_engine)
 
-
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div'
+		})
 		content_data.appendChild(fragment)
 
 

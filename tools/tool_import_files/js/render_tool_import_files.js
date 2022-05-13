@@ -449,21 +449,21 @@ const get_content_data_edit = async function(self) {
 					current_data_manager.request({body : rqo})
 					.then(function(response){
 						console.warn("-> API response:",response);
-						if(response.result === true){
-							if(self.caller){
-								self.caller.refresh()
-							}
-							self.tool_container.close()
+						if(response.result===true) {
+							// if(self.caller){
+							// 	self.caller.refresh()
+							// }
+							// self.tool_container.close()
 						}
 						resolve(response)
 					})
 				})
 		})
 
-
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div'
+		})
 		content_data.appendChild(fragment)
 
 

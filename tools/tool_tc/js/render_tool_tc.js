@@ -181,8 +181,9 @@ const content_data_edit = async function(self) {
 		})
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div'
+		})
 		content_data.appendChild(fragment)
 
 

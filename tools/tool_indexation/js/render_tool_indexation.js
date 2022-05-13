@@ -281,14 +281,11 @@ const get_content_data_edit = async function(self) {
 			const indexing_component_node = await self.indexing_component.render()
 			right_container.appendChild(indexing_component_node)
 
-
 	// content_data
 		const content_data = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_data ' + self.type
+			element_type	: 'div'
 		})
 		content_data.appendChild(fragment)
-
 
 
 	return content_data
