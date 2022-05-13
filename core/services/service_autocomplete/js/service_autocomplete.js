@@ -210,6 +210,10 @@ export const service_autocomplete = function() {
 		// search_input
 			const search_input = self.render_search_input()
 			searh_container.appendChild(search_input)
+			search_input.addEventListener("focus", function(e){
+				e.preventDefault()
+				search_input.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"})
+			})
 
 		// button options
 			const button_options = ui.create_dom_element({
@@ -230,7 +234,7 @@ export const service_autocomplete = function() {
 				parent			: searh_container
 			})
 
-		// fix main nodes
+		// fix main nodes pointers
 			self.searh_container	= searh_container
 			self.search_input		= search_input
 			self.datalist			= datalist
