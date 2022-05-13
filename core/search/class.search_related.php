@@ -15,7 +15,7 @@ class search_related extends search {
 	*	default false
 	* @return string $sql_query
 	*/
-	public function parse_search_query_object( $full_count=false ) : string {
+	public function parse_search_query_object( bool $full_count=false ) : string {
 
 		$ar_tables_to_search = common::get_matrix_tables_with_relations();
 
@@ -70,7 +70,7 @@ class search_related extends search {
 
 		// Set order to maintain results stable
 		// count and pagination optional
-			if($full_count === false){
+			if($full_count===false) {
 				$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
 				if($limit !== false){
 					$str_query .= PHP_EOL . 'LIMIT '.$limit;
@@ -95,7 +95,7 @@ class search_related extends search {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function get_referenced_locators( $reference_locator, $limit=false, $offset=false, $count=false ) {
+	public static function get_referenced_locators( object $reference_locator, int $limit=null, int $offset=null, bool $count=false ) : array {
 
 		//new way done in relations field with standard sqo
 			$sqo = new search_query_object();
