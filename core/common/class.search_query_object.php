@@ -225,14 +225,14 @@ class search_query_object {
 
 	/**
 	* SET_OFFSET
-	* @param int $value like 0
+	* @param int|null $value like 0
 	* @return bool true
 	*/
-	public function set_offset(int $value) {
+	public function set_offset(?int $value) {
 
 		// if(empty($value)) return false;
 
-		$this->offset = (int)$value;
+		$this->offset = $value;
 
 		return true;
 	}//end set_offset

@@ -95,7 +95,7 @@ class search_related extends search {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function get_referenced_locators( object $reference_locator, int $limit=null, int $offset=null, bool $count=false ) : array {
+	public static function get_referenced_locators( object $reference_locator, ?int $limit=null, ?int $offset=null, bool $count=false ) : array {
 
 		//new way done in relations field with standard sqo
 			$sqo = new search_query_object();
