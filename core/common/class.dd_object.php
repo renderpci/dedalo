@@ -154,6 +154,7 @@ class dd_object {
 
 	/**
 	* SET_TIPO
+	* @param string $value
 	*/
 	public function set_tipo(string $value) {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
@@ -166,9 +167,11 @@ class dd_object {
 
 	/**
 	* SET_SECTION_TIPO
+	* @param string|array $value
+	* 	Could be array or string
 	*/
-	public function set_section_tipo(string $value) {
-		if (!isset($this->model)) {
+	public function set_section_tipo(string|array $value) {
+		if (!isset($this->model) && isset($this->tipo)) {
 			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
 		// if(strpos($this->model, 'area')!==0 && !RecordObj_dd::get_prefix_from_tipo($value)) {
