@@ -16,12 +16,12 @@ date_default_timezone_set($myDateTimeZone);
 
 
 /**
-* tag_SAFE_XSS
+* TAG_SAFE_XSS
 * @return mixed $value
 */
-function tag_safe_xss($value) {
+function tag_safe_xss(string $value) {
 
-	if (is_string($value)) {
+	if (!empty($value)) {
 
 		if ($decode_json=json_decode($value)) {
 			// If var is a stringify json, not verify string now
@@ -113,13 +113,15 @@ $text = strip_tags($text, '');
 			break;
 		case (strpos($text,'[person-')!==false):
 			$type = 'person';
-			# mode [person-0-name-data:locator_flat:data]
-			$pattern 	= "/\[(person)-([a-z])-([0-9]{1,6})-(\S{0,22})\]/";
-			$text_original 	= $text;
+			# ex. [person-a-1-El%20in]
+			// $pattern		= "/\[(person)-([a-z])-([0-9]{1,6})-(\S{0,22})\]/";
+			$pattern		= "/\[(person)-([a-z])-([0-9]{1,6})-(\D{0,22})\]/";
+			$text_original	= $text;
 			preg_match_all($pattern, $text, $matches);
-			#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
+			// error_log($text);
+			// error_log( json_encode($matches, JSON_PRETTY_PRINT) ) ;
 			$text			= urldecode($matches[4][0]);
-			$state 			= $matches[2][0];
+			$state			= $matches[2][0] ?? 'a';
 			if($state!=='a' && $state!=='b') {
 				$state = 'a';
 			}
@@ -133,27 +135,29 @@ $text = strip_tags($text, '');
 			$text 		= urldecode($ar_parts[2]);
 			$imgBase 	= $tag_image_dir."/note-{$state}-x2.png";
 			break;
-		// locator case, used by svg or image or vídeo, etc...
+		// locator case, used by svg or image or video, etc...
 		case (strpos($text,'{')===0):
 
 			$changed_text = str_replace(['&#039;','\''],'"', $text);
 			$locator = json_decode($changed_text);
-
-			if(!$locator) return;
+			if(!$locator) {
+				error_log('Ignored bad locator from text:' . $text);
+				return;
+			}
 			include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 
-			$section_tipo 	= $locator->section_tipo;
-			$section_id 	= $locator->section_id;
-			$component_tipo = $locator->component_tipo;
-
-			$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+			$section_tipo	= $locator->section_tipo;
+			$section_id		= $locator->section_id;
+			$component_tipo	= $locator->component_tipo;
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$file_content = $component->get_file_content();
 
 
@@ -197,7 +201,7 @@ $text = strip_tags($text, '');
 
 // See if it failed
 	if(!$im) {
-		error_log("Error. ivalid im. type:". gettype($im) .' - REQUEST_URI: '.json_encode($_SERVER["REQUEST_URI"], JSON_PRETTY_PRINT));
+		error_log("Error. invalid im. type:". gettype($im) .' - REQUEST_URI: '.json_encode($_SERVER["REQUEST_URI"], JSON_PRETTY_PRINT));
 
 		// Create a blank image
 		$im  = imagecreatetruecolor(150, 30);
@@ -236,61 +240,68 @@ $text = strip_tags($text, '');
 
 	switch($type) {
 
-		case 'tc'	:	$colorText	= $colorH ;
-						$colorBG 	= $black ;
-						#$font_name	= $font; // --
-						#$font_size	= 8  ; # 11 o 10.88
-						$font_size 	= ($font_size *2)+2; // as 18
-						break;
+		case 'tc'	:
+			$colorText	= $colorH ;
+			$colorBG	= $black ;
+			#$font_name	= $font; // --
+			#$font_size	= 8  ; # 11 o 10.88
+			$font_size	= ($font_size *2)+2; // as 18
+			break;
 
-		case 'index':	$colorText	= $black ;
-						$colorBG 	= $black ;
-						#$font_name	= $font; // --
-						#$font_size	= 7.9  ; # 11 o 10.88
-						$font_size 	= ($font_size *2)+2; // as 18
+		case 'index':
+			$colorText	= $black ;
+			$colorBG	= $black ;
+			#$font_name	= $font; // --
+			#$font_size	= 7.9  ; # 11 o 10.88
+			$font_size	= ($font_size *2)+2; // as 18
 
-						if($state=='n') $colorText	= $white ;
-						break;
+			if($state==='n') $colorText	= $white ;
+			break;
 
-		case 'draw':	$colorText	= $white ;
-						$colorBG 	= $black ;
-						#$font_name	= $font; // --
-						#$font_size	= 7.9  ; # 11 o 10.88
-						$font_size 	= ($font_size *2)+2;
-						break;
+		case 'draw':
+			$colorText	= $white ;
+			$colorBG	= $black ;
+			#$font_name	= $font; // --
+			#$font_size	= 7.9  ; # 11 o 10.88
+			$font_size	= ($font_size *2)+2;
+			break;
 
-		case 'geo':		$colorText	= $white ;
-						$colorBG 	= $black ;
-						#$font_name	= $font; // --
-						#$font_size	= 7.9  ; # 11 o 10.88
-						$font_size 	= ($font_size *2)+2;
+		case 'geo':
+			$colorText	= $white ;
+			$colorBG	= $black ;
+			#$font_name	= $font; // --
+			#$font_size	= 7.9  ; # 11 o 10.88
+			$font_size	= ($font_size *2)+2;
 
-						if($state=='n') $colorText	= $white ;
-						break;
+			if($state==='n') $colorText	= $white ;
+			break;
 
-		case 'page':	$colorText	= $black ;
-						$colorBG 	= $black ;
-						$font_size 	= ($font_size *2)+2;
-						break;
+		case 'page':
+			$colorText	= $black ;
+			$colorBG	= $black ;
+			$font_size	= ($font_size *2)+2;
+			break;
 
-		case 'person':	$colorText	= $black ;
-						$colorBG 	= $black ;
-						#$maxchar 	= 160 ;
-						#$width 		= 400 ; 	# 88
-						$font_size 	= ($font_size *2)+2; // as 18
-						#$font_name 	= '/oxigen-webfont/oxygen-bold-webfont.ttf';
-						#$font_name 	= '/san_francisco/System_San_Francisco_Display_Regular.ttf';
-						#$font_name 	= '/san_francisco/SanFranciscoDisplay-Regular.otf';
-						break;
-		case 'note':	$colorText	= $black ;
-						$colorBG 	= $white ;
-						#$maxchar 	= 160 ;
-						#$width 		= 400 ; 	# 88
-						$font_size 	= ($font_size *2)+2; // as 18
-						#$font_name 	= '/oxigen-webfont/oxygen-bold-webfont.ttf';
-						#$font_name 	= '/san_francisco/System_San_Francisco_Display_Regular.ttf';
-						#$font_name 	= '/san_francisco/SanFranciscoDisplay-Regular.otf';
-						break;
+		case 'person':
+			$colorText	= $black ;
+			$colorBG	= $black ;
+			#$maxchar	= 160 ;
+			#$width		= 400 ; 	# 88
+			$font_size	= ($font_size *2)+2; // as 18
+			#$font_name	= '/oxigen-webfont/oxygen-bold-webfont.ttf';
+			#$font_name	= '/san_francisco/System_San_Francisco_Display_Regular.ttf';
+			#$font_name	= '/san_francisco/SanFranciscoDisplay-Regular.otf';
+			break;
+		case 'note':
+			$colorText	= $black ;
+			$colorBG	= $white ;
+			#$maxchar	= 160 ;
+			#$width		= 400 ; 	# 88
+			$font_size	= ($font_size *2)+2; // as 18
+			#$font_name	= '/oxigen-webfont/oxygen-bold-webfont.ttf';
+			#$font_name	= '/san_francisco/System_San_Francisco_Display_Regular.ttf';
+			#$font_name	= '/san_francisco/SanFranciscoDisplay-Regular.otf';
+			break;
 	}
 
 # We activate the alpha chanel (24bit png)
@@ -374,7 +385,6 @@ if($text!==false) {
 	# Get Bounding Box Size
 	$bbox = imagettfbbox($font_size, $angle, $fontfile, $text ); //( float $size , float $angle , string $fontfile , string $text )
 
-
 	// Get your Text Width and Height
 	$text_width		= abs($bbox[2])-abs($bbox[0]);
 	$text_height	= abs($bbox[7])-abs($bbox[1]);
@@ -386,7 +396,7 @@ if($text!==false) {
 	//calculate y baseline
 	$y = $baseline = abs($font_size/2 - ($image_height) ) + $offsetY ;
 
-	# This is our cordinates for X and Y
+	# This is our coordinates for X and Y
 	#$x = $bbox[0] + $centroXimg  - ($bbox[2] / 2)	+ $offsetX ;
 	#$y = $bbox[1] + $centroYimg  - ($bbox[6] / 2)	+ $offsetY ;
 
@@ -400,7 +410,7 @@ if($text!==false) {
 }//end if($text!==false) {
 
 
-# Enable interlancing
+# Enable interlacing
 	imageinterlace($im, true);
 
 
@@ -419,5 +429,3 @@ if($text!==false) {
 
 # On finish destroy
 	imagedestroy($im);
-
-
