@@ -215,10 +215,6 @@ class area_thesaurus extends area_common {
 		$dato		= $component->get_dato();
 		$locator	= $dato[0] ?? null;
 
-		if ($locator===false) {
-			$locator = null;
-		}
-
 		return $locator;
 	}//end get_typology_data
 
