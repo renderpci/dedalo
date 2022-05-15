@@ -170,7 +170,7 @@ class dd_object {
 	* @param string|array $value
 	* 	Could be array or string
 	*/
-	public function set_section_tipo(string|array $value) {
+	public function set_section_tipo($value) { // string|array
 		if (!isset($this->model) && isset($this->tipo)) {
 			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
