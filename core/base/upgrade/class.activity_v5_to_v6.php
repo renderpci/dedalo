@@ -51,14 +51,19 @@ class activity_v5_to_v6 extends v5_to_v6 {
 	* CONVERT_SECTION_DATO_TO_DATA
 	* @return object $dato
 	*/
-	public static function convert_section_dato_to_data( stdClass $datos_column ) {
+	public static function convert_section_dato_to_data( stdClass $datos_column ) : object {
 
 		$dato = clone $datos_column;
 
+		if (!isset($dato->components)) {
+			return $dato;
+		}
+
 		$section_tipo = $dato->section_tipo;
-		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO){
+		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 
 			// what dd545 (changed to select)
+				$dato->components->dd545 = $dato->components->dd545 ?? (object)['dato' => new StdClass()];
 				$activity_what_dato = $dato->components->dd545->dato->{DEDALO_DATA_NOLAN} ?? null;
 				if (!empty($activity_what_dato)) {
 					if (isset(self::$what_conversion_values[$activity_what_dato])) {
@@ -95,6 +100,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 
 
 			// where dd546 (changed to input_text) data change format from string to array
+				$dato->components->dd546 = $dato->components->dd546 ?? (object)['dato' => new StdClass()];
 				$activity_where_dato = $dato->components->dd546->dato->{DEDALO_DATA_NOLAN} ?? "";
 				if (!is_array($activity_where_dato)) {
 					$dato->components->dd546->dato->{DEDALO_DATA_NOLAN} = [$activity_where_dato]; // same dato but as array
@@ -102,6 +108,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 
 
 			// ip dd544 (data change format from string to array)
+				$dato->components->dd544 = $dato->components->dd544 ?? (object)['dato' => new StdClass()];
 				$activity_ip_dato = $dato->components->dd544->dato->{DEDALO_DATA_NOLAN} ?? "";
 				if (!is_array($activity_ip_dato)) {
 					$dato->components->dd544->dato->{DEDALO_DATA_NOLAN} = [$activity_ip_dato]; // same dato but as array
@@ -109,6 +116,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 
 
 			// date dd547 (converts timestamp to dd_date)
+				$dato->components->dd547 = $dato->components->dd547 ?? (object)['dato' => new StdClass()];
 				$date_dato = $dato->components->dd547->dato->{DEDALO_DATA_NOLAN} ?? null;
 				if (!empty($activity_what_dato) && is_string($date_dato)) {
 
@@ -127,6 +135,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 
 
 			// json dd551
+				$dato->components->dd551 = $dato->components->dd551 ?? (object)['dato' => new StdClass()];
 				$activity_ip_dato = $dato->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? "";
 				if (!is_array($activity_ip_dato)) {
 					$dato->components->dd551->dato->{DEDALO_DATA_NOLAN} = [$activity_ip_dato]; // same dato but as array

@@ -12,7 +12,7 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 	* CHANGE_COMPONENT_DATO
 	* @return array $ar_tables
 	*/
-	public static function change_component_dato() {
+	public static function change_component_dato() : array {
 
 		$ar_tables = [
 			// 'new_matrix'
@@ -57,7 +57,7 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
     * }
 	* @return object $datos_column
 	*/
-	public static function change_index( stdClass $datos_column ) {
+	public static function change_index( stdClass $datos_column ) : object {
 
 		$component_tipo = [
 			'rsc36'	=> 'rsc860',
