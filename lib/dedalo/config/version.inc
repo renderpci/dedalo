@@ -2711,7 +2711,7 @@
 	*/
 
 
-	# Version
+	# Version test
 	$DEDALO_VERSION = '5.8.5';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
