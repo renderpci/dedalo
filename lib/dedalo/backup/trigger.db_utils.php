@@ -19,7 +19,7 @@ function export_str($json_data) {
 		$response->result	= false;
 		$response->msg		= "";
 
-	// rsync trigger code HEAD from master git	
+	// rsync trigger code HEAD from master git
 		// function update_head_code() {
 
 		// 	$source		= DEDALO_CODE_SERVER_GIT_DIR;
@@ -29,7 +29,7 @@ function export_str($json_data) {
 		// 	debug_log(__METHOD__." Updated Dédalo code with command: ".to_string($command), logger::DEBUG);
 
 		// 	$output = shell_exec($command);
-			
+
 		// 	return $output;
 		// }
 		// try{
@@ -41,7 +41,7 @@ function export_str($json_data) {
 		// 	debug_log(__METHOD__." update_head_code output OK: $response->msg ".to_string(), logger::DEBUG);
 
 		// } catch (Exception $e) {
-		
+
 		// 	# Append msg
 		// 	$response->msg .= $e->getMessage();
 		// 	debug_log(__METHOD__." update_head_code output ERROR: $response->msg ".to_string(), logger::ERROR);
@@ -58,7 +58,7 @@ function export_str($json_data) {
 			# Append msg
 			$response->msg .= $res_export_structure->msg;
 		}
-	
+
 	// dump official structure version 'dedalo4_development_str.custom' (partial backup)
 		$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
 		if ($res_export_structure2->result===false) {
@@ -77,7 +77,7 @@ function export_str($json_data) {
 
 			$response->debug = $debug;
 		}
-	
+
 
 	return (object)$response;
 }//end export_str
@@ -100,9 +100,10 @@ function build_version_from_git_master($json_data) {
 
 			$source		= DEDALO_CODE_SERVER_GIT_DIR;
 			$target		= DEDALO_CODE_FILES_DIR .'/dedalo5_code.zip';
-			$command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target 2>&1"; // @see https://git-scm.com/docs/git-archive
+			// $command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target 2>&1"; // @see https://git-scm.com/docs/git-archive
+			$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo5_code/ HEAD > $target ";
 
-			$msg = " Called Dédalo update_head_code with command: ".to_string($command);
+			$msg = " Called Dédalo update_head_code with command: " .PHP_EOL. to_string($command);
 			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 			$response->msg .= PHP_EOL . $msg;
 
@@ -113,27 +114,27 @@ function build_version_from_git_master($json_data) {
 			exec($command, $output_array, $retval);
 
 			$result = "Returned with status $retval and output:\n" . to_string($output_array);
-			
+
 			return $result;
 		}
 		try{
 
 			$output = update_head_code($response);
-			
+
 			# Append msg
 			$msg = PHP_EOL ."<br> update_head_code shell_exec output: <br>".PHP_EOL.to_string($output);
 			$response->msg .= $msg;
 			debug_log(__METHOD__." update_head_code output OK: $msg ".to_string(), logger::DEBUG);
-			
+
 			$response->result = true;
 
 		} catch (Exception $e) {
-		
+
 			# Append msg
 			$response->msg .= $e->getMessage();
 			debug_log(__METHOD__." update_head_code output ERROR: $response->msg ".to_string(), logger::ERROR);
 		}
-	
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
@@ -141,7 +142,7 @@ function build_version_from_git_master($json_data) {
 
 			$response->debug = $debug;
 		}
-	
+
 
 	return (object)$response;
 }//end build_version_from_git_master
@@ -151,7 +152,7 @@ function build_version_from_git_master($json_data) {
 /**
 * IMPORT_STR
 * Import db (import_structure)
-*//* NO USAR . USAR LA DE TOOL ADMINISTRATION 
+*//* NO USAR . USAR LA DE TOOL ADMINISTRATION
 function import_str($json_data) {
 	global $start_time;
 
@@ -168,7 +169,7 @@ function import_str($json_data) {
 	$html .= '<br>';
 	if ($exp->code!=0) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.'] Sorry. Next step import_structure stopped ('.$exp->code.')';
-		return $response;		
+		return $response;
 	}
 
 	$res = backup::import_structure();
@@ -179,7 +180,7 @@ function import_str($json_data) {
 	# Delete session permissions table (force to recalculate)
 	unset($_SESSION['dedalo4']['auth']['permissions_table']);
 
-	$html .= $res;	
+	$html .= $res;
 	#echo wrap_html($html, false);
 
 	$response->result 	= $html;
@@ -193,13 +194,13 @@ function import_str($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end import_str */
 
 
 
-# BACKUP DB 
+# BACKUP DB
 /* REMOVED
 function backup() {
 
