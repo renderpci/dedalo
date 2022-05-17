@@ -629,25 +629,26 @@ abstract class common {
 
 	/**
 	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
+	* @return string
 	*/
 	public static function get_page_query_string(bool $remove_optional_vars=true) : string {
 
-		$queryString = $_SERVER['QUERY_STRING']; # like max=10
-		$queryString = safe_xss($queryString);
+		$queryString	= $_SERVER['QUERY_STRING']; # like max=10
+		$queryString	= safe_xss($queryString);
 
 		if($remove_optional_vars===false) {
 			return $queryString;
 		}
 
-		$qs 				= false ;
+		$qs 				= '' ;
 		$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
 
-		$search  		= array('&&',	'&=',	'=&',	'??',	'==');
-		$replace 		= array('&',	'&',	'&',	'?',	'=' );
-		$queryString 	= str_replace($search, $replace, $queryString);
+		$search			= array('&&',	'&=',	'=&',	'??',	'==');
+		$replace		= array('&',	'&',	'&',	'?',	'=' );
+		$queryString	= str_replace($search, $replace, $queryString);
 
-		$posAND 	= strpos($queryString, '&');
-		$posEQUAL 	= strpos($queryString, '=');
+		$posAND		= strpos($queryString, '&');
+		$posEQUAL	= strpos($queryString, '=');
 
 		# go through and rebuild the query without the optional variables
 		if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
@@ -660,8 +661,8 @@ abstract class common {
 
 					$troz		= explode('=',$par) ;
 
-					$varName 	= false;	if(isset($troz[0])) $varName  = $troz[0];
-					$varValue 	= false;	if(isset($troz[1])) $varValue = $troz[1];
+					$varName	= false;	if(isset($troz[0])) $varName  = $troz[0];
+					$varValue	= false;	if(isset($troz[1])) $varValue = $troz[1];
 
 					if(!in_array($varName, $ar_optional_vars)) {
 						$qs .= $varName . '=' . $varValue .'&';
@@ -690,22 +691,23 @@ abstract class common {
 	*	Get standard path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
-	public function get_html_DES() {
+		// public function get_html_DES() {
 
-		if(SHOW_DEBUG===true) $start_time = start_time();
+		// 	if(SHOW_DEBUG===true) $start_time = start_time();
 
-			# Class name is called class (ex. component_input_text), not this class (common)
-			ob_start();
-			include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
-			$html = ob_get_clean();
+		// 		# Class name is called class (ex. component_input_text), not this class (common)
+		// 		ob_start();
+		// 		include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
+		// 		$html = ob_get_clean();
 
-		if(SHOW_DEBUG===true) {
-			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
+		// 	if(SHOW_DEBUG===true) {
+		// 		#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
+		// 		// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		// 	}
 
-		return (string)$html;
-	}//end get_html
+		// 	return (string)$html;
+		// }//end get_html
+
 
 
 	/**
@@ -715,9 +717,9 @@ abstract class common {
 	*/
 	public static function get_ar_all_langs() : array {
 
-		$ar_all_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+		$ar_all_langs = DEDALO_PROJECTS_DEFAULT_LANGS;
 
-		return (array)$ar_all_langs;
+		return $ar_all_langs;
 	}//end get_ar_all_langs
 
 
@@ -831,8 +833,8 @@ abstract class common {
 			return $ar_related_by_model_data[$uid];
 		}
 
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$relaciones   = $RecordObj_dd->get_relaciones();
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$relaciones		= $RecordObj_dd->get_relaciones();
 
 		$ar_related_by_model=array();
 		foreach ((array)$relaciones as $relation) foreach ((array)$relation as $modelo_tipo => $current_tipo) {
@@ -942,8 +944,8 @@ abstract class common {
 			}
 			if (!$json_data = json_decode($str_json)) {
 				$response = new stdClass();
-					$response->result 	= false;
-					$response->msg 		= "Error on read php://input data";
+					$response->result	= false;
+					$response->msg		= "Error on read php://input data";
 
 				return false;
 			}
@@ -960,8 +962,8 @@ abstract class common {
 
 					# maintenance check
 					$response = new stdClass();
-						$response->result 	= true;
-						$response->msg 		= "Sorry, this site is under maintenace now";
+						$response->result	= true;
+						$response->msg		= "Sorry, this site is under maintenace now";
 					echo json_encode($response);
 					#exit();
 					return false;
@@ -972,8 +974,8 @@ abstract class common {
 		# LOGGED USER CHECK. Can be disabled in options (login case)
 			if($options->test_login===true && login::is_logged()!==true) {
 				$response = new stdClass();
-					$response->result 	= false;
-					$response->msg 		= "Error. Auth error: please login [1]";
+					$response->result	= false;
+					$response->msg		= "Error. Auth error: please login [1]";
 				echo json_encode($response);
 				#exit();
 				return false;
@@ -983,8 +985,8 @@ abstract class common {
 		# MODE Verify
 			if(empty($json_data->mode)) {
 				$response = new stdClass();
-					$response->result 	= false;
-					$response->msg 		= "Error. mode is mandatory";
+					$response->result	= false;
+					$response->msg		= "Error. mode is mandatory";
 				echo json_encode($response);
 				#exit();
 				return false;
@@ -1000,13 +1002,13 @@ abstract class common {
 			}else{
 
 				$response = new stdClass();
-					$response->result 	= false;
-					$response->msg 		= 'Error. Request failed. json_data->mode not exists: '.to_string($json_data->mode);
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed. json_data->mode not exists: '.to_string($json_data->mode);
 			}
 
 			// echo final string
-				$json_params = (SHOW_DEBUG===true) ? JSON_PRETTY_PRINT : null;
-				echo json_encode($response, $json_params);
+				// $json_params = (SHOW_DEBUG===true) ? JSON_PRETTY_PRINT : JSON_UNESCAPED_UNICODE;
+				echo json_encode($response, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
 
 
 		return true;
@@ -1034,14 +1036,14 @@ abstract class common {
 	public static function get_cookie_properties() : object {
 
 		# Cookie properties
-		$domain 	= $_SERVER['SERVER_NAME'];
-		$secure 	= stripos(DEDALO_PROTOCOL,'https')!==false ? 'true' : 'false';
-		$httponly 	= 'true'; # Not accessible for javascript, only for http/s requests
+		$domain		= $_SERVER['SERVER_NAME'];
+		$secure		= stripos(DEDALO_PROTOCOL,'https')!==false ? 'true' : 'false';
+		$httponly	= 'true'; # Not accessible for javascript, only for http/s requests
 
 		$cookie_properties = new stdClass();
-			$cookie_properties->domain 	 = $domain;
-			$cookie_properties->secure 	 = $secure;
-			$cookie_properties->httponly = $httponly;
+			$cookie_properties->domain		= $domain;
+			$cookie_properties->secure		= $secure;
+			$cookie_properties->httponly	= $httponly;
 
 
 		return $cookie_properties;

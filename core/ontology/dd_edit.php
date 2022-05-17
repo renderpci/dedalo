@@ -104,7 +104,7 @@ $ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();
 		$def			= $RecordObj->get_dato();
 		$def_id			= $RecordObj->get_ID();
 
-	#$ar_all_langs	= unserialize(DEDALO_APPLICATION_LANGS);
+	#$ar_all_langs	= DEDALO_APPLICATION_LANGS;
 	$ar_all_langs	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 
 	// dd_descriptors_grid html

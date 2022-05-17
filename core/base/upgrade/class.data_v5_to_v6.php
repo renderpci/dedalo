@@ -18,7 +18,7 @@ class data_v5_to_v6 extends v5_to_v6 {
 	*		"section_creator_portal_section_tipo"	: "
 	* @return array $ar_tables
 	*/
-	public static function clean_section_and_component_dato() {
+	public static function clean_section_and_component_dato() : array {
 
 		$ar_tables = [
 			// 'new_matrix'
@@ -56,7 +56,7 @@ class data_v5_to_v6 extends v5_to_v6 {
 	* @return object $datos_column
 	* @return object $dato
 	*/
-	public static function parse_properties( stdClass $datos_column ) {
+	public static function parse_properties( stdClass $datos_column ) : object {
 
 		$dato = clone $datos_column;
 

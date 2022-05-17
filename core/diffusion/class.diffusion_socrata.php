@@ -55,7 +55,7 @@ class diffusion_socrata extends diffusion  {
 
 		// Build data (array of json_row objects)
 			$ar_rows = [];
-			$ar_all_project_langs = defined('DEDALO_DIFFUSION_LANGS') ? unserialize(DEDALO_DIFFUSION_LANGS) : unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+			$ar_all_project_langs = defined('DEDALO_DIFFUSION_LANGS') ? DEDALO_DIFFUSION_LANGS : DEDALO_PROJECTS_DEFAULT_LANGS;
 			foreach ($ar_all_project_langs as $current_lang) {
 				$json_row_options = new stdClass();
 					$json_row_options->section_tipo 		  = $options->section_tipo;
@@ -157,7 +157,7 @@ class diffusion_socrata extends diffusion  {
 			$result = isset($result_obj->error) ? false : true;
 			$msg 	= isset($result_obj->message) ? $result_obj->message : to_string($result);
 
-		// saves publication data 
+		// saves publication data
 			diffusion::update_publication_data($options->section_tipo, $options->section_id);
 
 		$response->result 	= $result;
@@ -171,18 +171,18 @@ class diffusion_socrata extends diffusion  {
 	/**
 	* UPSERT_DATA
 	* @see https://github.com/socrata/soda-php
-	* @return 
+	* @return
 	*/
 	public static function upsert_data( $data, $path ) {
 		$socrata_config = (object)SOCRATA_CONFIG;
-	
+
 		require DEDALO_ROOT . '/autoload.php';
 
 		$app_token 			= $socrata_config->app_token;
 		$socrata_user		= $socrata_config->socrata_user;
 		$socrata_password 	= $socrata_config->socrata_password;
 		$server 			= $socrata_config->server;
-		
+
 		// Test read data
 			/*
 			$socrata = new Socrata($server, $app_token, $socrata_user, $socrata_password);
@@ -192,16 +192,16 @@ class diffusion_socrata extends diffusion  {
 
 		// https://ctti.azure-westeurope-prod.socrata.com/dataset/render_data_test/7w3e-npuc/revisions/0
 		// https://ctti.azure-westeurope-prod.socrata.com/resource/w4hd-c82i.json
-		
+
 		// Connect
 		$client = new Socrata($server, $app_token, $socrata_user, $socrata_password);
-			
+
 		// Post our response
 			$data_json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_APOS );
 			$response  = $client->post($path, $data_json);
 			#dump($response, ' response ++ '.to_string());
 			debug_log(__METHOD__." +++ response ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
-			
+
 			if (isset($response->Errors) && (int)$response->Errors>0) {
 				debug_log(__METHOD__." !!! ERROR ON UPSERT SOCRATA RECORD ".json_encode($response, JSON_PRETTY_PRINT), logger::ERROR);
 				debug_log(__METHOD__." !!! ERROR +++++ data_json ". json_encode(json_decode($data_json), JSON_PRETTY_PRINT) , logger::ERROR);
@@ -217,7 +217,7 @@ class diffusion_socrata extends diffusion  {
 	* @return array $ar_diffusion_sections
 	*/
 	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo) {
-		
+
 		$ar_diffusion_sections = array();
 
 		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
@@ -237,14 +237,14 @@ class diffusion_socrata extends diffusion  {
 						}
 					}
 					break;
-				
+
 				case 'table':
 				default:
 					# Pointer to section
 					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
 					break;
 			}
-		
+
 			if (isset($ar_related[0])) {
 				$ar_diffusion_sections[] = $ar_related[0];
 			}

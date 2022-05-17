@@ -7,10 +7,14 @@ require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 
 class ImageObj extends MediaObj {
 
-	protected $image_id ;			# image_id
-	protected $quality ;			# like 'A2,A4,A0..'
 
-	function __construct($image_id, $quality=false, $aditional_path=false, $initial_media_path='', $external_source=false) {
+
+	protected $image_id; # image_id
+	protected $quality; # like 'A2,A4,A0..'
+
+
+
+	function __construct($image_id, $quality=false, $aditional_path=false, string $initial_media_path='', bool $external_source=false) {
 
 		# SPECIFIC VARS
 		$this->set_image_id($image_id);
@@ -31,9 +35,10 @@ class ImageObj extends MediaObj {
 	}//end __construct
 
 
+
 	# MANDATORY DEFINITIONS
 	protected function define_name(){
-		return $this->image_id ;
+		return $this->image_id;
 	}
 	protected function define_type() {
 		return DEDALO_IMAGE_TYPE;
@@ -57,7 +62,7 @@ class ImageObj extends MediaObj {
 		return $this->external_source;
 	}
 
-	public function get_media_path() {
+	public function get_media_path() : string {
 		if($this->external_source){
 			$external_parts = pathinfo($this->external_source);
 			$media_path = $external_parts['dirname'];
@@ -65,9 +70,8 @@ class ImageObj extends MediaObj {
 		}else{
 			return DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path;
 		}
-
 	}
-	public function get_media_path_abs() {
+	public function get_media_path_abs() : string {
 		if($this->external_source){
 			$external_parts = pathinfo($this->external_source);
 			$media_path = $external_parts['dirname'];
@@ -77,21 +81,21 @@ class ImageObj extends MediaObj {
 		}
 	}
 
-	public function get_media_path_server() {
+	public function get_media_path_server() : string {
 			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path;
 	}
 
 	# GET DEFAULT QUALITY
-	public static function get_quality_default() {
+	public static function get_quality_default() : string {
 		return DEDALO_IMAGE_QUALITY_DEFAULT;
 	}
 
 	# GET ARRAY QUALITY OPTIONS
-	public static function get_ar_quality() {
-		return unserialize(DEDALO_IMAGE_AR_QUALITY);
+	public static function get_ar_quality() : array {
+		return DEDALO_IMAGE_AR_QUALITY;
 	}
 
-	public function get_target_filename() {
+	public function get_target_filename() : string {
 		if($this->external_source){
 			$external_parts = pathinfo($this->external_source);
 			return $external_parts['basename'];
@@ -109,8 +113,9 @@ class ImageObj extends MediaObj {
 	*
 	* Asigna la calidad recibida verificando que existe en el array de calidades definido en config
 	* Si no existe, asigna la calidad por defecto
+	* @return string $this->quality
 	*/
-	protected function set_quality($quality) {
+	protected function set_quality($quality) : string {
 
 		$default	= $this->get_quality_default();
 		$ar_valid 	= $this->get_ar_quality();
@@ -119,8 +124,6 @@ class ImageObj extends MediaObj {
 			$this->quality = $default;
 			return $this->quality;
 		}
-		#dump($quality,"QUALITY HERE");
-		#$quality 	= strtolower($quality);
 
 		if(!is_array($ar_valid)) {
 			throw new Exception("config ar_valid is not defined!", 1);
@@ -133,8 +136,6 @@ class ImageObj extends MediaObj {
 
 		$this->quality = $quality;
 
-			#dump($this,$quality);
-
 		return $this->quality;
 	}//end set_quality
 
@@ -142,7 +143,7 @@ class ImageObj extends MediaObj {
 
 	# QUALITY FOLDERS WITH EXISTING FILES
 	# Return array whith existing quality files
-	public function get_ar_quality_with_file() {
+	public function get_ar_quality_with_file() : array {
 
 		$ar_quality 			= self::get_ar_quality();
 		$ar_quality_with_file	= array();
@@ -334,7 +335,7 @@ class ImageObj extends MediaObj {
 	/**
 	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
 	*/
-	public static function get_megabytes_from_pixels($pixels) {
+	public static function get_megabytes_from_pixels(int $pixels) {
 		$const = 350000;
 		$total = ($pixels / $const);
 		return number_format($total, 2, '.', '');
@@ -343,13 +344,9 @@ class ImageObj extends MediaObj {
 
 
 	/*
-	# FILE EXISTS
-	public function get_file_exists() {
-		$this->media_file_exists = file_exists($this->get_local_full_path());
-		return $this->media_file_exists;
-	}
+	* FILE EXISTS
 	*/
-	public function get_file_exists(){
+	public function get_file_exists() : bool {
 
 		$source	= $this->get_local_full_path();
 
@@ -375,6 +372,5 @@ class ImageObj extends MediaObj {
 	}//end get_file_exists
 
 
+
 }//end class ImageObj
-
-

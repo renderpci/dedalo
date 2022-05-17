@@ -12,7 +12,7 @@ class security_v5_to_v6 {
 	* CONVERT_SECTION_DATO_TO_DATA
 	* @return object $dato
 	*/
-	public static function convert_section_dato_to_data( stdClass $datos_column ) {
+	public static function convert_section_dato_to_data( stdClass $datos_column ) : object {
 
 		$dato = clone $datos_column;
 
@@ -320,7 +320,7 @@ class security_v5_to_v6 {
 	* CONVERT_TABLE_DATA
 	* @return bool true
 	*/
-	public static function convert_table_data($ar_tables=null) {
+	public static function convert_table_data(array $ar_tables=null) : bool {
 
 		if ($ar_tables===null) {
 			// default
@@ -403,7 +403,7 @@ class security_v5_to_v6 {
 	* CONVERT_TABLE_DATA_PROFILES
 	* @return bool true
 	*/
-	public static function convert_table_data_profiles() {
+	public static function convert_table_data_profiles() : bool {
 
 		self::convert_table_data(["matrix_profiles"]);
 
@@ -416,7 +416,7 @@ class security_v5_to_v6 {
 	* CONVERT_TABLE_DATA_USERS
 	* @return bool true
 	*/
-	public static function convert_table_data_users() {
+	public static function convert_table_data_users() : bool {
 
 		self::convert_table_data(["matrix_users"]);
 

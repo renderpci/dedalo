@@ -402,7 +402,7 @@ class component_layout extends component_common {
 		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
 		# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
 		if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
-			$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+			$DEDALO_AR_EXCLUDE_COMPONENTS = DEDALO_AR_EXCLUDE_COMPONENTS;
 			foreach ($layout_map as $section_tipo => $ar_tipos) foreach ((array)$ar_tipos as $key => $current_tipo) {
 				if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
 					unset( $layout_map[$section_tipo][$key] );

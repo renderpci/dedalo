@@ -12,7 +12,7 @@ class ImageMagick {
 	* TEST_IMAGE_MAGICK
 	* @return true (or info about) / throw error
 	*/
-	public static function test_image_magick($info=false) {
+	public static function test_image_magick(bool $info=false) {
 		return true;
 
 		# Print the return code: 0 if OK, nonzero if error.
@@ -26,7 +26,15 @@ class ImageMagick {
 			throw new Exception("Error Processing Request. ImageMagick lib not found", 1);
 		}else{
 			if($info===true) {
-				return alist($out);
+
+				$html = '';
+				$html .= '<ul>';
+				for ($i = 0; $i < sizeof($array); $i++) {
+					$html .= '<li>'.$array[$i].'</li>';
+				}
+				$html .= '</ul>';
+
+				return $html;
 			}else{
 				return true;
 			}

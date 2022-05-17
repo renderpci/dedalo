@@ -79,7 +79,7 @@ session_write_close();
 					$lang_obj->label = lang::get_name_from_code($current_lang);
 					$lang_obj->value = $current_lang;
 				return $lang_obj;
-			}, unserialize(DEDALO_PROJECTS_DEFAULT_LANGS));
+			}, DEDALO_PROJECTS_DEFAULT_LANGS);
 
 			$obj->dedalo_image_quality_default = DEDALO_IMAGE_QUALITY_DEFAULT;
 
@@ -145,7 +145,6 @@ session_write_close();
 		'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
 		'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
 		'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
-		'USE_CDN'					=> USE_CDN,
 		// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 		'DD_TIPOS' => [
 			'DEDALO_SECTION_USERS_TIPO'		=> DEDALO_SECTION_USERS_TIPO,

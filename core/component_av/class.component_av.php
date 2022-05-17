@@ -597,7 +597,7 @@ class component_av extends component_media_common {
 	public function get_source_quality_to_build(string $target_quality) {
 
 		$ar_quality_source_valid = array();
-		$ar_quality 			 = unserialize(DEDALO_AV_AR_QUALITY);
+		$ar_quality 			 = DEDALO_AV_AR_QUALITY;
 			#dump($ar_quality,'$ar_quality');
 
 		foreach($ar_quality as $current_quality) {
@@ -623,10 +623,10 @@ class component_av extends component_media_common {
 	* @param array $ar_quality optional
 	* @return array $ar_all_files_by_quality
 	*/
-	public function get_ar_all_files_by_quality( $ar_quality=false ) : array {
+	public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
 
-		if (!$ar_quality) {
-			$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
+		if (empty($ar_quality)) {
+			$ar_quality = DEDALO_AV_AR_QUALITY;
 		}
 
 		$ar_all_files_by_quality=array();
@@ -635,7 +635,7 @@ class component_av extends component_media_common {
 		}
 
 		return (array)$ar_all_files_by_quality;
-	}#end get_ar_all_files_by_quality
+	}//end get_ar_all_files_by_quality
 
 
 
@@ -727,7 +727,7 @@ class component_av extends component_media_common {
 
 		#
 		# AV restore
-		$ar_quality = (array)unserialize(DEDALO_AV_AR_QUALITY);
+		$ar_quality = DEDALO_AV_AR_QUALITY;
 		foreach ($ar_quality as $current_quality) {
 
 			# media_path
@@ -833,9 +833,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_allowed_extensions() : array {
 
-		$allowed_extensions = is_array(DEDALO_AV_EXTENSIONS_SUPPORTED)
-			? DEDALO_AV_EXTENSIONS_SUPPORTED
-			: unserialize(DEDALO_AV_EXTENSIONS_SUPPORTED);
+		$allowed_extensions = DEDALO_AV_EXTENSIONS_SUPPORTED;
 
 		return $allowed_extensions;
 	}//end get_allowed_extensions
@@ -1138,7 +1136,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_ar_quality() : array {
 
-		$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
+		$ar_quality = DEDALO_AV_AR_QUALITY;
 
 		return $ar_quality;
 	}//end get_ar_quality

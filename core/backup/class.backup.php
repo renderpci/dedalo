@@ -1284,7 +1284,7 @@ abstract class backup {
 	* GET_REMOTE_DATA
 	* @return string $result
 	*/
-	public static function get_remote_data($data) {
+	public static function get_remote_data(object $data) {
 
 		$data_string = "data=" . json_encode($data);
 
@@ -1762,4 +1762,4 @@ abstract class backup {
 
 
 
-}//end class
+}//end class backup

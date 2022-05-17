@@ -268,15 +268,23 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 	const self = this
 
 	// convert the tag dataset to 'real' object for manage it
-	const ar_layer_id			= JSON.parse(options.tag.dataset.data)
-	const ar_layer_id_length	= ar_layer_id.length
-	for (let i = 0; i < ar_layer_id_length; i++) {
+	try {
 
-		self.load_vector_editor({
-			load		: 'layer',
-			layer_id	: parseInt(ar_layer_id[i])
-		})
+		const ar_layer_id			= JSON.parse(options.tag.dataset.data)
+		console.log("---> ar_layer_id:",ar_layer_id);
+		const ar_layer_id_length	= ar_layer_id.length
+		for (let i = 0; i < ar_layer_id_length; i++) {
+
+			self.load_vector_editor({
+				load		: 'layer',
+				layer_id	: parseInt(ar_layer_id[i])
+			})
+		}
+	} catch (error) {
+		console.error(error)
+		console.log("options.tag.dataset.data:",options.tag.dataset.data);
 	}
+
 
 
 	// TAG WAY

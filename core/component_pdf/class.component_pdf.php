@@ -253,9 +253,9 @@ class component_pdf extends component_media_common {
 	* Get the list of defined image qualities in Dédalo config
 	* @return array $ar_image_quality
 	*/
-	public function get_ar_quality() {
+	public function get_ar_quality() : array {
 
-		$ar_image_quality = unserialize(DEDALO_PDF_AR_QUALITY);
+		$ar_image_quality = DEDALO_PDF_AR_QUALITY;
 
 		return $ar_image_quality;
 	}//end get_ar_quality
@@ -265,7 +265,7 @@ class component_pdf extends component_media_common {
 	/**
 	* UPLOAD NEEDED
 	*/
-	public function get_target_filename() {
+	public function get_target_filename() : string {
 
 		return $this->pdf_id .'.'. $this->get_extension() ;
 	}//end get_target_filename
@@ -411,7 +411,7 @@ class component_pdf extends component_media_common {
 
 		// 	#
 		// 	# PDF remove
-		// 	$ar_quality = (array)unserialize(DEDALO_PDF_AR_QUALITY);
+		// 	$ar_quality = DEDALO_PDF_AR_QUALITY;
 		// 	foreach ($ar_quality as $current_quality) {
 		// 		# media_path
 		// 		$media_path = $this->get_path($current_quality);
@@ -454,7 +454,7 @@ class component_pdf extends component_media_common {
 
 		#
 		# PDF restore
-		$ar_quality = (array)unserialize(DEDALO_PDF_AR_QUALITY);
+		$ar_quality = DEDALO_PDF_AR_QUALITY;
 		foreach ($ar_quality as $current_quality) {
 
 			# media_path
@@ -617,11 +617,9 @@ class component_pdf extends component_media_common {
 	* GET_ALLOWED_EXTENSIONS
 	* @return array $allowed_extensions
 	*/
-	public function get_allowed_extensions() {
+	public function get_allowed_extensions() : array {
 
-		$allowed_extensions = is_array(DEDALO_PDF_EXTENSIONS_SUPPORTED)
-			? DEDALO_PDF_EXTENSIONS_SUPPORTED
-			: unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED);
+		$allowed_extensions = DEDALO_PDF_EXTENSIONS_SUPPORTED;
 
 		return $allowed_extensions;
 	}//end get_allowed_extensions
@@ -632,7 +630,7 @@ class component_pdf extends component_media_common {
 	* GET_ORIGINAL_QUALITY
 	* @return $original_quality
 	*/
-	public function get_original_quality() {
+	public function get_original_quality() : string {
 
 		$original_quality = defined('DEDALO_PDF_QUALITY_ORIGINAL')
 			? DEDALO_PDF_QUALITY_ORIGINAL
@@ -647,7 +645,7 @@ class component_pdf extends component_media_common {
 	* GET_PREVIEW_URL
 	* @return string $url
 	*/
-	public function get_preview_url() {
+	public function get_preview_url() : string {
 
 		$preview_url = DEDALO_CORE_URL . '/themes/default/icons/file-pdf-o.svg';
 

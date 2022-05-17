@@ -33,7 +33,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 	* CONVERT_TABLE_DATA_ACTIVITY
 	* @return bool true
 	*/
-	public static function convert_table_data_activity() {
+	public static function convert_table_data_activity() : bool {
 
 		$ar_tables = [
 			'matrix_activity'

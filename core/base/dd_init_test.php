@@ -125,7 +125,7 @@
 
 
 // MEDIA QUALITY FOLDERS (Important for ffmpeg conversions)
-	$ar_folder = (array)unserialize(DEDALO_AV_AR_QUALITY);
+	$ar_folder = DEDALO_AV_AR_QUALITY;
 	foreach ($ar_folder as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER.'/'.$quality;
 		if( !is_dir($folder_path) ) {
@@ -154,7 +154,7 @@
 
 // MEDIA IMAGE
 	# Target folder exists test
-	$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
+	$ar_quality = DEDALO_IMAGE_AR_QUALITY;
 	// append svg as quality only to force iterate it
 	$ar_quality[] = 'svg';
 	foreach ($ar_quality as $quality) {
@@ -242,7 +242,7 @@
 
 // MEDIA AV
 	# Target folder exists test
-	$ar_quality = (array)unserialize(DEDALO_AV_AR_QUALITY);
+	$ar_quality = DEDALO_AV_AR_QUALITY;
 	foreach ($ar_quality as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/'.$quality;
 		if( !is_dir($folder_path) ) {
@@ -499,7 +499,7 @@
 	#		}
 	#		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	#	}
-	#	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
+	#	$ar_langs 	 = DEDALO_APPLICATION_LANGS;
 	#	foreach ($ar_langs as $lang => $label) {
 	#		$label_path  = '/common/js/lang/' . $lang . '.js';
 	#		if (!file_exists(DEDALO_CORE_PATH.$label_path)) {

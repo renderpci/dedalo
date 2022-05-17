@@ -132,10 +132,10 @@ class update {
 			}
 
 		// Table matrix_updates data
-			$version_to_update = update::get_update_version();
-			$version_to_update = implode(".", $version_to_update);
-			$new_version 	   = update::update_dedalo_data_version($version_to_update);
-			$msg[] = "Updated Dédalo data version: ".to_string($version_to_update);
+			$version_to_update			= update::get_update_version();
+			$version_to_update_string	= implode(".", $version_to_update);
+			$new_version				= update::update_dedalo_data_version($version_to_update_string);
+			$msg[] = "Updated Dédalo data version: ".to_string($version_to_update_string);
 
 
 		$result = isset($components_update) ? $components_update : null;
@@ -297,9 +297,9 @@ class update {
 
 				foreach ($ar_component_tipo as $current_component_tipo) {
 
-					$RecordObj_dd = new RecordObj_dd($current_component_tipo);
-					$translatable = $RecordObj_dd->get_traducible();
-					$ar_langs 	  = ($translatable==='no') ? array(DEDALO_DATA_NOLAN) : unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+					$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
+					$translatable	= $RecordObj_dd->get_traducible();
+					$ar_langs		= ($translatable==='no') ? array(DEDALO_DATA_NOLAN) : DEDALO_PROJECTS_DEFAULT_LANGS;
 
 					foreach ($ar_langs as $current_lang) {
 
@@ -435,7 +435,7 @@ class update {
 	* UPDATE_DEDALO_DATA_VERSION
 	* @return bool true
 	*/
-	public static function update_dedalo_data_version($version_to_update) : bool {
+	public static function update_dedalo_data_version(string $version_to_update) : bool {
 
 		$values = new stdClass();
 			$values->dedalo_version = $version_to_update;
