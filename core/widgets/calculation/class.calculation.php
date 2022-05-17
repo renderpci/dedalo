@@ -73,7 +73,7 @@ class calculation extends widget_common {
 	*  }
 	* @return
 	*/
-	public function get_dato() {
+	public function get_dato() : array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
@@ -116,15 +116,18 @@ class calculation extends widget_common {
 	}//end get_dato
 
 
+
 	/**
 	* RESOLVE_DATA_FOR_FORMULA
 	* @param object $data
 	*	properties formula->data
 	* @return object $data_resolved
 	*/
-	public function resolve_data($data) {
+	public function resolve_data(object $data) : ?object {
 
-		if(!isset($data)) return false;
+		if(empty($data)) {
+			return null;
+		}
 
 		$data_resolved = new StdClass();
 
@@ -319,9 +322,9 @@ class calculation extends widget_common {
 
 	/**
 	* EXEC_DATO_FILTER_DATA
-	* @return array $ar_result
+	* @return object $result
 	*/
-	public static function exec_dato_filter_data($dato_item) {
+	public static function exec_dato_filter_data(object $dato_item) : object {
 
 		$ar_search_query_object = !is_array($dato_item->data) ? [$dato_item->data] : $dato_item->data; // Always array
 
@@ -387,21 +390,20 @@ class calculation extends widget_common {
 	}//end exec_dato_filter_data
 
 
+
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO
-	* @return
+	* @return int|float
 	*/
-	public function get_sum_from_component_tipo($search_options) {
+	public function get_sum_from_component_tipo(object $search_options) {
 
-		#dump($search_options, ' search_options ++ '.to_string());
+		$current_section_tipo	= $search_options->section_tipo;
+		$current_tipo			= $search_options->component_tipo;
+		$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
-		$current_section_tipo 	= $search_options->section_tipo;
-		$current_tipo 		  	= $search_options->component_tipo;
-		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-
-		$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-		$traducible 	= $RecordObj_dd->get_traducible();
-		$lang 			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$RecordObj_dd	= new RecordObj_dd($current_tipo);
+		$traducible		= $RecordObj_dd->get_traducible();
+		$lang			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		# section_id filter
 		$section_id_filter = '';
@@ -484,13 +486,9 @@ class calculation extends widget_common {
 
 	/**
 	* GET_VALUES_FROM_COMPONENT_TIPO
-	* @return
+	* @return array $ar_values
 	*/
-	public function get_values_from_component_tipo($search_options, $data) {
-
-		#dump($search_options, ' search_options ++ '.to_string());
-		#dump($data, ' data ++ '.to_string());
-
+	public function get_values_from_component_tipo(object $search_options, object $data) : array {
 
 		$current_section_tipo = $search_options->section_tipo;
 		$current_tipo 		  = $search_options->component_tipo;
@@ -608,7 +606,7 @@ class calculation extends widget_common {
 	* {"number":5}
 	* @return
 	*/
-	private function resolve_logic($process, $data) {
+	private function resolve_logic(object $process, $data) {
 		// path to the file with the functions, defined in structure
 		$file 	= DEDALO_EXTRAS_PATH . $process->file;
 		// function name, defined in structure
@@ -616,19 +614,19 @@ class calculation extends widget_common {
 		// merge the process->options defined in structure and the pre-procesed data
 		// in a unique object, for simplify the call
 		$arg 	= (object)[
-			'data' => $data,
-			'options' => $process->options
+			'data'		=> $data,
+			'options'	=> $process->options
 		];
 
 		switch ($process->engine) {
 			case 'php':
 			default:
 				// stringify the arguments
-				$arg 	= json_encode($arg);
+				$arg	= json_encode($arg);
 				// escape the json slashes, " will be convert to \" it's necesary because the call will be inside a " string
-				$arg 	= addslashes($arg);
+				$arg	= addslashes($arg);
 				// escape the total arguments string, \' will be added at begin and end
-				$arg 	= escapeshellarg($arg);
+				$arg	= escapeshellarg($arg);
 
 				// command
 					// require load the file with the functions in the path
@@ -637,15 +635,19 @@ class calculation extends widget_common {
 
 				// result
 					$result = shell_exec($command);
+
 				// parse the string result to json.
-					$result = json_decode($result);
+					$result = !empty($result)
+						? json_decode($result)
+						: null;
 
 				break;
-		}
+		}//end switch ($process->engine)
 
 
 		return $result;
 	}//end resolve_logic
 
 
-}
+
+}//end class calculation
