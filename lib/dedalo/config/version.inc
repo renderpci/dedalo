@@ -2686,7 +2686,7 @@
 		Fixed section bug when section cached and same section not cached are managed as different sections overwriting data on save. Now, get_my_section method is used when is available in components
 		Fixed component_common->split_query check error when try to check $query_object->q strpos
 		Added diffusion database_alias option to overwrite 'table' and 'table_alias' from original (numisdata catalog case for example)
-
+		Improved build_version_from_git_master response messages for easy debug
 
 
 	[/HISTORY]
@@ -2718,7 +2718,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-05-2022T05:52:52');
+	define('DEDALO_BUILD'	, '17-05-2022T12:18:26');
 
 
 	/*
