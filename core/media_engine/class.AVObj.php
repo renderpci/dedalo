@@ -283,7 +283,7 @@ class AVObj extends MediaObj {
 
 		//OLD WAY
 		# Zend atom lib
-		// require_once(DEDALO_ROOT . '/lib/Zend/Media/Iso14496.php');
+		// require_once(DEDALO_ROOT_PATH . '/lib/Zend/Media/Iso14496.php');
 
 		// try {
 

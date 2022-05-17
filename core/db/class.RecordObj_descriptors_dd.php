@@ -1,6 +1,6 @@
 <?php
 #require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
-#require_once(DEDALO_ROOT . '/jer/class.Jerarquia.php');
+#require_once(DEDALO_ROOT_PATH . '/jer/class.Jerarquia.php');
 
 
 # RecordObj_descriptors_dd

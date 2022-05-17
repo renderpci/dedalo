@@ -167,7 +167,7 @@ class class_loader {
 		}
 
 		$current_php_version	= phpversion();
-		$minimun_php_version	= '7.4.0';
+		$minimun_php_version	= '8.0.0';
 
 		$ar_current_php_version = explode('.',$current_php_version);
 		$ar_minimun_php_version = explode('.',$minimun_php_version);

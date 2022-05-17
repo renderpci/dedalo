@@ -133,6 +133,8 @@ class component_external extends component_common {
 
 	/**
 	* GET DATO
+	* @return mixed
+	* 	Ussually is a string like: ..
 	*/
 	public function get_dato() {
 

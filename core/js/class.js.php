@@ -178,13 +178,16 @@ class js {
 	/**
 	* BUILD_TAG
 	*/
-	public static function build_tag($url, $modifier=false) {
-		if (strpos($url, 'section_group_')!==false) return null;
+	public static function build_tag(string $url, ?bool $modifier=false) : ?string {
+
+		if (strpos($url, 'section_group_')!==false) {
+			return null;
+		}
 
 		// LOCAL VERSIONS
-		if (USE_CDN!==false && substr($url,-4)!=='.php') {
-			$url = USE_CDN . $url;
-		}
+		// if (USE_CDN!==false && substr($url,-4)!=='.php') {
+		// 	$url = USE_CDN . $url;
+		// }
 
 		# Add version
 		$url = $url .'?'. DEDALO_VERSION;

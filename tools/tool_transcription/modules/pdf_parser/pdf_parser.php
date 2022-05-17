@@ -2,8 +2,8 @@
 
 header('Content-Type: text/html; charset=utf-8');
 
-$lib_path = DEDALO_ROOT."/lib/Smalot/PdfParser/";
-$lib_tcpdf_path = DEDALO_ROOT."/lib/tcpdf/";
+$lib_path = DEDALO_ROOT_PATH."/lib/Smalot/PdfParser/";
+$lib_tcpdf_path = DEDALO_ROOT_PATH."/lib/tcpdf/";
 
 require_once($lib_tcpdf_path.'config/tcpdf_config.php');
 require_once($lib_tcpdf_path.'tcpdf_parser.php');
