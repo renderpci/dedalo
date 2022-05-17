@@ -17,7 +17,7 @@ function export_str($json_data) {
 
 	$response = new stdClass();
 		$response->result	= false;
-		$response->msg		= "";
+		$response->msg		= '';
 
 	// rsync trigger code HEAD from master git
 		// function update_head_code() {
@@ -73,8 +73,7 @@ function export_str($json_data) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
-
+				$debug->exec_time = exec_time_unit($start_time,'secs').' secs';
 			$response->debug = $debug;
 		}
 
@@ -86,43 +85,47 @@ function export_str($json_data) {
 
 /**
 * BUILD_VERSION_FROM_GIT_MASTER
-* Export db (build_version_from_git_masteructure)
+* Exec a git command to obtain a zip version of last master branch code and
+* save it to /code directory as 'dedalo5_code.zip'
+* @return object $response
 */
-function build_version_from_git_master($json_data) {
+function build_version_from_git_master($json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
 		$response->result	= false;
-		$response->msg		= "";
+		$response->msg		= '';
 
 	// rsync trigger code HEAD from master git
-		function update_head_code($response) {
+		function update_head_code(object $response) : string {
 
 			$source		= DEDALO_CODE_SERVER_GIT_DIR;
 			$target		= DEDALO_CODE_FILES_DIR .'/dedalo5_code.zip';
 			// $command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target 2>&1"; // @see https://git-scm.com/docs/git-archive
 			$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo5_code/ HEAD > $target ";
 
-			$msg = " Called Dédalo update_head_code with command: " .PHP_EOL. to_string($command);
+			$msg = "Called Dédalo update_head_code with command: " .PHP_EOL. to_string($command);
 			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 			$response->msg .= PHP_EOL . $msg;
 
-			// $output = shell_exec($command); // 2>&1
+			// $output_array = shell_exec($command); // 2>&1
 
 			$output_array	= null;
 			$retval			= null;
 			exec($command, $output_array, $retval);
 
-			$result = "Returned with status $retval and output:\n" . to_string($output_array);
+			$result = 'Return:'.PHP_EOL.'status: '. ($retval ?? null). PHP_EOL . 'output: ' . json_encode($output_array, JSON_PRETTY_PRINT);
 
 			return $result;
 		}
+
+	// try exec
 		try{
 
 			$output = update_head_code($response);
 
 			# Append msg
-			$msg = PHP_EOL ."<br> update_head_code shell_exec output: <br>".PHP_EOL.to_string($output);
+			$msg = PHP_EOL ."update_head_code shell_exec output: ". PHP_EOL. to_string($output);
 			$response->msg .= $msg;
 			debug_log(__METHOD__." update_head_code output OK: $msg ".to_string(), logger::DEBUG);
 
