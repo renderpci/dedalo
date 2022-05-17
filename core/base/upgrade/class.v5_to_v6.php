@@ -12,7 +12,7 @@ class v5_to_v6 {
 	* CONVERT_TABLE_DATA
 	* @return bool true
 	*/
-	public static function convert_table_data($ar_tables, $action) {
+	public static function convert_table_data(array $ar_tables, string $action) : bool {
 
 		# Maximum execution time
 		set_time_limit(0);

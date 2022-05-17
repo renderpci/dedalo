@@ -39,11 +39,13 @@ class navigator {
 		#if(isset($_SESSION['dedalo']['auth']['userID_matrix']))
 		#self::$userID_matrix =  $_SESSION['dedalo']['auth']['userID_matrix'];
 
-		if(isset($_SESSION['dedalo']['auth']['user_id']))
-		self::$user_id =  $_SESSION['dedalo']['auth']['user_id'];
+		if(isset($_SESSION['dedalo']['auth']['user_id'])) {
+			self::$user_id = $_SESSION['dedalo']['auth']['user_id'];
+		}
 
-		if(isset($_SESSION['dedalo']['auth']['username']))
-		self::$username =  $_SESSION['dedalo']['auth']['username'];					#dump($_SESSION['dedalo']['auth']['username'],'$_SESSION['dedalo']['auth']['username']');
+		if(isset($_SESSION['dedalo']['auth']['username'])) {
+			self::$username = $_SESSION['dedalo']['auth']['username'];
+		}
 
 		# PAGE CURRENT QUERY STRING
 		#self::$page_query_string	= common::get_page_query_string();

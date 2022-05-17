@@ -510,8 +510,8 @@ class diffusion_sql extends diffusion  {
 
 		# LANGS . From config
 			$ar_all_project_langs = defined('DEDALO_DIFFUSION_LANGS')
-				? unserialize(DEDALO_DIFFUSION_LANGS)
-				: unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+				? DEDALO_DIFFUSION_LANGS
+				: DEDALO_PROJECTS_DEFAULT_LANGS;
 
 
 		# AR_FIELD_DATA

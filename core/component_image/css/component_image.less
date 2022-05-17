@@ -220,8 +220,15 @@
 					&.active{
 						background-color: @color_grey_medium;
 						color: #000;
-						font-weight: bold;
 						user-select: none;
+						.user_layer_name {
+							font-weight: bold;
+						}
+					}
+
+					>* {
+						line-height: 1.1rem;
+						margin: 0;
 					}
 
 					.layer_icon {
@@ -241,7 +248,9 @@
 
 					}
 					.user_layer_name {
-
+						color: #555555;
+						font-size: 0.96rem;
+						font-weight: normal;
 					}
 					.layer_delete {
 						// .fn_build_button('trash_light.svg', black, 1);

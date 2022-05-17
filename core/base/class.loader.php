@@ -3,6 +3,7 @@
 	FIXED CLASSES TO LOAD
 */
 include(DEDALO_CORE_PATH . '/base/class.Error.php');
+include(DEDALO_CORE_PATH . '/logger/class.logger.php');
 include(DEDALO_CORE_PATH . '/db/class.DBi.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
 include(DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
@@ -137,14 +138,14 @@ class class_loader {
 		}
 
 		if ( !include($file_path) ) {
-			if(SHOW_DEBUG===true) {
-				$bt = debug_backtrace();
-				dump($bt, ' ERROR ON LOADER INCLUDE FILE !! bt ++ '.to_string($file_path));
-				die();
-			}
-			throw new Exception(__METHOD__ . "<hr> A loader call was made to class <b>$className</b><br> File do not exits at: <b>$file_path</b><br>
+			// $bt = debug_backtrace();
+			// dump($bt, ' ERROR ON LOADER INCLUDE FILE !! bt ++ '.to_string($file_path));
+			$msg = "<hr> A loader call was made to class <b>$className</b><br> File do not exits at: <b>$file_path</b><br>
 				Please, remember require this file in main class (like component_common) or create standard dedalo lib path folder
-				like '/component_input_text/class.component_input_text.php' for loader calls. ");
+				like '/component_input_text/class.component_input_text.php' for loader calls. ";
+			// throw new Exception(__METHOD__ . $msg);
+			trigger_error(__METHOD__ . $msg);
+			return false;
 		}
 
 		return true;

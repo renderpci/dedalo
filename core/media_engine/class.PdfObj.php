@@ -64,7 +64,7 @@ class PdfObj extends MediaObj {
 
 	# GET ARRAY QUALITY OPTIONS
 	public static function get_ar_quality() {
-		return unserialize(DEDALO_PDF_AR_QUALITY);
+		return DEDALO_PDF_AR_QUALITY;
 	}
 
 

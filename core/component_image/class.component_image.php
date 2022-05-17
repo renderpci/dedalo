@@ -1132,7 +1132,7 @@ class component_image extends component_media_common {
 
 		#
 		# Image restore
-		$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
+		$ar_quality = DEDALO_IMAGE_AR_QUALITY;
 		foreach ($ar_quality as $current_quality) {
 
 			# media_path
@@ -1293,9 +1293,9 @@ class component_image extends component_media_common {
 	* Get the list of defined image qualities in Dédalo config
 	* @return array $ar_image_quality
 	*/
-	public function get_ar_quality() {
+	public function get_ar_quality() : array {
 
-		$ar_image_quality = unserialize(DEDALO_IMAGE_AR_QUALITY);
+		$ar_image_quality = DEDALO_IMAGE_AR_QUALITY;
 
 		return $ar_image_quality;
 	}//end get_ar_quality
@@ -1306,11 +1306,9 @@ class component_image extends component_media_common {
 	* GET_ALLOWED_EXTENSIONS
 	* @return array $allowed_extensions
 	*/
-	public function get_allowed_extensions() {
+	public function get_allowed_extensions() : array {
 
-		$allowed_extensions = is_array(DEDALO_IMAGE_EXTENSIONS_SUPPORTED)
-			? DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-			: unserialize(DEDALO_IMAGE_EXTENSIONS_SUPPORTED);
+		$allowed_extensions = DEDALO_IMAGE_EXTENSIONS_SUPPORTED;
 
 		return $allowed_extensions;
 	}//end get_allowed_extensions
@@ -1321,7 +1319,7 @@ class component_image extends component_media_common {
 	* GET_ORIGINAL_QUALITY
 	* @return array $original_quality
 	*/
-	public function get_original_quality() {
+	public function get_original_quality() : string {
 
 		$original_quality = defined('DEDALO_IMAGE_QUALITY_ORIGINAL')
 			? DEDALO_IMAGE_QUALITY_ORIGINAL
@@ -1781,10 +1779,10 @@ class component_image extends component_media_common {
 	* GET_SOURCE_QUALITY_TO_BUILD
 	* Iterate array DEDALO_IMAGE_AR_QUALITY (Order by quality big to small)
 	*/
-	public function get_source_quality_to_build($target_quality) {
+	public function get_source_quality_to_build(string $target_quality) {
 
 		$ar_quality_source_valid = array();
-		$ar_quality 			 = unserialize(DEDALO_IMAGE_AR_QUALITY);
+		$ar_quality 			 = DEDALO_IMAGE_AR_QUALITY;
 			#dump($ar_quality,'$ar_quality');
 
 		foreach($ar_quality as $current_quality) {

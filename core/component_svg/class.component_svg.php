@@ -197,7 +197,7 @@ class component_svg extends component_media_common {
 	* GET_FILE_NAME
 	* @return string $file_name
 	*/
-	public function get_file_name() {
+	public function get_file_name() : string {
 
 		$file_name = $this->tipo .'_'. $this->section_tipo .'_'. $this->parent;
 
@@ -209,7 +209,7 @@ class component_svg extends component_media_common {
 	/**
 	* GET_DEFAULT_QUALITY
 	*/
-	public function get_default_quality() {
+	public function get_default_quality() : string {
 
 		return DEDALO_SVG_QUALITY_DEFAULT;
 	}//end get_default_quality
@@ -221,9 +221,9 @@ class component_svg extends component_media_common {
 	* Get the list of defined image qualities in Dédalo config
 	* @return array $ar_image_quality
 	*/
-	public function get_ar_quality() {
+	public function get_ar_quality() : array {
 
-		$ar_quality = unserialize(DEDALO_SVG_AR_QUALITY);
+		$ar_quality = DEDALO_SVG_AR_QUALITY;
 
 		return $ar_quality;
 	}//end get_ar_quality
@@ -234,7 +234,7 @@ class component_svg extends component_media_common {
 	* GET_PATH
 	* @return string $file_path
 	*/
-	public function get_path($quality=false) {
+	public function get_path($quality=false) : string {
 
 		if(empty($quality)) {
 			$quality = $this->get_quality();
@@ -411,11 +411,9 @@ class component_svg extends component_media_common {
 	* GET_ALLOWED_EXTENSIONS
 	* @return array $allowed_extensions
 	*/
-	public function get_allowed_extensions() {
+	public function get_allowed_extensions() : array {
 
-		$allowed_extensions = defined('DEDALO_SVG_EXTENSIONS_SUPPORTED')
-			? (is_array(DEDALO_SVG_EXTENSIONS_SUPPORTED) ? DEDALO_SVG_EXTENSIONS_SUPPORTED : unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED))
-			: ['svg'];
+		$allowed_extensions = DEDALO_SVG_EXTENSIONS_SUPPORTED;
 
 		return $allowed_extensions;
 	}//end get_allowed_extensions
@@ -426,7 +424,7 @@ class component_svg extends component_media_common {
 	* GET_ORIGINAL_QUALITY
 	* @return $original_quality
 	*/
-	public function get_original_quality() {
+	public function get_original_quality() : string {
 
 		$original_quality = defined('DEDALO_SVG_QUALITY_ORIGINAL')
 			? DEDALO_SVG_QUALITY_ORIGINAL
@@ -441,7 +439,7 @@ class component_svg extends component_media_common {
 	* GET_PREVIEW_URL
 	* @return string $url
 	*/
-	public function get_preview_url() {
+	public function get_preview_url() : string {
 
 		// $preview_url = $this->get_thumb_url();
 		$preview_url = $this->get_url($quality=false, $test_file=true, $absolute=false, $default_add=false);

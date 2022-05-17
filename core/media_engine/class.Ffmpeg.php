@@ -97,19 +97,21 @@ class Ffmpeg {
 	}//end get_quality_from_setting
 
 
+
 	/**
 	* GET_MASTER_MEDIA_FILE
 	* Get master media file for generate alternative version
+	* @return string|bool
 	*/
-	public function get_master_media_file($AVObj) {
+	public function get_master_media_file(object $AVObj) {
 
 		$name	 	= $AVObj->get_name();
 		$extension	= $AVObj->get_extension();
 
-		$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
+		$ar_quality = DEDALO_AV_AR_QUALITY;
 
 		# Recorre el array de calidades de mayor a menor hasta que encuentra una que exista
-		if(is_array($ar_quality)) foreach($ar_quality as $quality) {
+		foreach($ar_quality as $quality) {
 
 			#$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
 
@@ -141,8 +143,9 @@ class Ffmpeg {
 			#	return $file;
 			#}
 		}//end if(is_array($ar_quality)) foreach($ar_quality as $quality) {
-		return false;
 
+
+		return false;
 	}//end get_master_media_file
 
 
@@ -152,7 +155,7 @@ class Ffmpeg {
 	* Get master media file quality from file name
 	* @param object $AVObj
 	*/
-	public function get_master_media_file_quality($AVObj) {
+	public function get_master_media_file_quality(object $AVObj) {
 
 		$master_media_file = $this->get_master_media_file($AVObj);
 
@@ -170,7 +173,7 @@ class Ffmpeg {
 	* GET_MASTER_MEDIA_FILE_OBJ
 	* Get master media file quality from file name
 	*/
-	public function get_master_media_file_obj($AVObj) {
+	public function get_master_media_file_obj(object $AVObj) {
 
 		$reelID						= $AVObj->get_reelID();
 		$master_media_file_quality	= $this->get_master_media_file_quality($AVObj);

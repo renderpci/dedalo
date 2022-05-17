@@ -58,7 +58,7 @@
 				default:
 					$value							= $this->get_dato();
 					// datalist
-					$ar_all_project_select_langs	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+					$ar_all_project_select_langs	= DEDALO_PROJECTS_DEFAULT_LANGS;
 					$datalist = [];
 					foreach ((array)$ar_all_project_select_langs as $key => $item) {
 

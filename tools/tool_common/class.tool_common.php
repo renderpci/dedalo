@@ -519,6 +519,11 @@ class tool_common {
 
 		$user_tools = [];
 
+		// user zero case
+			if (empty($user_id)) {
+				return $user_tools;
+			}
+
 		// all unfiltered tools
 			$registered_tools = tool_common::get_client_registered_tools();
 

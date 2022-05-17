@@ -104,7 +104,7 @@ class AVObj extends MediaObj {
 
 	# GET ARRAY QUALITY OPTIONS
 	public static function get_ar_quality() {
-		return unserialize(DEDALO_AV_AR_QUALITY);
+		return DEDALO_AV_AR_QUALITY;
 	}
 
 
@@ -267,7 +267,7 @@ class AVObj extends MediaObj {
 
 		if(isset($this->header_data)) return $this->header_data;
 
-		
+
 
 		$local_file		= $this->get_local_full_path();		#dump($local_file, ' local_file');
 		$quality 		= $this->get_quality();

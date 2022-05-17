@@ -45,16 +45,16 @@ class security {
 			}
 
 		// permissions root check
-			if( !defined('DEDALO_PERMISSIONS_ROOT') ) {
-				$msg = "<span class='error'> Error: permissions_root is not defined! </span>";
-				trigger_error($msg);
-				if(SHOW_DEBUG===true) {
-					throw new Exception( __METHOD__ . $msg);
-				}
-				die($msg);
-			}else{
-				$this->permissions_root = DEDALO_PERMISSIONS_ROOT;
-			}
+			// if( !defined('DEDALO_PERMISSIONS_ROOT') ) {
+			// 	$msg = "<span class='error'> Error: permissions_root is not defined! </span>";
+			// 	trigger_error($msg);
+			// 	if(SHOW_DEBUG===true) {
+			// 		throw new Exception( __METHOD__ . $msg);
+			// 	}
+			// 	die($msg);
+			// }else{
+			// 	$this->permissions_root = DEDALO_PERMISSIONS_ROOT;
+			// }
 
 		return true;
 	}//end __construct

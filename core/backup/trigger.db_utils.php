@@ -12,19 +12,19 @@ common::trigger_manager();
 * EXPORT_STR
 * Export db (export_structure)
 */
-function export_str($json_data) : object {
+function export_str(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= "";//'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= '';//'Error. Request failed ['.__FUNCTION__.']';
 
 	# Dump all historic data first
-	$db_name 				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
-	$res_export_structure 	= backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+	$db_name				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+	$res_export_structure	= backup::export_structure($db_name, $exclude_tables=false);	// Full backup
 	if ($res_export_structure->result===false) {
-		$response->result 	= false;
-		$response->msg 		= $res_export_structure->msg;
+		$response->result	= false;
+		$response->msg		= $res_export_structure->msg;
 		return $response;
 	}else{
 		# Append msg
@@ -32,12 +32,11 @@ function export_str($json_data) : object {
 	}
 
 
-
 	# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
 	$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
 	if ($res_export_structure2->result===false) {
-		$response->result 	= false;
-		$response->msg 		= $res_export_structure2->msg;
+		$response->result	= false;
+		$response->msg		= $res_export_structure2->msg;
 		return $response;
 	}else{
 		# Append msg
@@ -52,6 +51,7 @@ function export_str($json_data) : object {
 
 		$response->debug = $debug;
 	}
+
 
 	return (object)$response;
 }//end export_str

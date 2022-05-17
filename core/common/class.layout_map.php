@@ -74,10 +74,10 @@ class layout_map {
 			$request_config_type	= $options->request_config_type;
 			$parent					= $tipo;
 			$ddo_key 				= $section_tipo.'_'.$tipo.'_'.$mode;
-		
+
 			// if($_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]){
 			// 	return  $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
-			// } 
+			// }
 
 
 		// properties
@@ -233,7 +233,7 @@ class layout_map {
 
 		// Remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
 			if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
-				$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+				$DEDALO_AR_EXCLUDE_COMPONENTS = DEDALO_AR_EXCLUDE_COMPONENTS;
 				foreach ($layout_map as $key => $item) {
 					// if (empty($item)) {
 					// 	debug_log(__METHOD__." Skipped empty item ".to_string(), logger::DEBUG);
@@ -367,7 +367,7 @@ class layout_map {
 
 	/**
 	* SEARCH_USER_PRESET_LAYOUT_MAP
-	* Get user layout map preset 
+	* Get user layout map preset
 	* @return array | bool
 	*/
 	public static function search_user_preset_layout_map($tipo, $section_tipo, $user_id, $modo, $view=null) {
