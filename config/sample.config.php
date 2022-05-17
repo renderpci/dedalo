@@ -1,91 +1,103 @@
 <?php
 ################################################################
-################### DEDALO VERSION V4 ##########################
+################### DEDALO VERSION 6 ###########################
 ################################################################
 /*
-	UNDER GNU PUBLIC LICENSE / BAJO LICENCIA PÚBLICA GNU
+	UNDER GNU PUBLIC LICENSE
 	http://www.gnu.org/licenses/licenses.es.html
-	Version 4, 14 de marzo de 2012 / 5 May 2016
+	Versión 4, 14 de marzo de 2012 / 21 Abril 2015
 
 	Juan Francisco Onielfa Veneros
 	Alejandro Peña Carbonell
 	https://dedalo.dev
 
-	Reviewed: 12-05-2018
+	Reviewed: 17-05-2022
 */
 
 
-################################################################
-# DEDALO MAIN VARS
-	define('DEDALO_HOST'			, $_SERVER['HTTP_HOST'] );
-	define('DEDALO_PROTOCOL'		, stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://' );
 
-	# Dedalo paths
-	define('DEDALO_ROOT'			, dirname(dirname(__FILE__)));
-	#define('DEDALO_ROOT_WEB'		, '/'. substr(substr($_SERVER["REQUEST_URI"],1), 0,  strpos(substr($_SERVER["REQUEST_URI"],1), "/")));
-	define('DEDALO_ROOT_WEB'		, '/'.explode('/', $_SERVER["REQUEST_URI"])[1]);
-
-	define('DEDALO_CONFIG'			,'config');
-	define('DEDALO_CORE'			,'core');
-	define('DEDALO_SHARED'			,'shared');
-	define('DEDALO_TOOLS'			,'tools');
-	define('DEDALO_LIB'				,'lib');
-
-	#config
-	define('DEDALO_CONFIG_PATH'		, DEDALO_ROOT.'/'.DEDALO_CONFIG );
-
-	#core
-	define('DEDALO_CORE_PATH'		, DEDALO_ROOT. '/'. DEDALO_CORE);
-	define('DEDALO_CORE_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_CORE );
-
-	#shared
-	define('DEDALO_SHARED_PATH'		, DEDALO_ROOT.'/'. DEDALO_SHARED);
-	define('DEDALO_SHARED_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_SHARED );
-
-	#tools
-	define('DEDALO_TOOLS_PATH'		, DEDALO_ROOT.'/'. DEDALO_TOOLS);
-	define('DEDALO_TOOLS_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_TOOLS );
-
-	#lib
-	define('DEDALO_LIB_PATH'		, DEDALO_ROOT.'/'. DEDALO_LIB);
-	define('DEDALO_LIB_URL'			, DEDALO_ROOT_WEB . '/'. DEDALO_LIB );
-
-	#widgets
-	define('DEDALO_WIDGETS_PATH'	, DEDALO_CORE_PATH .'/widgets');
-	define('DEDALO_WIDGETS_URL'		, DEDALO_CORE_URL . '/widgets');
-
-	#extras
-	define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
-	define('DEDALO_EXTRAS_URL'		, DEDALO_CORE_URL . '/extras');
-
-
-	# Dedalo information
-	define('DEDALO_SALT_STRING'		, 'dedalo_cuatro');
-
-	# TIME ZONE : Zona horaria (for backups archive names)
-	define('DEDALO_TIMEZONE'		, 'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
-	# SET LOCALE (Spanish for example)
-	#setlocale(LC_ALL,'en_EN');
-	setlocale(LC_ALL,'es_ES'); 			// For Mac
-	#setlocale(LC_ALL, 'es_ES.utf8');	// For Linux
+// duplicity check
+	if (defined('DEDALO_ROOT_PATH')) {
+		throw new Exception("Error Processing Request: config file is already included!", 1);
+	}
 
 
 
-################################################################
-# DEDALO ENTITY
+// dedalo paths
+	// xx_PATH is absolute system path like '/user/httpdocs/dedalo/core'
+	// xx_WEB is relative url path (to current dedalo url dir, ussually 'dedalo') like '/dedalo/core'
+
+	// host
+		define('DEDALO_HOST',		$_SERVER['HTTP_HOST']);
+		define('DEDALO_PROTOCOL',	(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
+
+	// root paths
+		define('DEDALO_ROOT_PATH',	dirname(dirname(__FILE__)));
+		define('DEDALO_ROOT_WEB',	'/' . explode('/', $_SERVER["REQUEST_URI"])[1]);
+
+	// base paths
+		define('DEDALO_CONFIG',	'config');
+		define('DEDALO_CORE',	'core');
+		define('DEDALO_SHARED',	'shared');
+		define('DEDALO_TOOLS',	'tools');
+		define('DEDALO_LIB',	'lib');
+
+	// config
+		define('DEDALO_CONFIG_PATH',	DEDALO_ROOT_PATH .'/'. DEDALO_CONFIG );
+
+	// core
+		define('DEDALO_CORE_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_CORE);
+		define('DEDALO_CORE_URL',		DEDALO_ROOT_WEB .'/'. DEDALO_CORE );
+
+	// shared
+		define('DEDALO_SHARED_PATH',	DEDALO_ROOT_PATH .'/'. DEDALO_SHARED);
+		define('DEDALO_SHARED_URL',		DEDALO_ROOT_WEB  .'/'. DEDALO_SHARED );
+
+	// tools
+		define('DEDALO_TOOLS_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_TOOLS);
+		define('DEDALO_TOOLS_URL',		DEDALO_ROOT_WEB .'/'. DEDALO_TOOLS );
+
+	// lib
+		define('DEDALO_LIB_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_LIB);
+		define('DEDALO_LIB_URL',		DEDALO_ROOT_WEB .'/'. DEDALO_LIB );
+
+	// widgets
+		define('DEDALO_WIDGETS_PATH',	DEDALO_CORE_PATH . '/widgets');
+		define('DEDALO_WIDGETS_URL',	DEDALO_CORE_URL . '/widgets');
+
+	// extras
+		define('DEDALO_EXTRAS_PATH',	DEDALO_CORE_PATH . '/extras');
+		define('DEDALO_EXTRAS_URL',		DEDALO_CORE_URL . '/extras');
+
+
+
+// Dedalo information
+	define('DEDALO_SALT_STRING', 'dedalo_six');
+
+
+
+// time zone (for backups archive names)
+	define('DEDALO_TIMEZONE', 'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
+	// set locale ('en_ES' Spanish for example) es_ES | en_EN | ...
+	// For Mac, use format as 'es_ES'. For Linux as 'es_ES.utf8'
+	setlocale(LC_ALL, 'es_ES');
+
+
+
+// dedalo entity
+	// dedalo_entity string. Do not use here spaces or non ASCII chars
 	define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
-	# DEDALO_ENTITY_LABEL . (Showed title of html pages)
+	// dedalo_entity_label . (Showed title of html pages)
 	define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
-	# DEDALO_ENTITY_ID . (From Dédalo private list)
+	// dedalo_entity_id . (From Dédalo private list. You need to be register before but it's not mandatory fill this)
 	define('DEDALO_ENTITY_ID', 0);
-	# DEVELOPMENT_SERVER
-	define('DEVELOPMENT_SERVER'	, false);
+	// development_server. Default is false
+	define('DEVELOPMENT_SERVER', false);
 
 
 
-################################################################
-# CACHE MANAGER
-	define('DEDALO_CACHE_MANAGER', false );	# redis / memcached / zebra_db / false
+// cache manager. redis | memcached | zebra_db | false . Default is false
+	define('DEDALO_CACHE_MANAGER', false );
 
 
 
