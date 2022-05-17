@@ -517,7 +517,7 @@ class Ffmpeg {
 				}
 				# image zero 0.jpg from dedalo images to posterframe images
 				if(!file_exists("{$target_path}/0.jpg")) {
-					$image_zero = DEDALO_ROOT ."/images/0.jpg";
+					$image_zero = DEDALO_ROOT_PATH ."/images/0.jpg";
 					if(file_exists($image_zero)) {
 						copy($image_zero, "{$target_path}/0.".DEDALO_AV_POSTERFRAME_EXTENSION);
 					}

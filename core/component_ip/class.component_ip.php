@@ -1,6 +1,6 @@
 <?php
 # GeoIp2 load by composer
-// require_once DEDALO_ROOT . '/autoload.php';
+// require_once DEDALO_ROOT_PATH . '/autoload.php';
 #use GeoIp2\Database\Reader;
 
 
@@ -47,7 +47,7 @@ class component_ip extends component_common {
 
 			switch ($mode) {
 				case 'city':
-					$db_file = DEDALO_ROOT . '/vendor/maxmind-db/db/GeoLite2-City.mmdb';
+					$db_file = DEDALO_ROOT_PATH . '/vendor/maxmind-db/db/GeoLite2-City.mmdb';
 					$reader  = new Reader($db_file);
 
 					$record = $reader->city($ip);
@@ -61,7 +61,7 @@ class component_ip extends component_common {
 					break;
 
 				default:
-					$db_file = DEDALO_ROOT . '/vendor/maxmind-db/db/GeoLite2-Country.mmdb';
+					$db_file = DEDALO_ROOT_PATH . '/vendor/maxmind-db/db/GeoLite2-Country.mmdb';
 					$reader  = new Reader($db_file);
 
 					$record  = $reader->country($ip);

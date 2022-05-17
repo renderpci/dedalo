@@ -163,9 +163,9 @@ class css {
 
 		if (strpos($url, 'section_group_')!==false) return null;
 
-		if (USE_CDN!==false) {
-			$url = USE_CDN . $url;
-		}
+		// if (USE_CDN!==false) {
+		// 	$url = USE_CDN . $url;
+		// }
 
 		# Add version
 		$url = $url.'?'.DEDALO_VERSION;

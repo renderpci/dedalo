@@ -75,7 +75,7 @@ function propagate_marks() {
 
 	# before save, remove changes in log index /**/
 	if($ar_indexID_click || $confirmAllIndexReview) {
-	require_once( DEDALO_ROOT . '/ind/class.IndexToReview.php');
+	require_once( DEDALO_ROOT_PATH . '/ind/class.IndexToReview.php');
 
 		$RecordObj_ind 		= new RecordObj_ind_tr($targetID);
 

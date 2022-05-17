@@ -17,8 +17,6 @@ if($is_logged!==true) {
 
 
 require_once(dirname(__FILE__) . '/class.dd.php');
-
-// require_once(DEDALO_ROOT . '/Connections/config.php');
 require_once(dirname(__FILE__) . '/inc/funciones.php');
 
 

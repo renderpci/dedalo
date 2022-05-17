@@ -176,7 +176,7 @@ class diffusion_socrata extends diffusion  {
 	public static function upsert_data( $data, $path ) {
 		$socrata_config = (object)SOCRATA_CONFIG;
 
-		require DEDALO_ROOT . '/autoload.php';
+		require DEDALO_ROOT_PATH . '/autoload.php';
 
 		$app_token 			= $socrata_config->app_token;
 		$socrata_user		= $socrata_config->socrata_user;

@@ -6,7 +6,6 @@ require_once( dirname(__FILE__) .'/config/config_ontology.php');
 * CLASE DD BASADA EN TESAURO V3
 */
 require_once( dirname(__FILE__) . '/class.dd_elements.php');
-#require_once(DEDALO_ROOT.'/jer/class.RecordObj_jer_tipos.php');
 
 
 class dd extends dd_elements {

@@ -1297,118 +1297,17 @@ abstract class backup {
 
 
 	/**
-	* CURL_REQUEST
-	* @return object $response
-	* 	msg: string info about execution
-	* 	code: int httpcode response from server
-	* 	error: mixed error info from CURL if exists. Else false
-	* 	result: mixed data received from server
-	*/
-	public static function curl_request(object $options) : object {
-
-		// options
-			$url			= $options->url; // mandatory
-			$post			= isset($options->post) ? $options->post : true;
-			$postfields		= $options->postfields; // mandatory
-			$returntransfer	= $options->returntransfer ?? 1;
-			$followlocation	= isset($options->followlocation) ? $options->followlocation : true;
-			$header			= isset($options->header) ? $options->header : true;
-			$ssl_verifypeer	= isset($options->ssl_verifypeer) ? $options->ssl_verifypeer : false;
-			$timeout		= isset($options->timeout) ? (int)$options->timeout : 5; // seconds
-			$proxy			= $options->proxy ?? false;
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
-
-		// open connection
-		$ch = curl_init();
-
-		// set the url, number of POST vars, POST data
-		curl_setopt($ch, CURLOPT_URL, $url); // Like 'http://domain.com/get-post.php'
-		curl_setopt($ch, CURLOPT_POST, $post); // bool default true
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $postfields); // data_string
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, $returntransfer); // int default 1
-		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, $followlocation); // bool default true
-		curl_setopt($ch, CURLOPT_HEADER, $header); // we want headers. default true
-
-		// proxy. Use connection proxy on demand
-		if ($proxy!==false) {
-			curl_setopt($ch, CURLOPT_PROXY, $proxy); // like '127.0.0.1:8888'
-		}
-
-		# SSL. Avoid verify SSL certificates (very slow)
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $ssl_verifypeer); // bool default false
-
-		// A given cURL operation should only take XXX seconds max.
-		curl_setopt($ch, CURLOPT_TIMEOUT, $timeout); // int default 5
-
-		// execute post
-		$result = curl_exec($ch);
-
-		// status code. Info about result
-		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		// debug_log(__METHOD__." ".$url." status code: ".to_string($httpcode), logger::WARNING);
-
-		// message. Generate a human readable info
-			$msg = '';
-			switch ($httpcode) {
-				case 200:
-					$msg .= "OK. check_remote_server passed successfully (status code: $httpcode)";
-					break;
-				case 401:
-					$msg .= "Error. Unauthorized code (status code: $httpcode)";
-					break;
-				case 400:
-					$msg .= "Error. Server has problems collect structure files (status code: $httpcode)";
-					break;
-				default:
-					$msg .= "Error. check_remote_server problem found (status code: $httpcode)";
-					break;
-			}
-			debug_log(__METHOD__.' '.$url.' msg: '.$msg, logger::WARNING);
-
-		// curl_errno check. Verify if any error has occurred on CURL execution
-			$error_info = false;
-			try {
-				// Check if any error occurred
-				if(curl_errno($ch)) {
-					$error_info	 = curl_error($ch);
-					$msg		.= '. curl_request Curl error:' . $error_info;
-					debug_log(__METHOD__.' '.$url.' error_info: '.$error_info, logger::ERROR);
-				}
-			} catch (Exception $e) {
-				$msg .= '. curl_request Caught exception:' . $e->getMessage();
-				debug_log(__METHOD__.' curl_request Caught exception:' . $e->getMessage(), logger::ERROR);
-			}
-
-		// close connection
-		curl_close($ch);
-
-		// response
-			$response->msg		= $msg;
-			$response->error	= $error_info;
-			$response->code		= $httpcode;
-			$response->result	= $result;
-
-
-		return $response;
-	}//end curl_request
-
-
-
-	/**
 	* DOWNLOAD_REMOTE_STRUCTURE_FILE
 	* @return bool
 	*/
 	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
 		$start_time=microtime(1);
 
-		$data = array(
+		$data = (object)[
 			'code'	=> STRUCTURE_SERVER_CODE,
 			'type'	=> $obj->type,
 			'name'	=> $obj->name
-		);
+		];
 
 		$result = self::get_remote_data($data);
 		#if(SHOW_DEBUG===true) {
@@ -1486,7 +1385,7 @@ abstract class backup {
 			];
 
 		// curl_request
-			$response = backup::curl_request($options);
+			$response = curl_request($options);
 
 		// decorate message
 			if ($response->code==200) {

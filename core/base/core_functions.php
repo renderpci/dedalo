@@ -24,7 +24,7 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 	$bt = debug_backtrace();
 
 
-	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(DEDALO_ROOT,'',$bt[0]['file']);
+	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(DEDALO_ROOT_PATH,'',$bt[0]['file']);
 	$html .= PHP_EOL ." Line: ".@$bt[0]['line'];
 
 	# NIVEL 1
