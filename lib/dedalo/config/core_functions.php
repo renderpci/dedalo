@@ -300,29 +300,77 @@ function exec_time_unit($start, $unit='ms', $round=3) {
 
 
 # TO_STRING
-function to_string($var=null) {
-	if ($var===null) return $var;
+	// function to_string($var=null) {
+	// 	if ($var===null) return $var;
+
+	// 	if (is_string($var) && (strpos($var, '{')===0 || strpos($var, '[')===0)) {
+	// 		$var = json_decode($var);
+	// 	}
+
+	// 	if (is_array($var)) {
+	// 		if ( is_string(current($var)) || is_numeric(current($var)) ) {
+	// 			return implode(' | ', $var);
+	// 		}else if( is_object( current($var) ) ){
+	// 			foreach ($var as $obj) {
+	// 				$ar_ob[] = $obj;
+	// 			}
+	// 			#return implode('|', $ar_ob);
+	// 			return print_r($ar_ob,true);
+	// 		}else if(empty($var)){
+	// 			return 'Array(empty)';
+	// 		}
+	// 		return print_r($var,true);
+
+	// 	}else if (is_object($var)) {
+	// 		$var = json_encode($var, JSON_PRETTY_PRINT);
+	// 		return $var;
+	// 		#$var = json_decode($var);
+	// 		#return '<pre>'.print_r($var,true).'</pre>';
+	// 	}else if (is_bool($var)) {
+	// 		$var = (int)$var;
+	// 	}
+
+	// 	return "$var";
+	// }//end to_string
+
+
+
+/**
+* TO_STRING
+* Get input var as parsed string
+* @return string
+*/
+function to_string($var=null) : string {
+
+	if(is_null($var)) {
+		return 'null';
+	}
 
 	if (is_string($var) && (strpos($var, '{')===0 || strpos($var, '[')===0)) {
 		$var = json_decode($var);
 	}
 
 	if (is_array($var)) {
-		if ( is_string(current($var)) || is_numeric(current($var)) ) {
-			return implode(' | ', $var);
+
+		if(empty($var)) {
+			return 'Array(empty)';
+		}else if ( is_string(current($var)) || is_numeric(current($var)) ) {
+			if (is_associative($var)) {
+				return json_encode($var, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+			}else{
+				return implode('|', $var);
+			}
 		}else if( is_object( current($var) ) ){
 			foreach ($var as $obj) {
 				$ar_ob[] = $obj;
 			}
-			#return implode('|', $ar_ob);
 			return print_r($ar_ob,true);
-		}else if(empty($var)){
-			return 'Array(empty)';
 		}
-		return print_r($var,true);
+
+		return print_r($var, true);
 
 	}else if (is_object($var)) {
-		$var = json_encode($var, JSON_PRETTY_PRINT);
+		$var = json_encode($var, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 		return $var;
 		#$var = json_decode($var);
 		#return '<pre>'.print_r($var,true).'</pre>';
@@ -332,6 +380,32 @@ function to_string($var=null) {
 
 	return "$var";
 }//end to_string
+
+
+
+/**
+* IS_ASSOCIATIVE
+* Checks if an array is associative. Return value of 'False' indicates a sequential array.
+* @param array $inpt_arr
+* @return bool
+*/
+function is_associative($inpt_arr) : bool {
+  // An empty array is in theory a valid associative array
+  // so we return 'true' for empty.
+  if ([] === $inpt_arr) {
+    return true;
+  }
+  $n = count($inpt_arr);
+  for ($i = 0; $i < $n; $i++) {
+    if(!array_key_exists($i, $inpt_arr)) {
+      return true;
+    }
+  }
+
+  // Dealing with a Sequential array
+  return false;
+}//end is_associative
+
 
 
 # GET_LAST_MODIFICATION_DATE : Get last modified file date in all Dedalo files
@@ -1236,13 +1310,12 @@ function safe_sql_query($sql_query) {
 
 
 
-/***
- * Starts a session with a specific timeout and a specific GC probability.
- * @param int $timeout The number of seconds until it should time out.
- * @param int $probability The probability, in int percentage, that the garbage
- *        collection routine will be triggered right now.
- * @param string $cookie_path The base path for the cookie.
- */
+/**
+* SESSION_START_MANAGER
+* Starts a session with a specific timeout and a specific GC probability.
+* @param array $request_options
+* @return bool
+*/
 $sessiondb = null;
 function session_start_manager($request_options) {
 	global $sessiondb;
@@ -1251,7 +1324,8 @@ function session_start_manager($request_options) {
 	$options = new stdClass();
 		$options->save_handler				= 'files';
 		$options->timeout_seconds			= 1400;
-		$options->probability					= 100;
+		$options->probability					= null;
+		$options->gc_divisor					= null;
 		$options->cookie_path					= '/';
 		$options->cookie_domain				= '';
 		$options->save_path						= false; # /tmp/php
@@ -1260,18 +1334,11 @@ function session_start_manager($request_options) {
 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 	switch ($options->save_handler) {
-		case 'memcached':
-			ini_set('session.save_handler', 'memcached');
-			# Connection type: '127.0.0.1:11211' , '/usr/local/var/memcached/memcached.sock'
-			ini_set('session.save_path', $options->save_path);
-
-			// Start the session!
-			session_start();
-			break;
 
 		case 'files':
 			$timeout				= $options->timeout_seconds;
 			$probability		= $options->probability;
+			$gc_divisor			= $options->gc_divisor;
 			$cookie_path		= $options->cookie_path;
 			$cookie_domain	= $options->cookie_domain;
 
@@ -1307,9 +1374,15 @@ function session_start_manager($request_options) {
 				ini_set("session.save_path", $path);
 			}
 
-			// Set the chance to trigger the garbage collection.
-			ini_set("session.gc_probability", $probability);
-			ini_set("session.gc_divisor", 100); // Should always be 100
+			// probability. Set the chance to trigger the garbage collection.
+				if (!is_null($probability)) {
+					ini_set("session.gc_probability", $probability);
+				}
+
+			// gc_divisor
+				if (!is_null($gc_divisor)) {
+					ini_set("session.gc_divisor", 100); // Should always be 100
+				}
 
 			// Start the session!
 			session_start();
@@ -1339,6 +1412,15 @@ function session_start_manager($request_options) {
 			#session_start();
 			#session_regenerate_id(true);
 
+			session_start();
+			break;
+
+		case 'memcached':
+			ini_set('session.save_handler', 'memcached');
+			# Connection type: '127.0.0.1:11211' , '/usr/local/var/memcached/memcached.sock'
+			ini_set('session.save_path', $options->save_path);
+
+			// Start the session!
 			session_start();
 			break;
 	}
