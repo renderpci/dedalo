@@ -14,7 +14,7 @@ common::trigger_manager();
 * @param $component_tipo
 * @param $section_id
 */
-function automatic_translation($json_data) {
+function automatic_translation(object $json_data) : object {
 	global $start_time;
 
 	# Write session to unlock session file
@@ -124,7 +124,7 @@ function propagate_marks() {
 * OPEN_STRUCTURATION_SELECTOR
 * @return object $response
 */
-function open_structuration_selector($json_data) {
+function open_structuration_selector(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();

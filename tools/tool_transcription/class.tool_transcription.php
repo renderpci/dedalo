@@ -19,7 +19,7 @@ class tool_transcription extends tool_common {
 	* __CONSTRUCT
 	*/
 	public function __construct($component_obj, $modo='button') {
-		
+
 		# Fix modo
 		$this->modo = $modo;
 
@@ -33,33 +33,35 @@ class tool_transcription extends tool_common {
 	}//end __construct
 
 
-	
-	
+
+
 	/**
 	* GET_TEXT_FROM_PDF
 	* Extract text from pdf file
 	* @param object $new_options
 	* @return object $response
 	*/
-	public static function get_text_from_pdf( $new_options ) {
-		$response=new stdClass();
+	public static function get_text_from_pdf( object $new_options ) : object {
 
-		$options = new stdClass();
-			$options->path_pdf 	 = null;	# full source pdf file path
-			$options->first_page = 1; 		# number of first page. default is 1
+		$response = new stdClass();
+
+		// options
+			$options = new stdClass();
+				$options->path_pdf		= null;	# full source pdf file path
+				$options->first_page	= 1; 		# number of first page. default is 1
 
 		# new_options overwrite options defaults
-		foreach ((object)$new_options as $key => $value) {			
+		foreach ((object)$new_options as $key => $value) {
 			if (property_exists($options, $key)) {
-				$options->$key = $value;				
+				$options->$key = $value;
 			}
 		}
 
 		if (empty($options->path_pdf) || !file_exists($options->path_pdf)) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
-			return $response;			
-		}		
+			return $response;
+		}
 
 
 		#
@@ -67,7 +69,7 @@ class tool_transcription extends tool_common {
 		if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
-			return $response;			
+			return $response;
 		}else{
 			$transcription_engine = trim(shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE));
 			if (empty($transcription_engine)) {
@@ -80,15 +82,15 @@ class tool_transcription extends tool_common {
 		#
 		# FILE TEXT FROM PDF . Create a new text file from pdf text content
 		$text_filename 	= substr($options->path_pdf, 0, -4) .'.txt';
-		
+
 		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
 		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error')) {
 			$response->result = 'error';
 			$response->msg 	  = "$output";
-			return $response;			
+			return $response;
 		}
-		
+
 		if (!file_exists($text_filename)) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Text file not found";
@@ -103,47 +105,49 @@ class tool_transcription extends tool_common {
 		$test_utf8 = valid_utf8($pdf_text);
 		if (!$test_utf8) {
 			error_log("WARNING: Current string is NOT utf8 valid. Anyway continue ...");
-		}		
-		
+		}
+
 		# Remove non utf8 chars
 		$pdf_text = utf8_clean($pdf_text);
 
 		# Test JSON conversion before save
-		$pdf_text 	= json_handler::encode($pdf_text);		
+		$pdf_text 	= json_handler::encode($pdf_text);
 		if (!$pdf_text) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
-			return $response;			
-		}		
+			return $response;
+		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
 		$pdf_text 	= trim($pdf_text);	// Trim before check is empty
-		if (empty($pdf_text)) {			
+		if (empty($pdf_text)) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
-			return $response;	
-		}	
+			return $response;
+		}
 
 		#
-		# PAGES TAGS	
+		# PAGES TAGS
 		$original_text = str_replace("","", $pdf_text);
 		$pages = explode("", $pdf_text);
 		$i=(int)$options->first_page;
 		$pdf_text='';
-		foreach ($pages as $current_page) {		
+		foreach ($pages as $current_page) {
 		    $pdf_text .= '[page-n-'. $i .']';
 		    $pdf_text .= '<br>';
 		    $pdf_text .= nl2br($current_page);
 		    $i++;
 		}
 
-		$response->result  = (string)$pdf_text;
-		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
-		$response->original = trim($original_text);
+		$response->result	= (string)$pdf_text;
+		$response->msg		= "Ok Processing Request pdf_automatic_transcription: text processed";
+		$response->original	= trim($original_text);
+
+
 		return $response;
 	}//end build_pdf_transcription
 
 
-	
+
 }//end class tool_transcription
 
 
@@ -160,10 +164,10 @@ class tool_transcription extends tool_common {
 # http://en.wikipedia.org/wiki/UTF-8
 # Implemented as a recursive descent parser based on a simple state machine
 # copyright 2005 Maarten Meijer
-# This cries out for a C-implementation to be included in PHP core	
-function valid_utf8($string) {
+# This cries out for a C-implementation to be included in PHP core
+function valid_utf8(string $string) : bool {
 	$len = strlen($string);
-	$i = 0;    
+	$i = 0;
 	while( $i < $len ) {
 		$char = ord(substr($string, $i++, 1));
 		if(valid_1byte($char)) {    // continue
@@ -187,28 +191,28 @@ function valid_utf8($string) {
 	}
 	return true; // done
 }
-function valid_1byte($char) {
+function valid_1byte($char) : bool {
 	if(!is_int($char)) return false;
 	return ($char & 0x80) == 0x00;
-}	
-function valid_2byte($char) {
+}
+function valid_2byte($char) : bool {
 	if(!is_int($char)) return false;
 	return ($char & 0xE0) == 0xC0;
 }
-function valid_3byte($char) {
+function valid_3byte($char) : bool {
 	if(!is_int($char)) return false;
 	return ($char & 0xF0) == 0xE0;
 }
-function valid_4byte($char) {
+function valid_4byte($char) : bool {
 	if(!is_int($char)) return false;
 	return ($char & 0xF8) == 0xF0;
-}	
-function valid_nextbyte($char) {
+}
+function valid_nextbyte($char) : bool {
 	if(!is_int($char)) return false;
 	return ($char & 0xC0) == 0x80;
 }
 # UTF8_CLEAN
-function utf8_clean($string, $control = false) {
+function utf8_clean(string $string, bool $control=false) : string {
     $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
     return $string;
 
@@ -219,5 +223,3 @@ function utf8_clean($string, $control = false) {
 
     return preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
 }
-
-?>
