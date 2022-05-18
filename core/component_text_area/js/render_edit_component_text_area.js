@@ -716,7 +716,8 @@ const get_custom_events = (self, i, text_editor) => {
 
 					case 'person':
 						// Show person info
-						component_text_area.show_person_info( ed, evt, text_area_component )
+												console.log("tag_obj.data_tag:---------",tag_obj);
+						component_text_area.show_person_info( {tag: tag_obj, caller: self, text_editor: text_editor} )
 						break;
 
 					case 'note':
@@ -762,7 +763,7 @@ const get_custom_events = (self, i, text_editor) => {
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
 			// use the observe property into ontology of the components to suscribe to this events
-			console.log("evt.code:",evt.code);
+
 			switch( true ){
 
 				// 'Escape'
@@ -804,13 +805,17 @@ const get_custom_events = (self, i, text_editor) => {
 									text_editor.set_content(tag.outerHTML)
 							}// end switch
 						}
-						break;
-					case evt.ctrlKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
+					break;
+				// ctrl + 0
+				case evt.ctrlKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
 
-						const number	= evt.code.match(/\d+/g);
-						const person	= self.context.tags_persons[number[0]]
+					const number		= evt.code.match(/\d+/g);
+					const person_tag	= self.context.tags_persons[number[0]]
+					event_manager.publish('key_up_persons' +'_'+ self.id_base, number)
+					const tag = build_node_tag(person_tag, person_tag.tag_id)
+					text_editor.set_content(tag.outerHTML)
 
-						break;
+					break;
 			}
 		};//end KeyUp
 
@@ -829,10 +834,12 @@ const get_custom_events = (self, i, text_editor) => {
 */
 export const build_node_tag = function(data_tag, tag_id) {
 
-	const type	= data_tag.type
-	const state	= data_tag.state
-	const label	= data_tag.label
-	const data	= data_tag.data
+	const type			= data_tag.type
+	const state			= data_tag.state
+	const label			= data_tag.label
+	const data_string	= JSON.stringify(data_tag.data)
+	const data			= data_string.replace(/"/g, '\'')
+
 
 	const images_factory_url = "../component_text_area/tag/?id="
 
@@ -871,7 +878,6 @@ export const build_node_tag = function(data_tag, tag_id) {
 		class_name		: class_name,
 		dataset			: dataset
 	})
-
 
 	return node_tag
 };//end build_node_tag

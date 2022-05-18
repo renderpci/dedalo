@@ -1853,6 +1853,7 @@ class component_text_area extends component_common {
 													'data'=>$data_locator
 												));
 				$element = new stdClass();
+					$element->type		= 'person';
 					$element->parent			= $obj_value->parent;
 					$element->parent_section_id	= $obj_value->section_id;
 					$element->tag 		= $tag_person;
