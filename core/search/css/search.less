@@ -4,10 +4,8 @@
 * Included from main.less file
 */
 
-// Variables
-@common_css: "../../common/css";
 // Usage
-@import "@{common_css}/library.less";
+@import '../../common/css/library.less';
 
 
 
@@ -127,7 +125,7 @@
 			.search_container_selection {
 				flex-grow: 1;
 				align-self: flex-start;
-				background-color: #d0e2f5;
+				background-color: #f0f0f0;
 				position: relative;
 				padding-top: 0;
 
@@ -144,6 +142,7 @@
 					}
 
 					.search_group {
+						max-width: 85%;
 						border: 0.5px solid #b9b9b9;
 						padding: 5px;
 						padding-right: 24px;

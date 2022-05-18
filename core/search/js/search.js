@@ -141,11 +141,21 @@ search.prototype.init = async function(options) {
 			event_manager.subscribe('change_search_element', fn_change_search_element)
 		)
 		async function fn_change_search_element(instance) {
+			// parse filter to DOM
 			await self.parse_dom_to_json_filter({mode:self.mode})
 			// Set as changed, it will fire the event to save the temp search section (temp preset)
 			self.update_state({state:'changed'})
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
+			// set instance as changed or not based on their value
+			const hilite = (
+				(instance.data.value && instance.data.value.length>0) ||
+				(instance.data.q_operator && instance.data.q_operator.length>0)
+			)
+			ui.hilite({
+				instance	: instance, // instance object
+				hilite		: hilite // bool
+			})
 		}
 
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
@@ -877,49 +887,54 @@ search.prototype.get_search_group_operator = function(search_group) {
 	/**
 	* UPDATE_STATE
 	* get the save state of the presets
+	* @param object options
 	* @return promise
 	*/
 	search.prototype.update_state = async function(options) {
 
 		const self = this
 
-		self.search_layout_state = options.state
-			//console.log("self.search_layout_state:",self.search_layout_state);
+		// options
+			const state						= options.state // string
+			const editing_section_id		= options.editing_section_id || null // string|null
+			const editing_save_arguments	= options.editing_save_arguments || null // string|null
 
-		// Store current editing section_id in search_container_selection_presets dataset
-			const search_container_selection_presets 	= self.search_container_selection_presets
-			const button_save_preset 				  	= document.getElementById("button_save_preset")
+		// fix vars
+			self.search_layout_state = state
 
-		if (self.mode==="thesaurus") {
-			button_save_preset.classList.add("in_thesaurus")
-		}
+		// search_container_selection_presets. Store current editing section_id in search_container_selection_presets dataset
+			const search_container_selection_presets = self.search_container_selection_presets
 
-		// editing_section_id set
-			if (options.editing_section_id) {
+		// editing_section_id case
+			if (editing_section_id) {
 				// Set dataset section_id
-				search_container_selection_presets.dataset.section_id 		= options.editing_section_id
+				search_container_selection_presets.dataset.section_id = editing_section_id
 				// Set dataset save_arguments
-				search_container_selection_presets.dataset.save_arguments 	= options.editing_save_arguments
+				search_container_selection_presets.dataset.save_arguments = editing_save_arguments
 			}
 
-		const editing_section_id = search_container_selection_presets.dataset.section_id
-		//const editing_section_id = self.loaded_preset ? self.loaded_preset.section_id : null
-
-		if (button_save_preset) {
-			if (options.state==="changed" && editing_section_id) {
-				// Show save preset button
-				button_save_preset.classList.add("show")
-			}else{
-				// Hide save preset button
-				button_save_preset.classList.remove("show")
+		// button save preset
+			const button_save_preset = document.getElementById("button_save_preset")
+			if (button_save_preset) {
+				if (self.mode==='thesaurus') {
+					button_save_preset.classList.add('in_thesaurus')
+				}
+				const current_section_id = search_container_selection_presets.dataset.section_id
+				if (state==='changed' && current_section_id) {
+					// Show save preset button
+					button_save_preset.classList.add("show")
+				}else{
+					// Hide save preset button
+					button_save_preset.classList.remove("show")
+				}
 			}
-		}
 
-		if (options.state==="changed") {
-			const section_tipo = search_container_selection_presets.dataset.section_tipo
-			// Save temp preset
-			await self.save_temp_preset(section_tipo)
-		}
+		// save temp preset if changed
+			if (state==='changed') {
+				const section_tipo = search_container_selection_presets.dataset.section_tipo
+				// Save temp preset
+				await self.save_temp_preset(section_tipo)
+			}
 
 
 		return true

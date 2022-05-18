@@ -103,6 +103,26 @@ component_common.prototype.init = async function(options) {
 					self.active()
 				}
 			}
+		// hilite (search mode)
+			if (self.mode==='search') {
+				self.events_tokens.push(
+					event_manager.subscribe('render_' + self.id, fn_hilite_element)
+				)
+				function fn_hilite_element() {
+					// set instance as changed or not based on their value
+					const instance = self
+					const hilite = (
+						(instance.data.value && instance.data.value.length>0) ||
+						(instance.data.q_operator && instance.data.q_operator.length>0)
+					)
+					setTimeout(function(){ // used timeout to allow css background tansition occurs
+						ui.hilite({
+							instance	: instance, // instance object
+							hilite		: hilite // bool
+						})
+					}, 150)
+				}
+			}
 
 	// DES
 		// component_save (when user change component value) every component is looking if the own the instance was changed.

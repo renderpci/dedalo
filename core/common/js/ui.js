@@ -624,10 +624,10 @@ export const ui = {
 					// }
 
 				// event click . Activate component on event
-					// wrapper.addEventListener("click", e => {
-					// 	e.stopPropagation()
-					// 	event_manager.publish('active_component', instance)
-					// })
+					wrapper.addEventListener("click", e => {
+						e.stopPropagation()
+						event_manager.publish('active_component', instance)
+					})
 
 				wrapper.appendChild(fragment)
 
@@ -2526,6 +2526,41 @@ export const ui = {
 			set_element_css(selector.replace('#',''), css_object)
 		// }
 	},//end make_column_responsive
+
+
+
+	/**
+	* HILITE
+	* Hilite/unhilite and element (ussually a component) in the DOM
+	* @param object options
+	* @return bool
+	*/
+	hilite : function(options) {
+		console.log("//// hilite options:",options);
+
+		// options
+			const hilite	= options.hilite // boll
+			const instance	= options.instance // object instance
+
+		// add/remove wrapper class
+			const nodes_length = instance.node.length
+			for (let i = 0; i < nodes_length; i++) {
+
+				const wrapper_node = instance.node[i]
+
+				if (hilite===true) {
+					if (!wrapper_node.classList.contains('hilite_element')) {
+						wrapper_node.classList.add('hilite_element')
+					}
+				}else{
+					if (wrapper_node.classList.contains('hilite_element')) {
+						wrapper_node.classList.remove('hilite_element')
+					}
+				}
+			}
+
+		return true
+	},//end hilite
 
 
 
