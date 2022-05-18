@@ -20,7 +20,7 @@ class tool_propagate_component_data extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function propagate_component_data($request_options) {
+	public static function propagate_component_data(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

@@ -25,7 +25,7 @@ abstract class subtitles {
 	* @param object $request_options
 	* @return string | false $srt
 	*/
-	public static function build_subtitles_text( object $request_options ) : object {
+	public static function build_subtitles_text(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -197,7 +197,7 @@ abstract class subtitles {
 	*	Like '56' // Zero for empty value
 	* @return array $fragment_ar_lines
 	*/
-	public static function build_fragment(array $ar_lines, $tc_in_secs, $tc_out_secs) : array {
+	public static function build_fragment(array $ar_lines, int $tc_in_secs, int $tc_out_secs) : array {
 
 		$fragment_ar_lines = [];
 
@@ -488,7 +488,7 @@ abstract class subtitles {
 	* @param int $total_ms
 	* @return float $global_charTime (in seconds)
 	*/
-	public static function calculate_global_char_time( string $sourceText, $total_ms ) {
+	public static function calculate_global_char_time(string $sourceText, $total_ms) {
 		$global_charTime=0;
 		# count number of char
 		$n_char = subtitles::text_lenght( $sourceText );
@@ -519,7 +519,7 @@ abstract class subtitles {
 	* Fix possible errors on line string with received tag
 	* @return string $line_string
 	*/
-	public static function revise_tag_in_line($line_string, $tag_name) {
+	public static function revise_tag_in_line(string $line_string, string $tag_name) : string {
 
 		$line_string = str_replace('</'.$tag_name.'>'.'<'.$tag_name.'>', '', $line_string);
 		$line_string = str_replace('</'.$tag_name.'> <'.$tag_name.'>', ' ', $line_string);
@@ -565,7 +565,7 @@ abstract class subtitles {
 	* @return string $string (removed marks and extras)
 	* @see class.TR.php deleteMarks
 	*/
-	public static function clean_text_for_subtitles($string) {
+	public static function clean_text_for_subtitles(string $string) : string {
 
 		# CONVERT ENCODING (Traducciones mal formadas provinientes de Babel)
 		html_entity_decode($string);
@@ -595,15 +595,21 @@ abstract class subtitles {
 	* TRUNCATE_TEXT
 	* Multibyte truncate text
 	*/
-	public static function truncate_text($string, $limit, $break=" ", $pad="...") {
+	public static function truncate_text(string $string, int $limit, string $break=' ', string $pad='...') : string {
+
+		if (empty($string)) {
+			return '';
+		}
 
 		# return with no change if string is shorter than $limit
 		$str_len = subtitles::text_lenght($string);  // strlen($string)
-		if($str_len <= $limit) return $string;
+		if($str_len <= $limit) {
+			return $string;
+		}
 
 		$string = mb_substr($string, 0, $limit);
 
-		if(false !== ($breakpoint = mb_strrpos($string, $break))) {
+		if(false!==($breakpoint = mb_strrpos($string, $break))) {
 			$string = mb_substr($string, 0, $breakpoint);
 		}
 
@@ -617,7 +623,12 @@ abstract class subtitles {
 	* Trim firts and last return of type \n and \r
 	* @return string
 	*/
-	public static function trim_text($string) {
+	public static function trim_text(string $string=null) : string {
+
+		if (empty($string)) {
+			return '';
+		}
+
 		$firstChar = substr($string,0,1);
 		if($firstChar=="\r"|| $firstChar=="\n")	$string = substr($string,1);
 
@@ -634,7 +645,7 @@ abstract class subtitles {
 	* Get multibyte text lenght
 	* @return int | false $text_lenght
 	*/
-	public static function text_lenght($text) {
+	public static function text_lenght(string $text) : string {
 
 		#$text_lenght = strlen($text);
 		$text_lenght = mb_strlen($text, '8bit');
@@ -649,7 +660,7 @@ abstract class subtitles {
 	* GET_SUBTITLES_URL
 	* @return string $subtitles_url
 	*/
-	public static function get_subtitles_url($section_id, $tc_in=false, $tc_out=false, $lang=DEDALO_DATA_LANG) {
+	public static function get_subtitles_url($section_id, $tc_in=null, $tc_out=null, string $lang=DEDALO_DATA_LANG) : string {
 
 		// Subtitles url base
 			$TEXT_SUBTITLES_URL_BASE = DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/';
@@ -676,7 +687,6 @@ abstract class subtitles {
 
 		return $subtitles_url;
 	}//end get_subtitles_url
-
 
 
 

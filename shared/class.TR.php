@@ -393,19 +393,20 @@ abstract class TR {
 	*/
 	public static function addBabelTagsOnTheFly(string $text) : string {
 
-		$ar_tags = array('indexIn',
-						 'indexOut',
-						 'structIn',
-						 'structOut',
-						 'tc',
-						 'svg',
-						 'geo',
-						 'page',
-						 'person',
-						 'note',
-						 'reference',
-						 //'strong','em',
-			);
+		$ar_tags = [
+			'indexIn',
+			'indexOut',
+			'structIn',
+			'structOut',
+			'tc',
+			'svg',
+			'geo',
+			'page',
+			'person',
+			'note',
+			'reference'
+			//'strong','em',
+		];
 		foreach ($ar_tags as $tag) {
 			$pattern	= TR::get_mark_pattern($tag);
 			#$text		= preg_replace($pattern, "<apertium-notrans>$1</apertium-notrans>", $text);
@@ -424,13 +425,9 @@ abstract class TR {
 	/**
 	* DELETEMARKS
 	* clean text to translate
+	* @return string $string
 	*/
-	public static function deleteMarks(string $string, object $request_options=null) {
-
-		# Temporal (for catch old calls only)
-		if (is_bool($request_options)) {
-			throw new Exception("Error. Only a object is valid for delete marks options. Update your call to new format please", 1);
-		}
+	public static function deleteMarks(string $string, object $request_options=null) : string {
 
 		$options = new stdClass();
 			$options->deleteTC			= true;
@@ -556,8 +553,9 @@ abstract class TR {
 	/**
 	* MATCH_PATTERN_INDEX_FROM_TAG
 	* Using pattern like: \[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]
+	* @return array|null
 	*/
-	public static function match_pattern_index_from_tag( string $tag, string $type='index' ) : string {
+	public static function match_pattern_index_from_tag(string $tag, string $type='index') : ?array {
 
 		$pattern = TR::get_mark_pattern($mark=$type, $standalone=false);
 		if(preg_match_all("/$pattern/", $tag, $matches, PREG_PATTERN_ORDER)) {
@@ -565,40 +563,42 @@ abstract class TR {
 			return $matches;
 		}
 
-		return false;
+		return null;
 	}//end match_pattern_index_from_tag
 
 
 
 	# TAG2TYPE
-	public static function tag2type(string $tag) {
+	public static function tag2type(string $tag) : ?string {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
-		$type 			= $match_pattern[1][0];
+		$type 			= $match_pattern[1][0] ?? null;
 
 		return $type;
 	}
 	# TAG2STATE
-	public static function tag2state(string $tag) {
+	public static function tag2state(string $tag) : ?string {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
-		$state 			= $match_pattern[2][0];
+		$state 			= $match_pattern[2][0] ?? null;
 
 		return $state;
 	}
 	# TAG2VALUE. Convert tag to value
-	public static function tag2value(string $tag) {
+	public static function tag2value(string $tag) : ?int {
 
 		$match_pattern	= TR::match_pattern_index_from_tag($tag);
-		$value			= isset($match_pattern[3][0]) ? (int)$match_pattern[3][0] : null;
+		$value			= isset($match_pattern[3][0])
+			? (int)$match_pattern[3][0]
+			: null;
 
 		return $value;
 	}
 	# CONVERT tag to label
-	public static function tag2label(string $tag) {
+	public static function tag2label(string $tag) : ?string {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
-		$value 			= $match_pattern[5][0];
+		$value 			= $match_pattern[5][0] ?? null;
 
 		return (string)$value;
 	}//end tag2label
@@ -610,13 +610,17 @@ abstract class TR {
 	* @return object | null
 	*	Try to parse json data as object. If not is possible parse, return null
 	*/
-	public static function tag2data(string $tag, string $type='index') {
+	public static function tag2data(string $tag, string $type='index') : ?object {
 
 		$match_pattern	= TR::match_pattern_index_from_tag($tag, $type);
-		$string			= $match_pattern[6][0];
-		#$value_string	= preg_replace("'", '"', $string);
-		$value_string	= str_replace("'", '"', $string);
-		$value			= json_decode($value_string);
+		$string			= $match_pattern[6][0] ?? null;
+		if (!is_null($string)) {
+			#$value_string	= preg_replace("'", '"', $string);
+			$value_string	= str_replace("'", '"', $string);
+			$value			= json_decode($value_string);
+		}else{
+			$value = null;
+		}
 
 		return $value;
 	}//end tag2data
@@ -627,7 +631,7 @@ abstract class TR {
 	* CONVERTDIV2BR
 	* CONVERT DIVS (div) TO <br />
 	*/
-	private static function convertDiv2br(string $text) {
+	private static function convertDiv2br(string $text) : string {
 
 		$text = str_replace('<div>','', $text);
 		$text = str_replace('</div>',"<br>\n", $text);
@@ -642,7 +646,7 @@ abstract class TR {
 	* Create a usable in text editor image from tag
 	* @return string
 	*/
-	public static function create_text_editor_image_from_tag( string $tag, string $type ) : string {
+	public static function create_text_editor_image_from_tag(string $tag, string $type) : string {
 
 		switch ($type) {
 			case 'index':
@@ -653,7 +657,7 @@ abstract class TR {
 				break;
 			default:
 				$img = '';
-				trigger_error("Sorry. Type ($type) is not defined");
+				debug_log(__METHOD__."  Type ($type) is not defined ".to_string(), logger::ERROR);
 				break;
 		}
 
@@ -769,14 +773,13 @@ abstract class TR {
 	/**
 	* PREPROCESS_TEXT_TO_SAVE
 	* @return string $string_clean
-	*//*
-	public function preprocess_text_to_save( $string ) {
-		$string_clean = $string;
-
-			dump($string, ' string ++ '.to_string());
-		return $string_clean;
-	}//end preprocess_text_to_save
 	*/
+		// public function preprocess_text_to_save( $string ) {
+		// 	$string_clean = $string;
+
+		// 		dump($string, ' string ++ '.to_string());
+		// 	return $string_clean;
+		// }//end preprocess_text_to_save
 
 
 
@@ -792,7 +795,6 @@ abstract class TR {
 		return $string;
 
 		// No more regex here 17-03-2017
-
 	}//end limpiezaPOSTtr
 
 
@@ -830,7 +832,11 @@ abstract class TR {
 
 
 	# cleanTexGarbage V2
-	public static function cleanTexGarbageV2_DEPRECATED(string $string) {
+	public static function cleanTexGarbageV2_DEPRECATED(string $string) : string {
+
+		if (empty($string)) {
+			return '';
+		}
 
 		$string = str_replace('<p><span class=\"hilite\"> </span></p>', '', $string);
 		$string = str_replace('<p><span class="hilite"> </span></p>', '', $string);
@@ -904,8 +910,7 @@ abstract class TR {
 
 
 	# captaciones antiguas de Gerard tienen tc's formato 00,25,12 . Lo formateamos correctamente: <h6>[TC_00:25:12_TC]</h6>
-	public static function formatTC_Memorial2Dedalo($string)
-	{
+	public static function formatTC_Memorial2Dedalo(string $string)	{
 		# Especific code for old transcriptions TC convert like 01'25'11 or 01,25,11 to [TC_01:25:11_TC]
 		#
 		$patterns[] = '/<br \/>([0-9][0-9]):([0-9][0-9]):([0-9][0-9])/' ;
@@ -923,7 +928,7 @@ abstract class TR {
 	}
 
 	#Change the format for TC to TC with ms
-	public static function formatTC_to_TCms($string)
+	public static function formatTC_to_TCms(string $string)
 	{
 		# Especific code for old transcriptions TC convert like [TC_01:25:11_TC] to [TC_01:25:11.332_TC]
 		#
@@ -937,7 +942,7 @@ abstract class TR {
 	}
 
 	# multipleSpaces2One
-	public static function multipleSpaces2One($string) {
+	public static function multipleSpaces2One(string $string) : string {
 
 		# utf-8 spaces
 		#$ar = array('&#x20;','&#xA0;' ,'&#X202F;','&#x2003;','&#x2000;','&#x2007;','&#x2001;','&#x2002;','&#x2003;','&#x2004;','&#x2005;','&#x2006;','&#x2007;','&#x2008;','&#x2009;','&#x200A;', '&#x200B;','&#xFEFF;');	#%2C%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0+
@@ -959,7 +964,7 @@ abstract class TR {
 
 
 	# fix posible unions between mark and text like 'casa[TAG] or '[TAG]casa'. Insert a space like 'casa [TAG]' or '[TAG] casa'
-	public static function adjustSpaceBetweenMarkText($string) {
+	public static function adjustSpaceBetweenMarkText(string $string) : string {
 
 		$pattern[]			= TR::get_mark_pattern('indexIn',false);
 		$pattern[]			= TR::get_mark_pattern('indexOut',false);
@@ -987,7 +992,7 @@ abstract class TR {
 
 
 	# trCommonErrors . Devuelve Errores comununes en transcripción
-	public static function trCommonErrors($textoFull) {
+	public static function trCommonErrors(string $textoFull) {
 
 		$html			= false ;
 		$error			= false ;
@@ -1025,10 +1030,10 @@ abstract class TR {
 	* trInfo
 	* Info de los TC e Indexaciones de un texto (transcripción)
 	*/
-	public static function trInfo($texto) {
+	public static function trInfo(string $texto) : ?string {
 
 		$fragmentoFull	= $texto ;
-		$html			= false;
+		$html			= null;
 
 		// TC
 		$pattern = TR::get_mark_pattern('tc');
@@ -1050,7 +1055,7 @@ abstract class TR {
 
 	# clean text for list
 	# prepara el texto para mostrar un extracto en los listados (sin tags ni tc's)
-	public static function limpiezaFragmentoEnListados(&$string, $limit=160) {
+	public static function limpiezaFragmentoEnListados(string &$string, int $limit=160) : string {
 		#dump( debug_backtrace() );
 		# dump($string, ' string ++ '.to_string());
 		$string = str_replace('<br />',' ', $string);
@@ -1069,10 +1074,12 @@ abstract class TR {
 	/**
 	* TRUNCATE_TEXT
 	*/
-	public static function truncate_text( $string, $limit, $break=" ", $pad="...") {
+	public static function truncate_text(string $string, $limit, $break=" ", $pad="...") : string {
 
 	  # return with no change if string is shorter than $limit
-	  if(strlen($string) <= $limit) return $string;
+	  if(strlen($string) <= $limit) {
+	  	return $string;
+	  }
 
 	  $string = substr($string, 0, $limit);
 	  if( false !== ($breakpoint = strrpos($string, $break)) ) {
@@ -1088,7 +1095,7 @@ abstract class TR {
 	* GET_CHARS_INFO
 	* @return object $chars_info
 	*/
-	public static function get_chars_info( $raw_text ) {
+	public static function get_chars_info(string $raw_text) : object {
 
 		$chars_info = new stdClass();
 
