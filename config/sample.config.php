@@ -101,30 +101,19 @@
 
 
 
-################################################################
-# CORE_FUNCTIONS
-	include(DEDALO_CORE_PATH . '/core_functions.php');
+// required files
+	// core_functions. Basic common functions (before session start)
+	include(DEDALO_CORE_PATH . '/base/core_functions.php');
+	// dd_tipos. List of main Dédalo resolved tipos
+	include(DEDALO_CONFIG_PATH . '/dd_tipos.php');
+	// version. Info about current version and build
+	include(DEDALO_CONFIG_PATH . '/version.inc');
+	// config_db. Dédalo PostgreSQL and MariaDB config file
+	include(DEDALO_CONFIG_PATH . '/config_db.php');
 
 
 
-################################################################
-# CONFIG REQUIRE
-	# VERSION
-	include(DEDALO_CONFIG_PATH.'/version.inc');
-	# Dedalo str tipos
-	include(DEDALO_CONFIG_PATH.'/dd_tipos.php');
-
-
-
-################################################################
-# DB : CONEXIÓN CON LA BASE DE DATOS MYSQL
-	include(DEDALO_CONFIG_PATH.'/config_db.php');
-	define('SLOW_QUERY_MS'	, 600);
-
-
-
-################################################################
-# SESSION
+// session
 	if (session_status() !== PHP_SESSION_ACTIVE) {
 
 		# HANDLER
@@ -142,116 +131,97 @@
 
 		# Session
 		session_start_manager([
-						'save_handler' 		=> 'files',
-						'timeout_seconds'	=> $timeout_seconds,
-						'session_name' 		=> 'dedalo_'.DEDALO_ENTITY
-					]);
+			'save_handler'		=> 'files',
+			'timeout_seconds'	=> $timeout_seconds,
+			'session_name'		=> 'dedalo_'.DEDALO_ENTITY
+		]);
 
 	}//end if (session_status() !== PHP_SESSION_ACTIVE)
 
 
 
-################################################################
-# BACKUP : Automatic backups control
+// show_debug. Application debug config
+	define('SHOW_DEBUG',
+		(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
+			? true
+			: false // false
+	);
+
+
+
+// is_developer. Logged user is developer value
+	define('SHOW_DEVELOPER',
+		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
+			? true
+			: false // false
+	);
+
+
+
+// loader
+	// auto load basic and called classes
+	include DEDALO_CORE_PATH . '/base/class.loader.php';
+
+
+
+// backup : Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false
 	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
 	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
 	define('DEDALO_BACKUP_TIME_RANGE', 4);
 	// backups paths
-	define('DEDALO_BACKUP_PATH' 	 		, dirname(DEDALO_ROOT) . '/backups');
+	define('DEDALO_BACKUP_PATH' 	 		, dirname(DEDALO_ROOT_PATH) . '/backups');
 	define('DEDALO_BACKUP_PATH_TEMP' 	 	, DEDALO_BACKUP_PATH . '/temp');
 	define('DEDALO_BACKUP_PATH_DB' 	 		, DEDALO_BACKUP_PATH . '/db');
 	define('DEDALO_BACKUP_PATH_STRUCTURE' 	, DEDALO_BACKUP_PATH . '/structure');
 	define('DEDALO_BACKUP_PATH_USERS' 		, DEDALO_BACKUP_PATH . '/users');
+	// structure_download. When ontology is updated, download files are saved here
+	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_STRUCTURE);
 
 
 
-################################################################
-# IS_DEVELOPER : Logged user is developer value
-	$show_developer = false;
-	if (isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true) {
-		$show_developer = true;
-	}
-	define('SHOW_DEVELOPER', $show_developer);
-
-
-
-################################################################
-# DEBUG : Application debug config
-	$show_debug = false;
-	if(
-		# SUPERUSER IS LOGGED
-		(
-			isset($_SESSION['dedalo']['auth']['user_id'])
-			&& 	 ($_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
-		)
-	) {
-		$show_debug = true;
-	}
-	define('SHOW_DEBUG', $show_debug);
-
-
-
-################################################################
-# LOADER (AUTO LOAD CALLED CLASSES)
-	include(DEDALO_CORE_PATH.'/class.loader.php');
-
-
-
-################################################################
-# LOG AND ERRORS : STORE APPLICATION DATA INFO AND ERRORS
-	/*
-	DEBUG 	 = 100;
-	INFO 	 = 75;
-	NOTICE 	 = 50;
-	WARNING  = 25;
-	ERROR 	 = 10;
-	CRITICAL = 5;
-
-	Debug default: DEBUG
-	Production default: ERROR
-	*/
-	if (SHOW_DEBUG===true) {
+// log and errors : Store application data info and errors
+	// logger_level. default: ERROR
+		// level error codes
+		// DEBUG	= 100;
+		// INFO		= 75;
+		// NOTICE	= 50;
+		// WARNING	= 25;
+		// ERROR	= 10;
+		// CRITICAL	= 5;
 		define('LOGGER_LEVEL', logger::DEBUG);
-	}else{
-		define('LOGGER_LEVEL', logger::WARNING);
-	}
-
-
-	# Log messages in page
-	$log_messages = array();
-	global $log_messages;
-
-	# ACTIVITY LOG DB
-	# Log application info in db
+	// Log messages in page
+		$log_messages = array();
+		global $log_messages;
+	// activity log db
+		// Log application info in db
 		logger::register('activity'	, 'activity://auto:auto@auto:3306/log_data?table=matrix_activity');
-		# Store object in logger static array var
+		// Store object in logger static array var
 		logger::$obj['activity'] = logger::get_instance('activity');
-
-	# ERROR LOG FILE
-	# Log aplication errors in file
-		# Logs dir (Maintain this directory unaccessible for security)
-		define('DEDALO_LOGS_DIR'  , dirname(dirname(DEDALO_ROOT)) . '/logs');	# !! In production mode log MUST BE out of site
-		# Set file. In production mode log MUST BE out of site
+	// error log file
+		// Log application errors in file
+		// Logs dir (Maintain this directory inaccessible for security)
+		define('DEDALO_LOGS_DIR'  , dirname(DEDALO_ROOT_PATH) . '/temp/logs');	# !! In production mode log MUST BE out of site
+		// define('DEDALO_LOGS_DIR'  , DEDALO_LIB_PATH . '/logs');
+		// Set file. In production mode log MUST BE out of site
 		logger::register('error', 'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');
-		# Store object in logger static array var
+		// Store object in logger static array var
 		logger::$obj['error'] = logger::get_instance('error');
 
 
 
-################################################################
-# LANG
+// lang
 	# DEDALO STRUCTURE LANG (default 'lg-spa')
-	define('DEDALO_STRUCTURE_LANG'				, 'lg-spa');
+	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
 
 	# APPLICATION LANG : Dedalo application lang
-	define('DEDALO_APPLICATION_LANGS'			, serialize([
-													"lg-spa" => "Castellano",
-													"lg-cat" => "Català",
-													"lg-eus" => "Euskara",
-													"lg-eng" => "English",
-													"lg-fra" => "French",
-													]));
+	define('DEDALO_APPLICATION_LANGS', [
+		'lg-spa'	=> 'Castellano',
+		'lg-cat'	=> 'Català',
+		'lg-eus'	=> 'Euskara',
+		'lg-eng'	=> 'English',
+		'lg-fra'	=> 'French',
+	]);
 	define('DEDALO_APPLICATION_LANGS_DEFAULT'	, 'lg-spa');
 	define('DEDALO_APPLICATION_LANG'			, fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 
@@ -264,23 +234,21 @@
 	define('DEDALO_DATA_NOLAN'					, 'lg-nolan');
 
 	# Projects langs
-	define('DEDALO_PROJECTS_DEFAULT_LANGS'		, serialize([
-													'lg-spa',
-													'lg-cat',
-													'lg-eng',
-													]));
+	define('DEDALO_PROJECTS_DEFAULT_LANGS'		, [
+		'lg-spa',
+		'lg-cat',
+		'lg-eng',
+	]);
 	# DEDALO_DIFFUSION_LANGS
 	# Default value is the same as proyect langs. Change for custom diffusion langs
 	define('DEDALO_DIFFUSION_LANGS'				, DEDALO_PROJECTS_DEFAULT_LANGS);
 
-	# TRANSLATOR
-	define('DEDALO_TRANSLATOR_URL'				, 'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
+	// translator
+	// define('DEDALO_TRANSLATOR_URL'				, 'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
 
 
 
-################################################################
-# DEDALO 4 DEFAULT CONFIG VALUES
-
+// dedalo default config values
 	#
 	# DEDALO_PREFIX_TIPOS
 	define('DEDALO_PREFIX_TIPOS', [
@@ -310,43 +278,10 @@
 
 
 
-################################################################
-# LIBS PATH
-
-	# JQUERY JS LIB
-	define('JQUERY_LIB_URL_JS'			, DEDALO_LIB_URL . '/jquery/jquery.min.js');
-	# JQUERY UI
-	define('JQUERY_UI_URL_JS'			, DEDALO_LIB_URL . '/jquery/jquery-ui/jquery-ui.min.js');
-	define('JQUERY_UI_URL_CSS'			, DEDALO_LIB_URL . '/jquery/jquery-ui/jquery-ui.min.css');
-	# TABLESORTER
-	define('JQUERY_TABLESORTER_JS'		, DEDALO_LIB_URL . '/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
-	# Text editor
-	define('TEXT_EDITOR_URL_JS'			, DEDALO_LIB_URL . '/tinymce/js/tinymce/tinymce.min.js');
-	#define('TEXT_EDITOR_URL_JS'			, DEDALO_LIB_URL . '/vendor/tinymce/tinymce/tinymce.min.js');
-	# PAPER
-	define('PAPER_JS_URL' 				, DEDALO_LIB_URL .'/paper/dist/paper-core.min.js');
-	# LEAFLET
-	define('LEAFLET_JS_URL' 			, DEDALO_LIB_URL .'/leaflet/stable_versions/leaflet.js');
-	# D3
-	define('D3_URL_JS' 					, DEDALO_LIB_URL .'/nvd3/d3.v3.min.js');
-	# NVD3
-	define('NVD3_URL_JS' 				, DEDALO_LIB_URL .'/nvd3/build/nv.d3.min.js');
-	define('NVD3_URL_CSS' 				, DEDALO_LIB_URL .'/nvd3/build/nv.d3.min.css');
-	# BOOTSTRAP
-	define('BOOTSTRAP_CSS_URL' 			, DEDALO_LIB_URL .'/bootstrap/dist/css/bootstrap.min.css');
-	define('BOOTSTRAP_JS_URL' 			, DEDALO_LIB_URL .'/bootstrap/dist/js/bootstrap.min.js');
-	# CDN USE BOOL
-	define('USE_CDN' 					, false);
-
-
-
-################################################################
-# MEDIA CONFIG
-
+// media config
 	# MEDIA_BASE PATH
-	define('DEDALO_MEDIA_PATH'		, DEDALO_ROOT 		. '/media');
+	define('DEDALO_MEDIA_PATH'		, DEDALO_ROOT_PATH	. '/media');
 	define('DEDALO_MEDIA_URL'		, DEDALO_ROOT_WEB 	. '/media');
-
 
 	#
 	# AV MEDIA
@@ -355,7 +290,7 @@
 		# EXTENSION normally mp4, mov
 		define('DEDALO_AV_EXTENSION'				, 'mp4');
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, serialize(['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg']));
+		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg']);
 		# MIME normally video/mp4, quicktime/mov
 		define('DEDALO_AV_MIME_TYPE'				, 'video/mp4');
 		# TYPE normally h264/AAC
@@ -365,7 +300,7 @@
 		# QUALITY DEFAULT normally '404' (estándar dedalo 72x404)
 		define('DEDALO_AV_QUALITY_DEFAULT'			, '404');
 		# QUALITY FOLDERS ARRAY normally '404','audio' (Sort DESC quality)
-		define('DEDALO_AV_AR_QUALITY'				, serialize([DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']));
+		define('DEDALO_AV_AR_QUALITY'				, [DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']);
 		# EXTENSION normally mp4, mov
 		define('DEDALO_AV_POSTERFRAME_EXTENSION'	, 'jpg');
 		# FFMPEG PATH
@@ -413,7 +348,7 @@
 		# DEDALO_IMAGE_THUMB_DEFAULT
 		define('DEDALO_IMAGE_THUMB_DEFAULT'			, 'thumb');
 		# QUALITY FOLDERS ARRAY IN MB
-		define('DEDALO_IMAGE_AR_QUALITY'			, serialize([DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]));
+		define('DEDALO_IMAGE_AR_QUALITY'			, [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
 		# PRINT DPI (default 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
 		# IMAGE LIB
@@ -448,7 +383,7 @@
 
 
 		# QUALITY FOLDERS ARRAY
-		define('DEDALO_PDF_AR_QUALITY'				, serialize([DEDALO_PDF_QUALITY_DEFAULT]));
+		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_DEFAULT]);
 		# MIME normally application/pdf
 		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
 		# TYPE normally jpeg
@@ -478,17 +413,17 @@
 		# MIME normally image/svg+xml
 		define('DEDALO_SVG_MIME_TYPE'			, 'image/svg+xml');
 		# DEDALO_SVG_EXTENSIONS_SUPPORTED
-		define('DEDALO_SVG_EXTENSIONS_SUPPORTED', serialize( array('svg') ));
+		define('DEDALO_SVG_EXTENSIONS_SUPPORTED', array('svg') );
 		# QUALITY DEFAULT normally 'standar'
-		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'standard');
+		define('DEDALO_SVG_QUALITY_DEFAULT'		, 'standard');
 		# QUALITY ORIGINAL normally 'original'
-		define('DEDALO_SVG_QUALITY_ORIGINAL'		, DEDALO_SVG_QUALITY_DEFAULT);
+		define('DEDALO_SVG_QUALITY_ORIGINAL'	, DEDALO_SVG_QUALITY_DEFAULT);
 
 
 
 ################################################################
 # UPLOADER CONFIG
-	define('DEDALO_UPLOADER_DIR'			, DEDALO_ROOT 		. '/lib/jquery/jQuery-File-Upload');
+	define('DEDALO_UPLOADER_DIR'			, DEDALO_ROOT_PATH	. '/lib/jquery/jQuery-File-Upload');
 	define('DEDALO_UPLOADER_URL'			, DEDALO_ROOT_WEB	. '/lib/jquery/jQuery-File-Upload');
 
 
@@ -502,9 +437,9 @@
 ################################################################
 # MEDIA ENTITY
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
-	define('DEDALO_ENTITY_MEDIA_AREA_TIPO'			, '');
+	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
 	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...
-	define('DEDALO_ENTITY_MENU_SKIP_TIPOS'			, serialize( array()));
+	define('DEDALO_ENTITY_MENU_SKIP_TIPOS', []);
 
 
 
