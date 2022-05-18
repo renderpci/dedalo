@@ -2036,7 +2036,7 @@ class component_text_area extends component_common {
 	* CREATE_NEW_NOTE
 	* @return object $response
 	*/
-	public static function create_new_note() : object {
+	public static function DES_create_new_note() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
