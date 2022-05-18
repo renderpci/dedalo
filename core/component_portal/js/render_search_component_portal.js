@@ -85,13 +85,14 @@ export const add_events = function(self, wrapper) {
 		})
 
 	// click delegated
-		wrapper.addEventListener("click", function(e){
+		wrapper.addEventListener('click', function(e){
 			e.stopPropagation()
 
-			if (e.target.matches('input[type="text"].q_operator')) {
-				// prevent activate component on click inside q_operator input
-				return true
-			}
+			// q_operator
+				if (e.target.matches('input[type="text"].q_operator')) {
+					// prevent activate component on click inside q_operator input
+					return true
+				}
 
 			// remove row
 				if (e.target.matches('.button.remove')) {
@@ -107,15 +108,13 @@ export const add_events = function(self, wrapper) {
 						const update = self.update_data_value(changed_data)
 
 					// publish search. Event to update the dom elements of the instance
-						event_manager.publish('change_search_element', self)
+						// event_manager.publish('change_search_element', self)
 
 					// refresh
 						self.refresh()
 
 					return true
 				}
-
-			event_manager.publish('active_component', self)
 
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
@@ -137,7 +136,6 @@ export const add_events = function(self, wrapper) {
 
 					return true
 				}
-
 		})//end click event
 
 
