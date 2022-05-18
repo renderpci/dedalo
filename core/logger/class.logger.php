@@ -10,12 +10,12 @@ class logger {
 
 	// Niveles de registro. A mayor número, menor importancia
 	// Se dejan huecos en la numeración para poder añadir posteriormente otros niveles
-	const DEBUG 	= 100;
-	const INFO 		= 75;
-	const NOTICE 	= 50;
-	const WARNING 	= 25;
-	const ERROR 	= 10;
-	const CRITICAL 	= 5;
+	const DEBUG		= 100;
+	const INFO		= 75;
+	const NOTICE	= 50;
+	const WARNING	= 25;
+	const ERROR		= 10;
+	const CRITICAL	= 5;
 
 	# global logger obj array to store instances of logger
 	static $obj;
@@ -29,7 +29,8 @@ class logger {
 	/**
 	* LEVEL TO STRING CONVERSION
 	*/
-	public static function level_to_string($log_level) {
+	public static function level_to_string(int $log_level) : string {
+
 		switch ($log_level) {
 			case logger::DEBUG:
 				return 'DEBUG';
@@ -59,7 +60,7 @@ class logger {
 	/**
 	* REGISTER
 	*/
-	public static function register( $log_name, $connection_string ) {
+	public static function register(string $log_name, string $connection_string) : bool {
 
 		$url_data = parse_url($connection_string);
 			#var_dump($url_data);
@@ -91,7 +92,7 @@ class logger {
 	/**
 	* GET INSTANCE
 	*/
-	public static function get_instance($name) {
+	public static function get_instance(string $name) {
 
 		return logger::manage_backends($name);
 	}//end get_instance
@@ -101,7 +102,7 @@ class logger {
 	/**
 	* MANAGE BACKENDS
 	*/
-	private static function manage_backends( $name, logger_backend $obj_back = NULL) {
+	private static function manage_backends(string $name, logger_backend $obj_back=null) {
 
 		static $backends;
 
@@ -120,6 +121,8 @@ class logger {
 			# We are adding
 			$backends[$name] = $obj_back;
 		}
+
+		return null;
 	}//end manage_backends
 
 

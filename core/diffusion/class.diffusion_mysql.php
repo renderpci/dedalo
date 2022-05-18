@@ -444,9 +444,9 @@ class diffusion_mysql extends diffusion_sql  {
 	/**
 	* SAVE_RECORD
 	* Insert / Update one MySQL row (one for lang)
-	* @return
+	* @return object $response
 	*/
-	public static function save_record( $request_options ) {
+	public static function save_record( object $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result = false;
@@ -461,7 +461,7 @@ class diffusion_mysql extends diffusion_sql  {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		$database_name		= $options->record_data['database_name'];
 		$table_name			= $options->record_data['table_name'];
@@ -599,18 +599,18 @@ class diffusion_mysql extends diffusion_sql  {
 			}//end foreach ($ar_fields as $lang => $fields) iterate langs
 
 			#debug_log(__METHOD__." ++ strQuery ".to_string($strQuery), logger::DEBUG);
-
 		}//end foreach ($ar_section_id as $section_id)
-		#dump($result, ' result ++ '.to_string());
 
 
-		if(SHOW_DEBUG===true) {
-			$response->debug = exec_time($start_time);
-		}
+		// response
+			$response->result	= true;
+			$response->new_id	= self::$insert_id;
+			$response->msg		= implode(",\n", $response->msg);		#dump($response, ' response');
 
-		$response->result = true;
-		$response->new_id = self::$insert_id;
-		$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
+			if(SHOW_DEBUG===true) {
+				$response->debug = exec_time_unit($start_time);
+			}
+
 
 		return (object)$response;
 	}//end save_record

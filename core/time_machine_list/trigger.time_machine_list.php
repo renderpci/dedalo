@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time = hrtime(true);
 require_once( dirname(dirname(__FILE__)).'/config/config4.php');
 common::trigger_manager();
 
@@ -21,11 +21,11 @@ function get_time_machine_list_json($json_data) {
 
 	$vars = array('tipo','section_tipo','section_id','modo','value_resolved','limit','offset','count');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 		}
 
 	$time_machine_list 		= new time_machine_list($tipo, $section_id, $section_tipo, $modo='edit');
-	$time_machine_list->set_value_resolved($value_resolved); 
+	$time_machine_list->set_value_resolved($value_resolved);
 	$time_machine_list->set_limit($limit);
 	$time_machine_list->set_offset($offset);
 	$time_machine_list->set_count($count);

@@ -56,18 +56,13 @@ abstract class diffusion  {
 		if(SHOW_DEBUG) $start_time = start_time();
 
 		# Class name is called class (ex. component_input_text), not this class (common)
-		$class_name	= get_called_class();	#dump($class_name,'$class_name');
+		$class_name	= get_called_class();
 
 		$file = DEDALO_CORE_PATH .'/diffusion/'. $class_name .'/'. $class_name .'.php' ; 	#dump("$class_name");
 
 		ob_start();
 		include ( $file );
 		$html =  ob_get_clean();
-
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' [element '.$class_name.']', "html");
-			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.microtime(1)]=microtime(1);
-		}
 
 		return $html;
 	}//end get_html

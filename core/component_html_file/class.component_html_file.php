@@ -64,10 +64,6 @@ class component_html_file extends component_common {
 	# COMPONENT_HTML_FILE CONSTRUCT
 	function __construct($tipo, $parent, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
-		if(SHOW_DEBUG) {
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
-		}
-
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
@@ -106,19 +102,17 @@ class component_html_file extends component_common {
 				error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}
 		}#end if ($need_save)
+	}//end __construct
 
 
-		if(SHOW_DEBUG) {
-			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-	}
 
 	# GET DATO : Format {"counter":1}
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (object)$dato;
 	}
+
+
 
 	# SET_DATO
 	public function set_dato($dato) {

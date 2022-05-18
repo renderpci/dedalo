@@ -10,45 +10,49 @@ class logger_backend_activity extends logger_backend {
 	private $h_conn;
 	private static $activity_matrix_table = 'matrix_activity';
 
-	static $what 	= array(
-		'LOG IN'			=>	1,	# dd696 login module
-		'LOG OUT'			=>	2,	# dd697 login module
-		'NEW'				=>	3, 	# dd695 section
-		'DELETE'			=>	4,	# dd698 section
-		'SAVE'				=>	5,	# dd700 component
-		'LOAD EDIT'			=>	6,	# dd694 page
-		'LOAD LIST'			=>	7,	# dd693 page
-		'SEARCH'			=>	8,	# dd699 component
-		'UPLOAD'			=>	9, 	# dd1090 upload file by tool upload
-		'DOWNLOAD'			=>	10, # dd1080 download file by tool av / image / pdf
-		'UPLOAD COMPLETE'	=>	11, # dd1094 upload file by tool upload
-		'DELETE FILE'		=>	12, # dd1095 delete file by tool
-		'RECOVER SECTION'	=>	13, # dd1092 recuperar sección
-		'RECOVER COMPONENT'	=>	14, # dd1091 recuperar componente
-		'STATS'				=>	15, # dd1098 estadisticas
-		'NEW VERSION'		=>	16, # dd1081 new version file
-	);
+
+	// what var
+	static $what = [
+		'LOG IN'			=>	1,	// dd696 login module
+		'LOG OUT'			=>	2,	// dd697 login module
+		'NEW'				=>	3, 	// dd695 section
+		'DELETE'			=>	4,	// dd698 section
+		'SAVE'				=>	5,	// dd700 component
+		'LOAD EDIT'			=>	6,	// dd694 page
+		'LOAD LIST'			=>	7,	// dd693 page
+		'SEARCH'			=>	8,	// dd699 component
+		'UPLOAD'			=>	9, 	// dd1090 upload file by tool upload
+		'DOWNLOAD'			=>	10, // dd1080 download file by tool av / image / pdf
+		'UPLOAD COMPLETE'	=>	11, // dd1094 upload file by tool upload
+		'DELETE FILE'		=>	12, // dd1095 delete file by tool
+		'RECOVER SECTION'	=>	13, // dd1092 recuperar sección
+		'RECOVER COMPONENT'	=>	14, // dd1091 recuperar componente
+		'STATS'				=>	15, // dd1098 estadisticas
+		'NEW VERSION'		=>	16  // dd1081 new version file
+	];
 
 
+	// vars
+		static $_SECTION_TIPO 		= ['tipo'=>'dd542','modelo_name'=>'section'];
+		static $_COMPONENT_IP 		= ['tipo'=>'dd544','modelo_name'=>'component_ip'];
+		static $_COMPONENT_QUIEN 	= ['tipo'=>'dd543','modelo_name'=>'component_autocomplete'];
+		static $_COMPONENT_QUE 		= ['tipo'=>'dd545','modelo_name'=>'component_input_text'];
+		static $_COMPONENT_DONDE 	= ['tipo'=>'dd546','modelo_name'=>'component_input_text'];
+		static $_COMPONENT_CUANDO 	= ['tipo'=>'dd547','modelo_name'=>'component_date'];
+		static $_COMPONENT_PROYECTOS= ['tipo'=>'dd550','modelo_name'=>'component_filter'];
+		static $_COMPONENT_DATOS 	= ['tipo'=>'dd551','modelo_name'=>'component_input_text'];
 
-	static $_SECTION_TIPO 		= array('tipo'=>'dd542','modelo_name'=>'section');
-	static $_COMPONENT_IP 		= array('tipo'=>'dd544','modelo_name'=>'component_ip');
-	static $_COMPONENT_QUIEN 	= array('tipo'=>'dd543','modelo_name'=>'component_autocomplete');
-	static $_COMPONENT_QUE 		= array('tipo'=>'dd545','modelo_name'=>'component_input_text');
-	static $_COMPONENT_DONDE 	= array('tipo'=>'dd546','modelo_name'=>'component_input_text');
-	static $_COMPONENT_CUANDO 	= array('tipo'=>'dd547','modelo_name'=>'component_date');
-	static $_COMPONENT_PROYECTOS= array('tipo'=>'dd550','modelo_name'=>'component_filter');
-	static $_COMPONENT_DATOS 	= array('tipo'=>'dd551','modelo_name'=>'component_input_text');
+	// ar_elements_activity_tipo
+		static $ar_elements_activity_tipo;
 
-	static $ar_elements_activity_tipo;
-
-	public static $enable_log 	= true;
+	// enable_log static
+	public static $enable_log = true;
 
 
 
 	# CONSTRUCT
 	# Require url_data string like: 'mysql://user:password@host/database?tabe=matrix_activity' for caompatibity
-	public function __construct($url_data) {
+	public function __construct(array $url_data) {
 		#parent::__construct($url_data);
 
 		# FIX ARRAY ar_elements_activity_tipo
@@ -68,14 +72,14 @@ class logger_backend_activity extends logger_backend {
 
 	/**
 	* BUILD_COMPONENT_ACTIVITY_OBJECT
+	* @return object $component_obj
 	*/
-	public static function build_component_activity_object($dato) {
+	public static function build_component_activity_object($dato) : object {
 
-		$component_lang = DEDALO_DATA_NOLAN;
-		$component_obj 	= new stdClass();
+		$component_obj = new stdClass();
 			$component_obj->dato = new stdClass();
-			$component_obj->dato->$component_lang = new stdClass();
-			$component_obj->dato->$component_lang = [$dato];
+			$component_obj->dato->{DEDALO_DATA_NOLAN}	= new stdClass();
+			$component_obj->dato->{DEDALO_DATA_NOLAN}	= [$dato];
 
 		return $component_obj;
 	}//end build_component_activity_object
@@ -87,9 +91,15 @@ class logger_backend_activity extends logger_backend {
 	*	MODULE  TIME  USER  IP  REFERRER  MESSAGE  SEVERITY_LEVEL  OPERATIONS
 	*	IP_ADDRESS 	QUIEN 	QUE 	DONDE 	CUANDO 	DATOS
 	*	QUE(like 'LOAD EDIT'), LOGLEVEL(INFO), TIPO(like 'dd120'), DATOS(array of related info)
+	* @return int|null section_id
 	*/
-	public function log_message( $message, $log_level=logger::INFO, $tipo_donde=NULL, $projects=array(), $datos=NULL ) {
-
+	public function log_message(
+		string $message,
+		int $log_level=logger::INFO,
+		string $tipo_donde=null,
+		string $operations=null,
+		array $datos=null
+	) : ?int {
 
 		// Creation log exceptions
 
@@ -99,14 +109,14 @@ class logger_backend_activity extends logger_backend {
 			# if tipo of activity is not sended is not possible generate log
 			if (empty($tipo_donde)) {
 				trigger_error("Error on log_message (var 'tipo_donde' is empty) ".__METHOD__);
-				return NULL;
+				return null;
 			}
 
 			# AUTOLOG STOP
 			# Prevent infinite loop saving self
 			if (in_array($tipo_donde, self::$ar_elements_activity_tipo)) {
 				trigger_error("Error on log_message (infinite loop stopped) ".__METHOD__);
-				return NULL;
+				return null;
 			}
 			#dump($datos,"$message, $log_level, $tipo_donde ".self::$_SECTION_TIPO['tipo']); return null;
 
@@ -114,7 +124,7 @@ class logger_backend_activity extends logger_backend {
 		// DEBUG : Time
 			if(SHOW_DEBUG===true) {
 				$start_time = start_time();
-				// global$TIMER;$TIMER[get_called_class().'_IN_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[get_called_class().'_IN_'.$tipo_donde.'_'.start_time()]=start_time();
 			}
 
 
@@ -208,11 +218,9 @@ class logger_backend_activity extends logger_backend {
 					}
 
 				# DATA (param 'datos' + url's ...)	#############################################################
-					if (!is_array($datos)) {
-						$dato_array = array($datos);
-					}else{
-						$dato_array = $datos;
-					}
+					$dato_array = !is_array($datos)
+						? [$datos]
+						: $datos;
 
 					# When msg is load, include datos of urls
 					if (strpos($message, 'LOAD')!==false) {
@@ -258,19 +266,13 @@ class logger_backend_activity extends logger_backend {
 							# (!) Note that here no relations are written to relations table automatically, we need launch action manually
 							# without pass by component
 							$relation_options = new stdClass();
-								$relation_options->section_tipo 		= DEDALO_ACTIVITY_SECTION_TIPO;
-								$relation_options->section_id 			= $id_section;
-								$relation_options->from_component_tipo 	= self::$_COMPONENT_PROYECTOS['tipo'];
-								$relation_options->ar_locators 			= $project_relations;
+								$relation_options->section_tipo			= DEDALO_ACTIVITY_SECTION_TIPO;
+								$relation_options->section_id			= $id_section;
+								$relation_options->from_component_tipo	= self::$_COMPONENT_PROYECTOS['tipo'];
+								$relation_options->ar_locators			= $project_relations;
 							$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
 						}
 
-
-
-					if(SHOW_DEBUG===true) {
-						#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, 'logger_backend_activity '.$id_section);
-						// $TIMER[get_called_class().'_OUT_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
-					}
 
 		return $id_section;
 	}//end log_message

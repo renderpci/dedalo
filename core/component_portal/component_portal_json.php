@@ -17,7 +17,7 @@
 	// $context = [];
 
 	// if($options->get_context===true && $permissions>0){
-	// 	// $api_start_time=microtime(1);
+	// 	// $api_start_time=start_time();
 	// 	switch ($options->context_type) {
 	// 		case 'simple':
 	// 			// Component structure context_simple (tipo, relations, properties, etc.)

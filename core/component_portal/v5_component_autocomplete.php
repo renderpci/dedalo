@@ -52,7 +52,6 @@
 			}else{
 				$ar_componets_related = (array)$ar_related_terms;
 			}
-			dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
 
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
@@ -172,7 +171,6 @@
 		$valor_export = br2nl($valor_export);
 
 		return $valor_export;
-
 	};//end get_valor_export
 
 
@@ -185,7 +183,7 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value =  function ($lang=null) {
+	$_get_diffusion_value = function ($lang=null) {
 
 		// force recalculate for each lang
 			unset($this->valor);
@@ -216,8 +214,3 @@
 
 		return (string)$diffusion_value;
 	};//end get_diffusion_value
-
-
-
-
-

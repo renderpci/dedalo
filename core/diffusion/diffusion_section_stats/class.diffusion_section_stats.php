@@ -177,7 +177,7 @@ class diffusion_section_stats extends diffusion {
 	*/
 	protected function get_stats( $options_received=null ) {
 
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		$options = new stdClass();
 			$options->section_tipo  = $this->caller_section_tipo;
@@ -539,7 +539,7 @@ class diffusion_section_stats extends diffusion {
 							$this->diffusion_map_object->$section_tipo->$current_component_tipo->js_obj   = $js_obj;
 
 					// Debug
-						$sql_time = round(microtime(1)-$start_time,3);
+						$sql_time = round(start_time()-$start_time,3);
 						$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug = new stdClass();
 							$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->sql_time = $sql_time;
 							$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->strQuery = isset($section_rows->strQuery) ? $section_rows->strQuery : '';
@@ -550,7 +550,7 @@ class diffusion_section_stats extends diffusion {
 		#dump($this->diffusion_map_object, 'this->diffusion_map_object', array());
 
 		if(SHOW_DEBUG===true) {
-			echo "<span style=\"float:left\">Time To Generate stats ".round(microtime(1)-$start_time,3)."</span>"; # <br>".$section_rows->strQuery;
+			echo "<span style=\"float:left\">Time To Generate stats ".round(start_time()-$start_time,3)."</span>"; # <br>".$section_rows->strQuery;
 			#dump( $this->diffusion_map_object, 'var', array());;
 			#dump($section_rows->strQuery, '$section_rows->strQuery');
 			#dump($this->js_ar_obj, '$this->js_ar_obj ++ '.to_string());

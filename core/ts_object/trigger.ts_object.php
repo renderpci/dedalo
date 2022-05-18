@@ -2,7 +2,7 @@
 // Turn off output buffering
 ini_set('output_buffering', 'off');
 
-$start_time=microtime(1);
+$start_time=hrtime(true);
 include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 include(DEDALO_CORE_PATH . '/ts_object/class.ts_object.php');
 

@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time=hrtime(true);
 include( DEDALO_CONFIG_PATH.'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
@@ -34,7 +34,7 @@ function generate_virtual_section($json_data) {
 	$options = new stdClass();
 		$options->section_id   = $component_parent;
 		$options->section_tipo = $section_tipo;
-		
+
 	$result = (object)hierarchy::generate_virtual_section( $options );
 		#dump($result, ' $result ++ '.to_string());
 
@@ -75,7 +75,7 @@ function generate_virtual_section($json_data) {
 		$response->debug = $debug;
 	}
 
-	
+
 	return (object)$response;
 }//end generate_virtual_section
 
@@ -103,7 +103,7 @@ function update_target_section($json_data) {
 				return $response;
 			}
 		}
-	
+
 
 	$options = new stdClass();
 		$options->section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
@@ -122,7 +122,7 @@ function update_target_section($json_data) {
 		$response->debug = $debug;
 	}
 
-	
+
 	return (object)$response;
 }//end update_target_section
 

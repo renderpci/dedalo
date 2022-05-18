@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time=hrtime(true);
 // include( dirname(dirname(__FILE__)).'/config/config4.php');
 // ontology custon config file
 require_once( dirname(dirname(__FILE__)) .'/config/config_ontology.php' );

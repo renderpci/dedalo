@@ -25,8 +25,8 @@ class component_pdf extends component_media_common {
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
 		if(SHOW_DEBUG===true) {
-			$start_time = microtime(1);
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
+			$start_time = start_time();
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.start_time()]=start_time();
 		}
 
 		# Creamos el componente normalmente
@@ -53,14 +53,14 @@ class component_pdf extends component_media_common {
 			$result = $this->Save();
 			# DEBUG
 			if(SHOW_DEBUG===true) {
-				$total=round(microtime(true)-$start_time,3);
+				$total=round(start_time()-$start_time,3);
 				$name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true);
 				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}
 		}//end if ($need_save)
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 		}
 		*/
 

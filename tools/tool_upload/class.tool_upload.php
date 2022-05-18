@@ -35,7 +35,7 @@ class tool_upload { // extends tool_common
 	* @return object $response
 	*/
 	public static function process_uploaded_file(object $options) : object {
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		// response
 			$response = new stdClass();

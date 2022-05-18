@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time=hrtime(true);
 set_time_limit ( 259200 );  // 3 dias
 $session_duration_hours = 72;
 include( DEDALO_CONFIG_PATH .'/config.php');
@@ -23,7 +23,7 @@ session_write_close();
 
 /**
 * LOAD_TERMS
-* 
+*
 */
 function load_terms($json_data) {
 	global $start_time;
@@ -54,7 +54,7 @@ function load_terms($json_data) {
 													  $modo='edit',
 													  $lang=DEDALO_DATA_NOLAN,
 													  $section_tipo);
-	
+
 	$widget_str_object->component_info = $component_info;
 
 
@@ -77,8 +77,8 @@ function load_terms($json_data) {
 
 		$response->debug = $debug;
 	}
-	
-	
+
+
 	return (object)$response;
 }//end load_terms
 
