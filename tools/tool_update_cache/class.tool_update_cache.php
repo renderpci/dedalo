@@ -20,7 +20,7 @@ class tool_update_cache extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function update_cache($request_options) {
+	public static function update_cache(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -112,7 +112,7 @@ class tool_update_cache extends tool_common {
 	* @return object $response
 	* 	->result = array of objects
 	*/
-	public static function get_component_list($request_options) {
+	public static function get_component_list(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

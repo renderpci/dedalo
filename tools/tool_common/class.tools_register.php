@@ -216,9 +216,9 @@ class tools_register {
 	* Gets current tool from the tool name
 	* Note that this function can search in any virtual of section 'Tools' (dd73)
 	* @param string $tool_name
-	* @return object $tool_full_data | null
+	* @return object|null $tool_full_data
 	*/
-	public static function get_tool_by_name(string $tool_name, string $section_tipo) {
+	public static function get_tool_by_name(string $tool_name, string $section_tipo) : ?object {
 
 		// search by tool name
 			$sqo = json_decode('{

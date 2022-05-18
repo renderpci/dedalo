@@ -13,7 +13,7 @@ common::trigger_manager();
 * @param $section_id
 * @param $section_tipo
 */
-function pdf_automatic_transcription($json_data) {
+function pdf_automatic_transcription(object $json_data) : object {
 	global $start_time;
 
 	# Write session to unlock session file
