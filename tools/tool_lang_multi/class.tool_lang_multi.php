@@ -44,19 +44,19 @@ class tool_lang_multi { // extends tool_common
 	* AUTOMATIC_TRANSLATION
 	* @return object $response
 	*/
-	public static function automatic_translation($request_options) {
+	public static function automatic_translation(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		$options = new stdClass();
-			$options->source_lang 		= null;
-			$options->target_lang 		= null;
+			$options->source_lang		= null;
+			$options->target_lang		= null;
 			$options->component_tipo	= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->translator 		= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->translator		= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// config json file . Must be compatible with tool properties translator_engine data

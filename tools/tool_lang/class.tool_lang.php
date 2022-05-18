@@ -17,7 +17,7 @@ class tool_lang extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function automatic_translation($request_options) {
+	public static function automatic_translation(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

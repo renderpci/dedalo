@@ -17,7 +17,7 @@ class tool_posterframe extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function create_posterframe($request_options) {
+	public static function create_posterframe(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -63,7 +63,7 @@ class tool_posterframe extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function delete_posterframe($request_options) {
+	public static function delete_posterframe(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -108,7 +108,7 @@ class tool_posterframe extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function create_identifying_image($request_options) {
+	public static function create_identifying_image(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -244,7 +244,7 @@ class tool_posterframe extends tool_common {
 	* @return object $response
 	* 	->result : array $ar_identifying_image
 	*/
-	public static function get_ar_identifying_image($request_options) {
+	public static function get_ar_identifying_image(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -268,7 +268,7 @@ class tool_posterframe extends tool_common {
 			$ar_identifying_image = [];
 			foreach ($inverse_locators as $locator) {
 
-				$identifying_image = self::get_identifying_image_from_section($locator->from_section_tipo, $locator->from_section_id);
+				$identifying_image = self::get_identifying_image_from_section($locator->from_section_tipo, (int)$locator->from_section_id);
 				if(empty($identifying_image)) continue;
 
 				$ar_identifying_image[] = $identifying_image;
@@ -287,9 +287,9 @@ class tool_posterframe extends tool_common {
 	/**
 	* GET_IDENTIFYING_IMAGE_FROM_SECTION
 	*  Match every portal_tipo of current section with properties->identifying_image
-	* @return object|null
+	* @return object|null $result
 	*/
-	private static function get_identifying_image_from_section($section_tipo, $section_id) {
+	private static function get_identifying_image_from_section(string $section_tipo, int $section_id) : ?object {
 
 		$result = null;
 

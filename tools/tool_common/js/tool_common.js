@@ -414,7 +414,7 @@ const load_default_ddo_map = async function() {
 
 /**
 * LOAD_COMPONENT
-* Loads component to place in respective containers: current preview and preview version
+* Loads component to place it in respective containers: current preview and preview version
 * @param object options
 * 	context: object
 * 	to_delete_instances: array of instance object
@@ -522,7 +522,7 @@ export const open_tool = async (options) => {
 	// open_as. Mode of tool visualization: modal, tab, popup
 		const open_as = tool_context.properties && tool_context.properties.open_as
 			? tool_context.properties.open_as
-			: 'modal'
+			: 'modal' // default is 'modal'
 
 	// windowFeatures. Features to pass to the tool visualizer
 	// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
@@ -626,8 +626,14 @@ const view_modal = async function(options) {
 			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
 			const modal		= ui.attach_to_modal(header, wrapper, null)
 			modal.on_close	= () => {
-				caller.refresh()
-				tool_instance.destroy(true, true, true)
+
+				if (typeof tool_instance.on_close_actions==='function') {
+					// custom actions
+					tool_instance.on_close_actions('modal')
+				}else{
+					caller.refresh()
+					tool_instance.destroy(true, true, true)
+				}
 			}
 
 			// pointer from wrapper to modal
@@ -868,6 +874,4 @@ const get_tool_label = function(label_name, ...rest) {
 
 
 	return null
-};//end get_tool_label
-
-
+}//end get_tool_label

@@ -245,7 +245,7 @@ tool_export.prototype.get_export_xsl = async function (options) {
 	// const ws1 = XLSX.utils.table_to_book(table);
 	// console.log("ws1:",ws1);
 	// XLSX.utils.book_append_sheet(workbook, ws1, "Sheet1");
- // 	// const workbook = XLSX.read(table, {type:'string'});
+ 	// 	// const workbook = XLSX.read(table, {type:'string'});
 	// XLSX.writeFile(workbook, 'out.csv' );
 
 
@@ -280,3 +280,22 @@ tool_export.prototype.get_export_xsl = async function (options) {
 };//end get_export_xsl
 
 
+
+/**
+* ON_CLOSE_ACTIONS
+* Executes specific action on close the tool
+* @param string open_as
+* 	modal | window
+* @return promise: bool
+*/
+tool_export.prototype.on_close_actions = async function(open_as) {
+
+	const self = this
+
+	if (open_as==='modal') {
+		// self.caller.refresh() // never refresh caller (component_json)
+		self.destroy(true, true, true)
+	}
+
+	return true
+}//end on_close_actions
