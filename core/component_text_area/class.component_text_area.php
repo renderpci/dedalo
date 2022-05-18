@@ -45,7 +45,7 @@ class component_text_area extends component_common {
 	*/
 	public static function force_change_lang(string $tipo, $parent, string $modo, string $lang, string$section_tipo) : string {
 		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);
+			$start_time=start_time();
 		}
 
 		$changed_lang = false;
@@ -1102,7 +1102,7 @@ class component_text_area extends component_common {
 				$response->msg .= " ".label::get_label('etiqueta_salvar_texto'); // and saved text
 			}
 
-			$response->total = round(microtime(1)-$start_time,4)*1000 ." ms";
+			$response->total = round(start_time()-$start_time,4)*1000 ." ms";
 		}
 
 		return $response;
@@ -1255,7 +1255,7 @@ class component_text_area extends component_common {
 				$response->msg .= " ".label::get_label('etiqueta_salvar_texto'); // and saved text
 			}
 
-			$response->total = round(microtime(1)-$start_time,4)*1000 ." ms";
+			$response->total = round(start_time()-$start_time,4)*1000 ." ms";
 		}
 
 		return $response;

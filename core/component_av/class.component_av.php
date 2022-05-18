@@ -33,10 +33,6 @@ class component_av extends component_media_common {
 	*/
 	function __construct($tipo, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
-		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
-		}
-
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
@@ -77,12 +73,9 @@ class component_av extends component_media_common {
 			$result = $this->Save();
 			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - section_id:$this->section_id - lang:$this->lang)");
 
-		}#end if ($need_save)
+		}//end if ($need_save)
 
 
-		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
 	}//end __construct
 
 

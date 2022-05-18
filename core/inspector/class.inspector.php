@@ -35,14 +35,8 @@ class inspector {
 		include ( DEDALO_CORE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' ' );
-			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
 		return $html;
 	}//end get_html
 
 
 }//end inspector
-?>

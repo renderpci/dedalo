@@ -240,13 +240,13 @@ class search {
 	* @return object $records_data
 	*/
 	public function search() : object {
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		# Converts json search_query_object to sql query string
 		$sql_query = $this->parse_search_query_object( $full_count=false );
 			// debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
 
-		$parsed_time = round(microtime(1)-$start_time,3);
+		$parsed_time = round(start_time()-$start_time,3);
 
 		$result	= JSON_RecordObj_matrix::search_free($sql_query);
 		if ($result===false) {
@@ -334,7 +334,7 @@ class search {
 
 		// debug
 			if(SHOW_DEVELOPER===true) {
-				$exec_time = round(microtime(1)-$start_time, 3);
+				$exec_time = round(start_time()-$start_time, 3);
 				$records_data->generated_time['parsed_time'] = $parsed_time;
 				# Info about required time to exec the search
 				$records_data->generated_time['get_records_data'] = $exec_time;
@@ -343,7 +343,7 @@ class search {
 				if (isset($full_count_sql_query)) {
 					$records_data->strQuery .= PHP_EOL . $full_count_sql_query;
 				}
-				#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+				#$this->search_query_object->generated_time['get_records_data'] = round(start_time()-$start_time,3);
 				#dump($records_data, '$records_data', array());
 				$this->search_query_object->generated_time 	= $exec_time;
 
@@ -353,7 +353,7 @@ class search {
 				}, $ar_sections);
 
 				// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
-				// debug_log(__METHOD__." SQL QUERY EXEC TIME (".implode(',', $ar_sections)."): ".round(microtime(1)-$start_time,3).' '. str_repeat('-', 50) .PHP_EOL. to_string($sql_query), logger::DEBUG);
+				// debug_log(__METHOD__." SQL QUERY EXEC TIME (".implode(',', $ar_sections)."): ".round(start_time()-$start_time,3).' '. str_repeat('-', 50) .PHP_EOL. to_string($sql_query), logger::DEBUG);
 
 				// debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 				// debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
@@ -374,7 +374,7 @@ class search {
 	*/
 	public function count() : object {
 
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		#
 		# ONLY_COUNT
@@ -393,7 +393,7 @@ class search {
 				#$records_data->search_query_object	= $this->search_query_object;
 				$records_data->total = $total;
 				if(SHOW_DEVELOPER===true) {
-					$exec_time = round(microtime(1)-$start_time, 3);
+					$exec_time = round(start_time()-$start_time, 3);
 					# Info about required time to exec the search
 					$records_data->debug = $records_data->debug ?? new stdClass();
 					$records_data->debug->generated_time['get_records_data'] = $exec_time;
@@ -443,7 +443,7 @@ class search {
 	*/
 	public function pre_parse_search_query_object() : bool {
 
-		#$start_time=microtime(1);
+		#$start_time=start_time();
 		#dump($this->search_query_object, 'preparsed $this->search_query_object 1 ++ '.to_string());
 
 		# FILTER
@@ -592,7 +592,7 @@ class search {
 	* @return string $sql_query
 	*/
 	public function parse_search_query_object( bool $full_count=false ) : string {
-		#$start_time=microtime(1);
+		#$start_time=start_time();
 		#dump($this->search_query_object->filter, ' this->search_query_object->filter 1 ++ '.to_string());
 		#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
 		#debug_log(__METHOD__." JSONSEARCH ORIGINAL (ANTES DE PASAR POR COMPONENTES) ".json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), logger::DEBUG);

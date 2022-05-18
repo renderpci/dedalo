@@ -6,14 +6,17 @@ require_once( DEDALO_CORE_PATH .'/logger/class.logger_backend.php' );
 */
 class logger_backend_file extends logger_backend  {
 
+
+
 	private $log_level;
 	private $h_log_file;
+
 
 
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($url_data) {
+	public function __construct(array $url_data) {
 
 		# ANULADO DE MOMENTO
 		return null;
@@ -51,23 +54,31 @@ class logger_backend_file extends logger_backend  {
 	* LOG MESSAGES
 	* 	LINE:
 	*	MODULE  TIME  USER  IP  REFERRER  MESSAGE  SEVERITY_LEVEL  OPERATIONS
+	* 	$message, $log_level=logger::INFO, $tipo_donde=null, $projects=null, $datos=null
 	*/
-	public function log_message( $message, $log_level=logger::INFO, $module=NULL, $operations=NULL, $datos=NULL ) {	#$message, $log_level=logger::INFO, $tipo_donde=NULL, $projects=NULL, $datos=NULL
+	public function log_message(
+		string $message,
+		int $log_level=logger::INFO,
+		string $tipo_donde=null,
+		string $operations=null,
+		array $datos=null
+	) {
 
-		# ANULADO DE MOMENTO
+		// ANULADO DE MOMENTO (!)
 		return null;
 
 		if ( $log_level > $this->log_level ) {
 			return;
 		}
 
-		$start_time = microtime(1);
+		$start_time = start_time();
 
 		# LINE VARS
 			# Module
+			$module = $tipo_donde; // alias of tipo_donde
 			if (isset($module)) {
-			$module			= str_replace("\t", ' ', $module);
-			$module 		= str_replace("\n", ' ', $module);
+				$module	= str_replace("\t", ' ', $module);
+				$module	= str_replace("\n", ' ', $module);
 			}
 
 			# Time. Asegurarse de haber establecido zona horaria en config

@@ -1001,14 +1001,10 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	*/
 	export const toggle_search_panel = (self) => {
 
-		console.log("toggle_search_panel self:",self);
-		console.log("self.search_global_container:",self.search_global_container);
-
 		// short vars
 			const search_global_container	= self.search_global_container
 			const status_id					= 'open_search_panel'
 			const status_table				= 'status'
-
 
 		if (search_global_container.classList.contains("hide")) {
 

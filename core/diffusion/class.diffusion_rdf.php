@@ -167,7 +167,7 @@ class diffusion_rdf extends diffusion {
 		# Maximum execution time seconds
 		set_time_limit(600);
 
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -239,7 +239,7 @@ class diffusion_rdf extends diffusion {
 		// response additional info
 			$response->url = $options->url_file;
 
-		$total_time=round(microtime(1)-$start_time,3);
+		$total_time=round(start_time()-$start_time,3);
 		$response->debug[] = "Generated [".count($options->ar_section_id)." elements] in $total_time secs";
 
 
@@ -794,7 +794,7 @@ class diffusion_rdf extends diffusion {
 
 		if ($base_uri!='http://numismatics.org/ocre/id/ric.') return false;
 
-		$start_time = microtime(1);
+		$start_time = start_time();
 
 		$url_test = $base_uri.$add_uri_string;
 
@@ -878,7 +878,7 @@ class diffusion_rdf extends diffusion {
 
 		}//end if ($response==404)
 
-		$total=round(microtime(1)-$start_time,3);
+		$total=round(start_time()-$start_time,3);
 		$msg .= " Time: $total";
 
 		logger::$obj['error']->log_message($msg, logger::ERROR, __METHOD__);

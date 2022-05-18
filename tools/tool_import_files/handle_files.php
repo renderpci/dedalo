@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time=hrtime(true);
 // Turn off output buffering
 ini_set('output_buffering', 'off');
 // header print as json data

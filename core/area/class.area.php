@@ -29,7 +29,9 @@ class area extends area_common  {
 
 		// /session_start();
 
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+		}
 
 		// cache session. If the session has the all_areas return it from cache for speed
 			// if (isset($_SESSION['dedalo']['ontology']['all_areas'][DEDALO_APPLICATION_LANG])) {
@@ -99,7 +101,7 @@ class area extends area_common  {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total	= round(microtime(1)-$start_time,3);
+				$total	= round( start_time() - $start_time, 3);
 				$n		= count($areas);
 				debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
 			}

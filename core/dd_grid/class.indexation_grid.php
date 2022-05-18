@@ -314,7 +314,7 @@ class indexation_grid {
 	* @return array $ar_section_top_tipo
 	*/
 	protected function get_ar_section_top_tipo() {
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		$ar_section_top_tipo	= array();
 		$user_id				= navigator::get_user_id();
@@ -393,7 +393,7 @@ class indexation_grid {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total=round(microtime(1)-$start_time,3);
+				$total=round(start_time()-$start_time,3);
 				$slow = 0.125;
 				if ($total>$slow) {
 					dump($total,"SLOW METHOD (>$slow): total secs $total");

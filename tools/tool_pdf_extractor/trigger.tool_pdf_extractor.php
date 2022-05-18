@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time=hrtime(true);
 include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 

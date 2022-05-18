@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time = hrtime(true);
 set_time_limit(300);
 include( DEDALO_CONFIG_PATH .'/config.php');
 include(DEDALO_CORE_PATH.'/backup/class.backup.php');

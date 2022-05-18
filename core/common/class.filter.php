@@ -104,7 +104,7 @@ abstract class filter {
 	* @return array $ar_projects
 	*/
 	public static function get_user_authorized_projects( int $user_id, string $from_component_tipo ) : array {
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		// cache
 			$cache_key = $user_id .'_'. $from_component_tipo;
