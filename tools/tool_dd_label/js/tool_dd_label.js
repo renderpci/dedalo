@@ -85,3 +85,21 @@ tool_dd_label.prototype.update_data = function() {
 };//end update_data
 
 
+/**
+* ON_CLOSE_ACTIONS
+* Executes specific action on close the tool
+* @param string open_as
+* 	modal | window
+* @return promise: bool
+*/
+tool_dd_label.prototype.on_close_actions = async function(open_as) {
+
+	const self = this
+
+	if (open_as==='modal') {
+		// self.caller.refresh() // never refresh caller (component_json)
+		self.destroy(true, true, true)
+	}
+
+	return true
+}//end on_close_actions
