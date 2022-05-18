@@ -348,9 +348,10 @@ const get_input_element = (i, current_value, self) => {
 				const current_text_editor = new service_tinymce()
 
 			// editor_config
+				const toolbar_buttons = self.context.toolbar_buttons || []
 				const editor_config = {
 					plugins			: ['paste','image','print','searchreplace','code','noneditable'], // ,'fullscreen'
-					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+self.context.toolbar_buttons.join(' ')+' | button_save', // fullscreen
+					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+ toolbar_buttons.join(' ') + ' | button_save', // fullscreen
 					custom_buttons	: get_custom_buttons(self, current_text_editor, i),
 					custom_events	: get_custom_events(self, i, current_text_editor)
 				}
@@ -361,7 +362,7 @@ const get_input_element = (i, current_value, self) => {
 					key				: i,
 					editor_config	: editor_config
 				})
-				.then(function(initied){
+				.then(function(){
 					// fix current_text_editor
 					self.text_editor[i] = current_text_editor
 				})
