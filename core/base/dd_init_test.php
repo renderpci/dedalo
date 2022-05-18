@@ -14,8 +14,9 @@
 
 
 // PHP VERSION
-	if (version_compare(PHP_VERSION, '7.2.0', '<')) {
+	if (version_compare(PHP_VERSION, '8.0.10', '<')) {
 		$init_response->msg .= trim(" Error. This php version ".PHP_VERSION." is not supported by Dédalo");
+		trigger_error($init_response->msg);
 		return $init_response;
 	}
 
