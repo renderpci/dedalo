@@ -348,10 +348,9 @@ const get_input_element = (i, current_value, self) => {
 				const current_text_editor = new service_tinymce()
 
 			// editor_config
-				const toolbar_buttons = self.context.toolbar_buttons || []
 				const editor_config = {
 					plugins			: ['paste','image','print','searchreplace','code','noneditable'], // ,'fullscreen'
-					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+ toolbar_buttons.join(' ') + ' | button_save', // fullscreen
+					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+self.context.toolbar_buttons.join(' ')+' | button_save', // fullscreen
 					custom_buttons	: get_custom_buttons(self, current_text_editor, i),
 					custom_events	: get_custom_events(self, i, current_text_editor)
 				}
@@ -362,7 +361,7 @@ const get_input_element = (i, current_value, self) => {
 					key				: i,
 					editor_config	: editor_config
 				})
-				.then(function(){
+				.then(function(initied){
 					// fix current_text_editor
 					self.text_editor[i] = current_text_editor
 				})
@@ -717,8 +716,28 @@ const get_custom_events = (self, i, text_editor) => {
 
 					case 'person':
 						// Show person info
-												console.log("tag_obj.data_tag:---------",tag_obj);
-						component_text_area.show_person_info( {tag: tag_obj, caller: self, text_editor: text_editor} )
+						event_manager.publish('click_tag_person_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
+						// get the locator in string format
+						const data_string	= tag_obj.dataset.data
+						// rebuild the correct locator witht the " instead '
+						const data			= data_string.replace(/\'/g, '"')
+						// parse the string to object or create new one
+						const locator		= JSON.parse(data) || {}
+						// get the match of the locator with the tag_persons array inside the instance
+						const person = self.context.tags_persons.find(item => item.data.section_tipo === locator.section_tipo && item.data.section_id===locator.section_id && item.data.component_tipo===locator.component_tipo)
+						// if person is available create a node with the full name of the person
+						if(person){
+							const layer_person = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'layer_person',
+								text_node		: person.full_name,
+								parent			: self.node[0],
+							})
+							layer_person.addEventListener('click',function(event) {
+								layer_person.parentNode.removeChild(layer_person)
+							})
+						}
+
 						break;
 
 					case 'note':
@@ -838,7 +857,10 @@ export const build_node_tag = function(data_tag, tag_id) {
 	const type			= data_tag.type
 	const state			= data_tag.state
 	const label			= data_tag.label
+	// convert the data_tag to string to be used it in html
 	const data_string	= JSON.stringify(data_tag.data)
+	// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
+	// json use " but it's not compatible with the data-data storage in html5
 	const data			= data_string.replace(/"/g, '\'')
 
 
